@@ -1,0 +1,31 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+prototype/daemon/devforged
+prototype/daemon/devforge
+prototype/ssl/ssl_manager
+
+# Dependencies
+node_modules/
+vendor/
+
+# IDE / Editor local configs
+.[a-z]*/
+!.git/
+!.github/
+/[A-Z]*.md
+!/README.md
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Archives
+*.zip
+
+# SQLite databases
+*.db

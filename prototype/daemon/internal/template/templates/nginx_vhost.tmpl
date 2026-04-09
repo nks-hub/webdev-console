@@ -1,0 +1,33 @@
+server {
+    listen {{.Port}}{{if .SSL}} ssl{{end}};
+    server_name {{.Hostname}}{{range .Aliases}} {{.}}{{end}};
+
+    root "{{.DocumentRoot}}";
+    index index.php index.html;
+
+    {{- if .SSL}}
+
+    ssl_certificate "{{.SSLCertPath}}";
+    ssl_certificate_key "{{.SSLKeyPath}}";
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    {{- end}}
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:{{.PHPFPMPort}};
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    error_log "{{.LogDir}}/{{.Hostname}}-error.log";
+    access_log "{{.LogDir}}/{{.Hostname}}-access.log" combined;
+}

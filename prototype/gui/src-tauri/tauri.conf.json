@@ -1,0 +1,93 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+
+  "productName": "DevForge",
+  "version": "0.1.0",
+  "identifier": "sh.devforge.app",
+
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "DevForge",
+        "width": 1100,
+        "height": 720,
+        "minWidth": 820,
+        "minHeight": 560,
+        "resizable": true,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "visible": false,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*; font-src 'self' data:;"
+    },
+    "trayIcon": {
+      "iconPath": "icons/tray.png",
+      "iconAsTemplate": false
+    }
+  },
+
+  "bundle": {
+    "active": true,
+    "targets": "all",
+
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+
+    "resources": {
+      "bin/*": "bin"
+    },
+
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+      }
+    },
+
+    "publisher": "DevForge",
+    "copyright": "Copyright 2026 DevForge Contributors",
+
+    "longDescription": "DevForge is a local development server management tool. Manage Apache, Nginx, MySQL, PHP versions, virtual hosts, SSL certificates, and more.",
+    "shortDescription": "Local dev server manager"
+  },
+
+  "plugins": {
+    "updater": {
+      "pubkey": "PLACEHOLDER_UPDATE_PUBLIC_KEY",
+      "endpoints": [
+        "https://releases.devforge.sh/latest.json"
+      ],
+      "dialog": true,
+      "windows": {
+        "installerArgs": ["/passive"],
+        "installMode": "passive"
+      }
+    },
+    "shell": {
+      "open": true
+    }
+  }
+}
