@@ -135,18 +135,29 @@ Target audience: PHP developers who want native performance (not Docker overhead
 
 **Alternative: Rust** if maximum performance and memory safety are prioritized. Adds development complexity but produces smaller binaries and eliminates GC pauses.
 
-### GUI Framework: Tauri v2
+### GUI Framework: Full Evaluation
 
-| Criteria | Tauri v2 | Electron | .NET MAUI | Flutter Desktop |
-|----------|---------|----------|-----------|-----------------|
-| Bundle size | ~5-10MB | ~150MB+ | ~50MB+ | ~20MB+ |
-| Memory baseline | ~30MB | ~80-150MB | ~60MB | ~40MB |
-| Native feel | WebView2 (Win), WebKit (macOS) | Chromium everywhere | Native controls | Custom rendering |
-| System tray | Yes | Yes | Limited | Limited |
-| IPC with daemon | Local socket | Local socket | Named pipes | Platform channels |
-| Dev ecosystem | Rust + any web framework | Node.js + any web framework | C# + XAML | Dart + widgets |
+| Framework | Bundle Size | Memory | Platform | Language | Rendering | Verdict |
+|-----------|------------|--------|----------|----------|-----------|---------|
+| **Tauri v2** | **5-10 MB** | **30-80 MB** | Win/macOS/Linux | Rust + Web (Svelte/React) | Native WebView2/WebKit | **RECOMMENDED** |
+| Electron | 130-160 MB | 250-400 MB | Win/macOS/Linux | Node.js + Web | Bundled Chromium | Too heavy |
+| Neutralinojs | ~6 MB | ~40 MB | Win/macOS/Linux | C++ + Web | Native WebView | Lacks ecosystem |
+| Qt (C++) | 30-50 MB | ~50 MB | Win/macOS/Linux | C++ / QML | Native widgets | Steep learning curve |
+| .NET MAUI | 50+ MB | ~60 MB | Win/macOS | C# + XAML | Native controls | .NET runtime required |
+| Flutter Desktop | 20+ MB | ~40 MB | Win/macOS/Linux | Dart + widgets | Custom Skia engine | Platform channel complexity |
+| Sciter | ~5 MB | ~20 MB | Win/macOS/Linux | C++ + HTML/CSS | Custom engine | Proprietary license |
+| GTK4 + libadwaita | ~15 MB | ~30 MB | Linux (Win/macOS limited) | C/Vala/Rust | Native GTK | Linux-centric |
+| SwiftUI | 0 (system) | ~20 MB | macOS only | Swift | Native Apple | Apple-only |
+| FLTK | ~1 MB | ~10 MB | Win/macOS/Linux | C++ | Custom lightweight | Too basic for modern UI |
 
-**Recommendation: Tauri v2 with Svelte 5 frontend.** 5-10x smaller than Electron, uses OS-native WebView2 (no bundled Chromium), Rust backend can share code with the daemon if daemon is also Rust.
+**Decision: Tauri v2 with Svelte 5** — validated by prototype (21 files in `prototype/gui/`).
+
+Key reasons:
+- **5-10 MB** installer vs Electron's 130-160 MB
+- WebView2 ships with Windows 10/11 — no bundled browser
+- Rust backend enables system tray, privilege elevation, named pipe IPC
+- Sidecar feature launches Go daemon as managed child process
+- **CAUTION**: Tauri NSIS installer triggers same AV false positives as Go — use **MSI (WiX)** instead
 
 ### Configuration Storage: Hybrid
 
