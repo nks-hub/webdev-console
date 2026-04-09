@@ -192,20 +192,46 @@ Target audience: PHP developers who want native performance (not Docker overhead
 - LGPL viable but adds legal compliance overhead
 - Risk: C++ learning curve, 2-4 month ramp-up for web team
 
-### Decision: Tauri v2 with Svelte 5
+### REVISED Decision: Non-JS/TS GUI (user requirement: NO JavaScript/TypeScript)
 
-Validated by prototype (21 files in `prototype/gui/`).
+**23 frameworks evaluated by 4 parallel research agents.** Tauri and Electron eliminated (require JS for frontend).
 
-**Scenario-based recommendation:**
-- **Ship in 3-4 months** → Electron (lowest execution risk, FlyEnv reference)
-- **Ship in 5-6 months, better architecture** → **Tauri v2 + Go sidecar** (every technical metric wins)
-- **C++/Qt team available** → Qt 6 QML (best native feel, LGPL review needed)
+### Tier 1 — Ready to Ship (No JS/TS)
 
-**Why Tauri wins for DevForge specifically:**
-1. Go daemon already handles service management → Tauri sidecar is perfect fit
-2. MAMP replacement coexists with PHP+MySQL+Redis → Electron's 200-450MB is problematic
-3. Windows primary → WebView2 pre-installed (Win11) or auto-bootstrapped (Win10)
-4. **CAUTION**: Use **MSI (WiX)** installer, not NSIS (AV false positives)
+| # | Framework | Lang | Score | Bundle | RAM | Tray | License |
+|---|-----------|------|-------|--------|-----|------|---------|
+| **1** | **Qt6 C++/QML** | C++ | **9.5** | 8-15 MB | 30-50 MB | ✅ built-in | LGPL v3 |
+| **2** | **Avalonia UI** | C# | **8.5** | 21+13 MB | 40-80 MB | ✅ built-in | MIT |
+| **3** | **PySide6+Nuitka** | Python | **7.5** | 18-25 MB | 80-120 MB | ✅ built-in | LGPL v3 |
+| **S** | **Go+htmx+templ+systray** | Go | **9.0** | single binary | 15-30 MB | ✅ systray | MIT |
+
+### Tier 2 — Strong with Trade-offs
+
+| # | Framework | Lang | Score | Key Issue |
+|---|-----------|------|-------|-----------|
+| 4 | Flutter Desktop | Dart | 7.0 | tray = community plugin, xterm stale |
+| 5 | Slint | Rust | 6.5 | No system tray yet |
+| 6 | Iced | Rust | 6.0 | Pre-1.0, no built-in tray |
+| 7 | Fyne | Go | 4.5 | Dated look, CPU issues |
+
+### Key Findings
+
+**Avalonia UI** (v12.0.0, Apr 2026): 30.5K stars, $3M Devolutions sponsorship, Native AOT 21MB EXE, FluentTheme dark/light, TrayIcon + DataGrid built-in, gRPC over named pipes via GrpcDotNetNamedPipes.
+
+**Qt6 LGPL compliance**: Dynamic linking = closed-source app OK. Ship Qt DLLs + LGPL notice. Telegram, VLC, VirtualBox all do this.
+
+**Go+htmx+templ pattern**: Zero JS framework. Go daemon serves HTML via templ templates, htmx (14KB) handles reactivity, SSE for real-time logs. systray opens browser to 127.0.0.1:7272. Docker Desktop, Portainer, Caddy use this pattern.
+
+### Scenario-Based Recommendation
+
+| If team knows... | Choose | Timeline | Why |
+|-----------------|--------|----------|-----|
+| **C# / .NET** | **Avalonia UI** | 4-5 months | XAML/MVVM familiar, MIT license, best .NET cross-platform |
+| **C++ / Qt** | **Qt6 QML** | 5-6 months | Gold standard, smallest bundle, LGPL review needed |
+| **Go only** | **Go+htmx+templ+systray** | 3-4 months | Zero new language, browser=UI, Docker pattern |
+| **Python** | **PySide6+Nuitka** | 4-5 months | Qt power in Python, 20MB bundle |
+| **Dart/Flutter** | **Flutter Desktop** | 5-6 months | fluent_ui for Windows, hot reload |
+| **Rust** | **Slint** | 6-7 months | Royalty-free, QML-like DSL, 3MB binary |
 
 ### Configuration Storage: Hybrid
 
