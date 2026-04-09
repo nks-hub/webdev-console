@@ -1016,6 +1016,47 @@ DevForge/
 
 All downloaded binaries verified against pinned SHA-256 hashes. GPG verification where available (PHP, MySQL).
 
+### Windows Antivirus False Positive Mitigation (CRITICAL)
+
+Go binaries on Windows trigger Microsoft Defender false positives (Wacatac.B!ml / Wacapew.C!ml). This is a **known, unresolved issue** — [microsoft/go#1255](https://github.com/microsoft/go/issues/1255) is OPEN as of Sep 2025. Microsoft Go team confirmed: **no compiler-level fix possible**, it's a Defender ML heuristic problem.
+
+**Key findings from research:**
+- Code signing has **minimal impact** — "signing doesn't really make much of a difference, it seems random"
+- Garble obfuscation **worsens** detection (flagged as "WinGo/Packed.Obfuscated.D")
+- `-ldflags="-s -w"` alone can **trigger** more detections
+- Tauri/Electron NSIS installers have the **same problem** ([tauri#2486](https://github.com/tauri-apps/tauri/issues/2486))
+- **MSI installers raise fewer false positives** than NSIS .exe installers
+
+**Multi-layer mitigation strategy (all required):**
+
+1. **EV Code Signing Certificate** (~$350-700/year) — provides SmartScreen reputation faster than OV
+2. **MSI installer instead of NSIS** — fewer AV triggers (WiX toolset for MSI generation)
+3. **`-trimpath` build flag** — removes local paths from binary
+4. **DO NOT use `-ldflags="-s -w"`** — stripping debug info paradoxically triggers more detections
+5. **Microsoft Defender submission portal** — submit every release binary for allowlisting
+6. **VirusTotal pre-check** — scan in CI before publishing release
+7. **Windows SmartScreen reputation building** — consistent signing with same EV cert builds reputation over time
+8. **User documentation** — include "antivirus false positive" FAQ with restore instructions
+
+```bash
+# Production build (DO NOT strip symbols — increases false positives!)
+go build -trimpath -o devforged.exe ./cmd/daemon
+signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 devforged.exe
+
+# Verify with VirusTotal before release
+vt scan file devforged.exe
+```
+
+**Budget:** EV Code Signing Certificate ~$350-700/year. Microsoft submission: free.
+
+| Binary | Risk Level | Reason | Installer Format |
+|--------|-----------|--------|-----------------|
+| devforged.exe | **HIGH** | Long-running daemon, spawns processes, named pipes | Bundled in MSI |
+| devforge.exe | MEDIUM | CLI tool, short-lived | Bundled in MSI |
+| DevForge installer | **HIGH** | Writes to Program Files | **MSI (not NSIS)** |
+
+**Sources:** [microsoft/go#1255](https://github.com/microsoft/go/issues/1255), [tauri#2486](https://github.com/tauri-apps/tauri/issues/2486), [Tauri False Positives Guide](https://tauri.by.simon.hyll.nu/concepts/security/false_positives/)
+
 ### CDN Infrastructure
 
 - Primary: AWS S3 + CloudFront
