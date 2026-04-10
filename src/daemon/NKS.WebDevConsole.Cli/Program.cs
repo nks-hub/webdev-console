@@ -716,6 +716,22 @@ phpInstCmd.SetAction(async (parseResult, ct) =>
 });
 phpCommand.Add(phpInstCmd);
 
+// --- wdc php remove {version} ---
+var phpRemVerArg = new Argument<string>("version") { Description = "PHP version to remove" };
+var phpRemCmd = new Command("remove", "Remove an installed PHP version") { phpRemVerArg };
+phpRemCmd.SetAction(async (parseResult, ct) =>
+{
+    var ver = parseResult.GetValue(phpRemVerArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    if (!json && !AnsiConsole.Confirm($"Remove PHP [red]{Markup.Escape(ver)}[/]?", false)) return;
+    await client.DeleteAsync($"/api/binaries/php/{ver}");
+    if (json) PrintJson(new { removed = $"php/{ver}" });
+    else AnsiConsole.MarkupLine($"[yellow]PHP {Markup.Escape(ver)} removed[/]");
+});
+phpCommand.Add(phpRemCmd);
+
 // --- wdc open {domain} ---
 var openDomainArg = new Argument<string>("domain") { Description = "Site domain to open in browser" };
 var openCommand = new Command("open", "Open a site in the default browser") { openDomainArg };
