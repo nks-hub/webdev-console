@@ -1,0 +1,62 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-2022
+            target: win
+          - os: macos-14
+            target: mac
+          - os: ubuntu-24.04
+            target: linux
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build daemon
+        run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r ${{ matrix.os == 'windows-2022' && 'win-x64' || matrix.os == 'macos-14' && 'osx-arm64' || 'linux-x64' }} --self-contained -o src/frontend/resources/daemon
+
+      - name: Build plugins
+        run: |
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Apache/NKS.WebDevConsole.Plugin.Apache.csproj -c Release
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.PHP/NKS.WebDevConsole.Plugin.PHP.csproj -c Release
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.MySQL/NKS.WebDevConsole.Plugin.MySQL.csproj -c Release
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Redis/NKS.WebDevConsole.Plugin.Redis.csproj -c Release
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Mailpit/NKS.WebDevConsole.Plugin.Mailpit.csproj -c Release
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Hosts/NKS.WebDevConsole.Plugin.Hosts.csproj -c Release
+          dotnet build src/plugins/NKS.WebDevConsole.Plugin.SSL/NKS.WebDevConsole.Plugin.SSL.csproj -c Release
+
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build Electron app
+        working-directory: src/frontend
+        run: npm run dist:${{ matrix.target == 'win' && '' || matrix.target }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: src/frontend/dist/*.{exe,dmg,AppImage,zip}
