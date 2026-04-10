@@ -1,1 +1,663 @@
-@import "tailwindcss";
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+
+/*
+ * NKS WDC Design System
+ * Dark-first, Raycast/Linear-inspired professional developer tool UI
+ */
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --wdc-bg:          #0a0a0f;
+  --wdc-surface:     #111118;
+  --wdc-surface-2:   #17171f;
+  --wdc-elevated:    #1e1e28;
+  --wdc-hover:       #1c1c26;
+
+  /* Borders */
+  --wdc-border:      rgba(255, 255, 255, 0.07);
+  --wdc-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --wdc-text:        #e2e4ec;
+  --wdc-text-2:      #8b8fa8;
+  --wdc-text-3:      #4e5269;
+
+  /* Accent — indigo/violet */
+  --wdc-accent:      #6366f1;
+  --wdc-accent-2:    #8b5cf6;
+  --wdc-accent-glow: rgba(99, 102, 241, 0.15);
+  --wdc-accent-dim:  rgba(99, 102, 241, 0.08);
+
+  /* Status */
+  --wdc-status-running:  #22c55e;
+  --wdc-status-stopped:  #3f4358;
+  --wdc-status-error:    #ef4444;
+  --wdc-status-starting: #f59e0b;
+
+  /* Status glow */
+  --wdc-glow-running:  rgba(34, 197, 94, 0.2);
+  --wdc-glow-error:    rgba(239, 68, 68, 0.2);
+
+  /* Radius */
+  --wdc-radius-sm:   6px;
+  --wdc-radius:      10px;
+  --wdc-radius-lg:   14px;
+
+  /* Shadows */
+  --wdc-shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.4);
+  --wdc-shadow:      0 4px 16px rgba(0, 0, 0, 0.5);
+  --wdc-shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* Light mode overrides */
+html:not(.dark) {
+  --wdc-bg:          #f4f4f7;
+  --wdc-surface:     #ffffff;
+  --wdc-surface-2:   #f8f8fb;
+  --wdc-elevated:    #eeeef4;
+  --wdc-hover:       #f0f0f6;
+  --wdc-border:      rgba(0, 0, 0, 0.08);
+  --wdc-border-strong: rgba(0, 0, 0, 0.14);
+  --wdc-text:        #111118;
+  --wdc-text-2:      #5c5f72;
+  --wdc-text-3:      #9496a8;
+  --wdc-accent-glow: rgba(99, 102, 241, 0.10);
+  --wdc-accent-dim:  rgba(99, 102, 241, 0.06);
+  --wdc-status-stopped: #c0c2d0;
+  color-scheme: light;
+}
+
+/* ─── Element Plus Dark Variable Overrides ────────────────────────────────── */
+.dark {
+  --el-bg-color:                  var(--wdc-surface);
+  --el-bg-color-page:             var(--wdc-bg);
+  --el-bg-color-overlay:          var(--wdc-elevated);
+
+  --el-border-color:              var(--wdc-border);
+  --el-border-color-light:        var(--wdc-border);
+  --el-border-color-lighter:      rgba(255, 255, 255, 0.04);
+  --el-border-color-extra-light:  rgba(255, 255, 255, 0.03);
+  --el-border-color-dark:         var(--wdc-border-strong);
+  --el-border-color-darker:       rgba(255, 255, 255, 0.16);
+
+  --el-text-color-primary:        var(--wdc-text);
+  --el-text-color-regular:        #b4b7cc;
+  --el-text-color-secondary:      var(--wdc-text-2);
+  --el-text-color-placeholder:    var(--wdc-text-3);
+  --el-text-color-disabled:       #3a3d52;
+
+  --el-fill-color:                var(--wdc-surface-2);
+  --el-fill-color-light:          var(--wdc-hover);
+  --el-fill-color-lighter:        rgba(255, 255, 255, 0.02);
+  --el-fill-color-extra-light:    rgba(255, 255, 255, 0.01);
+  --el-fill-color-dark:           var(--wdc-elevated);
+  --el-fill-color-darker:         rgba(255, 255, 255, 0.05);
+  --el-fill-color-blank:          var(--wdc-surface);
+
+  --el-color-primary:             var(--wdc-accent);
+  --el-color-primary-light-3:     #818cf8;
+  --el-color-primary-light-5:     #a5b4fc;
+  --el-color-primary-light-7:     #c7d2fe;
+  --el-color-primary-light-8:     #d8dffe;
+  --el-color-primary-light-9:     rgba(99, 102, 241, 0.12);
+  --el-color-primary-dark-2:      #4f52c8;
+
+  --el-color-success:             var(--wdc-status-running);
+  --el-color-success-light-3:     #4ade80;
+  --el-color-success-light-5:     #86efac;
+  --el-color-success-light-9:     rgba(34, 197, 94, 0.12);
+
+  --el-color-warning:             var(--wdc-status-starting);
+  --el-color-warning-light-9:     rgba(245, 158, 11, 0.12);
+
+  --el-color-danger:              var(--wdc-status-error);
+  --el-color-danger-light-9:      rgba(239, 68, 68, 0.12);
+
+  --el-color-info:                var(--wdc-text-2);
+  --el-color-info-light-9:        rgba(139, 143, 168, 0.10);
+
+  --el-mask-color:                rgba(0, 0, 0, 0.7);
+  --el-mask-color-extra-light:    rgba(0, 0, 0, 0.4);
+
+  --el-box-shadow:                var(--wdc-shadow);
+  --el-box-shadow-light:          var(--wdc-shadow-sm);
+  --el-box-shadow-lighter:        0 2px 8px rgba(0, 0, 0, 0.3);
+  --el-box-shadow-dark:           var(--wdc-shadow-lg);
+}
+
+/* Also apply to root for always-dark mode */
+:root {
+  --el-bg-color:                  var(--wdc-surface);
+  --el-bg-color-page:             var(--wdc-bg);
+  --el-bg-color-overlay:          var(--wdc-elevated);
+  --el-border-color:              var(--wdc-border);
+  --el-border-color-light:        var(--wdc-border);
+  --el-border-color-lighter:      rgba(255, 255, 255, 0.04);
+  --el-border-color-extra-light:  rgba(255, 255, 255, 0.03);
+  --el-border-color-dark:         var(--wdc-border-strong);
+  --el-border-color-darker:       rgba(255, 255, 255, 0.16);
+  --el-text-color-primary:        var(--wdc-text);
+  --el-text-color-regular:        #b4b7cc;
+  --el-text-color-secondary:      var(--wdc-text-2);
+  --el-text-color-placeholder:    var(--wdc-text-3);
+  --el-text-color-disabled:       #3a3d52;
+  --el-fill-color:                var(--wdc-surface-2);
+  --el-fill-color-light:          var(--wdc-hover);
+  --el-fill-color-blank:          var(--wdc-surface);
+  --el-fill-color-dark:           var(--wdc-elevated);
+  --el-color-primary:             var(--wdc-accent);
+  --el-color-primary-light-3:     #818cf8;
+  --el-color-primary-light-5:     #a5b4fc;
+  --el-color-primary-light-7:     #c7d2fe;
+  --el-color-primary-light-9:     rgba(99, 102, 241, 0.12);
+  --el-color-primary-dark-2:      #4f52c8;
+  --el-color-success:             var(--wdc-status-running);
+  --el-color-success-light-9:     rgba(34, 197, 94, 0.12);
+  --el-color-warning:             var(--wdc-status-starting);
+  --el-color-warning-light-9:     rgba(245, 158, 11, 0.12);
+  --el-color-danger:              var(--wdc-status-error);
+  --el-color-danger-light-9:      rgba(239, 68, 68, 0.12);
+  --el-color-info:                var(--wdc-text-2);
+  --el-color-info-light-9:        rgba(139, 143, 168, 0.10);
+  --el-box-shadow:                var(--wdc-shadow);
+  --el-box-shadow-light:          var(--wdc-shadow-sm);
+  --el-box-shadow-dark:           var(--wdc-shadow-lg);
+  --el-mask-color:                rgba(0, 0, 0, 0.7);
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--wdc-bg);
+  color: var(--wdc-text);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+}
+
+/* ─── Element Plus Component Refinements ─────────────────────────────────── */
+
+/* Buttons */
+.el-button {
+  border-radius: var(--wdc-radius-sm) !important;
+  font-weight: 500;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+  letter-spacing: 0.01em;
+}
+
+.el-button--small {
+  height: 28px;
+  padding: 0 12px;
+}
+
+.el-button--default {
+  background: var(--wdc-surface-2) !important;
+  border-color: var(--wdc-border) !important;
+  color: var(--wdc-text-2) !important;
+}
+
+.el-button--default:hover {
+  background: var(--wdc-elevated) !important;
+  border-color: var(--wdc-border-strong) !important;
+  color: var(--wdc-text) !important;
+}
+
+.el-button--primary {
+  background: var(--wdc-accent) !important;
+  border-color: var(--wdc-accent) !important;
+}
+
+.el-button--primary:hover {
+  background: var(--wdc-accent-2) !important;
+  border-color: var(--wdc-accent-2) !important;
+}
+
+.el-button.is-plain.el-button--success {
+  background: rgba(34, 197, 94, 0.08) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+  color: var(--wdc-status-running) !important;
+}
+.el-button.is-plain.el-button--success:hover {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+.el-button.is-plain.el-button--danger {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: var(--wdc-status-error) !important;
+}
+.el-button.is-plain.el-button--danger:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Inputs */
+.el-input__wrapper {
+  background: var(--wdc-surface-2) !important;
+  border-color: var(--wdc-border) !important;
+  border-radius: var(--wdc-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+.el-input__wrapper:hover {
+  border-color: var(--wdc-border-strong) !important;
+}
+
+.el-input__wrapper.is-focus {
+  border-color: var(--wdc-accent) !important;
+  box-shadow: 0 0 0 2px var(--wdc-accent-dim) !important;
+}
+
+.el-input__inner {
+  color: var(--wdc-text) !important;
+  font-size: 0.82rem;
+}
+
+/* Tags */
+.el-tag {
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.el-tag--small {
+  height: 18px;
+  padding: 0 6px;
+}
+
+.el-tag--info.is-plain,
+.el-tag--info.is-dark {
+  background: rgba(139, 143, 168, 0.10) !important;
+  border-color: rgba(139, 143, 168, 0.20) !important;
+  color: var(--wdc-text-2) !important;
+}
+
+.el-tag--success.is-plain,
+.el-tag--success.is-dark {
+  background: rgba(34, 197, 94, 0.10) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+  color: var(--wdc-status-running) !important;
+}
+
+.el-tag--warning.is-plain,
+.el-tag--warning.is-dark {
+  background: rgba(245, 158, 11, 0.10) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: var(--wdc-status-starting) !important;
+}
+
+.el-tag--danger.is-plain,
+.el-tag--danger.is-dark {
+  background: rgba(239, 68, 68, 0.10) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: var(--wdc-status-error) !important;
+}
+
+/* Table */
+.el-table {
+  background: transparent !important;
+  color: var(--wdc-text);
+  border-radius: var(--wdc-radius) !important;
+  border: 1px solid var(--wdc-border) !important;
+  overflow: hidden;
+}
+
+.el-table__header-wrapper th.el-table__cell {
+  background: var(--wdc-surface-2) !important;
+  color: var(--wdc-text-2) !important;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--wdc-border) !important;
+}
+
+.el-table__body tr.el-table__row td {
+  background: transparent !important;
+  border-bottom: 1px solid var(--wdc-border) !important;
+  color: var(--wdc-text);
+  font-size: 0.82rem;
+}
+
+.el-table__body tr.el-table__row:last-child td {
+  border-bottom: none !important;
+}
+
+.el-table__body tr.el-table__row:hover td {
+  background: var(--wdc-hover) !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td {
+  background: rgba(255, 255, 255, 0.015) !important;
+}
+
+.el-table__body-wrapper {
+  background: var(--wdc-surface) !important;
+}
+
+.el-table__inner-wrapper::before {
+  display: none !important;
+}
+
+/* Tabs */
+.el-tabs__header {
+  border-bottom: 1px solid var(--wdc-border) !important;
+  margin-bottom: 0;
+}
+
+.el-tabs__nav-wrap::after {
+  display: none !important;
+}
+
+.el-tabs__item {
+  color: var(--wdc-text-2) !important;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0 16px !important;
+  height: 38px;
+  line-height: 38px;
+  transition: color 0.15s;
+}
+
+.el-tabs__item:hover {
+  color: var(--wdc-text) !important;
+}
+
+.el-tabs__item.is-active {
+  color: var(--wdc-text) !important;
+  font-weight: 600;
+}
+
+.el-tabs__active-bar {
+  background: var(--wdc-accent) !important;
+  height: 2px !important;
+}
+
+/* Menu (sidebar) */
+.el-menu {
+  background: transparent !important;
+  border: none !important;
+}
+
+.el-menu-item,
+.el-sub-menu__title {
+  height: 36px !important;
+  line-height: 36px !important;
+  border-radius: var(--wdc-radius-sm) !important;
+  margin: 2px 8px !important;
+  width: calc(100% - 16px) !important;
+  color: var(--wdc-text-2) !important;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.12s ease;
+}
+
+.el-menu-item:hover,
+.el-sub-menu__title:hover {
+  background: var(--wdc-hover) !important;
+  color: var(--wdc-text) !important;
+}
+
+.el-menu-item.is-active {
+  background: var(--wdc-accent-dim) !important;
+  color: #a5b4fc !important;
+}
+
+.el-menu--collapse .el-menu-item,
+.el-menu--collapse .el-sub-menu__title {
+  margin: 2px 4px !important;
+  width: calc(100% - 8px) !important;
+}
+
+.el-sub-menu .el-menu-item {
+  height: 32px !important;
+  line-height: 32px !important;
+  min-width: unset !important;
+  padding-left: 32px !important;
+  font-size: 0.78rem;
+}
+
+/* Sub-menu popup */
+.el-menu--popup {
+  background: var(--wdc-elevated) !important;
+  border: 1px solid var(--wdc-border) !important;
+  border-radius: var(--wdc-radius) !important;
+  box-shadow: var(--wdc-shadow) !important;
+  padding: 4px !important;
+  min-width: 160px;
+}
+
+.el-menu--popup .el-menu-item {
+  margin: 1px 0 !important;
+  width: 100% !important;
+  border-radius: var(--wdc-radius-sm) !important;
+}
+
+/* Form items */
+.el-form-item__label {
+  color: var(--wdc-text-2) !important;
+  font-size: 0.78rem !important;
+  font-weight: 500;
+}
+
+.el-form-item {
+  margin-bottom: 16px !important;
+}
+
+/* Select */
+.el-select .el-input__wrapper {
+  background: var(--wdc-surface-2) !important;
+}
+
+.el-select-dropdown {
+  background: var(--wdc-elevated) !important;
+  border: 1px solid var(--wdc-border) !important;
+  border-radius: var(--wdc-radius) !important;
+  box-shadow: var(--wdc-shadow) !important;
+}
+
+.el-select-dropdown__item {
+  color: var(--wdc-text-2) !important;
+  font-size: 0.82rem;
+}
+
+.el-select-dropdown__item:hover,
+.el-select-dropdown__item.is-hovering {
+  background: var(--wdc-hover) !important;
+  color: var(--wdc-text) !important;
+}
+
+.el-select-dropdown__item.is-selected {
+  color: var(--wdc-accent) !important;
+  font-weight: 600;
+}
+
+/* Dialog */
+.el-dialog {
+  background: var(--wdc-elevated) !important;
+  border: 1px solid var(--wdc-border) !important;
+  border-radius: var(--wdc-radius-lg) !important;
+  box-shadow: var(--wdc-shadow-lg) !important;
+}
+
+.el-dialog__header {
+  padding: 20px 24px 16px !important;
+  border-bottom: 1px solid var(--wdc-border);
+}
+
+.el-dialog__title {
+  color: var(--wdc-text) !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.el-dialog__body {
+  padding: 20px 24px !important;
+  color: var(--wdc-text);
+}
+
+.el-dialog__footer {
+  padding: 16px 24px !important;
+  border-top: 1px solid var(--wdc-border);
+}
+
+/* Drawer */
+.el-drawer {
+  background: var(--wdc-elevated) !important;
+  border-left: 1px solid var(--wdc-border) !important;
+}
+
+.el-drawer__header {
+  padding: 20px 24px 16px !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid var(--wdc-border);
+}
+
+.el-drawer__title {
+  color: var(--wdc-text) !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.el-drawer__body {
+  padding: 20px 24px !important;
+}
+
+/* Switch */
+.el-switch__core {
+  background: var(--wdc-elevated) !important;
+  border-color: var(--wdc-border-strong) !important;
+}
+
+.el-switch.is-checked .el-switch__core {
+  background: var(--wdc-accent) !important;
+  border-color: var(--wdc-accent) !important;
+}
+
+/* Radio button group */
+.el-radio-button__inner {
+  background: var(--wdc-surface-2) !important;
+  border-color: var(--wdc-border) !important;
+  color: var(--wdc-text-2) !important;
+  font-size: 0.78rem;
+}
+
+.el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background: var(--wdc-accent) !important;
+  border-color: var(--wdc-accent) !important;
+  color: #fff !important;
+  box-shadow: -1px 0 0 0 var(--wdc-accent) !important;
+}
+
+/* Alert */
+.el-alert {
+  border-radius: var(--wdc-radius) !important;
+  border: 1px solid;
+}
+
+.el-alert--warning {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+/* Collapse */
+.el-collapse {
+  border-color: var(--wdc-border) !important;
+}
+
+.el-collapse-item__header {
+  background: var(--wdc-surface) !important;
+  border-bottom-color: var(--wdc-border) !important;
+  color: var(--wdc-text) !important;
+  font-size: 0.85rem;
+  height: 44px;
+  padding: 0 16px;
+}
+
+.el-collapse-item__header.is-active {
+  color: var(--wdc-text) !important;
+}
+
+.el-collapse-item__wrap {
+  background: var(--wdc-surface) !important;
+  border-bottom-color: var(--wdc-border) !important;
+}
+
+.el-collapse-item__content {
+  padding-bottom: 0 !important;
+  color: var(--wdc-text);
+}
+
+/* Progress */
+.el-progress-bar__outer {
+  background: var(--wdc-elevated) !important;
+  border-radius: 4px !important;
+}
+
+.el-progress-bar__inner {
+  border-radius: 4px !important;
+  background: linear-gradient(90deg, var(--wdc-accent), var(--wdc-accent-2)) !important;
+}
+
+/* Input number */
+.el-input-number {
+  width: 100%;
+}
+
+.el-input-number .el-input__wrapper {
+  background: var(--wdc-surface-2) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes wdc-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+@keyframes wdc-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
