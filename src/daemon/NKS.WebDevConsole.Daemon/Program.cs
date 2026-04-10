@@ -2,6 +2,7 @@ using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
 using NKS.WebDevConsole.Daemon.Sites;
 using NKS.WebDevConsole.Daemon.Config;
+using NKS.WebDevConsole.Daemon.Data;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 
@@ -50,6 +51,15 @@ foreach (var p in pluginLoader.Plugins)
 {
     p.Instance.Initialize(builder.Services, initContext);
 }
+
+// Initialize SQLite database and run migrations
+var dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "data", "state.db");
+Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+var database = new Database(dbPath);
+builder.Services.AddSingleton(database);
+
+var migrationRunner = new MigrationRunner(earlyLoggerFactory.CreateLogger<MigrationRunner>());
+migrationRunner.Run(database.ConnectionString);
 
 var app = builder.Build();
 app.UseCors();
@@ -113,11 +123,25 @@ app.MapGet("/api/plugins", () => Results.Ok(
     })
 ));
 
-app.MapGet("/api/plugins/{id}/ui", (string id) =>
+app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
 {
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
     if (plugin == null) return Results.NotFound();
-    // Stub UI schema - plugins will provide this via IFrontendPanelProvider later
+
+    // Check if the plugin implements IFrontendPanelProvider
+    if (plugin.Instance is IFrontendPanelProvider uiProvider)
+    {
+        var def = uiProvider.GetUiDefinition();
+        return Results.Ok(new
+        {
+            pluginId = def.PluginId,
+            category = def.Category,
+            icon = def.Icon,
+            panels = def.Panels.Select(p => new { type = p.Type, props = p.Props })
+        });
+    }
+
+    // Fallback: generic UI schema for plugins that don't provide their own
     return Results.Ok(new
     {
         pluginId = id,
@@ -125,8 +149,8 @@ app.MapGet("/api/plugins/{id}/ui", (string id) =>
         icon = "el-icon-setting",
         panels = new[]
         {
-            new { type = "service-status-card", props = new { serviceId = id } },
-            new { type = "log-viewer", props = new { serviceId = id } }
+            new { type = "service-status-card", props = (object)new { serviceId = id } },
+            new { type = "log-viewer", props = (object)new { serviceId = id } }
         }
     });
 });
@@ -138,22 +162,41 @@ app.MapGet("/api/services", (ProcessManager pm) =>
 app.MapGet("/api/services/{id}", (string id, ProcessManager pm) =>
     Results.Ok(pm.GetStatus(id)));
 
-app.MapPost("/api/services/{id}/start", (string id, ProcessManager pm) =>
+app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp) =>
 {
-    // TODO: Wire to plugin's StartAsync when plugin-to-ProcessManager bridge is implemented
-    return Results.StatusCode(501);
+    var modules = sp.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null) return Results.NotFound(new { error = $"No service module for '{id}'" });
+
+    await module.StartAsync(CancellationToken.None);
+    var status = await module.GetStatusAsync(CancellationToken.None);
+    return Results.Ok(status);
 });
 
-app.MapPost("/api/services/{id}/stop", async (string id, ProcessManager pm) =>
+app.MapPost("/api/services/{id}/stop", async (string id, IServiceProvider sp) =>
 {
-    var result = await pm.StopAsync(id);
-    return result ? Results.Ok(new { message = "stopped" }) : Results.NotFound();
+    var modules = sp.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null) return Results.NotFound(new { error = $"No service module for '{id}'" });
+
+    await module.StopAsync(CancellationToken.None);
+    var status = await module.GetStatusAsync(CancellationToken.None);
+    return Results.Ok(status);
 });
 
-app.MapPost("/api/services/{id}/restart", async (string id, ProcessManager pm) =>
+app.MapPost("/api/services/{id}/restart", async (string id, IServiceProvider sp) =>
 {
-    await pm.StopAsync(id);
-    return Results.Ok(new { message = $"Restart {id} via plugin" });
+    var modules = sp.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null) return Results.NotFound(new { error = $"No service module for '{id}'" });
+
+    await module.StopAsync(CancellationToken.None);
+    await module.StartAsync(CancellationToken.None);
+    var status = await module.GetStatusAsync(CancellationToken.None);
+    return Results.Ok(status);
 });
 
 // Sites CRUD
