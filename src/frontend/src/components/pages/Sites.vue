@@ -177,6 +177,15 @@
         <el-form-item label="SSL">
           <el-switch v-model="newSite.sslEnabled" />
         </el-form-item>
+        <el-form-item label="Create Database">
+          <el-switch v-model="newSite.createDb" />
+          <el-input
+            v-if="newSite.createDb"
+            v-model="newSite.dbName"
+            placeholder="auto: myapp_db"
+            style="margin-top: 8px"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showCreate = false">Cancel</el-button>
@@ -194,6 +203,12 @@ import { useSitesStore } from '../../stores/sites'
 import type { SiteInfo } from '../../api/types'
 
 const sitesStore = useSitesStore()
+
+function daemonBase(): string {
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  const port = (window as any).daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
+  return `http://localhost:${port}`
+}
 const drawerOpen = ref(false)
 const selectedSite = ref<SiteInfo | null>(null)
 const showCreate = ref(false)
@@ -207,6 +222,8 @@ const newSite = reactive({
   documentRoot: '',
   phpVersion: '8.4',
   aliases: '',
+  createDb: false,
+  dbName: '',
   sslEnabled: false,
 })
 
@@ -275,9 +292,26 @@ async function createSite() {
       aliases: newSite.aliases ? newSite.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
     }
     await sitesStore.create(payload)
-    ElMessage.success(`Site ${newSite.domain} created`)
+
+    // Auto-create database if requested
+    if (newSite.createDb) {
+      const dbName = newSite.dbName || newSite.domain.replace(/\./g, '_').replace(/-/g, '_') + '_db'
+      try {
+        await fetch(`${daemonBase()}/api/databases`, {
+          method: 'POST',
+          headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: dbName }),
+        })
+        ElMessage.success(`Site ${newSite.domain} + database ${dbName} created`)
+      } catch {
+        ElMessage.success(`Site ${newSite.domain} created (database creation failed)`)
+      }
+    } else {
+      ElMessage.success(`Site ${newSite.domain} created`)
+    }
+
     showCreate.value = false
-    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false })
+    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false, createDb: false, dbName: '' })
   } catch (e: any) {
     ElMessage.error(`Create failed: ${e.message}`)
   } finally {
