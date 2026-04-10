@@ -2,8 +2,11 @@
   "appId": "com.nks-hub.webdev-console",
   "productName": "NKS WebDev Console",
   "directories": { "output": "release" },
-  "files": ["dist/**", "dist-electron/**"],
-  "win": { "target": "nsis" },
+  "files": ["out/**", "package.json"],
+  "extraMetadata": {
+    "main": "out/main/main.js"
+  },
+  "win": { "target": "dir" },
   "mac": { "target": "dmg" },
   "linux": { "target": "AppImage" }
 }
