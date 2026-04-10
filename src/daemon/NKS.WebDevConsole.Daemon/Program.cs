@@ -5,6 +5,7 @@ using NKS.WebDevConsole.Daemon.Sites;
 using NKS.WebDevConsole.Daemon.Binaries;
 using NKS.WebDevConsole.Daemon.Config;
 using NKS.WebDevConsole.Daemon.Data;
+using CliWrap.Buffered;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 
@@ -512,10 +513,80 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
     return Results.Ok(settings);
 });
 
-// Databases placeholder
-app.MapGet("/api/databases", () =>
+// Databases — list MySQL databases via mysql CLI
+app.MapGet("/api/databases", async (BinaryManager bm) =>
 {
-    return Results.Ok(Array.Empty<object>());
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.Ok(new { error = "MySQL not installed", databases = Array.Empty<string>() });
+
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    if (!File.Exists(mysqlCli))
+        return Results.Ok(new { error = "mysql.exe not found", databases = Array.Empty<string>() });
+
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments("-h 127.0.0.1 -P 3306 -u root -N -e \"SHOW DATABASES\"")
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        if (result.ExitCode != 0)
+            return Results.Ok(new { error = result.StandardError.Trim(), databases = Array.Empty<string>() });
+
+        var dbs = result.StandardOutput
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(d => d.Trim())
+            .Where(d => d != "information_schema" && d != "performance_schema" && d != "sys" && d != "mysql")
+            .ToList();
+
+        return Results.Ok(new { databases = dbs });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { error = ex.Message, databases = Array.Empty<string>() });
+    }
+});
+
+// Create database
+app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    var dbName = body?.GetValueOrDefault("name") ?? "";
+    if (string.IsNullOrWhiteSpace(dbName))
+        return Results.BadRequest(new { error = "Database name required" });
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -e \"CREATE DATABASE IF NOT EXISTS `{dbName}`\"")
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+
+    return result.ExitCode == 0
+        ? Results.Created($"/api/databases/{dbName}", new { name = dbName })
+        : Results.BadRequest(new { error = result.StandardError.Trim() });
+});
+
+// Drop database
+app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -e \"DROP DATABASE IF EXISTS `{name}`\"")
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+
+    return result.ExitCode == 0
+        ? Results.NoContent()
+        : Results.BadRequest(new { error = result.StandardError.Trim() });
 });
 
 // ── Binary catalog + installation management ──────────────────────────────
