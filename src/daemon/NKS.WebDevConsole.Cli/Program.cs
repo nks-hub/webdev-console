@@ -131,6 +131,31 @@ logsCommand.SetAction(async (parseResult, ct) =>
     }
 });
 
+// --- wdc services info {id} ---
+var svcInfoIdArg = new Argument<string>("id");
+var svcInfoCmd = new Command("info", "Show detailed info about a service") { svcInfoIdArg };
+svcInfoCmd.SetAction(async (parseResult, ct) =>
+{
+    var id = parseResult.GetValue(svcInfoIdArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var svc = await client.GetJsonAsync($"/api/services/{id}");
+    if (json) { PrintJson(svc); return; }
+    var table = new Table().Border(TableBorder.Rounded).HideHeaders();
+    table.AddColumn("Key"); table.AddColumn("Value");
+    table.AddRow("ID", svc.GetProperty("id").GetString() ?? "?");
+    table.AddRow("Name", svc.GetProperty("displayName").GetString() ?? "-");
+    var st = svc.GetProperty("state").GetInt32();
+    table.AddRow("State", FormatState(StateNumToStr(st)));
+    table.AddRow("PID", GetInt(svc, "pid")?.ToString() ?? "-");
+    table.AddRow("CPU", GetDouble(svc, "cpuPercent") is double c ? $"{c:F1}%" : "-");
+    table.AddRow("Memory", GetLong(svc, "memoryBytes") is long m ? FormatBytes(m) : "-");
+    if (svc.TryGetProperty("uptime", out var up)) table.AddRow("Uptime", up.GetString() ?? "-");
+    AnsiConsole.Write(table);
+});
+servicesCommand.Add(svcInfoCmd);
+
 // --- wdc sites ---
 var sitesCommand = new Command("sites", "List all sites");
 sitesCommand.SetAction(async (parseResult, ct) =>
