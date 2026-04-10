@@ -669,6 +669,27 @@ app.MapDelete("/api/ssl/certs/{domain}", (string domain) =>
         : Results.NotFound(new { ok = false, message = $"No certificate found for {domain}" });
 });
 
+// DNS flush
+app.MapPost("/api/dns/flush", async () =>
+{
+    try
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var result = await CliWrap.Cli.Wrap("ipconfig")
+                .WithArguments("/flushdns")
+                .WithValidation(CliWrap.CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+            return Results.Ok(new { ok = result.ExitCode == 0, output = result.StandardOutput.Trim() });
+        }
+        return Results.Ok(new { ok = false, output = "Not supported on this platform" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { ok = false, output = ex.Message });
+    }
+});
+
 // Settings CRUD
 app.MapGet("/api/settings", async (Database db) =>
 {

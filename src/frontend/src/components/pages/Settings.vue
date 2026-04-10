@@ -57,6 +57,16 @@
               <el-form-item label="Auto-start services">
                 <el-switch v-model="autoStart" />
               </el-form-item>
+              <el-form-item label="Default PHP version">
+                <el-select v-model="defaultPhp" style="width: 160px" placeholder="Select">
+                  <el-option v-for="v in phpVersions" :key="v" :label="'PHP ' + v" :value="v" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="DNS Cache">
+                <el-button size="small" @click="flushDns" :loading="flushingDns">
+                  Flush DNS Cache
+                </el-button>
+              </el-form-item>
             </el-form>
           </div>
         </el-tab-pane>
@@ -195,6 +205,9 @@ const ports = reactive({
 
 const runOnStartup = ref(false)
 const autoStart = ref(true)
+const defaultPhp = ref('8.4')
+const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
+const flushingDns = ref(false)
 
 const paths = reactive({
   apache: '',
@@ -252,6 +265,29 @@ async function dropDatabase(name: string) {
   } catch (e: any) { ElMessage.error(`Drop failed: ${e.message}`) }
 }
 
+async function flushDns() {
+  flushingDns.value = true
+  try {
+    const r = await fetch(`${daemonBase()}/api/dns/flush`, { method: 'POST', headers: authHeaders() })
+    if (r.ok) ElMessage.success('DNS cache flushed')
+    else ElMessage.warning('DNS flush may require admin privileges')
+  } catch {
+    ElMessage.warning('DNS flush endpoint not available')
+  } finally {
+    flushingDns.value = false
+  }
+}
+
+async function loadPhpVersions() {
+  try {
+    const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: authHeaders() })
+    if (r.ok) {
+      const data = await r.json()
+      phpVersions.value = data.map((v: any) => v.majorMinor || v.version)
+    }
+  } catch { /* keep defaults */ }
+}
+
 async function loadSettings() {
   try {
     const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
@@ -276,6 +312,7 @@ async function loadSettings() {
 onMounted(async () => {
   void loadSettings()
   void loadDatabases()
+  void loadPhpVersions()
   try {
     const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
