@@ -2,13 +2,6 @@
   <div class="settings-page">
     <h2>Settings</h2>
 
-    <el-alert
-      title="Settings persistence not yet implemented — changes will not be saved."
-      type="warning"
-      :closable="false"
-      show-icon
-      style="margin-bottom: 16px"
-    />
 
     <el-tabs>
       <el-tab-pane label="Ports" name="ports">
@@ -53,13 +46,13 @@
     </el-tabs>
 
     <div class="settings-footer">
-      <el-button type="primary" size="small" disabled @click="save">Save Settings</el-button>
+      <el-button type="primary" size="small" :loading="saving" @click="save">Save Settings</el-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useThemeStore, type ThemeMode } from '../../stores/theme'
 
@@ -69,10 +62,65 @@ const themeStore = useThemeStore()
 const ports = reactive({ http: 80, https: 443, mysql: 3306 })
 const runOnStartup = ref(false)
 const autoStart = ref(true)
+const saving = ref(false)
 
-function save() {
-  // TODO: persist via daemon API
-  ElMessage.success('Settings saved')
+declare global {
+  interface Window {
+    daemonApi?: { getPort: () => number; getToken: () => string }
+  }
+}
+
+function daemonBase(): string {
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
+  return `http://localhost:${port}`
+}
+
+function authHeaders(): Record<string, string> {
+  const urlToken = new URLSearchParams(window.location.search).get('token')
+  const token = window.daemonApi?.getToken?.() || urlToken || ''
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
+onMounted(async () => {
+  try {
+    const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+    if (!r.ok) return
+    const data = await r.json() as Record<string, string>
+    if (data['ports.http']) ports.http = parseInt(data['ports.http'])
+    if (data['ports.https']) ports.https = parseInt(data['ports.https'])
+    if (data['ports.mysql']) ports.mysql = parseInt(data['ports.mysql'])
+    if (data['general.runOnStartup']) runOnStartup.value = data['general.runOnStartup'] === 'true'
+    if (data['general.autoStart']) autoStart.value = data['general.autoStart'] === 'true'
+  } catch {
+    // daemon not reachable — keep defaults
+  }
+})
+
+async function save() {
+  saving.value = true
+  try {
+    const payload: Record<string, string> = {
+      'ports.http': String(ports.http),
+      'ports.https': String(ports.https),
+      'ports.mysql': String(ports.mysql),
+      'general.runOnStartup': String(runOnStartup.value),
+      'general.autoStart': String(autoStart.value),
+    }
+    const r = await fetch(`${daemonBase()}/api/settings`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    ElMessage.success('Settings saved')
+  } catch (e: any) {
+    ElMessage.error(`Failed to save settings: ${e.message}`)
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
