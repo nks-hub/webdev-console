@@ -405,6 +405,19 @@ phpExtCmd.SetAction(async (parseResult, ct) =>
 });
 phpCommand.Add(phpExtCmd);
 
+// --- wdc open {domain} ---
+var openDomainArg = new Argument<string>("domain") { Description = "Site domain to open in browser" };
+var openCommand = new Command("open", "Open a site in the default browser") { openDomainArg };
+openCommand.SetAction((parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(openDomainArg)!;
+    var url = $"http://{domain}";
+    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+    AnsiConsole.MarkupLine($"Opening [blue]{Markup.Escape(url)}[/]...");
+    return Task.CompletedTask;
+});
+
+rootCommand.Add(openCommand);
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(logsCommand);
