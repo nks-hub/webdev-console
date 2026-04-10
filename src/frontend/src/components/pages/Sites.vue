@@ -39,7 +39,7 @@
             <el-input v-model="selectedSite.phpVersion" />
           </el-form-item>
           <el-form-item label="Document Root">
-            <el-input v-model="selectedSite.docRoot" />
+            <el-input v-model="selectedSite.documentRoot" />
           </el-form-item>
           <el-form-item label="SSL">
             <el-switch v-model="selectedSite.sslEnabled" />
@@ -56,7 +56,7 @@
           <el-input v-model="newSite.domain" placeholder="myapp.loc" />
         </el-form-item>
         <el-form-item label="Document Root">
-          <el-input v-model="newSite.docRoot" placeholder="C:\work\sites\myapp\www" />
+          <el-input v-model="newSite.documentRoot" placeholder="C:\work\sites\myapp\www" />
         </el-form-item>
         <el-form-item label="PHP Version">
           <el-input v-model="newSite.phpVersion" placeholder="8.2" />

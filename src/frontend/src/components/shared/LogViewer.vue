@@ -20,18 +20,35 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 
+declare global {
+  interface Window {
+    daemonApi?: { getPort: () => number; getToken: () => string }
+  }
+}
+
+function daemonBase(): string {
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
+  return `http://localhost:${port}`
+}
+
+function daemonToken(): string {
+  return window.daemonApi?.getToken?.() || new URLSearchParams(window.location.search).get('token') || ''
+}
+
 const props = defineProps<{ serviceId?: string }>()
 const terminalRef = ref<HTMLElement>()
 const logLevel = ref('all')
 
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
+let closeEventSource: (() => void) | null = null
 
 function clearTerminal() {
   terminal?.clear()
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (!terminalRef.value) return
 
   terminal = new Terminal({
@@ -55,17 +72,50 @@ onMounted(() => {
   terminal.open(terminalRef.value)
   fitAddon.fit()
 
-  // Demo output to verify ANSI rendering
-  terminal.writeln('\x1b[32m[INFO]\x1b[0m  NKS WebDev Console Log Viewer initialized')
-  terminal.writeln('\x1b[33m[WARN]\x1b[0m  This is a warning message')
-  terminal.writeln('\x1b[31m[ERROR]\x1b[0m This is an error message')
-  terminal.writeln('\x1b[36m[DEBUG]\x1b[0m Service: ' + (props.serviceId ?? 'none'))
+  // Fetch historical logs from daemon
+  if (props.serviceId) {
+    try {
+      const baseUrl = daemonBase()
+      const token = daemonToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const resp = await fetch(`${baseUrl}/api/services/${props.serviceId}/logs?lines=100`, { headers })
+      if (resp.ok) {
+        const logs = await resp.json() as string[]
+        logs.forEach(line => terminal?.writeln(line))
+      }
+    } catch {
+      // daemon may not be running
+    }
+  }
+
+  // Subscribe to SSE log events and append matching lines
+  if (props.serviceId) {
+    const token = daemonToken()
+    const url = token
+      ? `${daemonBase()}/api/events?token=${encodeURIComponent(token)}`
+      : `${daemonBase()}/api/events`
+    const es = new EventSource(url)
+
+    es.addEventListener('log', (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as { serviceId?: string; line?: string }
+        if (data.serviceId === props.serviceId && data.line) {
+          terminal?.writeln(data.line)
+        }
+      } catch { /* ignore parse errors */ }
+    })
+
+    closeEventSource = () => es.close()
+  }
 
   const resizeObserver = new ResizeObserver(() => fitAddon?.fit())
   resizeObserver.observe(terminalRef.value)
 })
 
 onUnmounted(() => {
+  closeEventSource?.()
   terminal?.dispose()
 })
 </script>

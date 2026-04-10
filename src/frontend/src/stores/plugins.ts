@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchPlugins, fetchPluginUi, enablePlugin, disablePlugin } from '../api/daemon'
 import type { PluginManifest, PluginUiDefinition } from '../api/types'
+import { useDaemonStore } from './daemon'
 
 export interface SidebarCategory {
   id: string
@@ -47,7 +48,12 @@ export const usePluginsStore = defineStore('plugins', () => {
         id: plugin.id,
         name: plugin.name,
         icon: plugin.ui.icon,
-        serviceStatus: 'stopped',
+        serviceStatus: (() => {
+          const daemonStore = useDaemonStore()
+          const svc = daemonStore.services.find((s: any) => s.id === plugin.id || s.displayName === plugin.name)
+          if (!svc) return 'stopped'
+          return svc.state === 2 ? 'running' : svc.state === 4 ? 'error' : 'stopped'
+        })(),
       })
     }
 

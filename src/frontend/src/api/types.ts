@@ -21,13 +21,15 @@ export interface StatusResponse {
 }
 
 export interface SiteInfo {
-  id: string
   domain: string
-  docRoot: string
+  documentRoot: string
   phpVersion: string
   sslEnabled: boolean
-  status: 'active' | 'inactive'
+  httpPort: number
+  httpsPort: number
+  aliases: string[]
   framework?: string
+  environment?: Record<string, string>
 }
 
 export interface PhpVersion {
