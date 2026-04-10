@@ -625,6 +625,23 @@ stopAllCmd.SetAction(async (parseResult, ct) =>
     }
 });
 
+var restartAllCmd = new Command("restart-all", "Restart all running services");
+restartAllCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var svcs = await client.GetJsonAsync("/api/services");
+    foreach (var s in svcs.EnumerateArray())
+    {
+        if (s.GetProperty("state").GetInt32() == 2)
+        {
+            var id = s.GetProperty("id").GetString()!;
+            try { await client.PostAsync($"/api/services/{id}/restart"); AnsiConsole.MarkupLine($"[blue]Restarted[/] {id}"); }
+            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); }
+        }
+    }
+});
+
 // --- wdc info {domain} ---
 var infoDomainArg = new Argument<string>("domain") { Description = "Site domain" };
 var infoCommand = new Command("info", "Show detailed info about a site") { infoDomainArg };
@@ -660,6 +677,7 @@ rootCommand.Add(configCommand);
 rootCommand.Add(doctorCommand);
 rootCommand.Add(startAllCmd);
 rootCommand.Add(stopAllCmd);
+rootCommand.Add(restartAllCmd);
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(logsCommand);
