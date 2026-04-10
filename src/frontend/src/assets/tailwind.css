@@ -177,7 +177,7 @@ html:not(.dark) {
 }
 
 html {
-  font-size: 16.5px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

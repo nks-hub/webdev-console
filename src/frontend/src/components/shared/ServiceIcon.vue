@@ -60,8 +60,8 @@ watch(() => props.service, () => { loadError.value = false })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   color: var(--wdc-text-3);
   transition: opacity 0.12s, filter 0.12s;
@@ -75,8 +75,8 @@ watch(() => props.service, () => { loadError.value = false })
   pointer-events: none;
 }
 .svc-icon.inactive {
-  opacity: 0.45;
-  filter: saturate(0.12) brightness(0.85);
+  opacity: 0.55;
+  filter: saturate(0.35);
 }
 .fallback {
   font-size: 0.72rem;
