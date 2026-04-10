@@ -47,6 +47,13 @@ public class DaemonClient : IDisposable
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
+    public async Task<JsonElement> PutAsync(string path, HttpContent? content = null)
+    {
+        var response = await _http.PutAsync($"{_baseUrl}{path}", content ?? new StringContent(""));
+        response.EnsureSuccessStatusCode();
+        return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync()).ContinueWith(t => t.Result.RootElement);
+    }
+
     public async Task<HttpResponseMessage> DeleteAsync(string path)
     {
         var response = await _http.DeleteAsync($"{_baseUrl}{path}");

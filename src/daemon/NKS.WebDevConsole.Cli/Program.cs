@@ -253,6 +253,39 @@ reapplyCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(reapplyCmd);
 
+// --- wdc sites update {domain} ---
+var updateDomainArg = new Argument<string>("domain");
+var updatePhpOpt = new Option<string?>("--php") { Description = "Set PHP version" };
+var updateDocrootOpt = new Option<string?>("--docroot") { Description = "Set document root" };
+var updateSiteCmd = new Command("update", "Update a site") { updateDomainArg, updatePhpOpt, updateDocrootOpt };
+updateSiteCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(updateDomainArg)!;
+    var php = parseResult.GetValue(updatePhpOpt);
+    var docroot = parseResult.GetValue(updateDocrootOpt);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var site = await client.GetJsonAsync($"/api/sites/{domain}");
+    var payload = new Dictionary<string, object?>
+    {
+        ["domain"] = domain,
+        ["documentRoot"] = docroot ?? (site.TryGetProperty("documentRoot", out var dr) ? dr.GetString() : null),
+        ["phpVersion"] = php ?? (site.TryGetProperty("phpVersion", out var pv) ? pv.GetString() : null),
+        ["sslEnabled"] = site.TryGetProperty("sslEnabled", out var ssl) && ssl.GetBoolean(),
+        ["httpPort"] = site.TryGetProperty("httpPort", out var hp) ? hp.GetInt32() : 80,
+        ["httpsPort"] = site.TryGetProperty("httpsPort", out var hps) ? hps.GetInt32() : 443,
+    };
+    var content = JsonContent.Create(payload);
+    var result = await client.PutAsync($"/api/sites/{domain}", content);
+    if (json) { PrintJson(result); return; }
+    AnsiConsole.MarkupLine($"[green]Updated[/] {Markup.Escape(domain)}");
+    if (php != null) AnsiConsole.MarkupLine($"  PHP → {Markup.Escape(php)}");
+    if (docroot != null) AnsiConsole.MarkupLine($"  DocRoot → {Markup.Escape(docroot)}");
+});
+sitesCommand.Add(updateSiteCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
