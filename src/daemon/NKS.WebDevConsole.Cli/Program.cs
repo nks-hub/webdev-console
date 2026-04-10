@@ -443,8 +443,78 @@ configCommand.SetAction((parseResult, ct) =>
     return Task.CompletedTask;
 });
 
+// --- wdc doctor ---
+var doctorCommand = new Command("doctor", "Run health checks on the NKS WDC stack");
+doctorCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var checks = new List<(string name, bool ok, string detail)>();
+
+    // 1. Port file exists
+    var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
+    checks.Add(("Port file", File.Exists(portFile), File.Exists(portFile) ? portFile : "Missing"));
+
+    // 2. Daemon reachable
+    using var client = new DaemonClient();
+    var connected = client.Connect();
+    checks.Add(("Daemon connection", connected, connected ? "OK" : "Cannot connect"));
+
+    if (connected)
+    {
+        // 3. Services
+        try
+        {
+            var svcs = await client.GetJsonAsync("/api/services");
+            var running = 0; var crashed = 0; var total = svcs.GetArrayLength();
+            foreach (var s in svcs.EnumerateArray())
+            {
+                var st = s.GetProperty("state").GetInt32();
+                if (st == 2) running++;
+                if (st == 4) crashed++;
+            }
+            checks.Add(("Services", crashed == 0, $"{running}/{total} running, {crashed} crashed"));
+        }
+        catch { checks.Add(("Services", false, "Query failed")); }
+
+        // 4. Sites
+        try
+        {
+            var sites = await client.GetJsonAsync("/api/sites");
+            checks.Add(("Sites configured", sites.GetArrayLength() > 0, $"{sites.GetArrayLength()} sites"));
+        }
+        catch { checks.Add(("Sites", false, "Query failed")); }
+
+        // 5. Binaries
+        try
+        {
+            var bins = await client.GetJsonAsync("/api/binaries/installed");
+            checks.Add(("Binaries installed", bins.GetArrayLength() > 0, $"{bins.GetArrayLength()} packages"));
+        }
+        catch { checks.Add(("Binaries", false, "Query failed")); }
+    }
+
+    // 6. Hosts file writable
+    var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+    var hostsOk = false;
+    try { using var f = File.Open(hostsPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite); hostsOk = true; } catch { }
+    checks.Add(("Hosts file writable", hostsOk, hostsOk ? hostsPath : "Need admin elevation"));
+
+    if (json) { PrintJson(checks.Select(c => new { c.name, c.ok, c.detail })); return; }
+
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Check"); table.AddColumn("Status"); table.AddColumn("Detail");
+    foreach (var (name, ok, detail) in checks)
+        table.AddRow(Markup.Escape(name), ok ? "[green]PASS[/]" : "[red]FAIL[/]", Markup.Escape(detail));
+    AnsiConsole.Write(table);
+
+    var allOk = checks.All(c => c.ok);
+    AnsiConsole.WriteLine();
+    AnsiConsole.MarkupLine(allOk ? "[green bold]All checks passed![/]" : "[yellow]Some checks failed. See details above.[/]");
+});
+
 rootCommand.Add(openCommand);
 rootCommand.Add(configCommand);
+rootCommand.Add(doctorCommand);
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(logsCommand);
