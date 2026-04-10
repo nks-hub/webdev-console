@@ -11,6 +11,17 @@ let daemon: ChildProcess | null = null
 let daemonConnected = false
 let isQuitting = false
 
+// Portable mode: if portable.txt exists next to the app, use local data dir
+const isPortable = existsSync(join(app.getAppPath(), 'portable.txt'))
+  || existsSync(join(process.cwd(), 'portable.txt'))
+
+if (isPortable) {
+  // Store all user data next to the app binary instead of %APPDATA%
+  const portableDir = join(app.getAppPath(), 'data')
+  app.setPath('userData', portableDir)
+  console.log('[portable] mode enabled, data dir:', portableDir)
+}
+
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
 
 function readPortFile(): { port: number; token: string } | null {
