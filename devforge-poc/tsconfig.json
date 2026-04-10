@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "types": ["vite/client"]
   },
   "include": ["electron/**/*", "src/**/*"],
   "exclude": ["node_modules", "dist", "dist-electron"]

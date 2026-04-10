@@ -121,4 +121,4 @@ app.whenReady().then(() => {
   createTray()
 })
 
-app.on('window-all-closed', (e: Event) => e.preventDefault())
+app.on('window-all-closed', () => { /* keep running — hide to tray on close */ })
