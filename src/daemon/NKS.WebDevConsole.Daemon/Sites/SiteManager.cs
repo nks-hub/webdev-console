@@ -55,8 +55,27 @@ public class SiteManager
 
     public SiteConfig? Get(string domain) => _sites.GetValueOrDefault(domain);
 
+    public static void ValidateDomain(string domain)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+            throw new ArgumentException("Domain name is required");
+        if (domain.Length > 253)
+            throw new ArgumentException("Domain name too long (max 253 chars)");
+        // Reject dangerous characters per SPEC section 18
+        var forbidden = new[] { ' ', '\t', '\n', '\r', '\0', ';', '|', '&', '$', '`', '>', '<', '"', '\'' };
+        foreach (var c in forbidden)
+            if (domain.Contains(c))
+                throw new ArgumentException($"Domain contains forbidden character: '{c}'");
+        if (domain.Contains("../") || domain.Contains("..\\"))
+            throw new ArgumentException("Domain contains path traversal sequence");
+        // Must look like a hostname
+        if (!System.Text.RegularExpressions.Regex.IsMatch(domain, @"^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$"))
+            throw new ArgumentException("Domain must be a valid hostname (letters, digits, hyphens, dots)");
+    }
+
     public async Task<SiteConfig> CreateAsync(SiteConfig site)
     {
+        ValidateDomain(site.Domain);
         var toml = TomlSerializer.Serialize(site);
         var path = Path.Combine(_sitesDir, $"{site.Domain}.toml");
         await File.WriteAllTextAsync(path, toml);

@@ -327,8 +327,8 @@ app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
 
 app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
-    if (string.IsNullOrWhiteSpace(site.Domain))
-        return Results.BadRequest(new { error = "Domain is required" });
+    try { SiteManager.ValidateDomain(site.Domain); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     if (sm.Get(site.Domain) is not null)
         return Results.Conflict(new { error = $"Site {site.Domain} already exists" });
     var created = await sm.CreateAsync(site);
