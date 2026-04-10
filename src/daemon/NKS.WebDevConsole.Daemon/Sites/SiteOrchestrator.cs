@@ -222,6 +222,9 @@ $begin
 {string.Join(Environment.NewLine, allDomains.Select(d => $"127.0.0.1\t{d}"))}
 $end
 ""@
+# Backup hosts file before modification
+$backupPath = $hostsPath + '.wdc-backup'
+if (-not (Test-Path $backupPath)) {{ Copy-Item $hostsPath $backupPath -ErrorAction SilentlyContinue }}
 $content = Get-Content $hostsPath -Raw -ErrorAction SilentlyContinue
 if (-not $content) {{ $content = '' }}
 $bi = $content.IndexOf($begin)
