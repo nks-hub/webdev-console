@@ -116,8 +116,19 @@ public class SiteManager
 
     public async Task<SiteConfig> UpdateAsync(SiteConfig site)
     {
+        // SECURITY: validate before building any path from domain (prevents traversal
+        // via crafted PUT body). Same treatment as Delete/Create.
+        ValidateDomain(site.Domain);
+        if (site.Aliases is { Length: > 0 })
+            foreach (var alias in site.Aliases)
+                ValidateAlias(alias);
+
         var toml = TomlSerializer.Serialize(site);
-        var path = Path.Combine(_sitesDir, $"{site.Domain}.toml");
+        var sitesRoot = Path.GetFullPath(_sitesDir);
+        var path = Path.GetFullPath(Path.Combine(_sitesDir, $"{site.Domain}.toml"));
+        if (!path.StartsWith(sitesRoot, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Resolved site path escapes sites root");
+
         await _writer.WriteAsync(path, toml);
         _sites[site.Domain] = site;
         return site;
@@ -125,9 +136,24 @@ public class SiteManager
 
     public bool Delete(string domain)
     {
-        var path = Path.Combine(_sitesDir, $"{domain}.toml");
+        // SECURITY: validate domain before touching any path. Without this, a caller
+        // could pass "../../something" and delete files outside the sites directory.
+        ValidateDomain(domain);
+
+        // Additional defense: resolve full paths and verify they live inside the
+        // expected directories. Defends against TOCTOU / creative inputs even if
+        // ValidateDomain ever loosens its pattern.
+        var sitesRoot = Path.GetFullPath(_sitesDir);
+        var generatedRoot = Path.GetFullPath(_generatedDir);
+        var path = Path.GetFullPath(Path.Combine(_sitesDir, $"{domain}.toml"));
+        var genPath = Path.GetFullPath(Path.Combine(_generatedDir, $"{domain}.conf"));
+
+        if (!path.StartsWith(sitesRoot, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Resolved site path escapes sites root");
+        if (!genPath.StartsWith(generatedRoot, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Resolved generated path escapes generated root");
+
         if (File.Exists(path)) File.Delete(path);
-        var genPath = Path.Combine(_generatedDir, $"{domain}.conf");
         if (File.Exists(genPath)) File.Delete(genPath);
         return _sites.Remove(domain);
     }

@@ -413,9 +413,14 @@ app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrat
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     if (sm.Get(site.Domain) is not null)
         return Results.Conflict(new { error = $"Site {site.Domain} already exists" });
-    var created = await sm.CreateAsync(site);
-    await orchestrator.ApplyAsync(created);
-    return Results.Created($"/api/sites/{created.Domain}", created);
+    try
+    {
+        var created = await sm.CreateAsync(site);
+        await orchestrator.ApplyAsync(created);
+        return Results.Created($"/api/sites/{created.Domain}", created);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
 app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
@@ -423,14 +428,30 @@ app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteMan
     if (sm.Get(domain) is null)
         return Results.NotFound();
     site.Domain = domain;
-    var updated = await sm.UpdateAsync(site);
-    await orchestrator.ApplyAsync(updated);
-    return Results.Ok(updated);
+    try
+    {
+        var updated = await sm.UpdateAsync(site);
+        await orchestrator.ApplyAsync(updated);
+        return Results.Ok(updated);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
 app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
-    if (!sm.Delete(domain)) return Results.NotFound();
+    try
+    {
+        if (!sm.Delete(domain)) return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
     await orchestrator.RemoveAsync(domain);
     return Results.NoContent();
 });
