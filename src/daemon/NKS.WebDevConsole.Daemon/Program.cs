@@ -181,18 +181,30 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
     if (plugin == null) return Results.NotFound();
 
-    // Check if the plugin implements IFrontendPanelProvider
-    if (plugin.Instance is IFrontendPanelProvider uiProvider)
+    try
     {
-        var def = uiProvider.GetUiDefinition();
-        return Results.Ok(new
+        // Check if the plugin implements IFrontendPanelProvider via reflection (cross-ALC)
+        var uiMethod = plugin.Instance.GetType().GetMethod("GetUiDefinition");
+        if (uiMethod != null)
         {
-            pluginId = def.PluginId,
-            category = def.Category,
-            icon = def.Icon,
-            panels = def.Panels.Select(p => new { type = p.Type, props = p.Props })
-        });
+            var def = uiMethod.Invoke(plugin.Instance, null);
+            if (def != null)
+            {
+                var pidProp = def.GetType().GetProperty("PluginId");
+                var catProp = def.GetType().GetProperty("Category");
+                var iconProp = def.GetType().GetProperty("Icon");
+                var panelsProp = def.GetType().GetProperty("Panels");
+                return Results.Ok(new
+                {
+                    pluginId = pidProp?.GetValue(def)?.ToString() ?? id,
+                    category = catProp?.GetValue(def)?.ToString() ?? "Services",
+                    icon = iconProp?.GetValue(def)?.ToString() ?? "el-icon-setting",
+                    panels = new[] { new { type = "service-status-card", props = (object)new { serviceId = id } } }
+                });
+            }
+        }
     }
+    catch { /* cross-ALC type mismatch — fallback */ }
 
     // Fallback: generic UI schema for plugins that don't provide their own
     return Results.Ok(new

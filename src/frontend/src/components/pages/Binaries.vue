@@ -100,9 +100,10 @@
 
           <div class="release-list">
             <div
-              v-for="release in releases"
-              :key="release.version"
+              v-for="(release, ri) in releases"
+              :key="release?.version ?? ri"
               class="release-row"
+              v-if="release?.version"
             >
               <div class="release-info">
                 <span class="release-version">{{ release.version }}</span>
