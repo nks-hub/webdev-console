@@ -15,7 +15,7 @@
     <div class="sidebar-section">
       <div class="section-label" v-if="!collapsed">Web Server</div>
       <template v-for="svc in webServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`) }">
+        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
             <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
@@ -35,7 +35,7 @@
       <template v-for="svc in langServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
           <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
@@ -53,7 +53,7 @@
       <template v-for="svc in dbServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
           <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
@@ -71,7 +71,7 @@
       <template v-for="svc in cacheServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
           <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch

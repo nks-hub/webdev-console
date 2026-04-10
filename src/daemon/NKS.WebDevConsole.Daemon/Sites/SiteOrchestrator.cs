@@ -184,7 +184,7 @@ public sealed class SiteOrchestrator
 
     /// <summary>
     /// Collects all domains from all sites and writes them into the managed block of the hosts file.
-    /// Uses PowerShell with -Verb RunAs (UAC elevation) on Windows.
+    /// Uses PowerShell with -Verb RunAs (UAC elevation) on Windows — ONLY when content would actually change.
     /// </summary>
     private async Task UpdateHostsFileAsync(IEnumerable<string> domainsToAdd, CancellationToken ct)
     {
@@ -210,6 +210,22 @@ public sealed class SiteOrchestrator
         }
         foreach (var d in domainsToAdd)
             allDomains.Add(d);
+
+        // EARLY EXIT: read hosts file without elevation (most users can read it) and check if
+        // every required domain already maps to 127.0.0.1. If so, no UAC prompt is needed.
+        try
+        {
+            var existing = await File.ReadAllTextAsync(hostsPath, ct);
+            if (AllDomainsAlreadyMapped(existing, allDomains))
+            {
+                _logger.LogInformation("Hosts file already contains all {Count} managed domains — skipping UAC elevation", allDomains.Count);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug("Hosts file pre-check failed ({Error}) — proceeding with elevated write", ex.Message);
+        }
 
         // Build PowerShell command that writes managed block with elevation
         var entries = string.Join("\\n", allDomains.Select(d => $"127.0.0.1\\t{d}"));
@@ -243,19 +259,50 @@ for ($i = 4; $i -ge 1; $i--) {{
 }}
 Copy-Item $hostsPath ""$hostsPath.wdc-backup.1"" -Force
 
-# Find existing managed block
+# Snapshot original non-managed lines for post-write sanity check
+$originalLines = $content -split ""`r?`n""
+$inManagedBlock = $false
+$nonManagedOriginal = @()
+foreach ($ln in $originalLines) {{
+    if ($ln -match [regex]::Escape($begin)) {{ $inManagedBlock = $true; continue }}
+    if ($ln -match [regex]::Escape($end)) {{ $inManagedBlock = $false; continue }}
+    if (-not $inManagedBlock) {{ $nonManagedOriginal += $ln }}
+}}
+
+# Find existing managed block — find end AFTER begin, not from beginning
 $bi = $content.IndexOf($begin)
-$ei = $content.IndexOf($end)
+if ($bi -ge 0) {{
+    $ei = $content.IndexOf($end, $bi)
+}} else {{
+    $ei = -1
+}}
 if ($bi -ge 0 -and $ei -ge 0) {{
     # Replace ONLY the managed block, preserve everything before and after
     $before = $content.Substring(0, $bi)
     $after = $content.Substring($ei + $end.Length)
-    $content = $before.TrimEnd() + ""`r`n"" + $block + $after
+    $newContent = $before.TrimEnd() + ""`r`n"" + $block + $after
 }} else {{
     # No existing block — APPEND to end, never overwrite existing content
-    $content = $content.TrimEnd() + ""`r`n`r`n"" + $block + ""`r`n""
+    $newContent = $content.TrimEnd() + ""`r`n`r`n"" + $block + ""`r`n""
 }}
-Set-Content -Path $hostsPath -Value $content -Encoding ASCII -Force
+
+# SANITY: every original non-managed, non-empty line MUST still appear in new content
+foreach ($origLine in $nonManagedOriginal) {{
+    $trimmed = $origLine.Trim()
+    if ($trimmed.Length -eq 0) {{ continue }}
+    if ($newContent -notmatch [regex]::Escape($trimmed)) {{
+        Write-Error ""SAFETY ABORT: original line would be lost: $trimmed""
+        exit 2
+    }}
+}}
+
+# SANITY: new content must not be drastically smaller than original
+if ($newContent.Length -lt ($content.Length / 4)) {{
+    Write-Error ""SAFETY ABORT: new content is suspiciously small (orig=$($content.Length), new=$($newContent.Length))""
+    exit 3
+}}
+
+Set-Content -Path $hostsPath -Value $newContent -Encoding ASCII -Force
 ipconfig /flushdns | Out-Null
 ";
         // Write script to temp file and execute with elevation
@@ -286,6 +333,38 @@ ipconfig /flushdns | Out-Null
         {
             _logger.LogWarning("Hosts file write failed: {Error}. Try running NKS WDC as administrator.", ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Checks whether every required domain already maps to 127.0.0.1 in the hosts file content.
+    /// Works line-by-line, ignoring comments and whitespace. Used to skip UAC elevation when no write is needed.
+    /// </summary>
+    private static bool AllDomainsAlreadyMapped(string hostsContent, HashSet<string> requiredDomains)
+    {
+        if (requiredDomains.Count == 0) return true;
+
+        var mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rawLine in hostsContent.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith("#")) continue;
+
+            // split on whitespace/tabs: first token IP, remaining tokens are hostnames
+            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) continue;
+            var ip = parts[0];
+            if (ip != "127.0.0.1" && ip != "::1") continue;
+            for (int i = 1; i < parts.Length; i++)
+            {
+                var host = parts[i];
+                // strip inline comments
+                var hash = host.IndexOf('#');
+                if (hash >= 0) host = host.Substring(0, hash);
+                if (host.Length > 0) mapped.Add(host);
+            }
+        }
+
+        return requiredDomains.All(d => mapped.Contains(d));
     }
 
     /// <summary>

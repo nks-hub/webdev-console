@@ -4,26 +4,26 @@
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
   /* Backgrounds — deep navy with subtle warmth (unique NKS identity) */
-  --wdc-bg:          #141620;
-  --wdc-surface:     #1c1e2a;
-  --wdc-surface-2:   #252736;
-  --wdc-elevated:    #2e3042;
-  --wdc-hover:       #292b3a;
+  --wdc-bg:          #0f111a;
+  --wdc-surface:     #1a1d2c;
+  --wdc-surface-2:   #242838;
+  --wdc-elevated:    #2d3145;
+  --wdc-hover:       #2a2e42;
 
-  /* Borders — visible separation */
-  --wdc-border:      rgba(255, 255, 255, 0.15);
-  --wdc-border-strong: rgba(255, 255, 255, 0.25);
+  /* Borders — strong separation for WCAG AA */
+  --wdc-border:      rgba(255, 255, 255, 0.18);
+  --wdc-border-strong: rgba(255, 255, 255, 0.32);
 
-  /* Text — high contrast for readability */
-  --wdc-text:        #f0f2fa;
-  --wdc-text-2:      #b8bcd6;
-  --wdc-text-3:      #9ca0bc;
+  /* Text — WCAG AA+ contrast (all > 7:1 on bg) */
+  --wdc-text:        #ffffff;
+  --wdc-text-2:      #d5d9f0;
+  --wdc-text-3:      #a8acc8;
 
-  /* Accent — indigo/violet */
-  --wdc-accent:      #8b5cf6;
-  --wdc-accent-2:    #a78bfa;
-  --wdc-accent-glow: rgba(99, 102, 241, 0.15);
-  --wdc-accent-dim:  rgba(99, 102, 241, 0.14);
+  /* Accent — brighter violet for dark bg readability */
+  --wdc-accent:      #a78bfa;
+  --wdc-accent-2:    #c4b5fd;
+  --wdc-accent-glow: rgba(167, 139, 250, 0.20);
+  --wdc-accent-dim:  rgba(167, 139, 250, 0.22);
 
   /* Status */
   --wdc-status-running:  #22c55e;
@@ -54,19 +54,20 @@ html:not(.dark) {
   --wdc-surface:     #ffffff;
   --wdc-surface-2:   #f8f8fb;
   --wdc-elevated:    #eeeef4;
-  --wdc-hover:       #f0f0f6;
-  --wdc-border:      rgba(0, 0, 0, 0.08);
-  --wdc-border-strong: rgba(0, 0, 0, 0.14);
-  --wdc-text:        #111118;
-  --wdc-text-2:      #5c5f72;
-  --wdc-text-3:      #5a5f70;
-  --wdc-accent-glow: rgba(99, 102, 241, 0.10);
-  --wdc-accent-dim:  rgba(99, 102, 241, 0.06);
+  --wdc-hover:       #ebebf4;
+  --wdc-border:      rgba(0, 0, 0, 0.14);
+  --wdc-border-strong: rgba(0, 0, 0, 0.24);
+  --wdc-text:        #0b0c14;
+  --wdc-text-2:      #3b3e52;
+  --wdc-text-3:      #4a4d62;
+  --wdc-accent-glow: rgba(79, 70, 229, 0.12);
+  --wdc-accent-dim:  rgba(79, 70, 229, 0.12);
   --wdc-accent:        #4338ca;
+  --wdc-accent-2:      #6d28d9;
   --wdc-status-running: #15803d;
-  --wdc-status-error:   #dc2626;
+  --wdc-status-error:   #b91c1c;
   --wdc-status-starting: #b45309;
-  --wdc-status-stopped: #94959e;
+  --wdc-status-stopped: #6b7280;
   color-scheme: light;
 }
 
@@ -176,7 +177,7 @@ html:not(.dark) {
 }
 
 html {
-  font-size: 15.5px;
+  font-size: 16.5px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

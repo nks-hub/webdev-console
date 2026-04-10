@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>PostgreSQL</title>
+  <!-- elephant head -->
+  <ellipse cx="32" cy="32" rx="26" ry="27" fill="#336791"/>
+  <ellipse cx="32" cy="32" rx="22" ry="23" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.3"/>
+  <!-- eyes -->
+  <circle cx="24" cy="26" r="2" fill="#fff"/>
+  <circle cx="40" cy="26" r="2" fill="#fff"/>
+  <!-- trunk -->
+  <path d="M32 32 C 30 38 28 44 32 48 C 36 44 34 38 32 32" fill="#fff" opacity="0.85"/>
+</svg>

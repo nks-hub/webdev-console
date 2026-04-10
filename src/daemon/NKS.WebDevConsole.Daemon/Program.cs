@@ -220,6 +220,35 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
     });
 });
 
+// Plugin brand icon: streams embedded SVG resource from plugin DLL
+app.MapGet("/api/plugins/{id}/icon", (string id) =>
+{
+    // Accept either full plugin id (nks.wdc.apache) or short service id (apache)
+    var plugin = pluginLoader.Plugins.FirstOrDefault(p =>
+        p.Instance.Id.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || p.Instance.Id.EndsWith("." + id, StringComparison.OrdinalIgnoreCase)
+        || p.Instance.Id.Split('.').Last().Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    if (plugin is null)
+        return Results.NotFound();
+
+    var asm = plugin.Instance.GetType().Assembly;
+    // Resource name pattern: {AssemblyName}.Resources.icon.svg
+    var resourceName = asm.GetManifestResourceNames()
+        .FirstOrDefault(r => r.EndsWith(".Resources.icon.svg", StringComparison.OrdinalIgnoreCase)
+                          || r.EndsWith(".icon.svg", StringComparison.OrdinalIgnoreCase));
+    if (resourceName is null)
+        return Results.NotFound();
+
+    using var stream = asm.GetManifestResourceStream(resourceName);
+    if (stream is null)
+        return Results.NotFound();
+
+    using var ms = new MemoryStream();
+    stream.CopyTo(ms);
+    return Results.File(ms.ToArray(), "image/svg+xml");
+});
+
 // Service management endpoints — query real plugin modules
 app.MapGet("/api/services", async (IServiceProvider sp) =>
 {

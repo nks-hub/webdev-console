@@ -1,71 +1,86 @@
 <template>
-  <span class="service-icon" :class="{ inactive: !active }">
-    <!-- Apache feather -->
-    <svg v-if="service === 'apache'" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z" opacity="0.8"/>
-      <path d="M12 2L8 8l4 6-4 6 4 2 4-2-4-6 4-6-4-6z" fill="currentColor"/>
-    </svg>
-    <!-- PHP -->
-    <svg v-else-if="service === 'php'" viewBox="0 0 24 24" fill="currentColor">
-      <ellipse cx="12" cy="12" rx="11" ry="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <text x="12" y="15" text-anchor="middle" font-size="9" font-weight="bold" fill="currentColor">php</text>
-    </svg>
-    <!-- MySQL -->
-    <svg v-else-if="service === 'mysql'" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <text x="12" y="15" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">SQL</text>
-    </svg>
-    <!-- Redis -->
-    <svg v-else-if="service === 'redis'" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3L2 9l10 6 10-6-10-6zM2 15l10 6 10-6M2 12l10 6 10-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-    </svg>
-    <!-- Mailpit -->
-    <svg v-else-if="service === 'mailpit'" viewBox="0 0 24 24" fill="currentColor">
-      <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <path d="M3 7l9 6 9-6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-    </svg>
-    <!-- Default circle -->
-    <svg v-else viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="12" r="8" fill="currentColor"/>
-    </svg>
+  <span class="svc-icon" :class="{ inactive: !active }" :data-service="service">
+    <img v-if="iconUrl" :src="iconUrl" :alt="service" draggable="false" @error="onError" />
+    <span v-else class="fallback">{{ (service || '?').charAt(0).toUpperCase() }}</span>
   </span>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { ref, watch, computed } from 'vue'
+
+const props = defineProps<{
   service: string
   active: boolean
 }>()
+
+// Static frontend fallback assets — imported so Vite bundles them
+const staticIcons = import.meta.glob<string>('../../assets/brand/*.svg', { eager: true, query: '?url', import: 'default' })
+
+function staticUrlFor(id: string): string | null {
+  const key = Object.keys(staticIcons).find(k => k.endsWith(`/brand/${id}.svg`))
+  return key ? (staticIcons[key] as unknown as string) : null
+}
+
+function daemonBase(): string {
+  const params = new URLSearchParams(window.location.search)
+  const port = params.get('port') || (window as any).daemonApi?.getPort?.() || '5199'
+  return `http://localhost:${port}`
+}
+
+const loadError = ref(false)
+
+// Map daemon plugin ids to short service ids
+const SHORT_ID: Record<string, string> = {
+  'nks.wdc.apache': 'apache',
+  'nks.wdc.php': 'php',
+  'nks.wdc.mysql': 'mysql',
+  'nks.wdc.redis': 'redis',
+  'nks.wdc.mailpit': 'mailpit',
+}
+
+const iconUrl = computed(() => {
+  if (loadError.value) return staticUrlFor(props.service)
+  // Prefer daemon endpoint so users can swap plugin DLLs without rebuilding frontend
+  // Fall back to static asset if service id doesn't have known plugin
+  const shortId = SHORT_ID[props.service] || props.service
+  const knownPlugin = ['apache', 'php', 'mysql', 'redis', 'mailpit'].includes(shortId)
+  if (knownPlugin) return `${daemonBase()}/api/plugins/${shortId}/icon`
+  return staticUrlFor(shortId)
+})
+
+function onError() {
+  loadError.value = true
+}
+
+watch(() => props.service, () => { loadError.value = false })
 </script>
 
 <style scoped>
-.service-icon {
+.svc-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  transition: all 0.15s;
+  color: var(--wdc-text-3);
+  transition: opacity 0.12s, filter 0.12s;
+  user-select: none;
 }
-
-.service-icon svg {
+.svc-icon img {
   width: 100%;
   height: 100%;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
 }
-
-/* Color mapping per service when active */
-.service-icon:not(.inactive) { color: var(--wdc-accent); }
-
-/* Service-specific colors when active */
-:deep([data-service="apache"]) .service-icon:not(.inactive) { color: #e44d26; }
-:deep([data-service="php"]) .service-icon:not(.inactive) { color: #8892bf; }
-:deep([data-service="mysql"]) .service-icon:not(.inactive) { color: #4479a1; }
-:deep([data-service="redis"]) .service-icon:not(.inactive) { color: #dc382d; }
-:deep([data-service="mailpit"]) .service-icon:not(.inactive) { color: #22c55e; }
-
-.service-icon.inactive {
-  color: var(--wdc-text-3);
-  opacity: 0.5;
+.svc-icon.inactive {
+  opacity: 0.45;
+  filter: saturate(0.12) brightness(0.85);
+}
+.fallback {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--wdc-text-2);
 }
 </style>

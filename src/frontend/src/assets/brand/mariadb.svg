@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>MariaDB</title>
+  <!-- seal body -->
+  <path d="M8 44 C 8 32 18 20 30 16 C 40 12 52 16 56 24 C 58 30 56 38 48 44 C 40 50 28 52 20 50 C 12 48 8 46 8 44 Z"
+        fill="#003545"/>
+  <!-- accent -->
+  <circle cx="44" cy="26" r="2" fill="#fbbd14"/>
+  <path d="M14 44 C 20 38 28 32 38 30 C 46 28 52 30 54 34" stroke="#fbbd14" stroke-width="1.2" fill="none" opacity="0.6"/>
+</svg>
