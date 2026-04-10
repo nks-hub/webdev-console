@@ -1,45 +1,68 @@
 <template>
-  <div class="app-layout">
-    <header class="app-header">
-      <span class="app-title">DevForge POC</span>
-      <el-tag :type="store.connected ? 'success' : 'danger'" effect="dark" size="small">
-        {{ store.connected ? 'Daemon Online' : 'Daemon Offline' }}
-      </el-tag>
-    </header>
+  <div class="app-root">
+    <AppHeader />
 
-    <main class="app-main">
-      <ServiceCard />
-    </main>
+    <div class="app-body">
+      <AppSidebar />
+      <main class="content-area">
+        <router-view />
+      </main>
+    </div>
+
+    <AppStatusBar />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import AppHeader from './components/layout/AppHeader.vue'
+import AppSidebar from './components/layout/AppSidebar.vue'
+import AppStatusBar from './components/layout/AppStatusBar.vue'
 import { useDaemonStore } from './stores/daemon'
-import ServiceCard from './components/ServiceCard.vue'
+import { usePluginsStore } from './stores/plugins'
 
-const store = useDaemonStore()
-onMounted(() => store.startPolling())
-onUnmounted(() => store.stopPolling())
+const daemonStore = useDaemonStore()
+const pluginsStore = usePluginsStore()
+
+onMounted(() => {
+  daemonStore.startPolling()
+  void pluginsStore.loadAll()
+})
+
+onUnmounted(() => {
+  daemonStore.stopPolling()
+})
 </script>
 
 <style>
 :root {
+  --df-bg:      #0f1117;
+  --df-surface: #1a1d27;
+  --df-elevated:#242736;
   color-scheme: dark;
 }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0f0f1a; color: #e0e0e0; font-family: system-ui, sans-serif; }
-.app-layout { display: flex; flex-direction: column; height: 100vh; }
-.app-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 24px;
-  background: #1a1a2e;
-  border-bottom: 1px solid #2a2a4a;
-  -webkit-app-region: drag;
+body { background: var(--df-bg); color: #e8eaf0; font-family: system-ui, sans-serif; }
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  min-width: 900px;
+  min-height: 600px;
 }
-.app-title { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.05em; }
-.app-main {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 32px;
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--df-bg);
 }
 </style>
