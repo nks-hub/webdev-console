@@ -227,9 +227,9 @@ function formatUptime(seconds: number): string {
 }
 
 .svc-name {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--wdc-text);
 }
 
 .svc-badge { flex-shrink: 0; }
@@ -247,9 +247,9 @@ function formatUptime(seconds: number): string {
 }
 
 .metric-label {
-  font-size: 0.72rem;
-  color: var(--el-text-color-secondary);
-  width: 28px;
+  font-size: 0.78rem;
+  color: var(--wdc-text-2);
+  width: 32px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
@@ -275,8 +275,8 @@ function formatUptime(seconds: number): string {
   transition: width 0.4s ease;
 }
 
-.cpu-fill { background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
-.ram-fill { background: linear-gradient(90deg, #10b981, #06b6d4); }
+.cpu-fill { background: var(--wdc-accent); opacity: 0.7; }
+.ram-fill { background: var(--wdc-status-running); opacity: 0.6; }
 
 .metric-value {
   font-size: 0.75rem;

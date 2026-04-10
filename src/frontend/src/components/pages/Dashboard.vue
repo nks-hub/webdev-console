@@ -188,26 +188,26 @@ async function stopAll() {
 
 .stat-card {
   background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  padding: 16px 20px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .stat-value {
-  font-size: 1.75rem;
+  font-size: 2.2rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
-  font-size: 0.78rem;
-  color: var(--el-text-color-secondary);
+  font-size: 0.85rem;
+  color: var(--wdc-text-2);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  margin-top: 4px;
 }
 
 .services-grid {
