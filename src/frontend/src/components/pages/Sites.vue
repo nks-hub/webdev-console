@@ -1,11 +1,14 @@
 <template>
   <div class="sites-page">
     <div class="page-header">
-      <div>
+      <div class="header-left">
         <h1 class="page-title">Sites</h1>
-        <p class="page-subtitle">{{ sitesStore.sites.length }} site{{ sitesStore.sites.length !== 1 ? 's' : '' }} configured</p>
+        <span class="site-count">{{ sitesStore.sites.length }}</span>
       </div>
       <div class="header-actions">
+        <el-button size="small" @click="openHostsFile" title="Open hosts file">
+          Open Hosts
+        </el-button>
         <el-button size="small" @click="reapplyAll" :loading="reapplying" title="Regenerate all vhosts">
           Reapply All
         </el-button>
@@ -331,6 +334,12 @@ async function reapplyAll() {
   }
 }
 
+function openHostsFile() {
+  // Open hosts file in system editor
+  const hostsPath = 'C:\\Windows\\System32\\drivers\\etc\\hosts'
+  window.open(`vscode://file/${hostsPath}`, '_self')
+}
+
 function openInBrowser(site: SiteInfo) {
   const proto = site.sslEnabled ? 'https' : 'http'
   const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
@@ -357,16 +366,26 @@ function formatDate(iso: string): string {
   margin-bottom: 20px;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .page-title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--wdc-text);
 }
 
-.page-subtitle {
-  font-size: 0.82rem;
-  color: var(--wdc-text-2);
-  margin-top: 2px;
+.site-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .header-actions {
