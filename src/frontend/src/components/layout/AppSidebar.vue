@@ -83,6 +83,10 @@
 
     <!-- Bottom items -->
     <div class="sidebar-bottom">
+      <div class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
+        <el-icon :size="16"><Coin /></el-icon>
+        <span class="nav-label">Databases</span>
+      </div>
       <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <el-icon :size="16"><Download /></el-icon>
         <span class="nav-label">Binaries</span>
@@ -102,7 +106,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { ElMessage } from 'element-plus'

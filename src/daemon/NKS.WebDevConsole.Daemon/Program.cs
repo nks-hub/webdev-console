@@ -760,6 +760,78 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm) =>
         : Results.BadRequest(new { error = result.StandardError.Trim() });
 });
 
+// Database tables
+app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -N -e \"SELECT TABLE_NAME, TABLE_ROWS, ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}' ORDER BY TABLE_NAME\"")
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+    if (result.ExitCode != 0)
+        return Results.BadRequest(new { error = result.StandardError.Trim() });
+    var tables = result.StandardOutput.Trim()
+        .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        .Select(line =>
+        {
+            var parts = line.Split('\t');
+            return new { name = parts[0], rows = parts.Length > 1 ? parts[1] : "0", size = parts.Length > 2 ? parts[2] + " MB" : "0 MB" };
+        }).ToList();
+    return Results.Ok(new { tables });
+});
+
+// Database size
+app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -N -e \"SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}'\"")
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+    if (result.ExitCode != 0)
+        return Results.BadRequest(new { error = result.StandardError.Trim() });
+    return Results.Ok(new { size = result.StandardOutput.Trim() + " MB" });
+});
+
+// Database query execution
+app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, BinaryManager bm) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    var sql = body?.GetValueOrDefault("sql") ?? "";
+    if (string.IsNullOrWhiteSpace(sql))
+        return Results.BadRequest(new { error = "sql required" });
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments($"-h 127.0.0.1 -P 3306 -u root {name} -e \"{sql.Replace("\"", "\\\"")}\"")
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+    if (result.ExitCode != 0)
+        return Results.BadRequest(new { error = result.StandardError.Trim() });
+    // Parse tab-separated output to JSON
+    var lines = result.StandardOutput.Trim().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    if (lines.Length == 0)
+        return Results.Ok(new { rows = Array.Empty<object>(), message = "Query executed successfully (no output)" });
+    var headers = lines[0].Split('\t').Select(h => h.Trim()).ToArray();
+    var rows = lines.Skip(1).Select(l =>
+    {
+        var vals = l.Split('\t').Select(v => v.Trim()).ToArray();
+        var row = new Dictionary<string, string>();
+        for (int i = 0; i < headers.Length && i < vals.Length; i++)
+            row[headers[i]] = vals[i];
+        return row;
+    }).ToList();
+    return Results.Ok(new { columns = headers, rows, rowCount = rows.Count });
+});
+
 // ── Binary catalog + installation management ──────────────────────────────
 // GET /api/binaries/catalog          → all known releases
 // GET /api/binaries/catalog/{app}    → releases for one app

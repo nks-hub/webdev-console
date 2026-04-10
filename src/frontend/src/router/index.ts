@@ -5,11 +5,13 @@ import Settings from '../components/pages/Settings.vue'
 import PluginManager from '../components/pages/PluginManager.vue'
 import PluginPage from '../components/pages/PluginPage.vue'
 import Binaries from '../components/pages/Binaries.vue'
+import Databases from '../components/pages/Databases.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
   { path: '/dashboard', component: Dashboard, meta: { title: 'Services' } },
   { path: '/sites', component: Sites, meta: { title: 'Sites' } },
+  { path: '/databases', component: Databases, meta: { title: 'Databases' } },
   { path: '/settings', component: Settings, meta: { title: 'Settings' } },
   { path: '/plugins', component: PluginManager, meta: { title: 'Plugins' } },
   { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin' } },
