@@ -222,18 +222,37 @@ $begin
 {string.Join(Environment.NewLine, allDomains.Select(d => $"127.0.0.1\t{d}"))}
 $end
 ""@
-# Backup hosts file before modification
-$backupPath = $hostsPath + '.wdc-backup'
-if (-not (Test-Path $backupPath)) {{ Copy-Item $hostsPath $backupPath -ErrorAction SilentlyContinue }}
-$content = Get-Content $hostsPath -Raw -ErrorAction SilentlyContinue
-if (-not $content) {{ $content = '' }}
+
+# SAFETY: Read existing hosts file — ABORT completely if cannot read
+try {{
+    $content = Get-Content $hostsPath -Raw -ErrorAction Stop
+}} catch {{
+    Write-Error ""Cannot read hosts file: $_""
+    exit 1
+}}
+if ($null -eq $content -or $content.Length -eq 0) {{
+    Write-Error 'Hosts file is empty or unreadable — refusing to write'
+    exit 1
+}}
+
+# Rotate backups: keep last 5 versions (.wdc-backup.1 through .wdc-backup.5)
+for ($i = 4; $i -ge 1; $i--) {{
+    $src = ""$hostsPath.wdc-backup.$i""
+    $dst = ""$hostsPath.wdc-backup.$($i+1)""
+    if (Test-Path $src) {{ Move-Item $src $dst -Force }}
+}}
+Copy-Item $hostsPath ""$hostsPath.wdc-backup.1"" -Force
+
+# Find existing managed block
 $bi = $content.IndexOf($begin)
 $ei = $content.IndexOf($end)
 if ($bi -ge 0 -and $ei -ge 0) {{
+    # Replace ONLY the managed block, preserve everything before and after
     $before = $content.Substring(0, $bi)
     $after = $content.Substring($ei + $end.Length)
-    $content = $before.TrimEnd() + ""`r`n`r`n"" + $block + $after.TrimStart()
+    $content = $before.TrimEnd() + ""`r`n"" + $block + $after
 }} else {{
+    # No existing block — APPEND to end, never overwrite existing content
     $content = $content.TrimEnd() + ""`r`n`r`n"" + $block + ""`r`n""
 }}
 Set-Content -Path $hostsPath -Value $content -Encoding ASCII -Force
@@ -247,8 +266,8 @@ ipconfig /flushdns | Out-Null
         {
             FileName = "powershell.exe",
             Arguments = $"-ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
+            UseShellExecute = true,
+            Verb = "runas",
         };
 
         try
