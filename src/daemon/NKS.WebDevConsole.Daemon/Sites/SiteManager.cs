@@ -149,18 +149,61 @@ public class SiteManager
         return candidates.FirstOrDefault(File.Exists);
     }
 
+    /// <summary>
+    /// Detects the PHP framework powering a site by inspecting its document root
+    /// and parent directory (Laravel/Symfony/Nette typically have docroot=public/ or www/).
+    /// Returns a lowercase identifier or null. Recognized frameworks:
+    /// laravel, symfony, nette, wordpress, drupal, joomla, codeigniter, yii, slim, statamic.
+    /// </summary>
     public string? DetectFramework(string documentRoot)
     {
-        if (File.Exists(Path.Combine(documentRoot, "artisan"))) return "laravel";
-        if (File.Exists(Path.Combine(documentRoot, "wp-config.php"))) return "wordpress";
-        var composerJson = Path.Combine(documentRoot, "composer.json");
-        if (File.Exists(composerJson))
+        if (string.IsNullOrEmpty(documentRoot) || !Directory.Exists(documentRoot))
+            return null;
+
+        // Search the docroot AND its parent (frameworks like Laravel/Symfony/Nette
+        // expose only public/www as docroot but the project root holds composer.json/artisan)
+        var searchDirs = new List<string> { documentRoot };
+        var parent = Path.GetDirectoryName(documentRoot.TrimEnd('/', '\\'));
+        if (!string.IsNullOrEmpty(parent) && Directory.Exists(parent))
+            searchDirs.Add(parent);
+
+        foreach (var dir in searchDirs)
         {
-            var content = File.ReadAllText(composerJson);
-            if (content.Contains("nette/application")) return "nette";
-            if (content.Contains("symfony/framework-bundle")) return "symfony";
-            if (content.Contains("laravel/framework")) return "laravel";
+            // File markers — fastest, no parsing
+            if (File.Exists(Path.Combine(dir, "artisan"))) return "laravel";
+            if (File.Exists(Path.Combine(dir, "wp-config.php"))) return "wordpress";
+            if (File.Exists(Path.Combine(dir, "wp-load.php"))) return "wordpress";
+            if (File.Exists(Path.Combine(dir, "configuration.php")) &&
+                Directory.Exists(Path.Combine(dir, "administrator"))) return "joomla";
+            if (Directory.Exists(Path.Combine(dir, "core", "lib", "Drupal"))) return "drupal";
+            if (File.Exists(Path.Combine(dir, "bin", "console")) &&
+                Directory.Exists(Path.Combine(dir, "config", "packages"))) return "symfony";
+            if (File.Exists(Path.Combine(dir, "system", "core", "CodeIgniter.php"))) return "codeigniter";
+            if (File.Exists(Path.Combine(dir, "yii"))) return "yii";
+
+            // composer.json content marker — slower but most accurate
+            var composerJson = Path.Combine(dir, "composer.json");
+            if (File.Exists(composerJson))
+            {
+                try
+                {
+                    var content = File.ReadAllText(composerJson);
+                    if (content.Contains("\"laravel/framework\"")) return "laravel";
+                    if (content.Contains("\"symfony/framework-bundle\"")) return "symfony";
+                    if (content.Contains("\"symfony/symfony\"")) return "symfony";
+                    if (content.Contains("\"nette/application\"")) return "nette";
+                    if (content.Contains("\"nette/nette\"")) return "nette";
+                    if (content.Contains("\"drupal/core\"")) return "drupal";
+                    if (content.Contains("\"yiisoft/yii2\"")) return "yii";
+                    if (content.Contains("\"slim/slim\"")) return "slim";
+                    if (content.Contains("\"statamic/cms\"")) return "statamic";
+                    if (content.Contains("\"codeigniter4/framework\"")) return "codeigniter";
+                    if (content.Contains("\"cakephp/cakephp\"")) return "cakephp";
+                }
+                catch { /* unreadable composer.json */ }
+            }
         }
+
         return null;
     }
 }

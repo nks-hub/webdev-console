@@ -298,6 +298,55 @@ app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteO
     return Results.NoContent();
 });
 
+// List config history versions for a site
+app.MapGet("/api/sites/{domain}/history", (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    var generatedDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".wdc", "generated", "history");
+    if (!Directory.Exists(generatedDir))
+        return Results.Ok(Array.Empty<object>());
+
+    var prefix = $"{domain}.conf.";
+    var versions = Directory.GetFiles(generatedDir, prefix + "*")
+        .Select(f => new
+        {
+            timestamp = Path.GetFileName(f).Substring(prefix.Length),
+            size = new FileInfo(f).Length,
+            createdAt = File.GetLastWriteTimeUtc(f),
+            path = f,
+        })
+        .OrderByDescending(v => v.timestamp)
+        .ToList();
+    return Results.Ok(versions);
+});
+
+// Rollback a site's vhost config to a specific historical version
+app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, string timestamp, SiteManager sm, SiteOrchestrator orchestrator) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site {domain} not found" });
+
+    var historyDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".wdc", "generated", "history");
+    var historyFile = Path.Combine(historyDir, $"{domain}.conf.{timestamp}");
+    if (!File.Exists(historyFile))
+        return Results.NotFound(new { error = $"History entry {timestamp} not found" });
+
+    var generatedFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".wdc", "generated", $"{domain}.conf");
+
+    File.Copy(historyFile, generatedFile, overwrite: true);
+    // Re-apply through orchestrator so vhost is also written next to Apache binary
+    await orchestrator.ApplyAsync(site);
+    return Results.Ok(new { domain, restoredFrom = timestamp });
+});
+
 app.MapPost("/api/sites/reapply-all", async (SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     var results = new List<object>();
@@ -316,11 +365,16 @@ app.MapPost("/api/sites/reapply-all", async (SiteManager sm, SiteOrchestrator or
     return Results.Ok(results);
 });
 
-app.MapPost("/api/sites/{domain}/detect-framework", (string domain, SiteManager sm) =>
+app.MapPost("/api/sites/{domain}/detect-framework", async (string domain, SiteManager sm) =>
 {
     var site = sm.Get(domain);
     if (site is null) return Results.NotFound();
     var framework = sm.DetectFramework(site.DocumentRoot);
+    if (framework is not null && framework != site.Framework)
+    {
+        site.Framework = framework;
+        await sm.UpdateAsync(site);
+    }
     return Results.Ok(new { domain, framework });
 });
 
