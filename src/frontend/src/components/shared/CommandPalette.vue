@@ -13,8 +13,10 @@
         placeholder="Type a command..."
         size="large"
         clearable
-        @keydown.enter="executeFirst"
+        @keydown.enter.prevent="executeFirst"
         @keydown.escape="close"
+        @keydown.up.prevent="moveSelection(-1)"
+        @keydown.down.prevent="moveSelection(1)"
       />
       <div class="command-list" v-if="filteredCommands.length">
         <div
@@ -128,6 +130,12 @@ function execute(cmd: Command) {
 function executeFirst() {
   const cmd = filteredCommands.value[selectedIndex.value]
   if (cmd) execute(cmd)
+}
+
+function moveSelection(delta: number) {
+  const len = filteredCommands.value.length
+  if (len === 0) return
+  selectedIndex.value = (selectedIndex.value + delta + len) % len
 }
 
 defineExpose({ open })

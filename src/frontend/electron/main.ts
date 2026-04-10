@@ -119,7 +119,7 @@ async function spawnDaemon() {
   if (isDev) {
     const projectDir = findDaemonProject()
     console.log('[daemon] starting from:', projectDir)
-    daemon = spawn('dotnet', ['run', '--project', projectDir, '--', '--urls', 'http://localhost:5199'], {
+    daemon = spawn('dotnet', ['run', '--project', projectDir], {
       stdio: 'pipe',
       detached: false
     })

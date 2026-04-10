@@ -39,7 +39,7 @@
       <el-alert
         type="warning"
         title="Connecting to daemon..."
-        description="Waiting for NKS WDC daemon on port 5199"
+        description="Waiting for NKS WDC daemon connection..."
         :closable="false"
         show-icon
         style="margin: 16px;"
