@@ -138,11 +138,13 @@ async function act(action: 'start' | 'stop' | 'restart') {
   pendingAction.value = action
   try {
     await servicesStore[action](props.service.id)
-    ElMessage.success(`${props.service.name}: ${action} succeeded`)
+    const svcName = props.service.displayName || props.service.id
+    ElMessage.success(`${svcName}: ${action} succeeded`)
   } catch (err: unknown) {
+    const svcName = props.service.displayName || props.service.id
     const message = err instanceof Error ? err.message : String(err)
     ElNotification({
-      title: `${props.service.name} — ${action} failed`,
+      title: `${svcName} — ${action} failed`,
       message,
       type: 'error',
       duration: 5000,

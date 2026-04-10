@@ -138,7 +138,8 @@ export function subscribeEvents(
   onMetrics?: (data: MetricsUpdate) => void,
   onLog?: (data: LogEntry) => void,
 ): () => void {
-  const token = window.daemonApi?.getToken?.() || ''
+  const urlToken = new URLSearchParams(window.location.search).get('token')
+  const token = window.daemonApi?.getToken?.() || urlToken || ''
   const url = token
     ? `${base()}/api/events?token=${encodeURIComponent(token)}`
     : `${base()}/api/events`
