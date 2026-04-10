@@ -20,6 +20,11 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod().AllowAnyHeader());
 });
 
+// OpenAPI metadata so /openapi/v1.json can be consumed by NSwag/swagger-typescript-api
+// to generate TS types in CI (prevents contract drift between daemon and frontend).
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
+
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
@@ -82,6 +87,9 @@ migrationRunner.Run(database.ConnectionString);
 
 var app = builder.Build();
 app.UseCors();
+
+// Expose OpenAPI spec at /openapi/v1.json — used by CI TS type generation
+app.MapOpenApi();
 
 // Refresh binary catalog from the (mock) catalog API before plugins start so they can use it
 var catalogClient = app.Services.GetRequiredService<CatalogClient>();
