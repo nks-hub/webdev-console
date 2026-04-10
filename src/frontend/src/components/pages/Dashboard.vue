@@ -2,9 +2,14 @@
   <div class="dashboard-page">
     <!-- Page header -->
     <div class="page-header">
-      <div>
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Local development environment status</p>
+      <div class="header-title-block">
+        <span class="page-title">Services</span>
+        <span class="page-count" v-if="services.length > 0">
+          <span class="count-running">{{ runningCount }}</span>
+          <span class="count-sep">/</span>
+          <span class="count-total">{{ totalCount }}</span>
+          <span class="count-label">running</span>
+        </span>
       </div>
       <div class="header-actions">
         <el-button
@@ -25,12 +30,11 @@
         >
           Stop All
         </el-button>
-        <el-button size="small" @click="router.push('/sites')">+ New Site</el-button>
       </div>
     </div>
 
     <!-- Offline state -->
-    <div v-if="!daemonStore.connected" style="padding: 0 24px;">
+    <div v-if="!daemonStore.connected" class="offline-banner">
       <el-alert
         type="warning"
         title="Daemon offline"
@@ -41,81 +45,100 @@
     </div>
 
     <template v-else>
-      <!-- Summary stats row -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-value stat-running">{{ runningCount }}</div>
-          <div class="stat-label">Running</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value stat-neutral">{{ stoppedCount }}</div>
-          <div class="stat-label">Stopped</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ sitesStore.sites.length }}</div>
-          <div class="stat-label">Sites</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ totalCount }}</div>
-          <div class="stat-label">Services</div>
-        </div>
-      </div>
+      <!-- Service list -->
+      <div class="service-list">
+        <div
+          v-for="service in services"
+          :key="service.id"
+          class="service-row"
+          :class="[`row-${statusText(service)}`]"
+        >
+          <!-- Status dot -->
+          <span class="status-dot" :class="`dot-${statusText(service)}`" />
 
-      <!-- Service cards grid -->
-      <div style="padding: 0 24px 24px;">
-        <div class="services-grid">
-          <ServiceCard
-            v-for="service in services"
-            :key="service.id"
-            :service="service"
-          />
+          <!-- Name + version -->
+          <div class="svc-identity">
+            <span class="svc-name">{{ service.displayName || service.id }}</span>
+            <span class="svc-version mono" v-if="service.version">v{{ service.version }}</span>
+          </div>
+
+          <!-- Port -->
+          <div class="svc-port" v-if="service.port">
+            <span class="port-label">Port</span>
+            <span class="port-value mono">{{ service.port }}</span>
+          </div>
+
+          <!-- CPU/RAM when running -->
+          <div class="svc-metrics" v-if="isRunning(service)">
+            <span class="metric mono">CPU <em>{{ formatCpu(service.cpuPercent) }}</em></span>
+            <span class="metric mono">MEM <em>{{ formatMem(service.memoryBytes ?? 0) }}</em></span>
+          </div>
+          <div class="svc-metrics" v-else>
+            <span class="status-label" :class="`status-${statusText(service)}`">{{ statusText(service) }}</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="svc-actions">
+            <el-button
+              size="small"
+              text
+              class="action-btn"
+              @click="openLogs(service.id)"
+            >
+              Logs
+            </el-button>
+            <el-button
+              size="small"
+              text
+              class="action-btn"
+              @click="openConfig(service.id)"
+            >
+              Config
+            </el-button>
+            <el-switch
+              :model-value="isRunning(service)"
+              :loading="servicesStore.isBusy(service.id)"
+              :disabled="!daemonStore.connected"
+              size="large"
+              class="svc-toggle"
+              @change="toggleService(service.id, $event)"
+            />
+          </div>
         </div>
 
         <!-- Empty state -->
         <el-empty
           v-if="services.length === 0"
           description="No services registered. Check daemon configuration."
-          :image-size="80"
+          :image-size="64"
+          class="empty-state"
         />
       </div>
-
-      <!-- Quick links -->
-      <div style="padding: 0 24px 24px;" v-if="sitesStore.sites.length > 0">
-        <div class="section-title" style="margin-bottom: 12px;">Quick Links</div>
-        <div class="quick-links-row">
-          <a
-            v-for="site in sitesStore.sites.slice(0, 8)"
-            :key="site.domain"
-            :href="`http${site.sslEnabled ? 's' : ''}://${site.domain}`"
-            target="_blank"
-            class="quick-link"
-          >
-            <span class="ssl-dot" :class="site.sslEnabled ? 'ssl-on' : 'ssl-off'" />
-            {{ site.domain }}
-          </a>
-          <el-button
-            v-if="sitesStore.sites.length > 8"
-            size="small"
-            text
-            @click="router.push('/sites')"
-          >
-            +{{ sitesStore.sites.length - 8 }} more
-          </el-button>
-        </div>
-      </div>
     </template>
+
+    <!-- Logs drawer -->
+    <el-drawer
+      v-model="logsDrawer.open"
+      :title="`Logs — ${logsDrawer.serviceId}`"
+      direction="rtl"
+      size="520px"
+    >
+      <div class="log-viewer">
+        <div v-if="logsDrawer.loading" class="log-loading">Loading...</div>
+        <pre v-else class="log-pre">{{ logsDrawer.content }}</pre>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
-import ServiceCard from '../shared/ServiceCard.vue'
+import { fetchServiceLogs } from '../../api/daemon'
+import { ElMessage, ElNotification } from 'element-plus'
 
-const router = useRouter()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
@@ -125,19 +148,58 @@ const stoppingAll = ref(false)
 
 const services = computed(() => daemonStore.services)
 const totalCount = computed(() => services.value.length)
-const runningCount = computed(() => services.value.filter((s: any) => s.state === 2).length)
-const stoppedCount = computed(() => services.value.filter((s: any) => s.state === 0).length)
+const runningCount = computed(() => services.value.filter((s: any) => s.state === 2 || s.status === 'running').length)
 const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
 const noneRunning = computed(() => runningCount.value === 0)
 
 onMounted(() => { void sitesStore.load() })
+
+const stateLabels: Record<number, string> = {
+  0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled',
+}
+
+function statusText(service: any): string {
+  return stateLabels[service.state] ?? service.status ?? 'unknown'
+}
+
+function isRunning(service: any): boolean {
+  return service.state === 2 || service.status === 'running'
+}
+
+function formatCpu(val: number): string {
+  return `${(val ?? 0).toFixed(1)}%`
+}
+
+function formatMem(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+async function toggleService(id: string, value: boolean | string | number) {
+  const on = Boolean(value)
+  const svc = services.value.find((s: any) => s.id === id)
+  const name = svc ? (svc.displayName || svc.id) : id
+  try {
+    if (on) {
+      await servicesStore.start(id)
+      ElMessage.success(`${name}: started`)
+    } else {
+      await servicesStore.stop(id)
+      ElMessage.success(`${name}: stopped`)
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    ElNotification({ title: `${name} — action failed`, message, type: 'error', duration: 5000 })
+  }
+}
 
 async function startAll() {
   startingAll.value = true
   try {
     await Promise.allSettled(
       services.value
-        .filter((s: any) => s.state === 0)
+        .filter((s: any) => s.state === 0 || s.status === 'stopped')
         .map((s: any) => servicesStore.start(s.id))
     )
   } finally {
@@ -150,12 +212,39 @@ async function stopAll() {
   try {
     await Promise.allSettled(
       services.value
-        .filter((s: any) => s.state === 2)
+        .filter((s: any) => s.state === 2 || s.status === 'running')
         .map((s: any) => servicesStore.stop(s.id))
     )
   } finally {
     stoppingAll.value = false
   }
+}
+
+// Logs drawer
+const logsDrawer = reactive({
+  open: false,
+  serviceId: '',
+  content: '',
+  loading: false,
+})
+
+async function openLogs(id: string) {
+  logsDrawer.serviceId = id
+  logsDrawer.content = ''
+  logsDrawer.loading = true
+  logsDrawer.open = true
+  try {
+    const lines = await fetchServiceLogs(id, 300)
+    logsDrawer.content = Array.isArray(lines) ? lines.join('\n') : String(lines)
+  } catch (err: unknown) {
+    logsDrawer.content = err instanceof Error ? err.message : 'Failed to load logs'
+  } finally {
+    logsDrawer.loading = false
+  }
+}
+
+function openConfig(id: string) {
+  ElMessage.info(`Config for ${id} — coming soon`)
 }
 </script>
 
@@ -165,95 +254,263 @@ async function stopAll() {
   background: var(--wdc-bg);
 }
 
+/* ─── Page header ─────────────────────────────────────────────────────────── */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 0;
-  margin-bottom: 24px;
-}
-.page-title { font-size: 1.25rem; font-weight: 700; color: var(--wdc-text); }
-.page-subtitle { font-size: 0.82rem; color: var(--wdc-text-2); margin-top: 2px; }
-.header-actions { display: flex; align-items: center; gap: 8px; }
-
-.quick-links-row { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  padding: 0 24px;
-  margin-bottom: 24px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--wdc-border);
 }
 
-.stat-card {
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  padding: 20px 24px;
+.header-title-block {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.page-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  letter-spacing: -0.01em;
+}
+
+.page-count {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 0.78rem;
+}
+
+.count-running {
+  color: var(--wdc-status-running);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.count-sep {
+  color: var(--wdc-text-3);
+}
+
+.count-total {
+  color: var(--wdc-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.count-label {
+  color: var(--wdc-text-3);
+  margin-left: 2px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── Offline banner ──────────────────────────────────────────────────────── */
+.offline-banner {
+  padding: 16px 20px;
+}
+
+/* ─── Service list ────────────────────────────────────────────────────────── */
+.service-list {
   display: flex;
   flex-direction: column;
 }
 
-.stat-value {
-  font-size: 2.4rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--wdc-text);
-}
-.stat-running { color: var(--wdc-status-running); }
-.stat-neutral { color: var(--wdc-text-2); }
-
-.stat-label {
-  font-size: 0.85rem;
-  color: var(--wdc-text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 4px;
-}
-
-.services-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.section-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--el-text-color-secondary);
-}
-
-.quick-link {
-  display: inline-flex;
+.service-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  font-size: 0.88rem;
-  color: var(--wdc-text-2);
-  text-decoration: none;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  border-bottom: 1px solid var(--wdc-border);
+  transition: background 0.1s;
+  cursor: default;
 }
 
-.quick-link:hover {
-  border-color: var(--wdc-accent);
-  color: var(--wdc-accent);
+.service-row:last-child {
+  border-bottom: none;
+}
+
+.service-row:hover {
   background: var(--wdc-hover);
 }
 
-.ssl-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
+/* ─── Status dot ──────────────────────────────────────────────────────────── */
+.status-dot {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.ssl-on  { background: var(--wdc-status-running); }
-.ssl-off { background: var(--wdc-status-stopped); }
+
+.dot-running {
+  background: var(--wdc-status-running);
+  box-shadow: 0 0 5px var(--wdc-status-running);
+}
+
+.dot-stopped {
+  background: var(--wdc-status-stopped);
+}
+
+.dot-starting,
+.dot-stopping {
+  background: var(--wdc-status-starting);
+  animation: svc-pulse 1s ease-in-out infinite;
+}
+
+.dot-crashed {
+  background: var(--wdc-status-error);
+  box-shadow: 0 0 5px var(--wdc-status-error);
+}
+
+.dot-disabled,
+.dot-unknown {
+  background: var(--wdc-border-strong);
+}
+
+@keyframes svc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ─── Service identity ────────────────────────────────────────────────────── */
+.svc-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.svc-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--wdc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.svc-version {
+  font-size: 0.75rem;
+  color: var(--wdc-text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Port ────────────────────────────────────────────────────────────────── */
+.svc-port {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  width: 110px;
+}
+
+.port-label {
+  font-size: 0.72rem;
+  color: var(--wdc-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.port-value {
+  font-size: 0.8rem;
+  color: var(--wdc-text-2);
+}
+
+/* ─── Metrics / status text ───────────────────────────────────────────────── */
+.svc-metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  width: 170px;
+}
+
+.metric {
+  font-size: 0.72rem;
+  color: var(--wdc-text-3);
+  white-space: nowrap;
+}
+
+.metric em {
+  font-style: normal;
+  color: var(--wdc-text-2);
+  font-weight: 500;
+}
+
+.status-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.status-stopped  { color: var(--wdc-text-3); }
+.status-starting,
+.status-stopping { color: var(--wdc-status-starting); }
+.status-crashed  { color: var(--wdc-status-error); }
+.status-disabled { color: var(--wdc-text-3); }
+.status-unknown  { color: var(--wdc-text-3); }
+
+/* ─── Actions ─────────────────────────────────────────────────────────────── */
+.svc-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.action-btn {
+  font-size: 0.75rem !important;
+  color: var(--wdc-text-3) !important;
+  padding: 0 8px !important;
+  height: 26px !important;
+  line-height: 26px !important;
+}
+
+.action-btn:hover {
+  color: var(--wdc-text) !important;
+}
+
+.svc-toggle {
+  margin-left: 8px;
+}
+
+/* ─── Mono util ───────────────────────────────────────────────────────────── */
+.mono {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+.empty-state {
+  padding: 48px 0;
+}
+
+/* ─── Log drawer ──────────────────────────────────────────────────────────── */
+.log-viewer {
+  height: 100%;
+  overflow: auto;
+}
+
+.log-pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--wdc-text-2);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-loading {
+  color: var(--wdc-text-3);
+  font-size: 0.82rem;
+  padding: 16px 0;
+}
 </style>

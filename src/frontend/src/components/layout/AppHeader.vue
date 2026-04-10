@@ -34,15 +34,15 @@ function toggleTheme() { themeStore.toggle() }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 40px;
-  padding: 0 16px;
+  height: 36px;
+  padding: 0 14px;
   background: var(--wdc-surface);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
 }
 
 .app-logo {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: var(--wdc-accent);

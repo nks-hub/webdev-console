@@ -7,12 +7,12 @@
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds — wider lightness steps for clear depth hierarchy (Linear-inspired) */
-  --wdc-bg:          #0f1117;
-  --wdc-surface:     #1a1c28;
-  --wdc-surface-2:   #242636;
-  --wdc-elevated:    #2e3044;
-  --wdc-hover:       #282a3c;
+  /* Backgrounds — native desktop app palette (FlyEnv/MAMP PRO-inspired) */
+  --wdc-bg:          #1a1a1e;
+  --wdc-surface:     #242428;
+  --wdc-surface-2:   #2c2c32;
+  --wdc-elevated:    #343438;
+  --wdc-hover:       #303036;
 
   /* Borders — clearly visible separation */
   --wdc-border:      rgba(255, 255, 255, 0.12);

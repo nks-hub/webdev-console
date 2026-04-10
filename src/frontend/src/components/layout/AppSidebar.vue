@@ -14,7 +14,6 @@
       <div class="nav-item" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
         <el-icon :size="18"><Link /></el-icon>
         <span class="nav-label" v-if="!collapsed">Sites</span>
-        <span class="nav-badge" v-if="!collapsed && sitesCount > 0">{{ sitesCount }}</span>
       </div>
     </div>
 
@@ -27,7 +26,6 @@
       <div class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <el-icon :size="18"><Box /></el-icon>
         <span class="nav-label" v-if="!collapsed">Plugins</span>
-        <span class="nav-badge" v-if="!collapsed">{{ pluginCount }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <el-icon :size="18"><Setting /></el-icon>
@@ -45,20 +43,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Monitor, Link, Download, Box, Setting, Fold, Expand, Odometer } from '@element-plus/icons-vue'
-import { useSitesStore } from '../../stores/sites'
-import { usePluginsStore } from '../../stores/plugins'
 
 const router = useRouter()
 const route = useRoute()
-const sitesStore = useSitesStore()
-const pluginsStore = usePluginsStore()
 const collapsed = ref(false)
-
-const sitesCount = computed(() => sitesStore.sites.length)
-const pluginCount = computed(() => pluginsStore.manifests.length)
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')
@@ -139,17 +130,6 @@ function navigate(path: string) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.nav-badge {
-  font-size: 0.68rem;
-  font-weight: 600;
-  background: var(--wdc-surface-2);
-  color: var(--wdc-text-2);
-  padding: 1px 7px;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
 }
 
 .sidebar-spacer { flex: 1; }
