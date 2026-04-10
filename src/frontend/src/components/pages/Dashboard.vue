@@ -619,6 +619,7 @@ async function openConfig(id: string) {
 
 .metrics-section {
   padding: 0 16px 16px;
+  flex-shrink: 0;
 }
 
 .metrics-grid {
@@ -632,6 +633,8 @@ async function openConfig(id: string) {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   padding: 12px 16px;
+  height: 130px;
+  overflow: hidden;
 }
 
 .metric-card-header {
