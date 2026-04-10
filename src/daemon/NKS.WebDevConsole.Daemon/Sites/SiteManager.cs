@@ -96,9 +96,29 @@ public class SiteManager
             throw new ArgumentException($"Alias '{alias}' is not a valid hostname pattern");
     }
 
+    /// <summary>
+    /// Validates a DocumentRoot path. Rejects characters that would break out of the
+    /// quoted DocumentRoot directive in the generated Apache vhost (quotes, newlines,
+    /// null bytes, shell metacharacters) — without this a crafted POST body could
+    /// inject additional Apache directives into the rendered vhost.
+    /// </summary>
+    public static void ValidateDocumentRoot(string documentRoot)
+    {
+        if (string.IsNullOrWhiteSpace(documentRoot))
+            throw new ArgumentException("DocumentRoot is required");
+        if (documentRoot.Length > 4096)
+            throw new ArgumentException("DocumentRoot too long (max 4096 chars)");
+        // Characters that could break out of the quoted Apache directive:
+        var forbidden = new[] { '"', '\n', '\r', '\0', '\t', '|', '&', '`', '<', '>' };
+        foreach (var c in forbidden)
+            if (documentRoot.Contains(c))
+                throw new ArgumentException($"DocumentRoot contains forbidden character: '{c}'");
+    }
+
     public async Task<SiteConfig> CreateAsync(SiteConfig site)
     {
         ValidateDomain(site.Domain);
+        ValidateDocumentRoot(site.DocumentRoot);
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
@@ -119,6 +139,7 @@ public class SiteManager
         // SECURITY: validate before building any path from domain (prevents traversal
         // via crafted PUT body). Same treatment as Delete/Create.
         ValidateDomain(site.Domain);
+        ValidateDocumentRoot(site.DocumentRoot);
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
