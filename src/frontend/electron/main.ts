@@ -8,6 +8,7 @@ let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let daemon: ChildProcess | null = null
 let daemonConnected = false
+let isQuitting = false
 
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
 const DAEMON_EXE = join(__dirname, '../../daemon/bin/wdc-daemon.exe')
@@ -67,30 +68,50 @@ function createWindow() {
 
   win.once('ready-to-show', () => win?.show())
 
-  // Hide to tray on close
+  // Minimize to tray on close instead of quitting
   win.on('close', (e) => {
-    e.preventDefault()
-    win?.hide()
+    if (!isQuitting) {
+      e.preventDefault()
+      win?.hide()
+    }
   })
 }
 
 function updateTray() {
-  const icon = nativeImage.createEmpty()
   if (!tray) return
   const label = daemonConnected ? 'NKS WebDev Console (connected)' : 'NKS WebDev Console (disconnected)'
-  tray.setToolTip(label)
+  tray.setToolTip('NKS WebDev Console')
   const menu = Menu.buildFromTemplate([
     { label, enabled: false },
     { type: 'separator' },
     {
-      label: 'Show / Hide',
-      click: () => (win?.isVisible() ? win.hide() : win?.show())
+      label: win?.isVisible() ? 'Hide Window' : 'Show Window',
+      click: () => {
+        if (win?.isVisible()) {
+          win.hide()
+        } else {
+          win?.show()
+          win?.focus()
+        }
+        updateTray()
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Services',
+      submenu: [
+        { label: 'Apache', enabled: false },
+        { label: 'MySQL', enabled: false },
+        { label: 'PHP', enabled: false },
+        { type: 'separator' },
+        { label: 'Manage...', click: () => { win?.show(); win?.focus() } }
+      ]
     },
     { type: 'separator' },
     {
       label: 'Quit',
       click: () => {
-        win?.removeAllListeners('close')
+        isQuitting = true
         daemon?.kill()
         app.quit()
       }
@@ -100,20 +121,32 @@ function updateTray() {
 }
 
 function createTray() {
-  // Inline 16x16 white circle as base64 PNG (no external file needed)
-  const iconData = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA' +
-    'BHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAABl0RVh0U29mdHdhcmUAd3d3' +
-    'Lmlua3NjYXBlLm9yZ5vuPBoAAADLSURBVDiNpdOxCsIwEAbgL3YJdHMRJ9/FxUVw8Al8AUF' +
-    'wcHBwcHBwEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEM' +
-    'HBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxE' +
-    'EMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBxEEMHBQRAcHBx' +
-    'EEMHBQRAcHBxEEA=='
-  )
-  tray = new Tray(iconData)
+  // Create a 16x16 green square as placeholder tray icon (RGBA buffer)
+  const size = 16
+  const buf = Buffer.alloc(size * size * 4)
+  for (let i = 0; i < size * size; i++) {
+    buf[i * 4 + 0] = 0x22 // R
+    buf[i * 4 + 1] = 0xc5 // G
+    buf[i * 4 + 2] = 0x5e // B
+    buf[i * 4 + 3] = 0xff // A
+  }
+  const icon = nativeImage.createFromBuffer(buf, { width: size, height: size })
+  tray = new Tray(icon.resize({ width: 16, height: 16 }))
   updateTray()
-  tray.on('click', () => (win?.isVisible() ? win.hide() : win?.show()))
+  tray.on('click', () => {
+    if (win?.isVisible()) {
+      win.hide()
+    } else {
+      win?.show()
+      win?.focus()
+    }
+    updateTray()
+  })
 }
+
+app.on('before-quit', () => {
+  isQuitting = true
+})
 
 app.whenReady().then(() => {
   spawnDaemon()

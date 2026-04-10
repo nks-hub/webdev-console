@@ -28,14 +28,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
-import { useDark, useToggle } from '@vueuse/core'
+import { useThemeStore } from '../../stores/theme'
 
 const daemonStore = useDaemonStore()
-const isDark = useDark()
-const toggleTheme = useToggle(isDark)
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
+function toggleTheme() { themeStore.toggle() }
 
 const topServices = computed(() =>
   (daemonStore.status?.services ?? []).slice(0, 5)
