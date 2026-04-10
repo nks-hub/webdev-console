@@ -41,16 +41,9 @@ public class PluginLoader
             return;
         }
 
-        foreach (var dir in Directory.GetDirectories(pluginsDirectory))
+        foreach (var dllPath in Directory.GetFiles(pluginsDirectory, "*.dll", SearchOption.TopDirectoryOnly))
         {
-            var pluginName = Path.GetFileName(dir);
-            var dllPath = Path.Combine(dir, $"{pluginName}.dll");
-
-            if (!File.Exists(dllPath))
-            {
-                _logger.LogWarning("No DLL found for plugin {Name} at {Path}", pluginName, dllPath);
-                continue;
-            }
+            var pluginName = Path.GetFileNameWithoutExtension(dllPath);
 
             try
             {

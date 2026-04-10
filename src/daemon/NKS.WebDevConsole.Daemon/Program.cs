@@ -33,9 +33,13 @@ builder.Services.AddSingleton(sp => new SiteManager(
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
 var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
+// Production: plugins/ next to daemon binary. Dev: build/plugins/ at repo root.
 var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
 if (!Directory.Exists(pluginDir))
-    pluginDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "plugins"));
+{
+    var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+    pluginDir = Path.Combine(repoRoot, "build", "plugins");
+}
 pluginLoader.LoadPlugins(pluginDir);
 
 builder.Services.AddSingleton(pluginLoader);
