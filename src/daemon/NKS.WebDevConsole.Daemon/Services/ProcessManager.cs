@@ -103,22 +103,31 @@ public class ProcessManager
             process.EnableRaisingEvents = true;
             process.Exited += async (_, _) =>
             {
-                _logger.LogWarning("Service {Id} (PID {Pid}) exited with code {Code}", id, process.Id, process.ExitCode);
-                unit.State = ServiceState.Crashed;
-                unit.Process = null;
-                await BroadcastState(unit);
-                await TryAutoRestart(unit);
+                try
+                {
+                    _logger.LogWarning("Service {Id} (PID {Pid}) exited with code {Code}", id, process.Id, process.ExitCode);
+                    unit.State = ServiceState.Crashed;
+                    unit.Process = null;
+                    await BroadcastState(unit);
+                    await TryAutoRestart(unit);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in exit handler for {Id}", id);
+                }
             };
 
             process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data != null)
-                    _ = _sse.BroadcastAsync("log", new { serviceId = id, level = "info", message = e.Data });
+                    _ = _sse.BroadcastAsync("log", new { serviceId = id, level = "info", message = e.Data })
+                        .ContinueWith(t => _logger.LogWarning(t.Exception, "SSE broadcast failed"), TaskContinuationOptions.OnlyOnFaulted);
             };
             process.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null)
-                    _ = _sse.BroadcastAsync("log", new { serviceId = id, level = "error", message = e.Data });
+                    _ = _sse.BroadcastAsync("log", new { serviceId = id, level = "error", message = e.Data })
+                        .ContinueWith(t => _logger.LogWarning(t.Exception, "SSE broadcast failed"), TaskContinuationOptions.OnlyOnFaulted);
             };
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();

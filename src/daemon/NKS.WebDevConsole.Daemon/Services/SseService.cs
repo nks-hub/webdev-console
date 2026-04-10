@@ -16,7 +16,8 @@ public class SseService
 
     public void RemoveClient(string id)
     {
-        _clients.TryRemove(id, out _);
+        if (_clients.TryRemove(id, out var client))
+            client.Dispose();
     }
 
     public async Task BroadcastAsync(string eventType, object data)
@@ -27,6 +28,7 @@ public class SseService
         var deadClients = new List<string>();
         foreach (var (id, client) in _clients)
         {
+            await client.WriteLock.WaitAsync();
             try
             {
                 await client.Response.WriteAsync(message);
@@ -36,13 +38,28 @@ public class SseService
             {
                 deadClients.Add(id);
             }
+            finally
+            {
+                client.WriteLock.Release();
+            }
         }
 
         foreach (var id in deadClients)
-            _clients.TryRemove(id, out _);
+        {
+            if (_clients.TryRemove(id, out var dead))
+                dead.Dispose();
+        }
     }
 
     public int ClientCount => _clients.Count;
 }
 
-public record SseClient(string Id, HttpResponse Response);
+public class SseClient : IDisposable
+{
+    public string Id { get; }
+    public HttpResponse Response { get; }
+    public SemaphoreSlim WriteLock { get; } = new(1, 1);
+
+    public SseClient(string id, HttpResponse response) { Id = id; Response = response; }
+    public void Dispose() => WriteLock.Dispose();
+}
