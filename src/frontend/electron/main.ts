@@ -60,15 +60,28 @@ function daemonPost(path: string): Promise<void> {
   })
 }
 const DAEMON_EXE = join(__dirname, '../../daemon/bin/wdc-daemon.exe')
-const DAEMON_DEV = join(__dirname, '../../daemon')
+
+function findDaemonProject(): string {
+  // electron-vite dev: __dirname = src/frontend/dist-electron/
+  // Go up to repo root and find the daemon project
+  const candidates = [
+    join(__dirname, '../../daemon/NKS.WebDevConsole.Daemon'),
+    join(__dirname, '../../../src/daemon/NKS.WebDevConsole.Daemon'),
+    join(__dirname, '../../../../src/daemon/NKS.WebDevConsole.Daemon'),
+  ]
+  for (const c of candidates) {
+    if (existsSync(join(c, 'NKS.WebDevConsole.Daemon.csproj'))) return c
+  }
+  return candidates[0] // fallback
+}
 
 function spawnDaemon() {
-  // In dev: use dotnet run. In prod: use compiled exe.
   const isDev = !app.isPackaged
 
   if (isDev) {
-    daemon = spawn('dotnet', ['run'], {
-      cwd: DAEMON_DEV,
+    const projectDir = findDaemonProject()
+    console.log('[daemon] starting from:', projectDir)
+    daemon = spawn('dotnet', ['run', '--project', projectDir, '--', '--urls', 'http://localhost:5199'], {
       stdio: 'pipe',
       detached: false
     })
@@ -103,7 +116,7 @@ function createWindow() {
     backgroundColor: '#1a1a2e',
     show: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, 'preload.js'),
       contextIsolation: true
     }
   })
