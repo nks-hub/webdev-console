@@ -20,8 +20,8 @@
   --wdc-text-3:      #9ca0bc;
 
   /* Accent — indigo/violet */
-  --wdc-accent:      #6366f1;
-  --wdc-accent-2:    #8b5cf6;
+  --wdc-accent:      #8b5cf6;
+  --wdc-accent-2:    #a78bfa;
   --wdc-accent-glow: rgba(99, 102, 241, 0.15);
   --wdc-accent-dim:  rgba(99, 102, 241, 0.14);
 
@@ -59,10 +59,14 @@ html:not(.dark) {
   --wdc-border-strong: rgba(0, 0, 0, 0.14);
   --wdc-text:        #111118;
   --wdc-text-2:      #5c5f72;
-  --wdc-text-3:      #9496a8;
+  --wdc-text-3:      #5a5f70;
   --wdc-accent-glow: rgba(99, 102, 241, 0.10);
   --wdc-accent-dim:  rgba(99, 102, 241, 0.06);
-  --wdc-status-stopped: #c0c2d0;
+  --wdc-accent:        #4338ca;
+  --wdc-status-running: #15803d;
+  --wdc-status-error:   #dc2626;
+  --wdc-status-starting: #b45309;
+  --wdc-status-stopped: #94959e;
   color-scheme: light;
 }
 
@@ -83,7 +87,7 @@ html:not(.dark) {
   --el-text-color-regular:        #b4b7cc;
   --el-text-color-secondary:      var(--wdc-text-2);
   --el-text-color-placeholder:    var(--wdc-text-3);
-  --el-text-color-disabled:       #555872;
+  --el-text-color-disabled:       #9ca0bc;
 
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
@@ -94,12 +98,12 @@ html:not(.dark) {
   --el-fill-color-blank:          var(--wdc-surface);
 
   --el-color-primary:             var(--wdc-accent);
-  --el-color-primary-light-3:     #818cf8;
-  --el-color-primary-light-5:     #a5b4fc;
-  --el-color-primary-light-7:     #c7d2fe;
-  --el-color-primary-light-8:     #d8dffe;
-  --el-color-primary-light-9:     rgba(99, 102, 241, 0.12);
-  --el-color-primary-dark-2:      #4f52c8;
+  --el-color-primary-light-3:     #a78bfa;
+  --el-color-primary-light-5:     #c4b5fd;
+  --el-color-primary-light-7:     #e9d5ff;
+  --el-color-primary-light-8:     #f3e8ff;
+  --el-color-primary-light-9:     rgba(139, 92, 246, 0.12);
+  --el-color-primary-dark-2:      #7c3aed;
 
   --el-color-success:             var(--wdc-status-running);
   --el-color-success-light-3:     #4ade80;
@@ -139,7 +143,7 @@ html:not(.dark) {
   --el-text-color-regular:        #b4b7cc;
   --el-text-color-secondary:      var(--wdc-text-2);
   --el-text-color-placeholder:    var(--wdc-text-3);
-  --el-text-color-disabled:       #555872;
+  --el-text-color-disabled:       #9ca0bc;
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
   --el-fill-color-blank:          var(--wdc-surface);
@@ -148,8 +152,8 @@ html:not(.dark) {
   --el-color-primary-light-3:     #818cf8;
   --el-color-primary-light-5:     #a5b4fc;
   --el-color-primary-light-7:     #c7d2fe;
-  --el-color-primary-light-9:     rgba(99, 102, 241, 0.12);
-  --el-color-primary-dark-2:      #4f52c8;
+  --el-color-primary-light-9:     rgba(139, 92, 246, 0.12);
+  --el-color-primary-dark-2:      #7c3aed;
   --el-color-success:             var(--wdc-status-running);
   --el-color-success-light-9:     rgba(34, 197, 94, 0.12);
   --el-color-warning:             var(--wdc-status-starting);
