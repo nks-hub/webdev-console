@@ -140,7 +140,77 @@ public sealed class BinaryManager
         }
 
         _logger.LogInformation("Installed {App} {Version} at {Path}", app, version, installPath);
+
+        // Post-install steps for specific apps
+        await PostInstallAsync(app, version, installPath, cacheDir, ct);
+
         return ToInstalled(app, version, installPath);
+    }
+
+    /// <summary>
+    /// App-specific actions that have to run AFTER the base archive is extracted.
+    /// For Apache on Windows we fetch mod_fcgid (an external Apache Lounge module) into modules/.
+    /// </summary>
+    private async Task PostInstallAsync(string app, string version, string installPath, string cacheDir, CancellationToken ct)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        if (app.Equals("apache", StringComparison.OrdinalIgnoreCase))
+        {
+            await EnsureModFcgidAsync(installPath, cacheDir, ct);
+        }
+    }
+
+    private async Task EnsureModFcgidAsync(string apacheInstallPath, string cacheDir, CancellationToken ct)
+    {
+        var modulesDir = Path.Combine(apacheInstallPath, "modules");
+        var modFcgid = Path.Combine(modulesDir, "mod_fcgid.so");
+        if (File.Exists(modFcgid))
+        {
+            _logger.LogDebug("mod_fcgid already present at {Path}", modFcgid);
+            return;
+        }
+
+        // mod_fcgid is an external Apache Lounge module — single .so/.dll bundled in a zip.
+        // Hardcoded URL because the catalog API only tracks "primary" releases.
+        var release = new BinaryRelease(
+            App: "mod_fcgid",
+            Version: "2.3.10",
+            MajorMinor: "2.3",
+            Url: "https://www.apachelounge.com/download/VS18/modules/mod_fcgid-2.3.10-win64-VS18.zip",
+            Os: "windows",
+            Arch: "x64",
+            ArchiveType: "zip",
+            Source: "apachelounge",
+            UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        );
+
+        try
+        {
+            _logger.LogInformation("Fetching mod_fcgid (external Apache module) for Apache at {Path}", apacheInstallPath);
+            var archive = await _downloader.DownloadAsync(release, cacheDir, progress: null, ct: ct);
+            var tempExtract = Path.Combine(cacheDir, "mod_fcgid_extract");
+            if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, recursive: true);
+            await _downloader.ExtractAsync(archive, tempExtract, ct);
+
+            // Find mod_fcgid.so anywhere inside the extracted tree and copy into modules/
+            var so = Directory.GetFiles(tempExtract, "mod_fcgid.so", SearchOption.AllDirectories).FirstOrDefault();
+            if (so is null)
+            {
+                _logger.LogWarning("mod_fcgid.so not found in extracted archive");
+            }
+            else
+            {
+                Directory.CreateDirectory(modulesDir);
+                File.Copy(so, modFcgid, overwrite: true);
+                _logger.LogInformation("mod_fcgid installed at {Path}", modFcgid);
+            }
+            Directory.Delete(tempExtract, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("mod_fcgid install failed (Apache will fall back to mod_proxy_fcgi): {Error}", ex.Message);
+        }
     }
 
     /// <summary>Remove an installed binary from disk.</summary>

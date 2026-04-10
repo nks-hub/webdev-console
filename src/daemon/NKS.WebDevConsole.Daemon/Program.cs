@@ -250,6 +250,19 @@ app.MapPost("/api/services/{id}/restart", async (string id, IServiceProvider sp)
 var siteManager = app.Services.GetRequiredService<SiteManager>();
 siteManager.LoadAll();
 
+// On startup, re-apply all sites so vhost configs are regenerated against the
+// current Apache install. (Vhosts live next to the binary, so a fresh install
+// of a different Apache version starts with an empty sites-enabled/.)
+var startupOrchestrator = app.Services.GetRequiredService<SiteOrchestrator>();
+foreach (var siteToApply in siteManager.Sites.Values)
+{
+    try { await startupOrchestrator.ApplyAsync(siteToApply); }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[startup] failed to re-apply site {siteToApply.Domain}: {ex.Message}");
+    }
+}
+
 app.MapGet("/api/sites", (SiteManager sm) => Results.Ok(sm.Sites.Values));
 
 app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
@@ -283,6 +296,24 @@ app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteO
     if (!sm.Delete(domain)) return Results.NotFound();
     await orchestrator.RemoveAsync(domain);
     return Results.NoContent();
+});
+
+app.MapPost("/api/sites/reapply-all", async (SiteManager sm, SiteOrchestrator orchestrator) =>
+{
+    var results = new List<object>();
+    foreach (var site in sm.Sites.Values)
+    {
+        try
+        {
+            await orchestrator.ApplyAsync(site);
+            results.Add(new { domain = site.Domain, ok = true });
+        }
+        catch (Exception ex)
+        {
+            results.Add(new { domain = site.Domain, ok = false, error = ex.Message });
+        }
+    }
+    return Results.Ok(results);
 });
 
 app.MapPost("/api/sites/{domain}/detect-framework", (string domain, SiteManager sm) =>
