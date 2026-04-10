@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-04-10T00:00:00Z",
+  "comment": "NKS WebDev Console binary catalog. Source-of-truth for downloadable upstream binaries (Apache, PHP, MySQL, MariaDB, Redis, PostgreSQL, MongoDB, Memcached, Mailpit, Nginx). URLs point to official upstream releases. Replace this mock with a real backend later — JSON shape will be preserved.",
+  "apps": {
+    "apache": {
+      "name": "apache",
+      "display_name": "Apache HTTP Server",
+      "category": "webserver",
+      "homepage": "https://httpd.apache.org/",
+      "license": "Apache-2.0",
+      "releases": [
+        {
+          "version": "2.4.66",
+          "major_minor": "2.4",
+          "channel": "stable",
+          "released_at": "2025-02-26",
+          "downloads": [
+            {
+              "url": "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.66-260223-Win64-VS18.zip",
+              "os": "windows",
+              "arch": "x64",
+              "archive_type": "zip",
+              "size_bytes": null,
+              "sha256": null,
+              "source": "apachelounge",
+              "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "php": {
+      "name": "php",
+      "display_name": "PHP",
+      "category": "language",
+      "homepage": "https://www.php.net/",
+      "license": "PHP-3.01",
+      "releases": [
+        { "version": "8.5.5",  "major_minor": "8.5", "channel": "stable", "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-8.5.5-Win32-vs17-x64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "8.4.20", "major_minor": "8.4", "channel": "stable", "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-8.4.20-Win32-vs17-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "8.3.30", "major_minor": "8.3", "channel": "stable", "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-8.3.30-Win32-vs16-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "8.2.30", "major_minor": "8.2", "channel": "stable", "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-8.2.30-Win32-vs16-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "8.1.34", "major_minor": "8.1", "channel": "stable", "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-8.1.34-Win32-vs16-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "8.0.30", "major_minor": "8.0", "channel": "eol",    "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-8.0.30-Win32-vs16-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "7.4.33", "major_minor": "7.4", "channel": "eol",    "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-7.4.33-Win32-vc15-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "7.3.33", "major_minor": "7.3", "channel": "eol",    "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-7.3.33-Win32-VC15-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "7.2.34", "major_minor": "7.2", "channel": "eol",    "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-7.2.34-Win32-VC15-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] },
+        { "version": "7.1.33", "major_minor": "7.1", "channel": "eol",    "downloads": [{ "url": "https://downloads.php.net/~windows/releases/archives/php-7.1.33-Win32-VC14-x64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "php.net" }] }
+      ]
+    },
+    "mysql": {
+      "name": "mysql",
+      "display_name": "MySQL",
+      "category": "database",
+      "homepage": "https://www.mysql.com/",
+      "license": "GPL-2.0",
+      "releases": [
+        { "version": "9.6.0",  "major_minor": "9.6", "channel": "innovation", "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-9.6/mysql-9.6.0-winx64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] },
+        { "version": "8.4.8",  "major_minor": "8.4", "channel": "lts",        "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-8.4.8-winx64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] },
+        { "version": "8.0.45", "major_minor": "8.0", "channel": "stable",     "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.45-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] },
+        { "version": "5.7.44", "major_minor": "5.7", "channel": "eol",        "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-5.7.44-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] }
+      ]
+    },
+    "mariadb": {
+      "name": "mariadb",
+      "display_name": "MariaDB",
+      "category": "database",
+      "homepage": "https://mariadb.org/",
+      "license": "GPL-2.0",
+      "releases": [
+        { "version": "12.3.1",  "major_minor": "12.3", "channel": "stable", "downloads": [{ "url": "https://archive.mariadb.org/mariadb-12.3.1/winx64-packages/mariadb-12.3.1-winx64.zip",   "os": "windows", "arch": "x64", "archive_type": "zip", "source": "mariadb.org" }] },
+        { "version": "11.8.6",  "major_minor": "11.8", "channel": "lts",    "downloads": [{ "url": "https://archive.mariadb.org/mariadb-11.8.6/winx64-packages/mariadb-11.8.6-winx64.zip",   "os": "windows", "arch": "x64", "archive_type": "zip", "source": "mariadb.org" }] },
+        { "version": "11.4.10", "major_minor": "11.4", "channel": "lts",    "downloads": [{ "url": "https://archive.mariadb.org/mariadb-11.4.10/winx64-packages/mariadb-11.4.10-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "mariadb.org" }] }
+      ]
+    },
+    "redis": {
+      "name": "redis",
+      "display_name": "Redis",
+      "category": "cache",
+      "homepage": "https://redis.io/",
+      "license": "BSD-3-Clause",
+      "releases": [
+        { "version": "8.6.2",  "major_minor": "8.6", "channel": "stable", "downloads": [{ "url": "https://github.com/redis-windows/redis-windows/releases/download/8.6.2/Redis-8.6.2-Windows-x64-msys2.zip",   "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/redis-windows" }] },
+        { "version": "8.0.6",  "major_minor": "8.0", "channel": "stable", "downloads": [{ "url": "https://github.com/redis-windows/redis-windows/releases/download/8.0.6/Redis-8.0.6-Windows-x64-msys2.zip",   "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/redis-windows" }] },
+        { "version": "7.4.8",  "major_minor": "7.4", "channel": "stable", "downloads": [{ "url": "https://github.com/redis-windows/redis-windows/releases/download/7.4.8/Redis-7.4.8-Windows-x64-msys2.zip",   "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/redis-windows" }] },
+        { "version": "7.2.13", "major_minor": "7.2", "channel": "stable", "downloads": [{ "url": "https://github.com/redis-windows/redis-windows/releases/download/7.2.13/Redis-7.2.13-Windows-x64-msys2.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/redis-windows" }] }
+      ]
+    },
+    "postgresql": {
+      "name": "postgresql",
+      "display_name": "PostgreSQL",
+      "category": "database",
+      "homepage": "https://www.postgresql.org/",
+      "license": "PostgreSQL",
+      "releases": [
+        { "version": "18.3",  "major_minor": "18", "channel": "stable", "downloads": [{ "url": "https://get.enterprisedb.com/postgresql/postgresql-18.3-1-windows-x64-binaries.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "enterprisedb" }] },
+        { "version": "17.9",  "major_minor": "17", "channel": "stable", "downloads": [{ "url": "https://get.enterprisedb.com/postgresql/postgresql-17.9-1-windows-x64-binaries.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "enterprisedb" }] },
+        { "version": "16.13", "major_minor": "16", "channel": "stable", "downloads": [{ "url": "https://get.enterprisedb.com/postgresql/postgresql-16.13-1-windows-x64-binaries.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "enterprisedb" }] }
+      ]
+    },
+    "mongodb": {
+      "name": "mongodb",
+      "display_name": "MongoDB",
+      "category": "database",
+      "homepage": "https://www.mongodb.com/",
+      "license": "SSPL-1.0",
+      "releases": [
+        { "version": "8.0.21-rc1", "major_minor": "8.0", "channel": "rc",     "downloads": [{ "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.21-rc1.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "mongodb" }] },
+        { "version": "7.0.32-rc2", "major_minor": "7.0", "channel": "rc",     "downloads": [{ "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-7.0.32-rc2.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "mongodb" }] }
+      ]
+    },
+    "memcached": {
+      "name": "memcached",
+      "display_name": "Memcached",
+      "category": "cache",
+      "homepage": "https://memcached.org/",
+      "license": "BSD-3-Clause",
+      "releases": [
+        { "version": "1.6.41", "major_minor": "1.6", "channel": "stable", "downloads": [{ "url": "https://github.com/nono303/memcached/archive/1.6.41.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/nono303" }] }
+      ]
+    },
+    "mailpit": {
+      "name": "mailpit",
+      "display_name": "Mailpit",
+      "category": "mail",
+      "homepage": "https://mailpit.axllent.org/",
+      "license": "MIT",
+      "releases": [
+        { "version": "1.29.6", "major_minor": "1.29", "channel": "stable", "downloads": [{ "url": "https://github.com/axllent/mailpit/releases/download/v1.29.6/mailpit-windows-amd64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/axllent" }] },
+        { "version": "1.28.4", "major_minor": "1.28", "channel": "stable", "downloads": [{ "url": "https://github.com/axllent/mailpit/releases/download/v1.28.4/mailpit-windows-amd64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "github/axllent" }] }
+      ]
+    },
+    "nginx": {
+      "name": "nginx",
+      "display_name": "Nginx",
+      "category": "webserver",
+      "homepage": "https://nginx.org/",
+      "license": "BSD-2-Clause",
+      "releases": [
+        { "version": "1.29.8", "major_minor": "1.29", "channel": "mainline", "downloads": [{ "url": "https://nginx.org/download/nginx-1.29.8.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "nginx.org" }] },
+        { "version": "1.28.3", "major_minor": "1.28", "channel": "stable",   "downloads": [{ "url": "https://nginx.org/download/nginx-1.28.3.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "nginx.org" }] },
+        { "version": "1.26.3", "major_minor": "1.26", "channel": "stable",   "downloads": [{ "url": "https://nginx.org/download/nginx-1.26.3.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "nginx.org" }] },
+        { "version": "1.24.0", "major_minor": "1.24", "channel": "stable",   "downloads": [{ "url": "https://nginx.org/download/nginx-1.24.0.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "nginx.org" }] }
+      ]
+    }
+  }
+}

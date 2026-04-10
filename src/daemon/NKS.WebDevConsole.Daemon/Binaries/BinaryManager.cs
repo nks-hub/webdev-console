@@ -22,12 +22,14 @@ public sealed record InstalledBinary(
 public sealed class BinaryManager
 {
     private readonly BinaryDownloader _downloader;
+    private readonly CatalogClient _catalog;
     private readonly ILogger<BinaryManager> _logger;
     private readonly string _root;
 
-    public BinaryManager(BinaryDownloader downloader, ILogger<BinaryManager> logger)
+    public BinaryManager(BinaryDownloader downloader, CatalogClient catalog, ILogger<BinaryManager> logger)
     {
         _downloader = downloader;
+        _catalog = catalog;
         _logger = logger;
         _root = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -51,6 +53,8 @@ public sealed class BinaryManager
     /// <summary>
     /// List everything we have under ~/.wdc/binaries/.
     /// Scans the directory layout — does not require the catalog.
+    /// Skips internal-state directories (anything starting with '.', and
+    /// "downloads" / ".cache" caches).
     /// </summary>
     public IReadOnlyList<InstalledBinary> ListInstalled()
     {
@@ -60,9 +64,15 @@ public sealed class BinaryManager
         foreach (var appDir in Directory.GetDirectories(_root))
         {
             var app = Path.GetFileName(appDir);
+            if (app.StartsWith('.') || app.Equals("downloads", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             foreach (var versionDir in Directory.GetDirectories(appDir))
             {
                 var version = Path.GetFileName(versionDir);
+                if (version.StartsWith('.') || version.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 var majorMinor = string.Join('.', version.Split('.').Take(2));
                 result.Add(new InstalledBinary(app, version, majorMinor, versionDir, ResolveExecutable(app, versionDir)));
             }
@@ -91,9 +101,9 @@ public sealed class BinaryManager
             return ToInstalled(app, version, installPath);
         }
 
-        var release = BinaryCatalog.Find(app, version)
+        var release = _catalog.Find(app, version)
             ?? throw new InvalidOperationException(
-                $"No catalog entry for {app} {version}. Available: {string.Join(", ", BinaryCatalog.ForApp(app).Select(r => r.Version))}");
+                $"No catalog entry for {app} {version}. Available: {string.Join(", ", _catalog.ForApp(app).Select(r => r.Version))}");
 
         var cacheDir = Path.Combine(_root, ".cache");
         Directory.CreateDirectory(cacheDir);
@@ -105,14 +115,22 @@ public sealed class BinaryManager
         if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, recursive: true);
         await _downloader.ExtractAsync(archive, tempExtract, ct);
 
-        // Some archives wrap their content in a single top-level directory (e.g. mysql-8.4.8-winx64/...);
-        // flatten if so.
-        var entries = Directory.GetFileSystemEntries(tempExtract);
-        if (entries.Length == 1 && Directory.Exists(entries[0]))
+        // Some archives wrap their content in a single top-level directory (e.g. mysql-8.4.8-winx64/...,
+        // Apache24/...). Flatten if there's exactly one *significant* top-level directory — ignoring
+        // readme/info files that ship alongside (e.g. Apache Lounge zips contain "-- Win64 VS18 --" and "ReadMe.txt").
+        var allEntries = Directory.GetFileSystemEntries(tempExtract);
+        var dirEntries = allEntries.Where(Directory.Exists).ToList();
+        if (dirEntries.Count == 1)
         {
-            var inner = entries[0];
+            var inner = dirEntries[0];
             if (Directory.Exists(installPath)) Directory.Delete(installPath, recursive: true);
             Directory.Move(inner, installPath);
+            // Move any leftover top-level files (readmes, info markers) into the install dir for reference
+            foreach (var leftover in allEntries.Where(File.Exists))
+            {
+                try { File.Move(leftover, Path.Combine(installPath, Path.GetFileName(leftover)), overwrite: true); }
+                catch { /* ignore */ }
+            }
             Directory.Delete(tempExtract, recursive: true);
         }
         else

@@ -36,6 +36,15 @@ builder.Services.AddSingleton<SiteOrchestrator>();
 
 // Binary catalog / downloader / manager — own binaries under ~/.wdc/binaries/
 builder.Services.AddHttpClient("binary-downloader");
+builder.Services.AddHttpClient("catalog-client");
+builder.Services.AddSingleton<CatalogClientOptions>(sp =>
+{
+    // FUTURE: read from settings table or environment
+    var url = Environment.GetEnvironmentVariable("NKS_WDC_CATALOG_URL")
+        ?? "http://127.0.0.1:8765";
+    return new CatalogClientOptions { BaseUrl = url };
+});
+builder.Services.AddSingleton<CatalogClient>();
 builder.Services.AddSingleton<BinaryDownloader>();
 builder.Services.AddSingleton<BinaryManager>();
 
@@ -71,6 +80,10 @@ migrationRunner.Run(database.ConnectionString);
 
 var app = builder.Build();
 app.UseCors();
+
+// Refresh binary catalog from the (mock) catalog API before plugins start so they can use it
+var catalogClient = app.Services.GetRequiredService<CatalogClient>();
+await catalogClient.RefreshAsync();
 
 // Phase 2: Start plugins with the fully-built service provider
 var pluginContext = new PluginContext(
@@ -409,11 +422,17 @@ app.MapGet("/api/databases", () =>
 // POST /api/binaries/install         → { app, version } downloads + extracts
 // DELETE /api/binaries/{app}/{version} → uninstall
 
-app.MapGet("/api/binaries/catalog", () =>
-    Results.Ok(BinaryCatalog.All));
+app.MapGet("/api/binaries/catalog", (CatalogClient cc) =>
+    Results.Ok(cc.CachedReleases));
 
-app.MapGet("/api/binaries/catalog/{app}", (string app) =>
-    Results.Ok(BinaryCatalog.ForApp(app)));
+app.MapGet("/api/binaries/catalog/{app}", (string app, CatalogClient cc) =>
+    Results.Ok(cc.ForApp(app)));
+
+app.MapPost("/api/binaries/catalog/refresh", async (CatalogClient cc, CancellationToken ct) =>
+{
+    var count = await cc.RefreshAsync(ct);
+    return Results.Ok(new { count, lastFetch = cc.LastFetch });
+});
 
 app.MapGet("/api/binaries/installed", (BinaryManager bm) =>
     Results.Ok(bm.ListInstalled()));
