@@ -118,241 +118,320 @@ Target audience: PHP developers who want native performance (not Docker overhead
 
 ## 3. Technology Stack Decision
 
-### Core Engine: Go (Recommended) or Rust
+### Core Engine: C# / .NET 9 (FINAL DECISION)
 
-| Criteria | Go | Rust | C# (.NET) | Node.js |
+**Single-language, unified stack for daemon + GUI + CLI**
+
+| Criteria | Go | Rust | **C# (.NET 9)** | Node.js |
 |----------|------|------|-----------|---------|
-| Process management | Excellent (`os/exec`, goroutines) | Excellent (async, tokio) | Moderate (heavy runtime) | Poor (single-threaded) |
-| Cross-compilation | `GOOS=windows go build` | `cargo build --target` | Requires .NET runtime | Requires Node.js |
-| Binary size | ~10MB | ~5MB | ~50MB+ (with runtime) | N/A (needs runtime) |
-| Startup speed | Fast | Fastest | Slow (JIT) | Moderate |
-| Developer ecosystem | Large, familiar | Growing | Large (Windows) | Largest |
-| Concurrency | Goroutines (easy) | async/await (complex) | async/await | Event loop |
-| Template engine | `text/template` (built-in) | Tera (Jinja2-like) | Razor | Handlebars |
-| SQLite | `modernc.org/sqlite` (pure Go) | `rusqlite` | EF Core | better-sqlite3 |
+| Process management | Excellent (`os/exec`, goroutines) | Excellent (async, tokio) | **Excellent** (`System.Diagnostics.Process`, Task-based) | Poor (single-threaded) |
+| Cross-compilation | `GOOS=windows go build` | `cargo build --target` | **Native (platform-specific publish)** | Requires Node.js |
+| Binary size | ~10MB | ~5MB | **15-25MB** (self-contained, NO trimming) | N/A (needs runtime) |
+| Startup speed | Fast | Fastest | **Moderate (JIT warm-up)** | Moderate |
+| Developer ecosystem | Large, familiar | Growing | **Large (Windows-centric, cross-platform improving)** | Largest |
+| Concurrency | Goroutines (easy) | async/await (complex) | **async/await (first-class, mature)** | Event loop |
+| Dependency injection | Manual | Manual | **Built-in (Microsoft.Extensions)** | npm |
+| SQLite | `modernc.org/sqlite` (pure Go) | `rusqlite` | **EF Core or Dapper** | better-sqlite3 |
+| IPC | Named pipe (native) | TcpStream | **gRPC + named pipes (GrpcDotNetNamedPipes)** | TCP |
+| Daemon framework | Manual goroutine loops | Manual tokio | **IHostedService (mature pattern)** | Manual event loop |
 
-**Recommendation: Go** for the daemon. Pragmatic choice — goroutines map directly to per-service supervisors, `os/exec` handles process management cleanly, single static binary with zero dependencies. Cross-compilation from any platform.
+**Decision Rationale:**
+1. **AV False Positive Safety** — Go binaries trigger Microsoft Defender heuristics (Wacatac.B!ml, Wacapew.C!ml); .NET Framework Dependent Execution (FDE) not flagged even on unsigned binaries. Critical for product reliability.
+2. **Single Language Everywhere** — Daemon (Worker Service) + GUI (Avalonia UI XAML/C#) + CLI (System.CommandLine, Spectre.Console) = zero polyglot friction, unified testing, shared domain models.
+3. **Native Process Management** — `System.Diagnostics.Process` + `TaskCompletionSource` is gold standard for Windows process control; `Task` model elegantly maps to per-service lifecycle management.
+4. **IPC/RPC Excellence** — gRPC + protobuf over named pipes provides better performance and type safety than JSON-RPC; works natively on Windows with `GrpcDotNetNamedPipes` NuGet package.
+5. **GUI Maturity** — Avalonia UI 12.x reaches production-grade stability with Fluent Design System, native tray support, and DataGrid control built-in. ReactiveUI/CommunityToolkit.MVVM ecosystem is robust.
+6. **Developer Productivity** — C# async/await, LINQ, and dependency injection reduce ceremony vs. Go; IDE support (Visual Studio Community, Rider) is unmatched.
 
-**Alternative: Rust** if maximum performance and memory safety are prioritized. Adds development complexity but produces smaller binaries and eliminates GC pauses.
+### GUI Framework: Avalonia UI 12.x (SELECTED)
 
-### GUI Framework: Full Evaluation
+**Avalonia UI v12.0.0+ (April 2026 release)**
 
-| Framework | Bundle Size | Memory | Platform | Language | Rendering | Verdict |
-|-----------|------------|--------|----------|----------|-----------|---------|
-| **Tauri v2** | **5-10 MB** | **30-80 MB** | Win/macOS/Linux | Rust + Web (Svelte/React) | Native WebView2/WebKit | **RECOMMENDED** |
-| Electron | 130-160 MB | 250-400 MB | Win/macOS/Linux | Node.js + Web | Bundled Chromium | Too heavy |
-| Neutralinojs | ~6 MB | ~40 MB | Win/macOS/Linux | C++ + Web | Native WebView | Lacks ecosystem |
-| Qt (C++) | 30-50 MB | ~50 MB | Win/macOS/Linux | C++ / QML | Native widgets | Steep learning curve |
-| .NET MAUI | 50+ MB | ~60 MB | Win/macOS | C# + XAML | Native controls | .NET runtime required |
-| Flutter Desktop | 20+ MB | ~40 MB | Win/macOS/Linux | Dart + widgets | Custom Skia engine | Platform channel complexity |
-| Sciter | ~5 MB | ~20 MB | Win/macOS/Linux | C++ + HTML/CSS | Custom engine | Proprietary license |
-| GTK4 + libadwaita | ~15 MB | ~30 MB | Linux (Win/macOS limited) | C/Vala/Rust | Native GTK | Linux-centric |
-| SwiftUI | 0 (system) | ~20 MB | macOS only | Swift | Native Apple | Apple-only |
-| FLTK | ~1 MB | ~10 MB | Win/macOS/Linux | C++ | Custom lightweight | Too basic for modern UI |
+| Aspect | Details |
+|--------|---------|
+| **License** | MIT (permissive, commercial OK) |
+| **Bundle Size** | ~21 MB base + ~13 MB self-contained runtime = ~34 MB installer (vs. Qt 8-15 MB) |
+| **Memory** | 40-80 MB runtime (lower than Electron, comparable to Qt) |
+| **Features** | Native tray icon, DataGrid, TreeView, Fluent Design System (dark/light), hot reload in dev |
+| **Cross-Platform** | Win, macOS, Linux (native rendering on each platform) |
+| **IPC with Daemon** | gRPC over named pipes (Windows) / Unix sockets (macOS/Linux) via `GrpcDotNetNamedPipes` package |
+| **MVVM** | ReactiveUI (mature) or CommunityToolkit.MVVM (simpler, Microsoft-endorsed) |
+| **Charts/Graphing** | LiveCharts2 (C#, similar to Chart.js) |
+| **Keyboard Shortcuts** | Built-in `HotKeyManager` and command binding support |
+| **Accessibility** | WCAG 2.1 AA via UIA (Windows) / accessibility APIs (macOS/Linux) |
 
-### Weighted Decision Matrix (from deep research of all 10 frameworks)
+**Comparison to Qt6:**
+- Qt6 (Score: 9.5): Smaller bundle (8-15 MB), LGPL compliance burden, C++ learning curve
+- **Avalonia UI (Score: 8.5): Slightly larger bundle, MIT license (simpler), C# ecosystem, unified .NET stack**
 
-| Criterion | Weight | Tauri v2 | Electron | Flutter | Qt 6 | .NET MAUI |
-|-----------|--------|----------|----------|---------|------|-----------|
-| Bundle size | 15% | 10 | 3 | 6 | 7 | 5 |
-| Memory | 10% | 9 | 3 | 6 | 9 | 6 |
-| Cross-platform | 15% | 8 | 9 | 9 | 8 | 4 |
-| System tray | 10% | 9 | 9 | 7 | 10 | 5 |
-| IPC/Process mgmt | 15% | 8 | 10 | 7 | 9 | 8 |
-| Dev speed | 15% | 6 | 10 | 8 | 4 | 6 |
-| Ecosystem | 10% | 7 | 10 | 7 | 8 | 5 |
-| Risk | 10% | 7 | 9 | 7 | 6 | 4 |
-| **TOTAL** | | **7.85** | **7.70** | **7.35** | **7.20** | **5.10** |
+### Core Engine Framework: .NET 9 Worker Service
 
-*Neutralinojs (3.1), Sciter (2.4), GTK4 (3.8), JavaFX (3.5), wxWidgets (4.1), FLTK (2.0) — all eliminated.*
+```csharp
+// Program.cs entry point
+Host.CreateDefaultBuilder(args)
+    .ConfigureServices(services => {
+        services.AddHostedService<DevForgeWorkerService>();
+        services.AddScoped<IServiceManager>();
+        services.AddScoped<IConfigurationPipeline>();
+        services.AddSingleton<EventBus>();
+        services.AddGrpc();
+    })
+    .Build()
+    .Run();
+```
 
-### Per-Framework Key Findings
+**Key Patterns:**
+- `IHostedService` lifecycle (StartAsync / StopAsync) for daemon management
+- `BackgroundService` base class for continuous monitoring loops
+- `CancellationToken` throughout for graceful shutdown
+- `Channel<T>` for inter-task communication (replaces goroutine channels)
+- Dependency injection for loose coupling
 
-**Tauri v2 (Score: 7.85)** — RECOMMENDED
-- 105K GitHub stars, Chromium-free (OS WebView), 3-15MB installer
-- Sidecar (`externalBin`) is first-class for Go daemon integration
-- Production apps: Hoppscotch (165→8MB migration), ChatGPT desktop
-- Risk: Rust learning curve (3-6 weeks ramp-up), WebView rendering differences across OS
-- AV: NSIS triggers Defender — **use MSI (WiX) installer**
+### Configuration Storage & IPC
 
-**Electron (Score: 7.70)** — RUNNER-UP (fastest dev speed)
-- 114K stars, 85-170MB installer, 200-450MB memory
-- FlyEnv (our competitor) uses this exact stack — architectural reference available
-- Best dev speed: node-pty + xterm.js terminal in one afternoon
-- Risk: Memory overhead when users run PHP + MySQL + Redis simultaneously
-- 2022 Defender incident flagged ALL Electron apps (Chrome, Discord, Slack)
+**Configuration Storage:**
+- **Site configs: TOML files** — parsed via `Tomlyn` NuGet package
+- **Runtime state: SQLite** — `Dapper` for lightweight ORM, or EF Core for migrations
+- **Rationale:** Same as before — survives corruption, independent per-site
 
-**Flutter Desktop (Score: 7.35)** — VIABLE ALTERNATIVE
-- 174K stars, 45-80MB installer, consistent Impeller rendering
-- `tray_manager` works cross-platform; `dart:io` Process.start() adequate
-- Risk: No named pipe in dart:io (needs FFI), immature desktop plugin ecosystem
+**IPC Protocol: gRPC (not JSON-RPC)**
+- **Transport:** Named pipe `\\.\pipe\devforge-daemon` (Windows) / Unix socket `~/.devforge/daemon.sock` (Unix)
+- **Serialization:** Protocol Buffers (protobuf) — type-safe, binary efficient
+- **Benefits vs. JSON-RPC 2.0:**
+  - Strongly-typed contracts (compile-time safety)
+  - Better performance for streaming logs/events
+  - Named pipes have full support via `GrpcDotNetNamedPipes` package
+  - Shared proto definitions between daemon and clients
 
-**Qt 6 (Score: 7.20)** — BEST NATIVE FEEL
-- 30-year track record, QProcess is gold standard for process management
-- LGPL viable but adds legal compliance overhead
-- Risk: C++ learning curve, 2-4 month ramp-up for web team
-
-### REVISED Decision: Non-JS/TS GUI (user requirement: NO JavaScript/TypeScript)
-
-**23 frameworks evaluated by 4 parallel research agents.** Tauri and Electron eliminated (require JS for frontend).
-
-### Tier 1 — Ready to Ship (No JS/TS)
-
-| # | Framework | Lang | Score | Bundle | RAM | Tray | License |
-|---|-----------|------|-------|--------|-----|------|---------|
-| **1** | **Qt6 C++/QML** | C++ | **9.5** | 8-15 MB | 30-50 MB | ✅ built-in | LGPL v3 |
-| **2** | **Avalonia UI** | C# | **8.5** | 21+13 MB | 40-80 MB | ✅ built-in | MIT |
-| **3** | **PySide6+Nuitka** | Python | **7.5** | 18-25 MB | 80-120 MB | ✅ built-in | LGPL v3 |
-| **S** | **Go+htmx+templ+systray** | Go | **9.0** | single binary | 15-30 MB | ✅ systray | MIT |
-
-### Tier 2 — Strong with Trade-offs
-
-| # | Framework | Lang | Score | Key Issue |
-|---|-----------|------|-------|-----------|
-| 4 | Flutter Desktop | Dart | 7.0 | tray = community plugin, xterm stale |
-| 5 | Slint | Rust | 6.5 | No system tray yet |
-| 6 | Iced | Rust | 6.0 | Pre-1.0, no built-in tray |
-| 7 | Fyne | Go | 4.5 | Dated look, CPU issues |
-
-### Key Findings
-
-**Avalonia UI** (v12.0.0, Apr 2026): 30.5K stars, $3M Devolutions sponsorship, Native AOT 21MB EXE, FluentTheme dark/light, TrayIcon + DataGrid built-in, gRPC over named pipes via GrpcDotNetNamedPipes.
-
-**Qt6 LGPL compliance**: Dynamic linking = closed-source app OK. Ship Qt DLLs + LGPL notice. Telegram, VLC, VirtualBox all do this.
-
-**Go+htmx+templ pattern**: Zero JS framework. Go daemon serves HTML via templ templates, htmx (14KB) handles reactivity, SSE for real-time logs. systray opens browser to 127.0.0.1:7272. Docker Desktop, Portainer, Caddy use this pattern.
-
-### Scenario-Based Recommendation
-
-| If team knows... | Choose | Timeline | Why |
-|-----------------|--------|----------|-----|
-| **C# / .NET** | **Avalonia UI** | 4-5 months | XAML/MVVM familiar, MIT license, best .NET cross-platform |
-| **C++ / Qt** | **Qt6 QML** | 5-6 months | Gold standard, smallest bundle, LGPL review needed |
-| **Go only** | **Go+htmx+templ+systray** | 3-4 months | Zero new language, browser=UI, Docker pattern |
-| **Python** | **PySide6+Nuitka** | 4-5 months | Qt power in Python, 20MB bundle |
-| **Dart/Flutter** | **Flutter Desktop** | 5-6 months | fluent_ui for Windows, hot reload |
-| **Rust** | **Slint** | 6-7 months | Royalty-free, QML-like DSL, 3MB binary |
-
-### Configuration Storage: Hybrid
-
-- **Site configs: TOML files** (one per site) — human-readable, diffable, survives corruption
-- **Runtime state: SQLite** — PIDs, health log, events, service status
-- **Rationale:** Solves MAMP PRO's single-DB-corruption problem. Each site is independent.
-
-### IPC: JSON-RPC 2.0 over local sockets
-
-- **Windows:** Named pipe `\\.\pipe\devforge-daemon`
-- **macOS/Linux:** Unix domain socket `~/.devforge/daemon.sock`
-- **Protocol:** JSON-RPC 2.0 with streaming support for logs/events
+**Proto Example:**
+```protobuf
+service DevForge {
+  rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
+  rpc ListSites(Empty) returns (stream SiteInfo);
+  rpc SubscribeEvents(EventFilter) returns (stream Event);
+}
+```
 
 ---
 
 ## 4. System Architecture
 
-### Layered Architecture
+### Layered Architecture (.NET 9 + Avalonia UI)
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  PRESENTATION LAYER                                  │
-│  ┌──────────────────┐  ┌─────────────────────────┐  │
-│  │  GUI (Tauri +    │  │  CLI (devforge binary)  │  │
-│  │  Svelte 5)       │  │                         │  │
-│  └────────┬─────────┘  └──────────┬──────────────┘  │
-│           │                       │                  │
-├───────────┴───────────────────────┴──────────────────┤
-│  API LAYER — JSON-RPC 2.0 over local socket/pipe     │
-├──────────────────────────────────────────────────────┤
-│  CORE ENGINE (devforged daemon)                       │
-│  ┌───────────┬────────────┬───────────┬───────────┐  │
-│  │ Service   │ Config     │ VHost     │ Plugin    │  │
-│  │ Manager   │ Pipeline   │ Manager   │ Host      │  │
-│  ├───────────┼────────────┼───────────┼───────────┤  │
-│  │ PHP Mgr   │ SSL/Cert   │ DNS/Hosts │ DB Mgr   │  │
-│  └───────────┴────────────┴───────────┴───────────┘  │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │  Event Bus (pub/sub) + Health Monitor            │ │
-│  └──────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────┤
-│  PLATFORM ABSTRACTION LAYER (PAL)                     │
-│  (process spawning, privilege elevation,              │
-│   file permissions, service registration)             │
-└──────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│  PRESENTATION LAYER                                   │
+│  ┌──────────────────────────┐  ┌──────────────────┐  │
+│  │  GUI (Avalonia UI)       │  │  CLI             │  │
+│  │  XAML + C# ViewModel     │  │  (System.        │  │
+│  │  (MVVM/ReactiveUI)       │  │   CommandLine +  │  │
+│  │                          │  │   Spectre.       │  │
+│  └────────────┬─────────────┘  │   Console)       │  │
+│               │                │                  │  │
+│               │                └────────┬─────────┘  │
+├───────────────┴─────────────────────────┴────────────┤
+│  RPC LAYER — gRPC over named pipe/Unix socket        │
+│  (Protobuf serialization, strongly-typed contracts)  │
+├───────────────────────────────────────────────────────┤
+│  CORE ENGINE (DevForge Worker Service)               │
+│  ┌───────────────┬──────────────┬─────────────────┐  │
+│  │ IServiceMgr   │ IConfigPipe   │ IVHostManager  │  │
+│  │ (Process      │ (TOML + tpl + │ (Apache/Nginx) │  │
+│  │  lifycycle)   │  validation)  │                │  │
+│  ├───────────────┼──────────────┼─────────────────┤  │
+│  │ IPhpManager   │ ISslModule    │ IDnsManager    │  │
+│  │ (MultiVer)    │ (mkcert)      │ (hosts file)   │  │
+│  └───────────────┴──────────────┴─────────────────┘  │
+│  ┌─────────────────────────────────────────────────┐ │
+│  │  EventBus (Channel<Event>) + HealthMonitor     │ │
+│  │  (runs as BackgroundService)                   │ │
+│  └─────────────────────────────────────────────────┘ │
+├───────────────────────────────────────────────────────┤
+│  PLATFORM ABSTRACTION LAYER (C#)                      │
+│  IPlatformAbstraction: process spawning,             │
+│  privilege elevation (UAC), file ACLs, registries    │
+└───────────────────────────────────────────────────────┘
 ```
 
-### Three Binaries
+### Single .NET Solution Structure
 
-1. **`devforged`** — Background daemon. Owns all child processes. Exposes JSON-RPC API. Runs as user-level process (NOT admin/root).
-2. **`devforge`** — CLI client. Thin RPC client, no direct file or process manipulation.
-3. **`DevForge`** — GUI app (Tauri). Embeds daemon or connects to existing one.
+```
+DevForge.sln
+├── DevForge.Daemon/              # Worker Service (.NET 9)
+│   ├── Program.cs               # Startup, DI configuration
+│   ├── Services/
+│   │   ├── ServiceManager.cs    # System.Diagnostics.Process wrapper
+│   │   ├── ConfigPipeline.cs    # TOML + Handlebars rendering
+│   │   ├── VHostManager.cs      # Apache/Nginx config
+│   │   ├── SslModule.cs         # mkcert integration
+│   │   ├── HealthMonitor.cs     # BackgroundService loop
+│   │   └── PluginHost.cs        # Lua runtime
+│   └── Protos/                  # gRPC service definitions
+│       └── devforge.proto       # Service contracts
+│
+├── DevForge.Gui/                 # Avalonia UI Application
+│   ├── App.xaml.cs              # App entry point
+│   ├── Views/
+│   │   ├── MainWindow.xaml      # Root window
+│   │   ├── DashboardView.xaml
+│   │   ├── SitesManagerView.xaml
+│   │   ├── PhpManagerView.xaml
+│   │   └── SettingsView.xaml
+│   ├── ViewModels/              # ReactiveUI or MVVM Toolkit
+│   │   ├── MainViewModel.cs
+│   │   ├── DashboardViewModel.cs
+│   │   └── ...
+│   └── DaemonClient.cs          # gRPC channel to daemon
+│
+├── DevForge.Cli/                 # CLI Console Application
+│   ├── Program.cs               # System.CommandLine root
+│   ├── Commands/
+│   │   ├── SiteCommand.cs       # site:create, site:list, etc.
+│   │   ├── ServiceCommand.cs
+│   │   ├── PhpCommand.cs
+│   │   └── ...
+│   └── DaemonClient.cs          # Shared gRPC client
+│
+├── DevForge.Core/                # Shared domain models
+│   ├── Models/
+│   │   ├── ServiceUnit.cs
+│   │   ├── Site.cs
+│   │   └── ...
+│   ├── Interfaces/
+│   │   ├── IServiceManager.cs
+│   │   ├── IConfigPipeline.cs
+│   │   └── ...
+│   ├── Events/
+│   │   └── EventBus.cs          # Channel<Event> pub/sub
+│   └── Exceptions/
+│
+└── DevForge.Tests/               # xUnit + Moq
+    ├── UnitTests/
+    ├── IntegrationTests/
+    └── E2eTests/
+```
+
+### Three Entry Points (Same .NET Runtime)
+
+1. **`devforged.exe`** — Worker Service daemon
+   - Runs as system service (Windows Service) or user process (manual launch)
+   - Exposes gRPC endpoint on named pipe
+   - Manages all child processes (Apache, PHP-FPM, MySQL)
+   
+2. **`devforge.exe`** — CLI tool
+   - System.CommandLine for command parsing
+   - Spectre.Console for rich terminal output
+   - Connects to daemon via gRPC (if daemon not running, exits with error)
+   - Zero direct process/file manipulation
+   
+3. **`DevForge.exe`** — GUI application
+   - Avalonia UI, native look and feel
+   - Launches daemon if not running (or connects to existing)
+   - Uses gRPC client to communicate
+   - Tray icon integration (TrayIcon control in Avalonia)
 
 ### Critical Design Principle
 
-**The daemon is the single source of truth.** Neither CLI nor GUI ever modify config files or spawn services directly. All mutations go through the daemon's API.
+**The daemon is the single source of truth.** Neither CLI nor GUI ever modify config files or spawn services directly. All mutations go through the daemon's gRPC API. Protobuf contracts ensure version compatibility and strict typing.
 
 ---
 
 ## 5. Core Engine - Service Management
 
-### Service Process Model
+### Service Process Model (C# / System.Diagnostics)
 
 Each managed service (Apache, Nginx, MySQL, MariaDB, PHP-FPM) is represented as a `ServiceUnit`:
 
-```go
-type ServiceState int
-const (
-    StateStopped ServiceState = iota
-    StateStarting
-    StateRunning
-    StateStopping
-    StateCrashed
-    StateRestarting
-    StateDisabled
-)
+```csharp
+public enum ServiceState
+{
+    Stopped = 0,
+    Starting = 1,
+    Running = 2,
+    Stopping = 3,
+    Crashed = 4,
+    Restarting = 5,
+    Disabled = 6
+}
 
-type ServiceProcess struct {
-    ID           string
-    State        ServiceState
-    PID          int
-    Cmd          *exec.Cmd
-    LogBuffer    *RingBuffer    // last 1000 lines
-    RestartCount int
-    LastCrash    time.Time
-    Config       ServiceConfig
+public class ServiceUnit
+{
+    public string Id { get; set; }
+    public ServiceState State { get; private set; }
+    public int? ProcessId { get; private set; }  // null = no process
+    public Process? Process { get; private set; }
+    public CircularBuffer<string> LogBuffer { get; } = new(1000);  // last 1000 lines
+    public int RestartCount { get; private set; }
+    public DateTime? LastCrash { get; private set; }
+    public ServiceConfiguration Config { get; set; }
+    
+    // State machine, crash recovery orchestrated here
+    public async Task StartAsync(CancellationToken ct);
+    public async Task StopAsync(CancellationToken ct);
+    public async Task RestartAsync(CancellationToken ct);
+}
+
+public class RestartPolicy
+{
+    public int MaxRestarts { get; set; } = 5;
+    public TimeSpan WindowDuration { get; set; } = TimeSpan.FromSeconds(60);
+    public TimeSpan BackoffBase { get; set; } = TimeSpan.FromSeconds(2);
+    public TimeSpan BackoffMax { get; set; } = TimeSpan.FromSeconds(30);
 }
 ```
 
 ### State Machine
 
 ```
-STOPPED ──start()──► STARTING ──ready()──► RUNNING
-                          │                    │
-                     fail()│              crash()│
-                          ▼                    ▼
-                       CRASHED ◄──────── CRASHED
-                          │
-              restartPolicy│ (within threshold)
-                          ▼
-                     RESTARTING ──► STARTING
+STOPPED ──StartAsync()──► STARTING ──ReadinessCheck()──► RUNNING
+                               │                           │
+                          fail()│                   Crash()│
+                               ▼                           ▼
+                            CRASHED ◄────────────────────CRASHED
+                               │
+              RestartPolicy.Check (within threshold)
+                               ▼
+                            RESTARTING ──► STARTING
 
-RUNNING ──stop()──► STOPPING ──done()──► STOPPED
-                        │
-                   timeout(10s)
-                        ▼
-                    SIGKILL ──► STOPPED
+RUNNING ──StopAsync()──► STOPPING ──ProcessExit()──► STOPPED
+                             │
+                        WaitForExit(10s)
+                             ▼
+                         Process.Kill() ──► STOPPED
 ```
 
-### Crash Recovery
+**Key Difference from Go:** 
+- Go uses goroutines as lightweight tasks; .NET uses `Task` and `CancellationToken` for the same purpose
+- `Process.WaitForExitAsync()` replaces goroutine-based wait loops
+- `Channel<T>` enables inter-task signaling (state machine transitions trigger events)
 
-```go
-type RestartPolicy struct {
-    MaxRestarts    int           // 5
-    WindowDuration time.Duration // 60s
-    BackoffBase    time.Duration // 2s
-    BackoffMax     time.Duration // 30s
+### Crash Recovery Logic
+
+```csharp
+private async Task HandleCrashRecoveryAsync(CancellationToken ct)
+{
+    LastCrash = DateTime.UtcNow;
+    RestartCount++;
+    
+    if (RestartCount > Config.RestartPolicy.MaxRestarts 
+        && (DateTime.UtcNow - LastCrashWindow) < Config.RestartPolicy.WindowDuration)
+    {
+        State = ServiceState.Disabled;
+        await _eventBus.PublishAsync(new ServiceDegradedEvent(Id), ct);
+        return;
+    }
+    
+    // Exponential backoff: 2s, 4s, 8s, 16s, 30s (max)
+    var backoff = TimeSpan.FromMilliseconds(
+        Math.Min(
+            Config.RestartPolicy.BackoffBase.TotalMilliseconds * Math.Pow(2, RestartCount - 1),
+            Config.RestartPolicy.BackoffMax.TotalMilliseconds
+        )
+    );
+    
+    await Task.Delay(backoff, ct);
+    await RestartAsync(ct);
 }
-```
-
-If `RestartCount > MaxRestarts` within `WindowDuration` → transition to `StateDisabled`, fire `service.degraded` event.
 
 ### Startup Sequence (Target: < 3 seconds)
 
@@ -689,169 +768,369 @@ CREATE UNIQUE INDEX idx_php_default ON php_versions(is_default) WHERE is_default
 
 ## 12. CLI Interface & API Specification
 
-### CLI Command Tree
+### CLI Command Tree (System.CommandLine + Spectre.Console)
 
 ```
-devforge daemon:start|stop|status
-devforge site:create <domain> [--php=X.Y] [--server=apache|nginx] [--docroot=PATH] [--ssl]
-devforge site:list [--json]
-devforge site:delete <domain>
-devforge site:info <domain>
-devforge site:open <domain>
-devforge site:log <domain>
-devforge start [service]
-devforge stop [service]
-devforge restart [service]
-devforge status
-devforge php:list
-devforge php:install <version>
-devforge php:remove <version>
-devforge php:default <version>
-devforge php:ext <version> <extension> [--enable|--disable]
-devforge db:list
-devforge db:create <name>
-devforge db:drop <name>
-devforge db:import <name> <file>
-devforge db:export <name> [file]
-devforge ssl:trust
-devforge ssl:create <domain>
-devforge ssl:status
-devforge dns:status
-devforge dns:flush
-devforge config:get <key>
-devforge config:set <key> <value>
-devforge config:list
-devforge config:rebuild
-devforge plugin:list
-devforge plugin:install <name>
-devforge plugin:remove <name>
+devforge daemon [start|stop|status]
+devforge site create <domain> [--php=X.Y] [--server=apache|nginx] [--docroot=PATH] [--ssl]
+devforge site list [--json]
+devforge site delete <domain>
+devforge site info <domain>
+devforge site open <domain>
+devforge site log <domain> [--follow] [--lines=100]
+devforge service start [service]
+devforge service stop [service]
+devforge service restart [service]
+devforge service status [--json]
+devforge php list [--json]
+devforge php install <version>
+devforge php remove <version>
+devforge php default <version>
+devforge php extension <version> <name> [--enable|--disable]
+devforge database list
+devforge database create <name>
+devforge database drop <name>
+devforge database import <name> <file>
+devforge database export <name> [--output=file]
+devforge ssl trust
+devforge ssl create <domain> [--wildcard]
+devforge ssl status
+devforge dns status
+devforge dns flush
+devforge config get <key>
+devforge config set <key> <value>
+devforge config list
+devforge config rebuild
+devforge plugin list [--json]
+devforge plugin install <name>
+devforge plugin remove <name>
 ```
 
 ### Global Flags
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Machine-readable JSON output |
-| `--no-color` | Disable ANSI colors |
-| `--quiet` / `-q` | Suppress progress, errors only |
-| `--verbose` / `-v` | Debug output |
+| `--json` | Machine-readable JSON output (uses System.Text.Json) |
+| `--no-color` | Disable Spectre.Console ANSI markup |
+| `--quiet` / `-q` | Suppress progress indicators, errors only |
+| `--verbose` / `-v` | Debug output (includes stack traces) |
+| `--daemon-timeout=<ms>` | Override gRPC timeout (default: 30000ms) |
 
-### JSON-RPC 2.0 API
+**Implementation:** System.CommandLine v18.x provides built-in command/option/argument structure. Spectre.Console handles progress bars, tables, syntax highlighting with zero JavaScript.
+
+```csharp
+// Example: devforge site create
+var rootCommand = new RootCommand();
+var siteCommand = new Command("site");
+
+var createCommand = new Command("create")
+{
+    new Argument<string>("domain", "Site domain (e.g., myapp.local)"),
+    new Option<string>("--php", () => "8.2", "PHP version"),
+    new Option<string>("--docroot", "Document root path"),
+    new Option<string>("--server", () => "apache", "apache or nginx"),
+    new Option<bool>("--ssl", () => false, "Enable HTTPS"),
+};
+
+createCommand.SetHandler(async (domain, php, docroot, server, ssl, ct) =>
+{
+    var client = new DevForgeGrpcClient(); // gRPC client
+    var response = await client.CreateSiteAsync(
+        new CreateSiteRequest 
+        { 
+            Domain = domain, 
+            PhpVersion = php, 
+            DocumentRoot = docroot ?? Path.GetCurrentDirectory(),
+            ServerType = server,
+            SslEnabled = ssl
+        },
+        cancellationToken: ct
+    );
+    
+    AnsiConsole.MarkupLine($"[green]✓[/] Site created: [bold]{response.Domain}[/]");
+    AnsiConsole.MarkupLine($"  Document Root: [yellow]{response.DocumentRoot}[/]");
+    AnsiConsole.MarkupLine($"  URL: [link]{$"http{(ssl ? "s" : "")}://{domain}"}[/]");
+}, domainArg, phpOpt, docrootOpt, serverOpt, sslOpt);
+
+siteCommand.AddCommand(createCommand);
+rootCommand.AddCommand(siteCommand);
+```
+
+### gRPC API Specification (Protobuf)
 
 Transport: Named pipe (Win) / Unix domain socket (macOS/Linux).
 
-**Key API Methods:**
+**Core Services:**
 
-| Method | Params | Returns |
-|--------|--------|---------|
-| `site.create` | `{domain, root, php, ssl, server}` | `{domain, config_path, fpm_socket}` |
-| `site.list` | `{filter?}` | `{sites: [...]}` |
-| `site.delete` | `{domain, remove_db?, remove_files?}` | `{deleted: true}` |
-| `service.start` | `{name?}` | `{started: [...]}` |
-| `service.stop` | `{name?}` | `{stopped: [...]}` |
-| `service.status` | `{name?}` | `{services: [...]}` |
-| `php.install` | `{version}` | `{installed, path}` (+ progress stream) |
-| `php.set_default` | `{version}` | `{default}` |
-| `db.create` | `{name, engine?}` | `{created, engine}` |
-| `db.import` | `{name, file}` | `{imported, statements}` |
-| `ssl.create` | `{domain, wildcard?}` | `{domain, cert, expires}` |
-| `events.subscribe` | `{topics[]}` | SSE stream |
+```protobuf
+service DevForge {
+  // Site Management
+  rpc CreateSite(CreateSiteRequest) returns (SiteInfo);
+  rpc ListSites(Empty) returns (ListSitesResponse);
+  rpc DeleteSite(DeleteSiteRequest) returns (Empty);
+  rpc GetSiteInfo(GetSiteInfoRequest) returns (SiteInfo);
+  
+  // Service Control
+  rpc StartService(ServiceRequest) returns (ServiceResponse);
+  rpc StopService(ServiceRequest) returns (ServiceResponse);
+  rpc RestartService(ServiceRequest) returns (ServiceResponse);
+  rpc GetServiceStatus(Empty) returns (ServiceStatusResponse);
+  
+  // PHP Management
+  rpc InstallPhpVersion(PhpVersionRequest) returns (stream ProgressEvent);
+  rpc ListPhpVersions(Empty) returns (ListPhpResponse);
+  rpc SetDefaultPhp(PhpVersionRequest) returns (Empty);
+  
+  // Database Operations
+  rpc CreateDatabase(CreateDatabaseRequest) returns (Empty);
+  rpc ListDatabases(Empty) returns (ListDatabasesResponse);
+  rpc ImportDatabase(stream ImportDatabaseRequest) returns (ImportDatabaseResponse);
+  
+  // SSL/TLS
+  rpc CreateCertificate(CertificateRequest) returns (CertificateInfo);
+  rpc TrustCertificateAuthority(Empty) returns (Empty);
+  
+  // Events (server-to-client streaming)
+  rpc SubscribeEvents(EventFilter) returns (stream Event);
+}
 
-### Error Codes
+// Event message (supports service.started, site.created, etc.)
+message Event {
+  string topic = 1;          // e.g., "service.started"
+  string id = 2;             // UUID
+  google.protobuf.Timestamp timestamp = 3;
+  google.protobuf.Struct data = 4;  // Flexible JSON-like payload
+}
+```
 
-| Code | Meaning |
-|------|---------|
-| `-32001` | Service not running |
-| `-32002` | Domain not found |
-| `-32003` | Domain already exists |
-| `-32004` | PHP version not installed |
-| `-32005` | Permission denied |
-| `-32006` | Operation conflict |
+### Error Handling
+
+gRPC uses standard HTTP/2 status codes. Custom app errors via `Rpc.Status` detail field:
+
+```csharp
+// Server throws
+throw new RpcException(
+    new Status(StatusCode.NotFound, "Domain not found"),
+    new Metadata { { "error-code", "32002" } }
+);
+
+// Client catches
+try 
+{
+    await client.DeleteSiteAsync(new DeleteSiteRequest { Domain = domain });
+}
+catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+{
+    AnsiConsole.MarkupLine("[red]✗ Error:[/] Domain not found");
+    Environment.Exit(1);
+}
+```
 
 ### Event System
 
-Topics: `service.*`, `site.*`, `php.*`, `config.*`, `health.*`
+Both CLI and GUI subscribe to gRPC server streaming events. Event topics: `service.*`, `site.*`, `php.*`, `config.*`, `health.*`
 
-```json
+**CLI Usage:**
+```csharp
+var call = client.SubscribeEvents(new EventFilter { TopicPatterns = { "service.*" } });
+await foreach (var @event in call.ResponseStream.ReadAllAsync(ct))
 {
-  "event": "service.started",
-  "id": "<uuid>",
-  "timestamp": "2026-04-09T10:00:00Z",
-  "data": { "name": "nginx", "pid": 12345 }
+    AnsiConsole.MarkupLine($"[blue]{@event.Topic}[/] @ {@event.Timestamp}");
 }
 ```
+
+**GUI Usage:** Avalonia ViewModels bind to event streams via ReactiveUI or MVVM Toolkit, enabling real-time UI updates without polling.
 
 ---
 
 ## 13. UI/UX Design Specification
 
-### Design Language
+### Design Language (Avalonia UI + Fluent Design System)
 
+- **Base Theme:** FluentTheme (built-in to Avalonia)
 - **Dark mode default** (developer preference), light mode available
-- **Font:** Inter (UI) + JetBrains Mono (code/paths)
-- **Border radius:** 6px (inputs/buttons), 10px (cards), 16px (modals)
-- **Status colors:** Green (#22c55e) running, Red (#ef4444) stopped, Yellow (#f59e0b) warning, Blue (#38bdf8) info
+- **Font:** Segoe UI (system font) for UI, JetBrains Mono 12px for code/paths
+- **Border radius:** 4px (Fluent standard, inputs/buttons), 8px (cards), 12px (dialogs)
+- **Status colors:** Green (#107c10) running, Red (#da3b01) stopped, Yellow (#ffb900) warning, Blue (#0078d4) info
+- **Animations:** 200ms easing for state changes (respects `prefers-reduced-motion`)
 
-### Color Palette (Dark Mode)
+### Fluent Design System Implementation (Avalonia)
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--bg-base` | `#0f1117` | App background |
-| `--bg-surface` | `#1a1d27` | Cards, panels, sidebar |
-| `--bg-elevated` | `#242736` | Hover states |
-| `--text-primary` | `#e8eaf0` | Primary text |
-| `--text-secondary` | `#8b90a7` | Metadata |
-| `--accent-blue` | `#4f87ff` | Primary actions |
+Avalonia 12.x includes `FluentTheme` which provides:
+- Native control styling across Win/macOS/Linux
+- Built-in dark/light mode switching
+- Acrylic blur (Windows), vibrancy (macOS) backgrounds
+- System color integration
 
-### Screen Layout
-
-```
-┌────────────┬────────────────────────────────┐
-│            │                                │
-│  SIDEBAR   │       CONTENT AREA             │
-│  (56px     │                                │
-│  collapsed │  Dashboard / Sites / PHP /     │
-│  / 200px   │  Database / SSL / Terminal /   │
-│  expanded) │  Settings                      │
-│            │                                │
-│  Dashboard │                                │
-│  Sites     │                                │
-│  PHP       │                                │
-│  Database  │                                │
-│  SSL       │                                │
-│  Terminal  │                                │
-│  Settings  │                                │
-│            │                                │
-└────────────┴────────────────────────────────┘
+```xaml
+<!-- App.xaml -->
+<Application>
+  <Application.Styles>
+    <FluentTheme Mode="Dark" AccentColor="#0078d4" />
+  </Application.Styles>
+</Application>
 ```
 
-### Key Screens
+### Color Palette
 
-1. **System Tray** — Status dot, Start/Stop All, recent sites, open terminal
-2. **Dashboard** — Service status cards, resource usage, activity log, quick actions
-3. **Sites Manager** — Table with status, domain, PHP, SSL; detail panel on select
-4. **PHP Manager** — Installed versions, extensions toggle, download new versions
-5. **Database** — MySQL/MariaDB instances, create/import/export, phpMyAdmin access
-6. **SSL Manager** — Per-site cert status, one-click generation, CA trust status
-7. **Terminal** — Embedded terminal with DevForge CLI integration
-8. **Settings** — Ports, DNS, updates, plugins, themes
+| Token | Light | Dark | Usage |
+|-------|-------|------|-------|
+| Background | #ffffff | #1f1f1f | Canvas |
+| Surface | #f3f3f3 | #2d2d2d | Cards, panels |
+| Tertiary | #e0e0e0 | #3d3d3d | Dividers, subtle |
+| Text Primary | #000000 | #ffffff | Main text |
+| Text Secondary | #424242 | #a0a0a0 | Metadata |
+| Success | #107c10 | #107c10 | ✓ Running |
+| Error | #da3b01 | #f4573c | ✗ Stopped |
+| Warning | #ffb900 | #ffd666 | ⚠ Warning |
+| Info | #0078d4 | #4cc2ff | ℹ Info |
 
-### Keyboard Shortcuts
+### Screen Layout (XAML)
 
-- `Ctrl+K` — Command palette
-- `Ctrl+T` — New terminal tab
-- `Ctrl+1-8` — Switch sidebar sections
-- `Ctrl+N` — New site
-- `F5` — Refresh status
-- `Space` — Toggle selected service
+```xaml
+<!-- MainWindow.xaml -->
+<Window>
+  <DockPanel>
+    <!-- Sidebar Navigation -->
+    <StackPanel DockPanel.Dock="Left" Width="200" Background="{StaticResource SurfaceBrush}">
+      <Button Content="Dashboard" Command="{Binding ShowDashboard}" />
+      <Button Content="Sites" Command="{Binding ShowSites}" />
+      <Button Content="PHP" Command="{Binding ShowPhp}" />
+      <Button Content="Database" Command="{Binding ShowDatabase}" />
+      <Button Content="SSL/TLS" Command="{Binding ShowSsl}" />
+      <Button Content="Terminal" Command="{Binding ShowTerminal}" />
+      <Button Content="Settings" Command="{Binding ShowSettings}" />
+    </StackPanel>
 
-### Accessibility
+    <!-- Main Content -->
+    <ContentControl Content="{Binding CurrentView}" />
+  </DockPanel>
+</Window>
+```
 
-- All status colors paired with shape/text (never color alone)
-- WCAG 2.1 AA contrast ratios
-- `aria-live="polite"` for service state changes
-- All interactive elements min 44x44px touch target
-- Respects `prefers-reduced-motion`
+### Key Screens (Avalonia XAML)
+
+1. **System Tray**
+   - `TrayIcon` control in Avalonia (click opens MainWindow)
+   - Context menu: Start All, Stop All, recent sites (virtualized list), Exit
+   - Status indicator: Green/red circle overlay
+
+2. **Dashboard** (`DashboardView.xaml`)
+   - Service status cards (Apache, PHP-FPM, MySQL, dnsmasq)
+   - Real-time resource graphs (LiveCharts2 for CPU, RAM, disk)
+   - Quick action buttons (Start All, Stop All, Open Site)
+   - Activity log (latest 10 events, auto-scrolling)
+
+3. **Sites Manager** (`SitesManagerView.xaml`)
+   - DataGrid (Avalonia built-in) with columns: Domain, Status, PHP Version, SSL, Actions
+   - Right-click context menu: Open, Edit, Delete, View Logs
+   - Right panel shows detailed site config when selected
+   - Virtual scrolling for 50+ sites
+
+4. **PHP Manager** (`PhpManagerView.xaml`)
+   - List of installed PHP versions with actions (Set Default, Remove)
+   - Extensions manager: toggle xdebug, intl, gd per version
+   - Download new version UI (combo box + Install button)
+   - php.ini editor (syntax highlighting via TextEditor control)
+
+5. **Database Manager** (`DatabaseView.xaml`)
+   - MySQL/MariaDB instances
+   - Create new database dialog
+   - Import/export buttons with file picker
+   - phpMyAdmin link (opens browser)
+   - Database list with size info
+
+6. **SSL Manager** (`SslView.xaml`)
+   - CA trust status (green if trusted, red if not)
+   - Per-site cert status table (domain, expiry, trust status)
+   - Create Certificate button (generates with mkcert)
+   - Trust Certificate Authority button (runs elevated)
+
+7. **Terminal** (`TerminalView.xaml`)
+   - Embedded terminal via VT100 emulation (Terminal.Gui or custom ANSI parser)
+   - Integrates with `devforge` CLI directly
+   - Copy/paste support, scrollback buffer
+
+8. **Settings** (`SettingsView.xaml`)
+   - Listen ports (Apache, Nginx, MySQL)
+   - Startup behavior (start on boot, minimize to tray)
+   - DNS settings (dnsmasq config, domain suffix)
+   - Theme selector (Light/Dark/System)
+   - About & check for updates
+
+### Keyboard Shortcuts & Input
+
+| Shortcut | Action | Implementation |
+|----------|--------|-----|
+| `Ctrl+K` | Command palette | Window searches commands via XAML attached behavior |
+| `Ctrl+T` | New terminal | Triggered via AcceleratorKey binding |
+| `Ctrl+1-8` | Navigate sidebar | Button Click handlers with keyboard focus |
+| `Ctrl+N` | New site | Command binding to CreateSiteCommand |
+| `F5` | Refresh status | Calls `RefreshStatusAsync()` on ViewModel |
+| `Ctrl+,` | Settings | Navigation via router/controller pattern |
+| `Ctrl+W` / `Alt+F4` | Close window | Standard Avalonia behavior |
+
+```xaml
+<!-- Dashboard.xaml -->
+<Window>
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+K" Command="{Binding ShowCommandPalette}" />
+    <KeyBinding Gesture="Ctrl+N" Command="{Binding ShowCreateSiteDialog}" />
+    <KeyBinding Gesture="F5" Command="{Binding RefreshStatusCommand}" />
+  </Window.KeyBindings>
+</Window>
+```
+
+### Accessibility (WCAG 2.1 AA)
+
+- **Color + Shape:** Status indicators use color + icon (✓ Green, ✗ Red, ⚠ Orange)
+- **Contrast Ratios:** Text 4.5:1, UI components 3:1 (verified with Contrast Ratio checker)
+- **Focus Management:** Tab order defined via `TabIndex`, visible focus rect on all buttons
+- **ARIA equivalents:** `AutomationProperties.Name`, `AutomationProperties.HelpText` on controls
+- **Motion Reduction:** Animations respect `MediaQueryListener` for `prefers-reduced-motion`
+- **Touch Targets:** All buttons/clickable elements minimum 44x44px
+- **Keyboard Navigation:** All features accessible without mouse via Tab + Enter
+
+### MVVM Pattern (ReactiveUI or MVVM Toolkit)
+
+Example using MVVM Toolkit (Microsoft.Mvvm.Toolkit):
+
+```csharp
+public partial class DashboardViewModel : ObservableObject
+{
+    private readonly IDevForgeGrpcClient _client;
+    
+    [ObservableProperty]
+    private ObservableCollection<ServiceStatusModel> services = new();
+    
+    [ObservableProperty]
+    private bool isLoading;
+    
+    [RelayCommand]
+    private async Task RefreshStatusAsync(CancellationToken ct)
+    {
+        IsLoading = true;
+        try 
+        {
+            var response = await _client.GetServiceStatusAsync(ct);
+            Services = new ObservableCollection<ServiceStatusModel>(
+                response.Services.Select(s => MapToModel(s))
+            );
+        }
+        finally { IsLoading = false; }
+    }
+    
+    [RelayCommand]
+    private async Task StartAllServicesAsync(CancellationToken ct) => 
+        await _client.StartServiceAsync(new ServiceRequest { All = true }, cancellationToken: ct);
+}
+```
+
+### State Management
+
+- **View State** (UI visibility, selected tabs, scroll position) — ViewModel properties
+- **App State** (daemon connection, cached site list) — Singleton service
+- **Real-time Updates** — gRPC server-streaming events trigger ViewModel property changes
 
 ---
 
@@ -1076,77 +1355,190 @@ DevForge/
 │   └── sites/
 ├── log/
 ├── plugins/
-├── devforged[.exe]     (daemon)
-├── devforge[.exe]      (CLI)
-└── DevForge[.exe]      (GUI)
+├── devforged.exe       (daemon)
+├── devforge.exe        (CLI)
+├── DevForge.exe        (GUI)
+└── .NET 9 runtime files (if not using self-contained)
 ```
+
+### Build & Publish Strategy (.NET 9)
+
+**Self-Contained Build (Recommended for simplicity):**
+
+```bash
+# No external .NET runtime dependency
+dotnet publish -c Release -r win-x64 --self-contained
+
+# Output: 25-35 MB per platform (includes .NET runtime)
+# Binaries: devforged.exe, devforge.exe, DevForge.exe
+```
+
+**Framework-Dependent Build (Smaller):**
+
+```bash
+# Requires .NET 9 Desktop Runtime installed
+dotnet publish -c Release -r win-x64 --no-self-contained
+
+# Output: 2-3 MB binaries only
+# User must install .NET 9 Desktop Runtime from microsoft.com
+```
+
+**Decision:** Use **self-contained** for consumer distribution (no prerequisites), **framework-dependent** for enterprise/CI deployments (faster updates).
 
 ### Installers
 
-| Platform | Format | Size |
-|----------|--------|------|
-| Windows | NSIS installer + portable .7z | ~1.2GB compressed |
-| macOS | DMG + Homebrew cask | ~800MB |
-| Linux | AppImage + .deb/.rpm | ~600MB |
+| Platform | Format | Size | Tool |
+|----------|--------|------|------|
+| Windows | MSI (WiX Toolset) | ~300-500MB compressed | `dotnet new wix` + WiX 4 |
+| Windows Portable | .7z archive | ~250-350MB | 7-Zip CLI |
+| macOS | DMG + notarization | ~400-600MB | `create-dmg` + Apple signing |
+| Linux | AppImage + snap | ~300-500MB | `appimagetool` + snapcraft |
+
+**Windows Installer (WiX MSI) — Recommended Over NSIS**
+
+```xml
+<!-- DevForge.wixproj / Product.wxs (WiX 4) -->
+<Product>
+  <Feature Id="ProductFeature">
+    <ComponentRef Id="DevForgeDaemon" />
+    <ComponentRef Id="DevForgeCLI" />
+    <ComponentRef Id="DevForgeGUI" />
+    <ComponentRef Id="PHPBinaries" />
+    <ComponentRef Id="ApacheBinaries" />
+    <ComponentRef Id="MySQLBinaries" />
+  </Feature>
+  
+  <UI>
+    <UIRef Id="WixUI_InstallDir" />
+    <Publish Dialog="ExitDialog" Control="Finish" Event="LaunchApplication">
+      [WIXUI_EXITDIALOGOPTIONALCHECKBOXCHECKED]
+    </Publish>
+  </UI>
+</Product>
+
+<!-- Build -->
+dotnet build DevForge.wixproj
+# Outputs: DevForge.msi (signed)
+```
+
+**Why MSI over NSIS:**
+1. **Lower AV false positive rate** — Windows trusts MSI format more than NSIS .exe stubs
+2. **Automatic repair & uninstall** — Windows Installer handles rollback
+3. **License & documentation integration** — built-in EULA flow
+4. **Per-machine vs. per-user install** — flexible deployment options
+
+### Code Signing (.NET 9 Binaries)
+
+**.NET binaries do NOT trigger Defender heuristics** like Go binaries do. However, code signing still recommended for:
+1. SmartScreen reputation building (consumer trust)
+2. Chain-of-custody compliance (enterprise requirements)
+
+```bash
+# Sign .NET binaries post-publish
+signtool sign /f cert.pfx /p password /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 \
+  bin/Release/net9.0-windows/publish/*.exe
+
+# Sign MSI
+signtool sign /f cert.pfx /p password /fd SHA256 /tr http://timestamp.digicert.com \
+  DevForge.msi
+```
+
+**Certificate Strategy:**
+- **OV (Organization Validation) Code Signing Certificate** ~$200-400/year — sufficient for .NET
+- Do NOT use EV certificate (unnecessary cost for .NET; EV required for Go false positives)
+- Renewal before expiry to maintain SmartScreen reputation chain
+
+### .NET Framework Dependent vs. Self-Contained Tradeoff
+
+| Aspect | Framework-Dependent | Self-Contained |
+|--------|---------------------|-----------------|
+| Download size | 2-3 MB binaries | 25-35 MB (includes .NET 9 runtime) |
+| Install size | 5-10 MB (+ .NET SDK) | 60-80 MB total |
+| First launch | Fast (runtime pre-installed) | Slightly slower (JIT warm-up) |
+| Updates | Small binary patches | Full re-download |
+| Prerequisites | .NET 9 Desktop Runtime | None |
+| Enterprise | Easier (IT manages .NET) | No dependency management |
+| Consumer | Requires .NET installer download | Single ZIP/MSI download |
+
+**Recommendation:** Self-contained for initial releases (consumer expectations), transition to framework-dependent after market penetration (~v1.5+).
 
 ### Auto-Update System
 
-- Update manifest JSON on CDN (24h cache)
-- Delta updates for changed components
-- Code-signed with Ed25519 (TUF framework)
-- Rollback: keep last 2 versions
-- Channels: stable, beta, nightly
+**Strategy: Delta updates via Sparkle.NET or custom updater**
 
-### Binary Integrity
-
-All downloaded binaries verified against pinned SHA-256 hashes. GPG verification where available (PHP, MySQL).
-
-### Windows Antivirus False Positive Mitigation (CRITICAL)
-
-Go binaries on Windows trigger Microsoft Defender false positives (Wacatac.B!ml / Wacapew.C!ml). This is a **known, unresolved issue** — [microsoft/go#1255](https://github.com/microsoft/go/issues/1255) is OPEN as of Sep 2025. Microsoft Go team confirmed: **no compiler-level fix possible**, it's a Defender ML heuristic problem.
-
-**Key findings from research:**
-- Code signing has **minimal impact** — "signing doesn't really make much of a difference, it seems random"
-- Garble obfuscation **worsens** detection (flagged as "WinGo/Packed.Obfuscated.D")
-- `-ldflags="-s -w"` alone can **trigger** more detections
-- Tauri/Electron NSIS installers have the **same problem** ([tauri#2486](https://github.com/tauri-apps/tauri/issues/2486))
-- **MSI installers raise fewer false positives** than NSIS .exe installers
-
-**Multi-layer mitigation strategy (all required):**
-
-1. **EV Code Signing Certificate** (~$350-700/year) — provides SmartScreen reputation faster than OV
-2. **MSI installer instead of NSIS** — fewer AV triggers (WiX toolset for MSI generation)
-3. **`-trimpath` build flag** — removes local paths from binary
-4. **DO NOT use `-ldflags="-s -w"`** — stripping debug info paradoxically triggers more detections
-5. **Microsoft Defender submission portal** — submit every release binary for allowlisting
-6. **VirusTotal pre-check** — scan in CI before publishing release
-7. **Windows SmartScreen reputation building** — consistent signing with same EV cert builds reputation over time
-8. **User documentation** — include "antivirus false positive" FAQ with restore instructions
-
-```bash
-# Production build (DO NOT strip symbols — increases false positives!)
-go build -trimpath -o devforged.exe ./cmd/daemon
-signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 devforged.exe
-
-# Verify with VirusTotal before release
-vt scan file devforged.exe
+```csharp
+// Custom updater service
+public class UpdateService : BackgroundService
+{
+    private const string UpdateCheckUrl = "https://cdn.devforge.dev/releases/latest.json";
+    
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            // Check for updates every 24 hours
+            var response = await _http.GetAsync(UpdateCheckUrl, ct);
+            var manifest = JsonSerializer.Deserialize<UpdateManifest>(
+                await response.Content.ReadAsStringAsync(ct)
+            );
+            
+            if (manifest.Version > CurrentVersion && manifest.IsSigned)
+            {
+                // Download delta binary if available, else full binary
+                await DownloadAndVerifyAsync(manifest, ct);
+                // Restart daemon with graceful handoff of services
+                await RestartWithoutDowntimeAsync(ct);
+            }
+            
+            await Task.Delay(TimeSpan.FromHours(24), ct);
+        }
+    }
+}
 ```
 
-**Budget:** EV Code Signing Certificate ~$350-700/year. Microsoft submission: free.
+**Update Manifest (CDN-hosted):**
+```json
+{
+  "version": "1.0.5",
+  "releaseDate": "2026-04-15T00:00:00Z",
+  "downloadUrl": "https://cdn.devforge.dev/releases/v1.0.5/DevForge.msi",
+  "sha256": "abc123...",
+  "signature": "...", // Ed25519
+  "releaseNotes": "Fixed PHP 8.4 compatibility issue",
+  "channels": ["stable", "beta", "nightly"]
+}
+```
 
-| Binary | Risk Level | Reason | Installer Format |
-|--------|-----------|--------|-----------------|
-| devforged.exe | **HIGH** | Long-running daemon, spawns processes, named pipes | Bundled in MSI |
-| devforge.exe | MEDIUM | CLI tool, short-lived | Bundled in MSI |
-| DevForge installer | **HIGH** | Writes to Program Files | **MSI (not NSIS)** |
+**Key features:**
+- Signed updates (Ed25519 verify, public key embedded in app)
+- Delta patches for minor versions (if binary size substantial)
+- Rollback: keep previous 2 versions in `%LocalAppData%\DevForge\versions/`
+- Graceful restart: notify connected clients, finish in-flight operations, restart daemon
+- Opt-in beta channel: Users can enable pre-release testing
 
-**Sources:** [microsoft/go#1255](https://github.com/microsoft/go/issues/1255), [tauri#2486](https://github.com/tauri-apps/tauri/issues/2486), [Tauri False Positives Guide](https://tauri.by.simon.hyll.nu/concepts/security/false_positives/)
+### Binary Integrity & Verification
+
+**Pre-release verification (CI/CD):**
+
+```powershell
+# Generate checksums
+Get-FileHash bin/Release/net9.0-windows/publish/*.exe | Format-List > checksums.sha256
+
+# Scan with VirusTotal (optional, not required for .NET)
+# vt scan file bin/Release/net9.0-windows/publish/devforged.exe
+
+# Sign MSI
+dotnet tool run signtool sign /fd SHA256 ...
+```
 
 ### CDN Infrastructure
 
-- Primary: AWS S3 + CloudFront
-- Fallback: GitHub Releases
-- Estimated: ~5TB/month for 10K active users (~$310/month)
+- **Primary:** AWS S3 + CloudFront (CDN edge locations globally)
+- **Fallback:** GitHub Releases (no bandwidth charges)
+- **Estimated costs (10K active users, 3 major releases/month):**
+  - S3 storage: ~$5/month
+  - CloudFront egress: ~$200-300/month (10TB/month @ 3 releases)
+  - Total: ~$250-350/month
 
 ---
 
@@ -1216,60 +1608,196 @@ vt scan file devforged.exe
 
 ## 20. Implementation Roadmap
 
+### Technology Stack Review (C# / .NET 9 + Avalonia UI)
+
+**All implementation phases use single .NET solution** — no polyglot friction.
+
 ### Phase 1 — Foundation (Weeks 1-3)
 
-- [ ] Go workspace: `devforged`, `devforge-cli`, `devforge-pal`, `devforge-config`
-- [ ] Platform Abstraction Layer: process spawning, Job Objects (Win), elevation
-- [ ] Config pipeline: TOML parsing, template rendering, atomic writes
-- [ ] JSON-RPC service + basic daemon skeleton
-- [ ] SQLite schema + migration system
+**Deliverables:** Core daemon architecture, gRPC service layer, database schema
+
+- [ ] .NET 9 solution structure (DevForge.Daemon, DevForge.Core, DevForge.Cli, DevForge.Tests)
+- [ ] `IHostedService` daemon skeleton with graceful shutdown
+- [ ] gRPC service definitions (protos/devforge.proto) with basic stubs
+- [ ] `GrpcDotNetNamedPipes` integration for Windows IPC
+- [ ] SQLite schema + EF Core migrations (ServiceUnit, Site, PluginMetadata tables)
+- [ ] Event bus implementation (`Channel<Event>` pub/sub)
+- [ ] IPlatformAbstraction interface (Windows/Unix implementations)
+  - Process spawning via `System.Diagnostics.Process`
+  - UAC elevation via `ProcessStartInfo.UseShellExecute + Verb="runas"`
+  - File ACL management via `FileSecurity` (Windows) / Unix permissions (Linux)
+
+**Effort:** 1 developer, ~12-14 days
 
 ### Phase 2 — Core Services (Weeks 4-6)
 
-- [ ] Apache ServiceUnit: config gen, `httpd -t` validation, start/stop/reload
-- [ ] PHP-FPM management: multi-version install, per-site pools
-- [ ] MySQL ServiceUnit: config gen, data dir init, start/stop
-- [ ] Health check loop + auto-restart logic
-- [ ] Port conflict detection
+**Deliverables:** Service management, config pipeline, health monitoring
 
-### Phase 3 — Site Management (Weeks 7-8)
+- [ ] `ServiceManager` implementation
+  - Apache/Nginx ServiceUnit (Start/Stop/Reload, config validation via `httpd -t` / `nginx -t`)
+  - PHP-FPM ServiceUnit (per-site pool generation, multi-version support)
+  - MySQL/MariaDB ServiceUnit (initialization, startup sequence)
+  - Health check loop (`BackgroundService`) with exponential backoff restart policy
+  - Port conflict detection (scan 80, 443, 3306, 5432, etc.)
 
-- [ ] VHost CRUD through API
-- [ ] SSL module (mkcert integration)
-- [ ] DNS/hosts module with elevation helper
-- [ ] CLI client: all `site:*`, `service:*`, `php:*` commands
-- [ ] Import/export configuration
+- [ ] `ConfigurationPipeline`
+  - TOML parsing via `Tomlyn` NuGet package
+  - Template rendering via `Scriban` (modern, zero-JS alternative to Handlebars)
+  - Config validation: parse → render → execute `httpd -t` → atomic file swap
+  - Version archiving (keep last 5 versions, atomic rollback support)
 
-### Phase 4 — GUI (Weeks 9-11)
+- [ ] Startup sequence optimization (target: < 3 seconds)
+  - Parallel MySQL + dnsmasq launch via `Task.WhenAll()`
+  - Pre-generate configs at site creation (not at startup)
+  - Skip validation on cached configs if timestamp unchanged
 
-- [ ] Tauri app scaffold with Svelte 5
-- [ ] Dashboard, Sites Manager, PHP Manager screens
+**Effort:** 2 developers, ~12-16 days
+
+### Phase 3 — Site Management (Weeks 7-9)
+
+**Deliverables:** VHost CRUD API, SSL/TLS module, DNS integration, CLI client
+
+- [ ] VHost CRUD gRPC endpoints (CreateSite, ListSites, DeleteSite, etc.)
+  - TOML file generation per site
+  - Apache VirtualHost / Nginx server block generation
+  - PHP-FPM pool creation (one pool per site + PHP version combo)
+
+- [ ] SSL module
+  - `mkcert` integration via `System.Diagnostics.Process`
+  - Certificate authority trust (Windows: CertMgr.exe, Unix: update-ca-certificates)
+  - Per-site cert generation + renewal tracking
+
+- [ ] DNS/Hosts module
+  - Windows: Direct registry modification (HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Tcpip\Parameters\Interfaces) OR hosts file + elevation
+  - Unix: /etc/hosts file management with sudo prompt
+  - dnsmasq configuration for *.local suffix wildcard resolution
+
+- [ ] CLI client (System.CommandLine + Spectre.Console)
+  - All `site:*`, `service:*`, `php:*` commands with rich output
+  - `--json` flag for machine-readable output
+  - Progress indicators, table rendering, syntax highlighting
+  - Context-aware help (e.g., `devforge site create --help`)
+
+- [ ] Configuration import/export (TOML serialization)
+
+**Effort:** 2 developers, ~15-18 days
+
+### Phase 4 — GUI (Weeks 10-12)
+
+**Deliverables:** Avalonia UI application with all core features
+
+- [ ] Avalonia UI scaffolding + FluentTheme setup
+  - MainWindow with sidebar navigation
+  - MVVM architecture (ReactiveUI or MVVM Toolkit)
+  - gRPC client integration (shared with CLI)
+
+- [ ] Core screens (XAML + C# ViewModels)
+  - Dashboard: Service status cards, real-time graphs (LiveCharts2)
+  - Sites Manager: DataGrid with CRUD operations
+  - PHP Manager: Version list, extensions toggle, install new versions
+  - Database Manager: MySQL/MariaDB instance mgmt
+  - SSL Manager: Per-site cert status, generation
+  - Terminal: Embedded terminal (xterm.js-like, or simple Process output pipe)
+  - Settings: Ports, startup behavior, theme selector
+
 - [ ] System tray integration
-- [ ] Live log streaming via JSON-RPC
-- [ ] Command palette (Ctrl+K)
+  - `TrayIcon` control in Avalonia (show/hide window, context menu)
+  - Status indicator (green/red circle)
+  - Recent sites quick launch
+  - Start/Stop All buttons
 
-### Phase 5 — Polish & Plugins (Weeks 12-14)
+- [ ] Live event streaming
+  - Avalonia ViewModels subscribe to gRPC `SubscribeEvents` stream
+  - UI updates via `ObservableProperty` bindings
+  - No polling, fully reactive
 
-- [ ] Nginx ServiceUnit
-- [ ] MariaDB ServiceUnit
-- [ ] Plugin host (Lua runtime)
-- [ ] First plugins: Redis, Laravel driver, WordPress driver
-- [ ] Installer/updater (NSIS Win, DMG macOS)
+- [ ] Keyboard shortcuts
+  - `Ctrl+K`: Command palette (filter commands, execute)
+  - `Ctrl+N`: New site dialog
+  - `F5`: Refresh status
+  - `Ctrl+T`: New terminal tab (if implemented)
 
-### Phase 6 — Beta & Launch (Weeks 15-18)
+**Effort:** 2-3 developers, ~18-21 days
 
-- [ ] Public beta
+### Phase 5 — Polish & Ecosystem (Weeks 13-15)
+
+**Deliverables:** Additional services, plugin system, installers
+
+- [ ] Nginx ServiceUnit (parity with Apache)
+- [ ] MariaDB ServiceUnit (parity with MySQL)
+- [ ] Redis/Memcached plugin stubs (for plugin marketplace proof-of-concept)
+- [ ] Plugin host implementation
+  - Lua 5.4 embedded runtime via `MoonSharp` or `Lua.NET`
+  - Plugin sandboxing via `AppDomain` (deprecated in .NET 9, use custom permission model instead)
+  - Hook system: `before_site_create`, `after_service_start`, etc.
+  - Plugin marketplace scaffolding (HTTP endpoint returning JSON)
+
+- [ ] Installer generation (WiX MSI toolset)
+  - Windows MSI with automatic PHP/Apache/MySQL bundling
+  - macOS DMG (notarization required)
+  - Linux AppImage
+  - Portable .7z archive option
+
+- [ ] Auto-update service (Sparkle.NET or custom implementation)
+  - Update manifest JSON fetch + signature verification
+  - Delta binary download (if binary size > 10MB)
+  - Graceful restart with in-flight operation completion
+
+**Effort:** 2 developers, ~14-18 days
+
+### Phase 6 — Documentation & Launch (Weeks 16-18)
+
+**Deliverables:** User documentation, migration tools, beta release
+
+- [ ] User documentation
+  - Getting Started guide (3 OSes × 3 install methods)
+  - CLI reference (all commands with examples)
+  - API documentation (gRPC proto + example client code)
+  - Troubleshooting guide (40+ common issues)
+  - FAQ & video tutorials
+
 - [ ] MAMP PRO migration tool
-- [ ] Documentation site (Docusaurus)
-- [ ] Plugin marketplace
+  - Import vhosts from MAMP SQLite database
+  - Convert to DevForge TOML format
+  - Database backup utilities
+
 - [ ] Community feedback integration
-- [ ] v1.0.0 release
+  - GitHub Issues triage
+  - Discord/Slack community setup
+  - Public beta (v0.9.0-beta)
 
-### Estimated Effort
+- [ ] v1.0.0 GA release
+  - Final bug fixes
+  - Performance optimization (target: < 3s startup, < 250MB idle)
+  - Security audit (code review, fuzzing)
 
-- **MVP (Phase 1-3):** 2 developers × 8 weeks
-- **Full v1.0 (all phases):** 2-3 developers × 18 weeks
-- **Ongoing:** 1 developer for maintenance + community
+**Effort:** 2 developers, ~10-14 days
+
+### Phase 7 — Advanced Features (Post-v1.0)
+
+- [ ] Team management (multi-user setup, permissions)
+- [ ] Cloud sync (DevForge config backup to user's cloud storage)
+- [ ] Advanced SSL (wildcard certs, custom CAs, ACME integration)
+- [ ] Container integration (Traefik reverse proxy, Docker CLI shim)
+- [ ] IDE plugins (VS Code, JetBrains IDEs)
+
+### Estimated Effort Summary
+
+| Phase | Duration | Team | Deliverable |
+|-------|----------|------|-------------|
+| 1 — Foundation | 3 weeks | 1 dev | Core daemon + gRPC |
+| 2 — Core Services | 3 weeks | 2 devs | Service mgmt + config pipeline |
+| 3 — Site Management | 3 weeks | 2 devs | VHost CRUD + SSL + CLI |
+| 4 — GUI | 3 weeks | 2-3 devs | Avalonia UI, all screens |
+| 5 — Polish & Ecosystem | 3 weeks | 2 devs | Plugins, installers, updater |
+| 6 — Documentation & Launch | 3 weeks | 2 devs | Docs, migration tool, GA |
+| **Total (MVP to v1.0)** | **18 weeks** | **2-3 devs** | **Production-ready product** |
+
+**Notes:**
+- Timeline assumes parallel work on Windows and Unix implementations (CI/CD coverage)
+- Phase 1-3 can shift to Phase 4 as soon as gRPC stubs are ready (CLI testing begins mid-Phase 3)
+- Each phase includes testing (xUnit + integration tests) and CI/CD pipeline setup
+- Burn-down tracking via GitHub Project board + weekly demos
 
 ---
 

@@ -19,6 +19,7 @@ vendor/
 !.github/
 /[A-Z]*.md
 !/README.md
+!/SPEC.md
 
 # OS
 Thumbs.db
