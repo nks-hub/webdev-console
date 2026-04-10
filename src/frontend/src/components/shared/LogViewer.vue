@@ -53,13 +53,21 @@ onMounted(async () => {
 
   terminal = new Terminal({
     theme: {
-      background: '#1a1a2e',
-      foreground: '#e0e0e0',
-      cursor: '#67C23A',
-      selectionBackground: '#67C23A40',
+      background: '#0f1117',
+      foreground: '#eceef6',
+      cursor: '#6366f1',
+      selectionBackground: '#6366f140',
+      black: '#1a1c28',
+      red: '#ef4444',
+      green: '#22c55e',
+      yellow: '#f59e0b',
+      blue: '#6366f1',
+      magenta: '#8b5cf6',
+      cyan: '#06b6d4',
+      white: '#eceef6',
     },
     fontSize: 13,
-    fontFamily: 'JetBrains Mono, Consolas, monospace',
+    fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
     convertEol: true,
     disableStdin: true,
     scrollback: 5000,
@@ -122,6 +130,6 @@ onUnmounted(() => {
 
 <style scoped>
 .log-viewer { display: flex; flex-direction: column; height: 100%; }
-.log-toolbar { display: flex; gap: 8px; padding: 8px; background: var(--wdc-surface, #1e1e2e); }
+.log-toolbar { display: flex; gap: 8px; padding: 8px 12px; background: var(--wdc-surface); border-bottom: 1px solid var(--wdc-border); }
 .terminal-container { flex: 1; min-height: 200px; }
 </style>
