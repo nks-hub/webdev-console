@@ -1,9 +1,32 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Models;
 
 namespace NKS.WebDevConsole.Daemon.Services;
+
+public class RestartPolicy
+{
+    public int MaxRestarts { get; init; } = 5;
+    public TimeSpan Window { get; init; } = TimeSpan.FromSeconds(60);
+    public TimeSpan MinBackoff { get; init; } = TimeSpan.FromSeconds(2);
+    public TimeSpan MaxBackoff { get; init; } = TimeSpan.FromSeconds(30);
+
+    public TimeSpan GetBackoff(int restartCount)
+    {
+        var seconds = Math.Min(MinBackoff.TotalSeconds * Math.Pow(2, restartCount), MaxBackoff.TotalSeconds);
+        return TimeSpan.FromSeconds(seconds);
+    }
+
+    public bool ShouldRestart(int restartCount, DateTime firstRestartInWindow)
+    {
+        if (restartCount >= MaxRestarts && DateTime.UtcNow - firstRestartInWindow < Window)
+            return false;
+        return true;
+    }
+}
 
 public class ServiceUnit
 {
@@ -12,9 +35,14 @@ public class ServiceUnit
     public ServiceState State { get; set; } = ServiceState.Stopped;
     public Process? Process { get; set; }
     public int? Pid => Process?.Id;
+    public int Port { get; set; }
     public DateTime? StartedAt { get; set; }
     public int RestartCount { get; set; }
-    public DateTime LastRestartAttempt { get; set; }
+    public DateTime FirstRestartInWindow { get; set; }
+    public RestartPolicy RestartPolicy { get; set; } = new();
+    public string? Executable { get; set; }
+    public string? Arguments { get; set; }
+    public string? WorkingDirectory { get; set; }
 }
 
 public class ProcessManager
@@ -68,6 +96,9 @@ public class ProcessManager
             unit.State = ServiceState.Running;
             unit.StartedAt = DateTime.UtcNow;
             unit.RestartCount = 0;
+            unit.Executable = executable;
+            unit.Arguments = arguments;
+            unit.WorkingDirectory = workingDir;
 
             process.EnableRaisingEvents = true;
             process.Exited += async (_, _) =>
@@ -76,6 +107,7 @@ public class ProcessManager
                 unit.State = ServiceState.Crashed;
                 unit.Process = null;
                 await BroadcastState(unit);
+                await TryAutoRestart(unit);
             };
 
             process.OutputDataReceived += (_, e) =>
@@ -163,6 +195,92 @@ public class ProcessManager
     public IEnumerable<ServiceStatus> GetAllStatuses()
         => _services.Values.Select(u => GetStatus(u.Id));
 
+    private async Task TryAutoRestart(ServiceUnit unit)
+    {
+        if (unit.Executable == null) return;
+
+        unit.RestartCount++;
+        if (unit.RestartCount == 1)
+            unit.FirstRestartInWindow = DateTime.UtcNow;
+
+        if (!unit.RestartPolicy.ShouldRestart(unit.RestartCount, unit.FirstRestartInWindow))
+        {
+            _logger.LogError("Service {Id} exceeded restart limit ({Count}/{Max} in {Window}s), disabling",
+                unit.Id, unit.RestartCount, unit.RestartPolicy.MaxRestarts, unit.RestartPolicy.Window.TotalSeconds);
+            unit.State = ServiceState.Disabled;
+            await BroadcastState(unit);
+            return;
+        }
+
+        var backoff = unit.RestartPolicy.GetBackoff(unit.RestartCount - 1);
+        _logger.LogInformation("Auto-restarting {Id} in {Backoff}s (attempt {Count})", unit.Id, backoff.TotalSeconds, unit.RestartCount);
+        await Task.Delay(backoff);
+
+        if (unit.State == ServiceState.Stopped || unit.State == ServiceState.Disabled) return;
+
+        await StartAsync(unit.Id, unit.Executable, unit.Arguments ?? "", unit.WorkingDirectory);
+    }
+
+    public static (bool Available, int? OwnerPid, string? OwnerName) CheckPort(int port)
+    {
+        try
+        {
+            using var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return (true, null, null);
+        }
+        catch (SocketException)
+        {
+            // Port is in use — try to find owner process
+            try
+            {
+                var psi = new ProcessStartInfo("netstat", $"-ano")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+                var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    var output = proc.StandardOutput.ReadToEnd();
+                    proc.WaitForExit(3000);
+
+                    foreach (var line in output.Split('\n'))
+                    {
+                        if (line.Contains($":{port} ") && line.Contains("LISTENING"))
+                        {
+                            var parts = line.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length >= 5 && int.TryParse(parts[^1], out var pid))
+                            {
+                                try
+                                {
+                                    var ownerProc = Process.GetProcessById(pid);
+                                    return (false, pid, ownerProc.ProcessName);
+                                }
+                                catch { return (false, pid, null); }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            return (false, null, null);
+        }
+    }
+
+    public int SuggestAlternativePort(int preferredPort, int maxAttempts = 10)
+    {
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            var candidate = preferredPort + i + 1;
+            var (available, _, _) = CheckPort(candidate);
+            if (available) return candidate;
+        }
+        return 0;
+    }
+
     private async Task BroadcastState(ServiceUnit unit)
     {
         await _sse.BroadcastAsync("service", new
@@ -171,7 +289,9 @@ public class ProcessManager
             name = unit.DisplayName,
             status = unit.State.ToString().ToLowerInvariant(),
             pid = unit.Pid,
-            startedAt = unit.StartedAt
+            port = unit.Port,
+            startedAt = unit.StartedAt,
+            restartCount = unit.RestartCount
         });
     }
 }
