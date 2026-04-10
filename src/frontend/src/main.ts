@@ -14,11 +14,13 @@ import ServiceCard from './components/shared/ServiceCard.vue'
 import VersionSwitcher from './components/shared/VersionSwitcher.vue'
 import ConfigEditor from './components/shared/ConfigEditor.vue'
 import LogViewer from './components/shared/LogViewer.vue'
+import MetricsChart from './components/shared/MetricsChart.vue'
 
 registerPanelComponent('service-status-card', ServiceCard)
 registerPanelComponent('version-switcher', VersionSwitcher)
 registerPanelComponent('config-editor', ConfigEditor)
 registerPanelComponent('log-viewer', LogViewer)
+registerPanelComponent('metrics-chart', MetricsChart)
 
 const app = createApp(App)
 

@@ -1,3 +1,4 @@
+using Dapper;
 using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
 using NKS.WebDevConsole.Daemon.Sites;
@@ -114,14 +115,24 @@ app.MapGet("/api/status", () => Results.Ok(new
     uptime = Environment.TickCount64 / 1000
 }));
 
-app.MapGet("/api/plugins", () => Results.Ok(
-    pluginLoader.Plugins.Select(p => new
+app.MapGet("/api/plugins", (IServiceProvider sp) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    return Results.Ok(pluginLoader.Plugins.Select(p =>
     {
-        id = p.Instance.Id,
-        name = p.Instance.DisplayName,
-        version = p.Instance.Version
-    })
-));
+        var svcId = p.Instance.Id.Split('.').LastOrDefault() ?? "";
+        var hasService = modules.Any(m => m.ServiceId.Contains(svcId, StringComparison.OrdinalIgnoreCase));
+        return new
+        {
+            id = p.Instance.Id,
+            name = p.Instance.DisplayName,
+            version = p.Instance.Version,
+            type = hasService ? "service" : "tool",
+            enabled = true,
+            description = $"{p.Instance.DisplayName} plugin",
+        };
+    }));
+});
 
 app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
 {
@@ -319,6 +330,33 @@ app.MapGet("/api/ssl/certs", () =>
         return Results.Ok(certs);
     }
     return Results.Ok(Array.Empty<object>());
+});
+
+// Settings CRUD
+app.MapGet("/api/settings", async (Database db) =>
+{
+    using var conn = db.CreateConnection();
+    var settings = await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings");
+    var dict = new Dictionary<string, string>();
+    foreach (var s in settings) dict[$"{s.category}.{s.key}"] = s.value;
+    return Results.Ok(dict);
+});
+
+app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
+{
+    var settings = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    if (settings == null) return Results.BadRequest();
+    using var conn = db.CreateConnection();
+    foreach (var (compositeKey, value) in settings)
+    {
+        var parts = compositeKey.Split('.', 2);
+        var category = parts.Length > 1 ? parts[0] : "general";
+        var key = parts.Length > 1 ? parts[1] : parts[0];
+        await conn.ExecuteAsync(
+            "INSERT INTO settings (category, key, value) VALUES (@Category, @Key, @Value) ON CONFLICT(category, key) DO UPDATE SET value = @Value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
+            new { Category = category, Key = key, Value = value });
+    }
+    return Results.Ok(settings);
 });
 
 // Databases placeholder
