@@ -75,7 +75,34 @@ function findDaemonProject(): string {
   return candidates[0] // fallback
 }
 
-function spawnDaemon() {
+async function isDaemonAlive(): Promise<boolean> {
+  const info = readPortFile()
+  if (!info) return false
+  try {
+    // /api/status requires auth — the mere fact that we get a response (even 401) means the daemon is up
+    await new Promise<void>((resolve, reject) => {
+      const req = http.get(`http://localhost:${info.port}/api/status`, (res) => {
+        res.on('data', () => {})
+        res.on('end', () => resolve())
+      })
+      req.on('error', reject)
+      req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')) })
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function spawnDaemon() {
+  // If a daemon is already running (e.g. started from CLI), reuse it
+  if (await isDaemonAlive()) {
+    console.log('[daemon] already running (port file exists and responds), reusing')
+    daemonConnected = true
+    updateTray()
+    return
+  }
+
   const isDev = !app.isPackaged
 
   if (isDev) {
@@ -245,8 +272,8 @@ app.on('before-quit', () => {
   isQuitting = true
 })
 
-app.whenReady().then(() => {
-  spawnDaemon()
+app.whenReady().then(async () => {
+  await spawnDaemon()
   createWindow()
   createTray()
 })
