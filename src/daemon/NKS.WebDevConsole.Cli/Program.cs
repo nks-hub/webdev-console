@@ -547,7 +547,37 @@ stopAllCmd.SetAction(async (parseResult, ct) =>
     }
 });
 
+// --- wdc info {domain} ---
+var infoDomainArg = new Argument<string>("domain") { Description = "Site domain" };
+var infoCommand = new Command("info", "Show detailed info about a site") { infoDomainArg };
+infoCommand.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(infoDomainArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        var site = await client.GetJsonAsync($"/api/sites/{domain}");
+        if (json) { PrintJson(site); return; }
+        var table = new Table().Border(TableBorder.Rounded).HideHeaders();
+        table.AddColumn("Key"); table.AddColumn("Value");
+        table.AddRow("Domain", site.GetProperty("domain").GetString() ?? "-");
+        table.AddRow("Document Root", site.GetProperty("documentRoot").GetString() ?? "-");
+        table.AddRow("PHP Version", site.GetProperty("phpVersion").GetString() ?? "-");
+        table.AddRow("HTTP Port", site.TryGetProperty("httpPort", out var hp) ? hp.GetInt32().ToString() : "80");
+        table.AddRow("SSL", site.TryGetProperty("sslEnabled", out var ssl) && ssl.GetBoolean() ? "[green]Yes[/]" : "No");
+        if (site.TryGetProperty("aliases", out var al) && al.GetArrayLength() > 0)
+            table.AddRow("Aliases", string.Join(", ", al.EnumerateArray().Select(a => a.GetString())));
+        if (site.TryGetProperty("framework", out var fw) && fw.ValueKind == JsonValueKind.String)
+            table.AddRow("Framework", fw.GetString()!);
+        AnsiConsole.Write(table);
+    }
+    catch { AnsiConsole.MarkupLine($"[red]Site {Markup.Escape(domain)} not found[/]"); }
+});
+
 rootCommand.Add(openCommand);
+rootCommand.Add(infoCommand);
 rootCommand.Add(configCommand);
 rootCommand.Add(doctorCommand);
 rootCommand.Add(startAllCmd);
