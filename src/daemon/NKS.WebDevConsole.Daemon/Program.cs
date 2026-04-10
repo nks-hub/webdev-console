@@ -31,6 +31,7 @@ builder.Services.AddSingleton(sp => new SiteManager(
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "sites"),
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "generated")
 ));
+builder.Services.AddSingleton<SiteOrchestrator>();
 
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
@@ -238,13 +239,14 @@ app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
     return site is not null ? Results.Ok(site) : Results.NotFound();
 });
 
-app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm) =>
+app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     if (string.IsNullOrWhiteSpace(site.Domain))
         return Results.BadRequest(new { error = "Domain is required" });
     if (sm.Get(site.Domain) is not null)
         return Results.Conflict(new { error = $"Site {site.Domain} already exists" });
     var created = await sm.CreateAsync(site);
+    await orchestrator.ApplyAsync(created);
     return Results.Created($"/api/sites/{created.Domain}", created);
 });
 
@@ -257,9 +259,11 @@ app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteMan
     return Results.Ok(updated);
 });
 
-app.MapDelete("/api/sites/{domain}", (string domain, SiteManager sm) =>
+app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
-    return sm.Delete(domain) ? Results.NoContent() : Results.NotFound();
+    if (!sm.Delete(domain)) return Results.NotFound();
+    await orchestrator.RemoveAsync(domain);
+    return Results.NoContent();
 });
 
 app.MapPost("/api/sites/{domain}/detect-framework", (string domain, SiteManager sm) =>
