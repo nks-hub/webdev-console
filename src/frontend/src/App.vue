@@ -16,6 +16,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
@@ -24,6 +25,7 @@ import { useDaemonStore } from './stores/daemon'
 import { usePluginsStore } from './stores/plugins'
 import { useThemeStore } from './stores/theme'
 
+const router = useRouter()
 const daemonStore = useDaemonStore()
 const pluginsStore = usePluginsStore()
 useThemeStore()
@@ -38,6 +40,10 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'F5') {
     e.preventDefault()
     daemonStore.poll()
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault()
+    router.push('/sites')
   }
 }
 
