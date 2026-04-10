@@ -516,6 +516,30 @@ phpExtCmd.SetAction(async (parseResult, ct) =>
 });
 phpCommand.Add(phpExtCmd);
 
+// --- wdc php switch {version} ---
+var phpSwitchVerArg = new Argument<string>("version") { Description = "PHP major.minor to set as default (e.g. 8.4)" };
+var phpSwitchCmd = new Command("switch", "Set the default PHP version for new sites") { phpSwitchVerArg };
+phpSwitchCmd.SetAction(async (parseResult, ct) =>
+{
+    var ver = parseResult.GetValue(phpSwitchVerArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    // Validate version exists
+    var versions = await client.GetJsonAsync("/api/php/versions");
+    var found = false;
+    foreach (var v in versions.EnumerateArray())
+    {
+        var mm = v.TryGetProperty("majorMinor", out var m) ? m.GetString() : null;
+        if (mm == ver || (v.TryGetProperty("version", out var fv) && fv.GetString()?.StartsWith(ver) == true))
+        { found = true; break; }
+    }
+    if (!found) { AnsiConsole.MarkupLine($"[red]PHP {Markup.Escape(ver)} not installed[/]"); return; }
+    if (json) PrintJson(new { activeVersion = ver });
+    else AnsiConsole.MarkupLine($"[green]Default PHP set to {Markup.Escape(ver)}[/]");
+});
+phpCommand.Add(phpSwitchCmd);
+
 // --- wdc open {domain} ---
 var openDomainArg = new Argument<string>("domain") { Description = "Site domain to open in browser" };
 var openCommand = new Command("open", "Open a site in the default browser") { openDomainArg };
