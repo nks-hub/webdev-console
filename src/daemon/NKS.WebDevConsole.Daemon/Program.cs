@@ -683,10 +683,37 @@ app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
     }
 });
 
-// Cleanup port file on shutdown
-app.Lifetime.ApplicationStopping.Register(() =>
+// Graceful shutdown — stop all services + cleanup
+app.Lifetime.ApplicationStopping.Register(async () =>
 {
+    Console.WriteLine("[shutdown] Stopping all services...");
+    var modules = app.Services.GetServices<IServiceModule>();
+    foreach (var module in modules)
+    {
+        try
+        {
+            var status = await module.GetStatusAsync(CancellationToken.None);
+            if (status.State == ServiceState.Running)
+            {
+                await module.StopAsync(CancellationToken.None);
+                Console.WriteLine($"[shutdown] {module.ServiceId}: stopped");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[shutdown] {module.ServiceId}: {ex.Message}");
+        }
+    }
+
+    // Stop plugins
+    foreach (var p in pluginLoader.Plugins)
+    {
+        try { await p.Instance.StopAsync(CancellationToken.None); }
+        catch { }
+    }
+
     try { File.Delete(portFile); } catch { }
+    Console.WriteLine("[shutdown] Complete");
 });
 
 await app.RunAsync();
