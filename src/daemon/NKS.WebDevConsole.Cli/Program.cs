@@ -409,6 +409,23 @@ installBinCmd.SetAction(async (parseResult, ct) =>
 });
 binariesCommand.Add(installBinCmd);
 
+var removeAppArg = new Argument<string>("app");
+var removeVerArg = new Argument<string>("version");
+var removeBinCmd = new Command("remove", "Remove an installed binary") { removeAppArg, removeVerArg };
+removeBinCmd.SetAction(async (parseResult, ct) =>
+{
+    var app = parseResult.GetValue(removeAppArg)!;
+    var ver = parseResult.GetValue(removeVerArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    if (!json && !AnsiConsole.Confirm($"Remove [red]{Markup.Escape(app)} {Markup.Escape(ver)}[/]?", false)) return;
+    await client.DeleteAsync($"/api/binaries/{app}/{ver}");
+    if (json) PrintJson(new { removed = $"{app}/{ver}" });
+    else AnsiConsole.MarkupLine($"[yellow]Removed:[/] {Markup.Escape(app)} {Markup.Escape(ver)}");
+});
+binariesCommand.Add(removeBinCmd);
+
 // --- wdc php ---
 var phpCommand = new Command("php", "PHP version management");
 phpCommand.SetAction(async (parseResult, ct) =>
