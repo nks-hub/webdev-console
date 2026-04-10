@@ -623,6 +623,40 @@ queryCmd.SetAction(async (parseResult, ct) =>
 });
 dbCommand.Add(queryCmd);
 
+// --- wdc databases size ---
+var sizeCmd = new Command("size", "Show database sizes");
+sizeCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var bins = await client.GetJsonAsync("/api/binaries/installed");
+    string? mysqlCli = null;
+    foreach (var b in bins.EnumerateArray())
+    {
+        if (b.GetProperty("app").GetString() == "mysql" && b.TryGetProperty("executable", out var exe))
+        {
+            var dir = Path.GetDirectoryName(exe.GetString());
+            if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
+        }
+    }
+    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+
+    var sql = "SELECT table_schema AS db, ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb FROM information_schema.tables WHERE table_schema NOT IN ('information_schema','performance_schema','mysql','sys') GROUP BY table_schema ORDER BY size_mb DESC";
+    var psi = new System.Diagnostics.ProcessStartInfo
+    {
+        FileName = mysqlCli, Arguments = $"-h 127.0.0.1 -P 3306 -u root {(json ? "-N" : "-t")} -e \"{sql}\"",
+        RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true
+    };
+    var proc = System.Diagnostics.Process.Start(psi);
+    if (proc == null) return;
+    var output = await proc.StandardOutput.ReadToEndAsync();
+    await proc.WaitForExitAsync();
+    AnsiConsole.WriteLine(output);
+});
+dbCommand.Add(sizeCmd);
+
 // --- wdc binaries ---
 var binariesCommand = new Command("binaries", "List installed binaries");
 binariesCommand.SetAction(async (parseResult, ct) =>
