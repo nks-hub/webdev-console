@@ -1,82 +1,109 @@
-using System.Diagnostics;
+using NKS.WebDevConsole.Daemon.Plugin;
+using NKS.WebDevConsole.Daemon.Services;
+using NKS.WebDevConsole.Core.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://localhost:50051");
+// CORS for Electron renderer
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+});
 
-builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+builder.Services.AddSingleton<SseService>();
+builder.Services.AddSingleton<PluginLoader>();
 
 var app = builder.Build();
 app.UseCors();
 
-var startedAt = DateTime.UtcNow;
-int? managedPid = null;
+// Load plugins
+var pluginLoader = app.Services.GetRequiredService<PluginLoader>();
+var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
+// Also check relative path for development
+if (!Directory.Exists(pluginDir))
+    pluginDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "plugins"));
+pluginLoader.LoadPlugins(pluginDir);
+
+// Initialize plugins
+foreach (var p in pluginLoader.Plugins)
+{
+    await p.Module.InitializeAsync(CancellationToken.None);
+}
 
 // Write port file so Electron can discover us
+var url = app.Urls.FirstOrDefault() ?? "http://localhost:5173";
+var port = new Uri(url.Replace("+", "localhost")).Port;
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
-await File.WriteAllTextAsync(portFile, "50051");
+await File.WriteAllTextAsync(portFile, port.ToString());
 Console.WriteLine($"[daemon] port file: {portFile}");
 
-app.MapGet("/api/status", () =>
+// REST Endpoints
+app.MapGet("/api/status", () => Results.Ok(new
 {
-    var uptime = (DateTime.UtcNow - startedAt).TotalSeconds;
+    status = "running",
+    version = "0.1.0",
+    plugins = pluginLoader.Plugins.Count,
+    uptime = Environment.TickCount64 / 1000
+}));
+
+app.MapGet("/api/plugins", () => Results.Ok(
+    pluginLoader.Plugins.Select(p => new
+    {
+        id = p.Module.Id,
+        name = p.Module.Name,
+        version = p.Module.Version,
+        isService = p.Module is IServicePlugin
+    })
+));
+
+app.MapGet("/api/plugins/{id}/ui", (string id) =>
+{
+    var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Module.Id == id);
+    if (plugin == null) return Results.NotFound();
+    // Stub UI schema - plugins will provide this via IFrontendPanelProvider later
     return Results.Ok(new
     {
-        version = "0.1.0-poc",
-        uptime = Math.Round(uptime, 1),
-        services = new[]
+        pluginId = id,
+        category = "Services",
+        icon = "el-icon-setting",
+        panels = new[]
         {
-            new
-            {
-                name = "notepad",
-                status = managedPid.HasValue && !IsProcessDead(managedPid.Value)
-                    ? "running"
-                    : "stopped",
-                pid = managedPid
-            }
+            new { type = "service-status-card", props = new { serviceId = id } },
+            new { type = "log-viewer", props = new { serviceId = id } }
         }
     });
 });
 
-app.MapPost("/api/service/start", () =>
+// SSE endpoint
+app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
 {
-    if (managedPid.HasValue && !IsProcessDead(managedPid.Value))
-        return Results.Ok(new { ok = false, message = "already running", pid = managedPid });
+    ctx.Response.ContentType = "text/event-stream";
+    ctx.Response.Headers.CacheControl = "no-cache";
+    ctx.Response.Headers.Connection = "keep-alive";
 
-    var proc = Process.Start(new ProcessStartInfo("notepad.exe") { UseShellExecute = true });
-    managedPid = proc?.Id;
-    Console.WriteLine($"[daemon] started notepad pid={managedPid}");
-    return Results.Ok(new { ok = true, message = "started", pid = managedPid });
-});
+    var clientId = sse.AddClient(ctx.Response);
 
-app.MapPost("/api/service/stop", () =>
-{
-    if (!managedPid.HasValue)
-        return Results.Ok(new { ok = false, message = "not running" });
+    // Send initial connected event
+    await ctx.Response.WriteAsync($"event: connected\ndata: {{\"clientId\":\"{clientId}\"}}\n\n");
+    await ctx.Response.Body.FlushAsync();
 
+    // Keep connection alive until client disconnects
     try
     {
-        var proc = Process.GetProcessById(managedPid.Value);
-        proc.Kill();
-        Console.WriteLine($"[daemon] killed pid={managedPid}");
-        managedPid = null;
-        return Results.Ok(new { ok = true, message = "stopped" });
+        await Task.Delay(Timeout.Infinite, ctx.RequestAborted);
     }
-    catch
+    catch (TaskCanceledException) { }
+    finally
     {
-        managedPid = null;
-        return Results.Ok(new { ok = true, message = "already dead" });
+        sse.RemoveClient(clientId);
     }
 });
 
-Console.WriteLine("[daemon] listening on http://localhost:50051");
-Console.CancelKeyPress += (_, _) => File.Delete(portFile);
+// Cleanup port file on shutdown
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    try { File.Delete(portFile); } catch { }
+});
 
 await app.RunAsync();
-
-static bool IsProcessDead(int pid)
-{
-    try { Process.GetProcessById(pid); return false; }
-    catch { return true; }
-}
