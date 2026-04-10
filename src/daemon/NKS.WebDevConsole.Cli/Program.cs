@@ -538,6 +538,50 @@ exportDbCmd.SetAction(async (parseResult, ct) =>
 });
 dbCommand.Add(exportDbCmd);
 
+// --- wdc databases tables {name} ---
+var tablesDbArg = new Argument<string>("name") { Description = "Database name" };
+var tablesCmd = new Command("tables", "List tables in a database") { tablesDbArg };
+tablesCmd.SetAction(async (parseResult, ct) =>
+{
+    var name = parseResult.GetValue(tablesDbArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var bins = await client.GetJsonAsync("/api/binaries/installed");
+    string? mysqlCli = null;
+    foreach (var b in bins.EnumerateArray())
+    {
+        if (b.GetProperty("app").GetString() == "mysql" && b.TryGetProperty("executable", out var exe))
+        {
+            var dir = Path.GetDirectoryName(exe.GetString());
+            if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
+        }
+    }
+    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+
+    var psi = new System.Diagnostics.ProcessStartInfo
+    {
+        FileName = mysqlCli,
+        Arguments = $"-h 127.0.0.1 -P 3306 -u root -N -e \"SHOW TABLES\" {name}",
+        RedirectStandardOutput = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+    var proc = System.Diagnostics.Process.Start(psi);
+    if (proc == null) return;
+    var output = await proc.StandardOutput.ReadToEndAsync();
+    await proc.WaitForExitAsync();
+    var tables = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToArray();
+    if (json) { PrintJson(new { database = name, tables }); return; }
+    if (tables.Length == 0) { AnsiConsole.MarkupLine($"[dim]No tables in {Markup.Escape(name)}[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn($"Tables in {name} ({tables.Length})");
+    foreach (var t in tables) table.AddRow(t);
+    AnsiConsole.Write(table);
+});
+dbCommand.Add(tablesCmd);
+
 // --- wdc binaries ---
 var binariesCommand = new Command("binaries", "List installed binaries");
 binariesCommand.SetAction(async (parseResult, ct) =>
