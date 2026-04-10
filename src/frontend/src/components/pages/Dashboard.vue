@@ -63,9 +63,9 @@
           </div>
 
           <!-- Port -->
-          <div class="svc-port" v-if="service.port">
+          <div class="svc-port" v-if="getPort(service)">
             <span class="port-label">Port</span>
-            <span class="port-value mono">{{ service.port }}</span>
+            <span class="port-value mono">{{ getPort(service) }}</span>
           </div>
 
           <!-- CPU/RAM when running -->
@@ -156,6 +156,13 @@ onMounted(() => { void sitesStore.load() })
 
 const stateLabels: Record<number, string> = {
   0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled',
+}
+
+const KNOWN_PORTS: Record<string, number> = {
+  apache: 80, mysql: 3306, redis: 6379, mailpit: 8025, php: 9084,
+}
+function getPort(svc: any): number | null {
+  return svc.port || KNOWN_PORTS[svc.id] || null
 }
 
 function statusText(service: any): string {
