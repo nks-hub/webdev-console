@@ -44,19 +44,19 @@
       <!-- Summary stats row -->
       <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">{{ runningCount }}</div>
+          <div class="stat-value stat-running">{{ runningCount }}</div>
           <div class="stat-label">Running</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #94a3b8;">{{ stoppedCount }}</div>
+          <div class="stat-value stat-neutral">{{ stoppedCount }}</div>
           <div class="stat-label">Stopped</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">{{ sitesStore.sites.length }}</div>
+          <div class="stat-value">{{ sitesStore.sites.length }}</div>
           <div class="stat-label">Sites</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">{{ totalCount }}</div>
+          <div class="stat-value">{{ totalCount }}</div>
           <div class="stat-label">Services</div>
         </div>
       </div>
@@ -196,11 +196,14 @@ async function stopAll() {
 }
 
 .stat-value {
-  font-size: 2.2rem;
+  font-size: 2.4rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: var(--wdc-text);
 }
+.stat-running { color: var(--wdc-status-running); }
+.stat-neutral { color: var(--wdc-text-2); }
 
 .stat-label {
   font-size: 0.85rem;
@@ -212,7 +215,7 @@ async function stopAll() {
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
 }
 
@@ -227,20 +230,21 @@ async function stopAll() {
 .quick-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: 8px;
+  padding: 8px 14px;
   background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 6px;
-  font-size: 0.82rem;
-  color: var(--el-text-color-regular);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+  font-size: 0.88rem;
+  color: var(--wdc-text-2);
   text-decoration: none;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .quick-link:hover {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary);
+  border-color: var(--wdc-accent);
+  color: var(--wdc-accent);
+  background: var(--wdc-hover);
 }
 
 .ssl-dot {

@@ -172,27 +172,28 @@ function formatUptime(seconds: number): string {
 <style scoped>
 .svc-card {
   background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  padding: 16px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   transition: border-color 0.15s, box-shadow 0.15s;
-  border-top-width: 3px;
+  border-left-width: 3px;
+  border-left-style: solid;
 }
 
 .svc-card:hover {
   box-shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
 
-.svc-running  { border-top-color: var(--wdc-status-running); }
-.svc-stopped  { border-top-color: var(--wdc-status-stopped); }
-.svc-crashed  { border-top-color: var(--wdc-status-error); }
-.svc-starting { border-top-color: var(--wdc-status-starting); }
-.svc-stopping { border-top-color: var(--wdc-status-starting); }
-.svc-disabled { border-top-color: var(--el-border-color); }
-.svc-unknown  { border-top-color: var(--el-border-color); }
+.svc-running  { border-left-color: var(--wdc-status-running); }
+.svc-stopped  { border-left-color: var(--wdc-status-stopped); }
+.svc-crashed  { border-left-color: var(--wdc-status-error); }
+.svc-starting { border-left-color: var(--wdc-status-starting); }
+.svc-stopping { border-left-color: var(--wdc-status-starting); }
+.svc-disabled { border-left-color: var(--wdc-border); }
+.svc-unknown  { border-left-color: var(--wdc-border); }
 
 .svc-header {
   display: flex;
@@ -257,9 +258,9 @@ function formatUptime(seconds: number): string {
 
 .metric-bar-wrap {
   flex: 1;
-  height: 6px;
-  background: var(--wdc-elevated, #242736);
-  border-radius: 3px;
+  height: 8px;
+  background: var(--wdc-elevated);
+  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -323,12 +324,12 @@ function formatUptime(seconds: number): string {
 
 .svc-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .svc-actions .el-button {
   flex: 1;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
 }
 
 .offline-crashed  { font-size: 0.78rem; color: var(--wdc-status-error); }

@@ -7,21 +7,21 @@
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds — slightly lifted for better readability */
+  /* Backgrounds — wider lightness steps for clear depth hierarchy (Linear-inspired) */
   --wdc-bg:          #0f1117;
-  --wdc-surface:     #181a24;
-  --wdc-surface-2:   #1f2130;
-  --wdc-elevated:    #262838;
-  --wdc-hover:       #232536;
+  --wdc-surface:     #1a1c28;
+  --wdc-surface-2:   #242636;
+  --wdc-elevated:    #2e3044;
+  --wdc-hover:       #282a3c;
 
-  /* Borders — more visible */
-  --wdc-border:      rgba(255, 255, 255, 0.10);
-  --wdc-border-strong: rgba(255, 255, 255, 0.18);
+  /* Borders — clearly visible separation */
+  --wdc-border:      rgba(255, 255, 255, 0.12);
+  --wdc-border-strong: rgba(255, 255, 255, 0.20);
 
-  /* Text — brighter for readability */
+  /* Text — WCAG AA compliant on all surfaces */
   --wdc-text:        #eceef6;
   --wdc-text-2:      #9ea2be;
-  --wdc-text-3:      #636880;
+  --wdc-text-3:      #8b8fa8;
 
   /* Accent — indigo/violet */
   --wdc-accent:      #6366f1;
@@ -87,7 +87,7 @@ html:not(.dark) {
   --el-text-color-regular:        #b4b7cc;
   --el-text-color-secondary:      var(--wdc-text-2);
   --el-text-color-placeholder:    var(--wdc-text-3);
-  --el-text-color-disabled:       #3a3d52;
+  --el-text-color-disabled:       #555872;
 
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
@@ -143,7 +143,7 @@ html:not(.dark) {
   --el-text-color-regular:        #b4b7cc;
   --el-text-color-secondary:      var(--wdc-text-2);
   --el-text-color-placeholder:    var(--wdc-text-3);
-  --el-text-color-disabled:       #3a3d52;
+  --el-text-color-disabled:       #555872;
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
   --el-fill-color-blank:          var(--wdc-surface);
@@ -181,11 +181,17 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap');
+
 body {
   background: var(--wdc-bg);
   color: var(--wdc-text);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
+}
+
+code, pre, .mono, .metric-value, .meta-val, .stat-value {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace !important;
 }
 
 /* ─── Element Plus Component Refinements ─────────────────────────────────── */
@@ -200,8 +206,8 @@ body {
 }
 
 .el-button--small {
-  height: 32px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 16px;
 }
 
 .el-button--default {
