@@ -1117,6 +1117,39 @@ newCommand.SetAction(async (parseResult, ct) =>
     if (ssl) AnsiConsole.MarkupLine("  SSL: [green]enabled[/]");
 });
 
+// --- wdc completion ---
+var completionShellArg = new Argument<string?>("shell") { Description = "Shell type: bash, zsh, powershell (default: powershell)" };
+var completionCmd = new Command("completion", "Generate shell completion script") { completionShellArg };
+completionCmd.SetAction((parseResult, ct) =>
+{
+    var shell = parseResult.GetValue(completionShellArg) ?? "powershell";
+    switch (shell.ToLowerInvariant())
+    {
+        case "powershell":
+            AnsiConsole.WriteLine("Register-ArgumentCompleter -Native -CommandName wdc -ScriptBlock {");
+            AnsiConsole.WriteLine("  param($wordToComplete, $commandAst, $cursorPosition)");
+            AnsiConsole.WriteLine("  wdc --help | Select-String '  \\w' | ForEach-Object { $_.Line.Trim().Split()[0] } |");
+            AnsiConsole.WriteLine("    Where-Object { $_ -like \"$wordToComplete*\" } |");
+            AnsiConsole.WriteLine("    ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }");
+            AnsiConsole.WriteLine("}");
+            break;
+        case "bash":
+        case "zsh":
+            AnsiConsole.WriteLine("# Add to ~/.bashrc or ~/.zshrc:");
+            AnsiConsole.WriteLine("_wdc_completions() {");
+            AnsiConsole.WriteLine("  local commands=\"new open info config doctor system start-all stop-all restart-all status services logs sites php plugins databases binaries version\"");
+            AnsiConsole.WriteLine("  COMPREPLY=( $(compgen -W \"$commands\" -- ${COMP_WORDS[COMP_CWORD]}) )");
+            AnsiConsole.WriteLine("}");
+            AnsiConsole.WriteLine("complete -F _wdc_completions wdc");
+            break;
+        default:
+            AnsiConsole.MarkupLine($"[yellow]Shell '{Markup.Escape(shell)}' not supported. Try: powershell, bash, zsh[/]");
+            break;
+    }
+    return Task.CompletedTask;
+});
+
+rootCommand.Add(completionCmd);
 rootCommand.Add(newCommand);
 rootCommand.Add(openCommand);
 rootCommand.Add(infoCommand);
