@@ -66,11 +66,15 @@ interface Command {
 
 const commands = computed<Command[]>(() => [
   { id: 'sites', label: 'Go to Sites', icon: '🌐', shortcut: '', action: () => router.push('/sites') },
-  { id: 'dashboard', label: 'Go to Dashboard', icon: '📊', action: () => router.push('/dashboard') },
+  { id: 'dashboard', label: 'Go to Services', icon: '📊', action: () => router.push('/dashboard') },
+  { id: 'databases', label: 'Go to Databases', icon: '🗄️', action: () => router.push('/databases') },
+  { id: 'ssl', label: 'Go to SSL Manager', icon: '🔒', action: () => router.push('/ssl') },
+  { id: 'php', label: 'Go to PHP Manager', icon: '🐘', action: () => router.push('/php') },
   { id: 'binaries', label: 'Go to Binaries', icon: '📦', action: () => router.push('/binaries') },
   { id: 'plugins', label: 'Go to Plugins', icon: '🔌', action: () => router.push('/plugins') },
   { id: 'settings', label: 'Go to Settings', icon: '⚙️', action: () => router.push('/settings') },
-  { id: 'new-site', label: 'Create New Site', icon: '➕', shortcut: 'Ctrl+N', action: () => { router.push('/sites'); /* TODO: auto-open dialog */ } },
+  { id: 'new-site', label: 'Create New Site', icon: '➕', shortcut: 'Ctrl+N', action: () => router.push('/sites') },
+  { id: 'refresh', label: 'Refresh Data', icon: '🔄', shortcut: 'F5', action: () => daemonStore.poll() },
   ...daemonStore.services.map((svc: any) => ({
     id: `start-${svc.id}`,
     label: `Start ${svc.displayName || svc.id}`,

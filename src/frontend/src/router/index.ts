@@ -6,12 +6,16 @@ import PluginManager from '../components/pages/PluginManager.vue'
 import PluginPage from '../components/pages/PluginPage.vue'
 import Binaries from '../components/pages/Binaries.vue'
 import Databases from '../components/pages/Databases.vue'
+import SslManager from '../components/pages/SslManager.vue'
+import PhpManager from '../components/pages/PhpManager.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
   { path: '/dashboard', component: Dashboard, meta: { title: 'Services' } },
   { path: '/sites', component: Sites, meta: { title: 'Sites' } },
   { path: '/databases', component: Databases, meta: { title: 'Databases' } },
+  { path: '/ssl', component: SslManager, meta: { title: 'SSL' } },
+  { path: '/php', component: PhpManager, meta: { title: 'PHP' } },
   { path: '/settings', component: Settings, meta: { title: 'Settings' } },
   { path: '/plugins', component: PluginManager, meta: { title: 'Plugins' } },
   { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin' } },
