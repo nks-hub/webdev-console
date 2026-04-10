@@ -92,6 +92,9 @@ public class ProcessManager
                 return false;
             }
 
+            // Assign to the daemon Job Object so this child dies when the daemon exits
+            NKS.WebDevConsole.Core.Services.DaemonJobObject.AssignProcess(process);
+
             unit.Process = process;
             unit.State = ServiceState.Running;
             unit.StartedAt = DateTime.UtcNow;

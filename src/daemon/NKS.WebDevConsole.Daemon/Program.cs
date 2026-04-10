@@ -10,6 +10,11 @@ using CliWrap.Buffered;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 
+// Windows: create the Job Object before anything spawns child processes so every
+// subsequent Process.Start() from ProcessManager + plugins gets assigned to it and
+// gets killed when the daemon exits (no orphaned httpd/mysqld/php-cgi processes).
+NKS.WebDevConsole.Core.Services.DaemonJobObject.EnsureInitialized();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // CORS for Electron renderer
@@ -694,17 +699,29 @@ app.MapGet("/api/services/{id}/config", async (string id) =>
 });
 
 // Config validation (Apache)
-app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator) =>
+app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
     if (body == null) return Results.BadRequest();
+
+    // Resolve httpd path from own managed binaries first, then from the loaded Apache plugin.
+    // Rule: NEVER fall back to MAMP or any system path — NKS WDC only uses its own binaries.
+    string? httpdPath = null;
     var apachePlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.apache");
-    string httpdPath = @"C:\MAMP\bin\apache\bin\httpd.exe"; // fallback
     if (apachePlugin != null)
     {
         var prop = apachePlugin.Instance.GetType().GetProperty("HttpdPath");
-        if (prop != null) httpdPath = (string?)prop.GetValue(apachePlugin.Instance) ?? httpdPath;
+        if (prop != null) httpdPath = prop.GetValue(apachePlugin.Instance) as string;
     }
+    if (string.IsNullOrEmpty(httpdPath))
+    {
+        // Fallback: find the newest apache binary installed under ~/.wdc/binaries/apache/
+        var installed = bm.ListInstalled("apache").FirstOrDefault();
+        httpdPath = installed?.Executable;
+    }
+    if (string.IsNullOrEmpty(httpdPath) || !File.Exists(httpdPath))
+        return Results.BadRequest(new { error = "Apache httpd not found in managed binaries — install it first via POST /api/binaries/install" });
+
     var (isValid, output) = await validator.ValidateApacheConfig(httpdPath, body.ConfigPath);
     return Results.Ok(new { isValid, output });
 });
