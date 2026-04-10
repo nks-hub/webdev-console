@@ -11,7 +11,9 @@
       <div class="section-label">Web Server</div>
       <template v-for="svc in webServices" :key="svc.id">
         <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`) }">
-          <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          </el-tooltip>
           <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
@@ -27,7 +29,9 @@
       <div class="section-label">Languages</div>
       <template v-for="svc in langServices" :key="svc.id">
         <div class="service-item">
-          <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          </el-tooltip>
           <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
@@ -43,7 +47,9 @@
       <div class="section-label">Database</div>
       <template v-for="svc in dbServices" :key="svc.id">
         <div class="service-item">
-          <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          </el-tooltip>
           <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
@@ -59,7 +65,9 @@
       <div class="section-label">Cache &amp; Mail</div>
       <template v-for="svc in cacheServices" :key="svc.id">
         <div class="service-item">
-          <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+          </el-tooltip>
           <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
