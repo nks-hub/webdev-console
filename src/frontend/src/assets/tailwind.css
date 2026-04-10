@@ -10,20 +10,20 @@
   --wdc-elevated:    #2e3042;
   --wdc-hover:       #292b3a;
 
-  /* Borders — clearly visible separation */
-  --wdc-border:      rgba(255, 255, 255, 0.12);
-  --wdc-border-strong: rgba(255, 255, 255, 0.20);
+  /* Borders — visible separation */
+  --wdc-border:      rgba(255, 255, 255, 0.15);
+  --wdc-border-strong: rgba(255, 255, 255, 0.25);
 
-  /* Text — WCAG AA compliant on all surfaces */
-  --wdc-text:        #eceef6;
-  --wdc-text-2:      #9ea2be;
-  --wdc-text-3:      #8b8fa8;
+  /* Text — high contrast for readability */
+  --wdc-text:        #f0f2fa;
+  --wdc-text-2:      #b8bcd6;
+  --wdc-text-3:      #9ca0bc;
 
   /* Accent — indigo/violet */
   --wdc-accent:      #6366f1;
   --wdc-accent-2:    #8b5cf6;
   --wdc-accent-glow: rgba(99, 102, 241, 0.15);
-  --wdc-accent-dim:  rgba(99, 102, 241, 0.08);
+  --wdc-accent-dim:  rgba(99, 102, 241, 0.14);
 
   /* Status */
   --wdc-status-running:  #22c55e;
