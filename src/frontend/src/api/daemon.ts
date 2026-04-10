@@ -19,24 +19,26 @@ declare global {
 }
 
 function base(): string {
-  // Priority: (1) URL query param passed by Electron main at load time (authoritative, fresh),
-  // (2) preload getPort() as fallback if URL param missing (browser dev mode).
-  // Preload has a hardcoded default of 5199 which can be STALE — never trust it if URL has a value.
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  let port: number = 5199
-  if (urlPort && /^\d+$/.test(urlPort)) {
-    port = parseInt(urlPort, 10)
-  } else {
-    const preloadPort = window.daemonApi?.getPort?.()
-    if (typeof preloadPort === 'number' && preloadPort > 0) port = preloadPort
+  // Priority: (1) preload getPort() because it RE-READS the port file on every
+  // call and survives daemon restarts (new token/port are picked up live),
+  // (2) URL query param as fallback for browser/dev mode where preload doesn't exist.
+  // Preload returns 0 if the file doesn't exist yet — treat 0 as "no value".
+  const preloadPort = window.daemonApi?.getPort?.()
+  if (typeof preloadPort === 'number' && preloadPort > 0) {
+    return `http://localhost:${preloadPort}`
   }
-  return `http://localhost:${port}`
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  if (urlPort && /^\d+$/.test(urlPort)) {
+    return `http://localhost:${parseInt(urlPort, 10)}`
+  }
+  return 'http://localhost:5199'
 }
 
 function authHeaders(extra?: HeadersInit): Record<string, string> {
-  // Same priority: URL query param first (authoritative), preload fallback.
-  const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = urlToken || window.daemonApi?.getToken?.() || ''
+  // Prefer preload token (live-refreshed from port file), fallback to URL query.
+  const preloadToken = window.daemonApi?.getToken?.() || ''
+  const urlToken = new URLSearchParams(window.location.search).get('token') || ''
+  const token = preloadToken || urlToken
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   if (extra) {
@@ -168,9 +170,10 @@ export function subscribeEvents(
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   function buildUrl(): string {
-    // Re-read URL params on every reconnect so we pick up fresh port/token
-    const urlToken = new URLSearchParams(window.location.search).get('token')
-    const token = urlToken || window.daemonApi?.getToken?.() || ''
+    // Prefer preload (live-refreshes port file) over URL query (frozen)
+    const preloadToken = window.daemonApi?.getToken?.() || ''
+    const urlToken = new URLSearchParams(window.location.search).get('token') || ''
+    const token = preloadToken || urlToken
     return token
       ? `${base()}/api/events?token=${encodeURIComponent(token)}`
       : `${base()}/api/events`
