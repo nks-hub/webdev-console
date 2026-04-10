@@ -671,10 +671,45 @@ infoCommand.SetAction(async (parseResult, ct) =>
     catch { AnsiConsole.MarkupLine($"[red]Site {Markup.Escape(domain)} not found[/]"); }
 });
 
+// --- wdc system ---
+var systemCmd = new Command("system", "Show system runtime information");
+systemCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var sys = await client.GetJsonAsync("/api/system");
+    if (json) { PrintJson(sys); return; }
+    var table = new Table().Border(TableBorder.Rounded).HideHeaders();
+    table.AddColumn("Key"); table.AddColumn("Value");
+    if (sys.TryGetProperty("daemon", out var d))
+    {
+        table.AddRow("Daemon Version", d.GetProperty("version").GetString() ?? "-");
+        table.AddRow("Daemon PID", d.TryGetProperty("pid", out var p) ? p.GetInt32().ToString() : "-");
+    }
+    if (sys.TryGetProperty("services", out var sv))
+        table.AddRow("Services", $"{sv.GetProperty("running").GetInt32()}/{sv.GetProperty("total").GetInt32()} running");
+    if (sys.TryGetProperty("sites", out var st))
+        table.AddRow("Sites", st.GetInt32().ToString());
+    if (sys.TryGetProperty("plugins", out var pl))
+        table.AddRow("Plugins", pl.GetInt32().ToString());
+    if (sys.TryGetProperty("binaries", out var bn))
+        table.AddRow("Binaries", bn.GetInt32().ToString());
+    if (sys.TryGetProperty("os", out var os))
+    {
+        table.AddRow("OS", os.GetProperty("version").GetString() ?? "-");
+        table.AddRow("Machine", os.GetProperty("machine").GetString() ?? "-");
+    }
+    if (sys.TryGetProperty("runtime", out var rt))
+        table.AddRow(".NET", $"{rt.GetProperty("dotnet").GetString()} ({rt.GetProperty("arch").GetString()})");
+    AnsiConsole.Write(table);
+});
+
 rootCommand.Add(openCommand);
 rootCommand.Add(infoCommand);
 rootCommand.Add(configCommand);
 rootCommand.Add(doctorCommand);
+rootCommand.Add(systemCmd);
 rootCommand.Add(startAllCmd);
 rootCommand.Add(stopAllCmd);
 rootCommand.Add(restartAllCmd);
