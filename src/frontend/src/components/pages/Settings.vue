@@ -1,13 +1,13 @@
 <template>
   <div class="settings-page">
-    <div class="flex items-center justify-between mb-5 px-6 pt-6">
+    <div class="page-header">
       <div>
-        <h1 class="text-xl font-bold text-white">Settings</h1>
-        <p class="text-sm text-slate-400 mt-0.5">Configure NKS WDC daemon and UI preferences</p>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Configure NKS WDC daemon and UI preferences</p>
       </div>
     </div>
 
-    <div class="px-6 pb-6">
+    <div class="page-body">
       <el-tabs v-model="activeTab" class="settings-tabs">
         <!-- Ports tab -->
         <el-tab-pane label="Ports" name="ports">
@@ -224,6 +224,30 @@ async function save() {
 .settings-page {
   min-height: 100%;
   background: var(--wdc-bg);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+
+.page-subtitle {
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
+  margin-top: 2px;
+}
+
+.page-body {
+  padding: 0 24px 24px;
 }
 
 .settings-tabs {

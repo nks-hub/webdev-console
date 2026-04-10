@@ -1,9 +1,9 @@
 <template>
   <div class="pm-page">
-    <div class="flex items-center justify-between mb-5 px-6 pt-6">
+    <div class="page-header">
       <div>
-        <h1 class="text-xl font-bold text-white">Plugins</h1>
-        <p class="text-sm text-slate-400 mt-0.5">{{ pluginsStore.manifests.length }} plugins installed</p>
+        <h1 class="page-title">Plugins</h1>
+        <p class="page-subtitle">{{ pluginsStore.manifests.length }} plugins installed</p>
       </div>
       <el-input
         v-model="search"
@@ -16,12 +16,12 @@
     </div>
 
     <!-- Loading skeleton -->
-    <div v-if="pluginsStore.loading" class="px-6">
+    <div v-if="pluginsStore.loading" class="page-body-pad">
       <el-skeleton :rows="5" animated />
     </div>
 
     <!-- Plugin cards grid -->
-    <div v-else class="pm-grid px-6 pb-6">
+    <div v-else class="pm-grid page-body-pad">
       <div
         v-for="plugin in filteredPlugins"
         :key="plugin.id"
@@ -110,6 +110,30 @@ onMounted(() => { void pluginsStore.loadAll() })
 .pm-page {
   min-height: 100%;
   background: var(--wdc-bg);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+
+.page-subtitle {
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
+  margin-top: 2px;
+}
+
+.page-body-pad {
+  padding: 0 24px 24px;
 }
 
 .pm-grid {

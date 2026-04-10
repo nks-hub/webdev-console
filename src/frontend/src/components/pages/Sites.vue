@@ -1,11 +1,11 @@
 <template>
   <div class="sites-page">
-    <div class="flex items-center justify-between mb-5 px-6 pt-6">
+    <div class="page-header">
       <div>
-        <h1 class="text-xl font-bold text-white">Sites</h1>
-        <p class="text-sm text-slate-400 mt-0.5">{{ sitesStore.sites.length }} site{{ sitesStore.sites.length !== 1 ? 's' : '' }} configured</p>
+        <h1 class="page-title">Sites</h1>
+        <p class="page-subtitle">{{ sitesStore.sites.length }} site{{ sitesStore.sites.length !== 1 ? 's' : '' }} configured</p>
       </div>
-      <div class="flex gap-2">
+      <div class="header-actions">
         <el-button size="small" @click="reapplyAll" :loading="reapplying" title="Regenerate all vhosts">
           Reapply All
         </el-button>
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Search bar -->
-    <div class="px-6 mb-4">
+    <div class="search-bar">
       <el-input
         v-model="search"
         placeholder="Filter by domain or docroot..."
@@ -25,7 +25,7 @@
       />
     </div>
 
-    <div class="px-6 pb-6">
+    <div class="page-body">
       <el-table
         :data="filteredSites"
         v-loading="sitesStore.loading"
@@ -37,8 +37,8 @@
         <el-table-column prop="domain" label="Domain" min-width="160">
           <template #default="{ row }">
             <div>
-              <span class="font-semibold text-sm">{{ row.domain }}</span>
-              <div v-if="row.aliases?.length" class="text-xs text-slate-400 mt-0.5">
+              <span class="col-domain">{{ row.domain }}</span>
+              <div v-if="row.aliases?.length" class="col-aliases">
                 {{ row.aliases.join(', ') }}
               </div>
             </div>
@@ -47,7 +47,7 @@
 
         <el-table-column label="Document Root" min-width="200">
           <template #default="{ row }">
-            <span class="text-xs font-mono text-slate-300">{{ row.documentRoot }}</span>
+            <span class="col-mono">{{ row.documentRoot }}</span>
           </template>
         </el-table-column>
 
@@ -56,14 +56,14 @@
             <el-tag v-if="row.phpVersion && row.phpVersion !== 'none'" size="small" effect="plain">
               {{ row.phpVersion }}
             </el-tag>
-            <span v-else class="text-slate-500 text-xs">—</span>
+            <span v-else class="col-empty">—</span>
           </template>
         </el-table-column>
 
         <el-table-column label="Framework" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.framework" size="small" type="warning" effect="plain">{{ row.framework }}</el-tag>
-            <span v-else class="text-slate-500 text-xs">—</span>
+            <span v-else class="col-empty">—</span>
           </template>
         </el-table-column>
 
@@ -77,7 +77,7 @@
 
         <el-table-column label="Port" width="70" align="center">
           <template #default="{ row }">
-            <span class="text-xs font-mono text-slate-400">{{ row.httpPort || 80 }}</span>
+            <span class="col-mono col-empty">{{ row.httpPort || 80 }}</span>
           </template>
         </el-table-column>
 
@@ -347,6 +347,64 @@ function formatDate(iso: string): string {
 .sites-page {
   min-height: 100%;
   background: var(--wdc-bg);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+
+.page-subtitle {
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-bar {
+  padding: 0 24px;
+  margin-bottom: 16px;
+}
+
+.page-body {
+  padding: 0 24px 24px;
+}
+
+.col-domain {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--wdc-text);
+}
+
+.col-aliases {
+  font-size: 0.75rem;
+  color: var(--wdc-text-2);
+  margin-top: 2px;
+}
+
+.col-mono {
+  font-size: 0.78rem;
+  font-family: monospace;
+  color: var(--el-text-color-regular);
+}
+
+.col-empty {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
 }
 
 .site-detail {

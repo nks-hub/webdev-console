@@ -1,9 +1,9 @@
 <template>
   <div class="binaries-page">
-    <div class="flex items-center justify-between mb-5 px-6 pt-6">
+    <div class="page-header">
       <div>
-        <h1 class="text-xl font-bold text-white">Binaries</h1>
-        <p class="text-sm text-slate-400 mt-0.5">Manage installed runtimes and server binaries</p>
+        <h1 class="page-title">Binaries</h1>
+        <p class="page-subtitle">Manage installed runtimes and server binaries</p>
       </div>
       <el-button size="small" @click="refresh" :loading="loading" title="Refresh catalog and installed list">
         Refresh
@@ -11,39 +11,48 @@
     </div>
 
     <!-- Installed binaries section -->
-    <div class="px-6 mb-6">
+    <div class="page-section">
       <div class="section-header">
         <span class="section-title">Installed</span>
         <el-tag size="small" type="success" effect="plain">{{ installed.length }} installed</el-tag>
       </div>
 
       <div v-if="installed.length === 0 && !loading" class="empty-box">
-        <span class="text-slate-400 text-sm">No binaries installed yet. Install from catalog below.</span>
+        <span class="empty-msg">No binaries installed yet. Install from catalog below.</span>
       </div>
 
-      <div v-else class="installed-grid">
+      <div v-else class="installed-groups">
         <div
-          v-for="bin in installed"
-          :key="`${bin.app}-${bin.version}`"
-          class="installed-card"
+          v-for="(versions, appName) in groupedInstalled"
+          :key="appName"
+          class="installed-group"
         >
-          <div class="installed-header">
-            <div>
-              <span class="installed-app">{{ bin.app }}</span>
-              <span class="installed-version">{{ bin.version }}</span>
-              <el-tag v-if="bin.isDefault" size="small" type="success" effect="plain" class="ml-2">default</el-tag>
-            </div>
-            <el-button
-              size="small"
-              type="danger"
-              plain
-              :loading="uninstalling.has(`${bin.app}-${bin.version}`)"
-              @click="uninstall(bin.app, bin.version)"
-            >
-              Remove
-            </el-button>
+          <div class="group-header">
+            <span class="group-app-name">{{ appName }}</span>
+            <span class="group-count">{{ versions.length }} version{{ versions.length !== 1 ? 's' : '' }}</span>
           </div>
-          <div class="installed-path">{{ bin.path }}</div>
+          <div class="group-versions">
+            <div
+              v-for="bin in versions"
+              :key="`${bin.app}-${bin.version}`"
+              class="installed-row"
+            >
+              <div class="installed-row-info">
+                <span class="installed-version">{{ bin.version }}</span>
+                <el-tag v-if="bin.isDefault" size="small" type="success" effect="plain">default</el-tag>
+                <span class="installed-path">{{ bin.path }}</span>
+              </div>
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                :loading="uninstalling.has(`${bin.app}-${bin.version}`)"
+                @click="uninstall(bin.app, bin.version)"
+              >
+                Remove
+              </el-button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -51,8 +60,8 @@
     <el-divider />
 
     <!-- Catalog section -->
-    <div class="px-6 pb-6">
-      <div class="section-header mb-4">
+    <div class="page-section">
+      <div class="section-header">
         <span class="section-title">Available Catalog</span>
         <el-input
           v-model="catalogSearch"
@@ -64,7 +73,7 @@
         />
       </div>
 
-      <div v-if="loading" class="px-0">
+      <div v-if="loading">
         <el-skeleton :rows="6" animated />
       </div>
 
@@ -77,13 +86,12 @@
           <template #title>
             <div class="catalog-app-header">
               <span class="catalog-app-name">{{ app }}</span>
-              <el-tag size="small" type="info" effect="plain" class="ml-2">{{ releases.length }} releases</el-tag>
+              <el-tag size="small" type="info" effect="plain">{{ releases.length }} releases</el-tag>
               <el-tag
                 v-if="installedApps.has(app)"
                 size="small"
                 type="success"
                 effect="plain"
-                class="ml-1"
               >
                 installed
               </el-tag>
@@ -146,7 +154,7 @@
     <!-- Install progress dialog -->
     <el-dialog v-model="progressVisible" title="Installing..." width="400px" :close-on-click-modal="false">
       <div class="progress-content">
-        <p class="text-sm text-slate-300 mb-3">{{ progressMessage }}</p>
+        <p class="progress-msg">{{ progressMessage }}</p>
         <el-progress :percentage="progressPercent" :status="progressError ? 'exception' : (progressDone ? 'success' : undefined)" />
       </div>
       <template #footer>
@@ -185,6 +193,15 @@ const progressDone = ref(false)
 const progressError = ref(false)
 
 const installedApps = computed(() => new Set(installed.value.map(b => b.app)))
+
+const groupedInstalled = computed(() => {
+  const groups: Record<string, InstalledBinary[]> = {}
+  for (const bin of installed.value) {
+    if (!groups[bin.app]) groups[bin.app] = []
+    groups[bin.app].push(bin)
+  }
+  return groups
+})
 
 const filteredCatalog = computed(() => {
   const q = catalogSearch.value.toLowerCase()
@@ -274,11 +291,105 @@ onMounted(() => { void refresh() })
   background: var(--wdc-bg);
 }
 
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+
+.page-subtitle {
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
+  margin-top: 2px;
+}
+
+.page-section {
+  padding: 0 24px 24px;
+}
+
+.empty-msg {
+  font-size: 0.88rem;
+  color: var(--wdc-text-2);
+}
+
+.installed-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.installed-group {
+  background: var(--wdc-surface);
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--wdc-surface-2);
+  border-bottom: 1px solid var(--el-border-color);
+}
+
+.group-app-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  text-transform: capitalize;
+}
+
+.group-count {
+  font-size: 0.72rem;
+  color: var(--wdc-text-2);
+}
+
+.group-versions {
+  display: flex;
+  flex-direction: column;
+}
+
+.installed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter, rgba(255,255,255,0.04));
+  transition: background 0.1s;
+}
+
+.installed-row:last-child { border-bottom: none; }
+.installed-row:hover { background: var(--wdc-hover); }
+
+.installed-row-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.progress-msg {
+  font-size: 0.88rem;
+  color: var(--el-text-color-regular);
+  margin-bottom: 12px;
+}
+
 .section-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .section-title {
@@ -297,35 +408,6 @@ onMounted(() => { void refresh() })
   text-align: center;
 }
 
-.installed-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.installed-card {
-  background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.installed-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.installed-app {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin-right: 8px;
-}
-
 .installed-version {
   font-size: 0.78rem;
   font-family: monospace;
@@ -336,7 +418,11 @@ onMounted(() => { void refresh() })
   font-size: 0.72rem;
   font-family: monospace;
   color: var(--el-text-color-secondary);
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .catalog-collapse {
@@ -349,6 +435,7 @@ onMounted(() => { void refresh() })
 .catalog-app-header {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .catalog-app-name {

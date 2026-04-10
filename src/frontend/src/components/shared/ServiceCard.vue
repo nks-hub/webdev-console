@@ -53,9 +53,9 @@
     </div>
 
     <div v-else class="svc-offline">
-      <span v-if="statusText === 'crashed'" class="text-red-400 text-xs">Process crashed</span>
-      <span v-else-if="statusText === 'starting'" class="text-amber-400 text-xs">Starting...</span>
-      <span v-else class="text-slate-500 text-xs">Service not running</span>
+      <span v-if="statusText === 'crashed'" class="offline-crashed">Process crashed</span>
+      <span v-else-if="statusText === 'starting'" class="offline-starting">Starting...</span>
+      <span v-else class="offline-stopped">Service not running</span>
       <span class="meta-item" v-if="service.version" style="margin-top: 4px;">
         <span class="meta-label">v</span>
         <span class="meta-val">{{ service.version }}</span>
@@ -330,4 +330,8 @@ function formatUptime(seconds: number): string {
   flex: 1;
   font-size: 0.78rem;
 }
+
+.offline-crashed  { font-size: 0.78rem; color: var(--wdc-status-error); }
+.offline-starting { font-size: 0.78rem; color: var(--wdc-status-starting); }
+.offline-stopped  { font-size: 0.78rem; color: var(--wdc-text-3); }
 </style>
