@@ -417,7 +417,34 @@ openCommand.SetAction((parseResult, ct) =>
     return Task.CompletedTask;
 });
 
+// --- wdc config ---
+var configCommand = new Command("config", "Show configuration paths");
+configCommand.SetAction((parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    var paths = new
+    {
+        wdcRoot = Path.Combine(home, ".wdc"),
+        binaries = Path.Combine(home, ".wdc", "binaries"),
+        sites = Path.Combine(home, ".wdc", "sites"),
+        data = Path.Combine(home, ".wdc", "data"),
+        portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port"),
+    };
+    if (json) { PrintJson(paths); return Task.CompletedTask; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Key"); table.AddColumn("Path");
+    table.AddRow("WDC Root", paths.wdcRoot);
+    table.AddRow("Binaries", paths.binaries);
+    table.AddRow("Sites Config", paths.sites);
+    table.AddRow("Data (SQLite)", paths.data);
+    table.AddRow("Port File", paths.portFile);
+    AnsiConsole.Write(table);
+    return Task.CompletedTask;
+});
+
 rootCommand.Add(openCommand);
+rootCommand.Add(configCommand);
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(logsCommand);
