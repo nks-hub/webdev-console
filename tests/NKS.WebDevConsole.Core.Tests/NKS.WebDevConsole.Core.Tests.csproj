@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\daemon\NKS.WebDevConsole.Core\NKS.WebDevConsole.Core.csproj" />
+    <ProjectReference Include="..\..\src\daemon\NKS.WebDevConsole.Plugin.SDK\NKS.WebDevConsole.Plugin.SDK.csproj" />
   </ItemGroup>
 
 </Project>
