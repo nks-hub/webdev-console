@@ -209,8 +209,25 @@ async function buildServiceSubmenu(): Promise<Electron.MenuItemConstructorOption
 
 async function updateTray() {
   if (!tray) return
+
+  // Dynamic icon color based on state
+  let iconColor: 'green' | 'red' | 'yellow' | 'gray' = 'gray'
+  if (daemonConnected) {
+    try {
+      const services = await daemonGet<any[]>('/api/services')
+      const crashed = services.filter(s => s.state === 4).length
+      const running = services.filter(s => s.state === 2).length
+      if (crashed > 0) iconColor = 'red'
+      else if (running > 0) iconColor = 'green'
+      else iconColor = 'yellow'
+    } catch {
+      iconColor = 'green' // connected but can't query — assume OK
+    }
+  }
+  tray.setImage(createTrayIcon(iconColor))
+
   const label = daemonConnected ? 'NKS WebDev Console (connected)' : 'NKS WebDev Console (disconnected)'
-  tray.setToolTip('NKS WebDev Console')
+  tray.setToolTip(`NKS WDC — ${daemonConnected ? 'Connected' : 'Offline'}`)
 
   const serviceItems = await buildServiceSubmenu()
 
@@ -247,18 +264,32 @@ async function updateTray() {
   tray.setContextMenu(menu)
 }
 
-function createTray() {
-  // Create a 16x16 green square as placeholder tray icon (RGBA buffer)
+function createTrayIcon(color: 'green' | 'red' | 'yellow' | 'gray'): Electron.NativeImage {
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
-  for (let i = 0; i < size * size; i++) {
-    buf[i * 4 + 0] = 0x22 // R
-    buf[i * 4 + 1] = 0xc5 // G
-    buf[i * 4 + 2] = 0x5e // B
-    buf[i * 4 + 3] = 0xff // A
+  const colors: Record<string, [number, number, number]> = {
+    green:  [0x22, 0xc5, 0x5e],
+    red:    [0xef, 0x44, 0x44],
+    yellow: [0xf5, 0x9e, 0x0b],
+    gray:   [0x64, 0x74, 0x8b],
   }
-  const icon = nativeImage.createFromBuffer(buf, { width: size, height: size })
-  tray = new Tray(icon.resize({ width: 16, height: 16 }))
+  const [r, g, b] = colors[color]
+  const cx = size / 2, cy = size / 2, radius = 6
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+      const i = (y * size + x) * 4
+      if (dist <= radius) {
+        buf[i] = r; buf[i + 1] = g; buf[i + 2] = b; buf[i + 3] = 0xff
+      }
+    }
+  }
+  return nativeImage.createFromBuffer(buf, { width: size, height: size })
+}
+
+function createTray() {
+  const icon = createTrayIcon(daemonConnected ? 'green' : 'gray')
+  tray = new Tray(icon)
   updateTray()
   tray.on('click', () => {
     if (win?.isVisible()) {
