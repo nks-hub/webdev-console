@@ -68,10 +68,11 @@
             <span class="port-value mono">{{ getPort(service) }}</span>
           </div>
 
-          <!-- CPU/RAM when running -->
+          <!-- CPU/RAM/Uptime when running -->
           <div class="svc-metrics" v-if="isRunning(service)">
             <span class="metric mono">CPU <em>{{ formatCpu(service.cpuPercent) }}</em></span>
             <span class="metric mono">MEM <em>{{ formatMem(service.memoryBytes ?? 0) }}</em></span>
+            <span class="metric mono" v-if="service.uptime">UP <em>{{ formatUptime(service.uptime) }}</em></span>
           </div>
           <div class="svc-metrics" v-else>
             <span class="status-label" :class="`status-${statusText(service)}`">{{ statusText(service) }}</span>
@@ -204,6 +205,24 @@ function formatMem(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+function formatUptime(uptime: string | number): string {
+  if (typeof uptime === 'number') {
+    const s = uptime
+    if (s < 60) return `${s}s`
+    if (s < 3600) return `${Math.floor(s / 60)}m`
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
+  }
+  // TimeSpan string "HH:MM:SS.xxx"
+  const parts = String(uptime).split(':')
+  if (parts.length >= 3) {
+    const h = parseInt(parts[0]), m = parseInt(parts[1])
+    if (h > 0) return `${h}h ${m}m`
+    if (m > 0) return `${m}m`
+    return `${parseInt(parts[2])}s`
+  }
+  return String(uptime)
 }
 
 async function toggleService(id: string, value: boolean | string | number) {
