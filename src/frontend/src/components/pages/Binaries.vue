@@ -45,7 +45,7 @@
               <el-button
                 size="small"
                 type="danger"
-                plain
+                text
                 :loading="uninstalling.has(`${bin.app}-${bin.version}`)"
                 @click="uninstall(bin.app, bin.version)"
               >
@@ -132,7 +132,7 @@
                   v-else
                   size="small"
                   type="danger"
-                  plain
+                  text
                   :loading="uninstalling.has(`${app}-${release.version}`)"
                   @click="uninstall(app, release.version)"
                 >
