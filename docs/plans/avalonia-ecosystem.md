@@ -413,9 +413,9 @@ Use **FluentMigrator** only if rollback or strongly-typed C# migrations are requ
 |---|---|---|
 | `System.CommandLine` | `2.0.0-beta5` | Beta, targeting stable with .NET 10 (late 2025). Many breaking changes between betas. |
 | `Spectre.Console` | `0.55.0` | Stable, rich output (tables, progress, colors) |
-| `Spectre.Console.Cli` | `0.55.0` | Now in separate repo, heading to 1.0 |
+| `Spectre.Console.Cli` | `0.55.0` | Available but **NOT used** — see note below |
 
-**Recommendation:** Use `Spectre.Console.Cli` for command parsing + `Spectre.Console` for output rendering. It is stable and production-ready today; `System.CommandLine` is still in beta with breaking changes between releases.
+**NOTE (OVERRIDDEN BY SPEC.md):** Original recommendation was `Spectre.Console.Cli`. However, `System.CommandLine` 2.0.5 shipped STABLE (March 2026). **SPEC.md decision: `System.CommandLine` for command parsing, `Spectre.Console` for output formatting ONLY. Do NOT use `Spectre.Console.Cli`.**
 
 ```csharp
 var app = new CommandApp();

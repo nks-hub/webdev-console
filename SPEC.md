@@ -261,7 +261,7 @@ Neither the GUI nor CLI ever modify config files, spawn services, or touch the h
 | Windows | Named pipe `\\.\pipe\devforge-daemon` |
 | macOS / Linux | Unix domain socket `~/.devforge/daemon.sock` |
 
-gRPC runs over these transports using `GrpcDotNetNamedPipes` on Windows and the built-in Unix socket support on macOS/Linux.
+gRPC runs over these transports using standard Kestrel named pipe listener (`ListenNamedPipe("devforge-daemon")`) on Windows and the built-in Unix Domain Socket support on macOS/Linux. Do NOT use the `GrpcDotNetNamedPipes` NuGet package — it uses a custom wire protocol incompatible with standard gRPC tooling.
 
 ### Daemon Lifecycle
 
@@ -1973,8 +1973,12 @@ The GUI prototype (`prototype/gui/`) uses **Tauri + Svelte** — this is **super
 
 Existing documentation that is useful context but should not drive implementation decisions differently from this SPEC:
 
-- `docs/plans/2026-04-09-devforge-implementation-plan.md` — Earlier plan compiled from 15 agents; some decisions were later revised (e.g., Go → C#, Tauri → Avalonia). Use as supplemental reference.
-- `docs/plans/interview-results.md` — Original user requirements gathering.
+- `docs/plans/2026-04-09-devforge-implementation-plan.md` — Detailed implementation plan (21 sections, fully rewritten for C#/Avalonia).
+- `docs/plans/interview-results.md` — Original user requirements gathering (30+ questions).
+- `docs/plans/avalonia-ecosystem.md` — NuGet package reference, patterns, gotchas, version compatibility.
+- `docs/plans/csharp-process-management.md` — Graceful shutdown per service, Job Objects, CliWrap patterns, PHP-CGI on Windows.
+- `docs/plans/avalonia-ui-patterns.md` — Complete AXAML + C# code examples for all UI components (ServiceCard, Dashboard, Create Wizard, gRPC streaming).
+- `docs/plans/gui-decision-interview.md` — 70-question scoring interview for framework selection.
 
 **This SPEC.md is the definitive document.** When this SPEC conflicts with any other document, follow this SPEC.
 
