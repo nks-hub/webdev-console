@@ -144,12 +144,9 @@
       v-model="logsDrawer.open"
       :title="`Logs — ${logsDrawer.serviceId}`"
       direction="rtl"
-      size="520px"
+      size="560px"
     >
-      <div class="log-viewer">
-        <div v-if="logsDrawer.loading" class="log-loading">Loading...</div>
-        <pre v-else class="log-pre">{{ logsDrawer.content }}</pre>
-      </div>
+      <LogViewer v-if="logsDrawer.open && logsDrawer.serviceId" :service-id="logsDrawer.serviceId" />
     </el-drawer>
 
     <!-- Config drawer -->
@@ -187,9 +184,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
-import { fetchServiceLogs, fetchServiceConfig, type ConfigFile } from '../../api/daemon'
+import { fetchServiceConfig, type ConfigFile } from '../../api/daemon'
 import { ElMessage, ElNotification } from 'element-plus'
 import MetricsChart from '../shared/MetricsChart.vue'
+import LogViewer from '../shared/LogViewer.vue'
 
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
@@ -303,23 +301,11 @@ async function stopAll() {
 const logsDrawer = reactive({
   open: false,
   serviceId: '',
-  content: '',
-  loading: false,
 })
 
-async function openLogs(id: string) {
+function openLogs(id: string) {
   logsDrawer.serviceId = id
-  logsDrawer.content = ''
-  logsDrawer.loading = true
   logsDrawer.open = true
-  try {
-    const lines = await fetchServiceLogs(id, 300)
-    logsDrawer.content = Array.isArray(lines) ? lines.join('\n') : String(lines)
-  } catch (err: unknown) {
-    logsDrawer.content = err instanceof Error ? err.message : 'Failed to load logs'
-  } finally {
-    logsDrawer.loading = false
-  }
 }
 
 // Config drawer
