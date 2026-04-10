@@ -27,8 +27,16 @@ public sealed class PluginContext : IPluginContext
     /// </summary>
     public static PluginContext ForInitPhase(ILoggerFactory loggerFactory)
     {
-        // ServiceProvider is not yet available during Initialize;
-        // plugins must not access it until StartAsync.
-        return new PluginContext(null!, loggerFactory);
+        return new PluginContext(
+            new InitPhaseServiceProvider(),
+            loggerFactory);
+    }
+
+    private class InitPhaseServiceProvider : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            throw new InvalidOperationException(
+                $"Cannot resolve {serviceType.Name} during plugin initialization. " +
+                "Services are only available after StartAsync is called.");
     }
 }

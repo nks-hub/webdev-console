@@ -1,5 +1,9 @@
 namespace NKS.WebDevConsole.Plugin.SDK;
 
+/// <summary>
+/// Allows plugins to register custom HTTP endpoints under /api/{pluginId}/.
+/// Reserved for future third-party plugin use — not wired by the daemon yet.
+/// </summary>
 public class EndpointRegistration
 {
     private readonly string _pluginId;
