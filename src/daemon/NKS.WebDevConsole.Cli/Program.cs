@@ -101,6 +101,36 @@ foreach (var (verb, label, color) in new[] { ("start", "Started", "green"), ("st
     servicesCommand.Add(cmd);
 }
 
+// --- wdc logs {id} ---
+var logsIdArg = new Argument<string>("id") { Description = "Service ID" };
+var logsLinesOpt = new Option<int?>("--lines") { Description = "Number of lines (default: 50)" };
+var logsCommand = new Command("logs", "Show service logs") { logsIdArg, logsLinesOpt };
+logsCommand.SetAction(async (parseResult, ct) =>
+{
+    var id = parseResult.GetValue(logsIdArg)!;
+    var lines = parseResult.GetValue(logsLinesOpt) ?? 50;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var result = await client.GetJsonAsync($"/api/services/{id}/logs?lines={lines}");
+    if (json) { PrintJson(result); return; }
+
+    if (result.GetArrayLength() == 0)
+    {
+        AnsiConsole.MarkupLine($"[dim]No logs for {Markup.Escape(id)}[/]");
+        return;
+    }
+    foreach (var line in result.EnumerateArray())
+    {
+        var text = line.GetString() ?? "";
+        if (text.Contains("ERR", StringComparison.OrdinalIgnoreCase))
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(text)}[/]");
+        else
+            AnsiConsole.WriteLine(text);
+    }
+});
+
 // --- wdc sites ---
 var sitesCommand = new Command("sites", "List all sites");
 sitesCommand.SetAction(async (parseResult, ct) =>
@@ -320,6 +350,7 @@ binariesCommand.Add(installBinCmd);
 
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
+rootCommand.Add(logsCommand);
 rootCommand.Add(sitesCommand);
 rootCommand.Add(pluginsCommand);
 rootCommand.Add(dbCommand);
