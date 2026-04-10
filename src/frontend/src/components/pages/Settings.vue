@@ -3,7 +3,7 @@
     <h2>Settings</h2>
 
 
-    <el-tabs>
+    <el-tabs v-model="activeTab">
       <el-tab-pane label="Ports" name="ports">
         <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
           <el-form-item label="HTTP Port">
@@ -59,6 +59,7 @@ import { useThemeStore, type ThemeMode } from '../../stores/theme'
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
 
+const activeTab = ref('ports')
 const ports = reactive({ http: 80, https: 443, mysql: 3306 })
 const runOnStartup = ref(false)
 const autoStart = ref(true)

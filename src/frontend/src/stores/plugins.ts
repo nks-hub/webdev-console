@@ -63,16 +63,23 @@ export const usePluginsStore = defineStore('plugins', () => {
   async function loadAll() {
     loading.value = true
     try {
-      manifests.value = await fetchPlugins()
-      // Load UI definitions for all enabled plugins in parallel
-      await Promise.allSettled(
-        manifests.value
-          .filter(p => p.enabled && p.permissions.gui)
-          .map(async p => {
-            const ui = await fetchPluginUi(p.id)
+      const raw = await fetchPlugins()
+      manifests.value = raw.map(p => ({
+        ...p,
+        permissions: p.permissions ?? { network: true, process: true, gui: true },
+      }))
+      // Load UI definitions for enabled plugins
+      for (const p of manifests.value.filter(x => x.enabled)) {
+        try {
+          const ui = await fetchPluginUi(p.id)
+          if (ui) {
             uiDefinitions.value.set(p.id, ui)
-          })
-      )
+            if (!p.ui) (p as any).ui = ui
+          }
+        } catch { /* plugin may not have UI */ }
+      }
+    } catch (err) {
+      console.error('[plugins] loadAll failed:', err)
     } finally {
       loading.value = false
     }

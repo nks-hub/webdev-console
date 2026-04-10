@@ -26,9 +26,9 @@
       <el-table-column label="Permissions" width="140">
         <template #default="{ row }">
           <div class="perm-chips">
-            <el-tag v-if="row.permissions.network" size="small" type="warning">network</el-tag>
-            <el-tag v-if="row.permissions.process" size="small" type="danger">process</el-tag>
-            <el-tag v-if="row.permissions.gui" size="small" type="info">gui</el-tag>
+            <el-tag v-if="row.permissions?.network" size="small" type="warning">network</el-tag>
+            <el-tag v-if="row.permissions?.process" size="small" type="danger">process</el-tag>
+            <el-tag v-if="row.permissions?.gui" size="small" type="info">gui</el-tag>
           </div>
         </template>
       </el-table-column>
