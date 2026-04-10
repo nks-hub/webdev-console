@@ -5,7 +5,7 @@ using System.Text.Json;
 using NKS.WebDevConsole.Cli;
 using Spectre.Console;
 
-var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON instead of formatted tables" };
+var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON instead of formatted tables", Recursive = true };
 
 var rootCommand = new RootCommand("NKS WebDev Console CLI") { jsonOption };
 
