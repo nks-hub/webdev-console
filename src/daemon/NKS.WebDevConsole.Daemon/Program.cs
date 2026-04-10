@@ -139,6 +139,23 @@ app.MapGet("/api/status", () => Results.Ok(new
     uptime = Environment.TickCount64 / 1000
 }));
 
+app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var running = 0; var total = 0;
+    foreach (var m in modules) { total++; var s = await m.GetStatusAsync(CancellationToken.None); if (s.State == ServiceState.Running) running++; }
+    return Results.Ok(new
+    {
+        daemon = new { version = "0.1.0", uptime = Environment.TickCount64 / 1000, pid = Environment.ProcessId },
+        services = new { running, total },
+        sites = sm.Sites.Count,
+        plugins = pluginLoader.Plugins.Count,
+        binaries = bm.ListInstalled().Count,
+        os = new { platform = Environment.OSVersion.Platform.ToString(), version = Environment.OSVersion.VersionString, machine = Environment.MachineName },
+        runtime = new { dotnet = Environment.Version.ToString(), arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString() }
+    });
+});
+
 app.MapGet("/api/plugins", (IServiceProvider sp) =>
 {
     var modules = sp.GetServices<IServiceModule>();
