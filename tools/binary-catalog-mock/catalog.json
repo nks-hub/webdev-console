@@ -145,6 +145,16 @@
         { "version": "1.26.3", "major_minor": "1.26", "channel": "stable",   "downloads": [{ "url": "https://nginx.org/download/nginx-1.26.3.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "nginx.org" }] },
         { "version": "1.24.0", "major_minor": "1.24", "channel": "stable",   "downloads": [{ "url": "https://nginx.org/download/nginx-1.24.0.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "nginx.org" }] }
       ]
+    },
+    "mkcert": {
+      "name": "mkcert",
+      "display_name": "mkcert",
+      "category": "tool",
+      "homepage": "https://github.com/FiloSottile/mkcert",
+      "license": "BSD-3-Clause",
+      "releases": [
+        { "version": "1.4.4", "major_minor": "1.4", "channel": "stable", "downloads": [{ "url": "https://dl.filippo.io/mkcert/v1.4.4?for=windows/amd64", "os": "windows", "arch": "x64", "archive_type": "exe", "source": "filippo.io" }] }
+      ]
     }
   }
 }
