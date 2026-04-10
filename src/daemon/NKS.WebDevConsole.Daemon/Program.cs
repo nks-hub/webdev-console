@@ -2,6 +2,7 @@ using Dapper;
 using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
 using NKS.WebDevConsole.Daemon.Sites;
+using NKS.WebDevConsole.Daemon.Binaries;
 using NKS.WebDevConsole.Daemon.Config;
 using NKS.WebDevConsole.Daemon.Data;
 using NKS.WebDevConsole.Core.Interfaces;
@@ -32,6 +33,11 @@ builder.Services.AddSingleton(sp => new SiteManager(
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "generated")
 ));
 builder.Services.AddSingleton<SiteOrchestrator>();
+
+// Binary catalog / downloader / manager — own binaries under ~/.wdc/binaries/
+builder.Services.AddHttpClient("binary-downloader");
+builder.Services.AddSingleton<BinaryDownloader>();
+builder.Services.AddSingleton<BinaryManager>();
 
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
@@ -395,6 +401,49 @@ app.MapGet("/api/databases", () =>
     return Results.Ok(Array.Empty<object>());
 });
 
+// ── Binary catalog + installation management ──────────────────────────────
+// GET /api/binaries/catalog          → all known releases
+// GET /api/binaries/catalog/{app}    → releases for one app
+// GET /api/binaries/installed        → currently installed binaries
+// GET /api/binaries/installed/{app}  → installed versions for one app
+// POST /api/binaries/install         → { app, version } downloads + extracts
+// DELETE /api/binaries/{app}/{version} → uninstall
+
+app.MapGet("/api/binaries/catalog", () =>
+    Results.Ok(BinaryCatalog.All));
+
+app.MapGet("/api/binaries/catalog/{app}", (string app) =>
+    Results.Ok(BinaryCatalog.ForApp(app)));
+
+app.MapGet("/api/binaries/installed", (BinaryManager bm) =>
+    Results.Ok(bm.ListInstalled()));
+
+app.MapGet("/api/binaries/installed/{app}", (string app, BinaryManager bm) =>
+    Results.Ok(bm.ListInstalled(app)));
+
+app.MapPost("/api/binaries/install", async (HttpContext ctx, BinaryManager bm) =>
+{
+    var req = await ctx.Request.ReadFromJsonAsync<InstallBinaryRequest>();
+    if (req is null || string.IsNullOrWhiteSpace(req.App) || string.IsNullOrWhiteSpace(req.Version))
+        return Results.BadRequest(new { error = "app and version required" });
+
+    try
+    {
+        var installed = await bm.EnsureInstalledAsync(req.App, req.Version, progress: null, ct: ctx.RequestAborted);
+        return Results.Ok(installed);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Install failed: {ex.Message}");
+    }
+});
+
+app.MapDelete("/api/binaries/{app}/{version}", (string app, string version, BinaryManager bm) =>
+{
+    bm.Uninstall(app, version);
+    return Results.NoContent();
+});
+
 // SSE endpoint
 app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
 {
@@ -429,3 +478,4 @@ app.Lifetime.ApplicationStopping.Register(() =>
 await app.RunAsync();
 
 record ConfigValidateRequest(string ConfigPath, string? Content);
+record InstallBinaryRequest(string App, string Version);
