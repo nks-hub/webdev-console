@@ -140,6 +140,39 @@ deleteSiteCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(deleteSiteCmd);
 
+// --- wdc sites create ---
+var createSiteCmd = new Command("create", "Create a new site (interactive)");
+createSiteCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var domain = AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):");
+    var docRoot = AnsiConsole.Ask<string>("Document root:");
+    var php = AnsiConsole.Ask("PHP version:", "8.4");
+    var ssl = AnsiConsole.Confirm("Enable SSL?", false);
+
+    var payload = new
+    {
+        domain,
+        documentRoot = docRoot,
+        phpVersion = php,
+        sslEnabled = ssl,
+        httpPort = 80,
+        httpsPort = 443,
+        aliases = Array.Empty<string>(),
+        environment = new Dictionary<string, string>()
+    };
+
+    var content = JsonContent.Create(payload);
+    var result = await client.PostAsync("/api/sites", content);
+
+    if (json) { PrintJson(result); return; }
+    AnsiConsole.MarkupLine($"[green]Site created:[/] {Markup.Escape(domain)}");
+});
+sitesCommand.Add(createSiteCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
