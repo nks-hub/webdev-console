@@ -63,7 +63,15 @@ export const useDaemonStore = defineStore('daemon', () => {
 
   function startPolling() {
     void poll()
-    pollTimer = setInterval(poll, 5000)
+    // The 5-second interval always resets the fast-retry counter BEFORE polling
+    // so that successive daemon restarts (each of which may need a fresh retry
+    // cascade) keep getting rescued. Without this, once retryCount hits the cap
+    // the UI stayed Offline until a manual window reload.
+    pollTimer = setInterval(() => {
+      retryCount = 0
+      if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
+      void poll()
+    }, 5000)
 
     sseCleanup = subscribeEvents(
       (service) => {

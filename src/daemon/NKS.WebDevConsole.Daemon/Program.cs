@@ -1086,19 +1086,25 @@ app.MapPost("/api/binaries/install", async (HttpContext ctx, BinaryManager bm) =
 
     try
     {
+        BinaryManager.ValidateAppVersion(req.App, req.Version);
         var installed = await bm.EnsureInstalledAsync(req.App, req.Version, progress: null, ct: ctx.RequestAborted);
         return Results.Ok(installed);
     }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Install failed: {ex.Message}");
-    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (Exception ex) { return Results.Problem($"Install failed: {ex.Message}"); }
 });
 
 app.MapDelete("/api/binaries/{app}/{version}", (string app, string version, BinaryManager bm) =>
 {
-    bm.Uninstall(app, version);
-    return Results.NoContent();
+    try
+    {
+        BinaryManager.ValidateAppVersion(app, version);
+        bm.Uninstall(app, version);
+        return Results.NoContent();
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
 // SSE endpoint

@@ -39,9 +39,32 @@ public sealed class BinaryManager
 
     public string Root => _root;
 
+    /// <summary>
+    /// Validates app/version strings so that they cannot traverse out of the binaries
+    /// root. Without this, a crafted POST /api/binaries/install body with
+    /// <c>app="../.."</c> could cause extraction into unexpected locations.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex _safeIdent =
+        new(@"^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,63}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    public static void ValidateAppVersion(string app, string version)
+    {
+        if (string.IsNullOrWhiteSpace(app) || !_safeIdent.IsMatch(app))
+            throw new ArgumentException($"Invalid app identifier: '{app}'");
+        if (string.IsNullOrWhiteSpace(version) || !_safeIdent.IsMatch(version))
+            throw new ArgumentException($"Invalid version identifier: '{version}'");
+    }
+
     /// <summary>Path to the install directory for a given app/version (may not exist yet).</summary>
     public string GetInstallPath(string app, string version)
-        => Path.Combine(_root, app.ToLowerInvariant(), version);
+    {
+        ValidateAppVersion(app, version);
+        var combined = Path.GetFullPath(Path.Combine(_root, app.ToLowerInvariant(), version));
+        var rootFull = Path.GetFullPath(_root);
+        if (!combined.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Resolved install path escapes binaries root");
+        return combined;
+    }
 
     /// <summary>Returns true if the binary for app/version is already extracted on disk.</summary>
     public bool IsInstalled(string app, string version)
