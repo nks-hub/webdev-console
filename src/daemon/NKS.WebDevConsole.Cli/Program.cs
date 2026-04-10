@@ -215,6 +215,24 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(createSiteCmd);
 
+// --- wdc sites detect {domain} ---
+var detectDomainArg = new Argument<string>("domain");
+var detectCmd = new Command("detect", "Auto-detect framework for a site") { detectDomainArg };
+detectCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(detectDomainArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync($"/api/sites/{domain}/detect-framework");
+    if (json) { PrintJson(result); return; }
+    var fw = result.TryGetProperty("framework", out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() : null;
+    AnsiConsole.MarkupLine(fw != null
+        ? $"[green]Detected:[/] {Markup.Escape(fw)} for {Markup.Escape(domain)}"
+        : $"[dim]No framework detected for {Markup.Escape(domain)}[/]");
+});
+sitesCommand.Add(detectCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
