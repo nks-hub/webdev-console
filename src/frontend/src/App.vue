@@ -10,30 +10,42 @@
     </div>
 
     <AppStatusBar />
+    <CommandPalette ref="commandPalette" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
+import CommandPalette from './components/shared/CommandPalette.vue'
 import { useDaemonStore } from './stores/daemon'
 import { usePluginsStore } from './stores/plugins'
 import { useThemeStore } from './stores/theme'
 
 const daemonStore = useDaemonStore()
 const pluginsStore = usePluginsStore()
-// Initialize theme store - applies saved theme preference on startup
 useThemeStore()
+
+const commandPalette = ref<InstanceType<typeof CommandPalette> | null>(null)
+
+function handleKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault()
+    commandPalette.value?.open()
+  }
+}
 
 onMounted(() => {
   daemonStore.startPolling()
   void pluginsStore.loadAll()
+  window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   daemonStore.stopPolling()
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
