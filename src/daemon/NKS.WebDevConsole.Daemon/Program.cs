@@ -259,6 +259,74 @@ app.MapPost("/api/sites/{domain}/detect-framework", (string domain, SiteManager 
     return Results.Ok(new { domain, framework });
 });
 
+// PHP versions — delegate to PhpPlugin via reflection
+app.MapGet("/api/php/versions", () =>
+{
+    var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
+    if (phpPlugin == null) return Results.NotFound();
+    var method = phpPlugin.Instance.GetType().GetMethod("GetInstalledVersions");
+    if (method != null)
+    {
+        var versions = method.Invoke(phpPlugin.Instance, null);
+        return Results.Ok(versions);
+    }
+    return Results.Ok(Array.Empty<object>());
+});
+
+// Service logs
+app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int? lines) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null) return Results.NotFound();
+    var logs = await module.GetLogsAsync(lines ?? 100, CancellationToken.None);
+    return Results.Ok(logs);
+});
+
+// Config validation (Apache)
+app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
+    if (body == null) return Results.BadRequest();
+    var apachePlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.apache");
+    string httpdPath = @"C:\MAMP\bin\apache\bin\httpd.exe"; // fallback
+    if (apachePlugin != null)
+    {
+        var prop = apachePlugin.Instance.GetType().GetProperty("HttpdPath");
+        if (prop != null) httpdPath = (string?)prop.GetValue(apachePlugin.Instance) ?? httpdPath;
+    }
+    var (isValid, output) = await validator.ValidateApacheConfig(httpdPath, body.ConfigPath);
+    return Results.Ok(new { isValid, output });
+});
+
+// Plugin enable/disable stubs
+app.MapPost("/api/plugins/{id}/enable", (string id) =>
+    Results.Ok(new { id, enabled = true }));
+
+app.MapPost("/api/plugins/{id}/disable", (string id) =>
+    Results.Ok(new { id, enabled = false }));
+
+// SSL certificates
+app.MapGet("/api/ssl/certs", () =>
+{
+    var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
+    if (sslPlugin == null) return Results.Ok(Array.Empty<object>());
+    var method = sslPlugin.Instance.GetType().GetMethod("GetCerts");
+    if (method != null)
+    {
+        var certs = method.Invoke(sslPlugin.Instance, null);
+        return Results.Ok(certs);
+    }
+    return Results.Ok(Array.Empty<object>());
+});
+
+// Databases placeholder
+app.MapGet("/api/databases", () =>
+{
+    return Results.Ok(Array.Empty<object>());
+});
+
 // SSE endpoint
 app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
 {
@@ -291,3 +359,5 @@ app.Lifetime.ApplicationStopping.Register(() =>
 });
 
 await app.RunAsync();
+
+record ConfigValidateRequest(string ConfigPath, string? Content);
