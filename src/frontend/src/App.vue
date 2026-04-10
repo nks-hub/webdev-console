@@ -45,6 +45,13 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     router.push({ path: '/sites', query: { create: '1' } })
   }
+  // Ctrl+1-7 navigation
+  if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '7') {
+    e.preventDefault()
+    const routes = ['/dashboard', '/sites', '/databases', '/ssl', '/php', '/binaries', '/settings']
+    const idx = parseInt(e.key) - 1
+    if (idx < routes.length) router.push(routes[idx])
+  }
 }
 
 onMounted(() => {
