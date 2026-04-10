@@ -1,0 +1,52 @@
+appId: com.nks-hub.webdev-console
+productName: NKS WebDev Console
+copyright: Copyright 2026 NKS Hub
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - dist-electron/**/*
+  - dist/**/*
+  - "!node_modules/**/*"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  shortcutName: NKS WebDev Console
+  artifactName: "NKS-WebDev-Console-${version}-Setup.${ext}"
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.icns
+  category: public.app-category.developer-tools
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: build/icon.png
+  category: Development
+
+publish:
+  provider: github
+  owner: nks-hub
+  repo: webdev-console
+
+extraMetadata:
+  main: dist-electron/main.js
