@@ -3,6 +3,12 @@
 *.dll
 *.so
 *.dylib
+*.pdb
+
+# .NET build output
+bin/
+obj/
+publish/
 
 # Go
 prototype/daemon/wdc-daemon
@@ -30,3 +36,13 @@ Thumbs.db
 
 # SQLite databases
 *.db
+
+# Electron build output
+release/
+out/
+
+# Temp/cache
+*.cache
+appsettings.*.json
+!src/daemon/NKS.WebDevConsole.Daemon/appsettings.json
+!src/daemon/NKS.WebDevConsole.Daemon/appsettings.Development.json
