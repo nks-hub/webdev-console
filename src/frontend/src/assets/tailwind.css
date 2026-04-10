@@ -7,12 +7,12 @@
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds — native desktop app palette (FlyEnv/MAMP PRO-inspired) */
-  --wdc-bg:          #1a1a1e;
-  --wdc-surface:     #242428;
-  --wdc-surface-2:   #2c2c32;
-  --wdc-elevated:    #343438;
-  --wdc-hover:       #303036;
+  /* Backgrounds — deep navy with subtle warmth (unique NKS identity) */
+  --wdc-bg:          #141620;
+  --wdc-surface:     #1c1e2a;
+  --wdc-surface-2:   #252736;
+  --wdc-elevated:    #2e3042;
+  --wdc-hover:       #292b3a;
 
   /* Borders — clearly visible separation */
   --wdc-border:      rgba(255, 255, 255, 0.12);

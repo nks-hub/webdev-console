@@ -12,7 +12,7 @@
       <template v-for="svc in webServices" :key="svc.id">
         <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`) }">
           <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ svc.displayName || svc.id }}</span>
+          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -28,7 +28,7 @@
       <template v-for="svc in langServices" :key="svc.id">
         <div class="service-item">
           <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ svc.displayName || svc.id }}</span>
+          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -44,7 +44,7 @@
       <template v-for="svc in dbServices" :key="svc.id">
         <div class="service-item">
           <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ svc.displayName || svc.id }}</span>
+          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -60,7 +60,7 @@
       <template v-for="svc in cacheServices" :key="svc.id">
         <div class="service-item">
           <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ svc.displayName || svc.id }}</span>
+          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -106,6 +106,16 @@ const servicesStore = useServicesStore()
 
 const services = computed(() => daemonStore.services as any[])
 
+// Short names for sidebar display
+const SHORT_NAMES: Record<string, string> = {
+  'Apache HTTP Server': 'Apache',
+  'PHP (Multi-version)': 'PHP',
+  'Mailpit': 'Mailpit',
+}
+function shortName(svc: any): string {
+  return SHORT_NAMES[svc.displayName] || svc.displayName || svc.id
+}
+
 // Categorize services like FlyEnv
 const SERVICE_CATEGORIES: Record<string, string> = {
   apache: 'web', nginx: 'web',
@@ -146,7 +156,7 @@ async function toggleSvc(svc: any) {
 
 <style scoped>
 .sidebar {
-  width: 190px;
+  width: 200px;
   display: flex;
   flex-direction: column;
   background: var(--wdc-surface);
