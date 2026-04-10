@@ -1,4 +1,4 @@
-// help_text.go — DevForge CLI help text definitions
+// help_text.go — NKS WDC CLI help text definitions
 //
 // All command help strings live here so they can be referenced from
 // the cobra command definitions and tested in isolation.
@@ -23,22 +23,22 @@ var HelpTexts = map[string]CommandHelp{
 	// ─── root ────────────────────────────────────────────────────────────────
 
 	"root": {
-		Short: "DevForge — local dev server management",
-		Long: `DevForge is a local development server management tool.
+		Short: "NKS WDC — local dev server management",
+		Long: `NKS WebDev Console is a local development server management tool.
 
 It manages Apache, PHP-FPM (multiple versions), MySQL, Redis, and Mailpit
 as a unified stack — with automatic SSL via mkcert, per-site PHP version
 selection, and a single CLI to control everything.`,
-		Example: `  devforge status
-  devforge site:create myapp.test --php=8.2
-  devforge start
-  devforge doctor`,
+		Example: `  wdc status
+  wdc site:create myapp.test --php=8.2
+  wdc start
+  wdc doctor`,
 	},
 
 	// ─── status ──────────────────────────────────────────────────────────────
 
 	"status": {
-		Short: "Show the status of all DevForge-managed services",
+		Short: "Show the status of all NKS WDC-managed services",
 		Long: `Displays a formatted table of all managed services with their
 current status, PID, uptime, and memory usage.
 
@@ -46,8 +46,8 @@ Exit codes:
   0  all services are running
   1  one or more services are stopped or degraded
   2  daemon is not reachable`,
-		Example: `  devforge status
-  devforge status --json`,
+		Example: `  wdc status
+  wdc status --json`,
 	},
 
 	// ─── start ───────────────────────────────────────────────────────────────
@@ -69,10 +69,10 @@ Service names:
   mailpit           Mailpit email catcher
   php-fpm           All PHP-FPM processes
   php-fpm@<ver>     Specific PHP-FPM version (e.g. php-fpm@8.2)`,
-		Example: `  devforge start
-  devforge start apache
-  devforge start php-fpm@8.3
-  devforge start --all`,
+		Example: `  wdc start
+  wdc start apache
+  wdc start php-fpm@8.3
+  wdc start --all`,
 	},
 
 	// ─── stop ────────────────────────────────────────────────────────────────
@@ -84,10 +84,10 @@ affect active sites, you will be prompted for confirmation unless
 the --force flag is provided.
 
 Without arguments, stops all running services in reverse dependency order.`,
-		Example: `  devforge stop
-  devforge stop apache
-  devforge stop php-fpm@8.1
-  devforge stop mysql --force`,
+		Example: `  wdc stop
+  wdc stop apache
+  wdc stop php-fpm@8.1
+  wdc stop mysql --force`,
 	},
 
 	// ─── restart ─────────────────────────────────────────────────────────────
@@ -95,13 +95,13 @@ Without arguments, stops all running services in reverse dependency order.`,
 	"restart": {
 		Short: "Restart all services, or a specific named service",
 		Long: `Stops then starts the named service (or all services if no argument
-is given). Equivalent to 'devforge stop <svc> && devforge start <svc>'.
+is given). Equivalent to 'wdc stop <svc> && wdc start <svc>'.
 
-For Apache, prefer 'devforge reload apache' which performs a graceful
+For Apache, prefer 'wdc reload apache' which performs a graceful
 restart without dropping active connections.`,
-		Example: `  devforge restart
-  devforge restart apache
-  devforge restart mysql`,
+		Example: `  wdc restart
+  wdc restart apache
+  wdc restart mysql`,
 	},
 
 	// ─── reload ──────────────────────────────────────────────────────────────
@@ -113,8 +113,8 @@ For Apache this triggers 'apachectl graceful' — existing connections
 are not dropped and workers finish their current requests before reloading.
 
 For MySQL and PHP-FPM this is equivalent to a restart.`,
-		Example: `  devforge reload apache
-  devforge reload php-fpm`,
+		Example: `  wdc reload apache
+  wdc reload php-fpm`,
 	},
 
 	// ─── logs ────────────────────────────────────────────────────────────────
@@ -131,9 +131,9 @@ Available log sources:
   php-fpm@X.Y  Specific PHP-FPM version logs
   redis        Redis log
   mailpit      Mailpit log`,
-		Example: `  devforge logs apache
-  devforge logs php-fpm@8.2 --lines=100
-  devforge logs mysql --no-follow`,
+		Example: `  wdc logs apache
+  wdc logs php-fpm@8.2 --lines=100
+  wdc logs mysql --no-follow`,
 	},
 
 	// ─── site:list ───────────────────────────────────────────────────────────
@@ -144,9 +144,9 @@ Available log sources:
 domain, PHP version, status, SSL state, and document root.
 
 By default shows only enabled sites. Use --all to include disabled sites.`,
-		Example: `  devforge site:list
-  devforge site:list --all
-  devforge site:list --json`,
+		Example: `  wdc site:list
+  wdc site:list --all
+  wdc site:list --json`,
 	},
 
 	// ─── site:create ─────────────────────────────────────────────────────────
@@ -171,12 +171,12 @@ Supported framework presets (--preset):
   wordpress   Configures .htaccess rules and rewrites
   symfony     Sets document root to <path>/public/
   none        Plain directory, no rewrite rules`,
-		Example: `  devforge site:create
-  devforge site:create myapp.test
-  devforge site:create myapp.test --php=8.2
-  devforge site:create myapp.test --php=8.3 --docroot=~/projects/myapp
-  devforge site:create myapp.test --preset=laravel --db=myapp
-  devforge site:create myapp.test --no-ssl`,
+		Example: `  wdc site:create
+  wdc site:create myapp.test
+  wdc site:create myapp.test --php=8.2
+  wdc site:create myapp.test --php=8.3 --docroot=~/projects/myapp
+  wdc site:create myapp.test --preset=laravel --db=myapp
+  wdc site:create myapp.test --no-ssl`,
 	},
 
 	// ─── site:delete ─────────────────────────────────────────────────────────
@@ -191,9 +191,9 @@ to also remove the document root.
 
 You will be prompted to confirm by typing the domain name unless
 the --force flag is provided.`,
-		Example: `  devforge site:delete myapp.test
-  devforge site:delete myapp.test --force
-  devforge site:delete myapp.test --delete-files`,
+		Example: `  wdc site:delete myapp.test
+  wdc site:delete myapp.test --force
+  wdc site:delete myapp.test --delete-files`,
 	},
 
 	// ─── site:info ───────────────────────────────────────────────────────────
@@ -203,8 +203,8 @@ the --force flag is provided.`,
 		Long: `Displays all configuration details for the given site:
 domain, PHP version, document root, SSL certificate details,
 database links, Apache config path, and current status.`,
-		Example: `  devforge site:info myapp.test
-  devforge site:info myapp.test --json`,
+		Example: `  wdc site:info myapp.test
+  wdc site:info myapp.test --json`,
 	},
 
 	// ─── site:edit ───────────────────────────────────────────────────────────
@@ -214,10 +214,10 @@ database links, Apache config path, and current status.`,
 		Long: `Opens the TOML configuration file for the given site in
 your preferred editor (set via $EDITOR or config general.editor).
 
-After saving, DevForge automatically validates and reloads the
+After saving, NKS WDC automatically validates and reloads the
 configuration if changes are detected.`,
-		Example: `  devforge site:edit myapp.test
-  EDITOR=nano devforge site:edit myapp.test`,
+		Example: `  wdc site:edit myapp.test
+  EDITOR=nano wdc site:edit myapp.test`,
 	},
 
 	// ─── site:open ───────────────────────────────────────────────────────────
@@ -226,7 +226,7 @@ configuration if changes are detected.`,
 		Short: "Open a site in your default browser",
 		Long: `Opens the site's URL (https:// if SSL is enabled, http:// otherwise)
 in the system default browser.`,
-		Example: `  devforge site:open myapp.test`,
+		Example: `  wdc site:open myapp.test`,
 	},
 
 	// ─── site:php ────────────────────────────────────────────────────────────
@@ -236,10 +236,10 @@ in the system default browser.`,
 		Long: `Updates the site's vhost configuration to use the specified
 PHP-FPM version and reloads Apache.
 
-The PHP version must already be installed. Use 'devforge php:list' to
-see installed versions and 'devforge php:install' to install new ones.`,
-		Example: `  devforge site:php myapp.test 8.3
-  devforge site:php legacy.test 7.4`,
+The PHP version must already be installed. Use 'wdc php:list' to
+see installed versions and 'wdc php:install' to install new ones.`,
+		Example: `  wdc site:php myapp.test 8.3
+  wdc site:php legacy.test 7.4`,
 	},
 
 	// ─── site:enable / site:disable ──────────────────────────────────────────
@@ -248,7 +248,7 @@ see installed versions and 'devforge php:install' to install new ones.`,
 		Short: "Enable a disabled site",
 		Long: `Re-enables a previously disabled site. The vhost config is
 restored, the /etc/hosts entry is re-added, and Apache is reloaded.`,
-		Example: `  devforge site:enable myapp.test`,
+		Example: `  wdc site:enable myapp.test`,
 	},
 
 	"site:disable": {
@@ -256,41 +256,41 @@ restored, the /etc/hosts entry is re-added, and Apache is reloaded.`,
 		Long: `Disables the site by removing its vhost from Apache's active
 configuration and removing its /etc/hosts entry. The site config
 TOML file is preserved and can be re-enabled at any time.`,
-		Example: `  devforge site:disable myapp.test`,
+		Example: `  wdc site:disable myapp.test`,
 	},
 
 	// ─── php:list ────────────────────────────────────────────────────────────
 
 	"php:list": {
 		Short: "List installed PHP versions",
-		Long: `Displays all PHP versions managed by DevForge with their
+		Long: `Displays all PHP versions managed by NKS WDC with their
 status (running/stopped), FPM port, number of sites using that version,
 and binary path.
 
 The default version is highlighted with ●.
 
 To see versions available to install, use --available.`,
-		Example: `  devforge php:list
-  devforge php:list --available
-  devforge php:list --json`,
+		Example: `  wdc php:list
+  wdc php:list --available
+  wdc php:list --json`,
 	},
 
 	// ─── php:install ─────────────────────────────────────────────────────────
 
 	"php:install": {
 		Short: "Download and install a PHP version",
-		Long: `Downloads the specified PHP version from the DevForge binary
+		Long: `Downloads the specified PHP version from the NKS WDC binary
 repository, verifies the SHA-256 checksum, extracts it to
-~/.devforge/bin/php-<version>/, and configures PHP-FPM.
+~/.wdc/bin/php-<version>/, and configures PHP-FPM.
 
 Extensions included in all builds:
   bcmath, curl, gd, intl, mbstring, mysqli, openssl,
   pdo_mysql, pdo_sqlite, redis, zip, xdebug (disabled by default)
 
-DevForge bundles its own OpenSSL 3.x to avoid Windows EC key issues.`,
-		Example: `  devforge php:install 8.4
-  devforge php:install 8.1 --set-default
-  devforge php:install 7.4`,
+NKS WDC bundles its own OpenSSL 3.x to avoid Windows EC key issues.`,
+		Example: `  wdc php:install 8.4
+  wdc php:install 8.1 --set-default
+  wdc php:install 7.4`,
 	},
 
 	// ─── php:uninstall ───────────────────────────────────────────────────────
@@ -298,12 +298,12 @@ DevForge bundles its own OpenSSL 3.x to avoid Windows EC key issues.`,
 	"php:uninstall": {
 		Short: "Remove an installed PHP version",
 		Long: `Stops the PHP-FPM process for the given version and removes
-its files from ~/.devforge/bin/php-<version>/.
+its files from ~/.wdc/bin/php-<version>/.
 
 If any sites are currently using this PHP version you will be
 prompted to migrate them first (or use --force to skip).`,
-		Example: `  devforge php:uninstall 8.0
-  devforge php:uninstall 7.4 --force`,
+		Example: `  wdc php:uninstall 8.0
+  wdc php:uninstall 7.4 --force`,
 	},
 
 	// ─── php:use ─────────────────────────────────────────────────────────────
@@ -314,8 +314,8 @@ prompted to migrate them first (or use --force to skip).`,
 created sites — existing sites keep their configured version.
 
 The selected version must already be installed.`,
-		Example: `  devforge php:use 8.3
-  devforge php:use 8.2`,
+		Example: `  wdc php:use 8.3
+  wdc php:use 8.2`,
 	},
 
 	// ─── php:info ────────────────────────────────────────────────────────────
@@ -324,8 +324,8 @@ The selected version must already be installed.`,
 		Short: "Show details and loaded extensions for a PHP version",
 		Long: `Displays PHP version details, loaded extensions, php.ini path,
 FPM pool configuration, and the equivalent of 'php -i' key values.`,
-		Example: `  devforge php:info 8.2
-  devforge php:info 8.3 --json`,
+		Example: `  wdc php:info 8.2
+  wdc php:info 8.3 --json`,
 	},
 
 	// ─── ssl:status ──────────────────────────────────────────────────────────
@@ -335,24 +335,24 @@ FPM pool configuration, and the equivalent of 'php -i' key values.`,
 		Long: `Displays a table of all sites and their SSL certificate state:
 issuer, expiry date, and days remaining.
 
-Also shows the status of the DevForge local CA and whether it is
+Also shows the status of the NKS WDC local CA and whether it is
 trusted by the system certificate store.`,
-		Example: `  devforge ssl:status
-  devforge ssl:status --expired
-  devforge ssl:status --json`,
+		Example: `  wdc ssl:status
+  wdc ssl:status --expired
+  wdc ssl:status --json`,
 	},
 
 	// ─── ssl:install ─────────────────────────────────────────────────────────
 
 	"ssl:install": {
-		Short: "Install and trust the DevForge local CA",
-		Long: `Runs 'mkcert -install' to install the DevForge local CA into
+		Short: "Install and trust the NKS WDC local CA",
+		Long: `Runs 'mkcert -install' to install the NKS WDC local CA into
 the system trust store. This is a one-time operation that requires
 elevation (sudo / UAC prompt).
 
 After installation, all certificates signed by this CA will be
 trusted by browsers without security warnings.`,
-		Example: `  devforge ssl:install`,
+		Example: `  wdc ssl:install`,
 	},
 
 	// ─── ssl:create ──────────────────────────────────────────────────────────
@@ -360,13 +360,13 @@ trusted by browsers without security warnings.`,
 	"ssl:create": {
 		Short: "Generate a new SSL certificate for a domain",
 		Long: `Generates a new certificate for the given domain using mkcert
-and the DevForge local CA. The certificate and key are stored in
-~/.devforge/certs/ and linked to the site's vhost configuration.
+and the NKS WDC local CA. The certificate and key are stored in
+~/.wdc/certs/ and linked to the site's vhost configuration.
 
 Wildcard certificates are supported: *.myapp.test`,
-		Example: `  devforge ssl:create myapp.test
-  devforge ssl:create "*.myapp.test"
-  devforge ssl:create myapp.test --days=730`,
+		Example: `  wdc ssl:create myapp.test
+  wdc ssl:create "*.myapp.test"
+  wdc ssl:create myapp.test --days=730`,
 	},
 
 	// ─── ssl:renew ───────────────────────────────────────────────────────────
@@ -376,24 +376,24 @@ Wildcard certificates are supported: *.myapp.test`,
 		Long: `Regenerates the certificate for the given domain and reloads Apache.
 Useful when a certificate is near expiry or if the CA has been reinstalled.
 
-DevForge automatically detects and warns about certificates expiring
-within 30 days when you run 'devforge status' or 'devforge ssl:status'.`,
-		Example: `  devforge ssl:renew myapp.test
-  devforge ssl:renew --all`,
+NKS WDC automatically detects and warns about certificates expiring
+within 30 days when you run 'wdc status' or 'wdc ssl:status'.`,
+		Example: `  wdc ssl:renew myapp.test
+  wdc ssl:renew --all`,
 	},
 
 	// ─── db:list ─────────────────────────────────────────────────────────────
 
 	"db:list": {
-		Short: "List all databases managed by DevForge",
+		Short: "List all databases managed by NKS WDC",
 		Long: `Displays a table of all databases with their size, table count,
 linked site (if any), and last modified time.
 
 System databases (information_schema, performance_schema, mysql, sys)
 are hidden by default. Use --all to include them.`,
-		Example: `  devforge db:list
-  devforge db:list --all
-  devforge db:list --json`,
+		Example: `  wdc db:list
+  wdc db:list --all
+  wdc db:list --json`,
 	},
 
 	// ─── db:create ───────────────────────────────────────────────────────────
@@ -403,8 +403,8 @@ are hidden by default. Use --all to include them.`,
 		Long: `Creates a new database with the given name using the configured
 MySQL connection. Defaults to utf8mb4 character set and
 utf8mb4_unicode_ci collation unless overridden.`,
-		Example: `  devforge db:create myapp
-  devforge db:create myapp --charset=utf8mb4 --collation=utf8mb4_unicode_ci`,
+		Example: `  wdc db:create myapp
+  wdc db:create myapp --charset=utf8mb4 --collation=utf8mb4_unicode_ci`,
 	},
 
 	// ─── db:drop ─────────────────────────────────────────────────────────────
@@ -414,9 +414,9 @@ utf8mb4_unicode_ci collation unless overridden.`,
 		Long: `Permanently drops the given database. You will be prompted to
 confirm by typing the database name unless --force is used.
 
-This operation is irreversible. Consider 'devforge db:export' first.`,
-		Example: `  devforge db:drop myapp
-  devforge db:drop myapp --force`,
+This operation is irreversible. Consider 'wdc db:export' first.`,
+		Example: `  wdc db:drop myapp
+  wdc db:drop myapp --force`,
 	},
 
 	// ─── db:import ───────────────────────────────────────────────────────────
@@ -429,9 +429,9 @@ Gzip-compressed files are decompressed on the fly.
 Use --drop-first to drop and recreate the database before importing
 (useful for full restores). Use --no-create-db if your SQL file
 already contains CREATE DATABASE and USE statements.`,
-		Example: `  devforge db:import myapp dump.sql
-  devforge db:import myapp backup.sql.gz --drop-first
-  devforge db:import myapp export.sql --no-create-db`,
+		Example: `  wdc db:import myapp dump.sql
+  wdc db:import myapp backup.sql.gz --drop-first
+  wdc db:import myapp export.sql --no-create-db`,
 	},
 
 	// ─── db:export ───────────────────────────────────────────────────────────
@@ -443,10 +443,10 @@ The output file defaults to <database>-<date>.sql in the current directory.
 
 Use --compress to create a .sql.gz file. Use --no-routines to skip
 stored procedures and functions.`,
-		Example: `  devforge db:export myapp
-  devforge db:export myapp --output=backup.sql
-  devforge db:export myapp --output=backup.sql.gz --compress
-  devforge db:export myapp --no-routines`,
+		Example: `  wdc db:export myapp
+  wdc db:export myapp --output=backup.sql
+  wdc db:export myapp --output=backup.sql.gz --compress
+  wdc db:export myapp --no-routines`,
 	},
 
 	// ─── db:open ─────────────────────────────────────────────────────────────
@@ -454,42 +454,42 @@ stored procedures and functions.`,
 	"db:open": {
 		Short: "Open a database in your configured GUI client",
 		Long: `Opens the specified database in your preferred database GUI client.
-DevForge attempts to detect installed clients in this order:
+NKS WDC attempts to detect installed clients in this order:
   1. TablePlus
   2. Sequel Pro (macOS)
   3. HeidiSQL (Windows)
   4. DBeaver
   5. MySQL Workbench
 
-Set a specific client with: devforge config:set general.db_client tableplus`,
-		Example: `  devforge db:open myapp`,
+Set a specific client with: wdc config:set general.db_client tableplus`,
+		Example: `  wdc db:open myapp`,
 	},
 
 	// ─── config ──────────────────────────────────────────────────────────────
 
 	"config": {
-		Short: "Show the current DevForge configuration",
+		Short: "Show the current NKS WDC configuration",
 		Long: `Displays the current configuration loaded from
-~/.devforge/config.toml.
+~/.wdc/config.toml.
 
-Use 'devforge config:get <key>' to retrieve a single value.
-Use 'devforge config:set <key> <value>' to update a value.
-Use 'devforge config:edit' to open the full config file in your editor.`,
-		Example: `  devforge config
-  devforge config --json`,
+Use 'wdc config:get <key>' to retrieve a single value.
+Use 'wdc config:set <key> <value>' to update a value.
+Use 'wdc config:edit' to open the full config file in your editor.`,
+		Example: `  wdc config
+  wdc config --json`,
 	},
 
 	"config:get": {
 		Short: "Get a single configuration value",
 		Long:  `Prints the current value of the specified configuration key.`,
-		Example: `  devforge config:get php.default_version
-  devforge config:get apache.port`,
+		Example: `  wdc config:get php.default_version
+  wdc config:get apache.port`,
 	},
 
 	"config:set": {
 		Short: "Set a configuration value",
 		Long: `Updates the specified configuration key to the given value in
-~/.devforge/config.toml. The value is validated before writing.
+~/.wdc/config.toml. The value is validated before writing.
 
 Available keys and their defaults:
   apache.port             80
@@ -499,32 +499,32 @@ Available keys and their defaults:
   mysql.root_password     (empty)
   php.default_version     8.2
   php.fpm_base_port       9000
-  ssl.ca_path             ~/.devforge/ca/rootCA.pem
+  ssl.ca_path             ~/.wdc/ca/rootCA.pem
   ssl.cert_days           365
   dns.method              hosts
   dns.hosts_file          /etc/hosts
   general.editor          (uses $EDITOR)
   general.browser         (uses system default)
   general.sites_dir       ~/sites`,
-		Example: `  devforge config:set apache.port 8080
-  devforge config:set php.default_version 8.3
-  devforge config:set general.editor vim`,
+		Example: `  wdc config:set apache.port 8080
+  wdc config:set php.default_version 8.3
+  wdc config:set general.editor vim`,
 	},
 
 	"config:edit": {
 		Short: "Open the configuration file in your editor",
-		Long: `Opens ~/.devforge/config.toml in your preferred editor.
-After saving, DevForge validates the configuration and reloads
+		Long: `Opens ~/.wdc/config.toml in your preferred editor.
+After saving, NKS WDC validates the configuration and reloads
 affected services automatically.`,
-		Example: `  devforge config:edit
-  EDITOR=vim devforge config:edit`,
+		Example: `  wdc config:edit
+  EDITOR=vim wdc config:edit`,
 	},
 
 	// ─── doctor ──────────────────────────────────────────────────────────────
 
 	"doctor": {
 		Short: "Run system diagnostics and report issues",
-		Long: `Checks all aspects of the DevForge installation and reports:
+		Long: `Checks all aspects of the NKS WDC installation and reports:
 
   CORE        Daemon, config file, socket accessibility
   SERVICES    Binary paths, running state, config validation
@@ -535,9 +535,9 @@ Each check is marked ✓ (ok), ⚡ (warning), or ✗ (error).
 
 Use --fix to attempt automatic remediation of detected issues.
 Some fixes (e.g. /etc/hosts permissions) require elevation.`,
-		Example: `  devforge doctor
-  devforge doctor --fix
-  devforge doctor --json`,
+		Example: `  wdc doctor
+  wdc doctor --fix
+  wdc doctor --json`,
 	},
 }
 
@@ -552,7 +552,7 @@ func Get(command string) CommandHelp {
 
 // UsageLine returns a one-line usage string for the given command and usage pattern.
 func UsageLine(command, usage string) string {
-	return fmt.Sprintf("  devforge %s %s", command, usage)
+	return fmt.Sprintf("  wdc %s %s", command, usage)
 }
 
 // FlagLine returns a formatted flag description line.
@@ -568,5 +568,5 @@ func GlobalFlagsHelp() string {
   --verbose, -v       Show additional debug information
   --no-color          Disable ANSI color output
   --help, -h          Show this help message
-  --version           Show devforge version and exit`
+  --version           Show wdc version and exit`
 }

@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database — Seed Data
+-- NKS WebDev Console Database — Seed Data
 -- Default settings, services, and PHP versions
 -- ============================================================================
 
@@ -36,11 +36,11 @@ VALUES
 -- General
 INSERT INTO settings (category, key, value, value_type, description)
 VALUES
-    ('general', 'app_name',         'DevForge',     'string',  'Application display name'),
+    ('general', 'app_name',         'NKS WebDev Console',     'string',  'Application display name'),
     ('general', 'data_dir',         '',             'path',    'Data directory path (empty = default)'),
     ('general', 'log_level',        'info',         'string',  'Log level: debug, info, warn, error'),
     ('general', 'log_retention_days', '30',         'integer', 'Days to retain log files'),
-    ('general', 'start_on_boot',    'false',        'boolean', 'Start DevForge on system boot'),
+    ('general', 'start_on_boot',    'false',        'boolean', 'Start NKS WebDev Console on system boot'),
     ('general', 'check_updates',    'true',         'boolean', 'Automatically check for updates');
 
 -- Updates

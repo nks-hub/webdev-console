@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database Schema - Rollback Migration 001
+-- NKS WebDev Console Database Schema - Rollback Migration 001
 -- Drops all views, triggers, indexes, and tables in reverse dependency order
 -- ============================================================================
 

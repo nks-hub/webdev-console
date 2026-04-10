@@ -74,7 +74,7 @@ func (v *Validator) ValidateBytes(data []byte) Result {
 
 // execValidation writes config to a temp file and invokes the server binary.
 func (v *Validator) execValidation(data []byte) Result {
-	tmp, err := os.CreateTemp("", "devforge-validate-*.conf")
+	tmp, err := os.CreateTemp("", "wdc-validate-*.conf")
 	if err != nil {
 		return Result{Err: fmt.Errorf("creating temp file: %w", err)}
 	}

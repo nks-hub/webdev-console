@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database — Triggers
+-- NKS WebDev Console Database — Triggers
 -- Auto-update timestamps, audit trail, business rule enforcement
 -- ============================================================================
 

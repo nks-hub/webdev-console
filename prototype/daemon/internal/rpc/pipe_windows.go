@@ -10,7 +10,7 @@ import (
 	"github.com/Microsoft/go-winio"
 )
 
-const DefaultPipeName = `\\.\pipe\devforge`
+const DefaultPipeName = `\\.\pipe\wdc`
 
 // ListenPipe creates a Windows named pipe listener at the given pipe path.
 // If pipePath is empty, DefaultPipeName is used.

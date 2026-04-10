@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nks/devforge/internal/config"
-	"github.com/nks/devforge/internal/fileops"
-	"github.com/nks/devforge/internal/service"
-	tmplpkg "github.com/nks/devforge/internal/template"
-	"github.com/nks/devforge/internal/validator"
+	"github.com/nks/wdc/internal/config"
+	"github.com/nks/wdc/internal/fileops"
+	"github.com/nks/wdc/internal/service"
+	tmplpkg "github.com/nks/wdc/internal/template"
+	"github.com/nks/wdc/internal/validator"
 )
 
 // DaemonDeps groups the dependencies injected into RPC method handlers.
@@ -23,7 +23,7 @@ type DaemonDeps struct {
 	StartedAt  time.Time
 }
 
-// RegisterMethods registers all built-in DevForge RPC methods on srv.
+// RegisterMethods registers all built-in NKS WebDev Console RPC methods on srv.
 func RegisterMethods(srv *Server, deps *DaemonDeps) {
 	srv.Register("site.create", makeSiteCreate(deps))
 	srv.Register("service.start", makeServiceStart(deps))

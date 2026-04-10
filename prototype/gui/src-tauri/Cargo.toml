@@ -1,17 +1,17 @@
 [package]
-name = "devforge-gui"
+name = "wdc-gui"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.77"
-description = "DevForge — local dev server management GUI"
+description = "NKS WebDev Console — local dev server management GUI"
 license = "Apache-2.0"
 
 [lib]
-name = "devforge_gui_lib"
+name = "wdc_gui_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "devforge-gui"
+name = "wdc-gui"
 path = "src/main.rs"
 
 [build-dependencies]

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nks/devforge/internal/config"
+	"github.com/nks/wdc/internal/config"
 )
 
 func newTestRenderer(t *testing.T) *Renderer {

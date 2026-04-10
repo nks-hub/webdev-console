@@ -1,4 +1,4 @@
-# DevForge Database Schema
+# NKS WDC Database Schema
 
 SQLite database for local dev server management. Stores all configuration, service state, and audit history.
 

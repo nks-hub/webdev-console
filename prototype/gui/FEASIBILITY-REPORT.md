@@ -1,4 +1,4 @@
-# DevForge GUI — Tauri v2 + Svelte 5 Feasibility Report
+# NKS WDC GUI — Tauri v2 + Svelte 5 Feasibility Report
 
 **Date:** 2026-04-09  
 **Stack under evaluation:** Tauri v2 (stable) + Svelte 5 + TailwindCSS v4  
@@ -19,7 +19,7 @@ Tauri v2 reached stable release in October 2024. It is production-ready for Wind
 | Windows 10 (older builds, LTSC) | **No** | Must install runtime or bundle it |
 | Windows Server 2019/2022 | **No** | Enterprise environments need manual install |
 
-### Distribution Strategy for DevForge
+### Distribution Strategy for NKS WDC
 Two options in `tauri.conf.json`:
 
 ```json
@@ -38,7 +38,7 @@ Two options in `tauri.conf.json`:
 - `embedBootstrapper` — self-contained, no internet needed at install time (+1.5MB)
 - `offlineInstaller` — bundles full WebView2 runtime (+120MB, for air-gapped environments)
 
-**Recommendation:** Use `downloadBootstrapper` for standard distribution. DevForge targets developers on up-to-date Windows 10/11 — WebView2 will already be present on ~98% of target machines.
+**Recommendation:** Use `downloadBootstrapper` for standard distribution. NKS WDC targets developers on up-to-date Windows 10/11 — WebView2 will already be present on ~98% of target machines.
 
 ### WebView2 vs Chromium (Electron)
 - WebView2 shares the Chromium process already running in Edge → **0 extra memory for the engine itself**
@@ -73,18 +73,18 @@ use tauri::{
 };
 
 pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, "open", "Open DevForge", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Open NKS WDC", true, None::<&str>)?;
     let start_all = MenuItem::with_id(app, "start_all", "Start All Services", true, None::<&str>)?;
     let stop_all = MenuItem::with_id(app, "stop_all", "Stop All Services", true, None::<&str>)?;
     let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit DevForge", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit NKS WebDev Console", true, None::<&str>)?;
 
     let menu = Menu::with_items(app, &[&open, &start_all, &stop_all, &separator, &quit])?;
 
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
-        .tooltip("DevForge — All services running")
+        .tooltip("NKS WebDev Console — All services running")
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => {
                 if let Some(window) = app.get_webview_window("main") {
@@ -127,7 +127,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
 The tray icon can be updated at runtime to reflect service state (green dot = all running, yellow = partial, red = stopped):
 ```rust
 tray.set_icon(Some(app.default_window_icon().unwrap().clone()))?;
-tray.set_tooltip(Some("DevForge — 2/3 services running"))?;
+tray.set_tooltip(Some("NKS WebDev Console — 2/3 services running"))?;
 ```
 
 ---
@@ -169,7 +169,7 @@ UAC dialog appears → user approves → entry is written. The main app itself n
 Install a lightweight Windows service (via `windows-service` Rust crate) that runs as SYSTEM. The Tauri app communicates with it via named pipe with ACL restricted to the app's SID.
 
 ```
-devforge-helper.exe install  → NSSM or sc.exe registers it as a service
+wdc-helper.exe install  → NSSM or sc.exe registers it as a service
 Tauri app → NamedPipe → helper → writes hosts / netsh commands
 ```
 
@@ -203,7 +203,7 @@ struct ServiceManager {
 impl ServiceManager {
     fn start_apache(&mut self) -> std::io::Result<()> {
         let child = Command::new("httpd.exe")
-            .args(["-f", "C:/DevForge/apache/conf/httpd.conf"])
+            .args(["-f", "C:/WDC/apache/conf/httpd.conf"])
             .spawn()?;
         self.apache = Some(child);
         Ok(())
@@ -212,7 +212,7 @@ impl ServiceManager {
 ```
 
 ### Recommendation: Separate Go Daemon (Architecture Decision)
-The implementation plan already specifies a Go daemon with JSON-RPC 2.0 over named pipes. This is the correct architecture for DevForge:
+The implementation plan already specifies a Go daemon with JSON-RPC 2.0 over named pipes. This is the correct architecture for NKS WDC:
 
 | Concern | Embedded | Separate Daemon |
 |---------|---------|----------------|
@@ -308,7 +308,7 @@ Windows named pipes are first-class in Rust via `tokio` + `tokio::net::windows::
 use tokio::net::windows::named_pipe::ClientOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-const PIPE_NAME: &str = r"\\.\pipe\devforge-daemon";
+const PIPE_NAME: &str = r"\\.\pipe\wdc-daemon";
 
 pub async fn call_daemon(method: &str, params: serde_json::Value) 
     -> Result<serde_json::Value, Box<dyn std::error::Error>> 
@@ -334,7 +334,7 @@ pub async fn call_daemon(method: &str, params: serde_json::Value)
 ### On the Go Daemon Side
 ```go
 // cmd/daemon/main.go
-ln, err := winio.ListenPipe(`\\.\pipe\devforge-daemon`, nil)
+ln, err := winio.ListenPipe(`\\.\pipe\wdc-daemon`, nil)
 // requires github.com/Microsoft/go-winio
 ```
 
@@ -417,7 +417,7 @@ notify = "6"  # underlying library
 use tauri_plugin_fs_watch::WatcherExt;
 
 app.watch()
-    .path("C:/DevForge/config")
+    .path("C:/WDC/config")
     .recursive(true)
     .on_event(|event| {
         // Config file changed externally
@@ -439,7 +439,7 @@ let mut watcher = notify::recommended_watcher(|res| {
 watcher.watch(config_path, RecursiveMode::Recursive)?;
 ```
 
-### Use Cases for DevForge
+### Use Cases for NKS WDC
 - Watch `sites/*.toml` — show "config changed externally" badge in Sites Manager
 - Watch Apache/Nginx error logs — feed into Dashboard activity log  
 - Watch PHP ini files — detect manual edits
@@ -466,7 +466,7 @@ tauri-plugin-updater = "2"
   "platforms": {
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ...",
-      "url": "https://releases.devforge.sh/v2.1.0/DevForge_2.1.0_x64.msi.zip"
+      "url": "https://releases.wdc.sh/v2.1.0/WDC_2.1.0_x64.msi.zip"
     }
   }
 }
@@ -499,8 +499,8 @@ async function checkForUpdate() {
 | macOS: DMG / pkg | Both | DMG |
 | **Signing complexity** | Requires key pair | Requires code cert |
 
-### For DevForge Distribution
-- Updates served from `https://releases.devforge.sh/latest.json`
+### For NKS WDC Distribution
+- Updates served from `https://releases.wdc.sh/latest.json`
 - Sign with `tauri signer generate` — private key stored in CI secrets
 - MSI installer for Windows (better for enterprise, supports group policy)
 
@@ -521,7 +521,7 @@ async function checkForUpdate() {
 | Terminal emulation | 8/10 | xterm.js + portable-pty |
 | File watching | 9/10 | notify crate, first-party plugin |
 | Auto-updater | 7/10 | No delta updates, but code signing enforced |
-| **Overall** | **8.5/10** | **Strong fit for DevForge** |
+| **Overall** | **8.5/10** | **Strong fit for NKS WDC** |
 
 ### Final Recommendation
 **Proceed with Tauri v2 + Svelte 5.** The architecture aligns well with the existing plan (Go daemon + thin GUI client). The bundle size advantage over Electron is decisive for a developer tool competing with Laragon (native, ~15MB) and MAMP PRO (native). Tauri bridges the gap between native performance and modern web UI.

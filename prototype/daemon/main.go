@@ -1,4 +1,4 @@
-// DevForge daemon — manages web server configs and service lifecycle via JSON-RPC.
+// NKS WebDev Console daemon — manages web server configs and service lifecycle via JSON-RPC.
 package main
 
 import (
@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nks/devforge/internal/rpc"
-	"github.com/nks/devforge/internal/service"
-	tmplpkg "github.com/nks/devforge/internal/template"
+	"github.com/nks/wdc/internal/rpc"
+	"github.com/nks/wdc/internal/service"
+	tmplpkg "github.com/nks/wdc/internal/template"
 )
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 		logger.Error("failed to create listener", "err", err)
 		os.Exit(1)
 	}
-	logger.Info("devforge daemon starting", "pipe", ln.Addr())
+	logger.Info("wdc daemon starting", "pipe", ln.Addr())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -64,5 +64,5 @@ func main() {
 		logger.Error("rpc server error", "err", err)
 		os.Exit(1)
 	}
-	logger.Info("devforge daemon shut down cleanly")
+	logger.Info("wdc daemon shut down cleanly")
 }

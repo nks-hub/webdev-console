@@ -1,4 +1,4 @@
-module github.com/nks/devforge
+module github.com/nks/wdc
 
 go 1.23.4
 

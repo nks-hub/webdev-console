@@ -1,4 +1,4 @@
-# DevForge CLI — UX Design Specification
+# NKS WDC CLI — UX Design Specification
 
 **Version:** 1.0.0  
 **Status:** Design Spec  
@@ -7,7 +7,7 @@
 
 ## 1. Design Philosophy
 
-DevForge CLI follows the conventions established by **Docker CLI**, **gh CLI**, and **Laravel Artisan**:
+NKS WDC CLI follows the conventions established by **Docker CLI**, **gh CLI**, and **Laravel Artisan**:
 
 - Output is human-readable by default, machine-readable with `--json`
 - Color is informational, never decorative
@@ -26,7 +26,7 @@ DevForge CLI follows the conventions established by **Docker CLI**, **gh CLI**, 
 --verbose, -v   Show additional debug/trace information
 --no-color      Disable ANSI color output
 --help, -h      Show command help
---version       Show devforge version
+--version       Show wdc version
 ```
 
 ---
@@ -103,12 +103,12 @@ For single-item detail views:
 
 ## 5. Command Output Specifications
 
-### 5.1 `devforge status`
+### 5.1 `wdc status`
 
-Shows the overall health of all DevForge-managed services.
+Shows the overall health of all NKS WDC-managed services.
 
 ```
-DevForge v1.0.0  ●  All systems operational
+NKS WDC v1.0.0  ●  All systems operational
 
   SERVICE         STATUS     PID     UPTIME    MEMORY
   ─────────────────────────────────────────────────────
@@ -122,12 +122,12 @@ DevForge v1.0.0  ●  All systems operational
   ─────────────────────────────────────────────────────
   7 services  ·  5 running  ·  1 stopped  ·  1 disabled
 
-  Hint: Use 'devforge start php-fpm@8.1' to start PHP-FPM 8.1
+  Hint: Use 'wdc start php-fpm@8.1' to start PHP-FPM 8.1
 ```
 
 Degraded state example (Apache restarting):
 ```
-DevForge v1.0.0  ⚡  Degraded — 1 service needs attention
+NKS WDC v1.0.0  ⚡  Degraded — 1 service needs attention
 
   SERVICE         STATUS        PID     UPTIME    MEMORY
   ──────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ DevForge v1.0.0  ⚡  Degraded — 1 service needs attention
   MySQL 8.0       ✓ running     12860   2h 14m    312 MB
 ```
 
-JSON output (`devforge status --json`):
+JSON output (`wdc status --json`):
 ```json
 {
   "version": "1.0.0",
@@ -164,7 +164,7 @@ JSON output (`devforge status --json`):
 
 ---
 
-### 5.2 `devforge site:list`
+### 5.2 `wdc site:list`
 
 ```
   3 sites configured
@@ -176,7 +176,7 @@ JSON output (`devforge status --json`):
   legacy.test         7.4    ✗ stopped  ✗      ~/sites/legacy
   ────────────────────────────────────────────────────────────────────────────
 
-  Hint: Use 'devforge site:info <domain>' for detailed info on a site
+  Hint: Use 'wdc site:info <domain>' for detailed info on a site
 ```
 
 With `--all` flag (includes disabled sites):
@@ -195,7 +195,7 @@ With `--all` flag (includes disabled sites):
 
 ---
 
-### 5.3 `devforge site:create myapp.test --php=8.2`
+### 5.3 `wdc site:create myapp.test --php=8.2`
 
 ```
   Creating site myapp.test
@@ -212,31 +212,31 @@ With `--all` flag (includes disabled sites):
   Domain        https://myapp.test
   PHP           8.2.27
   Document Root ~/sites/myapp
-  Config        ~/.devforge/sites/myapp.test.toml
+  Config        ~/.wdc/sites/myapp.test.toml
   SSL           ✓ Trusted (mkcert)
   ─────────────────────────────────────────────────────
 
-  Open in browser: devforge site:open myapp.test
+  Open in browser: wdc site:open myapp.test
 ```
 
 Error variant (domain already exists):
 ```
   ✗  Error: Domain 'myapp.test' already exists
 
-  Existing config: ~/.devforge/sites/myapp.test.toml
+  Existing config: ~/.wdc/sites/myapp.test.toml
 
   Suggestions:
-    · devforge site:info myapp.test    — view current config
-    · devforge site:edit myapp.test    — edit the site
-    · devforge site:delete myapp.test  — remove and recreate
+    · wdc site:info myapp.test    — view current config
+    · wdc site:edit myapp.test    — edit the site
+    · wdc site:delete myapp.test  — remove and recreate
 ```
 
 ---
 
-### 5.4 `devforge site:create` (interactive mode, no args)
+### 5.4 `wdc site:create` (interactive mode, no args)
 
 ```
-  DevForge  Site Creation Wizard
+  NKS WDC  Site Creation Wizard
 
   ? Domain name:  > myapp.test_
 
@@ -278,12 +278,12 @@ Error variant (domain already exists):
 
 ---
 
-### 5.5 `devforge start`
+### 5.5 `wdc start`
 
 Starts all services:
 
 ```
-  Starting DevForge services
+  Starting NKS WDC services
 
   ✓  Apache 2.4.58       started  (pid 14220)
   ✓  PHP-FPM 8.2         started  (pid 14224)
@@ -298,7 +298,7 @@ Starts all services:
 
 ---
 
-### 5.6 `devforge stop apache`
+### 5.6 `wdc stop apache`
 
 Stopping a single named service:
 
@@ -318,28 +318,28 @@ Stopping with dependent services warning:
 
 ---
 
-### 5.7 `devforge php:list`
+### 5.7 `wdc php:list`
 
 ```
   Installed PHP versions
 
   VERSION   STATUS       FPM PORT  SITES  PATH
   ────────────────────────────────────────────────────────────────────────────
-  8.3.6     ✓ running    9083      2      ~/.devforge/bin/php-8.3/bin/php
-  8.2.27    ● default    9082      5      ~/.devforge/bin/php-8.2/bin/php
-  8.1.28    ✓ running    9081      1      ~/.devforge/bin/php-8.1/bin/php
-  8.0.30    ✗ stopped    9080      0      ~/.devforge/bin/php-8.0/bin/php
-  7.4.33    ✗ stopped    9074      1      ~/.devforge/bin/php-7.4/bin/php
+  8.3.6     ✓ running    9083      2      ~/.wdc/bin/php-8.3/bin/php
+  8.2.27    ● default    9082      5      ~/.wdc/bin/php-8.2/bin/php
+  8.1.28    ✓ running    9081      1      ~/.wdc/bin/php-8.1/bin/php
+  8.0.30    ✗ stopped    9080      0      ~/.wdc/bin/php-8.0/bin/php
+  7.4.33    ✗ stopped    9074      1      ~/.wdc/bin/php-7.4/bin/php
   ────────────────────────────────────────────────────────────────────────────
   5 installed  ·  3 running  ·  ● 8.2.27 is default
 
   Available to install: 8.4 (RC2),  5.6.40
-  Run 'devforge php:install 8.4' to install
+  Run 'wdc php:install 8.4' to install
 ```
 
 ---
 
-### 5.8 `devforge php:install 8.4`
+### 5.8 `wdc php:install 8.4`
 
 ```
   Installing PHP 8.4.0-RC2
@@ -348,7 +348,7 @@ Stopping with dependent services warning:
   ████████████████████████████████████████████  100%  3.2s
 
   [2/4] Verifying checksum (SHA-256) ...                        ✓
-  [3/4] Extracting to ~/.devforge/bin/php-8.4/ ...              ✓
+  [3/4] Extracting to ~/.wdc/bin/php-8.4/ ...              ✓
   [4/4] Configuring PHP-FPM (port 9084) ...                     ✓
 
   ─────────────────────────────────────────────────
@@ -357,35 +357,35 @@ Stopping with dependent services warning:
   Extensions:  bcmath, curl, gd, intl, mbstring, mysqli, 
                openssl, pdo_mysql, redis, zip
   FPM port:    9084
-  Path:        ~/.devforge/bin/php-8.4/bin/php
+  Path:        ~/.wdc/bin/php-8.4/bin/php
 
-  Run 'devforge php:use 8.4' to set as default
+  Run 'wdc php:use 8.4' to set as default
   ─────────────────────────────────────────────────
 ```
 
 ---
 
-### 5.9 `devforge ssl:status`
+### 5.9 `wdc ssl:status`
 
 ```
   SSL Certificates
 
   DOMAIN              ISSUER        EXPIRES        STATUS
   ────────────────────────────────────────────────────────────────────────────
-  myapp.test          DevForge CA   2027-04-09     ✓ valid  (366 days)
-  api.local           DevForge CA   2027-04-09     ✓ valid  (366 days)
+  myapp.test          NKS WDC CA   2027-04-09     ✓ valid  (366 days)
+  api.local           NKS WDC CA   2027-04-09     ✓ valid  (366 days)
   legacy.test         —             —              ✗ no cert
   ────────────────────────────────────────────────────────────────────────────
-  CA Status:  ✓ DevForge Local CA installed and trusted
-  CA Cert:    ~/.devforge/ca/rootCA.pem
+  CA Status:  ✓ NKS WDC Local CA installed and trusted
+  CA Cert:    ~/.wdc/ca/rootCA.pem
   Cert Store: System (macOS Keychain / Windows Cert Store)
 
-  Hint: Use 'devforge ssl:renew <domain>' to renew a certificate
+  Hint: Use 'wdc ssl:renew <domain>' to renew a certificate
 ```
 
 ---
 
-### 5.10 `devforge db:list`
+### 5.10 `wdc db:list`
 
 ```
   Databases  (MySQL 8.0 · 127.0.0.1:3306)
@@ -399,7 +399,7 @@ Stopping with dependent services warning:
   ────────────────────────────────────────────────────────────────────────────
   4 databases  ·  total 123.0 MB
 
-  Hint: 'devforge db:create <name>' · 'devforge db:open <name>'
+  Hint: 'wdc db:create <name>' · 'wdc db:open <name>'
 ```
 
 ---
@@ -416,7 +416,7 @@ All errors follow a consistent format:
   Suggestions:
     · <actionable fix 1>
     · <actionable fix 2>
-    · Run 'devforge <cmd> --help' for usage
+    · Run 'wdc <cmd> --help' for usage
 ```
 
 Example — port conflict:
@@ -427,9 +427,9 @@ Example — port conflict:
   Conflict: Microsoft-HTTPAPI/2.0  (pid 4, System)
 
   Suggestions:
-    · devforge config set apache.port 8080  — use alternate port
+    · wdc config set apache.port 8080  — use alternate port
     · Stop IIS:  net stop w3svc             — free port 80
-    · devforge doctor                       — run diagnostics
+    · wdc doctor                       — run diagnostics
 ```
 
 Example — PHP version not installed:
@@ -439,8 +439,8 @@ Example — PHP version not installed:
   Site 'myapp.test' requires PHP 8.4 which is not installed.
 
   Suggestions:
-    · devforge php:install 8.4  — install PHP 8.4
-    · devforge php:list         — see installed versions
+    · wdc php:install 8.4  — install PHP 8.4
+    · wdc php:list         — see installed versions
 ```
 
 ---
@@ -456,7 +456,7 @@ Example — PHP version not installed:
     · Apache vhost config
     · SSL certificate
     · /etc/hosts entry
-    · Site config ~/.devforge/sites/myapp.test.toml
+    · Site config ~/.wdc/sites/myapp.test.toml
 
   Note: Document root ~/sites/myapp will NOT be deleted.
 
@@ -473,7 +473,7 @@ Example — PHP version not installed:
 
 Bypass with `--force` flag:
 ```bash
-devforge site:delete myapp.test --force
+wdc site:delete myapp.test --force
 ```
 
 ---
@@ -497,15 +497,15 @@ Navigation: arrow keys, Enter to select, Esc to cancel.
 
 ---
 
-## 9. `devforge doctor` Output
+## 9. `wdc doctor` Output
 
 ```
-  DevForge Doctor  —  System Diagnostics
+  NKS WDC Doctor  —  System Diagnostics
 
   CORE
-  ✓  devforge daemon         running (v1.0.0, pid 1024)
-  ✓  devforge config         valid (~/.devforge/config.toml)
-  ✓  socket                  /tmp/devforge.sock  accessible
+  ✓  wdc-daemon               running (v1.0.0, pid 1024)
+  ✓  wdc config               valid (~/.wdc/config.toml)
+  ✓  socket                  /tmp/wdc.sock  accessible
 
   SERVICES
   ✓  Apache 2.4.58           /usr/local/opt/httpd/bin/httpd
@@ -514,21 +514,21 @@ Navigation: arrow keys, Enter to select, Esc to cancel.
   ✓  mkcert 1.4.4            CA installed and trusted
 
   NETWORK
-  ✓  Port 80                 free / bound by devforge
-  ✓  Port 443                free / bound by devforge
+  ✓  Port 80                 free / bound by wdc
+  ✓  Port 443                free / bound by wdc
   ✗  Port 3306               bound by external process (pid 991)
   ✓  DNS resolution          myapp.test → 127.0.0.1  ✓
 
   FILESYSTEM
-  ✓  Config dir              ~/.devforge/  (rw)
-  ✓  Log dir                 ~/.devforge/logs/  (rw)
-  ✓  Bin dir                 ~/.devforge/bin/  (rw)
-  ✗  /etc/hosts              not writable (run: devforge fix:hosts)
+  ✓  Config dir              ~/.wdc/  (rw)
+  ✓  Log dir                 ~/.wdc/logs/  (rw)
+  ✓  Bin dir                 ~/.wdc/bin/  (rw)
+  ✗  /etc/hosts              not writable (run: wdc fix:hosts)
 
   ──────────────────────────────────────────────────
   2 issues found
 
-  Run 'devforge doctor --fix' to automatically resolve issues
+  Run 'wdc doctor --fix' to automatically resolve issues
 ```
 
 ---
@@ -536,7 +536,7 @@ Navigation: arrow keys, Enter to select, Esc to cancel.
 ## 10. Command Hierarchy
 
 ```
-devforge
+wdc
 ├── status               Global status overview
 ├── start [service]      Start all or named service
 ├── stop [service]       Stop all or named service

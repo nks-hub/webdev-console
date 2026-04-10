@@ -1,4 +1,4 @@
-// devforge CLI — sends JSON-RPC commands to the running DevForge daemon.
+// wdc CLI — sends JSON-RPC commands to the running NKS WebDev Console daemon.
 package main
 
 import (
@@ -10,13 +10,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/nks/devforge/internal/rpc"
+	"github.com/nks/wdc/internal/rpc"
 )
 
 func main() {
 	pipePath := flag.String("pipe", "", "pipe/socket path (default: platform default)")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: devforge [flags] <command> [args]\n\nCommands:\n")
+		fmt.Fprintf(os.Stderr, "Usage: wdc [flags] <command> [args]\n\nCommands:\n")
 		fmt.Fprintf(os.Stderr, "  status                   Show daemon and service status\n")
 		fmt.Fprintf(os.Stderr, "  site create <file.toml>  Create a site from a TOML config file\n")
 		fmt.Fprintf(os.Stderr, "  service start <name>     Start a registered service\n")
@@ -34,7 +34,7 @@ func main() {
 
 	conn, err := rpc.DialPipe(*pipePath)
 	if err != nil {
-		log.Fatalf("cannot connect to daemon: %v\n(is devforge daemon running?)", err)
+		log.Fatalf("cannot connect to daemon: %v\n(is wdc daemon running?)", err)
 	}
 	defer conn.Close()
 
@@ -44,7 +44,7 @@ func main() {
 
 	case "site":
 		if len(args) < 3 || args[1] != "create" {
-			fmt.Fprintln(os.Stderr, "usage: devforge site create <file.toml>")
+			fmt.Fprintln(os.Stderr, "usage: wdc site create <file.toml>")
 			os.Exit(1)
 		}
 		tomlData, err := os.ReadFile(args[2])
@@ -56,7 +56,7 @@ func main() {
 
 	case "service":
 		if len(args) < 3 {
-			fmt.Fprintln(os.Stderr, "usage: devforge service <start|stop|restart> <name>")
+			fmt.Fprintln(os.Stderr, "usage: wdc service <start|stop|restart> <name>")
 			os.Exit(1)
 		}
 		method := "service." + args[1]

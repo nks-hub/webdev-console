@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/nks/devforge/internal/config"
+	"github.com/nks/wdc/internal/config"
 )
 
 //go:embed templates/*.tmpl

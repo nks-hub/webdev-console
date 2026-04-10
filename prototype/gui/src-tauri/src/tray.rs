@@ -5,15 +5,15 @@ use tauri::{
 };
 use tracing::debug;
 
-/// Set up the system tray icon and menu for DevForge.
+/// Set up the system tray icon and menu for NKS WebDev Console.
 pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
     // Menu items
-    let open = MenuItem::with_id(app, "open", "Open DevForge", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Open NKS WebDev Console", true, None::<&str>)?;
     let separator1 = PredefinedMenuItem::separator(app)?;
     let start_all = MenuItem::with_id(app, "start_all", "Start All Services", true, None::<&str>)?;
     let stop_all = MenuItem::with_id(app, "stop_all", "Stop All Services", true, None::<&str>)?;
     let separator2 = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit DevForge", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit NKS WebDev Console", true, None::<&str>)?;
 
     let menu = Menu::with_items(app, &[
         &open,
@@ -27,7 +27,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
-        .tooltip("DevForge")
+        .tooltip("NKS WebDev Console")
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| {
             debug!("tray menu event: {}", event.id.as_ref());

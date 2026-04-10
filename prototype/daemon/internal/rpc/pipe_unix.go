@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const DefaultPipeName = "/tmp/devforge.sock"
+const DefaultPipeName = "/tmp/wdc.sock"
 
 // ListenPipe creates a Unix domain socket listener at the given path.
 // If socketPath is empty, DefaultPipeName is used.

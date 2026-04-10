@@ -1,4 +1,4 @@
-// cli_mockup.go — DevForge CLI output simulator
+// cli_mockup.go — NKS WDC CLI output simulator
 //
 // This program renders realistic CLI output for design review.
 // No actual service management — purely a UI/UX mockup.
@@ -97,11 +97,11 @@ func sleep(ms int) {
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 }
 
-// ─── devforge status ─────────────────────────────────────────────────────────
+// ─── wdc status ─────────────────────────────────────────────────────────
 
 func cmdStatus() {
 	fmt.Printf("\n  %s  %s  %s\n\n",
-		white.Sprint("DevForge v1.0.0"),
+		white.Sprint("NKS WDC v1.0.0"),
 		green.Sprint("●"),
 		green.Sprint("All systems operational"),
 	)
@@ -141,11 +141,11 @@ func cmdStatus() {
 	fmt.Printf("\n  %s\n",
 		dim.Sprint("7 services  ·  5 running  ·  1 stopped  ·  1 disabled"),
 	)
-	hint("Use 'devforge start php-fpm@8.1' to start PHP-FPM 8.1")
+	hint("Use 'wdc start php-fpm@8.1' to start PHP-FPM 8.1")
 	fmt.Println()
 }
 
-// ─── devforge site:list ───────────────────────────────────────────────────────
+// ─── wdc site:list ───────────────────────────────────────────────────────
 
 func cmdSiteList() {
 	fmt.Printf("\n  %s\n\n", dim.Sprint("3 sites configured"))
@@ -177,11 +177,11 @@ func cmdSiteList() {
 	}
 	table.Render()
 
-	hint("Use 'devforge site:info <domain>' for detailed info on a site")
+	hint("Use 'wdc site:info <domain>' for detailed info on a site")
 	fmt.Println()
 }
 
-// ─── devforge site:create ────────────────────────────────────────────────────
+// ─── wdc site:create ────────────────────────────────────────────────────
 
 func cmdSiteCreate(domain string) {
 	fmt.Printf("\n  %s %s\n\n",
@@ -211,7 +211,7 @@ func cmdSiteCreate(domain string) {
 		{"Domain", blue.Sprint("https://" + domain)},
 		{"PHP", green.Sprint("8.2.27")},
 		{"Document Root", dim.Sprint("~/sites/" + strings.Split(domain, ".")[0])},
-		{"Config", dim.Sprint("~/.devforge/sites/" + domain + ".toml")},
+		{"Config", dim.Sprint("~/.wdc/sites/" + domain + ".toml")},
 		{"SSL", green.Sprint("✓ Trusted") + dim.Sprint(" (mkcert)")},
 	}
 	for _, d := range details {
@@ -221,12 +221,12 @@ func cmdSiteCreate(domain string) {
 	printDivider(55)
 	fmt.Printf("\n  %s %s %s\n\n",
 		dim.Sprint("Open in browser:"),
-		green.Sprint("devforge site:open"),
+		green.Sprint("wdc site:open"),
 		dim.Sprint(domain),
 	)
 }
 
-// ─── devforge php:list ───────────────────────────────────────────────────────
+// ─── wdc php:list ───────────────────────────────────────────────────────
 
 func cmdPhpList() {
 	fmt.Printf("\n  %s\n\n", white.Sprint("Installed PHP versions"))
@@ -254,35 +254,35 @@ func cmdPhpList() {
 			statusIcon("running"),
 			dim.Sprint("9083"),
 			"2",
-			dim.Sprint("~/.devforge/bin/php-8.3/bin/php"),
+			dim.Sprint("~/.wdc/bin/php-8.3/bin/php"),
 		},
 		{
 			green.Sprint("8.2.27 ●"),
 			statusIcon("running"),
 			dim.Sprint("9082"),
 			"5",
-			dim.Sprint("~/.devforge/bin/php-8.2/bin/php"),
+			dim.Sprint("~/.wdc/bin/php-8.2/bin/php"),
 		},
 		{
 			white.Sprint("8.1.28"),
 			statusIcon("running"),
 			dim.Sprint("9081"),
 			"1",
-			dim.Sprint("~/.devforge/bin/php-8.1/bin/php"),
+			dim.Sprint("~/.wdc/bin/php-8.1/bin/php"),
 		},
 		{
 			dim.Sprint("8.0.30"),
 			statusIcon("stopped"),
 			dim.Sprint("9080"),
 			"0",
-			dim.Sprint("~/.devforge/bin/php-8.0/bin/php"),
+			dim.Sprint("~/.wdc/bin/php-8.0/bin/php"),
 		},
 		{
 			dim.Sprint("7.4.33"),
 			statusIcon("stopped"),
 			dim.Sprint("9074"),
 			"1",
-			dim.Sprint("~/.devforge/bin/php-7.4/bin/php"),
+			dim.Sprint("~/.wdc/bin/php-7.4/bin/php"),
 		},
 	}
 	for _, r := range rows {
@@ -295,11 +295,11 @@ func cmdPhpList() {
 		dim.Sprint("Available to install:"),
 		yellow.Sprint("8.4 (RC2)"),
 	)
-	hint("Run 'devforge php:install 8.4' to install")
+	hint("Run 'wdc php:install 8.4' to install")
 	fmt.Println()
 }
 
-// ─── devforge php:install ────────────────────────────────────────────────────
+// ─── wdc php:install ────────────────────────────────────────────────────
 
 func cmdPhpInstall(version string) {
 	fmt.Printf("\n  %s %s\n\n",
@@ -344,7 +344,7 @@ func cmdPhpInstall(version string) {
 
 	remainingSteps := []string{
 		"Verifying checksum (SHA-256) ...",
-		fmt.Sprintf("Extracting to ~/.devforge/bin/php-%s/ ...", version),
+		fmt.Sprintf("Extracting to ~/.wdc/bin/php-%s/ ...", version),
 		"Configuring PHP-FPM ...",
 	}
 	for i, s := range remainingSteps {
@@ -359,7 +359,7 @@ func cmdPhpInstall(version string) {
 		{"Extensions", dim.Sprint("bcmath, curl, gd, intl, mbstring, mysqli,\n" +
 			"                    openssl, pdo_mysql, redis, zip")},
 		{"FPM port", dim.Sprint("9084")},
-		{"Path", dim.Sprint("~/.devforge/bin/php-" + version + "/bin/php")},
+		{"Path", dim.Sprint("~/.wdc/bin/php-" + version + "/bin/php")},
 	}
 	for _, d := range details {
 		fmt.Printf("  %-18s%s\n", white.Sprint(d[0]), d[1])
@@ -367,12 +367,12 @@ func cmdPhpInstall(version string) {
 
 	printDivider(55)
 	fmt.Printf("\n  %s %s\n\n",
-		dim.Sprint("Run 'devforge php:use "+version+"' to set as default"),
+		dim.Sprint("Run 'wdc php:use "+version+"' to set as default"),
 		"",
 	)
 }
 
-// ─── devforge ssl:status ─────────────────────────────────────────────────────
+// ─── wdc ssl:status ─────────────────────────────────────────────────────
 
 func cmdSSLStatus() {
 	fmt.Printf("\n  %s\n\n", white.Sprint("SSL Certificates"))
@@ -394,8 +394,8 @@ func cmdSSLStatus() {
 	)
 
 	rows := [][]string{
-		{"myapp.test", dim.Sprint("DevForge CA"), dim.Sprint("2027-04-09"), green.Sprint("✓ valid") + dim.Sprint(" (366 days)")},
-		{"api.local", dim.Sprint("DevForge CA"), dim.Sprint("2027-04-09"), green.Sprint("✓ valid") + dim.Sprint(" (366 days)")},
+		{"myapp.test", dim.Sprint("NKS WDC CA"), dim.Sprint("2027-04-09"), green.Sprint("✓ valid") + dim.Sprint(" (366 days)")},
+		{"api.local", dim.Sprint("NKS WDC CA"), dim.Sprint("2027-04-09"), green.Sprint("✓ valid") + dim.Sprint(" (366 days)")},
 		{"legacy.test", dim.Sprint("—"), dim.Sprint("—"), red.Sprint("✗ no cert")},
 	}
 	for _, r := range rows {
@@ -403,14 +403,14 @@ func cmdSSLStatus() {
 	}
 	table.Render()
 
-	fmt.Printf("\n  %-14s%s\n", white.Sprint("CA Status:"), green.Sprint("✓ DevForge Local CA installed and trusted"))
-	fmt.Printf("  %-14s%s\n", white.Sprint("CA Cert:"), dim.Sprint("~/.devforge/ca/rootCA.pem"))
+	fmt.Printf("\n  %-14s%s\n", white.Sprint("CA Status:"), green.Sprint("✓ NKS WDC Local CA installed and trusted"))
+	fmt.Printf("  %-14s%s\n", white.Sprint("CA Cert:"), dim.Sprint("~/.wdc/ca/rootCA.pem"))
 	fmt.Printf("  %-14s%s\n", white.Sprint("Cert Store:"), dim.Sprint("Windows Certificate Store"))
-	hint("Use 'devforge ssl:renew <domain>' to renew a certificate")
+	hint("Use 'wdc ssl:renew <domain>' to renew a certificate")
 	fmt.Println()
 }
 
-// ─── devforge db:list ────────────────────────────────────────────────────────
+// ─── wdc db:list ────────────────────────────────────────────────────────
 
 func cmdDBList() {
 	fmt.Printf("\n  %s %s\n\n",
@@ -447,14 +447,14 @@ func cmdDBList() {
 	table.Render()
 
 	fmt.Printf("\n  %s\n", dim.Sprint("4 databases  ·  total 123.0 MB"))
-	hint("'devforge db:create <name>'  ·  'devforge db:open <name>'")
+	hint("'wdc db:create <name>'  ·  'wdc db:open <name>'")
 	fmt.Println()
 }
 
-// ─── devforge doctor ─────────────────────────────────────────────────────────
+// ─── wdc doctor ─────────────────────────────────────────────────────────
 
 func cmdDoctor() {
-	fmt.Printf("\n  %s\n\n", white.Sprint("DevForge Doctor  —  System Diagnostics"))
+	fmt.Printf("\n  %s\n\n", white.Sprint("NKS WDC Doctor  —  System Diagnostics"))
 
 	type check struct {
 		category string
@@ -465,24 +465,24 @@ func cmdDoctor() {
 
 	checks := []check{
 		// CORE
-		{category: "CORE", label: "devforge daemon", status: "ok", detail: "running (v1.0.0, pid 1024)"},
-		{category: "", label: "devforge config", status: "ok", detail: "valid (~/.devforge/config.toml)"},
-		{category: "", label: "socket", status: "ok", detail: "/tmp/devforge.sock  accessible"},
+		{category: "CORE", label: "wdc-daemon", status: "ok", detail: "running (v1.0.0, pid 1024)"},
+		{category: "", label: "wdc config", status: "ok", detail: "valid (~/.wdc/config.toml)"},
+		{category: "", label: "socket", status: "ok", detail: "/tmp/wdc.sock  accessible"},
 		// SERVICES
 		{category: "SERVICES", label: "Apache 2.4.58", status: "ok", detail: "/usr/local/opt/httpd/bin/httpd"},
 		{category: "", label: "MySQL 8.0.36", status: "ok", detail: "/usr/local/opt/mysql/bin/mysqld"},
 		{category: "", label: "PHP-FPM 7.4", status: "warn", detail: "config warning: pm.max_children low (1)"},
 		{category: "", label: "mkcert 1.4.4", status: "ok", detail: "CA installed and trusted"},
 		// NETWORK
-		{category: "NETWORK", label: "Port 80", status: "ok", detail: "free / bound by devforge"},
-		{category: "", label: "Port 443", status: "ok", detail: "free / bound by devforge"},
+		{category: "NETWORK", label: "Port 80", status: "ok", detail: "free / bound by wdc"},
+		{category: "", label: "Port 443", status: "ok", detail: "free / bound by wdc"},
 		{category: "", label: "Port 3306", status: "error", detail: "bound by external process (pid 991)"},
 		{category: "", label: "DNS resolution", status: "ok", detail: "myapp.test → 127.0.0.1  ✓"},
 		// FILESYSTEM
-		{category: "FILESYSTEM", label: "Config dir", status: "ok", detail: "~/.devforge/  (rw)"},
-		{category: "", label: "Log dir", status: "ok", detail: "~/.devforge/logs/  (rw)"},
-		{category: "", label: "Bin dir", status: "ok", detail: "~/.devforge/bin/  (rw)"},
-		{category: "", label: "/etc/hosts", status: "error", detail: "not writable (run: devforge fix:hosts)"},
+		{category: "FILESYSTEM", label: "Config dir", status: "ok", detail: "~/.wdc/  (rw)"},
+		{category: "", label: "Log dir", status: "ok", detail: "~/.wdc/logs/  (rw)"},
+		{category: "", label: "Bin dir", status: "ok", detail: "~/.wdc/bin/  (rw)"},
+		{category: "", label: "/etc/hosts", status: "error", detail: "not writable (run: wdc fix:hosts)"},
 	}
 
 	lastCategory := ""
@@ -506,14 +506,14 @@ func cmdDoctor() {
 	printDivider(55)
 	fmt.Printf("\n  %s\n", yellow.Sprint("2 issues found"))
 	fmt.Printf("\n  %s\n\n",
-		dim.Sprint("Run 'devforge doctor --fix' to automatically resolve issues"),
+		dim.Sprint("Run 'wdc doctor --fix' to automatically resolve issues"),
 	)
 }
 
-// ─── devforge start ───────────────────────────────────────────────────────────
+// ─── wdc start ───────────────────────────────────────────────────────────
 
 func cmdStart() {
-	fmt.Printf("\n  %s\n\n", white.Sprint("Starting DevForge services"))
+	fmt.Printf("\n  %s\n\n", white.Sprint("Starting NKS WDC services"))
 
 	type svc struct {
 		name    string
@@ -560,7 +560,7 @@ func cmdStart() {
 	)
 }
 
-// ─── devforge stop <service> ─────────────────────────────────────────────────
+// ─── wdc stop <service> ─────────────────────────────────────────────────
 
 func cmdStop(service string) {
 	fmt.Printf("\n  %s %s ...", white.Sprint("Stopping"), magenta.Sprint(service))
@@ -573,9 +573,9 @@ func cmdStop(service string) {
 // ─── usage / dispatch ────────────────────────────────────────────────────────
 
 func printUsage() {
-	fmt.Printf("\n  %s  %s\n\n", magenta.Sprint("DevForge"), dim.Sprint("v1.0.0"))
+	fmt.Printf("\n  %s  %s\n\n", magenta.Sprint("NKS WDC"), dim.Sprint("v1.0.0"))
 	fmt.Printf("  %s\n\n", white.Sprint("USAGE"))
-	fmt.Printf("    %s\n\n", dim.Sprint("devforge <command> [arguments] [flags]"))
+	fmt.Printf("    %s\n\n", dim.Sprint("wdc <command> [arguments] [flags]"))
 	fmt.Printf("  %s\n\n", white.Sprint("COMMANDS"))
 
 	cmds := [][2]string{
@@ -607,7 +607,7 @@ func printUsage() {
 	fmt.Printf("    %-30s%s\n", blue.Sprint("--help, -h"), dim.Sprint("Show command help"))
 	fmt.Printf("\n  %s %s\n\n",
 		dim.Sprint("Run"),
-		dim.Sprint("devforge <command> --help  for more information about a command."),
+		dim.Sprint("wdc <command> --help  for more information about a command."),
 	)
 }
 
@@ -661,7 +661,7 @@ func main() {
 		)
 		fmt.Printf("  %s %s\n\n",
 			dim.Sprint("Run"),
-			dim.Sprint("devforge --help  for a list of commands."),
+			dim.Sprint("wdc --help  for a list of commands."),
 		)
 		os.Exit(1)
 	}

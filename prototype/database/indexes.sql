@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database — Indexes
+-- NKS WebDev Console Database — Indexes
 -- Performance indexes for common query patterns
 -- ============================================================================
 

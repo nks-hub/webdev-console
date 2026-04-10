@@ -10,10 +10,10 @@ use tracing::{debug, error, info, warn};
 
 // Named pipe path — must match what the Go daemon opens
 #[cfg(windows)]
-const PIPE_NAME: &str = r"\\.\pipe\devforge-daemon";
+const PIPE_NAME: &str = r"\\.\pipe\wdc-daemon";
 
 #[cfg(unix)]
-const PIPE_NAME: &str = "/tmp/devforge-daemon.sock";
+const PIPE_NAME: &str = "/tmp/wdc-daemon.sock";
 
 const WATCHDOG_INTERVAL_SECS: u64 = 3;
 const REQUEST_TIMEOUT_SECS: u64 = 10;

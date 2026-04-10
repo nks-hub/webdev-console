@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Integration test for DevForge SSL Manager.
+    Integration test for NKS WebDev Console SSL Manager.
 
 .DESCRIPTION
-    1. Generates a cert for "devforge-test.test"
+    1. Generates a cert for "wdc-test.test"
     2. Creates a minimal Apache vhost config using the cert
     3. Verifies the cert with OpenSSL
     4. Shows cert details (domain, expiry, issuer)
@@ -15,13 +15,13 @@ param()
 
 $ErrorActionPreference = "Stop"
 
-$TestDomain   = "devforge-test.test"
-$TestAliases  = @("www.devforge-test.test", "*.devforge-test.test")
+$TestDomain   = "wdc-test.test"
+$TestAliases  = @("www.wdc-test.test", "*.wdc-test.test")
 $ScriptDir    = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SslManager   = Join-Path $ScriptDir "ssl_manager.ps1"
 $ApacheTempl  = Join-Path $ScriptDir "apache_ssl.conf.tmpl"
-$SslBaseDir   = Join-Path $env:USERPROFILE ".devforge\ssl\sites"
-$TestDocRoot  = "C:\MAMP\htdocs\devforge-test"
+$SslBaseDir   = Join-Path $env:USERPROFILE ".wdc\ssl\sites"
+$TestDocRoot  = "C:\MAMP\htdocs\wdc-test"
 
 $OpenSSLPath  = "openssl"
 if (-not (Get-Command $OpenSSLPath -ErrorAction SilentlyContinue)) {
@@ -56,7 +56,7 @@ function Test-Assert([string]$Name, [scriptblock]$Test) {
 # -------------------------------------------------------------------
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " DevForge SSL Manager - Integration Test" -ForegroundColor Cyan
+Write-Host " NKS WebDev Console SSL Manager - Integration Test" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -169,7 +169,7 @@ Test-Assert "Certificate contains test domain in Subject" {
 }
 
 Test-Assert "Certificate contains wildcard SAN" {
-    $certTextStr -match "\*\.$([regex]::Escape('devforge-test.test'))"
+    $certTextStr -match "\*\.$([regex]::Escape('wdc-test.test'))"
 }
 
 Test-Assert "Certificate is not expired" {

@@ -1,15 +1,15 @@
-# DevForge PowerShell completion
+# NKS WDC PowerShell completion
 #
 # Installation:
 #   # Option 1 — add to your PowerShell profile:
-#   Add-Content $PROFILE ". C:\path\to\devforge.ps1"
+#   Add-Content $PROFILE ". C:\path\to\wdc.ps1"
 #
 #   # Option 2 — import directly in this session:
-#   . .\devforge.ps1
+#   . .\wdc.ps1
 #
 #   # Option 3 — place in a module directory and auto-import:
-#   # Copy to: $env:PSModulePath\DevForge\devforge.ps1
-#   # Then add to $PROFILE: Import-Module DevForge
+#   # Copy to: $env:PSModulePath\WDC\wdc.ps1
+#   # Then add to $PROFILE: Import-Module WDC
 #
 #   # Verify profile path:
 #   $PROFILE
@@ -18,27 +18,27 @@
 
 # ─── internal helpers ─────────────────────────────────────────────────────────
 
-function _DevForge-GetSites {
+function _WDC-GetSites {
     try {
-        $json = & devforge site:list --json 2>$null | ConvertFrom-Json
+        $json = & wdc site:list --json 2>$null | ConvertFrom-Json
         return $json.sites | Select-Object -ExpandProperty domain
     } catch {
         return @()
     }
 }
 
-function _DevForge-GetPhpVersions {
+function _WDC-GetPhpVersions {
     try {
-        $json = & devforge php:list --json 2>$null | ConvertFrom-Json
+        $json = & wdc php:list --json 2>$null | ConvertFrom-Json
         return $json.versions | Select-Object -ExpandProperty version
     } catch {
         return @('5.6', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4')
     }
 }
 
-function _DevForge-GetDatabases {
+function _WDC-GetDatabases {
     try {
-        $json = & devforge db:list --json 2>$null | ConvertFrom-Json
+        $json = & wdc db:list --json 2>$null | ConvertFrom-Json
         return $json.databases | Select-Object -ExpandProperty name
     } catch {
         return @()
@@ -47,14 +47,14 @@ function _DevForge-GetDatabases {
 
 # ─── completion scriptblock ───────────────────────────────────────────────────
 
-$DevForgeCompleter = {
+$WDCCompleter = {
     param(
         $wordToComplete,
         $commandAst,
         $cursorPosition
     )
 
-    # Parse the command line tokens (skip 'devforge' itself)
+    # Parse the command line tokens (skip 'wdc' itself)
     $tokens = $commandAst.CommandElements
     $tokenCount = $tokens.Count
 
@@ -188,7 +188,7 @@ $DevForgeCompleter = {
 
         { $_ -in 'site:delete', 'site:info', 'site:edit', 'site:open', 'site:enable', 'site:disable' } {
             if ($argPos -eq 0) {
-                foreach ($site in (_DevForge-GetSites) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($site in (_WDC-GetSites) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $site, $site, 'ParameterValue', "Site: $site"
                     )
@@ -198,13 +198,13 @@ $DevForgeCompleter = {
 
         'site:php' {
             if ($argPos -eq 0) {
-                foreach ($site in (_DevForge-GetSites) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($site in (_WDC-GetSites) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $site, $site, 'ParameterValue', "Site: $site"
                     )
                 }
             } elseif ($argPos -eq 1) {
-                foreach ($ver in (_DevForge-GetPhpVersions) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($ver in (_WDC-GetPhpVersions) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $ver, $ver, 'ParameterValue', "PHP $ver"
                     )
@@ -224,7 +224,7 @@ $DevForgeCompleter = {
 
         { $_ -in 'php:uninstall', 'php:use', 'php:info' } {
             if ($argPos -eq 0) {
-                foreach ($ver in (_DevForge-GetPhpVersions) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($ver in (_WDC-GetPhpVersions) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $ver, $ver, 'ParameterValue', "PHP $ver"
                     )
@@ -234,7 +234,7 @@ $DevForgeCompleter = {
 
         { $_ -in 'ssl:create', 'ssl:renew' } {
             if ($argPos -eq 0) {
-                foreach ($site in (_DevForge-GetSites) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($site in (_WDC-GetSites) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $site, $site, 'ParameterValue', "Site: $site"
                     )
@@ -244,7 +244,7 @@ $DevForgeCompleter = {
 
         { $_ -in 'db:drop', 'db:export', 'db:open' } {
             if ($argPos -eq 0) {
-                foreach ($db in (_DevForge-GetDatabases) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($db in (_WDC-GetDatabases) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $db, $db, 'ParameterValue', "Database: $db"
                     )
@@ -254,7 +254,7 @@ $DevForgeCompleter = {
 
         'db:import' {
             if ($argPos -eq 0) {
-                foreach ($db in (_DevForge-GetDatabases) | Where-Object { $_ -like "$wordToComplete*" }) {
+                foreach ($db in (_WDC-GetDatabases) | Where-Object { $_ -like "$wordToComplete*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         $db, $db, 'ParameterValue', "Database: $db"
                     )
@@ -285,7 +285,7 @@ $DevForgeCompleter = {
             # Handle --php= and --preset= inline value completion
             if ($wordToComplete -like '--php=*') {
                 $partial = $wordToComplete.Substring('--php='.Length)
-                foreach ($ver in (_DevForge-GetPhpVersions) | Where-Object { $_ -like "$partial*" }) {
+                foreach ($ver in (_WDC-GetPhpVersions) | Where-Object { $_ -like "$partial*" }) {
                     [System.Management.Automation.CompletionResult]::new(
                         "--php=$ver", "--php=$ver", 'ParameterValue', "PHP $ver"
                     )
@@ -303,4 +303,4 @@ $DevForgeCompleter = {
 }
 
 # Register the completer
-Register-ArgumentCompleter -Native -CommandName devforge -ScriptBlock $DevForgeCompleter
+Register-ArgumentCompleter -Native -CommandName wdc -ScriptBlock $WDCCompleter

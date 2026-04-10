@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database — Export / Import
+-- NKS WebDev Console Database — Export / Import
 -- SQL helpers for JSON-based config backup and restore
 -- ============================================================================
 

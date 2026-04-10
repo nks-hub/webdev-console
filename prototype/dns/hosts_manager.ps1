@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    DevForge hosts file management tool.
+    NKS WebDev Console hosts file management tool.
 
 .DESCRIPTION
     Manages entries in C:\Windows\System32\drivers\etc\hosts for local development domains.
@@ -34,7 +34,7 @@
     .\hosts_manager.ps1 -Action port-check -Port 80
     .\hosts_manager.ps1 -Action backup
     .\hosts_manager.ps1 -Action clean
-    .\hosts_manager.ps1 -Action restore -BackupFile "C:\DevForge\backups\hosts.20240101-120000.bak"
+    .\hosts_manager.ps1 -Action restore -BackupFile "C:\NKS WebDev Console\backups\hosts.20240101-120000.bak"
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -57,9 +57,9 @@ $ErrorActionPreference = 'Stop'
 # Constants
 # ---------------------------------------------------------------------------
 $HOSTS_FILE      = 'C:\Windows\System32\drivers\etc\hosts'
-$BACKUP_DIR      = 'C:\DevForge\backups'
-$BLOCK_START     = '# >>> DevForge Managed - DO NOT EDIT <<<'
-$BLOCK_END       = '# <<< DevForge Managed >>>'
+$BACKUP_DIR      = 'C:\NKS WebDev Console\backups'
+$BLOCK_START     = '# >>> NKS WebDev Console Managed - DO NOT EDIT <<<'
+$BLOCK_END       = '# <<< NKS WebDev Console Managed >>>'
 $DOMAIN_REGEX    = '^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
 
 # ---------------------------------------------------------------------------
@@ -305,7 +305,7 @@ function Invoke-Add {
     }
 
     if ($allExist) {
-        Write-Info "'$AddDomain' is already present in DevForge managed block. No changes made."
+        Write-Info "'$AddDomain' is already present in NKS WebDev Console managed block. No changes made."
         return
     }
 
@@ -362,7 +362,7 @@ function Invoke-Remove {
     }
 
     if (-not $removed) {
-        Write-Warn "'$RemoveDomain' was not found in DevForge managed block."
+        Write-Warn "'$RemoveDomain' was not found in NKS WebDev Console managed block."
         return
     }
 
@@ -382,12 +382,12 @@ function Invoke-List {
     $entries = Get-ManagedEntries $lines
 
     if ($entries.Count -eq 0) {
-        Write-Info "No DevForge-managed entries found."
+        Write-Info "No NKS WebDev Console-managed entries found."
         return
     }
 
     Write-Host ""
-    Write-Host "  DevForge Managed Hosts Entries" -ForegroundColor Cyan
+    Write-Host "  NKS WebDev Console Managed Hosts Entries" -ForegroundColor Cyan
     Write-Host "  --------------------------------" -ForegroundColor DarkGray
     foreach ($entry in $entries) {
         $parts = $entry -split '\s+'
@@ -437,11 +437,11 @@ function Invoke-Clean {
     $entries = Get-ManagedEntries $lines
 
     if ($entries.Count -eq 0) {
-        Write-Info "No DevForge-managed entries to remove."
+        Write-Info "No NKS WebDev Console-managed entries to remove."
         return
     }
 
-    if (-not $PSCmdlet.ShouldProcess("all $($entries.Count) DevForge-managed entries", "Remove")) {
+    if (-not $PSCmdlet.ShouldProcess("all $($entries.Count) NKS WebDev Console-managed entries", "Remove")) {
         return
     }
 
@@ -449,7 +449,7 @@ function Invoke-Clean {
     $lines = Set-ManagedBlock -Lines $lines -BlockContent @()
     Write-HostsFile $lines
 
-    Write-Success "Removed all $($entries.Count) DevForge-managed entries."
+    Write-Success "Removed all $($entries.Count) NKS WebDev Console-managed entries."
     Flush-DnsCache
 }
 

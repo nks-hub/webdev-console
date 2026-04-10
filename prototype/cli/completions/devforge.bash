@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# DevForge Bash completion
+# NKS WDC Bash completion
 #
 # Installation:
 #   # Option 1 — source directly in ~/.bashrc:
-#   source /path/to/devforge.bash
+#   source /path/to/wdc.bash
 #
 #   # Option 2 — system-wide (Linux):
-#   sudo cp devforge.bash /etc/bash_completion.d/devforge
+#   sudo cp wdc.bash /etc/bash_completion.d/wdc
 #
 #   # Option 3 — Homebrew on macOS:
-#   cp devforge.bash "$(brew --prefix)/etc/bash_completion.d/devforge"
+#   cp wdc.bash "$(brew --prefix)/etc/bash_completion.d/wdc"
 
-_devforge_commands=(
+_wdc_commands=(
     "status"
     "start"
     "stop"
@@ -49,7 +49,7 @@ _devforge_commands=(
     "config:edit"
 )
 
-_devforge_services=(
+_wdc_services=(
     "apache"
     "mysql"
     "redis"
@@ -61,7 +61,7 @@ _devforge_services=(
     "php-fpm@8.4"
 )
 
-_devforge_php_versions=(
+_wdc_php_versions=(
     "5.6"
     "7.4"
     "8.0"
@@ -71,7 +71,7 @@ _devforge_php_versions=(
     "8.4"
 )
 
-_devforge_global_flags=(
+_wdc_global_flags=(
     "--json"
     "--quiet"
     "-q"
@@ -85,28 +85,28 @@ _devforge_global_flags=(
     "-f"
 )
 
-# Retrieve configured site domains from devforge (falls back to empty on error)
-_devforge_get_sites() {
-    devforge site:list --json 2>/dev/null | \
+# Retrieve configured site domains from wdc (falls back to empty on error)
+_wdc_get_sites() {
+    wdc site:list --json 2>/dev/null | \
         grep '"domain"' | \
         sed 's/.*"domain": *"\([^"]*\)".*/\1/'
 }
 
-# Retrieve installed PHP versions from devforge
-_devforge_get_php_versions() {
-    devforge php:list --json 2>/dev/null | \
+# Retrieve installed PHP versions from wdc
+_wdc_get_php_versions() {
+    wdc php:list --json 2>/dev/null | \
         grep '"version"' | \
         sed 's/.*"version": *"\([^"]*\)".*/\1/'
 }
 
 # Retrieve databases
-_devforge_get_databases() {
-    devforge db:list --json 2>/dev/null | \
+_wdc_get_databases() {
+    wdc db:list --json 2>/dev/null | \
         grep '"name"' | \
         sed 's/.*"name": *"\([^"]*\)".*/\1/'
 }
 
-_devforge() {
+_wdc() {
     local cur prev words cword
     _init_completion || return
 
@@ -117,7 +117,7 @@ _devforge() {
 
     # Complete the main command
     if [[ $cword -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "${_devforge_commands[*]}" -- "$cur"))
+        COMPREPLY=($(compgen -W "${_wdc_commands[*]}" -- "$cur"))
         return
     fi
 
@@ -125,7 +125,7 @@ _devforge() {
 
     # Global flags available for all commands
     if [[ "$cur" == --* || "$cur" == -* ]]; then
-        local cmd_flags=("${_devforge_global_flags[@]}")
+        local cmd_flags=("${_wdc_global_flags[@]}")
 
         case "$cmd" in
             site:list)
@@ -165,20 +165,20 @@ _devforge() {
     case "$cmd" in
         start|stop|restart|reload)
             if [[ $cword -eq 2 ]]; then
-                COMPREPLY=($(compgen -W "${_devforge_services[*]}" -- "$cur"))
+                COMPREPLY=($(compgen -W "${_wdc_services[*]}" -- "$cur"))
             fi
             ;;
 
         logs)
             if [[ $cword -eq 2 ]]; then
-                COMPREPLY=($(compgen -W "${_devforge_services[*]}" -- "$cur"))
+                COMPREPLY=($(compgen -W "${_wdc_services[*]}" -- "$cur"))
             fi
             ;;
 
         site:delete|site:info|site:edit|site:open|site:enable|site:disable)
             if [[ $cword -eq 2 ]]; then
                 local sites
-                sites=$(_devforge_get_sites)
+                sites=$(_wdc_get_sites)
                 COMPREPLY=($(compgen -W "$sites" -- "$cur"))
             fi
             ;;
@@ -186,25 +186,25 @@ _devforge() {
         site:php)
             if [[ $cword -eq 2 ]]; then
                 local sites
-                sites=$(_devforge_get_sites)
+                sites=$(_wdc_get_sites)
                 COMPREPLY=($(compgen -W "$sites" -- "$cur"))
             elif [[ $cword -eq 3 ]]; then
                 local versions
-                versions=$(_devforge_get_php_versions)
-                COMPREPLY=($(compgen -W "$versions ${_devforge_php_versions[*]}" -- "$cur"))
+                versions=$(_wdc_get_php_versions)
+                COMPREPLY=($(compgen -W "$versions ${_wdc_php_versions[*]}" -- "$cur"))
             fi
             ;;
 
         php:install)
             if [[ $cword -eq 2 ]]; then
-                COMPREPLY=($(compgen -W "${_devforge_php_versions[*]}" -- "$cur"))
+                COMPREPLY=($(compgen -W "${_wdc_php_versions[*]}" -- "$cur"))
             fi
             ;;
 
         php:uninstall|php:use|php:info)
             if [[ $cword -eq 2 ]]; then
                 local versions
-                versions=$(_devforge_get_php_versions)
+                versions=$(_wdc_get_php_versions)
                 COMPREPLY=($(compgen -W "$versions" -- "$cur"))
             fi
             ;;
@@ -212,7 +212,7 @@ _devforge() {
         ssl:create|ssl:renew)
             if [[ $cword -eq 2 ]]; then
                 local sites
-                sites=$(_devforge_get_sites)
+                sites=$(_wdc_get_sites)
                 COMPREPLY=($(compgen -W "$sites" -- "$cur"))
             fi
             ;;
@@ -220,7 +220,7 @@ _devforge() {
         db:drop|db:import|db:export|db:open)
             if [[ $cword -eq 2 ]]; then
                 local dbs
-                dbs=$(_devforge_get_databases)
+                dbs=$(_wdc_get_databases)
                 COMPREPLY=($(compgen -W "$dbs" -- "$cur"))
             fi
             ;;
@@ -261,8 +261,8 @@ _devforge() {
                 :
             elif [[ "$prev" == "--php" || "$prev" == "--php="* ]]; then
                 local versions
-                versions=$(_devforge_get_php_versions)
-                COMPREPLY=($(compgen -W "$versions ${_devforge_php_versions[*]}" -- "$cur"))
+                versions=$(_wdc_get_php_versions)
+                COMPREPLY=($(compgen -W "$versions ${_wdc_php_versions[*]}" -- "$cur"))
             elif [[ "$prev" == "--preset" || "$prev" == "--preset="* ]]; then
                 COMPREPLY=($(compgen -W "laravel wordpress symfony none" -- "$cur"))
             fi
@@ -270,4 +270,4 @@ _devforge() {
     esac
 }
 
-complete -F _devforge devforge
+complete -F _wdc wdc

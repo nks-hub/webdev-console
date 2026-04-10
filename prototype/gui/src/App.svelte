@@ -140,7 +140,7 @@
         <Activity size={20} />
       </div>
       {#if sidebarExpanded}
-        <span class="brand-name">DevForge</span>
+        <span class="brand-name">NKS WebDev Console</span>
       {/if}
     </div>
 
@@ -217,7 +217,7 @@
     <!-- Topbar -->
     <header class="topbar">
       <h1 class="page-title">
-        {NAV_ITEMS.find(n => n.id === activeSection)?.label ?? 'DevForge'}
+        {NAV_ITEMS.find(n => n.id === activeSection)?.label ?? 'NKS WebDev Console'}
       </h1>
 
       <div class="topbar-actions">

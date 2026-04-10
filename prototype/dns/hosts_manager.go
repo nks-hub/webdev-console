@@ -1,5 +1,5 @@
 // Package dns provides programmatic management of the Windows hosts file
-// for the DevForge daemon. It operates only within a clearly delimited
+// for the NKS WebDev Console daemon. It operates only within a clearly delimited
 // managed block so user content is never touched.
 package dns
 
@@ -22,9 +22,9 @@ import (
 
 const (
 	hostsFile  = `C:\Windows\System32\drivers\etc\hosts`
-	backupDir  = `C:\DevForge\backups`
-	blockStart = "# >>> DevForge Managed - DO NOT EDIT <<<"
-	blockEnd   = "# <<< DevForge Managed >>>"
+	backupDir  = `C:\NKS WebDev Console\backups`
+	blockStart = "# >>> NKS WebDev Console Managed - DO NOT EDIT <<<"
+	blockEnd   = "# <<< NKS WebDev Console Managed >>>"
 )
 
 var domainRe = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)

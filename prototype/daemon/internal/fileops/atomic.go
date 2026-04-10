@@ -39,7 +39,7 @@ func AtomicWrite(dst string, data []byte, opts WriteOptions) error {
 
 	// Write to a temp file in the same directory so the rename stays on one
 	// filesystem (avoids cross-device link errors).
-	tmp, err := os.CreateTemp(dir, ".devforge-tmp-*")
+	tmp, err := os.CreateTemp(dir, ".wdc-tmp-*")
 	if err != nil {
 		return fmt.Errorf("creating temp file in %q: %w", dir, err)
 	}

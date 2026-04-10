@@ -1,4 +1,4 @@
-// UAC elevation helper for DevForge on Windows.
+// UAC elevation helper for NKS WebDev Console on Windows.
 //
 // Compile:
 //

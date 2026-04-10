@@ -1,4 +1,4 @@
-module github.com/devforge/ssl-manager
+module github.com/wdc/ssl-manager
 
 go 1.21
 

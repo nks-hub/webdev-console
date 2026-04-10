@@ -1,7 +1,7 @@
-// Package ssl provides automated SSL certificate management for DevForge
+// Package ssl provides automated SSL certificate management for NKS WebDev Console
 // using mkcert as the underlying certificate generator.
 //
-// Certificates are stored under ~/.devforge/ssl/sites/{domain}/ and metadata
+// Certificates are stored under ~/.wdc/ssl/sites/{domain}/ and metadata
 // is tracked in a SQLite database for fast querying and lifecycle management.
 package main
 
@@ -38,9 +38,9 @@ type CertInfo struct {
 
 // CertManager manages SSL certificates for local development domains.
 type CertManager struct {
-	baseDir    string // ~/.devforge/ssl
-	sitesDir   string // ~/.devforge/ssl/sites
-	dbPath     string // ~/.devforge/ssl/certs.db
+	baseDir    string // ~/.wdc/ssl
+	sitesDir   string // ~/.wdc/ssl/sites
+	dbPath     string // ~/.wdc/ssl/certs.db
 	mkcertPath string
 	db         *sql.DB
 }
@@ -53,7 +53,7 @@ func NewCertManager() (*CertManager, error) {
 		return nil, fmt.Errorf("cannot determine home directory: %w", err)
 	}
 
-	baseDir := filepath.Join(homeDir, ".devforge", "ssl")
+	baseDir := filepath.Join(homeDir, ".wdc", "ssl")
 	sitesDir := filepath.Join(baseDir, "sites")
 	dbPath := filepath.Join(baseDir, "certs.db")
 
@@ -165,7 +165,7 @@ func (cm *CertManager) initDB() error {
 
 // InstallCA ensures the mkcert root CA is installed in the system trust store.
 func (cm *CertManager) InstallCA() error {
-	fmt.Println("[DevForge SSL] Installing mkcert CA...")
+	fmt.Println("[NKS WebDev Console SSL] Installing mkcert CA...")
 
 	cmd := exec.Command(cm.mkcertPath, "-install")
 	cmd.Stdout = os.Stdout
@@ -202,7 +202,7 @@ func (cm *CertManager) Generate(domain string, aliases []string) (*CertInfo, err
 	args := []string{"-cert-file", certPath, "-key-file", keyPath, domain}
 	args = append(args, aliases...)
 
-	fmt.Printf("[DevForge SSL] Generating certificate for: %s\n", strings.Join(append([]string{domain}, aliases...), ", "))
+	fmt.Printf("[NKS WebDev Console SSL] Generating certificate for: %s\n", strings.Join(append([]string{domain}, aliases...), ", "))
 
 	cmd := exec.Command(cm.mkcertPath, args...)
 	cmd.Stdout = os.Stdout
@@ -633,7 +633,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("DevForge SSL Manager")
+	fmt.Println("NKS WebDev Console SSL Manager")
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  ssl_manager install-ca                          Install mkcert CA in trust store")

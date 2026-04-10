@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database Schema - Initial Migration
+-- NKS WebDev Console Database Schema - Initial Migration
 -- Version: 001
 -- Engine: SQLite 3.38+ (requires json_valid, STRICT mode awareness)
 -- Date format: ISO 8601 TEXT (YYYY-MM-DDTHH:MM:SS.sssZ)

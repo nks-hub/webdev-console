@@ -1,5 +1,5 @@
 -- ============================================================================
--- DevForge Database — Application Query Examples
+-- NKS WebDev Console Database — Application Query Examples
 -- These represent the actual queries the application will execute
 -- ============================================================================
 

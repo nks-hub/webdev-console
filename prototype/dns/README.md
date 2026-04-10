@@ -1,7 +1,7 @@
-# DevForge — DNS / Hosts File Manager
+# NKS WDC — DNS / Hosts File Manager
 
 Manages entries in `C:\Windows\System32\drivers\etc\hosts` for local development
-domains. All DevForge entries are contained within a clearly delimited block so
+domains. All NKS WDC entries are contained within a clearly delimited block so
 user content is never touched.
 
 ---
@@ -9,10 +9,10 @@ user content is never touched.
 ## Managed block format
 
 ```
-# >>> DevForge Managed - DO NOT EDIT <<<
+# >>> NKS WDC Managed - DO NOT EDIT <<<
 127.0.0.1	myapp.test
 127.0.0.1	shop.test	www.shop.test
-# <<< DevForge Managed >>>
+# <<< NKS WDC Managed >>>
 ```
 
 ---
@@ -31,11 +31,11 @@ user content is never touched.
 |---|---|
 | `add` | Add a domain (+ optional aliases) pointing to an IP |
 | `remove` | Remove a domain entry from the managed block |
-| `list` | Print all DevForge-managed entries |
+| `list` | Print all NKS WDC-managed entries |
 | `check` | DNS resolution test for a domain (Resolve-DnsName + ping) |
-| `backup` | Create a timestamped backup in `C:\DevForge\backups\` |
+| `backup` | Create a timestamped backup in `C:\WDC\backups\` |
 | `restore` | Restore from a backup (defaults to most recent) |
-| `clean` | Remove **all** DevForge-managed entries |
+| `clean` | Remove **all** NKS WDC-managed entries |
 | `port-check` | Check if a port is in use and who holds it |
 
 ### Parameters
@@ -77,9 +77,9 @@ user content is never touched.
 .\hosts_manager.ps1 -Action restore
 
 # Restore a specific backup
-.\hosts_manager.ps1 -Action restore -BackupFile "C:\DevForge\backups\hosts.20240101-120000.bak"
+.\hosts_manager.ps1 -Action restore -BackupFile "C:\WDC\backups\hosts.20240101-120000.bak"
 
-# Remove all DevForge entries
+# Remove all NKS WDC entries
 .\hosts_manager.ps1 -Action clean
 
 # Port check
@@ -91,7 +91,7 @@ user content is never touched.
 
 - **Auto-elevation** — prompts for UAC if not already running as Administrator.
 - **Backup before every write** — a timestamped `.bak` file is created in
-  `C:\DevForge\backups\` before any modification to the hosts file.
+  `C:\WDC\backups\` before any modification to the hosts file.
 - **Atomic write** — changes are written to a temp file first, then renamed over
   the hosts file to prevent corruption if interrupted.
 - **Idempotent `add`** — re-adding an existing domain is a no-op.
@@ -104,7 +104,7 @@ user content is never touched.
 
 ## Go library — `hosts_manager.go`
 
-Used by the DevForge daemon. Exposes the same logic as the PowerShell script.
+Used by the NKS WDC daemon. Exposes the same logic as the PowerShell script.
 
 ### API
 
@@ -126,7 +126,7 @@ path, err := dns.Backup()
 
 // Restore (empty string = most recent)
 err := dns.RestoreBackup("")
-err := dns.RestoreBackup(`C:\DevForge\backups\hosts.20240101-120000.bak`)
+err := dns.RestoreBackup(`C:\WDC\backups\hosts.20240101-120000.bak`)
 
 // Admin check
 ok := dns.IsAdmin()
@@ -218,15 +218,15 @@ cd C:\work\sources\nks-ws\prototype\dns
 ### What is tested
 
 1. Pre-test backup is created successfully
-2. `add devforge-test.local` — entry appears in file
+2. `add wdc-test.local` — entry appears in file
 3. Entry is within the managed block markers
 4. Idempotent add — file unchanged after duplicate
-5. `add devforge-alias.local` with alias `www.devforge-alias.local`
+5. `add wdc-alias.local` with alias `www.wdc-alias.local`
 6. `list` — output contains both domains
 7. DNS resolution via `nslookup` returns `127.0.0.1`
 8. DNS resolution via `Resolve-DnsName` returns `127.0.0.1`
-9. `remove devforge-test.local` — entry gone, alias untouched
-10. `remove devforge-alias.local` — entry gone
+9. `remove wdc-test.local` — entry gone, alias untouched
+10. `remove wdc-alias.local` — entry gone
 11. Invalid domain format is rejected without modifying the file
 12. `restore` — original hosts file is recovered
 
@@ -248,7 +248,7 @@ prototype/dns/
 
 ## Backup location
 
-All backups are stored in `C:\DevForge\backups\` with the naming convention:
+All backups are stored in `C:\WDC\backups\` with the naming convention:
 
 ```
 hosts.YYYYMMDD-HHMMSS.bak

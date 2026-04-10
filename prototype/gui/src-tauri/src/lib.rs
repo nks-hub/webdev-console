@@ -8,7 +8,7 @@ use tracing_subscriber::EnvFilter;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive("devforge_gui=debug".parse().unwrap()))
+        .with_env_filter(EnvFilter::from_default_env().add_directive("wdc_gui=debug".parse().unwrap()))
         .init();
 
     tauri::Builder::default()
@@ -46,5 +46,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running DevForge GUI");
+        .expect("error while running NKS WebDev Console GUI");
 }

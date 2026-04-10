@@ -1,17 +1,17 @@
-# DevForge SSL Certificate Manager
+# NKS WDC SSL Certificate Manager
 
 Automated SSL certificate lifecycle management for local development domains using [mkcert](https://github.com/nickg/mkcert).
 
 ## Overview
 
-DevForge SSL Manager generates locally-trusted SSL certificates for `*.test` domains (or any local development domain) so that HTTPS works without browser warnings during development.
+NKS WDC SSL Manager generates locally-trusted SSL certificates for `*.test` domains (or any local development domain) so that HTTPS works without browser warnings during development.
 
 It wraps `mkcert` with a structured storage layer, metadata tracking, and Apache configuration generation.
 
 ## Architecture
 
 ```
-~/.devforge/ssl/
+~/.wdc/ssl/
   ├── sites/
   │   ├── myapp.test/
   │   │   ├── cert.pem          # X.509 certificate
@@ -101,7 +101,7 @@ Integration test that exercises the full workflow:
 
 Steps:
 1. Checks preconditions (mkcert, openssl, scripts)
-2. Generates a cert for `devforge-test.test`
+2. Generates a cert for `wdc-test.test`
 3. Creates an Apache vhost config from the template
 4. Verifies the cert with OpenSSL (parsing, expiry, key match)
 5. Displays cert details (subject, issuer, SANs, fingerprint)
@@ -128,12 +128,12 @@ Steps:
 - **Modern TLS only**: Template disables SSLv3, TLSv1.0, TLSv1.1.
 - **Cert verification**: The `verify` action checks expiry, key-cert match, and trust chain back to the mkcert CA.
 
-## Integration with DevForge
+## Integration with NKS WDC
 
-The SSL manager is designed to be called by DevForge's site provisioning workflow:
+The SSL manager is designed to be called by NKS WDC's site provisioning workflow:
 
 ```
-devforge site create myapp.test
+wdc site create myapp.test
   -> ssl_manager generate myapp.test www.myapp.test *.myapp.test
   -> generate Apache vhost from template
   -> reload Apache

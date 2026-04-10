@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DevForge Database Schema Test Suite
+NKS WebDev Console Database Schema Test Suite
 
 Creates a fresh SQLite database, runs all migrations, seeds data,
 validates constraints, triggers, views, and common queries.
@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 
 # Configuration
 SCRIPT_DIR = Path(__file__).parent
-DB_PATH = SCRIPT_DIR / "test_devforge.db"
+DB_PATH = SCRIPT_DIR / "test_wdc.db"
 VERBOSE = "--verbose" in sys.argv or "-v" in sys.argv
 KEEP_DB = "--keep-db" in sys.argv
 
@@ -928,7 +928,7 @@ def main():
     global passed, failed
 
     print("=" * 70)
-    print("DevForge Database Schema Test Suite")
+    print("NKS WebDev Console Database Schema Test Suite")
     print("=" * 70)
     print(f"Database: {DB_PATH}")
     print(f"Verbose:  {VERBOSE}")

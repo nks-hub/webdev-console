@@ -1,3 +1,3 @@
-module github.com/nks/devforge/dns
+module github.com/nks/wdc/dns
 
 go 1.23.4

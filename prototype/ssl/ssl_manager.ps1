@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    DevForge SSL Certificate Manager - manages local dev SSL certificates via mkcert.
+    NKS WebDev Console SSL Certificate Manager - manages local dev SSL certificates via mkcert.
 
 .DESCRIPTION
     Automates SSL certificate lifecycle for local development domains (*.test).
     Uses mkcert to generate locally-trusted certificates and stores them
-    in a structured directory under ~/.devforge/ssl/sites/{domain}/.
+    in a structured directory under ~/.wdc/ssl/sites/{domain}/.
 
 .PARAMETER Action
     One of: install-ca, generate, list, verify, revoke
@@ -47,8 +47,8 @@ $ErrorActionPreference = "Continue"
 
 $MkcertPath = "C:\work\mkcert.exe"
 $OpenSSLPath = "openssl"  # use system PATH; fallback below
-$SslBaseDir  = Join-Path $env:USERPROFILE ".devforge\ssl\sites"
-$MetadataDir = Join-Path $env:USERPROFILE ".devforge\ssl\metadata"
+$SslBaseDir  = Join-Path $env:USERPROFILE ".wdc\ssl\sites"
+$MetadataDir = Join-Path $env:USERPROFILE ".wdc\ssl\metadata"
 
 # Prefer Git-for-Windows openssl if system one is missing
 if (-not (Get-Command $OpenSSLPath -ErrorAction SilentlyContinue)) {
@@ -64,7 +64,7 @@ if (-not (Get-Command $OpenSSLPath -ErrorAction SilentlyContinue)) {
 # Helpers
 # -------------------------------------------------------------------
 function Write-Status([string]$Message) {
-    Write-Host "[DevForge SSL] " -ForegroundColor Cyan -NoNewline
+    Write-Host "[NKS WebDev Console SSL] " -ForegroundColor Cyan -NoNewline
     Write-Host $Message
 }
 

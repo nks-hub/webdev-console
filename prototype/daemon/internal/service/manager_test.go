@@ -9,7 +9,7 @@ import (
 func nopProcess(name string) *Process {
 	// A process that exits quickly — "cmd /c echo" on Windows, "true" on Unix.
 	if runtime.GOOS == "windows" {
-		return NewProcess(name, "cmd", "/c", "echo", "devforge-test")
+		return NewProcess(name, "cmd", "/c", "echo", "wdc-test")
 	}
 	return NewProcess(name, "true")
 }

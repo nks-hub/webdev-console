@@ -8,7 +8,7 @@
     the real hosts file.  Must be run as Administrator.
 
 .NOTES
-    Test domain used: devforge-test.local
+    Test domain used: wdc-test.local
     The test never leaves the managed block dirty — it restores the original
     hosts file even when a step fails.
 #>
@@ -73,7 +73,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 
 Write-Host ""
-Write-Host "  DevForge hosts_manager Integration Tests" -ForegroundColor Cyan
+Write-Host "  NKS WebDev Console hosts_manager Integration Tests" -ForegroundColor Cyan
 Write-Host "  ===========================================" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -82,7 +82,7 @@ Write-Host ""
 # ---------------------------------------------------------------------------
 Write-Host "  [1] Creating pre-test backup..." -ForegroundColor DarkGray
 
-$backupDir = 'C:\DevForge\backups'
+$backupDir = 'C:\NKS WebDev Console\backups'
 if (-not (Test-Path $backupDir)) {
     New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
 }
@@ -97,20 +97,20 @@ Assert-True 'Pre-test backup created' (Test-Path $script:TestBackup)
 # Step 2 — Add test entry
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  [2] Adding test entry 'devforge-test.local'..." -ForegroundColor DarkGray
+Write-Host "  [2] Adding test entry 'wdc-test.local'..." -ForegroundColor DarkGray
 
 $addResult = $null
 try {
-    Invoke-Manager @{ Action = 'add'; Domain = 'devforge-test.local' }
+    Invoke-Manager @{ Action = 'add'; Domain = 'wdc-test.local' }
     $addResult = $true
 } catch {
     $addResult = $false
 }
 
 Assert-True  'add command completed without error' ($addResult -ne $false)
-Assert-True  'devforge-test.local appears in hosts file' (Test-DomainInHosts 'devforge-test.local')
+Assert-True  'wdc-test.local appears in hosts file' (Test-DomainInHosts 'wdc-test.local')
 Assert-True  'entry is within managed block' (
-    (Get-HostsContent) -match '(?s)# >>> DevForge Managed.*devforge-test\.local.*# <<< DevForge Managed'
+    (Get-HostsContent) -match '(?s)# >>> NKS WebDev Console Managed.*wdc-test\.local.*# <<< NKS WebDev Console Managed'
 )
 
 # ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ Write-Host "  [3] Testing idempotency (re-adding same domain)..." -ForegroundCol
 $contentBefore = Get-HostsContent
 
 try {
-    Invoke-Manager @{ Action = 'add'; Domain = 'devforge-test.local' }
+    Invoke-Manager @{ Action = 'add'; Domain = 'wdc-test.local' }
 } catch { }
 
 $contentAfter = Get-HostsContent
@@ -132,18 +132,18 @@ Assert-True 'Hosts file unchanged after duplicate add' ($contentBefore -eq $cont
 # Step 4 — Add with alias
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  [4] Adding entry with alias 'devforge-alias.local'..." -ForegroundColor DarkGray
+Write-Host "  [4] Adding entry with alias 'wdc-alias.local'..." -ForegroundColor DarkGray
 
 try {
-    Invoke-Manager @{ Action = 'add'; Domain = 'devforge-alias.local'; Aliases = 'www.devforge-alias.local' }
+    Invoke-Manager @{ Action = 'add'; Domain = 'wdc-alias.local'; Aliases = 'www.wdc-alias.local' }
     $aliasResult = $true
 } catch {
     $aliasResult = $false
 }
 
 Assert-True 'add with alias completed without error' ($aliasResult -ne $false)
-Assert-True 'primary domain devforge-alias.local in hosts' (Test-DomainInHosts 'devforge-alias.local')
-Assert-True 'alias www.devforge-alias.local in hosts'       (Test-DomainInHosts 'www.devforge-alias.local')
+Assert-True 'primary domain wdc-alias.local in hosts' (Test-DomainInHosts 'wdc-alias.local')
+Assert-True 'alias www.wdc-alias.local in hosts'       (Test-DomainInHosts 'www.wdc-alias.local')
 
 # ---------------------------------------------------------------------------
 # Step 5 — list command
@@ -152,30 +152,30 @@ Write-Host ""
 Write-Host "  [5] Listing managed entries..." -ForegroundColor DarkGray
 
 $listOutput = & (Join-Path $PSScriptRoot 'hosts_manager.ps1') -Action list 2>&1
-Assert-True 'list output contains devforge-test.local'  (($listOutput -join '') -match 'devforge-test\.local')
-Assert-True 'list output contains devforge-alias.local' (($listOutput -join '') -match 'devforge-alias\.local')
+Assert-True 'list output contains wdc-test.local'  (($listOutput -join '') -match 'wdc-test\.local')
+Assert-True 'list output contains wdc-alias.local' (($listOutput -join '') -match 'wdc-alias\.local')
 
 # ---------------------------------------------------------------------------
 # Step 6 — DNS resolution check (nslookup)
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  [6] DNS resolution check for 'devforge-test.local'..." -ForegroundColor DarkGray
+Write-Host "  [6] DNS resolution check for 'wdc-test.local'..." -ForegroundColor DarkGray
 
 # Flush DNS so the new hosts entry is picked up
 Clear-DnsClientCache -ErrorAction SilentlyContinue
 
 $resolveOk = $false
 try {
-    $nsResult = nslookup devforge-test.local 2>&1
+    $nsResult = nslookup wdc-test.local 2>&1
     $resolveOk = ($nsResult -join '') -match '127\.0\.0\.1'
 } catch { }
 
-Assert-True 'devforge-test.local resolves to 127.0.0.1' $resolveOk
+Assert-True 'wdc-test.local resolves to 127.0.0.1' $resolveOk
 
 # PowerShell DNS resolver cross-check
 $dnsOk = $false
 try {
-    $dns = Resolve-DnsName -Name 'devforge-test.local' -Type A -ErrorAction Stop
+    $dns = Resolve-DnsName -Name 'wdc-test.local' -Type A -ErrorAction Stop
     $dnsOk = ($dns | Where-Object { $_.IPAddress -eq '127.0.0.1' }) -ne $null
 } catch { }
 
@@ -185,34 +185,34 @@ Assert-True 'Resolve-DnsName returns 127.0.0.1' $dnsOk
 # Step 7 — Remove test entry
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  [7] Removing 'devforge-test.local'..." -ForegroundColor DarkGray
+Write-Host "  [7] Removing 'wdc-test.local'..." -ForegroundColor DarkGray
 
 try {
-    Invoke-Manager @{ Action = 'remove'; Domain = 'devforge-test.local' }
+    Invoke-Manager @{ Action = 'remove'; Domain = 'wdc-test.local' }
     $removeResult = $true
 } catch {
     $removeResult = $false
 }
 
 Assert-True  'remove command completed without error'         ($removeResult -ne $false)
-Assert-False 'devforge-test.local no longer in hosts file'   (Test-DomainInHosts 'devforge-test.local')
-Assert-True  'devforge-alias.local still present after remove' (Test-DomainInHosts 'devforge-alias.local')
+Assert-False 'wdc-test.local no longer in hosts file'   (Test-DomainInHosts 'wdc-test.local')
+Assert-True  'wdc-alias.local still present after remove' (Test-DomainInHosts 'wdc-alias.local')
 
 # ---------------------------------------------------------------------------
 # Step 8 — Remove alias entry
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  [8] Removing 'devforge-alias.local'..." -ForegroundColor DarkGray
+Write-Host "  [8] Removing 'wdc-alias.local'..." -ForegroundColor DarkGray
 
 try {
-    Invoke-Manager @{ Action = 'remove'; Domain = 'devforge-alias.local' }
+    Invoke-Manager @{ Action = 'remove'; Domain = 'wdc-alias.local' }
     $removeAlias = $true
 } catch {
     $removeAlias = $false
 }
 
 Assert-True  'remove alias completed without error'         ($removeAlias -ne $false)
-Assert-False 'devforge-alias.local no longer in hosts file' (Test-DomainInHosts 'devforge-alias.local')
+Assert-False 'wdc-alias.local no longer in hosts file' (Test-DomainInHosts 'wdc-alias.local')
 
 # ---------------------------------------------------------------------------
 # Step 9 — Invalid domain rejected
@@ -242,8 +242,8 @@ try {
 }
 
 Assert-True  'restore completed without error'            $restoreResult
-Assert-False 'devforge-test.local absent after restore'   (Test-DomainInHosts 'devforge-test.local')
-Assert-False 'devforge-alias.local absent after restore'  (Test-DomainInHosts 'devforge-alias.local')
+Assert-False 'wdc-test.local absent after restore'   (Test-DomainInHosts 'wdc-test.local')
+Assert-False 'wdc-alias.local absent after restore'  (Test-DomainInHosts 'wdc-alias.local')
 
 Clear-DnsClientCache -ErrorAction SilentlyContinue
 

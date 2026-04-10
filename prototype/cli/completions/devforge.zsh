@@ -1,20 +1,20 @@
-#compdef devforge
-# DevForge Zsh completion
+#compdef wdc
+# NKS WDC Zsh completion
 #
 # Installation:
 #   # Option 1 — place in a directory on your $fpath:
-#   cp devforge.zsh ~/.zsh/completions/_devforge
+#   cp wdc.zsh ~/.zsh/completions/_wdc
 #   # Then ensure ~/.zsh/completions is in fpath:
 #   # fpath=(~/.zsh/completions $fpath)
 #   # autoload -Uz compinit && compinit
 #
 #   # Option 2 — Oh My Zsh:
-#   cp devforge.zsh ~/.oh-my-zsh/completions/_devforge
+#   cp wdc.zsh ~/.oh-my-zsh/completions/_wdc
 #
 #   # Option 3 — Homebrew on macOS:
-#   cp devforge.zsh "$(brew --prefix)/share/zsh/site-functions/_devforge"
+#   cp wdc.zsh "$(brew --prefix)/share/zsh/site-functions/_wdc"
 
-_devforge() {
+_wdc() {
     local context state state_descr line
     typeset -A opt_args
 
@@ -25,7 +25,7 @@ _devforge() {
         '--json[Output as JSON]' \
         '--no-color[Disable ANSI colors]' \
         '--version[Show version]' \
-        '1: :_devforge_commands' \
+        '1: :_wdc_commands' \
         '*:: :->args'
 
     case $state in
@@ -41,14 +41,14 @@ _devforge() {
                     _arguments \
                         '--all[Apply to all services]' \
                         '(-f --force)'{-f,--force}'[Force without confirmation]' \
-                        '1: :_devforge_services'
+                        '1: :_wdc_services'
                     ;;
 
                 logs)
                     _arguments \
                         '--follow[Follow log output]' \
                         '--lines=[Number of lines to show]:lines:(10 50 100 500)' \
-                        '1: :_devforge_services'
+                        '1: :_wdc_services'
                     ;;
 
                 site:list)
@@ -59,7 +59,7 @@ _devforge() {
 
                 site:create)
                     _arguments \
-                        '--php=[PHP version]:version:_devforge_php_versions' \
+                        '--php=[PHP version]:version:_wdc_php_versions' \
                         '--docroot=[Document root path]:docroot:_files -/' \
                         '--ssl[Enable SSL (default)]' \
                         '--no-ssl[Disable SSL]' \
@@ -72,18 +72,18 @@ _devforge() {
                     _arguments \
                         '(-f --force)'{-f,--force}'[Skip confirmation]' \
                         '--keep-files[Do not delete document root]' \
-                        '1:domain:_devforge_sites'
+                        '1:domain:_wdc_sites'
                     ;;
 
                 site:info|site:edit|site:open|site:enable|site:disable)
                     _arguments \
-                        '1:domain:_devforge_sites'
+                        '1:domain:_wdc_sites'
                     ;;
 
                 site:php)
                     _arguments \
-                        '1:domain:_devforge_sites' \
-                        '2:version:_devforge_php_versions'
+                        '1:domain:_wdc_sites' \
+                        '2:version:_wdc_php_versions'
                     ;;
 
                 php:list)
@@ -95,18 +95,18 @@ _devforge() {
                 php:install)
                     _arguments \
                         '--set-default[Set as default after install]' \
-                        '1:version:_devforge_php_available_versions'
+                        '1:version:_wdc_php_available_versions'
                     ;;
 
                 php:uninstall)
                     _arguments \
                         '(-f --force)'{-f,--force}'[Skip confirmation]' \
-                        '1:version:_devforge_php_versions'
+                        '1:version:_wdc_php_versions'
                     ;;
 
                 php:use|php:info)
                     _arguments \
-                        '1:version:_devforge_php_versions'
+                        '1:version:_wdc_php_versions'
                     ;;
 
                 ssl:status)
@@ -118,7 +118,7 @@ _devforge() {
                 ssl:create|ssl:renew)
                     _arguments \
                         '--days=[Certificate validity in days]:days:(365 730)' \
-                        '1:domain:_devforge_sites'
+                        '1:domain:_wdc_sites'
                     ;;
 
                 db:list)
@@ -137,14 +137,14 @@ _devforge() {
                 db:drop)
                     _arguments \
                         '(-f --force)'{-f,--force}'[Skip confirmation]' \
-                        '1:database:_devforge_databases'
+                        '1:database:_wdc_databases'
                     ;;
 
                 db:import)
                     _arguments \
                         '--drop-first[Drop and recreate database before import]' \
                         '--no-create-db[Skip CREATE DATABASE statement]' \
-                        '1:database:_devforge_databases' \
+                        '1:database:_wdc_databases' \
                         '2:file:_files -g "*.sql *.sql.gz"'
                     ;;
 
@@ -153,17 +153,17 @@ _devforge() {
                         '--output=[Output file]:file:_files' \
                         '--compress[Compress with gzip]' \
                         '--no-routines[Skip stored routines]' \
-                        '1:database:_devforge_databases'
+                        '1:database:_wdc_databases'
                     ;;
 
                 db:open)
                     _arguments \
-                        '1:database:_devforge_databases'
+                        '1:database:_wdc_databases'
                     ;;
 
                 config:get|config:set)
                     _arguments \
-                        '1:key:_devforge_config_keys'
+                        '1:key:_wdc_config_keys'
                     ;;
 
                 doctor)
@@ -178,7 +178,7 @@ _devforge() {
 
 # Sub-completions
 
-_devforge_commands() {
+_wdc_commands() {
     local commands=(
         'status:Show service status overview'
         'start:Start all or named service'
@@ -219,7 +219,7 @@ _devforge_commands() {
     _describe 'command' commands
 }
 
-_devforge_services() {
+_wdc_services() {
     local services=(
         'apache:Apache web server'
         'mysql:MySQL database'
@@ -234,17 +234,17 @@ _devforge_services() {
     _describe 'service' services
 }
 
-_devforge_sites() {
+_wdc_sites() {
     local sites
-    sites=(${(f)"$(devforge site:list --json 2>/dev/null | \
+    sites=(${(f)"$(wdc site:list --json 2>/dev/null | \
         grep '"domain"' | \
         sed 's/.*"domain": *"\([^"]*\)".*/\1/')"})
     _describe 'site' sites
 }
 
-_devforge_php_versions() {
+_wdc_php_versions() {
     local versions
-    versions=(${(f)"$(devforge php:list --json 2>/dev/null | \
+    versions=(${(f)"$(wdc php:list --json 2>/dev/null | \
         grep '"version"' | \
         sed 's/.*"version": *"\([^"]*\)".*/\1/')"})
     if [[ ${#versions[@]} -eq 0 ]]; then
@@ -253,20 +253,20 @@ _devforge_php_versions() {
     _describe 'PHP version' versions
 }
 
-_devforge_php_available_versions() {
+_wdc_php_available_versions() {
     local versions=(5.6 7.4 8.0 8.1 8.2 8.3 8.4)
     _describe 'PHP version' versions
 }
 
-_devforge_databases() {
+_wdc_databases() {
     local dbs
-    dbs=(${(f)"$(devforge db:list --json 2>/dev/null | \
+    dbs=(${(f)"$(wdc db:list --json 2>/dev/null | \
         grep '"name"' | \
         sed 's/.*"name": *"\([^"]*\)".*/\1/')"})
     _describe 'database' dbs
 }
 
-_devforge_config_keys() {
+_wdc_config_keys() {
     local keys=(
         'apache.port:HTTP port (default 80)'
         'apache.ssl_port:HTTPS port (default 443)'
@@ -286,4 +286,4 @@ _devforge_config_keys() {
     _describe 'config key' keys
 }
 
-_devforge "$@"
+_wdc "$@"

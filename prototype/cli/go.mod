@@ -1,4 +1,4 @@
-module github.com/nks/devforge/prototype/cli
+module github.com/nks/wdc/prototype/cli
 
 go 1.23
 
