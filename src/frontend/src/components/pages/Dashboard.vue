@@ -118,6 +118,26 @@
         />
       </div>
 
+      <!-- Quick stats -->
+      <div class="quick-stats" v-if="daemonStore.connected">
+        <div class="stat-item" @click="$router.push('/sites')">
+          <span class="stat-value mono">{{ sitesStore.sites.length }}</span>
+          <span class="stat-label">Sites</span>
+        </div>
+        <div class="stat-item" @click="$router.push('/databases')">
+          <span class="stat-value mono">{{ daemonStore.status?.plugins ?? 0 }}</span>
+          <span class="stat-label">Plugins</span>
+        </div>
+        <div class="stat-item" @click="$router.push('/php')">
+          <span class="stat-value mono">{{ runningCount }}</span>
+          <span class="stat-label">Running</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value mono">{{ formatUptime(daemonStore.status?.uptime ?? 0) }}</span>
+          <span class="stat-label">Uptime</span>
+        </div>
+      </div>
+
       <!-- Metrics sparklines -->
       <div class="metrics-section" v-if="daemonStore.cpuHistory.length > 2">
         <div class="metrics-grid">
@@ -601,6 +621,44 @@ async function openConfig(id: string) {
   color: var(--wdc-text-3);
   font-size: 0.82rem;
   padding: 16px 0;
+}
+
+/* ─── Quick stats ────────────────────────────────────────────────────────── */
+.quick-stats {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--wdc-border);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s;
+  min-width: 80px;
+}
+
+.stat-item:hover { border-color: var(--wdc-accent); }
+
+.stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+
+.stat-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wdc-text-3);
 }
 
 .metrics-section {
