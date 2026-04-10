@@ -3,7 +3,7 @@ using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.Apache;
+namespace NKS.WebDevConsole.Plugin.Apache;
 
 public record ApacheInstallation(string ExecutablePath, Version Version, string ServerRoot);
 

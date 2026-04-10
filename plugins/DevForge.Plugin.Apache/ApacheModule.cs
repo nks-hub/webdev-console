@@ -5,9 +5,9 @@ using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.Apache;
+namespace NKS.WebDevConsole.Plugin.Apache;
 
-// ─── Shared contracts (normally from DevForge.Core) ────────────────────────
+// ─── Shared contracts (normally from NKS.WebDevConsole.Core) ────────────────────────
 public enum ServiceState { Stopped, Starting, Running, Stopping, Crashed, Disabled }
 public enum ServiceType { WebServer, Database, Cache, MailServer, Other }
 
@@ -29,7 +29,7 @@ public interface IServiceModule
     Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct);
 }
 
-public interface IDevForgePlugin
+public interface IWdcPlugin
 {
     string Id { get; }
     string DisplayName { get; }

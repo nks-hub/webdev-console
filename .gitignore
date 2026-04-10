@@ -5,8 +5,8 @@
 *.dylib
 
 # Go
-prototype/daemon/devforged
-prototype/daemon/devforge
+prototype/daemon/wdc-daemon
+prototype/daemon/wdc
 prototype/ssl/ssl_manager
 
 # Dependencies

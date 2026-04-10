@@ -2,7 +2,7 @@ using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 public record PhpExtension(
     string Name,        // "pdo_mysql"

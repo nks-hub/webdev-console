@@ -3,8 +3,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>DevForge.Plugin.PHP</AssemblyName>
-    <RootNamespace>DevForge.Plugin.PHP</RootNamespace>
+    <AssemblyName>NKS.WebDevConsole.Plugin.PHP</AssemblyName>
+    <RootNamespace>NKS.WebDevConsole.Plugin.PHP</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
   <ItemGroup>
@@ -18,8 +18,8 @@
     <EmbeddedResource Include="Templates\php-shim.cmd.scriban" />
   </ItemGroup>
   <ItemGroup>
-    <!-- In production these contracts come from DevForge.Core. -->
+    <!-- In production these contracts come from NKS.WebDevConsole.Core. -->
     <!-- For standalone compilation the Apache plugin holds the shared stub. -->
-    <ProjectReference Include="..\DevForge.Plugin.Apache\DevForge.Plugin.Apache.csproj" />
+    <ProjectReference Include="..\NKS.WebDevConsole.Plugin.Apache\NKS.WebDevConsole.Plugin.Apache.csproj" />
   </ItemGroup>
 </Project>

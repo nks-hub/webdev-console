@@ -8,7 +8,7 @@
       {{ runningCount }} / {{ totalCount }} services running
     </span>
     <span class="status-item" style="margin-left: auto">
-      DevForge {{ appVersion }}
+      NKS WDC {{ appVersion }}
     </span>
   </footer>
 </template>

@@ -14,7 +14,7 @@ var startedAt = DateTime.UtcNow;
 int? managedPid = null;
 
 // Write port file so Electron can discover us
-var portFile = Path.Combine(Path.GetTempPath(), "devforge-daemon.port");
+var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
 await File.WriteAllTextAsync(portFile, "50051");
 Console.WriteLine($"[daemon] port file: {portFile}");
 

@@ -1,7 +1,7 @@
 <template>
   <header class="app-header" :style="{ WebkitAppRegion: 'drag' } as any">
     <div class="header-left" style="-webkit-app-region: no-drag">
-      <span class="app-logo">DevForge</span>
+      <span class="app-logo">NKS WDC</span>
     </div>
 
     <div class="header-center service-dots" style="-webkit-app-region: no-drag">

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Scriban;
 using Scriban.Runtime;
 
-namespace DevForge.Plugin.Apache;
+namespace NKS.WebDevConsole.Plugin.Apache;
 
 public record VhostModel(
     string Domain,

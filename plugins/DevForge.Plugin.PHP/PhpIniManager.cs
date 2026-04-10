@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Scriban;
 using Scriban.Runtime;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 public enum PhpIniProfile { Development, Production }
 public enum PhpIniMode { Cli, Web }

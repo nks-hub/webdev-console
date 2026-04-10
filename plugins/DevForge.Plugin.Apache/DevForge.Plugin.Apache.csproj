@@ -3,8 +3,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>DevForge.Plugin.Apache</AssemblyName>
-    <RootNamespace>DevForge.Plugin.Apache</RootNamespace>
+    <AssemblyName>NKS.WebDevConsole.Plugin.Apache</AssemblyName>
+    <RootNamespace>NKS.WebDevConsole.Plugin.Apache</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
   <ItemGroup>
@@ -16,6 +16,6 @@
     <EmbeddedResource Include="Templates\vhost.conf.scriban" />
     <EmbeddedResource Include="Templates\httpd.conf.scriban" />
   </ItemGroup>
-  <!-- DevForge.Core reference (adjust path as needed) -->
-  <!-- <ProjectReference Include="..\..\src\DevForge.Core\DevForge.Core.csproj" /> -->
+  <!-- NKS.WebDevConsole.Core reference (adjust path as needed) -->
+  <!-- <ProjectReference Include="..\..\src\NKS.WebDevConsole.Core\NKS.WebDevConsole.Core.csproj" /> -->
 </Project>

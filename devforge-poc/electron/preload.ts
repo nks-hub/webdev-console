@@ -5,7 +5,7 @@ import { tmpdir } from 'os'
 
 contextBridge.exposeInMainWorld('daemonApi', {
   getPort: (): number => {
-    const f = join(tmpdir(), 'devforge-daemon.port')
+    const f = join(tmpdir(), 'nks-wdc-daemon.port')
     if (existsSync(f)) return parseInt(readFileSync(f, 'utf8').trim(), 10)
     return 50051
   }

@@ -1,14 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.Apache;
+namespace NKS.WebDevConsole.Plugin.Apache;
 
 /// <summary>
-/// IDevForgePlugin entry point — registered via AssemblyLoadContext by the daemon's PluginLoader.
+/// IWdcPlugin entry point — registered via AssemblyLoadContext by the daemon's PluginLoader.
 /// </summary>
-public sealed class ApachePlugin : IDevForgePlugin
+public sealed class ApachePlugin : IWdcPlugin
 {
-    public string Id => "devforge.apache";
+    public string Id => "nks.wdc.apache";
     public string DisplayName => "Apache HTTP Server";
     public string Version => "1.0.0";
 

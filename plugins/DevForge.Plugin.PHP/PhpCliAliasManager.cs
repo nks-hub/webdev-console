@@ -3,11 +3,11 @@ using Microsoft.Extensions.Logging;
 using Scriban;
 using Scriban.Runtime;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 /// <summary>
 /// Creates CLI shim scripts so developers can run php74, php82, php84 etc. from any terminal.
-/// Windows: .cmd scripts written to a DevForge-managed bin dir that should be on PATH.
+/// Windows: .cmd scripts written to a NKS WDC-managed bin dir that should be on PATH.
 /// Unix: shell scripts written to a shims dir, symlinked from /usr/local/bin.
 /// </summary>
 public sealed class PhpCliAliasManager
@@ -80,7 +80,7 @@ public sealed class PhpCliAliasManager
 
         var content = $"""
             #!/bin/sh
-            # DevForge PHP {php.Version} shim
+            # NKS WDC PHP {php.Version} shim
             PHPRC="{iniDir}" exec "{php.ExecutablePath}" "$@"
             """;
 

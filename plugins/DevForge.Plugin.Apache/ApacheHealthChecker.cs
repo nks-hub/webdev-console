@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.Apache;
+namespace NKS.WebDevConsole.Plugin.Apache;
 
 /// <summary>
 /// TCP port probe and HTTP HEAD health check for Apache.
@@ -23,7 +23,7 @@ public sealed class ApacheHealthChecker
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = (_, cert, _, _) =>
-                cert?.Issuer?.Contains("DevForge", StringComparison.OrdinalIgnoreCase) == true
+                cert?.Issuer?.Contains("NKS", StringComparison.OrdinalIgnoreCase) == true
                 || cert?.Issuer?.Contains("mkcert", StringComparison.OrdinalIgnoreCase) == true
         };
     }

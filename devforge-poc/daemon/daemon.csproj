@@ -4,6 +4,6 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>devforged</AssemblyName>
+    <AssemblyName>wdc-daemon</AssemblyName>
   </PropertyGroup>
 </Project>

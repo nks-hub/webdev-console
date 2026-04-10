@@ -9,10 +9,10 @@ using Microsoft.Extensions.Logging;
 using Scriban;
 using Scriban.Runtime;
 
-// Re-use the shared interface types defined in ApacheModule.cs (in production: from DevForge.Core)
-using DevForge.Plugin.Apache;
+// Re-use the shared interface types defined in ApacheModule.cs (in production: from NKS.WebDevConsole.Core)
+using NKS.WebDevConsole.Plugin.Apache;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 public sealed class PhpModuleConfig
 {
@@ -423,7 +423,7 @@ public sealed class PhpModule : IServiceModule, IAsyncDisposable
         {
             version = php.Version,
             version_tag = tag,
-            pool_name = $"devforge-php{tag}",
+            pool_name = $"nks-wdc-php{tag}",
             socket_path = socketPath,
             run_dir = _config.RunDirectory.Replace('\\', '/'),
             log_dir = _config.LogDirectory.Replace('\\', '/'),

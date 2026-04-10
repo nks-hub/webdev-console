@@ -9,8 +9,8 @@ let tray: Tray | null = null
 let daemon: ChildProcess | null = null
 let daemonConnected = false
 
-const PORT_FILE = join(tmpdir(), 'devforge-daemon.port')
-const DAEMON_EXE = join(__dirname, '../../daemon/bin/devforged.exe')
+const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
+const DAEMON_EXE = join(__dirname, '../../daemon/bin/wdc-daemon.exe')
 const DAEMON_DEV = join(__dirname, '../../daemon')
 
 function spawnDaemon() {
@@ -77,7 +77,7 @@ function createWindow() {
 function updateTray() {
   const icon = nativeImage.createEmpty()
   if (!tray) return
-  const label = daemonConnected ? 'DevForge (connected)' : 'DevForge (disconnected)'
+  const label = daemonConnected ? 'NKS WebDev Console (connected)' : 'NKS WebDev Console (disconnected)'
   tray.setToolTip(label)
   const menu = Menu.buildFromTemplate([
     { label, enabled: false },

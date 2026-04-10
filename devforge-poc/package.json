@@ -1,5 +1,5 @@
 {
-  "name": "devforge-poc",
+  "name": "wdc-poc",
   "version": "0.1.0",
   "private": true,
   "main": "dist-electron/main.js",

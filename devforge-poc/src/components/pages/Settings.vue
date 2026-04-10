@@ -37,7 +37,7 @@
 
       <el-tab-pane label="About" name="about">
         <div class="about-section">
-          <p><strong>DevForge</strong></p>
+          <p><strong>NKS WDC</strong></p>
           <p class="version">Version {{ appVersion }}</p>
           <p class="subtitle">Local development server manager</p>
         </div>

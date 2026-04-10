@@ -1,6 +1,6 @@
 {
-  "appId": "dev.devforge.poc",
-  "productName": "DevForge POC",
+  "appId": "com.nks-hub.webdev-console",
+  "productName": "NKS WebDev Console POC",
   "directories": { "output": "release" },
   "files": ["dist/**", "dist-electron/**"],
   "win": { "target": "nsis" },

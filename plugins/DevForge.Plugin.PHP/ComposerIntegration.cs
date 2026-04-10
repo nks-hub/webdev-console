@@ -2,7 +2,7 @@ using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 /// <summary>
 /// Runs Composer commands using a specific PHP version, using the correct php.ini.

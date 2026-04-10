@@ -1,17 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-// Re-use shared contracts from Apache plugin (in production: from DevForge.Core)
-using DevForge.Plugin.Apache;
+// Re-use shared contracts from Apache plugin (in production: from NKS.WebDevConsole.Core)
+using NKS.WebDevConsole.Plugin.Apache;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 /// <summary>
-/// IDevForgePlugin entry point for the PHP multi-version module.
+/// IWdcPlugin entry point for the PHP multi-version module.
 /// </summary>
-public sealed class PhpPlugin : IDevForgePlugin
+public sealed class PhpPlugin : IWdcPlugin
 {
-    public string Id => "devforge.php";
+    public string Id => "nks.wdc.php";
     public string DisplayName => "PHP (Multi-version)";
     public string Version => "1.0.0";
 

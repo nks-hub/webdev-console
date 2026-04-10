@@ -2,7 +2,7 @@ using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
-namespace DevForge.Plugin.PHP;
+namespace NKS.WebDevConsole.Plugin.PHP;
 
 public record PhpInstallation(
     string Version,         // "8.2.25"
@@ -62,7 +62,7 @@ public sealed class PhpVersionManager
     {
         var exe = OperatingSystem.IsWindows() ? "php.exe" : "php";
 
-        // 1. DevForge-managed installs in appDir/php/{version}/
+        // 1. NKS WDC-managed installs in appDir/php/{version}/
         if (Directory.Exists(Path.Combine(appDirectory, "php")))
         {
             foreach (var vdir in Directory.GetDirectories(Path.Combine(appDirectory, "php")))
