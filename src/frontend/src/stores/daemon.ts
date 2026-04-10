@@ -23,11 +23,14 @@ export const useDaemonStore = defineStore('daemon', () => {
     services.value.length > 0 && services.value.every(s => s.state === 2 || s.status === 'running')
   )
 
+  let retryCount = 0
+
   async function poll() {
     try {
       status.value = await fetchStatus()
       services.value = await fetchServices()
       connected.value = true
+      retryCount = 0
 
       // Track aggregate metrics
       const totalCpu = services.value.reduce((sum, s: any) => sum + (s.cpuPercent ?? 0), 0)
@@ -37,6 +40,8 @@ export const useDaemonStore = defineStore('daemon', () => {
       if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
       if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
     } catch {
+      // On first few failures, retry faster (daemon might be starting up)
+      if (retryCount < 10) retryCount++
       connected.value = false
       status.value = null
       services.value = []

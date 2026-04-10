@@ -147,11 +147,21 @@ async function spawnDaemon() {
   }, 500)
 }
 
-function createWindow() {
+async function waitForPortFile(maxWaitMs = 15000): Promise<{ port: number; token: string } | null> {
+  const start = Date.now()
+  while (Date.now() - start < maxWaitMs) {
+    const info = readPortFile()
+    if (info && info.token) return info
+    await new Promise(r => setTimeout(r, 300))
+  }
+  return readPortFile()
+}
+
+async function createWindow() {
   win = new BrowserWindow({
-    width: 900,
-    height: 600,
-    backgroundColor: '#1a1a2e',
+    width: 960,
+    height: 640,
+    backgroundColor: '#141620',
     show: false,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
@@ -159,13 +169,22 @@ function createWindow() {
     }
   })
 
+  // Wait for daemon port file before loading renderer
+  const info = await waitForPortFile()
+
   if (process.env.ELECTRON_RENDERER_URL) {
-    // Pass token via query param so renderer can authenticate even before preload bridges
-    const info = readPortFile()
-    const tokenParam = info?.token ? `?token=${encodeURIComponent(info.token)}` : ''
-    win.loadURL(`${process.env.ELECTRON_RENDERER_URL}${tokenParam}`)
+    const params = new URLSearchParams()
+    if (info?.port) params.set('port', String(info.port))
+    if (info?.token) params.set('token', info.token)
+    const qs = params.toString()
+    win.loadURL(`${process.env.ELECTRON_RENDERER_URL}${qs ? '?' + qs : ''}`)
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
+    // Production: load from dist, pass params via hash query
+    const indexPath = join(__dirname, '../renderer/index.html')
+    const params = new URLSearchParams()
+    if (info?.port) params.set('port', String(info.port))
+    if (info?.token) params.set('token', info.token)
+    win.loadFile(indexPath, { query: Object.fromEntries(params) })
   }
 
   win.once('ready-to-show', () => win?.show())
