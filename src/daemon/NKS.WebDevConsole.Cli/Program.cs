@@ -817,6 +817,32 @@ phpRemCmd.SetAction(async (parseResult, ct) =>
 });
 phpCommand.Add(phpRemCmd);
 
+// --- wdc php versions --- explicit alias
+var phpVersionsCmd = new Command("versions", "List installed PHP versions (alias for wdc php)");
+phpVersionsCmd.SetAction(async (parseResult, ct) =>
+{
+    // Delegate to parent command handler
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var versions = await client.GetJsonAsync("/api/php/versions");
+    if (json) { PrintJson(versions); return; }
+    if (versions.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No PHP versions[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Version"); table.AddColumn("Port"); table.AddColumn("Ext"); table.AddColumn("Active");
+    foreach (var v in versions.EnumerateArray())
+    {
+        var isActive = v.TryGetProperty("isActive", out var a) && a.GetBoolean();
+        table.AddRow(
+            v.GetProperty("version").GetString() ?? "?",
+            v.TryGetProperty("fcgiPort", out var p) ? p.GetInt32().ToString() : "-",
+            v.TryGetProperty("extensions", out var ext) && ext.ValueKind == JsonValueKind.Array ? ext.GetArrayLength().ToString() : "-",
+            isActive ? "[green]Yes[/]" : "[dim]No[/]");
+    }
+    AnsiConsole.Write(table);
+});
+phpCommand.Add(phpVersionsCmd);
+
 // --- wdc open {domain} ---
 var openDomainArg = new Argument<string>("domain") { Description = "Site domain to open in browser" };
 var openCommand = new Command("open", "Open a site in the default browser") { openDomainArg };
