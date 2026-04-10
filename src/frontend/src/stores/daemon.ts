@@ -24,6 +24,7 @@ export const useDaemonStore = defineStore('daemon', () => {
   )
 
   let retryCount = 0
+  let fastRetryTimer: ReturnType<typeof setTimeout> | null = null
 
   async function poll() {
     try {
@@ -31,6 +32,8 @@ export const useDaemonStore = defineStore('daemon', () => {
       services.value = await fetchServices()
       connected.value = true
       retryCount = 0
+      // Clear any pending fast retry — we're back online
+      if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
 
       // Track aggregate metrics
       const totalCpu = services.value.reduce((sum, s: any) => sum + (s.cpuPercent ?? 0), 0)
@@ -40,11 +43,21 @@ export const useDaemonStore = defineStore('daemon', () => {
       if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
       if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
     } catch {
-      // On first few failures, retry faster (daemon might be starting up)
-      if (retryCount < 10) retryCount++
       connected.value = false
       status.value = null
       services.value = []
+      // Fast-retry cascade after a failure so the UI recovers quickly from a
+      // daemon restart (when the token changed). Previous version only retried
+      // on the 5-second interval tick, leaving the "Offline" pill visible for
+      // up to 5s even though the new token was already in the port file.
+      if (retryCount < 5 && !fastRetryTimer) {
+        retryCount++
+        const delay = Math.min(300 * retryCount, 1500)
+        fastRetryTimer = setTimeout(() => {
+          fastRetryTimer = null
+          void poll()
+        }, delay)
+      }
     }
   }
 
@@ -64,6 +77,7 @@ export const useDaemonStore = defineStore('daemon', () => {
 
   function stopPolling() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+    if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
     sseCleanup?.()
   }
 
