@@ -264,6 +264,26 @@ foreach (var siteToApply in siteManager.Sites.Values)
     }
 }
 
+// Auto-start services if setting enabled (default: true)
+var autoStartEnabled = true; // TODO: read from settings DB
+if (autoStartEnabled)
+{
+    var modules = app.Services.GetServices<IServiceModule>();
+    foreach (var module in modules)
+    {
+        try
+        {
+            await module.StartAsync(CancellationToken.None);
+            var status = await module.GetStatusAsync(CancellationToken.None);
+            Console.WriteLine($"[auto-start] {status.Id}: {status.State}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[auto-start] {module.ServiceId} failed: {ex.Message}");
+        }
+    }
+}
+
 app.MapGet("/api/sites", (SiteManager sm) => Results.Ok(sm.Sites.Values));
 
 app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
