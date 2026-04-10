@@ -173,7 +173,8 @@ async function createWindow() {
     show: false,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
-      contextIsolation: true
+      contextIsolation: true,
+      sandbox: false
     }
   })
 

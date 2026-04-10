@@ -51,6 +51,9 @@ const navItems = [
   { path: '/dashboard', label: 'Services' },
   { path: '/sites', label: 'Sites' },
   { path: '/databases', label: 'Databases' },
+  { path: '/ssl', label: 'SSL' },
+  { path: '/php', label: 'PHP' },
+  { path: '/settings', label: 'Settings' },
 ]
 
 function isActive(path: string) {
