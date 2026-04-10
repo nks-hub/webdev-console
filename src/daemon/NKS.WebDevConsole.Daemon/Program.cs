@@ -485,19 +485,42 @@ app.MapGet("/api/sites/{domain}/history", (string domain, SiteManager sm) =>
 // Rollback a site's vhost config to a specific historical version
 app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, string timestamp, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
+    // SECURITY: validate both path segments before building filesystem paths. The
+    // timestamp is user-supplied and could contain "../" or null bytes — without
+    // validation an attacker (with a valid auth token) could overwrite any file
+    // the daemon user can write. domain is already validated by sm.Get() (the
+    // dictionary lookup will fail for traversal strings) but we re-check anyway
+    // so the path-containment assertion below is definitely safe.
+    try { SiteManager.ValidateDomain(domain); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+
+    // Timestamp format produced by config history rotation is ISO-like with digits,
+    // letters and safe punctuation (e.g. "20260411T140522Z"). Reject anything else.
+    if (string.IsNullOrWhiteSpace(timestamp) ||
+        !System.Text.RegularExpressions.Regex.IsMatch(timestamp, @"^[a-zA-Z0-9_\-.:]{1,64}$"))
+    {
+        return Results.BadRequest(new { error = "Invalid timestamp format" });
+    }
+
     var site = sm.Get(domain);
     if (site is null) return Results.NotFound(new { error = $"Site {domain} not found" });
 
     var historyDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".wdc", "generated", "history");
-    var historyFile = Path.Combine(historyDir, $"{domain}.conf.{timestamp}");
+    var historyDirFull = Path.GetFullPath(historyDir);
+    var historyFile = Path.GetFullPath(Path.Combine(historyDir, $"{domain}.conf.{timestamp}"));
+    if (!historyFile.StartsWith(historyDirFull, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "Resolved history path escapes history root" });
     if (!File.Exists(historyFile))
         return Results.NotFound(new { error = $"History entry {timestamp} not found" });
 
-    var generatedFile = Path.Combine(
+    var generatedRoot = Path.GetFullPath(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "generated", $"{domain}.conf");
+        ".wdc", "generated"));
+    var generatedFile = Path.GetFullPath(Path.Combine(generatedRoot, $"{domain}.conf"));
+    if (!generatedFile.StartsWith(generatedRoot, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "Resolved generated path escapes generated root" });
 
     File.Copy(historyFile, generatedFile, overwrite: true);
     // Re-apply through orchestrator so vhost is also written next to Apache binary
