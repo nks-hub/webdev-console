@@ -286,6 +286,30 @@ updateSiteCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(updateSiteCmd);
 
+// --- wdc sites history {domain} ---
+var histDomainArg = new Argument<string>("domain");
+var histCmd = new Command("history", "Show config history for a site") { histDomainArg };
+histCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(histDomainArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var hist = await client.GetJsonAsync($"/api/sites/{domain}/history");
+    if (json) { PrintJson(hist); return; }
+    if (hist.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No history entries[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Timestamp"); table.AddColumn("Size");
+    foreach (var h in hist.EnumerateArray())
+    {
+        table.AddRow(
+            h.GetProperty("timestamp").GetString() ?? "?",
+            h.TryGetProperty("size", out var s) ? $"{s.GetInt64()} bytes" : "-");
+    }
+    AnsiConsole.Write(table);
+});
+sitesCommand.Add(histCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
