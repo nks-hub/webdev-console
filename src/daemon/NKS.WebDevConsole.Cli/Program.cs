@@ -922,6 +922,45 @@ systemCmd.SetAction(async (parseResult, ct) =>
     AnsiConsole.Write(table);
 });
 
+// --- wdc new {domain} — shortcut for sites create --domain {domain} ---
+var newDomainArg = new Argument<string>("domain") { Description = "Domain (e.g. myapp.loc)" };
+var newDocrootOpt = new Option<string?>("--docroot") { Description = "Document root" };
+var newPhpOpt = new Option<string?>("--php") { Description = "PHP version (default: 8.4)" };
+var newSslOpt = new Option<bool>("--ssl") { Description = "Enable SSL" };
+var newAliasesOpt = new Option<string?>("--aliases") { Description = "Comma-separated aliases" };
+var newCommand = new Command("new", "Create a new site (shortcut for sites create)") { newDomainArg, newDocrootOpt, newPhpOpt, newSslOpt, newAliasesOpt };
+newCommand.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(newDomainArg)!;
+    var docroot = parseResult.GetValue(newDocrootOpt) ?? $"C:\\work\\htdocs\\{domain.Split('.')[0]}";
+    var php = parseResult.GetValue(newPhpOpt) ?? "8.4";
+    var ssl = parseResult.GetValue(newSslOpt);
+    var aliasStr = parseResult.GetValue(newAliasesOpt);
+    var json = parseResult.GetValue(jsonOption);
+
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var payload = new
+    {
+        domain,
+        documentRoot = docroot,
+        phpVersion = php,
+        sslEnabled = ssl,
+        httpPort = 80,
+        httpsPort = 443,
+        aliases = aliasStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>(),
+        environment = new Dictionary<string, string>()
+    };
+    var content = JsonContent.Create(payload);
+    var result = await client.PostAsync("/api/sites", content);
+    if (json) { PrintJson(result); return; }
+    AnsiConsole.MarkupLine($"[green]Created:[/] {Markup.Escape(domain)}");
+    AnsiConsole.MarkupLine($"  PHP: {Markup.Escape(php)}  DocRoot: {Markup.Escape(docroot)}");
+    if (ssl) AnsiConsole.MarkupLine("  SSL: [green]enabled[/]");
+});
+
+rootCommand.Add(newCommand);
 rootCommand.Add(openCommand);
 rootCommand.Add(infoCommand);
 rootCommand.Add(configCommand);
