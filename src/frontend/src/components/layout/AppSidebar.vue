@@ -168,7 +168,7 @@ async function toggleSvc(svc: any) {
 
 <style scoped>
 .sidebar {
-  width: 200px;
+  width: 210px;
   display: flex;
   flex-direction: column;
   background: var(--wdc-surface);
@@ -176,7 +176,7 @@ async function toggleSvc(svc: any) {
   flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px;
+  padding: 10px;
 }
 
 /* Sites button — prominent */
@@ -190,12 +190,12 @@ async function toggleSvc(svc: any) {
 }
 
 .section-label {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-3);
-  padding: 10px 8px 4px;
+  padding: 12px 8px 5px;
 }
 
 /* Service item with toggle */
@@ -203,7 +203,7 @@ async function toggleSvc(svc: any) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 7px 10px;
   border-radius: var(--wdc-radius-sm);
   transition: background 0.1s;
 }
@@ -222,7 +222,7 @@ async function toggleSvc(svc: any) {
 
 .svc-name {
   flex: 1;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--wdc-text);
   cursor: pointer;
   white-space: nowrap;
@@ -237,12 +237,12 @@ async function toggleSvc(svc: any) {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 8px;
+  gap: 10px;
+  padding: 9px 10px;
   border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   color: var(--wdc-text-2);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 500;
   transition: all 0.1s;
 }

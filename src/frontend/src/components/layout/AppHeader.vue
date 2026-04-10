@@ -1,8 +1,24 @@
 <template>
   <header class="app-header" :style="{ WebkitAppRegion: 'drag' } as any">
     <div class="header-left" style="-webkit-app-region: no-drag">
-      <span class="app-logo">NKS WDC</span>
+      <span class="app-logo" @click="router.push('/sites')">
+        <span class="logo-text">NKS</span>
+        <span class="logo-sep">|</span>
+        <span class="logo-sub">WDC</span>
+      </span>
     </div>
+
+    <nav class="header-nav" style="-webkit-app-region: no-drag">
+      <router-link
+        v-for="item in navItems"
+        :key="item.path"
+        :to="item.path"
+        class="nav-tab"
+        :class="{ active: isActive(item.path) }"
+      >
+        {{ item.label }}
+      </router-link>
+    </nav>
 
     <div class="header-right" style="-webkit-app-region: no-drag">
       <div class="conn-pill" :class="daemonStore.connected ? 'conn-ok' : 'conn-err'">
@@ -19,14 +35,27 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
 
+const router = useRouter()
+const route = useRoute()
 const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
 const isDark = computed(() => themeStore.isDark)
 function toggleTheme() { themeStore.toggle() }
+
+const navItems = [
+  { path: '/dashboard', label: 'Services' },
+  { path: '/sites', label: 'Sites' },
+  { path: '/databases', label: 'Databases' },
+]
+
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(path + '/')
+}
 </script>
 
 <style scoped>
@@ -34,18 +63,71 @@ function toggleTheme() { themeStore.toggle() }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 36px;
-  padding: 0 14px;
+  height: 42px;
+  padding: 0 16px;
   background: var(--wdc-surface);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
+  gap: 16px;
 }
 
 .app-logo {
-  font-size: 0.82rem;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.logo-text {
+  font-size: 0.88rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--wdc-accent);
+}
+
+.logo-sep {
+  font-size: 0.75rem;
+  color: var(--wdc-text-3);
+  margin: 0 2px;
+}
+
+.logo-sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--wdc-text-2);
+}
+
+/* Header nav tabs */
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-tab {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--wdc-text-2);
+  text-decoration: none;
+  border-radius: var(--wdc-radius-sm);
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  color: var(--wdc-text);
+  background: var(--wdc-hover);
+}
+
+.nav-tab.active {
+  color: var(--wdc-text);
+  background: var(--wdc-accent-dim);
+  font-weight: 600;
 }
 
 .header-right {
@@ -60,7 +142,7 @@ function toggleTheme() { themeStore.toggle() }
   gap: 6px;
   padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
   border: 1px solid;
 }

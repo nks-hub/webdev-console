@@ -50,12 +50,12 @@ function formatMem(bytes: number): string {
 .status-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 28px;
+  gap: 14px;
+  height: 30px;
   padding: 0 16px;
   background: var(--wdc-surface);
   border-top: 1px solid var(--wdc-border);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--wdc-text-2);
   flex-shrink: 0;
 }

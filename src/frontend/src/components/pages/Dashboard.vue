@@ -373,7 +373,7 @@ async function openConfig(id: string) {
 }
 
 .page-title {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--wdc-text);
   letter-spacing: -0.01em;
@@ -426,9 +426,9 @@ async function openConfig(id: string) {
 .service-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 0 20px;
-  height: 52px;
+  height: 56px;
   border-bottom: 1px solid var(--wdc-border);
   transition: background 0.1s;
   cursor: default;
@@ -490,7 +490,7 @@ async function openConfig(id: string) {
 }
 
 .svc-name {
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--wdc-text);
   white-space: nowrap;
