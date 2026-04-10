@@ -8,6 +8,12 @@ namespace NKS.WebDevConsole.Daemon.Plugin;
 public class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
+    private static readonly HashSet<string> SharedAssemblies = [
+        "NKS.WebDevConsole.Core",
+        "NKS.WebDevConsole.Plugin.SDK",
+        "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "Microsoft.Extensions.Logging.Abstractions",
+    ];
 
     public PluginLoadContext(string pluginPath) : base(isCollectible: true)
     {
@@ -16,6 +22,10 @@ public class PluginLoadContext : AssemblyLoadContext
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
+        // Shared assemblies must come from the host context to preserve type identity
+        if (SharedAssemblies.Contains(assemblyName.Name!))
+            return null; // fall back to Default context
+
         var path = _resolver.ResolveAssemblyToPath(assemblyName);
         return path != null ? LoadFromAssemblyPath(path) : null;
     }
@@ -41,9 +51,15 @@ public class PluginLoader
             return;
         }
 
-        foreach (var dllPath in Directory.GetFiles(pluginsDirectory, "*.dll", SearchOption.TopDirectoryOnly))
+        var pluginDlls = Directory.GetFiles(pluginsDirectory, "NKS.WebDevConsole.Plugin.*.dll")
+            .Where(f => !f.EndsWith("Plugin.SDK.dll", StringComparison.OrdinalIgnoreCase));
+
+        _logger.LogInformation("Scanning {Dir} — found {Count} plugin candidates", pluginsDirectory, pluginDlls.Count());
+
+        foreach (var dllPath in pluginDlls)
         {
             var pluginName = Path.GetFileNameWithoutExtension(dllPath);
+            _logger.LogDebug("Loading {Plugin}...", pluginName);
 
             try
             {
@@ -51,20 +67,33 @@ public class PluginLoader
                 var assembly = context.LoadFromAssemblyPath(Path.GetFullPath(dllPath));
 
                 var pluginTypes = assembly.GetTypes()
-                    .Where(t => typeof(IWdcPlugin).IsAssignableFrom(t) && !t.IsAbstract);
+                    .Where(t => typeof(IWdcPlugin).IsAssignableFrom(t) && !t.IsAbstract)
+                    .ToList();
+
+                if (pluginTypes.Count == 0)
+                {
+                    _logger.LogDebug("No IWdcPlugin found in {Plugin}", pluginName);
+                    continue;
+                }
 
                 foreach (var type in pluginTypes)
                 {
-                    if (Activator.CreateInstance(type) is IWdcPlugin plugin)
+                    var plugin = Activator.CreateInstance(type) as IWdcPlugin;
+                    if (plugin != null)
                     {
                         _plugins.Add(new LoadedPlugin(plugin, assembly, context));
-                        _logger.LogInformation("Loaded plugin: {Id} v{Version}", plugin.Id, plugin.Version);
+                        _logger.LogInformation("Loaded plugin: {Id} v{Version} ({Type})", plugin.Id, plugin.Version, type.Name);
                     }
                 }
             }
+            catch (ReflectionTypeLoadException ex)
+            {
+                _logger.LogError("Failed to load types from {Plugin}: {Errors}", pluginName,
+                    string.Join("; ", ex.LoaderExceptions?.Select(e => e?.Message) ?? []));
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load plugin from {Path}", dllPath);
+                _logger.LogError(ex, "Failed to load plugin {Plugin}", pluginName);
             }
         }
     }

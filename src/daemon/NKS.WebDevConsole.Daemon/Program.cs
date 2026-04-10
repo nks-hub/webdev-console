@@ -37,7 +37,7 @@ var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader
 var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
 if (!Directory.Exists(pluginDir))
 {
-    var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+    var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
     pluginDir = Path.Combine(repoRoot, "build", "plugins");
 }
 pluginLoader.LoadPlugins(pluginDir);
