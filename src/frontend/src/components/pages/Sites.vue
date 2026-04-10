@@ -26,7 +26,7 @@
       </el-table-column>
       <el-table-column label="Actions" width="100" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" type="danger" text @click.stop="confirmDelete(row.id)">Delete</el-button>
+          <el-button size="small" type="danger" text @click.stop="confirmDelete(row.domain)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -82,7 +82,7 @@ const drawerOpen = ref(false)
 const selectedSite = ref<SiteInfo | null>(null)
 const showCreate = ref(false)
 const creating = ref(false)
-const newSite = reactive({ domain: '', docRoot: '', phpVersion: '8.2' })
+const newSite = reactive({ domain: '', documentRoot: '', phpVersion: '8.2' })
 
 onMounted(() => { void sitesStore.load() })
 
@@ -93,7 +93,7 @@ function selectSite(row: SiteInfo) {
 
 async function saveSelected() {
   if (!selectedSite.value) return
-  await sitesStore.update(selectedSite.value.id, selectedSite.value)
+  await sitesStore.update(selectedSite.value.domain, selectedSite.value)
   ElMessage.success('Site updated')
   drawerOpen.value = false
 }
@@ -104,15 +104,15 @@ async function createSite() {
     await sitesStore.create(newSite)
     ElMessage.success(`Site ${newSite.domain} created`)
     showCreate.value = false
-    newSite.domain = ''; newSite.docRoot = ''; newSite.phpVersion = '8.2'
+    newSite.domain = ''; newSite.documentRoot = ''; newSite.phpVersion = '8.2'
   } finally {
     creating.value = false
   }
 }
 
-async function confirmDelete(id: string) {
+async function confirmDelete(domain: string) {
   await ElMessageBox.confirm('Delete this site? This cannot be undone.', 'Warning', { type: 'warning' })
-  await sitesStore.remove(id)
+  await sitesStore.remove(domain)
   ElMessage.success('Site deleted')
 }
 </script>

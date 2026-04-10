@@ -6,6 +6,8 @@ import type {
   CertInfo,
   PluginManifest,
   ProgressUpdate,
+  MetricsUpdate,
+  LogEntry,
 } from './types'
 
 declare global {
@@ -74,7 +76,7 @@ export const deleteSite = (id: string) =>
   json<void>(`/api/sites/${id}`, { method: 'DELETE' })
 
 export const updateSite = (id: string, data: Partial<SiteInfo>) =>
-  json<SiteInfo>(`/api/sites/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+  json<SiteInfo>(`/api/sites/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 
 // PHP
 export const fetchPhpVersions = (): Promise<PhpVersion[]> =>
@@ -108,6 +110,8 @@ export const fetchPluginUi = (id: string) =>
 export function subscribeEvents(
   onService: (data: import('./types').ServiceInfo) => void,
   onProgress: (data: ProgressUpdate) => void,
+  onMetrics?: (data: MetricsUpdate) => void,
+  onLog?: (data: LogEntry) => void,
 ): () => void {
   const token = window.daemonApi?.getToken?.() || ''
   const url = token
@@ -121,6 +125,14 @@ export function subscribeEvents(
 
   es.addEventListener('progress', (e: MessageEvent) => {
     try { onProgress(JSON.parse(e.data) as ProgressUpdate) } catch { /* ignore */ }
+  })
+
+  es.addEventListener('metrics', (e: MessageEvent) => {
+    try { onMetrics?.(JSON.parse(e.data) as MetricsUpdate) } catch { /* ignore */ }
+  })
+
+  es.addEventListener('log', (e: MessageEvent) => {
+    try { onLog?.(JSON.parse(e.data) as LogEntry) } catch { /* ignore */ }
   })
 
   es.onerror = () => {

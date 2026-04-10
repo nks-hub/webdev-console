@@ -18,16 +18,16 @@ export const useSitesStore = defineStore('sites', () => {
     return site
   }
 
-  async function update(id: string, data: Partial<SiteInfo>) {
-    const updated = await updateSite(id, data)
-    const idx = sites.value.findIndex(s => s.id === id)
+  async function update(domain: string, data: Partial<SiteInfo>) {
+    const updated = await updateSite(domain, data)
+    const idx = sites.value.findIndex(s => s.domain === domain)
     if (idx >= 0) sites.value[idx] = updated
     return updated
   }
 
-  async function remove(id: string) {
-    await deleteSite(id)
-    sites.value = sites.value.filter(s => s.id !== id)
+  async function remove(domain: string) {
+    await deleteSite(domain)
+    sites.value = sites.value.filter(s => s.domain !== domain)
   }
 
   return { sites, loading, load, create, update, remove }

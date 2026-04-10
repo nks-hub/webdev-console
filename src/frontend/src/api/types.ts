@@ -105,3 +105,17 @@ export interface ProgressUpdate {
   done: boolean
   error?: string
 }
+
+export interface MetricsUpdate {
+  serviceId: string
+  cpu: number
+  memory: number
+  uptime?: number
+}
+
+export interface LogEntry {
+  serviceId: string
+  level: string
+  message: string
+  timestamp: string
+}
