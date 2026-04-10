@@ -1,14 +1,19 @@
 <template>
-  <nav class="sidebar">
+  <nav class="sidebar" :class="{ collapsed }">
+    <!-- Collapse toggle -->
+    <div class="collapse-toggle" @click="toggleCollapse" :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+      <el-icon :size="14"><Fold v-if="!collapsed" /><Expand v-else /></el-icon>
+    </div>
+
     <!-- Sites button -->
     <div class="nav-item sites-btn" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
       <el-icon :size="18"><Link /></el-icon>
-      <span class="nav-label">Sites</span>
+      <span class="nav-label" v-if="!collapsed">Sites</span>
     </div>
 
     <!-- Service categories -->
     <div class="sidebar-section">
-      <div class="section-label">Web Server</div>
+      <div class="section-label" v-if="!collapsed">Web Server</div>
       <template v-for="svc in webServices" :key="svc.id">
         <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`) }">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
@@ -26,7 +31,7 @@
     </div>
 
     <div class="sidebar-section" v-if="langServices.length">
-      <div class="section-label">Languages</div>
+      <div class="section-label" v-if="!collapsed">Languages</div>
       <template v-for="svc in langServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
@@ -44,7 +49,7 @@
     </div>
 
     <div class="sidebar-section" v-if="dbServices.length">
-      <div class="section-label">Database</div>
+      <div class="section-label" v-if="!collapsed">Database</div>
       <template v-for="svc in dbServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
@@ -62,7 +67,7 @@
     </div>
 
     <div class="sidebar-section" v-if="cacheServices.length">
-      <div class="section-label">Cache &amp; Mail</div>
+      <div class="section-label" v-if="!collapsed">Cache &amp; Mail</div>
       <template v-for="svc in cacheServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
@@ -112,9 +117,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, Fold, Expand } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { ElMessage } from 'element-plus'
@@ -123,6 +128,13 @@ const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
+
+const collapsed = ref(localStorage.getItem('wdc-sidebar-collapsed') === 'true')
+
+function toggleCollapse() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem('wdc-sidebar-collapsed', String(collapsed.value))
+}
 
 const services = computed(() => daemonStore.services as any[])
 
@@ -266,6 +278,33 @@ async function toggleSvc(svc: any) {
   flex: 1;
   white-space: nowrap;
 }
+
+/* Collapse toggle */
+.collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  color: var(--wdc-text-3);
+  border-radius: var(--wdc-radius-sm);
+  transition: all 0.12s;
+  align-self: flex-end;
+}
+.collapse-toggle:hover { color: var(--wdc-text); background: var(--wdc-hover); }
+
+/* Collapsed state */
+.sidebar.collapsed {
+  width: 56px;
+  padding: 8px 4px;
+}
+.sidebar.collapsed .nav-item { justify-content: center; padding: 9px 0; }
+.sidebar.collapsed .service-item { justify-content: center; padding: 7px 0; gap: 0; }
+.sidebar.collapsed .service-item .svc-name { display: none; }
+.sidebar.collapsed .service-item .el-switch { display: none; }
+.sidebar.collapsed .collapse-toggle { align-self: center; }
+.sidebar.collapsed .nav-label { display: none; }
 
 .sidebar-spacer { flex: 1; }
 
