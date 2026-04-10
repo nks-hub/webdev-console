@@ -127,11 +127,19 @@ async function spawnDaemon() {
     daemon = spawn(DAEMON_EXE, [], { stdio: 'pipe', detached: false })
   }
 
-  daemon.stdout?.on('data', (d) => console.log('[daemon]', d.toString().trim()))
-  daemon.stderr?.on('data', (d) => console.error('[daemon err]', d.toString().trim()))
+  daemon.stdout?.on('data', (d) => {
+    try { console.log('[daemon]', d.toString().trim()) } catch {}
+  })
+  daemon.stderr?.on('data', (d) => {
+    try { console.error('[daemon err]', d.toString().trim()) } catch {}
+  })
+  daemon.on('error', (err) => {
+    console.error('[daemon] process error:', err.message)
+  })
   daemon.on('exit', (code) => {
     console.log(`[daemon] exited code=${code}`)
     daemonConnected = false
+    daemon = null
     updateTray()
   })
 
