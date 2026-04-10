@@ -1,0 +1,9 @@
+{
+  "appId": "dev.devforge.poc",
+  "productName": "DevForge POC",
+  "directories": { "output": "release" },
+  "files": ["dist/**", "dist-electron/**"],
+  "win": { "target": "nsis" },
+  "mac": { "target": "dmg" },
+  "linux": { "target": "AppImage" }
+}
