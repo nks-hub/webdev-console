@@ -109,6 +109,9 @@ app.Lifetime.ApplicationStarted.Register(() =>
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 });
 
+// Health endpoint — no auth required (for monitoring + Electron daemon detection)
+app.MapGet("/healthz", () => Results.Ok(new { ok = true, timestamp = DateTime.UtcNow }));
+
 // Auth middleware for /api/* requests
 app.Use(async (ctx, next) =>
 {
