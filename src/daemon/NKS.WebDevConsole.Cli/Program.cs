@@ -5,7 +5,7 @@ using System.Text.Json;
 using NKS.WebDevConsole.Cli;
 using Spectre.Console;
 
-var jsonOption = new Option<bool>("--json", "Output raw JSON instead of formatted tables");
+var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON instead of formatted tables" };
 
 var rootCommand = new RootCommand("NKS WebDev Console CLI") { jsonOption };
 
@@ -32,9 +32,12 @@ statusCommand.SetAction(async (parseResult, ct) =>
     table.AddColumn("Service"); table.AddColumn("State"); table.AddColumn("PID"); table.AddColumn("Memory");
     foreach (var svc in services.EnumerateArray())
     {
+        var stateStr = svc.GetProperty("state").ValueKind == JsonValueKind.Number
+            ? StateNumToStr(svc.GetProperty("state").GetInt32())
+            : svc.GetProperty("state").GetString() ?? "unknown";
         table.AddRow(
             svc.GetProperty("id").GetString() ?? "?",
-            FormatState(svc.GetProperty("state").GetString() ?? "unknown"),
+            FormatState(stateStr),
             GetInt(svc, "pid")?.ToString() ?? "-",
             GetLong(svc, "memoryBytes") is long m ? FormatBytes(m) : "-");
     }
@@ -58,10 +61,13 @@ servicesCommand.SetAction(async (parseResult, ct) =>
     table.AddColumn("PID"); table.AddColumn("CPU %"); table.AddColumn("Memory");
     foreach (var svc in services.EnumerateArray())
     {
+        var sState = svc.GetProperty("state").ValueKind == JsonValueKind.Number
+            ? StateNumToStr(svc.GetProperty("state").GetInt32())
+            : svc.GetProperty("state").GetString() ?? "unknown";
         table.AddRow(
             svc.GetProperty("id").GetString() ?? "?",
             svc.GetProperty("displayName").GetString() ?? "-",
-            FormatState(svc.GetProperty("state").GetString() ?? "unknown"),
+            FormatState(sState),
             GetInt(svc, "pid")?.ToString() ?? "-",
             GetDouble(svc, "cpuPercent") is double c ? $"{c:F1}%" : "-",
             GetLong(svc, "memoryBytes") is long m ? FormatBytes(m) : "-");
@@ -213,10 +219,105 @@ versionCommand.SetAction(async (parseResult, ct) =>
         : "[bold]Daemon[/]     [dim]not running[/]");
 });
 
+// --- wdc databases ---
+var dbCommand = new Command("databases", "List and manage MySQL databases");
+dbCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var result = await client.GetJsonAsync("/api/databases");
+    if (json) { PrintJson(result); return; }
+
+    if (result.TryGetProperty("databases", out var dbs) && dbs.GetArrayLength() > 0)
+    {
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("Database");
+        foreach (var db in dbs.EnumerateArray())
+            table.AddRow(db.GetString() ?? "?");
+        AnsiConsole.Write(table);
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[dim]No user databases found.[/]");
+    }
+});
+
+var createDbArg = new Argument<string>("name");
+var createDbCmd = new Command("create", "Create a database") { createDbArg };
+createDbCmd.SetAction(async (parseResult, ct) =>
+{
+    var name = parseResult.GetValue(createDbArg)!;
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var content = JsonContent.Create(new { name });
+    await client.PostAsync("/api/databases", content);
+    AnsiConsole.MarkupLine($"[green]Database created:[/] {Markup.Escape(name)}");
+});
+dbCommand.Add(createDbCmd);
+
+var dropDbArg = new Argument<string>("name");
+var dropDbCmd = new Command("drop", "Drop a database") { dropDbArg };
+dropDbCmd.SetAction(async (parseResult, ct) =>
+{
+    var name = parseResult.GetValue(dropDbArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    if (!json && !AnsiConsole.Confirm($"Drop database [red]{Markup.Escape(name)}[/]?", false)) return;
+    await client.DeleteAsync($"/api/databases/{name}");
+    AnsiConsole.MarkupLine($"[yellow]Dropped:[/] {Markup.Escape(name)}");
+});
+dbCommand.Add(dropDbCmd);
+
+// --- wdc binaries ---
+var binariesCommand = new Command("binaries", "List installed binaries");
+binariesCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var bins = await client.GetJsonAsync("/api/binaries/installed");
+    if (json) { PrintJson(bins); return; }
+    if (bins.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No binaries installed.[/]"); return; }
+
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("App"); table.AddColumn("Version"); table.AddColumn("Path");
+    foreach (var b in bins.EnumerateArray())
+    {
+        table.AddRow(
+            b.GetProperty("app").GetString() ?? "?",
+            b.GetProperty("version").GetString() ?? "?",
+            b.GetProperty("installPath").GetString() ?? "-");
+    }
+    AnsiConsole.Write(table);
+});
+
+var installAppArg = new Argument<string>("app");
+var installVerArg = new Argument<string>("version");
+var installBinCmd = new Command("install", "Download and install a binary") { installAppArg, installVerArg };
+installBinCmd.SetAction(async (parseResult, ct) =>
+{
+    var app = parseResult.GetValue(installAppArg)!;
+    var ver = parseResult.GetValue(installVerArg)!;
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    AnsiConsole.MarkupLine($"Installing [bold]{Markup.Escape(app)}[/] {Markup.Escape(ver)}...");
+    var content = JsonContent.Create(new { app, version = ver });
+    var result = await client.PostAsync("/api/binaries/install", content);
+    AnsiConsole.MarkupLine($"[green]Installed![/]");
+    PrintJson(result);
+});
+binariesCommand.Add(installBinCmd);
+
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(sitesCommand);
 rootCommand.Add(pluginsCommand);
+rootCommand.Add(dbCommand);
+rootCommand.Add(binariesCommand);
 rootCommand.Add(versionCommand);
 
 return await rootCommand.Parse(args).InvokeAsync();
@@ -231,6 +332,12 @@ static bool EnsureConnected(DaemonClient client)
 
 static void PrintJson(object obj) =>
     AnsiConsole.WriteLine(JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true }));
+
+static string StateNumToStr(int state) => state switch
+{
+    0 => "stopped", 1 => "starting", 2 => "running",
+    3 => "stopping", 4 => "crashed", 5 => "disabled", _ => "unknown"
+};
 
 static string FormatState(string state) => state.ToLowerInvariant() switch
 {
