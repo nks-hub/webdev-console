@@ -700,6 +700,22 @@ phpSwitchCmd.SetAction(async (parseResult, ct) =>
 });
 phpCommand.Add(phpSwitchCmd);
 
+// --- wdc php install {version} ---
+var phpInstVerArg = new Argument<string>("version") { Description = "PHP version to install (e.g. 8.2.30)" };
+var phpInstCmd = new Command("install", "Download and install a PHP version") { phpInstVerArg };
+phpInstCmd.SetAction(async (parseResult, ct) =>
+{
+    var ver = parseResult.GetValue(phpInstVerArg)!;
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    AnsiConsole.MarkupLine($"Installing PHP [bold]{Markup.Escape(ver)}[/]...");
+    var content = JsonContent.Create(new { app = "php", version = ver });
+    var result = await client.PostAsync("/api/binaries/install", content);
+    if (parseResult.GetValue(jsonOption)) { PrintJson(result); return; }
+    AnsiConsole.MarkupLine($"[green]PHP {Markup.Escape(ver)} installed![/]");
+});
+phpCommand.Add(phpInstCmd);
+
 // --- wdc open {domain} ---
 var openDomainArg = new Argument<string>("domain") { Description = "Site domain to open in browser" };
 var openCommand = new Command("open", "Open a site in the default browser") { openDomainArg };
