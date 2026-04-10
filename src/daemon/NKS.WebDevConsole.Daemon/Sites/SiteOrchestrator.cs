@@ -90,6 +90,21 @@ public sealed class SiteOrchestrator
             }
         }
 
+        // 4. Hosts file — add domain + aliases to system hosts (requires elevation on Windows)
+        try
+        {
+            var domains = new List<string> { site.Domain };
+            if (site.Aliases is { Length: > 0 })
+                domains.AddRange(site.Aliases);
+
+            await UpdateHostsFileAsync(domains, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Hosts file update failed for {Domain} (may need admin elevation): {Error}",
+                site.Domain, ex.Message);
+        }
+
         _logger.LogInformation("Site {Domain} applied", site.Domain);
     }
 
@@ -130,6 +145,90 @@ public sealed class SiteOrchestrator
         }
 
         _logger.LogInformation("Site {Domain} removed", domain);
+    }
+
+    /// <summary>
+    /// Collects all domains from all sites and writes them into the managed block of the hosts file.
+    /// Uses PowerShell with -Verb RunAs (UAC elevation) on Windows.
+    /// </summary>
+    private async Task UpdateHostsFileAsync(IEnumerable<string> domainsToAdd, CancellationToken ct)
+    {
+        if (!OperatingSystem.IsWindows()) return; // TODO: Unix implementation
+
+        var hostsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "drivers", "etc", "hosts");
+
+        // Collect ALL managed domains (existing + new) so we can write the complete block
+        var siteManager = _sp.GetService<SiteManager>();
+        var allDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (siteManager is not null)
+        {
+            foreach (var site in siteManager.Sites.Values)
+            {
+                allDomains.Add(site.Domain);
+                if (site.Aliases is not null)
+                    foreach (var alias in site.Aliases)
+                        allDomains.Add(alias);
+            }
+        }
+        foreach (var d in domainsToAdd)
+            allDomains.Add(d);
+
+        // Build PowerShell command that writes managed block with elevation
+        var entries = string.Join("\\n", allDomains.Select(d => $"127.0.0.1\\t{d}"));
+        var psScript = $@"
+$hostsPath = '{hostsPath.Replace("'", "''")}'
+$begin = '# BEGIN NKS WebDev Console'
+$end = '# END NKS WebDev Console'
+$block = @""
+$begin
+{string.Join(Environment.NewLine, allDomains.Select(d => $"127.0.0.1\t{d}"))}
+$end
+""@
+$content = Get-Content $hostsPath -Raw -ErrorAction SilentlyContinue
+if (-not $content) {{ $content = '' }}
+$bi = $content.IndexOf($begin)
+$ei = $content.IndexOf($end)
+if ($bi -ge 0 -and $ei -ge 0) {{
+    $before = $content.Substring(0, $bi)
+    $after = $content.Substring($ei + $end.Length)
+    $content = $before.TrimEnd() + ""`r`n`r`n"" + $block + $after.TrimStart()
+}} else {{
+    $content = $content.TrimEnd() + ""`r`n`r`n"" + $block + ""`r`n""
+}}
+Set-Content -Path $hostsPath -Value $content -Encoding ASCII -Force
+ipconfig /flushdns | Out-Null
+";
+        // Write script to temp file and execute with elevation
+        var scriptPath = Path.Combine(Path.GetTempPath(), "nks-wdc-hosts-update.ps1");
+        await File.WriteAllTextAsync(scriptPath, psScript, ct);
+
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = $"-ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        try
+        {
+            var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is not null)
+            {
+                await proc.WaitForExitAsync(ct);
+                if (proc.ExitCode == 0)
+                    _logger.LogInformation("Hosts file updated with {Count} domains", allDomains.Count);
+                else
+                    _logger.LogWarning("Hosts update script exited with code {Code}", proc.ExitCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Hosts file write failed: {Error}. Try running NKS WDC as administrator.", ex.Message);
+        }
     }
 
     /// <summary>
