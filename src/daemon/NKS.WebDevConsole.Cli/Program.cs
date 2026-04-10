@@ -1218,6 +1218,84 @@ hostsCmd.SetAction((parseResult, ct) =>
     return Task.CompletedTask;
 });
 
+// --- wdc ssl ---
+var sslCommand = new Command("ssl", "SSL certificate management");
+
+var sslListCmd = new Command("list", "List all SSL certificates");
+sslListCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var data = await client.GetJsonAsync("/api/ssl/certs");
+    if (json) { PrintJson(data); return; }
+
+    var mkcert = data.TryGetProperty("mkcertInstalled", out var mi) && mi.GetBoolean();
+    AnsiConsole.MarkupLine($"mkcert: {(mkcert ? "[green]installed[/]" : "[red]not found[/]")}");
+
+    if (data.TryGetProperty("certs", out var certs) && certs.GetArrayLength() > 0)
+    {
+        var table = new Table().Border(TableBorder.Rounded)
+            .AddColumn("Domain").AddColumn("Created").AddColumn("Cert Path");
+        foreach (var c in certs.EnumerateArray())
+        {
+            var domain = c.GetProperty("domain").GetString() ?? "";
+            var created = c.TryGetProperty("createdUtc", out var cr) ? cr.GetString()?[..10] ?? "" : "";
+            var path = c.TryGetProperty("certPath", out var cp) ? cp.GetString() ?? "" : "";
+            table.AddRow(Markup.Escape(domain), created, Markup.Escape(path));
+        }
+        AnsiConsole.Write(table);
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[dim]No certificates.[/]");
+    }
+});
+sslCommand.Add(sslListCmd);
+
+var sslGenerateArg = new Argument<string>("domain") { Description = "Domain to generate certificate for" };
+var sslGenerateCmd = new Command("generate", "Generate SSL certificate for a domain") { sslGenerateArg };
+sslGenerateCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(sslGenerateArg);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync("/api/ssl/generate",
+        new StringContent(JsonSerializer.Serialize(new { domain, aliases = Array.Empty<string>() }),
+        System.Text.Encoding.UTF8, "application/json"));
+    var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
+    var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+    if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
+    else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+});
+sslCommand.Add(sslGenerateCmd);
+
+var sslInstallCaCmd = new Command("install-ca", "Install mkcert root CA into system trust store");
+sslInstallCaCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync("/api/ssl/install-ca");
+    var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
+    var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+    if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
+    else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+});
+sslCommand.Add(sslInstallCaCmd);
+
+var sslRevokeArg = new Argument<string>("domain") { Description = "Domain to revoke certificate for" };
+var sslRevokeCmd = new Command("revoke", "Revoke (delete) SSL certificate") { sslRevokeArg };
+sslRevokeCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(sslRevokeArg);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    await client.DeleteAsync($"/api/ssl/certs/{domain}");
+    AnsiConsole.MarkupLine($"[green]✓[/] Certificate for {Markup.Escape(domain)} revoked");
+});
+sslCommand.Add(sslRevokeCmd);
+
+rootCommand.Add(sslCommand);
 rootCommand.Add(hostsCmd);
 rootCommand.Add(completionCmd);
 rootCommand.Add(newCommand);
