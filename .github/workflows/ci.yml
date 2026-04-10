@@ -1,0 +1,148 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-daemon:
+    name: Build Daemon (.NET)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore dependencies
+        run: dotnet restore WebDevConsole.sln
+
+      - name: Build
+        run: dotnet build WebDevConsole.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test WebDevConsole.sln -c Release --verbosity normal
+
+      - name: Publish Daemon
+        run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon -c Release -r win-x64 --self-contained -o publish/daemon
+
+      - name: Publish CLI
+        run: dotnet publish src/daemon/NKS.WebDevConsole.Cli -c Release -r win-x64 --self-contained -o publish/cli
+
+      - name: Upload Daemon artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-win-x64
+          path: publish/daemon/
+          retention-days: 14
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-win-x64
+          path: publish/cli/
+          retention-days: 14
+
+  build-frontend:
+    name: Build Frontend (Electron)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: src/frontend/node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      - name: Install dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: src/frontend
+        run: npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-out
+          path: src/frontend/out/
+          retention-days: 14
+
+  package:
+    name: Package Electron Installer
+    runs-on: windows-latest
+    needs: [build-daemon, build-frontend]
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download daemon artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: daemon-win-x64
+          path: publish/daemon
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-win-x64
+          path: publish/cli
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-out
+          path: src/frontend/out
+
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build Electron installer
+        working-directory: src/frontend
+        run: npx electron-builder --config electron-builder.json --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-win-x64
+          path: src/frontend/release/
+          retention-days: 30
