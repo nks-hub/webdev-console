@@ -3,6 +3,7 @@ import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import { readFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
+import http from 'http'
 
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -11,6 +12,53 @@ let daemonConnected = false
 let isQuitting = false
 
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
+
+function readPortFile(): { port: number; token: string } | null {
+  try {
+    if (!existsSync(PORT_FILE)) return null
+    const lines = readFileSync(PORT_FILE, 'utf-8').split('\n').filter(Boolean)
+    if (lines.length >= 2) return { port: parseInt(lines[0], 10), token: lines[1] }
+  } catch {}
+  return null
+}
+
+function daemonGet<T>(path: string): Promise<T> {
+  const info = readPortFile()
+  if (!info) return Promise.reject(new Error('No port file'))
+  return new Promise((resolve, reject) => {
+    const req = http.get(
+      `http://localhost:${info.port}${path}`,
+      { headers: info.token ? { Authorization: `Bearer ${info.token}` } : {} },
+      (res) => {
+        let body = ''
+        res.on('data', (chunk: Buffer) => (body += chunk.toString()))
+        res.on('end', () => {
+          try { resolve(JSON.parse(body) as T) } catch (e) { reject(e) }
+        })
+      }
+    )
+    req.on('error', reject)
+    req.setTimeout(3000, () => { req.destroy(); reject(new Error('timeout')) })
+  })
+}
+
+function daemonPost(path: string): Promise<void> {
+  const info = readPortFile()
+  if (!info) return Promise.reject(new Error('No port file'))
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      `http://localhost:${info.port}${path}`,
+      { method: 'POST', headers: info.token ? { Authorization: `Bearer ${info.token}` } : {} },
+      (res) => {
+        res.on('data', () => {})
+        res.on('end', () => resolve())
+      }
+    )
+    req.on('error', reject)
+    req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')) })
+    req.end()
+  })
+}
 const DAEMON_EXE = join(__dirname, '../../daemon/bin/wdc-daemon.exe')
 const DAEMON_DEV = join(__dirname, '../../daemon')
 
@@ -77,10 +125,52 @@ function createWindow() {
   })
 }
 
-function updateTray() {
+interface ServiceEntry {
+  id: string
+  name: string
+  status: string
+}
+
+async function buildServiceSubmenu(): Promise<Electron.MenuItemConstructorOptions[]> {
+  try {
+    const services = await daemonGet<ServiceEntry[]>('/api/services')
+    if (!services || services.length === 0) {
+      return [{ label: 'No services', enabled: false }]
+    }
+    const items: Electron.MenuItemConstructorOptions[] = []
+    for (const svc of services) {
+      const running = svc.status === 'running'
+      items.push({
+        label: `${svc.name} (${svc.status})`,
+        submenu: [
+          {
+            label: 'Start',
+            enabled: !running,
+            click: () => { daemonPost(`/api/services/${svc.id}/start`).then(() => updateTray()) }
+          },
+          {
+            label: 'Stop',
+            enabled: running,
+            click: () => { daemonPost(`/api/services/${svc.id}/stop`).then(() => updateTray()) }
+          }
+        ]
+      })
+    }
+    items.push({ type: 'separator' })
+    items.push({ label: 'Manage...', click: () => { win?.show(); win?.focus() } })
+    return items
+  } catch {
+    return [{ label: 'Daemon offline', enabled: false }]
+  }
+}
+
+async function updateTray() {
   if (!tray) return
   const label = daemonConnected ? 'NKS WebDev Console (connected)' : 'NKS WebDev Console (disconnected)'
   tray.setToolTip('NKS WebDev Console')
+
+  const serviceItems = await buildServiceSubmenu()
+
   const menu = Menu.buildFromTemplate([
     { label, enabled: false },
     { type: 'separator' },
@@ -99,13 +189,7 @@ function updateTray() {
     { type: 'separator' },
     {
       label: 'Services',
-      submenu: [
-        { label: 'Apache', enabled: false },
-        { label: 'MySQL', enabled: false },
-        { label: 'PHP', enabled: false },
-        { type: 'separator' },
-        { label: 'Manage...', click: () => { win?.show(); win?.focus() } }
-      ]
+      submenu: serviceItems
     },
     { type: 'separator' },
     {
