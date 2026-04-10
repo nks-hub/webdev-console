@@ -24,7 +24,7 @@ public sealed class ApacheVersionManager
 
     /// <summary>
     /// Returns all Apache installations found on the current machine.
-    /// Scans: PATH, well-known install directories, and DevForge's own app-dir.
+    /// Scans: PATH, well-known install directories, and NKS WDC app-dir.
     /// </summary>
     public async Task<IReadOnlyList<ApacheInstallation>> DetectAllAsync(
         string appDirectory,
@@ -51,7 +51,7 @@ public sealed class ApacheVersionManager
     {
         var exe = OperatingSystem.IsWindows() ? "httpd.exe" : "httpd";
 
-        // 1. DevForge bundled copy
+        // 1. NKS WDC bundled copy
         yield return Path.Combine(appDirectory, "apache", "bin", exe);
 
         // 2. PATH entries

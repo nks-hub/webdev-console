@@ -6,7 +6,7 @@ namespace NKS.WebDevConsole.Plugin.PHP;
 
 /// <summary>
 /// Runs Composer commands using a specific PHP version, using the correct php.ini.
-/// Downloads composer.phar if not already present in the DevForge appDir.
+/// Downloads composer.phar if not already present in the NKS WDC appDir.
 /// </summary>
 public sealed class ComposerIntegration
 {
