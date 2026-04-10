@@ -147,17 +147,23 @@ deleteSiteCmd.SetAction(async (parseResult, ct) =>
 sitesCommand.Add(deleteSiteCmd);
 
 // --- wdc sites create ---
-var createSiteCmd = new Command("create", "Create a new site (interactive)");
+var domainOpt = new Option<string?>("--domain") { Description = "Domain name (e.g. myapp.loc)" };
+var docrootOpt = new Option<string?>("--docroot") { Description = "Document root path" };
+var phpOpt = new Option<string?>("--php") { Description = "PHP version (default: 8.4)" };
+var sslOpt = new Option<bool>("--ssl") { Description = "Enable SSL" };
+var aliasesOpt = new Option<string?>("--aliases") { Description = "Comma-separated aliases" };
+var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt };
 createSiteCmd.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
 
-    var domain = AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):");
-    var docRoot = AnsiConsole.Ask<string>("Document root:");
-    var php = AnsiConsole.Ask("PHP version:", "8.4");
-    var ssl = AnsiConsole.Confirm("Enable SSL?", false);
+    var domain = parseResult.GetValue(domainOpt) ?? AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):");
+    var docRoot = parseResult.GetValue(docrootOpt) ?? AnsiConsole.Ask<string>("Document root:");
+    var php = parseResult.GetValue(phpOpt) ?? "8.4";
+    var ssl = parseResult.GetValue(sslOpt) || (!json && domain == null && AnsiConsole.Confirm("Enable SSL?", false));
+    var aliasStr = parseResult.GetValue(aliasesOpt);
 
     var payload = new
     {
@@ -167,7 +173,7 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
         sslEnabled = ssl,
         httpPort = 80,
         httpsPort = 443,
-        aliases = Array.Empty<string>(),
+        aliases = aliasStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>(),
         environment = new Dictionary<string, string>()
     };
 
