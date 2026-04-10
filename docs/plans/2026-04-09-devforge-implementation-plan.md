@@ -1,9 +1,9 @@
 # DevForge - Complete Implementation Plan & Documentation
 
-**Version:** 1.0.0-draft  
+**Version:** 1.0.0  
 **Date:** 2026-04-09  
 **Status:** Implementation Plan  
-**Compiled from:** 15 parallel specialist agents + web research  
+**Compiled from:** SPEC.md + interview results + Avalonia ecosystem research  
 
 ---
 
@@ -53,9 +53,9 @@
 | SSL Certs | Manual | Manual | 1-click mkcert | Auto | **Auto mkcert + CA mgmt** |
 | Config Validation | None | None | None | Unknown | **3-stage: parse→render→dry-run** |
 | Portable | Partial | Partial | Yes | Yes | **Yes (copy folder)** |
-| CLI | None | None | None | Limited | **Full JSON-RPC CLI** |
-| Plugin System | None | None | None | Custom modules | **Sandboxed Lua plugins** |
-| Docker Integration | None | None | None | Podman | **Traefik reverse proxy** |
+| CLI | None | None | None | Limited | **Full gRPC CLI** |
+| Plugin System | None | None | None | Custom modules | **Extensible C# plugins via AssemblyLoadContext** |
+| Reverse Proxy | None | None | None | Podman | **Traefik integration** |
 | Config Storage | SQLite (fragile) | INI files | INI files | Unknown | **TOML per-site + SQLite state** |
 | Open Source | No (Pro) | Yes | Yes | Yes (BSD-3) | **Yes (Apache-2.0)** |
 
@@ -89,7 +89,7 @@
 | **FlyEnv** | Electron + Vue + TS | Win, macOS, Linux | BSD-3 | 50+ modules, AI integration, native binaries | Electron memory overhead, 2.7k stars |
 | **ServBay** | Native | macOS, Win | Freemium | Multi-language, DNS manager, sleek GUI | Partially paid, newer |
 | **Laravel Herd** | Native (Swift/C++) | macOS, Win | Free/Pro ($99/yr) | Laravel-focused, fast, Valet-based | Laravel-centric, Pro features locked |
-| **DDEV** | Go + Docker | All | Apache-2.0 | Docker isolation, CI/CD friendly | Docker overhead (1-2GB RAM), 15-45s startup |
+| **DDEV** | Docker | All | Apache-2.0 | Docker isolation, CI/CD friendly | Docker overhead (1-2GB RAM), 15-45s startup |
 
 #### Tier 3 — Specialized/Lightweight
 
@@ -131,16 +131,16 @@ Target audience: PHP developers who want native performance (not Docker overhead
 | Developer ecosystem | Large, familiar | Growing | **Large (Windows-centric, cross-platform improving)** | Largest |
 | Concurrency | Goroutines (easy) | async/await (complex) | **async/await (first-class, mature)** | Event loop |
 | Dependency injection | Manual | Manual | **Built-in (Microsoft.Extensions)** | npm |
-| SQLite | `modernc.org/sqlite` (pure Go) | `rusqlite` | **EF Core or Dapper** | better-sqlite3 |
-| IPC | Named pipe (native) | TcpStream | **gRPC + named pipes (GrpcDotNetNamedPipes)** | TCP |
+| SQLite | `sqlite` (C FFI) | `rusqlite` | **Microsoft.Data.Sqlite + Dapper** | better-sqlite3 |
+| IPC | Named pipe (native) | TcpStream | **gRPC + named pipes (built-in Kestrel)** | TCP |
 | Daemon framework | Manual goroutine loops | Manual tokio | **IHostedService (mature pattern)** | Manual event loop |
 
 **Decision Rationale:**
 1. **AV False Positive Safety** — Go binaries trigger Microsoft Defender heuristics (Wacatac.B!ml, Wacapew.C!ml); .NET Framework Dependent Execution (FDE) not flagged even on unsigned binaries. Critical for product reliability.
 2. **Single Language Everywhere** — Daemon (Worker Service) + GUI (Avalonia UI XAML/C#) + CLI (System.CommandLine, Spectre.Console) = zero polyglot friction, unified testing, shared domain models.
 3. **Native Process Management** — `System.Diagnostics.Process` + `TaskCompletionSource` is gold standard for Windows process control; `Task` model elegantly maps to per-service lifecycle management.
-4. **IPC/RPC Excellence** — gRPC + protobuf over named pipes provides better performance and type safety than JSON-RPC; works natively on Windows with `GrpcDotNetNamedPipes` NuGet package.
-5. **GUI Maturity** — Avalonia UI 12.x reaches production-grade stability with Fluent Design System, native tray support, and DataGrid control built-in. ReactiveUI/CommunityToolkit.MVVM ecosystem is robust.
+4. **IPC/RPC Excellence** — gRPC + protobuf over named pipes provides better performance and type safety than JSON-RPC; works natively on Windows with Kestrel named pipe listener.
+5. **GUI Maturity** — Avalonia UI 12.x reaches production-grade stability with Fluent Design System, native tray support, and DataGrid control built-in. CommunityToolkit.Mvvm ecosystem is robust.
 6. **Developer Productivity** — C# async/await, LINQ, and dependency injection reduce ceremony vs. Go; IDE support (Visual Studio Community, Rider) is unmatched.
 
 ### GUI Framework: Avalonia UI 12.x (SELECTED)
@@ -149,509 +149,540 @@ Target audience: PHP developers who want native performance (not Docker overhead
 
 | Aspect | Details |
 |--------|---------|
-| **License** | MIT (permissive, commercial OK) |
-| **Bundle Size** | ~21 MB base + ~13 MB self-contained runtime = ~34 MB installer (vs. Qt 8-15 MB) |
-| **Memory** | 40-80 MB runtime (lower than Electron, comparable to Qt) |
-| **Features** | Native tray icon, DataGrid, TreeView, Fluent Design System (dark/light), hot reload in dev |
-| **Cross-Platform** | Win, macOS, Linux (native rendering on each platform) |
-| **IPC with Daemon** | gRPC over named pipes (Windows) / Unix sockets (macOS/Linux) via `GrpcDotNetNamedPipes` package |
-| **MVVM** | ReactiveUI (mature) or CommunityToolkit.MVVM (simpler, Microsoft-endorsed) |
-| **Charts/Graphing** | LiveCharts2 (C#, similar to Chart.js) |
-| **Keyboard Shortcuts** | Built-in `HotKeyManager` and command binding support |
-| **Accessibility** | WCAG 2.1 AA via UIA (Windows) / accessibility APIs (macOS/Linux) |
+| **Framework** | Avalonia UI 12.0.0 |
+| **Styling** | Fluent Dark/Light theme (built-in `RequestedThemeVariant`) |
+| **System Tray** | Native `TrayIcon` control with `NativeMenu` |
+| **Charts** | LiveCharts2.SkiaSharp.Avalonia (2.0.0; **VERIFY Avalonia 12 compat day 1**) |
+| **DataGrid** | `Avalonia.Controls.DataGrid` (separate NuGet) |
+| **MVVM** | CommunityToolkit.Mvvm (source generators) |
+| **Hot Reload** | HotAvalonia 3.1.0 (Debug only) |
 
-**Comparison to Qt6:**
-- Qt6 (Score: 9.5): Smaller bundle (8-15 MB), LGPL compliance burden, C++ learning curve
-- **Avalonia UI (Score: 8.5): Slightly larger bundle, MIT license (simpler), C# ecosystem, unified .NET stack**
+**Why Avalonia (vs. Flutter / PySide6 / Slint):**
+- **No WebView** — native rendering via Skia; matches developer preference ("neni to prava nativni appka")
+- **C# native** — unified with daemon and CLI
+- **TrayIcon built-in** — must-have per interview
+- **Fluent theme** — professional dark/light switch
+- **MIT license** — commercial-friendly
+- **$3M Devolutions backing** — long-term stability
 
-### Core Engine Framework: .NET 9 Worker Service
+**Known issues & mitigations:**
+- LiveCharts2 2.0.0 declares `>= Avalonia 11.0.0` but Avalonia 12 compat unconfirmed. **Day-1 verification checklist:** Test LiveCharts2 against Avalonia 12.0.0 in a minimal app. Fallback options: ScottPlot.Avalonia, OxyPlot.Avalonia (both tested against 12.x).
+- No official XAML hot reload in open-source; HotAvalonia provides community solution.
+- Linux system tray varies by desktop environment (Wayland unsupported in many DE's).
 
-```csharp
-// Program.cs entry point
-Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services => {
-        services.AddHostedService<DevForgeWorkerService>();
-        services.AddScoped<IServiceManager>();
-        services.AddScoped<IConfigurationPipeline>();
-        services.AddSingleton<EventBus>();
-        services.AddGrpc();
-    })
-    .Build()
-    .Run();
-```
+### IPC Protocol: gRPC (NOT JSON-RPC)
 
-**Key Patterns:**
-- `IHostedService` lifecycle (StartAsync / StopAsync) for daemon management
-- `BackgroundService` base class for continuous monitoring loops
-- `CancellationToken` throughout for graceful shutdown
-- `Channel<T>` for inter-task communication (replaces goroutine channels)
-- Dependency injection for loose coupling
+**Benefits vs. JSON-RPC 2.0:**
+- **Typed contracts** — protobuf defines request/response schema; no stringly-typed JSON
+- **Binary efficiency** — gRPC compression reduces bandwidth vs. JSON
+- **Streaming** — server-sent events (logs, metrics) via `stream` keyword
+- **HTTP/2 multiplexing** — multiple concurrent RPC calls on single connection
+- **Tooling** — `grpcurl` CLI for debugging, code generation from `.proto` files
 
-### Configuration Storage & IPC
+**Transport (platform-specific):**
+- Windows: Named pipe `\\.\pipe\devforge-daemon`
+- macOS/Linux: Unix domain socket `~/.devforge/daemon.sock`
 
-**Configuration Storage:**
-- **Site configs: TOML files** — parsed via `Tomlyn` NuGet package
-- **Runtime state: SQLite** — `Dapper` for lightweight ORM, or EF Core for migrations
-- **Rationale:** Same as before — survives corruption, independent per-site
+Both use standard gRPC over HTTP/2; no custom wire protocol.
 
-**IPC Protocol: gRPC (not JSON-RPC)**
-- **Transport:** Named pipe `\\.\pipe\devforge-daemon` (Windows) / Unix socket `~/.devforge/daemon.sock` (Unix)
-- **Serialization:** Protocol Buffers (protobuf) — type-safe, binary efficient
-- **Benefits vs. JSON-RPC 2.0:**
-  - Strongly-typed contracts (compile-time safety)
-  - Better performance for streaming logs/events
-  - Named pipes have full support via `GrpcDotNetNamedPipes` package
-  - Shared proto definitions between daemon and clients
+### Key NuGet Packages (Core Stack)
 
-**Proto Example:**
-```protobuf
-service DevForge {
-  rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
-  rpc ListSites(Empty) returns (stream SiteInfo);
-  rpc SubscribeEvents(EventFilter) returns (stream Event);
-}
-```
+**DevForge.Core (shared contracts):**
+- `Google.Protobuf` 3.x
+- `Grpc.Tools` (code generation)
+- `Tomlyn` (TOML parsing for config files)
+
+**DevForge.Daemon (service):**
+- `Grpc.AspNetCore` 2.76.0+ (gRPC server via Kestrel)
+- `Microsoft.Data.Sqlite` 9.0+ (SQLite client)
+- `Dapper` 2.1+ (micro-ORM for queries)
+- `Scriban` 7.1.0+ (template engine for Apache/Nginx configs)
+- `CliWrap` 3.10.1+ (subprocess: `httpd -t`, `mysqladmin`, `mkcert`)
+- `Microsoft.Extensions.Hosting` (Worker Service)
+- `Microsoft.Extensions.Logging` (structured logging)
+- `Serilog` 4.3+ + `Serilog.Sinks.File` 7.0+ (file logging)
+- `dbup-sqlite` 6.0+ (schema migrations)
+
+**DevForge.Gui (Avalonia app):**
+- `Avalonia` 12.0.0
+- `Avalonia.Desktop` 12.0.0
+- `Avalonia.Themes.Fluent` 12.0.0
+- `Avalonia.Controls.DataGrid` 12.0.0
+- `LiveChartsCore.SkiaSharpView.Avalonia` 2.0.0 (**with day-1 compat check**)
+- `Grpc.Net.Client` 2.76.0+
+- `CommunityToolkit.Mvvm` 8.x (source generators)
+- `HotAvalonia` 3.1.0 (Debug conditional)
+
+**DevForge.Cli (command-line):**
+- `System.CommandLine` 2.0.5+ (command parsing)
+- `Spectre.Console` 0.55.0 (output formatting: tables, progress bars, colors)
+- `Grpc.Net.Client` 2.76.0+
+- `CliWrap` 3.10.1+
+
+**DevForge.Tests:**
+- `xunit` 2.6+
+- `Moq` 4.x
+- `Avalonia.Headless.XUnit`
+- `Microsoft.Data.Sqlite` (in-memory for DB tests)
 
 ---
 
 ## 4. System Architecture
 
-### Layered Architecture (.NET 9 + Avalonia UI)
+### Core Principle: Daemon Is Source of Truth
+
+Neither the GUI nor CLI ever modify config files, spawn services, or touch the hosts file directly. Every mutation goes through the daemon's gRPC API. The daemon is the single source of truth.
+
+### Component Diagram
 
 ```
-┌───────────────────────────────────────────────────────┐
-│  PRESENTATION LAYER                                   │
-│  ┌──────────────────────────┐  ┌──────────────────┐  │
-│  │  GUI (Avalonia UI)       │  │  CLI             │  │
-│  │  XAML + C# ViewModel     │  │  (System.        │  │
-│  │  (MVVM/ReactiveUI)       │  │   CommandLine +  │  │
-│  │                          │  │   Spectre.       │  │
-│  └────────────┬─────────────┘  │   Console)       │  │
-│               │                │                  │  │
-│               │                └────────┬─────────┘  │
-├───────────────┴─────────────────────────┴────────────┤
-│  RPC LAYER — gRPC over named pipe/Unix socket        │
-│  (Protobuf serialization, strongly-typed contracts)  │
-├───────────────────────────────────────────────────────┤
-│  CORE ENGINE (DevForge Worker Service)               │
-│  ┌───────────────┬──────────────┬─────────────────┐  │
-│  │ IServiceMgr   │ IConfigPipe   │ IVHostManager  │  │
-│  │ (Process      │ (TOML + tpl + │ (Apache/Nginx) │  │
-│  │  lifycycle)   │  validation)  │                │  │
-│  ├───────────────┼──────────────┼─────────────────┤  │
-│  │ IPhpManager   │ ISslModule    │ IDnsManager    │  │
-│  │ (MultiVer)    │ (mkcert)      │ (hosts file)   │  │
-│  └───────────────┴──────────────┴─────────────────┘  │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │  EventBus (Channel<Event>) + HealthMonitor     │ │
-│  │  (runs as BackgroundService)                   │ │
-│  └─────────────────────────────────────────────────┘ │
-├───────────────────────────────────────────────────────┤
-│  PLATFORM ABSTRACTION LAYER (C#)                      │
-│  IPlatformAbstraction: process spawning,             │
-│  privilege elevation (UAC), file ACLs, registries    │
-└───────────────────────────────────────────────────────┘
+┌──────────────────────────────┐   ┌────────────────────────────────┐
+│  DevForge.Gui (Avalonia)     │   │  DevForge.Cli (System.CommandLine)
+│  - Main window               │   │  - devforge start apache       │
+│  - System tray               │   │  - devforge new myapp.loc      │
+│  - LiveCharts2 metrics       │   │  - devforge db:import mydb ... │
+└──────────┬───────────────────┘   └────────────┬───────────────────┘
+           │ gRPC over named pipe               │ gRPC over named pipe
+           │ (Windows: \\.\pipe\devforge)       │ (macOS/Linux: unix socket)
+           └──────────┬────────────────────────┘
+                      │
+           ┌──────────▼──────────────────────────────────────┐
+           │  DevForge.Daemon (Worker Service)                │
+           │                                                  │
+           │  ProcessManager   HealthMonitor   MetricsCollector  │
+           │  ┌────────────┐  ┌────────────┐  ┌───────────────┐ │
+           │  │ Apache     │  │ Nginx      │  │ MySQL         │ │
+           │  │ Module     │  │ Module     │  │ Module        │ │
+           │  ├────────────┤  ├────────────┤  ├───────────────┤ │
+           │  │ PHP-FPM    │  │ Redis      │  │ Mailpit       │ │
+           │  │ Module     │  │ Module     │  │ Module        │ │
+           │  └────────────┘  └────────────┘  └───────────────┘ │
+           │                                                  │
+           │  ConfigEngine     SslManager    HostsFileManager    │
+           │  PluginLoader     DbManager     DnsFlush            │
+           │                                                  │
+           │  SQLite (state.db)                                   │
+           └──────────────────────────────────────────────────────┘
 ```
 
-### Single .NET Solution Structure
+### Solution Structure
 
 ```
 DevForge.sln
-├── DevForge.Daemon/              # Worker Service (.NET 9)
-│   ├── Program.cs               # Startup, DI configuration
-│   ├── Services/
-│   │   ├── ServiceManager.cs    # System.Diagnostics.Process wrapper
-│   │   ├── ConfigPipeline.cs    # TOML + Handlebars rendering
-│   │   ├── VHostManager.cs      # Apache/Nginx config
-│   │   ├── SslModule.cs         # mkcert integration
-│   │   ├── HealthMonitor.cs     # BackgroundService loop
-│   │   └── PluginHost.cs        # Lua runtime
-│   └── Protos/                  # gRPC service definitions
-│       └── devforge.proto       # Service contracts
+src/
+├── DevForge.Core/              # Shared types, interfaces, config models
+│   ├── Models/                 # Site, Service, PhpVersion, Certificate, Database
+│   ├── Interfaces/             # IServiceModule, IConfigProvider, IHostsManager
+│   ├── Configuration/          # AppConfig, SiteConfig, TOML loading
+│   └── Proto/                  # .proto files for gRPC (shared between daemon and clients)
 │
-├── DevForge.Gui/                 # Avalonia UI Application
-│   ├── App.xaml.cs              # App entry point
-│   ├── Views/
-│   │   ├── MainWindow.xaml      # Root window
-│   │   ├── DashboardView.xaml
-│   │   ├── SitesManagerView.xaml
-│   │   ├── PhpManagerView.xaml
-│   │   └── SettingsView.xaml
-│   ├── ViewModels/              # ReactiveUI or MVVM Toolkit
-│   │   ├── MainViewModel.cs
-│   │   ├── DashboardViewModel.cs
-│   │   └── ...
-│   └── DaemonClient.cs          # gRPC channel to daemon
+├── DevForge.Daemon/            # Background service — owns all child processes
+│   ├── Program.cs              # Worker Service host entry point
+│   ├── Services/               # ProcessManager, HealthMonitor, MetricsCollector
+│   ├── Modules/                # ApacheModule, NginxModule, MySqlModule, PhpFpmModule, RedisModule
+│   ├── Grpc/                   # gRPC server implementations
+│   ├── Config/                 # TemplateEngine (Scriban), ConfigValidator, AtomicWriter
+│   ├── Ssl/                    # MkcertManager, CertificateTracker
+│   ├── Dns/                    # HostsFileManager, DnsFlush
+│   ├── Db/                     # DatabaseManager, BackupScheduler
+│   └── Plugin/                 # PluginLoader (AssemblyLoadContext), PluginHost
 │
-├── DevForge.Cli/                 # CLI Console Application
-│   ├── Program.cs               # System.CommandLine root
-│   ├── Commands/
-│   │   ├── SiteCommand.cs       # site:create, site:list, etc.
-│   │   ├── ServiceCommand.cs
-│   │   ├── PhpCommand.cs
-│   │   └── ...
-│   └── DaemonClient.cs          # Shared gRPC client
+├── DevForge.Gui/               # Avalonia desktop application
+│   ├── App.axaml               # Application entry, theme registration
+│   ├── ViewModels/             # MVVM ViewModels (CommunityToolkit.Mvvm)
+│   ├── Views/                  # .axaml views per screen
+│   ├── Controls/               # Reusable controls: ServiceCard, SiteCard, PhpVersionBadge
+│   └── Services/               # GrpcClientService, ThemeService, NotificationService
 │
-├── DevForge.Core/                # Shared domain models
-│   ├── Models/
-│   │   ├── ServiceUnit.cs
-│   │   ├── Site.cs
-│   │   └── ...
-│   ├── Interfaces/
-│   │   ├── IServiceManager.cs
-│   │   ├── IConfigPipeline.cs
-│   │   └── ...
-│   ├── Events/
-│   │   └── EventBus.cs          # Channel<Event> pub/sub
-│   └── Exceptions/
+├── DevForge.Cli/               # CLI client (System.CommandLine)
+│   ├── Program.cs
+│   └── Commands/               # SiteCommand, ServiceCommand, PhpCommand, DbCommand, SslCommand
 │
-└── DevForge.Tests/               # xUnit + Moq
-    ├── UnitTests/
-    ├── IntegrationTests/
-    └── E2eTests/
+└── DevForge.Tests/
+    ├── Core.Tests/
+    ├── Daemon.Tests/
+    ├── Cli.Tests/
+    └── Gui.Tests/              # Avalonia Headless testing
 ```
 
-### Three Entry Points (Same .NET Runtime)
+### IPC Transport
 
-1. **`devforged.exe`** — Worker Service daemon
-   - Runs as system service (Windows Service) or user process (manual launch)
-   - Exposes gRPC endpoint on named pipe
-   - Manages all child processes (Apache, PHP-FPM, MySQL)
-   
-2. **`devforge.exe`** — CLI tool
-   - System.CommandLine for command parsing
-   - Spectre.Console for rich terminal output
-   - Connects to daemon via gRPC (if daemon not running, exits with error)
-   - Zero direct process/file manipulation
-   
-3. **`DevForge.exe`** — GUI application
-   - Avalonia UI, native look and feel
-   - Launches daemon if not running (or connects to existing)
-   - Uses gRPC client to communicate
-   - Tray icon integration (TrayIcon control in Avalonia)
+| Platform | Transport |
+|---|---|
+| Windows | Named pipe `\\.\pipe\devforge-daemon` |
+| macOS / Linux | Unix domain socket `~/.devforge/daemon.sock` |
 
-### Critical Design Principle
+gRPC runs over these transports using standard Kestrel listeners configured at daemon startup:
 
-**The daemon is the single source of truth.** Neither CLI nor GUI ever modify config files or spawn services directly. All mutations go through the daemon's gRPC API. Protobuf contracts ensure version compatibility and strict typing.
+```csharp
+builder.WebHost.ConfigureKestrel(opts =>
+{
+    if (OperatingSystem.IsWindows())
+        opts.ListenNamedPipe("devforge-daemon");
+    else
+    {
+        var sock = Path.Combine(Path.GetTempPath(), "devforge.sock");
+        if (File.Exists(sock)) File.Delete(sock);
+        opts.ListenUnixSocket(sock);
+    }
+    opts.ConfigureEndpointDefaults(o => o.Protocols = HttpProtocols.Http2);
+});
+```
+
+### Daemon Lifecycle
+
+1. Check for existing PID lock (`~/.devforge/daemon.pid`). If stale, clean up.
+2. Write PID lock.
+3. Open SQLite database, run pending migrations.
+4. Start gRPC server on transport.
+5. Load plugins via AssemblyLoadContext.
+6. Start services marked `auto_start = 1` in parallel.
+7. Start HealthMonitor loop (5-second interval).
+8. Block until cancellation token fired (SIGTERM / Windows stop).
+9. Shutdown in reverse order: web servers → PHP-FPM → MySQL → others.
+10. Release PID lock.
 
 ---
 
 ## 5. Core Engine - Service Management
 
-### Service Process Model (C# / System.Diagnostics)
+### ProcessManager & ServiceUnit
 
-Each managed service (Apache, Nginx, MySQL, MariaDB, PHP-FPM) is represented as a `ServiceUnit`:
+Each service (Apache, Nginx, MySQL, PHP-FPM, Redis, Mailpit) is represented as a `ServiceUnit`:
 
 ```csharp
 public enum ServiceState
 {
-    Stopped = 0,
-    Starting = 1,
-    Running = 2,
-    Stopping = 3,
-    Crashed = 4,
-    Restarting = 5,
-    Disabled = 6
+    Stopped,
+    Starting,
+    Running,
+    Stopping,
+    Crashed,
+    Restarting,
+    Disabled
 }
 
 public class ServiceUnit
 {
     public string Id { get; set; }
-    public ServiceState State { get; private set; }
-    public int? ProcessId { get; private set; }  // null = no process
-    public Process? Process { get; private set; }
-    public CircularBuffer<string> LogBuffer { get; } = new(1000);  // last 1000 lines
-    public int RestartCount { get; private set; }
-    public DateTime? LastCrash { get; private set; }
-    public ServiceConfiguration Config { get; set; }
-    
-    // State machine, crash recovery orchestrated here
-    public async Task StartAsync(CancellationToken ct);
-    public async Task StopAsync(CancellationToken ct);
-    public async Task RestartAsync(CancellationToken ct);
+    public ServiceState State { get; set; }
+    public int? Pid { get; set; }
+    public Process? Process { get; set; }
+    public RingBuffer<string> LogBuffer { get; set; }  // last 1000 lines
+    public int RestartCount { get; set; }
+    public DateTime? LastCrash { get; set; }
+    public IServiceModule Module { get; set; }
 }
+```
 
+**State Machine:**
+
+```
+STOPPED → start() → STARTING → ready() → RUNNING
+                    ↓ fail()              ↓ crash()
+                  CRASHED ←─────────── CRASHED
+                    ↓ (within restart threshold)
+                  RESTARTING → STARTING
+
+RUNNING → stop() → STOPPING → done() → STOPPED
+                   ↓ timeout(10s)
+                   SIGKILL → STOPPED
+```
+
+**Restart Policy:**
+
+```csharp
 public class RestartPolicy
 {
     public int MaxRestarts { get; set; } = 5;
-    public TimeSpan WindowDuration { get; set; } = TimeSpan.FromSeconds(60);
+    public TimeSpan Window { get; set; } = TimeSpan.FromSeconds(60);
     public TimeSpan BackoffBase { get; set; } = TimeSpan.FromSeconds(2);
     public TimeSpan BackoffMax { get; set; } = TimeSpan.FromSeconds(30);
 }
 ```
 
-### State Machine
+If `RestartCount > MaxRestarts` within `Window` → transition to `Disabled`, fire `service.degraded` event.
 
-```
-STOPPED ──StartAsync()──► STARTING ──ReadinessCheck()──► RUNNING
-                               │                           │
-                          fail()│                   Crash()│
-                               ▼                           ▼
-                            CRASHED ◄────────────────────CRASHED
-                               │
-              RestartPolicy.Check (within threshold)
-                               ▼
-                            RESTARTING ──► STARTING
+**Windows Job Objects:** On Windows, wrap each spawned process in a Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. This ensures child processes (e.g., Apache worker processes) are killed when the daemon exits, even if killed ungracefully.
 
-RUNNING ──StopAsync()──► STOPPING ──ProcessExit()──► STOPPED
-                             │
-                        WaitForExit(10s)
-                             ▼
-                         Process.Kill() ──► STOPPED
-```
+### IServiceModule Interface
 
-**Key Difference from Go:** 
-- Go uses goroutines as lightweight tasks; .NET uses `Task` and `CancellationToken` for the same purpose
-- `Process.WaitForExitAsync()` replaces goroutine-based wait loops
-- `Channel<T>` enables inter-task signaling (state machine transitions trigger events)
-
-### Crash Recovery Logic
+Every service (Apache, Nginx, MySQL, PHP-FPM, Redis, etc.) implements this interface:
 
 ```csharp
-private async Task HandleCrashRecoveryAsync(CancellationToken ct)
+public interface IServiceModule
 {
-    LastCrash = DateTime.UtcNow;
-    RestartCount++;
-    
-    if (RestartCount > Config.RestartPolicy.MaxRestarts 
-        && (DateTime.UtcNow - LastCrashWindow) < Config.RestartPolicy.WindowDuration)
-    {
-        State = ServiceState.Disabled;
-        await _eventBus.PublishAsync(new ServiceDegradedEvent(Id), ct);
-        return;
-    }
-    
-    // Exponential backoff: 2s, 4s, 8s, 16s, 30s (max)
-    var backoff = TimeSpan.FromMilliseconds(
-        Math.Min(
-            Config.RestartPolicy.BackoffBase.TotalMilliseconds * Math.Pow(2, RestartCount - 1),
-            Config.RestartPolicy.BackoffMax.TotalMilliseconds
-        )
-    );
-    
-    await Task.Delay(backoff, ct);
-    await RestartAsync(ct);
+    string ServiceId { get; }
+    string DisplayName { get; }
+    ServiceType Type { get; }
+
+    Task<ValidationResult> ValidateConfigAsync(CancellationToken ct);
+    Task StartAsync(CancellationToken ct);
+    Task StopAsync(CancellationToken ct);
+    Task ReloadAsync(CancellationToken ct);       // graceful config reload
+    Task<ServiceStatus> GetStatusAsync(CancellationToken ct);
+    Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct);
+
+    // Optional: CLI commands registered by this module
+    IReadOnlyList<CliCommandDefinition>? CliCommands => null;
 }
 
-### Startup Sequence (Target: < 3 seconds)
-
-```
-T=0ms    : Daemon starts, read cached config index
-T=0ms    : [PARALLEL] MySQL + dnsmasq launch
-T=0ms    : [PARALLEL] Config validation (pre-generated)
-T=~800ms : MySQL socket accepting connections
-T=~800ms : [PARALLEL] PHP-FPM pools start
-T=~1200ms: PHP-FPM pools ready (sockets listening)
-T=~1200ms: Apache/Nginx start (depends on PHP-FPM)
-T=~1600ms: Apache/Nginx ready, all vhosts responding
-T=~2000ms: Health checks pass → "All services ready"
+public record ServiceStatus(
+    ServiceState State,
+    int? Pid,
+    TimeSpan Uptime,
+    int RestartCount,
+    double CpuPercent,
+    long MemoryBytes);
 ```
 
-**Key optimizations:**
-- Direct process launch, NOT Windows Services (saves 400-800ms)
-- Pre-generate all configs at site creation, not startup
-- PHP-FPM starts in parallel with MySQL (no dependency)
-- Debounce config reloads (500ms window)
+### HealthMonitor
 
-### Shutdown Sequence
+Every 5 seconds per service:
+- Check PID is alive (`Process.GetProcessById(pid)`)
+- HTTP check on the service port if applicable (Apache: HEAD request to localhost)
+- MySQL: `SELECT 1` via `MySqlConnector`
+- PHP-FPM: ping via FastCGI
 
-```
-1. Stop accepting IPC connections
-2. Fire "daemon.stopping" event
-3. Reverse order: Apache/Nginx → PHP-FPM → MySQL → dnsmasq
-4. Each: SIGTERM → wait 10s → SIGKILL
-5. Flush event log
-6. Release PID lock
-```
+On failure: transition state to `Crashed`, trigger `RestartPolicy`.
+
+Metrics collected per service:
+- CPU % (via `Process.TotalProcessorTime`)
+- Memory bytes (via `Process.WorkingSet64`)
+- Uptime seconds
+- Request count (Apache/Nginx: tail access log)
 
 ---
 
 ## 6. Configuration Pipeline
 
-This is **DevForge's killer feature** — the architectural centerpiece that eliminates config corruption.
+### Design Principle: Render → Validate → Apply
 
-### Three-Stage Pipeline
+All config generation follows this 3-stage pipeline:
 
 ```
-TOML Source Files           Templates              Rendered Config
-(sites/*.toml)    +    (templates/*.hbs)    →    (generated/*.conf)
-                                                        │
-                                                   VALIDATE
-                                              (httpd -t / nginx -t)
-                                                        │
-                                               ┌────────┴────────┐
-                                             PASS              FAIL
-                                               │                 │
-                                         Atomic rename     Return error
-                                         (temp → live)     (no change)
-                                               │
-                                         Reload signal
-                                         (graceful restart)
-                                               │
-                                         Version archive
-                                         (keep last 5)
+1. RENDER (Scriban template + user data)
+       ↓
+2. VALIDATE (httpd -t, syntax checks, schema validation)
+       ↓
+3. APPLY (atomic write, backup previous gen, notify services)
 ```
 
-### Site TOML Format
+**Example: Apache VirtualHost generation**
 
-```toml
-[site]
-hostname = "myapp.test"
-aliases = ["www.myapp.test"]
-document_root = "C:\\work\\sites\\myapp\\www"
-
-[php]
-version = "8.2"
-extensions = ["xdebug", "intl", "gd"]
-ini_overrides = { memory_limit = "512M", display_errors = "On" }
-
-[ssl]
-enabled = true
-# cert auto-generated if not specified
-
-[server]
-type = "apache"   # or "nginx"
-custom_directives = """
-<Directory "${document_root}">
-    AllowOverride All
-</Directory>
-"""
+Template (`vhost.conf.scriban`):
+```
+<VirtualHost *:{{ port }}>
+    ServerName {{ site.domain }}
+    ServerAlias {{ site.aliases | join ", " }}
+    DocumentRoot "{{ site.root }}"
+    
+    {{ if site.ssl }}
+    SSLEngine on
+    SSLCertificateFile "{{ site.cert_path }}"
+    SSLCertificateKeyFile "{{ site.key_path }}"
+    {{ end }}
+    
+    {{ if site.php_enabled }}
+    <FilesMatch "\.php$">
+        SetHandler "proxy:unix:/var/run/php{{ site.php_version | replace "." "" }}-fpm.sock|fcgi://localhost"
+    </FilesMatch>
+    {{ end }}
+    
+    {{ for redirect in site.redirects }}
+    Redirect 301 {{ redirect.from }} {{ redirect.to }}
+    {{ end }}
+</VirtualHost>
 ```
 
-### Critical Invariant
-
-The `generated/` directory is always fully reconstructible from `devforge.toml` + `sites/*.toml`. Users can delete it entirely and run `devforge config:rebuild`.
-
-### Atomic Config Updates
-
-```go
-func (c *ConfigEngine) ApplyVhostConfig(site SiteConfig) error {
-    rendered, err := c.renderTemplate(site)
-    if err != nil { return err }
-
-    tmpPath := site.ConfigPath + ".tmp"
-    os.WriteFile(tmpPath, rendered, 0644)
-
-    // VALIDATE before applying
-    if err := c.validateConfig(site.Server, tmpPath); err != nil {
-        os.Remove(tmpPath)
-        return fmt.Errorf("config validation failed: %w", err)
-    }
-
-    c.archiveCurrent(site.ConfigPath)     // keep last 5 versions
-    return os.Rename(tmpPath, site.ConfigPath)  // atomic
-}
+Rendering (`Scriban.Template.Parse(templateText).Render(model)`):
+```csharp
+var template = Template.Parse(templateText);
+var config = await template.RenderAsync(new
+{
+    site = siteModel,
+    port = 443,
+    redirects = new[] { ... }
+});
 ```
+
+Validation:
+```csharp
+// Stage 2: Validate Apache config syntax
+var validateCmd = CliWrap.Cli.Wrap("httpd")
+    .WithArguments(new[] { "-t", "-f", tempConfigPath });
+var result = await validateCmd.ExecuteAsync();
+if (result.ExitCode != 0) throw new ConfigValidationException(result.StandardError);
+
+// Stage 3: Atomic write (backup old, write new)
+BackupConfig(configPath);
+await File.WriteAllTextAsync(configPath, config);
+```
+
+### Per-Site Config Files
+
+Instead of a single monolithic `httpd.conf`, DevForge generates:
+
+```
+~/.devforge/apache/
+├── httpd.conf               (generated base config)
+├── vhosts/
+│   ├── nks-web.loc.conf     (site 1)
+│   ├── chatujme.loc.conf    (site 2)
+│   └── ...
+├── backups/
+│   ├── vhosts/
+│   │   ├── nks-web.loc.conf.1  (generation N-1)
+│   │   └── ...
+```
+
+**Benefit:** Changing one vhost never corrupts others. Backup generations prevent "restart overwrites my fix" bugs.
+
+### ConfigValidator
+
+Validates not only syntax but also:
+- Site root directory exists
+- PHP version file exists
+- SSL cert file readable
+- Port not in use by another site
+- DNS entries resolvable
 
 ---
 
 ## 7. Virtual Host Manager
 
-### CRUD Flow
+### VirtualHost Model
 
-```
-CLI: devforge site:create myapp.test --php=8.2 --docroot=C:\work\sites\myapp\www
-  │
-  ▼
-API: site.create →
-  1. Validate hostname (RFC 952, check conflicts)
-  2. Write sites/myapp.test.toml
-  3. Run Config Pipeline (parse → render → dry-run → atomic apply)
-  4. If SSL enabled → trigger SSL module (generate cert)
-  5. Trigger DNS module (add hosts entry)
-  6. Reload affected services (graceful, not restart)
-  7. Return success + site summary
+```csharp
+public class SiteConfig
+{
+    public string Domain { get; set; }               // e.g., "nks-web.loc"
+    public string Root { get; set; }                 // e.g., "/home/user/projects/nks-web/public"
+    public string[] Aliases { get; set; }            // e.g., ["*.nks-web.loc"]
+    public PhpVersion PhpVersion { get; set; }      // e.g., "8.2"
+    public bool Ssl { get; set; }                    // HTTPS enabled
+    public string? CertPath { get; set; }            // mkcert-generated cert
+    public string? KeyPath { get; set; }
+    public int HttpPort { get; set; } = 80;
+    public int HttpsPort { get; set; } = 443;
+    public string[] Redirects { get; set; }          // old domain → new domain
+    public bool Enabled { get; set; } = true;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string? Framework { get; set; }           // "Nette", "Laravel", "WordPress", detected on create
+}
 ```
 
-### Domain Validation
+### Site Wizard (CLI + GUI)
 
-Strict regex enforced at DB level AND application level:
-```
-^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$
+**CLI:**
+```bash
+devforge new myapp.loc \
+    --root ~/projects/myapp \
+    --php=8.2 \
+    --ssl \
+    --db \
+    --framework=nette
 ```
 
-Rejects: spaces, newlines, null bytes, path traversal sequences. Eliminates the injection vector found in MAMP PRO.
+**GUI:**
+1. Enter domain (e.g., `myapp.loc`)
+2. Select root folder (file picker) — auto-detect framework
+3. Select PHP version (dropdown)
+4. Toggle SSL (auto-generates cert)
+5. Toggle Create DB (auto-creates + sets `DB_HOST=127.0.0.1`)
+6. Review configuration → Create
+
+**Auto-detect Framework:**
+- Nette: look for `app/` + `src/` dirs
+- Laravel: look for `artisan` script
+- WordPress: look for `wp-config.php`
+- Generic PHP: any `index.php` in root
 
 ---
 
 ## 8. PHP Version Manager
 
-### Architecture
+### Per-Site PHP Version
 
-Each PHP version is self-contained under `bin/php-X.Y.Z/`. PHP-FPM runs per-version, listening on dedicated ports:
+Each site can target a specific PHP version via `php_version` in SiteConfig. The daemon routes PHP-FPM requests via socket pool:
 
 ```
-PHP 8.2 FPM → 127.0.0.1:9082  (or Unix socket)
-PHP 8.3 FPM → 127.0.0.1:9083
-PHP 5.6 FPM → 127.0.0.1:9056
+~/.devforge/php/
+├── 7.4/
+│   ├── bin/php
+│   ├── etc/php.ini         (managed, NOT user-edited)
+│   └── var/run/php74-fpm.sock
+├── 8.2/
+│   ├── bin/php
+│   ├── etc/php.ini
+│   └── var/run/php82-fpm.sock
+└── 8.4/
+    ├── bin/php
+    ├── etc/php.ini
+    └── var/run/php84-fpm.sock
 ```
 
-Apache uses `mod_proxy_fcgi` to route to the correct FPM pool. Nginx uses `fastcgi_pass`. **No mod_php** — eliminates module conflicts entirely.
+### CLI Aliases
 
-### OpenSSL Fix
+DevForge creates shell aliases in `~/.devforge/bin/`:
 
-DevForge bundles its own OpenSSL 3.x binaries per platform and sets `OPENSSL_CONF` and `OPENSSL_MODULES` environment variables per PHP process. EC key generation is tested as part of post-install validation.
-
-### PHP-FPM Pool Configuration (Development Optimized)
-
-```ini
-pm = ondemand            # NOT static/dynamic (saves 400-600MB)
-pm.max_children = 3
-pm.process_idle_timeout = 30s
-pm.max_requests = 500
+```bash
+~/.devforge/bin/php74    → ~/.devforge/php/7.4/bin/php
+~/.devforge/bin/php82    → ~/.devforge/php/8.2/bin/php
+~/.devforge/bin/php84    → ~/.devforge/php/8.4/bin/php
 ```
 
-Memory per site: ~8MB idle (master only), ~60MB active (with workers).
+User adds `~/.devforge/bin/` to their `$PATH` to use: `php82 -v`, `composer install` (uses default PHP), etc.
 
-| Active Sites | PHP-FPM Memory | Notes |
-|-------------|---------------|-------|
-| 5 | ~250MB | Baseline |
-| 10 | ~350MB | Negligible impact |
-| 25 | ~500MB | Still under 3s startup |
-| 50 | ~700MB | Approaches limits |
+### php.ini Management
+
+Each PHP version gets a managed `php.ini` with:
+- `error_log = ~/.devforge/logs/php82-error.log`
+- `extension_dir = ~/.devforge/php/8.2/lib/php/extensions/`
+- `pdo_mysql.default_socket = /tmp/mysql.sock` (or Windows named pipe)
+- `upload_tmp_dir = ~/.devforge/tmp/`
+
+DevForge **never** modifies user-provided php.ini; it generates a clean base and user can add custom overrides in a separate file that's sourced.
 
 ---
 
 ## 9. Network & DNS Architecture
 
-### Strategy Per Platform
+### Hosts File Management
 
-| Platform | Primary | Fallback | Wildcard |
-|----------|---------|----------|---------|
-| **Windows** | Hosts file modification | Acrylic DNS Proxy | Optional |
-| **macOS** | `/etc/resolver/test` + dnsmasq:53535 | Hosts file | Native |
-| **Linux** | systemd-resolved split-DNS | Hosts file | Native |
+DevForge manages the system `hosts` file (Windows: `C:\Windows\System32\drivers\etc\hosts`, Unix: `/etc/hosts`).
 
-### Windows Hosts File Management
-
-Hosts file editing requires elevation. DevForge uses a minimal elevation helper (`devforge-elevate.exe`) that performs ONLY the hosts file write. The daemon itself runs unprivileged.
-
-Managed block with markers:
-```
-# >>> DevForge Managed - DO NOT EDIT <<<
-127.0.0.1  myapp.test
-127.0.0.1  api.local
-# <<< DevForge Managed >>>
-```
-
-### Multi-Site Networking
-
-**Name-based virtual hosts on 127.0.0.1** (recommended). All sites share the same IP, differentiated by `Host:` header — same as production. No per-site loopback IPs needed.
-
-### Port Conflict Resolution Algorithm
+**Single-responsibility model:** DevForge only adds/removes lines between markers:
 
 ```
-1. Check port availability (netstat/lsof/ss)
-2. If FREE → bind and return
-3. If IN USE → identify owner process
-4. Classify: KNOWN_WEB_SERVER | KNOWN_COMMS_APP | OWN_PROCESS | UNKNOWN
-5. Offer: stop conflicting process OR use fallback port
-6. Fallback map: 80→8080, 443→8443, 3306→3307
+# DevForge START — do not edit manually
+127.0.0.1 nks-web.loc
+127.0.0.1 chatujme.loc *.chatujme.loc
+::1       nks-web.loc
+::1       chatujme.loc *.chatujme.loc
+# DevForge END
 ```
 
-### Reverse Proxy (Optional)
+**Atomicity:** Read file → update → write atomically. Race condition with editor: acceptable (user shouldn't edit hosts during DevForge operations).
 
-Caddy or Traefik as optional reverse proxy layer. Benefits: single SSL termination point, Docker container routing, automatic cert management for all sites.
+### DNS Flush
+
+After modifying hosts, flush OS DNS cache:
+- **Windows:** `ipconfig /flushdns`
+- **macOS:** `dscacheutil -flushcache`
+- **Linux:** `systemd-resolve --flush-caches` (or `sudo resolvectl flush-caches` on newer systemd)
+
+Called via `CliWrap` after every hosts change.
+
+### Wildcard DNS Support
+
+DevForge creates:
+```
+127.0.0.1 *.nks-web.loc
+```
+
+This allows subdomains (e.g., `api.nks-web.loc`, `admin.nks-web.loc`) to resolve without explicit entries.
 
 ---
 
@@ -659,590 +690,691 @@ Caddy or Traefik as optional reverse proxy layer. Benefits: single SSL terminati
 
 ### mkcert Integration
 
-First run:
-1. `mkcert -install` — installs local CA into system trust store (one-time elevation)
-2. CA files stored in `ssl/ca/`
+DevForge bundles or downloads `mkcert` (platform-specific binary) and uses it to generate trusted certificates:
 
-Per-site cert generation:
 ```bash
-mkcert -cert-file ssl/certs/myapp.test.pem \
-       -key-file ssl/certs/myapp.test-key.pem \
-       myapp.test "*.myapp.test"
+mkcert -install                          # Create local CA (one-time)
+mkcert -cert-file cert.pem \
+       -key-file key.pem \
+       nks-web.loc *.nks-web.loc        # Create per-site cert
 ```
 
-### Security Hardening
+On Windows with OpenSSL 3.x (bundled), mkcert avoids the EC key generation bug that breaks MAMP PRO.
 
-- **CA key protection:** Windows DPAPI, macOS Keychain, Linux libsecret
-- **Name Constraints:** CA limited to `.test`, `.local`, `.localhost` domains
-- **Short-lived certs:** 30-day validity with auto-renewal
-- **User warning:** Clear non-dismissable warning at CA creation
+### Certificate Tracking
 
-### Storage Layout
-
+SQLite table (`certificates`):
+```sql
+CREATE TABLE certificates (
+    id INTEGER PRIMARY KEY,
+    domain TEXT,
+    cert_path TEXT,
+    key_path TEXT,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP
+);
 ```
-ssl/
-├── ca/
-│   ├── rootCA.pem         (CA cert, read-only)
-│   └── rootCA-key.pem     (CA key, chmod 600)
-└── sites/
-    ├── myapp.test/
-    │   ├── cert.pem
-    │   └── key.pem
-    └── shop.test/
-        ├── cert.pem
-        └── key.pem
-```
+
+**HealthMonitor checks daily.** If cert expires within 7 days:
+- Log warning
+- Regenerate via `mkcert`
+- Update database
+- Restart Apache/Nginx
+
+### Certificate Authority Management
+
+mkcert stores the root CA at `~/.local/share/mkcert/` (Linux/macOS) or user AppData (Windows). DevForge tracks which certificates are under its control and handles renewal automatically.
 
 ---
 
 ## 11. Database Schema
 
-### SQLite Configuration Database
-
-```sql
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
-PRAGMA busy_timeout = 5000;
-PRAGMA synchronous = NORMAL;
-```
-
 ### Core Tables
 
-#### sites
-
+**`sites`** (virtual host registry):
 ```sql
 CREATE TABLE sites (
-    id                INTEGER PRIMARY KEY,
-    domain            TEXT NOT NULL UNIQUE CHECK (
-                        length(domain) > 0 AND domain NOT GLOB '* *'
-                      ),
-    aliases           TEXT NOT NULL DEFAULT '',
-    document_root     TEXT NOT NULL CHECK (length(document_root) > 0),
-    webserver_type    TEXT NOT NULL DEFAULT 'apache'
-                      CHECK (webserver_type IN ('apache', 'nginx')),
-    php_version_id    INTEGER REFERENCES php_versions(id) ON DELETE SET NULL,
-    ssl_enabled       INTEGER NOT NULL DEFAULT 0 CHECK (ssl_enabled IN (0, 1)),
-    certificate_id    INTEGER REFERENCES certificates(id) ON DELETE SET NULL,
-    custom_directives TEXT NOT NULL DEFAULT '',
-    status            TEXT NOT NULL DEFAULT 'active'
-                      CHECK (status IN ('active', 'disabled')),
-    sort_order        INTEGER NOT NULL DEFAULT 0,
-    created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    CHECK (ssl_enabled = 0 OR certificate_id IS NOT NULL)
+    id INTEGER PRIMARY KEY,
+    domain TEXT UNIQUE NOT NULL,
+    root TEXT NOT NULL,
+    php_version TEXT,
+    ssl BOOLEAN DEFAULT 1,
+    http_port INTEGER DEFAULT 80,
+    https_port INTEGER DEFAULT 443,
+    enabled BOOLEAN DEFAULT 1,
+    framework TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-#### php_versions
-
+**`services`** (process registry):
 ```sql
-CREATE TABLE php_versions (
-    id            INTEGER PRIMARY KEY,
-    version       TEXT NOT NULL UNIQUE CHECK (version GLOB '[0-9]*.[0-9]*.[0-9]*'),
-    install_path  TEXT NOT NULL CHECK (length(install_path) > 0),
-    status        TEXT NOT NULL DEFAULT 'installed'
-                  CHECK (status IN ('installed', 'downloading', 'broken', 'removed')),
-    extensions_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(extensions_json)),
-    ini_overrides TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(ini_overrides)),
-    is_default    INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0, 1)),
-    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+CREATE TABLE services (
+    id INTEGER PRIMARY KEY,
+    service_id TEXT UNIQUE NOT NULL,
+    display_name TEXT NOT NULL,
+    type TEXT NOT NULL,  -- "WebServer", "Database", "Cache", etc.
+    auto_start BOOLEAN DEFAULT 1,
+    restart_policy TEXT,  -- JSON: {max_restarts: 5, window: 60}
+    config_path TEXT,
+    enabled BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
-
--- Only one default PHP version
-CREATE UNIQUE INDEX idx_php_default ON php_versions(is_default) WHERE is_default = 1;
 ```
 
-#### services, certificates, databases, plugins, settings, config_history
+**`config_history`** (change audit):
+```sql
+CREATE TABLE config_history (
+    id INTEGER PRIMARY KEY,
+    entity_type TEXT,      -- "site", "service", "ssl"
+    entity_id TEXT,
+    change_type TEXT,      -- "create", "update", "delete"
+    before_state TEXT,     -- JSON
+    after_state TEXT,      -- JSON
+    changed_by TEXT,       -- "cli", "gui", "api"
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
 
-(Full DDL with CHECK constraints, foreign keys, JSON validation, triggers for audit trail — see [Database Schema appendix](#appendix-a-full-ddl))
+**`certificates`** (SSL tracking):
+```sql
+CREATE TABLE certificates (
+    id INTEGER PRIMARY KEY,
+    domain TEXT,
+    cert_path TEXT,
+    key_path TEXT,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP
+);
+```
 
-### Key Design Decisions
+**`databases`** (MySQL/SQLite registry):
+```sql
+CREATE TABLE databases (
+    id INTEGER PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    engine TEXT,           -- "mysql", "sqlite"
+    created_at TIMESTAMP
+);
+```
 
-- **WAL mode** for concurrent reads during service operation
-- **JSON columns** with `json_valid()` CHECK constraints
-- **Audit trail** via `config_history` table with triggers on UPDATE/DELETE
-- **Migration system** with up/down SQL, checksum verification, automatic backup
-- **Export format** as portable JSON for configuration transfer
+**`settings`** (key-value config):
+```sql
+CREATE TABLE settings (
+    id INTEGER PRIMARY KEY,
+    category TEXT,         -- "backup", "ssl", "php", etc.
+    key TEXT,
+    value TEXT,
+    UNIQUE(category, key)
+);
+```
+
+### Views for Reporting
+
+**`v_service_status`** (with CPU/RAM metrics from HealthMonitor):
+```sql
+CREATE VIEW v_service_status AS
+SELECT
+    s.id, s.service_id, s.display_name,
+    sm.state, sm.pid, sm.uptime, sm.restart_count,
+    sm.cpu_percent, sm.memory_bytes
+FROM services s
+LEFT JOIN service_metrics sm ON s.id = sm.service_id;
+```
+
+**`v_expiring_certs`** (monitoring):
+```sql
+CREATE VIEW v_expiring_certs AS
+SELECT domain, expires_at
+FROM certificates
+WHERE expires_at < datetime('now', '+30 days')
+ORDER BY expires_at ASC;
+```
 
 ---
 
 ## 12. CLI Interface & API Specification
 
-### CLI Command Tree (System.CommandLine + Spectre.Console)
+### Using System.CommandLine 2.0.5+
 
-```
-devforge daemon [start|stop|status]
-devforge site create <domain> [--php=X.Y] [--server=apache|nginx] [--docroot=PATH] [--ssl]
-devforge site list [--json]
-devforge site delete <domain>
-devforge site info <domain>
-devforge site open <domain>
-devforge site log <domain> [--follow] [--lines=100]
-devforge service start [service]
-devforge service stop [service]
-devforge service restart [service]
-devforge service status [--json]
-devforge php list [--json]
-devforge php install <version>
-devforge php remove <version>
-devforge php default <version>
-devforge php extension <version> <name> [--enable|--disable]
-devforge database list
-devforge database create <name>
-devforge database drop <name>
-devforge database import <name> <file>
-devforge database export <name> [--output=file]
-devforge ssl trust
-devforge ssl create <domain> [--wildcard]
-devforge ssl status
-devforge dns status
-devforge dns flush
-devforge config get <key>
-devforge config set <key> <value>
-devforge config list
-devforge config rebuild
-devforge plugin list [--json]
-devforge plugin install <name>
-devforge plugin remove <name>
-```
-
-### Global Flags
-
-| Flag | Description |
-|------|-------------|
-| `--json` | Machine-readable JSON output (uses System.Text.Json) |
-| `--no-color` | Disable Spectre.Console ANSI markup |
-| `--quiet` / `-q` | Suppress progress indicators, errors only |
-| `--verbose` / `-v` | Debug output (includes stack traces) |
-| `--daemon-timeout=<ms>` | Override gRPC timeout (default: 30000ms) |
-
-**Implementation:** System.CommandLine v18.x provides built-in command/option/argument structure. Spectre.Console handles progress bars, tables, syntax highlighting with zero JavaScript.
+CLI structure (no `Spectre.Console.Cli` — only `System.CommandLine` for parsing):
 
 ```csharp
-// Example: devforge site create
-var rootCommand = new RootCommand();
-var siteCommand = new Command("site");
+var rootCommand = new RootCommand("DevForge local dev server manager");
 
-var createCommand = new Command("create")
+var startCommand = new Command("start", "Start services");
+startCommand.AddOption(new Option<string[]>("--service", "Service to start"));
+startCommand.SetHandler(async (services) =>
 {
-    new Argument<string>("domain", "Site domain (e.g., myapp.local)"),
-    new Option<string>("--php", () => "8.2", "PHP version"),
-    new Option<string>("--docroot", "Document root path"),
-    new Option<string>("--server", () => "apache", "apache or nginx"),
-    new Option<bool>("--ssl", () => false, "Enable HTTPS"),
-};
+    // Call daemon via gRPC
+    using var channel = GrpcChannel.ForAddress($"http://{GetDaemonAddress()}");
+    var client = new Daemon.DaemonClient(channel);
+    foreach (var svc in services)
+        await client.StartServiceAsync(new StartServiceRequest { ServiceId = svc });
+}, /* option binding */);
 
-createCommand.SetHandler(async (domain, php, docroot, server, ssl, ct) =>
-{
-    var client = new DevForgeGrpcClient(); // gRPC client
-    var response = await client.CreateSiteAsync(
-        new CreateSiteRequest 
-        { 
-            Domain = domain, 
-            PhpVersion = php, 
-            DocumentRoot = docroot ?? Path.GetCurrentDirectory(),
-            ServerType = server,
-            SslEnabled = ssl
-        },
-        cancellationToken: ct
-    );
-    
-    AnsiConsole.MarkupLine($"[green]✓[/] Site created: [bold]{response.Domain}[/]");
-    AnsiConsole.MarkupLine($"  Document Root: [yellow]{response.DocumentRoot}[/]");
-    AnsiConsole.MarkupLine($"  URL: [link]{$"http{(ssl ? "s" : "")}://{domain}"}[/]");
-}, domainArg, phpOpt, docrootOpt, serverOpt, sslOpt);
-
-siteCommand.AddCommand(createCommand);
-rootCommand.AddCommand(siteCommand);
+rootCommand.Add(startCommand);
+return await rootCommand.InvokeAsync(args);
 ```
 
-### gRPC API Specification (Protobuf)
+Output formatting via `Spectre.Console`:
 
-Transport: Named pipe (Win) / Unix domain socket (macOS/Linux).
+```csharp
+// Instead of plain Console.WriteLine:
+AnsiConsole.MarkupLine("[green]✓[/] Apache started (PID 12345)");
 
-**Core Services:**
+var table = new Table();
+table.AddColumn("Service").AddColumn("State").AddColumn("PID");
+foreach (var svc in services)
+    table.AddRow(svc.Id, svc.State.ToString(), svc.Pid?.ToString() ?? "—");
+AnsiConsole.Write(table);
+```
+
+### Core Commands
+
+**Site Management:**
+```bash
+devforge new myapp.loc --php=8.2 --db --ssl
+devforge list                        # Show all sites
+devforge remove myapp.loc
+devforge domain rename old.loc new.loc
+devforge domain set-root new.loc /path/to/root
+devforge domain enable myapp.loc
+devforge domain disable myapp.loc
+```
+
+**Service Management:**
+```bash
+devforge start apache|mysql|redis|all
+devforge stop apache|mysql|all
+devforge restart apache
+devforge status                      # Show all services + metrics
+devforge logs apache [--lines=50]
+```
+
+**PHP:**
+```bash
+devforge php list                    # Show installed versions
+devforge php set-default 8.2         # Global default
+devforge php set-site myapp.loc 8.4  # Per-site override
+devforge php info 8.2
+```
+
+**Database:**
+```bash
+devforge db list
+devforge db create mydb
+devforge db drop mydb
+devforge db backup mydb [--output=mydb.sql]
+devforge db import mydb mydb.sql
+devforge db restore mydb [--from-backup]
+```
+
+**SSL:**
+```bash
+devforge ssl list
+devforge ssl renew myapp.loc
+devforge ssl revoke myapp.loc
+```
+
+**Config:**
+```bash
+devforge config validate         # Pre-flight check
+devforge config export           # Export current state as JSON
+devforge config import file.json # Bulk import from backup
+```
+
+### gRPC API (Daemon Service)
+
+`.proto` file:
 
 ```protobuf
-service DevForge {
-  // Site Management
-  rpc CreateSite(CreateSiteRequest) returns (SiteInfo);
-  rpc ListSites(Empty) returns (ListSitesResponse);
-  rpc DeleteSite(DeleteSiteRequest) returns (Empty);
-  rpc GetSiteInfo(GetSiteInfoRequest) returns (SiteInfo);
-  
-  // Service Control
-  rpc StartService(ServiceRequest) returns (ServiceResponse);
-  rpc StopService(ServiceRequest) returns (ServiceResponse);
-  rpc RestartService(ServiceRequest) returns (ServiceResponse);
-  rpc GetServiceStatus(Empty) returns (ServiceStatusResponse);
-  
-  // PHP Management
-  rpc InstallPhpVersion(PhpVersionRequest) returns (stream ProgressEvent);
-  rpc ListPhpVersions(Empty) returns (ListPhpResponse);
-  rpc SetDefaultPhp(PhpVersionRequest) returns (Empty);
-  
-  // Database Operations
-  rpc CreateDatabase(CreateDatabaseRequest) returns (Empty);
-  rpc ListDatabases(Empty) returns (ListDatabasesResponse);
-  rpc ImportDatabase(stream ImportDatabaseRequest) returns (ImportDatabaseResponse);
-  
-  // SSL/TLS
-  rpc CreateCertificate(CertificateRequest) returns (CertificateInfo);
-  rpc TrustCertificateAuthority(Empty) returns (Empty);
-  
-  // Events (server-to-client streaming)
-  rpc SubscribeEvents(EventFilter) returns (stream Event);
+service DaemonService {
+    rpc StartService(StartServiceRequest) returns (ServiceStatus);
+    rpc StopService(StopServiceRequest) returns (ServiceStatus);
+    rpc GetServiceStatus(GetServiceStatusRequest) returns (ServiceStatus);
+    rpc GetAllServices(Empty) returns (ServiceList);
+    
+    rpc CreateSite(CreateSiteRequest) returns (Site);
+    rpc UpdateSite(UpdateSiteRequest) returns (Site);
+    rpc DeleteSite(DeleteSiteRequest) returns (Empty);
+    rpc GetSite(GetSiteRequest) returns (Site);
+    rpc ListSites(Empty) returns (SiteList);
+    
+    rpc StreamLogs(StreamLogsRequest) returns (stream LogEntry);
+    rpc GetMetrics(GetMetricsRequest) returns (Metrics);
 }
 
-// Event message (supports service.started, site.created, etc.)
-message Event {
-  string topic = 1;          // e.g., "service.started"
-  string id = 2;             // UUID
-  google.protobuf.Timestamp timestamp = 3;
-  google.protobuf.Struct data = 4;  // Flexible JSON-like payload
+message StartServiceRequest {
+    string service_id = 1;
+}
+
+message ServiceStatus {
+    string service_id = 1;
+    string state = 2;
+    int32 pid = 3;
+    int64 uptime_seconds = 4;
+    double cpu_percent = 5;
+    int64 memory_bytes = 6;
+}
+
+message StreamLogsRequest {
+    string service_id = 1;
+    int32 lines = 2;
+}
+
+message LogEntry {
+    string message = 1;
+    int64 timestamp_unix = 2;
+    string level = 3;  // "info", "warn", "error"
+}
+
+message Metrics {
+    int64 cpu_percent_daemon = 1;
+    int64 memory_bytes_daemon = 2;
+    int64 disk_free_bytes = 3;
+    repeated ServiceMetric services = 4;
+}
+
+message ServiceMetric {
+    string service_id = 1;
+    double cpu_percent = 2;
+    int64 memory_bytes = 3;
 }
 ```
 
-### Error Handling
-
-gRPC uses standard HTTP/2 status codes. Custom app errors via `Rpc.Status` detail field:
+**Server-side streaming example (logs):**
 
 ```csharp
-// Server throws
-throw new RpcException(
-    new Status(StatusCode.NotFound, "Domain not found"),
-    new Metadata { { "error-code", "32002" } }
-);
+public override async Task StreamLogs(StreamLogsRequest request, IServerStreamWriter<LogEntry> responseStream, ServerCallContext context)
+{
+    var serviceUnit = _processManager.GetService(request.ServiceId);
+    if (serviceUnit == null)
+        throw new RpcException(new Status(StatusCode.NotFound, "Service not found"));
 
-// Client catches
-try 
-{
-    await client.DeleteSiteAsync(new DeleteSiteRequest { Domain = domain });
-}
-catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
-{
-    AnsiConsole.MarkupLine("[red]✗ Error:[/] Domain not found");
-    Environment.Exit(1);
+    var lastLines = serviceUnit.LogBuffer.GetLastN(request.Lines);
+    foreach (var line in lastLines)
+    {
+        await responseStream.WriteAsync(new LogEntry { Message = line });
+        if (context.CancellationToken.IsCancellationRequested)
+            break;
+    }
 }
 ```
-
-### Event System
-
-Both CLI and GUI subscribe to gRPC server streaming events. Event topics: `service.*`, `site.*`, `php.*`, `config.*`, `health.*`
-
-**CLI Usage:**
-```csharp
-var call = client.SubscribeEvents(new EventFilter { TopicPatterns = { "service.*" } });
-await foreach (var @event in call.ResponseStream.ReadAllAsync(ct))
-{
-    AnsiConsole.MarkupLine($"[blue]{@event.Topic}[/] @ {@event.Timestamp}");
-}
-```
-
-**GUI Usage:** Avalonia ViewModels bind to event streams via ReactiveUI or MVVM Toolkit, enabling real-time UI updates without polling.
 
 ---
 
 ## 13. UI/UX Design Specification
 
-### Design Language (Avalonia UI + Fluent Design System)
+### Avalonia Application Layout
 
-- **Base Theme:** FluentTheme (built-in to Avalonia)
-- **Dark mode default** (developer preference), light mode available
-- **Font:** Segoe UI (system font) for UI, JetBrains Mono 12px for code/paths
-- **Border radius:** 4px (Fluent standard, inputs/buttons), 8px (cards), 12px (dialogs)
-- **Status colors:** Green (#107c10) running, Red (#da3b01) stopped, Yellow (#ffb900) warning, Blue (#0078d4) info
-- **Animations:** 200ms easing for state changes (respects `prefers-reduced-motion`)
+**Main Window:**
 
-### Fluent Design System Implementation (Avalonia)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ☰  DevForge                                      🌙 ⚙ −□✕  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ ┌────────────────────────────────────────────────────────┐ │
+│ │  Dashboard                                  [+ New Site] │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │                                                        │ │
+│ │  Services Status                                       │ │
+│ │  ┌──────────────────────────────────────────────────┐ │ │
+│ │  │ Service       State    PID      CPU    RAM       │ │ │
+│ │  ├──────────────────────────────────────────────────┤ │ │
+│ │  │ Apache        ▲ Running  5432   2.1%   45 MB    │ │ │
+│ │  │ MySQL         ▲ Running  5467   1.8%   120 MB   │ │ │
+│ │  │ PHP-FPM 8.2   ▲ Running  5502   0.3%   32 MB    │ │ │
+│ │  │ Redis         ▲ Running  5521   0.1%   8 MB     │ │ │
+│ │  │ Mailpit       ▲ Running  5548   0.0%   15 MB    │ │ │
+│ │  └──────────────────────────────────────────────────┘ │ │
+│ │                                                        │ │
+│ │  CPU / Memory Over Time                                │ │
+│ │  ┌──────────────────────────────────────────────────┐ │ │
+│ │  │                                         ╱╲       │ │ │
+│ │  │    ╱╲      ╱╲                        ╱╲╱  ╲      │ │ │
+│ │  │   ╱  ╲╱╲  ╱  ╲     ╱╲              ╱      ╲╱╲  │ │ │
+│ │  │  ╱        ╱╲          ╲            ╱           │ │ │
+│ │  │_╱_______________╲____╱╲___________╱___________ │ │ │
+│ │  │ 0 min                              60 min       │ │ │
+│ │  └──────────────────────────────────────────────────┘ │ │
+│ │                                                        │ │
+│ └────────────────────────────────────────────────────────┘ │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 
-Avalonia 12.x includes `FluentTheme` which provides:
-- Native control styling across Win/macOS/Linux
-- Built-in dark/light mode switching
-- Acrylic blur (Windows), vibrancy (macOS) backgrounds
-- System color integration
+Sidebar (left, collapsed by default):
+  📋 Dashboard
+  🌐 Sites (count badge)
+  ⚙️  Services
+  💾 Databases
+  🔒 SSL Certificates
+  🔌 Plugins
+  ⚙️  Settings
 
-```xaml
-<!-- App.xaml -->
-<Application>
-  <Application.Styles>
-    <FluentTheme Mode="Dark" AccentColor="#0078d4" />
-  </Application.Styles>
-</Application>
+System Tray Menu:
+  ☑️  Open Dashboard
+  ────────────────
+  Apache:  ▲ Running
+  MySQL:   ▲ Running
+  PHP-FPM: ▲ Running
+  ────────────────
+  ⚙️  Settings
+  ❌ Quit
 ```
 
-### Color Palette
+**Sites Tab:**
 
-| Token | Light | Dark | Usage |
-|-------|-------|------|-------|
-| Background | #ffffff | #1f1f1f | Canvas |
-| Surface | #f3f3f3 | #2d2d2d | Cards, panels |
-| Tertiary | #e0e0e0 | #3d3d3d | Dividers, subtle |
-| Text Primary | #000000 | #ffffff | Main text |
-| Text Secondary | #424242 | #a0a0a0 | Metadata |
-| Success | #107c10 | #107c10 | ✓ Running |
-| Error | #da3b01 | #f4573c | ✗ Stopped |
-| Warning | #ffb900 | #ffd666 | ⚠ Warning |
-| Info | #0078d4 | #4cc2ff | ℹ Info |
+```
+┌──────────────────────────────────────┐
+│ Sites (3)              [+ New Site] │
+├──────────────────────────────────────┤
+│ ┌────────────────────────────────┐  │
+│ │ 🌐 nks-web.loc             ⋮  │  │
+│ │   Root: /home/user/projects/nks-web/public
+│ │   PHP 8.2 | SSL ✓ | ↑ Running
+│ │   https://nks-web.loc
+│ └────────────────────────────────┘  │
+│
+│ ┌────────────────────────────────┐  │
+│ │ 🌐 chatujme.loc            ⋮  │  │
+│ │   Root: /home/user/projects/chatujme/public
+│ │   PHP 8.4 | SSL ✓ | ↑ Running
+│ │   https://chatujme.loc
+│ └────────────────────────────────┘  │
+│
+│ ┌────────────────────────────────┐  │
+│ │ 🌐 wp.loc                 ⋮  │  │
+│ │   Root: /home/user/sites/wp
+│ │   PHP 7.4 | SSL ✗ | ↓ Stopped
+│ │   http://wp.loc
+│ └────────────────────────────────┘  │
+└──────────────────────────────────────┘
 
-### Screen Layout (XAML)
+Site Detail (right panel, if selected):
+  Domain: nks-web.loc
+  Root: /home/user/projects/nks-web/public
+  Aliases: *.nks-web.loc
 
-```xaml
-<!-- MainWindow.xaml -->
-<Window>
-  <DockPanel>
-    <!-- Sidebar Navigation -->
-    <StackPanel DockPanel.Dock="Left" Width="200" Background="{StaticResource SurfaceBrush}">
-      <Button Content="Dashboard" Command="{Binding ShowDashboard}" />
-      <Button Content="Sites" Command="{Binding ShowSites}" />
-      <Button Content="PHP" Command="{Binding ShowPhp}" />
-      <Button Content="Database" Command="{Binding ShowDatabase}" />
-      <Button Content="SSL/TLS" Command="{Binding ShowSsl}" />
-      <Button Content="Terminal" Command="{Binding ShowTerminal}" />
-      <Button Content="Settings" Command="{Binding ShowSettings}" />
-    </StackPanel>
+  PHP Version: 8.2 (global default 8.4)
+  [Change PHP]
 
-    <!-- Main Content -->
-    <ContentControl Content="{Binding CurrentView}" />
-  </DockPanel>
-</Window>
+  SSL:
+    ✓ Enabled (expires 2026-08-09)
+    [Renew] [Revoke]
+
+  Actions:
+    [Open in Browser] [Open in Editor] [Delete]
 ```
 
-### Key Screens (Avalonia XAML)
+**Services Tab (detailed):**
 
-1. **System Tray**
-   - `TrayIcon` control in Avalonia (click opens MainWindow)
-   - Context menu: Start All, Stop All, recent sites (virtualized list), Exit
-   - Status indicator: Green/red circle overlay
-
-2. **Dashboard** (`DashboardView.xaml`)
-   - Service status cards (Apache, PHP-FPM, MySQL, dnsmasq)
-   - Real-time resource graphs (LiveCharts2 for CPU, RAM, disk)
-   - Quick action buttons (Start All, Stop All, Open Site)
-   - Activity log (latest 10 events, auto-scrolling)
-
-3. **Sites Manager** (`SitesManagerView.xaml`)
-   - DataGrid (Avalonia built-in) with columns: Domain, Status, PHP Version, SSL, Actions
-   - Right-click context menu: Open, Edit, Delete, View Logs
-   - Right panel shows detailed site config when selected
-   - Virtual scrolling for 50+ sites
-
-4. **PHP Manager** (`PhpManagerView.xaml`)
-   - List of installed PHP versions with actions (Set Default, Remove)
-   - Extensions manager: toggle xdebug, intl, gd per version
-   - Download new version UI (combo box + Install button)
-   - php.ini editor (syntax highlighting via TextEditor control)
-
-5. **Database Manager** (`DatabaseView.xaml`)
-   - MySQL/MariaDB instances
-   - Create new database dialog
-   - Import/export buttons with file picker
-   - phpMyAdmin link (opens browser)
-   - Database list with size info
-
-6. **SSL Manager** (`SslView.xaml`)
-   - CA trust status (green if trusted, red if not)
-   - Per-site cert status table (domain, expiry, trust status)
-   - Create Certificate button (generates with mkcert)
-   - Trust Certificate Authority button (runs elevated)
-
-7. **Terminal** (`TerminalView.xaml`)
-   - Embedded terminal via VT100 emulation (Terminal.Gui or custom ANSI parser)
-   - Integrates with `devforge` CLI directly
-   - Copy/paste support, scrollback buffer
-
-8. **Settings** (`SettingsView.xaml`)
-   - Listen ports (Apache, Nginx, MySQL)
-   - Startup behavior (start on boot, minimize to tray)
-   - DNS settings (dnsmasq config, domain suffix)
-   - Theme selector (Light/Dark/System)
-   - About & check for updates
-
-### Keyboard Shortcuts & Input
-
-| Shortcut | Action | Implementation |
-|----------|--------|-----|
-| `Ctrl+K` | Command palette | Window searches commands via XAML attached behavior |
-| `Ctrl+T` | New terminal | Triggered via AcceleratorKey binding |
-| `Ctrl+1-8` | Navigate sidebar | Button Click handlers with keyboard focus |
-| `Ctrl+N` | New site | Command binding to CreateSiteCommand |
-| `F5` | Refresh status | Calls `RefreshStatusAsync()` on ViewModel |
-| `Ctrl+,` | Settings | Navigation via router/controller pattern |
-| `Ctrl+W` / `Alt+F4` | Close window | Standard Avalonia behavior |
-
-```xaml
-<!-- Dashboard.xaml -->
-<Window>
-  <Window.KeyBindings>
-    <KeyBinding Gesture="Ctrl+K" Command="{Binding ShowCommandPalette}" />
-    <KeyBinding Gesture="Ctrl+N" Command="{Binding ShowCreateSiteDialog}" />
-    <KeyBinding Gesture="F5" Command="{Binding RefreshStatusCommand}" />
-  </Window.KeyBindings>
-</Window>
+```
+┌──────────────────────────────────────┐
+│ Services                             │
+├──────────────────────────────────────┤
+│ ┌────────────────────────────────┐  │
+│ │ Apache (httpd)                 │  │
+│ │ ▲ Running | PID: 5432          │  │
+│ │                                 │  │
+│ │ CPU:    ████░░░░ 2.1%          │  │
+│ │ Memory: ███████░░ 45 MB        │  │
+│ │ Uptime: 2h 15m                 │  │
+│ │                                 │  │
+│ │ [Logs] [Stop] [Reload Config]  │  │
+│ └────────────────────────────────┘  │
+│
+│ ┌────────────────────────────────┐  │
+│ │ MySQL 5.7                      │  │
+│ │ ▲ Running | PID: 5467          │  │
+│ │                                 │  │
+│ │ CPU:    ██░░░░░░░ 1.8%         │  │
+│ │ Memory: █████████░ 120 MB      │  │
+│ │ Uptime: 5h 44m                 │  │
+│ │                                 │  │
+│ │ [Logs] [Stop] [Backup]         │  │
+│ └────────────────────────────────┘  │
+└──────────────────────────────────────┘
 ```
 
-### Accessibility (WCAG 2.1 AA)
+### Theme & Styling
 
-- **Color + Shape:** Status indicators use color + icon (✓ Green, ✗ Red, ⚠ Orange)
-- **Contrast Ratios:** Text 4.5:1, UI components 3:1 (verified with Contrast Ratio checker)
-- **Focus Management:** Tab order defined via `TabIndex`, visible focus rect on all buttons
-- **ARIA equivalents:** `AutomationProperties.Name`, `AutomationProperties.HelpText` on controls
-- **Motion Reduction:** Animations respect `MediaQueryListener` for `prefers-reduced-motion`
-- **Touch Targets:** All buttons/clickable elements minimum 44x44px
-- **Keyboard Navigation:** All features accessible without mouse via Tab + Enter
+- **Avalonia.Themes.Fluent** (v12.0.0)
+- Dark/Light toggle via `Application.Current.RequestedThemeVariant`
+- FluentTheme only supports Dark and Light (no custom palettes)
+- Colors follow Microsoft Fluent Design tokens
 
-### MVVM Pattern (ReactiveUI or MVVM Toolkit)
+### Controls
 
-Example using MVVM Toolkit (Microsoft.Mvvm.Toolkit):
-
-```csharp
-public partial class DashboardViewModel : ObservableObject
-{
-    private readonly IDevForgeGrpcClient _client;
-    
-    [ObservableProperty]
-    private ObservableCollection<ServiceStatusModel> services = new();
-    
-    [ObservableProperty]
-    private bool isLoading;
-    
-    [RelayCommand]
-    private async Task RefreshStatusAsync(CancellationToken ct)
-    {
-        IsLoading = true;
-        try 
-        {
-            var response = await _client.GetServiceStatusAsync(ct);
-            Services = new ObservableCollection<ServiceStatusModel>(
-                response.Services.Select(s => MapToModel(s))
-            );
-        }
-        finally { IsLoading = false; }
-    }
-    
-    [RelayCommand]
-    private async Task StartAllServicesAsync(CancellationToken ct) => 
-        await _client.StartServiceAsync(new ServiceRequest { All = true }, cancellationToken: ct);
-}
-```
-
-### State Management
-
-- **View State** (UI visibility, selected tabs, scroll position) — ViewModel properties
-- **App State** (daemon connection, cached site list) — Singleton service
-- **Real-time Updates** — gRPC server-streaming events trigger ViewModel property changes
+**ServiceCard:** Reusable card displaying service name, state, metrics, actions
+**SiteCard:** Reusable card displaying site domain, PHP version, SSL status, framework
+**PhpVersionBadge:** Colored badge showing PHP version (e.g., "8.2")
 
 ---
 
 ## 14. Plugin Architecture
 
-### Plugin Types
+### Mechanism: AssemblyLoadContext + IServiceModule
 
-1. **Service Plugins** — Add Redis, Memcached, MongoDB, PostgreSQL, Elasticsearch
-2. **Framework Plugins (Drivers)** — Auto-detect Laravel, WordPress, Nette, Symfony
-3. **GUI Extension Plugins** — Dashboard widgets, site detail panels
-4. **CLI Extension Plugins** — `devforge laravel:new`, `devforge wp:install`
-5. **Hook Plugins** — React to events (before/after site creation, service start/stop)
+DevForge plugins are .NET assemblies loaded dynamically via `AssemblyLoadContext`. No external scripting language (e.g., Lua) — everything is .NET.
 
-### Plugin Manifest (`plugin.toml`)
+**Plugin Interface:**
 
-```toml
-[plugin]
-id = "devforge-redis"
-name = "Redis"
-version = "1.2.0"
-type = "service"
-min_devforge_version = "1.0.0"
-
-[permissions]
-network = true
-filesystem = ["${DEVFORGE_HOME}/plugins/redis/"]
-process = true
-gui = false
-
-[capabilities.service]
-binary_name = "redis-server"
-default_port = 6379
-config_template = "templates/redis.conf.hbs"
-health_check_cmd = "redis-cli ping"
-health_check_ok = "PONG"
+```csharp
+public interface IDevForgePlugin
+{
+    string Name { get; }
+    Version Version { get; }
+    void Configure(IServiceCollection services);
+}
 ```
 
-### Plugin Runtime
+**Plugin Discovery & Loading:**
 
-Plugins written in **Lua 5.4** (embedded via LuaJIT), sandboxed per-plugin. Host exposes stable API:
+```csharp
+public class PluginLoader
+{
+    public async Task LoadPluginsAsync(string pluginsDir)
+    {
+        foreach (var dll in Directory.GetFiles(pluginsDir, "*.Plugin.dll"))
+        {
+            var ctx = new PluginLoadContext(dll);
+            var asm = ctx.LoadFromAssemblyPath(dll);
 
-```lua
-devforge.services.register(spec)     -- register a service
-devforge.frameworks.register(driver) -- register framework detector
-devforge.cli.register(command)       -- add CLI command
-devforge.events.on(event, handler)   -- subscribe to events
-devforge.store.set(key, value)       -- persistent storage
-devforge.fs.read(path)               -- filesystem (restricted)
-devforge.process.spawn(binary, args) -- process management
-devforge.ipc.call(method, params)    -- daemon RPC
+            var pluginType = asm.GetExportedTypes()
+                .FirstOrDefault(t => typeof(IDevForgePlugin).IsAssignableFrom(t) && !t.IsAbstract);
+
+            if (pluginType == null)
+                continue;
+
+            var plugin = (IDevForgePlugin)Activator.CreateInstance(pluginType)!;
+            _logger.LogInformation("Loaded plugin: {Name} v{Version}", plugin.Name, plugin.Version);
+
+            // Plugin configures services
+            plugin.Configure(_serviceCollection);
+        }
+    }
+}
+
+public class PluginLoadContext : AssemblyLoadContext
+{
+    private readonly AssemblyDependencyResolver _resolver;
+
+    public PluginLoadContext(string pluginPath) : base(isCollectible: true)
+        => _resolver = new AssemblyDependencyResolver(pluginPath);
+
+    protected override Assembly? Load(AssemblyName name)
+    {
+        var path = _resolver.ResolveAssemblyToPath(name);
+        return path != null ? LoadFromAssemblyPath(path) : null;
+    }
+}
 ```
 
-### Security Model
+### Plugin Manifest (plugin.json)
 
-| Trust Level | Source | Signing | User Prompt |
-|---|---|---|---|
-| `marketplace` | Official registry | Required (registry key) | Permissions only |
-| `community` | Third-party | Required (author key) | Permissions + key warning |
-| `local` | Local directory | Not required | Full warning |
-| `dev` | `--dev-plugin` flag | Not required | Suppressed |
+Each plugin ships a `plugin.json` describing its capabilities:
 
-All `devforge.fs.*` and `devforge.process.*` calls mediated by host — paths validated against declared permissions.
+```json
+{
+  "name": "MyCustomModule",
+  "version": "1.0.0",
+  "description": "Custom service module for X",
+  "author": "DevForge Community",
+  "license": "Apache-2.0",
+  "entry_point": "MyNamespace.MyPlugin",
+  "required_devforge_version": "1.0.0+",
+  "dependencies": {
+    "MyCustomModule": "1.0.0"
+  },
+  "permissions": [
+    "process:start",
+    "config:write",
+    "database:read"
+  ]
+}
+```
+
+### Plugin Development Example
+
+Create a custom module (e.g., for a proprietary service):
+
+```csharp
+// MyNamespace.MyPlugin.cs
+public class MyCustomModule : IDevForgePlugin, IServiceModule
+{
+    public string Name => "MyCustomModule";
+    public Version Version => new(1, 0, 0);
+    public string ServiceId => "my-custom-service";
+    public string DisplayName => "My Custom Service";
+    public ServiceType Type => ServiceType.Custom;
+
+    private ILogger<MyCustomModule> _logger;
+
+    public void Configure(IServiceCollection services)
+    {
+        services.AddSingleton<IServiceModule>(this);
+    }
+
+    public async Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
+    {
+        // Custom validation logic
+        return new ValidationResult(true, Array.Empty<string>());
+    }
+
+    public async Task StartAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("Starting custom service");
+        // Launch via System.Diagnostics.Process
+    }
+
+    public async Task StopAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("Stopping custom service");
+    }
+
+    // ... other interface members
+}
+```
+
+### Security: No Sandbox
+
+`AssemblyLoadContext` provides **no sandbox**. A loaded plugin can call any .NET API. Mitigation:
+- Code-sign plugin DLLs with a trusted certificate
+- Verify signature before loading
+- Document that plugins are trusted code
+- For first-party DevForge plugins only
+
+For untrusted plugins, run them in a separate process communicating via gRPC.
+
+### Hot Reload (Future)
+
+Plugins can be unloaded and reloaded by:
+1. Clearing all references to the `AssemblyLoadContext`
+2. Setting the context to null
+3. Calling `GC.Collect()` and `GC.WaitForPendingFinalizers()`
+4. Reloading from disk
+
+Requires careful management to avoid `InvalidCastException` when shared types between host and plugin differ.
 
 ---
 
 ## 15. Security Model
 
-### Threat Assessment Summary
+### Principle: Daemon = Privileged, Clients = Unprivileged
 
-| Area | Severity | Key Mitigation |
-|------|----------|----------------|
-| Privilege Escalation | **CRITICAL** | Split-process architecture |
-| Process Isolation | **HIGH** | Per-site uid, open_basedir |
-| Certificate Security | **HIGH** | Platform keystore for CA key |
-| Configuration Integrity | **MEDIUM** | SHA-256 manifest, atomic writes |
-| Network Security | **HIGH** | Default localhost-only binding |
-| Plugin Security | **HIGH** | Sandboxed Lua, code signing |
-| Data Protection | **MEDIUM** | Platform-native secrets storage |
-| Supply Chain | **HIGH** | Pinned hashes, GPG verification |
-| Update Security | **MEDIUM** | TUF framework, signed updates |
+The daemon runs with elevated privileges (to manage system services, write `hosts` file, manage SSL certs). The GUI and CLI are unprivileged clients that only call gRPC endpoints.
 
-### Split-Process Architecture (CRITICAL)
+### Permissions Model (Future / V2)
 
+```csharp
+public enum Permission
+{
+    ProcessStart,
+    ProcessStop,
+    ConfigRead,
+    ConfigWrite,
+    DatabaseRead,
+    DatabaseWrite,
+    SslRead,
+    SslWrite,
+    HostsWrite,
+    PluginLoad
+}
+
+public class RoleBasedAccess
+{
+    public static readonly Dictionary<string, Permission[]> Roles = new()
+    {
+        ["admin"] = Enum.GetValues<Permission>().ToArray(),
+        ["viewer"] = new[] { Permission.ProcessRead, Permission.ConfigRead },
+        ["operator"] = new[] { Permission.ProcessStart, Permission.ProcessStop, Permission.ConfigRead }
+    };
+}
 ```
-┌──────────────────────────────────┐
-│  Unprivileged Frontend           │  ← Runs as current user
-│  (GUI/CLI, config editing,       │
-│   plugin execution)              │
-└──────────┬───────────────────────┘
-           │ Local socket (HMAC-authenticated)
-┌──────────▼───────────────────────┐
-│  Privileged Helper (minimal)     │  ← Runs elevated
-│  Commands allowed:               │
-│  1. Write hosts file entries     │
-│  2. Bind privileged ports        │
-│  3. Install CA certificate       │
-│  NOTHING ELSE                    │
-└──────────────────────────────────┘
+
+In V1, all local clients have full access (implicit trust). Multi-user/remote access requires authentication (out of scope for V1).
+
+### SSL/TLS for Daemon ↔ Client Communication
+
+gRPC over named pipes / Unix socket is OS-level authenticated (ACL on Windows, file mode on Unix). Additional TLS layer is unnecessary for local IPC but can be added for defense-in-depth:
+
+```csharp
+// Optional: use self-signed certs even for local pipes
+builder.Services
+    .AddGrpc()
+    .ConfigureKestrelServerOptions(opts =>
+    {
+        opts.UseHttps("devforge-selfsigned.pfx", "password");
+    });
 ```
 
-Platform integration:
-- **Windows:** Helper as Windows Service, UAC at install. Named pipes with ACL.
-- **macOS:** `SMJobBless` privileged helper. Authorization Services per operation.
-- **Linux:** polkit with custom `.policy` files.
+### Code Signing (Post-V1)
 
-### MySQL Security Default
+Unsigned .NET assemblies are not flagged by Defender; signing adds trust markers for end users. Not required for V1 but recommended for production releases.
 
-**CRITICAL CHANGE from competitors:** MySQL root gets a **randomly generated password** at first launch, displayed once, stored in platform secrets manager. No more empty root passwords.
+### Input Validation
 
-### Default Network Binding
+All gRPC handlers validate input:
 
-All services bind to `127.0.0.1` exclusively. Explicit user action + warning dialog required for `0.0.0.0`.
+```csharp
+public override async Task<Site> CreateSite(CreateSiteRequest request, ServerCallContext context)
+{
+    if (string.IsNullOrWhiteSpace(request.Domain))
+        throw new RpcException(new Status(StatusCode.InvalidArgument, "Domain required"));
+
+    if (!Path.IsPathRooted(request.Root))
+        throw new RpcException(new Status(StatusCode.InvalidArgument, "Root must be absolute path"));
+
+    if (!Directory.Exists(request.Root))
+        throw new RpcException(new Status(StatusCode.NotFound, "Root directory not found"));
+
+    // ... validation logic
+}
+```
 
 ---
 
@@ -1250,623 +1382,538 @@ All services bind to `127.0.0.1` exclusively. Explicit user action + warning dia
 
 ### Targets
 
-| Metric | Target | Current Competitors |
-|--------|--------|-------------------|
-| Full stack cold start | < 3s | MAMP 4-8s, DDEV 15-45s |
-| Site creation | < 1s | MAMP ~5s |
-| PHP version switch | < 2s | MAMP ~10s |
-| Memory (tool itself) | < 100MB | Electron 80-150MB |
-| Memory (all services, 10 sites) | < 500MB | MAMP 300-500MB, DDEV 800-1500MB |
+| Metric | Target | Current (Est.) |
+|--------|--------|-----------|
+| Daemon startup | < 3s | ~1.5s (gRPC init, plugin load, DB migrate) |
+| Site creation | < 1s | ~0.8s (render + validate + write) |
+| PHP version switch | < 2s | ~1.5s (stop PHP-FPM, update vhost, reload Apache) |
+| Memory (daemon + services) | < 250MB | ~180MB (daemon 30MB + Apache 40 + MySQL 80 + PHP 30) |
+| GUI responsiveness | 60 FPS | 60 FPS (Avalonia/Skia native) |
+| gRPC latency | < 10ms | ~2-5ms (local named pipe) |
 
-### Development-Optimized Defaults
+### Optimization Strategies
 
-```ini
-# PHP-FPM (per-site pool)
-pm = ondemand
-pm.max_children = 3
-pm.process_idle_timeout = 30s
+1. **Lazy loading:** Plugins loaded only on demand
+2. **Caching:** Service status cached for 1 second; charts downsample data
+3. **Async I/O:** All file operations use `async`/`await`
+4. **Database indices:** Primary keys on `sites.domain`, `services.service_id`
+5. **Circular buffers:** Log buffer (RingBuffer<string>) limits memory for 1000 lines
+6. **Streaming APIs:** Server-sent events for logs to avoid buffering entire log file in memory
+7. **Binary protocols:** gRPC/protobuf vs. JSON reduces serialization overhead
+8. **No trimming:** Do NOT use `PublishTrimmed=true` (causes reflection-based code to break and triggers Defender heuristics)
 
-# MySQL
-innodb_buffer_pool_size = 128M
-max_connections = 20
-performance_schema = OFF
-skip_log_bin = ON
+### Monitoring
 
-# Nginx
-worker_processes = 2
-worker_connections = 256
-```
-
-### Top 3 Optimizations (Ranked by Impact)
-
-1. **`ondemand` PHP-FPM pools** — saves 400-600MB across 10+ sites
-2. **`performance_schema = OFF` in MySQL** — saves 100-200MB
-3. **Parallel service startup** — saves 1-3 seconds
+DevForge exports Prometheus-style metrics (future feature) for integration with monitoring tools. Basic metrics available via gRPC `GetMetrics` RPC.
 
 ---
 
 ## 17. Testing Strategy
 
-### Test Categories & Coverage Targets
+### Test Structure
 
-| Module | Branch Coverage | Line Coverage |
-|--------|----------------|--------------|
-| Config template engine | 90% | 95% |
-| Domain/port validation | 95% | 95% |
-| Service lifecycle | 80% | 85% |
-| CLI argument parser | 90% | 95% |
-| GUI components | 70% | 75% |
+```
+DevForge.Tests/
+├── Core.Tests/
+│   ├── Configuration/
+│   │   ├── ScribanTemplateTests.cs
+│   │   ├── TomlParsingTests.cs
+│   │   └── ConfigValidationTests.cs
+│   ├── Models/
+│   │   └── SiteConfigTests.cs
+│   └── Services/
+│       └── HostsFileManagerTests.cs
+│
+├── Daemon.Tests/
+│   ├── ProcessManagerTests.cs
+│   ├── HealthMonitorTests.cs
+│   ├── SslManagerTests.cs
+│   └── PluginLoaderTests.cs
+│
+├── Cli.Tests/
+│   ├── CommandParsingTests.cs
+│   └── GrpcClientTests.cs
+│
+└── Gui.Tests/
+    ├── ViewModelTests.cs
+    └── AvaloniaHeadlessTests.cs
+```
 
-### Test Matrix (CI/CD)
+### Test Categories
 
-| Category | Win 2022 | macOS 14 | Ubuntu 24.04 |
-|----------|----------|----------|-------------|
-| Unit | YES | YES | YES |
-| Integration | YES | YES | YES |
-| E2E (CLI) | YES | YES | YES |
-| E2E (GUI) | YES | YES | YES |
-| Performance | YES | YES | YES |
-| Security | NO | YES | YES |
-| Chaos | NO | YES | YES |
+**Unit Tests** (xUnit + Moq):
+- Configuration rendering (Scriban templates)
+- TOML parsing
+- Hosts file parsing/generation
+- PHP version detection
+- Config validation rules
 
-### Critical Test Cases
+**Integration Tests:**
+- Daemon gRPC API
+- Database migrations (in-memory SQLite)
+- Multi-service start/stop sequences
+- Config apply pipeline
 
-1. **Config injection guard** — reject domain with newline/null byte/path traversal
-2. **PHP version switch** — verify new version active within 5s, old socket cleaned
-3. **Startup benchmark** — cold start < 3000ms, warm reload < 500ms
-4. **Crash recovery** — kill Apache → auto-restart within 3s, site accessible
-5. **Full E2E** — create site → enable SSL → browser loads HTTPS without warning
+**E2E Tests** (Avalonia Headless):
+- GUI open → create site → start service → verify in browser
+- CLI commands (via subprocess invocation)
 
-### Quality Gates
+**Performance Tests:**
+- Site creation time (target: < 1s)
+- Daemon startup time (target: < 3s)
+- Memory footprint under load
 
-- Coverage below module targets → build blocked
-- Security test passes malicious input → build blocked
-- Startup exceeds 3000ms by >10% → build blocked
-- Playwright screenshot diff >0.5% → build blocked
+### CI/CD (GitHub Actions)
+
+```yaml
+# .github/workflows/test.yml
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet test
+      - run: dotnet build -c Release
+```
 
 ---
 
 ## 18. Packaging & Distribution
 
-### Portable Directory Structure
+### Installer Strategy
 
-```
-DevForge/
-├── bin/
-│   ├── php/
-│   │   ├── 5.6.40/    (30MB)
-│   │   ├── 7.4.33/    (35MB)
-│   │   ├── 8.2.21/    (45MB)
-│   │   ├── 8.3.9/     (48MB)
-│   │   └── 8.4.1/     (50MB)
-│   ├── apache/2.4.x/  (15MB)
-│   ├── nginx/1.26/    (3MB)
-│   ├── mysql/8.0/     (100MB)
-│   └── mariadb/11.4/  (80MB)
-├── etc/
-│   ├── devforge.toml
-│   ├── sites/          (one TOML per site)
-│   └── generated/      (ephemeral, reconstructible)
-├── data/
-│   ├── mysql/
-│   └── state.db
-├── ssl/
-│   ├── ca/
-│   └── sites/
-├── log/
-├── plugins/
-├── devforged.exe       (daemon)
-├── devforge.exe        (CLI)
-├── DevForge.exe        (GUI)
-└── .NET 9 runtime files (if not using self-contained)
-```
+| Platform | Installer | Auto-Update |
+|----------|-----------|-------------|
+| Windows | Inno Setup EXE (portable) + WiX MSI (managed) | Velopack |
+| macOS | DMG (drag-to-install) | Velopack |
+| Linux | AppImage | Velopack |
 
-### Build & Publish Strategy (.NET 9)
+### Velopack Setup
 
-**Self-Contained Build (Recommended for simplicity):**
+**Configuration:**
 
 ```bash
-# No external .NET runtime dependency
-dotnet publish -c Release -r win-x64 --self-contained
+dotnet add package Velopack
+# Then in Program.cs:
+VelopackApp.Build().Run();
 
-# Output: 25-35 MB per platform (includes .NET runtime)
-# Binaries: devforged.exe, devforge.exe, DevForge.exe
+# Install vpk CLI tool:
+dotnet tool install -g vpk
+
+# Publish and package:
+dotnet publish -c Release -r win-x64 --self-contained -o publish/
+vpk pack --packId DevForge --packVersion 1.0.0 --packDir publish/ --mainExe DevForge.exe
+# Output: releases/DevForge-1.0.0-full.exe, DevForge-1.0.0-delta.exe
 ```
 
-**Framework-Dependent Build (Smaller):**
+**Benefits:**
+- Delta updates (small download)
+- Automatic delta generation and application
+- Rollback support
+- ~2 second update time
+
+### Publish Flags (Self-Contained, Non-Trimmed)
 
 ```bash
-# Requires .NET 9 Desktop Runtime installed
-dotnet publish -c Release -r win-x64 --no-self-contained
-
-# Output: 2-3 MB binaries only
-# User must install .NET 9 Desktop Runtime from microsoft.com
+dotnet publish -c Release \
+  -r win-x64 \
+  --self-contained true \
+  -p:PublishSingleFile=true \
+  -p:IncludeNativeLibrariesForSelfExtract=true \
+  -p:ReadyToRun=true \
+  -p:PublishTrimmed=false
 ```
 
-**Decision:** Use **self-contained** for consumer distribution (no prerequisites), **framework-dependent** for enterprise/CI deployments (faster updates).
+**Why NOT trimmed:**
+- Trimming breaks reflection-based code (Avalonia bindings, gRPC code generation)
+- Plugin system relies on reflection
+- Does NOT improve safety against Defender (no false positive issue with untrimmed)
 
-### Installers
+### Portable vs. Installed
 
-| Platform | Format | Size | Tool |
-|----------|--------|------|------|
-| Windows | MSI (WiX Toolset) | ~300-500MB compressed | `dotnet new wix` + WiX 4 |
-| Windows Portable | .7z archive | ~250-350MB | 7-Zip CLI |
-| macOS | DMG + notarization | ~400-600MB | `create-dmg` + Apple signing |
-| Linux | AppImage + snap | ~300-500MB | `appimagetool` + snapcraft |
+**Portable ("Run Once") — Recommended for users:**
+- Download ZIP, extract anywhere
+- No installer
+- No system integration
+- No UAC elevation needed
+- Perfect for testing or minimal footprint
 
-**Windows Installer (WiX MSI) — Recommended Over NSIS**
+**Installed (Installer):**
+- WiX MSI for enterprise GPO deployment
+- Windows Store package (MSIX) available post-launch
+- Start menu shortcuts
+- Optional system tray start on login
+- Auto-update integration
 
-```xml
-<!-- DevForge.wixproj / Product.wxs (WiX 4) -->
-<Product>
-  <Feature Id="ProductFeature">
-    <ComponentRef Id="DevForgeDaemon" />
-    <ComponentRef Id="DevForgeCLI" />
-    <ComponentRef Id="DevForgeGUI" />
-    <ComponentRef Id="PHPBinaries" />
-    <ComponentRef Id="ApacheBinaries" />
-    <ComponentRef Id="MySQLBinaries" />
-  </Feature>
-  
-  <UI>
-    <UIRef Id="WixUI_InstallDir" />
-    <Publish Dialog="ExitDialog" Control="Finish" Event="LaunchApplication">
-      [WIXUI_EXITDIALOGOPTIONALCHECKBOXCHECKED]
-    </Publish>
-  </UI>
-</Product>
+### Licensing & Code Signing
 
-<!-- Build -->
-dotnet build DevForge.wixproj
-# Outputs: DevForge.msi (signed)
-```
+**License:** Apache-2.0
 
-**Why MSI over NSIS:**
-1. **Lower AV false positive rate** — Windows trusts MSI format more than NSIS .exe stubs
-2. **Automatic repair & uninstall** — Windows Installer handles rollback
-3. **License & documentation integration** — built-in EULA flow
-4. **Per-machine vs. per-user install** — flexible deployment options
-
-### Code Signing (.NET 9 Binaries)
-
-**.NET binaries do NOT trigger Defender heuristics** like Go binaries do. However, code signing still recommended for:
-1. SmartScreen reputation building (consumer trust)
-2. Chain-of-custody compliance (enterprise requirements)
-
-```bash
-# Sign .NET binaries post-publish
-signtool sign /f cert.pfx /p password /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 \
-  bin/Release/net9.0-windows/publish/*.exe
-
-# Sign MSI
-signtool sign /f cert.pfx /p password /fd SHA256 /tr http://timestamp.digicert.com \
-  DevForge.msi
-```
-
-**Certificate Strategy:**
-- **OV (Organization Validation) Code Signing Certificate** ~$200-400/year — sufficient for .NET
-- Do NOT use EV certificate (unnecessary cost for .NET; EV required for Go false positives)
-- Renewal before expiry to maintain SmartScreen reputation chain
-
-### .NET Framework Dependent vs. Self-Contained Tradeoff
-
-| Aspect | Framework-Dependent | Self-Contained |
-|--------|---------------------|-----------------|
-| Download size | 2-3 MB binaries | 25-35 MB (includes .NET 9 runtime) |
-| Install size | 5-10 MB (+ .NET SDK) | 60-80 MB total |
-| First launch | Fast (runtime pre-installed) | Slightly slower (JIT warm-up) |
-| Updates | Small binary patches | Full re-download |
-| Prerequisites | .NET 9 Desktop Runtime | None |
-| Enterprise | Easier (IT manages .NET) | No dependency management |
-| Consumer | Requires .NET installer download | Single ZIP/MSI download |
-
-**Recommendation:** Self-contained for initial releases (consumer expectations), transition to framework-dependent after market penetration (~v1.5+).
-
-### Auto-Update System
-
-**Strategy: Delta updates via Sparkle.NET or custom updater**
-
-```csharp
-// Custom updater service
-public class UpdateService : BackgroundService
-{
-    private const string UpdateCheckUrl = "https://cdn.devforge.dev/releases/latest.json";
-    
-    protected override async Task ExecuteAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            // Check for updates every 24 hours
-            var response = await _http.GetAsync(UpdateCheckUrl, ct);
-            var manifest = JsonSerializer.Deserialize<UpdateManifest>(
-                await response.Content.ReadAsStringAsync(ct)
-            );
-            
-            if (manifest.Version > CurrentVersion && manifest.IsSigned)
-            {
-                // Download delta binary if available, else full binary
-                await DownloadAndVerifyAsync(manifest, ct);
-                // Restart daemon with graceful handoff of services
-                await RestartWithoutDowntimeAsync(ct);
-            }
-            
-            await Task.Delay(TimeSpan.FromHours(24), ct);
-        }
-    }
-}
-```
-
-**Update Manifest (CDN-hosted):**
-```json
-{
-  "version": "1.0.5",
-  "releaseDate": "2026-04-15T00:00:00Z",
-  "downloadUrl": "https://cdn.devforge.dev/releases/v1.0.5/DevForge.msi",
-  "sha256": "abc123...",
-  "signature": "...", // Ed25519
-  "releaseNotes": "Fixed PHP 8.4 compatibility issue",
-  "channels": ["stable", "beta", "nightly"]
-}
-```
-
-**Key features:**
-- Signed updates (Ed25519 verify, public key embedded in app)
-- Delta patches for minor versions (if binary size substantial)
-- Rollback: keep previous 2 versions in `%LocalAppData%\DevForge\versions/`
-- Graceful restart: notify connected clients, finish in-flight operations, restart daemon
-- Opt-in beta channel: Users can enable pre-release testing
-
-### Binary Integrity & Verification
-
-**Pre-release verification (CI/CD):**
-
-```powershell
-# Generate checksums
-Get-FileHash bin/Release/net9.0-windows/publish/*.exe | Format-List > checksums.sha256
-
-# Scan with VirusTotal (optional, not required for .NET)
-# vt scan file bin/Release/net9.0-windows/publish/devforged.exe
-
-# Sign MSI
-dotnet tool run signtool sign /fd SHA256 ...
-```
-
-### CDN Infrastructure
-
-- **Primary:** AWS S3 + CloudFront (CDN edge locations globally)
-- **Fallback:** GitHub Releases (no bandwidth charges)
-- **Estimated costs (10K active users, 3 major releases/month):**
-  - S3 storage: ~$5/month
-  - CloudFront egress: ~$200-300/month (10TB/month @ 3 releases)
-  - Total: ~$250-350/month
+**Code signing:**
+- V1: Optional (not required for .NET, no Defender false positive)
+- Post-V1: Recommended for trust markers
+- Use standard Authenticode cert (NOT EV; EV cost only justified for Go binaries)
 
 ---
 
 ## 19. Legal & Licensing
 
-### License Compatibility Matrix
+### Compliance Checklist
 
-| Component | License | Permissive? | Commercial OK? | Must Share Modifications? | Source Offer Required? |
-|---|---|---|---|---|---|
-| Apache HTTP Server | Apache-2.0 | Yes | Yes | No | No (NOTICE only) |
-| Nginx | BSD-2-Clause | Yes | Yes | No | No |
-| PHP | PHP-3.01 | Yes | Yes | No | No |
-| MySQL Community | GPLv2 (+FOSS Exception) | **No** | **Conditional** | **Yes** | **Yes** |
-| MariaDB | GPLv2 | **No** | **Conditional** | **Yes** | **Yes** |
-| phpMyAdmin | GPLv2 | **No** | **Conditional** | **Yes** | **Yes** |
-| mkcert | BSD-3-Clause | Yes | Yes | No | No |
-| dnsmasq | GPLv2/v3 | **No** | **Conditional** | **Yes** | **Yes** |
-| OpenSSL 3.x | Apache-2.0 | Yes | Yes | No | No |
-| Tauri | Apache-2.0/MIT | Yes | Yes | No | No |
+- ✓ Apache-2.0 license chosen (commercial-friendly, patent grant)
+- ✓ COPYING file at repo root
+- ✓ Dependencies: all must be compatible with Apache-2.0
+  - MIT (Avalonia, Dapper, Scriban): ✓ compatible
+  - Apache-2.0 (gRPC, many others): ✓ compatible
+  - LGPL (if any): ✓ compatible (static link OK)
+- ✓ No GPL code (would require GPL license for entire project)
 
-### Critical Compatibility Notes
+### Dependency Audit
 
-**Apache-2.0 + GPLv2:** GPLv2 components and Apache-2.0 components coexist as **separate programs** in aggregate distribution (GPLv2 Section 2, "mere aggregation" clause). DevForge launching MySQL as a separate process ≠ derivative work. Same model used by MAMP, XAMPP, Laragon.
+Key dependencies:
+- Avalonia: MIT
+- gRPC: Apache-2.0 / MIT dual
+- Dapper: Apache-2.0
+- Scriban: Apache-2.0
+- CommunityToolkit.Mvvm: MIT
+- Serilog: Apache-2.0
+- Spectre.Console: MIT
+- System.CommandLine: MIT
 
-**Redis 7.4+ (RSALv2/SSPL):** Prohibits managed service offering. **Recommendation:** Bundle Valkey (BSD-3-Clause fork) instead of Redis >= 7.4.
+No problematic licenses detected.
 
-**PHP License v3.01:** Naming restriction — cannot use "PHP" in derivative product names without permission.
+### Third-Party Binaries
 
-### Recommended Distribution Model: Open Core
-
-| Layer | License | Content |
-|-------|---------|---------|
-| **Core** | Apache-2.0 | CLI, daemon, config engine, basic GUI |
-| **Premium** | Proprietary | Cloud sync, team management, advanced SSL, GUI themes |
-| **GPL binaries** | GPLv2 (unmodified) | MySQL, MariaDB, phpMyAdmin, dnsmasq |
-
-### GPL Compliance Requirements
-
-1. **Source code offer** — written offer valid 3 years, covering exact versions bundled
-2. **No modification lock-in** — patches to GPL components must be published under GPLv2
-3. **Host source archives** or provide download links to upstream exact versions
-4. **NOTICE file** — list all components, versions, licenses in `THIRD-PARTY-LICENSES`
-
-### Trademark Usage
-
-| Mark | Owner | Usage Rule |
-|------|-------|-----------|
-| PHP | The PHP Group | Descriptive OK, cannot name product "*PHP*" |
-| MySQL | Oracle Corp. | Descriptive OK + ™ symbol, no logo |
-| Apache | ASF | Must say "Apache HTTP Server" (not just "Apache") |
-| Nginx | F5, Inc. | Descriptive OK, no endorsement implication |
-| MariaDB | MariaDB Foundation | Descriptive OK, logo requires permission |
-
-### Privacy & Telemetry
-
-- **GDPR:** Opt-in consent, data minimization, right to deletion, DPA with analytics processor
-- **CCPA:** Disclosure at collection, opt-out right
-- **Minimum:** Privacy policy disclosing what/why/who/retention/rights
-
-### Contributor License Agreement
-
-- **Apache ICLA recommended** — ensures relicensing for proprietary premium layer
-- **Originality warranty** — prohibits pasting GPL code into Apache-2.0 codebase
-- **DCO (Developer Certificate of Origin)** as lighter alternative
+- `mkcert`: Unlicense (public domain) — bundled or downloaded
+- OpenSSL: Apache-2.0 (via mkcert) — transparent to users
 
 ---
 
 ## 20. Implementation Roadmap
 
-### Technology Stack Review (C# / .NET 9 + Avalonia UI)
+### Phase 0: Day-1 Verification (1 day)
 
-**All implementation phases use single .NET solution** — no polyglot friction.
+**Checklist before starting Phase 1:**
 
-### Phase 1 — Foundation (Weeks 1-3)
+1. **Avalonia 12 + LiveCharts2 compat**
+   - Create minimal Avalonia app with LiveCharts2 2.0.0
+   - Render a real-time line chart (100 data points, updated every 500ms)
+   - Verify smooth rendering, no exceptions
+   - If broken: report issue to LiveCharts2, switch to ScottPlot.Avalonia
 
-**Deliverables:** Core daemon architecture, gRPC service layer, database schema
+2. **gRPC over named pipes**
+   - Create minimal gRPC server listening on `\\.\pipe\devforge-daemon`
+   - Create client connecting to same pipe
+   - Invoke unary + streaming RPC
+   - Verify latency < 5ms
 
-- [ ] .NET 9 solution structure (DevForge.Daemon, DevForge.Core, DevForge.Cli, DevForge.Tests)
-- [ ] `IHostedService` daemon skeleton with graceful shutdown
-- [ ] gRPC service definitions (protos/devforge.proto) with basic stubs
-- [ ] `GrpcDotNetNamedPipes` integration for Windows IPC
-- [ ] SQLite schema + EF Core migrations (ServiceUnit, Site, PluginMetadata tables)
-- [ ] Event bus implementation (`Channel<Event>` pub/sub)
-- [ ] IPlatformAbstraction interface (Windows/Unix implementations)
-  - Process spawning via `System.Diagnostics.Process`
-  - UAC elevation via `ProcessStartInfo.UseShellExecute + Verb="runas"`
-  - File ACL management via `FileSecurity` (Windows) / Unix permissions (Linux)
+3. **Scriban template rendering**
+   - Parse Apache VirtualHost template
+   - Render with test data
+   - Compare output to expected (manual Apache syntax check)
 
-**Effort:** 1 developer, ~12-14 days
+4. **SQLite + Dapper in-memory**
+   - Create in-memory DB
+   - Define tables + views
+   - Insert/update/delete via Dapper
+   - Verify query results
 
-### Phase 2 — Core Services (Weeks 4-6)
+5. **System.Diagnostics.Process + child management**
+   - Spawn a long-running process (e.g., `sleep 1000`)
+   - Capture PID
+   - Test `Process.Kill(entireProcessTree: true)`
+   - Verify all children killed
 
-**Deliverables:** Service management, config pipeline, health monitoring
+6. **Plugin loading (AssemblyLoadContext)**
+   - Create a test plugin DLL with `IServiceModule`
+   - Load via `AssemblyLoadContext`
+   - Instantiate plugin
+   - Call a method
 
-- [ ] `ServiceManager` implementation
-  - Apache/Nginx ServiceUnit (Start/Stop/Reload, config validation via `httpd -t` / `nginx -t`)
-  - PHP-FPM ServiceUnit (per-site pool generation, multi-version support)
-  - MySQL/MariaDB ServiceUnit (initialization, startup sequence)
-  - Health check loop (`BackgroundService`) with exponential backoff restart policy
-  - Port conflict detection (scan 80, 443, 3306, 5432, etc.)
+If all 6 items pass: proceed to Phase 1.
 
-- [ ] `ConfigurationPipeline`
-  - TOML parsing via `Tomlyn` NuGet package
-  - Template rendering via `Scriban` (modern, zero-JS alternative to Handlebars)
-  - Config validation: parse → render → execute `httpd -t` → atomic file swap
-  - Version archiving (keep last 5 versions, atomic rollback support)
+### Phase 1: Core Daemon & gRPC API (Weeks 1–4)
 
-- [ ] Startup sequence optimization (target: < 3 seconds)
-  - Parallel MySQL + dnsmasq launch via `Task.WhenAll()`
-  - Pre-generate configs at site creation (not at startup)
-  - Skip validation on cached configs if timestamp unchanged
+**Goals:**
+- Daemon boots and listens on gRPC
+- Process management for Apache + MySQL
+- Basic configuration rendering
 
-**Effort:** 2 developers, ~12-16 days
+**Deliverables:**
+1. `DevForge.Core` project with domain models (Site, Service, PhpVersion, etc.)
+2. `DevForge.Daemon` Worker Service
+3. ProcessManager + ServiceUnit state machine
+4. Apache + MySQL modules implementing `IServiceModule`
+5. Basic gRPC service (start/stop/status)
+6. SQLite schema + DbUp migrations
+7. Unit tests for ProcessManager + HealthMonitor
 
-### Phase 3 — Site Management (Weeks 7-9)
+**Exit Criteria:**
+- `devforge start apache` and `devforge stop apache` work via gRPC
+- Service state persisted in SQLite
+- Logs captured and streamable via gRPC
 
-**Deliverables:** VHost CRUD API, SSL/TLS module, DNS integration, CLI client
+### Phase 2: Configuration Pipeline (Weeks 5–7)
 
-- [ ] VHost CRUD gRPC endpoints (CreateSite, ListSites, DeleteSite, etc.)
-  - TOML file generation per site
-  - Apache VirtualHost / Nginx server block generation
-  - PHP-FPM pool creation (one pool per site + PHP version combo)
+**Goals:**
+- Scriban template rendering for Apache VirtualHost
+- 3-stage config pipeline (render → validate → apply)
+- Virtual host manager
 
-- [ ] SSL module
-  - `mkcert` integration via `System.Diagnostics.Process`
-  - Certificate authority trust (Windows: CertMgr.exe, Unix: update-ca-certificates)
-  - Per-site cert generation + renewal tracking
+**Deliverables:**
+1. ConfigEngine with Scriban template support
+2. ConfigValidator (syntax checks, schema validation)
+3. AtomicWriter (backup + write)
+4. VirtualHost CRUD gRPC endpoints
+5. Site creation CLI command + wizard
+6. Config history audit table + gRPC endpoint
 
-- [ ] DNS/Hosts module
-  - Windows: Direct registry modification (HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Tcpip\Parameters\Interfaces) OR hosts file + elevation
-  - Unix: /etc/hosts file management with sudo prompt
-  - dnsmasq configuration for *.local suffix wildcard resolution
+**Exit Criteria:**
+- Create site via CLI: `devforge new myapp.loc --php=8.2 --ssl`
+- VirtualHost config generated, validated, applied
+- Site accessible at `https://myapp.loc`
 
-- [ ] CLI client (System.CommandLine + Spectre.Console)
-  - All `site:*`, `service:*`, `php:*` commands with rich output
-  - `--json` flag for machine-readable output
-  - Progress indicators, table rendering, syntax highlighting
-  - Context-aware help (e.g., `devforge site create --help`)
+### Phase 3: PHP Version Manager (Weeks 8–9)
 
-- [ ] Configuration import/export (TOML serialization)
+**Goals:**
+- Multi-PHP version support (7.4, 8.2, 8.4)
+- Per-site PHP FPM pools
+- CLI aliases
 
-**Effort:** 2 developers, ~15-18 days
+**Deliverables:**
+1. PHP module implementing `IServiceModule`
+2. PHP FPM pool configuration for each version
+3. CLI aliases in `~/.devforge/bin/`
+4. `devforge php list|set-default|set-site` commands
+5. php.ini template rendering per version
 
-### Phase 4 — GUI (Weeks 10-12)
+**Exit Criteria:**
+- Switch site from PHP 8.2 → 8.4: `devforge php set-site myapp.loc 8.4`
+- Verify site uses correct version (phpinfo() on site, CLI `php82 -v`)
 
-**Deliverables:** Avalonia UI application with all core features
+### Phase 4: SSL/TLS + DNS (Weeks 10–11)
 
-- [ ] Avalonia UI scaffolding + FluentTheme setup
-  - MainWindow with sidebar navigation
-  - MVVM architecture (ReactiveUI or MVVM Toolkit)
-  - gRPC client integration (shared with CLI)
+**Goals:**
+- mkcert integration for trusted local certs
+- Automatic certificate generation + renewal
+- Hosts file management
 
-- [ ] Core screens (XAML + C# ViewModels)
-  - Dashboard: Service status cards, real-time graphs (LiveCharts2)
-  - Sites Manager: DataGrid with CRUD operations
-  - PHP Manager: Version list, extensions toggle, install new versions
-  - Database Manager: MySQL/MariaDB instance mgmt
-  - SSL Manager: Per-site cert status, generation
-  - Terminal: Embedded terminal (xterm.js-like, or simple Process output pipe)
-  - Settings: Ports, startup behavior, theme selector
+**Deliverables:**
+1. MkcertManager (locate/install/run mkcert)
+2. Certificate CRUD + expiry tracking
+3. HealthMonitor check for expiring certs (renewal)
+4. HostsFileManager (read/write between markers)
+5. DNS flush after hosts change
+6. SSL gRPC endpoints
 
-- [ ] System tray integration
-  - `TrayIcon` control in Avalonia (show/hide window, context menu)
-  - Status indicator (green/red circle)
-  - Recent sites quick launch
-  - Start/Stop All buttons
+**Exit Criteria:**
+- Create site with `--ssl` flag: auto-generates cert via mkcert
+- Certificate trusted in browser (no warnings)
+- DNS entry in hosts file
+- Certificate auto-renewed before expiry
 
-- [ ] Live event streaming
-  - Avalonia ViewModels subscribe to gRPC `SubscribeEvents` stream
-  - UI updates via `ObservableProperty` bindings
-  - No polling, fully reactive
+### Phase 5: GUI (Weeks 12–13)
 
-- [ ] Keyboard shortcuts
-  - `Ctrl+K`: Command palette (filter commands, execute)
-  - `Ctrl+N`: New site dialog
-  - `F5`: Refresh status
-  - `Ctrl+T`: New terminal tab (if implemented)
+**Goals:**
+- Avalonia application
+- Dashboard with service status
+- Sites list with CRUD
+- System tray
 
-**Effort:** 2-3 developers, ~18-21 days
+**Deliverables:**
+1. App.axaml + theme setup
+2. Main window with sidebar
+3. Dashboard tab (LiveCharts2 metrics, service status table)
+4. Sites tab (list, create/edit/delete)
+5. System tray with menu
+6. GrpcClientService wrapper
+7. MVVM ViewModels with CommunityToolkit.Mvvm
 
-### Phase 5 — Polish & Ecosystem (Weeks 13-15)
+**Exit Criteria:**
+- GUI launches
+- Dashboard shows live CPU/RAM charts
+- Can create/delete sites
+- Tray menu works (open/quit)
 
-**Deliverables:** Additional services, plugin system, installers
+### Phase 6: CLI + Documentation (Weeks 14–15)
 
-- [ ] Nginx ServiceUnit (parity with Apache)
-- [ ] MariaDB ServiceUnit (parity with MySQL)
-- [ ] Redis/Memcached plugin stubs (for plugin marketplace proof-of-concept)
-- [ ] Plugin host implementation
-  - Lua 5.4 embedded runtime via `MoonSharp` or `Lua.NET`
-  - Plugin sandboxing via `AppDomain` (deprecated in .NET 9, use custom permission model instead)
-  - Hook system: `before_site_create`, `after_service_start`, etc.
-  - Plugin marketplace scaffolding (HTTP endpoint returning JSON)
+**Goals:**
+- Full CLI implementation
+- Help text + man pages
+- API documentation
+- User guide
 
-- [ ] Installer generation (WiX MSI toolset)
-  - Windows MSI with automatic PHP/Apache/MySQL bundling
-  - macOS DMG (notarization required)
-  - Linux AppImage
-  - Portable .7z archive option
+**Deliverables:**
+1. System.CommandLine command tree (site, service, php, db, ssl, config)
+2. Spectre.Console output (tables, progress bars)
+3. API documentation (.proto → HTML via protoc plugins)
+4. Installation guide
+5. User manual (per-site PHP, SSL certs, database backup)
+6. Plugin development guide
 
-- [ ] Auto-update service (Sparkle.NET or custom implementation)
-  - Update manifest JSON fetch + signature verification
-  - Delta binary download (if binary size > 10MB)
-  - Graceful restart with in-flight operation completion
+**Exit Criteria:**
+- All CLI commands documented and tested
+- Help text: `devforge --help`, `devforge new --help`
+- User can run full workflow from CLI
 
-**Effort:** 2 developers, ~14-18 days
+### Phase 7: Database Manager + Plugins (Weeks 16–17)
 
-### Phase 6 — Documentation & Launch (Weeks 16-18)
+**Goals:**
+- MySQL / SQLite database management
+- Plugin system integration
+- V1 feature complete
 
-**Deliverables:** User documentation, migration tools, beta release
+**Deliverables:**
+1. Database module (`db create`, `db backup`, `db import`)
+2. Plugin discovery + loading
+3. Example plugin (custom service module)
+4. Plugin development documentation
+5. Integration tests for entire system
 
-- [ ] User documentation
-  - Getting Started guide (3 OSes × 3 install methods)
-  - CLI reference (all commands with examples)
-  - API documentation (gRPC proto + example client code)
-  - Troubleshooting guide (40+ common issues)
-  - FAQ & video tutorials
+**Exit Criteria:**
+- `devforge db create mydb && devforge db backup mydb`
+- Plugin loading without errors
+- Example plugin starts and shows in GUI
 
-- [ ] MAMP PRO migration tool
-  - Import vhosts from MAMP SQLite database
-  - Convert to DevForge TOML format
-  - Database backup utilities
+### Phase 8: Packaging + Release (Weeks 18–19)
 
-- [ ] Community feedback integration
-  - GitHub Issues triage
-  - Discord/Slack community setup
-  - Public beta (v0.9.0-beta)
+**Goals:**
+- Installers for Windows/macOS/Linux
+- Auto-update via Velopack
+- Release candidate testing
 
-- [ ] v1.0.0 GA release
-  - Final bug fixes
-  - Performance optimization (target: < 3s startup, < 250MB idle)
-  - Security audit (code review, fuzzing)
+**Deliverables:**
+1. Velopack configuration + build
+2. Inno Setup script (portable EXE)
+3. WiX MSI (managed install)
+4. CI/CD pipeline (GitHub Actions)
+5. Release notes + changelog
 
-**Effort:** 2 developers, ~10-14 days
+**Exit Criteria:**
+- Download and run installer
+- Auto-update check works
+- Publish to GitHub Releases
 
-### Phase 7 — Advanced Features (Post-v1.0)
+### Phase 9: Testing + Polish (Weeks 19–20)
 
-- [ ] Team management (multi-user setup, permissions)
-- [ ] Cloud sync (DevForge config backup to user's cloud storage)
-- [ ] Advanced SSL (wildcard certs, custom CAs, ACME integration)
-- [ ] Container integration (Traefik reverse proxy, Docker CLI shim)
-- [ ] IDE plugins (VS Code, JetBrains IDEs)
+**Goals:**
+- Test coverage
+- Performance profiling
+- UX refinements
 
-### Estimated Effort Summary
+**Deliverables:**
+1. Unit test suite (80%+ coverage)
+2. E2E tests (critical user flows)
+3. Performance benchmarks
+4. Accessibility audit (WCAG AA)
+5. Bug fixes from testing
 
-| Phase | Duration | Team | Deliverable |
-|-------|----------|------|-------------|
-| 1 — Foundation | 3 weeks | 1 dev | Core daemon + gRPC |
-| 2 — Core Services | 3 weeks | 2 devs | Service mgmt + config pipeline |
-| 3 — Site Management | 3 weeks | 2 devs | VHost CRUD + SSL + CLI |
-| 4 — GUI | 3 weeks | 2-3 devs | Avalonia UI, all screens |
-| 5 — Polish & Ecosystem | 3 weeks | 2 devs | Plugins, installers, updater |
-| 6 — Documentation & Launch | 3 weeks | 2 devs | Docs, migration tool, GA |
-| **Total (MVP to v1.0)** | **18 weeks** | **2-3 devs** | **Production-ready product** |
+**Exit Criteria:**
+- All tests passing
+- Startup < 3s
+- Memory < 250MB
+- Dashboard responsive
 
-**Notes:**
-- Timeline assumes parallel work on Windows and Unix implementations (CI/CD coverage)
-- Phase 1-3 can shift to Phase 4 as soon as gRPC stubs are ready (CLI testing begins mid-Phase 3)
-- Each phase includes testing (xUnit + integration tests) and CI/CD pipeline setup
-- Burn-down tracking via GitHub Project board + weekly demos
+### Timeline Summary
+
+**Total:** ~20 weeks (4.5 months) for solo developer
+**Start:** 2026-04-09
+**Expected Release:** 2026-08-28 (v1.0.0)
 
 ---
 
 ## 21. Risk Analysis
 
-| Risk | Probability | Impact | Mitigation |
-|------|------------|--------|------------|
-| Windows UAC friction | High | Medium | Minimize elevation requests, batch operations |
-| PHP binary compatibility | Medium | High | Test matrix across Windows versions, VC++ bundles |
-| Apache/Nginx config complexity | Medium | Medium | Template validation catches errors pre-apply |
-| Electron alternative (Tauri) maturity | Low | High | Tauri v2 is stable; fallback to Electron possible |
-| FlyEnv as competitor | Medium | Medium | Focus on config validation + CLI as differentiators |
-| MySQL licensing changes | Low | Medium | MariaDB as default, MySQL optional |
-| Plugin security vulnerabilities | Medium | High | Lua sandbox + permission model + code signing |
-| Cross-platform parity | High | Medium | PAL abstraction + comprehensive CI matrix |
+### Technical Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|-----------|
+| LiveCharts2 + Avalonia 12 incompatibility | Medium | High | Day-1 verification; fallback to ScottPlot |
+| gRPC named pipe timeout / deadlock | Low | High | Performance test during Phase 1; cancellation tokens |
+| Hosts file race condition (concurrent edits) | Low | Medium | Atomic write; document not to edit hosts manually during DevForge use |
+| Plugin loading ALC unload failure | Medium | Medium | Careful reference cleanup; fallback to process restart |
+| Windows Job Object not killing children | Very Low | High | Test during Phase 1 ProcessManager tests |
+| mkcert OpenSSL 3.x on Windows fails | Very Low | Medium | Fallback to PowerShell cert generation; pre-test on target systems |
+| Apache/Nginx config syntax changes | Low | Medium | Validate with `httpd -t` / `nginx -t` in pipeline |
+| SQLite journal mode locking | Low | Medium | Enable WAL mode; concurrent reader/writer test in Phase 1 |
+
+### Deployment Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|-----------|
+| Defender / antivirus false positive | Low | High | .NET FDE not flagged; test on Windows with real AV; optional code signing |
+| Installer UAC elevation fails | Medium | Medium | Provide portable ZIP alternative; test on limited user account |
+| User has incompatible Apache version | Low | Medium | Version detection on startup; compatibility table in docs |
+| Port conflict (80/443 in use) | Medium | Medium | Config validation suggests alternative ports; error message |
+
+### Market Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|-----------|
+| FlyEnv adds config validation | Medium | Low | First-mover advantage on validation feature; emphasize gRPC API extensibility |
+| Laragon becomes active again | Low | Low | Cross-platform story (Laragon Windows-only); CLI + plugin ecosystem |
+| Laravel Herd gains market share | Medium | Medium | Position for non-Laravel developers; emphasize multi-language support |
+| User expects Docker integration | Medium | Low | Traefik reverse proxy (post-V1) bridges gap; document trade-offs |
+
+### Operational Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|-----------|
+| Limited maintainer capacity (solo dev) | High | High | Open-source contributions; plugin architecture for extensibility; community-driven features |
+| Dependency vulnerability in gRPC/Avalonia | Medium | Medium | Automated dependency scanning (Dependabot); rapid patch releases |
+| Config corruption (migration bug) | Low | High | Backup config before migration; rollback procedure; audit trail in `config_history` |
+| User misconfigures PHP version mismatch | Medium | Low | Validation checks; clear error messages; documentation |
+
+### Security Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|-----------|
+| Daemon process runs as SYSTEM (over-privileged) | Medium | High | Principle of least privilege; document minimum permissions needed |
+| Plugin arbitrary code execution | Low | High | Code signing requirement; documented that plugins are trusted; process isolation (future) |
+| Config files world-readable | Medium | Medium | Secure file permissions on Unix (chmod 600); document security model |
+| Hosts file tampering | Very Low | Medium | File integrity checks; audit log |
+
+### Mitigation Summary
+
+1. **Day-1 verification** catches technical blockers early
+2. **Phased rollout** allows testing at each stage
+3. **Comprehensive testing** (unit + E2E) prevents regressions
+4. **Documentation** explains limitations and best practices
+5. **Community involvement** shares maintenance burden
 
 ---
 
-## Appendices
+## Appendix A: Glossary
 
-### Appendix A: Full DDL
+| Term | Definition |
+|------|-----------|
+| **Daemon** | Background service (DevForge.Daemon) running as Worker Service |
+| **gRPC** | Remote Procedure Call framework over HTTP/2 (protobuf messages) |
+| **Named Pipe** | Windows IPC mechanism (\\.\pipe\name) |
+| **Unix Socket** | POSIX IPC mechanism (file path) |
+| **VirtualHost** | Apache configuration for a single domain |
+| **FPM** | FastCGI Process Manager (PHP-FPM) |
+| **mkcert** | CLI tool to generate trusted local TLS certificates |
+| **Scriban** | Template engine (Liquid-like syntax) for config generation |
+| **TOML** | Configuration file format (INI-like) |
+| **AssemblyLoadContext** | .NET mechanism for dynamic assembly loading |
+| **IServiceModule** | Interface that all service modules implement |
 
-(See Section 11 for core tables. Full DDL including triggers, views, seed data, and migration system available in `docs/schema/`)
+## Appendix B: References
 
-### Appendix B: API Reference
+- [Avalonia UI Documentation](https://docs.avaloniaui.net)
+- [gRPC C# Guide](https://grpc.io/docs/languages/csharp/)
+- [System.CommandLine Documentation](https://docs.microsoft.com/en-us/dotnet/standard/commandline/)
+- [Spectre.Console](https://spectreconsole.net)
+- [Scriban Documentation](https://github.com/scriban/scriban)
+- [mkcert GitHub](https://github.com/FiloSottile/mkcert)
+- [Apache VirtualHost Directive](https://httpd.apache.org/docs/current/mod/core.html#virtualhost)
+- [DevForge SPEC.md](./SPEC.md) — authoritative technical specification
+- [Interview Results](./interview-results.md) — user requirements
+- [Avalonia Ecosystem](./avalonia-ecosystem.md) — NuGet package guidance
 
-(Complete JSON-RPC method documentation with request/response examples in `docs/api/`)
-
-### Appendix C: Design Tokens
-
-(Full CSS custom property definitions for dark/light themes in `docs/design/tokens.css`)
-
-### Appendix D: Documentation Suite (Created)
-
-The Technical Writer agent created **10 documentation files** (~15,000 words total):
-
-| File | Words | Content |
-|------|-------|---------|
-| `docs/README.md` | 1,200 | Project overview, features, quick start |
-| `docs/getting-started.md` | 3,200 | Installation (3 OS × 3 methods), first-run wizard |
-| `docs/troubleshooting.md` | 2,800 | 40+ solutions in 8 categories |
-| `docs/migration-mamp-pro.md` | 2,400 | 10-step migration, DB backup, config updates |
-| `docs/TABLE-OF-CONTENTS.md` | 1,900 | Complete 40+ topic roadmap |
-| `docs/DOCUMENTATION-SUMMARY.md` | 2,000 | Quality metrics, phase roadmap |
-| `docs/DELIVERY-REPORT.md` | 2,000 | Success criteria, platform coverage |
-| `docs/00-START-HERE.md` | 250 | Quick orientation entry point |
-| `docs/INDEX.md` | 400 | Topic-based navigation |
-| `docs/FILES-MANIFEST.md` | 500 | Complete file catalog |
-
-**Content highlights:** 80+ code examples, 40+ troubleshooting entries, 9 installation methods, 25+ CLI commands documented.
-
-### Appendix E: Legal Analysis Summary
-
-Full legal analysis covering license compatibility, distribution models, GPL compliance, trademark usage, GDPR/CCPA requirements, and CLA recommendations. Key decision: **Open Core model** (Apache-2.0 core + proprietary premium + GPL binaries as separate processes).
-
----
-
-## Sources
-
-- [Kinsta - 8 Best MAMP Alternatives in 2026](https://kinsta.com/blog/mamp-alternative/)
-- [DEV.to - XAMPP vs Laragon vs Laravel Herd](https://dev.to/nassiry/xampp-vs-laragon-vs-laravel-herd-which-one-should-you-use-for-php-and-laravel-projects-4j8k)
-- [FlyEnv GitHub - 2.7k stars, 50+ modules](https://github.com/xpf0000/FlyEnv)
-- [FlyEnv Documentation](https://www.flyenv.com/guide/what-is-flyenv.html)
-- [Tauri v2 Architecture](https://v2.tauri.app/concept/architecture/)
-- [ServBay - PHP 5.6-8.5 support](https://www.servbay.com/)
-- [AlternativeTo - MAMP Alternatives](https://alternativeto.net/software/mamp/)
-- [ServBay vs Laragon Comparison](https://www.servbay.com/vs/laragon)
-- [Laravel Herd Alternatives](https://alternativeto.net/software/laravel-herd/)
-
----
-
-*Document generated by 15 parallel specialist agents: Technical Researcher, Code Architect, Security Auditor, UI Designer, Backend Architect, Performance Engineer, API Designer, Database Architect, Network Engineer, Architecture Modernizer, Technical Writer, Test Engineer, Deployment Engineer, Legal Advisor, and Web Research.*
