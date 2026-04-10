@@ -92,7 +92,7 @@ async function isDaemonAlive(): Promise<boolean> {
   try {
     // /api/status requires auth — the mere fact that we get a response (even 401) means the daemon is up
     await new Promise<void>((resolve, reject) => {
-      const req = http.get(`http://localhost:${info.port}/api/status`, (res) => {
+      const req = http.get(`http://localhost:${info.port}/healthz`, (res) => {
         res.on('data', () => {})
         res.on('end', () => resolve())
       })
