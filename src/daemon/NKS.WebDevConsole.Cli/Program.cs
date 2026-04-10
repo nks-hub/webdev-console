@@ -704,6 +704,20 @@ removeBinCmd.SetAction(async (parseResult, ct) =>
 });
 binariesCommand.Add(removeBinCmd);
 
+// --- wdc binaries refresh ---
+var refreshCmd = new Command("refresh", "Refresh the binary catalog from the catalog API");
+refreshCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync("/api/binaries/catalog/refresh");
+    if (json) { PrintJson(result); return; }
+    var count = result.TryGetProperty("count", out var c) ? c.GetInt32() : 0;
+    AnsiConsole.MarkupLine($"[green]Catalog refreshed:[/] {count} releases");
+});
+binariesCommand.Add(refreshCmd);
+
 // --- wdc php ---
 var phpCommand = new Command("php", "PHP version management");
 phpCommand.SetAction(async (parseResult, ct) =>
