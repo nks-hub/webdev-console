@@ -8,17 +8,21 @@ import Binaries from '../components/pages/Binaries.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
-  { path: '/dashboard', component: Dashboard },
-  { path: '/sites', component: Sites },
-  { path: '/settings', component: Settings },
-  { path: '/plugins', component: PluginManager },
-  { path: '/plugin/:id', component: PluginPage, props: true },
-  { path: '/binaries', component: Binaries },
-  // Service detail pages — clicking service name in sidebar opens this
-  { path: '/service/:id', component: Dashboard, props: true },
+  { path: '/dashboard', component: Dashboard, meta: { title: 'Services' } },
+  { path: '/sites', component: Sites, meta: { title: 'Sites' } },
+  { path: '/settings', component: Settings, meta: { title: 'Settings' } },
+  { path: '/plugins', component: PluginManager, meta: { title: 'Plugins' } },
+  { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin' } },
+  { path: '/binaries', component: Binaries, meta: { title: 'Binaries' } },
+  { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service' } },
 ]
 
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: baseRoutes,
+})
+
+router.afterEach((to) => {
+  const title = (to.meta?.title as string) ?? 'NKS WebDev Console'
+  document.title = `${title} — NKS WDC`
 })
