@@ -392,6 +392,25 @@ app.MapGet("/api/php/versions", () =>
     return Results.Ok(Array.Empty<object>());
 });
 
+// PHP extensions for a given version
+app.MapGet("/api/php/{version}/extensions", async (string version) =>
+{
+    var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
+    if (phpPlugin == null) return Results.NotFound();
+    var method = phpPlugin.Instance.GetType().GetMethod("GetExtensionsForVersion");
+    if (method != null)
+    {
+        var task = method.Invoke(phpPlugin.Instance, new object[] { version }) as Task;
+        if (task != null)
+        {
+            await task;
+            var resultProp = task.GetType().GetProperty("Result");
+            return Results.Ok(resultProp?.GetValue(task));
+        }
+    }
+    return Results.Ok(Array.Empty<object>());
+});
+
 // Version validation (checks if a version string is available for a service)
 app.MapPost("/api/services/{id}/validate-version", async (string id, HttpContext ctx) =>
 {
