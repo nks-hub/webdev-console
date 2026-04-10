@@ -33,4 +33,10 @@ for (const [name, component] of Object.entries(ElementPlusIcons)) {
 app.use(createPinia())
 app.use(ElementPlus)
 app.use(router)
+
+// Global error handler — prevents white screen on component errors
+app.config.errorHandler = (err, instance, info) => {
+  console.error('[Vue Error]', info, err)
+}
+
 app.mount('#app')
