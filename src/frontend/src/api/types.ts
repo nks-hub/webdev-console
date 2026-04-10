@@ -93,6 +93,31 @@ export interface PluginManifest {
   ui?: PluginUiDefinition
 }
 
+export interface BinaryRelease {
+  app: string
+  version: string
+  url: string
+  size?: number
+  sha256?: string
+  platform?: string
+}
+
+export interface InstalledBinary {
+  app: string
+  version: string
+  path: string
+  isDefault?: boolean
+}
+
+export interface BinaryCatalog {
+  [app: string]: BinaryRelease[]
+}
+
+export interface ServiceLog {
+  lines: string[]
+  serviceId: string
+}
+
 export interface ValidationState {
   phase: 'idle' | 'validating' | 'passed' | 'failed'
   message: string

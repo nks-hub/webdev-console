@@ -8,6 +8,8 @@ import type {
   ProgressUpdate,
   MetricsUpdate,
   LogEntry,
+  BinaryRelease,
+  InstalledBinary,
 } from './types'
 
 declare global {
@@ -102,6 +104,29 @@ export const disablePlugin = (id: string) =>
 
 export const fetchPluginUi = (id: string) =>
   json<import('./types').PluginUiDefinition>(`/api/plugins/${id}/ui`)
+
+// Binaries
+export const fetchBinaryCatalog = (): Promise<Record<string, BinaryRelease[]>> =>
+  json('/api/binaries/catalog')
+
+export const fetchBinaryCatalogForApp = (app: string): Promise<BinaryRelease[]> =>
+  json(`/api/binaries/catalog/${app}`)
+
+export const fetchInstalledBinaries = (): Promise<InstalledBinary[]> =>
+  json('/api/binaries/installed')
+
+export const installBinary = (app: string, version: string) =>
+  json<{ ok: boolean; path?: string; message?: string }>('/api/binaries/install', {
+    method: 'POST',
+    body: JSON.stringify({ app, version }),
+  })
+
+export const uninstallBinary = (app: string, version: string) =>
+  json<{ ok: boolean }>(`/api/binaries/${app}/${version}`, { method: 'DELETE' })
+
+// Service logs
+export const fetchServiceLogs = (id: string, lines = 200): Promise<string[]> =>
+  json(`/api/services/${id}/logs?lines=${lines}`)
 
 /**
  * Subscribe to SSE stream from daemon.

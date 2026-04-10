@@ -1,5 +1,6 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 export default defineConfig({
@@ -29,6 +30,6 @@ export default defineConfig({
         input: resolve(__dirname, 'src/index.html')
       }
     },
-    plugins: [vue()]
+    plugins: [tailwindcss(), vue()]
   }
 })

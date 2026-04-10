@@ -1,45 +1,105 @@
 <template>
-  <el-card class="service-card" :class="[`status-${statusText}`]" shadow="hover">
-    <template #header>
-      <div class="card-header">
-        <span class="card-name">{{ service.displayName || service.name || service.id }}</span>
-        <el-tag :type="tagType" size="small" effect="dark">{{ statusText }}</el-tag>
+  <div class="svc-card" :class="[`svc-${statusText}`]">
+    <!-- Header -->
+    <div class="svc-header">
+      <div class="svc-name-row">
+        <span class="svc-status-dot" :class="`dot-${statusText}`" />
+        <span class="svc-name">{{ service.displayName || service.name || service.id }}</span>
       </div>
-    </template>
-
-    <div v-if="isRunning" class="card-stats">
-      <div class="stat">
-        <span class="label">CPU</span>
-        <span class="value">{{ (service.cpuPercent ?? 0).toFixed(1) }}%</span>
-      </div>
-      <div class="stat">
-        <span class="label">RAM</span>
-        <span class="value">{{ formatMem(service.memoryBytes ?? 0) }}</span>
-      </div>
-      <div class="stat">
-        <span class="label">PID</span>
-        <span class="value">{{ service.pid ?? '-' }}</span>
-      </div>
-    </div>
-    <div v-else class="card-stats-placeholder">
-      <span style="color: var(--el-text-color-secondary); font-size: 0.85rem;">Service not running</span>
+      <el-tag :type="tagType" size="small" effect="dark" class="svc-badge">
+        {{ statusText }}
+      </el-tag>
     </div>
 
-    <div class="card-actions">
-      <el-button size="small" type="success" :disabled="isRunning || busy"
-        :loading="busy && pendingAction === 'start'" @click="act('start')">Start</el-button>
-      <el-button size="small" type="danger" :disabled="isStopped || busy"
-        :loading="busy && pendingAction === 'stop'" @click="act('stop')">Stop</el-button>
-      <el-button size="small" :disabled="isStopped || busy"
-        :loading="busy && pendingAction === 'restart'" @click="act('restart')">Restart</el-button>
+    <!-- Metrics (only when running) -->
+    <div v-if="isRunning" class="svc-metrics">
+      <!-- CPU bar -->
+      <div class="metric-row">
+        <span class="metric-label">CPU</span>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" :style="{ width: cpuBarWidth }">
+            <div class="metric-bar-fill cpu-fill" :style="{ width: '100%' }" />
+          </div>
+        </div>
+        <span class="metric-value">{{ cpuText }}</span>
+      </div>
+
+      <!-- RAM bar -->
+      <div class="metric-row">
+        <span class="metric-label">RAM</span>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width: 100%">
+            <div class="metric-bar-fill ram-fill" :style="{ width: ramBarWidth }" />
+          </div>
+        </div>
+        <span class="metric-value">{{ formatMem(service.memoryBytes ?? 0) }}</span>
+      </div>
+
+      <!-- Uptime + PID -->
+      <div class="svc-meta">
+        <span class="meta-item">
+          <span class="meta-label">uptime</span>
+          <span class="meta-val">{{ formatUptime(service.uptimeSeconds ?? 0) }}</span>
+        </span>
+        <span class="meta-item" v-if="service.pid">
+          <span class="meta-label">pid</span>
+          <span class="meta-val">{{ service.pid }}</span>
+        </span>
+        <span class="meta-item" v-if="service.version">
+          <span class="meta-label">v</span>
+          <span class="meta-val">{{ service.version }}</span>
+        </span>
+      </div>
     </div>
-  </el-card>
+
+    <div v-else class="svc-offline">
+      <span v-if="statusText === 'crashed'" class="text-red-400 text-xs">Process crashed</span>
+      <span v-else-if="statusText === 'starting'" class="text-amber-400 text-xs">Starting...</span>
+      <span v-else class="text-slate-500 text-xs">Service not running</span>
+      <span class="meta-item" v-if="service.version" style="margin-top: 4px;">
+        <span class="meta-label">v</span>
+        <span class="meta-val">{{ service.version }}</span>
+      </span>
+    </div>
+
+    <!-- Actions -->
+    <div class="svc-actions">
+      <el-button
+        size="small"
+        type="success"
+        plain
+        :disabled="isRunning || busy"
+        :loading="busy && pendingAction === 'start'"
+        @click="act('start')"
+      >
+        Start
+      </el-button>
+      <el-button
+        size="small"
+        type="danger"
+        plain
+        :disabled="isStopped || busy"
+        :loading="busy && pendingAction === 'stop'"
+        @click="act('stop')"
+      >
+        Stop
+      </el-button>
+      <el-button
+        size="small"
+        plain
+        :disabled="isStopped || busy"
+        :loading="busy && pendingAction === 'restart'"
+        @click="act('restart')"
+      >
+        Restart
+      </el-button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
-import type { ServiceInfo } from '../../api/types'
 import { useServicesStore } from '../../stores/services'
 
 const props = defineProps<{ service: any }>()
@@ -48,18 +108,30 @@ const pendingAction = ref<'start' | 'stop' | 'restart' | null>(null)
 
 const busy = computed(() => servicesStore.isBusy(props.service.id))
 
-// Map C# ServiceState enum: 0=Stopped, 1=Starting, 2=Running, 3=Stopping, 4=Crashed, 5=Disabled
-const stateLabels: Record<number, string> = { 0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled' }
+const stateLabels: Record<number, string> = {
+  0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled',
+}
 const statusText = computed(() => stateLabels[props.service.state] ?? props.service.status ?? 'unknown')
 const isRunning = computed(() => props.service.state === 2)
-const isStopped = computed(() => props.service.state === 0)
+const isStopped = computed(() => props.service.state === 0 || props.service.state === 5)
 
-const tagType = computed(() => {
+const tagType = computed((): '' | 'success' | 'warning' | 'danger' | 'info' => {
   const map: Record<string, '' | 'success' | 'warning' | 'danger' | 'info'> = {
     running: 'success', stopped: 'info', starting: 'warning',
     stopping: 'warning', crashed: 'danger', disabled: 'info',
   }
   return map[statusText.value] ?? 'info'
+})
+
+const cpuPercent = computed(() => Math.min(props.service.cpuPercent ?? 0, 100))
+const cpuText = computed(() => `${cpuPercent.value.toFixed(1)}%`)
+const cpuBarWidth = computed(() => `${cpuPercent.value}%`)
+
+// RAM bar: cap display at 500 MB for visual scale
+const RAM_MAX = 500 * 1024 * 1024
+const ramBarWidth = computed(() => {
+  const pct = Math.min((props.service.memoryBytes ?? 0) / RAM_MAX, 1) * 100
+  return `${pct}%`
 })
 
 async function act(action: 'start' | 'stop' | 'restart') {
@@ -82,28 +154,178 @@ async function act(action: 'start' | 'stop' | 'restart') {
 
 function formatMem(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
 function formatUptime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return `${h}h ${m}m`
 }
 </script>
 
 <style scoped>
-.service-card { min-width: 220px; }
-.card-header { display: flex; align-items: center; justify-content: space-between; }
-.card-name { font-size: 0.9rem; font-weight: 600; }
-.card-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.stat { display: flex; justify-content: space-between; font-size: 0.82rem; }
-.label { color: var(--el-text-color-secondary); }
-.value { font-family: monospace; }
-.card-actions { display: flex; gap: 6px; }
+.svc-card {
+  background: var(--wdc-surface);
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  border-top-width: 3px;
+}
 
-.status-running { border-top: 2px solid var(--el-color-success); }
-.status-stopped { border-top: 2px solid var(--el-color-info); }
-.status-error   { border-top: 2px solid var(--el-color-danger); }
-.status-starting { border-top: 2px solid var(--el-color-warning); }
+.svc-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.svc-running  { border-top-color: var(--wdc-status-running); }
+.svc-stopped  { border-top-color: var(--wdc-status-stopped); }
+.svc-crashed  { border-top-color: var(--wdc-status-error); }
+.svc-starting { border-top-color: var(--wdc-status-starting); }
+.svc-stopping { border-top-color: var(--wdc-status-starting); }
+.svc-disabled { border-top-color: var(--el-border-color); }
+.svc-unknown  { border-top-color: var(--el-border-color); }
+
+.svc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.svc-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.svc-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-running  { background: var(--wdc-status-running); box-shadow: 0 0 6px var(--wdc-status-running); }
+.dot-stopped  { background: var(--wdc-status-stopped); }
+.dot-crashed  { background: var(--wdc-status-error); box-shadow: 0 0 6px var(--wdc-status-error); }
+.dot-starting { background: var(--wdc-status-starting); animation: pulse 1s infinite; }
+.dot-stopping { background: var(--wdc-status-starting); animation: pulse 1s infinite; }
+.dot-disabled { background: var(--el-border-color); }
+.dot-unknown  { background: var(--el-border-color); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.svc-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.svc-badge { flex-shrink: 0; }
+
+.svc-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  color: var(--el-text-color-secondary);
+  width: 28px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.metric-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--wdc-elevated, #242736);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.metric-bar {
+  height: 100%;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.cpu-fill { background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
+.ram-fill { background: linear-gradient(90deg, #10b981, #06b6d4); }
+
+.metric-value {
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: var(--el-text-color-regular);
+  width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.svc-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 0.68rem;
+  color: var(--el-text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.meta-val {
+  font-size: 0.72rem;
+  font-family: monospace;
+  color: var(--el-text-color-regular);
+}
+
+.svc-offline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 42px;
+  justify-content: center;
+}
+
+.svc-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.svc-actions .el-button {
+  flex: 1;
+  font-size: 0.78rem;
+}
 </style>

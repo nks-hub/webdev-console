@@ -4,6 +4,7 @@ import Sites from '../components/pages/Sites.vue'
 import Settings from '../components/pages/Settings.vue'
 import PluginManager from '../components/pages/PluginManager.vue'
 import PluginPage from '../components/pages/PluginPage.vue'
+import Binaries from '../components/pages/Binaries.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/dashboard' },
@@ -12,6 +13,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/settings', component: Settings },
   { path: '/plugins', component: PluginManager },
   { path: '/plugin/:id', component: PluginPage, props: true },
+  { path: '/binaries', component: Binaries },
 ]
 
 export const router = createRouter({

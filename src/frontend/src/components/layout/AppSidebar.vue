@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar" :class="{ collapsed }">
-    <div class="sidebar-toggle" @click="collapsed = !collapsed">
+    <div class="sidebar-toggle" @click="collapsed = !collapsed" :title="collapsed ? 'Expand' : 'Collapse'">
       <el-icon><Fold v-if="!collapsed" /><Expand v-else /></el-icon>
     </div>
 
@@ -11,7 +11,7 @@
       class="sidebar-menu"
       @select="navigate"
     >
-      <!-- Fixed core items -->
+      <!-- Core nav -->
       <el-menu-item index="/dashboard">
         <el-icon><Monitor /></el-icon>
         <template #title>Dashboard</template>
@@ -43,8 +43,13 @@
         </el-menu-item>
       </el-sub-menu>
 
-      <!-- Fixed bottom items -->
-      <el-divider style="margin: 8px 0;" />
+      <!-- Divider before management items -->
+      <div class="sidebar-divider" />
+
+      <el-menu-item index="/binaries">
+        <el-icon><Download /></el-icon>
+        <template #title>Binaries</template>
+      </el-menu-item>
 
       <el-menu-item index="/plugins">
         <el-icon><Box /></el-icon>
@@ -62,7 +67,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Monitor, Link, Grid, Box, Setting, Fold, Expand } from '@element-plus/icons-vue'
+import { Monitor, Link, Grid, Box, Setting, Fold, Expand, Download } from '@element-plus/icons-vue'
 import { usePluginsStore } from '../../stores/plugins'
 
 const router = useRouter()
@@ -86,8 +91,11 @@ function navigate(path: string) {
   border-right: 1px solid var(--el-border-color);
   transition: width 0.2s;
   flex-shrink: 0;
+  overflow: hidden;
 }
+
 .sidebar.collapsed { width: 56px; }
+
 .sidebar-toggle {
   display: flex;
   align-items: center;
@@ -95,9 +103,28 @@ function navigate(path: string) {
   padding: 8px 12px;
   cursor: pointer;
   color: var(--el-text-color-secondary);
+  flex-shrink: 0;
 }
 .sidebar-toggle:hover { color: var(--el-text-color-primary); }
-.sidebar-menu { flex: 1; border-right: none; background: transparent; }
+
+.sidebar-menu {
+  flex: 1;
+  border-right: none;
+  background: transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--el-border-color);
+  margin: 6px 12px;
+}
+
+.sidebar.collapsed .sidebar-divider {
+  margin: 6px 6px;
+}
+
 .status-dot {
   display: inline-block;
   width: 7px;
@@ -106,8 +133,14 @@ function navigate(path: string) {
   margin-right: 6px;
   flex-shrink: 0;
 }
-.dot-running { background: var(--el-color-success); }
-.dot-stopped { background: var(--el-color-info); }
-.dot-error   { background: var(--el-color-danger); }
-.dot-starting { background: var(--el-color-warning); }
+
+.dot-running  { background: var(--el-color-success); }
+.dot-stopped  { background: var(--el-color-info); }
+.dot-crashed  { background: var(--el-color-danger); }
+.dot-starting { background: var(--el-color-warning); animation: blink 1s infinite; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 </style>
