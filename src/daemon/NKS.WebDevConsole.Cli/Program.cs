@@ -444,6 +444,53 @@ dropDbCmd.SetAction(async (parseResult, ct) =>
 });
 dbCommand.Add(dropDbCmd);
 
+// --- wdc databases import {name} {file} ---
+var importDbNameArg = new Argument<string>("name") { Description = "Database name" };
+var importFileArg = new Argument<string>("file") { Description = "SQL file path" };
+var importDbCmd = new Command("import", "Import SQL file into database") { importDbNameArg, importFileArg };
+importDbCmd.SetAction(async (parseResult, ct) =>
+{
+    var name = parseResult.GetValue(importDbNameArg)!;
+    var file = parseResult.GetValue(importFileArg)!;
+    if (!File.Exists(file)) { AnsiConsole.MarkupLine($"[red]File not found:[/] {Markup.Escape(file)}"); return; }
+
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    // Get mysql.exe path from binaries
+    var bins = await client.GetJsonAsync("/api/binaries/installed");
+    string? mysqlCli = null;
+    foreach (var b in bins.EnumerateArray())
+    {
+        if (b.GetProperty("app").GetString() == "mysql" && b.TryGetProperty("executable", out var exe))
+        {
+            var dir = Path.GetDirectoryName(exe.GetString());
+            if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
+        }
+    }
+    if (mysqlCli == null || !File.Exists(mysqlCli)) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+
+    AnsiConsole.MarkupLine($"Importing [blue]{Markup.Escape(file)}[/] into [blue]{Markup.Escape(name)}[/]...");
+    var psi = new System.Diagnostics.ProcessStartInfo
+    {
+        FileName = mysqlCli,
+        Arguments = $"-h 127.0.0.1 -P 3306 -u root {name}",
+        RedirectStandardInput = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+    var proc = System.Diagnostics.Process.Start(psi);
+    if (proc != null)
+    {
+        await using var input = proc.StandardInput;
+        await input.WriteAsync(await File.ReadAllTextAsync(file));
+        await proc.WaitForExitAsync();
+        if (proc.ExitCode == 0) AnsiConsole.MarkupLine("[green]Import complete[/]");
+        else AnsiConsole.MarkupLine($"[red]Import failed (exit {proc.ExitCode})[/]");
+    }
+});
+dbCommand.Add(importDbCmd);
+
 // --- wdc binaries ---
 var binariesCommand = new Command("binaries", "List installed binaries");
 binariesCommand.SetAction(async (parseResult, ct) =>
