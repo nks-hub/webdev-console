@@ -1,6 +1,9 @@
 using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
+using NKS.WebDevConsole.Daemon.Sites;
+using NKS.WebDevConsole.Daemon.Config;
 using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,17 @@ builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
 builder.Services.AddSingleton<PluginLoader>();
+builder.Services.AddSingleton<TemplateEngine>();
+builder.Services.AddSingleton<ConfigValidator>();
+builder.Services.AddSingleton<AtomicWriter>();
+builder.Services.AddSingleton(sp => new SiteManager(
+    sp.GetRequiredService<ILogger<SiteManager>>(),
+    sp.GetRequiredService<TemplateEngine>(),
+    sp.GetRequiredService<ConfigValidator>(),
+    sp.GetRequiredService<AtomicWriter>(),
+    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "sites"),
+    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "generated")
+));
 
 var app = builder.Build();
 app.UseCors();
@@ -100,6 +114,50 @@ app.MapPost("/api/services/{id}/restart", async (string id, ProcessManager pm) =
 {
     await pm.StopAsync(id);
     return Results.Ok(new { message = $"Restart {id} via plugin" });
+});
+
+// Sites CRUD
+var siteManager = app.Services.GetRequiredService<SiteManager>();
+siteManager.LoadAll();
+
+app.MapGet("/api/sites", (SiteManager sm) => Results.Ok(sm.Sites.Values));
+
+app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    return site is not null ? Results.Ok(site) : Results.NotFound();
+});
+
+app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm) =>
+{
+    if (string.IsNullOrWhiteSpace(site.Domain))
+        return Results.BadRequest(new { error = "Domain is required" });
+    if (sm.Get(site.Domain) is not null)
+        return Results.Conflict(new { error = $"Site {site.Domain} already exists" });
+    var created = await sm.CreateAsync(site);
+    return Results.Created($"/api/sites/{created.Domain}", created);
+});
+
+app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm) =>
+{
+    if (sm.Get(domain) is null)
+        return Results.NotFound();
+    site.Domain = domain;
+    var updated = await sm.UpdateAsync(site);
+    return Results.Ok(updated);
+});
+
+app.MapDelete("/api/sites/{domain}", (string domain, SiteManager sm) =>
+{
+    return sm.Delete(domain) ? Results.NoContent() : Results.NotFound();
+});
+
+app.MapPost("/api/sites/{domain}/detect-framework", (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+    var framework = sm.DetectFramework(site.DocumentRoot);
+    return Results.Ok(new { domain, framework });
 });
 
 // SSE endpoint
