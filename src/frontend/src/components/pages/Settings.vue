@@ -85,6 +85,24 @@
           </div>
         </el-tab-pane>
 
+        <!-- Databases tab -->
+        <el-tab-pane label="Databases" name="databases">
+          <div class="tab-content">
+            <p class="tab-desc">MySQL databases managed by NKS WDC.</p>
+            <div class="db-list" v-if="databases.length > 0">
+              <div class="db-row" v-for="db in databases" :key="db">
+                <span class="db-name">{{ db }}</span>
+                <el-button size="small" type="danger" text @click="dropDatabase(db)">Drop</el-button>
+              </div>
+            </div>
+            <el-empty v-else description="No user databases" :image-size="48" />
+            <div class="db-create">
+              <el-input v-model="newDbName" placeholder="new_database" size="small" style="width: 200px" />
+              <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">Create</el-button>
+            </div>
+          </div>
+        </el-tab-pane>
+
         <!-- About tab -->
         <el-tab-pane label="About" name="about">
           <div class="tab-content">
@@ -129,6 +147,8 @@ const themeStore = useThemeStore()
 
 const activeTab = ref('ports')
 const saving = ref(false)
+const databases = ref<string[]>([])
+const newDbName = ref('')
 
 const ports = reactive({
   http: 80,
@@ -164,6 +184,38 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
+async function loadDatabases() {
+  try {
+    const r = await fetch(`${daemonBase()}/api/databases`, { headers: authHeaders() })
+    if (r.ok) {
+      const data = await r.json()
+      databases.value = data.databases ?? []
+    }
+  } catch { /* not connected */ }
+}
+
+async function createDatabase() {
+  if (!newDbName.value) return
+  try {
+    await fetch(`${daemonBase()}/api/databases`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: newDbName.value }),
+    })
+    ElMessage.success(`Database ${newDbName.value} created`)
+    newDbName.value = ''
+    await loadDatabases()
+  } catch (e: any) { ElMessage.error(e.message) }
+}
+
+async function dropDatabase(name: string) {
+  try {
+    await fetch(`${daemonBase()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
+    ElMessage.success(`Database ${name} dropped`)
+    await loadDatabases()
+  } catch (e: any) { ElMessage.error(e.message) }
+}
+
 async function loadSettings() {
   try {
     const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
@@ -185,7 +237,7 @@ async function loadSettings() {
   } catch { /* daemon not reachable — keep defaults */ }
 }
 
-onMounted(() => { void loadSettings() })
+onMounted(() => { void loadSettings(); void loadDatabases() })
 
 async function save() {
   saving.value = true
@@ -319,4 +371,16 @@ async function save() {
   gap: 6px;
   margin-top: 8px;
 }
+
+.db-list { margin-bottom: 16px; }
+.db-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--wdc-border);
+}
+.db-row:last-child { border-bottom: none; }
+.db-name { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--wdc-text); }
+.db-create { display: flex; gap: 8px; margin-top: 12px; }
 </style>
