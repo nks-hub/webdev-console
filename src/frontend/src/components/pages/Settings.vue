@@ -115,6 +115,11 @@
                 Manages Apache, MySQL, PHP, Redis, Mailpit and SSL certificates for local development.
               </div>
 
+              <div class="about-links">
+                <a href="https://github.com/nks-hub/webdev-console" target="_blank" class="about-link">GitHub</a>
+                <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">Website</a>
+              </div>
+
               <div class="about-stack">
                 <el-tag size="small" effect="plain">Electron 34</el-tag>
                 <el-tag size="small" effect="plain">Vue 3.5</el-tag>
@@ -371,6 +376,14 @@ async function save() {
   gap: 6px;
   margin-top: 8px;
 }
+
+.about-links { display: flex; gap: 12px; margin-top: 12px; }
+.about-link {
+  color: var(--wdc-accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.about-link:hover { text-decoration: underline; }
 
 .db-list { margin-bottom: 16px; }
 .db-row {
