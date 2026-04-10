@@ -80,22 +80,12 @@
           </div>
         </div>
 
-        <!-- Editor textarea (Monaco drop-in planned later) -->
+        <!-- Monaco code editor — replaces textarea, Phase 4 plan item -->
         <div class="editor-main">
-          <textarea
-            ref="editorRef"
+          <MonacoEditor
             v-model="editingContent"
-            class="editor-textarea mono"
-            spellcheck="false"
-            @input="onEdit"
+            :language="fileFormat"
           />
-          <div class="editor-gutter">
-            <div
-              v-for="n in lineCount"
-              :key="n"
-              class="gutter-line mono"
-            >{{ n }}</div>
-          </div>
         </div>
 
         <!-- Validation + actions row -->
@@ -152,6 +142,7 @@ import { ArrowLeft, Refresh, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fetchServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
+import MonacoEditor from '../shared/MonacoEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -435,40 +426,8 @@ onMounted(() => { void load() })
 .editor-main {
   flex: 1;
   display: flex;
-  min-height: 0;
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  overflow: hidden;
-}
-.editor-gutter {
-  order: -1;
-  width: 52px;
-  padding: 12px 8px;
-  background: var(--wdc-surface-2);
-  border-right: 1px solid var(--wdc-border);
-  user-select: none;
-  overflow: hidden;
-  text-align: right;
-  color: var(--wdc-text-3);
-}
-.gutter-line {
-  font-size: 0.76rem;
-  line-height: 1.55;
-}
-.editor-textarea {
-  flex: 1;
-  resize: none;
-  border: none;
-  outline: none;
-  padding: 12px 14px;
-  background: transparent;
-  color: var(--wdc-text);
-  font-size: 0.82rem;
-  line-height: 1.55;
-  tab-size: 4;
-  white-space: pre;
-  overflow: auto;
+  min-height: 280px;
+  min-width: 0;
 }
 
 .validation-bar {
