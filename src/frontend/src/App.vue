@@ -43,7 +43,7 @@ function handleKeydown(e: KeyboardEvent) {
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
     e.preventDefault()
-    router.push('/sites')
+    router.push({ path: '/sites', query: { create: '1' } })
   }
 }
 
