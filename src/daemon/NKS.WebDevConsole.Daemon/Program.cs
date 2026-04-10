@@ -12,6 +12,8 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddSingleton<SseService>();
+builder.Services.AddSingleton<ProcessManager>();
+builder.Services.AddHostedService<HealthMonitor>();
 builder.Services.AddSingleton<PluginLoader>();
 
 var app = builder.Build();
@@ -73,6 +75,31 @@ app.MapGet("/api/plugins/{id}/ui", (string id) =>
             new { type = "log-viewer", props = new { serviceId = id } }
         }
     });
+});
+
+// Service management endpoints
+app.MapGet("/api/services", (ProcessManager pm) =>
+    Results.Ok(pm.GetAllStatuses()));
+
+app.MapGet("/api/services/{id}", (string id, ProcessManager pm) =>
+    Results.Ok(pm.GetStatus(id)));
+
+app.MapPost("/api/services/{id}/start", (string id, ProcessManager pm) =>
+{
+    // Plugin will provide the actual executable path
+    return Results.Ok(new { message = $"Start {id} via plugin" });
+});
+
+app.MapPost("/api/services/{id}/stop", async (string id, ProcessManager pm) =>
+{
+    var result = await pm.StopAsync(id);
+    return result ? Results.Ok(new { message = "stopped" }) : Results.NotFound();
+});
+
+app.MapPost("/api/services/{id}/restart", async (string id, ProcessManager pm) =>
+{
+    await pm.StopAsync(id);
+    return Results.Ok(new { message = $"Restart {id} via plugin" });
 });
 
 // SSE endpoint
