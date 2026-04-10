@@ -196,6 +196,10 @@ async function createWindow() {
     win.loadFile(indexPath, { query: Object.fromEntries(params) })
   }
 
+  // Remove default menu bar (File/Edit/View/Window/Help)
+  win.setMenuBarVisibility(false)
+  win.setAutoHideMenuBar(true)
+
   win.once('ready-to-show', () => win?.show())
 
   // Minimize to tray on close instead of quitting
