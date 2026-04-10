@@ -58,10 +58,10 @@
       "homepage": "https://www.mysql.com/",
       "license": "GPL-2.0",
       "releases": [
-        { "version": "9.6.0",  "major_minor": "9.6", "channel": "innovation", "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-9.6/mysql-9.6.0-winx64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] },
-        { "version": "8.4.8",  "major_minor": "8.4", "channel": "lts",        "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-8.4.8-winx64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] },
-        { "version": "8.0.45", "major_minor": "8.0", "channel": "stable",     "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.45-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] },
-        { "version": "5.7.44", "major_minor": "5.7", "channel": "eol",        "downloads": [{ "url": "https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-5.7.44-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "dev.mysql.com" }] }
+        { "version": "9.6.0",  "major_minor": "9.6", "channel": "innovation", "downloads": [{ "url": "https://cdn.mysql.com/Downloads/MySQL-9.6/mysql-9.6.0-winx64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "cdn.mysql.com" }] },
+        { "version": "8.4.8",  "major_minor": "8.4", "channel": "lts",        "downloads": [{ "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.8-winx64.zip",  "os": "windows", "arch": "x64", "archive_type": "zip", "source": "cdn.mysql.com" }] },
+        { "version": "8.0.45", "major_minor": "8.0", "channel": "stable",     "downloads": [{ "url": "https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.45-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "cdn.mysql.com" }] },
+        { "version": "5.7.44", "major_minor": "5.7", "channel": "eol",        "downloads": [{ "url": "https://cdn.mysql.com/Downloads/MySQL-5.7/mysql-5.7.44-winx64.zip", "os": "windows", "arch": "x64", "archive_type": "zip", "source": "cdn.mysql.com" }] }
       ]
     },
     "mariadb": {
