@@ -35,12 +35,14 @@
 
     <!-- Offline state -->
     <div v-if="!daemonStore.connected" class="offline-banner">
+      <el-skeleton :rows="5" animated style="padding: 0 16px;" />
       <el-alert
         type="warning"
-        title="Daemon offline"
-        description="Waiting for connection to NKS WDC daemon on port 5199..."
+        title="Connecting to daemon..."
+        description="Waiting for NKS WDC daemon on port 5199"
         :closable="false"
         show-icon
+        style="margin: 16px;"
       />
     </div>
 
