@@ -190,12 +190,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Lock } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import type { SiteInfo } from '../../api/types'
 
+const route = useRoute()
 const sitesStore = useSitesStore()
 const phpVersions = ref<string[]>([])
 
@@ -240,6 +242,11 @@ const aliasesStr = computed({
     }
   },
 })
+
+// Open create dialog if navigated with ?create=1
+watch(() => route.query.create, (val) => {
+  if (val === '1') showCreate.value = true
+}, { immediate: true })
 
 onMounted(async () => {
   void sitesStore.load()
@@ -301,11 +308,12 @@ async function createSite() {
     if (newSite.createDb) {
       const dbName = newSite.dbName || newSite.domain.replace(/\./g, '_').replace(/-/g, '_') + '_db'
       try {
-        await fetch(`${daemonBase()}/api/databases`, {
+        const dbRes = await fetch(`${daemonBase()}/api/databases`, {
           method: 'POST',
           headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: dbName }),
         })
+        if (!dbRes.ok) throw new Error(`DB create HTTP ${dbRes.status}`)
         ElMessage.success(`Site ${newSite.domain} + database ${dbName} created`)
       } catch {
         ElMessage.success(`Site ${newSite.domain} created (database creation failed)`)
@@ -329,6 +337,7 @@ async function detectFramework(domain: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...sitesStore.authHeaders() },
     })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json() as { framework?: string }
     if (data.framework) {
       ElMessage.success(`Detected: ${data.framework}`)

@@ -231,23 +231,25 @@ async function loadDatabases() {
 async function createDatabase() {
   if (!newDbName.value) return
   try {
-    await fetch(`${daemonBase()}/api/databases`, {
+    const r = await fetch(`${daemonBase()}/api/databases`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ name: newDbName.value }),
     })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
     ElMessage.success(`Database ${newDbName.value} created`)
     newDbName.value = ''
     await loadDatabases()
-  } catch (e: any) { ElMessage.error(e.message) }
+  } catch (e: any) { ElMessage.error(`Create failed: ${e.message}`) }
 }
 
 async function dropDatabase(name: string) {
   try {
-    await fetch(`${daemonBase()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
+    const r = await fetch(`${daemonBase()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
     ElMessage.success(`Database ${name} dropped`)
     await loadDatabases()
-  } catch (e: any) { ElMessage.error(e.message) }
+  } catch (e: any) { ElMessage.error(`Drop failed: ${e.message}`) }
 }
 
 async function loadSettings() {

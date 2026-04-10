@@ -75,7 +75,7 @@ const commands = computed<Command[]>(() => [
   { id: 'binaries', label: 'Go to Binaries', icon: '📦', action: () => router.push('/binaries') },
   { id: 'plugins', label: 'Go to Plugins', icon: '🔌', action: () => router.push('/plugins') },
   { id: 'settings', label: 'Go to Settings', icon: '⚙️', action: () => router.push('/settings') },
-  { id: 'new-site', label: 'Create New Site', icon: '➕', shortcut: 'Ctrl+N', action: () => router.push('/sites') },
+  { id: 'new-site', label: 'Create New Site', icon: '➕', shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
   { id: 'refresh', label: 'Refresh Data', icon: '🔄', shortcut: 'F5', action: () => daemonStore.poll() },
   ...daemonStore.services.map((svc: any) => ({
     id: `start-${svc.id}`,

@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { usePluginsStore } from '../../stores/plugins'
 
 const router = useRouter()
@@ -99,8 +100,13 @@ const filteredPlugins = computed(() =>
 
 async function toggle(id: string) {
   toggling.value.add(id)
-  try { await pluginsStore.toggleEnable(id) }
-  finally { toggling.value.delete(id) }
+  try {
+    await pluginsStore.toggleEnable(id)
+  } catch (e: any) {
+    ElMessage.error(`Plugin toggle failed: ${e.message}`)
+  } finally {
+    toggling.value.delete(id)
+  }
 }
 
 onMounted(() => { void pluginsStore.loadAll() })
