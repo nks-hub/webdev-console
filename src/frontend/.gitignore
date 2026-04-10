@@ -1,5 +1,6 @@
 node_modules/
 out/
+dist-electron/
 release/
 daemon/bin/
 daemon/obj/
