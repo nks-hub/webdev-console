@@ -69,11 +69,22 @@ pluginLoader.LoadPlugins(pluginDir);
 
 builder.Services.AddSingleton(pluginLoader);
 
-// Call Initialize on each plugin so they can register their services into the DI container
+// Call Initialize on each plugin so they can register their services into the DI container.
+// Wrap per-plugin in try/catch so one buggy plugin DLL cannot prevent the daemon from starting.
 var initContext = PluginContext.ForInitPhase(earlyLoggerFactory);
+var initLogger = earlyLoggerFactory.CreateLogger("PluginInit");
+var failedInitPlugins = new List<string>();
 foreach (var p in pluginLoader.Plugins)
 {
-    p.Instance.Initialize(builder.Services, initContext);
+    try
+    {
+        p.Instance.Initialize(builder.Services, initContext);
+    }
+    catch (Exception ex)
+    {
+        initLogger.LogError(ex, "Plugin {Id} failed to Initialize — will be skipped", p.Instance.Id);
+        failedInitPlugins.Add(p.Instance.Id);
+    }
 }
 
 // Initialize SQLite database and run migrations
@@ -95,14 +106,29 @@ app.MapOpenApi();
 var catalogClient = app.Services.GetRequiredService<CatalogClient>();
 await catalogClient.RefreshAsync();
 
-// Phase 2: Start plugins with the fully-built service provider
+// Phase 2: Start plugins with the fully-built service provider.
+// Wrap per-plugin in try/catch so one failing StartAsync cannot break the daemon — other
+// plugins and the REST API remain available; the failing service will just report Crashed.
 var pluginContext = new PluginContext(
     app.Services,
     app.Services.GetRequiredService<ILoggerFactory>());
 
+var startLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("PluginStart");
 foreach (var p in pluginLoader.Plugins)
 {
-    await p.Instance.StartAsync(pluginContext, CancellationToken.None);
+    if (failedInitPlugins.Contains(p.Instance.Id))
+    {
+        startLogger.LogWarning("Skipping StartAsync for {Id} (Initialize failed)", p.Instance.Id);
+        continue;
+    }
+    try
+    {
+        await p.Instance.StartAsync(pluginContext, CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+        startLogger.LogError(ex, "Plugin {Id} failed to Start — daemon continues without it", p.Instance.Id);
+    }
 }
 
 // Auth token generated early so middleware can reference it

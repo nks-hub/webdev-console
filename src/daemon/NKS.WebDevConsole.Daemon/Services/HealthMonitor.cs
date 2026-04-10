@@ -25,10 +25,23 @@ public class HealthMonitor : BackgroundService
 
         while (!ct.IsCancellationRequested)
         {
+            IEnumerable<IServiceModule> modules;
             try
             {
-                var modules = _sp.GetServices<IServiceModule>();
-                foreach (var module in modules)
+                modules = _sp.GetServices<IServiceModule>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Health check could not enumerate modules");
+                await Task.Delay(5000, ct);
+                continue;
+            }
+
+            // Per-module try/catch so one failing plugin doesn't stop metrics for the others
+            foreach (var module in modules)
+            {
+                if (ct.IsCancellationRequested) break;
+                try
                 {
                     var status = await module.GetStatusAsync(ct);
                     if (status.State == ServiceState.Running)
@@ -42,13 +55,18 @@ public class HealthMonitor : BackgroundService
                         });
                     }
                 }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogWarning(ex, "Health check cycle failed");
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Health check failed for module {ServiceId}", module.ServiceId);
+                }
             }
 
-            await Task.Delay(5000, ct);
+            try { await Task.Delay(5000, ct); }
+            catch (OperationCanceledException) { break; }
         }
     }
 }
