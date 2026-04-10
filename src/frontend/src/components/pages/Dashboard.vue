@@ -151,6 +151,34 @@
         <pre v-else class="log-pre">{{ logsDrawer.content }}</pre>
       </div>
     </el-drawer>
+
+    <!-- Config drawer -->
+    <el-drawer
+      v-model="configDrawer.open"
+      :title="`Config — ${configDrawer.serviceId}`"
+      direction="rtl"
+      size="600px"
+    >
+      <div v-if="configDrawer.loading" class="log-loading">Loading config...</div>
+      <div v-else-if="configDrawer.files.length === 0" class="log-loading">No config files found</div>
+      <div v-else class="config-files">
+        <el-collapse v-model="configDrawer.activeFile">
+          <el-collapse-item
+            v-for="file in configDrawer.files"
+            :key="file.path"
+            :name="file.path"
+          >
+            <template #title>
+              <div class="config-file-header">
+                <span class="config-file-name">{{ file.name }}</span>
+                <span class="config-file-path">{{ file.path }}</span>
+              </div>
+            </template>
+            <pre class="config-pre">{{ file.content }}</pre>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -159,7 +187,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
-import { fetchServiceLogs } from '../../api/daemon'
+import { fetchServiceLogs, fetchServiceConfig, type ConfigFile } from '../../api/daemon'
 import { ElMessage, ElNotification } from 'element-plus'
 import MetricsChart from '../shared/MetricsChart.vue'
 
@@ -294,8 +322,32 @@ async function openLogs(id: string) {
   }
 }
 
-function openConfig(id: string) {
-  ElMessage.info(`Config for ${id} — coming soon`)
+// Config drawer
+const configDrawer = reactive({
+  open: false,
+  serviceId: '',
+  files: [] as ConfigFile[],
+  loading: false,
+  activeFile: [] as string[],
+})
+
+async function openConfig(id: string) {
+  configDrawer.serviceId = id
+  configDrawer.files = []
+  configDrawer.loading = true
+  configDrawer.open = true
+  configDrawer.activeFile = []
+  try {
+    const data = await fetchServiceConfig(id)
+    configDrawer.files = data.files
+    if (data.files.length > 0) configDrawer.activeFile = [data.files[0].path]
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to load config'
+    ElMessage.error(msg)
+    configDrawer.files = []
+  } finally {
+    configDrawer.loading = false
+  }
 }
 </script>
 
@@ -600,5 +652,43 @@ function openConfig(id: string) {
 .metric-card-value {
   font-size: 0.85rem;
   color: var(--wdc-text);
+}
+
+/* Config drawer */
+.config-files {
+  height: 100%;
+  overflow: auto;
+}
+
+.config-file-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-file-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--wdc-text);
+}
+
+.config-file-path {
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--wdc-text-3);
+}
+
+.config-pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--wdc-text-2);
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 12px;
+  background: var(--wdc-bg);
+  border-radius: var(--wdc-radius-sm);
+  max-height: 500px;
+  overflow: auto;
 }
 </style>

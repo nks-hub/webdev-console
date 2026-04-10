@@ -491,6 +491,70 @@ app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int
     return Results.Ok(logs);
 });
 
+// Service config read — returns the main config file content for a service
+app.MapGet("/api/services/{id}/config", (string id) =>
+{
+    var wdcHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc");
+    var configs = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["apache"] = new[] {
+            Path.Combine(wdcHome, "binaries", "apache"),
+        },
+        ["mysql"] = new[] {
+            Path.Combine(wdcHome, "data", "mysql", "my.ini"),
+            Path.Combine(wdcHome, "binaries", "mysql"),
+        },
+        ["php"] = new[] {
+            Path.Combine(wdcHome, "binaries", "php"),
+        },
+        ["redis"] = new[] {
+            Path.Combine(wdcHome, "binaries", "redis"),
+        },
+    };
+
+    var files = new List<object>();
+
+    // Find actual config files
+    if (id.Equals("apache", StringComparison.OrdinalIgnoreCase))
+    {
+        // httpd.conf + all vhost configs
+        var apacheRoot = Directory.GetDirectories(Path.Combine(wdcHome, "binaries", "apache"))
+            .Where(d => !Path.GetFileName(d).StartsWith('.'))
+            .OrderByDescending(d => d)
+            .FirstOrDefault();
+        if (apacheRoot != null)
+        {
+            var httpdConf = Path.Combine(apacheRoot, "conf", "httpd.conf");
+            if (File.Exists(httpdConf))
+                files.Add(new { name = "httpd.conf", path = httpdConf, content = File.ReadAllText(httpdConf) });
+
+            var vhostsDir = Path.Combine(apacheRoot, "conf", "sites-enabled");
+            if (Directory.Exists(vhostsDir))
+                foreach (var f in Directory.GetFiles(vhostsDir, "*.conf"))
+                    files.Add(new { name = Path.GetFileName(f), path = f, content = File.ReadAllText(f) });
+        }
+    }
+    else if (id.Equals("php", StringComparison.OrdinalIgnoreCase))
+    {
+        var phpRoot = Path.Combine(wdcHome, "binaries", "php");
+        if (Directory.Exists(phpRoot))
+            foreach (var vdir in Directory.GetDirectories(phpRoot).Where(d => !Path.GetFileName(d).StartsWith('.')))
+            {
+                var ini = Path.Combine(vdir, "php.ini");
+                if (File.Exists(ini))
+                    files.Add(new { name = $"php.ini ({Path.GetFileName(vdir)})", path = ini, content = File.ReadAllText(ini) });
+            }
+    }
+    else if (id.Equals("mysql", StringComparison.OrdinalIgnoreCase))
+    {
+        var myIni = Path.Combine(wdcHome, "data", "mysql", "my.ini");
+        if (File.Exists(myIni))
+            files.Add(new { name = "my.ini", path = myIni, content = File.ReadAllText(myIni) });
+    }
+
+    return Results.Ok(new { serviceId = id, files });
+});
+
 // Config validation (Apache)
 app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator) =>
 {

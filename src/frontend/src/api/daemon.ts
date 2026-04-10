@@ -128,6 +128,15 @@ export const uninstallBinary = (app: string, version: string) =>
 export const fetchServiceLogs = (id: string, lines = 200): Promise<string[]> =>
   json(`/api/services/${id}/logs?lines=${lines}`)
 
+// Service config
+export interface ConfigFile {
+  name: string
+  path: string
+  content: string
+}
+export const fetchServiceConfig = (id: string): Promise<{ serviceId: string; files: ConfigFile[] }> =>
+  json(`/api/services/${id}/config`)
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.
