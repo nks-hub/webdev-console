@@ -155,12 +155,28 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
     });
 });
 
-// Service management endpoints
-app.MapGet("/api/services", (ProcessManager pm) =>
-    Results.Ok(pm.GetAllStatuses()));
+// Service management endpoints — query real plugin modules
+app.MapGet("/api/services", async (IServiceProvider sp) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var statuses = new List<object>();
+    foreach (var m in modules)
+    {
+        var status = await m.GetStatusAsync(CancellationToken.None);
+        statuses.Add(status);
+    }
+    return Results.Ok(statuses);
+});
 
-app.MapGet("/api/services/{id}", (string id, ProcessManager pm) =>
-    Results.Ok(pm.GetStatus(id)));
+app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null) return Results.NotFound();
+    var status = await module.GetStatusAsync(CancellationToken.None);
+    return Results.Ok(status);
+});
 
 app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp) =>
 {
