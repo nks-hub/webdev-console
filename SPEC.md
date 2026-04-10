@@ -182,29 +182,31 @@ DevForge.Tests.*    → all above
 - `Tomlyn` (TOML parsing)
 
 **DevForge.Daemon:**
-- `Grpc.AspNetCore`
-- `Microsoft.Data.Sqlite`
-- `Dapper`
-- `Scriban` (template engine for Apache/Nginx config generation)
+- `Grpc.AspNetCore` 2.76.0+
+- `Microsoft.Data.Sqlite` 9.0+
+- `Dapper` 2.1+
+- `Scriban` 7.1.0+ (template engine for Apache/Nginx config generation)
+- `CliWrap` 3.10.1+ (one-shot subprocess: httpd -t, mysqladmin, mkcert)
 - `Microsoft.Extensions.Hosting`
 - `Microsoft.Extensions.Logging`
-- `Serilog` + `Serilog.Sinks.File` (structured logging)
-- `dbup-sqlite` (schema migrations)
+- `Serilog` 4.3+ + `Serilog.Sinks.File` 7.0+ (structured logging)
+- `dbup-sqlite` 6.0+ (schema migrations)
 
 **DevForge.Gui:**
 - `Avalonia` (12.x)
 - `Avalonia.Desktop`
 - `Avalonia.Themes.Fluent`
 - `Avalonia.Controls.DataGrid`
-- `LiveChartsCore.SkiaSharpView.Avalonia`
+- `LiveChartsCore.SkiaSharpView.Avalonia` (**VERIFY Avalonia 12 compat on day 1** — stable 2.0.0 declares `>= Avalonia 11.0.0`, no 12.x confirmed. If fails, try ScottPlot.Avalonia — OxyPlot.Avalonia is also broken on 12.x)
 - `Grpc.Net.Client`
 - `CommunityToolkit.Mvvm`
 - `HotAvalonia` (Debug only — XAML hot reload)
 
 **DevForge.Cli:**
-- `System.CommandLine` (command parsing)
-- `Grpc.Net.Client`
-- `Spectre.Console` (output formatting ONLY — tables, progress bars, colors. Do NOT use Spectre.Console.Cli for parsing)
+- `System.CommandLine` 2.0.5+ (command parsing — now STABLE as of 2026-03-12)
+- `Grpc.Net.Client` 2.76.0+
+- `Spectre.Console` 0.55.0 (output formatting ONLY — tables, progress bars, colors. Do NOT use Spectre.Console.Cli for parsing)
+- `CliWrap` 3.10.1+ (one-shot subprocess calls: mkcert, httpd -t, mysqladmin)
 
 **DevForge.Tests:**
 - `xunit`
@@ -1831,6 +1833,19 @@ Steps taken at every release:
 ---
 
 ## 22. Implementation Phases
+
+### Phase 0: Day-1 Verification (BEFORE any implementation)
+
+**Must verify before writing any code:**
+- [ ] `dotnet new install Avalonia.Templates` — install Avalonia project templates
+- [ ] Create minimal Avalonia 12 project: verify `FluentTheme` dark mode works
+- [ ] Add `LiveChartsCore.SkiaSharpView.Avalonia 2.0.0` — verify it renders a chart in Avalonia 12 window
+- [ ] If LiveCharts2 fails on Avalonia 12: test `ScottPlot.Avalonia` as fallback (OxyPlot is also broken)
+- [ ] Verify `Grpc.AspNetCore` 2.76.0 works with Kestrel named pipe on Windows
+- [ ] Verify `HotAvalonia` works with Avalonia 12 for XAML hot reload
+- [ ] Run `dotnet publish --self-contained -r win-x64` and scan result with Windows Defender (confirm no false positive)
+
+**If any verification fails:** update SPEC.md with the workaround before proceeding to Phase 1.
 
 ### Phase 1: Foundation (Week 1–2)
 
