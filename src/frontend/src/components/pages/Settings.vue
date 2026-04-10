@@ -126,6 +126,34 @@
                 <el-tag size="small" effect="plain">Element Plus 2.9</el-tag>
                 <el-tag size="small" effect="plain">.NET 9</el-tag>
               </div>
+
+              <div v-if="systemInfo" class="about-system">
+                <div class="about-sys-title">Runtime</div>
+                <div class="about-sys-row">
+                  <span class="sys-label">Services</span>
+                  <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }} running</span>
+                </div>
+                <div class="about-sys-row">
+                  <span class="sys-label">Sites</span>
+                  <span class="sys-value">{{ systemInfo.sites }}</span>
+                </div>
+                <div class="about-sys-row">
+                  <span class="sys-label">Plugins</span>
+                  <span class="sys-value">{{ systemInfo.plugins }}</span>
+                </div>
+                <div class="about-sys-row">
+                  <span class="sys-label">Binaries</span>
+                  <span class="sys-value">{{ systemInfo.binaries }}</span>
+                </div>
+                <div class="about-sys-row">
+                  <span class="sys-label">OS</span>
+                  <span class="sys-value">{{ systemInfo.os?.version }}</span>
+                </div>
+                <div class="about-sys-row">
+                  <span class="sys-label">.NET</span>
+                  <span class="sys-value">{{ systemInfo.runtime?.dotnet }} ({{ systemInfo.runtime?.arch }})</span>
+                </div>
+              </div>
             </div>
           </div>
         </el-tab-pane>
@@ -154,6 +182,7 @@ const activeTab = ref('ports')
 const saving = ref(false)
 const databases = ref<string[]>([])
 const newDbName = ref('')
+const systemInfo = ref<any>(null)
 
 const ports = reactive({
   http: 80,
@@ -242,7 +271,14 @@ async function loadSettings() {
   } catch { /* daemon not reachable — keep defaults */ }
 }
 
-onMounted(() => { void loadSettings(); void loadDatabases() })
+onMounted(async () => {
+  void loadSettings()
+  void loadDatabases()
+  try {
+    const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
+    if (r.ok) systemInfo.value = await r.json()
+  } catch { /* not connected */ }
+})
 
 async function save() {
   saving.value = true
@@ -376,6 +412,12 @@ async function save() {
   gap: 6px;
   margin-top: 8px;
 }
+
+.about-system { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--wdc-border); }
+.about-sys-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--wdc-text-3); margin-bottom: 8px; }
+.about-sys-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
+.sys-label { color: var(--wdc-text-2); }
+.sys-value { color: var(--wdc-text); font-family: 'JetBrains Mono', monospace; }
 
 .about-links { display: flex; gap: 12px; margin-top: 12px; }
 .about-link {
