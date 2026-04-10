@@ -1,0 +1,275 @@
+using Microsoft.Extensions.Logging;
+using Moq;
+using Tomlyn;
+using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Daemon.Config;
+using NKS.WebDevConsole.Daemon.Sites;
+
+namespace NKS.WebDevConsole.Daemon.Tests;
+
+public class SiteManagerTests : IDisposable
+{
+    private readonly Mock<ILogger<SiteManager>> _loggerMock = new();
+    private readonly TemplateEngine _templateEngine = new();
+    private readonly ConfigValidator _validator;
+    private readonly AtomicWriter _writer = new();
+    private readonly string _sitesDir;
+    private readonly string _generatedDir;
+    private readonly string _tempDir;
+    private readonly SiteManager _manager;
+
+    public SiteManagerTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), "nks-site-tests-" + Guid.NewGuid().ToString("N"));
+        _sitesDir = Path.Combine(_tempDir, "sites");
+        _generatedDir = Path.Combine(_tempDir, "generated");
+
+        var validatorLogger = new Mock<ILogger<ConfigValidator>>();
+        _validator = new ConfigValidator(validatorLogger.Object);
+
+        _manager = new SiteManager(
+            _loggerMock.Object,
+            _templateEngine,
+            _validator,
+            _writer,
+            _sitesDir,
+            _generatedDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CreatesTomlFile()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "mysite.loc",
+            DocumentRoot = "C:/htdocs/mysite",
+            PhpVersion = "8.3"
+        };
+
+        await _manager.CreateAsync(site);
+
+        var tomlPath = Path.Combine(_sitesDir, "mysite.loc.toml");
+        Assert.True(File.Exists(tomlPath));
+        var content = await File.ReadAllTextAsync(tomlPath);
+        Assert.Contains("mysite.loc", content);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AddsSiteToInMemoryCollection()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "test.loc",
+            DocumentRoot = "C:/htdocs/test"
+        };
+
+        await _manager.CreateAsync(site);
+
+        Assert.True(_manager.Sites.ContainsKey("test.loc"));
+    }
+
+    [Fact]
+    public async Task Get_ReturnsCreatedSite()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "app.loc",
+            DocumentRoot = "C:/htdocs/app",
+            PhpVersion = "8.4",
+            SslEnabled = true
+        };
+        await _manager.CreateAsync(site);
+
+        var result = _manager.Get("app.loc");
+
+        Assert.NotNull(result);
+        Assert.Equal("app.loc", result.Domain);
+        Assert.Equal("C:/htdocs/app", result.DocumentRoot);
+        Assert.Equal("8.4", result.PhpVersion);
+        Assert.True(result.SslEnabled);
+    }
+
+    [Fact]
+    public void Get_ReturnsNull_ForNonexistentDomain()
+    {
+        var result = _manager.Get("nonexistent.loc");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Delete_RemovesSiteAndFiles()
+    {
+        var site = new SiteConfig { Domain = "delete-me.loc", DocumentRoot = "C:/htdocs/del" };
+        await _manager.CreateAsync(site);
+
+        // Verify it exists first
+        Assert.NotNull(_manager.Get("delete-me.loc"));
+        Assert.True(File.Exists(Path.Combine(_sitesDir, "delete-me.loc.toml")));
+
+        var removed = _manager.Delete("delete-me.loc");
+
+        Assert.True(removed);
+        Assert.Null(_manager.Get("delete-me.loc"));
+        Assert.False(File.Exists(Path.Combine(_sitesDir, "delete-me.loc.toml")));
+    }
+
+    [Fact]
+    public void Delete_ReturnsFalse_ForNonexistentDomain()
+    {
+        var removed = _manager.Delete("ghost.loc");
+
+        Assert.False(removed);
+    }
+
+    [Fact]
+    public void DetectFramework_FindsLaravel_ByArtisanFile()
+    {
+        var docRoot = Path.Combine(_tempDir, "laravel-app");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "artisan"), "#!/usr/bin/env php");
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Equal("laravel", framework);
+    }
+
+    [Fact]
+    public void DetectFramework_FindsWordPress_ByWpConfig()
+    {
+        var docRoot = Path.Combine(_tempDir, "wp-app");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "wp-config.php"), "<?php");
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Equal("wordpress", framework);
+    }
+
+    [Fact]
+    public void DetectFramework_FindsNette_ByComposerJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "nette-app");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "composer.json"),
+            """{"require": {"nette/application": "^3.2"}}""");
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Equal("nette", framework);
+    }
+
+    [Fact]
+    public void DetectFramework_FindsSymfony_ByComposerJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "symfony-app");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "composer.json"),
+            """{"require": {"symfony/framework-bundle": "^6.0"}}""");
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Equal("symfony", framework);
+    }
+
+    [Fact]
+    public void DetectFramework_FindsLaravel_ByComposerJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "laravel-composer");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "composer.json"),
+            """{"require": {"laravel/framework": "^10.0"}}""");
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Equal("laravel", framework);
+    }
+
+    [Fact]
+    public void DetectFramework_ReturnsNull_ForUnknownProject()
+    {
+        var docRoot = Path.Combine(_tempDir, "plain-html");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "index.html"), "<html></html>");
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Null(framework);
+    }
+
+    [Fact]
+    public void DetectFramework_ReturnsNull_ForEmptyDirectory()
+    {
+        var docRoot = Path.Combine(_tempDir, "empty-dir");
+        Directory.CreateDirectory(docRoot);
+
+        var framework = _manager.DetectFramework(docRoot);
+
+        Assert.Null(framework);
+    }
+
+    [Fact]
+    public void LoadAll_ReadsExistingTomlFiles()
+    {
+        // Use the same serializer that SiteManager.CreateAsync uses
+        var siteObj = new SiteConfig
+        {
+            Domain = "loaded.loc",
+            DocumentRoot = "C:/htdocs/loaded",
+            PhpVersion = "8.3"
+        };
+        var toml = TomlSerializer.Serialize(siteObj);
+        File.WriteAllText(Path.Combine(_sitesDir, "loaded.loc.toml"), toml);
+
+        _manager.LoadAll();
+
+        Assert.Single(_manager.Sites);
+        var site = _manager.Get("loaded.loc");
+        Assert.NotNull(site);
+        Assert.Equal("C:/htdocs/loaded", site.DocumentRoot);
+    }
+
+    [Fact]
+    public void LoadAll_SkipsInvalidToml_WithWarning()
+    {
+        File.WriteAllText(Path.Combine(_sitesDir, "bad.toml"), "this is not valid toml = [[[");
+
+        _manager.LoadAll();
+
+        Assert.Empty(_manager.Sites);
+    }
+
+    [Fact]
+    public void LoadAll_LoadsMultipleFiles()
+    {
+        var site1 = new SiteConfig { Domain = "site1.loc", DocumentRoot = "C:/htdocs/site1", PhpVersion = "8.3" };
+        var site2 = new SiteConfig { Domain = "site2.loc", DocumentRoot = "C:/htdocs/site2", PhpVersion = "8.4", SslEnabled = true };
+
+        File.WriteAllText(Path.Combine(_sitesDir, "site1.loc.toml"), TomlSerializer.Serialize(site1));
+        File.WriteAllText(Path.Combine(_sitesDir, "site2.loc.toml"), TomlSerializer.Serialize(site2));
+
+        _manager.LoadAll();
+
+        Assert.Equal(2, _manager.Sites.Count);
+        Assert.NotNull(_manager.Get("site1.loc"));
+        Assert.NotNull(_manager.Get("site2.loc"));
+    }
+
+    [Fact]
+    public void LoadAll_UsesDomainFromFilename_WhenDomainEmpty()
+    {
+        // Serialize a SiteConfig with empty domain; the filename should become the key
+        var site = new SiteConfig { Domain = "", DocumentRoot = "C:/htdocs/noname", PhpVersion = "8.3" };
+        File.WriteAllText(Path.Combine(_sitesDir, "fromfile.loc.toml"), TomlSerializer.Serialize(site));
+
+        _manager.LoadAll();
+
+        Assert.True(_manager.Sites.ContainsKey("fromfile.loc"));
+    }
+}

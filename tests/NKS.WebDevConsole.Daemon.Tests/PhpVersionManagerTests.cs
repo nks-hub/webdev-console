@@ -24,6 +24,8 @@ public class PhpVersionManagerTests
     [Fact]
     public async Task DetectAllAsync_FindsMampVersions()
     {
+        if (!Directory.Exists(@"C:\MAMP")) return; // Skip on machines without MAMP
+
         // Act
         var installations = await _sut.DetectAllAsync(AppContext.BaseDirectory);
 
@@ -49,6 +51,8 @@ public class PhpVersionManagerTests
     [Fact]
     public async Task DetectAllAsync_VersionsAreSortedDescending()
     {
+        if (!Directory.Exists(@"C:\MAMP")) return; // Skip on machines without MAMP
+
         var installations = await _sut.DetectAllAsync(AppContext.BaseDirectory);
 
         for (int i = 1; i < installations.Count; i++)
@@ -62,6 +66,8 @@ public class PhpVersionManagerTests
     [Fact]
     public async Task DetectAllAsync_EachVersionHasValidFields()
     {
+        if (!Directory.Exists(@"C:\MAMP")) return; // Skip on machines without MAMP
+
         var installations = await _sut.DetectAllAsync(AppContext.BaseDirectory);
 
         foreach (var php in installations)
@@ -78,6 +84,8 @@ public class PhpVersionManagerTests
     [Fact]
     public async Task DetectAllAsync_MampVersionsHavePhpCgi()
     {
+        if (!Directory.Exists(@"C:\MAMP")) return; // Skip on machines without MAMP
+
         var installations = await _sut.DetectAllAsync(AppContext.BaseDirectory);
         var mampInstalls = installations
             .Where(p => p.Directory.Contains("MAMP", StringComparison.OrdinalIgnoreCase))
@@ -96,6 +104,8 @@ public class PhpVersionManagerTests
     [Fact]
     public async Task DetectAllAsync_MampVersionsHaveExtensions()
     {
+        if (!Directory.Exists(@"C:\MAMP")) return; // Skip on machines without MAMP
+
         var installations = await _sut.DetectAllAsync(AppContext.BaseDirectory);
         var mampInstalls = installations
             .Where(p => p.Directory.Contains("MAMP", StringComparison.OrdinalIgnoreCase))
@@ -112,6 +122,8 @@ public class PhpVersionManagerTests
     [Fact]
     public async Task DetectAllAsync_SetsActiveVersionToHighest()
     {
+        if (!Directory.Exists(@"C:\MAMP")) return; // Skip on machines without MAMP
+
         var installations = await _sut.DetectAllAsync(AppContext.BaseDirectory);
         Assert.NotNull(_sut.ActiveVersion);
 
