@@ -43,6 +43,10 @@ onUnmounted(() => {
   --wdc-surface: #1a1d27;
   --wdc-elevated:#242736;
   --wdc-text:    #e8eaf0;
+  --wdc-status-running:  #22c55e;
+  --wdc-status-stopped:  #64748b;
+  --wdc-status-error:    #ef4444;
+  --wdc-status-starting: #f59e0b;
   color-scheme: dark;
 }
 
@@ -51,6 +55,10 @@ html:not(.dark) {
   --wdc-surface: #ffffff;
   --wdc-elevated:#e8e8ec;
   --wdc-text:    #1a1a2e;
+  --wdc-status-running:  #16a34a;
+  --wdc-status-stopped:  #94a3b8;
+  --wdc-status-error:    #dc2626;
+  --wdc-status-starting: #d97706;
   color-scheme: light;
 }
 
@@ -76,5 +84,12 @@ body { background: var(--wdc-bg); color: var(--wdc-text); font-family: system-ui
   flex: 1;
   overflow-y: auto;
   background: var(--wdc-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>

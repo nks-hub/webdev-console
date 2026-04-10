@@ -63,8 +63,8 @@ const topServices = computed(() =>
   height: 9px;
   border-radius: 50%;
 }
-.dot-running  { background: #22c55e; box-shadow: 0 0 4px #22c55e80; }
-.dot-stopped  { background: #64748b; }
-.dot-error    { background: #ef4444; box-shadow: 0 0 4px #ef444480; }
-.dot-starting { background: #f59e0b; }
+.dot-running  { background: var(--wdc-status-running); box-shadow: 0 0 4px color-mix(in srgb, var(--wdc-status-running) 50%, transparent); }
+.dot-stopped  { background: var(--wdc-status-stopped); }
+.dot-error    { background: var(--wdc-status-error); box-shadow: 0 0 4px color-mix(in srgb, var(--wdc-status-error) 50%, transparent); }
+.dot-starting { background: var(--wdc-status-starting); }
 </style>

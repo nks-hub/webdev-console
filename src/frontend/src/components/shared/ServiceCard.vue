@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ElMessage, ElNotification } from 'element-plus'
 import type { ServiceInfo } from '../../api/types'
 import { useServicesStore } from '../../stores/services'
 
@@ -72,6 +73,15 @@ async function act(action: 'start' | 'stop' | 'restart') {
   pendingAction.value = action
   try {
     await servicesStore[action](props.service.id)
+    ElMessage.success(`${props.service.name}: ${action} succeeded`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    ElNotification({
+      title: `${props.service.name} — ${action} failed`,
+      message,
+      type: 'error',
+      duration: 5000,
+    })
   } finally {
     pendingAction.value = null
   }

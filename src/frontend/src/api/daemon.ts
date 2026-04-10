@@ -10,7 +10,7 @@ import type {
 
 declare global {
   interface Window {
-    daemonApi: { getPort: () => number }
+    daemonApi: { getPort: () => number; getToken: () => string }
   }
 }
 
@@ -19,8 +19,26 @@ function base(): string {
   return `http://localhost:${port}`
 }
 
+function authHeaders(extra?: HeadersInit): Record<string, string> {
+  const token = window.daemonApi?.getToken?.() || ''
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (extra) {
+    const entries = extra instanceof Headers
+      ? Array.from(extra.entries())
+      : Array.isArray(extra)
+        ? extra
+        : Object.entries(extra)
+    for (const [k, v] of entries) headers[k] = v
+  }
+  return headers
+}
+
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${base()}${path}`, init)
+  const r = await fetch(`${base()}${path}`, {
+    ...init,
+    headers: authHeaders(init?.headers),
+  })
   if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`)
   return r.json() as Promise<T>
 }
@@ -44,13 +62,13 @@ export const fetchSites = (): Promise<SiteInfo[]> =>
   json('/api/sites')
 
 export const createSite = (data: Partial<SiteInfo>) =>
-  json<SiteInfo>('/api/sites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+  json<SiteInfo>('/api/sites', { method: 'POST', body: JSON.stringify(data) })
 
 export const deleteSite = (id: string) =>
   json<void>(`/api/sites/${id}`, { method: 'DELETE' })
 
 export const updateSite = (id: string, data: Partial<SiteInfo>) =>
-  json<SiteInfo>(`/api/sites/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+  json<SiteInfo>(`/api/sites/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
 
 // PHP
 export const fetchPhpVersions = (): Promise<PhpVersion[]> =>
@@ -85,7 +103,11 @@ export function subscribeEvents(
   onService: (data: import('./types').ServiceInfo) => void,
   onProgress: (data: ProgressUpdate) => void,
 ): () => void {
-  const es = new EventSource(`${base()}/api/events`)
+  const token = window.daemonApi?.getToken?.() || ''
+  const url = token
+    ? `${base()}/api/events?token=${encodeURIComponent(token)}`
+    : `${base()}/api/events`
+  const es = new EventSource(url)
 
   es.addEventListener('service', (e: MessageEvent) => {
     try { onService(JSON.parse(e.data) as import('./types').ServiceInfo) } catch { /* ignore */ }

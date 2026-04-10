@@ -41,6 +41,6 @@ const runningCount = computed(() =>
 }
 .status-item { display: flex; align-items: center; gap: 5px; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
-.dot-ok  { background: #22c55e; }
-.dot-err { background: #ef4444; }
+.dot-ok  { background: var(--wdc-status-running); }
+.dot-err { background: var(--wdc-status-error); }
 </style>

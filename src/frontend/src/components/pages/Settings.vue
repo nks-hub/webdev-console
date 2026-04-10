@@ -2,6 +2,14 @@
   <div class="settings-page">
     <h2>Settings</h2>
 
+    <el-alert
+      title="Settings persistence not yet implemented — changes will not be saved."
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px"
+    />
+
     <el-tabs>
       <el-tab-pane label="Ports" name="ports">
         <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
@@ -45,7 +53,7 @@
     </el-tabs>
 
     <div class="settings-footer">
-      <el-button type="primary" size="small" @click="save">Save Settings</el-button>
+      <el-button type="primary" size="small" disabled @click="save">Save Settings</el-button>
     </div>
   </div>
 </template>
