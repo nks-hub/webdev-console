@@ -138,6 +138,14 @@
         </div>
       </div>
 
+      <!-- Quick actions -->
+      <div class="quick-actions" v-if="daemonStore.connected">
+        <el-button size="small" @click="$router.push({ path: '/sites', query: { create: '1' } })">+ New Site</el-button>
+        <el-button size="small" @click="openMailpit">Open Mailpit</el-button>
+        <el-button size="small" @click="$router.push('/ssl')">SSL Manager</el-button>
+        <el-button size="small" @click="$router.push('/databases')">Databases</el-button>
+      </div>
+
       <!-- Metrics sparklines -->
       <div class="metrics-section" v-if="daemonStore.cpuHistory.length > 2">
         <div class="metrics-grid">
@@ -322,6 +330,10 @@ const logsDrawer = reactive({
   open: false,
   serviceId: '',
 })
+
+function openMailpit() {
+  window.open('http://localhost:8025', '_blank')
+}
 
 function openLogs(id: string) {
   logsDrawer.serviceId = id
@@ -659,6 +671,13 @@ async function openConfig(id: string) {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--wdc-text-3);
+}
+
+/* ─── Quick actions ──────────────────────────────────────────────────────── */
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 20px 12px;
 }
 
 .metrics-section {

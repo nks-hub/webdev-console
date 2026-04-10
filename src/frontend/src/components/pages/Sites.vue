@@ -134,6 +134,7 @@
 
         <div class="drawer-actions">
           <el-button type="primary" size="small" @click="saveSelected">Save Changes</el-button>
+          <el-button size="small" @click="openInBrowser(selectedSite!)">Open in Browser</el-button>
           <el-button size="small" @click="drawerOpen = false">Cancel</el-button>
         </div>
 
