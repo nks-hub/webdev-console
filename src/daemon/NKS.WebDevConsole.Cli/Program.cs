@@ -348,10 +348,68 @@ installBinCmd.SetAction(async (parseResult, ct) =>
 });
 binariesCommand.Add(installBinCmd);
 
+// --- wdc php ---
+var phpCommand = new Command("php", "PHP version management");
+phpCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var versions = await client.GetJsonAsync("/api/php/versions");
+    if (json) { PrintJson(versions); return; }
+    if (versions.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No PHP versions detected.[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Version"); table.AddColumn("Path"); table.AddColumn("CGI"); table.AddColumn("Port"); table.AddColumn("Ext"); table.AddColumn("Active");
+    foreach (var v in versions.EnumerateArray())
+    {
+        var isActive = v.TryGetProperty("isActive", out var a) && a.GetBoolean();
+        var exePath = v.TryGetProperty("phpExePath", out var ep) ? ep.GetString()
+                    : v.TryGetProperty("executablePath", out var ep2) ? ep2.GetString() : "-";
+        var cgiPath = v.TryGetProperty("phpCgiPath", out var cp) ? cp.GetString()
+                    : v.TryGetProperty("fpmExecutable", out var cp2) ? cp2.GetString() : "-";
+        table.AddRow(
+            v.GetProperty("version").GetString() ?? "?",
+            exePath ?? "-",
+            cgiPath ?? "-",
+            v.TryGetProperty("fcgiPort", out var p) ? p.GetInt32().ToString() : "-",
+            v.TryGetProperty("extensions", out var ext) && ext.ValueKind == JsonValueKind.Array ? ext.GetArrayLength().ToString() : "-",
+            isActive ? "[green]Yes[/]" : "[dim]No[/]");
+    }
+    AnsiConsole.Write(table);
+});
+
+// --- wdc php extensions {version} ---
+var phpExtVerArg = new Argument<string>("version") { Description = "PHP major.minor (e.g. 8.4)" };
+var phpExtCmd = new Command("extensions", "List extensions for a PHP version") { phpExtVerArg };
+phpExtCmd.SetAction(async (parseResult, ct) =>
+{
+    var ver = parseResult.GetValue(phpExtVerArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var exts = await client.GetJsonAsync($"/api/php/{ver}/extensions");
+    if (json) { PrintJson(exts); return; }
+    if (exts.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No extensions for PHP {Markup.Escape(ver)}[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Extension"); table.AddColumn("Loaded"); table.AddColumn("Core");
+    foreach (var e in exts.EnumerateArray())
+    {
+        var loaded = e.TryGetProperty("isLoaded", out var l) && l.GetBoolean();
+        var core = e.TryGetProperty("isCore", out var c) && c.GetBoolean();
+        table.AddRow(
+            e.GetProperty("name").GetString() ?? "?",
+            loaded ? "[green]Yes[/]" : "[dim]No[/]",
+            core ? "[blue]Core[/]" : "-");
+    }
+    AnsiConsole.Write(table);
+});
+phpCommand.Add(phpExtCmd);
+
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(logsCommand);
 rootCommand.Add(sitesCommand);
+rootCommand.Add(phpCommand);
 rootCommand.Add(pluginsCommand);
 rootCommand.Add(dbCommand);
 rootCommand.Add(binariesCommand);
