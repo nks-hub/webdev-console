@@ -820,6 +820,17 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
     return Results.Ok(settings);
 });
 
+// Database identifier validation.
+// MySQL identifier rules allow unquoted names matching [a-zA-Z0-9_$] (and $ in some versions).
+// We use a strict subset to avoid shell escape, path traversal, and SQL injection when the
+// name is inlined into CLI args or (ab)used in SQL strings.
+static bool IsValidDatabaseName(string? name)
+{
+    if (string.IsNullOrEmpty(name)) return false;
+    if (name.Length > 64) return false; // MySQL hard limit
+    return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z0-9_]+$");
+}
+
 // Databases — list MySQL databases via mysql CLI
 app.MapGet("/api/databases", async (BinaryManager bm) =>
 {
@@ -860,8 +871,8 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
     var dbName = body?.GetValueOrDefault("name") ?? "";
-    if (string.IsNullOrWhiteSpace(dbName))
-        return Results.BadRequest(new { error = "Database name required" });
+    if (!IsValidDatabaseName(dbName))
+        return Results.BadRequest(new { error = "Invalid database name — allowed chars: letters, digits, underscore (max 64 chars)" });
 
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
@@ -881,6 +892,9 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm) =>
 // Drop database
 app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm) =>
 {
+    if (!IsValidDatabaseName(name))
+        return Results.BadRequest(new { error = "Invalid database name" });
+
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
@@ -899,6 +913,8 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm) =>
 // Database tables
 app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm) =>
 {
+    if (!IsValidDatabaseName(name))
+        return Results.BadRequest(new { error = "Invalid database name" });
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
@@ -922,6 +938,8 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm)
 // Database size
 app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm) =>
 {
+    if (!IsValidDatabaseName(name))
+        return Results.BadRequest(new { error = "Invalid database name" });
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
@@ -938,6 +956,8 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm) =
 // Database query execution
 app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, BinaryManager bm) =>
 {
+    if (!IsValidDatabaseName(name))
+        return Results.BadRequest(new { error = "Invalid database name" });
     var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
     var sql = body?.GetValueOrDefault("sql") ?? "";
     if (string.IsNullOrWhiteSpace(sql))
@@ -971,6 +991,8 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
 // Database export (mysqldump)
 app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm) =>
 {
+    if (!IsValidDatabaseName(name))
+        return Results.BadRequest(new { error = "Invalid database name" });
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
@@ -989,6 +1011,8 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm)
 // Database import (mysql < file)
 app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx, BinaryManager bm) =>
 {
+    if (!IsValidDatabaseName(name))
+        return Results.BadRequest(new { error = "Invalid database name" });
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
