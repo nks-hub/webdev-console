@@ -491,6 +491,53 @@ importDbCmd.SetAction(async (parseResult, ct) =>
 });
 dbCommand.Add(importDbCmd);
 
+// --- wdc databases export {name} {file} ---
+var exportDbNameArg = new Argument<string>("name") { Description = "Database name" };
+var exportFileArg = new Argument<string>("file") { Description = "Output SQL file path" };
+var exportDbCmd = new Command("export", "Export database to SQL file") { exportDbNameArg, exportFileArg };
+exportDbCmd.SetAction(async (parseResult, ct) =>
+{
+    var name = parseResult.GetValue(exportDbNameArg)!;
+    var file = parseResult.GetValue(exportFileArg)!;
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var bins = await client.GetJsonAsync("/api/binaries/installed");
+    string? mysqldump = null;
+    foreach (var b in bins.EnumerateArray())
+    {
+        if (b.GetProperty("app").GetString() == "mysql" && b.TryGetProperty("executable", out var exe))
+        {
+            var dir = Path.GetDirectoryName(exe.GetString());
+            if (dir != null) mysqldump = Path.Combine(dir, "mysqldump.exe");
+        }
+    }
+    if (mysqldump == null || !File.Exists(mysqldump)) { AnsiConsole.MarkupLine("[red]mysqldump not found[/]"); return; }
+
+    AnsiConsole.MarkupLine($"Exporting [blue]{Markup.Escape(name)}[/] to [blue]{Markup.Escape(file)}[/]...");
+    var psi = new System.Diagnostics.ProcessStartInfo
+    {
+        FileName = mysqldump,
+        Arguments = $"-h 127.0.0.1 -P 3306 -u root {name}",
+        RedirectStandardOutput = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+    var proc = System.Diagnostics.Process.Start(psi);
+    if (proc != null)
+    {
+        var sql = await proc.StandardOutput.ReadToEndAsync();
+        await proc.WaitForExitAsync();
+        if (proc.ExitCode == 0)
+        {
+            await File.WriteAllTextAsync(file, sql);
+            AnsiConsole.MarkupLine($"[green]Exported[/] ({new FileInfo(file).Length} bytes)");
+        }
+        else AnsiConsole.MarkupLine($"[red]Export failed (exit {proc.ExitCode})[/]");
+    }
+});
+dbCommand.Add(exportDbCmd);
+
 // --- wdc binaries ---
 var binariesCommand = new Command("binaries", "List installed binaries");
 binariesCommand.SetAction(async (parseResult, ct) =>
