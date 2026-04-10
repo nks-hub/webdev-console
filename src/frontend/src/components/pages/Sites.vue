@@ -145,6 +145,9 @@
             <div v-for="(h, i) in siteHistory" :key="i" class="history-item">
               <span class="history-date">{{ formatDate(h.timestamp) }}</span>
               <span class="history-label">{{ h.label ?? `Version ${i + 1}` }}</span>
+              <el-button size="small" text type="primary" @click="rollbackConfig(selectedSite!.domain, h.timestamp)">
+                Restore
+              </el-button>
             </div>
           </div>
         </div>
@@ -393,6 +396,21 @@ function openInBrowser(site: SiteInfo) {
   const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
   const portSuffix = (site.sslEnabled && port === 443) || (!site.sslEnabled && port === 80) ? '' : `:${port}`
   window.open(`${proto}://${site.domain}${portSuffix}`, '_blank')
+}
+
+async function rollbackConfig(domain: string, timestamp: string) {
+  try {
+    const res = await fetch(`${daemonBase()}/api/sites/${domain}/rollback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sitesStore.authHeaders() },
+      body: JSON.stringify({ timestamp }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    ElMessage.success(`Config restored to ${timestamp}`)
+    await sitesStore.load()
+  } catch (e: any) {
+    ElMessage.error(`Rollback failed: ${e.message}`)
+  }
 }
 
 function formatDate(iso: string): string {

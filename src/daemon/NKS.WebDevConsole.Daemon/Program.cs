@@ -865,6 +865,66 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
     return Results.Ok(new { columns = headers, rows, rowCount = rows.Count });
 });
 
+// Database export (mysqldump)
+app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+    var mysqldump = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqldump.exe");
+    if (!File.Exists(mysqldump))
+        return Results.BadRequest(new { error = "mysqldump.exe not found" });
+    var result = await CliWrap.Cli.Wrap(mysqldump)
+        .WithArguments($"-h 127.0.0.1 -P 3306 -u root {name}")
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+    if (result.ExitCode != 0)
+        return Results.BadRequest(new { error = result.StandardError.Trim() });
+    return Results.Text(result.StandardOutput, "application/sql");
+});
+
+// Database import (mysql < file)
+app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx, BinaryManager bm) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { error = "MySQL not installed" });
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+
+    // Read uploaded SQL file or raw body
+    string sql;
+    if (ctx.Request.HasFormContentType)
+    {
+        var form = await ctx.Request.ReadFormAsync();
+        var file = form.Files.FirstOrDefault();
+        if (file is null) return Results.BadRequest(new { error = "No file uploaded" });
+        using var reader = new StreamReader(file.OpenReadStream());
+        sql = await reader.ReadToEndAsync();
+    }
+    else
+    {
+        sql = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
+    }
+
+    var tmpFile = Path.GetTempFileName();
+    await File.WriteAllTextAsync(tmpFile, sql);
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments($"-h 127.0.0.1 -P 3306 -u root {name}")
+            .WithStandardInputPipe(CliWrap.PipeSource.FromFile(tmpFile))
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+        return result.ExitCode == 0
+            ? Results.Ok(new { ok = true, message = "Import completed" })
+            : Results.BadRequest(new { error = result.StandardError.Trim() });
+    }
+    finally
+    {
+        File.Delete(tmpFile);
+    }
+});
+
 // ── Binary catalog + installation management ──────────────────────────────
 // GET /api/binaries/catalog          → all known releases
 // GET /api/binaries/catalog/{app}    → releases for one app

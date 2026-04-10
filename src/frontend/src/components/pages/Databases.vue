@@ -59,6 +59,9 @@
           <h2 class="detail-title">{{ selectedDb }}</h2>
           <div class="detail-actions">
             <el-button size="small" @click="loadTables(selectedDb)">Refresh Tables</el-button>
+            <el-button size="small" type="success" @click="triggerImport">Import SQL</el-button>
+            <el-button size="small" @click="exportDb">Export SQL</el-button>
+            <input ref="importFileRef" type="file" accept=".sql,.gz" style="display:none" @change="handleImportFile" />
           </div>
         </div>
 
@@ -142,6 +145,7 @@ const queryResult = ref('')
 const queryRunning = ref(false)
 const queryTime = ref<number | null>(null)
 
+const importFileRef = ref<HTMLInputElement>()
 const currentTables = computed(() => dbTables[selectedDb.value] ?? [])
 
 function daemonBase(): string {
@@ -264,6 +268,51 @@ async function executeQuery() {
     queryResult.value = `Error: ${e.message}`
   } finally {
     queryRunning.value = false
+  }
+}
+
+function triggerImport() {
+  importFileRef.value?.click()
+}
+
+async function handleImportFile(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !selectedDb.value) return
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    ElMessage.info(`Importing ${file.name} into ${selectedDb.value}...`)
+    const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/import`, {
+      method: 'POST',
+      headers: { Authorization: authHeaders()['Authorization'] },
+      body: formData,
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    ElMessage.success(`Imported ${file.name} successfully`)
+    await loadTables(selectedDb.value)
+  } catch (e: any) {
+    ElMessage.error(`Import failed: ${e.message}`)
+  }
+  if (importFileRef.value) importFileRef.value.value = ''
+}
+
+async function exportDb() {
+  if (!selectedDb.value) return
+  try {
+    const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/export`, {
+      headers: authHeaders(),
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const blob = await r.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${selectedDb.value}.sql`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success(`Exported ${selectedDb.value}.sql`)
+  } catch (e: any) {
+    ElMessage.error(`Export failed: ${e.message}`)
   }
 }
 
