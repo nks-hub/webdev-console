@@ -233,6 +233,26 @@ detectCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(detectCmd);
 
+// --- wdc sites reapply ---
+var reapplyCmd = new Command("reapply", "Regenerate all site vhosts and reload Apache");
+reapplyCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync("/api/sites/reapply-all");
+    if (parseResult.GetValue(jsonOption)) { PrintJson(result); return; }
+    if (result.GetArrayLength() > 0)
+    {
+        foreach (var r in result.EnumerateArray())
+        {
+            var domain = r.GetProperty("domain").GetString() ?? "?";
+            var ok = r.TryGetProperty("ok", out var o) && o.GetBoolean();
+            AnsiConsole.MarkupLine(ok ? $"[green]✓[/] {Markup.Escape(domain)}" : $"[red]✗[/] {Markup.Escape(domain)}");
+        }
+    }
+});
+sitesCommand.Add(reapplyCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
