@@ -60,13 +60,18 @@ foreach (var p in pluginLoader.Plugins)
     await p.Instance.StartAsync(pluginContext, CancellationToken.None);
 }
 
-// Write port file so Electron can discover us
-var url = app.Urls.FirstOrDefault() ?? "http://localhost:5173";
-var port = new Uri(url.Replace("+", "localhost")).Port;
+// Auth token generated early so middleware can reference it
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
 var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
-await File.WriteAllTextAsync(portFile, $"{port}\n{authToken}");
-Console.WriteLine($"[daemon] port file: {portFile}");
+
+// Write port file AFTER server starts listening (avoids race condition)
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
+    var port = new Uri(address.Replace("+", "localhost")).Port;
+    File.WriteAllText(portFile, $"{port}\n{authToken}");
+    Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
+});
 
 // Auth middleware for /api/* requests
 app.Use(async (ctx, next) =>
@@ -131,8 +136,8 @@ app.MapGet("/api/services/{id}", (string id, ProcessManager pm) =>
 
 app.MapPost("/api/services/{id}/start", (string id, ProcessManager pm) =>
 {
-    // Plugin will provide the actual executable path
-    return Results.Ok(new { message = $"Start {id} via plugin" });
+    // TODO: Wire to plugin's StartAsync when plugin-to-ProcessManager bridge is implemented
+    return Results.StatusCode(501);
 });
 
 app.MapPost("/api/services/{id}/stop", async (string id, ProcessManager pm) =>
