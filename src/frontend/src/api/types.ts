@@ -1,15 +1,18 @@
 // TypeScript types matching C# daemon models
 
-export type ServiceStatus = 'running' | 'stopped' | 'starting' | 'error'
+export type ServiceStatus = 'running' | 'stopped' | 'starting' | 'stopping' | 'crashed' | 'disabled' | 'error'
 
 export interface ServiceInfo {
   id: string
-  name: string
-  status: ServiceStatus
+  name?: string
+  displayName?: string
+  status?: ServiceStatus
+  state?: number // 0=Stopped, 1=Starting, 2=Running, 3=Stopping, 4=Crashed, 5=Disabled
   pid: number | null
   cpuPercent: number
   memoryBytes: number
-  uptimeSeconds: number
+  uptimeSeconds?: number
+  uptime?: string | number
   version?: string
 }
 
@@ -34,10 +37,11 @@ export interface SiteInfo {
 
 export interface PhpVersion {
   version: string
+  majorMinor?: string
   path: string
   isDefault: boolean
-  extensionCount: number
-  activeSiteCount: number
+  extensionCount?: number
+  activeSiteCount?: number
 }
 
 export interface DatabaseInfo {
