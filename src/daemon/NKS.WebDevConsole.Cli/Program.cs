@@ -310,6 +310,23 @@ histCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(histCmd);
 
+// --- wdc sites rollback {domain} {timestamp} ---
+var rbDomainArg = new Argument<string>("domain");
+var rbTimestampArg = new Argument<string>("timestamp") { Description = "Timestamp from history (e.g. 20260410_143037)" };
+var rollbackCmd = new Command("rollback", "Rollback a site config to a previous version") { rbDomainArg, rbTimestampArg };
+rollbackCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(rbDomainArg)!;
+    var ts = parseResult.GetValue(rbTimestampArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync($"/api/sites/{domain}/rollback/{ts}");
+    if (json) { PrintJson(result); return; }
+    AnsiConsole.MarkupLine($"[green]Rolled back[/] {Markup.Escape(domain)} to {Markup.Escape(ts)}");
+});
+sitesCommand.Add(rollbackCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
