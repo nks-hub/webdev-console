@@ -512,9 +512,46 @@ doctorCommand.SetAction(async (parseResult, ct) =>
     AnsiConsole.MarkupLine(allOk ? "[green bold]All checks passed![/]" : "[yellow]Some checks failed. See details above.[/]");
 });
 
+// --- wdc start-all / stop-all ---
+var startAllCmd = new Command("start-all", "Start all services");
+startAllCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var svcs = await client.GetJsonAsync("/api/services");
+    foreach (var s in svcs.EnumerateArray())
+    {
+        if (s.GetProperty("state").GetInt32() == 0)
+        {
+            var id = s.GetProperty("id").GetString()!;
+            try { await client.PostAsync($"/api/services/{id}/start"); AnsiConsole.MarkupLine($"[green]Started[/] {id}"); }
+            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); }
+        }
+    }
+});
+
+var stopAllCmd = new Command("stop-all", "Stop all services");
+stopAllCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var svcs = await client.GetJsonAsync("/api/services");
+    foreach (var s in svcs.EnumerateArray())
+    {
+        if (s.GetProperty("state").GetInt32() == 2)
+        {
+            var id = s.GetProperty("id").GetString()!;
+            try { await client.PostAsync($"/api/services/{id}/stop"); AnsiConsole.MarkupLine($"[yellow]Stopped[/] {id}"); }
+            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); }
+        }
+    }
+});
+
 rootCommand.Add(openCommand);
 rootCommand.Add(configCommand);
 rootCommand.Add(doctorCommand);
+rootCommand.Add(startAllCmd);
+rootCommand.Add(stopAllCmd);
 rootCommand.Add(statusCommand);
 rootCommand.Add(servicesCommand);
 rootCommand.Add(logsCommand);
