@@ -149,7 +149,10 @@ function createWindow() {
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    // Pass token via query param so renderer can authenticate even before preload bridges
+    const info = readPortFile()
+    const tokenParam = info?.token ? `?token=${encodeURIComponent(info.token)}` : ''
+    win.loadURL(`${process.env.ELECTRON_RENDERER_URL}${tokenParam}`)
   } else {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }

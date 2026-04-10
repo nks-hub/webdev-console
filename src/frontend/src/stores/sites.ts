@@ -30,5 +30,11 @@ export const useSitesStore = defineStore('sites', () => {
     sites.value = sites.value.filter(s => s.domain !== domain)
   }
 
-  return { sites, loading, load, create, update, remove }
+  function authHeaders(): Record<string, string> {
+    const urlToken = new URLSearchParams(window.location.search).get('token')
+    const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
+  return { sites, loading, load, create, update, remove, authHeaders }
 })
