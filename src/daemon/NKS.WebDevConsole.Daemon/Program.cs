@@ -284,6 +284,32 @@ app.MapGet("/api/php/versions", () =>
     return Results.Ok(Array.Empty<object>());
 });
 
+// Version validation (checks if a version string is available for a service)
+app.MapPost("/api/services/{id}/validate-version", async (string id, HttpContext ctx) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    var version = body?.GetValueOrDefault("version") ?? "";
+    // For PHP: check if the version exists in detected installations
+    if (id.Contains("php", StringComparison.OrdinalIgnoreCase))
+    {
+        var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
+        if (phpPlugin != null)
+        {
+            var method = phpPlugin.Instance.GetType().GetMethod("GetInstalledVersions");
+            if (method?.Invoke(phpPlugin.Instance, null) is System.Collections.IEnumerable versions)
+            {
+                foreach (var v in versions)
+                {
+                    var vProp = v.GetType().GetProperty("Version");
+                    if (vProp?.GetValue(v)?.ToString()?.StartsWith(version) == true)
+                        return Results.Ok(new { valid = true, version = vProp.GetValue(v)?.ToString() });
+                }
+            }
+        }
+    }
+    return Results.Ok(new { valid = !string.IsNullOrEmpty(version), version });
+});
+
 // Service logs
 app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int? lines) =>
 {
