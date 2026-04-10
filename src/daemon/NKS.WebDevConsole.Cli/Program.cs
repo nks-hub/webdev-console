@@ -1183,6 +1183,42 @@ completionCmd.SetAction((parseResult, ct) =>
     return Task.CompletedTask;
 });
 
+// --- wdc hosts ---
+var hostsCmd = new Command("hosts", "Show managed hosts file entries");
+hostsCmd.SetAction((parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+    if (!File.Exists(hostsPath)) { AnsiConsole.MarkupLine("[red]Hosts file not found[/]"); return Task.CompletedTask; }
+
+    var content = File.ReadAllText(hostsPath);
+    var beginIdx = content.IndexOf("# BEGIN NKS WebDev Console");
+    var endIdx = content.IndexOf("# END NKS WebDev Console");
+
+    if (beginIdx < 0 || endIdx < 0)
+    {
+        if (json) PrintJson(Array.Empty<object>());
+        else AnsiConsole.MarkupLine("[dim]No managed entries in hosts file[/]");
+        return Task.CompletedTask;
+    }
+
+    var block = content[beginIdx..endIdx];
+    var entries = block.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        .Where(l => !l.StartsWith('#') && l.Trim().Length > 0)
+        .Select(l => { var p = l.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries); return new { ip = p.Length > 0 ? p[0] : "", domain = p.Length > 1 ? p[1] : "" }; })
+        .ToList();
+
+    if (json) { PrintJson(entries); return Task.CompletedTask; }
+
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("IP"); table.AddColumn("Domain");
+    foreach (var e in entries) table.AddRow(e.ip, e.domain);
+    AnsiConsole.Write(table);
+    AnsiConsole.MarkupLine($"\n[dim]{entries.Count} managed entries in {Markup.Escape(hostsPath)}[/]");
+    return Task.CompletedTask;
+});
+
+rootCommand.Add(hostsCmd);
 rootCommand.Add(completionCmd);
 rootCommand.Add(newCommand);
 rootCommand.Add(openCommand);
