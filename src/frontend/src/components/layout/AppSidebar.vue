@@ -19,7 +19,7 @@
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
             <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
+          <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -37,7 +37,7 @@
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
             <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
+          <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -55,7 +55,7 @@
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
             <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
+          <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -73,7 +73,7 @@
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
             <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
           </el-tooltip>
-          <span class="svc-name" @click="navigate(`/service/${svc.id}`)">{{ shortName(svc) }}</span>
+          <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
             :model-value="svc.state === 2"
             :loading="servicesStore.isBusy(svc.id)"
@@ -167,7 +167,12 @@ function isActive(path: string) {
 }
 
 function navigate(path: string) {
-  void router.push(path)
+  // Force navigation even if already on the same path (clear query params)
+  if (route.path === path) {
+    void router.replace({ path, query: {} })
+  } else {
+    void router.push(path)
+  }
 }
 
 async function toggleSvc(svc: any) {
