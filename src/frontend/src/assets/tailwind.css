@@ -7,21 +7,21 @@
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --wdc-bg:          #0a0a0f;
-  --wdc-surface:     #111118;
-  --wdc-surface-2:   #17171f;
-  --wdc-elevated:    #1e1e28;
-  --wdc-hover:       #1c1c26;
+  /* Backgrounds — slightly lifted for better readability */
+  --wdc-bg:          #0f1117;
+  --wdc-surface:     #181a24;
+  --wdc-surface-2:   #1f2130;
+  --wdc-elevated:    #262838;
+  --wdc-hover:       #232536;
 
-  /* Borders */
-  --wdc-border:      rgba(255, 255, 255, 0.07);
-  --wdc-border-strong: rgba(255, 255, 255, 0.12);
+  /* Borders — more visible */
+  --wdc-border:      rgba(255, 255, 255, 0.10);
+  --wdc-border-strong: rgba(255, 255, 255, 0.18);
 
-  /* Text */
-  --wdc-text:        #e2e4ec;
-  --wdc-text-2:      #8b8fa8;
-  --wdc-text-3:      #4e5269;
+  /* Text — brighter for readability */
+  --wdc-text:        #eceef6;
+  --wdc-text-2:      #9ea2be;
+  --wdc-text-3:      #636880;
 
   /* Accent — indigo/violet */
   --wdc-accent:      #6366f1;
