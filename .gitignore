@@ -9,6 +9,7 @@
 bin/
 obj/
 publish/
+build/
 
 # Go
 prototype/daemon/wdc-daemon

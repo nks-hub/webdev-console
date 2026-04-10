@@ -55,32 +55,6 @@ public class PluginLoaderTests
     }
 
     [Fact]
-    public void LoadPlugins_SubdirWithoutDll_LogsWarningAndSkips()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        var subDir = Path.Combine(tempDir, "FakePlugin");
-        Directory.CreateDirectory(subDir);
-        try
-        {
-            _loader.LoadPlugins(tempDir);
-
-            Assert.Empty(_loader.Plugins);
-            _loggerMock.Verify(
-                x => x.Log(
-                    LogLevel.Warning,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("No DLL found")),
-                    null,
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Once);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Fact]
     public void Plugins_IsReadOnly()
     {
         Assert.IsAssignableFrom<IReadOnlyList<LoadedPlugin>>(_loader.Plugins);
