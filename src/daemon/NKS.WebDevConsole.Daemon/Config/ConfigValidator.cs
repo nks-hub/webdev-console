@@ -25,7 +25,7 @@ public sealed class ConfigValidator
         try
         {
             var result = await Cli.Wrap(httpdPath)
-                .WithArguments($"-t -f \"{configPath}\"")
+                .WithArguments(["-t", "-f", configPath])
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync();
 

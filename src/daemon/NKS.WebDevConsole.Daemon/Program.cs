@@ -11,13 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "app://.")
+              .AllowAnyMethod().AllowAnyHeader());
 });
 
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
-builder.Services.AddSingleton<PluginLoader>();
 builder.Services.AddSingleton<TemplateEngine>();
 builder.Services.AddSingleton<ConfigValidator>();
 builder.Services.AddSingleton<AtomicWriter>();
@@ -30,29 +30,61 @@ builder.Services.AddSingleton(sp => new SiteManager(
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "generated")
 ));
 
-var app = builder.Build();
-app.UseCors();
-
-// Load plugins
-var pluginLoader = app.Services.GetRequiredService<PluginLoader>();
+// Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
+var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
+var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
 var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
-// Also check relative path for development
 if (!Directory.Exists(pluginDir))
     pluginDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "plugins"));
 pluginLoader.LoadPlugins(pluginDir);
 
-// Initialize plugins
+builder.Services.AddSingleton(pluginLoader);
+
+// Call Initialize on each plugin so they can register their services into the DI container
+var initContext = PluginContext.ForInitPhase(earlyLoggerFactory);
 foreach (var p in pluginLoader.Plugins)
 {
-    await p.Module.InitializeAsync(CancellationToken.None);
+    p.Instance.Initialize(builder.Services, initContext);
+}
+
+var app = builder.Build();
+app.UseCors();
+
+// Phase 2: Start plugins with the fully-built service provider
+var pluginContext = new PluginContext(
+    app.Services,
+    app.Services.GetRequiredService<ILoggerFactory>());
+
+foreach (var p in pluginLoader.Plugins)
+{
+    await p.Instance.StartAsync(pluginContext, CancellationToken.None);
 }
 
 // Write port file so Electron can discover us
 var url = app.Urls.FirstOrDefault() ?? "http://localhost:5173";
 var port = new Uri(url.Replace("+", "localhost")).Port;
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
-await File.WriteAllTextAsync(portFile, port.ToString());
+var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+await File.WriteAllTextAsync(portFile, $"{port}\n{authToken}");
 Console.WriteLine($"[daemon] port file: {portFile}");
+
+// Auth middleware for /api/* requests
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api"))
+    {
+        var auth = ctx.Request.Headers.Authorization.FirstOrDefault();
+        var queryToken = ctx.Request.Query["token"].FirstOrDefault();
+        var provided = auth?.Replace("Bearer ", "") ?? queryToken;
+        if (provided != authToken)
+        {
+            ctx.Response.StatusCode = 401;
+            await ctx.Response.WriteAsync("Unauthorized");
+            return;
+        }
+    }
+    await next();
+});
 
 // REST Endpoints
 app.MapGet("/api/status", () => Results.Ok(new
@@ -66,16 +98,15 @@ app.MapGet("/api/status", () => Results.Ok(new
 app.MapGet("/api/plugins", () => Results.Ok(
     pluginLoader.Plugins.Select(p => new
     {
-        id = p.Module.Id,
-        name = p.Module.Name,
-        version = p.Module.Version,
-        isService = p.Module is IServicePlugin
+        id = p.Instance.Id,
+        name = p.Instance.DisplayName,
+        version = p.Instance.Version
     })
 ));
 
 app.MapGet("/api/plugins/{id}/ui", (string id) =>
 {
-    var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Module.Id == id);
+    var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
     if (plugin == null) return Results.NotFound();
     // Stub UI schema - plugins will provide this via IFrontendPanelProvider later
     return Results.Ok(new
