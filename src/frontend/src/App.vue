@@ -35,6 +35,10 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     commandPalette.value?.open()
   }
+  if (e.key === 'F5') {
+    e.preventDefault()
+    daemonStore.poll()
+  }
 }
 
 onMounted(() => {
