@@ -58,11 +58,11 @@ public class PluginLoader
                 var assembly = context.LoadFromAssemblyPath(Path.GetFullPath(dllPath));
 
                 var pluginTypes = assembly.GetTypes()
-                    .Where(t => typeof(IPluginModule).IsAssignableFrom(t) && !t.IsAbstract);
+                    .Where(t => typeof(IWdcPlugin).IsAssignableFrom(t) && !t.IsAbstract);
 
                 foreach (var type in pluginTypes)
                 {
-                    if (Activator.CreateInstance(type) is IPluginModule plugin)
+                    if (Activator.CreateInstance(type) is IWdcPlugin plugin)
                     {
                         _plugins.Add(new LoadedPlugin(plugin, assembly, context));
                         _logger.LogInformation("Loaded plugin: {Id} v{Version}", plugin.Id, plugin.Version);
@@ -77,4 +77,4 @@ public class PluginLoader
     }
 }
 
-public record LoadedPlugin(IPluginModule Module, Assembly Assembly, AssemblyLoadContext Context);
+public record LoadedPlugin(IWdcPlugin Instance, Assembly Assembly, AssemblyLoadContext Context);
