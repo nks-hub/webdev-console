@@ -234,6 +234,84 @@ app.MapGet("/api/plugins", (IServiceProvider sp) =>
     }));
 });
 
+// Plugin marketplace — Phase 5 plan item.
+// Fetches a JSON manifest from a configurable URL (NKS_WDC_MARKETPLACE_URL env or default)
+// and returns the list of available plugins. Cross-references installed plugin ids so the
+// UI can mark entries as "installed" / "update available". Graceful fallback to an empty
+// list if the remote manifest is unreachable — the feature is best-effort, not critical path.
+app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
+{
+    var marketplaceUrl = Environment.GetEnvironmentVariable("NKS_WDC_MARKETPLACE_URL")
+        ?? "http://127.0.0.1:8765/plugins.json";
+
+    var installedIds = new HashSet<string>(
+        pluginLoader.Plugins.Select(p => p.Instance.Id),
+        StringComparer.OrdinalIgnoreCase);
+
+    try
+    {
+        using var client = httpFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(5);
+        using var response = await client.GetAsync(marketplaceUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            return Results.Ok(new
+            {
+                source = marketplaceUrl,
+                reachable = false,
+                plugins = Array.Empty<object>(),
+                error = $"Marketplace returned HTTP {(int)response.StatusCode}"
+            });
+        }
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var entries = new List<object>();
+        if (doc.RootElement.TryGetProperty("plugins", out var arr) && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in arr.EnumerateArray())
+            {
+                var id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                var name = item.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? id : id;
+                var version = item.TryGetProperty("version", out var vEl) ? vEl.GetString() ?? "" : "";
+                var description = item.TryGetProperty("description", out var dEl) ? dEl.GetString() ?? "" : "";
+                var downloadUrl = item.TryGetProperty("downloadUrl", out var duEl) ? duEl.GetString() ?? "" : "";
+                var author = item.TryGetProperty("author", out var aEl) ? aEl.GetString() ?? "" : "";
+                var license = item.TryGetProperty("license", out var lEl) ? lEl.GetString() ?? "" : "";
+                entries.Add(new
+                {
+                    id,
+                    name,
+                    version,
+                    description,
+                    downloadUrl,
+                    author,
+                    license,
+                    installed = installedIds.Contains(id),
+                });
+            }
+        }
+
+        return Results.Ok(new
+        {
+            source = marketplaceUrl,
+            reachable = true,
+            plugins = entries,
+            count = entries.Count
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new
+        {
+            source = marketplaceUrl,
+            reachable = false,
+            plugins = Array.Empty<object>(),
+            error = ex.Message
+        });
+    }
+});
+
 app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
 {
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
