@@ -20,9 +20,9 @@ import { useDaemonStore } from '../../stores/daemon'
 const daemonStore = useDaemonStore()
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 
-const totalCount = computed(() => daemonStore.status?.services.length ?? 0)
+const totalCount = computed(() => daemonStore.services.length)
 const runningCount = computed(() =>
-  daemonStore.status?.services.filter(s => s.status === 'running').length ?? 0
+  daemonStore.services.filter((s: any) => s.state === 2 || s.status === 'running').length
 )
 </script>
 

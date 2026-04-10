@@ -14,9 +14,10 @@ export interface ServiceInfo {
 }
 
 export interface StatusResponse {
+  status: string
   version: string
+  plugins: number
   uptime: number
-  services: ServiceInfo[]
 }
 
 export interface SiteInfo {

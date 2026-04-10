@@ -15,12 +15,15 @@ declare global {
 }
 
 function base(): string {
-  const port = window.daemonApi?.getPort() ?? 50051
+  // Electron: preload exposes getPort(). Browser dev: use ?port= query param or default 5199.
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
   return `http://localhost:${port}`
 }
 
 function authHeaders(extra?: HeadersInit): Record<string, string> {
-  const token = window.daemonApi?.getToken?.() || ''
+  const urlToken = new URLSearchParams(window.location.search).get('token')
+  const token = window.daemonApi?.getToken?.() || urlToken || ''
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   if (extra) {
@@ -48,6 +51,9 @@ export const fetchStatus = (): Promise<StatusResponse> =>
   json('/api/status')
 
 // Services
+export const fetchServices = (): Promise<any[]> =>
+  json('/api/services')
+
 export const startService = (id: string) =>
   json<{ ok: boolean; message: string; pid?: number }>(`/api/services/${id}/start`, { method: 'POST' })
 

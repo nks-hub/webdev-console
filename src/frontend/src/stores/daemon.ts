@@ -1,31 +1,32 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchStatus, subscribeEvents } from '../api/daemon'
+import { fetchStatus, fetchServices, subscribeEvents } from '../api/daemon'
 import type { StatusResponse, ServiceInfo } from '../api/types'
 
 export const useDaemonStore = defineStore('daemon', () => {
   const status = ref<StatusResponse | null>(null)
+  const services = ref<ServiceInfo[]>([])
   const connected = ref(false)
   let pollTimer: ReturnType<typeof setInterval> | null = null
   let sseCleanup: (() => void) | null = null
 
-  const serviceMap = computed<Map<string, ServiceInfo>>(() => {
-    const m = new Map<string, ServiceInfo>()
-    status.value?.services.forEach(s => m.set(s.id, s))
-    return m
-  })
+  const runningServices = computed(() =>
+    services.value.filter(s => s.state === 2 || s.status === 'running')
+  )
 
   const allRunning = computed(() =>
-    status.value?.services.every(s => s.status === 'running') ?? false
+    services.value.length > 0 && services.value.every(s => s.state === 2 || s.status === 'running')
   )
 
   async function poll() {
     try {
       status.value = await fetchStatus()
+      services.value = await fetchServices()
       connected.value = true
     } catch {
       connected.value = false
       status.value = null
+      services.value = []
     }
   }
 
@@ -35,12 +36,11 @@ export const useDaemonStore = defineStore('daemon', () => {
 
     sseCleanup = subscribeEvents(
       (service) => {
-        if (!status.value) return
-        const idx = status.value.services.findIndex(s => s.id === service.id)
-        if (idx >= 0) status.value.services[idx] = service
-        else status.value.services.push(service)
+        const idx = services.value.findIndex(s => s.id === service.id)
+        if (idx >= 0) services.value[idx] = service
+        else services.value.push(service)
       },
-      () => { /* progress handled by operation stores */ },
+      () => {},
     )
   }
 
@@ -49,5 +49,5 @@ export const useDaemonStore = defineStore('daemon', () => {
     sseCleanup?.()
   }
 
-  return { status, connected, serviceMap, allRunning, startPolling, stopPolling, poll }
+  return { status, services, connected, runningServices, allRunning, startPolling, stopPolling, poll }
 })
