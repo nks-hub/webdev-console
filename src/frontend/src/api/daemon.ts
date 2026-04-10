@@ -149,6 +149,11 @@ export const fetchServiceConfig = (id: string): Promise<{ serviceId: string; fil
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.
+ *
+ * Implements its own reconnect with exponential backoff because the built-in
+ * EventSource reconnect uses the frozen initial URL. On daemon restart the
+ * port/token change, so we must rebuild the URL from current location.search
+ * (which Electron main refreshes on window reload) before each reconnect attempt.
  */
 export function subscribeEvents(
   onService: (data: import('./types').ServiceInfo) => void,
@@ -156,32 +161,83 @@ export function subscribeEvents(
   onMetrics?: (data: MetricsUpdate) => void,
   onLog?: (data: LogEntry) => void,
 ): () => void {
-  const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = urlToken || window.daemonApi?.getToken?.() || ''
-  const url = token
-    ? `${base()}/api/events?token=${encodeURIComponent(token)}`
-    : `${base()}/api/events`
-  const es = new EventSource(url)
+  let es: EventSource | null = null
+  let closed = false
+  let backoffMs = 1000
+  const MAX_BACKOFF = 15000
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
-  es.addEventListener('service', (e: MessageEvent) => {
-    try { onService(JSON.parse(e.data) as import('./types').ServiceInfo) } catch { /* ignore */ }
-  })
-
-  es.addEventListener('progress', (e: MessageEvent) => {
-    try { onProgress(JSON.parse(e.data) as ProgressUpdate) } catch { /* ignore */ }
-  })
-
-  es.addEventListener('metrics', (e: MessageEvent) => {
-    try { onMetrics?.(JSON.parse(e.data) as MetricsUpdate) } catch { /* ignore */ }
-  })
-
-  es.addEventListener('log', (e: MessageEvent) => {
-    try { onLog?.(JSON.parse(e.data) as LogEntry) } catch { /* ignore */ }
-  })
-
-  es.onerror = () => {
-    // reconnect is automatic for EventSource; stores handle disconnected state via polling
+  function buildUrl(): string {
+    // Re-read URL params on every reconnect so we pick up fresh port/token
+    const urlToken = new URLSearchParams(window.location.search).get('token')
+    const token = urlToken || window.daemonApi?.getToken?.() || ''
+    return token
+      ? `${base()}/api/events?token=${encodeURIComponent(token)}`
+      : `${base()}/api/events`
   }
 
-  return () => es.close()
+  function connect() {
+    if (closed) return
+    try {
+      es = new EventSource(buildUrl())
+    } catch {
+      scheduleReconnect()
+      return
+    }
+
+    es.addEventListener('open', () => {
+      // Successful connection — reset backoff
+      backoffMs = 1000
+    })
+
+    es.addEventListener('service', (e: MessageEvent) => {
+      try { onService(JSON.parse(e.data) as import('./types').ServiceInfo) } catch { /* ignore */ }
+    })
+
+    es.addEventListener('progress', (e: MessageEvent) => {
+      try { onProgress(JSON.parse(e.data) as ProgressUpdate) } catch { /* ignore */ }
+    })
+
+    es.addEventListener('metrics', (e: MessageEvent) => {
+      try { onMetrics?.(JSON.parse(e.data) as MetricsUpdate) } catch { /* ignore */ }
+    })
+
+    es.addEventListener('log', (e: MessageEvent) => {
+      try { onLog?.(JSON.parse(e.data) as LogEntry) } catch { /* ignore */ }
+    })
+
+    es.onerror = () => {
+      // EventSource would auto-reconnect with stale URL — we close and rebuild
+      // so the next attempt uses fresh port/token (daemon restart scenario)
+      if (es) {
+        try { es.close() } catch { /* ignore */ }
+        es = null
+      }
+      scheduleReconnect()
+    }
+  }
+
+  function scheduleReconnect() {
+    if (closed) return
+    if (reconnectTimer !== null) return
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
+      backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF)
+      connect()
+    }, backoffMs)
+  }
+
+  connect()
+
+  return () => {
+    closed = true
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    if (es) {
+      try { es.close() } catch { /* ignore */ }
+      es = null
+    }
+  }
 }
