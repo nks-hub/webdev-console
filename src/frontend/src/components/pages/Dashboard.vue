@@ -47,25 +47,25 @@ const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 
-const services = computed(() => daemonStore.status?.services ?? [])
+const services = computed(() => daemonStore.services)
 const totalCount = computed(() => services.value.length)
-const runningCount = computed(() => services.value.filter(s => s.status === 'running').length)
+const runningCount = computed(() => services.value.filter((s: any) => s.state === 2).length)
 
 onMounted(() => { void sitesStore.load() })
 
 async function startAll() {
   await Promise.allSettled(
     services.value
-      .filter(s => s.status === 'stopped')
-      .map(s => servicesStore.start(s.id))
+      .filter((s: any) => s.state === 0) // Stopped
+      .map((s: any) => servicesStore.start(s.id))
   )
 }
 
 async function stopAll() {
   await Promise.allSettled(
     services.value
-      .filter(s => s.status === 'running')
-      .map(s => servicesStore.stop(s.id))
+      .filter((s: any) => s.state === 2) // Running
+      .map((s: any) => servicesStore.stop(s.id))
   )
 }
 </script>

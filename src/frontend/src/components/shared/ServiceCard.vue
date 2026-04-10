@@ -1,48 +1,37 @@
 <template>
-  <el-card class="service-card" :class="[`status-${service.status}`]" shadow="hover">
+  <el-card class="service-card" :class="[`status-${statusText}`]" shadow="hover">
     <template #header>
       <div class="card-header">
-        <span class="card-name">{{ service.name }}</span>
-        <el-tag :type="tagType" size="small" effect="dark">{{ service.status }}</el-tag>
+        <span class="card-name">{{ service.displayName || service.name || service.id }}</span>
+        <el-tag :type="tagType" size="small" effect="dark">{{ statusText }}</el-tag>
       </div>
     </template>
 
-    <div class="card-stats">
+    <div v-if="isRunning" class="card-stats">
       <div class="stat">
         <span class="label">CPU</span>
-        <span class="value">{{ service.cpuPercent.toFixed(1) }}%</span>
+        <span class="value">{{ (service.cpuPercent ?? 0).toFixed(1) }}%</span>
       </div>
       <div class="stat">
         <span class="label">RAM</span>
-        <span class="value">{{ formatMem(service.memoryBytes) }}</span>
+        <span class="value">{{ formatMem(service.memoryBytes ?? 0) }}</span>
       </div>
       <div class="stat">
-        <span class="label">Uptime</span>
-        <span class="value">{{ formatUptime(service.uptimeSeconds) }}</span>
+        <span class="label">PID</span>
+        <span class="value">{{ service.pid ?? '-' }}</span>
       </div>
+    </div>
+    <div v-else class="card-stats-placeholder">
+      <span style="color: var(--el-text-color-secondary); font-size: 0.85rem;">Service not running</span>
     </div>
 
     <div class="card-actions">
-      <el-button
-        size="small"
-        type="success"
-        :disabled="service.status === 'running' || busy"
-        :loading="busy && pendingAction === 'start'"
-        @click="act('start')"
-      >Start</el-button>
-      <el-button
-        size="small"
-        type="danger"
-        :disabled="service.status === 'stopped' || busy"
-        :loading="busy && pendingAction === 'stop'"
-        @click="act('stop')"
-      >Stop</el-button>
-      <el-button
-        size="small"
-        :disabled="service.status === 'stopped' || busy"
-        :loading="busy && pendingAction === 'restart'"
-        @click="act('restart')"
-      >Restart</el-button>
+      <el-button size="small" type="success" :disabled="isRunning || busy"
+        :loading="busy && pendingAction === 'start'" @click="act('start')">Start</el-button>
+      <el-button size="small" type="danger" :disabled="isStopped || busy"
+        :loading="busy && pendingAction === 'stop'" @click="act('stop')">Stop</el-button>
+      <el-button size="small" :disabled="isStopped || busy"
+        :loading="busy && pendingAction === 'restart'" @click="act('restart')">Restart</el-button>
     </div>
   </el-card>
 </template>
@@ -53,20 +42,24 @@ import { ElMessage, ElNotification } from 'element-plus'
 import type { ServiceInfo } from '../../api/types'
 import { useServicesStore } from '../../stores/services'
 
-const props = defineProps<{ service: ServiceInfo }>()
+const props = defineProps<{ service: any }>()
 const servicesStore = useServicesStore()
 const pendingAction = ref<'start' | 'stop' | 'restart' | null>(null)
 
 const busy = computed(() => servicesStore.isBusy(props.service.id))
 
+// Map C# ServiceState enum: 0=Stopped, 1=Starting, 2=Running, 3=Stopping, 4=Crashed, 5=Disabled
+const stateLabels: Record<number, string> = { 0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled' }
+const statusText = computed(() => stateLabels[props.service.state] ?? props.service.status ?? 'unknown')
+const isRunning = computed(() => props.service.state === 2)
+const isStopped = computed(() => props.service.state === 0)
+
 const tagType = computed(() => {
   const map: Record<string, '' | 'success' | 'warning' | 'danger' | 'info'> = {
-    running: 'success',
-    stopped: 'info',
-    starting: 'warning',
-    error: 'danger',
+    running: 'success', stopped: 'info', starting: 'warning',
+    stopping: 'warning', crashed: 'danger', disabled: 'info',
   }
-  return map[props.service.status] ?? 'info'
+  return map[statusText.value] ?? 'info'
 })
 
 async function act(action: 'start' | 'stop' | 'restart') {
