@@ -1,24 +1,18 @@
 <template>
   <nav class="sidebar">
     <div class="sidebar-brand" @click="navigate('/dashboard')">
-      <div class="brand-icon">⚡</div>
+      <el-icon :size="20" color="var(--wdc-accent)"><Monitor /></el-icon>
       <div class="brand-text" v-if="!collapsed">NKS WDC</div>
     </div>
 
     <div class="sidebar-section">
       <div class="section-label" v-if="!collapsed">Overview</div>
-      <div
-        class="nav-item" :class="{ active: isActive('/dashboard') }"
-        @click="navigate('/dashboard')"
-      >
-        <span class="nav-icon">📊</span>
+      <div class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
+        <el-icon :size="18"><Odometer /></el-icon>
         <span class="nav-label" v-if="!collapsed">Dashboard</span>
       </div>
-      <div
-        class="nav-item" :class="{ active: isActive('/sites') }"
-        @click="navigate('/sites')"
-      >
-        <span class="nav-icon">🌐</span>
+      <div class="nav-item" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
+        <el-icon :size="18"><Link /></el-icon>
         <span class="nav-label" v-if="!collapsed">Sites</span>
         <span class="nav-badge" v-if="!collapsed && sitesCount > 0">{{ sitesCount }}</span>
       </div>
@@ -26,26 +20,17 @@
 
     <div class="sidebar-section">
       <div class="section-label" v-if="!collapsed">Manage</div>
-      <div
-        class="nav-item" :class="{ active: isActive('/binaries') }"
-        @click="navigate('/binaries')"
-      >
-        <span class="nav-icon">📦</span>
+      <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
+        <el-icon :size="18"><Download /></el-icon>
         <span class="nav-label" v-if="!collapsed">Binaries</span>
       </div>
-      <div
-        class="nav-item" :class="{ active: isActive('/plugins') }"
-        @click="navigate('/plugins')"
-      >
-        <span class="nav-icon">🔌</span>
+      <div class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
+        <el-icon :size="18"><Box /></el-icon>
         <span class="nav-label" v-if="!collapsed">Plugins</span>
         <span class="nav-badge" v-if="!collapsed">{{ pluginCount }}</span>
       </div>
-      <div
-        class="nav-item" :class="{ active: isActive('/settings') }"
-        @click="navigate('/settings')"
-      >
-        <span class="nav-icon">⚙️</span>
+      <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
+        <el-icon :size="18"><Setting /></el-icon>
         <span class="nav-label" v-if="!collapsed">Settings</span>
       </div>
     </div>
@@ -53,7 +38,7 @@
     <div class="sidebar-spacer" />
 
     <div class="sidebar-collapse" @click="collapsed = !collapsed">
-      <span class="nav-icon">{{ collapsed ? '▸' : '◂' }}</span>
+      <el-icon :size="16"><Fold v-if="!collapsed" /><Expand v-else /></el-icon>
       <span class="nav-label" v-if="!collapsed">Collapse</span>
     </div>
   </nav>
@@ -62,6 +47,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { Monitor, Link, Download, Box, Setting, Fold, Expand, Odometer } from '@element-plus/icons-vue'
 import { useSitesStore } from '../../stores/sites'
 import { usePluginsStore } from '../../stores/plugins'
 
@@ -85,7 +71,7 @@ function navigate(path: string) {
 
 <style scoped>
 .sidebar {
-  width: 210px;
+  width: 200px;
   display: flex;
   flex-direction: column;
   background: var(--wdc-surface);
@@ -96,46 +82,43 @@ function navigate(path: string) {
   padding: 8px;
 }
 
-.sidebar:has(.sidebar-collapse:hover) { /* subtle feedback */ }
-
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 10px 16px;
+  padding: 14px 10px 18px;
   cursor: pointer;
   user-select: none;
 }
-.brand-icon { font-size: 1.4rem; }
 .brand-text {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--wdc-text);
   letter-spacing: -0.02em;
 }
 
 .sidebar-section {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .section-label {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-3);
-  padding: 8px 10px 4px;
+  padding: 10px 10px 6px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px;
+  padding: 10px 10px;
   border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   color: var(--wdc-text-2);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.12s ease;
   user-select: none;
@@ -151,13 +134,6 @@ function navigate(path: string) {
   color: var(--wdc-accent);
 }
 
-.nav-icon {
-  font-size: 1.1rem;
-  width: 22px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
 .nav-label {
   flex: 1;
   white-space: nowrap;
@@ -166,11 +142,11 @@ function navigate(path: string) {
 }
 
 .nav-badge {
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 600;
   background: var(--wdc-surface-2);
   color: var(--wdc-text-2);
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
