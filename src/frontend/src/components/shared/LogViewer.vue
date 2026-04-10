@@ -1,146 +1,77 @@
-<!--
-  Real-time log viewer using a simple textarea.
-  Replaces xterm.js for the POC stage; swap in Terminal from xterm.js for production.
--->
 <template>
   <div class="log-viewer">
     <div class="log-toolbar">
-      <el-select v-model="serviceId" size="small" placeholder="Service" style="width: 150px">
-        <el-option
-          v-for="s in services"
-          :key="s.id"
-          :label="s.name"
-          :value="s.id"
-        />
-      </el-select>
-
-      <el-select v-model="levelFilter" size="small" style="width: 100px">
+      <el-select v-model="logLevel" size="small" style="width: 120px">
         <el-option label="All" value="all" />
-        <el-option label="Info" value="info" />
-        <el-option label="Warn" value="warn" />
         <el-option label="Error" value="error" />
+        <el-option label="Warning" value="warn" />
+        <el-option label="Info" value="info" />
       </el-select>
-
-      <el-input
-        v-model="searchTerm"
-        size="small"
-        placeholder="Filter..."
-        clearable
-        style="width: 180px"
-      />
-
-      <el-button size="small" @click="copyLogs">Copy</el-button>
-      <el-button size="small" :type="autoScroll ? 'primary' : ''" @click="autoScroll = !autoScroll">
-        {{ autoScroll ? 'Auto-scroll On' : 'Auto-scroll Off' }}
-      </el-button>
+      <el-button size="small" @click="clearTerminal">Clear</el-button>
     </div>
-
-    <div ref="logContainerRef" class="log-output" @scroll="onScroll">
-      <div
-        v-for="(line, idx) in filteredLines"
-        :key="idx"
-        class="log-line"
-        :class="[`level-${line.level}`]"
-      >
-        <span class="timestamp">{{ line.timestamp }}</span>
-        <span class="level-badge">{{ line.level.toUpperCase() }}</span>
-        <span class="text">{{ line.message }}</span>
-      </div>
-    </div>
+    <div ref="terminalRef" class="terminal-container" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
-import { useDaemonStore } from '../../stores/daemon'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { WebLinksAddon } from '@xterm/addon-web-links'
+import '@xterm/xterm/css/xterm.css'
 
-interface LogLine {
-  timestamp: string
-  level: string
-  message: string
+const props = defineProps<{ serviceId?: string }>()
+const terminalRef = ref<HTMLElement>()
+const logLevel = ref('all')
+
+let terminal: Terminal | null = null
+let fitAddon: FitAddon | null = null
+
+function clearTerminal() {
+  terminal?.clear()
 }
 
-const props = withDefaults(defineProps<{
-  serviceId?: string
-}>(), { serviceId: '' })
+onMounted(() => {
+  if (!terminalRef.value) return
 
-const daemonStore = useDaemonStore()
-const services = computed(() => daemonStore.status?.services ?? [])
-
-const serviceId = ref(props.serviceId || services.value[0]?.id || '')
-const levelFilter = ref('all')
-const searchTerm = ref('')
-const autoScroll = ref(true)
-const lines = ref<LogLine[]>([])
-const logContainerRef = ref<HTMLElement | null>(null)
-
-let eventSource: EventSource | null = null
-
-const filteredLines = computed(() => {
-  return lines.value.filter(l => {
-    if (levelFilter.value !== 'all' && l.level !== levelFilter.value) return false
-    if (searchTerm.value && !l.message.toLowerCase().includes(searchTerm.value.toLowerCase())) return false
-    return true
+  terminal = new Terminal({
+    theme: {
+      background: '#1a1a2e',
+      foreground: '#e0e0e0',
+      cursor: '#67C23A',
+      selectionBackground: '#67C23A40',
+    },
+    fontSize: 13,
+    fontFamily: 'JetBrains Mono, Consolas, monospace',
+    convertEol: true,
+    disableStdin: true,
+    scrollback: 5000,
   })
+
+  fitAddon = new FitAddon()
+  terminal.loadAddon(fitAddon)
+  terminal.loadAddon(new WebLinksAddon())
+
+  terminal.open(terminalRef.value)
+  fitAddon.fit()
+
+  // Demo output to verify ANSI rendering
+  terminal.writeln('\x1b[32m[INFO]\x1b[0m  NKS WebDev Console Log Viewer initialized')
+  terminal.writeln('\x1b[33m[WARN]\x1b[0m  This is a warning message')
+  terminal.writeln('\x1b[31m[ERROR]\x1b[0m This is an error message')
+  terminal.writeln('\x1b[36m[DEBUG]\x1b[0m Service: ' + (props.serviceId ?? 'none'))
+
+  const resizeObserver = new ResizeObserver(() => fitAddon?.fit())
+  resizeObserver.observe(terminalRef.value)
 })
 
-watch(serviceId, (id) => {
-  if (id) connectStream(id)
-}, { immediate: true })
-
-function connectStream(id: string) {
-  eventSource?.close()
-  lines.value = []
-  const port = window.daemonApi?.getPort() ?? 50051
-  eventSource = new EventSource(`http://localhost:${port}/api/logs/${id}/stream`)
-  eventSource.onmessage = (e: MessageEvent) => {
-    try {
-      const entry = JSON.parse(e.data as string) as LogLine
-      lines.value.push(entry)
-      if (lines.value.length > 2000) lines.value.splice(0, 200)
-      if (autoScroll.value) void nextTick(scrollToBottom)
-    } catch { /* ignore */ }
-  }
-}
-
-function scrollToBottom() {
-  const el = logContainerRef.value
-  if (el) el.scrollTop = el.scrollHeight
-}
-
-function onScroll() {
-  const el = logContainerRef.value
-  if (!el) return
-  autoScroll.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 20
-}
-
-function copyLogs() {
-  const text = filteredLines.value.map(l => `${l.timestamp} [${l.level}] ${l.message}`).join('\n')
-  void navigator.clipboard.writeText(text)
-}
-
-import { onUnmounted } from 'vue'
-onUnmounted(() => eventSource?.close())
+onUnmounted(() => {
+  terminal?.dispose()
+})
 </script>
 
 <style scoped>
 .log-viewer { display: flex; flex-direction: column; height: 100%; }
-.log-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px; flex-shrink: 0; flex-wrap: wrap; }
-.log-output {
-  flex: 1;
-  overflow-y: auto;
-  background: #0d0f1a;
-  padding: 8px;
-  font-family: 'Consolas', 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  line-height: 1.6;
-  min-height: 200px;
-}
-.log-line { display: flex; gap: 8px; }
-.timestamp { color: #5a6070; flex-shrink: 0; }
-.level-badge { flex-shrink: 0; width: 36px; font-weight: 600; }
-.level-info  .level-badge { color: #38bdf8; }
-.level-warn  .level-badge { color: #f59e0b; }
-.level-error .level-badge { color: #ef4444; }
-.text { color: #c9d1d9; word-break: break-all; }
+.log-toolbar { display: flex; gap: 8px; padding: 8px; background: var(--wdc-surface, #1e1e2e); }
+.terminal-container { flex: 1; min-height: 200px; }
 </style>
