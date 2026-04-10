@@ -10,6 +10,11 @@ export const useDaemonStore = defineStore('daemon', () => {
   let pollTimer: ReturnType<typeof setInterval> | null = null
   let sseCleanup: (() => void) | null = null
 
+  // Rolling metrics history (60 samples = 5 min at 5s interval)
+  const MAX_HISTORY = 60
+  const cpuHistory = ref<number[]>([])
+  const ramHistory = ref<number[]>([])
+
   const runningServices = computed(() =>
     services.value.filter(s => s.state === 2 || s.status === 'running')
   )
@@ -23,6 +28,14 @@ export const useDaemonStore = defineStore('daemon', () => {
       status.value = await fetchStatus()
       services.value = await fetchServices()
       connected.value = true
+
+      // Track aggregate metrics
+      const totalCpu = services.value.reduce((sum, s: any) => sum + (s.cpuPercent ?? 0), 0)
+      const totalRam = services.value.reduce((sum, s: any) => sum + (s.memoryBytes ?? 0), 0) / 1024 / 1024
+      cpuHistory.value.push(totalCpu)
+      ramHistory.value.push(totalRam)
+      if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
+      if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
     } catch {
       connected.value = false
       status.value = null
@@ -49,5 +62,5 @@ export const useDaemonStore = defineStore('daemon', () => {
     sseCleanup?.()
   }
 
-  return { status, services, connected, runningServices, allRunning, startPolling, stopPolling, poll }
+  return { status, services, connected, runningServices, allRunning, cpuHistory, ramHistory, startPolling, stopPolling, poll }
 })

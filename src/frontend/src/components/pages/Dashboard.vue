@@ -114,6 +114,26 @@
           class="empty-state"
         />
       </div>
+
+      <!-- Metrics sparklines -->
+      <div class="metrics-section" v-if="daemonStore.cpuHistory.length > 2">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <span class="metric-card-title">CPU Usage</span>
+              <span class="metric-card-value mono">{{ totalCpu.toFixed(1) }}%</span>
+            </div>
+            <MetricsChart :data="daemonStore.cpuHistory" color="#6366f1" />
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <span class="metric-card-title">Memory</span>
+              <span class="metric-card-value mono">{{ totalRamMB }} MB</span>
+            </div>
+            <MetricsChart :data="daemonStore.ramHistory" color="#22c55e" />
+          </div>
+        </div>
+      </div>
     </template>
 
     <!-- Logs drawer -->
@@ -138,6 +158,7 @@ import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { fetchServiceLogs } from '../../api/daemon'
 import { ElMessage, ElNotification } from 'element-plus'
+import MetricsChart from '../shared/MetricsChart.vue'
 
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
@@ -151,6 +172,8 @@ const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => services.value.filter((s: any) => s.state === 2 || s.status === 'running').length)
 const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
 const noneRunning = computed(() => runningCount.value === 0)
+const totalCpu = computed(() => services.value.reduce((s, x: any) => s + (x.cpuPercent ?? 0), 0))
+const totalRamMB = computed(() => Math.round(services.value.reduce((s, x: any) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
 
 onMounted(() => { void sitesStore.load() })
 
@@ -519,5 +542,42 @@ function openConfig(id: string) {
   color: var(--wdc-text-3);
   font-size: 0.82rem;
   padding: 16px 0;
+}
+
+.metrics-section {
+  padding: 0 16px 16px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.metric-card {
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 12px 16px;
+}
+
+.metric-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.metric-card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wdc-text-2);
+}
+
+.metric-card-value {
+  font-size: 0.85rem;
+  color: var(--wdc-text);
 }
 </style>
