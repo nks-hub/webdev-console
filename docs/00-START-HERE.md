@@ -184,12 +184,12 @@ All documents link to related topics, making it easy to jump between guides.
 
 ### If You're Stuck
 1. Check [Troubleshooting Guide](./troubleshooting.md)
-2. Run `nks-wdc diagnose` to gather system info
+2. Run `wdc diagnose` to gather system info
 3. Join our community: https://discord.gg/nks-wdc
 4. Email support: support@nks-wdc.sh (Pro tier)
 
 ### Report Issues
-- **Bug in NKS WebDev Console**: https://github.com/nks-wdc/nks-wdc/issues
+- **Bug in NKS WebDev Console**: https://github.com/nks-hub/webdev-console/issues
 - **Bug in Docs**: Same link (use "documentation" label)
 - **Community Help**: https://discord.gg/nks-wdc
 

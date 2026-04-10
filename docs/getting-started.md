@@ -75,7 +75,7 @@ sudo dnf install nks-wdc
 
 **Build from Source:**
 ```bash
-git clone https://github.com/nks-wdc/nks-wdc.git
+git clone https://github.com/nks-hub/webdev-console.git
 cd nks-wdc
 ./build.sh
 sudo ./install.sh
@@ -204,11 +204,11 @@ nks-wdc service stop all
 **Symptom**: Installation fails with "Port 3306 already in use"
 
 **Solution**:
-1. Run: `nks-wdc port-check`
+1. Run: `wdc port-check`
 2. If another service is on port 3306, either:
    - Stop the conflicting service
    - Change MySQL port in wizard to 3307 or higher
-3. Restart the wizard: `nks-wdc setup --force`
+3. Restart the wizard: `wdc setup --force`
 
 ### DNS Not Resolving
 **Symptom**: `my-project.local` shows "Site can't be reached"
@@ -227,7 +227,7 @@ nks-wdc service stop all
 **Solution**:
 1. Check if extension is installed: `wdc php extensions`
 2. Install missing extension: `wdc php install-extension gd`
-3. Restart PHP: `nks-wdc service restart php-fpm`
+3. Restart PHP: `wdc service restart php-fpm`
 
 ### Slow File Access (macOS)
 **Symptom**: Page loads slowly even with simple sites

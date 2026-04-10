@@ -138,10 +138,10 @@ NKS WebDev Console documentation is organized into several key sections. Each se
 
 ### [CLI Reference](./cli-reference.md) (Not yet created)
 #### Service Commands
-- `nks-wdc service start|stop|restart [service]`
-- `nks-wdc service status`
-- `nks-wdc service enable|disable` (auto-start)
-- `nks-wdc logs [service]`
+- `wdc service start|stop|restart [service]`
+- `wdc service status`
+- `wdc service enable|disable` (auto-start)
+- `wdc logs [service]`
 
 #### Site Commands
 - `wdc site create|delete|update`
@@ -157,19 +157,19 @@ NKS WebDev Console documentation is organized into several key sections. Each se
 - `wdc php config [key]` or `wdc php edit-config`
 
 #### Database Commands
-- `nks-wdc database list|create|delete`
-- `nks-wdc database import|export`
-- `nks-wdc database create-user|delete-user`
-- `nks-wdc database grant-privileges`
-- `nks-wdc database connect` (CLI access)
+- `wdc database list|create|delete`
+- `wdc database import|export`
+- `wdc database create-user|delete-user`
+- `wdc database grant-privileges`
+- `wdc database connect` (CLI access)
 
 #### Utility Commands
-- `nks-wdc port-check [port]`
+- `wdc port-check [port]`
 - `wdc dns-sync`
-- `nks-wdc cert generate|export|import|regenerate`
+- `wdc cert generate|export|import|regenerate`
 - `wdc config get|set [key] [value]`
-- `nks-wdc diagnose`
-- `nks-wdc version`
+- `wdc diagnose`
+- `wdc version`
 
 #### Shell Completion
 - Bash/Zsh/Fish setup
@@ -409,9 +409,9 @@ NKS WebDev Console documentation is organized into several key sections. Each se
 
 ### Official Links
 - **Website**: https://nks-wdc.sh
-- **GitHub**: https://github.com/nks-wdc/nks-wdc
+- **GitHub**: https://github.com/nks-hub/webdev-console
 - **Discord Community**: https://discord.gg/nks-wdc
-- **Issue Tracker**: https://github.com/nks-wdc/nks-wdc/issues
+- **Issue Tracker**: https://github.com/nks-hub/webdev-console/issues
 - **Email Support**: support@nks-wdc.sh (Pro tier)
 
 ### Related Documentation

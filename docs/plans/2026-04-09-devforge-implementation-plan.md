@@ -1758,7 +1758,7 @@ If all 6 items pass: proceed to Phase 1.
 
 **Exit Criteria:**
 - All CLI commands documented and tested
-- Help text: `nks-wdc --help`, `wdc new --help`
+- Help text: `wdc --help`, `wdc new --help`
 - User can run full workflow from CLI
 
 ### Phase 7: Database Manager + Plugins (Weeks 16–17)

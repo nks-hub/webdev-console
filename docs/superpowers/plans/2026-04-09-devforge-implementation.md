@@ -58,24 +58,24 @@ dotnet new list | grep -i avalonia
 ### Task 0.2: Verify Avalonia 12 FluentTheme Dark Mode
 
 **Files:**
-- `src/NKS WebDev Console.Verify/NKS WebDev Console.Verify.csproj` (create)
-- `src/NKS WebDev Console.Verify/Program.cs` (create)
-- `src/NKS WebDev Console.Verify/MainWindow.axaml` (create)
-- `src/NKS WebDev Console.Verify/MainWindow.axaml.cs` (create)
+- `src/NKS.WebDevConsole.Verify/NKS.WebDevConsole.Verify.csproj` (create)
+- `src/NKS.WebDevConsole.Verify/Program.cs` (create)
+- `src/NKS.WebDevConsole.Verify/MainWindow.axaml` (create)
+- `src/NKS.WebDevConsole.Verify/MainWindow.axaml.cs` (create)
 
 **Steps:**
-- [ ] Create new Avalonia app: `dotnet new avalonia.app -o src/NKS WebDev Console.Verify --framework net9.0`
-- [ ] Open `NKS WebDev Console.Verify.csproj`, confirm Avalonia 12.x package references
+- [ ] Create new Avalonia app: `dotnet new avalonia.app -o src/NKS.WebDevConsole.Verify --framework net9.0`
+- [ ] Open `NKS.WebDevConsole.Verify.csproj`, confirm Avalonia 12.x package references
 - [ ] Edit `App.axaml` to set `RequestedThemeVariant="Dark"` and include `<FluentTheme />`
 - [ ] Edit `MainWindow.axaml` to add a TextBlock "NKS WebDev Console Verification" with dark background
-- [ ] Run `dotnet run --project src/NKS WebDev Console.Verify` -- verify dark window appears
+- [ ] Run `dotnet run --project src/NKS.WebDevConsole.Verify` -- verify dark window appears
 - [ ] If FluentTheme fails, check Avalonia 12 API changes and fix
 
 **Code (`App.axaml`):**
 ```xml
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="NKS WebDev Console.Verify.App"
+             x:Class="NKS.WebDevConsole.Verify.App"
              RequestedThemeVariant="Dark">
   <Application.Styles>
     <FluentTheme />
@@ -87,7 +87,7 @@ dotnet new list | grep -i avalonia
 ```xml
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="NKS WebDev Console.Verify.MainWindow"
+        x:Class="NKS.WebDevConsole.Verify.MainWindow"
         Title="NKS WebDev Console - Verify" Width="600" Height="400">
   <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
     <TextBlock Text="NKS WebDev Console Verification" FontSize="24" FontWeight="Bold" />
@@ -100,12 +100,12 @@ dotnet new list | grep -i avalonia
 
 **Run:**
 ```bash
-dotnet run --project src/NKS WebDev Console.Verify
+dotnet run --project src/NKS.WebDevConsole.Verify
 ```
 
 **Commit:**
 ```bash
-git add src/NKS WebDev Console.Verify/
+git add src/NKS.WebDevConsole.Verify/
 git commit -m "chore: verify avalonia 12 dark mode renders"
 ```
 
@@ -114,11 +114,11 @@ git commit -m "chore: verify avalonia 12 dark mode renders"
 ### Task 0.3: Verify LiveCharts2 on Avalonia 12
 
 **Files:**
-- `src/NKS WebDev Console.Verify/NKS WebDev Console.Verify.csproj` (modify)
-- `src/NKS WebDev Console.Verify/MainWindow.axaml` (modify)
+- `src/NKS.WebDevConsole.Verify/NKS.WebDevConsole.Verify.csproj` (modify)
+- `src/NKS.WebDevConsole.Verify/MainWindow.axaml` (modify)
 
 **Steps:**
-- [ ] Add package: `dotnet add src/NKS WebDev Console.Verify package LiveChartsCore.SkiaSharpView.Avalonia`
+- [ ] Add package: `dotnet add src/NKS.WebDevConsole.Verify package LiveChartsCore.SkiaSharpView.Avalonia`
 - [ ] Edit `MainWindow.axaml` to add a `CartesianChart` with sample data
 - [ ] Run and confirm chart renders without exceptions
 - [ ] If LiveCharts2 throws on Avalonia 12: try `dotnet add package ScottPlot.Avalonia` as fallback
@@ -129,7 +129,7 @@ git commit -m "chore: verify avalonia 12 dark mode renders"
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-        x:Class="NKS WebDev Console.Verify.MainWindow"
+        x:Class="NKS.WebDevConsole.Verify.MainWindow"
         Title="NKS WebDev Console - Verify" Width="800" Height="500">
   <StackPanel Spacing="16" Margin="16">
     <TextBlock Text="LiveCharts2 Verification" FontSize="18" FontWeight="Bold" />
@@ -144,7 +144,7 @@ using Avalonia.Controls;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 
-namespace NKS WebDev Console.Verify;
+namespace NKS.WebDevConsole.Verify;
 
 public partial class MainWindow : Window
 {
@@ -163,7 +163,7 @@ public partial class MainWindow : Window
 
 **Run:**
 ```bash
-dotnet run --project src/NKS WebDev Console.Verify
+dotnet run --project src/NKS.WebDevConsole.Verify
 ```
 
 **Commit:**
@@ -176,12 +176,12 @@ git commit -am "chore: verify livecharts2 renders in avalonia 12"
 ### Task 0.4: Verify gRPC + Kestrel Named Pipe on Windows
 
 **Files:**
-- `src/NKS WebDev Console.Verify.Grpc/NKS WebDev Console.Verify.Grpc.csproj` (create)
-- `src/NKS WebDev Console.Verify.Grpc/Program.cs` (create)
-- `src/NKS WebDev Console.Verify.Grpc/Protos/greeter.proto` (create)
+- `src/NKS.WebDevConsole.Verify.Grpc/NKS.WebDevConsole.Verify.Grpc.csproj` (create)
+- `src/NKS.WebDevConsole.Verify.Grpc/Program.cs` (create)
+- `src/NKS.WebDevConsole.Verify.Grpc/Protos/greeter.proto` (create)
 
 **Steps:**
-- [ ] Create project: `dotnet new web -o src/NKS WebDev Console.Verify.Grpc --framework net9.0`
+- [ ] Create project: `dotnet new web -o src/NKS.WebDevConsole.Verify.Grpc --framework net9.0`
 - [ ] Add packages: `Grpc.AspNetCore`, `Grpc.Net.Client`
 - [ ] Create `greeter.proto` with a simple `SayHello` RPC
 - [ ] Configure Kestrel to listen on named pipe `wdc-verify`
@@ -260,12 +260,12 @@ public class GreeterService : Verify.Greeter.GreeterBase
 
 **Run:**
 ```bash
-dotnet run --project src/NKS WebDev Console.Verify.Grpc
+dotnet run --project src/NKS.WebDevConsole.Verify.Grpc
 ```
 
 **Commit:**
 ```bash
-git add src/NKS WebDev Console.Verify.Grpc/
+git add src/NKS.WebDevConsole.Verify.Grpc/
 git commit -m "chore: verify grpc named pipe transport on windows"
 ```
 
@@ -277,7 +277,7 @@ git commit -m "chore: verify grpc named pipe transport on windows"
 - (none -- build verification)
 
 **Steps:**
-- [ ] Publish: `dotnet publish src/NKS WebDev Console.Verify --runtime win-x64 --self-contained true -o publish/verify`
+- [ ] Publish: `dotnet publish src/NKS.WebDevConsole.Verify --runtime win-x64 --self-contained true -o publish/verify`
 - [ ] Do NOT add `/p:PublishTrimmed=true` (triggers Defender heuristics per SPEC.md Section 2)
 - [ ] Open Windows Security > Virus & Threat Protection > Scan options > Custom scan
 - [ ] Scan the `publish/verify/` directory
@@ -286,13 +286,13 @@ git commit -m "chore: verify grpc named pipe transport on windows"
 
 **Run:**
 ```bash
-dotnet publish src/NKS WebDev Console.Verify --runtime win-x64 --self-contained true -o publish/verify
+dotnet publish src/NKS.WebDevConsole.Verify --runtime win-x64 --self-contained true -o publish/verify
 # Then manually scan publish/verify/ with Windows Defender
 ```
 
 **Commit:**
 ```bash
-# No commit -- verification only. Delete src/NKS WebDev Console.Verify* after Phase 0 passes.
+# No commit -- verification only. Delete src/NKS.WebDevConsole.Verify* after Phase 0 passes.
 ```
 
 ---
@@ -306,22 +306,22 @@ dotnet publish src/NKS WebDev Console.Verify --runtime win-x64 --self-contained 
 ### Task 1.1: Create Solution and Project Structure
 
 **Files:**
-- `NKS WebDev Console.sln` (create)
-- `src/NKS WebDev Console.Core/NKS WebDev Console.Core.csproj` (create)
-- `src/NKS WebDev Console.Daemon/NKS WebDev Console.Daemon.csproj` (create)
-- `src/NKS WebDev Console.Gui/NKS WebDev Console.Gui.csproj` (create)
-- `src/NKS WebDev Console.Cli/NKS WebDev Console.Cli.csproj` (create)
-- `tests/NKS WebDev Console.Core.Tests/NKS WebDev Console.Core.Tests.csproj` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/NKS WebDev Console.Daemon.Tests.csproj` (create)
+- `NKS.WebDevConsole.sln` (create)
+- `src/NKS.WebDevConsole.Core/NKS.WebDevConsole.Core.csproj` (create)
+- `src/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj` (create)
+- `src/NKS.WebDevConsole.Gui/NKS.WebDevConsole.Gui.csproj` (create)
+- `src/NKS.WebDevConsole.Cli/NKS.WebDevConsole.Cli.csproj` (create)
+- `tests/NKS.WebDevConsole.Core.Tests/NKS.WebDevConsole.Core.Tests.csproj` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/NKS.WebDevConsole.Daemon.Tests.csproj` (create)
 
 **Steps:**
 - [ ] Create solution: `dotnet new sln -n NKS WebDev Console`
-- [ ] Create Core class library: `dotnet new classlib -o src/NKS WebDev Console.Core --framework net9.0`
-- [ ] Create Daemon worker service: `dotnet new worker -o src/NKS WebDev Console.Daemon --framework net9.0`
-- [ ] Create GUI Avalonia app: `dotnet new avalonia.app -o src/NKS WebDev Console.Gui --framework net9.0`
-- [ ] Create CLI console app: `dotnet new console -o src/NKS WebDev Console.Cli --framework net9.0`
-- [ ] Create test projects: `dotnet new xunit -o tests/NKS WebDev Console.Core.Tests` and `dotnet new xunit -o tests/NKS WebDev Console.Daemon.Tests`
-- [ ] Add all projects to solution: `dotnet sln add src/NKS WebDev Console.Core src/NKS WebDev Console.Daemon src/NKS WebDev Console.Gui src/NKS WebDev Console.Cli tests/NKS WebDev Console.Core.Tests tests/NKS WebDev Console.Daemon.Tests`
+- [ ] Create Core class library: `dotnet new classlib -o src/NKS.WebDevConsole.Core --framework net9.0`
+- [ ] Create Daemon worker service: `dotnet new worker -o src/NKS.WebDevConsole.Daemon --framework net9.0`
+- [ ] Create GUI Avalonia app: `dotnet new avalonia.app -o src/NKS.WebDevConsole.Gui --framework net9.0`
+- [ ] Create CLI console app: `dotnet new console -o src/NKS.WebDevConsole.Cli --framework net9.0`
+- [ ] Create test projects: `dotnet new xunit -o tests/NKS.WebDevConsole.Core.Tests` and `dotnet new xunit -o tests/NKS.WebDevConsole.Daemon.Tests`
+- [ ] Add all projects to solution: `dotnet sln add src/NKS.WebDevConsole.Core src/NKS.WebDevConsole.Daemon src/NKS.WebDevConsole.Gui src/NKS.WebDevConsole.Cli tests/NKS.WebDevConsole.Core.Tests tests/NKS.WebDevConsole.Daemon.Tests`
 - [ ] Add project references per SPEC.md Section 3 dependency graph
 - [ ] Add NuGet packages to each project (see code block below)
 - [ ] Run `dotnet build` and confirm zero errors
@@ -331,74 +331,74 @@ dotnet publish src/NKS WebDev Console.Verify --runtime win-x64 --self-contained 
 ```bash
 # Core has no NKS WebDev Console dependencies
 # Daemon -> Core
-dotnet add src/NKS WebDev Console.Daemon reference src/NKS WebDev Console.Core
+dotnet add src/NKS.WebDevConsole.Daemon reference src/NKS.WebDevConsole.Core
 # Gui -> Core
-dotnet add src/NKS WebDev Console.Gui reference src/NKS WebDev Console.Core
+dotnet add src/NKS.WebDevConsole.Gui reference src/NKS.WebDevConsole.Core
 # Cli -> Core
-dotnet add src/NKS WebDev Console.Cli reference src/NKS WebDev Console.Core
+dotnet add src/NKS.WebDevConsole.Cli reference src/NKS.WebDevConsole.Core
 # Tests -> all
-dotnet add tests/NKS WebDev Console.Core.Tests reference src/NKS WebDev Console.Core
-dotnet add tests/NKS WebDev Console.Daemon.Tests reference src/NKS WebDev Console.Core src/NKS WebDev Console.Daemon
+dotnet add tests/NKS.WebDevConsole.Core.Tests reference src/NKS.WebDevConsole.Core
+dotnet add tests/NKS.WebDevConsole.Daemon.Tests reference src/NKS.WebDevConsole.Core src/NKS.WebDevConsole.Daemon
 ```
 
 **Code (NuGet packages):**
 ```bash
 # Core
-dotnet add src/NKS WebDev Console.Core package Google.Protobuf
-dotnet add src/NKS WebDev Console.Core package Grpc.Tools
-dotnet add src/NKS WebDev Console.Core package Tomlyn
+dotnet add src/NKS.WebDevConsole.Core package Google.Protobuf
+dotnet add src/NKS.WebDevConsole.Core package Grpc.Tools
+dotnet add src/NKS.WebDevConsole.Core package Tomlyn
 
 # Daemon
-dotnet add src/NKS WebDev Console.Daemon package Grpc.AspNetCore
-dotnet add src/NKS WebDev Console.Daemon package Microsoft.Data.Sqlite
-dotnet add src/NKS WebDev Console.Daemon package Dapper
-dotnet add src/NKS WebDev Console.Daemon package Scriban
-dotnet add src/NKS WebDev Console.Daemon package CliWrap
-dotnet add src/NKS WebDev Console.Daemon package Serilog
-dotnet add src/NKS WebDev Console.Daemon package Serilog.Sinks.File
-dotnet add src/NKS WebDev Console.Daemon package Serilog.Extensions.Hosting
-dotnet add src/NKS WebDev Console.Daemon package DbUp.SQLite
+dotnet add src/NKS.WebDevConsole.Daemon package Grpc.AspNetCore
+dotnet add src/NKS.WebDevConsole.Daemon package Microsoft.Data.Sqlite
+dotnet add src/NKS.WebDevConsole.Daemon package Dapper
+dotnet add src/NKS.WebDevConsole.Daemon package Scriban
+dotnet add src/NKS.WebDevConsole.Daemon package CliWrap
+dotnet add src/NKS.WebDevConsole.Daemon package Serilog
+dotnet add src/NKS.WebDevConsole.Daemon package Serilog.Sinks.File
+dotnet add src/NKS.WebDevConsole.Daemon package Serilog.Extensions.Hosting
+dotnet add src/NKS.WebDevConsole.Daemon package DbUp.SQLite
 
 # Gui
-dotnet add src/NKS WebDev Console.Gui package Avalonia
-dotnet add src/NKS WebDev Console.Gui package Avalonia.Desktop
-dotnet add src/NKS WebDev Console.Gui package Avalonia.Themes.Fluent
-dotnet add src/NKS WebDev Console.Gui package LiveChartsCore.SkiaSharpView.Avalonia
-dotnet add src/NKS WebDev Console.Gui package Grpc.Net.Client
-dotnet add src/NKS WebDev Console.Gui package CommunityToolkit.Mvvm
+dotnet add src/NKS.WebDevConsole.Gui package Avalonia
+dotnet add src/NKS.WebDevConsole.Gui package Avalonia.Desktop
+dotnet add src/NKS.WebDevConsole.Gui package Avalonia.Themes.Fluent
+dotnet add src/NKS.WebDevConsole.Gui package LiveChartsCore.SkiaSharpView.Avalonia
+dotnet add src/NKS.WebDevConsole.Gui package Grpc.Net.Client
+dotnet add src/NKS.WebDevConsole.Gui package CommunityToolkit.Mvvm
 
 # Cli
-dotnet add src/NKS WebDev Console.Cli package System.CommandLine
-dotnet add src/NKS WebDev Console.Cli package Grpc.Net.Client
-dotnet add src/NKS WebDev Console.Cli package Spectre.Console
+dotnet add src/NKS.WebDevConsole.Cli package System.CommandLine
+dotnet add src/NKS.WebDevConsole.Cli package Grpc.Net.Client
+dotnet add src/NKS.WebDevConsole.Cli package Spectre.Console
 
 # Tests
-dotnet add tests/NKS WebDev Console.Core.Tests package Moq
-dotnet add tests/NKS WebDev Console.Daemon.Tests package Moq
-dotnet add tests/NKS WebDev Console.Daemon.Tests package Microsoft.Data.Sqlite
+dotnet add tests/NKS.WebDevConsole.Core.Tests package Moq
+dotnet add tests/NKS.WebDevConsole.Daemon.Tests package Moq
+dotnet add tests/NKS.WebDevConsole.Daemon.Tests package Microsoft.Data.Sqlite
 ```
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/SolutionStructureTests.cs
-namespace NKS WebDev Console.Core.Tests;
+// tests/NKS.WebDevConsole.Core.Tests/SolutionStructureTests.cs
+namespace NKS.WebDevConsole.Core.Tests;
 
 public class SolutionStructureTests
 {
     [Fact]
     public void Core_Assembly_Loads()
     {
-        var assembly = typeof(NKS WebDev Console.Core.Models.ServiceType).Assembly;
+        var assembly = typeof(NKS.WebDevConsole.Core.Models.ServiceType).Assembly;
         Assert.NotNull(assembly);
-        Assert.Contains("NKS WebDev Console.Core", assembly.FullName);
+        Assert.Contains("NKS.WebDevConsole.Core", assembly.FullName);
     }
 }
 ```
 
 **Run:**
 ```bash
-dotnet build NKS WebDev Console.sln
-dotnet test tests/NKS WebDev Console.Core.Tests
+dotnet build NKS.WebDevConsole.sln
+dotnet test tests/NKS.WebDevConsole.Core.Tests
 ```
 
 **Commit:**
@@ -412,16 +412,16 @@ git commit -m "feat: create solution with 5 projects and test infrastructure"
 ### Task 1.2: Define Core Enums and Models
 
 **Files:**
-- `src/NKS WebDev Console.Core/Models/ServiceType.cs` (create)
-- `src/NKS WebDev Console.Core/Models/ServiceState.cs` (create)
-- `src/NKS WebDev Console.Core/Models/ServiceStatus.cs` (create)
-- `src/NKS WebDev Console.Core/Models/ValidationResult.cs` (create)
-- `src/NKS WebDev Console.Core/Models/Framework.cs` (create)
-- `src/NKS WebDev Console.Core/Models/RestartPolicy.cs` (create)
-- `tests/NKS WebDev Console.Core.Tests/Models/ServiceStateTests.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/ServiceType.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/ServiceState.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/ServiceStatus.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/ValidationResult.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/Framework.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/RestartPolicy.cs` (create)
+- `tests/NKS.WebDevConsole.Core.Tests/Models/ServiceStateTests.cs` (create)
 
 **Steps:**
-- [ ] Create `src/NKS WebDev Console.Core/Models/` directory
+- [ ] Create `src/NKS.WebDevConsole.Core/Models/` directory
 - [ ] Define `ServiceType` enum (SPEC.md Section 5.3)
 - [ ] Define `ServiceState` enum (SPEC.md Section 5.1)
 - [ ] Define `ServiceStatus` record
@@ -433,8 +433,8 @@ git commit -m "feat: create solution with 5 projects and test infrastructure"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Core/Models/ServiceType.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/ServiceType.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public enum ServiceType
 {
@@ -449,8 +449,8 @@ public enum ServiceType
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Models/ServiceState.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/ServiceState.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public enum ServiceState
 {
@@ -465,8 +465,8 @@ public enum ServiceState
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Models/ServiceStatus.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/ServiceStatus.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public record ServiceStatus(
     ServiceState State,
@@ -478,8 +478,8 @@ public record ServiceStatus(
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Models/ValidationResult.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/ValidationResult.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public record ValidationResult(bool IsValid, IReadOnlyList<string> Errors)
 {
@@ -489,8 +489,8 @@ public record ValidationResult(bool IsValid, IReadOnlyList<string> Errors)
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Models/Framework.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/Framework.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public enum Framework
 {
@@ -503,8 +503,8 @@ public enum Framework
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Models/RestartPolicy.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/RestartPolicy.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public class RestartPolicy
 {
@@ -525,10 +525,10 @@ public class RestartPolicy
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Models/ServiceStateTests.cs
-namespace NKS WebDev Console.Core.Tests.Models;
+// tests/NKS.WebDevConsole.Core.Tests/Models/ServiceStateTests.cs
+namespace NKS.WebDevConsole.Core.Tests.Models;
 
-using NKS WebDev Console.Core.Models;
+using NKS.WebDevConsole.Core.Models;
 
 public class ServiceStateTests
 {
@@ -580,7 +580,7 @@ public class ServiceStateTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Core.Tests
+dotnet test tests/NKS.WebDevConsole.Core.Tests
 ```
 
 **Commit:**
@@ -594,12 +594,12 @@ git commit -m "feat: define core enums and models"
 ### Task 1.3: Define IServiceModule Interface
 
 **Files:**
-- `src/NKS WebDev Console.Core/Interfaces/IServiceModule.cs` (create)
-- `src/NKS WebDev Console.Core/Models/CliCommandDefinition.cs` (create)
-- `tests/NKS WebDev Console.Core.Tests/Interfaces/IServiceModuleTests.cs` (create)
+- `src/NKS.WebDevConsole.Core/Interfaces/IServiceModule.cs` (create)
+- `src/NKS.WebDevConsole.Core/Models/CliCommandDefinition.cs` (create)
+- `tests/NKS.WebDevConsole.Core.Tests/Interfaces/IServiceModuleTests.cs` (create)
 
 **Steps:**
-- [ ] Create `src/NKS WebDev Console.Core/Interfaces/` directory
+- [ ] Create `src/NKS.WebDevConsole.Core/Interfaces/` directory
 - [ ] Define `IServiceModule` interface per SPEC.md Section 17
 - [ ] Define `CliCommandDefinition` record
 - [ ] Write test with a mock implementation to verify interface compiles
@@ -607,10 +607,10 @@ git commit -m "feat: define core enums and models"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Core/Interfaces/IServiceModule.cs
-namespace NKS WebDev Console.Core.Interfaces;
+// src/NKS.WebDevConsole.Core/Interfaces/IServiceModule.cs
+namespace NKS.WebDevConsole.Core.Interfaces;
 
-using NKS WebDev Console.Core.Models;
+using NKS.WebDevConsole.Core.Models;
 
 public interface IServiceModule
 {
@@ -632,8 +632,8 @@ public interface IServiceModule
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Models/CliCommandDefinition.cs
-namespace NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Models/CliCommandDefinition.cs
+namespace NKS.WebDevConsole.Core.Models;
 
 public record CliCommandDefinition(
     string Name,
@@ -643,11 +643,11 @@ public record CliCommandDefinition(
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Interfaces/IServiceModuleTests.cs
-namespace NKS WebDev Console.Core.Tests.Interfaces;
+// tests/NKS.WebDevConsole.Core.Tests/Interfaces/IServiceModuleTests.cs
+namespace NKS.WebDevConsole.Core.Tests.Interfaces;
 
-using NKS WebDev Console.Core.Interfaces;
-using NKS WebDev Console.Core.Models;
+using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
 using Moq;
 
 public class IServiceModuleTests
@@ -671,7 +671,7 @@ public class IServiceModuleTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Core.Tests
+dotnet test tests/NKS.WebDevConsole.Core.Tests
 ```
 
 **Commit:**
@@ -685,17 +685,17 @@ git commit -m "feat: define IServiceModule interface and CliCommandDefinition"
 ### Task 1.4: Write wdc.proto gRPC Service Definition
 
 **Files:**
-- `src/NKS WebDev Console.Core/Proto/wdc.proto` (create)
-- `src/NKS WebDev Console.Core/NKS WebDev Console.Core.csproj` (modify -- add Protobuf item)
-- `src/NKS WebDev Console.Daemon/NKS WebDev Console.Daemon.csproj` (modify -- reference proto)
-- `src/NKS WebDev Console.Gui/NKS WebDev Console.Gui.csproj` (modify -- reference proto)
-- `src/NKS WebDev Console.Cli/NKS WebDev Console.Cli.csproj` (modify -- reference proto)
+- `src/NKS.WebDevConsole.Core/Proto/wdc.proto` (create)
+- `src/NKS.WebDevConsole.Core/NKS.WebDevConsole.Core.csproj` (modify -- add Protobuf item)
+- `src/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj` (modify -- reference proto)
+- `src/NKS.WebDevConsole.Gui/NKS.WebDevConsole.Gui.csproj` (modify -- reference proto)
+- `src/NKS.WebDevConsole.Cli/NKS.WebDevConsole.Cli.csproj` (modify -- reference proto)
 
 **Steps:**
-- [ ] Create `src/NKS WebDev Console.Core/Proto/` directory
+- [ ] Create `src/NKS.WebDevConsole.Core/Proto/` directory
 - [ ] Write complete `wdc.proto` with all 30 RPC methods from SPEC.md Section 7
-- [ ] Configure `NKS WebDev Console.Core.csproj` with `<Protobuf Include="Proto/wdc.proto" GrpcServices="None" />`
-- [ ] Configure `NKS WebDev Console.Daemon.csproj` with `<Protobuf Include="../NKS WebDev Console.Core/Proto/wdc.proto" GrpcServices="Server" Link="Proto/wdc.proto" />`
+- [ ] Configure `NKS.WebDevConsole.Core.csproj` with `<Protobuf Include="Proto/wdc.proto" GrpcServices="None" />`
+- [ ] Configure `NKS.WebDevConsole.Daemon.csproj` with `<Protobuf Include="../NKS.WebDevConsole.Core/Proto/wdc.proto" GrpcServices="Server" Link="Proto/wdc.proto" />`
 - [ ] Configure client projects with `GrpcServices="Client"`
 - [ ] Run `dotnet build` to verify proto compilation succeeds
 - [ ] Verify generated C# classes exist in obj/ directory
@@ -708,7 +708,7 @@ package wdc.v1;
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
-option csharp_namespace = "NKS WebDev Console.Proto";
+option csharp_namespace = "NKS.WebDevConsole.Proto";
 
 service NKS WebDev ConsoleService {
   rpc GetStatus(google.protobuf.Empty) returns (DaemonStatus);
@@ -834,10 +834,10 @@ message PluginListResponse { repeated PluginResponse plugins = 1; }
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Proto/ProtoCompilationTests.cs
-namespace NKS WebDev Console.Core.Tests.Proto;
+// tests/NKS.WebDevConsole.Core.Tests/Proto/ProtoCompilationTests.cs
+namespace NKS.WebDevConsole.Core.Tests.Proto;
 
-using NKS WebDev Console.Proto;
+using NKS.WebDevConsole.Proto;
 
 public class ProtoCompilationTests
 {
@@ -877,8 +877,8 @@ public class ProtoCompilationTests
 
 **Run:**
 ```bash
-dotnet build NKS WebDev Console.sln
-dotnet test tests/NKS WebDev Console.Core.Tests
+dotnet build NKS.WebDevConsole.sln
+dotnet test tests/NKS.WebDevConsole.Core.Tests
 ```
 
 **Commit:**
@@ -892,16 +892,16 @@ git commit -m "feat: add complete gRPC proto definition with 24 RPC methods"
 ### Task 1.5: Set Up SQLite with Migration Runner
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Data/DatabaseInitializer.cs` (create)
-- `src/NKS WebDev Console.Daemon/Data/Migrations/001_initial.sql` (copy from prototype)
-- `src/NKS WebDev Console.Daemon/Data/Migrations/002_triggers.sql` (copy from prototype)
-- `src/NKS WebDev Console.Daemon/Data/Migrations/003_views.sql` (copy from prototype)
-- `src/NKS WebDev Console.Daemon/Data/Migrations/004_indexes.sql` (copy from prototype)
-- `src/NKS WebDev Console.Daemon/Data/Migrations/005_seed.sql` (copy from prototype)
-- `tests/NKS WebDev Console.Daemon.Tests/Data/DatabaseInitializerTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Data/DatabaseInitializer.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Data/Migrations/001_initial.sql` (copy from prototype)
+- `src/NKS.WebDevConsole.Daemon/Data/Migrations/002_triggers.sql` (copy from prototype)
+- `src/NKS.WebDevConsole.Daemon/Data/Migrations/003_views.sql` (copy from prototype)
+- `src/NKS.WebDevConsole.Daemon/Data/Migrations/004_indexes.sql` (copy from prototype)
+- `src/NKS.WebDevConsole.Daemon/Data/Migrations/005_seed.sql` (copy from prototype)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Data/DatabaseInitializerTests.cs` (create)
 
 **Steps:**
-- [ ] Create `src/NKS WebDev Console.Daemon/Data/Migrations/` directory
+- [ ] Create `src/NKS.WebDevConsole.Daemon/Data/Migrations/` directory
 - [ ] Copy `prototype/database/migrations/001_initial.sql` to `001_initial.sql`
 - [ ] Copy `prototype/database/triggers.sql` to `002_triggers.sql`
 - [ ] Copy `prototype/database/views.sql` to `003_views.sql`
@@ -914,12 +914,12 @@ git commit -m "feat: add complete gRPC proto definition with 24 RPC methods"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Data/DatabaseInitializer.cs
+// src/NKS.WebDevConsole.Daemon/Data/DatabaseInitializer.cs
 using DbUp;
 using DbUp.Engine;
 using Microsoft.Data.Sqlite;
 
-namespace NKS WebDev Console.Daemon.Data;
+namespace NKS.WebDevConsole.Daemon.Data;
 
 public class DatabaseInitializer
 {
@@ -970,12 +970,12 @@ public class DatabaseInitializer
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Data/DatabaseInitializerTests.cs
-using NKS WebDev Console.Daemon.Data;
+// tests/NKS.WebDevConsole.Daemon.Tests/Data/DatabaseInitializerTests.cs
+using NKS.WebDevConsole.Daemon.Data;
 using Microsoft.Data.Sqlite;
 using Dapper;
 
-namespace NKS WebDev Console.Daemon.Tests.Data;
+namespace NKS.WebDevConsole.Daemon.Tests.Data;
 
 public class DatabaseInitializerTests
 {
@@ -1051,7 +1051,7 @@ public class DatabaseInitializerTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "DatabaseInitializerTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "DatabaseInitializerTests"
 ```
 
 **Commit:**
@@ -1065,9 +1065,9 @@ git commit -m "feat: sqlite migration runner with prototype schema"
 ### Task 1.6: Create SiteConfig TOML Model and Parser
 
 **Files:**
-- `src/NKS WebDev Console.Core/Configuration/SiteConfig.cs` (create)
-- `src/NKS WebDev Console.Core/Configuration/SiteConfigLoader.cs` (create)
-- `tests/NKS WebDev Console.Core.Tests/Configuration/SiteConfigLoaderTests.cs` (create)
+- `src/NKS.WebDevConsole.Core/Configuration/SiteConfig.cs` (create)
+- `src/NKS.WebDevConsole.Core/Configuration/SiteConfigLoader.cs` (create)
+- `tests/NKS.WebDevConsole.Core.Tests/Configuration/SiteConfigLoaderTests.cs` (create)
 
 **Steps:**
 - [ ] Define `SiteConfig` class matching TOML schema from SPEC.md Section 8
@@ -1078,8 +1078,8 @@ git commit -m "feat: sqlite migration runner with prototype schema"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Core/Configuration/SiteConfig.cs
-namespace NKS WebDev Console.Core.Configuration;
+// src/NKS.WebDevConsole.Core/Configuration/SiteConfig.cs
+namespace NKS.WebDevConsole.Core.Configuration;
 
 public class SiteConfig
 {
@@ -1117,11 +1117,11 @@ public class ServerSection
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Configuration/SiteConfigLoader.cs
+// src/NKS.WebDevConsole.Core/Configuration/SiteConfigLoader.cs
 using Tomlyn;
 using Tomlyn.Model;
 
-namespace NKS WebDev Console.Core.Configuration;
+namespace NKS.WebDevConsole.Core.Configuration;
 
 public static class SiteConfigLoader
 {
@@ -1204,10 +1204,10 @@ internal static class TomlTableExtensions
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Configuration/SiteConfigLoaderTests.cs
-using NKS WebDev Console.Core.Configuration;
+// tests/NKS.WebDevConsole.Core.Tests/Configuration/SiteConfigLoaderTests.cs
+using NKS.WebDevConsole.Core.Configuration;
 
-namespace NKS WebDev Console.Core.Tests.Configuration;
+namespace NKS.WebDevConsole.Core.Tests.Configuration;
 
 public class SiteConfigLoaderTests
 {
@@ -1270,7 +1270,7 @@ public class SiteConfigLoaderTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Core.Tests --filter "SiteConfigLoaderTests"
+dotnet test tests/NKS.WebDevConsole.Core.Tests --filter "SiteConfigLoaderTests"
 ```
 
 **Commit:**
@@ -1284,9 +1284,9 @@ git commit -m "feat: TOML site config model and parser"
 ### Task 1.7: Create Daemon Worker Service Host
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Program.cs` (modify)
-- `src/NKS WebDev Console.Daemon/DaemonService.cs` (create)
-- `src/NKS WebDev Console.Daemon/PidLock.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Program.cs` (modify)
+- `src/NKS.WebDevConsole.Daemon/DaemonService.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/PidLock.cs` (create)
 
 **Steps:**
 - [ ] Replace Worker.cs template with `DaemonService : BackgroundService`
@@ -1298,8 +1298,8 @@ git commit -m "feat: TOML site config model and parser"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/PidLock.cs
-namespace NKS WebDev Console.Daemon;
+// src/NKS.WebDevConsole.Daemon/PidLock.cs
+namespace NKS.WebDevConsole.Daemon;
 
 public class PidLock : IDisposable
 {
@@ -1344,10 +1344,10 @@ public class PidLock : IDisposable
 ```
 
 ```csharp
-// src/NKS WebDev Console.Daemon/DaemonService.cs
-using NKS WebDev Console.Daemon.Data;
+// src/NKS.WebDevConsole.Daemon/DaemonService.cs
+using NKS.WebDevConsole.Daemon.Data;
 
-namespace NKS WebDev Console.Daemon;
+namespace NKS.WebDevConsole.Daemon;
 
 public class DaemonService : BackgroundService
 {
@@ -1409,9 +1409,9 @@ public class DaemonService : BackgroundService
 ```
 
 ```csharp
-// src/NKS WebDev Console.Daemon/Program.cs
-using NKS WebDev Console.Daemon;
-using NKS WebDev Console.Daemon.Data;
+// src/NKS.WebDevConsole.Daemon/Program.cs
+using NKS.WebDevConsole.Daemon;
+using NKS.WebDevConsole.Daemon.Data;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -1438,8 +1438,8 @@ host.Run();
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/PidLockTests.cs
-namespace NKS WebDev Console.Daemon.Tests;
+// tests/NKS.WebDevConsole.Daemon.Tests/PidLockTests.cs
+namespace NKS.WebDevConsole.Daemon.Tests;
 
 public class PidLockTests
 {
@@ -1493,7 +1493,7 @@ public class PidLockTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "PidLockTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "PidLockTests"
 ```
 
 **Commit:**
@@ -1507,11 +1507,11 @@ git commit -m "feat: daemon worker service with PID lock and SQLite init"
 ### Task 1.8: Implement gRPC Server in Daemon
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Grpc/NKS WebDev ConsoleGrpcService.cs` (create)
-- `src/NKS WebDev Console.Daemon/Program.cs` (modify -- add gRPC + named pipe)
+- `src/NKS.WebDevConsole.Daemon/Grpc/NKS.WebDevConsole.GrpcService.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Program.cs` (modify -- add gRPC + named pipe)
 
 **Steps:**
-- [ ] Create `NKS WebDev ConsoleGrpcService` inheriting from `NKS WebDev ConsoleService.NKS WebDev ConsoleServiceBase`
+- [ ] Create `NKS.WebDevConsole.GrpcService` inheriting from `NKS WebDev ConsoleService.NKS WebDev ConsoleServiceBase`
 - [ ] Implement `GetStatus` returning daemon version and uptime
 - [ ] Configure Kestrel to listen on named pipe `wdc-daemon` (Windows) or Unix socket (macOS/Linux)
 - [ ] Register gRPC service in DI
@@ -1519,19 +1519,19 @@ git commit -m "feat: daemon worker service with PID lock and SQLite init"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Grpc/NKS WebDev ConsoleGrpcService.cs
-using NKS WebDev Console.Proto;
+// src/NKS.WebDevConsole.Daemon/Grpc/NKS.WebDevConsole.GrpcService.cs
+using NKS.WebDevConsole.Proto;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 
-namespace NKS WebDev Console.Daemon.Grpc;
+namespace NKS.WebDevConsole.Daemon.Grpc;
 
-public class NKS WebDev ConsoleGrpcService : NKS WebDev ConsoleService.NKS WebDev ConsoleServiceBase
+public class NKS.WebDevConsole.GrpcService : NKS WebDev ConsoleService.NKS WebDev ConsoleServiceBase
 {
     private readonly DateTime _startTime = DateTime.UtcNow;
-    private readonly ILogger<NKS WebDev ConsoleGrpcService> _logger;
+    private readonly ILogger<NKS.WebDevConsole.GrpcService> _logger;
 
-    public NKS WebDev ConsoleGrpcService(ILogger<NKS WebDev ConsoleGrpcService> logger)
+    public NKS.WebDevConsole.GrpcService(ILogger<NKS.WebDevConsole.GrpcService> logger)
     {
         _logger = logger;
     }
@@ -1575,10 +1575,10 @@ public class NKS WebDev ConsoleGrpcService : NKS WebDev ConsoleService.NKS WebDe
 ```
 
 ```csharp
-// src/NKS WebDev Console.Daemon/Program.cs (updated)
-using NKS WebDev Console.Daemon;
-using NKS WebDev Console.Daemon.Data;
-using NKS WebDev Console.Daemon.Grpc;
+// src/NKS.WebDevConsole.Daemon/Program.cs (updated)
+using NKS.WebDevConsole.Daemon;
+using NKS.WebDevConsole.Daemon.Data;
+using NKS.WebDevConsole.Daemon.Grpc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
@@ -1624,26 +1624,26 @@ builder.Services.AddSingleton(new DatabaseInitializer($"Data Source={dbPath}"));
 builder.Services.AddHostedService<DaemonService>();
 
 var app = builder.Build();
-app.MapGrpcService<NKS WebDev ConsoleGrpcService>();
+app.MapGrpcService<NKS.WebDevConsole.GrpcService>();
 app.Run();
 ```
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Grpc/NKS WebDev ConsoleGrpcServiceTests.cs
-using NKS WebDev Console.Daemon.Grpc;
-using NKS WebDev Console.Proto;
+// tests/NKS.WebDevConsole.Daemon.Tests/Grpc/NKS.WebDevConsole.GrpcServiceTests.cs
+using NKS.WebDevConsole.Daemon.Grpc;
+using NKS.WebDevConsole.Proto;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace NKS WebDev Console.Daemon.Tests.Grpc;
+namespace NKS.WebDevConsole.Daemon.Tests.Grpc;
 
-public class NKS WebDev ConsoleGrpcServiceTests
+public class NKS.WebDevConsole.GrpcServiceTests
 {
     [Fact]
     public async Task GetStatus_Returns_Running()
     {
-        var service = new NKS WebDev ConsoleGrpcService(NullLogger<NKS WebDev ConsoleGrpcService>.Instance);
+        var service = new NKS.WebDevConsole.GrpcService(NullLogger<NKS.WebDevConsole.GrpcService>.Instance);
         var result = await service.GetStatus(new Empty(), TestServerCallContext.Create());
         Assert.True(result.Running);
         Assert.Equal("0.1.0", result.Version);
@@ -1653,7 +1653,7 @@ public class NKS WebDev ConsoleGrpcServiceTests
     [Fact]
     public async Task ListServices_Returns_Empty_Initially()
     {
-        var service = new NKS WebDev ConsoleGrpcService(NullLogger<NKS WebDev ConsoleGrpcService>.Instance);
+        var service = new NKS.WebDevConsole.GrpcService(NullLogger<NKS.WebDevConsole.GrpcService>.Instance);
         var result = await service.ListServices(new Empty(), TestServerCallContext.Create());
         Assert.Empty(result.Services);
     }
@@ -1662,8 +1662,8 @@ public class NKS WebDev ConsoleGrpcServiceTests
 
 **Run:**
 ```bash
-dotnet build NKS WebDev Console.sln
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "NKS WebDev ConsoleGrpcServiceTests"
+dotnet build NKS.WebDevConsole.sln
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "NKS.WebDevConsole.GrpcServiceTests"
 ```
 
 **Commit:**
@@ -1677,8 +1677,8 @@ git commit -m "feat: gRPC server with named pipe transport and GetStatus"
 ### Task 1.9: Create gRPC Client Helper in Core
 
 **Files:**
-- `src/NKS WebDev Console.Core/Client/DaemonClient.cs` (create)
-- `src/NKS WebDev Console.Core/Client/IDaemonClient.cs` (create)
+- `src/NKS.WebDevConsole.Core/Client/DaemonClient.cs` (create)
+- `src/NKS.WebDevConsole.Core/Client/IDaemonClient.cs` (create)
 
 **Steps:**
 - [ ] Create `IDaemonClient` interface with typed methods wrapping gRPC calls
@@ -1687,10 +1687,10 @@ git commit -m "feat: gRPC server with named pipe transport and GetStatus"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Core/Client/IDaemonClient.cs
-using NKS WebDev Console.Proto;
+// src/NKS.WebDevConsole.Core/Client/IDaemonClient.cs
+using NKS.WebDevConsole.Proto;
 
-namespace NKS WebDev Console.Core.Client;
+namespace NKS.WebDevConsole.Core.Client;
 
 public interface IDaemonClient : IDisposable
 {
@@ -1705,12 +1705,12 @@ public interface IDaemonClient : IDisposable
 ```
 
 ```csharp
-// src/NKS WebDev Console.Core/Client/DaemonClient.cs
-using NKS WebDev Console.Proto;
+// src/NKS.WebDevConsole.Core/Client/DaemonClient.cs
+using NKS.WebDevConsole.Proto;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 
-namespace NKS WebDev Console.Core.Client;
+namespace NKS.WebDevConsole.Core.Client;
 
 public class DaemonClient : IDaemonClient
 {
@@ -1786,10 +1786,10 @@ public class DaemonClient : IDaemonClient
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Client/DaemonClientTests.cs
-namespace NKS WebDev Console.Core.Tests.Client;
+// tests/NKS.WebDevConsole.Core.Tests/Client/DaemonClientTests.cs
+namespace NKS.WebDevConsole.Core.Tests.Client;
 
-using NKS WebDev Console.Core.Client;
+using NKS.WebDevConsole.Core.Client;
 
 public class DaemonClientTests
 {
@@ -1805,7 +1805,7 @@ public class DaemonClientTests
 
 **Run:**
 ```bash
-dotnet build NKS WebDev Console.sln
+dotnet build NKS.WebDevConsole.sln
 ```
 
 **Commit:**
@@ -1819,12 +1819,12 @@ git commit -m "feat: gRPC client wrapper with named pipe transport"
 ### Task 1.10: Create Basic Avalonia Window with Sidebar Layout
 
 **Files:**
-- `src/NKS WebDev Console.Gui/App.axaml` (modify)
-- `src/NKS WebDev Console.Gui/App.axaml.cs` (modify)
-- `src/NKS WebDev Console.Gui/Views/MainWindow.axaml` (create)
-- `src/NKS WebDev Console.Gui/Views/MainWindow.axaml.cs` (create)
-- `src/NKS WebDev Console.Gui/ViewModels/MainWindowViewModel.cs` (create)
-- `src/NKS WebDev Console.Gui/Styles/NKS WebDev ConsoleTokens.axaml` (create)
+- `src/NKS.WebDevConsole.Gui/App.axaml` (modify)
+- `src/NKS.WebDevConsole.Gui/App.axaml.cs` (modify)
+- `src/NKS.WebDevConsole.Gui/Views/MainWindow.axaml` (create)
+- `src/NKS.WebDevConsole.Gui/Views/MainWindow.axaml.cs` (create)
+- `src/NKS.WebDevConsole.Gui/ViewModels/MainWindowViewModel.cs` (create)
+- `src/NKS.WebDevConsole.Gui/Styles/NKS WebDev ConsoleTokens.axaml` (create)
 
 **Steps:**
 - [ ] Configure `App.axaml` with `FluentTheme` dark mode and `NKS WebDev ConsoleTokens.axaml`
@@ -1840,7 +1840,7 @@ git commit -m "feat: gRPC client wrapper with named pipe transport"
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace NKS WebDev Console.Gui.ViewModels;
+namespace NKS.WebDevConsole.Gui.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -1861,7 +1861,7 @@ public partial class MainWindowViewModel : ObservableObject
 
 **Run:**
 ```bash
-dotnet run --project src/NKS WebDev Console.Gui
+dotnet run --project src/NKS.WebDevConsole.Gui
 ```
 
 **Commit:**
@@ -1875,8 +1875,8 @@ git commit -m "feat: avalonia main window with sidebar and dark theme"
 ### Task 1.11: Create CLI with System.CommandLine -- `wdc status`
 
 **Files:**
-- `src/NKS WebDev Console.Cli/Program.cs` (modify)
-- `src/NKS WebDev Console.Cli/Commands/StatusCommand.cs` (create)
+- `src/NKS.WebDevConsole.Cli/Program.cs` (modify)
+- `src/NKS.WebDevConsole.Cli/Commands/StatusCommand.cs` (create)
 
 **Steps:**
 - [ ] Configure System.CommandLine root command in Program.cs
@@ -1887,9 +1887,9 @@ git commit -m "feat: avalonia main window with sidebar and dark theme"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Cli/Program.cs
+// src/NKS.WebDevConsole.Cli/Program.cs
 using System.CommandLine;
-using NKS WebDev Console.Cli.Commands;
+using NKS.WebDevConsole.Cli.Commands;
 
 var rootCommand = new RootCommand("NKS WebDev Console - Local development server manager");
 
@@ -1902,13 +1902,13 @@ return await rootCommand.InvokeAsync(args);
 ```
 
 ```csharp
-// src/NKS WebDev Console.Cli/Commands/StatusCommand.cs
+// src/NKS.WebDevConsole.Cli/Commands/StatusCommand.cs
 using System.CommandLine;
 using System.Text.Json;
-using NKS WebDev Console.Core.Client;
+using NKS.WebDevConsole.Core.Client;
 using Spectre.Console;
 
-namespace NKS WebDev Console.Cli.Commands;
+namespace NKS.WebDevConsole.Cli.Commands;
 
 public static class StatusCommand
 {
@@ -1975,8 +1975,8 @@ public static class StatusCommand
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Cli/StatusCommandTests.cs
-namespace NKS WebDev Console.Core.Tests.Cli;
+// tests/NKS.WebDevConsole.Core.Tests/Cli/StatusCommandTests.cs
+namespace NKS.WebDevConsole.Core.Tests.Cli;
 
 public class StatusCommandTests
 {
@@ -1986,7 +1986,7 @@ public class StatusCommandTests
         // Verify the CLI structure compiles and status command exists
         var rootCommand = new System.CommandLine.RootCommand("test");
         var jsonOption = new System.CommandLine.Option<bool>("--json");
-        rootCommand.AddCommand(NKS WebDev Console.Cli.Commands.StatusCommand.Create(jsonOption));
+        rootCommand.AddCommand(NKS.WebDevConsole.Cli.Commands.StatusCommand.Create(jsonOption));
         Assert.Single(rootCommand.Subcommands);
         Assert.Equal("status", rootCommand.Subcommands[0].Name);
     }
@@ -1995,8 +1995,8 @@ public class StatusCommandTests
 
 **Run:**
 ```bash
-dotnet build src/NKS WebDev Console.Cli
-# With daemon running: dotnet run --project src/NKS WebDev Console.Cli -- status
+dotnet build src/NKS.WebDevConsole.Cli
+# With daemon running: dotnet run --project src/NKS.WebDevConsole.Cli -- status
 ```
 
 **Commit:**
@@ -2010,7 +2010,7 @@ git commit -m "feat: CLI with status command and json output"
 ### Task 1.12: Wire CLI to Daemon End-to-End Flow
 
 **Files:**
-- `src/NKS WebDev Console.Cli/Commands/ServiceCommand.cs` (create)
+- `src/NKS.WebDevConsole.Cli/Commands/ServiceCommand.cs` (create)
 
 **Steps:**
 - [ ] Add `wdc start [service]` and `wdc stop [service]` commands
@@ -2020,12 +2020,12 @@ git commit -m "feat: CLI with status command and json output"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Cli/Commands/ServiceCommand.cs
+// src/NKS.WebDevConsole.Cli/Commands/ServiceCommand.cs
 using System.CommandLine;
-using NKS WebDev Console.Core.Client;
+using NKS.WebDevConsole.Core.Client;
 using Spectre.Console;
 
-namespace NKS WebDev Console.Cli.Commands;
+namespace NKS.WebDevConsole.Cli.Commands;
 
 public static class ServiceCommand
 {
@@ -2084,9 +2084,9 @@ public static class ServiceCommand
 **Run:**
 ```bash
 # Terminal 1:
-dotnet run --project src/NKS WebDev Console.Daemon
+dotnet run --project src/NKS.WebDevConsole.Daemon
 # Terminal 2:
-dotnet run --project src/NKS WebDev Console.Cli -- status
+dotnet run --project src/NKS.WebDevConsole.Cli -- status
 ```
 
 **Commit:**
@@ -2100,8 +2100,8 @@ git commit -m "feat: CLI start/stop commands with daemon integration"
 ### Task 1.13: Add Serilog Structured Logging
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Program.cs` (modify -- already partially done in 1.7)
-- `src/NKS WebDev Console.Daemon/appsettings.json` (create)
+- `src/NKS.WebDevConsole.Daemon/Program.cs` (modify -- already partially done in 1.7)
+- `src/NKS.WebDevConsole.Daemon/appsettings.json` (create)
 
 **Steps:**
 - [ ] Configure Serilog with structured JSON output
@@ -2129,7 +2129,7 @@ git commit -m "feat: CLI start/stop commands with daemon integration"
 
 **Run:**
 ```bash
-dotnet run --project src/NKS WebDev Console.Daemon
+dotnet run --project src/NKS.WebDevConsole.Daemon
 # Check that log file exists in logs/ directory
 ```
 
@@ -2144,7 +2144,7 @@ git commit -m "feat: structured serilog logging with file rotation"
 ### Task 1.14: Integration Test -- Daemon Starts, CLI Connects
 
 **Files:**
-- `tests/NKS WebDev Console.Daemon.Tests/Integration/DaemonIntegrationTests.cs` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Integration/DaemonIntegrationTests.cs` (create)
 
 **Steps:**
 - [ ] Write integration test that starts daemon in-process
@@ -2155,17 +2155,17 @@ git commit -m "feat: structured serilog logging with file rotation"
 
 **Code:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Integration/DaemonIntegrationTests.cs
-using NKS WebDev Console.Proto;
+// tests/NKS.WebDevConsole.Daemon.Tests/Integration/DaemonIntegrationTests.cs
+using NKS.WebDevConsole.Proto;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
-using NKS WebDev Console.Daemon.Data;
-using NKS WebDev Console.Daemon.Grpc;
+using NKS.WebDevConsole.Daemon.Data;
+using NKS.WebDevConsole.Daemon.Grpc;
 
-namespace NKS WebDev Console.Daemon.Tests.Integration;
+namespace NKS.WebDevConsole.Daemon.Tests.Integration;
 
 public class DaemonIntegrationTests : IAsyncLifetime
 {
@@ -2183,7 +2183,7 @@ public class DaemonIntegrationTests : IAsyncLifetime
         });
 
         _app = builder.Build();
-        _app.MapGrpcService<NKS WebDev ConsoleGrpcService>();
+        _app.MapGrpcService<NKS.WebDevConsole.GrpcService>();
         await _app.StartAsync();
     }
 
@@ -2226,7 +2226,7 @@ public class DaemonIntegrationTests : IAsyncLifetime
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "DaemonIntegrationTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "DaemonIntegrationTests"
 ```
 
 **Commit:**
@@ -2246,8 +2246,8 @@ git commit -m "test: daemon integration test with gRPC over named pipe"
 ### Task 2.1: Implement ServiceUnit State Machine
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Services/ServiceUnit.cs` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/Services/ServiceUnitTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Services/ServiceUnit.cs` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Services/ServiceUnitTests.cs` (create)
 
 **Steps:**
 - [ ] Create `ServiceUnit` class with state machine from SPEC.md Section 5.1
@@ -2258,11 +2258,11 @@ git commit -m "test: daemon integration test with gRPC over named pipe"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Services/ServiceUnit.cs
-using NKS WebDev Console.Core.Interfaces;
-using NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Daemon/Services/ServiceUnit.cs
+using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
 
-namespace NKS WebDev Console.Daemon.Services;
+namespace NKS.WebDevConsole.Daemon.Services;
 
 public class ServiceUnit
 {
@@ -2346,13 +2346,13 @@ public class ServiceUnit
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Services/ServiceUnitTests.cs
-using NKS WebDev Console.Core.Models;
-using NKS WebDev Console.Daemon.Services;
+// tests/NKS.WebDevConsole.Daemon.Tests/Services/ServiceUnitTests.cs
+using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Daemon.Services;
 using Moq;
-using NKS WebDev Console.Core.Interfaces;
+using NKS.WebDevConsole.Core.Interfaces;
 
-namespace NKS WebDev Console.Daemon.Tests.Services;
+namespace NKS.WebDevConsole.Daemon.Tests.Services;
 
 public class ServiceUnitTests
 {
@@ -2437,7 +2437,7 @@ public class ServiceUnitTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "ServiceUnitTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "ServiceUnitTests"
 ```
 
 **Commit:**
@@ -2451,8 +2451,8 @@ git commit -m "feat: ServiceUnit state machine with restart policy"
 ### Task 2.2: Implement ProcessManager
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Services/ProcessManager.cs` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/Services/ProcessManagerTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Services/ProcessManager.cs` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Services/ProcessManagerTests.cs` (create)
 
 **Steps:**
 - [ ] Create `ProcessManager` that tracks `ServiceUnit` instances
@@ -2463,11 +2463,11 @@ git commit -m "feat: ServiceUnit state machine with restart policy"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Services/ProcessManager.cs
-using NKS WebDev Console.Core.Interfaces;
-using NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Daemon/Services/ProcessManager.cs
+using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
 
-namespace NKS WebDev Console.Daemon.Services;
+namespace NKS.WebDevConsole.Daemon.Services;
 
 public class ProcessManager
 {
@@ -2551,14 +2551,14 @@ public class ProcessManager
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Services/ProcessManagerTests.cs
-using NKS WebDev Console.Core.Interfaces;
-using NKS WebDev Console.Core.Models;
-using NKS WebDev Console.Daemon.Services;
+// tests/NKS.WebDevConsole.Daemon.Tests/Services/ProcessManagerTests.cs
+using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Daemon.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
-namespace NKS WebDev Console.Daemon.Tests.Services;
+namespace NKS.WebDevConsole.Daemon.Tests.Services;
 
 public class ProcessManagerTests
 {
@@ -2596,7 +2596,7 @@ public class ProcessManagerTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "ProcessManagerTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "ProcessManagerTests"
 ```
 
 **Commit:**
@@ -2610,8 +2610,8 @@ git commit -m "feat: ProcessManager with service lifecycle coordination"
 ### Task 2.3: Implement Windows Job Objects
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Services/JobObjects.cs` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/Services/JobObjectsTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Services/JobObjects.cs` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Services/JobObjectsTests.cs` (create)
 
 **Steps:**
 - [ ] Create `JobObjects` class with P/Invoke for Windows kernel32 (per csharp-process-management.md Section 3)
@@ -2623,8 +2623,8 @@ git commit -m "feat: ProcessManager with service lifecycle coordination"
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Services/JobObjectsTests.cs
-namespace NKS WebDev Console.Daemon.Tests.Services;
+// tests/NKS.WebDevConsole.Daemon.Tests/Services/JobObjectsTests.cs
+namespace NKS.WebDevConsole.Daemon.Tests.Services;
 
 public class JobObjectsTests
 {
@@ -2637,7 +2637,7 @@ public class JobObjectsTests
             Assert.True(true, "Skipped on non-Windows");
             return;
         }
-        var handle = NKS WebDev Console.Daemon.Services.JobObjects.CreateKillOnCloseJob();
+        var handle = NKS.WebDevConsole.Daemon.Services.JobObjects.CreateKillOnCloseJob();
         Assert.NotEqual(nint.Zero, handle);
     }
 }
@@ -2645,7 +2645,7 @@ public class JobObjectsTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "JobObjectsTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "JobObjectsTests"
 ```
 
 **Commit:**
@@ -2659,9 +2659,9 @@ git commit -m "feat: windows job objects for child process cleanup"
 ### Task 2.4: Implement TemplateEngine (Scriban)
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Config/TemplateEngine.cs` (create)
-- `src/NKS WebDev Console.Daemon/Config/Templates/apache-vhost.conf` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/Config/TemplateEngineTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Config/TemplateEngine.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Config/Templates/apache-vhost.conf` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Config/TemplateEngineTests.cs` (create)
 
 **Steps:**
 - [ ] Create `TemplateEngine` that loads Scriban templates from embedded resources
@@ -2672,12 +2672,12 @@ git commit -m "feat: windows job objects for child process cleanup"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Config/TemplateEngine.cs
+// src/NKS.WebDevConsole.Daemon/Config/TemplateEngine.cs
 using Scriban;
 using Scriban.Runtime;
-using NKS WebDev Console.Core.Configuration;
+using NKS.WebDevConsole.Core.Configuration;
 
-namespace NKS WebDev Console.Daemon.Config;
+namespace NKS.WebDevConsole.Daemon.Config;
 
 public class TemplateEngine
 {
@@ -2730,7 +2730,7 @@ public class TemplateEngine
         {
             using var stream = assembly.GetManifestResourceStream(name)!;
             using var reader = new StreamReader(stream);
-            var key = Path.GetFileName(name.Replace("NKS WebDev Console.Daemon.Config.Templates.", ""));
+            var key = Path.GetFileName(name.Replace("NKS.WebDevConsole.Daemon.Config.Templates.", ""));
             _templates[key] = Template.Parse(reader.ReadToEnd());
         }
     }
@@ -2790,11 +2790,11 @@ public class TemplateEngine
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Config/TemplateEngineTests.cs
-using NKS WebDev Console.Core.Configuration;
-using NKS WebDev Console.Daemon.Config;
+// tests/NKS.WebDevConsole.Daemon.Tests/Config/TemplateEngineTests.cs
+using NKS.WebDevConsole.Core.Configuration;
+using NKS.WebDevConsole.Daemon.Config;
 
-namespace NKS WebDev Console.Daemon.Tests.Config;
+namespace NKS.WebDevConsole.Daemon.Tests.Config;
 
 public class TemplateEngineTests
 {
@@ -2830,7 +2830,7 @@ public class TemplateEngineTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "TemplateEngineTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "TemplateEngineTests"
 ```
 
 **Commit:**
@@ -2844,8 +2844,8 @@ git commit -m "feat: Scriban template engine with Apache vhost template"
 ### Task 2.5: Implement ConfigValidator
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Config/ConfigValidator.cs` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/Config/ConfigValidatorTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Config/ConfigValidator.cs` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Config/ConfigValidatorTests.cs` (create)
 
 **Steps:**
 - [ ] Create `ConfigValidator` using CliWrap to run `httpd -t -f configPath`
@@ -2855,12 +2855,12 @@ git commit -m "feat: Scriban template engine with Apache vhost template"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Config/ConfigValidator.cs
+// src/NKS.WebDevConsole.Daemon/Config/ConfigValidator.cs
 using CliWrap;
 using CliWrap.Buffered;
-using NKS WebDev Console.Core.Models;
+using NKS.WebDevConsole.Core.Models;
 
-namespace NKS WebDev Console.Daemon.Config;
+namespace NKS.WebDevConsole.Daemon.Config;
 
 public class ConfigValidator
 {
@@ -2903,10 +2903,10 @@ public class ConfigValidator
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Config/ConfigValidatorTests.cs
-using NKS WebDev Console.Daemon.Config;
+// tests/NKS.WebDevConsole.Daemon.Tests/Config/ConfigValidatorTests.cs
+using NKS.WebDevConsole.Daemon.Config;
 
-namespace NKS WebDev Console.Daemon.Tests.Config;
+namespace NKS.WebDevConsole.Daemon.Tests.Config;
 
 public class ConfigValidatorTests
 {
@@ -2923,7 +2923,7 @@ public class ConfigValidatorTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "ConfigValidatorTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "ConfigValidatorTests"
 ```
 
 **Commit:**
@@ -2937,8 +2937,8 @@ git commit -m "feat: config validator with httpd -t via CliWrap"
 ### Task 2.6: Implement AtomicWriter
 
 **Files:**
-- `src/NKS WebDev Console.Daemon/Config/AtomicWriter.cs` (create)
-- `tests/NKS WebDev Console.Daemon.Tests/Config/AtomicWriterTests.cs` (create)
+- `src/NKS.WebDevConsole.Daemon/Config/AtomicWriter.cs` (create)
+- `tests/NKS.WebDevConsole.Daemon.Tests/Config/AtomicWriterTests.cs` (create)
 
 **Steps:**
 - [ ] Implement atomic write: write to .tmp, validate, rename to target
@@ -2948,8 +2948,8 @@ git commit -m "feat: config validator with httpd -t via CliWrap"
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Config/AtomicWriter.cs
-namespace NKS WebDev Console.Daemon.Config;
+// src/NKS.WebDevConsole.Daemon/Config/AtomicWriter.cs
+namespace NKS.WebDevConsole.Daemon.Config;
 
 public class AtomicWriter
 {
@@ -3008,11 +3008,11 @@ public class AtomicWriter
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Daemon.Tests/Config/AtomicWriterTests.cs
-using NKS WebDev Console.Core.Models;
-using NKS WebDev Console.Daemon.Config;
+// tests/NKS.WebDevConsole.Daemon.Tests/Config/AtomicWriterTests.cs
+using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Daemon.Config;
 
-namespace NKS WebDev Console.Daemon.Tests.Config;
+namespace NKS.WebDevConsole.Daemon.Tests.Config;
 
 public class AtomicWriterTests
 {
@@ -3074,7 +3074,7 @@ public class AtomicWriterTests
 
 **Run:**
 ```bash
-dotnet test tests/NKS WebDev Console.Daemon.Tests --filter "AtomicWriterTests"
+dotnet test tests/NKS.WebDevConsole.Daemon.Tests --filter "AtomicWriterTests"
 ```
 
 **Commit:**
@@ -3093,7 +3093,7 @@ Due to the length of this document, tasks 2.7 through 2.12 follow the same patte
 
 ### Task 2.7: Implement ApacheModule
 
-**Files:** `src/NKS WebDev Console.Daemon/Modules/ApacheModule.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Modules/ApacheModule.cs`, test file
 
 Implement `IServiceModule` for Apache. Start via `Process.Start("httpd")`, stop via `httpd -k stop` (Windows) or `apachectl graceful-stop` (Unix). Health check: TCP port 80 open. Use CliWrap for `httpd -t` validation. Reference: csharp-process-management.md Section 2, SPEC.md Section 9.
 
@@ -3103,7 +3103,7 @@ Implement `IServiceModule` for Apache. Start via `Process.Start("httpd")`, stop 
 
 ### Task 2.8: Implement MySqlModule
 
-**Files:** `src/NKS WebDev Console.Daemon/Modules/MySqlModule.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Modules/MySqlModule.cs`, test file
 
 Implement `IServiceModule` for MySQL. Start via `Process.Start("mysqld", "--standalone")`. Stop via CliWrap `mysqladmin shutdown`. Health check: `mysqladmin ping`. Init data dir on first run: `mysqld --initialize-insecure`. Reference: csharp-process-management.md Sections 2 & 5.
 
@@ -3113,7 +3113,7 @@ Implement `IServiceModule` for MySQL. Start via `Process.Start("mysqld", "--stan
 
 ### Task 2.9: Implement PhpFpmModule
 
-**Files:** `src/NKS WebDev Console.Daemon/Modules/PhpFpmModule.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Modules/PhpFpmModule.cs`, test file
 
 Implement `IServiceModule` for PHP-FPM (Unix) / php-cgi.exe (Windows). Multi-version support with deterministic port allocation (9056, 9074, 9082, etc. per SPEC.md Section 9). Per-site pool config generation. Reference: csharp-process-management.md Section 8.
 
@@ -3123,7 +3123,7 @@ Implement `IServiceModule` for PHP-FPM (Unix) / php-cgi.exe (Windows). Multi-ver
 
 ### Task 2.10: Implement HealthMonitor
 
-**Files:** `src/NKS WebDev Console.Daemon/Services/HealthMonitor.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Services/HealthMonitor.cs`, test file
 
 Background task polling every 5 seconds. Check PID alive, TCP port open, service-specific checks. Trigger restart policy on failure. Collect metrics (CPU%, RAM). Reference: csharp-process-management.md Section 5.
 
@@ -3133,7 +3133,7 @@ Background task polling every 5 seconds. Check PID alive, TCP port open, service
 
 ### Task 2.11: Implement MetricsCollector
 
-**Files:** `src/NKS WebDev Console.Daemon/Services/MetricsCollector.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Services/MetricsCollector.cs`, test file
 
 Collect `Process.TotalProcessorTime` and `Process.WorkingSet64` per service. Expose via gRPC `StreamMetrics`. Use `Channel<T>` for bounded pub/sub.
 
@@ -3143,7 +3143,7 @@ Collect `Process.TotalProcessorTime` and `Process.WorkingSet64` per service. Exp
 
 ### Task 2.12: Wire gRPC Service Management RPCs
 
-**Files:** `src/NKS WebDev Console.Daemon/Grpc/NKS WebDev ConsoleGrpcService.cs` (modify)
+**Files:** `src/NKS.WebDevConsole.Daemon/Grpc/NKS.WebDevConsole.GrpcService.cs` (modify)
 
 Implement `StartService`, `StopService`, `RestartService`, `ListServices`, `GetServiceStatus` RPCs by delegating to `ProcessManager`. Return proper gRPC status codes for errors (SPEC.md Section 7 error table).
 
@@ -3159,7 +3159,7 @@ Implement `StartService`, `StopService`, `RestartService`, `ListServices`, `GetS
 
 ### Task 3.1: Implement VirtualHostManager
 
-**Files:** `src/NKS WebDev Console.Daemon/Config/VirtualHostManager.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Config/VirtualHostManager.cs`, test file
 
 CRUD for sites: create TOML file at `~/.wdc/sites/{domain}.toml`, insert SQLite row, run config pipeline. Reference: SPEC.md Section 11 create site flow (10-step sequence).
 
@@ -3169,7 +3169,7 @@ CRUD for sites: create TOML file at `~/.wdc/sites/{domain}.toml`, insert SQLite 
 
 ### Task 3.2: Config Pipeline End-to-End
 
-**Files:** `src/NKS WebDev Console.Daemon/Config/ConfigPipeline.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Config/ConfigPipeline.cs`, test file
 
 Wire together: SiteConfigLoader (TOML) -> TemplateEngine (Scriban) -> ConfigValidator (httpd -t) -> AtomicWriter (temp + rename). Archive history. Reference: SPEC.md Section 8 pipeline diagram.
 
@@ -3179,7 +3179,7 @@ Wire together: SiteConfigLoader (TOML) -> TemplateEngine (Scriban) -> ConfigVali
 
 ### Task 3.3: Implement HostsFileManager
 
-**Files:** `src/NKS WebDev Console.Daemon/Dns/HostsFileManager.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Dns/HostsFileManager.cs`, test file
 
 Manage `# >>> NKS WebDev Console Managed <<<` block in hosts file. Add/remove `127.0.0.1 domain` entries. Never touch content outside managed block. Cross-platform paths. Reference: SPEC.md Section 12.
 
@@ -3189,7 +3189,7 @@ Manage `# >>> NKS WebDev Console Managed <<<` block in hosts file. Add/remove `1
 
 ### Task 3.4: UAC Elevation Helper (Windows)
 
-**Files:** `src/NKS WebDev Console.Daemon/Dns/ElevationHelper.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Dns/ElevationHelper.cs`, test file
 
 Use `ProcessStartInfo { Verb = "runas" }` for hosts file writes on Windows. Validate payload (only managed block operations). Reference: SPEC.md Section 12.
 
@@ -3199,7 +3199,7 @@ Use `ProcessStartInfo { Verb = "runas" }` for hosts file writes on Windows. Vali
 
 ### Task 3.5: Implement MkcertManager
 
-**Files:** `src/NKS WebDev Console.Daemon/Ssl/MkcertManager.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Ssl/MkcertManager.cs`, test file
 
 Wrap mkcert binary via CliWrap. CA install (`mkcert -install`), per-site cert generation. Store at `~/.wdc/ssl/sites/{domain}/`. Track in SQLite certificates table. Reference: SPEC.md Section 13.
 
@@ -3209,16 +3209,16 @@ Wrap mkcert binary via CliWrap. CA install (`mkcert -install`), per-site cert ge
 
 ### Task 3.6: Framework Auto-Detection
 
-**Files:** `src/NKS WebDev Console.Core/Configuration/FrameworkDetector.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Core/Configuration/FrameworkDetector.cs`, test file
 
 Detect Nette (composer.json contains nette/application), Laravel (artisan file), WordPress (wp-config.php), Symfony. Set document root accordingly. Reference: SPEC.md Section 11.
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Core/Configuration/FrameworkDetector.cs
-using NKS WebDev Console.Core.Models;
+// src/NKS.WebDevConsole.Core/Configuration/FrameworkDetector.cs
+using NKS.WebDevConsole.Core.Models;
 
-namespace NKS WebDev Console.Core.Configuration;
+namespace NKS.WebDevConsole.Core.Configuration;
 
 public static class FrameworkDetector
 {
@@ -3255,11 +3255,11 @@ public static class FrameworkDetector
 
 **Test:**
 ```csharp
-// tests/NKS WebDev Console.Core.Tests/Configuration/FrameworkDetectorTests.cs
-using NKS WebDev Console.Core.Configuration;
-using NKS WebDev Console.Core.Models;
+// tests/NKS.WebDevConsole.Core.Tests/Configuration/FrameworkDetectorTests.cs
+using NKS.WebDevConsole.Core.Configuration;
+using NKS.WebDevConsole.Core.Models;
 
-namespace NKS WebDev Console.Core.Tests.Configuration;
+namespace NKS.WebDevConsole.Core.Tests.Configuration;
 
 public class FrameworkDetectorTests
 {
@@ -3311,16 +3311,16 @@ public class FrameworkDetectorTests
 
 ### Task 3.7: Domain Validation
 
-**Files:** `src/NKS WebDev Console.Core/Configuration/DomainValidator.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Core/Configuration/DomainValidator.cs`, test file
 
 Strict regex per SPEC.md Section 11. Reject: whitespace, null bytes, path traversal, shell metacharacters, quotes, angle brackets.
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Core/Configuration/DomainValidator.cs
+// src/NKS.WebDevConsole.Core/Configuration/DomainValidator.cs
 using System.Text.RegularExpressions;
 
-namespace NKS WebDev Console.Core.Configuration;
+namespace NKS.WebDevConsole.Core.Configuration;
 
 public static partial class DomainValidator
 {
@@ -3354,7 +3354,7 @@ public static partial class DomainValidator
 
 ### Task 3.8: CLI Site and SSL Commands
 
-**Files:** `src/NKS WebDev Console.Cli/Commands/SiteCommand.cs`, `SslCommand.cs`, `DnsCommand.cs`
+**Files:** `src/NKS.WebDevConsole.Cli/Commands/SiteCommand.cs`, `SslCommand.cs`, `DnsCommand.cs`
 
 Implement: `wdc new <domain>` with flags (--php, --ssl, --db, --nette), `site:list`, `site:delete`, `ssl:create`, `dns:flush`. Wire to gRPC RPCs. Reference: SPEC.md Section 15.
 
@@ -3364,7 +3364,7 @@ Implement: `wdc new <domain>` with flags (--php, --ssl, --db, --nette), `site:li
 
 ### Task 3.9: Integration Test -- Full Site Creation
 
-**Files:** `tests/NKS WebDev Console.Daemon.Tests/Integration/SiteCreationTests.cs`
+**Files:** `tests/NKS.WebDevConsole.Daemon.Tests/Integration/SiteCreationTests.cs`
 
 End-to-end test: create site via gRPC -> verify TOML file exists -> verify generated Apache config -> verify hosts entry -> verify SQLite row.
 
@@ -3380,7 +3380,7 @@ End-to-end test: create site via gRPC -> verify TOML file exists -> verify gener
 
 ### Task 4.1: Dashboard Screen with ServiceCards
 
-**Files:** `src/NKS WebDev Console.Gui/Views/DashboardPage.axaml`, `ViewModels/DashboardViewModel.cs`, `Controls/ServiceCard.axaml`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/DashboardPage.axaml`, `ViewModels/DashboardViewModel.cs`, `Controls/ServiceCard.axaml`
 
 Implement per avalonia-ui-patterns.md Sections 3 and 5. Service cards with name, state dot, CPU/RAM, Start/Stop/Restart buttons.
 
@@ -3400,7 +3400,7 @@ Add CartesianChart with LineSeries for CPU % over 60-second window. 30 FPS throt
 
 ### Task 4.3: Sites Manager Screen
 
-**Files:** `src/NKS WebDev Console.Gui/Views/SitesPage.axaml`, `ViewModels/SitesViewModel.cs`, `Controls/SiteCard.axaml`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/SitesPage.axaml`, `ViewModels/SitesViewModel.cs`, `Controls/SiteCard.axaml`
 
 Per avalonia-ui-patterns.md Sections 4 and 6. Search/filter, WrapLayout card grid, empty state, SiteCard with domain/SSL/PHP badge.
 
@@ -3410,7 +3410,7 @@ Per avalonia-ui-patterns.md Sections 4 and 6. Search/filter, WrapLayout card gri
 
 ### Task 4.4: Create Site Wizard
 
-**Files:** `src/NKS WebDev Console.Gui/Views/CreateSiteDialog.axaml`, `ViewModels/CreateSiteWizardViewModel.cs`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/CreateSiteDialog.axaml`, `ViewModels/CreateSiteWizardViewModel.cs`
 
 4-step wizard per avalonia-ui-patterns.md Section 7. Domain + docroot -> PHP version -> SSL/webserver -> database. Carousel or TransitioningContentControl.
 
@@ -3420,7 +3420,7 @@ Per avalonia-ui-patterns.md Sections 4 and 6. Search/filter, WrapLayout card gri
 
 ### Task 4.5: PHP Manager Screen
 
-**Files:** `src/NKS WebDev Console.Gui/Views/PhpManagerPage.axaml`, `ViewModels/PhpManagerViewModel.cs`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/PhpManagerPage.axaml`, `ViewModels/PhpManagerViewModel.cs`
 
 List installed PHP versions, default badge, extensions count, site count. Set Default button.
 
@@ -3430,7 +3430,7 @@ List installed PHP versions, default badge, extensions count, site count. Set De
 
 ### Task 4.6: SSL Manager Screen
 
-**Files:** `src/NKS WebDev Console.Gui/Views/SslManagerPage.axaml`, `ViewModels/SslManagerViewModel.cs`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/SslManagerPage.axaml`, `ViewModels/SslManagerViewModel.cs`
 
 CA status, cert list with expiry dates, Generate Certificate button, expiry warnings.
 
@@ -3440,7 +3440,7 @@ CA status, cert list with expiry dates, Generate Certificate button, expiry warn
 
 ### Task 4.7: Log Viewer with gRPC StreamLogs
 
-**Files:** `src/NKS WebDev Console.Gui/Views/LogViewerPage.axaml`, `ViewModels/LogViewerViewModel.cs`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/LogViewerPage.axaml`, `ViewModels/LogViewerViewModel.cs`
 
 Service selector dropdown, gRPC `StreamLogs` subscription, auto-scroll with pause-on-select, level filter (info/warn/error).
 
@@ -3450,7 +3450,7 @@ Service selector dropdown, gRPC `StreamLogs` subscription, auto-scroll with paus
 
 ### Task 4.8: System Tray with NativeMenu
 
-**Files:** `src/NKS WebDev Console.Gui/App.axaml` (modify), `ViewModels/AppViewModel.cs` (create)
+**Files:** `src/NKS.WebDevConsole.Gui/App.axaml` (modify), `ViewModels/AppViewModel.cs` (create)
 
 TrayIcon with context menu per avalonia-ui-patterns.md Section 1. Service status dots, Start/Stop All, Recent Sites, Quit.
 
@@ -3486,7 +3486,7 @@ Per avalonia-ui-patterns.md Sections 8 and 1. ComboBox with Dark/Light/System, `
 
 ### Task 5.1: All Remaining CLI Commands
 
-**Files:** `src/NKS WebDev Console.Cli/Commands/PhpCommand.cs`, `DbCommand.cs`, `ConfigCommand.cs`, `DaemonCommand.cs`
+**Files:** `src/NKS.WebDevConsole.Cli/Commands/PhpCommand.cs`, `DbCommand.cs`, `ConfigCommand.cs`, `DaemonCommand.cs`
 
 Implement: `php:list`, `php:default`, `db:list`, `db:create`, `db:drop`, `db:import`, `db:export`, `config:get`, `config:set`, `config:rebuild`, `daemon start/stop/restart`.
 
@@ -3496,7 +3496,7 @@ Implement: `php:list`, `php:default`, `db:list`, `db:create`, `db:drop`, `db:imp
 
 ### Task 5.2: Shell Completions
 
-**Files:** modify `src/NKS WebDev Console.Cli/Program.cs`
+**Files:** modify `src/NKS.WebDevConsole.Cli/Program.cs`
 
 Enable System.CommandLine built-in completions. `wdc completion bash|zsh|fish|powershell` output.
 
@@ -3516,7 +3516,7 @@ Ensure every command respects `--json` global option. Error format: `{"error": t
 
 ### Task 5.4: Database Manager
 
-**Files:** `src/NKS WebDev Console.Daemon/Db/DatabaseManager.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Db/DatabaseManager.cs`, test file
 
 Create/drop/import/export MySQL databases via CliWrap. Stream import/export for large files. Reference: SPEC.md Section 14.
 
@@ -3526,7 +3526,7 @@ Create/drop/import/export MySQL databases via CliWrap. Stream import/export for 
 
 ### Task 5.5: Settings Screen in GUI
 
-**Files:** `src/NKS WebDev Console.Gui/Views/SettingsPage.axaml`, `ViewModels/SettingsViewModel.cs`
+**Files:** `src/NKS.WebDevConsole.Gui/Views/SettingsPage.axaml`, `ViewModels/SettingsViewModel.cs`
 
 Per avalonia-ui-patterns.md Section 8. Port config, DNS settings, default PHP, theme, startup options.
 
@@ -3552,17 +3552,17 @@ Ctrl+K command palette, Ctrl+N new site, Ctrl+1-7 sidebar sections, F5 refresh, 
 
 ### Task 6.1: Plugin System (AssemblyLoadContext)
 
-**Files:** `src/NKS WebDev Console.Daemon/Plugin/PluginLoader.cs`, `PluginLoadContext.cs`, test file
+**Files:** `src/NKS.WebDevConsole.Daemon/Plugin/PluginLoader.cs`, `PluginLoadContext.cs`, test file
 
 Implement `PluginLoader` per SPEC.md Section 17. Load `IServiceModule` implementations from `~/.wdc/plugins/{id}/`. Parse `plugin.json` manifest. `AssemblyLoadContext.Unload()` for hot-unload.
 
 **Code:**
 ```csharp
-// src/NKS WebDev Console.Daemon/Plugin/PluginLoadContext.cs
+// src/NKS.WebDevConsole.Daemon/Plugin/PluginLoadContext.cs
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace NKS WebDev Console.Daemon.Plugin;
+namespace NKS.WebDevConsole.Daemon.Plugin;
 
 public class PluginLoadContext : AssemblyLoadContext
 {
@@ -3597,7 +3597,7 @@ Ensure all built-in service modules implement `IServiceModule` cleanly. Register
 
 ### Task 6.3: Redis Plugin
 
-**Files:** `src/NKS WebDev Console.Plugin.Redis/RedisModule.cs`, `plugin.json`
+**Files:** `src/NKS.WebDevConsole.Plugin.Redis/RedisModule.cs`, `plugin.json`
 
 Implement `IServiceModule` for Redis 7.x. Start `redis-server`, stop via `redis-cli shutdown`, health check TCP 6379.
 
@@ -3607,7 +3607,7 @@ Implement `IServiceModule` for Redis 7.x. Start `redis-server`, stop via `redis-
 
 ### Task 6.4: Mailpit Plugin
 
-**Files:** `src/NKS WebDev Console.Plugin.Mailpit/MailpitModule.cs`, `plugin.json`
+**Files:** `src/NKS.WebDevConsole.Plugin.Mailpit/MailpitModule.cs`, `plugin.json`
 
 Implement `IServiceModule` for Mailpit. SMTP port 1025, UI port 8025. Health check HTTP `/api/v1/info`.
 
@@ -3617,7 +3617,7 @@ Implement `IServiceModule` for Mailpit. SMTP port 1025, UI port 8025. Health che
 
 ### Task 6.5: WiX MSI Installer
 
-**Files:** `installer/NKS WebDev Console.wxs`, `installer/build-msi.ps1`
+**Files:** `installer/NKS.WebDevConsole.wxs`, `installer/build-msi.ps1`
 
 WiX installer for Windows. Install to `C:\Program Files\NKS WebDev Console\`. Add to PATH. Register elevation helper scheduled task. Reference: SPEC.md Section 21.
 
@@ -3627,7 +3627,7 @@ WiX installer for Windows. Install to `C:\Program Files\NKS WebDev Console\`. Ad
 
 ### Task 6.6: Velopack Auto-Updater
 
-**Files:** `src/NKS WebDev Console.Daemon/Updates/UpdateChecker.cs`
+**Files:** `src/NKS.WebDevConsole.Daemon/Updates/UpdateChecker.cs`
 
 Check for updates every 24 hours. Download delta updates. Support stable/beta channels. Reference: SPEC.md Section 21.
 
@@ -3637,7 +3637,7 @@ Check for updates every 24 hours. Download delta updates. Support stable/beta ch
 
 ### Task 6.7: MAMP PRO Migration Tool
 
-**Files:** `src/NKS WebDev Console.Cli/Commands/MigrateCommand.cs`, `src/NKS WebDev Console.Daemon/Migration/MampImporter.cs`
+**Files:** `src/NKS.WebDevConsole.Cli/Commands/MigrateCommand.cs`, `src/NKS.WebDevConsole.Daemon/Migration/MampImporter.cs`
 
 Read MAMP PRO SQLite database, extract site configs, convert to NKS WebDev Console TOML format. `wdc migrate:mamp-pro <mamp-db-path>`. Reference: SPEC.md Section 1 (pain points).
 
@@ -3661,11 +3661,11 @@ Read MAMP PRO SQLite database, extract site configs, convert to NKS WebDev Conso
 **Estimated time:** 12 weeks for a solo developer. Each task is 2-15 minutes for a skilled C# developer with Claude Code assistance.
 
 **Key files** (most important to get right):
-- `src/NKS WebDev Console.Core/Proto/wdc.proto` -- API contract for entire system
-- `src/NKS WebDev Console.Daemon/Config/ConfigPipeline.cs` -- eliminates MAMP config corruption
-- `src/NKS WebDev Console.Daemon/Services/ServiceUnit.cs` -- state machine for all service lifecycle
-- `src/NKS WebDev Console.Core/Configuration/SiteConfig.cs` -- TOML source of truth model
-- `src/NKS WebDev Console.Daemon/Services/ProcessManager.cs` -- coordinates all service modules
+- `src/NKS.WebDevConsole.Core/Proto/wdc.proto` -- API contract for entire system
+- `src/NKS.WebDevConsole.Daemon/Config/ConfigPipeline.cs` -- eliminates MAMP config corruption
+- `src/NKS.WebDevConsole.Daemon/Services/ServiceUnit.cs` -- state machine for all service lifecycle
+- `src/NKS.WebDevConsole.Core/Configuration/SiteConfig.cs` -- TOML source of truth model
+- `src/NKS.WebDevConsole.Daemon/Services/ProcessManager.cs` -- coordinates all service modules
 
 ---
 

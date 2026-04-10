@@ -421,10 +421,10 @@ Planned directories:
 ## Support Resources Included
 
 - **Discord Community**: https://discord.gg/nks-wdc
-- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **GitHub Issues**: https://github.com/nks-hub/webdev-console/issues
 - **Email Support**: support@nks-wdc.sh
 - **Documentation Portal**: https://docs.nks-wdc.sh
-- **Diagnostic Tool**: `nks-wdc diagnose` command
+- **Diagnostic Tool**: `wdc diagnose` command
 
 ---
 

@@ -62,7 +62,7 @@ Or use the GUI: **File → New Site** and follow the wizard.
 
 - Browser: `https://my-project.local`
 - Database: `phpMyAdmin → http://localhost/phpmyadmin`
-- CLI: `nks-wdc database list`
+- CLI: `wdc database list`
 
 All services start automatically. No configuration needed.
 
@@ -118,7 +118,7 @@ Both are fully featured. Use whichever fits your workflow.
 
 - **Documentation**: https://docs.nks-wdc.sh
 - **Discord Community**: https://discord.gg/nks-wdc
-- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **GitHub Issues**: https://github.com/nks-hub/webdev-console/issues
 - **Email Support**: support@nks-wdc.sh (Pro tier)
 
 ## License

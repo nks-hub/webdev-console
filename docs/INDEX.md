@@ -209,7 +209,7 @@
 
 ### Support Channels
 - **Discord Community**: https://discord.gg/nks-wdc
-- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **GitHub Issues**: https://github.com/nks-hub/webdev-console/issues
 - **Email Support**: support@nks-wdc.sh (Pro tier)
 - **Documentation**: https://docs.nks-wdc.sh
 
@@ -240,7 +240,7 @@ Include the output when asking for help.
 
 Found an issue in the documentation? Want to improve it?
 
-→ Open an issue or PR at: https://github.com/nks-wdc/nks-wdc
+→ Open an issue or PR at: https://github.com/nks-hub/webdev-console
 
 ---
 

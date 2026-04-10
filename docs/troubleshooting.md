@@ -641,10 +641,10 @@ rm -rf /path/to/project
 
 ## Getting More Help
 
-- **Check logs**: `nks-wdc logs [service]` (nginx, php-fpm, mysql, etc.)
-- **Run diagnostics**: `nks-wdc diagnose`
+- **Check logs**: `wdc logs [service]` (nginx, php-fpm, mysql, etc.)
+- **Run diagnostics**: `wdc diagnose`
 - **Community**: https://discord.gg/nks-wdc
-- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **GitHub Issues**: https://github.com/nks-hub/webdev-console/issues
 
 ---
 
