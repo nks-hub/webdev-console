@@ -261,7 +261,7 @@ function selectSite(row: SiteInfo) {
 async function loadHistory(domain: string) {
   siteHistory.value = []
   try {
-    const res = await fetch(`http://localhost:5199/api/sites/${domain}/history`, {
+    const res = await fetch(`${daemonBase()}/api/sites/${domain}/history`, {
       headers: sitesStore.authHeaders(),
     })
     if (res.ok) {
@@ -325,7 +325,7 @@ async function createSite() {
 
 async function detectFramework(domain: string) {
   try {
-    const res = await fetch(`http://localhost:5199/api/sites/${domain}/detect-framework`, {
+    const res = await fetch(`${daemonBase()}/api/sites/${domain}/detect-framework`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...sitesStore.authHeaders() },
     })
@@ -356,7 +356,7 @@ async function confirmDelete(domain: string) {
 async function reapplyAll() {
   reapplying.value = true
   try {
-    const res = await fetch('http://localhost:5199/api/sites/reapply-all', {
+    const res = await fetch(`${daemonBase()}/api/sites/reapply-all`, {
       method: 'POST',
       headers: sitesStore.authHeaders(),
     })

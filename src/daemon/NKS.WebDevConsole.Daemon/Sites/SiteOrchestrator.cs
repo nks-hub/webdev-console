@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Daemon.Plugin;
 
 namespace NKS.WebDevConsole.Daemon.Sites;
 
@@ -48,6 +49,40 @@ public sealed class SiteOrchestrator
         else
         {
             _logger.LogWarning("Apache module not registered — skipping vhost generation");
+        }
+
+        // 1b. SSL — generate certificate if sslEnabled
+        if (site.SslEnabled)
+        {
+            try
+            {
+                var pluginLoader = _sp.GetService<PluginLoader>();
+                var sslPlugin = pluginLoader?.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
+                if (sslPlugin != null)
+                {
+                    var genMethod = sslPlugin.Instance.GetType().GetMethod("GenerateCert");
+                    if (genMethod != null)
+                    {
+                        var aliases = site.Aliases ?? Array.Empty<string>();
+                        var task = (Task)genMethod.Invoke(sslPlugin.Instance, new object[] { site.Domain, aliases })!;
+                        await task;
+                        var resultProp = task.GetType().GetProperty("Result");
+                        var result = resultProp?.GetValue(task);
+                        if (result != null)
+                            _logger.LogInformation("SSL certificate generated for {Domain}", site.Domain);
+                        else
+                            _logger.LogWarning("SSL certificate generation returned null for {Domain} — mkcert may not be installed", site.Domain);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("SSL plugin not loaded — skipping cert generation for {Domain}", site.Domain);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate SSL certificate for {Domain}", site.Domain);
+            }
         }
 
         // 2. PHP — ensure module is running (it manages all installed versions internally)

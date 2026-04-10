@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Dapper;
 using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
@@ -323,12 +324,13 @@ app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrat
     return Results.Created($"/api/sites/{created.Domain}", created);
 });
 
-app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm) =>
+app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     if (sm.Get(domain) is null)
         return Results.NotFound();
     site.Domain = domain;
     var updated = await sm.UpdateAsync(site);
+    await orchestrator.ApplyAsync(updated);
     return Results.Ok(updated);
 });
 
@@ -516,14 +518,79 @@ app.MapPost("/api/plugins/{id}/disable", (string id) =>
 app.MapGet("/api/ssl/certs", () =>
 {
     var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
-    if (sslPlugin == null) return Results.Ok(Array.Empty<object>());
+    if (sslPlugin == null) return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
     var method = sslPlugin.Instance.GetType().GetMethod("GetCerts");
     if (method != null)
     {
-        var certs = method.Invoke(sslPlugin.Instance, null);
-        return Results.Ok(certs);
+        var result = method.Invoke(sslPlugin.Instance, null);
+        if (result is IDictionary<string, object> dict)
+            return Results.Ok(new { certs = dict.Values, mkcertInstalled = true });
+        // IReadOnlyDictionary — enumerate via reflection
+        var values = new List<object>();
+        if (result is System.Collections.IEnumerable enumerable)
+            foreach (var item in enumerable)
+            {
+                var kvp = item.GetType();
+                var valProp = kvp.GetProperty("Value");
+                if (valProp != null) values.Add(valProp.GetValue(item)!);
+                else values.Add(item);
+            }
+        return Results.Ok(new { certs = values, mkcertInstalled = true });
     }
-    return Results.Ok(Array.Empty<object>());
+    return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
+});
+
+app.MapPost("/api/ssl/install-ca", async () =>
+{
+    var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
+    if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
+    var method = sslPlugin.Instance.GetType().GetMethod("InstallCA");
+    if (method == null) return Results.BadRequest(new { ok = false, message = "InstallCA method not found" });
+    var task = (Task<bool>)method.Invoke(sslPlugin.Instance, null)!;
+    var success = await task;
+    return success
+        ? Results.Ok(new { ok = true, message = "CA installed" })
+        : Results.BadRequest(new { ok = false, message = "Failed to install CA" });
+});
+
+app.MapPost("/api/ssl/generate", async (HttpContext ctx) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object>>();
+    if (body == null || !body.ContainsKey("domain"))
+        return Results.BadRequest(new { ok = false, message = "domain required" });
+
+    var domain = body["domain"]?.ToString() ?? "";
+    var aliases = Array.Empty<string>();
+    if (body.TryGetValue("aliases", out var aliasesObj) && aliasesObj is JsonElement aliasArr && aliasArr.ValueKind == JsonValueKind.Array)
+        aliases = aliasArr.EnumerateArray().Select(a => a.GetString() ?? "").Where(s => s.Length > 0).ToArray();
+
+    var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
+    if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded. Install mkcert first." });
+
+    var method = sslPlugin.Instance.GetType().GetMethod("GenerateCert");
+    if (method == null) return Results.BadRequest(new { ok = false, message = "GenerateCert method not found" });
+
+    var task = (Task)method.Invoke(sslPlugin.Instance, new object[] { domain, aliases })!;
+    await task;
+    var resultProp = task.GetType().GetProperty("Result");
+    var result = resultProp?.GetValue(task);
+
+    if (result == null)
+        return Results.BadRequest(new { ok = false, message = "mkcert not installed or failed" });
+
+    return Results.Ok(new { ok = true, domain, message = $"Certificate generated for {domain}" });
+});
+
+app.MapDelete("/api/ssl/certs/{domain}", (string domain) =>
+{
+    var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
+    if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
+    var method = sslPlugin.Instance.GetType().GetMethod("RevokeCert");
+    if (method == null) return Results.BadRequest(new { ok = false, message = "RevokeCert not found" });
+    var success = (bool)method.Invoke(sslPlugin.Instance, new object[] { domain })!;
+    return success
+        ? Results.Ok(new { ok = true, message = $"Certificate for {domain} revoked" })
+        : Results.NotFound(new { ok = false, message = $"No certificate found for {domain}" });
 });
 
 // Settings CRUD
