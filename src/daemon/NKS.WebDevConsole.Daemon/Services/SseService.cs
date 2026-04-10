@@ -25,28 +25,37 @@ public class SseService
         var json = JsonSerializer.Serialize(data);
         var message = $"event: {eventType}\ndata: {json}\n\n";
 
-        var deadClients = new List<string>();
-        foreach (var (id, client) in _clients)
+        // Snapshot the current client set so concurrent add/remove doesn't race.
+        // Writes are sent in PARALLEL — previous sequential version blocked the whole
+        // broadcast on any slow client, which broke live metrics when one renderer
+        // paused or the network stalled.
+        var snapshot = _clients.ToArray();
+        if (snapshot.Length == 0) return;
+
+        var tasks = snapshot.Select(async kvp =>
         {
+            var (id, client) = kvp;
             await client.WriteLock.WaitAsync();
             try
             {
                 await client.Response.WriteAsync(message);
                 await client.Response.Body.FlushAsync();
+                return (id, alive: true);
             }
             catch
             {
-                deadClients.Add(id);
+                return (id, alive: false);
             }
             finally
             {
                 client.WriteLock.Release();
             }
-        }
+        }).ToArray();
 
-        foreach (var id in deadClients)
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, alive) in results)
         {
-            if (_clients.TryRemove(id, out var dead))
+            if (!alive && _clients.TryRemove(id, out var dead))
                 dead.Dispose();
         }
     }

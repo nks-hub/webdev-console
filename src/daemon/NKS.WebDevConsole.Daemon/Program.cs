@@ -147,15 +147,34 @@ app.Lifetime.ApplicationStarted.Register(() =>
 // Health endpoint — no auth required (for monitoring + Electron daemon detection)
 app.MapGet("/healthz", () => Results.Ok(new { ok = true, timestamp = DateTime.UtcNow }));
 
-// Auth middleware for /api/* requests
+// Auth middleware for /api/* requests.
+// SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
+var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path.StartsWithSegments("/api"))
     {
-        var auth = ctx.Request.Headers.Authorization.FirstOrDefault();
-        var queryToken = ctx.Request.Query["token"].FirstOrDefault();
-        var provided = auth?.Replace("Bearer ", "") ?? queryToken;
-        if (provided != authToken)
+        // Parse Authorization: Bearer <token> — use prefix check instead of Replace() which
+        // is fragile (multiple occurrences, whitespace) and doesn't handle case variants.
+        var authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
+        string? provided = null;
+        if (!string.IsNullOrEmpty(authHeader) &&
+            authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            provided = authHeader.Substring(7).Trim();
+        }
+        provided ??= ctx.Request.Query["token"].FirstOrDefault();
+
+        bool ok = false;
+        if (!string.IsNullOrEmpty(provided))
+        {
+            var providedBytes = System.Text.Encoding.UTF8.GetBytes(provided);
+            // FixedTimeEquals requires same length — reject different length fast
+            ok = providedBytes.Length == authTokenBytes.Length
+                 && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, authTokenBytes);
+        }
+
+        if (!ok)
         {
             ctx.Response.StatusCode = 401;
             await ctx.Response.WriteAsync("Unauthorized");
@@ -567,7 +586,7 @@ app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int
 });
 
 // Service config read — returns the main config file content for a service
-app.MapGet("/api/services/{id}/config", (string id) =>
+app.MapGet("/api/services/{id}/config", async (string id) =>
 {
     var wdcHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc");
     var configs = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
@@ -601,12 +620,12 @@ app.MapGet("/api/services/{id}/config", (string id) =>
         {
             var httpdConf = Path.Combine(apacheRoot, "conf", "httpd.conf");
             if (File.Exists(httpdConf))
-                files.Add(new { name = "httpd.conf", path = httpdConf, content = File.ReadAllText(httpdConf) });
+                files.Add(new { name = "httpd.conf", path = httpdConf, content = await File.ReadAllTextAsync(httpdConf) });
 
             var vhostsDir = Path.Combine(apacheRoot, "conf", "sites-enabled");
             if (Directory.Exists(vhostsDir))
                 foreach (var f in Directory.GetFiles(vhostsDir, "*.conf"))
-                    files.Add(new { name = Path.GetFileName(f), path = f, content = File.ReadAllText(f) });
+                    files.Add(new { name = Path.GetFileName(f), path = f, content = await File.ReadAllTextAsync(f) });
         }
     }
     else if (id.Equals("php", StringComparison.OrdinalIgnoreCase))
@@ -617,14 +636,14 @@ app.MapGet("/api/services/{id}/config", (string id) =>
             {
                 var ini = Path.Combine(vdir, "php.ini");
                 if (File.Exists(ini))
-                    files.Add(new { name = $"php.ini ({Path.GetFileName(vdir)})", path = ini, content = File.ReadAllText(ini) });
+                    files.Add(new { name = $"php.ini ({Path.GetFileName(vdir)})", path = ini, content = await File.ReadAllTextAsync(ini) });
             }
     }
     else if (id.Equals("mysql", StringComparison.OrdinalIgnoreCase))
     {
         var myIni = Path.Combine(wdcHome, "data", "mysql", "my.ini");
         if (File.Exists(myIni))
-            files.Add(new { name = "my.ini", path = myIni, content = File.ReadAllText(myIni) });
+            files.Add(new { name = "my.ini", path = myIni, content = await File.ReadAllTextAsync(myIni) });
     }
 
     return Results.Ok(new { serviceId = id, files });
