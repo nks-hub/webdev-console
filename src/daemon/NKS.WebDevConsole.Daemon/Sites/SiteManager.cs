@@ -68,14 +68,40 @@ public class SiteManager
                 throw new ArgumentException($"Domain contains forbidden character: '{c}'");
         if (domain.Contains("../") || domain.Contains("..\\"))
             throw new ArgumentException("Domain contains path traversal sequence");
-        // Must look like a hostname
+        // Must look like a hostname (primary site domain must not be wildcard — wildcards are aliases only)
         if (!System.Text.RegularExpressions.Regex.IsMatch(domain, @"^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$"))
             throw new ArgumentException("Domain must be a valid hostname (letters, digits, hyphens, dots)");
+    }
+
+    /// <summary>
+    /// Validates a ServerAlias entry. Unlike the primary domain, aliases may be wildcard
+    /// patterns like <c>*.myapp.loc</c> which Apache ServerAlias and mkcert both support
+    /// natively. The hosts file layer is responsible for skipping wildcard entries.
+    /// </summary>
+    public static void ValidateAlias(string alias)
+    {
+        if (string.IsNullOrWhiteSpace(alias))
+            throw new ArgumentException("Alias cannot be empty");
+        if (alias.Length > 253)
+            throw new ArgumentException("Alias too long (max 253 chars)");
+        var forbidden = new[] { ' ', '\t', '\n', '\r', '\0', ';', '|', '&', '$', '`', '>', '<', '"', '\'' };
+        foreach (var c in forbidden)
+            if (alias.Contains(c))
+                throw new ArgumentException($"Alias contains forbidden character: '{c}'");
+        if (alias.Contains("../") || alias.Contains("..\\"))
+            throw new ArgumentException("Alias contains path traversal sequence");
+        // Allow leading `*.` or `?` for wildcards; rest must be hostname-safe
+        var normalized = alias.StartsWith("*.") ? alias[2..] : alias;
+        if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, @"^[a-zA-Z0-9\*\?]([a-zA-Z0-9\-\.\*\?]*[a-zA-Z0-9\*\?])?$"))
+            throw new ArgumentException($"Alias '{alias}' is not a valid hostname pattern");
     }
 
     public async Task<SiteConfig> CreateAsync(SiteConfig site)
     {
         ValidateDomain(site.Domain);
+        if (site.Aliases is { Length: > 0 })
+            foreach (var alias in site.Aliases)
+                ValidateAlias(alias);
         var toml = TomlSerializer.Serialize(site);
         var path = Path.Combine(_sitesDir, $"{site.Domain}.toml");
         await File.WriteAllTextAsync(path, toml);

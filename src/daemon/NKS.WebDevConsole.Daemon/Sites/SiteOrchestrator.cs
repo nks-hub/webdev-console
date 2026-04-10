@@ -194,22 +194,47 @@ public sealed class SiteOrchestrator
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             "drivers", "etc", "hosts");
 
-        // Collect ALL managed domains (existing + new) so we can write the complete block
+        // Collect ALL managed domains (existing + new) so we can write the complete block.
+        // Wildcard aliases (*.myapp.loc) are valid in Apache ServerAlias and mkcert certs but
+        // CANNOT be written to the hosts file — hosts doesn't support glob matching. Skip them
+        // here and warn once so the user knows they need a real DNS resolver for wildcards
+        // (Acrylic DNS Proxy on Windows, dnsmasq on macOS/Linux).
         var siteManager = _sp.GetService<SiteManager>();
         var allDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var skippedWildcards = new List<string>();
+
+        void AddOrSkipWildcard(string? d)
+        {
+            if (string.IsNullOrWhiteSpace(d)) return;
+            if (d.Contains('*') || d.Contains('?'))
+            {
+                skippedWildcards.Add(d);
+                return;
+            }
+            allDomains.Add(d);
+        }
 
         if (siteManager is not null)
         {
             foreach (var site in siteManager.Sites.Values)
             {
-                allDomains.Add(site.Domain);
+                AddOrSkipWildcard(site.Domain);
                 if (site.Aliases is not null)
                     foreach (var alias in site.Aliases)
-                        allDomains.Add(alias);
+                        AddOrSkipWildcard(alias);
             }
         }
         foreach (var d in domainsToAdd)
-            allDomains.Add(d);
+            AddOrSkipWildcard(d);
+
+        if (skippedWildcards.Count > 0)
+        {
+            _logger.LogWarning(
+                "Skipping {Count} wildcard alias(es) from hosts file ({Wildcards}). " +
+                "Apache ServerAlias and mkcert handle them natively, but hosts file requires explicit entries. " +
+                "For wildcard DNS install Acrylic DNS Proxy (Windows) or dnsmasq (macOS/Linux).",
+                skippedWildcards.Count, string.Join(", ", skippedWildcards));
+        }
 
         // EARLY EXIT: read hosts file without elevation (most users can read it) and check if
         // every required domain already maps to 127.0.0.1. If so, no UAC prompt is needed.
