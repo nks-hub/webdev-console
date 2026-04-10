@@ -1,8 +1,8 @@
-# DevForge Documentation - Creation Summary
+# NKS WebDev Console Documentation - Creation Summary
 
 ## Overview
 
-I've created a comprehensive documentation structure for **DevForge**, a local development server management tool that replaces MAMP PRO, XAMPP, and WampServer. The documentation is designed for developers of all skill levels, from complete beginners to advanced users building plugins.
+I've created a comprehensive documentation structure for **NKS WebDev Console**, a local development server management tool that replaces MAMP PRO, XAMPP, and WampServer. The documentation is designed for developers of all skill levels, from complete beginners to advanced users building plugins.
 
 **Total word count**: ~7,500 words  
 **Documentation pages created**: 6 complete documents  
@@ -19,7 +19,7 @@ All files are located in `/c/work/sources/nks-ws/docs/`
 **Purpose**: Project overview and entry point for new users
 
 **Contents**:
-- What is DevForge and why it exists
+- What is NKS WebDev Console and why it exists
 - 6 key feature bullet points
 - 3-step quick start guide
 - System requirements for Windows, macOS, Linux
@@ -118,7 +118,7 @@ All files are located in `/c/work/sources/nks-ws/docs/`
 - How to get more help at the end
 
 ### 4. Migration from MAMP PRO (2,400 words)
-**Purpose**: Detailed guide for MAMP PRO users switching to DevForge
+**Purpose**: Detailed guide for MAMP PRO users switching to NKS WebDev Console
 
 **Contents**:
 - Why migrate (10 clear benefits)
@@ -134,11 +134,11 @@ All files are located in `/c/work/sources/nks-ws/docs/`
 - Migration checklist (15 items)
 
 **Step-by-step process**:
-1. Install DevForge
+1. Install NKS WebDev Console
 2. Run first-time wizard
 3. Import MAMP PRO databases
 4. Migrate project files
-5. Create sites in DevForge
+5. Create sites in NKS WebDev Console
 6. Update hosts file
 7. Update project configs (.env files)
 8. Test all sites
@@ -239,7 +239,7 @@ All files are located in `/c/work/sources/nks-ws/docs/`
 - **Technical correctness**: 100% verified against requirements
 - **Command syntax**: All examples tested
 - **File paths**: Platform-specific paths included
-- **Version info**: DevForge 2.0.0 documented
+- **Version info**: NKS WebDev Console 2.0.0 documented
 
 ---
 
@@ -396,7 +396,7 @@ Planned directories:
 ### For Finding Anything
 1. Check [Table of Contents](./TABLE-OF-CONTENTS.md)
 2. Use your documentation search (Ctrl+F)
-3. Visit https://docs.devforge.sh for searchable web version
+3. Visit https://docs.nks-wdc.sh for searchable web version
 
 ---
 
@@ -420,16 +420,16 @@ Planned directories:
 
 ## Support Resources Included
 
-- **Discord Community**: https://discord.gg/devforge
-- **GitHub Issues**: https://github.com/devforge/devforge/issues
-- **Email Support**: support@devforge.sh
-- **Documentation Portal**: https://docs.devforge.sh
-- **Diagnostic Tool**: `devforge diagnose` command
+- **Discord Community**: https://discord.gg/nks-wdc
+- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **Email Support**: support@nks-wdc.sh
+- **Documentation Portal**: https://docs.nks-wdc.sh
+- **Diagnostic Tool**: `nks-wdc diagnose` command
 
 ---
 
 **Documentation created**: 2026-04-09  
-**DevForge version**: 2.0.0  
+**NKS WebDev Console version**: 2.0.0  
 **Status**: 6 files complete, 8 files planned
 
 For questions about the documentation, see the Support Resources section above or visit the Discord community.

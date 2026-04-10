@@ -1,6 +1,6 @@
-# DevForge GUI Framework — Rozhodovaci dotaznik
+# NKS WebDev Console GUI Framework — Rozhodovaci dotaznik
 
-**Ucel:** Systematicky urcit optimalni GUI framework pro DevForge na zaklade realnych potreb, schopnosti tymu a produktovych cilu.
+**Ucel:** Systematicky urcit optimalni GUI framework pro NKS WebDev Console na zaklade realnych potreb, schopnosti tymu a produktovych cilu.
 
 **Jak pouzit:** Odpovezte na kazdu otazku. Po vyplneni sectete body podle scoring guide u kazde otazky. Framework s nejvyssim celkovym skore je vas vitez.
 
@@ -90,7 +90,7 @@
 
 > [SCORING] a-> Flutter +4, Go+htmx +3 (browser hot reload). b-> Avalonia +1, PySide +1. c-> Qt +1
 
-**10. Mate zkusenosti s Go backendem DevForge a jeho JSON-RPC API?**
+**10. Mate zkusenosti s Go backendem NKS WebDev Console a jeho JSON-RPC API?**
 - a) Ano, jsem autor / hlavni vyvojar
 - b) Znam API, ale nekodoval jsem daemon
 - c) Neznam
@@ -101,7 +101,7 @@
 
 ## SEKCE 2: Produktova vize (vaha 15 %)
 
-**11. Je DevForge komercni produkt nebo interni nastroj?**
+**11. Je NKS WebDev Console komercni produkt nebo interni nastroj?**
 - a) Open-source, komunitni
 - b) Open-source core + placene pro funkce
 - c) Proprietarni komercni produkt
@@ -145,7 +145,7 @@
 > [SCORING] a-> Flutter +4 (sdileny kod), Avalonia +2. b-> Flutter +2. c-> vsechny +0
 
 **17. Jak dulezite je premium/lesteny vizualni dojem?**
-- a) Velmi — DevForge musi vypadat profesionalne a moderne
+- a) Velmi — NKS WebDev Console musi vypadat profesionalne a moderne
 - b) Solidni, ale nemusime soutezit s Figma designem
 - c) Utilitarni staci — hlavne at funguje
 
@@ -619,5 +619,5 @@
 
 ---
 
-*Dokument vygenerovan 2026-04-09 pro projekt DevForge.*
+*Dokument vygenerovan 2026-04-09 pro projekt NKS WebDev Console.*
 *Pouziti: Vyplnte, sectete, rozhodnete. Jeden vecer prace = mesice jistoty.*

@@ -1,8 +1,8 @@
-# DevForge Documentation - Complete Table of Contents
+# NKS WebDev Console Documentation - Complete Table of Contents
 
 ## Overview
 
-DevForge documentation is organized into several key sections. Each section builds on foundational knowledge, progressing from beginner to advanced topics.
+NKS WebDev Console documentation is organized into several key sections. Each section builds on foundational knowledge, progressing from beginner to advanced topics.
 
 ---
 
@@ -138,38 +138,38 @@ DevForge documentation is organized into several key sections. Each section buil
 
 ### [CLI Reference](./cli-reference.md) (Not yet created)
 #### Service Commands
-- `devforge service start|stop|restart [service]`
-- `devforge service status`
-- `devforge service enable|disable` (auto-start)
-- `devforge logs [service]`
+- `nks-wdc service start|stop|restart [service]`
+- `nks-wdc service status`
+- `nks-wdc service enable|disable` (auto-start)
+- `nks-wdc logs [service]`
 
 #### Site Commands
-- `devforge site create|delete|update`
-- `devforge site list|info`
-- `devforge site import|export`
-- `devforge site start|stop`
+- `wdc site create|delete|update`
+- `wdc site list|info`
+- `wdc site import|export`
+- `wdc site start|stop`
 
 #### PHP Commands
-- `devforge php version`
-- `devforge php install|uninstall [version]`
-- `devforge php extensions`
-- `devforge php install-extension|uninstall-extension`
-- `devforge php config [key]` or `devforge php edit-config`
+- `wdc php version`
+- `wdc php install|uninstall [version]`
+- `wdc php extensions`
+- `wdc php install-extension|uninstall-extension`
+- `wdc php config [key]` or `wdc php edit-config`
 
 #### Database Commands
-- `devforge database list|create|delete`
-- `devforge database import|export`
-- `devforge database create-user|delete-user`
-- `devforge database grant-privileges`
-- `devforge database connect` (CLI access)
+- `nks-wdc database list|create|delete`
+- `nks-wdc database import|export`
+- `nks-wdc database create-user|delete-user`
+- `nks-wdc database grant-privileges`
+- `nks-wdc database connect` (CLI access)
 
 #### Utility Commands
-- `devforge port-check [port]`
-- `devforge dns-sync`
-- `devforge cert generate|export|import|regenerate`
-- `devforge config get|set [key] [value]`
-- `devforge diagnose`
-- `devforge version`
+- `nks-wdc port-check [port]`
+- `wdc dns-sync`
+- `nks-wdc cert generate|export|import|regenerate`
+- `wdc config get|set [key] [value]`
+- `nks-wdc diagnose`
+- `nks-wdc version`
 
 #### Shell Completion
 - Bash/Zsh/Fish setup
@@ -281,7 +281,7 @@ DevForge documentation is organized into several key sections. Each section buil
 - Migration checklist
 
 ### [Migrating from XAMPP](./migration-xampp.md) (Not yet created)
-- XAMPP to DevForge differences
+- XAMPP to NKS WebDev Console differences
 - Database migration
 - Project structure conversion
 - Apache configuration migration
@@ -289,7 +289,7 @@ DevForge documentation is organized into several key sections. Each section buil
 - Issue-specific troubleshooting
 
 ### [Migrating from WampServer](./migration-wampserver.md) (Not yet created)
-- WampServer to DevForge mapping
+- WampServer to NKS WebDev Console mapping
 - Database backup from WampServer
 - Virtual hosts conversion
 - Service configuration
@@ -401,18 +401,18 @@ DevForge documentation is organized into several key sections. Each section buil
 | Use CLI | Troubleshooting | CLI Reference | Scripting |
 | Migrate from MAMP | Migration | Migration | Custom Migration |
 | Troubleshoot issues | Troubleshooting | Troubleshooting | Architecture |
-| Extend DevForge | N/A | N/A | Plugin Dev |
+| Extend NKS WebDev Console | N/A | N/A | Plugin Dev |
 
 ---
 
 ## External Resources
 
 ### Official Links
-- **Website**: https://devforge.sh
-- **GitHub**: https://github.com/devforge/devforge
-- **Discord Community**: https://discord.gg/devforge
-- **Issue Tracker**: https://github.com/devforge/devforge/issues
-- **Email Support**: support@devforge.sh (Pro tier)
+- **Website**: https://nks-wdc.sh
+- **GitHub**: https://github.com/nks-wdc/nks-wdc
+- **Discord Community**: https://discord.gg/nks-wdc
+- **Issue Tracker**: https://github.com/nks-wdc/nks-wdc/issues
+- **Email Support**: support@nks-wdc.sh (Pro tier)
 
 ### Related Documentation
 - [PHP Official Docs](https://www.php.net/docs.php)
@@ -439,7 +439,7 @@ DevForge documentation is organized into several key sections. Each section buil
 
 ## How to Use This Documentation
 
-1. **New to DevForge?** → Start with [README.md](./README.md) and [Getting Started](./getting-started.md)
+1. **New to NKS WebDev Console?** → Start with [README.md](./README.md) and [Getting Started](./getting-started.md)
 2. **Creating sites?** → See [Sites Guide](./guides/sites.md)
 3. **Working with PHP?** → See [PHP Management](./guides/php.md)
 4. **Having issues?** → See [Troubleshooting](./troubleshooting.md)

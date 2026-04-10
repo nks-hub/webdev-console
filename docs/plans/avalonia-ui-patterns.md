@@ -1,4 +1,4 @@
-# Avalonia UI Patterns — DevForge
+# Avalonia UI Patterns — NKS WebDev Console
 
 **Stack:** Avalonia 12.x · FluentTheme · CommunityToolkit.Mvvm · LiveCharts2 · gRPC  
 **Date:** 2026-04-09
@@ -11,20 +11,20 @@
 <!-- App.axaml -->
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="DevForge.GUI.App"
+             x:Class="NKS.WebDevConsole.Gui.App"
              RequestedThemeVariant="Dark">
 
   <Application.Styles>
     <FluentTheme />
-    <StyleInclude Source="avares://DevForge.GUI/Styles/DevForgeTokens.axaml" />
+    <StyleInclude Source="avares://NKS.WebDevConsole.Gui/Styles/nks-wdcTokens.axaml" />
   </Application.Styles>
 
   <TrayIcon.Icons>
     <TrayIcons>
-      <TrayIcon Icon="/Assets/tray.ico" ToolTipText="DevForge">
+      <TrayIcon Icon="/Assets/tray.ico" ToolTipText="NKS WebDev Console">
         <TrayIcon.Menu>
           <NativeMenu>
-            <NativeMenuItem Header="Open DevForge" Command="{Binding ShowWindowCommand}" />
+            <NativeMenuItem Header="Open NKS WebDev Console" Command="{Binding ShowWindowCommand}" />
             <NativeMenuItemSeparator />
             <NativeMenuItem Header="Start All Services" Command="{Binding StartAllCommand}" />
             <NativeMenuItem Header="Stop All Services"  Command="{Binding StopAllCommand}" />
@@ -82,10 +82,10 @@ public partial class App : Application
 <!-- MainWindow.axaml -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:DevForge.GUI.ViewModels"
-        x:Class="DevForge.GUI.Views.MainWindow"
+        xmlns:vm="using:NKS.WebDevConsole.Gui.ViewModels"
+        x:Class="NKS.WebDevConsole.Gui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="DevForge" Width="1100" Height="720"
+        Title="NKS WebDev Console" Width="1100" Height="720"
         MinWidth="900" MinHeight="600"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
@@ -94,7 +94,7 @@ public partial class App : Application
   <Grid RowDefinitions="32,*,28">
 
     <!-- Custom title bar (draggable) -->
-    <Grid Grid.Row="0" Background="{DynamicResource DevForgeSidebarBrush}"
+    <Grid Grid.Row="0" Background="{DynamicResource nks-wdcSidebarBrush}"
           IsHitTestVisible="True">
       <Panel IsHitTestVisible="True">
         <!-- DragWindowGesture lets the user drag from this region -->
@@ -103,7 +103,7 @@ public partial class App : Application
             <InvokeCommandAction Command="{Binding BeginDragCommand}" />
           </EventTriggerBehavior>
         </Interaction.Behaviors>
-        <TextBlock Text="DevForge" VerticalAlignment="Center" Margin="16,0,0,0"
+        <TextBlock Text="NKS WebDev Console" VerticalAlignment="Center" Margin="16,0,0,0"
                    FontFamily="{StaticResource InterFont}" FontWeight="SemiBold" />
       </Panel>
       <!-- Window buttons (min/max/close) rendered by OS on macOS, manual on Windows -->
@@ -117,7 +117,7 @@ public partial class App : Application
     <Grid Grid.Row="1" ColumnDefinitions="200,*">
 
       <!-- Left sidebar navigation -->
-      <StackPanel Grid.Column="0" Background="{DynamicResource DevForgeSidebarBrush}"
+      <StackPanel Grid.Column="0" Background="{DynamicResource nks-wdcSidebarBrush}"
                   Spacing="2" Margin="8">
         <Button Classes="nav-item" Command="{Binding NavigateCommand}"
                 CommandParameter="Dashboard" Content="Dashboard" />
@@ -134,7 +134,7 @@ public partial class App : Application
     </Grid>
 
     <!-- Status bar -->
-    <Grid Grid.Row="2" Background="{DynamicResource DevForgeStatusBarBrush}"
+    <Grid Grid.Row="2" Background="{DynamicResource nks-wdcStatusBarBrush}"
           ColumnDefinitions="Auto,*,Auto">
       <Ellipse Grid.Column="0" Width="8" Height="8" Margin="12,0,6,0"
                Fill="{Binding DaemonStatusColor}" />
@@ -193,9 +193,9 @@ public partial class MainWindowViewModel : ObservableObject
 <!-- Controls/ServiceCard.axaml -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:DevForge.GUI.ViewModels"
+             xmlns:vm="using:NKS.WebDevConsole.Gui.ViewModels"
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-             x:Class="DevForge.GUI.Controls.ServiceCard"
+             x:Class="NKS.WebDevConsole.Gui.Controls.ServiceCard"
              x:DataType="vm:ServiceViewModel">
 
   <Border Classes="card" CornerRadius="8" Padding="14" Width="220">
@@ -221,9 +221,9 @@ public partial class MainWindowViewModel : ObservableObject
       <!-- Metrics row -->
       <Grid ColumnDefinitions="*,*">
         <TextBlock Grid.Column="0" Text="{Binding CpuPercent, StringFormat='CPU {0:F0}%'}"
-                   FontSize="11" Foreground="{DynamicResource DevForgeSubtleBrush}" />
+                   FontSize="11" Foreground="{DynamicResource nks-wdcSubtleBrush}" />
         <TextBlock Grid.Column="1" Text="{Binding RamMb, StringFormat='RAM {0} MB'}"
-                   FontSize="11" Foreground="{DynamicResource DevForgeSubtleBrush}"
+                   FontSize="11" Foreground="{DynamicResource nks-wdcSubtleBrush}"
                    HorizontalAlignment="Right" />
       </Grid>
 
@@ -341,8 +341,8 @@ public partial class ServiceViewModel : ObservableObject
 <!-- Controls/SiteCard.axaml -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:DevForge.GUI.ViewModels"
-             x:Class="DevForge.GUI.Controls.SiteCard"
+             xmlns:vm="using:NKS.WebDevConsole.Gui.ViewModels"
+             x:Class="NKS.WebDevConsole.Gui.Controls.SiteCard"
              x:DataType="vm:SiteViewModel">
 
   <Border Classes="card" CornerRadius="8" Padding="14" Width="280">
@@ -361,7 +361,7 @@ public partial class ServiceViewModel : ObservableObject
       <TextBlock Text="{Binding DocRoot}" FontFamily="{StaticResource MonoFont}"
                  FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="240"
                  ToolTip.Tip="{Binding DocRoot}"
-                 Foreground="{DynamicResource DevForgeSubtleBrush}" />
+                 Foreground="{DynamicResource nks-wdcSubtleBrush}" />
 
       <!-- PHP version badge -->
       <Border CornerRadius="4" Padding="6,2"
@@ -434,10 +434,10 @@ public partial class SiteViewModel : ObservableObject
 <!-- Views/DashboardPage.axaml -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:DevForge.GUI.ViewModels"
-             xmlns:ctrl="using:DevForge.GUI.Controls"
+             xmlns:vm="using:NKS.WebDevConsole.Gui.ViewModels"
+             xmlns:ctrl="using:NKS.WebDevConsole.Gui.Controls"
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-             x:Class="DevForge.GUI.Views.DashboardPage"
+             x:Class="NKS.WebDevConsole.Gui.Views.DashboardPage"
              x:DataType="vm:DashboardViewModel">
 
   <ScrollViewer>
@@ -480,7 +480,7 @@ public partial class SiteViewModel : ObservableObject
                   <Grid ColumnDefinitions="130,*" Margin="0,2">
                     <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}"
                                FontFamily="{StaticResource MonoFont}" FontSize="11"
-                               Foreground="{DynamicResource DevForgeSubtleBrush}" />
+                               Foreground="{DynamicResource nks-wdcSubtleBrush}" />
                     <TextBlock Grid.Column="1" Text="{Binding Message}" FontSize="11" />
                   </Grid>
                 </DataTemplate>
@@ -503,9 +503,9 @@ public partial class SiteViewModel : ObservableObject
 <!-- Views/SitesPage.axaml -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:DevForge.GUI.ViewModels"
-             xmlns:ctrl="using:DevForge.GUI.Controls"
-             x:Class="DevForge.GUI.Views.SitesPage"
+             xmlns:vm="using:NKS.WebDevConsole.Gui.ViewModels"
+             xmlns:ctrl="using:NKS.WebDevConsole.Gui.Controls"
+             x:Class="NKS.WebDevConsole.Gui.Views.SitesPage"
              x:DataType="vm:SitesViewModel">
 
   <Grid RowDefinitions="Auto,*">
@@ -527,7 +527,7 @@ public partial class SiteViewModel : ObservableObject
         <TextBlock Text="No sites yet" FontSize="18" FontWeight="SemiBold"
                    HorizontalAlignment="Center" />
         <TextBlock Text="Create your first site to get started."
-                   Foreground="{DynamicResource DevForgeSubtleBrush}"
+                   Foreground="{DynamicResource nks-wdcSubtleBrush}"
                    HorizontalAlignment="Center" />
         <Button Content="+ New Site" Command="{Binding OpenCreateWizardCommand}"
                 Classes="primary" HorizontalAlignment="Center" />
@@ -766,29 +766,29 @@ Always update `ObservableCollection` on the UI thread. From background threads, 
 ## 10. Design Tokens — Resource Dictionary
 
 ```xml
-<!-- Styles/DevForgeTokens.axaml -->
+<!-- Styles/nks-wdcTokens.axaml -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!-- Color primitives -->
-  <Color x:Key="DevForgeAccent">#6366f1</Color>
-  <Color x:Key="DevForgeSurface">#1e1e2e</Color>
-  <Color x:Key="DevForgeSidebar">#181825</Color>
-  <Color x:Key="DevForgeStatusBar">#11111b</Color>
-  <Color x:Key="DevForgeSubtle">#6c7086</Color>
-  <Color x:Key="DevForgeSuccess">#22c55e</Color>
-  <Color x:Key="DevForgeDanger">#ef4444</Color>
-  <Color x:Key="DevForgeWarning">#eab308</Color>
+  <Color x:Key="nks-wdcAccent">#6366f1</Color>
+  <Color x:Key="nks-wdcSurface">#1e1e2e</Color>
+  <Color x:Key="nks-wdcSidebar">#181825</Color>
+  <Color x:Key="nks-wdcStatusBar">#11111b</Color>
+  <Color x:Key="nks-wdcSubtle">#6c7086</Color>
+  <Color x:Key="nks-wdcSuccess">#22c55e</Color>
+  <Color x:Key="nks-wdcDanger">#ef4444</Color>
+  <Color x:Key="nks-wdcWarning">#eab308</Color>
 
   <!-- Brushes -->
-  <SolidColorBrush x:Key="DevForgeAccentBrush"    Color="{StaticResource DevForgeAccent}" />
-  <SolidColorBrush x:Key="DevForgeSidebarBrush"   Color="{StaticResource DevForgeSidebar}" />
-  <SolidColorBrush x:Key="DevForgeStatusBarBrush" Color="{StaticResource DevForgeStatusBar}" />
-  <SolidColorBrush x:Key="DevForgeSubtleBrush"    Color="{StaticResource DevForgeSubtle}" />
+  <SolidColorBrush x:Key="nks-wdcAccentBrush"    Color="{StaticResource nks-wdcAccent}" />
+  <SolidColorBrush x:Key="nks-wdcSidebarBrush"   Color="{StaticResource nks-wdcSidebar}" />
+  <SolidColorBrush x:Key="nks-wdcStatusBarBrush" Color="{StaticResource nks-wdcStatusBar}" />
+  <SolidColorBrush x:Key="nks-wdcSubtleBrush"    Color="{StaticResource nks-wdcSubtle}" />
 
   <!-- Typography -->
-  <FontFamily x:Key="InterFont">avares://DevForge.GUI/Assets/Fonts/Inter#Inter</FontFamily>
-  <FontFamily x:Key="MonoFont">avares://DevForge.GUI/Assets/Fonts/JetBrainsMono#JetBrains Mono</FontFamily>
+  <FontFamily x:Key="InterFont">avares://NKS.WebDevConsole.Gui/Assets/Fonts/Inter#Inter</FontFamily>
+  <FontFamily x:Key="MonoFont">avares://NKS.WebDevConsole.Gui/Assets/Fonts/JetBrainsMono#JetBrains Mono</FontFamily>
 
   <!-- Card style -->
   <Style Selector="Border.card">
@@ -799,7 +799,7 @@ Always update `ObservableCollection` on the UI thread. From background threads, 
 
   <!-- Primary button style -->
   <Style Selector="Button.primary">
-    <Setter Property="Background" Value="{StaticResource DevForgeAccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource nks-wdcAccentBrush}" />
     <Setter Property="Foreground" Value="White" />
     <Setter Property="CornerRadius" Value="6" />
   </Style>

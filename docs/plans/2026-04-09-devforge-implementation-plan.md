@@ -1,4 +1,4 @@
-# DevForge - Complete Implementation Plan & Documentation
+# NKS WebDev Console - Complete Implementation Plan & Documentation
 
 **Version:** 1.0.0  
 **Date:** 2026-04-09  
@@ -35,7 +35,7 @@
 
 ## 1. Executive Summary
 
-**DevForge** is a modern, portable local development server management tool designed to replace MAMP PRO, XAMPP, WampServer, and similar tools. It addresses critical pain points discovered through real-world usage of existing tools:
+**NKS WebDev Console** is a modern, portable local development server management tool designed to replace MAMP PRO, XAMPP, WampServer, and similar tools. It addresses critical pain points discovered through real-world usage of existing tools:
 
 - **Config corruption** (MAMP PRO's SQLite stores vhosts with empty values → Apache syntax errors)
 - **SSL complexity** (manual cert generation, trust store management)
@@ -46,7 +46,7 @@
 
 ### Core Value Proposition
 
-| Feature | MAMP PRO | XAMPP | Laragon | FlyEnv | **DevForge** |
+| Feature | MAMP PRO | XAMPP | Laragon | FlyEnv | **NKS WebDev Console** |
 |---------|----------|-------|---------|--------|-------------|
 | Multi-PHP (5.6-8.4) | 2 versions | Single | Multiple | Multiple | **Multiple, per-site** |
 | Virtual Hosts | GUI only | Manual | Auto .test | GUI | **CLI + GUI + API** |
@@ -102,13 +102,13 @@
 ### Key Market Insights
 
 1. **FlyEnv is the closest competitor** — 50+ modules, cross-platform, BSD-3, but uses Electron (heavy)
-2. **No tool validates configs before applying** — this is DevForge's killer feature
+2. **No tool validates configs before applying** — this is NKS WebDev Console's killer feature
 3. **Laragon is beloved but Windows-only** with uncertain future
 4. **Docker tools (DDEV) are powerful but too heavy** for simple PHP dev
 5. **Per-site PHP version** via FPM pools is now table stakes
 6. **CLI + automation** is increasingly demanded (CI/CD, scripting)
 
-### DevForge Positioning
+### NKS WebDev Console Positioning
 
 **"The Laragon experience, everywhere, with the safety of config validation and the power of a plugin ecosystem."**
 
@@ -180,19 +180,19 @@ Target audience: PHP developers who want native performance (not Docker overhead
 - **Tooling** — `grpcurl` CLI for debugging, code generation from `.proto` files
 
 **Transport (platform-specific):**
-- Windows: Named pipe `\\.\pipe\devforge-daemon`
-- macOS/Linux: Unix domain socket `~/.devforge/daemon.sock`
+- Windows: Named pipe `\\.\pipe\nks-wdc-daemon`
+- macOS/Linux: Unix domain socket `~/.nks-wdc/daemon.sock`
 
 Both use standard gRPC over HTTP/2; no custom wire protocol.
 
 ### Key NuGet Packages (Core Stack)
 
-**DevForge.Core (shared contracts):**
+**NKS.WebDevConsole.Core (shared contracts):**
 - `Google.Protobuf` 3.x
 - `Grpc.Tools` (code generation)
 - `Tomlyn` (TOML parsing for config files)
 
-**DevForge.Daemon (service):**
+**NKS.WebDevConsole.Daemon (service):**
 - `Grpc.AspNetCore` 2.76.0+ (gRPC server via Kestrel)
 - `Microsoft.Data.Sqlite` 9.0+ (SQLite client)
 - `Dapper` 2.1+ (micro-ORM for queries)
@@ -203,7 +203,7 @@ Both use standard gRPC over HTTP/2; no custom wire protocol.
 - `Serilog` 4.3+ + `Serilog.Sinks.File` 7.0+ (file logging)
 - `dbup-sqlite` 6.0+ (schema migrations)
 
-**DevForge.Gui (Avalonia app):**
+**NKS.WebDevConsole.Gui (Avalonia app):**
 - `Avalonia` 12.0.0
 - `Avalonia.Desktop` 12.0.0
 - `Avalonia.Themes.Fluent` 12.0.0
@@ -213,13 +213,13 @@ Both use standard gRPC over HTTP/2; no custom wire protocol.
 - `CommunityToolkit.Mvvm` 8.x (source generators)
 - `HotAvalonia` 3.1.0 (Debug conditional)
 
-**DevForge.Cli (command-line):**
+**NKS.WebDevConsole.Cli (command-line):**
 - `System.CommandLine` 2.0.5+ (command parsing)
 - `Spectre.Console` 0.55.0 (output formatting: tables, progress bars, colors)
 - `Grpc.Net.Client` 2.76.0+
 - `CliWrap` 3.10.1+
 
-**DevForge.Tests:**
+**NKS.WebDevConsole.Tests:**
 - `xunit` 2.6+
 - `Moq` 4.x
 - `Avalonia.Headless.XUnit`
@@ -237,17 +237,17 @@ Neither the GUI nor CLI ever modify config files, spawn services, or touch the h
 
 ```
 ┌──────────────────────────────┐   ┌────────────────────────────────┐
-│  DevForge.Gui (Avalonia)     │   │  DevForge.Cli (System.CommandLine)
-│  - Main window               │   │  - devforge start apache       │
-│  - System tray               │   │  - devforge new myapp.loc      │
-│  - LiveCharts2 metrics       │   │  - devforge db:import mydb ... │
+│  NKS.WebDevConsole.Gui (Avalonia)     │   │  NKS.WebDevConsole.Cli (System.CommandLine)
+│  - Main window               │   │  - wdc start apache       │
+│  - System tray               │   │  - wdc new myapp.loc      │
+│  - LiveCharts2 metrics       │   │  - wdc db:import mydb ... │
 └──────────┬───────────────────┘   └────────────┬───────────────────┘
            │ gRPC over named pipe               │ gRPC over named pipe
-           │ (Windows: \\.\pipe\devforge)       │ (macOS/Linux: unix socket)
+           │ (Windows: \\.\pipe\nks-wdc)       │ (macOS/Linux: unix socket)
            └──────────┬────────────────────────┘
                       │
            ┌──────────▼──────────────────────────────────────┐
-           │  DevForge.Daemon (Worker Service)                │
+           │  NKS.WebDevConsole.Daemon (Worker Service)                │
            │                                                  │
            │  ProcessManager   HealthMonitor   MetricsCollector  │
            │  ┌────────────┐  ┌────────────┐  ┌───────────────┐ │
@@ -268,15 +268,15 @@ Neither the GUI nor CLI ever modify config files, spawn services, or touch the h
 ### Solution Structure
 
 ```
-DevForge.sln
+WebDevConsole.sln
 src/
-├── DevForge.Core/              # Shared types, interfaces, config models
+├── NKS.WebDevConsole.Core/              # Shared types, interfaces, config models
 │   ├── Models/                 # Site, Service, PhpVersion, Certificate, Database
 │   ├── Interfaces/             # IServiceModule, IConfigProvider, IHostsManager
 │   ├── Configuration/          # AppConfig, SiteConfig, TOML loading
 │   └── Proto/                  # .proto files for gRPC (shared between daemon and clients)
 │
-├── DevForge.Daemon/            # Background service — owns all child processes
+├── NKS.WebDevConsole.Daemon/            # Background service — owns all child processes
 │   ├── Program.cs              # Worker Service host entry point
 │   ├── Services/               # ProcessManager, HealthMonitor, MetricsCollector
 │   ├── Modules/                # ApacheModule, NginxModule, MySqlModule, PhpFpmModule, RedisModule
@@ -287,18 +287,18 @@ src/
 │   ├── Db/                     # DatabaseManager, BackupScheduler
 │   └── Plugin/                 # PluginLoader (AssemblyLoadContext), PluginHost
 │
-├── DevForge.Gui/               # Avalonia desktop application
+├── NKS.WebDevConsole.Gui/               # Avalonia desktop application
 │   ├── App.axaml               # Application entry, theme registration
 │   ├── ViewModels/             # MVVM ViewModels (CommunityToolkit.Mvvm)
 │   ├── Views/                  # .axaml views per screen
 │   ├── Controls/               # Reusable controls: ServiceCard, SiteCard, PhpVersionBadge
 │   └── Services/               # GrpcClientService, ThemeService, NotificationService
 │
-├── DevForge.Cli/               # CLI client (System.CommandLine)
+├── NKS.WebDevConsole.Cli/               # CLI client (System.CommandLine)
 │   ├── Program.cs
 │   └── Commands/               # SiteCommand, ServiceCommand, PhpCommand, DbCommand, SslCommand
 │
-└── DevForge.Tests/
+└── NKS.WebDevConsole.Tests/
     ├── Core.Tests/
     ├── Daemon.Tests/
     ├── Cli.Tests/
@@ -309,8 +309,8 @@ src/
 
 | Platform | Transport |
 |---|---|
-| Windows | Named pipe `\\.\pipe\devforge-daemon` |
-| macOS / Linux | Unix domain socket `~/.devforge/daemon.sock` |
+| Windows | Named pipe `\\.\pipe\nks-wdc-daemon` |
+| macOS / Linux | Unix domain socket `~/.nks-wdc/daemon.sock` |
 
 gRPC runs over these transports using standard Kestrel listeners configured at daemon startup:
 
@@ -318,10 +318,10 @@ gRPC runs over these transports using standard Kestrel listeners configured at d
 builder.WebHost.ConfigureKestrel(opts =>
 {
     if (OperatingSystem.IsWindows())
-        opts.ListenNamedPipe("devforge-daemon");
+        opts.ListenNamedPipe("nks-wdc-daemon");
     else
     {
-        var sock = Path.Combine(Path.GetTempPath(), "devforge.sock");
+        var sock = Path.Combine(Path.GetTempPath(), "nks-wdc.sock");
         if (File.Exists(sock)) File.Delete(sock);
         opts.ListenUnixSocket(sock);
     }
@@ -331,7 +331,7 @@ builder.WebHost.ConfigureKestrel(opts =>
 
 ### Daemon Lifecycle
 
-1. Check for existing PID lock (`~/.devforge/daemon.pid`). If stale, clean up.
+1. Check for existing PID lock (`~/.nks-wdc/daemon.pid`). If stale, clean up.
 2. Write PID lock.
 3. Open SQLite database, run pending migrations.
 4. Start gRPC server on transport.
@@ -521,10 +521,10 @@ await File.WriteAllTextAsync(configPath, config);
 
 ### Per-Site Config Files
 
-Instead of a single monolithic `httpd.conf`, DevForge generates:
+Instead of a single monolithic `httpd.conf`, NKS WebDev Console generates:
 
 ```
-~/.devforge/apache/
+~/.nks-wdc/apache/
 ├── httpd.conf               (generated base config)
 ├── vhosts/
 │   ├── nks-web.loc.conf     (site 1)
@@ -577,7 +577,7 @@ public class SiteConfig
 
 **CLI:**
 ```bash
-devforge new myapp.loc \
+wdc new myapp.loc \
     --root ~/projects/myapp \
     --php=8.2 \
     --ssl \
@@ -608,7 +608,7 @@ devforge new myapp.loc \
 Each site can target a specific PHP version via `php_version` in SiteConfig. The daemon routes PHP-FPM requests via socket pool:
 
 ```
-~/.devforge/php/
+~/.nks-wdc/php/
 ├── 7.4/
 │   ├── bin/php
 │   ├── etc/php.ini         (managed, NOT user-edited)
@@ -625,25 +625,25 @@ Each site can target a specific PHP version via `php_version` in SiteConfig. The
 
 ### CLI Aliases
 
-DevForge creates shell aliases in `~/.devforge/bin/`:
+NKS WebDev Console creates shell aliases in `~/.nks-wdc/bin/`:
 
 ```bash
-~/.devforge/bin/php74    → ~/.devforge/php/7.4/bin/php
-~/.devforge/bin/php82    → ~/.devforge/php/8.2/bin/php
-~/.devforge/bin/php84    → ~/.devforge/php/8.4/bin/php
+~/.nks-wdc/bin/php74    → ~/.nks-wdc/php/7.4/bin/php
+~/.nks-wdc/bin/php82    → ~/.nks-wdc/php/8.2/bin/php
+~/.nks-wdc/bin/php84    → ~/.nks-wdc/php/8.4/bin/php
 ```
 
-User adds `~/.devforge/bin/` to their `$PATH` to use: `php82 -v`, `composer install` (uses default PHP), etc.
+User adds `~/.nks-wdc/bin/` to their `$PATH` to use: `php82 -v`, `composer install` (uses default PHP), etc.
 
 ### php.ini Management
 
 Each PHP version gets a managed `php.ini` with:
-- `error_log = ~/.devforge/logs/php82-error.log`
-- `extension_dir = ~/.devforge/php/8.2/lib/php/extensions/`
+- `error_log = ~/.nks-wdc/logs/php82-error.log`
+- `extension_dir = ~/.nks-wdc/php/8.2/lib/php/extensions/`
 - `pdo_mysql.default_socket = /tmp/mysql.sock` (or Windows named pipe)
-- `upload_tmp_dir = ~/.devforge/tmp/`
+- `upload_tmp_dir = ~/.nks-wdc/tmp/`
 
-DevForge **never** modifies user-provided php.ini; it generates a clean base and user can add custom overrides in a separate file that's sourced.
+NKS WebDev Console **never** modifies user-provided php.ini; it generates a clean base and user can add custom overrides in a separate file that's sourced.
 
 ---
 
@@ -651,20 +651,20 @@ DevForge **never** modifies user-provided php.ini; it generates a clean base and
 
 ### Hosts File Management
 
-DevForge manages the system `hosts` file (Windows: `C:\Windows\System32\drivers\etc\hosts`, Unix: `/etc/hosts`).
+NKS WebDev Console manages the system `hosts` file (Windows: `C:\Windows\System32\drivers\etc\hosts`, Unix: `/etc/hosts`).
 
-**Single-responsibility model:** DevForge only adds/removes lines between markers:
+**Single-responsibility model:** NKS WebDev Console only adds/removes lines between markers:
 
 ```
-# DevForge START — do not edit manually
+# NKS WebDev Console START — do not edit manually
 127.0.0.1 nks-web.loc
 127.0.0.1 chatujme.loc *.chatujme.loc
 ::1       nks-web.loc
 ::1       chatujme.loc *.chatujme.loc
-# DevForge END
+# NKS WebDev Console END
 ```
 
-**Atomicity:** Read file → update → write atomically. Race condition with editor: acceptable (user shouldn't edit hosts during DevForge operations).
+**Atomicity:** Read file → update → write atomically. Race condition with editor: acceptable (user shouldn't edit hosts during NKS WebDev Console operations).
 
 ### DNS Flush
 
@@ -677,7 +677,7 @@ Called via `CliWrap` after every hosts change.
 
 ### Wildcard DNS Support
 
-DevForge creates:
+NKS WebDev Console creates:
 ```
 127.0.0.1 *.nks-web.loc
 ```
@@ -690,7 +690,7 @@ This allows subdomains (e.g., `api.nks-web.loc`, `admin.nks-web.loc`) to resolve
 
 ### mkcert Integration
 
-DevForge bundles or downloads `mkcert` (platform-specific binary) and uses it to generate trusted certificates:
+NKS WebDev Console bundles or downloads `mkcert` (platform-specific binary) and uses it to generate trusted certificates:
 
 ```bash
 mkcert -install                          # Create local CA (one-time)
@@ -723,7 +723,7 @@ CREATE TABLE certificates (
 
 ### Certificate Authority Management
 
-mkcert stores the root CA at `~/.local/share/mkcert/` (Linux/macOS) or user AppData (Windows). DevForge tracks which certificates are under its control and handles renewal automatically.
+mkcert stores the root CA at `~/.local/share/mkcert/` (Linux/macOS) or user AppData (Windows). NKS WebDev Console tracks which certificates are under its control and handles renewal automatically.
 
 ---
 
@@ -842,7 +842,7 @@ ORDER BY expires_at ASC;
 CLI structure (no `Spectre.Console.Cli` — only `System.CommandLine` for parsing):
 
 ```csharp
-var rootCommand = new RootCommand("DevForge local dev server manager");
+var rootCommand = new RootCommand("NKS WebDev Console local dev server manager");
 
 var startCommand = new Command("start", "Start services");
 startCommand.AddOption(new Option<string[]>("--service", "Service to start"));
@@ -876,54 +876,54 @@ AnsiConsole.Write(table);
 
 **Site Management:**
 ```bash
-devforge new myapp.loc --php=8.2 --db --ssl
-devforge list                        # Show all sites
-devforge remove myapp.loc
-devforge domain rename old.loc new.loc
-devforge domain set-root new.loc /path/to/root
-devforge domain enable myapp.loc
-devforge domain disable myapp.loc
+wdc new myapp.loc --php=8.2 --db --ssl
+nks-wdc list                        # Show all sites
+nks-wdc remove myapp.loc
+nks-wdc domain rename old.loc new.loc
+nks-wdc domain set-root new.loc /path/to/root
+nks-wdc domain enable myapp.loc
+nks-wdc domain disable myapp.loc
 ```
 
 **Service Management:**
 ```bash
-devforge start apache|mysql|redis|all
-devforge stop apache|mysql|all
-devforge restart apache
-devforge status                      # Show all services + metrics
-devforge logs apache [--lines=50]
+wdc start apache|mysql|redis|all
+wdc stop apache|mysql|all
+nks-wdc restart apache
+wdc status                      # Show all services + metrics
+nks-wdc logs apache [--lines=50]
 ```
 
 **PHP:**
 ```bash
-devforge php list                    # Show installed versions
-devforge php set-default 8.2         # Global default
-devforge php set-site myapp.loc 8.4  # Per-site override
-devforge php info 8.2
+wdc php list                    # Show installed versions
+wdc php set-default 8.2         # Global default
+wdc php set-site myapp.loc 8.4  # Per-site override
+wdc php info 8.2
 ```
 
 **Database:**
 ```bash
-devforge db list
-devforge db create mydb
-devforge db drop mydb
-devforge db backup mydb [--output=mydb.sql]
-devforge db import mydb mydb.sql
-devforge db restore mydb [--from-backup]
+wdc db list
+wdc db create mydb
+wdc db drop mydb
+wdc db backup mydb [--output=mydb.sql]
+wdc db import mydb mydb.sql
+wdc db restore mydb [--from-backup]
 ```
 
 **SSL:**
 ```bash
-devforge ssl list
-devforge ssl renew myapp.loc
-devforge ssl revoke myapp.loc
+wdc ssl list
+wdc ssl renew myapp.loc
+wdc ssl revoke myapp.loc
 ```
 
 **Config:**
 ```bash
-devforge config validate         # Pre-flight check
-devforge config export           # Export current state as JSON
-devforge config import file.json # Bulk import from backup
+wdc config validate         # Pre-flight check
+wdc config export           # Export current state as JSON
+wdc config import file.json # Bulk import from backup
 ```
 
 ### gRPC API (Daemon Service)
@@ -1014,7 +1014,7 @@ public override async Task StreamLogs(StreamLogsRequest request, IServerStreamWr
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ☰  DevForge                                      🌙 ⚙ −□✕  │
+│ ☰  NKS WebDev Console                                      🌙 ⚙ −□✕  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │ ┌────────────────────────────────────────────────────────┐ │
@@ -1159,12 +1159,12 @@ Site Detail (right panel, if selected):
 
 ### Mechanism: AssemblyLoadContext + IServiceModule
 
-DevForge plugins are .NET assemblies loaded dynamically via `AssemblyLoadContext`. No external scripting language (e.g., Lua) — everything is .NET.
+NKS WebDev Console plugins are .NET assemblies loaded dynamically via `AssemblyLoadContext`. No external scripting language (e.g., Lua) — everything is .NET.
 
 **Plugin Interface:**
 
 ```csharp
-public interface IDevForgePlugin
+public interface Inks-wdcPlugin
 {
     string Name { get; }
     Version Version { get; }
@@ -1185,12 +1185,12 @@ public class PluginLoader
             var asm = ctx.LoadFromAssemblyPath(dll);
 
             var pluginType = asm.GetExportedTypes()
-                .FirstOrDefault(t => typeof(IDevForgePlugin).IsAssignableFrom(t) && !t.IsAbstract);
+                .FirstOrDefault(t => typeof(Inks-wdcPlugin).IsAssignableFrom(t) && !t.IsAbstract);
 
             if (pluginType == null)
                 continue;
 
-            var plugin = (IDevForgePlugin)Activator.CreateInstance(pluginType)!;
+            var plugin = (Inks-wdcPlugin)Activator.CreateInstance(pluginType)!;
             _logger.LogInformation("Loaded plugin: {Name} v{Version}", plugin.Name, plugin.Version);
 
             // Plugin configures services
@@ -1223,10 +1223,10 @@ Each plugin ships a `plugin.json` describing its capabilities:
   "name": "MyCustomModule",
   "version": "1.0.0",
   "description": "Custom service module for X",
-  "author": "DevForge Community",
+  "author": "NKS WebDev Console Community",
   "license": "Apache-2.0",
   "entry_point": "MyNamespace.MyPlugin",
-  "required_devforge_version": "1.0.0+",
+  "required_nks-wdc_version": "1.0.0+",
   "dependencies": {
     "MyCustomModule": "1.0.0"
   },
@@ -1244,7 +1244,7 @@ Create a custom module (e.g., for a proprietary service):
 
 ```csharp
 // MyNamespace.MyPlugin.cs
-public class MyCustomModule : IDevForgePlugin, IServiceModule
+public class MyCustomModule : Inks-wdcPlugin, IServiceModule
 {
     public string Name => "MyCustomModule";
     public Version Version => new(1, 0, 0);
@@ -1286,7 +1286,7 @@ public class MyCustomModule : IDevForgePlugin, IServiceModule
 - Code-sign plugin DLLs with a trusted certificate
 - Verify signature before loading
 - Document that plugins are trusted code
-- For first-party DevForge plugins only
+- For first-party NKS WebDev Console plugins only
 
 For untrusted plugins, run them in a separate process communicating via gRPC.
 
@@ -1348,7 +1348,7 @@ builder.Services
     .AddGrpc()
     .ConfigureKestrelServerOptions(opts =>
     {
-        opts.UseHttps("devforge-selfsigned.pfx", "password");
+        opts.UseHttps("nks-wdc-selfsigned.pfx", "password");
     });
 ```
 
@@ -1404,7 +1404,7 @@ public override async Task<Site> CreateSite(CreateSiteRequest request, ServerCal
 
 ### Monitoring
 
-DevForge exports Prometheus-style metrics (future feature) for integration with monitoring tools. Basic metrics available via gRPC `GetMetrics` RPC.
+NKS WebDev Console exports Prometheus-style metrics (future feature) for integration with monitoring tools. Basic metrics available via gRPC `GetMetrics` RPC.
 
 ---
 
@@ -1413,7 +1413,7 @@ DevForge exports Prometheus-style metrics (future feature) for integration with 
 ### Test Structure
 
 ```
-DevForge.Tests/
+NKS.WebDevConsole.Tests/
 ├── Core.Tests/
 │   ├── Configuration/
 │   │   ├── ScribanTemplateTests.cs
@@ -1507,8 +1507,8 @@ dotnet tool install -g vpk
 
 # Publish and package:
 dotnet publish -c Release -r win-x64 --self-contained -o publish/
-vpk pack --packId DevForge --packVersion 1.0.0 --packDir publish/ --mainExe DevForge.exe
-# Output: releases/DevForge-1.0.0-full.exe, DevForge-1.0.0-delta.exe
+vpk pack --packId NKS WebDev Console --packVersion 1.0.0 --packDir publish/ --mainExe wdc.exe
+# Output: releases/NKS WebDev Console-1.0.0-full.exe, NKS WebDev Console-1.0.0-delta.exe
 ```
 
 **Benefits:**
@@ -1607,7 +1607,7 @@ No problematic licenses detected.
    - If broken: report issue to LiveCharts2, switch to ScottPlot.Avalonia
 
 2. **gRPC over named pipes**
-   - Create minimal gRPC server listening on `\\.\pipe\devforge-daemon`
+   - Create minimal gRPC server listening on `\\.\pipe\nks-wdc-daemon`
    - Create client connecting to same pipe
    - Invoke unary + streaming RPC
    - Verify latency < 5ms
@@ -1645,8 +1645,8 @@ If all 6 items pass: proceed to Phase 1.
 - Basic configuration rendering
 
 **Deliverables:**
-1. `DevForge.Core` project with domain models (Site, Service, PhpVersion, etc.)
-2. `DevForge.Daemon` Worker Service
+1. `NKS.WebDevConsole.Core` project with domain models (Site, Service, PhpVersion, etc.)
+2. `NKS.WebDevConsole.Daemon` Worker Service
 3. ProcessManager + ServiceUnit state machine
 4. Apache + MySQL modules implementing `IServiceModule`
 5. Basic gRPC service (start/stop/status)
@@ -1654,7 +1654,7 @@ If all 6 items pass: proceed to Phase 1.
 7. Unit tests for ProcessManager + HealthMonitor
 
 **Exit Criteria:**
-- `devforge start apache` and `devforge stop apache` work via gRPC
+- `wdc start apache` and `wdc stop apache` work via gRPC
 - Service state persisted in SQLite
 - Logs captured and streamable via gRPC
 
@@ -1674,7 +1674,7 @@ If all 6 items pass: proceed to Phase 1.
 6. Config history audit table + gRPC endpoint
 
 **Exit Criteria:**
-- Create site via CLI: `devforge new myapp.loc --php=8.2 --ssl`
+- Create site via CLI: `wdc new myapp.loc --php=8.2 --ssl`
 - VirtualHost config generated, validated, applied
 - Site accessible at `https://myapp.loc`
 
@@ -1688,12 +1688,12 @@ If all 6 items pass: proceed to Phase 1.
 **Deliverables:**
 1. PHP module implementing `IServiceModule`
 2. PHP FPM pool configuration for each version
-3. CLI aliases in `~/.devforge/bin/`
-4. `devforge php list|set-default|set-site` commands
+3. CLI aliases in `~/.nks-wdc/bin/`
+4. `wdc php list|set-default|set-site` commands
 5. php.ini template rendering per version
 
 **Exit Criteria:**
-- Switch site from PHP 8.2 → 8.4: `devforge php set-site myapp.loc 8.4`
+- Switch site from PHP 8.2 → 8.4: `wdc php set-site myapp.loc 8.4`
 - Verify site uses correct version (phpinfo() on site, CLI `php82 -v`)
 
 ### Phase 4: SSL/TLS + DNS (Weeks 10–11)
@@ -1758,7 +1758,7 @@ If all 6 items pass: proceed to Phase 1.
 
 **Exit Criteria:**
 - All CLI commands documented and tested
-- Help text: `devforge --help`, `devforge new --help`
+- Help text: `nks-wdc --help`, `wdc new --help`
 - User can run full workflow from CLI
 
 ### Phase 7: Database Manager + Plugins (Weeks 16–17)
@@ -1776,7 +1776,7 @@ If all 6 items pass: proceed to Phase 1.
 5. Integration tests for entire system
 
 **Exit Criteria:**
-- `devforge db create mydb && devforge db backup mydb`
+- `wdc db create mydb && wdc db backup mydb`
 - Plugin loading without errors
 - Example plugin starts and shows in GUI
 
@@ -1835,7 +1835,7 @@ If all 6 items pass: proceed to Phase 1.
 |------|------------|--------|-----------|
 | LiveCharts2 + Avalonia 12 incompatibility | Medium | High | Day-1 verification; fallback to ScottPlot |
 | gRPC named pipe timeout / deadlock | Low | High | Performance test during Phase 1; cancellation tokens |
-| Hosts file race condition (concurrent edits) | Low | Medium | Atomic write; document not to edit hosts manually during DevForge use |
+| Hosts file race condition (concurrent edits) | Low | Medium | Atomic write; document not to edit hosts manually during NKS WebDev Console use |
 | Plugin loading ALC unload failure | Medium | Medium | Careful reference cleanup; fallback to process restart |
 | Windows Job Object not killing children | Very Low | High | Test during Phase 1 ProcessManager tests |
 | mkcert OpenSSL 3.x on Windows fails | Very Low | Medium | Fallback to PowerShell cert generation; pre-test on target systems |
@@ -1892,7 +1892,7 @@ If all 6 items pass: proceed to Phase 1.
 
 | Term | Definition |
 |------|-----------|
-| **Daemon** | Background service (DevForge.Daemon) running as Worker Service |
+| **Daemon** | Background service (NKS.WebDevConsole.Daemon) running as Worker Service |
 | **gRPC** | Remote Procedure Call framework over HTTP/2 (protobuf messages) |
 | **Named Pipe** | Windows IPC mechanism (\\.\pipe\name) |
 | **Unix Socket** | POSIX IPC mechanism (file path) |
@@ -1913,7 +1913,7 @@ If all 6 items pass: proceed to Phase 1.
 - [Scriban Documentation](https://github.com/scriban/scriban)
 - [mkcert GitHub](https://github.com/FiloSottile/mkcert)
 - [Apache VirtualHost Directive](https://httpd.apache.org/docs/current/mod/core.html#virtualhost)
-- [DevForge SPEC.md](./SPEC.md) — authoritative technical specification
+- [NKS WebDev Console SPEC.md](./SPEC.md) — authoritative technical specification
 - [Interview Results](./interview-results.md) — user requirements
 - [Avalonia Ecosystem](./avalonia-ecosystem.md) — NuGet package guidance
 

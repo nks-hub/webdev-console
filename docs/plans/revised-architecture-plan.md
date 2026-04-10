@@ -1,10 +1,10 @@
-# DevForge -- Revised Architecture Plan
+# NKS WebDev Console -- Revised Architecture Plan
 
 **Version:** 2.0.0  
 **Date:** 2026-04-09  
 **Status:** Supersedes original SPEC.md architecture (Avalonia + gRPC)  
 **Stack:** Electron + Vue 3 + Element Plus (frontend) | C# .NET 9 Worker Service (daemon) | REST + SSE (IPC)  
-**Validated by:** `devforge-poc/` (20+ files, Electron spawn, REST API, SSE events, plugin schema rendering)
+**Validated by:** `wdc-poc/` (20+ files, Electron spawn, REST API, SSE events, plugin schema rendering)
 
 ---
 
@@ -27,7 +27,7 @@
  ├── SchemaRenderer: resolves panel type → Vue component
  └── PluginRegistry: built-in + dynamic bundle loading
 
- C# Daemon (ASP.NET Core Minimal API, devforged.exe)
+ C# Daemon (ASP.NET Core Minimal API, wdc-daemon.exe)
  ├── REST endpoints: /api/status, /api/services/*, /api/sites/*, /api/plugins/*
  ├── SSE hub: /api/events (broadcasts service state, progress, validation)
  ├── PluginLoader: AssemblyLoadContext per plugin DLL
@@ -36,7 +36,7 @@
  ├── SQLite (state.db via Microsoft.Data.Sqlite + Dapper)
  └── Each plugin registers its own /api/{pluginId}/* routes + returns JSON UI schema
 
- CLI (devforge.exe, System.CommandLine)
+ CLI (wdc.exe, System.CommandLine)
  └── same REST client as frontend, outputs via Spectre.Console
 ```
 
@@ -46,11 +46,11 @@ Three OS processes at runtime:
 
 | Process | Binary | RAM Target | Role |
 |---------|--------|-----------|------|
-| Electron | `devforge-app.exe` | 150-200 MB | Window, tray, renderer |
-| Daemon | `devforged.exe` | 30-50 MB | Service management, API, plugins |
-| CLI | `devforge.exe` | 10 MB (transient) | Scripting, automation |
+| Electron | `nks-wdc-app.exe` | 150-200 MB | Window, tray, renderer |
+| Daemon | `wdc-daemon.exe` | 30-50 MB | Service management, API, plugins |
+| CLI | `wdc.exe` | 10 MB (transient) | Scripting, automation |
 
-Electron spawns the daemon via `child_process.spawn`. In development: `dotnet run --project daemon/`. In production: `devforged.exe` bundled alongside the Electron app. The daemon writes a port file to `%TEMP%/devforge-daemon.port`; the preload script reads it to configure the API base URL. Already validated in `devforge-poc/electron/main.ts` and `devforge-poc/electron/preload.ts`.
+Electron spawns the daemon via `child_process.spawn`. In development: `dotnet run --project daemon/`. In production: `wdc-daemon.exe` bundled alongside the Electron app. The daemon writes a port file to `%TEMP%/nks-wdc-daemon.port`; the preload script reads it to configure the API base URL. Already validated in `wdc-poc/electron/main.ts` and `wdc-poc/electron/preload.ts`.
 
 ### Data Flow (User Action to UI Update)
 
@@ -84,7 +84,7 @@ User edits vhost config → Save & Apply button
 ## 2. Project Structure
 
 ```
-devforge/
+nks-wdc/
 ├── src/
 │   ├── frontend/                          # Electron + Vue 3 app
 │   │   ├── electron/
@@ -130,7 +130,7 @@ devforge/
 │   │   └── tsconfig.json
 │   │
 │   ├── daemon/                            # C# .NET 9 solution
-│   │   ├── DevForge.Daemon/               # ASP.NET Core Minimal API host
+│   │   ├── NKS.WebDevConsole.Daemon/               # ASP.NET Core Minimal API host
 │   │   │   ├── Program.cs                 # WebApplication builder, CORS, plugin route registration
 │   │   │   ├── Api/
 │   │   │   │   ├── StatusEndpoints.cs     # GET /api/status
@@ -155,7 +155,7 @@ devforge/
 │   │   │       ├── PluginLoader.cs        # AssemblyLoadContext per DLL, manifest parsing
 │   │   │       └── PluginHost.cs          # DI registration, route mapping, lifecycle
 │   │   │
-│   │   ├── DevForge.Core/                 # Shared library (no daemon dependencies)
+│   │   ├── NKS.WebDevConsole.Core/                 # Shared library (no daemon dependencies)
 │   │   │   ├── Interfaces/
 │   │   │   │   ├── IPluginModule.cs       # Main plugin contract
 │   │   │   │   ├── IServicePlugin.cs      # extends IPluginModule for managed services
@@ -169,15 +169,15 @@ devforge/
 │   │   │   │   ├── ValidationResult.cs    # IsValid, Errors list
 │   │   │   │   └── SiteConfig.cs          # TOML-mapped site model
 │   │   │   └── Configuration/
-│   │   │       └── AppPaths.cs            # %APPDATA%\DevForge paths: bin/, sites/, ssl/, data/
+│   │   │       └── AppPaths.cs            # %APPDATA%\NKS WebDev Console paths: bin/, sites/, ssl/, data/
 │   │   │
-│   │   ├── DevForge.Plugin.SDK/           # NuGet package for third-party plugin authors
-│   │   │   ├── DevForge.Plugin.SDK.csproj
+│   │   ├── NKS.WebDevConsole.Plugin.SDK/           # NuGet package for third-party plugin authors
+│   │   │   ├── NKS.WebDevConsole.Plugin.SDK.csproj
 │   │   │   ├── PluginBase.cs              # Abstract base with default implementations
 │   │   │   ├── UiSchemaBuilder.cs         # Fluent API: .AddPanel("service-status-card", props)
 │   │   │   └── EndpointRegistration.cs    # Helper to register plugin-scoped routes
 │   │   │
-│   │   └── DevForge.Cli/                  # CLI client
+│   │   └── NKS.WebDevConsole.Cli/                  # CLI client
 │   │       ├── Program.cs                 # System.CommandLine root, REST client setup
 │   │       └── Commands/
 │   │           ├── StatusCommand.cs
@@ -188,36 +188,36 @@ devforge/
 │   │           └── DbCommands.cs
 │   │
 │   └── plugins/                           # Built-in service plugins (each = separate .csproj → DLL)
-│       ├── DevForge.Plugin.Apache/
+│       ├── NKS.WebDevConsole.Plugin.Apache/
 │       │   ├── ApachePlugin.cs            # IServicePlugin: start/stop/reload httpd
 │       │   ├── ApacheUiSchema.cs          # Returns panels: service-card + config-editor + log-viewer
 │       │   ├── Templates/                 # Scriban: apache-vhost.conf, httpd-main.conf
 │       │   └── plugin.json                # Manifest: id, name, version, permissions
-│       ├── DevForge.Plugin.MySQL/
+│       ├── NKS.WebDevConsole.Plugin.MySQL/
 │       │   ├── MySqlPlugin.cs             # IServicePlugin: init datadir, start/stop mysqld
 │       │   ├── MySqlEndpoints.cs          # Extra routes: /api/mysql/databases, /api/mysql/import
 │       │   ├── MySqlUiSchema.cs           # Panels: service-card + db-manager (custom panel)
 │       │   └── plugin.json
-│       ├── DevForge.Plugin.PHP/
+│       ├── NKS.WebDevConsole.Plugin.PHP/
 │       │   ├── PhpPlugin.cs               # IPluginModule (not a service): version management
 │       │   ├── PhpVersionManager.cs       # Download, extract, shim creation, php.ini generation
 │       │   ├── PhpCgiManager.cs           # Windows: php-cgi.exe via mod_fcgid
 │       │   ├── PhpUiSchema.cs             # Panels: version-switcher + config-editor
 │       │   └── plugin.json
-│       ├── DevForge.Plugin.Hosts/
+│       ├── NKS.WebDevConsole.Plugin.Hosts/
 │       │   ├── HostsPlugin.cs             # Managed block in hosts file, elevation helper
 │       │   └── plugin.json
-│       ├── DevForge.Plugin.SSL/
+│       ├── NKS.WebDevConsole.Plugin.SSL/
 │       │   ├── SslPlugin.cs               # mkcert wrapper, CA install, per-site cert generation
 │       │   └── plugin.json
-│       ├── DevForge.Plugin.Redis/
+│       ├── NKS.WebDevConsole.Plugin.Redis/
 │       │   ├── RedisPlugin.cs             # IServicePlugin: start/stop redis-server
 │       │   └── plugin.json
-│       └── DevForge.Plugin.Mailpit/
+│       └── NKS.WebDevConsole.Plugin.Mailpit/
 │           ├── MailpitPlugin.cs           # IServicePlugin: start/stop mailpit
 │           └── plugin.json
 │
-├── DevForge.sln                           # References all .csproj files
+├── WebDevConsole.sln                           # References all .csproj files
 ├── package.json                           # Workspace root (scripts: dev, build, package)
 ├── prototype/database/                    # Canonical SQLite DDL (use verbatim)
 │   ├── migrations/001_initial.sql
@@ -239,7 +239,7 @@ devforge/
 | Tomlyn | 0.17+ | TOML parsing for site configs |
 | Serilog + Serilog.Sinks.File | 4.3+ / 7.0+ | Structured logging |
 | dbup-sqlite | 6.0+ | Schema migrations |
-| System.CommandLine | 2.0.5+ | CLI parsing (DevForge.Cli only) |
+| System.CommandLine | 2.0.5+ | CLI parsing (NKS.WebDevConsole.Cli only) |
 | Spectre.Console | 0.55+ | CLI output formatting only |
 
 ### Key npm Packages (Frontend)
@@ -262,10 +262,10 @@ devforge/
 
 ### Phase 0: Verification (1 day)
 
-Already largely completed by `devforge-poc/`. Remaining verification:
+Already largely completed by `wdc-poc/`. Remaining verification:
 
 - [ ] Confirm Electron 34 + Vue 3.5 + Element Plus 2.9 dark theme renders correctly (done in POC)
-- [ ] Confirm C# daemon spawned from Electron main process (done in POC: `devforge-poc/electron/main.ts`)
+- [ ] Confirm C# daemon spawned from Electron main process (done in POC: `wdc-poc/electron/main.ts`)
 - [ ] Confirm REST API round-trip < 50ms (done in POC: `/api/status`)
 - [ ] Confirm SSE streaming works for service events (done in POC: `subscribeEvents()`)
 - [ ] Test ECharts renders a sparkline inside an Element Plus card
@@ -277,15 +277,15 @@ Already largely completed by `devforge-poc/`. Remaining verification:
 
 **Goal:** Pluggable daemon with SDK, Electron shell with dynamic sidebar.
 
-- [ ] Create `DevForge.Core` with `IPluginModule` and `IServicePlugin` interfaces
-- [ ] Create `DevForge.Plugin.SDK` with `PluginBase`, `UiSchemaBuilder`, `EndpointRegistration`
+- [ ] Create `NKS.WebDevConsole.Core` with `IPluginModule` and `IServicePlugin` interfaces
+- [ ] Create `NKS.WebDevConsole.Plugin.SDK` with `PluginBase`, `UiSchemaBuilder`, `EndpointRegistration`
 - [ ] Implement `PluginLoader` in daemon: scan `plugins/` directory, load DLLs via `AssemblyLoadContext`
 - [ ] Implement `PluginHost`: register plugin routes under `/api/{pluginId}/*`, collect UI schemas
 - [ ] Implement `SseService`: thread-safe client list, `Broadcast(eventType, data)` method
 - [ ] Port `prototype/database/` schema to `MigrationRunner` using dbup-sqlite
 - [ ] Implement daemon `Program.cs`: WebApplication with CORS, port file, plugin discovery
 - [ ] Implement core REST endpoints: `/api/status`, `/api/plugins`, `/api/plugins/{id}/ui`, `/api/events`
-- [ ] Scaffold Electron app from POC: promote `devforge-poc/` structure to `src/frontend/`
+- [ ] Scaffold Electron app from POC: promote `wdc-poc/` structure to `src/frontend/`
 - [ ] Implement Pinia stores: `daemon`, `services`, `sites`, `plugins` (port from POC)
 - [ ] Implement `SchemaRenderer` + `PluginRegistry` (port from POC)
 - [ ] Implement layout: `AppHeader`, `AppSidebar` (dynamic categories), `AppStatusBar`
@@ -303,9 +303,9 @@ Already largely completed by `devforge-poc/`. Remaining verification:
 - [ ] Implement `RestartPolicy`: max 5 restarts in 60s, exponential backoff 2-30s
 - [ ] Implement `HealthMonitor`: 5s interval, PID alive + TCP port probe
 - [ ] Implement `MetricsCollector`: CPU% via `Process.TotalProcessorTime`, `WorkingSet64`
-- [ ] **DevForge.Plugin.Apache**: start/stop httpd, Scriban vhost templates, `httpd -t` validation
-- [ ] **DevForge.Plugin.MySQL**: `mysqld --initialize-insecure`, start/stop, root password to DPAPI
-- [ ] **DevForge.Plugin.PHP**: version detection, download/extract, shim scripts, php.ini generation, php-cgi.exe management on Windows
+- [ ] **NKS.WebDevConsole.Plugin.Apache**: start/stop httpd, Scriban vhost templates, `httpd -t` validation
+- [ ] **NKS.WebDevConsole.Plugin.MySQL**: `mysqld --initialize-insecure`, start/stop, root password to DPAPI
+- [ ] **NKS.WebDevConsole.Plugin.PHP**: version detection, download/extract, shim scripts, php.ini generation, php-cgi.exe management on Windows
 - [ ] Implement `ConfigEngine`: `TemplateEngine` (Scriban), `ConfigValidator` (CliWrap), `AtomicWriter` (.tmp → validate → archive → rename)
 - [ ] Implement `ValidationBadge` SSE flow: daemon emits validation phase events, frontend shows Validating/Passed/Failed
 - [ ] Implement `VersionSwitcher` component connected to PHP plugin's version list endpoint
@@ -321,15 +321,15 @@ Already largely completed by `devforge-poc/`. Remaining verification:
 - [ ] Implement `SiteEndpoints`: CRUD `/api/sites`, TOML read/write, SQLite sync
 - [ ] Implement config pipeline: TOML model → Scriban template → httpd -t → atomic write → graceful reload
 - [ ] Config versioning: keep last 5 in `generated/history/`, rollback endpoint
-- [ ] **DevForge.Plugin.Hosts**: managed block in hosts file, Windows elevation helper (`devforge-elevate.exe` or UAC prompt), DNS flush
-- [ ] **DevForge.Plugin.SSL**: mkcert binary management, CA install, per-site cert generation, certificate tracking in SQLite
+- [ ] **NKS.WebDevConsole.Plugin.Hosts**: managed block in hosts file, Windows elevation helper (`wdc-elevate.exe` or UAC prompt), DNS flush
+- [ ] **NKS.WebDevConsole.Plugin.SSL**: mkcert binary management, CA install, per-site cert generation, certificate tracking in SQLite
 - [ ] Implement `Sites.vue` page: table with domain/PHP/SSL/status, detail drawer, create wizard dialog
 - [ ] Create Site Wizard: domain input, docroot picker, framework auto-detection, PHP version selector, SSL toggle, database creation option
 - [ ] Framework auto-detection: scan for `artisan` (Laravel), `wp-config.php` (WordPress), `nette/application` in composer.json (Nette)
 - [ ] Wildcard alias support: `*.myapp.loc` → explicit hosts entries for known subdomains + dnsmasq on macOS
-- [ ] CLI: `devforge new myapp.loc --php=8.2 --ssl --nette`
+- [ ] CLI: `wdc new myapp.loc --php=8.2 --ssl --nette`
 
-**Acceptance:** `devforge new myapp.loc --php=8.2 --ssl --nette` creates a working site accessible at `https://myapp.loc` with no browser certificate warning. GUI wizard produces the same result.
+**Acceptance:** `wdc new myapp.loc --php=8.2 --ssl --nette` creates a working site accessible at `https://myapp.loc` with no browser certificate warning. GUI wizard produces the same result.
 
 ### Phase 4: GUI Polish (2 weeks)
 
@@ -356,13 +356,13 @@ Already largely completed by `devforge-poc/`. Remaining verification:
 - [ ] Implement all CLI commands per SPEC.md section 15 (35+ commands)
 - [ ] Shell completions: bash, zsh, fish, PowerShell via `System.CommandLine`
 - [ ] `--json` output mode for all commands
-- [ ] **DevForge.Plugin.Redis**: start/stop redis-server, config template, health check via PING
-- [ ] **DevForge.Plugin.Mailpit**: start/stop mailpit, SMTP port 1025, UI port 8025
-- [ ] **DevForge.Plugin.Caddy**: alternative web server, Caddyfile generation
+- [ ] **NKS.WebDevConsole.Plugin.Redis**: start/stop redis-server, config template, health check via PING
+- [ ] **NKS.WebDevConsole.Plugin.Mailpit**: start/stop mailpit, SMTP port 1025, UI port 8025
+- [ ] **NKS.WebDevConsole.Plugin.Caddy**: alternative web server, Caddyfile generation
 - [ ] Plugin marketplace stub: list available plugins from remote manifest
-- [ ] MAMP PRO migration: read MAMP's SQLite DB, create DevForge TOML site configs
+- [ ] MAMP PRO migration: read MAMP's SQLite DB, create NKS WebDev Console TOML site configs
 
-**Acceptance:** All CLI commands pass tests. `devforge status --json` returns valid JSON. Redis and Mailpit plugins load, start services, appear in sidebar, show schema-driven UI.
+**Acceptance:** All CLI commands pass tests. `wdc status --json` returns valid JSON. Redis and Mailpit plugins load, start services, appear in sidebar, show schema-driven UI.
 
 ### Phase 6: Packaging + Distribution (1 week)
 
@@ -401,11 +401,11 @@ Already largely completed by `devforge-poc/`. Remaining verification:
 
 ### R1: Plugin DLL Version Conflicts (HIGH)
 
-Plugin DLLs may depend on different versions of shared NuGet packages (e.g., Newtonsoft.Json 12 vs 13). **Mitigation:** Each plugin loads in its own `AssemblyLoadContext`, isolating dependencies. The SDK package (`DevForge.Plugin.SDK`) pins the shared contract types and is loaded in the default context. Plugins reference SDK interfaces, not daemon internals.
+Plugin DLLs may depend on different versions of shared NuGet packages (e.g., Newtonsoft.Json 12 vs 13). **Mitigation:** Each plugin loads in its own `AssemblyLoadContext`, isolating dependencies. The SDK package (`NKS.WebDevConsole.Plugin.SDK`) pins the shared contract types and is loaded in the default context. Plugins reference SDK interfaces, not daemon internals.
 
 ### R2: SSE Connection Limits (MEDIUM)
 
-Browsers limit concurrent SSE connections to ~6 per domain. DevForge uses 2 SSE streams (events + logs), leaving headroom. **Mitigation:** Multiplex all event types through a single `/api/events` endpoint with named events (`service`, `progress`, `validation`, `metrics`). Log streaming uses a separate endpoint only when the log viewer is open.
+Browsers limit concurrent SSE connections to ~6 per domain. NKS WebDev Console uses 2 SSE streams (events + logs), leaving headroom. **Mitigation:** Multiplex all event types through a single `/api/events` endpoint with named events (`service`, `progress`, `validation`, `metrics`). Log streaming uses a separate endpoint only when the log viewer is open.
 
 ### R3: Electron Memory Overhead (MEDIUM)
 
@@ -441,7 +441,7 @@ Electron + Vite provides HMR for the Vue renderer. The C# daemon requires restar
 
 **Chose:** REST (Minimal API) + SSE (EventSource).  
 **Over:** gRPC over named pipes.  
-**Rationale:** REST is debuggable with curl/browser DevTools. SSE is natively supported by `EventSource` in Chromium (no client library needed). No proto compilation step. The Electron renderer can call REST directly without IPC bridging. gRPC's bidirectional streaming is unnecessary -- all DevForge flows are request/response or server-push. Trade-off: no typed contracts at compile time (mitigate with OpenAPI + generated TypeScript types).
+**Rationale:** REST is debuggable with curl/browser DevTools. SSE is natively supported by `EventSource` in Chromium (no client library needed). No proto compilation step. The Electron renderer can call REST directly without IPC bridging. gRPC's bidirectional streaming is unnecessary -- all NKS WebDev Console flows are request/response or server-push. Trade-off: no typed contracts at compile time (mitigate with OpenAPI + generated TypeScript types).
 
 ### D3: Each Service as a Separate Plugin DLL
 
@@ -453,15 +453,15 @@ Electron + Vite provides HMR for the Vue renderer. The C# daemon requires restar
 
 **Chose:** Plugins declare UI as JSON (`{ panels: [{ type: "service-status-card", props: {...} }] }`). Frontend resolves panel types to Vue components via `PluginRegistry`.  
 **Over:** Plugins shipping their own Vue components (pure bundle approach).  
-**Rationale:** 80% of plugins need the same 4-5 panel types (service card, version switcher, config editor, log viewer, metrics chart). JSON schema avoids shipping redundant JS per plugin. For the 20% needing custom UI, the bundle escape hatch exists (`bundleUrl` in manifest). Already validated in `devforge-poc/src/plugins/SchemaRenderer.vue`.
+**Rationale:** 80% of plugins need the same 4-5 panel types (service card, version switcher, config editor, log viewer, metrics chart). JSON schema avoids shipping redundant JS per plugin. For the 20% needing custom UI, the bundle escape hatch exists (`bundleUrl` in manifest). Already validated in `wdc-poc/src/plugins/SchemaRenderer.vue`.
 
 ### D5: TOML Site Configs (unchanged from SPEC)
 
-Source of truth for site configuration remains per-site TOML files at `%APPDATA%\DevForge\sites\{domain}.toml`. SQLite stores runtime state only. TOML wins on conflict. This decision from the original SPEC is correct and unchanged -- human-editable, diffable, git-friendly configs are a key differentiator over FlyEnv's opaque electron-store JSON.
+Source of truth for site configuration remains per-site TOML files at `%APPDATA%\NKS WebDev Console\sites\{domain}.toml`. SQLite stores runtime state only. TOML wins on conflict. This decision from the original SPEC is correct and unchanged -- human-editable, diffable, git-friendly configs are a key differentiator over FlyEnv's opaque electron-store JSON.
 
 ### D6: Electron Spawns Daemon (not the reverse)
 
-Electron main process spawns the C# daemon as a child process. When the user quits the Electron app, the daemon is killed. This matches FlyEnv's model and avoids the complexity of a Windows Service or launchd agent. For headless/CLI usage, `devforge daemon start` can spawn the daemon independently.
+Electron main process spawns the C# daemon as a child process. When the user quits the Electron app, the daemon is killed. This matches FlyEnv's model and avoids the complexity of a Windows Service or launchd agent. For headless/CLI usage, `wdc daemon start` can spawn the daemon independently.
 
 ---
 

@@ -1,6 +1,6 @@
-# Getting Started with DevForge
+# Getting Started with NKS WebDev Console
 
-This guide walks you through installing DevForge and creating your first local development site.
+This guide walks you through installing NKS WebDev Console and creating your first local development site.
 
 ## System Requirements
 
@@ -30,31 +30,31 @@ This guide walks you through installing DevForge and creating your first local d
 
 **Option 1: Windows Package Manager (Recommended)**
 ```bash
-winget install devforge
+winget install nks-wdc
 ```
 
 **Option 2: Download Installer**
-1. Visit https://devforge.sh/download
-2. Download `DevForge-2.0.0-windows-x64.exe`
+1. Visit https://nks-wdc.sh/download
+2. Download `NKS WebDev Console-2.0.0-windows-x64.exe`
 3. Run the installer
 4. Click "Install" and accept Administrator privileges
-5. Choose installation directory (default: `C:\Program Files\DevForge`)
+5. Choose installation directory (default: `C:\Program Files\NKS WebDev Console`)
 
 **Option 3: Portable Version**
-Download `DevForge-2.0.0-windows-portable.zip`, extract, and run `devforge.exe`.
+Download `NKS WebDev Console-2.0.0-windows-portable.zip`, extract, and run `wdc.exe`.
 
 ### macOS
 
 **Option 1: Homebrew (Recommended)**
 ```bash
-brew tap devforge/tap
-brew install devforge
+brew tap nks-wdc/tap
+brew install nks-wdc
 ```
 
 **Option 2: Download DMG**
-1. Visit https://devforge.sh/download
-2. Download `DevForge-2.0.0.dmg`
-3. Mount the image and drag DevForge to Applications
+1. Visit https://nks-wdc.sh/download
+2. Download `NKS WebDev Console-2.0.0.dmg`
+3. Mount the image and drag NKS WebDev Console to Applications
 4. Launch from Applications folder
 
 **Option 3: Direct Download (M1/M2/M3)**
@@ -65,25 +65,25 @@ Download the ARM64 version from releases page for faster performance.
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get update
-sudo apt-get install devforge
+sudo apt-get install nks-wdc
 ```
 
 **Fedora/RHEL:**
 ```bash
-sudo dnf install devforge
+sudo dnf install nks-wdc
 ```
 
 **Build from Source:**
 ```bash
-git clone https://github.com/devforge/devforge.git
-cd devforge
+git clone https://github.com/nks-wdc/nks-wdc.git
+cd nks-wdc
 ./build.sh
 sudo ./install.sh
 ```
 
 ## First-Run Wizard
 
-When you launch DevForge for the first time:
+When you launch NKS WebDev Console for the first time:
 
 ### Step 1: Welcome Screen
 - Review the system requirements check
@@ -91,10 +91,10 @@ When you launch DevForge for the first time:
 - Select HTTP/HTTPS preference
 
 ### Step 2: Locations
-- **Data Directory**: Where DevForge stores configurations, databases, and certificates
-  - Windows: `C:\Users\{username}\AppData\Local\DevForge`
-  - macOS: `~/Library/Application Support/DevForge`
-  - Linux: `~/.local/share/devforge`
+- **Data Directory**: Where NKS WebDev Console stores configurations, databases, and certificates
+  - Windows: `C:\Users\{username}\AppData\Local\NKS WebDev Console`
+  - macOS: `~/Library/Application Support/NKS WebDev Console`
+  - Linux: `~/.local/share/nks-wdc`
 - **Projects Directory**: Where your sites are stored (default: `~/projects`)
 
 ### Step 3: Database
@@ -122,7 +122,7 @@ When you launch DevForge for the first time:
 
 ### Via GUI
 
-1. Open DevForge
+1. Open NKS WebDev Console
 2. Click **File → New Site** or click the **+** button
 3. Fill in the form:
    - **Site Name**: `my-project` (letters, numbers, hyphens only)
@@ -132,7 +132,7 @@ When you launch DevForge for the first time:
    - **Web Server**: Nginx (default)
    - **Enable SSL**: Yes (recommended)
 4. Click **Create Site**
-5. Wait 10–15 seconds while DevForge:
+5. Wait 10–15 seconds while NKS WebDev Console:
    - Creates web root directory
    - Generates SSL certificate
    - Creates virtual host configuration
@@ -141,7 +141,7 @@ When you launch DevForge for the first time:
 ### Via CLI
 
 ```bash
-devforge site create \
+wdc site create \
   --name my-project \
   --path /Users/you/projects/my-project \
   --php 8.2 \
@@ -160,7 +160,7 @@ devforge site create \
 ### SSH/Terminal Access
 ```bash
 # SSH into site (macOS/Linux only)
-devforge ssh my-project
+nks-wdc ssh my-project
 
 # This opens a shell in your project directory with proper PATH
 ```
@@ -174,7 +174,7 @@ devforge ssh my-project
 
 **CLI Access:**
 ```bash
-devforge database connect
+nks-wdc database connect
 # or MySQL client directly:
 mysql -u root -p -h 127.0.0.1
 ```
@@ -182,20 +182,20 @@ mysql -u root -p -h 127.0.0.1
 ## Stopping Services
 
 ### GUI Method
-1. Open DevForge
+1. Open NKS WebDev Console
 2. Click the service in the sidebar
 3. Click **Stop** button
 
 ### CLI Method
 ```bash
-devforge service stop nginx
-devforge service stop php-fpm
-devforge service stop mysql
+nks-wdc service stop nginx
+nks-wdc service stop php-fpm
+nks-wdc service stop mysql
 ```
 
 ### Stop All
 ```bash
-devforge service stop all
+nks-wdc service stop all
 ```
 
 ## Troubleshooting First-Run Issues
@@ -204,18 +204,18 @@ devforge service stop all
 **Symptom**: Installation fails with "Port 3306 already in use"
 
 **Solution**:
-1. Run: `devforge port-check`
+1. Run: `nks-wdc port-check`
 2. If another service is on port 3306, either:
    - Stop the conflicting service
    - Change MySQL port in wizard to 3307 or higher
-3. Restart the wizard: `devforge setup --force`
+3. Restart the wizard: `nks-wdc setup --force`
 
 ### DNS Not Resolving
 **Symptom**: `my-project.local` shows "Site can't be reached"
 
 **Solution**:
 - **Windows**: Check Control Panel → Network → DNS settings. Should show `127.0.0.1` for local domains
-- **macOS/Linux**: Run `devforge dns-sync` to update `/etc/hosts`
+- **macOS/Linux**: Run `wdc dns-sync` to update `/etc/hosts`
 - Manual fix: Add to `/etc/hosts`:
   ```
   127.0.0.1    my-project.local
@@ -225,9 +225,9 @@ devforge service stop all
 **Symptom**: "Call to undefined function" in browser
 
 **Solution**:
-1. Check if extension is installed: `devforge php extensions`
-2. Install missing extension: `devforge php install-extension gd`
-3. Restart PHP: `devforge service restart php-fpm`
+1. Check if extension is installed: `wdc php extensions`
+2. Install missing extension: `wdc php install-extension gd`
+3. Restart PHP: `nks-wdc service restart php-fpm`
 
 ### Slow File Access (macOS)
 **Symptom**: Page loads slowly even with simple sites
@@ -243,21 +243,21 @@ devforge service stop all
 
 ## Common First-Time Questions
 
-**Q: Can I use MAMP PRO and DevForge simultaneously?**
-A: Not recommended. Both bind to port 80/443. Uninstall MAMP PRO first, or change DevForge's port in Settings.
+**Q: Can I use MAMP PRO and NKS WebDev Console simultaneously?**
+A: Not recommended. Both bind to port 80/443. Uninstall MAMP PRO first, or change NKS WebDev Console's port in Settings.
 
 **Q: How do I move a site from MAMP PRO?**
 A: See [Migrating from MAMP PRO](./migration.md#mamp-pro).
 
 **Q: Can I have multiple PHP versions?**
-A: Yes. Install additional versions via `devforge php install 7.4` and assign to specific sites.
+A: Yes. Install additional versions via `wdc php install 7.4` and assign to specific sites.
 
 **Q: Is my data backed up?**
-A: DevForge keeps configurations in the Data Directory. Databases are stored in the MySQL data folder. Regular backups recommended for production data.
+A: NKS WebDev Console keeps configurations in the Data Directory. Databases are stored in the MySQL data folder. Regular backups recommended for production data.
 
 **Q: Can I use this for production?**
-A: No. DevForge is for local development only. For production, use a proper server (DigitalOcean, AWS, etc.).
+A: No. NKS WebDev Console is for local development only. For production, use a proper server (DigitalOcean, AWS, etc.).
 
 ---
 
-**Successfully installed?** Open DevForge and create your first site using the GUI wizard above.
+**Successfully installed?** Open NKS WebDev Console and create your first site using the GUI wizard above.

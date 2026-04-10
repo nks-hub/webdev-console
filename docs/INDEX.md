@@ -1,14 +1,14 @@
-# DevForge Documentation Index
+# NKS WebDev Console Documentation Index
 
-**Welcome to DevForge!** This is your complete documentation for managing local development servers across Windows, macOS, and Linux.
+**Welcome to NKS WebDev Console!** This is your complete documentation for managing local development servers across Windows, macOS, and Linux.
 
 ---
 
 ## Quick Navigation
 
 ### Getting Started (Start Here!)
-- **[README.md](./README.md)** – What is DevForge and why you need it
-- **[Getting Started Guide](./getting-started.md)** – Install DevForge and create your first site in 15 minutes
+- **[README.md](./README.md)** – What is NKS WebDev Console and why you need it
+- **[Getting Started Guide](./getting-started.md)** – Install NKS WebDev Console and create your first site in 15 minutes
 
 ### Core Documentation
 - **[Troubleshooting Guide](./troubleshooting.md)** – Fix common issues (40+ solutions)
@@ -25,7 +25,7 @@
 
 ### By Use Case
 
-#### "I'm new to DevForge"
+#### "I'm new to NKS WebDev Console"
 1. Read [README.md](./README.md) (5 min)
 2. Follow [Getting Started Guide](./getting-started.md) (15 min)
 3. Create your first site
@@ -138,7 +138,7 @@
 ### Advanced Topics
 - Plugin development
 - System architecture
-- Contributing to DevForge
+- Contributing to NKS WebDev Console
 - Performance optimization
 
 → Coming soon: Plugin Development Guide & Architecture Docs
@@ -150,7 +150,7 @@
 ### Most Useful Links
 | Task | Document |
 |------|----------|
-| Install DevForge | [Getting Started](./getting-started.md) |
+| Install NKS WebDev Console | [Getting Started](./getting-started.md) |
 | Create a site | [Getting Started](./getting-started.md) |
 | Fix a problem | [Troubleshooting](./troubleshooting.md) |
 | Migrate from MAMP | [Migration Guide](./migration-mamp-pro.md) |
@@ -208,15 +208,15 @@
 - **For everything**: See [Table of Contents](./TABLE-OF-CONTENTS.md)
 
 ### Support Channels
-- **Discord Community**: https://discord.gg/devforge
-- **GitHub Issues**: https://github.com/devforge/devforge/issues
-- **Email Support**: support@devforge.sh (Pro tier)
-- **Documentation**: https://docs.devforge.sh
+- **Discord Community**: https://discord.gg/nks-wdc
+- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **Email Support**: support@nks-wdc.sh (Pro tier)
+- **Documentation**: https://docs.nks-wdc.sh
 
 ### Diagnostic Command
 If you need to report a problem, gather system information:
 ```bash
-devforge diagnose
+nks-wdc diagnose
 ```
 Include the output when asking for help.
 
@@ -230,7 +230,7 @@ Include the output when asking for help.
 - **Follow links** – Navigate between guides
 - **Use table of contents** – See all available docs
 
-### In DevForge
+### In NKS WebDev Console
 - **[Getting Started](./getting-started.md)** – GUI keyboard shortcuts (coming soon)
 - **[CLI Reference](./cli-reference.md)** – All command examples (coming soon)
 
@@ -240,13 +240,13 @@ Include the output when asking for help.
 
 Found an issue in the documentation? Want to improve it?
 
-→ Open an issue or PR at: https://github.com/devforge/devforge
+→ Open an issue or PR at: https://github.com/nks-wdc/nks-wdc
 
 ---
 
 ## Version Information
 
-- **DevForge Version**: 2.0.0
+- **NKS WebDev Console Version**: 2.0.0
 - **Documentation Last Updated**: 2026-04-09
 - **Documentation Coverage**: 6 complete guides, 8 planned
 
@@ -261,6 +261,6 @@ Found an issue in the documentation? Want to improve it?
 
 ---
 
-**Welcome to DevForge! Happy coding! 🚀**
+**Welcome to NKS WebDev Console! Happy coding! 🚀**
 
-Questions? Visit our [Discord community](https://discord.gg/devforge) or check the [Troubleshooting Guide](./troubleshooting.md).
+Questions? Visit our [Discord community](https://discord.gg/nks-wdc) or check the [Troubleshooting Guide](./troubleshooting.md).

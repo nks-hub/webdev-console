@@ -1,4 +1,4 @@
-# DevForge Documentation - Files Manifest
+# NKS WebDev Console Documentation - Files Manifest
 
 **Location**: `/c/work/sources/nks-ws/docs/`  
 **Date Created**: 2026-04-09  
@@ -46,7 +46,7 @@
 ### Core Documentation Files
 
 #### 4. **README.md** (Product Overview)
-- **Purpose**: What is DevForge and why it exists
+- **Purpose**: What is NKS WebDev Console and why it exists
 - **Length**: ~1,200 words
 - **Key Sections**:
   - Project overview and differentiators
@@ -88,7 +88,7 @@
 - **Format**: Each issue has Symptom, Diagnosis, and Solutions
 
 #### 7. **migration-mamp-pro.md** (MAMP PRO Migration)
-- **Purpose**: Help MAMP PRO users switch to DevForge
+- **Purpose**: Help MAMP PRO users switch to NKS WebDev Console
 - **Length**: ~2,400 words
 - **Key Sections**:
   - Why migrate (10 benefits)
@@ -188,7 +188,7 @@
 │   └── FILES-MANIFEST.md .......... This file
 │
 ├── Core Documentation (Main Content)
-│   ├── README.md .................. What is DevForge
+│   ├── README.md .................. What is NKS WebDev Console
 │   ├── getting-started.md ......... Installation guide
 │   ├── troubleshooting.md ......... Issue solutions
 │   └── migration-mamp-pro.md ...... MAMP PRO migration
@@ -310,7 +310,7 @@
 ## Version Information
 
 - **Documentation Version**: 2.0.0
-- **DevForge Version**: 2.0.0
+- **NKS WebDev Console Version**: 2.0.0
 - **Created**: 2026-04-09
 - **Status**: Phase 1 Complete ✓
 - **Next Phase**: Phase 2 (User Guides)

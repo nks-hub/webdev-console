@@ -1,6 +1,6 @@
-# START HERE - DevForge Documentation
+# START HERE - NKS WebDev Console Documentation
 
-Welcome to the **DevForge Documentation Suite**. This file helps you get oriented quickly.
+Welcome to the **NKS WebDev Console Documentation Suite**. This file helps you get oriented quickly.
 
 ---
 
@@ -20,7 +20,7 @@ Welcome to the **DevForge Documentation Suite**. This file helps you get oriente
 Navigation hub for all documentation. Shows quick links by topic and use case.
 
 ### 2. [README.md](./README.md) (5 min)
-What DevForge is, why it exists, and what it can do. Perfect for understanding the big picture.
+What NKS WebDev Console is, why it exists, and what it can do. Perfect for understanding the big picture.
 
 ### 3. [Getting Started Guide](./getting-started.md) (15 min)
 Complete installation and first-site creation guide for your operating system.
@@ -161,7 +161,7 @@ All documents link to related topics, making it easy to jump between guides.
 ### Accuracy
 - All file paths are platform-specific
 - All code examples verified
-- Version info: DevForge 2.0.0
+- Version info: NKS WebDev Console 2.0.0
 - Technical accuracy: 100%
 
 ---
@@ -184,14 +184,14 @@ All documents link to related topics, making it easy to jump between guides.
 
 ### If You're Stuck
 1. Check [Troubleshooting Guide](./troubleshooting.md)
-2. Run `devforge diagnose` to gather system info
-3. Join our community: https://discord.gg/devforge
-4. Email support: support@devforge.sh (Pro tier)
+2. Run `nks-wdc diagnose` to gather system info
+3. Join our community: https://discord.gg/nks-wdc
+4. Email support: support@nks-wdc.sh (Pro tier)
 
 ### Report Issues
-- **Bug in DevForge**: https://github.com/devforge/devforge/issues
+- **Bug in NKS WebDev Console**: https://github.com/nks-wdc/nks-wdc/issues
 - **Bug in Docs**: Same link (use "documentation" label)
-- **Community Help**: https://discord.gg/devforge
+- **Community Help**: https://discord.gg/nks-wdc
 
 ---
 
@@ -199,7 +199,7 @@ All documents link to related topics, making it easy to jump between guides.
 
 **Pick one:**
 
-→ **New to DevForge?** Start with [README.md](./README.md)  
+→ **New to NKS WebDev Console?** Start with [README.md](./README.md)  
 → **Ready to install?** Go to [Getting Started](./getting-started.md)  
 → **Coming from MAMP?** Go to [Migration Guide](./migration-mamp-pro.md)  
 → **Troubleshooting?** Go to [Troubleshooting](./troubleshooting.md)  
@@ -208,7 +208,7 @@ All documents link to related topics, making it easy to jump between guides.
 ---
 
 **Last Updated**: 2026-04-09  
-**DevForge Version**: 2.0.0  
+**NKS WebDev Console Version**: 2.0.0  
 **Documentation Files**: 7 complete, 8 planned
 
 ---

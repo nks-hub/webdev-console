@@ -1,8 +1,8 @@
-# DevForge - Local Development Server Management
+# NKS WebDev Console - Local Development Server Management
 
-**DevForge** is a unified local development environment for Windows, macOS, and Linux that replaces MAMP PRO, XAMPP, and WampServer. Manage Apache/Nginx, PHP versions, MySQL/MariaDB, and SSL—all from one intuitive interface.
+**NKS WebDev Console** is a unified local development environment for Windows, macOS, and Linux that replaces MAMP PRO, XAMPP, and WampServer. Manage Apache/Nginx, PHP versions, MySQL/MariaDB, and SSL—all from one intuitive interface.
 
-## Why DevForge?
+## Why NKS WebDev Console?
 
 - **One tool, one workflow** – No more juggling multiple server managers
 - **Per-site PHP versions** – Run PHP 7.4 on one project, PHP 8.2 on another
@@ -26,30 +26,30 @@
 
 ## Quick Start
 
-### 1. Install DevForge
+### 1. Install NKS WebDev Console
 
 **Windows:**
 ```bash
-winget install devforge
-# or download from https://devforge.sh/download
+winget install nks-wdc
+# or download from https://nks-wdc.sh/download
 ```
 
 **macOS:**
 ```bash
-brew tap devforge/tap
-brew install devforge
+brew tap nks-wdc/tap
+brew install nks-wdc
 ```
 
 **Linux (Ubuntu/Debian):**
 ```bash
 sudo apt-get update
-sudo apt-get install devforge
+sudo apt-get install nks-wdc
 ```
 
 ### 2. Create Your First Site
 
 ```bash
-devforge site create \
+wdc site create \
   --name my-project \
   --path /Users/you/projects/my-project \
   --php 8.2 \
@@ -62,7 +62,7 @@ Or use the GUI: **File → New Site** and follow the wizard.
 
 - Browser: `https://my-project.local`
 - Database: `phpMyAdmin → http://localhost/phpmyadmin`
-- CLI: `devforge database list`
+- CLI: `nks-wdc database list`
 
 All services start automatically. No configuration needed.
 
@@ -76,8 +76,8 @@ All services start automatically. No configuration needed.
 - **[Configuration](./configuration.md)** – Global and per-site settings
 - **[Troubleshooting](./troubleshooting.md)** – Common issues and solutions
 - **[Migration Guides](./migration.md)** – Move from MAMP PRO, XAMPP, WampServer, Laragon
-- **[Plugin Development](./plugin-development.md)** – Extend DevForge
-- **[Architecture](./architecture.md)** – How DevForge works internally
+- **[Plugin Development](./plugin-development.md)** – Extend NKS WebDev Console
+- **[Architecture](./architecture.md)** – How NKS WebDev Console works internally
 
 ## System Requirements
 
@@ -116,14 +116,14 @@ Both are fully featured. Use whichever fits your workflow.
 
 ## Getting Help
 
-- **Documentation**: https://docs.devforge.sh
-- **Discord Community**: https://discord.gg/devforge
-- **GitHub Issues**: https://github.com/devforge/devforge/issues
-- **Email Support**: support@devforge.sh (Pro tier)
+- **Documentation**: https://docs.nks-wdc.sh
+- **Discord Community**: https://discord.gg/nks-wdc
+- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
+- **Email Support**: support@nks-wdc.sh (Pro tier)
 
 ## License
 
-DevForge is open-source under the MIT License. Premium features (Pro tier) require a license key.
+NKS WebDev Console is open-source under the MIT License. Premium features (Pro tier) require a license key.
 
 ## Version
 

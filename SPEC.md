@@ -1,4 +1,4 @@
-# DevForge — Implementation Specification
+# NKS WebDev Console — Implementation Specification
 
 **Version:** 1.0.0
 **Date:** 2026-04-09
@@ -37,18 +37,18 @@
 
 ## 1. Project Overview
 
-### What Is DevForge
+### What Is NKS WebDev Console
 
-DevForge is a local development server manager. It replaces MAMP PRO / XAMPP / WampServer with a modern, cross-platform, extensible tool. It manages Apache, Nginx, MySQL, MariaDB, PHP-FPM (multiple simultaneous versions), Redis, and Mailpit as local processes — no Docker.
+NKS WebDev Console is a local development server manager. It replaces MAMP PRO / XAMPP / WampServer with a modern, cross-platform, extensible tool. It manages Apache, Nginx, MySQL, MariaDB, PHP-FPM (multiple simultaneous versions), Redis, and Mailpit as local processes — no Docker.
 
 ### Why It Exists — Specific MAMP PRO Pain Points
 
 Every feature in this spec exists to fix a concrete bug or missing feature in MAMP PRO:
 
-| MAMP PRO Problem | DevForge Solution |
+| MAMP PRO Problem | NKS WebDev Console Solution |
 |---|---|
 | Config corruption: SQLite stores empty values → Apache syntax error | Config validation pipeline: render → `httpd -t` → atomic write |
-| No CLI | Full CLI: `devforge new myapp.loc --php=8.2 --db --ssl` |
+| No CLI | Full CLI: `wdc new myapp.loc --php=8.2 --db --ssl` |
 | SSL / OpenSSL EC key failure on Windows | mkcert with bundled OpenSSL 3.x |
 | Alias bug: changing one vhost breaks all others | Independent per-site config files |
 | Restart overwrites manually fixed config | Atomic writes + config versioning (5 generations) |
@@ -127,15 +127,15 @@ Bundle the .NET runtime in the installer. This is the standard AppHost.exe patte
 ## 3. Solution Structure
 
 ```
-DevForge.sln
+WebDevConsole.sln
 src/
-├── DevForge.Core/              # Shared types, interfaces, config models
+├── NKS.WebDevConsole.Core/              # Shared types, interfaces, config models
 │   ├── Models/                 # Site, Service, PhpVersion, Certificate, Database
 │   ├── Interfaces/             # IServiceModule, IConfigProvider, IHostsManager
 │   ├── Configuration/          # AppConfig, SiteConfig, TOML loading
 │   └── Proto/                  # .proto files for gRPC (shared between daemon and clients)
 │
-├── DevForge.Daemon/            # Background service — owns all child processes
+├── NKS.WebDevConsole.Daemon/            # Background service — owns all child processes
 │   ├── Program.cs              # Worker Service host entry point
 │   ├── Services/               # ProcessManager, HealthMonitor, MetricsCollector
 │   ├── Modules/                # ApacheModule, NginxModule, MySqlModule, PhpFpmModule, RedisModule
@@ -146,18 +146,18 @@ src/
 │   ├── Db/                     # DatabaseManager, BackupScheduler
 │   └── Plugin/                 # PluginLoader (AssemblyLoadContext), PluginHost
 │
-├── DevForge.Gui/               # Avalonia desktop application
+├── NKS.WebDevConsole.Gui/               # Avalonia desktop application
 │   ├── App.axaml               # Application entry, theme registration
 │   ├── ViewModels/             # MVVM ViewModels (CommunityToolkit.Mvvm)
 │   ├── Views/                  # .axaml views per screen
 │   ├── Controls/               # Reusable controls: ServiceCard, SiteCard, PhpVersionBadge
 │   └── Services/               # GrpcClientService, ThemeService, NotificationService
 │
-├── DevForge.Cli/               # CLI client (System.CommandLine)
+├── NKS.WebDevConsole.Cli/               # CLI client (System.CommandLine)
 │   ├── Program.cs
 │   └── Commands/               # SiteCommand, ServiceCommand, PhpCommand, DbCommand, SslCommand
 │
-└── DevForge.Tests/
+└── NKS.WebDevConsole.Tests/
     ├── Core.Tests/
     ├── Daemon.Tests/
     ├── Cli.Tests/
@@ -167,21 +167,21 @@ src/
 ### Project Dependencies
 
 ```
-DevForge.Core       (no dependencies on other DevForge projects)
-DevForge.Daemon     → DevForge.Core
-DevForge.Gui        → DevForge.Core
-DevForge.Cli        → DevForge.Core
-DevForge.Tests.*    → all above
+NKS.WebDevConsole.Core       (no dependencies on other NKS WebDev Console projects)
+NKS.WebDevConsole.Daemon     → NKS.WebDevConsole.Core
+NKS.WebDevConsole.Gui        → NKS.WebDevConsole.Core
+NKS.WebDevConsole.Cli        → NKS.WebDevConsole.Core
+NKS.WebDevConsole.Tests.*    → all above
 ```
 
 ### Key NuGet Packages
 
-**DevForge.Core:**
+**NKS.WebDevConsole.Core:**
 - `Google.Protobuf`
 - `Grpc.Tools`
 - `Tomlyn` (TOML parsing)
 
-**DevForge.Daemon:**
+**NKS.WebDevConsole.Daemon:**
 - `Grpc.AspNetCore` 2.76.0+
 - `Microsoft.Data.Sqlite` 9.0+
 - `Dapper` 2.1+
@@ -192,7 +192,7 @@ DevForge.Tests.*    → all above
 - `Serilog` 4.3+ + `Serilog.Sinks.File` 7.0+ (structured logging)
 - `dbup-sqlite` 6.0+ (schema migrations)
 
-**DevForge.Gui:**
+**NKS.WebDevConsole.Gui:**
 - `Avalonia` (12.x)
 - `Avalonia.Desktop`
 - `Avalonia.Themes.Fluent`
@@ -202,13 +202,13 @@ DevForge.Tests.*    → all above
 - `CommunityToolkit.Mvvm`
 - `HotAvalonia` (Debug only — XAML hot reload)
 
-**DevForge.Cli:**
+**NKS.WebDevConsole.Cli:**
 - `System.CommandLine` 2.0.5+ (command parsing — now STABLE as of 2026-03-12)
 - `Grpc.Net.Client` 2.76.0+
 - `Spectre.Console` 0.55.0 (output formatting ONLY — tables, progress bars, colors. Do NOT use Spectre.Console.Cli for parsing)
 - `CliWrap` 3.10.1+ (one-shot subprocess calls: mkcert, httpd -t, mysqladmin)
 
-**DevForge.Tests:**
+**NKS.WebDevConsole.Tests:**
 - `xunit`
 - `Moq`
 - `Avalonia.Headless.XUnit`
@@ -226,17 +226,17 @@ Neither the GUI nor CLI ever modify config files, spawn services, or touch the h
 
 ```
 ┌──────────────────────────────┐   ┌────────────────────────────────┐
-│  DevForge.Gui (Avalonia)     │   │  DevForge.Cli (System.CommandLine)
-│  - Main window               │   │  - devforge start apache       │
-│  - System tray               │   │  - devforge new myapp.loc      │
-│  - LiveCharts2 metrics       │   │  - devforge db:import mydb ... │
+│  NKS.WebDevConsole.Gui (Avalonia)     │   │  NKS.WebDevConsole.Cli (System.CommandLine)
+│  - Main window               │   │  - wdc start apache       │
+│  - System tray               │   │  - wdc new myapp.loc      │
+│  - LiveCharts2 metrics       │   │  - wdc db:import mydb ... │
 └──────────┬───────────────────┘   └────────────┬───────────────────┘
            │ gRPC over named pipe               │ gRPC over named pipe
-           │ (Windows: \\.\pipe\devforge)       │ (macOS/Linux: unix socket)
+           │ (Windows: \\.\pipe\nks-wdc)       │ (macOS/Linux: unix socket)
            └──────────────┬────────────────────┘
                           │
            ┌──────────────▼──────────────────────────────────────┐
-           │  DevForge.Daemon (Worker Service)                    │
+           │  NKS.WebDevConsole.Daemon (Worker Service)                    │
            │                                                      │
            │  ProcessManager   HealthMonitor   MetricsCollector  │
            │  ┌────────────┐  ┌────────────┐  ┌───────────────┐ │
@@ -258,14 +258,14 @@ Neither the GUI nor CLI ever modify config files, spawn services, or touch the h
 
 | Platform | Transport |
 |---|---|
-| Windows | Named pipe `\\.\pipe\devforge-daemon` |
-| macOS / Linux | Unix domain socket `~/.devforge/daemon.sock` |
+| Windows | Named pipe `\\.\pipe\nks-wdc-daemon` |
+| macOS / Linux | Unix domain socket `~/.nks-wdc/daemon.sock` |
 
-gRPC runs over these transports using standard Kestrel named pipe listener (`ListenNamedPipe("devforge-daemon")`) on Windows and the built-in Unix Domain Socket support on macOS/Linux. Do NOT use the `GrpcDotNetNamedPipes` NuGet package — it uses a custom wire protocol incompatible with standard gRPC tooling.
+gRPC runs over these transports using standard Kestrel named pipe listener (`ListenNamedPipe("nks-wdc-daemon")`) on Windows and the built-in Unix Domain Socket support on macOS/Linux. Do NOT use the `GrpcDotNetNamedPipes` NuGet package — it uses a custom wire protocol incompatible with standard gRPC tooling.
 
 ### Daemon Lifecycle
 
-1. Check for existing PID lock (`~/.devforge/daemon.pid`). If stale, clean up.
+1. Check for existing PID lock (`~/.nks-wdc/daemon.pid`). If stale, clean up.
 2. Write PID lock.
 3. Open SQLite database, run pending migrations.
 4. Start gRPC server on transport.
@@ -421,7 +421,7 @@ Key: Direct process launch (NOT Windows Services, saves 400–800ms). Pre-genera
 
 ### Location
 
-`~/.devforge/data/state.db` (or `%APPDATA%\DevForge\data\state.db` on Windows)
+`~/.nks-wdc/data/state.db` (or `%APPDATA%\NKS WebDev Console\data\state.db` on Windows)
 
 ### PRAGMA Settings
 
@@ -469,7 +469,7 @@ The schema is already prototyped and tested (49 tests passing). Located at `prot
 
 ### Migration System
 
-C# migration runner in `DevForge.Daemon`:
+C# migration runner in `NKS.WebDevConsole.Daemon`:
 - Reads `schema_migrations` table to find current version
 - Applies pending `.sql` files from `migrations/` directory in version order
 - Backs up database before applying migrations
@@ -492,20 +492,20 @@ C# migration runner in `DevForge.Daemon`:
 
 ### Proto File Location
 
-`src/DevForge.Core/Proto/devforge.proto`
+`src/NKS.WebDevConsole.Core/Proto/nks-wdc.proto`
 
-This file is compiled by both `DevForge.Daemon` (server) and `DevForge.Gui` / `DevForge.Cli` (clients). Place it in `DevForge.Core` and reference it from all projects.
+This file is compiled by both `NKS.WebDevConsole.Daemon` (server) and `NKS.WebDevConsole.Gui` / `NKS.WebDevConsole.Cli` (clients). Place it in `NKS.WebDevConsole.Core` and reference it from all projects.
 
 ### Service Definition
 
 ```protobuf
 syntax = "proto3";
-package devforge.v1;
+package nks-wdc.v1;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
-service DevForgeService {
+service nks-wdcService {
   // Daemon health
   rpc GetStatus(google.protobuf.Empty) returns (DaemonStatus);
 
@@ -638,7 +638,7 @@ Use standard gRPC status codes with application-specific error details:
 
 ## 8. Configuration Pipeline
 
-This is the architectural centerpiece of DevForge. It eliminates the config corruption problem that makes MAMP PRO unreliable.
+This is the architectural centerpiece of NKS WebDev Console. It eliminates the config corruption problem that makes MAMP PRO unreliable.
 
 ### Pipeline Stages
 
@@ -717,7 +717,7 @@ On rollback: copy `.conf.N` → `.conf`, validate, apply.
 ### Data Ownership (TOML vs SQLite)
 
 **TOML files** are the source of truth for **site configuration** (what gets templated into Apache/Nginx configs):
-- `~/.devforge/sites/{domain}.toml` — human-editable, diffable, git-friendly
+- `~/.nks-wdc/sites/{domain}.toml` — human-editable, diffable, git-friendly
 - Daemon reads TOML → renders templates → generates server configs
 
 **SQLite database** is the source of truth for **runtime state and relationships**:
@@ -760,16 +760,16 @@ custom_directives = """
 """
 ```
 
-Store TOML files at: `~/.devforge/sites/{domain}.toml`
+Store TOML files at: `~/.nks-wdc/sites/{domain}.toml`
 
 ### Config Rebuild
 
-The `generated/` directory is always fully reconstructible. Running `devforge config:rebuild` deletes `generated/` and rebuilds everything from TOML files. This is run automatically after daemon upgrade.
+The `generated/` directory is always fully reconstructible. Running `wdc config:rebuild` deletes `generated/` and rebuilds everything from TOML files. This is run automatically after daemon upgrade.
 
 ### Scriban Template Example (Apache vhost)
 
 ```
-# Generated by DevForge — DO NOT EDIT MANUALLY
+# Generated by NKS WebDev Console — DO NOT EDIT MANUALLY
 # Source: {{ site.hostname }}.toml  Generated: {{ now }}
 
 <VirtualHost *:80>
@@ -835,7 +835,7 @@ Each PHP version gets a dedicated port (fallback if Unix sockets unavailable):
 | 8.3.x | 9083 |
 | 8.4.x | 9084 |
 
-On macOS/Linux, use Unix sockets: `~/.devforge/run/php-fpm-8.2.sock`
+On macOS/Linux, use Unix sockets: `~/.nks-wdc/run/php-fpm-8.2.sock`
 
 ### Apache Integration
 
@@ -850,7 +850,7 @@ Per-site generated config uses:
 
 Apache global config (`httpd.conf`) includes the `generated/` directory:
 ```apache
-IncludeOptional /path/to/devforge/generated/*.conf
+IncludeOptional /path/to/nks-wdc/generated/*.conf
 ```
 
 This keeps site configs independent — adding, removing, or changing one site cannot corrupt another.
@@ -871,7 +871,7 @@ Before binding any port:
 1. Check port availability
 2. If in use: identify owner process name and PID
 3. Report to caller with actionable options:
-   - Stop conflicting process (if DevForge manages it)
+   - Stop conflicting process (if NKS WebDev Console manages it)
    - Use fallback port (80→8080, 443→8443, 3306→3307)
    - Show error and let user resolve
 
@@ -881,10 +881,10 @@ Before binding any port:
 
 ### Architecture
 
-Each PHP version is self-contained under `~/.devforge/bin/php/X.Y.Z/`.
+Each PHP version is self-contained under `~/.nks-wdc/bin/php/X.Y.Z/`.
 
 ```
-~/.devforge/bin/php/
+~/.nks-wdc/bin/php/
 ├── 7.4.33/
 │   ├── bin/php[.exe]
 │   ├── bin/php-fpm[.exe]  (not on Windows — see note)
@@ -913,18 +913,18 @@ Only one PHP version has `is_default = 1`. Enforced by trigger: setting a new de
 
 ### CLI Aliases
 
-DevForge manages a directory `~/.devforge/shims/` that is added to PATH. Create shim scripts for each installed version:
+NKS WebDev Console manages a directory `~/.nks-wdc/shims/` that is added to PATH. Create shim scripts for each installed version:
 
 On macOS/Linux (shell script):
 ```bash
 #!/bin/sh
-exec ~/.devforge/bin/php/8.2.21/bin/php "$@"
+exec ~/.nks-wdc/bin/php/8.2.21/bin/php "$@"
 ```
 
 On Windows (CMD wrapper `.cmd` file):
 ```cmd
 @echo off
-"C:\Users\Username\.devforge\bin\php\8.2.21\bin\php.exe" %*
+"C:\Users\Username\.nks-wdc\bin\php\8.2.21\bin\php.exe" %*
 ```
 
 Shim names: `php82`, `php83`, `php84`, `php74`, `php56`, etc.
@@ -932,7 +932,7 @@ Also manage `php` → points to default version.
 
 ### php.ini Management
 
-Each PHP version has its own `php.ini` managed by DevForge. The ini file is generated from:
+Each PHP version has its own `php.ini` managed by NKS WebDev Console. The ini file is generated from:
 1. Base template (sensible development defaults)
 2. Per-version ini overrides from SQLite `php_versions.ini_overrides`
 
@@ -959,7 +959,7 @@ pm = ondemand
 pm.max_children = 3
 pm.process_idle_timeout = 30s
 pm.max_requests = 500
-php_admin_value[error_log] = /path/to/devforge/log/php-fpm-myapp.log
+php_admin_value[error_log] = /path/to/nks-wdc/log/php-fpm-myapp.log
 php_admin_flag[log_errors] = on
 ```
 
@@ -972,7 +972,7 @@ php_admin_flag[log_errors] = on
 ### Create Site Flow
 
 ```
-CLI: devforge new myapp.loc --php=8.2 --db --ssl --nette
+CLI: wdc new myapp.loc --php=8.2 --db --ssl --nette
   or
 GUI: New Site wizard
 
@@ -1035,7 +1035,7 @@ Explicitly reject: spaces, newlines, null bytes, path traversal (`../`), semicol
 
 ### Config Versioning and Rollback
 
-The `devforge site:rollback myapp.loc` command:
+The `wdc site:rollback myapp.loc` command:
 1. Lists available config history versions (from `generated/history/`)
 2. Copies selected version to current
 3. Validates it
@@ -1048,15 +1048,15 @@ The `devforge site:rollback myapp.loc` command:
 
 ### Hosts File Format
 
-DevForge writes a clearly-marked managed block:
+NKS WebDev Console writes a clearly-marked managed block:
 
 ```
-# >>> DevForge Managed — DO NOT EDIT <<<
+# >>> NKS WebDev Console Managed — DO NOT EDIT <<<
 127.0.0.1    myapp.loc
 127.0.0.1    www.myapp.loc
 127.0.0.1    chatujme.loc
 127.0.0.1    www.chatujme.loc
-# <<< DevForge Managed >>>
+# <<< NKS WebDev Console Managed >>>
 ```
 
 Everything outside the markers is never touched.
@@ -1073,7 +1073,7 @@ Everything outside the markers is never touched.
 
 The daemon runs unprivileged. Hosts file writes require elevation on Windows. Use a minimal elevation helper:
 
-1. `devforge-elevate.exe` — a separate minimal Windows executable
+1. `wdc-elevate.exe` — a separate minimal Windows executable
 2. Registered as a scheduled task at install time with highest privileges and `RunOnlyIfLoggedOn = false`
 3. The daemon calls the scheduled task with the operation payload (add/remove entries)
 4. The helper validates the payload (only allows add/remove within the managed block)
@@ -1106,7 +1106,7 @@ Run the appropriate command after every hosts file write.
 
 ### mkcert Integration
 
-mkcert is a third-party tool. Bundle the mkcert binary with DevForge at `~/.devforge/bin/mkcert[.exe]`.
+mkcert is a third-party tool. Bundle the mkcert binary with NKS WebDev Console at `~/.nks-wdc/bin/mkcert[.exe]`.
 
 **One-time CA installation** (requires elevation):
 
@@ -1119,7 +1119,7 @@ This installs the local CA into:
 - macOS: Keychain
 - Linux: NSS database + system CA bundle
 
-Store CA files at `~/.devforge/ssl/ca/`:
+Store CA files at `~/.nks-wdc/ssl/ca/`:
 - `rootCA.pem` — CA certificate (read-only, 444)
 - `rootCA-key.pem` — CA private key (600, owner-only)
 
@@ -1127,8 +1127,8 @@ Store CA files at `~/.devforge/ssl/ca/`:
 
 ```bash
 mkcert \
-  -cert-file ~/.devforge/ssl/sites/myapp.loc/cert.pem \
-  -key-file ~/.devforge/ssl/sites/myapp.loc/key.pem \
+  -cert-file ~/.nks-wdc/ssl/sites/myapp.loc/cert.pem \
+  -key-file ~/.nks-wdc/ssl/sites/myapp.loc/key.pem \
   myapp.loc "*.myapp.loc" www.myapp.loc
 ```
 
@@ -1149,11 +1149,11 @@ The HealthMonitor checks certificate validity daily. If a cert expires within 7 
 
 ### OpenSSL Bundling
 
-On Windows, MAMP PRO has a known bug: EC key generation fails because it bundles an old OpenSSL. DevForge bundles OpenSSL 3.x per platform and sets environment variables when invoking mkcert:
+On Windows, MAMP PRO has a known bug: EC key generation fails because it bundles an old OpenSSL. NKS WebDev Console bundles OpenSSL 3.x per platform and sets environment variables when invoking mkcert:
 
 ```
-OPENSSL_CONF = ~/.devforge/ssl/openssl.cnf
-OPENSSL_MODULES = ~/.devforge/bin/ossl-modules/
+OPENSSL_CONF = ~/.nks-wdc/ssl/openssl.cnf
+OPENSSL_MODULES = ~/.nks-wdc/bin/ossl-modules/
 ```
 
 ---
@@ -1190,7 +1190,7 @@ Construct from the stored root password (retrieved from platform secrets manager
 
 ### phpMyAdmin / Adminer
 
-DevForge does not bundle phpMyAdmin or Adminer. Instead, it provides:
+NKS WebDev Console does not bundle phpMyAdmin or Adminer. Instead, it provides:
 - A button "Open phpMyAdmin" that opens the user's locally installed phpMyAdmin URL
 - A button "Open Adminer" that downloads `adminer.php` to a temp site and opens it
 - Connection pre-fill via URL parameters (hostname, username — NOT password)
@@ -1210,7 +1210,7 @@ Run backup as a background task in the daemon using `IHostedService` periodic ti
 
 ### Binary Name
 
-`devforge[.exe]` — single binary for all CLI commands. Communicates with the daemon via gRPC.
+`nks-wdc[.exe]` — single binary for all CLI commands. Communicates with the daemon via gRPC.
 
 If the daemon is not running when a CLI command is issued:
 - For read commands (`status`, `site:list`): start daemon automatically, wait up to 5s, execute command
@@ -1219,14 +1219,14 @@ If the daemon is not running when a CLI command is issued:
 ### Full Command Tree
 
 ```
-devforge daemon start|stop|status|restart
+wdc daemon start|stop|status|restart
 
-devforge status                          # All services overview
-devforge start [service]                 # Start all or named service
-devforge stop [service]                  # Stop all or named service
-devforge restart [service]               # Restart all or named service
+wdc status                          # All services overview
+wdc start [service]                 # Start all or named service
+wdc stop [service]                  # Stop all or named service
+nks-wdc restart [service]               # Restart all or named service
 
-devforge new <domain>                    # Create new site (wizard or flags)
+wdc new <domain>                    # Create new site (wizard or flags)
   --php=8.2                              # PHP version
   --server=apache|nginx                  # Web server
   --docroot=PATH                         # Document root (auto-detected if omitted)
@@ -1235,45 +1235,45 @@ devforge new <domain>                    # Create new site (wizard or flags)
   --db-name=NAME                         # Database name (default: domain slugified)
   --nette|--laravel|--wordpress          # Framework hint
 
-devforge site:list [--json]
-devforge site:info <domain> [--json]
-devforge site:delete <domain> [--yes]
-devforge site:open <domain>              # Open in default browser
-devforge site:rollback <domain>          # Roll back config to previous version
+wdc site:list [--json]
+wdc site:info <domain> [--json]
+wdc site:delete <domain> [--yes]
+wdc site:open <domain>              # Open in default browser
+wdc site:rollback <domain>          # Roll back config to previous version
 
-devforge php:list [--json]
-devforge php:install <version>           # e.g. devforge php:install 8.4
-devforge php:remove <version>
-devforge php:default <version>
-devforge php:use <version> [--site=<domain>]
+wdc php:list [--json]
+wdc php:install <version>           # e.g. wdc php:install 8.4
+wdc php:remove <version>
+wdc php:default <version>
+wdc php:use <version> [--site=<domain>]
 
-devforge db:list [--json]
-devforge db:create <name> [--service=mysql]
-devforge db:drop <name> [--yes]
-devforge db:import <name> <file.sql>
-devforge db:export <name> [output.sql]
-devforge db:backup [--all]
+wdc db:list [--json]
+wdc db:create <name> [--service=mysql]
+wdc db:drop <name> [--yes]
+wdc db:import <name> <file.sql>
+wdc db:export <name> [output.sql]
+wdc db:backup [--all]
 
-devforge ssl:install-ca                  # Install mkcert CA (requires elevation)
-devforge ssl:create <domain>             # Generate cert for domain
-devforge ssl:list [--json]
-devforge ssl:status                      # Show CA trust status
+wdc ssl:install-ca                  # Install mkcert CA (requires elevation)
+wdc ssl:create <domain>             # Generate cert for domain
+wdc ssl:list [--json]
+wdc ssl:status                      # Show CA trust status
 
-devforge dns:status                      # Show hosts file entries
-devforge dns:flush                       # Flush DNS cache
-devforge dns:add <domain> <ip>           # Manual entry
-devforge dns:remove <domain>
+wdc dns:status                      # Show hosts file entries
+wdc dns:flush                       # Flush DNS cache
+wdc dns:add <domain> <ip>           # Manual entry
+wdc dns:remove <domain>
 
-devforge config:get <key>
-devforge config:set <key> <value>
-devforge config:list [--json]
-devforge config:rebuild                  # Rebuild all generated configs from TOML
+wdc config:get <key>
+wdc config:set <key> <value>
+wdc config:list [--json]
+wdc config:rebuild                  # Rebuild all generated configs from TOML
 
-devforge plugin:list [--json]
-devforge plugin:install <name>           # From marketplace or local path
-devforge plugin:remove <name>
-devforge plugin:enable <name>
-devforge plugin:disable <name>
+wdc plugin:list [--json]
+wdc plugin:install <name>           # From marketplace or local path
+wdc plugin:remove <name>
+wdc plugin:enable <name>
+wdc plugin:disable <name>
 ```
 
 ### Global Flags
@@ -1300,7 +1300,7 @@ Success:
 
 ### Shell Completions
 
-`devforge completion bash|zsh|fish|powershell` — outputs completion script.
+`nks-wdc completion bash|zsh|fish|powershell` — outputs completion script.
 
 Generated via `System.CommandLine` built-in completion support. Installation instructions output automatically.
 
@@ -1324,7 +1324,7 @@ Avalonia UI 12.x with FluentTheme. MVVM pattern using `CommunityToolkit.Mvvm`. g
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  [Logo] DevForge          [service status dots]    [─][□][✕]        │
+│  [Logo] NKS WebDev Console          [service status dots]    [─][□][✕]        │
 ├──────────────┬──────────────────────────────────────────────────────┤
 │              │                                                       │
 │  SIDEBAR     │  CONTENT AREA                                        │
@@ -1431,7 +1431,7 @@ Tray icon:
 Left-click: show/hide main window.
 Right-click context menu:
 ```
-DevForge 1.0.0
+NKS WebDev Console 1.0.0
 ─────────────────
 ● Apache     Running  [Stop]
 ● MySQL      Running  [Stop]
@@ -1446,7 +1446,7 @@ Stop All Services
 ─────────────────
 Open Dashboard
 ─────────────────
-Quit DevForge
+Quit NKS WebDev Console
 ```
 
 ### Dark Mode Theme (Default)
@@ -1503,7 +1503,7 @@ private async Task CreateSiteAsync(CreateSiteModel model)
 ### IServiceModule Interface (for service plugins)
 
 ```csharp
-namespace DevForge.Core.Interfaces;
+namespace NKS.WebDevConsole.Core.Interfaces;
 
 public interface IServiceModule
 {
@@ -1529,16 +1529,16 @@ public interface IServiceModule
 
 ```json
 {
-  "id": "devforge-redis",
+  "id": "nks-wdc-redis",
   "name": "Redis",
   "version": "1.2.0",
   "type": "service",
-  "minDevForgeVersion": "1.0.0",
-  "entryAssembly": "DevForge.Plugin.Redis.dll",
-  "entryType": "DevForge.Plugin.Redis.RedisModule",
+  "minnks-wdcVersion": "1.0.0",
+  "entryAssembly": "NKS.WebDevConsole.Plugin.Redis.dll",
+  "entryType": "NKS.WebDevConsole.Plugin.Redis.RedisModule",
   "permissions": {
     "network": true,
-    "filesystem": ["${DEVFORGE_HOME}/plugins/redis/"],
+    "filesystem": ["${nks-wdc_HOME}/plugins/redis/"],
     "process": true,
     "gui": false
   }
@@ -1580,25 +1580,25 @@ public class PluginLoader
 
 ### Plugin Directory
 
-`~/.devforge/plugins/{plugin-id}/`
+`~/.nks-wdc/plugins/{plugin-id}/`
 
 On startup: scan this directory and attempt to load all enabled plugins from SQLite.
 
-### Built-in Plugins (Ship with DevForge)
+### Built-in Plugins (Ship with NKS WebDev Console)
 
-- `devforge-apache` — Apache 2.4 module (builtin = true)
-- `devforge-nginx` — Nginx module (builtin = true)
-- `devforge-mysql` — MySQL 8.x module (builtin = true)
-- `devforge-php-fpm` — PHP-FPM multi-version module (builtin = true)
+- `nks-wdc-apache` — Apache 2.4 module (builtin = true)
+- `nks-wdc-nginx` — Nginx module (builtin = true)
+- `nks-wdc-mysql` — MySQL 8.x module (builtin = true)
+- `nks-wdc-php-fpm` — PHP-FPM multi-version module (builtin = true)
 
 ### Optional Plugins (V1 or V2)
 
-- `devforge-redis` — Redis 7.x
-- `devforge-mariadb` — MariaDB 11.x (alternative to MySQL)
-- `devforge-mailpit` — Mailpit email testing
-- `devforge-nette` — Nette framework driver (auto-detection, site creation defaults)
-- `devforge-laravel` — Laravel framework driver
-- `devforge-wordpress` — WordPress framework driver
+- `nks-wdc-redis` — Redis 7.x
+- `nks-wdc-mariadb` — MariaDB 11.x (alternative to MySQL)
+- `nks-wdc-mailpit` — Mailpit email testing
+- `nks-wdc-nette` — Nette framework driver (auto-detection, site creation defaults)
+- `nks-wdc-laravel` — Laravel framework driver
+- `nks-wdc-wordpress` — WordPress framework driver
 
 ---
 
@@ -1611,14 +1611,14 @@ The daemon runs as the **current user** (unprivileged). The only operations requ
 2. Binding to ports < 1024 (if the user wants to use port 80/443 directly)
 3. Installing the mkcert CA certificate
 
-For each of these, DevForge uses a minimal elevation helper that is installed once at setup time.
+For each of these, NKS WebDev Console uses a minimal elevation helper that is installed once at setup time.
 
 ### Windows Elevation Helper
 
-`devforge-elevate.exe` — separate minimal executable registered as a Windows Scheduled Task with `RunLevel = Highest`. The daemon calls it via:
+`wdc-elevate.exe` — separate minimal executable registered as a Windows Scheduled Task with `RunLevel = Highest`. The daemon calls it via:
 
 ```csharp
-var task = TaskScheduler.FindTask("DevForge Elevation Helper");
+var task = TaskScheduler.FindTask("NKS WebDev Console Elevation Helper");
 task.Run(JsonSerializer.Serialize(new ElevationRequest { Operation = "write-hosts", Payload = ... }));
 ```
 
@@ -1645,7 +1645,7 @@ This prevents config injection attacks through the domain field, which is a know
 Random 32-character alphanumeric password generated at first init. Stored in:
 - Windows: DPAPI + `CredentialManager`
 - macOS: Keychain via `SecItemAdd`
-- Linux: libsecret (GNOME Keyring) or `~/.devforge/secrets/` with `chmod 600` as fallback
+- Linux: libsecret (GNOME Keyring) or `~/.nks-wdc/secrets/` with `chmod 600` as fallback
 
 Never stored in SQLite or TOML files.
 
@@ -1657,8 +1657,8 @@ All services bind to `127.0.0.1` by default. Binding to `0.0.0.0` requires expli
 
 | File | Permissions |
 |---|---|
-| `~/.devforge/ssl/ca/rootCA-key.pem` | `600` (owner read/write only) |
-| `~/.devforge/secrets/` (Linux fallback) | `700` directory, `600` files |
+| `~/.nks-wdc/ssl/ca/rootCA-key.pem` | `600` (owner read/write only) |
+| `~/.nks-wdc/secrets/` (Linux fallback) | `700` directory, `600` files |
 | All other config files | `644` |
 
 ---
@@ -1694,20 +1694,20 @@ All services bind to `127.0.0.1` by default. Binding to `0.0.0.0` requires expli
 
 | Project | Line Coverage | Branch Coverage |
 |---|---|---|
-| DevForge.Core | 90% | 90% |
-| DevForge.Daemon | 80% | 80% |
-| DevForge.Cli | 85% | 85% |
-| DevForge.Gui | 70% | 70% |
+| NKS.WebDevConsole.Core | 90% | 90% |
+| NKS.WebDevConsole.Daemon | 80% | 80% |
+| NKS.WebDevConsole.Cli | 85% | 85% |
+| NKS.WebDevConsole.Gui | 70% | 70% |
 
 ### Test Projects
 
-**DevForge.Tests/Core.Tests:**
+**NKS.WebDevConsole.Tests/Core.Tests:**
 - Config template rendering: all templates produce valid output for all framework types
 - Domain validation: valid domains pass, injection attempts are rejected
 - TOML parsing: read/write round-trip fidelity
 - Database migration: 001_initial.sql applies cleanly on empty DB (reuse prototype/database/schema_test.py logic in C#)
 
-**DevForge.Tests/Daemon.Tests:**
+**NKS.WebDevConsole.Tests/Daemon.Tests:**
 - ProcessManager: start/stop/crash/restart state machine transitions
 - ConfigPipeline: `httpd -t` validation integration test (requires Apache binary)
 - AtomicWriter: simulated filesystem failures
@@ -1715,13 +1715,13 @@ All services bind to `127.0.0.1` by default. Binding to `0.0.0.0` requires expli
 - SslManager: mkcert invocation and certificate tracking
 - Database migration runner: version sequencing, checksum validation
 
-**DevForge.Tests/Cli.Tests:**
+**NKS.WebDevConsole.Tests/Cli.Tests:**
 - All commands parse correctly from argument strings
 - `--json` flag produces valid JSON for all commands
 - Commands fail gracefully when daemon is not running
 - Shell completion output is valid for bash/zsh/PowerShell
 
-**DevForge.Tests/Gui.Tests:**
+**NKS.WebDevConsole.Tests/Gui.Tests:**
 - Avalonia Headless: all ViewModels initialize without exceptions
 - Create Site Wizard: step validation logic
 - ServiceCard: renders in all ServiceState values
@@ -1771,7 +1771,7 @@ For Linux: `linux-x64`.
 ### Portable Directory Structure (on disk after install/extract)
 
 ```
-~/.devforge/ (or %APPDATA%\DevForge\ on Windows)
+~/.nks-wdc/ (or %APPDATA%\NKS WebDev Console\ on Windows)
 ├── bin/
 │   ├── php/
 │   │   ├── 8.2.21/
@@ -1796,10 +1796,10 @@ For Linux: `linux-x64`.
 └── templates/          ← Scriban templates for Apache/Nginx configs
 ```
 
-The DevForge executables themselves are installed to:
-- Windows: `C:\Program Files\DevForge\`
-- macOS: `/Applications/DevForge.app/`
-- Linux: `/opt/devforge/`
+The NKS WebDev Console executables themselves are installed to:
+- Windows: `C:\Program Files\NKS WebDev Console\`
+- macOS: `/Applications/NKS WebDev Console.app/`
+- Linux: `/opt/nks-wdc/`
 
 ### Installers
 
@@ -1852,10 +1852,10 @@ Steps taken at every release:
 Deliverables:
 - [ ] .NET 9 solution with 5 projects: Core, Daemon, Gui, Cli, Tests
 - [ ] Copy prototype database schema (`prototype/database/`) and create C# migration runner
-- [ ] gRPC service definition (`devforge.proto`) with all methods defined
+- [ ] gRPC service definition (`nks-wdc.proto`) with all methods defined
 - [ ] Basic daemon: Worker Service host, gRPC server on named pipe, SQLite open
 - [ ] Basic Avalonia window: FluentTheme dark, sidebar layout, empty screens
-- [ ] Basic CLI: `devforge status` command, gRPC client connecting to daemon
+- [ ] Basic CLI: `wdc status` command, gRPC client connecting to daemon
 
 Acceptance criteria:
 - `dotnet build` succeeds on all three platforms
@@ -1888,7 +1888,7 @@ Deliverables:
 - [ ] CLI: all `site:*`, `ssl:*`, `dns:*` commands
 
 Acceptance criteria:
-- `devforge new myapp.loc --php=8.2 --ssl --nette` creates a working site end-to-end
+- `wdc new myapp.loc --php=8.2 --ssl --nette` creates a working site end-to-end
 - Site accessible at https://myapp.loc in browser without certificate warning
 - Hosts file has correct entry, DNS cache flushed
 
@@ -1922,7 +1922,7 @@ Deliverables:
 
 Acceptance criteria:
 - All CLI commands pass unit and integration tests
-- `devforge db:import mydb dump.sql` completes with progress bar
+- `wdc db:import mydb dump.sql` completes with progress bar
 - Shell completions work in bash and PowerShell
 
 ### Phase 6: Plugins + Packaging (Week 11–12)
@@ -1934,7 +1934,7 @@ Deliverables:
 - [ ] Optional plugin: Mailpit
 - [ ] Installer: WiX MSI (Windows), DMG (macOS), AppImage (Linux)
 - [ ] Auto-updater (Velopack)
-- [ ] MAMP PRO migration import tool (reads MAMP's SQLite, creates DevForge sites)
+- [ ] MAMP PRO migration import tool (reads MAMP's SQLite, creates NKS WebDev Console sites)
 
 Acceptance criteria:
 - Redis plugin loads, starts Redis, shows in Dashboard
@@ -1973,7 +1973,7 @@ The GUI prototype (`prototype/gui/`) uses **Tauri + Svelte** — this is **super
 
 Existing documentation that is useful context but should not drive implementation decisions differently from this SPEC:
 
-- `docs/plans/2026-04-09-devforge-implementation-plan.md` — Detailed implementation plan (21 sections, fully rewritten for C#/Avalonia).
+- `docs/plans/2026-04-09-nks-wdc-implementation-plan.md` — Detailed implementation plan (21 sections, fully rewritten for C#/Avalonia).
 - `docs/plans/interview-results.md` — Original user requirements gathering (30+ questions).
 - `docs/plans/avalonia-ecosystem.md` — NuGet package reference, patterns, gotchas, version compatibility.
 - `docs/plans/csharp-process-management.md` — Graceful shutdown per service, Job Objects, CliWrap patterns, PHP-CGI on Windows.

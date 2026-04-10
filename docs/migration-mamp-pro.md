@@ -1,12 +1,12 @@
-# Migrating from MAMP PRO to DevForge
+# Migrating from MAMP PRO to NKS WebDev Console
 
-This guide helps you move your projects, databases, and configurations from MAMP PRO to DevForge with minimal downtime.
+This guide helps you move your projects, databases, and configurations from MAMP PRO to NKS WebDev Console with minimal downtime.
 
 **Estimated migration time**: 30 minutes for typical setup with 5–10 projects
 
 ## Why Migrate from MAMP PRO?
 
-- **Simpler interface** – DevForge focuses on essential features
+- **Simpler interface** – NKS WebDev Console focuses on essential features
 - **Per-site PHP versions** – No need to restart to switch versions
 - **Better performance** – Nginx option, no bloated UI overhead
 - **Automatic SSL** – Self-signed certificates included
@@ -33,23 +33,23 @@ cp -r ~/Sites ~/Sites-backup
 
 ## Migration Steps
 
-### Step 1: Install DevForge
+### Step 1: Install NKS WebDev Console
 
 **macOS**:
 ```bash
-brew tap devforge/tap
-brew install devforge
+brew tap nks-wdc/tap
+brew install nks-wdc
 ```
 
 **Windows**:
 ```bash
-winget install devforge
-# or download from https://devforge.sh/download
+winget install nks-wdc
+# or download from https://nks-wdc.sh/download
 ```
 
 ### Step 2: Run First-Time Wizard
 
-Launch DevForge. The wizard will:
+Launch NKS WebDev Console. The wizard will:
 1. Check system requirements
 2. Choose ports for services (recommend different ports than MAMP PRO to avoid conflicts)
 3. Set MySQL root password
@@ -63,8 +63,8 @@ Launch DevForge. The wizard will:
 
 #### Option A: Quick Import (Recommended)
 ```bash
-# Restore your MAMP PRO backup to DevForge
-devforge database import ~/mamp-backup.sql
+# Restore your MAMP PRO backup to NKS WebDev Console
+nks-wdc database import ~/mamp-backup.sql
 ```
 
 #### Option B: Manual Database Export from MAMP PRO
@@ -72,8 +72,8 @@ devforge database import ~/mamp-backup.sql
 # Export specific database
 /Applications/MAMP/Library/bin/mysqldump -u root -proot my_database > ~/my_database.sql
 
-# Import to DevForge
-devforge database import ~/my_database.sql
+# Import to NKS WebDev Console
+nks-wdc database import ~/my_database.sql
 ```
 
 #### Option C: Using phpMyAdmin
@@ -81,17 +81,17 @@ devforge database import ~/my_database.sql
    - Select database
    - Export tab
    - Download SQL file
-2. **In DevForge phpMyAdmin** (http://localhost/phpmyadmin):
+2. **In NKS WebDev Console phpMyAdmin** (http://localhost/phpmyadmin):
    - Import tab
    - Upload SQL file
 
 **Verify imports**:
 ```bash
 # List all databases
-devforge database list
+nks-wdc database list
 
 # Check specific database
-devforge database info my_database
+nks-wdc database info my_database
 ```
 
 ### Step 4: Migrate Project Files
@@ -112,16 +112,16 @@ mv ~/Sites/* ~/projects/
 #### Option B: Re-link Existing Projects
 If your projects are elsewhere:
 ```bash
-devforge site create \
+wdc site create \
   --name my-project \
   --path /Users/you/existing/path/to/my-project \
   --php 8.2 \
   --ssl true
 ```
 
-### Step 5: Create Sites in DevForge
+### Step 5: Create Sites in NKS WebDev Console
 
-For each MAMP PRO site, create a new DevForge site. You have two options:
+For each MAMP PRO site, create a new NKS WebDev Console site. You have two options:
 
 #### Option A: GUI (Recommended for Beginners)
 1. Click **File → New Site**
@@ -133,7 +133,7 @@ For each MAMP PRO site, create a new DevForge site. You have two options:
 #### Option B: CLI (Recommended for Automation)
 ```bash
 # Single site
-devforge site create \
+wdc site create \
   --name my-project \
   --path /Users/you/projects/my-project \
   --php 8.2 \
@@ -141,7 +141,7 @@ devforge site create \
   --ssl true
 
 # Multiple sites (batch create)
-devforge site import ~/mamp-sites.yml
+wdc site import ~/mamp-sites.yml
 ```
 
 **Batch import file example** (`mamp-sites.yml`):
@@ -168,7 +168,7 @@ sites:
 
 ### Step 6: Update Your Hosts File
 
-MAMP PRO uses `127.0.0.1 localhost` for sites. DevForge uses `.local` domains.
+MAMP PRO uses `127.0.0.1 localhost` for sites. NKS WebDev Console uses `.local` domains.
 
 #### Update `/etc/hosts` (macOS/Linux)
 ```bash
@@ -177,7 +177,7 @@ echo "127.0.0.1    my-project.local" | sudo tee -a /etc/hosts
 echo "127.0.0.1    another-site.local" | sudo tee -a /etc/hosts
 
 # Or auto-sync
-devforge dns-sync
+wdc dns-sync
 ```
 
 #### Update `hosts` file (Windows)
@@ -189,7 +189,7 @@ devforge dns-sync
 
 ### Step 7: Update Project Configuration Files
 
-Update your `.env` and database configuration files to point to DevForge:
+Update your `.env` and database configuration files to point to NKS WebDev Console:
 
 #### Laravel (.env)
 ```bash
@@ -200,7 +200,7 @@ DB_DATABASE=my_laravel_db
 DB_USERNAME=root
 DB_PASSWORD=root
 
-# After (DevForge)
+# After (NKS WebDev Console)
 # If using default MySQL port 3306:
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -239,7 +239,7 @@ Visit each site in your browser to verify everything works:
 
 ```bash
 # Test all sites
-devforge site list  # Shows all sites and their URLs
+wdc site list  # Shows all sites and their URLs
 
 # Visit in browser
 https://my-project.local
@@ -255,17 +255,17 @@ https://another-site.local
 
 ### Step 9: Verify PHP Extensions
 
-MAMP PRO may have had different extensions enabled. Verify DevForge has everything you need:
+MAMP PRO may have had different extensions enabled. Verify NKS WebDev Console has everything you need:
 
 ```bash
 # Check installed extensions
-devforge php extensions
+wdc php extensions
 
 # Install missing extensions
-devforge php install-extension gd intl opcache redis
+wdc php install-extension gd intl opcache redis
 
 # Restart PHP
-devforge service restart php-fpm
+nks-wdc service restart php-fpm
 ```
 
 **Common extensions to verify**:
@@ -278,7 +278,7 @@ devforge service restart php-fpm
 
 ### Step 10: Uninstall MAMP PRO (Optional)
 
-Once everything is working in DevForge:
+Once everything is working in NKS WebDev Console:
 
 ```bash
 # Backup MAMP PRO configuration one last time (optional)
@@ -303,16 +303,16 @@ If you had custom VirtualHost configurations in MAMP PRO:
 cat /Applications/MAMP/conf/apache/sites-enabled/*.conf
 ```
 
-**Port to DevForge**:
+**Port to NKS WebDev Console**:
 
-Instead of editing Apache directly, use DevForge's per-site configuration:
+Instead of editing Apache directly, use NKS WebDev Console's per-site configuration:
 
 ```bash
 # Edit site configuration
-devforge site edit my-project --advanced
+wdc site edit my-project --advanced
 
 # Or add custom Nginx directives
-devforge site update my-project --nginx-directives "
+wdc site update my-project --nginx-directives "
 location ~* \.(jpg|jpeg|png|gif)$ {
     expires 30d;
     add_header Cache-Control 'public, immutable';
@@ -328,22 +328,22 @@ If you had custom `php.ini` settings:
 # Find your MAMP PRO php.ini
 cat /Applications/MAMP/conf/php7.4/php.ini
 
-# Copy settings to DevForge
-devforge site update my-project --ini "memory_limit=512M" --ini "upload_max_filesize=100M"
+# Copy settings to NKS WebDev Console
+wdc site update my-project --ini "memory_limit=512M" --ini "upload_max_filesize=100M"
 
 # Or edit directly
-devforge php edit-config
+wdc php edit-config
 ```
 
 ### SSL Certificates
 
 MAMP PRO uses self-signed certificates stored in `/Applications/MAMP/conf/apache/ssl/`.
 
-DevForge auto-generates new certificates for each site. If you want to use your existing certificates:
+NKS WebDev Console auto-generates new certificates for each site. If you want to use your existing certificates:
 
 ```bash
 # Import existing certificate
-devforge cert import my-project.local \
+nks-wdc cert import my-project.local \
   --cert /Applications/MAMP/conf/apache/ssl/my-project.crt \
   --key /Applications/MAMP/conf/apache/ssl/my-project.key
 ```
@@ -352,12 +352,12 @@ devforge cert import my-project.local \
 
 ### Local Email Testing
 
-MAMP PRO included Postfix for local email testing. DevForge doesn't include mail services by default, but you have options:
+MAMP PRO included Postfix for local email testing. NKS WebDev Console doesn't include mail services by default, but you have options:
 
 #### Option A: Use MailHog (Recommended)
 ```bash
 # Install MailHog
-devforge plugin install mailhog
+wdc plugin install mailhog
 
 # Configure your app to send to localhost:1025
 # Web UI: http://localhost:8025
@@ -388,7 +388,7 @@ MAIL_PASSWORD=your_mailtrap_password
 #### Option C: Use Postfix (Advanced)
 ```bash
 # Install via plugin
-devforge plugin install postfix
+wdc plugin install postfix
 
 # Configure app to send to localhost:25
 MAIL_HOST=127.0.0.1
@@ -407,21 +407,21 @@ MAIL_PORT=25
 
 2. **Verify services are running**:
    ```bash
-   devforge service status
+   nks-wdc service status
    ```
 
 3. **Check logs**:
    ```bash
-   devforge logs nginx
-   devforge logs php-fpm
+   nks-wdc logs nginx
+   nks-wdc logs php-fpm
    ```
 
 ### Database Connection Fails
 
 ```bash
 # Verify MySQL is running and port is correct
-devforge service status mysql
-devforge config get mysql.port
+nks-wdc service status mysql
+wdc config get mysql.port
 
 # Test connection directly
 mysql -u root -p -h 127.0.0.1
@@ -438,30 +438,30 @@ sudo killall -9 php-fpm
 # Verify they're gone
 ps aux | grep -E 'Apache|mysql|php'
 
-# Start DevForge
-devforge service start all
+# Start NKS WebDev Console
+nks-wdc service start all
 ```
 
 ### Database Passwords Don't Work After Import
 
-If you created new MySQL root password during DevForge setup, your imported databases use MAMP PRO's old password (`root`).
+If you created new MySQL root password during NKS WebDev Console setup, your imported databases use MAMP PRO's old password (`root`).
 
 **Solution**:
 
 ```bash
 # Drop and recreate the user with the new password
-devforge database update-user-password root --password "new_password"
+nks-wdc database update-user-password root --password "new_password"
 
 # Or create separate user for your apps
-devforge database create-user app_user --password "app_password"
-devforge database grant-privileges app_user my_database
+nks-wdc database create-user app_user --password "app_password"
+nks-wdc database grant-privileges app_user my_database
 ```
 
 Then update your `.env` files to use the new credentials.
 
 ## Performance Comparison
 
-| Feature | MAMP PRO | DevForge |
+| Feature | MAMP PRO | NKS WebDev Console |
 |---------|----------|----------|
 | Startup time | 15–30 seconds | 3–5 seconds |
 | Memory usage | 600 MB+ | 200 MB+ |
@@ -484,7 +484,7 @@ If something goes wrong during migration:
 
 ## Next Steps
 
-- [CLI Reference](./cli-reference.md) – Master DevForge commands
+- [CLI Reference](./cli-reference.md) – Master NKS WebDev Console commands
 - [Per-Site PHP Configuration](./guides/php.md) – Set different versions per project
 - [Database Guide](./guides/databases.md) – Advanced database operations
 - [Framework Integration](./guides/frameworks.md) – Laravel, WordPress, Symfony, etc.
@@ -495,13 +495,13 @@ If something goes wrong during migration:
 
 Print this and check off each step:
 
-- [ ] Install DevForge
+- [ ] Install NKS WebDev Console
 - [ ] Run first-time wizard
 - [ ] Backup MAMP PRO databases
 - [ ] Export databases
-- [ ] Import to DevForge
+- [ ] Import to NKS WebDev Console
 - [ ] Copy project files
-- [ ] Create sites in DevForge
+- [ ] Create sites in NKS WebDev Console
 - [ ] Update `/etc/hosts`
 - [ ] Update `.env` files
 - [ ] Test each site
@@ -509,8 +509,8 @@ Print this and check off each step:
 - [ ] Configure email (MailHog or Mailtrap)
 - [ ] Uninstall MAMP PRO (optional)
 
-**Complete?** You've successfully migrated to DevForge. Welcome to the community!
+**Complete?** You've successfully migrated to NKS WebDev Console. Welcome to the community!
 
 ---
 
-**Need help?** Join the Discord community: https://discord.gg/devforge
+**Need help?** Join the Discord community: https://discord.gg/nks-wdc

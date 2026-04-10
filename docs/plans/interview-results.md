@@ -1,4 +1,4 @@
-# Interview Results — DevForge GUI & Backend Technology Decision
+# Interview Results — NKS WebDev Console GUI & Backend Technology Decision
 
 **Date:** 2026-04-09
 **Respondent:** Lukas (solo developer + Claude Code)
@@ -77,7 +77,7 @@ MAMP PRO je super ale buggy. WAMP a XAMPP jsou shit. Ma konkretni pozadavky co e
 
 ### Workflow noveho projektu:
 - GUI wizard (krok za krokem) s auto-detect existujiciho projektu
-- CLI alternativa: `devforge new myapp.loc --php=8.2 --db --ssl --nette`
+- CLI alternativa: `wdc new myapp.loc --php=8.2 --db --ssl --nette`
 - Auto-detect framework (Nette/WP/Laravel) podle slozky
 
 ### PHP verze management:
@@ -148,7 +148,7 @@ MAMP PRO je super ale buggy. WAMP a XAMPP jsou shit. Ma konkretni pozadavky co e
 | Technologie | Pro | Proti |
 |-------------|-----|-------|
 | **C# / .NET** | Jeden jazyk s Avalonia, .NET 9 AOT | Process management mene prokazane nez Go |
-| **Go** | Overeny POC (devforged.exe 5.6MB) | AV false positive KRITICKE, $0 signing |
+| **Go** | Overeny POC (wdc-daemon.exe 5.6MB) | AV false positive KRITICKE, $0 signing |
 | **Dart** | Jeden jazyk s Flutter | dart:io pro daemon? Nestandardni |
 | **Python** | Jeden jazyk s PySide6 | Interpretovany, GIL |
 

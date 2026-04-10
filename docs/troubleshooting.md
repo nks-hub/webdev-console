@@ -23,7 +23,7 @@ This guide covers common issues and their solutions. Use the search feature or t
 
 **Diagnosis**:
 ```bash
-devforge port-check 80 443 3306 9000
+nks-wdc port-check 80 443 3306 9000
 ```
 
 **Solutions**:
@@ -32,11 +32,11 @@ devforge port-check 80 443 3306 9000
    - Windows: `netstat -ano | findstr ":80"`
    - macOS/Linux: `lsof -i :80`
 
-2. **Change DevForge port**:
+2. **Change NKS WebDev Console port**:
    ```bash
-   devforge config set ports.http 8080
-   devforge config set ports.https 8443
-   devforge service restart
+   wdc config set ports.http 8080
+   wdc config set ports.https 8443
+   nks-wdc service restart
    ```
    Then access sites via `https://my-project.local:8443`
 
@@ -45,23 +45,23 @@ devforge port-check 80 443 3306 9000
    - If Apache (macOS): `sudo apachectl stop`
    - If IIS (Windows): `net stop W3SVC`
 
-4. **Restart DevForge**:
+4. **Restart NKS WebDev Console**:
    ```bash
-   devforge service restart all
+   nks-wdc service restart all
    ```
 
 ### Network Unreachable
 
 **Symptom**: Cannot access `my-project.local` from another machine on network
 
-**Root Cause**: DevForge binds to `127.0.0.1` (localhost) by default, only accessible locally.
+**Root Cause**: NKS WebDev Console binds to `127.0.0.1` (localhost) by default, only accessible locally.
 
 **Solution**:
 
 1. **Bind to all interfaces**:
    ```bash
-   devforge config set server.bind 0.0.0.0
-   devforge service restart nginx
+   wdc config set server.bind 0.0.0.0
+   nks-wdc service restart nginx
    ```
 
 2. **Access from other machine**:
@@ -94,7 +94,7 @@ type %WINDIR%\System32\drivers\etc\hosts
 **macOS/Linux Solution**:
 ```bash
 # Auto-sync DNS
-devforge dns-sync
+wdc dns-sync
 
 # Or add to /etc/hosts manually:
 echo "127.0.0.1    my-project.local" | sudo tee -a /etc/hosts
@@ -110,9 +110,9 @@ nslookup my-project.local
 **Solution** (Recommended):
 ```bash
 # Use different TLDs instead:
-devforge site create --name project1 --domain project1.local
-devforge site create --name project2 --domain project2.test
-devforge site create --name project3 --domain project3.dev
+wdc site create --name project1 --domain project1.local
+wdc site create --name project2 --domain project2.test
+wdc site create --name project3 --domain project3.dev
 ```
 
 Then add all to `/etc/hosts`:
@@ -168,7 +168,7 @@ sudo brew services restart dnsmasq
 **Windows**:
 ```bash
 # Export certificate
-devforge cert export my-project.local
+nks-wdc cert export my-project.local
 
 # Import to Trusted Root (requires admin, run PowerShell as admin):
 Import-Certificate -FilePath "my-project.local.crt" -CertStoreLocation "Cert:\LocalMachine\Root"
@@ -177,7 +177,7 @@ Import-Certificate -FilePath "my-project.local.crt" -CertStoreLocation "Cert:\Lo
 **macOS**:
 ```bash
 # Export certificate
-devforge cert export my-project.local
+nks-wdc cert export my-project.local
 
 # Add to Keychain
 sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain my-project.local.crt
@@ -199,11 +199,11 @@ sudo update-ca-certificates
 **Solution**:
 ```bash
 # Regenerate certificate
-devforge cert regenerate my-project.local
+nks-wdc cert regenerate my-project.local
 
 # Or delete and recreate site (keeps files):
-devforge site delete my-project.local
-devforge site create --name my-project --path /existing/path --ssl true
+wdc site delete my-project.local
+wdc site create --name my-project --path /existing/path --ssl true
 ```
 
 ### Mixed Content Warning (HTTP/HTTPS)
@@ -241,22 +241,22 @@ if ($scheme != "https") {
 **Diagnosis**:
 ```bash
 # List installed extensions
-devforge php extensions
+wdc php extensions
 
 # Check if extension is available
-devforge php extensions | grep curl
+wdc php extensions | grep curl
 ```
 
 **Solution**:
 ```bash
 # Install extension
-devforge php install-extension curl
+wdc php install-extension curl
 
 # Or install multiple:
-devforge php install-extension gd intl opcache
+wdc php install-extension gd intl opcache
 
 # Restart PHP
-devforge service restart php-fpm
+nks-wdc service restart php-fpm
 
 # Verify in browser: <?php phpinfo(); ?>
 ```
@@ -268,19 +268,19 @@ devforge service restart php-fpm
 **Diagnosis**:
 ```bash
 # Check site's PHP version
-devforge site info my-project | grep "PHP Version"
+wdc site info my-project | grep "PHP Version"
 
 # Check default PHP version
-devforge php version
+wdc php version
 ```
 
 **Solution**:
 ```bash
 # Update site to use different PHP
-devforge site update my-project --php 8.2
+wdc site update my-project --php 8.2
 
 # Restart web server
-devforge service restart nginx
+nks-wdc service restart nginx
 ```
 
 ### PHP Memory Limit Too Low
@@ -290,16 +290,16 @@ devforge service restart nginx
 **Solution**:
 ```bash
 # Check current limit
-devforge php config memory_limit
+wdc php config memory_limit
 
 # Increase limit (per site)
-devforge site update my-project --ini "memory_limit=512M"
+wdc site update my-project --ini "memory_limit=512M"
 
 # Or edit global php.ini
-devforge php edit-config
+wdc php edit-config
 
 # Restart PHP
-devforge service restart php-fpm
+nks-wdc service restart php-fpm
 ```
 
 ### PHP Timezone Not Set
@@ -309,10 +309,10 @@ devforge service restart php-fpm
 **Solution**:
 ```bash
 # Set timezone globally
-devforge php config set date.timezone "Europe/Prague"
+wdc php config set date.timezone "Europe/Prague"
 
 # Or per-site in php.ini
-devforge site update my-project --ini "date.timezone=Europe/Prague"
+wdc site update my-project --ini "date.timezone=Europe/Prague"
 
 # Verify in phpinfo()
 ```
@@ -328,10 +328,10 @@ devforge site update my-project --ini "date.timezone=Europe/Prague"
 **Diagnosis**:
 ```bash
 # Check if MySQL is running
-devforge service status mysql
+nks-wdc service status mysql
 
 # Check MySQL port
-devforge config get mysql.port
+wdc config get mysql.port
 
 # Try connecting directly
 mysql -u root -p -h 127.0.0.1 -P 3306
@@ -341,19 +341,19 @@ mysql -u root -p -h 127.0.0.1 -P 3306
 
 1. **Start MySQL**:
    ```bash
-   devforge service start mysql
+   nks-wdc service start mysql
    ```
 
 2. **Check password** (if you forgot it):
    ```bash
    # Reset root password
-   devforge database reset-root-password
+   nks-wdc database reset-root-password
    ```
 
 3. **Change connection port** (if 3306 is in use):
    ```bash
-   devforge config set mysql.port 3307
-   devforge service restart mysql
+   wdc config set mysql.port 3307
+   nks-wdc service restart mysql
    
    # Update your .env or connection string to use port 3307
    ```
@@ -368,11 +368,11 @@ mysql -u root -p -h 127.0.0.1 -P 3306
 mysql -u root -p -h 127.0.0.1
 
 # 2. If you forgot password, reset it
-devforge database reset-root-password
+nks-wdc database reset-root-password
 
 # 3. Create user with specific permissions
-devforge database create-user my_user --password "secure_pass"
-devforge database grant-privileges my_user my_database
+nks-wdc database create-user my_user --password "secure_pass"
+nks-wdc database grant-privileges my_user my_database
 ```
 
 ### Database Not Found After Site Creation
@@ -382,7 +382,7 @@ devforge database grant-privileges my_user my_database
 **Solution**:
 ```bash
 # Create database manually
-devforge database create my_project_db
+nks-wdc database create my_project_db
 
 # Or through phpMyAdmin:
 # 1. Visit http://localhost/phpmyadmin
@@ -398,10 +398,10 @@ devforge database create my_project_db
 **Solution**:
 ```bash
 # Grant privileges to root user (usually already done)
-devforge database grant-privileges root '*'
+nks-wdc database grant-privileges root '*'
 
 # Or create new admin user
-devforge database create-user admin --password "pass123" --admin
+nks-wdc database create-user admin --password "pass123" --admin
 ```
 
 ---
@@ -410,38 +410,38 @@ devforge database create-user admin --password "pass123" --admin
 
 ### Nginx/Apache Won't Start
 
-**Symptom**: Service shows "Failed to start" in DevForge UI
+**Symptom**: Service shows "Failed to start" in NKS WebDev Console UI
 
 **Diagnosis**:
 ```bash
 # Check service logs
-devforge logs nginx  # or apache
+nks-wdc logs nginx  # or apache
 
 # Check configuration syntax
-devforge nginx validate-config
+nks-wdc nginx validate-config
 ```
 
 **Solutions**:
 
 1. **Check for port conflicts**:
    ```bash
-   devforge port-check 80 443
+   nks-wdc port-check 80 443
    ```
 
 2. **Validate configuration**:
    ```bash
-   devforge nginx validate-config
+   nks-wdc nginx validate-config
    ```
 
 3. **Check logs for specific error**:
    ```bash
-   tail -f ~/.local/share/devforge/logs/nginx.log
+   tail -f ~/.local/share/nks-wdc/logs/nginx.log
    ```
 
 4. **Reset to default config**:
    ```bash
-   devforge nginx reset-config
-   devforge service restart nginx
+   nks-wdc nginx reset-config
+   nks-wdc service restart nginx
    ```
 
 ### PHP-FPM Won't Start
@@ -451,18 +451,18 @@ devforge nginx validate-config
 **Solution**:
 ```bash
 # Check logs
-devforge logs php-fpm
+nks-wdc logs php-fpm
 
 # Verify PHP binary exists
-devforge php which
+wdc php which
 
 # Try restarting
-devforge service stop php-fpm
+nks-wdc service stop php-fpm
 sleep 2
-devforge service start php-fpm
+nks-wdc service start php-fpm
 
 # If still fails, reset PHP
-devforge php reset-config
+wdc php reset-config
 ```
 
 ### MySQL Won't Start on Windows
@@ -477,19 +477,19 @@ devforge php reset-config
    ```powershell
    # Run as admin
    netsh advfirewall set allprofiles state off
-   devforge service start mysql
+   nks-wdc service start mysql
    ```
 
 2. **Add firewall exception**:
    ```powershell
    # Run as admin
-   New-NetFirewallRule -DisplayName "DevForge MySQL" -Direction Inbound -LocalPort 3306 -Protocol TCP -Action Allow
+   New-NetFirewallRule -DisplayName "NKS WebDev Console MySQL" -Direction Inbound -LocalPort 3306 -Protocol TCP -Action Allow
    ```
 
-3. **Restart DevForge service**:
+3. **Restart NKS WebDev Console service**:
    ```powershell
    # Run as admin
-   devforge service restart all
+   nks-wdc service restart all
    ```
 
 ---
@@ -505,19 +505,19 @@ devforge php reset-config
 1. **Project on slow storage**:
    ```bash
    # Check if on external drive or network share
-   devforge site info my-project
+   wdc site info my-project
    
    # Move to SSD
-   devforge site move my-project --path "C:\Projects\my-project"
+   wdc site move my-project --path "C:\Projects\my-project"
    ```
 
 2. **PHP opcache disabled**:
    ```bash
    # Check if enabled
-   devforge php extensions | grep opcache
+   wdc php extensions | grep opcache
    
    # Enable if missing
-   devforge php install-extension opcache
+   wdc php install-extension opcache
    ```
 
 3. **File watching for too many files**:
@@ -544,7 +544,7 @@ devforge php reset-config
 
 1. **Check database fragmentation**:
    ```bash
-   devforge database optimize my_database
+   nks-wdc database optimize my_database
    ```
 
 2. **Create missing indexes**:
@@ -559,7 +559,7 @@ devforge php reset-config
 
 4. **Restart MySQL to clear cache**:
    ```bash
-   devforge service restart mysql
+   nks-wdc service restart mysql
    ```
 
 ---
@@ -572,7 +572,7 @@ devforge php reset-config
 
 **Windows Solution**:
 ```powershell
-# Run DevForge as Administrator
+# Run NKS WebDev Console as Administrator
 # or grant folder permissions:
 icacls "C:\path\to\project" /grant:r "Users:(OI)(CI)F"
 ```
@@ -598,8 +598,8 @@ sudo chmod -R 755 /path/to/project
 
 1. **Switch to Apache**:
    ```bash
-   devforge site update my-project --server apache
-   devforge service restart apache
+   wdc site update my-project --server apache
+   nks-wdc service restart apache
    ```
 
 2. **Or convert `.htaccess` to Nginx rules**:
@@ -619,9 +619,9 @@ sudo chmod -R 755 /path/to/project
 
 **Windows Solution**:
 ```powershell
-# DevForge is locking files. Stop web server first:
-devforge service stop nginx
-devforge service stop php-fpm
+# NKS WebDev Console is locking files. Stop web server first:
+nks-wdc service stop nginx
+nks-wdc service stop php-fpm
 
 # Then delete folder
 rmdir /s "C:\path\to\project"
@@ -630,8 +630,8 @@ rmdir /s "C:\path\to\project"
 **macOS/Linux Solution**:
 ```bash
 # Stop web server
-devforge service stop nginx
-devforge service stop php-fpm
+nks-wdc service stop nginx
+nks-wdc service stop php-fpm
 
 # Delete folder
 rm -rf /path/to/project
@@ -641,16 +641,16 @@ rm -rf /path/to/project
 
 ## Getting More Help
 
-- **Check logs**: `devforge logs [service]` (nginx, php-fpm, mysql, etc.)
-- **Run diagnostics**: `devforge diagnose`
-- **Community**: https://discord.gg/devforge
-- **GitHub Issues**: https://github.com/devforge/devforge/issues
+- **Check logs**: `nks-wdc logs [service]` (nginx, php-fpm, mysql, etc.)
+- **Run diagnostics**: `nks-wdc diagnose`
+- **Community**: https://discord.gg/nks-wdc
+- **GitHub Issues**: https://github.com/nks-wdc/nks-wdc/issues
 
 ---
 
 **Still stuck?** Gather this information and ask for help:
 ```bash
-devforge diagnose > ~/devforge-diagnostics.txt
+nks-wdc diagnose > ~/nks-wdc-diagnostics.txt
 ```
 
 Include the output when posting to Discord or GitHub.

@@ -1,6 +1,6 @@
 # C# / .NET Process Management — Technical Appendix
 
-**Project**: DevForge  
+**Project**: NKS WebDev Console  
 **Date**: 2026-04-09  
 **Scope**: Starting, stopping, restarting, and monitoring Apache, Nginx, MySQL, MariaDB, PHP-FPM, Redis, Node.js, dnsmasq, Mailpit across Windows, macOS, Linux.
 
@@ -146,7 +146,7 @@ async Task StopServiceAsync(ServiceConfig svc, CancellationToken ct)
 
 ## 3. Windows Job Objects
 
-When DevForge exits unexpectedly, any child processes it launched must also die. `.Kill(entireProcessTree: true)` only works when you can call it. Job Objects enforce this at the OS level.
+When NKS WebDev Console exits unexpectedly, any child processes it launched must also die. `.Kill(entireProcessTree: true)` only works when you can call it. Job Objects enforce this at the OS level.
 
 ### P/Invoke definitions
 
@@ -224,7 +224,7 @@ void StartService(ProcessStartInfo psi)
 }
 ```
 
-`.NET 5+ Process.Kill(entireProcessTree: true)` is sufficient for **clean shutdowns** but does nothing if the DevForge process itself crashes. Job Objects handle the crash case on Windows; `prctl(PR_SET_PDEATHSIG, SIGTERM)` handles it on Linux.
+`.NET 5+ Process.Kill(entireProcessTree: true)` is sufficient for **clean shutdowns** but does nothing if the NKS WebDev Console process itself crashes. Job Objects handle the crash case on Windows; `prctl(PR_SET_PDEATHSIG, SIGTERM)` handles it on Linux.
 
 ---
 
@@ -402,7 +402,7 @@ process.BeginOutputReadLine();
 
 ### Log rotation
 
-Services write their own log files. DevForge should not rotate them; instead, configure `logrotate` (Unix) or Windows Event Log redirect at the service level. DevForge only tails live stdout.
+Services write their own log files. NKS WebDev Console should not rotate them; instead, configure `logrotate` (Unix) or Windows Event Log redirect at the service level. NKS WebDev Console only tails live stdout.
 
 ---
 
@@ -461,7 +461,7 @@ Reserve `#if` for platform-specific P/Invoke declarations, not for business logi
 
 ## 8. PHP-FPM on Windows
 
-PHP-FPM is a Unix-only binary. On Windows, DevForge uses **php-cgi.exe** as the FastCGI backend.
+PHP-FPM is a Unix-only binary. On Windows, NKS WebDev Console uses **php-cgi.exe** as the FastCGI backend.
 
 ### Architecture
 
@@ -505,7 +505,7 @@ var psi = new ProcessStartInfo
 </FilesMatch>
 ```
 
-DevForge template engine must select the correct snippet based on `OperatingSystem.IsWindows()`. Assign each PHP version a deterministic port (e.g., 9056 for 5.6, 9074 for 7.4, 9082 for 8.2) to allow multiple versions to coexist.
+NKS WebDev Console template engine must select the correct snippet based on `OperatingSystem.IsWindows()`. Assign each PHP version a deterministic port (e.g., 9056 for 5.6, 9074 for 7.4, 9082 for 8.2) to allow multiple versions to coexist.
 
 ### Stopping php-cgi on Windows
 

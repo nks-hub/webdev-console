@@ -1,7 +1,7 @@
-# Avalonia Ecosystem Research — DevForge
+# Avalonia Ecosystem Research — NKS WebDev Console
 
 Date: 2026-04-09
-Scope: NuGet packages, API patterns, gotchas for DevForge stack
+Scope: NuGet packages, API patterns, gotchas for NKS WebDev Console stack
 
 ---
 
@@ -48,7 +48,7 @@ Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
 
 <TrayIcon.Icons>
     <TrayIcons>
-        <TrayIcon Icon="/Assets/tray.ico" ToolTipText="DevForge">
+        <TrayIcon Icon="/Assets/tray.ico" ToolTipText="NKS WebDev Console">
             <TrayIcon.Menu>
                 <NativeMenu>
                     <NativeMenuItem Header="Open" Command="{Binding OpenCommand}"/>
@@ -83,7 +83,7 @@ Official XAML hot reload is **not available** in the open-source build. The Aval
 - **HotAvalonia** (`HotAvalonia`, v3.1.0) — IDE-agnostic, supports Windows/macOS/Linux, works in Rider and VS Code. Dev-only dependency.
 - **Live.Avalonia** — older, experimental
 
-For DevForge: add `HotAvalonia` as a conditional dev package.
+For NKS WebDev Console: add `HotAvalonia` as a conditional dev package.
 
 ### Native AOT
 
@@ -106,7 +106,7 @@ Limitation: third-party controls that rely on reflection (some older community p
 | Server (hosted in daemon/worker) | `Grpc.AspNetCore` |
 | Client only (GUI process) | `Grpc.Net.Client` |
 | Code generation from .proto | `Grpc.Tools` (auto-added via `Grpc.AspNetCore`) |
-| Shared .proto contracts | Separate `DevForge.Contracts` project |
+| Shared .proto contracts | Separate `NKS.WebDevConsole.Contracts` project |
 
 Do **not** use `GrpcDotNetNamedPipes` — it uses a custom wire protocol incompatible with standard gRPC tooling.
 
@@ -118,10 +118,10 @@ Use **Unix Domain Sockets (UDS)** on macOS/Linux and **Named Pipes** on Windows,
 builder.WebHost.ConfigureKestrel(opts =>
 {
     if (OperatingSystem.IsWindows())
-        opts.ListenNamedPipe("devforge-daemon");
+        opts.ListenNamedPipe("nks-wdc-daemon");
     else
     {
-        var sock = Path.Combine(Path.GetTempPath(), "devforge.sock");
+        var sock = Path.Combine(Path.GetTempPath(), "nks-wdc.sock");
         if (File.Exists(sock)) File.Delete(sock);
         opts.ListenUnixSocket(sock);
     }
@@ -167,14 +167,14 @@ For streaming, catch exceptions inside the `while`/`foreach` loop and complete t
 ### Proto project structure
 
 ```
-DevForge.Contracts/
+NKS.WebDevConsole.Contracts/
   Protos/
     daemon.proto
     sites.proto
-  DevForge.Contracts.csproj  ← Grpc.Tools, Protobuf items
+  NKS.WebDevConsole.Contracts.csproj  ← Grpc.Tools, Protobuf items
 ```
 
-Both `DevForge.Daemon` and `DevForge.GUI` reference `DevForge.Contracts`. GUI only generates client stubs: `GrpcServices="Client"`.
+Both `NKS.WebDevConsole.Daemon` and `NKS.WebDevConsole.Gui` reference `NKS.WebDevConsole.Contracts`. GUI only generates client stubs: `GrpcServices="Client"`.
 
 ---
 
@@ -296,7 +296,7 @@ LiveCharts.Configure(config =>
 MEF is in **maintenance mode** (security fixes only, no new features) and does not integrate cleanly with `Microsoft.Extensions.DependencyInjection`. Do not use MEF for new work.
 
 ```csharp
-public interface IDevForgePlugin
+public interface Inks-wdcPlugin
 {
     string Name { get; }
     void Configure(IServiceCollection services);
@@ -323,9 +323,9 @@ foreach (var dll in Directory.GetFiles(pluginsDir, "*.Plugin.dll"))
     var ctx = new PluginLoadContext(dll);
     var asm = ctx.LoadFromAssemblyPath(dll);
     var pluginType = asm.GetExportedTypes()
-        .FirstOrDefault(t => typeof(IDevForgePlugin).IsAssignableFrom(t) && !t.IsAbstract);
+        .FirstOrDefault(t => typeof(Inks-wdcPlugin).IsAssignableFrom(t) && !t.IsAbstract);
     if (pluginType != null)
-        services.AddSingleton(typeof(IDevForgePlugin), Activator.CreateInstance(pluginType)!);
+        services.AddSingleton(typeof(Inks-wdcPlugin), Activator.CreateInstance(pluginType)!);
 }
 ```
 
@@ -346,7 +346,7 @@ Requires that no loaded types are still referenced from the main context — the
 `AssemblyLoadContext` provides **no sandbox**. A loaded plugin can call any .NET API. Options:
 - Code-sign plugin DLLs and verify signature before loading
 - Run untrusted plugins in a separate process communicating via gRPC (strong isolation)
-- For DevForge: plugins are first-party, so signature verification is sufficient
+- For NKS WebDev Console: plugins are first-party, so signature verification is sufficient
 
 ### Alternative library
 
@@ -375,7 +375,7 @@ Use **`Microsoft.Data.Sqlite`** (v9.x) directly with **`Dapper`** (v2.x).
 
 Enable on first connection open:
 ```csharp
-using var conn = new SqliteConnection("Data Source=devforge.db");
+using var conn = new SqliteConnection("Data Source=nks-wdc.db");
 conn.Open();
 conn.Execute("PRAGMA journal_mode=WAL;");
 conn.Execute("PRAGMA synchronous=NORMAL;");
@@ -401,7 +401,7 @@ upgrader.PerformUpgrade();
 
 Scripts named `0001_initial.sql`, `0002_add_services.sql` etc. — DbUp tracks executed scripts in `SchemaVersions` table.
 
-Use **FluentMigrator** only if rollback or strongly-typed C# migrations are required. For DevForge's embedded SQLite, DbUp's raw SQL approach is simpler and requires no runner configuration.
+Use **FluentMigrator** only if rollback or strongly-typed C# migrations are required. For NKS WebDev Console's embedded SQLite, DbUp's raw SQL approach is simpler and requires no runner configuration.
 
 ---
 
@@ -430,13 +430,13 @@ return app.Run(args);
 
 ### Sharing gRPC client between CLI and GUI
 
-Both CLI (`DevForge.CLI`) and GUI (`DevForge.GUI`) reference `DevForge.Contracts` and create a `GrpcChannel` to the daemon socket. Extract a `DaemonClient` service class into a shared `DevForge.Client` library used by both:
+Both CLI (`NKS.WebDevConsole.Cli`) and GUI (`NKS.WebDevConsole.Gui`) reference `NKS.WebDevConsole.Contracts` and create a `GrpcChannel` to the daemon socket. Extract a `DaemonClient` service class into a shared `NKS.WebDevConsole.Client` library used by both:
 
 ```
-DevForge.Client/
+NKS.WebDevConsole.Client/
   DaemonClient.cs   ← wraps GrpcChannel, exposes typed methods
-DevForge.CLI/       ← references DevForge.Client
-DevForge.GUI/       ← references DevForge.Client
+NKS.WebDevConsole.Cli/       ← references NKS.WebDevConsole.Client
+NKS.WebDevConsole.Gui/       ← references NKS.WebDevConsole.Client
 ```
 
 ---
@@ -458,7 +458,7 @@ VelopackApp.Build().Run();
 ```bash
 # Package after dotnet publish
 dotnet publish -c Release -r win-x64 --self-contained -o publish/
-vpk pack --packId DevForge --packVersion 1.0.0 --packDir publish/ --mainExe DevForge.exe
+vpk pack --packId NKS WebDev Console --packVersion 1.0.0 --packDir publish/ --mainExe wdc.exe
 ```
 
 Updates are applied in ~2 seconds, no UAC required for user-scope installs. Upload the `releases/` output to GitHub Releases or S3.
@@ -470,7 +470,7 @@ Updates are applied in ~2 seconds, no UAC required for user-scope installs. Uplo
 - **Inno Setup 6.x**: simple EXE installer, Pascal scripting, no MSI output. Best for simple user installs.
 - **WiX v4 / v6** (v6 released 2025-04-07): MSI/MSIX output, required for enterprise GPO deployment. Steeper learning curve, XML-heavy.
 
-For DevForge: **Velopack wraps Inno Setup** for Windows EXE generation — use Velopack as the primary path; fall back to WiX only if an MSI is contractually required.
+For NKS WebDev Console: **Velopack wraps Inno Setup** for Windows EXE generation — use Velopack as the primary path; fall back to WiX only if an MSI is contractually required.
 
 ### `dotnet publish` flags (non-trimmed self-contained)
 
@@ -525,7 +525,7 @@ Scriban sandboxes by default — the template cannot call arbitrary .NET methods
 ```bash
 dotnet publish -r osx-arm64 -o publish/arm64/
 dotnet publish -r osx-x64 -o publish/x64/
-lipo -create publish/arm64/DevForge publish/x64/DevForge -output publish/DevForge
+lipo -create publish/arm64/NKS WebDev Console publish/x64/NKS WebDev Console -output publish/NKS WebDev Console
 ```
 `lipo` is macOS-only; automate in CI. Velopack handles this per-arch and generates separate DMGs.
 
@@ -549,7 +549,7 @@ Always use `Path.Combine` and `Path.DirectorySeparatorChar`. Never hardcode `/` 
 ```csharp
 var configDir = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "DevForge");
+    "NKS WebDev Console");
 ```
 
 ### mkcert

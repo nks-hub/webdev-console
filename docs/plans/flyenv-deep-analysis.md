@@ -1,4 +1,4 @@
-# FlyEnv Deep Analysis — Inspirace pro DevForge
+# FlyEnv Deep Analysis — Inspirace pro NKS WebDev Console
 
 **Date:** 2026-04-09
 **Source:** https://github.com/xpf0000/FlyEnv (BSD-3-Clause, 2.7k stars)
@@ -73,68 +73,68 @@ FlyEnv-Data/
 
 ### 2.1 Per-Module Version Switcher
 Dropdown showing installed versions → one-click switch → service restarts.
-**DevForge:** Same pattern + config validation step between switch and restart.
+**NKS WebDev Console:** Same pattern + config validation step between switch and restart.
 
 ### 2.2 Service Status Dashboard
 Cards with colored dots (green/red), version, port, start/stop toggle.
 All visible without scrolling for 5-8 services.
-**DevForge:** Keep + add CPU/RAM inline metrics per card.
+**NKS WebDev Console:** Keep + add CPU/RAM inline metrics per card.
 
 ### 2.3 Log Viewer Per Service
 Tails log file in real-time with ANSI colors. Search/filter box. Auto-scroll toggle.
-**DevForge:** Implement with gRPC StreamLogs + log level filtering.
+**NKS WebDev Console:** Implement with gRPC StreamLogs + log level filtering.
 
 ### 2.4 One-Click SSL
 Single toggle: SSL on/off. Auto-generates cert, configures web server.
-**DevForge:** Copy exactly. Add "Details" expandable for power users.
+**NKS WebDev Console:** Copy exactly. Add "Details" expandable for power users.
 
 ### 2.5 Module Download Manager
 Browse available → click Install → progress bar → ready.
 Initial install stays small, download only what needed.
-**DevForge:** Core services bundled, optional modules downloaded on demand.
+**NKS WebDev Console:** Core services bundled, optional modules downloaded on demand.
 
 ### 2.6 Visual Version Grid
 All installed vs available versions displayed in a grid UI.
 Most demo-ed feature in FlyEnv marketing.
-**DevForge:** Must match this polish — critical for first impressions.
+**NKS WebDev Console:** Must match this polish — critical for first impressions.
 
 ---
 
-## 3. What FlyEnv Does POORLY (to fix in DevForge)
+## 3. What FlyEnv Does POORLY (to fix in NKS WebDev Console)
 
 ### 3.1 No Config Validation
 Writes Apache/Nginx configs without httpd -t/nginx -t.
 Syntax errors crash web server with no recovery.
-**DevForge killer feature:** 3-stage pipeline (parse → render → dry-run → atomic write).
+**NKS WebDev Console killer feature:** 3-stage pipeline (parse → render → dry-run → atomic write).
 
 ### 3.2 Electron Memory Overhead
 250-400MB idle RAM. Developers notice in Task Manager.
-**DevForge:** Avalonia target 40-80MB (3-5x improvement).
+**NKS WebDev Console:** Avalonia target 40-80MB (3-5x improvement).
 
 ### 3.3 No CLI Interface
 Everything GUI-only. No scripting, no CI/CD integration.
-**DevForge:** Full gRPC CLI with --json output.
+**NKS WebDev Console:** Full gRPC CLI with --json output.
 
 ### 3.4 Shallow Module Integration
 Each module is an isolated island. No inter-service awareness.
 Creating PHP site doesn't auto-configure database.
-**DevForge:** Deep integration — site creation auto-creates DB if requested.
+**NKS WebDev Console:** Deep integration — site creation auto-creates DB if requested.
 
 ### 3.5 No Process Supervision
 Crashed service stays "green" in UI. User discovers via "connection refused".
-**DevForge:** Auto-restart with exponential backoff + state polling.
+**NKS WebDev Console:** Auto-restart with exponential backoff + state polling.
 
 ### 3.6 PID-Only Health Check
 No port probing, no HTTP health check.
-**DevForge:** TCP port + HTTP health + mysqladmin ping + process alive.
+**NKS WebDev Console:** TCP port + HTTP health + mysqladmin ping + process alive.
 
 ### 3.7 No Port Conflict Detection
 Ports hardcoded. Service fails to start if port taken.
-**DevForge:** Automatic detection + suggestion of alternative ports.
+**NKS WebDev Console:** Automatic detection + suggestion of alternative ports.
 
 ---
 
-## 4. Gap Analysis: 52 FlyEnv Modules vs DevForge
+## 4. Gap Analysis: 52 FlyEnv Modules vs NKS WebDev Console
 
 ### v1.0 Must-Have (19 modules):
 Apache, Nginx, MySQL, MariaDB, PHP (multi-version), Node.js, Python, Redis,
@@ -192,7 +192,7 @@ public class ModuleRegistry
 
 ### Binary Layout (mirrors FlyEnv):
 ```
-%APPDATA%\DevForge\
+%APPDATA%\NKS WebDev Console\
   app\        <- downloaded binaries (mysql-8.0.33\, php-8.2.0\)
   server\     <- runtime data (mysql\my-8.0.cnf, data-8.0\)
   cache\      <- download staging
@@ -203,11 +203,11 @@ public class ModuleRegistry
   plugins\    <- plugin DLLs
 ```
 
-### Version API (DevForge equivalent):
+### Version API (NKS WebDev Console equivalent):
 ```
-POST https://api.devforge.app/api/version/fetch
+POST https://api.wdc.nks-hub.cz/api/version/fetch
 { "app": "mysql", "os": "win", "arch": "x64" }
-→ [{ "version": "8.0.33", "url": "https://cdn.devforge.app/mysql-8.0.33-win.zip" }]
+→ [{ "version": "8.0.33", "url": "https://cdn.wdc.nks-hub.cz/mysql-8.0.33-win.zip" }]
 ```
 
 ---
@@ -217,7 +217,7 @@ POST https://api.devforge.app/api/version/fetch
 > **Config validation must be VISIBLE in the UI.**
 > When user changes site config or switches PHP version, show a brief
 > "Validating... Passed ✓" step with green checkmark before applying.
-> This transforms DevForge's invisible backend advantage into a visible
+> This transforms NKS WebDev Console's invisible backend advantage into a visible
 > UX differentiator. FlyEnv cannot match this without fundamental architecture change.
 
 ---
