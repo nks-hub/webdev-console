@@ -1,6 +1,6 @@
 <template>
-  <div class="dashboard-page" :class="{ 'with-side-panel': configPanel.open }">
-   <div class="main-column"> <!-- Page header -->
+  <div class="dashboard-page">
+    <!-- Page header -->
     <div class="page-header">
       <div class="header-title-block">
         <span class="page-title">Services</span>
@@ -167,71 +167,35 @@
       </div>
     </template>
 
-    <!-- Logs drawer (kept as drawer — logs are ephemeral) -->
-    <el-drawer
-      v-model="logsDrawer.open"
-      :title="`Logs — ${logsDrawer.serviceId}`"
-      direction="rtl"
-      size="560px"
+    <!-- Logs: full-view modal (NOT drawer). Opens large el-dialog with xterm-backed viewer. -->
+    <el-dialog
+      v-model="logsDialog.open"
+      :title="`Logs — ${logsDialog.serviceId}`"
+      width="92%"
+      top="3vh"
+      class="full-dialog"
+      align-center
+      destroy-on-close
     >
-      <LogViewer v-if="logsDrawer.open && logsDrawer.serviceId" :service-id="logsDrawer.serviceId" />
-    </el-drawer>
-   </div><!-- /.main-column -->
-
-    <!-- Config SIDE PANEL — integrated inside the page flex, not a drawer -->
-    <aside v-if="configPanel.open" class="config-panel">
-      <div class="config-panel-header">
-        <div class="cp-title">
-          <span class="cp-title-label">Config</span>
-          <span class="cp-title-service">{{ configPanel.serviceId }}</span>
-        </div>
-        <div class="cp-actions">
-          <el-button size="small" text @click="reloadConfig(configPanel.serviceId)" :loading="configPanel.loading">
-            Reload
-          </el-button>
-          <el-button size="small" text @click="closeConfig">
-            <el-icon><Close /></el-icon>
-          </el-button>
-        </div>
-      </div>
-
-      <div v-if="configPanel.loading" class="cp-loading">Loading config files…</div>
-      <div v-else-if="configPanel.files.length === 0" class="cp-empty">No config files found for this service.</div>
-      <div v-else class="cp-body">
-        <!-- File selector tabs -->
-        <div class="cp-file-tabs">
-          <button
-            v-for="file in configPanel.files"
-            :key="file.path"
-            class="cp-file-tab"
-            :class="{ active: configPanel.activeFile === file.path }"
-            @click="configPanel.activeFile = file.path"
-            :title="file.path"
-          >
-            {{ file.name }}
-          </button>
-        </div>
-
-        <!-- Selected file content + path -->
-        <div v-if="selectedConfigFile" class="cp-file-view">
-          <div class="cp-file-path">{{ selectedConfigFile.path }}</div>
-          <pre class="cp-file-content">{{ selectedConfigFile.content }}</pre>
-        </div>
-      </div>
-    </aside>
+      <LogViewer
+        v-if="logsDialog.open && logsDialog.serviceId"
+        :service-id="logsDialog.serviceId"
+      />
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
-import { fetchServiceConfig, type ConfigFile } from '../../api/daemon'
 import { ElMessage, ElNotification } from 'element-plus'
-import { Close } from '@element-plus/icons-vue'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
+
+const router = useRouter()
 
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
@@ -341,8 +305,8 @@ async function stopAll() {
   }
 }
 
-// Logs drawer
-const logsDrawer = reactive({
+// Logs dialog (full-view modal, NOT drawer)
+const logsDialog = reactive({
   open: false,
   serviceId: '',
 })
@@ -352,58 +316,13 @@ function openMailpit() {
 }
 
 function openLogs(id: string) {
-  logsDrawer.serviceId = id
-  logsDrawer.open = true
+  logsDialog.serviceId = id
+  logsDialog.open = true
 }
 
-// Config side panel — integrated (not a drawer)
-const configPanel = reactive({
-  open: false,
-  serviceId: '',
-  files: [] as ConfigFile[],
-  loading: false,
-  activeFile: '' as string,
-})
-
-const selectedConfigFile = computed(() =>
-  configPanel.files.find(f => f.path === configPanel.activeFile) || null
-)
-
-async function loadConfigFiles(id: string) {
-  configPanel.loading = true
-  try {
-    const data = await fetchServiceConfig(id)
-    configPanel.files = data.files
-    configPanel.activeFile = data.files.length > 0 ? data.files[0].path : ''
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to load config'
-    ElMessage.error(msg)
-    configPanel.files = []
-  } finally {
-    configPanel.loading = false
-  }
-}
-
+// Config opens full view route (NOT drawer, NOT side panel)
 function openConfig(id: string) {
-  // Toggle: if same service already open, close; otherwise open/switch
-  if (configPanel.open && configPanel.serviceId === id) {
-    configPanel.open = false
-    return
-  }
-  configPanel.serviceId = id
-  configPanel.files = []
-  configPanel.activeFile = ''
-  configPanel.open = true
-  void loadConfigFiles(id)
-}
-
-function closeConfig() {
-  configPanel.open = false
-}
-
-function reloadConfig(id: string) {
-  if (!id) return
-  void loadConfigFiles(id)
+  void router.push(`/service/${id}/config`)
 }
 </script>
 
@@ -411,131 +330,16 @@ function reloadConfig(id: string) {
 .dashboard-page {
   min-height: 100%;
   background: var(--wdc-bg);
-  display: flex;
-  align-items: stretch;
-}
-.main-column {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
-/* ─── Config side panel ──────────────────────────────────────────────────── */
-.config-panel {
-  width: 520px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--wdc-border-strong);
-  background: var(--wdc-surface);
+/* Full-view dialog override: use most of the viewport so editing feels like a page */
+:global(.full-dialog) {
+  height: 94vh;
+}
+:global(.full-dialog .el-dialog__body) {
+  height: calc(94vh - 80px);
   overflow: hidden;
-  animation: slideInRight 0.18s ease-out;
-}
-@keyframes slideInRight {
-  from { transform: translateX(20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-.config-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--wdc-border);
-  background: var(--wdc-surface-2);
-}
-.cp-title {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.cp-title-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--wdc-text-3);
-}
-.cp-title-service {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-}
-.cp-actions {
-  display: flex;
-  gap: 4px;
-}
-.cp-loading, .cp-empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--wdc-text-3);
-  font-size: 0.85rem;
-}
-.cp-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.cp-file-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 8px 12px 0;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--wdc-border);
-}
-.cp-file-tab {
-  background: transparent;
-  border: 1px solid transparent;
-  border-bottom: none;
-  color: var(--wdc-text-2);
-  padding: 8px 14px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 6px 6px 0 0;
-  white-space: nowrap;
-  transition: all 0.1s;
-  font-family: 'JetBrains Mono', monospace;
-}
-.cp-file-tab:hover {
-  background: var(--wdc-hover);
-  color: var(--wdc-text);
-}
-.cp-file-tab.active {
-  background: var(--wdc-bg);
-  color: var(--wdc-accent);
-  border-color: var(--wdc-border);
-}
-.cp-file-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--wdc-bg);
-}
-.cp-file-path {
-  padding: 8px 16px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--wdc-text-3);
-  border-bottom: 1px solid var(--wdc-border);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cp-file-content {
-  flex: 1;
-  padding: 12px 16px;
-  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 0.76rem;
-  line-height: 1.6;
-  color: var(--wdc-text-2);
-  white-space: pre;
-  overflow: auto;
-  tab-size: 4;
-  background: var(--wdc-bg);
-  margin: 0;
+  padding: 0;
 }
 
 /* ─── Page header ─────────────────────────────────────────────────────────── */

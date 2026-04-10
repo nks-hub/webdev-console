@@ -35,7 +35,7 @@
       <template v-for="svc in langServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
@@ -53,7 +53,7 @@
       <template v-for="svc in dbServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch
@@ -71,7 +71,7 @@
       <template v-for="svc in cacheServices" :key="svc.id">
         <div class="service-item">
           <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <span class="svc-dot" :class="svc.state === 2 ? 'dot-on' : 'dot-off'" />
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <span class="svc-name" @click="navigate('/dashboard')">{{ shortName(svc) }}</span>
           <el-switch

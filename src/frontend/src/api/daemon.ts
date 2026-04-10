@@ -19,15 +19,24 @@ declare global {
 }
 
 function base(): string {
-  // Electron: preload exposes getPort(). Browser dev: use ?port= query param or default 5199.
+  // Priority: (1) URL query param passed by Electron main at load time (authoritative, fresh),
+  // (2) preload getPort() as fallback if URL param missing (browser dev mode).
+  // Preload has a hardcoded default of 5199 which can be STALE — never trust it if URL has a value.
   const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
+  let port: number = 5199
+  if (urlPort && /^\d+$/.test(urlPort)) {
+    port = parseInt(urlPort, 10)
+  } else {
+    const preloadPort = window.daemonApi?.getPort?.()
+    if (typeof preloadPort === 'number' && preloadPort > 0) port = preloadPort
+  }
   return `http://localhost:${port}`
 }
 
 function authHeaders(extra?: HeadersInit): Record<string, string> {
+  // Same priority: URL query param first (authoritative), preload fallback.
   const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = window.daemonApi?.getToken?.() || urlToken || ''
+  const token = urlToken || window.daemonApi?.getToken?.() || ''
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   if (extra) {
@@ -148,7 +157,7 @@ export function subscribeEvents(
   onLog?: (data: LogEntry) => void,
 ): () => void {
   const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = window.daemonApi?.getToken?.() || urlToken || ''
+  const token = urlToken || window.daemonApi?.getToken?.() || ''
   const url = token
     ? `${base()}/api/events?token=${encodeURIComponent(token)}`
     : `${base()}/api/events`

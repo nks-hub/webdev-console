@@ -100,59 +100,7 @@
       />
     </div>
 
-    <!-- Site detail drawer -->
-    <el-drawer
-      v-model="drawerOpen"
-      :title="selectedSite?.domain ?? 'Edit Site'"
-      direction="rtl"
-      size="420px"
-    >
-      <div v-if="selectedSite" class="site-detail">
-        <el-form :model="selectedSite" label-position="top" size="small">
-          <el-form-item label="Document Root">
-            <el-input v-model="selectedSite.documentRoot" />
-          </el-form-item>
-          <el-form-item label="PHP Version">
-            <el-select v-model="selectedSite.phpVersion" style="width: 100%">
-              <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
-              <el-option label="None" value="none" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Aliases (comma-separated)">
-            <el-input v-model="aliasesStr" placeholder="www.myapp.loc, dev.myapp.loc" />
-          </el-form-item>
-          <el-form-item label="Framework">
-            <el-input v-model="selectedSite.framework" placeholder="auto-detect" />
-          </el-form-item>
-          <el-form-item label="HTTP Port">
-            <el-input-number v-model="selectedSite.httpPort" :min="1" :max="65535" style="width: 100%" />
-          </el-form-item>
-          <el-form-item label="SSL">
-            <el-switch v-model="selectedSite.sslEnabled" />
-          </el-form-item>
-        </el-form>
-
-        <div class="drawer-actions">
-          <el-button type="primary" size="small" @click="saveSelected">Save Changes</el-button>
-          <el-button size="small" @click="openInBrowser(selectedSite!)">Open in Browser</el-button>
-          <el-button size="small" @click="drawerOpen = false">Cancel</el-button>
-        </div>
-
-        <!-- Site history -->
-        <div class="history-section" v-if="siteHistory.length > 0">
-          <div class="history-title">Config History</div>
-          <div class="history-list">
-            <div v-for="(h, i) in siteHistory" :key="i" class="history-item">
-              <span class="history-date">{{ formatDate(h.timestamp) }}</span>
-              <span class="history-label">{{ h.label ?? `Version ${i + 1}` }}</span>
-              <el-button size="small" text type="primary" @click="rollbackConfig(selectedSite!.domain, h.timestamp)">
-                Restore
-              </el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </el-drawer>
+    <!-- Site edit is a full-view route at /sites/:domain/edit (no drawer). -->
 
     <!-- Create dialog -->
     <el-dialog v-model="showCreate" title="New Site" width="480px">
@@ -195,13 +143,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Lock } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import type { SiteInfo } from '../../api/types'
 
 const route = useRoute()
+const router = useRouter()
 const sitesStore = useSitesStore()
 const phpVersions = ref<string[]>([])
 
@@ -264,9 +213,8 @@ onMounted(async () => {
 })
 
 function selectSite(row: SiteInfo) {
-  selectedSite.value = { ...row, aliases: [...(row.aliases || [])] }
-  drawerOpen.value = true
-  void loadHistory(row.domain)
+  // Navigate to full-view edit page instead of opening a drawer
+  void router.push(`/sites/${encodeURIComponent(row.domain)}/edit`)
 }
 
 async function loadHistory(domain: string) {

@@ -349,6 +349,11 @@ app.on('before-quit', () => {
   isQuitting = true
 })
 
+// Enable Chrome DevTools Protocol in dev mode so tooling/tests can read renderer console
+if (!app.isPackaged) {
+  app.commandLine.appendSwitch('remote-debugging-port', '9222')
+}
+
 app.whenReady().then(async () => {
   await spawnDaemon()
   createWindow()
