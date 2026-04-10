@@ -1,12 +1,22 @@
 <template>
   <div class="log-viewer">
     <div class="log-toolbar">
-      <el-select v-model="logLevel" size="small" style="width: 120px">
+      <el-select v-model="logLevel" size="small" style="width: 100px">
         <el-option label="All" value="all" />
         <el-option label="Error" value="error" />
         <el-option label="Warning" value="warn" />
         <el-option label="Info" value="info" />
       </el-select>
+      <el-input
+        v-model="searchText"
+        size="small"
+        placeholder="Search..."
+        clearable
+        style="width: 160px"
+        @keydown.enter="searchInTerminal"
+      />
+      <el-button size="small" @click="searchInTerminal" :disabled="!searchText">Find</el-button>
+      <el-button size="small" @click="copyLogs">Copy</el-button>
       <el-button size="small" @click="clearTerminal">Clear</el-button>
     </div>
     <div ref="terminalRef" class="terminal-container" />
@@ -18,6 +28,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 
 declare global {
@@ -39,13 +50,37 @@ function daemonToken(): string {
 const props = defineProps<{ serviceId?: string }>()
 const terminalRef = ref<HTMLElement>()
 const logLevel = ref('all')
+const searchText = ref('')
 
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
+let searchAddon: SearchAddon | null = null
 let closeEventSource: (() => void) | null = null
 
 function clearTerminal() {
   terminal?.clear()
+}
+
+function searchInTerminal() {
+  if (!searchText.value || !searchAddon) return
+  searchAddon.findNext(searchText.value)
+}
+
+function copyLogs() {
+  if (!terminal) return
+  const sel = terminal.getSelection()
+  if (sel) {
+    navigator.clipboard.writeText(sel)
+  } else {
+    // Copy all visible buffer
+    const buf = terminal.buffer.active
+    const lines: string[] = []
+    for (let i = 0; i < buf.length; i++) {
+      const line = buf.getLine(i)
+      if (line) lines.push(line.translateToString())
+    }
+    navigator.clipboard.writeText(lines.join('\n').trimEnd())
+  }
 }
 
 onMounted(async () => {
@@ -76,6 +111,8 @@ onMounted(async () => {
   fitAddon = new FitAddon()
   terminal.loadAddon(fitAddon)
   terminal.loadAddon(new WebLinksAddon())
+  searchAddon = new SearchAddon()
+  terminal.loadAddon(searchAddon)
 
   terminal.open(terminalRef.value)
   fitAddon.fit()
