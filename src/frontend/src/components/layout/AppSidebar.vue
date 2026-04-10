@@ -1,81 +1,82 @@
 <template>
-  <div class="sidebar" :class="{ collapsed }">
-    <div class="sidebar-toggle" @click="collapsed = !collapsed" :title="collapsed ? 'Expand' : 'Collapse'">
-      <el-icon><Fold v-if="!collapsed" /><Expand v-else /></el-icon>
+  <nav class="sidebar">
+    <div class="sidebar-brand" @click="navigate('/dashboard')">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text" v-if="!collapsed">NKS WDC</div>
     </div>
 
-    <el-menu
-      :default-active="currentRoute"
-      :collapse="collapsed"
-      :collapse-transition="false"
-      class="sidebar-menu"
-      @select="navigate"
-    >
-      <!-- Core nav -->
-      <el-menu-item index="/dashboard">
-        <el-icon><Monitor /></el-icon>
-        <template #title>Dashboard</template>
-      </el-menu-item>
-
-      <el-menu-item index="/sites">
-        <el-icon><Link /></el-icon>
-        <template #title>Sites</template>
-      </el-menu-item>
-
-      <!-- Dynamic plugin categories -->
-      <el-sub-menu
-        v-for="category in pluginsStore.sidebarCategories"
-        :key="category.id"
-        :index="`cat-${category.id}`"
+    <div class="sidebar-section">
+      <div class="section-label" v-if="!collapsed">Overview</div>
+      <div
+        class="nav-item" :class="{ active: isActive('/dashboard') }"
+        @click="navigate('/dashboard')"
       >
-        <template #title>
-          <el-icon><Grid /></el-icon>
-          <span>{{ category.label }}</span>
-        </template>
+        <span class="nav-icon">📊</span>
+        <span class="nav-label" v-if="!collapsed">Dashboard</span>
+      </div>
+      <div
+        class="nav-item" :class="{ active: isActive('/sites') }"
+        @click="navigate('/sites')"
+      >
+        <span class="nav-icon">🌐</span>
+        <span class="nav-label" v-if="!collapsed">Sites</span>
+        <span class="nav-badge" v-if="!collapsed && sitesCount > 0">{{ sitesCount }}</span>
+      </div>
+    </div>
 
-        <el-menu-item
-          v-for="plugin in category.plugins"
-          :key="plugin.id"
-          :index="`/plugin/${plugin.id}`"
-        >
-          <span class="status-dot" :class="[`dot-${plugin.serviceStatus}`]" />
-          <template #title>{{ plugin.name }}</template>
-        </el-menu-item>
-      </el-sub-menu>
+    <div class="sidebar-section">
+      <div class="section-label" v-if="!collapsed">Manage</div>
+      <div
+        class="nav-item" :class="{ active: isActive('/binaries') }"
+        @click="navigate('/binaries')"
+      >
+        <span class="nav-icon">📦</span>
+        <span class="nav-label" v-if="!collapsed">Binaries</span>
+      </div>
+      <div
+        class="nav-item" :class="{ active: isActive('/plugins') }"
+        @click="navigate('/plugins')"
+      >
+        <span class="nav-icon">🔌</span>
+        <span class="nav-label" v-if="!collapsed">Plugins</span>
+        <span class="nav-badge" v-if="!collapsed">{{ pluginCount }}</span>
+      </div>
+      <div
+        class="nav-item" :class="{ active: isActive('/settings') }"
+        @click="navigate('/settings')"
+      >
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label" v-if="!collapsed">Settings</span>
+      </div>
+    </div>
 
-      <!-- Divider before management items -->
-      <div class="sidebar-divider" />
+    <div class="sidebar-spacer" />
 
-      <el-menu-item index="/binaries">
-        <el-icon><Download /></el-icon>
-        <template #title>Binaries</template>
-      </el-menu-item>
-
-      <el-menu-item index="/plugins">
-        <el-icon><Box /></el-icon>
-        <template #title>Plugins</template>
-      </el-menu-item>
-
-      <el-menu-item index="/settings">
-        <el-icon><Setting /></el-icon>
-        <template #title>Settings</template>
-      </el-menu-item>
-    </el-menu>
-  </div>
+    <div class="sidebar-collapse" @click="collapsed = !collapsed">
+      <span class="nav-icon">{{ collapsed ? '▸' : '◂' }}</span>
+      <span class="nav-label" v-if="!collapsed">Collapse</span>
+    </div>
+  </nav>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Monitor, Link, Grid, Box, Setting, Fold, Expand, Download } from '@element-plus/icons-vue'
+import { useSitesStore } from '../../stores/sites'
 import { usePluginsStore } from '../../stores/plugins'
 
 const router = useRouter()
 const route = useRoute()
+const sitesStore = useSitesStore()
 const pluginsStore = usePluginsStore()
 const collapsed = ref(false)
 
-const currentRoute = computed(() => route.path)
+const sitesCount = computed(() => sitesStore.sites.length)
+const pluginCount = computed(() => pluginsStore.manifests.length)
+
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(path + '/')
+}
 
 function navigate(path: string) {
   void router.push(path)
@@ -84,63 +85,112 @@ function navigate(path: string) {
 
 <style scoped>
 .sidebar {
-  width: 200px;
+  width: 210px;
   display: flex;
   flex-direction: column;
   background: var(--wdc-surface);
-  border-right: 1px solid var(--el-border-color);
-  transition: width 0.2s;
+  border-right: 1px solid var(--wdc-border);
   flex-shrink: 0;
   overflow: hidden;
+  transition: width 0.2s ease;
+  padding: 8px;
 }
 
-.sidebar.collapsed { width: 56px; }
+.sidebar:has(.sidebar-collapse:hover) { /* subtle feedback */ }
 
-.sidebar-toggle {
+.sidebar-brand {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 12px 10px 16px;
   cursor: pointer;
-  color: var(--el-text-color-secondary);
+  user-select: none;
+}
+.brand-icon { font-size: 1.4rem; }
+.brand-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  letter-spacing: -0.02em;
+}
+
+.sidebar-section {
+  margin-bottom: 8px;
+}
+
+.section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text-3);
+  padding: 8px 10px 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--wdc-radius-sm);
+  cursor: pointer;
+  color: var(--wdc-text-2);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: var(--wdc-hover);
+  color: var(--wdc-text);
+}
+
+.nav-item.active {
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent);
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+  width: 22px;
+  text-align: center;
   flex-shrink: 0;
 }
-.sidebar-toggle:hover { color: var(--el-text-color-primary); }
 
-.sidebar-menu {
+.nav-label {
   flex: 1;
-  border-right: none;
-  background: transparent;
-  overflow-y: auto;
-  overflow-x: hidden;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sidebar-divider {
-  height: 1px;
-  background: var(--el-border-color);
-  margin: 6px 12px;
+.nav-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--wdc-surface-2);
+  color: var(--wdc-text-2);
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
 }
 
-.sidebar.collapsed .sidebar-divider {
-  margin: 6px 6px;
+.sidebar-spacer { flex: 1; }
+
+.sidebar-collapse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--wdc-radius-sm);
+  cursor: pointer;
+  color: var(--wdc-text-3);
+  font-size: 0.82rem;
+  transition: all 0.12s ease;
 }
-
-.status-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  margin-right: 6px;
-  flex-shrink: 0;
-}
-
-.dot-running  { background: var(--el-color-success); }
-.dot-stopped  { background: var(--el-color-info); }
-.dot-crashed  { background: var(--el-color-danger); }
-.dot-starting { background: var(--el-color-warning); animation: blink 1s infinite; }
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+.sidebar-collapse:hover {
+  background: var(--wdc-hover);
+  color: var(--wdc-text-2);
 }
 </style>
