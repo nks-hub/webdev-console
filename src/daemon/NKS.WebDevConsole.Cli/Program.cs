@@ -369,6 +369,29 @@ binariesCommand.SetAction(async (parseResult, ct) =>
     AnsiConsole.Write(table);
 });
 
+// --- wdc binaries catalog {app} ---
+var catalogAppArg = new Argument<string>("app") { Description = "App name (apache, php, mysql, redis, etc.)" };
+var catalogCmd = new Command("catalog", "Show available versions to download") { catalogAppArg };
+catalogCmd.SetAction(async (parseResult, ct) =>
+{
+    var appName = parseResult.GetValue(catalogAppArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var releases = await client.GetJsonAsync($"/api/binaries/catalog/{appName}");
+    if (json) { PrintJson(releases); return; }
+    if (releases.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No releases found for {Markup.Escape(appName)}[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Version"); table.AddColumn("Source"); table.AddColumn("Arch");
+    foreach (var r in releases.EnumerateArray())
+        table.AddRow(
+            r.GetProperty("version").GetString() ?? "?",
+            r.TryGetProperty("source", out var s) ? s.GetString()! : "-",
+            r.TryGetProperty("arch", out var a) ? a.GetString()! : "x64");
+    AnsiConsole.Write(table);
+});
+binariesCommand.Add(catalogCmd);
+
 var installAppArg = new Argument<string>("app");
 var installVerArg = new Argument<string>("version");
 var installBinCmd = new Command("install", "Download and install a binary") { installAppArg, installVerArg };
