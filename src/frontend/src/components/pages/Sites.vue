@@ -114,10 +114,7 @@
           </el-form-item>
           <el-form-item label="PHP Version">
             <el-select v-model="selectedSite.phpVersion" style="width: 100%">
-              <el-option label="8.4" value="8.4" />
-              <el-option label="8.3" value="8.3" />
-              <el-option label="8.2" value="8.2" />
-              <el-option label="8.1" value="8.1" />
+              <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
               <el-option label="None" value="none" />
             </el-select>
           </el-form-item>
@@ -163,11 +160,8 @@
           <el-input v-model="newSite.documentRoot" placeholder="C:\work\htdocs\myapp" />
         </el-form-item>
         <el-form-item label="PHP Version">
-          <el-select v-model="newSite.phpVersion" style="width: 100%">
-            <el-option label="8.4" value="8.4" />
-            <el-option label="8.3" value="8.3" />
-            <el-option label="8.2" value="8.2" />
-            <el-option label="8.1" value="8.1" />
+          <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
+            <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
             <el-option label="None" value="none" />
           </el-select>
         </el-form-item>
@@ -203,6 +197,7 @@ import { useSitesStore } from '../../stores/sites'
 import type { SiteInfo } from '../../api/types'
 
 const sitesStore = useSitesStore()
+const phpVersions = ref<string[]>([])
 
 function daemonBase(): string {
   const urlPort = new URLSearchParams(window.location.search).get('port')
@@ -246,7 +241,16 @@ const aliasesStr = computed({
   },
 })
 
-onMounted(() => { void sitesStore.load() })
+onMounted(async () => {
+  void sitesStore.load()
+  try {
+    const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: sitesStore.authHeaders() })
+    if (r.ok) {
+      const versions = await r.json()
+      phpVersions.value = versions.map((v: any) => v.majorMinor || v.version?.split('.').slice(0, 2).join('.') || v.version)
+    }
+  } catch { phpVersions.value = ['8.4', '8.3', '8.2'] }
+})
 
 function selectSite(row: SiteInfo) {
   selectedSite.value = { ...row, aliases: [...(row.aliases || [])] }
