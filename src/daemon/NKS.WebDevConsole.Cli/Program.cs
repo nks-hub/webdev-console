@@ -582,6 +582,47 @@ tablesCmd.SetAction(async (parseResult, ct) =>
 });
 dbCommand.Add(tablesCmd);
 
+// --- wdc databases query {name} {sql} ---
+var queryDbArg = new Argument<string>("name") { Description = "Database name" };
+var querySqlArg = new Argument<string>("sql") { Description = "SQL query to execute" };
+var queryCmd = new Command("query", "Execute SQL query against a database") { queryDbArg, querySqlArg };
+queryCmd.SetAction(async (parseResult, ct) =>
+{
+    var name = parseResult.GetValue(queryDbArg)!;
+    var sql = parseResult.GetValue(querySqlArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var bins = await client.GetJsonAsync("/api/binaries/installed");
+    string? mysqlCli = null;
+    foreach (var b in bins.EnumerateArray())
+    {
+        if (b.GetProperty("app").GetString() == "mysql" && b.TryGetProperty("executable", out var exe))
+        {
+            var dir = Path.GetDirectoryName(exe.GetString());
+            if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
+        }
+    }
+    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+
+    var args = json ? $"-h 127.0.0.1 -P 3306 -u root -N -e \"{sql}\" {name}" : $"-h 127.0.0.1 -P 3306 -u root -t -e \"{sql}\" {name}";
+    var psi = new System.Diagnostics.ProcessStartInfo
+    {
+        FileName = mysqlCli, Arguments = args,
+        RedirectStandardOutput = true, RedirectStandardError = true,
+        UseShellExecute = false, CreateNoWindow = true
+    };
+    var proc = System.Diagnostics.Process.Start(psi);
+    if (proc == null) return;
+    var output = await proc.StandardOutput.ReadToEndAsync();
+    var err = await proc.StandardError.ReadToEndAsync();
+    await proc.WaitForExitAsync();
+    if (proc.ExitCode != 0) { AnsiConsole.MarkupLine($"[red]{Markup.Escape(err.Trim())}[/]"); return; }
+    AnsiConsole.WriteLine(output);
+});
+dbCommand.Add(queryCmd);
+
 // --- wdc binaries ---
 var binariesCommand = new Command("binaries", "List installed binaries");
 binariesCommand.SetAction(async (parseResult, ct) =>
