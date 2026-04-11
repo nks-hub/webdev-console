@@ -682,28 +682,128 @@ binariesCommand.SetAction(async (parseResult, ct) =>
     AnsiConsole.Write(table);
 });
 
-// --- wdc binaries catalog {app} ---
-var catalogAppArg = new Argument<string>("app") { Description = "App name (apache, php, mysql, redis, etc.)" };
-var catalogCmd = new Command("catalog", "Show available versions to download") { catalogAppArg };
+// --- wdc binaries catalog [app] ---
+// Optional positional: with no argument we show a grid summary of every
+// app + its release/download counts so the CLI has parity with the
+// Binaries grid view in the Electron UI. With an argument we drill into
+// the per-app detail view (version/source/arch). Both support --json.
+var catalogAppArg = new Argument<string?>("app")
+{
+    Description = "App name (apache, php, mysql, redis, etc.). Omit to list every app.",
+    Arity = ArgumentArity.ZeroOrOne,
+    DefaultValueFactory = _ => null,
+};
+var catalogCmd = new Command("catalog", "Show available binaries (summary when no app, details when one is given)") { catalogAppArg };
 catalogCmd.SetAction(async (parseResult, ct) =>
 {
-    var appName = parseResult.GetValue(catalogAppArg)!;
+    var appName = parseResult.GetValue(catalogAppArg);
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
+
+    // Empty arg → summary across every app, same shape the Vue grid uses
+    // so the CLI output mirrors what the Binaries page shows.
+    if (string.IsNullOrWhiteSpace(appName))
+    {
+        var full = await client.GetJsonAsync("/api/binaries/catalog");
+        if (full.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            AnsiConsole.MarkupLine("[red]Unexpected catalog shape from daemon[/]");
+            return;
+        }
+        var grouped = new Dictionary<string, (HashSet<string> versions, int downloads)>();
+        foreach (var r in full.EnumerateArray())
+        {
+            var app = r.GetProperty("app").GetString() ?? "";
+            if (string.IsNullOrEmpty(app)) continue;
+            if (!grouped.TryGetValue(app, out var bucket))
+                bucket = (new HashSet<string>(), 0);
+            if (r.TryGetProperty("version", out var v) && v.GetString() is { } vs)
+                bucket.versions.Add(vs);
+            grouped[app] = (bucket.versions, bucket.downloads + 1);
+        }
+        if (json)
+        {
+            PrintJson(grouped.ToDictionary(
+                kv => kv.Key,
+                kv => new { versions = kv.Value.versions.Count, downloads = kv.Value.downloads }));
+            return;
+        }
+        if (grouped.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[dim]Catalog is empty. Try `wdc binaries refresh`.[/]");
+            return;
+        }
+        var summaryTable = new Table().Border(TableBorder.Rounded).Title($"[bold]Catalog — {grouped.Count} apps[/]");
+        summaryTable.AddColumn("App"); summaryTable.AddColumn("Versions"); summaryTable.AddColumn("Downloads");
+        foreach (var kv in grouped.OrderBy(k => k.Key))
+            summaryTable.AddRow(kv.Key, kv.Value.versions.Count.ToString(), kv.Value.downloads.ToString());
+        AnsiConsole.Write(summaryTable);
+        AnsiConsole.MarkupLine("[dim]Use [bold]wdc binaries catalog <app>[/] for per-version details.[/]");
+        return;
+    }
+
     var releases = await client.GetJsonAsync($"/api/binaries/catalog/{appName}");
     if (json) { PrintJson(releases); return; }
-    if (releases.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No releases found for {Markup.Escape(appName)}[/]"); return; }
+    if (releases.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No releases found for {Markup.Escape(appName ?? string.Empty)}[/]"); return; }
     var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("Version"); table.AddColumn("Source"); table.AddColumn("Arch");
+    table.AddColumn("Version"); table.AddColumn("OS"); table.AddColumn("Arch"); table.AddColumn("Source");
     foreach (var r in releases.EnumerateArray())
         table.AddRow(
             r.GetProperty("version").GetString() ?? "?",
-            r.TryGetProperty("source", out var s) ? s.GetString()! : "-",
-            r.TryGetProperty("arch", out var a) ? a.GetString()! : "x64");
+            r.TryGetProperty("os", out var o) ? o.GetString()! : "-",
+            r.TryGetProperty("arch", out var a) ? a.GetString()! : "x64",
+            r.TryGetProperty("source", out var s) ? s.GetString()! : "-");
     AnsiConsole.Write(table);
 });
 binariesCommand.Add(catalogCmd);
+
+// --- wdc binaries catalog-url [url] ---
+// Read or write the daemon.catalogUrl setting — mirrors the Settings →
+// Advanced tab in the UI. Without an argument prints the current value,
+// with an argument writes it via PUT /api/settings and triggers a
+// refresh so the change takes effect immediately (the CatalogClient
+// factory reads SettingsStore on every RefreshAsync).
+var catalogUrlArg = new Argument<string?>("url")
+{
+    Description = "New catalog URL. Omit to print the current value.",
+    Arity = ArgumentArity.ZeroOrOne,
+    DefaultValueFactory = _ => null,
+};
+var catalogUrlCmd = new Command("catalog-url", "Show or set the catalog API URL") { catalogUrlArg };
+catalogUrlCmd.SetAction(async (parseResult, ct) =>
+{
+    var newUrl = parseResult.GetValue(catalogUrlArg);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    // Read: return the persisted value from /api/settings (dotted key
+    // daemon.catalogUrl), falling back to "(default)" if unset.
+    if (string.IsNullOrWhiteSpace(newUrl))
+    {
+        var settings = await client.GetJsonAsync("/api/settings");
+        var url = settings.TryGetProperty("daemon.catalogUrl", out var v) ? v.GetString() : null;
+        var display = string.IsNullOrWhiteSpace(url) ? "(default: http://127.0.0.1:8765)" : url!;
+        if (json) { PrintJson(new { catalogUrl = url ?? "" }); return; }
+        AnsiConsole.MarkupLine($"Current catalog URL: [cyan]{Markup.Escape(display)}[/]");
+        return;
+    }
+
+    // Write: upsert via PUT /api/settings and trigger a refresh so the
+    // next /api/binaries/catalog call goes to the new source.
+    var body = JsonContent.Create(new Dictionary<string, string>
+    {
+        ["daemon.catalogUrl"] = newUrl,
+    });
+    await client.PutAsync("/api/settings", body);
+    var refreshed = await client.PostAsync("/api/binaries/catalog/refresh");
+    var count = refreshed.TryGetProperty("count", out var c) ? c.GetInt32() : 0;
+    if (json) { PrintJson(new { catalogUrl = newUrl, refreshed = count }); return; }
+    AnsiConsole.MarkupLine($"[green]Saved:[/] daemon.catalogUrl = [cyan]{Markup.Escape(newUrl)}[/]");
+    AnsiConsole.MarkupLine($"[green]Catalog refreshed:[/] {count} releases");
+});
+binariesCommand.Add(catalogUrlCmd);
 
 var installAppArg = new Argument<string>("app");
 var installVerArg = new Argument<string>("version");
