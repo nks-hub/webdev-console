@@ -84,6 +84,26 @@ public sealed class BinaryDownloader
         _logger.LogInformation("Extracting {Archive} to {Dir}", Path.GetFileName(archivePath), destinationDir);
 
         var ext = Path.GetExtension(archivePath).ToLowerInvariant();
+
+        // Single-file binaries (cloudflared, caddy releases that ship as a
+        // bare .exe) don't need extraction — just copy the file into the
+        // destination under a well-known name so ResolveExecutable finds it.
+        if (ext is ".exe" or ".bin" or "")
+        {
+            var guessedName = Path.GetFileName(archivePath);
+            // Re-name single-file binaries to their canonical executable name so
+            // ResolveExecutable in BinaryManager can find them by looking for
+            // `{app}.exe` / `{app}` in the install dir. Guess from the filename
+            // stem — cloudflared-windows-amd64.exe → cloudflared.exe.
+            var stem = Path.GetFileNameWithoutExtension(guessedName);
+            var canonical = stem.Contains("cloudflared", StringComparison.OrdinalIgnoreCase)
+                ? "cloudflared.exe"
+                : guessedName;
+            var dest = Path.Combine(destinationDir, canonical);
+            await Task.Run(() => File.Copy(archivePath, dest, overwrite: true), ct);
+            return destinationDir;
+        }
+
         if (ext != ".zip")
             throw new NotSupportedException($"Archive format not supported: {ext}");
 

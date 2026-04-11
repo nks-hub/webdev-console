@@ -267,6 +267,8 @@ public sealed class BinaryManager
             "mongodb" => ("bin", "mongod.exe"),
             "memcached" => ("", "memcached.exe"),
             "mailpit" => ("", "mailpit.exe"),
+            "caddy" => ("", "caddy.exe"),
+            "cloudflared" => ("", "cloudflared.exe"),
             _ => ("", "")
         };
 

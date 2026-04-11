@@ -56,6 +56,7 @@ public sealed class CatalogClient
     /// <summary>Fetch the full catalog from the API and update the cache.</summary>
     public async Task<int> RefreshAsync(CancellationToken ct = default)
     {
+        var flattened = new List<BinaryRelease>();
         try
         {
             _logger.LogInformation("Fetching binary catalog from {BaseUrl}/api/v1/catalog", _options.BaseUrl);
@@ -65,7 +66,6 @@ public sealed class CatalogClient
             var doc = JsonSerializer.Deserialize<CatalogDocument>(json, JsonOpts)
                 ?? throw new InvalidOperationException("Catalog API returned empty body");
 
-            var flattened = new List<BinaryRelease>();
             foreach (var (appName, appData) in doc.Apps ?? new())
             {
                 foreach (var release in appData.Releases ?? new())
@@ -87,21 +87,74 @@ public sealed class CatalogClient
                 }
             }
 
-            lock (_cacheLock)
-            {
-                _cache = flattened;
-                _lastFetch = DateTime.UtcNow;
-            }
-
             _logger.LogInformation("Catalog refreshed: {Count} releases across {Apps} apps",
                 flattened.Count, doc.Apps?.Count ?? 0);
-            return flattened.Count;
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Failed to fetch catalog from {BaseUrl}: {Error}", _options.BaseUrl, ex.Message);
-            return 0;
         }
+
+        // Always merge the built-in fallback list so apps that the external
+        // catalog doesn't know about (e.g. cloudflared) remain installable
+        // from the Binaries page even when the catalog server is unreachable.
+        // Merge strategy: external wins on (app, version, os, arch) conflicts.
+        foreach (var fb in BuiltInFallback())
+        {
+            var existing = flattened.Any(r =>
+                r.App.Equals(fb.App, StringComparison.OrdinalIgnoreCase) &&
+                r.Version == fb.Version && r.Os == fb.Os && r.Arch == fb.Arch);
+            if (!existing) flattened.Add(fb);
+        }
+
+        lock (_cacheLock)
+        {
+            _cache = flattened;
+            _lastFetch = DateTime.UtcNow;
+        }
+        return flattened.Count;
+    }
+
+    /// <summary>
+    /// Hard-coded minimum catalogue used as a fallback when the external
+    /// catalog service is unreachable, AND as the only source for apps that
+    /// the external catalog doesn't ship (e.g. cloudflared). Keeping this
+    /// list short — we only track the latest stable release per app here,
+    /// users who want older versions should point at a catalog server.
+    /// </summary>
+    private static IEnumerable<BinaryRelease> BuiltInFallback()
+    {
+        // ── Cloudflared (all platforms, direct GitHub release downloads) ──
+        yield return new BinaryRelease(
+            App: "cloudflared",
+            Version: "2026.3.0",
+            MajorMinor: "2026.3",
+            Url: "https://github.com/cloudflare/cloudflared/releases/download/2026.3.0/cloudflared-windows-amd64.exe",
+            Os: "windows",
+            Arch: "x64",
+            ArchiveType: "exe",
+            Source: "github",
+            UserAgent: null);
+        yield return new BinaryRelease(
+            App: "cloudflared",
+            Version: "2026.3.0",
+            MajorMinor: "2026.3",
+            Url: "https://github.com/cloudflare/cloudflared/releases/download/2026.3.0/cloudflared-linux-amd64",
+            Os: "linux",
+            Arch: "x64",
+            ArchiveType: "bin",
+            Source: "github",
+            UserAgent: null);
+        yield return new BinaryRelease(
+            App: "cloudflared",
+            Version: "2026.3.0",
+            MajorMinor: "2026.3",
+            Url: "https://github.com/cloudflare/cloudflared/releases/download/2026.3.0/cloudflared-darwin-amd64.tgz",
+            Os: "macos",
+            Arch: "x64",
+            ArchiveType: "tgz",
+            Source: "github",
+            UserAgent: null);
     }
 
     public IEnumerable<BinaryRelease> ForApp(string app, string os = "windows", string arch = "x64")
