@@ -14,6 +14,12 @@ let updaterStatus = 'Idle'
 let updateDownloaded = false
 let checkingForUpdates = false
 
+function getUpdateFeedOverride(): string | null {
+  const raw = process.env.NKS_WDC_UPDATE_FEED_URL?.trim()
+  if (!raw) return null
+  return raw.endsWith('/') ? raw : `${raw}/`
+}
+
 // Portable mode: if portable.txt exists next to the app, redirect both
 // Electron's userData AND the C# daemon's ~/.wdc tree to a local subfolder
 // so a USB-stick install leaves no trace on the host machine.
@@ -531,6 +537,11 @@ async function setupAutoUpdater() {
 
   try {
     const { autoUpdater } = await import('electron-updater')
+    const feedOverride = getUpdateFeedOverride()
+    if (feedOverride) {
+      autoUpdater.setFeedURL({ provider: 'generic', url: feedOverride })
+      console.log('[updater] using generic feed override:', feedOverride)
+    }
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
 
