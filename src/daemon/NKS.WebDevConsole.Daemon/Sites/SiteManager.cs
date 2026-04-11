@@ -35,6 +35,23 @@ public class SiteManager
     {
         _sites.Clear();
         if (!Directory.Exists(_sitesDir)) return;
+
+        // Simple line-based check: find top-level TOML keys (lines matching
+        // `^key\s*=` at indent 0, excluding comment lines and table headers)
+        // and warn when any don't correspond to a SiteConfig property. This
+        // catches the class of bugs where someone hand-edits a TOML with a
+        // typo like "phpVerion" — Tomlyn 2.3.0's deserialiser silently
+        // drops unknown keys so without this check the user sees no hint
+        // that their override wasn't applied. Warnings-only so one bad key
+        // never bricks the loader.
+        var knownKeys = typeof(SiteConfig)
+            .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Select(p => p.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var topKeyPattern = new System.Text.RegularExpressions.Regex(
+            @"^(?<key>[A-Za-z_][A-Za-z0-9_\-]*)\s*=",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
         foreach (var file in Directory.GetFiles(_sitesDir, "*.toml"))
         {
             try
@@ -44,6 +61,32 @@ public class SiteManager
                     ?? throw new InvalidOperationException($"Failed to deserialize {file}");
                 if (string.IsNullOrEmpty(model.Domain))
                     model.Domain = Path.GetFileNameWithoutExtension(file);
+
+                // Top-level key sanity check — once we hit a `[table]` header,
+                // subsequent keys belong to a subtable and aren't validated
+                // against the root SiteConfig schema.
+                var inSubtable = false;
+                foreach (var rawLine in toml.Split('\n'))
+                {
+                    var line = rawLine.TrimEnd('\r');
+                    if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith('#')) continue;
+                    if (line.TrimStart().StartsWith('['))
+                    {
+                        inSubtable = true;
+                        continue;
+                    }
+                    if (inSubtable) continue;
+                    var m = topKeyPattern.Match(line);
+                    if (!m.Success) continue;
+                    var key = m.Groups["key"].Value;
+                    if (!knownKeys.Contains(key))
+                    {
+                        _logger.LogWarning(
+                            "Site TOML {File} contains unknown key '{Key}' — possibly a typo, value ignored",
+                            Path.GetFileName(file), key);
+                    }
+                }
+
                 _sites[model.Domain] = model;
             }
             catch (Exception ex)

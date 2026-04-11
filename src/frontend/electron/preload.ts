@@ -17,6 +17,12 @@ let lastMtimeMs = 0
  * reload. Previous implementation cached once at startup and never refreshed,
  * which left the renderer with a stale token after every daemon restart.
  */
+// Base64 token shape check — the daemon emits a 32-byte random token encoded
+// as base64 (44 chars ending in =). We validate the shape before caching so
+// a corrupted or hand-edited port file can't inject arbitrary strings into
+// the renderer's Authorization header.
+const TOKEN_SHAPE = /^[A-Za-z0-9+/=]{16,512}$/
+
 function refreshFromPortFile(): void {
   try {
     if (!existsSync(portFilePath)) return
@@ -26,8 +32,16 @@ function refreshFromPortFile(): void {
     const lines = readFileSync(portFilePath, 'utf-8').split('\n').filter(Boolean)
     if (lines.length >= 2) {
       const p = parseInt(lines[0], 10)
-      if (!isNaN(p) && p > 0) cachedPort = p
-      cachedToken = lines[1]
+      // Port must be a valid 16-bit TCP port (1..65535); anything outside
+      // is a corrupted file and must not be trusted.
+      if (!isNaN(p) && p > 0 && p <= 65535) cachedPort = p
+      // Token must match the base64 shape we expect; reject anything else
+      // so a tampered file can't smuggle spaces, control chars, or CRLF
+      // injection into the Authorization header the renderer later uses.
+      const candidate = lines[1].trim()
+      if (TOKEN_SHAPE.test(candidate)) {
+        cachedToken = candidate
+      }
       lastMtimeMs = mtime
     }
   } catch {
