@@ -4,6 +4,7 @@ using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
 using NKS.WebDevConsole.Daemon.Sites;
 using NKS.WebDevConsole.Daemon.Binaries;
+using NKS.WebDevConsole.Daemon.Backup;
 using NKS.WebDevConsole.Daemon.Config;
 using NKS.WebDevConsole.Daemon.Data;
 using CliWrap.Buffered;
@@ -46,6 +47,7 @@ builder.Services.AddSingleton(sp => new SiteManager(
 ));
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
+builder.Services.AddSingleton<BackupManager>();
 
 // Binary catalog / downloader / manager — own binaries under ~/.wdc/binaries/
 builder.Services.AddHttpClient("binary-downloader");
@@ -610,6 +612,91 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     // Re-apply through orchestrator so vhost is also written next to Apache binary
     await orchestrator.ApplyAsync(site);
     return Results.Ok(new { domain, restoredFrom = timestamp });
+});
+
+// Backup / restore — Phase 7 plan item.
+// Creates a zip of ~/.wdc/sites + ~/.wdc/data/state.db + ~/.wdc/ssl/sites + ~/.wdc/caddy.
+// Restore is atomic with an automatic pre-restore safety backup.
+app.MapGet("/api/backup/list", (BackupManager bm) =>
+{
+    var list = bm.ListBackups()
+        .Select(b => new { path = b.Path, size = b.Size, createdUtc = b.Created })
+        .ToList();
+    return Results.Ok(new { count = list.Count, backups = list });
+});
+
+app.MapPost("/api/backup", (BackupManager bm, HttpContext ctx) =>
+{
+    try
+    {
+        var outPath = ctx.Request.Query["out"].FirstOrDefault();
+        var (path, files, size) = bm.CreateBackup(outPath);
+        return Results.Ok(new { path, files, size });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Backup failed: {ex.Message}");
+    }
+});
+
+app.MapGet("/api/backup/download", (BackupManager bm, string? path) =>
+{
+    string target;
+    if (string.IsNullOrEmpty(path))
+    {
+        var latest = bm.ListBackups().FirstOrDefault();
+        if (latest.Path is null) return Results.NotFound(new { error = "No backups available" });
+        target = latest.Path;
+    }
+    else
+    {
+        var backupRoot = Path.GetFullPath(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".wdc", "backups"));
+        var resolved = Path.GetFullPath(path);
+        if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+            return Results.BadRequest(new { error = "Path escapes backup root" });
+        target = resolved;
+    }
+    if (!File.Exists(target)) return Results.NotFound(new { error = "Backup file not found" });
+    return Results.File(target, "application/zip", Path.GetFileName(target));
+});
+
+app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
+{
+    try
+    {
+        string archivePath;
+        if (ctx.Request.HasFormContentType)
+        {
+            var form = await ctx.Request.ReadFormAsync();
+            var file = form.Files.FirstOrDefault();
+            if (file is null) return Results.BadRequest(new { error = "No file uploaded" });
+            var tmp = Path.Combine(Path.GetTempPath(), $"wdc-restore-{Guid.NewGuid():N}.zip");
+            using (var fs = File.Create(tmp))
+                await file.CopyToAsync(fs);
+            archivePath = tmp;
+        }
+        else
+        {
+            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+            var requested = body?.GetValueOrDefault("path");
+            if (string.IsNullOrWhiteSpace(requested))
+                return Results.BadRequest(new { error = "path or multipart file required" });
+            var backupRoot = Path.GetFullPath(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".wdc", "backups"));
+            var resolved = Path.GetFullPath(requested);
+            if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+                return Results.BadRequest(new { error = "Path escapes backup root" });
+            archivePath = resolved;
+        }
+
+        var (restored, safety) = bm.RestoreBackup(archivePath);
+        return Results.Ok(new { restored, safetyBackup = safety, archive = archivePath });
+    }
+    catch (FileNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
+    catch (Exception ex) { return Results.Problem($"Restore failed: {ex.Message}"); }
 });
 
 // MAMP PRO migration — Phase 5 plan item.

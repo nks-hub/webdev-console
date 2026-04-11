@@ -1369,6 +1369,76 @@ migrateCommand.SetAction(async (parseResult, ct) =>
     }
 });
 
+// --- wdc backup ---
+var backupCommand = new Command("backup", "Create a zip backup of NKS WDC state (sites, certs, db)");
+var backupOutOption = new Option<string?>("--out") { Description = "Output zip path (default: ~/.wdc/backups/wdc-backup-<timestamp>.zip)" };
+backupCommand.Add(backupOutOption);
+backupCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var outPath = parseResult.GetValue(backupOutOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var url = "/api/backup" + (string.IsNullOrEmpty(outPath) ? "" : $"?out={Uri.EscapeDataString(outPath)}");
+    var result = await client.PostAsync(url);
+    if (json) { PrintJson(result); return; }
+
+    var path = result.GetProperty("path").GetString() ?? "?";
+    var files = result.GetProperty("files").GetInt32();
+    var size = result.GetProperty("size").GetInt64();
+    AnsiConsole.MarkupLine($"[green]✓[/] Backup created");
+    AnsiConsole.MarkupLine($"  Path:  [bold]{Markup.Escape(path)}[/]");
+    AnsiConsole.MarkupLine($"  Files: {files}");
+    AnsiConsole.MarkupLine($"  Size:  {FormatBytes(size)}");
+});
+
+// --- wdc restore ---
+var restoreCommand = new Command("restore", "Restore a backup zip into NKS WDC state");
+var restoreFromOption = new Option<string>("--from") { Description = "Path to a backup zip", Required = true };
+var restoreYesOption = new Option<bool>("--yes") { Description = "Skip confirmation prompt" };
+restoreCommand.Add(restoreFromOption);
+restoreCommand.Add(restoreYesOption);
+restoreCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var from = parseResult.GetValue(restoreFromOption);
+    var yes = parseResult.GetValue(restoreYesOption);
+
+    if (string.IsNullOrWhiteSpace(from) || !System.IO.File.Exists(from))
+    {
+        AnsiConsole.MarkupLine($"[red]Backup file not found:[/] {Markup.Escape(from ?? "<none>")}");
+        return;
+    }
+
+    if (!yes && !json)
+    {
+        AnsiConsole.MarkupLine($"[yellow]This will replace your current NKS WDC sites/certs/db with the contents of:[/]");
+        AnsiConsole.MarkupLine($"  [bold]{Markup.Escape(from!)}[/]");
+        AnsiConsole.MarkupLine("[dim]A pre-restore safety backup will be created automatically.[/]");
+        if (!AnsiConsole.Confirm("Continue?", false)) return;
+    }
+
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    // The daemon endpoint accepts multipart upload OR JSON {path: ...} for in-place files.
+    // We send the path directly because the daemon already lives on the same machine.
+    var content = new StringContent(
+        System.Text.Json.JsonSerializer.Serialize(new { path = from }),
+        System.Text.Encoding.UTF8,
+        "application/json");
+    var result = await client.PostAsync("/api/restore", content);
+    if (json) { PrintJson(result); return; }
+
+    var restored = result.GetProperty("restored").GetInt32();
+    var safety = result.GetProperty("safetyBackup").GetString() ?? "?";
+    AnsiConsole.MarkupLine($"[green]✓[/] Restored [bold]{restored}[/] file(s)");
+    AnsiConsole.MarkupLine($"[dim]Safety backup of previous state: {Markup.Escape(safety)}[/]");
+});
+
+rootCommand.Add(backupCommand);
+rootCommand.Add(restoreCommand);
 rootCommand.Add(migrateCommand);
 rootCommand.Add(versionCommand);
 
