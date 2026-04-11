@@ -70,6 +70,7 @@
         >
           <div class="pm-card-header">
             <div class="pm-card-title">
+              <ServiceIcon :service="mp.id" :active="true" />
               <span class="pm-name">{{ mp.name }}</span>
               <el-tag v-if="mp.installed" size="small" type="success" effect="plain">installed</el-tag>
             </div>
@@ -115,6 +116,7 @@
       >
         <div class="pm-card-header">
           <div class="pm-card-title">
+            <ServiceIcon :service="plugin.id" :active="plugin.enabled" />
             <span class="pm-name">{{ plugin.name }}</span>
             <el-tag size="small" type="info" effect="plain" class="pm-type-tag">{{ plugin.type }}</el-tag>
           </div>
@@ -168,6 +170,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { usePluginsStore } from '../../stores/plugins'
+import ServiceIcon from '../shared/ServiceIcon.vue'
 import {
   fetchMarketplace,
   installPluginFromMarketplace,
@@ -344,7 +347,7 @@ onMounted(() => { void pluginsStore.loadAll() })
 .pm-card-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
