@@ -61,23 +61,22 @@
                     </el-input>
                   </el-form-item>
                   <el-form-item label="Document Root" required>
-                    <div class="path-row">
-                      <el-input
-                        v-model="site.documentRoot"
-                        placeholder="C:\work\htdocs\myapp"
-                        class="path-input"
-                        @input="markDirty"
-                      />
-                      <el-button
-                        size="default"
-                        type="primary"
-                        plain
-                        @click="showFolderBrowser = true"
-                      >
-                        <el-icon><FolderOpened /></el-icon>
-                        <span>Browse…</span>
-                      </el-button>
-                    </div>
+                    <el-input
+                      v-model="site.documentRoot"
+                      placeholder="C:\work\htdocs\myapp"
+                      class="path-input"
+                      @input="markDirty"
+                    >
+                      <template #append>
+                        <el-button
+                          class="browse-append-btn"
+                          @click="showFolderBrowser = true"
+                        >
+                          <el-icon><FolderOpened /></el-icon>
+                          <span>Browse…</span>
+                        </el-button>
+                      </template>
+                    </el-input>
                     <div class="hint" v-if="site.documentRoot">
                       <el-icon><Check /></el-icon>
                       Apache will serve files from this folder
@@ -709,17 +708,29 @@ onMounted(() => { void load() })
 }
 
 /* ─── Path input + Browse ────────────────────────────────────────────── */
-.path-row {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
 .path-input {
-  flex: 1;
+  width: 100%;
 }
 .path-input :deep(.el-input__inner) {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
+}
+.path-input :deep(.el-input-group__append) {
+  padding: 0 !important;
+  background: var(--wdc-surface-2) !important;
+  border-color: var(--wdc-border) !important;
+}
+.browse-append-btn {
+  border: none !important;
+  background: transparent !important;
+  color: var(--wdc-accent) !important;
+  font-weight: 700 !important;
+  height: 100% !important;
+  padding: 0 16px !important;
+  box-shadow: none !important;
+}
+.browse-append-btn:hover {
+  background: var(--wdc-accent-dim) !important;
 }
 
 /* ─── Alias chip picker ──────────────────────────────────────────────── */

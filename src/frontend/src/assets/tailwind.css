@@ -1,5 +1,9 @@
 /* NKS WDC Design System — pure CSS tokens + Element Plus overrides */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap');
+/* Inter: the de-facto UI sans for 2020s web apps. Crisp on Windows ClearType,
+   gorgeous on Retina, ships tight hinting at every weight. Replaces Space
+   Grotesk which felt too display-y for dense dashboard UIs.
+   JetBrains Mono stays as the monospace for paths / ports / version numbers. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ─── Design Tokens (flat, high-contrast, WCAG AAA) ───────────────────────
  *
@@ -211,8 +215,13 @@ html {
 body {
   background: var(--wdc-bg);
   color: var(--wdc-text);
-  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
+  /* Enable Inter's stylistic alternates + tabular figures. `cv11` is the
+     straight-sided single-story `a` that reads cleaner at small UI sizes;
+     `tnum` lines numerals up in tables / metrics. */
+  font-feature-settings: 'cv11', 'tnum', 'ss01';
+  letter-spacing: -0.005em;
 }
 
 code, pre, .mono, .metric-value, .meta-val, .stat-value {
