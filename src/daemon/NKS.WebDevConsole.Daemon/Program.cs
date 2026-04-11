@@ -64,14 +64,24 @@ builder.Services.AddHttpClient("binary-downloader");
 builder.Services.AddHttpClient("catalog-client");
 builder.Services.AddSingleton<CatalogClientOptions>(sp =>
 {
-    // Source precedence: SettingsStore (user-editable via /api/settings
-    // and the Settings page in the Electron UI) → NKS_WDC_CATALOG_URL env
-    // → localhost:8765 fallback (matches the dev run.cmd in
-    // services/catalog-api/).
+    // Seed value used only when the SettingsStore value is empty at
+    // construction time. The real URL is re-read on every RefreshAsync
+    // via the Func<string> injected below, so editing the URL in the
+    // Settings page takes effect immediately without a daemon restart.
     var settings = sp.GetRequiredService<SettingsStore>();
     return new CatalogClientOptions { BaseUrl = settings.CatalogUrl };
 });
-builder.Services.AddSingleton<CatalogClient>();
+builder.Services.AddSingleton<CatalogClient>(sp =>
+{
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var logger = sp.GetRequiredService<ILogger<CatalogClient>>();
+    var options = sp.GetRequiredService<CatalogClientOptions>();
+    var settings = sp.GetRequiredService<SettingsStore>();
+    // Provider closure re-reads SettingsStore.CatalogUrl on every invocation
+    // — makes the Settings page "Refresh" button point at the new URL without
+    // any DI rebuild gymnastics.
+    return new CatalogClient(httpFactory, logger, options, () => settings.CatalogUrl);
+});
 builder.Services.AddSingleton<BinaryDownloader>();
 builder.Services.AddSingleton<BinaryManager>();
 

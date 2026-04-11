@@ -30,17 +30,35 @@ public sealed class CatalogClient
     private readonly HttpClient _http;
     private readonly ILogger<CatalogClient> _logger;
     private readonly CatalogClientOptions _options;
+    private readonly Func<string>? _baseUrlProvider;
     private readonly object _cacheLock = new();
     private List<BinaryRelease> _cache = new();
     private DateTime _lastFetch = DateTime.MinValue;
 
-    public CatalogClient(IHttpClientFactory httpClientFactory, ILogger<CatalogClient> logger, CatalogClientOptions? options = null)
+    public CatalogClient(
+        IHttpClientFactory httpClientFactory,
+        ILogger<CatalogClient> logger,
+        CatalogClientOptions? options = null,
+        Func<string>? baseUrlProvider = null)
     {
         _options = options ?? new CatalogClientOptions();
+        // Don't bake BaseAddress into the HttpClient — it's immutable after
+        // the first request, so changing the catalog URL via Settings would
+        // require a daemon restart. We build absolute URIs per request and
+        // read the current base URL from the provider (which in turn hits
+        // SettingsStore on every call), so editing the URL in the Settings
+        // page + POST /api/binaries/catalog/refresh actually redirects to
+        // the new endpoint immediately.
         _http = httpClientFactory.CreateClient("catalog-client");
-        _http.BaseAddress = new Uri(_options.BaseUrl);
         _http.Timeout = _options.Timeout;
+        _baseUrlProvider = baseUrlProvider;
         _logger = logger;
+    }
+
+    private string CurrentBaseUrl()
+    {
+        var url = _baseUrlProvider?.Invoke() ?? _options.BaseUrl;
+        return url.TrimEnd('/');
     }
 
     public IReadOnlyList<BinaryRelease> CachedReleases
@@ -57,10 +75,11 @@ public sealed class CatalogClient
     public async Task<int> RefreshAsync(CancellationToken ct = default)
     {
         var flattened = new List<BinaryRelease>();
+        var baseUrl = CurrentBaseUrl();
         try
         {
-            _logger.LogInformation("Fetching binary catalog from {BaseUrl}/api/v1/catalog", _options.BaseUrl);
-            var resp = await _http.GetAsync("/api/v1/catalog", ct);
+            _logger.LogInformation("Fetching binary catalog from {BaseUrl}/api/v1/catalog", baseUrl);
+            var resp = await _http.GetAsync($"{baseUrl}/api/v1/catalog", ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             var doc = JsonSerializer.Deserialize<CatalogDocument>(json, JsonOpts)
@@ -92,7 +111,7 @@ public sealed class CatalogClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to fetch catalog from {BaseUrl}: {Error}", _options.BaseUrl, ex.Message);
+            _logger.LogWarning("Failed to fetch catalog from {BaseUrl}: {Error}", baseUrl, ex.Message);
         }
 
         // Always merge the built-in fallback list so apps that the external
