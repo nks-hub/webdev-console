@@ -211,6 +211,11 @@ app.Lifetime.ApplicationStarted.Register(() =>
 
 // Health endpoint — no auth required (for monitoring + Electron daemon detection)
 app.MapGet("/healthz", () => Results.Ok(new { ok = true, timestamp = DateTime.UtcNow }));
+app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
+{
+    _ = Task.Run(() => lifetime.StopApplication());
+    return Results.Accepted();
+});
 
 // Auth middleware for /api/* requests.
 // SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.

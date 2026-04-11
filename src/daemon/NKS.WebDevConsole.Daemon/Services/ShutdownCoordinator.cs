@@ -8,10 +8,12 @@ namespace NKS.WebDevConsole.Daemon.Services;
 public sealed class ShutdownCoordinator
 {
     private readonly ILogger<ShutdownCoordinator> _logger;
+    private readonly TimeSpan _stopTimeout;
 
-    public ShutdownCoordinator(ILogger<ShutdownCoordinator> logger)
+    public ShutdownCoordinator(ILogger<ShutdownCoordinator> logger, TimeSpan? stopTimeout = null)
     {
         _logger = logger;
+        _stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(15);
     }
 
     public async Task StopAllAsync(
@@ -29,9 +31,21 @@ public sealed class ShutdownCoordinator
                 var status = await module.GetStatusAsync(ct);
                 if (status.State == ServiceState.Running)
                 {
-                    await module.StopAsync(ct);
+                    using var stopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    stopCts.CancelAfter(_stopTimeout);
+                    await module.StopAsync(stopCts.Token).WaitAsync(_stopTimeout, ct);
                     Console.WriteLine($"[shutdown] {module.ServiceId}: stopped");
                 }
+            }
+            catch (TimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Timed out stopping service {ServiceId} during shutdown", module.ServiceId);
+                Console.WriteLine($"[shutdown] {module.ServiceId}: timed out");
+            }
+            catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Timed out stopping service {ServiceId} during shutdown", module.ServiceId);
+                Console.WriteLine($"[shutdown] {module.ServiceId}: timed out");
             }
             catch (Exception ex)
             {
@@ -44,7 +58,17 @@ public sealed class ShutdownCoordinator
         {
             try
             {
-                await plugin.Instance.StopAsync(ct);
+                using var stopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                stopCts.CancelAfter(_stopTimeout);
+                await plugin.Instance.StopAsync(stopCts.Token).WaitAsync(_stopTimeout, ct);
+            }
+            catch (TimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Timed out stopping plugin {PluginId} during shutdown", plugin.Instance.Id);
+            }
+            catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Timed out stopping plugin {PluginId} during shutdown", plugin.Instance.Id);
             }
             catch (Exception ex)
             {

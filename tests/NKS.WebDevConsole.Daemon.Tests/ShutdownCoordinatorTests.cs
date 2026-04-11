@@ -79,4 +79,29 @@ public class ShutdownCoordinatorTests
         healthyModule.Verify(x => x.StopAsync(It.IsAny<CancellationToken>()), Times.Once);
         brokenPlugin.Verify(x => x.StopAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task StopAllAsync_Continues_WhenServiceStopTimesOut()
+    {
+        var hangingModule = new Mock<IServiceModule>();
+        hangingModule.SetupGet(x => x.ServiceId).Returns("apache");
+        hangingModule.Setup(x => x.GetStatusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ServiceStatus("apache", "Apache", ServiceState.Running, 12, 0, 0, null));
+        hangingModule.Setup(x => x.StopAsync(It.IsAny<CancellationToken>()))
+            .Returns<CancellationToken>(ct => Task.Delay(TimeSpan.FromMinutes(1), ct));
+
+        var healthyModule = new Mock<IServiceModule>();
+        healthyModule.SetupGet(x => x.ServiceId).Returns("redis");
+        healthyModule.Setup(x => x.GetStatusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ServiceStatus("redis", "Redis", ServiceState.Running, 13, 0, 0, null));
+
+        var sut = new ShutdownCoordinator(_loggerMock.Object, TimeSpan.FromMilliseconds(100));
+        await sut.StopAllAsync(
+            [hangingModule.Object, healthyModule.Object],
+            [],
+            Path.Combine(Path.GetTempPath(), $"nks-wdc-shutdown-{Guid.NewGuid():N}.port"),
+            CancellationToken.None);
+
+        healthyModule.Verify(x => x.StopAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
