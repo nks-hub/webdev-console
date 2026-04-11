@@ -43,21 +43,21 @@
           {{ manifest.description || 'No description provided.' }}
         </p>
         <div class="plugin-desc-meta">
-          <span v-if="(manifest as any).author">
+          <span v-if="manifest.author">
             <span class="meta-label">Author</span>
-            <span class="meta-val">{{ (manifest as any).author }}</span>
+            <span class="meta-val">{{ manifest.author }}</span>
           </span>
-          <span v-if="(manifest as any).license">
+          <span v-if="manifest.license">
             <span class="meta-label">License</span>
-            <span class="meta-val">{{ (manifest as any).license }}</span>
+            <span class="meta-val">{{ manifest.license }}</span>
           </span>
-          <span v-if="(manifest as any).capabilities?.length">
+          <span v-if="manifest.capabilities?.length">
             <span class="meta-label">Capabilities</span>
-            <span class="meta-val">{{ (manifest as any).capabilities.join(', ') }}</span>
+            <span class="meta-val">{{ manifest.capabilities.join(', ') }}</span>
           </span>
-          <span v-if="(manifest as any).supportedPlatforms?.length">
+          <span v-if="manifest.supportedPlatforms?.length">
             <span class="meta-label">Platforms</span>
-            <span class="meta-val">{{ (manifest as any).supportedPlatforms.join(', ') }}</span>
+            <span class="meta-val">{{ manifest.supportedPlatforms.join(', ') }}</span>
           </span>
         </div>
       </div>

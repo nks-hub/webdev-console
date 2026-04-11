@@ -116,6 +116,17 @@ export interface PluginManifest {
   enabled: boolean
   description?: string
   author?: string
+  /** SPDX identifier from plugin.json `license` field (e.g. "Apache-2.0") */
+  license?: string
+  /**
+   * Capability strings advertised by the plugin in its plugin.json
+   * (e.g. "start", "stop", "reload", "log-streaming", "vhost-generation").
+   * Shown as meta chips in PluginPage — not enforced by the daemon yet,
+   * but frontend can hide buttons for missing capabilities.
+   */
+  capabilities?: string[]
+  /** OS names the plugin author claims support for, e.g. ["windows","macos","linux"] */
+  supportedPlatforms?: string[]
   permissions: {
     network?: boolean
     filesystem?: string[]
