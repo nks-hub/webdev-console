@@ -134,6 +134,9 @@ onBeforeUnmount(() => {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
   overflow: hidden;
-  background: #0f111a;
+  /* Use theme token so the container matches the Monaco dark theme in
+     dark mode and the page background in light mode. The embedded Monaco
+     editor has its own wdc-dark theme that handles its internal colors. */
+  background: var(--wdc-bg);
 }
 </style>

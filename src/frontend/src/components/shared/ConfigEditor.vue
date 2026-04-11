@@ -132,8 +132,12 @@ function revertEdit() {
 .editor-area {
   flex: 1;
   resize: none;
-  background: #0d0f1a;
-  color: #c9d1d9;
+  /* Use theme tokens so the fallback textarea respects light mode.
+     Prior hardcoded #0d0f1a / #c9d1d9 gave a 12.36:1 dark-mode ratio
+     (WCAG AAA) but froze the editor dark even when the rest of the
+     app switched to light theme. */
+  background: var(--wdc-bg);
+  color: var(--wdc-text-2);
   font-family: 'Consolas', 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   border: none;

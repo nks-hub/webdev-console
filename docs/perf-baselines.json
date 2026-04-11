@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-11T01:04:54.441Z",
+  "timestamp": "2026-04-11T06:47:52.463Z",
   "daemon": {
     "port": 5146
   },
@@ -14,42 +14,42 @@
   "endpoints": {
     "statusSequential": {
       "samples": 200,
-      "min": 0.1,
-      "p50": 0.14,
-      "p95": 0.23,
-      "p99": 0.28,
-      "max": 0.31,
-      "mean": 0.15,
+      "min": 0.13,
+      "p50": 0.19,
+      "p95": 0.27,
+      "p99": 0.35,
+      "max": 0.37,
+      "mean": 0.2,
       "statusOk": 200
     },
     "servicesSequential": {
       "samples": 200,
-      "min": 29.73,
-      "p50": 55.38,
-      "p95": 62.27,
-      "p99": 65.52,
-      "max": 72.8,
-      "mean": 54.78,
+      "min": 59.08,
+      "p50": 94.08,
+      "p95": 105.65,
+      "p99": 111.4,
+      "max": 113.41,
+      "mean": 93.52,
       "statusOk": 200
     },
     "statusParallel": {
       "samples": 200,
-      "min": 0.11,
-      "p50": 1.2,
-      "p95": 1.94,
-      "p99": 3.64,
-      "max": 4.06,
-      "mean": 1.35,
+      "min": 0.48,
+      "p50": 1.27,
+      "p95": 2.09,
+      "p99": 3.21,
+      "max": 3.5,
+      "mean": 1.41,
       "statusOk": 200,
-      "elapsedMs": 28.13,
-      "rps": 7110.3,
+      "elapsedMs": 29.06,
+      "rps": 6882.1,
       "concurrency": 10
     }
   },
   "sse": {
-    "events": 3,
-    "durationMs": 5009,
-    "eventsPerSec": 0.6
+    "events": 6,
+    "durationMs": 5001,
+    "eventsPerSec": 1.2
   },
   "config": {
     "samples": 200,
