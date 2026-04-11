@@ -3,7 +3,7 @@ productName: NKS WebDev Console
 copyright: Copyright 2026 NKS Hub
 
 directories:
-  output: dist
+  output: release
   buildResources: build
 
 files:
@@ -11,9 +11,18 @@ files:
   - out/**/*
   - "!node_modules/**/*"
 
+extraResources:
+  - from: resources/daemon
+    to: daemon
+
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+
 win:
   target:
     - target: nsis
+      arch:
+        - x64
+    - target: portable
       arch:
         - x64
   icon: build/icon.ico
@@ -24,13 +33,15 @@ nsis:
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   shortcutName: NKS WebDev Console
-  artifactName: "NKS-WebDev-Console-${version}-Setup.${ext}"
+  artifactName: "${productName}-${version}-setup-${arch}.${ext}"
+
+portable:
+  artifactName: "${productName}-${version}-portable-${arch}.${ext}"
 
 mac:
   target:
     - target: dmg
       arch:
-        - x64
         - arm64
   icon: build/icon.icns
   category: public.app-category.developer-tools
@@ -47,6 +58,7 @@ publish:
   provider: github
   owner: nks-hub
   repo: webdev-console
+  releaseType: release
 
 extraMetadata:
   main: dist-electron/main.js

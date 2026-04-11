@@ -13,10 +13,16 @@ jobs:
         include:
           - os: windows-2022
             target: win
+            daemon_rid: win-x64
+            npm_script: dist
           - os: macos-14
             target: mac
+            daemon_rid: osx-arm64
+            npm_script: dist:mac
           - os: ubuntu-24.04
             target: linux
+            daemon_rid: linux-x64
+            npm_script: dist:linux
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -33,7 +39,7 @@ jobs:
           node-version: '22'
 
       - name: Build daemon
-        run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r ${{ matrix.os == 'windows-2022' && 'win-x64' || matrix.os == 'macos-14' && 'osx-arm64' || 'linux-x64' }} --self-contained -o src/frontend/resources/daemon
+        run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r ${{ matrix.daemon_rid }} --self-contained -o src/frontend/resources/daemon
 
       - name: Build plugins
         run: |
@@ -51,12 +57,15 @@ jobs:
 
       - name: Build Electron app
         working-directory: src/frontend
-        run: npm run dist:${{ matrix.target == 'win' && '' || matrix.target }}
+        run: npm run ${{ matrix.npm_script }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release artifacts
+        run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target ${{ matrix.target }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
-          path: src/frontend/dist/*.{exe,dmg,AppImage,zip}
+          path: src/frontend/release/**

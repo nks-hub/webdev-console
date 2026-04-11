@@ -1,5 +1,5 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } from 'electron'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
@@ -20,13 +20,14 @@ let checkingForUpdates = false
 // The daemon honors the WDC_DATA_DIR env var via Core/Services/WdcPaths.cs,
 // which every service (SiteManager, BackupManager, TelemetryConsent,
 // PluginState, PhpExtensionOverrides, BinaryManager, all plugins) consults.
-const isPortable = existsSync(join(app.getAppPath(), 'portable.txt'))
+const appInstallDir = app.isPackaged ? dirname(process.execPath) : app.getAppPath()
+const isPortable = existsSync(join(appInstallDir, 'portable.txt'))
   || existsSync(join(process.cwd(), 'portable.txt'))
 
 let portableWdcDir: string | null = null
 if (isPortable) {
   // Store all user data next to the app binary instead of %APPDATA%
-  const portableDir = join(app.getAppPath(), 'data')
+  const portableDir = join(appInstallDir, 'data')
   app.setPath('userData', portableDir)
   portableWdcDir = join(portableDir, 'wdc')
   process.env.WDC_DATA_DIR = portableWdcDir
@@ -83,7 +84,19 @@ function daemonPost(path: string): Promise<void> {
     req.end()
   })
 }
-const DAEMON_EXE = join(__dirname, '../../daemon/bin/wdc-daemon.exe')
+function findPackagedDaemonExecutable(): string {
+  const candidates = [
+    join(process.resourcesPath, 'daemon', 'NKS.WebDevConsole.Daemon.exe'),
+    join(appInstallDir, 'daemon', 'NKS.WebDevConsole.Daemon.exe'),
+    join(__dirname, '../../daemon/bin/NKS.WebDevConsole.Daemon.exe'),
+  ]
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate
+  }
+
+  return candidates[0]
+}
 
 function findDaemonProject(): string {
   // electron-vite dev: __dirname = src/frontend/dist-electron/
@@ -144,7 +157,12 @@ async function spawnDaemon() {
       env: daemonEnv,
     })
   } else {
-    daemon = spawn(DAEMON_EXE, [], { stdio: 'pipe', detached: false, env: daemonEnv })
+    const daemonExe = findPackagedDaemonExecutable()
+    if (!existsSync(daemonExe)) {
+      throw new Error(`Packaged daemon executable not found: ${daemonExe}`)
+    }
+
+    daemon = spawn(daemonExe, [], { stdio: 'pipe', detached: false, env: daemonEnv })
   }
 
   daemon.stdout?.on('data', (d) => {
