@@ -104,14 +104,20 @@
               <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">default</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Platform" width="120">
+          <el-table-column label="Platforms" min-width="180">
             <template #default="{ row }">
-              <span class="mono col-muted">{{ row.platform || '—' }}</span>
+              <el-tag
+                v-for="p in row.platforms"
+                :key="p"
+                size="small"
+                effect="plain"
+                class="platform-tag mono"
+              >{{ p }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Size" width="100" align="right">
+          <el-table-column label="Source" width="140">
             <template #default="{ row }">
-              <span class="mono col-muted">{{ row.size ? formatSize(row.size) : '—' }}</span>
+              <span class="mono col-muted">{{ row.source || '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="Status" width="120">
@@ -213,8 +219,10 @@ type ModuleCard = {
 
 type DetailRow = {
   version: string
-  platform?: string
-  size?: number
+  /** De-duped list of available OS/arch combos, e.g. ["windows/x64", "linux/x64"] */
+  platforms: string[]
+  /** Upstream source label (e.g. "github", "apachelounge") */
+  source?: string
   installed: boolean
   isDefault: boolean
 }
@@ -263,10 +271,13 @@ const filteredModules = computed(() => {
   return moduleCards.value.filter(c => c.app.toLowerCase().includes(q))
 })
 
-// Build the merged table rows for the selected module: catalog entries get
-// annotated with installed/default state from the installed list. Installed
-// versions that don't appear in the catalog (e.g., manually dropped
-// binaries) also show up so Remove works.
+// Build the merged table rows for the selected module: one row per unique
+// version, collecting every platform variant (os/arch) from the catalog so
+// users can see all 6 cloudflared targets under a single 2026.3.0 row. Also
+// annotates installed/default state from the installed list so Install and
+// Remove buttons point at the right version. Installed versions missing
+// from the catalog (manually dropped binaries) still render so users can
+// Remove them.
 const detailRows = computed<DetailRow[]>(() => {
   if (!selectedApp.value) return []
   const app = selectedApp.value
@@ -275,19 +286,25 @@ const detailRows = computed<DetailRow[]>(() => {
 
   const byVersion = new Map<string, DetailRow>()
   for (const r of releases) {
-    byVersion.set(r.version, {
-      version: r.version,
-      platform: r.platform,
-      size: r.size,
-      installed: false,
-      isDefault: false,
-    })
+    const existing = byVersion.get(r.version)
+    const platform = `${r.os}/${r.arch}`
+    if (existing) {
+      if (!existing.platforms.includes(platform)) existing.platforms.push(platform)
+    } else {
+      byVersion.set(r.version, {
+        version: r.version,
+        platforms: [platform],
+        source: r.source,
+        installed: false,
+        isDefault: false,
+      })
+    }
   }
   for (const i of installedForApp) {
     const row = byVersion.get(i.version) ?? {
       version: i.version,
-      platform: undefined,
-      size: undefined,
+      platforms: [],
+      source: undefined,
       installed: true,
       isDefault: !!i.isDefault,
     }
@@ -359,12 +376,6 @@ async function uninstall(app: string, version: string) {
   } finally {
     uninstalling.value.delete(key)
   }
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
 onMounted(() => { void refresh() })
@@ -539,6 +550,14 @@ onMounted(() => { void refresh() })
 
 .col-muted {
   color: var(--wdc-text-3);
+}
+
+.platform-tag {
+  margin-right: 4px;
+  margin-bottom: 2px;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
 }
 
 .progress-content {

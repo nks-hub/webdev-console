@@ -100,10 +100,20 @@ export interface PluginManifest {
 export interface BinaryRelease {
   app: string
   version: string
+  /** Semantic major.minor (e.g. "8.4" for php 8.4.20) — used by version groupers */
+  majorMinor?: string
   url: string
-  size?: number
+  /** Platform triple — daemon returns (os, arch) pair separately, this is cosmetic */
+  os: string
+  arch: string
+  archiveType?: string
+  source?: string
+  /** Optional HTTP User-Agent override for sources that block the default */
+  userAgent?: string | null
+  /** Optional SHA-256 hex for integrity verification (currently unused in frontend) */
   sha256?: string
-  platform?: string
+  /** Optional size in bytes (set by some generators, absent from upstream scrapers) */
+  sizeBytes?: number
 }
 
 export interface InstalledBinary {
