@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 
@@ -76,6 +77,13 @@ public partial class PluginLoader
                     continue;
                 }
 
+                // Load plugin.json manifest next to the DLL (if present) so we
+                // can surface its description/author/license in /api/plugins
+                // without requiring every plugin to override the IWdcPlugin
+                // Description property. The plugin.json stays authoritative
+                // for metadata — code just owns behavior.
+                var manifest = TryLoadManifest(Path.GetDirectoryName(dllPath)!, pluginName);
+
                 foreach (var type in pluginTypes)
                 {
                     var plugin = Activator.CreateInstance(type) as IWdcPlugin;
@@ -100,7 +108,7 @@ public partial class PluginLoader
                                 "Plugin {Id} declares non-SemVer version '{Version}' — marketplace update detection may not work",
                                 plugin.Id, plugin.Version);
                         }
-                        _plugins.Add(new LoadedPlugin(plugin, assembly, context));
+                        _plugins.Add(new LoadedPlugin(plugin, assembly, context, manifest));
                         _logger.LogInformation("Loaded plugin: {Id} v{Version} ({Type})", plugin.Id, plugin.Version, type.Name);
                     }
                 }
@@ -118,7 +126,29 @@ public partial class PluginLoader
     }
 }
 
-public record LoadedPlugin(IWdcPlugin Instance, Assembly Assembly, AssemblyLoadContext Context);
+/// <summary>
+/// Parsed <c>plugin.json</c> manifest sitting next to each plugin DLL. Nullable
+/// fields so missing keys degrade gracefully — plugins that predate a given
+/// metadata field still load.
+/// </summary>
+public sealed class PluginManifestData
+{
+    public string? Id { get; set; }
+    public string? DisplayName { get; set; }
+    public string? Version { get; set; }
+    public string? Description { get; set; }
+    public string? Author { get; set; }
+    public string? License { get; set; }
+    public string[]? SupportedPlatforms { get; set; }
+    public string[]? Capabilities { get; set; }
+    public int[]? DefaultPorts { get; set; }
+}
+
+public record LoadedPlugin(
+    IWdcPlugin Instance,
+    Assembly Assembly,
+    AssemblyLoadContext Context,
+    PluginManifestData? Manifest = null);
 
 internal static class PluginLoaderInternals
 {
@@ -138,4 +168,42 @@ internal static class PluginLoaderInternals
 public partial class PluginLoader
 {
     private static bool IsSemVer(string? version) => PluginLoaderInternals.IsSemVer(version);
+
+    /// <summary>
+    /// Attempts to locate and parse <c>plugin.json</c> for a plugin DLL. We
+    /// look in two spots: (1) next to the DLL itself (the normal build
+    /// output layout) and (2) two levels up under <c>src/plugins/{name}/</c>
+    /// which is where the repo keeps the source manifest so dev mode picks
+    /// it up even before the first Release build copies it. Failures are
+    /// swallowed — a missing/corrupt manifest must never prevent the plugin
+    /// from loading.
+    /// </summary>
+    private PluginManifestData? TryLoadManifest(string dllDir, string assemblyName)
+    {
+        string[] candidates =
+        [
+            Path.Combine(dllDir, "plugin.json"),
+            // From build/plugins/*.dll walk back to src/plugins/{name}/plugin.json
+            Path.Combine(dllDir, "..", "..", "src", "plugins", assemblyName, "plugin.json"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+                "src", "plugins", assemblyName, "plugin.json"),
+        ];
+
+        foreach (var path in candidates)
+        {
+            try
+            {
+                var full = Path.GetFullPath(path);
+                if (!File.Exists(full)) continue;
+                var json = File.ReadAllText(full);
+                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<PluginManifestData>(json, opts);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to read plugin manifest at {Path}", path);
+            }
+        }
+        return null;
+    }
 }

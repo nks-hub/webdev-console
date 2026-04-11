@@ -52,6 +52,9 @@ public static class WdcPaths
     /// <summary><c>{Root}/caddy</c> — Caddyfile fragments for the Caddy plugin.</summary>
     public static string CaddyRoot => Path.Combine(Root, "caddy");
 
+    /// <summary><c>{Root}/cloudflare</c> — Cloudflare plugin config + cloudflared state.</summary>
+    public static string CloudflareRoot => Path.Combine(Root, "cloudflare");
+
     /// <summary>
     /// Returns true when the data root was resolved from <c>WDC_DATA_DIR</c>
     /// (portable mode), false when it falls back to <c>~/.wdc</c>.

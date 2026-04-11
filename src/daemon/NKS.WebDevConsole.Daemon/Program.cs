@@ -291,6 +291,21 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
     {
         var svcId = p.Instance.Id.Split('.').LastOrDefault() ?? "";
         var hasService = modules.Any(m => m.ServiceId.Contains(svcId, StringComparison.OrdinalIgnoreCase));
+
+        // Resolve description from three ordered sources so every plugin
+        // surfaces something meaningful in the Plugins settings page:
+        //   1. Plugin-overridden IWdcPlugin.Description property (code-owned)
+        //   2. plugin.json `description` field (metadata-owned, preferred
+        //      because users can edit it without a rebuild)
+        //   3. Fallback to the display name so the card never shows "null"
+        var codeDescription = p.Instance.Description;
+        var manifestDescription = p.Manifest?.Description;
+        var description = !string.IsNullOrWhiteSpace(codeDescription)
+            ? codeDescription
+            : !string.IsNullOrWhiteSpace(manifestDescription)
+                ? manifestDescription
+                : $"{p.Instance.DisplayName} plugin";
+
         return new
         {
             id = p.Instance.Id,
@@ -298,7 +313,11 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             version = p.Instance.Version,
             type = hasService ? "service" : "tool",
             enabled = pluginState.IsEnabled(p.Instance.Id),
-            description = $"{p.Instance.DisplayName} plugin",
+            description,
+            author = p.Manifest?.Author ?? "NKS",
+            license = p.Manifest?.License ?? "MIT",
+            capabilities = p.Manifest?.Capabilities ?? Array.Empty<string>(),
+            supportedPlatforms = p.Manifest?.SupportedPlatforms ?? Array.Empty<string>(),
         };
     }));
 });
@@ -1231,6 +1250,127 @@ app.MapGet("/api/fs/browse", (string? path) =>
         return Results.Problem(ex.Message);
     }
 });
+
+// ── Cloudflare Tunnel plugin — passthrough endpoints ─────────────────────
+// The Cloudflare plugin lives in a separate AssemblyLoadContext so we
+// can't reference its types directly without polluting the daemon's
+// dependency graph. Resolve the plugin instance + CloudflareApi /
+// CloudflareConfig via reflection and invoke methods through the shared
+// IServiceProvider. Everything returns the raw Cloudflare API JSON blob
+// so the frontend can render any subset without hand-written DTOs.
+
+object? ResolveCloudflareServiceOrNull(IServiceProvider sp, string typeName)
+{
+    var plugin = pluginLoader.Plugins
+        .FirstOrDefault(p => p.Instance.Id == "nks.wdc.cloudflare");
+    if (plugin == null) return null;
+    var t = plugin.Assembly.GetTypes().FirstOrDefault(x => x.Name == typeName);
+    if (t == null) return null;
+    return sp.GetService(t);
+}
+
+async Task<IResult> InvokeCfAsync(string apiMethodName, object[] args, IServiceProvider sp)
+{
+    var api = ResolveCloudflareServiceOrNull(sp, "CloudflareApi");
+    if (api == null) return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+    var method = api.GetType().GetMethod(apiMethodName);
+    if (method == null) return Results.NotFound(new { error = $"Method {apiMethodName} not found" });
+    try
+    {
+        var task = (Task)method.Invoke(api, args)!;
+        await task.ConfigureAwait(false);
+        var resultProp = task.GetType().GetProperty("Result");
+        var value = resultProp?.GetValue(task);
+        return Results.Ok(value);
+    }
+    catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
+    {
+        return Results.BadRequest(new { error = tie.InnerException.Message });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}
+
+// Settings: GET returns redacted config (secrets masked), PUT saves
+app.MapGet("/api/cloudflare/config", (IServiceProvider sp) =>
+{
+    var cfg = ResolveCloudflareServiceOrNull(sp, "CloudflareConfig");
+    if (cfg == null) return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+    var redactedMethod = cfg.GetType().GetMethod("Redacted");
+    var redacted = redactedMethod?.Invoke(cfg, null);
+    return Results.Ok(redacted);
+});
+
+app.MapPut("/api/cloudflare/config", async (HttpContext ctx, IServiceProvider sp) =>
+{
+    var cfg = ResolveCloudflareServiceOrNull(sp, "CloudflareConfig");
+    if (cfg == null) return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+
+    // Accept a loose JSON body and copy known properties onto the live
+    // config instance. Fields omitted from the body stay untouched.
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    var root = doc.RootElement;
+    var t = cfg.GetType();
+
+    void Apply(string jsonKey, string propName)
+    {
+        if (!root.TryGetProperty(jsonKey, out var el)) return;
+        if (el.ValueKind != System.Text.Json.JsonValueKind.String &&
+            el.ValueKind != System.Text.Json.JsonValueKind.Null) return;
+        var prop = t.GetProperty(propName);
+        prop?.SetValue(cfg, el.ValueKind == System.Text.Json.JsonValueKind.Null ? null : el.GetString());
+    }
+
+    Apply("cloudflaredPath", "CloudflaredPath");
+    Apply("tunnelToken", "TunnelToken");
+    Apply("tunnelName", "TunnelName");
+    Apply("tunnelId", "TunnelId");
+    Apply("apiToken", "ApiToken");
+    Apply("accountId", "AccountId");
+    Apply("defaultZoneId", "DefaultZoneId");
+
+    var saveMethod = t.GetMethod("Save");
+    saveMethod?.Invoke(cfg, null);
+
+    var redacted = t.GetMethod("Redacted")?.Invoke(cfg, null);
+    return Results.Ok(redacted);
+});
+
+app.MapGet("/api/cloudflare/verify", (IServiceProvider sp) =>
+    InvokeCfAsync("VerifyTokenAsync", new object[] { CancellationToken.None }, sp));
+
+app.MapGet("/api/cloudflare/zones", (IServiceProvider sp) =>
+    InvokeCfAsync("ListZonesAsync", new object[] { CancellationToken.None }, sp));
+
+app.MapGet("/api/cloudflare/zones/{zoneId}", (string zoneId, IServiceProvider sp) =>
+    InvokeCfAsync("GetZoneAsync", new object[] { zoneId, CancellationToken.None }, sp));
+
+app.MapGet("/api/cloudflare/zones/{zoneId}/dns", (string zoneId, IServiceProvider sp) =>
+    InvokeCfAsync("ListDnsRecordsAsync", new object[] { zoneId, CancellationToken.None }, sp));
+
+app.MapPost("/api/cloudflare/zones/{zoneId}/dns", async (string zoneId, HttpContext ctx, IServiceProvider sp) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    var root = doc.RootElement;
+    var type = root.TryGetProperty("type", out var tEl) ? tEl.GetString() ?? "CNAME" : "CNAME";
+    var name = root.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
+    var content = root.TryGetProperty("content", out var cEl) ? cEl.GetString() ?? "" : "";
+    var proxied = !root.TryGetProperty("proxied", out var pEl) || pEl.GetBoolean();
+    var ttl = root.TryGetProperty("ttl", out var tEl2) ? tEl2.GetInt32() : 1;
+    return await InvokeCfAsync("CreateDnsRecordAsync",
+        new object[] { zoneId, type, name, content, proxied, ttl, CancellationToken.None }, sp);
+});
+
+app.MapDelete("/api/cloudflare/zones/{zoneId}/dns/{recordId}", (string zoneId, string recordId, IServiceProvider sp) =>
+    InvokeCfAsync("DeleteDnsRecordAsync", new object[] { zoneId, recordId, CancellationToken.None }, sp));
+
+app.MapGet("/api/cloudflare/tunnels", (IServiceProvider sp) =>
+    InvokeCfAsync("ListTunnelsAsync", new object[] { CancellationToken.None }, sp));
+
+app.MapGet("/api/cloudflare/tunnels/{tunnelId}/configuration", (string tunnelId, IServiceProvider sp) =>
+    InvokeCfAsync("GetTunnelConfigurationAsync", new object[] { tunnelId, CancellationToken.None }, sp));
 
 // PHP versions — delegate to PhpPlugin via reflection
 app.MapGet("/api/php/versions", () =>
