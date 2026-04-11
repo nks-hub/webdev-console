@@ -183,6 +183,14 @@ public sealed class SiteOrchestrator
     }
 
     /// <summary>
+    /// Public wrapper around <see cref="UpdateHostsFileAsync"/> so the uninstall
+    /// endpoint can clear the managed hosts block without needing a site payload.
+    /// Pass an empty collection to strip the managed block entirely.
+    /// </summary>
+    public Task UpdateHostsBlockAsync(IEnumerable<string> domainsToAdd, CancellationToken ct) =>
+        UpdateHostsFileAsync(domainsToAdd, ct);
+
+    /// <summary>
     /// Collects all domains from all sites and writes them into the managed block of the hosts file.
     /// Uses PowerShell with -Verb RunAs (UAC elevation) on Windows — ONLY when content would actually change.
     /// </summary>

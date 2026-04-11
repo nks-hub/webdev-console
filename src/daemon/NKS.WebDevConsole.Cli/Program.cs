@@ -1437,8 +1437,67 @@ restoreCommand.SetAction(async (parseResult, ct) =>
     AnsiConsole.MarkupLine($"[dim]Safety backup of previous state: {Markup.Escape(safety)}[/]");
 });
 
+// --- wdc uninstall ---
+var uninstallCommand = new Command("uninstall", "Uninstall NKS WDC state (sites, certs, db, optionally binaries)");
+var uninstallDryRunOption = new Option<bool>("--dry-run") { Description = "Show what would be removed without deleting anything" };
+var uninstallPurgeOption = new Option<bool>("--purge") { Description = "Also remove ~/.wdc/binaries (default: keep binaries so reinstall is fast)" };
+var uninstallHostsOption = new Option<bool>("--hosts") { Description = "Strip the managed block from the system hosts file" };
+var uninstallYesOption = new Option<bool>("--yes") { Description = "Skip confirmation prompt" };
+uninstallCommand.Add(uninstallDryRunOption);
+uninstallCommand.Add(uninstallPurgeOption);
+uninstallCommand.Add(uninstallHostsOption);
+uninstallCommand.Add(uninstallYesOption);
+uninstallCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var dryRun = parseResult.GetValue(uninstallDryRunOption);
+    var purge = parseResult.GetValue(uninstallPurgeOption);
+    var hosts = parseResult.GetValue(uninstallHostsOption);
+    var yes = parseResult.GetValue(uninstallYesOption);
+
+    if (!dryRun && !yes && !json)
+    {
+        AnsiConsole.MarkupLine("[yellow bold]DESTRUCTIVE:[/] this will stop all services and delete NKS WDC state.");
+        if (purge) AnsiConsole.MarkupLine("  [red]--purge[/] will also delete [bold]~/.wdc/binaries[/] — you'll need to re-download PHP/Apache/etc.");
+        if (hosts) AnsiConsole.MarkupLine("  [red]--hosts[/] will strip the managed block from the system hosts file.");
+        AnsiConsole.MarkupLine("[dim]A pre-uninstall safety backup will be created automatically.[/]");
+        AnsiConsole.MarkupLine("[dim]Tip: run with --dry-run first to see what will be removed.[/]");
+        if (!AnsiConsole.Confirm("Continue?", false)) return;
+    }
+
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var payload = new
+    {
+        confirm = dryRun ? null : "YES-UNINSTALL",
+        dryRun,
+        purge,
+        hosts,
+    };
+    var content = new StringContent(
+        System.Text.Json.JsonSerializer.Serialize(payload),
+        System.Text.Encoding.UTF8,
+        "application/json");
+    var result = await client.PostAsync("/api/uninstall", content);
+    if (json) { PrintJson(result); return; }
+
+    var msg = result.TryGetProperty("message", out var m) ? m.GetString() : "";
+    var backup = result.TryGetProperty("safetyBackup", out var b) ? b.GetString() : null;
+    AnsiConsole.MarkupLine(dryRun ? $"[yellow]⚠[/] {Markup.Escape(msg ?? "")}" : $"[green]✓[/] {Markup.Escape(msg ?? "")}");
+    if (!string.IsNullOrEmpty(backup)) AnsiConsole.MarkupLine($"[dim]Safety backup: {Markup.Escape(backup)}[/]");
+
+    if (result.TryGetProperty("plan", out var planEl) && planEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+    {
+        AnsiConsole.MarkupLine("[bold]Plan:[/]");
+        foreach (var step in planEl.EnumerateArray())
+            AnsiConsole.MarkupLine($"  • {Markup.Escape(step.GetString() ?? "")}");
+    }
+});
+
 rootCommand.Add(backupCommand);
 rootCommand.Add(restoreCommand);
+rootCommand.Add(uninstallCommand);
 rootCommand.Add(migrateCommand);
 rootCommand.Add(versionCommand);
 

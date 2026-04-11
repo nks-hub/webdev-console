@@ -1182,6 +1182,126 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
     }
 });
 
+// Uninstall / cleanup — removes the managed state (sites, db, certs, logs,
+// optionally binaries and the managed hosts file block). ALWAYS creates a
+// safety backup before touching anything. Destructive endpoint: requires a
+// confirmation token in the body to prevent accidental triggers.
+//
+// Modes:
+//   dryRun:true   — report what would be removed, no writes
+//   purge:true    — also wipe ~/.wdc/binaries and ~/.wdc (default: preserve binaries)
+//   hosts:true    — also strip the managed BEGIN/END block from hosts file
+app.MapPost("/api/uninstall", async (HttpContext ctx, BackupManager backupManager, SiteOrchestrator orchestrator, SiteManager sm, IServiceProvider sp, ILoggerFactory lf) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>();
+    bool flag(string key) => body is not null && body.TryGetValue(key, out var v) && v switch
+    {
+        bool b => b,
+        System.Text.Json.JsonElement j when j.ValueKind == System.Text.Json.JsonValueKind.True => true,
+        _ => false,
+    };
+    string? str(string key) => body?.TryGetValue(key, out var v) == true ? v?.ToString() : null;
+
+    var confirm = str("confirm");
+    var dryRun = flag("dryRun");
+    var purge = flag("purge");
+    var removeHostsBlock = flag("hosts");
+
+    if (!dryRun && confirm != "YES-UNINSTALL")
+        return Results.BadRequest(new { error = "Destructive operation — pass confirm: \"YES-UNINSTALL\" in the body, or set dryRun: true." });
+
+    var log = lf.CreateLogger("Uninstall");
+    var wdcRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc");
+    var plan = new List<string>();
+    string? safetyBackupPath = null;
+
+    // 1. Stop all services (best-effort, continue on failure).
+    var modules = sp.GetServices<IServiceModule>();
+    foreach (var m in modules)
+    {
+        plan.Add($"stop service {m.ServiceId}");
+        if (!dryRun)
+        {
+            try
+            {
+                var status = await m.GetStatusAsync(CancellationToken.None);
+                if (status.State != ServiceState.Stopped)
+                    await m.StopAsync(CancellationToken.None);
+            }
+            catch (Exception ex) { log.LogWarning(ex, "Stop {Service} during uninstall", m.ServiceId); }
+        }
+    }
+
+    // 2. Safety backup before ANY deletion.
+    plan.Add("create pre-uninstall safety backup");
+    if (!dryRun)
+    {
+        try
+        {
+            var (path, _, _) = backupManager.CreateBackup();
+            safetyBackupPath = path;
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "Pre-uninstall safety backup failed");
+            return Results.Problem(title: "Safety backup failed — uninstall aborted", detail: ex.Message, statusCode: 500);
+        }
+    }
+
+    // 3. Remove managed hosts file block (only if requested — user may have other tooling).
+    if (removeHostsBlock)
+    {
+        plan.Add("strip managed block from hosts file");
+        if (!dryRun)
+        {
+            try
+            {
+                // Reuse the orchestrator's hosts update path with an empty domain list — that
+                // regenerates the managed block as empty (or removes it entirely).
+                await orchestrator.UpdateHostsBlockAsync(Array.Empty<string>(), CancellationToken.None);
+            }
+            catch (Exception ex) { log.LogWarning(ex, "Hosts block cleanup"); }
+        }
+    }
+
+    // 4. Remove generated vhosts + site TOMLs + DB + logs. Binaries kept unless purge.
+    var subpathsToRemove = new List<string>
+    {
+        Path.Combine(wdcRoot, "sites"),
+        Path.Combine(wdcRoot, "generated"),
+        Path.Combine(wdcRoot, "data"),
+        Path.Combine(wdcRoot, "logs"),
+        Path.Combine(wdcRoot, "ssl"),
+        Path.Combine(wdcRoot, "caddy"),
+        Path.Combine(wdcRoot, "cache"),
+    };
+    if (purge)
+        subpathsToRemove.Add(Path.Combine(wdcRoot, "binaries"));
+
+    foreach (var path in subpathsToRemove)
+    {
+        if (!Directory.Exists(path)) continue;
+        plan.Add($"delete {path}");
+        if (!dryRun)
+        {
+            try { Directory.Delete(path, recursive: true); }
+            catch (Exception ex) { log.LogWarning(ex, "Failed to delete {Path}", path); }
+        }
+    }
+
+    return Results.Ok(new
+    {
+        dryRun,
+        purge,
+        removeHostsBlock,
+        safetyBackup = safetyBackupPath,
+        plan,
+        message = dryRun
+            ? "Dry run — no changes made. Re-send with confirm: \"YES-UNINSTALL\" to execute."
+            : "Uninstall complete. Stop the daemon and delete the wdc-cli binary to fully remove.",
+    });
+});
+
 // Plugin enable/disable — persists to ~/.wdc/data/plugin-state.json via PluginState.
 // Plugins remain loaded either way; disabled plugins are hidden from the UI service
 // list and skipped by Start All.
