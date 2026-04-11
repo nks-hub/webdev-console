@@ -104,15 +104,18 @@
               <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">default</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Platforms" min-width="180">
+          <el-table-column label="Platforms" min-width="200">
             <template #default="{ row }">
               <el-tag
                 v-for="p in row.platforms"
                 :key="p"
                 size="small"
-                effect="plain"
+                :type="p === nativePlatform ? 'success' : 'info'"
+                :effect="p === nativePlatform ? 'dark' : 'plain'"
                 class="platform-tag mono"
-              >{{ p }}</el-tag>
+              >
+                <span v-if="p === nativePlatform">★ </span>{{ p }}
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="Source" width="140">
@@ -198,6 +201,11 @@ const catalog = ref<Record<string, BinaryRelease[]>>({})
 const installed = ref<InstalledBinary[]>([])
 const installing = ref<Set<string>>(new Set())
 const uninstalling = ref<Set<string>>(new Set())
+
+// Normalised "os/arch" tag of the current machine, e.g. "windows/x64". Used
+// by the detail table to highlight the release matching the host so users
+// don't misread the 6 cross-platform chips as "I need to pick one".
+const nativePlatform = ref<string>('')
 
 const gridSearch = ref('')
 const selectedApp = ref<string | null>(null)
@@ -401,7 +409,32 @@ async function uninstall(app: string, version: string) {
   }
 }
 
-onMounted(() => { void refresh() })
+async function loadNativePlatform() {
+  // Single shot — the host os/arch never changes during a session, so we
+  // don't need to re-fetch on refresh. Failure is non-fatal: the table
+  // falls back to showing all chips in the neutral info style.
+  try {
+    const base = (window as any).daemonApi?.getPort?.()
+      ? `http://localhost:${(window as any).daemonApi.getPort()}`
+      : `http://localhost:${new URLSearchParams(window.location.search).get('port') ?? '5199'}`
+    const token = (window as any).daemonApi?.getToken?.()
+      ?? new URLSearchParams(window.location.search).get('token')
+      ?? ''
+    const r = await fetch(`${base}/api/system`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!r.ok) return
+    const sys = await r.json()
+    if (sys?.os?.tag && sys?.os?.arch) {
+      nativePlatform.value = `${sys.os.tag}/${sys.os.arch}`
+    }
+  } catch { /* daemon not reachable yet — leave blank */ }
+}
+
+onMounted(() => {
+  void refresh()
+  void loadNativePlatform()
+})
 </script>
 
 <style scoped>

@@ -284,6 +284,24 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
     var modules = sp.GetServices<IServiceModule>();
     var running = 0; var total = 0;
     foreach (var m in modules) { total++; var s = await m.GetStatusAsync(CancellationToken.None); if (s.State == ServiceState.Running) running++; }
+
+    // Normalised OS + arch tags for frontend filtering — the catalog uses
+    // lowercase "windows"/"linux"/"macos" and "x64"/"arm64" strings, so we
+    // return the same shape here and let the Binaries page highlight the
+    // release that matches the current host without any mapping code in JS.
+    var osTag = OperatingSystem.IsWindows() ? "windows"
+              : OperatingSystem.IsLinux() ? "linux"
+              : OperatingSystem.IsMacOS() ? "macos"
+              : "unknown";
+    var archTag = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
+    {
+        System.Runtime.InteropServices.Architecture.X64 => "x64",
+        System.Runtime.InteropServices.Architecture.X86 => "x86",
+        System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+        System.Runtime.InteropServices.Architecture.Arm => "arm",
+        _ => "unknown",
+    };
+
     return Results.Ok(new
     {
         daemon = new { version = "0.1.0", uptime = Environment.TickCount64 / 1000, pid = Environment.ProcessId },
@@ -291,8 +309,15 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
         sites = sm.Sites.Count,
         plugins = pluginLoader.Plugins.Count,
         binaries = bm.ListInstalled().Count,
-        os = new { platform = Environment.OSVersion.Platform.ToString(), version = Environment.OSVersion.VersionString, machine = Environment.MachineName },
-        runtime = new { dotnet = Environment.Version.ToString(), arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString() }
+        os = new
+        {
+            platform = Environment.OSVersion.Platform.ToString(),
+            version = Environment.OSVersion.VersionString,
+            machine = Environment.MachineName,
+            tag = osTag,
+            arch = archTag,
+        },
+        runtime = new { dotnet = Environment.Version.ToString(), arch = archTag }
     });
 });
 
