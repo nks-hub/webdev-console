@@ -152,6 +152,10 @@
 </template>
 
 <script setup lang="ts">
+// Named export so <keep-alive exclude="SiteEdit"> in App.vue can skip caching
+// this page — SiteEdit is parametric by :domain and MUST refresh state on
+// every navigation, unlike Dashboard/Sites/Binaries which benefit from cache.
+defineOptions({ name: 'SiteEdit' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled } from '@element-plus/icons-vue'

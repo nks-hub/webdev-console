@@ -8,16 +8,22 @@ namespace NKS.WebDevConsole.Daemon.Binaries;
 
 public sealed class CatalogClientOptions
 {
-    /// <summary>Base URL of the binary catalog API. Default points at the Python mock.</summary>
+    /// <summary>
+    /// Base URL of the binary catalog API. Default points at a locally-hosted
+    /// reference implementation — any HTTP service that returns the expected
+    /// JSON shape works (see docs/catalog-api.md). Override via
+    /// <c>NKS_WDC_CATALOG_URL</c> env var to point at an upstream service.
+    /// </summary>
     public string BaseUrl { get; set; } = "http://127.0.0.1:8765";
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 }
 
 /// <summary>
-/// Fetches the binary release catalog from the NKS catalog API (currently a Python mock).
-/// Caches the response in memory for the lifetime of the daemon — refreshable via RefreshAsync().
-/// Falls back to an empty catalog if the server is unreachable; the daemon then logs a warning
-/// and the user can install binaries via direct upload (future) or by running the mock locally.
+/// Fetches the binary release catalog from the NKS catalog API. Caches the
+/// response in memory for the lifetime of the daemon — refreshable via
+/// <see cref="RefreshAsync"/>. Falls back to an empty catalog if the server
+/// is unreachable; the daemon then logs a warning and the user can install
+/// binaries via the built-in marketplace tab instead.
 /// </summary>
 public sealed class CatalogClient
 {
@@ -125,7 +131,7 @@ public sealed class CatalogClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    // ── DTOs that match the mock API JSON shape ────────────────────────────
+    // ── DTOs that match the catalog API JSON shape ─────────────────────────
     private sealed class CatalogDocument
     {
         [JsonPropertyName("schema_version")] public string? SchemaVersion { get; set; }

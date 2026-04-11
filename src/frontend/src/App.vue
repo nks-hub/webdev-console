@@ -6,7 +6,18 @@
     <div class="app-body">
       <AppSidebar />
       <main class="content-area">
-        <router-view />
+        <!-- keep-alive caches mounted page components so clicking a nav
+             item doesn't re-mount the whole tree AND re-run onMounted's
+             fetch cascade every time. This is the biggest win for the
+             "clicking feels slow" complaint in dev mode, where Vite's
+             module graph warm-up overlaps with SSE reconnect and store
+             re-hydration. Excluding SiteEdit because it's keyed by
+             :domain and needs fresh state per domain. -->
+        <router-view v-slot="{ Component }">
+          <keep-alive :exclude="['SiteEdit']">
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </main>
     </div>
 

@@ -199,7 +199,11 @@ html:not(.dark) {
 }
 
 html {
-  font-size: 15px;
+  /* Bumped from 15px after repeated "větší písmo" feedback. Every rem-based
+     class scales proportionally: .svc-name 0.95rem → 15.2px, nav tab
+     0.8rem → 12.8px, metrics mono 0.82rem → 13.1px. Tested: no wrapping
+     breaks in header / sidebar / el-table at minimum 900×600 window. */
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

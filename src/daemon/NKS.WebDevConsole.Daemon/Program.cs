@@ -167,7 +167,7 @@ app.UseCors();
 // Expose OpenAPI spec at /openapi/v1.json — used by CI TS type generation
 app.MapOpenApi();
 
-// Refresh binary catalog from the (mock) catalog API before plugins start so they can use it
+// Refresh binary catalog from the catalog API before plugins start so they can use it
 var catalogClient = app.Services.GetRequiredService<CatalogClient>();
 await catalogClient.RefreshAsync();
 
