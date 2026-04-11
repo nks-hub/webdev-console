@@ -447,6 +447,15 @@ const configPanel = reactive({
   serviceId: null as string | null,
 })
 function openConfig(id: string) {
+  // Cloudflare Tunnel has a dedicated configuration page that manages the
+  // whole thing via the Cloudflare REST API — the generic ConfigSidePanel
+  // (which expects file-based service configs like httpd.conf) is useless
+  // for it and would show "No config files found" with a 500 in the panel.
+  // Send it straight to /cloudflare instead.
+  if (id === 'cloudflare') {
+    router.push('/cloudflare')
+    return
+  }
   configPanel.serviceId = id
   configPanel.open = true
 }

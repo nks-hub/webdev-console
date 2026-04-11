@@ -11,4 +11,45 @@ public class SiteConfig
     public string[] Aliases { get; set; } = [];
     public string? Framework { get; set; }
     public Dictionary<string, string> Environment { get; set; } = new();
+
+    /// <summary>
+    /// Optional Cloudflare Tunnel exposure for this site. Null means the
+    /// site is only accessible locally (default). Set to a populated
+    /// <see cref="SiteCloudflareConfig"/> to expose the site via the
+    /// Cloudflare plugin's managed tunnel. The plugin reads this on
+    /// ApplyAsync to create/update DNS records and ingress rules.
+    /// </summary>
+    public SiteCloudflareConfig? Cloudflare { get; set; }
+}
+
+/// <summary>
+/// Per-site Cloudflare Tunnel configuration. Structure aligns with the
+/// FlyEnv reference implementation so the DNS CNAME + ingress rule pair
+/// behaves identically (including the crucial <c>httpHostHeader</c>
+/// override that makes Apache match the correct vhost when the inbound
+/// Host is the public name like <c>blog.nks-dev.cz</c> but the local
+/// vhost is bound to <c>blog.loc</c>).
+/// </summary>
+public class SiteCloudflareConfig
+{
+    /// <summary>Whether this site is currently exposed through the tunnel.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Public subdomain label, e.g. "blog" for <c>blog.nks-dev.cz</c>.</summary>
+    public string Subdomain { get; set; } = "";
+
+    /// <summary>Target Cloudflare zone ID (looked up via /api/cloudflare/zones).</summary>
+    public string ZoneId { get; set; } = "";
+
+    /// <summary>Zone apex, e.g. <c>nks-dev.cz</c> (cached for display).</summary>
+    public string ZoneName { get; set; } = "";
+
+    /// <summary>
+    /// Local service URL fragment used by cloudflared's ingress rule. Example:
+    /// <c>localhost:80</c> — the protocol is prepended from <see cref="Protocol"/>.
+    /// </summary>
+    public string LocalService { get; set; } = "localhost:80";
+
+    /// <summary>HTTP protocol for the local service. "http" or "https".</summary>
+    public string Protocol { get; set; } = "http";
 }

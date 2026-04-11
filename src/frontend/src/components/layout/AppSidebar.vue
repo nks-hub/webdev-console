@@ -218,6 +218,13 @@ function navigate(path: string) {
 }
 
 function openService(id: string) {
+  // Cloudflare has a dedicated configuration page — the generic service
+  // config drawer expects file-based configs and 500s for API-driven
+  // services. Route directly to the Cloudflare Tunnel management page.
+  if (id === 'cloudflare') {
+    void router.push('/cloudflare')
+    return
+  }
   void router.push(`/service/${id}/config`)
 }
 

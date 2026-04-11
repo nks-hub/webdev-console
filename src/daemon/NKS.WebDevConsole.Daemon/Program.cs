@@ -1341,6 +1341,176 @@ app.MapPut("/api/cloudflare/config", async (HttpContext ctx, IServiceProvider sp
 app.MapGet("/api/cloudflare/verify", (IServiceProvider sp) =>
     InvokeCfAsync("VerifyTokenAsync", new object[] { CancellationToken.None }, sp));
 
+// One-token auto-setup: user pastes an API token → we verify it, list
+// accounts, pick the first one, find or create a tunnel named
+// NKS-WDC-Tunnel-{md5[..12]}, fetch its JWT, and persist everything.
+// After this the user never has to enter an account/tunnel/jwt manually —
+// zones + per-site configuration are the only remaining inputs.
+app.MapPost("/api/cloudflare/auto-setup", async (HttpContext ctx, IServiceProvider sp) =>
+{
+    var cfg = ResolveCloudflareServiceOrNull(sp, "CloudflareConfig");
+    var api = ResolveCloudflareServiceOrNull(sp, "CloudflareApi");
+    if (cfg == null || api == null)
+        return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    if (!doc.RootElement.TryGetProperty("apiToken", out var tokenEl) ||
+        string.IsNullOrWhiteSpace(tokenEl.GetString()))
+    {
+        return Results.BadRequest(new { error = "apiToken is required" });
+    }
+    var token = tokenEl.GetString()!;
+
+    // 1. Stage the token onto the live config so the API wrapper picks it up.
+    var tCfg = cfg.GetType();
+    tCfg.GetProperty("ApiToken")?.SetValue(cfg, token);
+
+    try
+    {
+        // 2. Verify — fail fast with a readable error if the token is wrong
+        var verifyMethod = api.GetType().GetMethod("VerifyTokenAsync");
+        var verifyTask = (Task)verifyMethod!.Invoke(api, new object[] { CancellationToken.None })!;
+        await verifyTask;
+
+        // 3. Pick account — use first returned one, or fall back to whatever
+        //    the user already had saved (lets power-users override)
+        var listAccounts = api.GetType().GetMethod("ListAccountsAsync");
+        var accountsTask = (Task)listAccounts!.Invoke(api, new object[] { CancellationToken.None })!;
+        await accountsTask;
+        var accountsJson = (System.Text.Json.JsonElement)accountsTask.GetType().GetProperty("Result")!.GetValue(accountsTask)!;
+        string? accountId = null;
+        string? accountName = null;
+        if (accountsJson.TryGetProperty("result", out var arr) &&
+            arr.ValueKind == System.Text.Json.JsonValueKind.Array &&
+            arr.GetArrayLength() > 0)
+        {
+            accountId = arr[0].GetProperty("id").GetString();
+            accountName = arr[0].GetProperty("name").GetString();
+        }
+        if (string.IsNullOrEmpty(accountId))
+            return Results.BadRequest(new { error = "Token has no associated accounts — add Account read scope" });
+
+        tCfg.GetProperty("AccountId")?.SetValue(cfg, accountId);
+
+        // 4. Deterministic tunnel name — same token always resolves to the
+        //    same tunnel so repeated auto-setup runs don't create dupes.
+        var md5 = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(token));
+        var md5Hex = Convert.ToHexString(md5).ToLowerInvariant()[..12];
+        var tunnelName = $"NKS-WDC-Tunnel-{md5Hex}";
+
+        var findOrCreate = api.GetType().GetMethod("FindOrCreateTunnelAsync");
+        var tunnelTask = (Task)findOrCreate!.Invoke(api, new object[] { tunnelName, CancellationToken.None })!;
+        await tunnelTask;
+        var tunnelJson = (System.Text.Json.JsonElement)tunnelTask.GetType().GetProperty("Result")!.GetValue(tunnelTask)!;
+        var tunnelId = tunnelJson.GetProperty("id").GetString();
+
+        tCfg.GetProperty("TunnelId")?.SetValue(cfg, tunnelId);
+        tCfg.GetProperty("TunnelName")?.SetValue(cfg, tunnelName);
+
+        // 5. Fetch JWT — cloudflared needs this to run the tunnel locally
+        var getToken = api.GetType().GetMethod("GetTunnelTokenAsync");
+        var jwtTask = (Task)getToken!.Invoke(api, new object[] { tunnelId!, CancellationToken.None })!;
+        await jwtTask;
+        var jwt = (string?)jwtTask.GetType().GetProperty("Result")!.GetValue(jwtTask);
+        if (!string.IsNullOrEmpty(jwt))
+            tCfg.GetProperty("TunnelToken")?.SetValue(cfg, jwt);
+
+        // 6. Persist everything
+        tCfg.GetMethod("Save")?.Invoke(cfg, null);
+
+        return Results.Ok(new
+        {
+            ok = true,
+            account = new { id = accountId, name = accountName },
+            tunnel = new { id = tunnelId, name = tunnelName },
+            tokenFetched = !string.IsNullOrEmpty(jwt),
+        });
+    }
+    catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
+    {
+        return Results.BadRequest(new { error = tie.InnerException.Message });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// Sync all sites that have Cloudflare.Enabled=true:
+//   - Upserts a proxied CNAME per site → tunnelId.cfargotunnel.com
+//   - Rebuilds the tunnel ingress config with one rule per site + 404
+//   - Each ingress rule carries httpHostHeader = site.Domain so Apache
+//     matches the LOCAL vhost rather than the public hostname
+app.MapPost("/api/cloudflare/sync", async (IServiceProvider sp, SiteManager sm) =>
+{
+    var cfg = ResolveCloudflareServiceOrNull(sp, "CloudflareConfig");
+    var api = ResolveCloudflareServiceOrNull(sp, "CloudflareApi");
+    if (cfg == null || api == null)
+        return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+
+    var tCfg = cfg.GetType();
+    var tunnelId = tCfg.GetProperty("TunnelId")?.GetValue(cfg) as string;
+    if (string.IsNullOrWhiteSpace(tunnelId))
+        return Results.BadRequest(new { error = "Tunnel not configured. Run auto-setup first." });
+
+    var sitesWithCf = sm.Sites.Values
+        .Where(s => s.Cloudflare is { Enabled: true }
+                 && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneId)
+                 && !string.IsNullOrWhiteSpace(s.Cloudflare.Subdomain))
+        .ToList();
+
+    var upserted = new List<object>();
+    try
+    {
+        // DNS: one CNAME per site
+        var upsertMethod = api.GetType().GetMethod("UpsertCnameToTunnelAsync");
+        foreach (var s in sitesWithCf)
+        {
+            var cf = s.Cloudflare!;
+            var fullName = $"{cf.Subdomain}.{cf.ZoneName}";
+            var task = (Task)upsertMethod!.Invoke(api,
+                new object[] { cf.ZoneId, fullName, tunnelId, CancellationToken.None })!;
+            await task;
+            upserted.Add(new { domain = s.Domain, cname = fullName });
+        }
+
+        // Ingress: one rule per site with httpHostHeader override
+        var ruleType = api.GetType().Assembly.GetType(
+            "NKS.WebDevConsole.Plugin.Cloudflare.TunnelIngressRule")!;
+        var ruleListType = typeof(List<>).MakeGenericType(ruleType);
+        var rules = (System.Collections.IList)Activator.CreateInstance(ruleListType)!;
+        var ruleCtor = ruleType.GetConstructors().First();
+
+        foreach (var s in sitesWithCf)
+        {
+            var cf = s.Cloudflare!;
+            var hostname = $"{cf.Subdomain}.{cf.ZoneName}";
+            var service = $"{cf.Protocol}://{cf.LocalService}";
+            rules.Add(ruleCtor.Invoke(new object?[] { hostname, service, s.Domain }));
+        }
+
+        var ingressMethod = api.GetType().GetMethod("UpdateTunnelIngressAsync");
+        var ingressTask = (Task)ingressMethod!.Invoke(api,
+            new object[] { tunnelId, rules, CancellationToken.None })!;
+        await ingressTask;
+
+        return Results.Ok(new
+        {
+            ok = true,
+            synced = upserted.Count,
+            sites = upserted,
+        });
+    }
+    catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
+    {
+        return Results.BadRequest(new { error = tie.InnerException.Message });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.MapGet("/api/cloudflare/zones", (IServiceProvider sp) =>
     InvokeCfAsync("ListZonesAsync", new object[] { CancellationToken.None }, sp));
 
@@ -1603,8 +1773,26 @@ app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int
 // Service config read — returns the main config file content for a service
 app.MapGet("/api/services/{id}/config", async (string id, ServiceConfigManager configManager) =>
 {
-    var files = await configManager.GetFilesAsync(id);
-    return Results.Ok(new { serviceId = id, files });
+    try
+    {
+        var files = await configManager.GetFilesAsync(id);
+        return Results.Ok(new { serviceId = id, files });
+    }
+    catch (Exception ex)
+    {
+        // Graceful fallback: plugins like Cloudflare / SSL / Hosts manage
+        // their settings via the REST API, not file-based config, and the
+        // ServiceConfigManager throws if asked. Return an empty file list
+        // plus an info flag so the frontend can surface a "manage via
+        // dedicated page" hint instead of a 500 toast.
+        return Results.Ok(new
+        {
+            serviceId = id,
+            files = Array.Empty<object>(),
+            info = ex.Message,
+            managedExternally = true,
+        });
+    }
 });
 
 app.MapPost("/api/services/{id}/config", async (

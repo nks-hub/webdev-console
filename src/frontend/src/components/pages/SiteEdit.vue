@@ -257,6 +257,103 @@
           </div>
         </el-tab-pane>
 
+        <!-- ── Cloudflare Tunnel ────────────────── -->
+        <el-tab-pane name="cloudflare">
+          <template #label>
+            <span class="tab-label"><el-icon><Link /></el-icon> Cloudflare</span>
+          </template>
+          <div class="tab-content">
+            <section class="edit-card">
+              <header class="edit-card-header">
+                <span class="edit-card-title">Expose via Cloudflare Tunnel</span>
+                <span class="edit-card-hint">Public hostname → this local site</span>
+              </header>
+              <div class="edit-card-body">
+                <div class="ssl-toggle-row">
+                  <div class="ssl-toggle-meta">
+                    <div class="ssl-toggle-title">Enable tunnel for this site</div>
+                    <div class="ssl-toggle-desc">
+                      Creates a CNAME on your Cloudflare zone and adds an ingress
+                      rule to the managed tunnel so this site is reachable from
+                      the internet over HTTPS without port forwarding.
+                    </div>
+                  </div>
+                  <el-switch
+                    v-model="cloudflareEnabled"
+                    size="large"
+                    @change="onCloudflareToggle"
+                  />
+                </div>
+
+                <template v-if="cloudflareEnabled">
+                  <el-form label-position="top" size="default" style="margin-top: 20px;">
+                    <el-form-item label="Zone (Cloudflare domain)">
+                      <el-select
+                        v-model="cloudflareZoneId"
+                        placeholder="Pick a zone…"
+                        :loading="loadingCfZones"
+                        filterable
+                        style="width: 100%"
+                        @visible-change="(v: boolean) => v && cfZones.length === 0 && loadCfZones()"
+                        @change="onZoneChange"
+                      >
+                        <el-option
+                          v-for="z in cfZones"
+                          :key="z.id"
+                          :label="z.name"
+                          :value="z.id"
+                        />
+                      </el-select>
+                      <div class="hint" v-if="cfZones.length === 0 && !loadingCfZones">
+                        Open the
+                        <router-link to="/cloudflare">Cloudflare Tunnel page</router-link>
+                        first to enter your API token.
+                      </div>
+                    </el-form-item>
+
+                    <el-form-item label="Subdomain" v-if="cloudflareZoneId">
+                      <div class="cf-subdomain-row">
+                        <el-input
+                          v-model="cloudflareSubdomain"
+                          placeholder="blog"
+                          class="mono"
+                        />
+                        <span class="cf-zone-suffix mono">.{{ selectedCfZoneName }}</span>
+                      </div>
+                      <div class="hint">
+                        Full public URL:
+                        <code>https://{{ cloudflareSubdomain || 'subdomain' }}.{{ selectedCfZoneName }}</code>
+                      </div>
+                    </el-form-item>
+
+                    <el-form-item label="Local service">
+                      <el-input
+                        v-model="cloudflareLocalService"
+                        class="mono"
+                        placeholder="localhost:80"
+                      >
+                        <template #prepend>
+                          <el-select
+                            v-model="cloudflareProtocol"
+                            style="width: 100px"
+                          >
+                            <el-option label="http://" value="http" />
+                            <el-option label="https://" value="https" />
+                          </el-select>
+                        </template>
+                      </el-input>
+                      <div class="hint">
+                        cloudflared will forward tunnel traffic to this address and
+                        send <code>Host: {{ site.domain }}</code> so Apache's vhost matches.
+                      </div>
+                    </el-form-item>
+                  </el-form>
+                </template>
+              </div>
+            </section>
+          </div>
+        </el-tab-pane>
+
         <!-- ── SSL ──────────────────────────────── -->
         <el-tab-pane name="ssl">
           <template #label>
@@ -356,12 +453,13 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
-  FolderOpened, Check, Search,
+  FolderOpened, Check, Search, Link,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
+import { fetchCloudflareZones } from '../../api/daemon'
 
 const route = useRoute()
 const router = useRouter()
@@ -441,6 +539,63 @@ function onFolderPick(path: string) {
   markDirty()
 }
 
+// ── Cloudflare Tunnel per-site ─────────────────────────────────────────
+const cloudflareEnabled = ref(false)
+const cloudflareSubdomain = ref('')
+const cloudflareZoneId = ref('')
+const cloudflareZoneName = ref('')
+const cloudflareLocalService = ref('localhost:80')
+const cloudflareProtocol = ref<'http' | 'https'>('http')
+const cfZones = ref<any[]>([])
+const loadingCfZones = ref(false)
+
+const selectedCfZoneName = computed(() => {
+  const z = cfZones.value.find(x => x.id === cloudflareZoneId.value)
+  return z?.name ?? cloudflareZoneName.value ?? ''
+})
+
+watch(() => site.value?.cloudflare, (cf) => {
+  if (!cf) return
+  cloudflareEnabled.value = cf.enabled ?? false
+  cloudflareSubdomain.value = cf.subdomain ?? ''
+  cloudflareZoneId.value = cf.zoneId ?? ''
+  cloudflareZoneName.value = cf.zoneName ?? ''
+  cloudflareLocalService.value = cf.localService ?? 'localhost:80'
+  cloudflareProtocol.value = (cf.protocol ?? 'http') as 'http' | 'https'
+}, { immediate: true })
+
+async function loadCfZones() {
+  loadingCfZones.value = true
+  try {
+    const res = await fetchCloudflareZones()
+    cfZones.value = res?.result ?? []
+  } catch (e: any) {
+    ElMessage.error(`Cannot load Cloudflare zones: ${e.message}. Open the Cloudflare Tunnel page first to configure the API token.`)
+  } finally {
+    loadingCfZones.value = false
+  }
+}
+
+function onCloudflareToggle(v: boolean) {
+  markDirty()
+  if (v && cfZones.value.length === 0) void loadCfZones()
+  // Auto-pick a sensible subdomain from the local domain stem
+  if (v && !cloudflareSubdomain.value && site.value) {
+    cloudflareSubdomain.value = site.value.domain.replace(/\.(loc|local|test)$/i, '')
+  }
+  // Auto-fill local service from the site's HTTP port
+  if (v && site.value) {
+    const port = site.value.httpPort || 80
+    cloudflareLocalService.value = `localhost:${port}`
+  }
+}
+
+function onZoneChange(zoneId: string) {
+  const z = cfZones.value.find(x => x.id === zoneId)
+  cloudflareZoneName.value = z?.name ?? ''
+  markDirty()
+}
+
 // ── Auto-detect framework ──────────────────────────────────────────────
 const detecting = ref(false)
 async function detectFramework() {
@@ -511,6 +666,17 @@ async function save() {
   try {
     // Commit aliases from chip picker (no more comma-separated string)
     site.value.aliases = [...aliases.value]
+    // Commit Cloudflare sub-config from the dedicated tab. When disabled we
+    // still send the object so the daemon can clear any previous ingress
+    // rule on apply rather than leaving a stale CNAME pointing here.
+    ;(site.value as any).cloudflare = {
+      enabled: cloudflareEnabled.value,
+      subdomain: cloudflareSubdomain.value,
+      zoneId: cloudflareZoneId.value,
+      zoneName: cloudflareZoneName.value,
+      localService: cloudflareLocalService.value,
+      protocol: cloudflareProtocol.value,
+    }
     await sitesStore.update(site.value.domain, site.value)
     ElMessage.success('Site updated')
     dirty.value = false

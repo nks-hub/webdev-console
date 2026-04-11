@@ -64,17 +64,68 @@
 
     <!-- Tabs -->
     <el-tabs v-model="activeTab" class="cf-tabs">
-      <!-- ═══ Settings ═══════════════════════════════ -->
+      <!-- ═══ Setup (one-token flow) ════════════════ -->
       <el-tab-pane name="settings">
         <template #label>
-          <span class="tab-label"><el-icon><Setting /></el-icon> Settings</span>
+          <span class="tab-label"><el-icon><Setting /></el-icon> Setup</span>
         </template>
 
         <div class="tab-content">
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">cloudflared binary</span>
-              <span class="edit-card-hint">Path to the cloudflared executable</span>
+              <span class="edit-card-title">Step 1 — API token</span>
+              <span class="edit-card-hint">Paste a Cloudflare token, everything else is automatic</span>
+            </header>
+            <div class="edit-card-body">
+              <el-input
+                v-model="apiTokenInput"
+                type="password"
+                show-password
+                :placeholder="apiTokenMasked || 'cfut_… or 40-char token'"
+                class="mono"
+              />
+              <div class="hint">
+                Required scopes:
+                <code>Account &gt; Cloudflare Tunnel &gt; Edit</code>,
+                <code>Account &gt; Account Settings &gt; Read</code>,
+                <code>Zone &gt; Zone &gt; Read</code>,
+                <code>Zone &gt; DNS &gt; Edit</code>.
+                Create one at
+                <a href="#" @click.prevent="openTokenPage">dash.cloudflare.com/profile/api-tokens</a>.
+              </div>
+              <div class="card-actions">
+                <el-button
+                  type="primary"
+                  size="default"
+                  :loading="autoSettingUp"
+                  :disabled="!apiTokenInput && !config.apiToken"
+                  @click="runAutoSetup"
+                >
+                  <el-icon><Check /></el-icon>
+                  <span>Auto-setup tunnel</span>
+                </el-button>
+                <span v-if="autoSetupResult" class="save-status ok">
+                  ✓ Account: {{ autoSetupResult.account.name }} · Tunnel: {{ autoSetupResult.tunnel.name }}
+                </span>
+                <span v-if="saveStatus && saveStatus.kind === 'err'" class="save-status err">
+                  {{ saveStatus.message }}
+                </span>
+              </div>
+              <div class="hint" style="margin-top: 12px;">
+                Auto-setup will: verify the token, pick the first account, find or
+                create a tunnel named <code>NKS-WDC-Tunnel-{md5}</code>, fetch its
+                JWT, and save everything to
+                <code>~/.wdc/cloudflare/config.json</code>.
+              </div>
+            </div>
+          </section>
+
+          <section class="edit-card">
+            <header class="edit-card-header">
+              <span class="edit-card-title">Step 2 — cloudflared binary</span>
+              <span class="edit-card-hint">
+                Auto-detected from <code>~/.wdc/binaries/cloudflared/</code> and FlyEnv
+              </span>
             </header>
             <div class="edit-card-body">
               <el-input
@@ -86,213 +137,104 @@
                   <el-button @click="showFolderBrowser = true">Browse…</el-button>
                 </template>
               </el-input>
-              <div class="hint">
-                Auto-detected from <code>~/.wdc/binaries/cloudflared/</code> and
-                <code>~/Downloads/FlyEnv-Data/app/cloudflared/</code> at daemon start.
-              </div>
-            </div>
-          </section>
-
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">API token</span>
-              <span class="edit-card-hint">
-                Required scopes: Account &gt; Cloudflare Tunnel &gt; Edit,
-                Zone &gt; DNS &gt; Edit
-              </span>
-            </header>
-            <div class="edit-card-body">
-              <el-input
-                v-model="apiTokenInput"
-                type="password"
-                show-password
-                :placeholder="apiTokenMasked || 'cfut_…'"
-                class="mono"
-              />
               <div class="card-actions">
-                <el-button size="small" :loading="verifying" @click="verifyToken">
-                  Verify token
+                <el-button size="small" :loading="savingConfig" @click="saveBinaryPath">
+                  Save path
                 </el-button>
-                <span class="token-status" :class="`token-${tokenVerdict}`">{{ tokenVerdictLabel }}</span>
               </div>
             </div>
           </section>
 
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Account &amp; tunnel identifiers</span>
-              <span class="edit-card-hint">Account ID + default tunnel to operate on</span>
+              <span class="edit-card-title">Step 3 — start the tunnel</span>
+              <span class="edit-card-hint">Launches cloudflared as a managed service</span>
             </header>
             <div class="edit-card-body">
-              <el-form label-position="top" size="default">
-                <el-form-item label="Account ID">
-                  <el-input v-model="config.accountId" placeholder="68888717e58fbd8335fc688db778e311" class="mono" />
-                </el-form-item>
-                <el-form-item label="Tunnel ID">
-                  <div class="row-gap">
-                    <el-input v-model="config.tunnelId" placeholder="0eed0b1d-53c1-4a2b-a81e-5a7f435baa79" class="mono" />
-                    <el-button size="default" :loading="loadingTunnels" @click="loadTunnels">
-                      Load tunnels
-                    </el-button>
+              <div class="ssl-toggle-row">
+                <div class="ssl-toggle-meta">
+                  <div class="ssl-toggle-title">
+                    {{ serviceRunning ? '✓ Tunnel is running' : 'Tunnel is stopped' }}
                   </div>
-                  <div v-if="tunnels.length" class="tunnel-picker">
-                    <div
-                      v-for="t in tunnels"
-                      :key="t.id"
-                      class="tunnel-row"
-                      :class="{ 'tunnel-row-active': config.tunnelId === t.id }"
-                      @click="selectTunnel(t)"
-                    >
-                      <div class="tunnel-name">{{ t.name }}</div>
-                      <div class="tunnel-id mono">{{ t.id }}</div>
-                      <el-tag
-                        size="small"
-                        :type="t.status === 'healthy' ? 'success' : 'info'"
-                        effect="dark"
-                      >{{ t.status || 'unknown' }}</el-tag>
-                    </div>
+                  <div class="ssl-toggle-desc">
+                    Uses the JWT fetched in Step 1 and connects to Cloudflare's edge.
                   </div>
-                </el-form-item>
-                <el-form-item label="Tunnel name (label only)">
-                  <el-input v-model="config.tunnelName" placeholder="flyenv-local" />
-                </el-form-item>
-                <el-form-item label="Tunnel token (JWT)">
-                  <el-input
-                    v-model="tunnelTokenInput"
-                    type="password"
-                    show-password
-                    :placeholder="tunnelTokenMasked || 'eyJhIjoi…'"
-                    class="mono"
-                  />
-                  <div class="hint">
-                    Used by <code>cloudflared tunnel run --token</code>. Copy from the
-                    tunnel's Install Connector page in the Cloudflare dashboard.
-                  </div>
-                </el-form-item>
-                <el-form-item label="Default zone">
-                  <el-select
-                    v-model="config.defaultZoneId"
-                    placeholder="Pick a zone…"
-                    :loading="loadingZones"
-                    filterable
-                    style="width: 100%"
-                    @visible-change="(v: boolean) => v && !zones.length && loadZones()"
-                  >
-                    <el-option
-                      v-for="z in zones"
-                      :key="z.id"
-                      :label="`${z.name} (${z.status})`"
-                      :value="z.id"
-                    />
-                  </el-select>
-                </el-form-item>
-              </el-form>
+                </div>
+                <el-button
+                  size="default"
+                  :type="serviceRunning ? 'danger' : 'success'"
+                  :loading="toggling"
+                  :disabled="!configReady"
+                  @click="toggleTunnel"
+                >
+                  {{ serviceRunning ? 'Stop' : 'Start' }} cloudflared
+                </el-button>
+              </div>
             </div>
           </section>
-
-          <div class="save-row">
-            <el-button
-              type="primary"
-              size="default"
-              :loading="savingConfig"
-              @click="saveConfig"
-            >
-              <el-icon><Check /></el-icon>
-              <span>Save settings</span>
-            </el-button>
-            <span v-if="saveStatus" class="save-status" :class="saveStatus.kind">
-              {{ saveStatus.message }}
-            </span>
-          </div>
         </div>
       </el-tab-pane>
 
-      <!-- ═══ Ingress — per-site mapping ═════════════ -->
+      <!-- ═══ Sites — per-site exposure ═════════════ -->
       <el-tab-pane name="ingress">
         <template #label>
-          <span class="tab-label"><el-icon><Share /></el-icon> Ingress ({{ ingressRules.length }})</span>
+          <span class="tab-label"><el-icon><Share /></el-icon> Sites ({{ exposedSites.length }})</span>
         </template>
         <div class="tab-content">
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Per-site ingress rules</span>
+              <span class="edit-card-title">Exposed sites</span>
               <span class="edit-card-hint">
-                Map public hostnames → local services. A final catch-all 404 is added automatically.
+                Sites with Cloudflare Tunnel enabled in SiteEdit → Cloudflare tab
               </span>
             </header>
             <div class="edit-card-body">
-              <div class="ingress-list" v-if="ingressRules.length">
-                <div
-                  v-for="(rule, i) in ingressRules"
-                  :key="i"
-                  class="ingress-row"
-                >
-                  <el-input
-                    v-model="rule.hostname"
-                    placeholder="blog.nks-dev.cz"
-                    class="mono ingress-host"
-                  />
-                  <el-icon class="arrow"><Right /></el-icon>
-                  <el-input
-                    v-model="rule.service"
-                    placeholder="http://localhost:80"
-                    class="mono ingress-service"
-                  />
-                  <el-button
-                    size="small"
-                    type="danger"
-                    plain
-                    @click="removeRule(i)"
-                  >
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
+              <div v-if="exposedSites.length === 0" class="hint">
+                No sites are exposed yet. Open a site in the Sites page →
+                Cloudflare tab → toggle "Enable tunnel for this site", pick a zone,
+                enter a subdomain, Save, then click "Sync all sites" below.
               </div>
-              <div v-else class="ingress-empty">
-                No ingress rules yet. Click a site below to auto-add one.
+              <div v-else class="site-expose-list">
+                <div
+                  v-for="s in exposedSites"
+                  :key="s.domain"
+                  class="site-expose-row"
+                >
+                  <div class="expose-local mono">{{ s.domain }}</div>
+                  <el-icon class="arrow"><Right /></el-icon>
+                  <div class="expose-public mono">
+                    https://{{ s.cloudflare?.subdomain }}.{{ s.cloudflare?.zoneName }}
+                  </div>
+                  <el-tag
+                    size="small"
+                    type="success"
+                    effect="dark"
+                    class="expose-tag"
+                  >proxied</el-tag>
+                </div>
               </div>
 
               <div class="card-actions">
-                <el-button size="small" @click="addEmptyRule">+ Add rule</el-button>
-                <el-button size="small" type="primary" :loading="loadingTunnelConfig" @click="loadIngress">
-                  Reload from Cloudflare
-                </el-button>
                 <el-button
-                  size="small"
-                  type="success"
-                  :loading="applyingIngress"
-                  :disabled="!config.tunnelId || ingressRules.length === 0"
-                  @click="applyIngress"
+                  size="default"
+                  type="primary"
+                  :loading="syncing"
+                  :disabled="exposedSites.length === 0 || !config.tunnelId"
+                  @click="syncAllSites"
                 >
-                  Apply to tunnel
+                  <el-icon><Check /></el-icon>
+                  <span>Sync all sites to Cloudflare ({{ exposedSites.length }})</span>
                 </el-button>
+                <span v-if="syncStatus" class="save-status" :class="syncStatus.kind">
+                  {{ syncStatus.message }}
+                </span>
               </div>
-            </div>
-          </section>
-
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">Quick-add from sites</span>
-              <span class="edit-card-hint">One click to expose a local site through the tunnel</span>
-            </header>
-            <div class="edit-card-body">
-              <div v-if="sitesStore.sites.length === 0" class="hint">
-                No sites configured. Add a site on the Sites page first.
-              </div>
-              <div v-else class="site-pick-grid">
-                <button
-                  v-for="site in sitesStore.sites"
-                  :key="site.domain"
-                  type="button"
-                  class="site-pick-card"
-                  @click="addRuleFromSite(site)"
-                >
-                  <div class="site-pick-domain">{{ site.domain }}</div>
-                  <div class="site-pick-meta">
-                    localhost:{{ site.httpPort || 80 }}
-                    <span v-if="site.framework"> · {{ site.framework }}</span>
-                  </div>
-                </button>
+              <div class="hint" style="margin-top: 10px;">
+                Sync will: (1) upsert a proxied CNAME for each site pointing at
+                <code>{{ config.tunnelId ? config.tunnelId.slice(0,8)+'…' : 'tunnel' }}.cfargotunnel.com</code>,
+                (2) rebuild the tunnel ingress rules with an
+                <code>httpHostHeader</code> override per site so Apache matches
+                the correct local vhost. Safe to run repeatedly — it's idempotent.
               </div>
             </div>
           </section>
@@ -434,8 +376,8 @@ import {
   verifyCloudflareToken, fetchCloudflareZones,
   fetchCloudflareDns, createCloudflareDns, deleteCloudflareDns,
   fetchCloudflareTunnels, fetchCloudflareTunnelConfig,
-  updateCloudflareTunnelIngress,
-  type CloudflareConfig, type CfIngressRule,
+  updateCloudflareTunnelIngress, cloudflareAutoSetup, cloudflareSync,
+  type CloudflareConfig, type CfIngressRule, type CloudflareAutoSetupResult,
 } from '../../api/daemon'
 import type { SiteInfo } from '../../api/types'
 
@@ -492,6 +434,80 @@ async function saveConfig() {
     ElMessage.error(`Save failed: ${e.message}`)
   } finally {
     savingConfig.value = false
+  }
+}
+
+async function saveBinaryPath() {
+  savingConfig.value = true
+  try {
+    await saveCloudflareConfig({ cloudflaredPath: config.cloudflaredPath || null })
+    ElMessage.success('Binary path saved')
+  } catch (e: any) {
+    ElMessage.error(`Save failed: ${e.message}`)
+  } finally {
+    savingConfig.value = false
+  }
+}
+
+// ── Auto-setup (one-token flow) ──────────────────────────────────────
+const autoSettingUp = ref(false)
+const autoSetupResult = ref<CloudflareAutoSetupResult | null>(null)
+
+async function runAutoSetup() {
+  autoSettingUp.value = true
+  saveStatus.value = null
+  try {
+    // Use typed input if present, fall back to the already-stored masked token
+    // (empty string — only works if token was persisted earlier and user just
+    // wants to re-run setup without re-typing)
+    const token = apiTokenInput.value || ''
+    if (!token) {
+      ElMessage.warning('Paste your Cloudflare API token first')
+      return
+    }
+    autoSetupResult.value = await cloudflareAutoSetup(token)
+    apiTokenInput.value = ''
+    await loadConfig() // reload to see redacted token + populated account/tunnel IDs
+    tokenVerdict.value = 'ok'
+    ElMessage.success(`Auto-setup complete: tunnel "${autoSetupResult.value.tunnel.name}"`)
+    void loadZones()
+  } catch (e: any) {
+    saveStatus.value = { kind: 'err', message: e.message }
+    ElMessage.error(`Auto-setup failed: ${e.message}`)
+  } finally {
+    autoSettingUp.value = false
+  }
+}
+
+function openTokenPage() {
+  window.open('https://dash.cloudflare.com/profile/api-tokens', '_blank')
+}
+
+// ── Per-site exposed sites (from site configs) ───────────────────────
+const exposedSites = computed(() =>
+  sitesStore.sites.filter((s: any) =>
+    s.cloudflare?.enabled && s.cloudflare?.subdomain && s.cloudflare?.zoneName
+  )
+)
+
+const syncing = ref(false)
+const syncStatus = ref<{ kind: 'ok' | 'err'; message: string } | null>(null)
+
+async function syncAllSites() {
+  syncing.value = true
+  syncStatus.value = null
+  try {
+    const res = await cloudflareSync()
+    syncStatus.value = {
+      kind: 'ok',
+      message: `✓ Synced ${res.synced} site${res.synced === 1 ? '' : 's'} to Cloudflare`,
+    }
+    ElMessage.success(`Synced ${res.synced} sites`)
+  } catch (e: any) {
+    syncStatus.value = { kind: 'err', message: e.message }
+    ElMessage.error(`Sync failed: ${e.message}`)
+  } finally {
+    syncing.value = false
   }
 }
 
@@ -1007,5 +1023,38 @@ onMounted(async () => {
 
 .dns-table :deep(th) {
   background: var(--wdc-surface-2) !important;
+}
+
+/* Exposed sites list (Sites tab) ─────────────────────────────────── */
+.site-expose-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.site-expose-row {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+}
+.expose-local {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+.expose-public {
+  font-size: 0.82rem;
+  color: var(--wdc-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expose-tag {
+  flex-shrink: 0;
 }
 </style>

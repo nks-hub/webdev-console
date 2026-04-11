@@ -170,6 +170,21 @@ export const updateCloudflareTunnelIngress = (
     body: JSON.stringify({ rules }),
   })
 
+export interface CloudflareAutoSetupResult {
+  ok: boolean
+  account: { id: string; name: string }
+  tunnel: { id: string; name: string }
+  tokenFetched: boolean
+}
+export const cloudflareAutoSetup = (apiToken: string): Promise<CloudflareAutoSetupResult> =>
+  json('/api/cloudflare/auto-setup', {
+    method: 'POST',
+    body: JSON.stringify({ apiToken }),
+  })
+
+export const cloudflareSync = (): Promise<{ ok: boolean; synced: number; sites: any[] }> =>
+  json('/api/cloudflare/sync', { method: 'POST' })
+
 // Databases
 export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
   json('/api/databases')
