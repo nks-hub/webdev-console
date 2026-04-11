@@ -758,15 +758,17 @@ catalogCmd.SetAction(async (parseResult, ct) =>
 });
 binariesCommand.Add(catalogCmd);
 
-// --- wdc binaries catalog-url [url] ---
+// --- wdc binaries catalog-url [url | reset] ---
 // Read or write the daemon.catalogUrl setting — mirrors the Settings →
 // Advanced tab in the UI. Without an argument prints the current value,
-// with an argument writes it via PUT /api/settings and triggers a
-// refresh so the change takes effect immediately (the CatalogClient
-// factory reads SettingsStore on every RefreshAsync).
+// with a URL arg validates + writes via PUT /api/settings and triggers a
+// refresh so the change takes effect immediately (CatalogClient factory
+// reads SettingsStore on every RefreshAsync). Special sentinel
+// `reset` / `default` clears the setting, letting the env var
+// NKS_WDC_CATALOG_URL or the hardcoded localhost fallback take over.
 var catalogUrlArg = new Argument<string?>("url")
 {
-    Description = "New catalog URL. Omit to print the current value.",
+    Description = "New catalog URL (http/https), or `reset` to clear and use default. Omit to print current value.",
     Arity = ArgumentArity.ZeroOrOne,
     DefaultValueFactory = _ => null,
 };
@@ -790,18 +792,61 @@ catalogUrlCmd.SetAction(async (parseResult, ct) =>
         return;
     }
 
-    // Write: upsert via PUT /api/settings and trigger a refresh so the
-    // next /api/binaries/catalog call goes to the new source.
+    // Sentinel: user explicitly wants to clear the override so the
+    // SettingsStore getter falls through to env var / hardcoded default.
+    // Persist empty string — GetString returns null for "" via Dapper's
+    // default handling, but the CatalogUrl getter guards with
+    // IsNullOrWhiteSpace so either works.
+    var isReset = newUrl.Equals("reset", StringComparison.OrdinalIgnoreCase)
+               || newUrl.Equals("default", StringComparison.OrdinalIgnoreCase)
+               || newUrl.Equals("clear", StringComparison.OrdinalIgnoreCase);
+
+    if (!isReset)
+    {
+        // Validate URL format upfront so we never persist garbage. Must be
+        // an absolute http/https URI — catalog-api has no other protocol.
+        if (!Uri.TryCreate(newUrl, UriKind.Absolute, out var parsed)
+            || (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps))
+        {
+            AnsiConsole.MarkupLine($"[red]Invalid URL:[/] {Markup.Escape(newUrl)}");
+            AnsiConsole.MarkupLine("[dim]Expected absolute http:// or https:// URL. Use `reset` to clear the override.[/]");
+            Environment.ExitCode = 1;
+            return;
+        }
+    }
+
+    var valueToStore = isReset ? string.Empty : newUrl;
     var body = JsonContent.Create(new Dictionary<string, string>
     {
-        ["daemon.catalogUrl"] = newUrl,
+        ["daemon.catalogUrl"] = valueToStore,
     });
     await client.PutAsync("/api/settings", body);
     var refreshed = await client.PostAsync("/api/binaries/catalog/refresh");
     var count = refreshed.TryGetProperty("count", out var c) ? c.GetInt32() : 0;
-    if (json) { PrintJson(new { catalogUrl = newUrl, refreshed = count }); return; }
-    AnsiConsole.MarkupLine($"[green]Saved:[/] daemon.catalogUrl = [cyan]{Markup.Escape(newUrl)}[/]");
-    AnsiConsole.MarkupLine($"[green]Catalog refreshed:[/] {count} releases");
+
+    if (json)
+    {
+        PrintJson(new { catalogUrl = valueToStore, reset = isReset, refreshed = count });
+        return;
+    }
+    if (isReset)
+        AnsiConsole.MarkupLine("[green]Reset:[/] daemon.catalogUrl cleared — using default");
+    else
+        AnsiConsole.MarkupLine($"[green]Saved:[/] daemon.catalogUrl = [cyan]{Markup.Escape(newUrl)}[/]");
+
+    // Zero releases after a successful save almost always means the new
+    // URL didn't respond → warn the user instead of faking success with
+    // "0 releases" (which previously looked like a happy exit).
+    if (count == 0)
+    {
+        AnsiConsole.MarkupLine("[yellow]Warning:[/] refresh returned 0 releases — the new URL may be unreachable");
+        AnsiConsole.MarkupLine("[dim]Check that catalog-api is running at the configured URL and try again.[/]");
+        Environment.ExitCode = 2;
+    }
+    else
+    {
+        AnsiConsole.MarkupLine($"[green]Catalog refreshed:[/] {count} releases");
+    }
 });
 binariesCommand.Add(catalogUrlCmd);
 
