@@ -110,6 +110,57 @@ migrationRunner.Run(database.ConnectionString);
 var app = builder.Build();
 app.UseCors();
 
+// Sentry crash reporting — opt-in only. The TelemetryConsent singleton is the
+// sole gate: if the user hasn't ticked the Settings page toggle, Sentry is
+// never initialised and no network calls happen. DSN comes from the env var
+// NKS_WDC_SENTRY_DSN; if absent, the feature is inert even with consent so
+// self-hosters can point at their own Sentry instance before enabling.
+//
+// Privacy scrubbing matches the doc comment in TelemetryConsent.cs:
+// allowed — .NET version, OS version, daemon version, stack trace
+// forbidden — file paths, hostnames, site names, DB contents, passwords
+{
+    var consent = app.Services.GetRequiredService<TelemetryConsent>();
+    var dsn = Environment.GetEnvironmentVariable("NKS_WDC_SENTRY_DSN");
+    var sentryLog = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Sentry");
+    if (consent.Enabled && consent.CrashReports && !string.IsNullOrWhiteSpace(dsn))
+    {
+        try
+        {
+            Sentry.SentrySdk.Init(o =>
+            {
+                o.Dsn = dsn;
+                o.Release = typeof(Program).Assembly.GetName().Version?.ToString() ?? "dev";
+                o.Environment = "production";
+                // Never capture anything we can't prove is safe.
+                // SendDefaultPii:false strips IP, username, email, cookies, headers.
+                o.SendDefaultPii = false;
+                o.AutoSessionTracking = false;
+                o.AttachStacktrace = true;
+                o.ServerName = ""; // never include the hostname
+                // Additional scrubbing: drop the machine server name, any context
+                // the SDK auto-populates that could leak local paths, and reset
+                // the user object on every event.
+                o.SetBeforeSend((sentryEvent, _) =>
+                {
+                    sentryEvent.ServerName = "";
+                    sentryEvent.User = new Sentry.SentryUser();
+                    return sentryEvent;
+                });
+            });
+            sentryLog.LogInformation("Sentry crash reporting initialised (consent given)");
+        }
+        catch (Exception ex)
+        {
+            sentryLog.LogWarning(ex, "Sentry init failed — crash reporting disabled for this session");
+        }
+    }
+    else if (consent.Enabled && consent.CrashReports && string.IsNullOrWhiteSpace(dsn))
+    {
+        sentryLog.LogInformation("Sentry consent given but NKS_WDC_SENTRY_DSN not set — no reports will be sent");
+    }
+}
+
 // Expose OpenAPI spec at /openapi/v1.json — used by CI TS type generation
 app.MapOpenApi();
 
@@ -1925,6 +1976,18 @@ app.Lifetime.ApplicationStopping.Register(async () =>
     try { File.Delete(portFile); } catch { }
     Console.WriteLine("[shutdown] Complete");
 });
+
+// Route uncaught exceptions through Sentry (no-op if SDK wasn't initialised).
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+{
+    if (e.ExceptionObject is Exception ex)
+        Sentry.SentrySdk.CaptureException(ex);
+};
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    Sentry.SentrySdk.CaptureException(e.Exception);
+    e.SetObserved();
+};
 
 await app.RunAsync();
 
