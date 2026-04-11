@@ -17,15 +17,38 @@ export default scenario('16', 'Manual stop stays stopped', 'P1', async (ctx) => 
   assert.statusOk(servicesRes, 'GET /api/services')
   const services = Array.isArray(servicesRes.body) ? servicesRes.body : (servicesRes.body.services ?? [])
 
-  const target = CANDIDATES
-    .map((id) => services.find((svc) => (svc.id ?? '').toLowerCase() === id))
-    .find(Boolean)
+  // Walk the candidate list and pick the first one that (a) is exposed by
+  // the daemon, (b) isn't disabled, and (c) actually starts without a
+  // "not installed" error. This lets hosts missing Caddy fall through to
+  // Mailpit or Redis instead of the whole scenario skipping.
+  let serviceId = null
+  let originalState = null
+  let startResponse = null
+  for (const candidateId of CANDIDATES) {
+    const candidate = services.find((svc) => (svc.id ?? '').toLowerCase() === candidateId)
+    if (!candidate) continue
+    const state = parseServiceState(candidate)
+    if (state === 5) continue // disabled on this host
 
-  if (!target) throw new SkipError('no supported service candidate exposed')
+    // Try to start it — if the binary is missing we get a 500 with a
+    // specific marker and we move on to the next candidate silently.
+    await api.post(`/api/services/${candidateId}/stop`).catch(() => {})
+    await sleep(250)
+    const attempt = await api.post(`/api/services/${candidateId}/start`)
+    if (attempt.status >= 400) {
+      const err = typeof attempt.body === 'string' ? attempt.body : JSON.stringify(attempt.body ?? '')
+      if (err.toLowerCase().includes('not installed') || err.toLowerCase().includes('executable not found')) {
+        continue // try next candidate
+      }
+      throw new Error(`Unexpected failure starting ${candidateId}: HTTP ${attempt.status} ${err.slice(0, 200)}`)
+    }
+    serviceId = candidateId
+    originalState = state
+    startResponse = attempt
+    break
+  }
 
-  const serviceId = target.id
-  const originalState = parseServiceState(target)
-  if (originalState === 5) throw new SkipError(`${serviceId} is disabled on this host`)
+  if (!serviceId) throw new SkipError('no candidate service could be started on this host')
 
   ctx.cleanup(async () => {
     if (originalState === 2) {
@@ -35,17 +58,7 @@ export default scenario('16', 'Manual stop stays stopped', 'P1', async (ctx) => 
     }
   })
 
-  await api.post(`/api/services/${serviceId}/stop`).catch(() => {})
-  await sleep(250)
-
-  const start = await api.post(`/api/services/${serviceId}/start`)
-  if (start.status >= 400) {
-    const err = typeof start.body === 'string' ? start.body : JSON.stringify(start.body ?? '')
-    if (err.toLowerCase().includes('not installed') || err.toLowerCase().includes('executable not found')) {
-      throw new SkipError(`${serviceId} binary not installed on this host`)
-    }
-  }
-  assert.statusOk(start, `POST /api/services/${serviceId}/start`)
+  assert.statusOk(startResponse, `POST /api/services/${serviceId}/start`)
 
   await waitFor(async () => {
     const running = await api.get(`/api/services/${serviceId}`)
