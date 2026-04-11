@@ -56,13 +56,21 @@
                 <span class="alias-dot">↳</span>
                 {{ row.aliases.join(', ') }}
               </div>
-              <div v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain" class="col-tunnel">
+              <div
+                v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain"
+                class="col-tunnel"
+                :class="{ 'col-tunnel-offline': !cloudflaredRunning }"
+              >
                 <span class="tunnel-icon">☁</span>
                 <a
                   :href="`https://${row.cloudflare.subdomain}.${row.cloudflare.zoneName}`"
                   target="_blank"
                   @click.stop
+                  :title="cloudflaredRunning
+                    ? 'Open public URL in browser'
+                    : 'Tunnel service is stopped — this URL will not respond until you start cloudflared'"
                 >{{ row.cloudflare.subdomain }}.{{ row.cloudflare.zoneName }}</a>
+                <span v-if="!cloudflaredRunning" class="tunnel-badge-offline">offline</span>
               </div>
             </div>
           </template>
@@ -174,11 +182,24 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
+import { useDaemonStore } from '../../stores/daemon'
 import type { SiteInfo } from '../../api/types'
 
 const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
+const daemonStore = useDaemonStore()
+
+// Sites list shows per-row tunnel links when cloudflare.enabled → but the
+// link only works if the shared cloudflared process is actually running.
+// When it's stopped, render the row in a dimmed style with an "offline"
+// badge so users don't click through to a dead URL and see a Cloudflare
+// 521 error page. Computed here so it's reactive to SSE service updates.
+const cloudflaredRunning = computed(() =>
+  (daemonStore.services as any[]).some(s =>
+    s.id === 'cloudflare' && (s.state === 2 || s.status === 'running')
+  )
+)
 const phpVersions = ref<string[]>([])
 
 function daemonBase(): string {
@@ -523,6 +544,29 @@ function formatDate(iso: string): string {
 .tunnel-icon {
   color: #f38020;
   font-size: 0.95rem;
+}
+
+/* Dimmed offline state — tunnel service is stopped so the public URL
+   won't actually respond. Same hue but desaturated + muted badge so
+   the row is still clearly a "tunnel exists" marker, just parked. */
+.col-tunnel-offline a {
+  color: var(--wdc-text-3);
+  text-decoration: line-through;
+}
+.col-tunnel-offline .tunnel-icon {
+  color: var(--wdc-text-3);
+}
+.tunnel-badge-offline {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  background: var(--wdc-surface-2);
+  color: var(--wdc-text-3);
+  border: 1px solid var(--wdc-border);
+  border-radius: 6px;
+  margin-left: 4px;
 }
 
 .col-mono {
