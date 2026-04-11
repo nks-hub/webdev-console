@@ -140,6 +140,23 @@ export const installPluginFromMarketplace = (id: string, downloadUrl: string): P
     body: JSON.stringify({ id, downloadUrl }),
   })
 
+// Onboarding
+export interface OnboardingState {
+  completed: boolean
+  prerequisites: {
+    apacheInstalled: boolean
+    phpInstalled: boolean
+    mysqlInstalled: boolean
+    mkcertBinaryInstalled: boolean
+    mkcertCaInstalled: boolean
+  }
+}
+export const fetchOnboardingState = (): Promise<OnboardingState> =>
+  json('/api/onboarding/state')
+
+export const completeOnboarding = (): Promise<{ completed: boolean }> =>
+  json('/api/onboarding/complete', { method: 'POST' })
+
 export const enablePlugin = (id: string) =>
   json<void>(`/api/plugins/${id}/enable`, { method: 'POST' })
 

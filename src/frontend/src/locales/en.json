@@ -90,5 +90,27 @@
     "language": "Language",
     "languageEn": "English",
     "languageCs": "Čeština"
+  },
+  "onboarding": {
+    "title": "Welcome to NKS WebDev Console",
+    "subtitle": "Let's set up your local development environment.",
+    "step1": "Install core binaries",
+    "step1Desc": "Download Apache, PHP and MySQL into the managed binaries folder.",
+    "step2": "Install mkcert CA",
+    "step2Desc": "Add the local certificate authority to your system trust store so HTTPS sites work without warnings.",
+    "step3": "You're ready",
+    "step3Desc": "Create your first site and start developing.",
+    "installApache": "Install Apache",
+    "installPhp": "Install PHP",
+    "installMysql": "Install MySQL",
+    "installMkcert": "Install mkcert",
+    "installMkcertCa": "Trust local CA",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "skip": "Skip wizard",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish",
+    "createFirstSite": "Create first site"
   }
 }

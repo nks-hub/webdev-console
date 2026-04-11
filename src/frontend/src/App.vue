@@ -11,6 +11,7 @@
 
     <AppStatusBar />
     <CommandPalette ref="commandPalette" />
+    <OnboardingWizard />
   </div>
 </template>
 
@@ -21,6 +22,7 @@ import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
+import OnboardingWizard from './components/shared/OnboardingWizard.vue'
 import { useDaemonStore } from './stores/daemon'
 import { usePluginsStore } from './stores/plugins'
 import { useThemeStore } from './stores/theme'

@@ -715,6 +715,53 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     return Results.Ok(new { domain, restoredFrom = timestamp });
 });
 
+// Onboarding state — Phase 7 plan item.
+// First-run detection: a simple ~/.wdc/data/onboarding-complete.flag file marks the
+// wizard as finished. Before that file exists the frontend shows the onboarding
+// wizard. The wizard also returns which prerequisites are already satisfied so it
+// can skip ahead past any steps the user has already completed manually.
+app.MapGet("/api/onboarding/state", (BinaryManager bm) =>
+{
+    var flagFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".wdc", "data", "onboarding-complete.flag");
+
+    var installed = bm.ListInstalled();
+    var hasApache = installed.Any(b => b.App.Equals("apache", StringComparison.OrdinalIgnoreCase));
+    var hasPhp = installed.Any(b => b.App.Equals("php", StringComparison.OrdinalIgnoreCase));
+    var hasMysql = installed.Any(b => b.App.Equals("mysql", StringComparison.OrdinalIgnoreCase));
+    var hasMkcert = installed.Any(b => b.App.Equals("mkcert", StringComparison.OrdinalIgnoreCase));
+
+    // mkcert CA installed state — check presence of rootCA.pem in the mkcert CAROOT
+    var mkcertRoot = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "mkcert");
+    var mkcertCaInstalled = File.Exists(Path.Combine(mkcertRoot, "rootCA.pem"));
+
+    return Results.Ok(new
+    {
+        completed = File.Exists(flagFile),
+        prerequisites = new
+        {
+            apacheInstalled = hasApache,
+            phpInstalled = hasPhp,
+            mysqlInstalled = hasMysql,
+            mkcertBinaryInstalled = hasMkcert,
+            mkcertCaInstalled,
+        }
+    });
+});
+
+app.MapPost("/api/onboarding/complete", () =>
+{
+    var flagFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".wdc", "data", "onboarding-complete.flag");
+    Directory.CreateDirectory(Path.GetDirectoryName(flagFile)!);
+    File.WriteAllText(flagFile, DateTime.UtcNow.ToString("O"));
+    return Results.Ok(new { completed = true });
+});
+
 // Backup / restore — Phase 7 plan item.
 // Creates a zip of ~/.wdc/sites + ~/.wdc/data/state.db + ~/.wdc/ssl/sites + ~/.wdc/caddy.
 // Restore is atomic with an automatic pre-restore safety backup.

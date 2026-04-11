@@ -90,5 +90,27 @@
     "language": "Jazyk",
     "languageEn": "English",
     "languageCs": "Čeština"
+  },
+  "onboarding": {
+    "title": "Vítej v NKS WebDev Console",
+    "subtitle": "Pojďme nastavit tvoje lokální vývojové prostředí.",
+    "step1": "Instalace základních binárek",
+    "step1Desc": "Stáhni Apache, PHP a MySQL do spravované složky binárek.",
+    "step2": "Instalace mkcert CA",
+    "step2Desc": "Přidej lokální certifikační autoritu do systémového úložiště důvěryhodných certifikátů, aby HTTPS weby fungovaly bez upozornění.",
+    "step3": "Připraveno",
+    "step3Desc": "Vytvoř svůj první web a pusť se do vývoje.",
+    "installApache": "Instalovat Apache",
+    "installPhp": "Instalovat PHP",
+    "installMysql": "Instalovat MySQL",
+    "installMkcert": "Instalovat mkcert",
+    "installMkcertCa": "Důvěřovat lokální CA",
+    "installed": "Nainstalováno",
+    "notInstalled": "Nenainstalováno",
+    "skip": "Přeskočit průvodce",
+    "next": "Další",
+    "back": "Zpět",
+    "finish": "Dokončit",
+    "createFirstSite": "Vytvořit první web"
   }
 }
