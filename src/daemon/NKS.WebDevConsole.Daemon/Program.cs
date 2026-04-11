@@ -514,41 +514,74 @@ app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp) =>
     return Results.Ok(status);
 });
 
-app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp) =>
+app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
 {
     var modules = sp.GetServices<IServiceModule>();
     var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
         || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
     if (module == null) return Results.NotFound(new { error = $"No service module for '{id}'" });
 
-    await module.StartAsync(CancellationToken.None);
-    var status = await module.GetStatusAsync(CancellationToken.None);
-    return Results.Ok(status);
+    try
+    {
+        await module.StartAsync(CancellationToken.None);
+        var status = await module.GetStatusAsync(CancellationToken.None);
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("ServiceControl").LogError(ex, "Failed to start service {Id}", id);
+        return Results.Problem(
+            title: $"Failed to start {id}",
+            detail: ex.Message,
+            statusCode: 500);
+    }
 });
 
-app.MapPost("/api/services/{id}/stop", async (string id, IServiceProvider sp) =>
+app.MapPost("/api/services/{id}/stop", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
 {
     var modules = sp.GetServices<IServiceModule>();
     var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
         || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
     if (module == null) return Results.NotFound(new { error = $"No service module for '{id}'" });
 
-    await module.StopAsync(CancellationToken.None);
-    var status = await module.GetStatusAsync(CancellationToken.None);
-    return Results.Ok(status);
+    try
+    {
+        await module.StopAsync(CancellationToken.None);
+        var status = await module.GetStatusAsync(CancellationToken.None);
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("ServiceControl").LogError(ex, "Failed to stop service {Id}", id);
+        return Results.Problem(
+            title: $"Failed to stop {id}",
+            detail: ex.Message,
+            statusCode: 500);
+    }
 });
 
-app.MapPost("/api/services/{id}/restart", async (string id, IServiceProvider sp) =>
+app.MapPost("/api/services/{id}/restart", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
 {
     var modules = sp.GetServices<IServiceModule>();
     var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
         || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
     if (module == null) return Results.NotFound(new { error = $"No service module for '{id}'" });
 
-    await module.StopAsync(CancellationToken.None);
-    await module.StartAsync(CancellationToken.None);
-    var status = await module.GetStatusAsync(CancellationToken.None);
-    return Results.Ok(status);
+    try
+    {
+        await module.StopAsync(CancellationToken.None);
+        await module.StartAsync(CancellationToken.None);
+        var status = await module.GetStatusAsync(CancellationToken.None);
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("ServiceControl").LogError(ex, "Failed to restart service {Id}", id);
+        return Results.Problem(
+            title: $"Failed to restart {id}",
+            detail: ex.Message,
+            statusCode: 500);
+    }
 });
 
 // Sites CRUD
@@ -1082,32 +1115,71 @@ app.MapGet("/api/services/{id}/config", async (string id) =>
     return Results.Ok(new { serviceId = id, files });
 });
 
-// Config validation (Apache)
+// Config validation — dispatches to Apache / PHP / MySQL / Redis based on serviceId.
+// Frontend sends serviceId from the ServiceConfig.vue editor; legacy callers that
+// omit serviceId get Apache validation (backwards compat with the original endpoint).
 app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
     if (body == null) return Results.BadRequest();
 
-    // Resolve httpd path from own managed binaries first, then from the loaded Apache plugin.
-    // Rule: NEVER fall back to MAMP or any system path — NKS WDC only uses its own binaries.
-    string? httpdPath = null;
-    var apachePlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.apache");
-    if (apachePlugin != null)
-    {
-        var prop = apachePlugin.Instance.GetType().GetProperty("HttpdPath");
-        if (prop != null) httpdPath = prop.GetValue(apachePlugin.Instance) as string;
-    }
-    if (string.IsNullOrEmpty(httpdPath))
-    {
-        // Fallback: find the newest apache binary installed under ~/.wdc/binaries/apache/
-        var installed = bm.ListInstalled("apache").FirstOrDefault();
-        httpdPath = installed?.Executable;
-    }
-    if (string.IsNullOrEmpty(httpdPath) || !File.Exists(httpdPath))
-        return Results.BadRequest(new { error = "Apache httpd not found in managed binaries — install it first via POST /api/binaries/install" });
+    var service = (body.ServiceId ?? "apache").ToLowerInvariant();
 
-    var (isValid, output) = await validator.ValidateApacheConfig(httpdPath, body.ConfigPath);
-    return Results.Ok(new { isValid, output });
+    // Helper: resolve a managed binary executable for a given app key, never falling
+    // back to PATH. Rule: NKS WDC only uses its own binaries under ~/.wdc/binaries/.
+    string? ResolveBinary(string appKey, string pluginId, string? pluginProp)
+    {
+        string? path = null;
+        if (pluginProp is not null)
+        {
+            var plug = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == pluginId);
+            var prop = plug?.Instance.GetType().GetProperty(pluginProp);
+            if (prop != null) path = prop.GetValue(plug!.Instance) as string;
+        }
+        if (string.IsNullOrEmpty(path))
+            path = bm.ListInstalled(appKey).FirstOrDefault()?.Executable;
+        return path;
+    }
+
+    switch (service)
+    {
+        case "apache":
+        case "httpd":
+        {
+            var httpdPath = ResolveBinary("apache", "nks.wdc.apache", "HttpdPath");
+            if (string.IsNullOrEmpty(httpdPath) || !File.Exists(httpdPath))
+                return Results.BadRequest(new { error = "Apache httpd not found in managed binaries — install it first via POST /api/binaries/install" });
+            var (isValid, output) = await validator.ValidateApacheConfig(httpdPath, body.ConfigPath);
+            return Results.Ok(new { isValid, output });
+        }
+        case "php":
+        {
+            var phpPath = bm.ListInstalled("php").FirstOrDefault()?.Executable;
+            if (string.IsNullOrEmpty(phpPath) || !File.Exists(phpPath))
+                return Results.BadRequest(new { error = "PHP not found in managed binaries" });
+            var (isValid, output) = await validator.ValidatePhpIni(phpPath, body.ConfigPath);
+            return Results.Ok(new { isValid, output });
+        }
+        case "mysql":
+        case "mariadb":
+        {
+            var mysqldPath = bm.ListInstalled("mysql").FirstOrDefault()?.Executable;
+            if (string.IsNullOrEmpty(mysqldPath) || !File.Exists(mysqldPath))
+                return Results.BadRequest(new { error = "mysqld not found in managed binaries" });
+            var (isValid, output) = await validator.ValidateMyCnf(mysqldPath, body.ConfigPath);
+            return Results.Ok(new { isValid, output });
+        }
+        case "redis":
+        {
+            var redisPath = bm.ListInstalled("redis").FirstOrDefault()?.Executable;
+            if (string.IsNullOrEmpty(redisPath) || !File.Exists(redisPath))
+                return Results.BadRequest(new { error = "redis-server not found in managed binaries" });
+            var (isValid, output) = await validator.ValidateRedisConf(redisPath, body.ConfigPath);
+            return Results.Ok(new { isValid, output });
+        }
+        default:
+            return Results.BadRequest(new { error = $"Unknown serviceId '{body.ServiceId}'. Use apache | php | mysql | redis." });
+    }
 });
 
 // Plugin enable/disable — persists to ~/.wdc/data/plugin-state.json via PluginState.
@@ -1603,5 +1675,5 @@ app.Lifetime.ApplicationStopping.Register(async () =>
 
 await app.RunAsync();
 
-record ConfigValidateRequest(string ConfigPath, string? Content);
+record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
 record InstallBinaryRequest(string App, string Version);
