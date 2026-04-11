@@ -810,7 +810,13 @@ catalogUrlCmd.SetAction(async (parseResult, ct) =>
         {
             AnsiConsole.MarkupLine($"[red]Invalid URL:[/] {Markup.Escape(newUrl)}");
             AnsiConsole.MarkupLine("[dim]Expected absolute http:// or https:// URL. Use `reset` to clear the override.[/]");
-            Environment.ExitCode = 1;
+            // Environment.Exit terminates the process immediately with the
+            // given code. We intentionally bypass System.CommandLine's
+            // InvokeAsync return value here — its async Task handler
+            // overload always returns 0 on success, so setting
+            // Environment.ExitCode alone would be silently overwritten
+            // by the `return await ... InvokeAsync()` line at bottom-of-file.
+            Environment.Exit(1);
             return;
         }
     }
@@ -841,7 +847,10 @@ catalogUrlCmd.SetAction(async (parseResult, ct) =>
     {
         AnsiConsole.MarkupLine("[yellow]Warning:[/] refresh returned 0 releases — the new URL may be unreachable");
         AnsiConsole.MarkupLine("[dim]Check that catalog-api is running at the configured URL and try again.[/]");
-        Environment.ExitCode = 2;
+        // See rationale in the validation branch above — Environment.Exit
+        // is the only reliable way to propagate a non-zero exit code out
+        // of a System.CommandLine async Task handler.
+        Environment.Exit(2);
     }
     else
     {
