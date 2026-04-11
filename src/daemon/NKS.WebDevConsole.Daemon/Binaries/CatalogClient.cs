@@ -57,7 +57,25 @@ public sealed class CatalogClient
 
     private string CurrentBaseUrl()
     {
-        var url = _baseUrlProvider?.Invoke() ?? _options.BaseUrl;
+        string? url = null;
+        try
+        {
+            url = _baseUrlProvider?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            // A broken provider (SettingsStore read fail, DB locked, …) must
+            // never wedge the binary catalog — fall through to the seed URL
+            // instead of throwing out of the HTTP pipeline.
+            _logger.LogWarning("Catalog URL provider threw: {Error}", ex.Message);
+        }
+        if (string.IsNullOrWhiteSpace(url))
+            url = _options.BaseUrl;
+        // Last-resort fallback so GetAsync() never sees an empty relative URI
+        // (HttpClient has no BaseAddress on this instance, so an empty base
+        // + "/api/v1/catalog" would throw "invalid request URI").
+        if (string.IsNullOrWhiteSpace(url))
+            url = "http://127.0.0.1:8765";
         return url.TrimEnd('/');
     }
 
