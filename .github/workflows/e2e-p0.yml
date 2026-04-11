@@ -1,0 +1,83 @@
+name: e2e-p0
+
+on:
+  pull_request:
+    paths:
+      - 'src/daemon/**'
+      - 'src/plugins/**'
+      - 'scripts/e2e-runner.mjs'
+      - 'scripts/e2e/**'
+      - '.github/workflows/e2e-p0.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    env:
+      # Skip hosts file UAC prompt — the CI runner has no interactive desktop
+      # and we don't want to prompt for elevation. Sites created by scenarios
+      # won't have hosts entries, but we only assert on daemon API behaviour,
+      # not actual DNS resolution.
+      NKS_WDC_SKIP_HOSTS_UAC: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build daemon
+        run: dotnet build src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release --nologo
+
+      - name: Start daemon in background
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "dotnet" -ArgumentList @(
+            "run","--no-build","-c","Release","--project",
+            "src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj"
+          ) -PassThru -WindowStyle Hidden -RedirectStandardOutput "daemon.out.log" -RedirectStandardError "daemon.err.log"
+          Write-Host "Daemon PID=$($proc.Id)"
+          $proc.Id | Out-File -FilePath daemon.pid -Encoding ASCII
+
+      - name: Wait for daemon /healthz
+        shell: pwsh
+        run: |
+          $deadline = (Get-Date).AddSeconds(60)
+          while ((Get-Date) -lt $deadline) {
+            try {
+              $res = Invoke-WebRequest -Uri "http://localhost:5146/healthz" -UseBasicParsing -TimeoutSec 2
+              if ($res.StatusCode -eq 200) { Write-Host "Daemon ready"; exit 0 }
+            } catch { Start-Sleep -Milliseconds 500 }
+          }
+          Write-Error "Daemon failed to start within 60s"
+          Get-Content daemon.out.log -Tail 60
+          Get-Content daemon.err.log -Tail 60
+          exit 1
+
+      - name: Run P0 e2e scenarios
+        run: node scripts/e2e-runner.mjs --priority P0
+
+      - name: Upload daemon logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-logs
+          path: |
+            daemon.out.log
+            daemon.err.log
+
+      - name: Stop daemon
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path daemon.pid) {
+            $pid = Get-Content daemon.pid
+            try { Stop-Process -Id $pid -Force } catch { }
+          }

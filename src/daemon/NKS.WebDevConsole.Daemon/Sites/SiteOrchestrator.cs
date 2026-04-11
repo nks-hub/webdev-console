@@ -252,6 +252,20 @@ public sealed class SiteOrchestrator
             _logger.LogDebug("Hosts file pre-check failed ({Error}) — proceeding with elevated write", ex.Message);
         }
 
+        // ESCAPE HATCH for CI/e2e/autonomous runs: NKS_WDC_SKIP_HOSTS_UAC=1 skips the UAC
+        // prompt and logs what *would* have been written. This lets the integration test
+        // harness exercise the full site-creation code path without a human clicking UAC.
+        // NEVER set this in a normal interactive session — sites created this way won't
+        // resolve via DNS until the user re-runs reapply-all after elevating.
+        if (Environment.GetEnvironmentVariable("NKS_WDC_SKIP_HOSTS_UAC") == "1")
+        {
+            _logger.LogWarning(
+                "NKS_WDC_SKIP_HOSTS_UAC=1 is set — hosts file write skipped for {Count} domain(s). " +
+                "This is intended for CI/e2e tests only.",
+                allDomains.Count);
+            return;
+        }
+
         // Build PowerShell command that writes managed block with elevation
         var entries = string.Join("\\n", allDomains.Select(d => $"127.0.0.1\\t{d}"));
         var psScript = $@"

@@ -32,6 +32,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<TelemetryConsent>();
+builder.Services.AddSingleton<PluginState>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
@@ -219,7 +220,7 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
     });
 });
 
-app.MapGet("/api/plugins", (IServiceProvider sp) =>
+app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
 {
     var modules = sp.GetServices<IServiceModule>();
     return Results.Ok(pluginLoader.Plugins.Select(p =>
@@ -232,7 +233,7 @@ app.MapGet("/api/plugins", (IServiceProvider sp) =>
             name = p.Instance.DisplayName,
             version = p.Instance.Version,
             type = hasService ? "service" : "tool",
-            enabled = true,
+            enabled = pluginState.IsEnabled(p.Instance.Id),
             description = $"{p.Instance.DisplayName} plugin",
         };
     }));
@@ -1109,12 +1110,24 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
     return Results.Ok(new { isValid, output });
 });
 
-// Plugin enable/disable stubs
-app.MapPost("/api/plugins/{id}/enable", (string id) =>
-    Results.Ok(new { id, enabled = true }));
+// Plugin enable/disable — persists to ~/.wdc/data/plugin-state.json via PluginState.
+// Plugins remain loaded either way; disabled plugins are hidden from the UI service
+// list and skipped by Start All.
+app.MapPost("/api/plugins/{id}/enable", (string id, PluginState pluginState) =>
+{
+    var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
+    if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    pluginState.SetEnabled(id, true);
+    return Results.Ok(new { id, enabled = true });
+});
 
-app.MapPost("/api/plugins/{id}/disable", (string id) =>
-    Results.Ok(new { id, enabled = false }));
+app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState) =>
+{
+    var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
+    if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    pluginState.SetEnabled(id, false);
+    return Results.Ok(new { id, enabled = false });
+});
 
 // SSL certificates
 app.MapGet("/api/ssl/certs", () =>
