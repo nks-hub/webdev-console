@@ -23,10 +23,26 @@
     <div class="header-right" style="-webkit-app-region: no-drag">
       <div class="conn-pill" :class="daemonStore.connected ? 'conn-ok' : 'conn-err'">
         <span class="conn-dot" />
-        {{ daemonStore.connected ? 'Connected' : 'Offline' }}
+        {{ daemonStore.connected ? t('header.connected') : t('header.offline') }}
       </div>
 
-      <el-button circle size="small" @click="toggleTheme" :title="isDark ? 'Light mode' : 'Dark mode'">
+      <el-dropdown trigger="click" @command="onLocaleChange">
+        <el-button size="small" text class="lang-btn" :title="t('settings.language')">
+          {{ currentLocale.toUpperCase() }}
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="en" :disabled="currentLocale === 'en'">
+              {{ t('settings.languageEn') }}
+            </el-dropdown-item>
+            <el-dropdown-item command="cs" :disabled="currentLocale === 'cs'">
+              {{ t('settings.languageCs') }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+
+      <el-button circle size="small" @click="toggleTheme" :title="isDark ? t('header.lightMode') : t('header.darkMode')">
         <el-icon><Moon v-if="isDark" /><Sunny v-else /></el-icon>
       </el-button>
     </div>
@@ -36,25 +52,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
+import { setLocale, type Locale } from '../../i18n'
 
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
+const { t, locale } = useI18n()
 const isDark = computed(() => themeStore.isDark)
+const currentLocale = computed(() => String(locale.value))
 function toggleTheme() { themeStore.toggle() }
+function onLocaleChange(next: Locale) { setLocale(next) }
 
-const navItems = [
-  { path: '/dashboard', label: 'Services' },
-  { path: '/sites', label: 'Sites' },
-  { path: '/databases', label: 'Databases' },
-  { path: '/ssl', label: 'SSL' },
-  { path: '/php', label: 'PHP' },
-  { path: '/settings', label: 'Settings' },
-]
+const navItems = computed(() => [
+  { path: '/dashboard', label: t('nav.services') },
+  { path: '/sites', label: t('nav.sites') },
+  { path: '/databases', label: t('nav.databases') },
+  { path: '/ssl', label: t('nav.ssl') },
+  { path: '/php', label: t('nav.php') },
+  { path: '/settings', label: t('nav.settings') },
+])
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')

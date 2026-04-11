@@ -7,6 +7,7 @@ import './assets/tailwind.css'
 import * as ElementPlusIcons from '@element-plus/icons-vue'
 
 import { router } from './router/index'
+import { i18n } from './i18n'
 import App from './App.vue'
 
 // Register panel components in the plugin registry
@@ -33,6 +34,7 @@ for (const [name, component] of Object.entries(ElementPlusIcons)) {
 app.use(createPinia())
 app.use(ElementPlus)
 app.use(router)
+app.use(i18n)
 
 // Global error handler — prevents white screen on component errors
 app.config.errorHandler = (err, instance, info) => {
