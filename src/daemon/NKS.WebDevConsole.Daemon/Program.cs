@@ -64,10 +64,12 @@ builder.Services.AddHttpClient("binary-downloader");
 builder.Services.AddHttpClient("catalog-client");
 builder.Services.AddSingleton<CatalogClientOptions>(sp =>
 {
-    // FUTURE: read from settings table or environment
-    var url = Environment.GetEnvironmentVariable("NKS_WDC_CATALOG_URL")
-        ?? "http://127.0.0.1:8765";
-    return new CatalogClientOptions { BaseUrl = url };
+    // Source precedence: SettingsStore (user-editable via /api/settings
+    // and the Settings page in the Electron UI) → NKS_WDC_CATALOG_URL env
+    // → localhost:8765 fallback (matches the dev run.cmd in
+    // services/catalog-api/).
+    var settings = sp.GetRequiredService<SettingsStore>();
+    return new CatalogClientOptions { BaseUrl = settings.CatalogUrl };
 });
 builder.Services.AddSingleton<CatalogClient>();
 builder.Services.AddSingleton<BinaryDownloader>();
