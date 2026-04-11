@@ -180,9 +180,20 @@ public class SiteManager
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
+
         var toml = TomlSerializer.Serialize(site);
-        var path = Path.Combine(_sitesDir, $"{site.Domain}.toml");
-        await File.WriteAllTextAsync(path, toml);
+
+        // Same defense-in-depth + atomic-write treatment as UpdateAsync.
+        // Without this, Create wrote with raw File.WriteAllTextAsync which
+        // can leave a half-written .toml on crash AND skipped the
+        // path-containment guard, so a future change loosening
+        // ValidateDomain would silently re-open the traversal vector.
+        var sitesRoot = Path.GetFullPath(_sitesDir);
+        var path = Path.GetFullPath(Path.Combine(_sitesDir, $"{site.Domain}.toml"));
+        if (!path.StartsWith(sitesRoot, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Resolved site path escapes sites root");
+
+        await _writer.WriteAsync(path, toml);
         _sites[site.Domain] = site;
 
         // Generate Apache vhost configuration from Scriban template

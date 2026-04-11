@@ -75,6 +75,31 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_ArchivesExistingToml_WhenRecreatingDomain()
+    {
+        var domain = "existing.loc";
+        var targetPath = Path.Combine(_sitesDir, $"{domain}.toml");
+        await File.WriteAllTextAsync(targetPath, "domain = \"existing.loc\"\ndocumentRoot = \"C:/htdocs/old\"\n");
+
+        var site = new SiteConfig
+        {
+            Domain = domain,
+            DocumentRoot = "C:/htdocs/new",
+            PhpVersion = "8.3"
+        };
+
+        await _manager.CreateAsync(site);
+
+        var historyDir = Path.Combine(_sitesDir, "history");
+        var historyFiles = Directory.GetFiles(historyDir, $"{domain}.toml.*");
+        Assert.Single(historyFiles);
+        var archived = await File.ReadAllTextAsync(historyFiles[0]);
+        Assert.Contains("C:/htdocs/old", archived);
+        var current = await File.ReadAllTextAsync(targetPath);
+        Assert.Contains("C:/htdocs/new", current);
+    }
+
+    [Fact]
     public async Task Get_ReturnsCreatedSite()
     {
         var site = new SiteConfig
