@@ -1,0 +1,133 @@
+name: Release Security Scan
+
+# Pre-release security scan via VirusTotal — uploads built daemon binary and
+# Electron installer to VT, waits for engine results, and fails the workflow
+# (blocking the release) if any engine flags malware. Triggered automatically
+# right after Build & Release uploads artifacts on a tag push.
+#
+# Required repo secrets:
+#   VT_API_KEY        — VirusTotal API key (free tier OK for ~4 req/min)
+#
+# Run modes:
+#   - workflow_run after "Build & Release" completes
+#   - workflow_dispatch for manual re-scan
+
+on:
+  workflow_run:
+    workflows: ["Build & Release"]
+    types:
+      - completed
+    branches:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build & Release run id whose artifacts to scan (optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  scan:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Sanity check secret
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          if [ -z "$VT_API_KEY" ]; then
+            echo "::warning::VT_API_KEY secret is not set — skipping VirusTotal scan."
+            echo "skip_scan=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download Build & Release artifacts
+        if: env.skip_scan != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          run-id: ${{ github.event.workflow_run.id || inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+
+      - name: List artifacts to scan
+        if: env.skip_scan != 'true'
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p ./scan-targets
+          # Daemon binary + Electron installers (.exe / .dmg / .AppImage / .zip)
+          for f in ./artifacts/**/wdc-daemon* \
+                   ./artifacts/**/*.exe \
+                   ./artifacts/**/*.dmg \
+                   ./artifacts/**/*.AppImage \
+                   ./artifacts/**/*-portable.zip; do
+            [ -f "$f" ] || continue
+            cp "$f" ./scan-targets/
+          done
+          ls -la ./scan-targets/ || true
+          count=$(find ./scan-targets -type f | wc -l)
+          echo "scan_count=$count" >> "$GITHUB_ENV"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No release artifacts matched the scan glob."
+            exit 1
+          fi
+
+      - name: Submit each artifact to VirusTotal
+        if: env.skip_scan != 'true'
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in ./scan-targets/*; do
+            name="$(basename "$f")"
+            size=$(stat -c%s "$f")
+            echo "::group::Scanning $name ($size bytes)"
+
+            # Files >32MB need /files/upload_url first; smaller use /files directly.
+            if [ "$size" -gt 33554432 ]; then
+              upload_url=$(curl -fsSL -H "x-apikey: $VT_API_KEY" \
+                "https://www.virustotal.com/api/v3/files/upload_url" \
+                | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"])')
+              resp=$(curl -fsSL -H "x-apikey: $VT_API_KEY" -F "file=@$f" "$upload_url")
+            else
+              resp=$(curl -fsSL -H "x-apikey: $VT_API_KEY" -F "file=@$f" \
+                "https://www.virustotal.com/api/v3/files")
+            fi
+
+            analysis_id=$(echo "$resp" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+            echo "Analysis id: $analysis_id"
+
+            # Poll up to 10 minutes for completion
+            for i in $(seq 1 60); do
+              sleep 10
+              status_json=$(curl -fsSL -H "x-apikey: $VT_API_KEY" \
+                "https://www.virustotal.com/api/v3/analyses/$analysis_id")
+              status=$(echo "$status_json" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["attributes"]["status"])')
+              if [ "$status" = "completed" ]; then
+                stats=$(echo "$status_json" | python3 -c 'import sys,json;print(json.dumps(json.load(sys.stdin)["data"]["attributes"]["stats"]))')
+                malicious=$(echo "$stats" | python3 -c 'import sys,json;print(json.load(sys.stdin)["malicious"])')
+                suspicious=$(echo "$stats" | python3 -c 'import sys,json;print(json.load(sys.stdin)["suspicious"])')
+                echo "Stats: $stats"
+                if [ "$malicious" -gt 0 ] || [ "$suspicious" -gt 0 ]; then
+                  echo "::error file=$name::VirusTotal flagged $name (malicious=$malicious suspicious=$suspicious)"
+                  fail=1
+                fi
+                break
+              fi
+              echo "Still $status — attempt $i/60"
+            done
+            echo "::endgroup::"
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::One or more artifacts were flagged. Aborting release."
+            exit 1
+          fi
+          echo "All artifacts cleared VirusTotal."

@@ -1,0 +1,64 @@
+name: Defender Submission
+
+# Submits the daemon and Electron installer to Microsoft Defender false-positive
+# review queue after each successful Build & Release. Reduces SmartScreen friction
+# for end users. The actual portal does not have a public REST API — the script
+# wraps the documented multipart form upload and skips gracefully if creds are not
+# configured (so forks without the secret continue to build cleanly).
+#
+# Required repo secrets:
+#   MSDEFENDER_USER   — Microsoft Partner account email
+#   MSDEFENDER_TOKEN  — Bearer token captured from an interactive login
+
+on:
+  workflow_run:
+    workflows: ["Build & Release"]
+    types:
+      - completed
+    branches:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build & Release run id whose artifacts to submit'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  submit:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Build & Release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          run-id: ${{ github.event.workflow_run.id || inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+
+      - name: Submit each Windows artifact
+        env:
+          MSDEFENDER_USER: ${{ secrets.MSDEFENDER_USER }}
+          MSDEFENDER_TOKEN: ${{ secrets.MSDEFENDER_TOKEN }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $candidates = Get-ChildItem -Recurse ./artifacts -Include *.exe,*-portable.zip,wdc-daemon* | `
+                        Where-Object { -not $_.PSIsContainer }
+          if (-not $candidates) {
+            Write-Error "No Windows artifacts to submit"
+            exit 1
+          }
+          foreach ($f in $candidates) {
+            Write-Host "Submitting $($f.FullName)..."
+            pwsh ./scripts/submit-defender.ps1 -FilePath $f.FullName `
+                 -Notes "NKS WebDev Console release build (commit ${{ github.sha }})"
+          }
