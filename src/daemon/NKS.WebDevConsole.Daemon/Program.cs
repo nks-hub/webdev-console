@@ -35,6 +35,7 @@ builder.Services.AddSingleton<TelemetryConsent>();
 builder.Services.AddSingleton<PluginState>();
 builder.Services.AddSingleton<PhpExtensionOverrides>();
 builder.Services.AddSingleton<SettingsStore>();
+builder.Services.AddSingleton<WindowsFirewallManager>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
@@ -650,6 +651,22 @@ foreach (var siteToApply in siteManager.Sites.Values)
     {
         Console.WriteLine($"[startup] failed to re-apply site {siteToApply.Domain}: {ex.Message}");
     }
+}
+
+// Pre-register Windows Defender Firewall rules for managed service ports
+// so the user doesn't see the "Allow access" dialog on every first bind.
+// Silently no-ops on non-Windows, non-admin, or when rules already exist.
+// Best-effort: failures log warnings but never block daemon startup.
+try
+{
+    var firewall = app.Services.GetRequiredService<WindowsFirewallManager>();
+    var created = await firewall.EnsureRulesRegisteredAsync();
+    if (created > 0)
+        Console.WriteLine($"[firewall] registered {created} inbound rule(s) for managed service ports");
+}
+catch (Exception fwEx)
+{
+    Console.WriteLine($"[firewall] rule registration skipped: {fwEx.Message}");
 }
 
 // Auto-start services if setting enabled (default: true). Backed by SettingsStore
