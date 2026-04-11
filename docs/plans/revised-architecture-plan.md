@@ -385,7 +385,7 @@ Already largely completed by `wdc-poc/`. Remaining verification:
 
 **ALL PHASES 0-6 COMPLETE.** 72/72 plan items + 28 user-mandated security/UX fixes shipped across 32 commits in a single 2-day session. Runtime verified end-to-end via CDP introspection: Electron remains Connected across daemon restarts thanks to live-refresh preload + fast-retry cascade in the daemon store.
 
-### Phase 7: Post-v1 Polish (80% complete 2026-04-11)
+### Phase 7: Post-v1 Polish (complete 2026-04-11)
 
 Items discovered during the v1 audit cycle that are valuable but not blocking the v1 tag:
 
@@ -399,6 +399,30 @@ Items discovered during the v1 audit cycle that are valuable but not blocking th
 - [x] First-run onboarding wizard (`OnboardingWizard.vue` — 3-step el-dialog: binaries → mkcert CA → create first site, `/api/onboarding/state` + `/api/onboarding/complete` endpoints)
 - [x] Sentry/telemetry opt-in with explicit consent — off by default, `TelemetryConsent` singleton persists to `~/.wdc/data/telemetry-consent.json`, `GET/POST/DELETE /api/telemetry/consent`, sub-flags force-off when `enabled=false`
 - [x] Marketplace UI: `/api/plugins/install` endpoint + install button with HTTPS-only + traversal protection + restart-required flag
+
+### Phase 7b: v1 Shipping Blockers (complete 2026-04-11, wide-audit cycle)
+
+Discovered during the 90-min wide audit pass on top of Phase 7. These close the last real gaps between "feature-complete" and "cleanly shippable":
+
+- [x] Service start/stop/restart endpoints wrap module calls in try/catch — raw 500s replaced with `Results.Problem()` so frontend can display the real failure reason (`Program.cs` lines 517-591)
+- [x] ConfigValidator dispatches by `serviceId` — Apache (`httpd -t`), PHP (`php --php-ini`), MySQL (`mysqld --validate-config`), Redis (parse-only with `--port 0`). Monaco save-and-apply now lints the actual service's syntax instead of silently accepting anything.
+- [x] `wdc uninstall` CLI + `POST /api/uninstall` — destructive cleanup with `dryRun` / `purge` / `hosts` flags, mandatory `confirm: "YES-UNINSTALL"` token for destructive calls, automatic pre-uninstall safety backup before any deletion
+- [x] Service plugin orphan process kill — all three long-running services (Redis, MySQL, Mailpit) now kill orphaned child processes from crashed prior daemon runs via dual strategy: (1) `MainModule.FileName` path match, (2) `Get-NetTCPConnection` port-holder match verified by process name. MySQL `OnProcessExited` also handles the 8.x Windows angel/child process model by polling the pidfile for up to 2 s and re-attaching to the real mysqld.
+- [x] SSL vhost path fix — `SiteManager.GenerateVhostAsync` now emits `cert.pem`/`key.pem` under `~/.wdc/ssl/sites/{domain}/` (previously wrote `.crt`/`.key` paths that never existed). Regression guard added to e2e scenario #7.
+- [x] `TargetInvocationException` unwrap in `SiteOrchestrator.InvokeAsync` — cross-ALC plugin errors now propagate the inner exception with full stack trace via `ExceptionDispatchInfo.Capture`
+- [x] Domain validation tightening — reject `%` (URL encoding), any `..` substring (not just `../`/`..\`), enforce RFC 1035 63-char per-DNS-label limit
+- [x] `MetricsChart` container height lock — `height`/`min-height`/`max-height` all pinned to prop value via Vue SFC `v-bind` style so the ECharts canvas cannot stretch the flex parent under `ResizeObserver`
+- [x] Auto-update is a **known post-v1 limitation** — no self-update mechanism in v1. Updates require manual re-download of the release zip. Tracked for Phase 8 (see below).
+
+### Phase 8: Future Work (post-v1)
+
+Deferred items that aren't shipping blockers but are on the roadmap after tagging v1:
+
+- [ ] Self-update mechanism — check GitHub releases API, download + verify signature, swap in-place via the installer. Options: Velopack, Squirrel.Windows, or hand-rolled. Not blocking because users can re-download from the releases page.
+- [ ] Extended P2 e2e scenarios — wiring the remaining scenarios from `docs/e2e-scenarios.md` into the Node runner. Current coverage: 13 scenario modules, 12 passing, 1 skipped (Caddy binary not installed on dev host).
+- [ ] Vhost history file archival on every update — `SiteOrchestrator.ApplyAsync` should snapshot the previous `~/.wdc/generated/{domain}.conf` into `history/` unconditionally, not only when `AtomicWriter.WriteAsync` sees a pre-existing file. Today history is implicit via the atomic writer; making it explicit adds clarity.
+- [ ] Settings persistence for `autoStartEnabled` and similar runtime toggles — today `Program.cs` hardcodes `autoStartEnabled = true`. A `SettingsStore` singleton mirroring `TelemetryConsent`/`PluginState` would unblock the Settings page UI for these knobs.
+- [ ] Windows Firewall rule registration for managed service ports (Apache 80, MySQL 3306, etc.) — today the user must grant the UAC prompt manually on first bind. A `netsh advfirewall` helper would pre-register the rules on first daemon run.
 
 ---
 
