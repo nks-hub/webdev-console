@@ -244,9 +244,37 @@ public sealed class SiteOrchestrator
         {
             var cf = s.Cloudflare!;
             var hostname = $"{cf.Subdomain}.{cf.ZoneName}";
-            var service = $"{cf.Protocol}://{cf.LocalService}";
-            // ctor: (string Hostname, string Service, string? HttpHostHeader = null)
-            ruleList.Add(ruleCtor.Invoke(new object?[] { hostname, service, s.Domain }));
+
+            // Choose between http://localhost:{httpPort} and https://localhost:{httpsPort}
+            // based on whether the local vhost has SSL enabled. Critical: sites with
+            // sslEnabled have an Apache HTTP→HTTPS redirect (`RewriteRule ^(.*)$
+            // https://%{HTTP_HOST}$1 [R=301,L]`). If cloudflared forwards to plain HTTP,
+            // Apache bounces every request to https://{local-domain} which is not
+            // publicly reachable — visitor gets a redirect loop + DNS error.
+            // Going straight to local HTTPS with noTLSVerify + originServerName sends
+            // mkcert-signed traffic directly to the HTTPS vhost, skipping the redirect.
+            string service;
+            string? originServerName = null;
+            bool noTLSVerify = false;
+
+            if (s.SslEnabled)
+            {
+                var httpsPort = s.HttpsPort > 0 ? s.HttpsPort : 443;
+                service = $"https://localhost:{httpsPort}";
+                originServerName = s.Domain;
+                noTLSVerify = true; // mkcert-signed certs aren't publicly trusted
+            }
+            else
+            {
+                var httpPort = s.HttpPort > 0 ? s.HttpPort : 80;
+                service = $"http://localhost:{httpPort}";
+            }
+
+            // Ctor signature: (Hostname, Service, HttpHostHeader?, OriginServerName?, NoTLSVerify)
+            ruleList.Add(ruleCtor.Invoke(new object?[]
+            {
+                hostname, service, s.Domain, originServerName, noTLSVerify,
+            }));
         }
 
         var ingressMethod = apiType.GetMethod("UpdateTunnelIngressAsync");

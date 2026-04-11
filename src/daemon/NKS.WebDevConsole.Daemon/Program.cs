@@ -1485,8 +1485,30 @@ app.MapPost("/api/cloudflare/sync", async (IServiceProvider sp, SiteManager sm) 
         {
             var cf = s.Cloudflare!;
             var hostname = $"{cf.Subdomain}.{cf.ZoneName}";
-            var service = $"{cf.Protocol}://{cf.LocalService}";
-            rules.Add(ruleCtor.Invoke(new object?[] { hostname, service, s.Domain }));
+
+            // Mirror SiteOrchestrator.SyncCloudflareIfConfiguredAsync — pick HTTPS
+            // when the local vhost has SSL so cloudflared bypasses the Apache
+            // HTTP→HTTPS redirect. See that method for the full rationale.
+            string service;
+            string? originServerName = null;
+            bool noTLSVerify = false;
+            if (s.SslEnabled)
+            {
+                var httpsPort = s.HttpsPort > 0 ? s.HttpsPort : 443;
+                service = $"https://localhost:{httpsPort}";
+                originServerName = s.Domain;
+                noTLSVerify = true;
+            }
+            else
+            {
+                var httpPort = s.HttpPort > 0 ? s.HttpPort : 80;
+                service = $"http://localhost:{httpPort}";
+            }
+
+            rules.Add(ruleCtor.Invoke(new object?[]
+            {
+                hostname, service, s.Domain, originServerName, noTLSVerify,
+            }));
         }
 
         var ingressMethod = api.GetType().GetMethod("UpdateTunnelIngressAsync");
