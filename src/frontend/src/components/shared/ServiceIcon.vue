@@ -1,7 +1,7 @@
 <template>
   <span class="svc-icon" :class="{ inactive: !active }" :data-service="service">
     <img v-if="iconUrl" :src="iconUrl" :alt="service" draggable="false" @error="onError" />
-    <span v-else class="fallback">{{ (service || '?').charAt(0).toUpperCase() }}</span>
+    <span v-else class="fallback">{{ fallbackLetter }}</span>
   </span>
 </template>
 
@@ -80,6 +80,17 @@ const iconUrl = computed(() => {
 function onError() {
   loadError.value = true
 }
+
+// Pick a meaningful fallback letter when neither daemon nor static icon exists.
+// Plugin ids like "nks.wdc.hosts" have "N" as first char which is useless for
+// identification. Use the LAST segment after the final dot ("hosts" → "H"),
+// falling through to the raw service id if there are no dots.
+const fallbackLetter = computed(() => {
+  const s = props.service || ''
+  if (!s) return '?'
+  const lastSegment = s.includes('.') ? s.substring(s.lastIndexOf('.') + 1) : s
+  return (lastSegment || s).charAt(0).toUpperCase()
+})
 
 watch(() => props.service, () => { loadError.value = false })
 </script>

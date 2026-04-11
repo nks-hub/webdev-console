@@ -262,11 +262,29 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 .el-button--primary {
   background: var(--wdc-accent) !important;
   border-color: var(--wdc-accent) !important;
+  color: var(--wdc-bg) !important; /* dark text on bright accent — ~12:1 in dark mode */
 }
 
 .el-button--primary:hover {
   background: var(--wdc-accent-2) !important;
   border-color: var(--wdc-accent-2) !important;
+}
+
+/* Plain primary: the global .el-button--primary rule above forces the accent
+   background on ALL primary variants (solid + plain). Without an explicit
+   is-plain override, Element Plus's default plain text color (#409EFF) ended
+   up on the accent #56c2ff background → ~1.46:1 contrast, hard fail WCAG.
+   Use a transparent bg with accent border + readable text so plain primary
+   buttons look distinctly "outlined" vs the solid variant AND pass AA. */
+.el-button.is-plain.el-button--primary {
+  background: transparent !important;
+  border-color: var(--wdc-accent) !important;
+  color: var(--wdc-accent) !important;
+}
+.el-button.is-plain.el-button--primary:hover {
+  background: var(--wdc-accent-dim) !important;
+  border-color: var(--wdc-accent) !important;
+  color: var(--wdc-text) !important;
 }
 
 .el-button.is-plain.el-button--success {

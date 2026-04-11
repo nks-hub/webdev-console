@@ -167,14 +167,40 @@ export const fetchPluginUi = (id: string) =>
   json<import('./types').PluginUiDefinition>(`/api/plugins/${id}/ui`)
 
 // Binaries
-export const fetchBinaryCatalog = (): Promise<Record<string, BinaryRelease[]>> =>
-  json('/api/binaries/catalog')
+// Daemon returns a FLAT BinaryRelease[] (each entry has .app) rather than the
+// Record<app, BinaryRelease[]> the frontend used to assume. Group on the client
+// so Binaries.vue keeps its existing shape without needing a daemon API change.
+export const fetchBinaryCatalog = async (): Promise<Record<string, BinaryRelease[]>> => {
+  const flat = await json<BinaryRelease[] | Record<string, BinaryRelease[]>>('/api/binaries/catalog')
+  // If the daemon ever starts returning the grouped shape directly, pass it
+  // through untouched (arrays have length, objects have keys).
+  if (!Array.isArray(flat)) return flat as Record<string, BinaryRelease[]>
+  const grouped: Record<string, BinaryRelease[]> = {}
+  for (const entry of flat) {
+    const app = (entry as any).app ?? ''
+    if (!app) continue
+    if (!grouped[app]) grouped[app] = []
+    grouped[app].push(entry)
+  }
+  return grouped
+}
 
 export const fetchBinaryCatalogForApp = (app: string): Promise<BinaryRelease[]> =>
   json(`/api/binaries/catalog/${app}`)
 
-export const fetchInstalledBinaries = (): Promise<InstalledBinary[]> =>
-  json('/api/binaries/installed')
+export const fetchInstalledBinaries = async (): Promise<InstalledBinary[]> => {
+  // Daemon uses `installPath` + `executable` in its DTO while the frontend
+  // type exposes `path`. Normalise at the API boundary so Binaries.vue can
+  // keep using InstalledBinary.path without knowing about the naming clash.
+  const raw = await json<any[]>('/api/binaries/installed')
+  if (!Array.isArray(raw)) return []
+  return raw.map(r => ({
+    app: r.app,
+    version: r.version,
+    path: r.path ?? r.installPath ?? r.executable ?? '',
+    isDefault: r.isDefault ?? false,
+  }))
+}
 
 export const installBinary = (app: string, version: string) =>
   json<{ ok: boolean; path?: string; message?: string }>('/api/binaries/install', {
