@@ -406,6 +406,12 @@ ipconfig /flushdns | Out-Null
             var line = rawLine.Trim();
             if (line.Length == 0 || line.StartsWith("#")) continue;
 
+            // Drop any inline comment BEFORE tokenising — a line like
+            // "127.0.0.1 foo.com # disabled bar.com" must not count bar.com as mapped.
+            var commentIdx = line.IndexOf('#');
+            if (commentIdx >= 0) line = line.Substring(0, commentIdx).TrimEnd();
+            if (line.Length == 0) continue;
+
             // split on whitespace/tabs: first token IP, remaining tokens are hostnames
             var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2) continue;
@@ -414,9 +420,6 @@ ipconfig /flushdns | Out-Null
             for (int i = 1; i < parts.Length; i++)
             {
                 var host = parts[i];
-                // strip inline comments
-                var hash = host.IndexOf('#');
-                if (hash >= 0) host = host.Substring(0, hash);
                 if (host.Length > 0) mapped.Add(host);
             }
         }

@@ -366,12 +366,17 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   border-bottom: none !important;
 }
 
-.el-table__body tr.el-table__row:hover td {
-  background: var(--wdc-hover) !important;
-}
-
 .el-table--striped .el-table__body tr.el-table__row--striped td {
   background: rgba(255, 255, 255, 0.015) !important;
+}
+
+/* Hover MUST be declared AFTER the striped selector AND win on both striped and
+   non-striped rows. Without the --striped-qualified selector the hover rule
+   ties in specificity with the striped rule and loses by source order, so
+   hover was only visible on odd (non-striped) rows. Lock in both cases. */
+.el-table__body tr.el-table__row:hover td,
+.el-table--striped .el-table__body tr.el-table__row--striped:hover td {
+  background: var(--wdc-hover) !important;
 }
 
 .el-table__body-wrapper {
