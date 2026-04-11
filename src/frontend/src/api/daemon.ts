@@ -224,6 +224,38 @@ export interface ConfigFile {
 export const fetchServiceConfig = (id: string): Promise<{ serviceId: string; files: ConfigFile[] }> =>
   json(`/api/services/${id}/config`)
 
+export interface ConfigValidationResult {
+  isValid: boolean
+  output: string
+}
+
+export const validateServiceConfig = (
+  serviceId: string,
+  configPath: string,
+  content?: string,
+): Promise<ConfigValidationResult> =>
+  json('/api/config/validate', {
+    method: 'POST',
+    body: JSON.stringify({ serviceId, configPath, content }),
+  })
+
+export interface SaveServiceConfigResult {
+  saved: boolean
+  applied: boolean
+  restarted: boolean
+  message: string
+}
+
+export const saveServiceConfig = (
+  id: string,
+  path: string,
+  content: string,
+): Promise<SaveServiceConfigResult> =>
+  json(`/api/services/${id}/config`, {
+    method: 'POST',
+    body: JSON.stringify({ path, content }),
+  })
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.

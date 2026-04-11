@@ -134,7 +134,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { fetchServiceConfig, type ConfigFile } from '../../api/daemon'
+import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
 import MonacoEditor from './MonacoEditor.vue'
 
@@ -264,15 +264,13 @@ function revert() {
 }
 
 async function validateOnly() {
-  if (!activeFile.value) return
+  if (!activeFile.value || !props.serviceId) return
   validation.state = 'validating'
   validation.error = ''
   try {
-    // TODO: wire to daemon /api/config/validate when the frontend endpoint
-    // is added. For now this is an optimistic passthrough that surfaces the
-    // SSE-driven validation state from daemonStore.validation if available.
-    await new Promise(r => setTimeout(r, 200))
-    validation.state = 'passed'
+    const result = await validateServiceConfig(props.serviceId, activeFile.value.path, editingContent.value)
+    validation.state = result.isValid ? 'passed' : 'failed'
+    validation.error = result.isValid ? '' : (result.output || 'Validation failed')
   } catch (err: unknown) {
     validation.state = 'failed'
     validation.error = err instanceof Error ? err.message : 'Validation failed'
@@ -280,12 +278,25 @@ async function validateOnly() {
 }
 
 async function saveCurrent() {
-  if (!activeFile.value || !dirty.value) return
+  if (!activeFile.value || !dirty.value || !props.serviceId) return
   saving.value = true
   try {
-    // TODO: wire to POST /api/services/{id}/config when the endpoint is added.
-    // Keeping the local draft so users don't lose their edits in the meantime.
-    ElMessage.info('Save endpoint not yet wired — draft kept locally')
+    const validationResult = await validateServiceConfig(props.serviceId, activeFile.value.path, editingContent.value)
+    if (!validationResult.isValid) {
+      validation.state = 'failed'
+      validation.error = validationResult.output || 'Validation failed'
+      return
+    }
+
+    const result = await saveServiceConfig(props.serviceId, activeFile.value.path, editingContent.value)
+    originalContents[activeFile.value.path] = editingContent.value
+    editedContents[activeFile.value.path] = editingContent.value
+    dirtyFiles.delete(activeFile.value.path)
+    validation.state = 'idle'
+    validation.error = ''
+    await load()
+    if (result.applied) ElMessage.success(result.message)
+    else ElMessage.warning(result.message)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Save failed'
     ElMessage.error(msg)

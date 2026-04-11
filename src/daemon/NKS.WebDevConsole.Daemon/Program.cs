@@ -43,6 +43,10 @@ builder.Services.AddHostedService<HealthMonitor>();
 builder.Services.AddSingleton<TemplateEngine>();
 builder.Services.AddSingleton<ConfigValidator>();
 builder.Services.AddSingleton<AtomicWriter>();
+builder.Services.AddSingleton(sp => new ServiceConfigManager(
+    sp.GetRequiredService<AtomicWriter>(),
+    NKS.WebDevConsole.Core.Services.WdcPaths.Root
+));
 builder.Services.AddSingleton(sp => new SiteManager(
     sp.GetRequiredService<ILogger<SiteManager>>(),
     sp.GetRequiredService<TemplateEngine>(),
@@ -1318,67 +1322,44 @@ app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int
 });
 
 // Service config read — returns the main config file content for a service
-app.MapGet("/api/services/{id}/config", async (string id) =>
+app.MapGet("/api/services/{id}/config", async (string id, ServiceConfigManager configManager) =>
 {
-    var wdcHome = NKS.WebDevConsole.Core.Services.WdcPaths.Root;
-    var configs = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["apache"] = new[] {
-            Path.Combine(wdcHome, "binaries", "apache"),
-        },
-        ["mysql"] = new[] {
-            Path.Combine(wdcHome, "data", "mysql", "my.ini"),
-            Path.Combine(wdcHome, "binaries", "mysql"),
-        },
-        ["php"] = new[] {
-            Path.Combine(wdcHome, "binaries", "php"),
-        },
-        ["redis"] = new[] {
-            Path.Combine(wdcHome, "binaries", "redis"),
-        },
-    };
-
-    var files = new List<object>();
-
-    // Find actual config files
-    if (id.Equals("apache", StringComparison.OrdinalIgnoreCase))
-    {
-        // httpd.conf + all vhost configs
-        var apacheRoot = Directory.GetDirectories(Path.Combine(wdcHome, "binaries", "apache"))
-            .Where(d => !Path.GetFileName(d).StartsWith('.'))
-            .OrderByDescending(d => d)
-            .FirstOrDefault();
-        if (apacheRoot != null)
-        {
-            var httpdConf = Path.Combine(apacheRoot, "conf", "httpd.conf");
-            if (File.Exists(httpdConf))
-                files.Add(new { name = "httpd.conf", path = httpdConf, content = await File.ReadAllTextAsync(httpdConf) });
-
-            var vhostsDir = Path.Combine(apacheRoot, "conf", "sites-enabled");
-            if (Directory.Exists(vhostsDir))
-                foreach (var f in Directory.GetFiles(vhostsDir, "*.conf"))
-                    files.Add(new { name = Path.GetFileName(f), path = f, content = await File.ReadAllTextAsync(f) });
-        }
-    }
-    else if (id.Equals("php", StringComparison.OrdinalIgnoreCase))
-    {
-        var phpRoot = Path.Combine(wdcHome, "binaries", "php");
-        if (Directory.Exists(phpRoot))
-            foreach (var vdir in Directory.GetDirectories(phpRoot).Where(d => !Path.GetFileName(d).StartsWith('.')))
-            {
-                var ini = Path.Combine(vdir, "php.ini");
-                if (File.Exists(ini))
-                    files.Add(new { name = $"php.ini ({Path.GetFileName(vdir)})", path = ini, content = await File.ReadAllTextAsync(ini) });
-            }
-    }
-    else if (id.Equals("mysql", StringComparison.OrdinalIgnoreCase))
-    {
-        var myIni = Path.Combine(wdcHome, "data", "mysql", "my.ini");
-        if (File.Exists(myIni))
-            files.Add(new { name = "my.ini", path = myIni, content = await File.ReadAllTextAsync(myIni) });
-    }
-
+    var files = await configManager.GetFilesAsync(id);
     return Results.Ok(new { serviceId = id, files });
+});
+
+app.MapPost("/api/services/{id}/config", async (
+    string id,
+    HttpContext ctx,
+    ServiceConfigManager configManager,
+    IServiceProvider sp) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<ServiceConfigWriteRequest>();
+    if (body == null || string.IsNullOrWhiteSpace(body.Path))
+        return Results.BadRequest(new { error = "path is required" });
+
+    await configManager.SaveAsync(id, body.Path, body.Content ?? string.Empty, ctx.RequestAborted);
+
+    var modules = sp.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
+        || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null)
+        return Results.Ok(new { saved = true, applied = false, restarted = false, message = "Configuration saved. No matching service module found to apply changes." });
+
+    var status = await module.GetStatusAsync(ctx.RequestAborted);
+    if (status.State != ServiceState.Running)
+        return Results.Ok(new { saved = true, applied = false, restarted = false, message = "Configuration saved. Service is stopped, so changes will apply on next start." });
+
+    try
+    {
+        await module.StopAsync(ctx.RequestAborted);
+        await module.StartAsync(ctx.RequestAborted);
+        return Results.Ok(new { saved = true, applied = true, restarted = true, message = "Configuration saved and service restarted." });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { saved = true, applied = false, restarted = false, message = $"Configuration saved, but service restart failed: {ex.Message}" });
+    }
 });
 
 // Config validation — dispatches to Apache / PHP / MySQL / Redis based on serviceId.
@@ -1387,12 +1368,14 @@ app.MapGet("/api/services/{id}/config", async (string id) =>
 // Broadcasts SSE `validation` events (phase: started|passed|failed) so the UI
 // ValidationBadge can update live — originally specified in Phase 2 but never
 // wired; filled in during the 2026-04-11 strict audit cycle.
-app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm, SseService sse) =>
+app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm, SseService sse, ServiceConfigManager configManager) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
     if (body == null) return Results.BadRequest();
 
     var service = (body.ServiceId ?? "apache").ToLowerInvariant();
+    if (!configManager.TryNormalizeManagedPath(service, body.ConfigPath, out var normalizedConfigPath, out var pathError))
+        return Results.BadRequest(new { isValid = false, output = pathError });
 
     // Emit "started" immediately so the UI can show the spinner while
     // the validator binary runs.
@@ -1400,7 +1383,7 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
     {
         phase = "started",
         serviceId = service,
-        configPath = body.ConfigPath,
+        configPath = normalizedConfigPath,
     });
 
     async Task<IResult> Finish(bool isValid, string output)
@@ -1409,10 +1392,57 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
         {
             phase = isValid ? "passed" : "failed",
             serviceId = service,
-            configPath = body.ConfigPath,
+            configPath = normalizedConfigPath,
             output,
         });
         return Results.Ok(new { isValid, output });
+    }
+
+    var apacheRootConfigPath = service is "apache" or "httpd"
+        ? (await configManager.GetFilesAsync("apache")).FirstOrDefault(f => f.Name.Equals("httpd.conf", StringComparison.OrdinalIgnoreCase))?.Path
+        : null;
+
+    async Task<(bool IsValid, string Output)> ValidateDraftAsync(Func<string, Task<(bool IsValid, string Output)>> run)
+    {
+        if (service is "apache" or "httpd"
+            && !string.IsNullOrEmpty(apacheRootConfigPath)
+            && !string.Equals(normalizedConfigPath, apacheRootConfigPath, StringComparison.OrdinalIgnoreCase))
+        {
+            if (body.Content is null)
+                return await run(apacheRootConfigPath);
+
+            var originalContent = await File.ReadAllTextAsync(normalizedConfigPath, ctx.RequestAborted);
+            await File.WriteAllTextAsync(normalizedConfigPath, body.Content, ctx.RequestAborted);
+            try
+            {
+                return await run(apacheRootConfigPath);
+            }
+            finally
+            {
+                await File.WriteAllTextAsync(normalizedConfigPath, originalContent, ctx.RequestAborted);
+            }
+        }
+
+        if (body.Content is null)
+            return await run(normalizedConfigPath);
+
+        var draftPath = await configManager.WriteDraftAsync(service, normalizedConfigPath, body.Content, ctx.RequestAborted);
+        try
+        {
+            return await run(draftPath);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(draftPath))
+                    File.Delete(draftPath);
+            }
+            catch
+            {
+                // Best-effort cleanup only — startup tmp sweep catches leftovers.
+            }
+        }
     }
 
     // Helper: resolve a managed binary executable for a given app key, never falling
@@ -1439,7 +1469,7 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
             var httpdPath = ResolveBinary("apache", "nks.wdc.apache", "HttpdPath");
             if (string.IsNullOrEmpty(httpdPath) || !File.Exists(httpdPath))
                 return await Finish(false, "Apache httpd not found in managed binaries — install it first via POST /api/binaries/install");
-            var (isValid, output) = await validator.ValidateApacheConfig(httpdPath, body.ConfigPath);
+            var (isValid, output) = await ValidateDraftAsync(path => validator.ValidateApacheConfig(httpdPath, path));
             return await Finish(isValid, output);
         }
         case "php":
@@ -1447,7 +1477,7 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
             var phpPath = bm.ListInstalled("php").FirstOrDefault()?.Executable;
             if (string.IsNullOrEmpty(phpPath) || !File.Exists(phpPath))
                 return await Finish(false, "PHP not found in managed binaries");
-            var (isValid, output) = await validator.ValidatePhpIni(phpPath, body.ConfigPath);
+            var (isValid, output) = await ValidateDraftAsync(path => validator.ValidatePhpIni(phpPath, path));
             return await Finish(isValid, output);
         }
         case "mysql":
@@ -1456,7 +1486,7 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
             var mysqldPath = bm.ListInstalled("mysql").FirstOrDefault()?.Executable;
             if (string.IsNullOrEmpty(mysqldPath) || !File.Exists(mysqldPath))
                 return await Finish(false, "mysqld not found in managed binaries");
-            var (isValid, output) = await validator.ValidateMyCnf(mysqldPath, body.ConfigPath);
+            var (isValid, output) = await ValidateDraftAsync(path => validator.ValidateMyCnf(mysqldPath, path));
             return await Finish(isValid, output);
         }
         case "redis":
@@ -1464,7 +1494,7 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
             var redisPath = bm.ListInstalled("redis").FirstOrDefault()?.Executable;
             if (string.IsNullOrEmpty(redisPath) || !File.Exists(redisPath))
                 return await Finish(false, "redis-server not found in managed binaries");
-            var (isValid, output) = await validator.ValidateRedisConf(redisPath, body.ConfigPath);
+            var (isValid, output) = await ValidateDraftAsync(path => validator.ValidateRedisConf(redisPath, path));
             return await Finish(isValid, output);
         }
         default:
@@ -2112,4 +2142,5 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 await app.RunAsync();
 
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
+record ServiceConfigWriteRequest(string Path, string? Content);
 record InstallBinaryRequest(string App, string Version);

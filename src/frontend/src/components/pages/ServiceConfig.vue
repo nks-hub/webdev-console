@@ -140,7 +140,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Refresh, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchServiceConfig, type ConfigFile } from '../../api/daemon'
+import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
 import MonacoEditor from '../shared/MonacoEditor.vue'
 
@@ -176,6 +176,7 @@ const editingContent = computed<string>({
     const p = activeFilePath.value
     if (!p) return
     editedContents[p] = val
+    onEdit()
   }
 })
 
@@ -228,6 +229,8 @@ async function load() {
   try {
     const data = await fetchServiceConfig(serviceId.value)
     files.value = data.files
+    for (const k of Object.keys(originalContents)) delete originalContents[k]
+    for (const k of Object.keys(editedContents)) delete editedContents[k]
     for (const f of data.files) {
       originalContents[f.path] = f.content
       editedContents[f.path] = f.content
@@ -270,9 +273,9 @@ async function validateOnly() {
   validation.state = 'validating'
   validation.error = ''
   try {
-    // TODO: call daemon validation endpoint when available
-    await new Promise(r => setTimeout(r, 300))
-    validation.state = 'passed'
+    const result = await validateServiceConfig(serviceId.value, activeFile.value.path, editingContent.value)
+    validation.state = result.isValid ? 'passed' : 'failed'
+    validation.error = result.isValid ? '' : (result.output || 'Validation failed')
   } catch (err: unknown) {
     validation.state = 'failed'
     validation.error = err instanceof Error ? err.message : 'Validation failed'
@@ -283,13 +286,27 @@ async function saveCurrent() {
   if (!activeFile.value || !dirty.value) return
   saving.value = true
   try {
-    // TODO: wire to POST /api/services/{id}/config with {path, content}
-    ElMessage.info('Save endpoint not yet wired — draft kept locally')
-    saving.value = false
+    const validationResult = await validateServiceConfig(serviceId.value, activeFile.value.path, editingContent.value)
+    if (!validationResult.isValid) {
+      validation.state = 'failed'
+      validation.error = validationResult.output || 'Validation failed'
+      return
+    }
+
+    const result = await saveServiceConfig(serviceId.value, activeFile.value.path, editingContent.value)
+    originalContents[activeFile.value.path] = editingContent.value
+    editedContents[activeFile.value.path] = editingContent.value
+    dirtyFiles.delete(activeFile.value.path)
+    validation.state = 'idle'
+    validation.error = ''
+    await load()
+    if (result.applied) ElMessage.success(result.message)
+    else ElMessage.warning(result.message)
   } catch (err: unknown) {
-    saving.value = false
     const msg = err instanceof Error ? err.message : 'Save failed'
     ElMessage.error(msg)
+  } finally {
+    saving.value = false
   }
 }
 
