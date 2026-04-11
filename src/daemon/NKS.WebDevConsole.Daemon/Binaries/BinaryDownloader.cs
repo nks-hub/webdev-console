@@ -87,7 +87,54 @@ public sealed class BinaryDownloader
         if (ext != ".zip")
             throw new NotSupportedException($"Archive format not supported: {ext}");
 
-        await Task.Run(() => ZipFile.ExtractToDirectory(archivePath, destinationDir, overwriteFiles: true), ct);
+        // Explicit zip-slip defense on top of .NET 9's built-in `ExtractRelativeToDirectory`
+        // check — the managed binary catalog is network-sourced and mirrors Apache
+        // Lounge / PHP.net / mysql.com, all of which are high-value targets. Better to
+        // fail loudly on a suspicious entry than trust a single layer of defense.
+        await Task.Run(() =>
+        {
+            var destFull = Path.GetFullPath(destinationDir).TrimEnd(Path.DirectorySeparatorChar)
+                         + Path.DirectorySeparatorChar;
+            using var zip = ZipFile.OpenRead(archivePath);
+            foreach (var entry in zip.Entries)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                // Skip anything containing a parent-directory segment, regardless of
+                // separator style. .NET 9 already does this, but we keep the guard
+                // explicit for defense-in-depth and so the intent is obvious in code.
+                if (entry.FullName.Contains(".."))
+                {
+                    _logger.LogWarning(
+                        "Skipping suspicious zip entry with parent-dir segment: {Entry}",
+                        entry.FullName);
+                    continue;
+                }
+
+                var relative = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                var destPath = Path.GetFullPath(Path.Combine(destinationDir, relative));
+
+                // Resolved path must live strictly inside the destination root.
+                if (!destPath.StartsWith(destFull, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Skipping zip entry that would escape destination root: {Entry} → {Path}",
+                        entry.FullName, destPath);
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(entry.Name))
+                {
+                    // Directory entry (trailing slash) — create it.
+                    Directory.CreateDirectory(destPath);
+                    continue;
+                }
+
+                Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                entry.ExtractToFile(destPath, overwrite: true);
+            }
+        }, ct);
+
         _logger.LogInformation("Extraction complete: {Dir}", destinationDir);
         return destinationDir;
     }

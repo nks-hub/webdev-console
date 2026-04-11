@@ -653,6 +653,26 @@ foreach (var siteToApply in siteManager.Sites.Values)
     }
 }
 
+// Sweep orphan *.tmp files left over from a previous daemon crash or taskkill
+// during an in-progress AtomicWriter.WriteAsync. Only touches files older than
+// 1 hour so we don't clobber an in-flight write from a concurrent tool.
+try
+{
+    var sitesRoot = NKS.WebDevConsole.Core.Services.WdcPaths.SitesRoot;
+    var generatedRoot = NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot;
+    var orphanCount = 0;
+    if (Directory.Exists(sitesRoot))
+        orphanCount += AtomicWriter.CleanupOrphanTempFiles(sitesRoot);
+    if (Directory.Exists(generatedRoot))
+        orphanCount += AtomicWriter.CleanupOrphanTempFiles(generatedRoot);
+    if (orphanCount > 0)
+        Console.WriteLine($"[startup] reaped {orphanCount} orphan *.tmp file(s) from prior daemon crash");
+}
+catch (Exception tmpEx)
+{
+    Console.WriteLine($"[startup] orphan tmp cleanup failed: {tmpEx.Message}");
+}
+
 // Pre-register Windows Defender Firewall rules for managed service ports
 // so the user doesn't see the "Allow access" dialog on every first bind.
 // Silently no-ops on non-Windows, non-admin, or when rules already exist.
