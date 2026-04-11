@@ -44,11 +44,21 @@ public sealed class BackupManager
     };
 
     public BackupManager(ILogger<BackupManager> logger)
+        : this(logger, Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".wdc"))
+    {
+    }
+
+    /// <summary>
+    /// Test-only constructor: lets tests pin the wdc root to a temp directory so
+    /// they don't touch the developer's real ~/.wdc/. Production code uses the
+    /// single-arg overload above.
+    /// </summary>
+    public BackupManager(ILogger<BackupManager> logger, string wdcRoot)
     {
         _logger = logger;
-        _wdcRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".wdc");
+        _wdcRoot = wdcRoot;
         _backupRoot = Path.Combine(_wdcRoot, "backups");
         Directory.CreateDirectory(_backupRoot);
     }
