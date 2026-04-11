@@ -1372,6 +1372,58 @@ app.MapGet("/api/cloudflare/tunnels", (IServiceProvider sp) =>
 app.MapGet("/api/cloudflare/tunnels/{tunnelId}/configuration", (string tunnelId, IServiceProvider sp) =>
     InvokeCfAsync("GetTunnelConfigurationAsync", new object[] { tunnelId, CancellationToken.None }, sp));
 
+// Replace the tunnel's ingress rules. Body shape:
+//   { "rules": [ { "hostname": "blog.nks-dev.cz", "service": "http://localhost:80" }, ... ] }
+// CloudflareApi.UpdateTunnelIngressAsync appends the mandatory catch-all
+// 404 rule automatically so callers don't have to know the protocol detail.
+app.MapPut("/api/cloudflare/tunnels/{tunnelId}/configuration",
+    async (string tunnelId, HttpContext ctx, IServiceProvider sp) =>
+{
+    var api = ResolveCloudflareServiceOrNull(sp, "CloudflareApi");
+    if (api == null) return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    if (!doc.RootElement.TryGetProperty("rules", out var rulesEl) ||
+        rulesEl.ValueKind != System.Text.Json.JsonValueKind.Array)
+    {
+        return Results.BadRequest(new { error = "Missing 'rules' array" });
+    }
+
+    // Build the plugin's TunnelIngressRule record via reflection so we don't
+    // need a direct type reference into the plugin's ALC.
+    var ruleType = api.GetType().Assembly.GetType(
+        "NKS.WebDevConsole.Plugin.Cloudflare.TunnelIngressRule");
+    if (ruleType == null)
+        return Results.Problem("TunnelIngressRule type not found in plugin assembly");
+
+    var ruleListType = typeof(List<>).MakeGenericType(ruleType);
+    var ruleList = (System.Collections.IList)Activator.CreateInstance(ruleListType)!;
+    var ruleCtor = ruleType.GetConstructors().First();
+
+    foreach (var el in rulesEl.EnumerateArray())
+    {
+        var hostname = el.TryGetProperty("hostname", out var h) ? h.GetString() ?? "" : "";
+        var service = el.TryGetProperty("service", out var s) ? s.GetString() ?? "" : "";
+        if (string.IsNullOrEmpty(hostname) || string.IsNullOrEmpty(service)) continue;
+        ruleList.Add(ruleCtor.Invoke(new object[] { hostname, service }));
+    }
+
+    var method = api.GetType().GetMethod("UpdateTunnelIngressAsync");
+    if (method == null) return Results.Problem("UpdateTunnelIngressAsync not found");
+
+    try
+    {
+        var task = (Task)method.Invoke(api, new object[] { tunnelId, ruleList, CancellationToken.None })!;
+        await task.ConfigureAwait(false);
+        var resultProp = task.GetType().GetProperty("Result");
+        return Results.Ok(resultProp?.GetValue(task));
+    }
+    catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
+    {
+        return Results.BadRequest(new { error = tie.InnerException.Message });
+    }
+});
+
 // PHP versions — delegate to PhpPlugin via reflection
 app.MapGet("/api/php/versions", () =>
 {

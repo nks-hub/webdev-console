@@ -111,6 +111,65 @@ export interface FsBrowseResponse {
 export const browseFolder = (path?: string): Promise<FsBrowseResponse> =>
   json(`/api/fs/browse${path ? `?path=${encodeURIComponent(path)}` : ''}`)
 
+// ─── Cloudflare Tunnel plugin ─────────────────────────────────────────
+export interface CloudflareConfig {
+  cloudflaredPath?: string | null
+  tunnelToken?: string | null
+  tunnelName?: string | null
+  tunnelId?: string | null
+  apiToken?: string | null
+  accountId?: string | null
+  defaultZoneId?: string | null
+  startupTimeoutSecs?: number
+}
+
+export const fetchCloudflareConfig = (): Promise<CloudflareConfig> =>
+  json('/api/cloudflare/config')
+
+export const saveCloudflareConfig = (cfg: Partial<CloudflareConfig>): Promise<CloudflareConfig> =>
+  json('/api/cloudflare/config', { method: 'PUT', body: JSON.stringify(cfg) })
+
+export const verifyCloudflareToken = (): Promise<any> =>
+  json('/api/cloudflare/verify')
+
+export const fetchCloudflareZones = (): Promise<any> =>
+  json('/api/cloudflare/zones')
+
+export const fetchCloudflareDns = (zoneId: string): Promise<any> =>
+  json(`/api/cloudflare/zones/${zoneId}/dns`)
+
+export interface CfDnsRecordCreate {
+  type: string
+  name: string
+  content: string
+  proxied?: boolean
+  ttl?: number
+}
+export const createCloudflareDns = (zoneId: string, body: CfDnsRecordCreate): Promise<any> =>
+  json(`/api/cloudflare/zones/${zoneId}/dns`, { method: 'POST', body: JSON.stringify(body) })
+
+export const deleteCloudflareDns = (zoneId: string, recordId: string): Promise<any> =>
+  json(`/api/cloudflare/zones/${zoneId}/dns/${recordId}`, { method: 'DELETE' })
+
+export const fetchCloudflareTunnels = (): Promise<any> =>
+  json('/api/cloudflare/tunnels')
+
+export const fetchCloudflareTunnelConfig = (tunnelId: string): Promise<any> =>
+  json(`/api/cloudflare/tunnels/${tunnelId}/configuration`)
+
+export interface CfIngressRule {
+  hostname: string
+  service: string
+}
+export const updateCloudflareTunnelIngress = (
+  tunnelId: string,
+  rules: CfIngressRule[],
+): Promise<any> =>
+  json(`/api/cloudflare/tunnels/${tunnelId}/configuration`, {
+    method: 'PUT',
+    body: JSON.stringify({ rules }),
+  })
+
 // Databases
 export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
   json('/api/databases')

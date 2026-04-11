@@ -21,6 +21,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   language: 'Languages',
   cache: 'Cache',
   mail: 'Mail',
+  // "tools" is the catch-all for plugins that don't fit the other buckets
+  // without forcing them into a category where the label would be misleading
+  // (e.g. Cloudflare Tunnel doesn't belong under "Cache" or "Mail").
+  tools: 'Tools',
+  networking: 'Networking',
   other: 'Other',
 }
 

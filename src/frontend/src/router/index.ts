@@ -10,6 +10,7 @@ import SslManager from '../components/pages/SslManager.vue'
 import PhpManager from '../components/pages/PhpManager.vue'
 import ServiceConfig from '../components/pages/ServiceConfig.vue'
 import SiteEdit from '../components/pages/SiteEdit.vue'
+import CloudflareTunnel from '../components/pages/CloudflareTunnel.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
@@ -19,6 +20,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/databases', component: Databases, meta: { title: 'Databases' } },
   { path: '/ssl', component: SslManager, meta: { title: 'SSL' } },
   { path: '/php', component: PhpManager, meta: { title: 'PHP' } },
+  { path: '/cloudflare', component: CloudflareTunnel, meta: { title: 'Cloudflare Tunnel' } },
   { path: '/settings', component: Settings, meta: { title: 'Settings' } },
   { path: '/plugins', component: PluginManager, meta: { title: 'Plugins' } },
   { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin' } },
