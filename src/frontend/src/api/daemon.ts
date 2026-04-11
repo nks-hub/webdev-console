@@ -107,6 +107,26 @@ export const fetchCerts = (): Promise<CertInfo[]> =>
 export const fetchPlugins = (): Promise<PluginManifest[]> =>
   json('/api/plugins')
 
+export interface MarketplacePlugin {
+  id: string
+  name: string
+  version: string
+  description: string
+  downloadUrl: string
+  author: string
+  license: string
+  installed: boolean
+}
+export interface MarketplaceResponse {
+  source: string
+  reachable: boolean
+  plugins: MarketplacePlugin[]
+  count?: number
+  error?: string
+}
+export const fetchMarketplace = (): Promise<MarketplaceResponse> =>
+  json('/api/plugins/marketplace')
+
 export const enablePlugin = (id: string) =>
   json<void>(`/api/plugins/${id}/enable`, { method: 'POST' })
 

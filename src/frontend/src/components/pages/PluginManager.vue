@@ -3,9 +3,13 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">Plugins</h1>
-        <p class="page-subtitle">{{ pluginsStore.manifests.length }} plugins installed</p>
+        <p class="page-subtitle">
+          {{ pluginsStore.manifests.length }} installed
+          <span v-if="marketplace.reachable">· {{ marketplace.plugins.length }} in marketplace</span>
+        </p>
       </div>
       <el-input
+        v-if="activeTab === 'installed'"
         v-model="search"
         placeholder="Search plugins..."
         clearable
@@ -13,11 +17,82 @@
         style="width: 220px"
         prefix-icon="Search"
       />
+      <el-button
+        v-else
+        size="small"
+        :loading="loadingMarketplace"
+        @click="reloadMarketplace"
+      >
+        Refresh
+      </el-button>
     </div>
 
+    <el-tabs v-model="activeTab" class="pm-tabs">
+      <el-tab-pane label="Installed" name="installed" />
+      <el-tab-pane name="marketplace">
+        <template #label>
+          <span>Marketplace</span>
+          <el-tag v-if="marketplace.reachable" size="small" type="success" effect="plain" style="margin-left:6px">
+            {{ marketplace.plugins.length }}
+          </el-tag>
+        </template>
+      </el-tab-pane>
+    </el-tabs>
+
     <!-- Loading skeleton -->
-    <div v-if="pluginsStore.loading" class="page-body-pad">
+    <div v-if="activeTab === 'installed' && pluginsStore.loading" class="page-body-pad">
       <el-skeleton :rows="5" animated />
+    </div>
+
+    <!-- Marketplace tab -->
+    <div v-else-if="activeTab === 'marketplace'" class="page-body-pad">
+      <el-alert
+        v-if="!marketplace.reachable && marketplace.error"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="`Marketplace unreachable: ${marketplace.error}`"
+        :description="`Source: ${marketplace.source}`"
+        style="margin-bottom: 16px"
+      />
+      <div v-if="loadingMarketplace" class="page-body-pad">
+        <el-skeleton :rows="3" animated />
+      </div>
+      <div v-else-if="marketplace.plugins.length === 0" class="pm-empty">
+        <el-empty description="No plugins available in marketplace" :image-size="60" />
+      </div>
+      <div v-else class="pm-grid">
+        <div
+          v-for="mp in marketplace.plugins"
+          :key="mp.id"
+          class="pm-card"
+          :class="{ 'pm-card--enabled': mp.installed }"
+        >
+          <div class="pm-card-header">
+            <div class="pm-card-title">
+              <span class="pm-name">{{ mp.name }}</span>
+              <el-tag v-if="mp.installed" size="small" type="success" effect="plain">installed</el-tag>
+            </div>
+          </div>
+          <div class="pm-card-desc">{{ mp.description || 'No description.' }}</div>
+          <div class="pm-card-footer">
+            <div class="pm-meta">
+              <span class="pm-version">v{{ mp.version }}</span>
+              <span v-if="mp.author" class="pm-author">by {{ mp.author }}</span>
+              <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
+            </div>
+            <el-button
+              v-if="!mp.installed"
+              size="small"
+              type="primary"
+              :disabled="!mp.downloadUrl"
+              @click="copyDownloadUrl(mp.downloadUrl)"
+            >
+              Copy URL
+            </el-button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Plugin cards grid -->
@@ -79,15 +154,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { usePluginsStore } from '../../stores/plugins'
+import { fetchMarketplace, type MarketplaceResponse } from '../../api/daemon'
 
 const router = useRouter()
 const pluginsStore = usePluginsStore()
 const search = ref('')
 const toggling = ref<Set<string>>(new Set())
+const activeTab = ref<'installed' | 'marketplace'>('installed')
+const loadingMarketplace = ref(false)
+const marketplace = reactive<MarketplaceResponse>({
+  source: '',
+  reachable: false,
+  plugins: [],
+})
+
+async function reloadMarketplace() {
+  loadingMarketplace.value = true
+  try {
+    const data = await fetchMarketplace()
+    marketplace.source = data.source
+    marketplace.reachable = data.reachable
+    marketplace.plugins = data.plugins
+    marketplace.count = data.count
+    marketplace.error = data.error
+  } catch (e: any) {
+    marketplace.reachable = false
+    marketplace.error = e.message
+    marketplace.plugins = []
+  } finally {
+    loadingMarketplace.value = false
+  }
+}
+
+async function copyDownloadUrl(url: string) {
+  try {
+    await navigator.clipboard.writeText(url)
+    ElMessage.success('Download URL copied to clipboard')
+  } catch {
+    ElMessage.warning('Could not access clipboard')
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'marketplace' && marketplace.plugins.length === 0 && !loadingMarketplace.value) {
+    void reloadMarketplace()
+  }
+})
 
 const filteredPlugins = computed(() =>
   pluginsStore.manifests.filter(p =>
