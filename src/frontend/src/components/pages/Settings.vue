@@ -113,6 +113,55 @@
           </div>
         </el-tab-pane>
 
+        <!-- Advanced tab — integration endpoints -->
+        <el-tab-pane label="Advanced" name="advanced">
+          <div class="tab-content">
+            <p class="tab-desc">
+              External services the daemon talks to. Leave blank to use built-in defaults.
+              Changes take effect after restart or a catalog refresh.
+            </p>
+            <el-form label-position="top" size="small" style="max-width: 560px">
+              <el-form-item label="Catalog API URL">
+                <el-input
+                  v-model="catalogUrl"
+                  placeholder="http://127.0.0.1:8765"
+                  class="mono-input"
+                >
+                  <template #append>
+                    <el-button :loading="refreshingCatalog" @click="refreshCatalog">
+                      Refresh
+                    </el-button>
+                  </template>
+                </el-input>
+                <div class="hint">
+                  URL of the NKS WDC catalog-api service (see
+                  <code>services/catalog-api/</code>). Electron auto-spawns
+                  a local sidecar on <code>127.0.0.1:8765</code> in dev mode.
+                  Point at your self-hosted deployment for team-wide binary
+                  versions or leave blank for the default.
+                </div>
+                <div class="hint" v-if="catalogStatus">
+                  <span :class="['status-dot', catalogStatus.ok ? 'ok' : 'err']"></span>
+                  {{ catalogStatus.message }}
+                </div>
+              </el-form-item>
+              <el-form-item label="Binary releases">
+                <el-button size="small" @click="testCatalogReachable" :loading="testingCatalog">
+                  Test connection
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  @click="openCatalogAdmin"
+                  :disabled="!catalogUrl"
+                >
+                  Open admin UI
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+
         <!-- About tab -->
         <el-tab-pane label="About" name="about">
           <div class="tab-content">
@@ -217,6 +266,12 @@ const paths = reactive({
   sitesDir: '',
 })
 
+// ── Catalog API integration (Advanced tab) ────────────────────────────
+const catalogUrl = ref('')
+const refreshingCatalog = ref(false)
+const testingCatalog = ref(false)
+const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
+
 function daemonBase(): string {
   const urlPort = new URLSearchParams(window.location.search).get('port')
   const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
@@ -306,7 +361,66 @@ async function loadSettings() {
     if (data['paths.php'])       paths.php = data['paths.php']
     if (data['paths.redis'])     paths.redis = data['paths.redis']
     if (data['paths.sitesDir'])  paths.sitesDir = data['paths.sitesDir']
+    if (data['daemon.catalogUrl']) catalogUrl.value = data['daemon.catalogUrl']
   } catch { /* daemon not reachable — keep defaults */ }
+}
+
+async function refreshCatalog() {
+  refreshingCatalog.value = true
+  catalogStatus.value = null
+  try {
+    // Save URL first so the daemon's CatalogClient picks it up, then
+    // trigger a manual refresh so the new source takes effect without
+    // restarting the daemon.
+    await fetch(`${daemonBase()}/api/settings`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ 'daemon.catalogUrl': catalogUrl.value || '' }),
+    })
+    const r = await fetch(`${daemonBase()}/api/binaries/catalog/refresh`, {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const result = await r.json()
+    catalogStatus.value = {
+      ok: true,
+      message: `Refreshed: ${result.count ?? 0} releases · ${result.lastFetch ?? 'now'}`,
+    }
+    ElMessage.success(`Catalog refreshed: ${result.count ?? 0} releases`)
+  } catch (e: any) {
+    catalogStatus.value = { ok: false, message: `Refresh failed: ${e.message}` }
+    ElMessage.error(`Refresh failed: ${e.message}`)
+  } finally {
+    refreshingCatalog.value = false
+  }
+}
+
+async function testCatalogReachable() {
+  testingCatalog.value = true
+  catalogStatus.value = null
+  const url = catalogUrl.value || 'http://127.0.0.1:8765'
+  try {
+    const r = await fetch(`${url.replace(/\/$/, '')}/healthz`)
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const body = await r.json()
+    catalogStatus.value = {
+      ok: true,
+      message: `✓ Reachable: ${body.service ?? 'catalog-api'} v${body.version ?? '?'}`,
+    }
+  } catch (e: any) {
+    catalogStatus.value = {
+      ok: false,
+      message: `✗ Unreachable: ${e.message}. Is the sidecar running?`,
+    }
+  } finally {
+    testingCatalog.value = false
+  }
+}
+
+function openCatalogAdmin() {
+  const url = catalogUrl.value || 'http://127.0.0.1:8765'
+  window.open(url.replace(/\/$/, '') + '/admin', '_blank')
 }
 
 onMounted(async () => {
@@ -336,6 +450,7 @@ async function save() {
       'paths.php':      paths.php,
       'paths.redis':    paths.redis,
       'paths.sitesDir': paths.sitesDir,
+      'daemon.catalogUrl': catalogUrl.value,
     }
     const r = await fetch(`${daemonBase()}/api/settings`, {
       method: 'PUT',
@@ -396,6 +511,36 @@ async function save() {
   margin-bottom: 20px;
   line-height: 1.5;
 }
+
+.mono-input :deep(.el-input__inner) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.hint {
+  margin-top: 8px;
+  font-size: 0.76rem;
+  color: var(--wdc-text-3);
+  line-height: 1.5;
+}
+.hint code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--wdc-surface-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--wdc-accent);
+  font-size: 0.74rem;
+}
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.status-dot.ok { background: var(--wdc-status-running); }
+.status-dot.err { background: var(--wdc-status-error); }
 
 .settings-footer {
   margin-top: 24px;
