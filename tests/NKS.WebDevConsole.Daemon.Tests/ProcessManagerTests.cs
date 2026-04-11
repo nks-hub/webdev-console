@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Services;
+using System.Diagnostics;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
 
@@ -236,5 +237,71 @@ public class ProcessManagerTests
         Assert.Equal(0, unit.Port);
         Assert.Null(unit.StartedAt);
         Assert.Equal(0, unit.RestartCount);
+    }
+
+    [Fact]
+    public async Task HandleProcessExitAsync_ManualStop_DoesNotAutoRestart()
+    {
+        var unit = _pm.GetOrCreate("mailpit", "Mailpit");
+        unit.State = ServiceState.Stopping;
+        unit.StopRequested = true;
+        unit.Process = Process.GetCurrentProcess();
+        unit.StartedAt = DateTime.UtcNow.AddSeconds(-3);
+        unit.Executable = "cmd.exe";
+        unit.Arguments = "/c exit 1";
+
+        await _pm.HandleProcessExitAsync(unit, pid: 1234, exitCode: 0);
+
+        Assert.Equal(ServiceState.Stopped, unit.State);
+        Assert.False(unit.StopRequested);
+        Assert.Null(unit.Process);
+        Assert.Null(unit.StartedAt);
+        Assert.Equal(0, unit.RestartCount);
+    }
+
+    [Fact]
+    public async Task StartAsync_FlappingProcess_DisablesAfterRestartLimit()
+    {
+        var unit = _pm.GetOrCreate("flap", "Flapping Process");
+        unit.RestartPolicy = new RestartPolicy
+        {
+            MaxRestarts = 2,
+            Window = TimeSpan.FromSeconds(30),
+            MinBackoff = TimeSpan.FromMilliseconds(20),
+            MaxBackoff = TimeSpan.FromMilliseconds(20)
+        };
+
+        var (executable, arguments) = GetImmediateFailureCommand();
+        var started = await _pm.StartAsync("flap", executable, arguments);
+
+        Assert.True(started);
+        await WaitForAsync(
+            () => unit.State == ServiceState.Disabled && unit.RestartCount == 2,
+            TimeSpan.FromSeconds(5));
+
+        Assert.Equal(ServiceState.Disabled, unit.State);
+        Assert.Equal(2, unit.RestartCount);
+    }
+
+    private static (string Executable, string Arguments) GetImmediateFailureCommand()
+    {
+        if (OperatingSystem.IsWindows())
+            return ("cmd.exe", "/c exit 1");
+
+        return ("/bin/sh", "-c 'exit 1'");
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        while (sw.Elapsed < timeout)
+        {
+            if (condition())
+                return;
+
+            await Task.Delay(25);
+        }
+
+        Assert.True(condition(), $"Condition was not met within {timeout.TotalMilliseconds} ms.");
     }
 }

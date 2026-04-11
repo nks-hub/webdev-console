@@ -43,6 +43,7 @@ public class ServiceUnit
     public string? Executable { get; set; }
     public string? Arguments { get; set; }
     public string? WorkingDirectory { get; set; }
+    public bool StopRequested { get; set; }
 }
 
 public class ProcessManager
@@ -62,7 +63,13 @@ public class ProcessManager
         return _services.GetOrAdd(id, _ => new ServiceUnit { Id = id, DisplayName = displayName });
     }
 
-    public async Task<bool> StartAsync(string id, string executable, string arguments, string? workingDir = null, CancellationToken ct = default)
+    public async Task<bool> StartAsync(
+        string id,
+        string executable,
+        string arguments,
+        string? workingDir = null,
+        CancellationToken ct = default,
+        bool isAutoRestart = false)
     {
         var unit = _services.GetValueOrDefault(id);
         if (unit == null) return false;
@@ -98,27 +105,18 @@ public class ProcessManager
             unit.Process = process;
             unit.State = ServiceState.Running;
             unit.StartedAt = DateTime.UtcNow;
-            unit.RestartCount = 0;
+            unit.StopRequested = false;
+            if (!isAutoRestart)
+            {
+                unit.RestartCount = 0;
+                unit.FirstRestartInWindow = default;
+            }
             unit.Executable = executable;
             unit.Arguments = arguments;
             unit.WorkingDirectory = workingDir;
 
             process.EnableRaisingEvents = true;
-            process.Exited += async (_, _) =>
-            {
-                try
-                {
-                    _logger.LogWarning("Service {Id} (PID {Pid}) exited with code {Code}", id, process.Id, process.ExitCode);
-                    unit.State = ServiceState.Crashed;
-                    unit.Process = null;
-                    await BroadcastState(unit);
-                    await TryAutoRestart(unit);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error in exit handler for {Id}", id);
-                }
-            };
+            process.Exited += (_, _) => _ = HandleProcessExitAsync(unit, process.Id, process.ExitCode);
 
             process.OutputDataReceived += (_, e) =>
             {
@@ -153,6 +151,7 @@ public class ProcessManager
         var unit = _services.GetValueOrDefault(id);
         if (unit?.Process == null || unit.State != ServiceState.Running) return false;
 
+        unit.StopRequested = true;
         unit.State = ServiceState.Stopping;
         await BroadcastState(unit);
 
@@ -173,6 +172,7 @@ public class ProcessManager
         }
         catch (Exception ex)
         {
+            unit.StopRequested = false;
             _logger.LogError(ex, "Failed to stop {Id}", id);
             unit.State = ServiceState.Crashed;
             await BroadcastState(unit);
@@ -207,9 +207,43 @@ public class ProcessManager
     public IEnumerable<ServiceStatus> GetAllStatuses()
         => _services.Values.Select(u => GetStatus(u.Id));
 
+    internal async Task HandleProcessExitAsync(ServiceUnit unit, int pid, int exitCode)
+    {
+        try
+        {
+            if (unit.StopRequested || unit.State == ServiceState.Stopping)
+            {
+                _logger.LogInformation("Service {Id} (PID {Pid}) stopped with code {Code}", unit.Id, pid, exitCode);
+                unit.Process = null;
+                unit.State = ServiceState.Stopped;
+                unit.StartedAt = null;
+                unit.StopRequested = false;
+                await BroadcastState(unit);
+                return;
+            }
+
+            _logger.LogWarning("Service {Id} (PID {Pid}) exited with code {Code}", unit.Id, pid, exitCode);
+            unit.State = ServiceState.Crashed;
+            unit.Process = null;
+            unit.StartedAt = null;
+            await BroadcastState(unit);
+            await TryAutoRestart(unit);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in exit handler for {Id}", unit.Id);
+        }
+    }
+
     private async Task TryAutoRestart(ServiceUnit unit)
     {
         if (unit.Executable == null) return;
+
+        if (unit.RestartCount > 0 && DateTime.UtcNow - unit.FirstRestartInWindow >= unit.RestartPolicy.Window)
+        {
+            unit.RestartCount = 0;
+            unit.FirstRestartInWindow = default;
+        }
 
         unit.RestartCount++;
         if (unit.RestartCount == 1)
@@ -230,7 +264,7 @@ public class ProcessManager
 
         if (unit.State == ServiceState.Stopped || unit.State == ServiceState.Disabled) return;
 
-        await StartAsync(unit.Id, unit.Executable, unit.Arguments ?? "", unit.WorkingDirectory);
+        await StartAsync(unit.Id, unit.Executable, unit.Arguments ?? "", unit.WorkingDirectory, isAutoRestart: true);
     }
 
     public static (bool Available, int? OwnerPid, string? OwnerName) CheckPort(int port)

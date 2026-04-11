@@ -179,6 +179,16 @@ public sealed class SiteOrchestrator
             }
         }
 
+        try
+        {
+            await UpdateHostsBlockAsync(Array.Empty<string>(), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Hosts file cleanup failed for {Domain} (may need admin elevation): {Error}",
+                domain, ex.Message);
+        }
+
         _logger.LogInformation("Site {Domain} removed", domain);
     }
 

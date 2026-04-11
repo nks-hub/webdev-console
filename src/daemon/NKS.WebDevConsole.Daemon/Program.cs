@@ -2001,10 +2001,29 @@ app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
 });
 
 // Graceful shutdown — stop all services + cleanup
-app.Lifetime.ApplicationStopping.Register(async () =>
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    StopAllServicesOnShutdownAsync(app.Services, pluginLoader, portFile).GetAwaiter().GetResult();
+});
+
+// Route uncaught exceptions through Sentry (no-op if SDK wasn't initialised).
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+{
+    if (e.ExceptionObject is Exception ex)
+        Sentry.SentrySdk.CaptureException(ex);
+};
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    Sentry.SentrySdk.CaptureException(e.Exception);
+    e.SetObserved();
+};
+
+await app.RunAsync();
+
+static async Task StopAllServicesOnShutdownAsync(IServiceProvider services, PluginLoader pluginLoader, string portFile)
 {
     Console.WriteLine("[shutdown] Stopping all services...");
-    var modules = app.Services.GetServices<IServiceModule>();
+    var modules = services.GetServices<IServiceModule>();
     foreach (var module in modules)
     {
         try
@@ -2022,7 +2041,6 @@ app.Lifetime.ApplicationStopping.Register(async () =>
         }
     }
 
-    // Stop plugins
     foreach (var p in pluginLoader.Plugins)
     {
         try { await p.Instance.StopAsync(CancellationToken.None); }
@@ -2031,21 +2049,7 @@ app.Lifetime.ApplicationStopping.Register(async () =>
 
     try { File.Delete(portFile); } catch { }
     Console.WriteLine("[shutdown] Complete");
-});
-
-// Route uncaught exceptions through Sentry (no-op if SDK wasn't initialised).
-AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-{
-    if (e.ExceptionObject is Exception ex)
-        Sentry.SentrySdk.CaptureException(ex);
-};
-TaskScheduler.UnobservedTaskException += (_, e) =>
-{
-    Sentry.SentrySdk.CaptureException(e.Exception);
-    e.SetObserved();
-};
-
-await app.RunAsync();
+}
 
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
 record InstallBinaryRequest(string App, string Version);
