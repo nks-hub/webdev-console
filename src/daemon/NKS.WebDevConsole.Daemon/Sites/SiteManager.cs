@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Tomlyn;
 using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Core.Services;
 using NKS.WebDevConsole.Daemon.Config;
 using Microsoft.Extensions.Logging;
 
@@ -212,9 +213,7 @@ public class SiteManager
         // sites. The real Apache vhost is still produced by ApacheModule
         // under sites-enabled/ with the correct paths, but this display copy
         // needs to match so rollback works.
-        var sslDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".wdc", "ssl", "sites", site.Domain);
+        var sslDir = Path.Combine(WdcPaths.SslRoot, "sites", site.Domain);
 
         var model = new
         {

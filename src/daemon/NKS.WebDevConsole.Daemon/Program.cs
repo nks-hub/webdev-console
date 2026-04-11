@@ -45,8 +45,8 @@ builder.Services.AddSingleton(sp => new SiteManager(
     sp.GetRequiredService<TemplateEngine>(),
     sp.GetRequiredService<ConfigValidator>(),
     sp.GetRequiredService<AtomicWriter>(),
-    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "sites"),
-    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "generated")
+    NKS.WebDevConsole.Core.Services.WdcPaths.SitesRoot,
+    NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot
 ));
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
@@ -99,7 +99,7 @@ foreach (var p in pluginLoader.Plugins)
 }
 
 // Initialize SQLite database and run migrations
-var dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "data", "state.db");
+var dbPath = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "state.db");
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 var database = new Database(dbPath);
 builder.Services.AddSingleton(database);
@@ -445,9 +445,7 @@ app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory h
     if (!targetDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
         return Results.BadRequest(new { error = "Resolved path escapes plugins root" });
 
-    var cacheDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "cache", "plugin-installs");
+    var cacheDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.CacheRoot, "plugin-installs");
     Directory.CreateDirectory(cacheDir);
     var tempZip = Path.Combine(cacheDir, $"{pluginId}-{Guid.NewGuid():N}.zip");
 
@@ -736,9 +734,7 @@ app.MapGet("/api/sites/{domain}/history", (string domain, SiteManager sm) =>
     var site = sm.Get(domain);
     if (site is null) return Results.NotFound();
 
-    var generatedDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "generated", "history");
+    var generatedDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot, "history");
     if (!Directory.Exists(generatedDir))
         return Results.Ok(Array.Empty<object>());
 
@@ -779,9 +775,7 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     var site = sm.Get(domain);
     if (site is null) return Results.NotFound(new { error = $"Site {domain} not found" });
 
-    var historyDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "generated", "history");
+    var historyDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot, "history");
     var historyDirFull = Path.GetFullPath(historyDir);
     var historyFile = Path.GetFullPath(Path.Combine(historyDir, $"{domain}.conf.{timestamp}"));
     if (!historyFile.StartsWith(historyDirFull, StringComparison.OrdinalIgnoreCase))
@@ -789,9 +783,7 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     if (!File.Exists(historyFile))
         return Results.NotFound(new { error = $"History entry {timestamp} not found" });
 
-    var generatedRoot = Path.GetFullPath(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "generated"));
+    var generatedRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot);
     var generatedFile = Path.GetFullPath(Path.Combine(generatedRoot, $"{domain}.conf"));
     if (!generatedFile.StartsWith(generatedRoot, StringComparison.OrdinalIgnoreCase))
         return Results.BadRequest(new { error = "Resolved generated path escapes generated root" });
@@ -848,9 +840,7 @@ app.MapDelete("/api/telemetry/consent", (TelemetryConsent consent) =>
 // can skip ahead past any steps the user has already completed manually.
 app.MapGet("/api/onboarding/state", (BinaryManager bm) =>
 {
-    var flagFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "data", "onboarding-complete.flag");
+    var flagFile = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "onboarding-complete.flag");
 
     var installed = bm.ListInstalled();
     var hasApache = installed.Any(b => b.App.Equals("apache", StringComparison.OrdinalIgnoreCase));
@@ -880,9 +870,7 @@ app.MapGet("/api/onboarding/state", (BinaryManager bm) =>
 
 app.MapPost("/api/onboarding/complete", () =>
 {
-    var flagFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "data", "onboarding-complete.flag");
+    var flagFile = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "onboarding-complete.flag");
     Directory.CreateDirectory(Path.GetDirectoryName(flagFile)!);
     File.WriteAllText(flagFile, DateTime.UtcNow.ToString("O"));
     return Results.Ok(new { completed = true });
@@ -924,9 +912,7 @@ app.MapGet("/api/backup/download", (BackupManager bm, string? path) =>
     }
     else
     {
-        var backupRoot = Path.GetFullPath(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".wdc", "backups"));
+        var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
         var resolved = Path.GetFullPath(path);
         if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
             return Results.BadRequest(new { error = "Path escapes backup root" });
@@ -957,9 +943,7 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
             var requested = body?.GetValueOrDefault("path");
             if (string.IsNullOrWhiteSpace(requested))
                 return Results.BadRequest(new { error = "path or multipart file required" });
-            var backupRoot = Path.GetFullPath(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".wdc", "backups"));
+            var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
             var resolved = Path.GetFullPath(requested);
             if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "Path escapes backup root" });
@@ -1104,9 +1088,7 @@ app.MapPost("/api/php/{version}/extensions/{name}", async (
     // mod_fcgid-spawned php-cgi.exe) and one under _config.ConfigBaseDirectory
     // (used by the daemon's own invocations). We comment/uncomment the
     // `extension=name` directive so the change takes effect on next spawn.
-    var phpRoot = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "binaries", "php");
+    var phpRoot = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot, "php");
     var patched = new List<string>();
     if (Directory.Exists(phpRoot))
     {
@@ -1214,7 +1196,7 @@ app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int
 // Service config read — returns the main config file content for a service
 app.MapGet("/api/services/{id}/config", async (string id) =>
 {
-    var wdcHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc");
+    var wdcHome = NKS.WebDevConsole.Core.Services.WdcPaths.Root;
     var configs = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
     {
         ["apache"] = new[] {
@@ -1395,7 +1377,7 @@ app.MapPost("/api/uninstall", async (HttpContext ctx, BackupManager backupManage
         return Results.BadRequest(new { error = "Destructive operation — pass confirm: \"YES-UNINSTALL\" in the body, or set dryRun: true." });
 
     var log = lf.CreateLogger("Uninstall");
-    var wdcRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc");
+    var wdcRoot = NKS.WebDevConsole.Core.Services.WdcPaths.Root;
     var plan = new List<string>();
     string? safetyBackupPath = null;
 

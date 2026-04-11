@@ -1,4 +1,5 @@
 using System.Text.Json;
+using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
@@ -15,8 +16,7 @@ namespace NKS.WebDevConsole.Daemon.Services;
 public sealed class PluginState
 {
     private static readonly string StateFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "data", "plugin-state.json");
+        WdcPaths.DataRoot, "plugin-state.json");
 
     private readonly object _lock = new();
     private readonly HashSet<string> _disabled = new(StringComparer.OrdinalIgnoreCase);

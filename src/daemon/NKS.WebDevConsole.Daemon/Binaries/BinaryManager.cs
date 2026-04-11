@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Binaries;
 
@@ -31,9 +32,7 @@ public sealed class BinaryManager
         _downloader = downloader;
         _catalog = catalog;
         _logger = logger;
-        _root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".wdc", "binaries");
+        _root = WdcPaths.BinariesRoot;
         Directory.CreateDirectory(_root);
     }
 

@@ -3,6 +3,7 @@ using System.CommandLine.Parsing;
 using System.Net.Http.Json;
 using System.Text.Json;
 using NKS.WebDevConsole.Cli;
+using NKS.WebDevConsole.Core.Services;
 using Spectre.Console;
 
 var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON instead of formatted tables", Recursive = true };
@@ -908,13 +909,13 @@ var configCommand = new Command("config", "Show configuration paths");
 configCommand.SetAction((parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
-    var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     var paths = new
     {
-        wdcRoot = Path.Combine(home, ".wdc"),
-        binaries = Path.Combine(home, ".wdc", "binaries"),
-        sites = Path.Combine(home, ".wdc", "sites"),
-        data = Path.Combine(home, ".wdc", "data"),
+        wdcRoot = WdcPaths.Root,
+        binaries = WdcPaths.BinariesRoot,
+        sites = WdcPaths.SitesRoot,
+        data = WdcPaths.DataRoot,
+        portable = WdcPaths.IsPortableMode,
         portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port"),
     };
     if (json) { PrintJson(paths); return Task.CompletedTask; }

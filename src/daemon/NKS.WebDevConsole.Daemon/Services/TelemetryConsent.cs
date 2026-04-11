@@ -1,4 +1,5 @@
 using System.Text.Json;
+using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
@@ -30,8 +31,7 @@ namespace NKS.WebDevConsole.Daemon.Services;
 public sealed class TelemetryConsent
 {
     private static readonly string ConsentFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "data", "telemetry-consent.json");
+        WdcPaths.DataRoot, "telemetry-consent.json");
 
     private static readonly object _lock = new();
 

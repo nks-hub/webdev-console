@@ -11,15 +11,25 @@ let daemon: ChildProcess | null = null
 let daemonConnected = false
 let isQuitting = false
 
-// Portable mode: if portable.txt exists next to the app, use local data dir
+// Portable mode: if portable.txt exists next to the app, redirect both
+// Electron's userData AND the C# daemon's ~/.wdc tree to a local subfolder
+// so a USB-stick install leaves no trace on the host machine.
+// The daemon honors the WDC_DATA_DIR env var via Core/Services/WdcPaths.cs,
+// which every service (SiteManager, BackupManager, TelemetryConsent,
+// PluginState, PhpExtensionOverrides, BinaryManager, all plugins) consults.
 const isPortable = existsSync(join(app.getAppPath(), 'portable.txt'))
   || existsSync(join(process.cwd(), 'portable.txt'))
 
+let portableWdcDir: string | null = null
 if (isPortable) {
   // Store all user data next to the app binary instead of %APPDATA%
   const portableDir = join(app.getAppPath(), 'data')
   app.setPath('userData', portableDir)
-  console.log('[portable] mode enabled, data dir:', portableDir)
+  portableWdcDir = join(portableDir, 'wdc')
+  process.env.WDC_DATA_DIR = portableWdcDir
+  console.log('[portable] mode enabled')
+  console.log('[portable]   electron userData:', portableDir)
+  console.log('[portable]   daemon WDC_DATA_DIR:', portableWdcDir)
 }
 
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
@@ -116,15 +126,22 @@ async function spawnDaemon() {
 
   const isDev = !app.isPackaged
 
+  // Pass the portable data directory through explicitly so the daemon's
+  // WdcPaths helper redirects ~/.wdc/* to the USB-stick-local folder.
+  // Inherit everything else from the Electron process env.
+  const daemonEnv: NodeJS.ProcessEnv = { ...process.env }
+  if (portableWdcDir) daemonEnv.WDC_DATA_DIR = portableWdcDir
+
   if (isDev) {
     const projectDir = findDaemonProject()
     console.log('[daemon] starting from:', projectDir)
     daemon = spawn('dotnet', ['run', '--project', projectDir], {
       stdio: 'pipe',
-      detached: false
+      detached: false,
+      env: daemonEnv,
     })
   } else {
-    daemon = spawn(DAEMON_EXE, [], { stdio: 'pipe', detached: false })
+    daemon = spawn(DAEMON_EXE, [], { stdio: 'pipe', detached: false, env: daemonEnv })
   }
 
   daemon.stdout?.on('data', (d) => {

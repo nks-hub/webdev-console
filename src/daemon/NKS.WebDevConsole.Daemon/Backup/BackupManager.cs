@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Microsoft.Extensions.Logging;
+using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Backup;
 
@@ -44,9 +45,7 @@ public sealed class BackupManager
     };
 
     public BackupManager(ILogger<BackupManager> logger)
-        : this(logger, Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".wdc"))
+        : this(logger, WdcPaths.Root)
     {
     }
 

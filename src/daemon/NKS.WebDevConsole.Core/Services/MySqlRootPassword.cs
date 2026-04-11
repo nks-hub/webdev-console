@@ -20,8 +20,7 @@ namespace NKS.WebDevConsole.Core.Services;
 public static class MySqlRootPassword
 {
     private static readonly string StorePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "data", "mysql-root.dpapi");
+        WdcPaths.DataRoot, "mysql-root.dpapi");
 
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("NKS.WebDevConsole.MySqlRoot.v1");
 

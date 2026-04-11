@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
@@ -21,8 +22,7 @@ namespace NKS.WebDevConsole.Daemon.Services;
 public sealed class PhpExtensionOverrides
 {
     private static readonly string StateFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".wdc", "data", "php-extensions.json");
+        WdcPaths.DataRoot, "php-extensions.json");
 
     private readonly object _lock = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, bool>> _state = new();
