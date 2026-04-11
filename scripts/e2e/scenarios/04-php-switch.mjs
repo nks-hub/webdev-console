@@ -6,6 +6,8 @@
  */
 import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile } from '../harness.mjs'
 import { join } from 'node:path'
+import { readFileSync, existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 
 const DOMAIN = 'phpswitch-e2e.loc'
 
@@ -67,10 +69,15 @@ export default scenario('4', 'PHP version switch', 'P0', async (ctx) => {
   })
   assert.statusOk(update, `PUT /api/sites/${DOMAIN} with phpVersion=${b}`)
 
-  // Confirm GET /api/sites/:domain reports the new version — this is the REST
-  // contract the UI and CLI rely on. Whether Apache vhost has been regenerated
-  // on disk is an implementation detail not asserted here.
+  // Confirm GET /api/sites/:domain reports the new version.
   const after = await api.get(`/api/sites/${DOMAIN}`)
   assert.statusOk(after, `GET /api/sites/${DOMAIN} after update`)
   assert.eq(after.body.phpVersion, b, `phpVersion after update should be ${b}`)
+
+  // Also verify the SiteManager-owned vhost under ~/.wdc/generated/ was
+  // regenerated (this is what the GUI config-history view displays).
+  const vhostPath = join(homedir(), '.wdc', 'generated', `${DOMAIN}.conf`)
+  assert.ok(existsSync(vhostPath), `generated vhost exists at ${vhostPath}`)
+  const vhost = readFileSync(vhostPath, 'utf-8')
+  assert.contains(vhost, b, `generated vhost references PHP ${b} after switch`)
 })

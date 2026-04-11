@@ -41,15 +41,15 @@ export default scenario('6', 'Site config history records updates', 'P1', async 
   })
   assert.statusOk(update1, 'PUT /api/sites #1')
 
-  // Request history. Shape may be {history:[...]} or a bare array.
-  // We only verify the REST contract: endpoint reachable, returns an array
-  // for a known domain. Whether history files are materialised on every
-  // update is a SiteOrchestrator implementation concern (today it archives
-  // only when a prior vhost existed on disk, which depends on Apache status).
+  // Request history. Shape may be {history:[...]} or a bare array. After
+  // exactly one update we expect at least one archive entry (the vhost
+  // written on initial POST, now archived by AtomicWriter before the PUT
+  // overwrite).
   const hist = await api.get(`/api/sites/${DOMAIN}/history`)
   assert.statusOk(hist, 'GET /api/sites/:domain/history')
   const entries = Array.isArray(hist.body) ? hist.body : (hist.body.history ?? hist.body.versions ?? [])
   assert.ok(Array.isArray(entries), 'history response is an array')
+  assert.ok(entries.length >= 1, `history has at least 1 entry after update, got ${entries.length}`)
 
   // Endpoint also returns 404 for non-existent sites — verify that contract.
   const missing = await api.get('/api/sites/definitely-not-a-site-e2e.loc/history')

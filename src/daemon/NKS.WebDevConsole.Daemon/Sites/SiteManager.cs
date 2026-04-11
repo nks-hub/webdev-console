@@ -152,6 +152,15 @@ public class SiteManager
 
         await _writer.WriteAsync(path, toml);
         _sites[site.Domain] = site;
+
+        // Regenerate the Apache vhost under ~/.wdc/generated/ so the GUI config-history
+        // view and rollback endpoint see the updated version; AtomicWriter archives the
+        // previous vhost to generated/history/ automatically. Without this call, an edit
+        // via PUT /api/sites silently left the stale vhost on disk (the real Apache vhost
+        // in conf/sites-enabled/ IS regenerated separately by SiteOrchestrator via the
+        // ApacheModule plugin, but the SiteManager-owned copy used for history was not).
+        await GenerateVhostAsync(site);
+
         return site;
     }
 
