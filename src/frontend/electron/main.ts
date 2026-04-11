@@ -587,18 +587,6 @@ app.whenReady().then(async () => {
   createWindow()
   createTray()
   await setupAutoUpdater()
-
-  // Auto-updater: check for updates when packaged (not in dev)
-  if (false) {
-    try {
-      const { autoUpdater } = await import('electron-updater')
-      autoUpdater.checkForUpdatesAndNotify()
-      autoUpdater.on('update-available', () => console.log('[updater] Update available'))
-      autoUpdater.on('update-downloaded', () => console.log('[updater] Update downloaded — will install on quit'))
-    } catch {
-      // electron-updater not installed — skip
-    }
-  }
 })
 
 app.on('window-all-closed', () => { /* keep running — hide to tray on close */ })

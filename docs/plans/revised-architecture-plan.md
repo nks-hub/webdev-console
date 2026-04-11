@@ -412,7 +412,7 @@ Discovered during the 90-min wide audit pass on top of Phase 7. These close the 
 - [x] `TargetInvocationException` unwrap in `SiteOrchestrator.InvokeAsync` — cross-ALC plugin errors now propagate the inner exception with full stack trace via `ExceptionDispatchInfo.Capture`
 - [x] Domain validation tightening — reject `%` (URL encoding), any `..` substring (not just `../`/`..\`), enforce RFC 1035 63-char per-DNS-label limit
 - [x] `MetricsChart` container height lock — `height`/`min-height`/`max-height` all pinned to prop value via Vue SFC `v-bind` style so the ECharts canvas cannot stretch the flex parent under `ResizeObserver`
-- [x] Auto-update is a **known post-v1 limitation** — no self-update mechanism in v1. Updates require manual re-download of the release zip. Tracked for Phase 8 (see below).
+- [x] Auto-update is a **known post-v1 limitation** in the shipped v1 baseline. The repo now contains Electron updater plumbing, but real self-update still remains a Phase 8 item until a tagged GitHub release proves the end-to-end flow.
 
 ### Phase 7c: Strict-audit gap closure (complete 2026-04-11, hourly audit cycle)
 
