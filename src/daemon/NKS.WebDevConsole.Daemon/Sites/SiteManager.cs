@@ -115,10 +115,20 @@ public class SiteManager
         // Must look like a hostname (primary site domain must not be wildcard — wildcards are aliases only)
         if (!System.Text.RegularExpressions.Regex.IsMatch(domain, @"^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$"))
             throw new ArgumentException("Domain must be a valid hostname (letters, digits, hyphens, dots)");
-        // RFC 1035: each DNS label between dots is max 63 chars.
+        // RFC 1035: each DNS label between dots is max 63 chars AND must not
+        // start or end with a hyphen. Without the hyphen check the whole-string
+        // regex accepts "foo.-bar.com" (invalid per RFC; some DNS resolvers
+        // and hosts file parsers silently drop such entries, leading to
+        // diagnostically-confusing "site created but doesn't resolve" bugs).
         foreach (var label in domain.Split('.'))
+        {
+            if (label.Length == 0)
+                throw new ArgumentException("Domain contains empty label (leading, trailing, or consecutive dots)");
             if (label.Length > 63)
                 throw new ArgumentException($"Domain label '{label}' exceeds 63 characters (RFC 1035)");
+            if (label[0] == '-' || label[^1] == '-')
+                throw new ArgumentException($"Domain label '{label}' must not start or end with a hyphen (RFC 1035)");
+        }
     }
 
     /// <summary>
