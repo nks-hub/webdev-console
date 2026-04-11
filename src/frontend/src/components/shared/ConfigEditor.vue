@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { saveServiceConfig, validateServiceConfig } from '../../api/daemon'
 import ValidationBadge from './ValidationBadge.vue'
 
 const props = defineProps<{
@@ -61,6 +62,12 @@ watch(() => props.initialContent, (v) => {
 })
 
 async function validateAndApply() {
+  if (!props.serviceId) {
+    badge.value?.setResult(false, 'Missing serviceId for config validation')
+    validating.value = false
+    return
+  }
+
   validating.value = true
   // The imperative startValidation call below is a fallback for the case
   // where the user edits a file that isn't tied to any specific serviceId
@@ -70,23 +77,9 @@ async function validateAndApply() {
   // double-call is idempotent.
   badge.value?.startValidation()
   try {
-    const port = window.daemonApi?.getPort() ?? 50051
-    const token = window.daemonApi?.getToken?.() ?? ''
-    const res = await fetch(`http://localhost:${port}/api/config/validate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        configPath: props.configPath,
-        content: localContent.value,
-        serviceId: props.serviceId,
-      }),
-    })
-    const data = await res.json() as { isValid?: boolean; valid?: boolean; output?: string; error?: string }
-    const ok = data.isValid ?? data.valid ?? false
-    badge.value?.setResult(ok, data.output ?? data.error)
+    const result = await validateServiceConfig(props.serviceId, props.configPath, localContent.value)
+    badge.value?.setResult(result.isValid, result.output)
+    const ok = result.isValid
     if (!ok) { validating.value = false }
   } catch (e) {
     badge.value?.setResult(false, String(e))
@@ -95,12 +88,13 @@ async function validateAndApply() {
 }
 
 async function applyEdit() {
-  const port = window.daemonApi?.getPort() ?? 50051
-  await fetch(`http://localhost:${port}/api/config/write`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: props.configPath, content: localContent.value }),
-  })
+  if (!props.serviceId) {
+    badge.value?.setResult(false, 'Missing serviceId for config save')
+    validating.value = false
+    return
+  }
+
+  await saveServiceConfig(props.serviceId, props.configPath, localContent.value)
   savedContent.value = localContent.value
   dirty.value = false
   validating.value = false
