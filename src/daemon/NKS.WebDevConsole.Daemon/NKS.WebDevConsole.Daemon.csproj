@@ -2,6 +2,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NKS.WebDevConsole.Core\NKS.WebDevConsole.Core.csproj" />
+    <!-- Plugin.SDK is listed in PluginLoadContext.SharedAssemblies so the
+         plugin ALC defers to the default ALC for it. That only works if
+         SDK.dll is actually present in the daemon's bin dir — otherwise the
+         default ALC raises FileNotFoundException when a plugin calls any SDK
+         type (UiSchemaBuilder, etc.) from GetUiDefinition(). Reference it
+         here so MSBuild copies SDK.dll next to the daemon executable. -->
+    <ProjectReference Include="..\NKS.WebDevConsole.Plugin.SDK\NKS.WebDevConsole.Plugin.SDK.csproj" />
   </ItemGroup>
 
   <ItemGroup>

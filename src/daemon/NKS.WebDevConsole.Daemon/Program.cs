@@ -384,7 +384,9 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
 
     try
     {
-        // Check if the plugin implements IFrontendPanelProvider via reflection (cross-ALC)
+        // Check if the plugin implements IFrontendPanelProvider via reflection (cross-ALC).
+        // Must project panels by reflection too because PanelDef lives in the Core assembly
+        // loaded under the plugin's ALC, not the daemon's default ALC — direct cast fails.
         var uiMethod = plugin.Instance.GetType().GetMethod("GetUiDefinition");
         if (uiMethod != null)
         {
@@ -395,17 +397,50 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
                 var catProp = def.GetType().GetProperty("Category");
                 var iconProp = def.GetType().GetProperty("Icon");
                 var panelsProp = def.GetType().GetProperty("Panels");
-                return Results.Ok(new
+
+                var panelsOut = new List<object>();
+                if (panelsProp?.GetValue(def) is System.Collections.IEnumerable panelsEnum)
                 {
-                    pluginId = pidProp?.GetValue(def)?.ToString() ?? id,
-                    category = catProp?.GetValue(def)?.ToString() ?? "Services",
-                    icon = iconProp?.GetValue(def)?.ToString() ?? "el-icon-setting",
-                    panels = new[] { new { type = "service-status-card", props = (object)new { serviceId = id } } }
-                });
+                    foreach (var p in panelsEnum)
+                    {
+                        if (p is null) continue;
+                        var t = p.GetType();
+                        var typeStr = t.GetProperty("Type")?.GetValue(p)?.ToString() ?? "";
+                        var propsRaw = t.GetProperty("Props")?.GetValue(p);
+                        // PanelDef.Props is IDictionary<string,object> — flatten to a plain
+                        // dictionary so System.Text.Json serialises it as a JSON object.
+                        var propsDict = new Dictionary<string, object?>();
+                        if (propsRaw is System.Collections.IDictionary dict)
+                        {
+                            foreach (System.Collections.DictionaryEntry entry in dict)
+                            {
+                                propsDict[entry.Key?.ToString() ?? ""] = entry.Value;
+                            }
+                        }
+                        panelsOut.Add(new { type = typeStr, props = propsDict });
+                    }
+                }
+
+                // If the plugin gave us an empty panel list, fall through to the default
+                // (it's most likely a plugin scaffolding bug — don't punish the user with
+                // a blank page).
+                if (panelsOut.Count > 0)
+                {
+                    return Results.Ok(new
+                    {
+                        pluginId = pidProp?.GetValue(def)?.ToString() ?? id,
+                        category = catProp?.GetValue(def)?.ToString() ?? "Services",
+                        icon = iconProp?.GetValue(def)?.ToString() ?? "el-icon-setting",
+                        panels = panelsOut
+                    });
+                }
             }
         }
     }
-    catch { /* cross-ALC type mismatch — fallback */ }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Cross-ALC reflection on GetUiDefinition failed for plugin {Id} — falling back to default UI", id);
+    }
 
     // Fallback: generic UI schema for plugins that don't provide their own
     return Results.Ok(new

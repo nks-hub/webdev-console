@@ -33,9 +33,15 @@ function daemonBase(): string {
   return `http://localhost:${port}`
 }
 
+function authToken(): string {
+  const params = new URLSearchParams(window.location.search)
+  return params.get('token') || (window as any).daemonApi?.getToken?.() || ''
+}
+
 const loadError = ref(false)
 
-// Map daemon plugin ids to short service ids
+// Map daemon plugin ids to short service ids — handles "nks.wdc.apache" from
+// /api/plugins manifests AND "apache" from /api/services statuses.
 const SHORT_ID: Record<string, string> = {
   'nks.wdc.apache': 'apache',
   'nks.wdc.caddy': 'caddy',
@@ -45,13 +51,29 @@ const SHORT_ID: Record<string, string> = {
   'nks.wdc.mailpit': 'mailpit',
 }
 
+// Normalise any input (long plugin id, short service id) to a known short id or
+// null. Used for BOTH the daemon endpoint path and the static fallback lookup.
+function normalise(id: string): string {
+  return SHORT_ID[id] || id
+}
+
 const iconUrl = computed(() => {
-  if (loadError.value) return staticUrlFor(props.service)
-  // Prefer daemon endpoint so users can swap plugin DLLs without rebuilding frontend
-  // Fall back to static asset if service id doesn't have known plugin
-  const shortId = SHORT_ID[props.service] || props.service
+  const shortId = normalise(props.service)
+  // Static fallback path (when daemon img 404/401 happened): look up static
+  // AFTER normalising so "nks.wdc.apache" → "apache.svg" instead of
+  // "nks.wdc.apache.svg" which doesn't exist and triggers the "N" letter.
+  if (loadError.value) return staticUrlFor(shortId)
+  // Prefer daemon endpoint so users can swap plugin DLLs without rebuilding
+  // frontend. The daemon requires auth on /api/*; <img> tags can't set
+  // headers, so pipe the token through the query string (the auth middleware
+  // in Program.cs accepts `?token=` as a fallback to the Bearer header).
+  // Without this every brand icon 401s and the sidebar fills up with "N".
   const knownPlugin = ['apache', 'caddy', 'php', 'mysql', 'redis', 'mailpit'].includes(shortId)
-  if (knownPlugin) return `${daemonBase()}/api/plugins/${shortId}/icon`
+  if (knownPlugin) {
+    const token = authToken()
+    const suffix = token ? `?token=${encodeURIComponent(token)}` : ''
+    return `${daemonBase()}/api/plugins/${shortId}/icon${suffix}`
+  }
   return staticUrlFor(shortId)
 })
 

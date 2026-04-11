@@ -227,8 +227,24 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 }
 
 .el-button--small {
-  height: 36px;
-  padding: 0 16px;
+  height: 32px;
+  padding: 0 14px;
+}
+
+/* Circle buttons must stay perfectly round — the global --small padding
+   above would otherwise stretch them horizontally into ovals (visible on
+   the header theme toggle). Lock width == height and strip padding. */
+.el-button.is-circle {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+.el-button.is-circle.el-button--large {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
 }
 
 .el-button--default {

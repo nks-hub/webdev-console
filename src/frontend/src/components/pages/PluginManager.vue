@@ -144,15 +144,18 @@
           </div>
         </div>
 
-        <!-- Open plugin page button if has UI -->
+        <!-- Open plugin page button if has UI. Must be a full-width solid
+             button for readable contrast — the old text-primary variant
+             rendered as low-contrast blue-on-blue on the flat surface. -->
         <div class="pm-card-actions" v-if="plugin.enabled && plugin.ui">
           <el-button
             size="small"
-            text
             type="primary"
+            plain
+            class="pm-open-btn"
             @click="router.push(`/plugin/${plugin.id}`)"
           >
-            Open Panel &rarr;
+            Open panel &rarr;
           </el-button>
         </div>
       </div>
@@ -285,6 +288,9 @@ onMounted(() => { void pluginsStore.loadAll() })
 </script>
 
 <style scoped>
+/* Flat redesign — mirrors .svc-card from Dashboard.vue. No gradients, solid
+   surface, hairline WDC border, solid accent left-edge for enabled state,
+   readable secondary text via --wdc-text-2/3 (not --el-text-color-*). */
 .pm-page {
   min-height: 100%;
   background: var(--wdc-bg);
@@ -294,19 +300,20 @@ onMounted(() => { void pluginsStore.loadAll() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 0;
-  margin-bottom: 20px;
+  padding: 20px 24px 0;
+  margin-bottom: 16px;
 }
 
 .page-title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--wdc-text);
+  letter-spacing: 0.01em;
 }
 
 .page-subtitle {
-  font-size: 0.82rem;
-  color: var(--wdc-text-2);
+  font-size: 0.76rem;
+  color: var(--wdc-text-3);
   margin-top: 2px;
 }
 
@@ -316,32 +323,38 @@ onMounted(() => { void pluginsStore.loadAll() })
 
 .pm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
 }
 
 .pm-card {
   background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  padding: 16px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  transition: border-color 0.15s, opacity 0.15s;
+  gap: 12px;
+  transition: border-color 0.12s, background 0.12s;
   border-left-width: 3px;
+  border-left-style: solid;
+  border-left-color: var(--wdc-border);
 }
 
-.pm-card--enabled { border-left-color: var(--el-color-primary); }
-.pm-card--disabled { border-left-color: var(--el-border-color); opacity: 0.65; }
+.pm-card--enabled { border-left-color: var(--wdc-accent); }
+.pm-card--disabled { opacity: 0.55; }
 
-.pm-card:hover { border-color: var(--el-color-primary-light-5, #a0a0ff); }
+.pm-card:hover {
+  border-color: var(--wdc-border-strong);
+  background: var(--wdc-surface-2);
+}
+.pm-card--enabled:hover { border-left-color: var(--wdc-accent); }
 
 .pm-card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .pm-card-title {
@@ -349,20 +362,26 @@ onMounted(() => { void pluginsStore.loadAll() })
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .pm-name {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--wdc-text);
+  letter-spacing: 0.005em;
 }
 
-.pm-type-tag { flex-shrink: 0; }
+.pm-type-tag {
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 .pm-card-desc {
-  font-size: 0.8rem;
-  color: var(--el-text-color-secondary);
-  line-height: 1.4;
+  font-size: 0.78rem;
+  color: var(--wdc-text-2);
+  line-height: 1.5;
   flex: 1;
 }
 
@@ -370,7 +389,8 @@ onMounted(() => { void pluginsStore.loadAll() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .pm-meta {
@@ -380,14 +400,14 @@ onMounted(() => { void pluginsStore.loadAll() })
 }
 
 .pm-version {
-  font-size: 0.72rem;
-  font-family: monospace;
-  color: var(--el-text-color-secondary);
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--wdc-text-3);
 }
 
 .pm-author {
-  font-size: 0.72rem;
-  color: var(--el-text-color-secondary);
+  font-size: 0.7rem;
+  color: var(--wdc-text-3);
 }
 
 .pm-perms {
@@ -397,8 +417,15 @@ onMounted(() => { void pluginsStore.loadAll() })
 }
 
 .pm-card-actions {
-  padding-top: 4px;
-  border-top: 1px solid var(--el-border-color);
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--wdc-border);
+}
+
+.pm-open-btn {
+  width: 100%;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .pm-empty {

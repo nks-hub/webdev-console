@@ -98,12 +98,18 @@
             >
               Config
             </el-button>
+            <!-- Transitional states (starting=1, stopping=3) must block further
+                 toggles AND show the spinner so the user doesn't think their
+                 click was lost. Without this the switch would flip OFF as
+                 soon as state goes to 3, leaving the user clicking to start
+                 while the daemon is still gracefully stopping Apache. -->
             <el-switch
-              :model-value="isRunning(service)"
-              :loading="servicesStore.isBusy(service.id)"
-              :disabled="!daemonStore.connected"
+              :model-value="isRunning(service) || isTransitioning(service)"
+              :loading="servicesStore.isBusy(service.id) || isTransitioning(service)"
+              :disabled="!daemonStore.connected || isTransitioning(service)"
               size="large"
               class="svc-toggle"
+              :title="transitionTitle(service)"
               @change="toggleService(service.id, $event)"
             />
           </div>
@@ -299,6 +305,21 @@ function statusText(service: any): string {
 
 function isRunning(service: any): boolean {
   return service.state === 2 || service.status === 'running'
+}
+
+// Transitional states: 1=starting, 3=stopping. During these the switch must
+// be frozen — pretending the process is already in the target state would
+// let the user queue conflicting commands while the daemon is still in the
+// middle of a graceful start/stop cycle (Apache graceful stop can take 30s).
+function isTransitioning(service: any): boolean {
+  return service.state === 1 || service.state === 3
+    || service.status === 'starting' || service.status === 'stopping'
+}
+
+function transitionTitle(service: any): string {
+  if (service.state === 1) return `${service.displayName || service.id}: starting…`
+  if (service.state === 3) return `${service.displayName || service.id}: stopping…`
+  return ''
 }
 
 function formatCpu(val: number): string {

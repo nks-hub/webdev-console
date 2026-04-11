@@ -71,12 +71,15 @@ const currentTitle = computed(() => String(route.meta?.title || 'Control Surface
 function toggleTheme() { themeStore.toggle() }
 function onLocaleChange(next: Locale) { setLocale(next) }
 
+// PHP dropped from top-level nav — it's accessible via the Services dashboard
+// (toggle + config editor) and via its plugin panel at /plugin/nks.wdc.php.
+// Keeping runtime-specific managers out of the top nav prevents the menu from
+// exploding as we add Node/Go/Python/etc.
 const navItems = computed(() => [
   { path: '/dashboard', label: t('nav.services') },
   { path: '/sites', label: t('nav.sites') },
   { path: '/databases', label: t('nav.databases') },
   { path: '/ssl', label: t('nav.ssl') },
-  { path: '/php', label: t('nav.php') },
   { path: '/settings', label: t('nav.settings') },
 ])
 

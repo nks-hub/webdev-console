@@ -29,7 +29,15 @@ export const useDaemonStore = defineStore('daemon', () => {
   )
 
   let retryCount = 0
+  let consecutiveFailures = 0
   let fastRetryTimer: ReturnType<typeof setTimeout> | null = null
+  // How many consecutive poll failures before flipping the badge to Offline.
+  // A single transient failure (network blip, EventSource reconnection,
+  // Vite HMR pause) must NOT flicker the badge — the flicker reported by the
+  // user came from the previous code setting connected=false on the first
+  // failure, then the fast-retry cascade setting it back to true ~300ms
+  // later, producing a visible Offline flash on every heartbeat blip.
+  const OFFLINE_THRESHOLD = 3
 
   async function poll() {
     try {
@@ -37,6 +45,7 @@ export const useDaemonStore = defineStore('daemon', () => {
       services.value = await fetchServices()
       connected.value = true
       retryCount = 0
+      consecutiveFailures = 0
       // Clear any pending fast retry — we're back online
       if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
 
@@ -48,9 +57,15 @@ export const useDaemonStore = defineStore('daemon', () => {
       if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
       if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
     } catch {
-      connected.value = false
-      status.value = null
-      services.value = []
+      consecutiveFailures++
+      // Only flip to Offline after the retry cascade actually exhausts itself.
+      // Until then the badge STAYS in its last state (almost always
+      // connected=true) so brief failures don't flash the header.
+      if (consecutiveFailures >= OFFLINE_THRESHOLD) {
+        connected.value = false
+        status.value = null
+        services.value = []
+      }
       // Fast-retry cascade after a failure so the UI recovers quickly from a
       // daemon restart (when the token changed). Previous version only retried
       // on the 5-second interval tick, leaving the "Offline" pill visible for
