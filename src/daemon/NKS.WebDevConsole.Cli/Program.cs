@@ -1315,6 +1315,61 @@ rootCommand.Add(phpCommand);
 rootCommand.Add(pluginsCommand);
 rootCommand.Add(dbCommand);
 rootCommand.Add(binariesCommand);
+// --- wdc migrate ---
+var migrateCommand = new Command("migrate", "Migrate sites from another tool (currently: MAMP)");
+var migrateFromOption = new Option<string>("--from") { Description = "Source tool to migrate from (mamp)", Required = true };
+var migrateDryRunOption = new Option<bool>("--dry-run") { Description = "Discover only, do not write any site configs" };
+migrateCommand.Add(migrateFromOption);
+migrateCommand.Add(migrateDryRunOption);
+migrateCommand.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    var from = parseResult.GetValue(migrateFromOption);
+    var dryRun = parseResult.GetValue(migrateDryRunOption);
+
+    if (!string.Equals(from, "mamp", StringComparison.OrdinalIgnoreCase))
+    {
+        AnsiConsole.MarkupLine($"[red]Unsupported source:[/] {Markup.Escape(from ?? "<none>")} — only 'mamp' is supported");
+        return;
+    }
+
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    if (dryRun)
+    {
+        var discovered = await client.GetJsonAsync("/api/sites/discover-mamp");
+        if (json) { PrintJson(discovered); return; }
+        var count = discovered.GetProperty("count").GetInt32();
+        AnsiConsole.MarkupLine($"[bold]MAMP discovery:[/] {count} site(s) found");
+        if (count == 0) return;
+        var t = new Table().Border(TableBorder.Rounded);
+        t.AddColumn("Domain"); t.AddColumn("DocumentRoot"); t.AddColumn("SSL"); t.AddColumn("Source");
+        foreach (var s in discovered.GetProperty("sites").EnumerateArray())
+        {
+            t.AddRow(
+                s.GetProperty("domain").GetString() ?? "?",
+                s.GetProperty("documentRoot").GetString() ?? "?",
+                s.GetProperty("sslEnabled").GetBoolean() ? "✓" : "-",
+                s.GetProperty("sourcePath").GetString() ?? "?");
+        }
+        AnsiConsole.Write(t);
+        AnsiConsole.MarkupLine("[dim]Run without --dry-run to import.[/]");
+        return;
+    }
+
+    var result = await client.PostAsync("/api/sites/migrate-mamp");
+    if (json) { PrintJson(result); return; }
+    var imported = result.GetProperty("count").GetInt32();
+    AnsiConsole.MarkupLine($"[green]✓[/] Imported [bold]{imported}[/] site(s) from MAMP");
+    if (imported > 0)
+    {
+        foreach (var d in result.GetProperty("imported").EnumerateArray())
+            AnsiConsole.MarkupLine($"  • {Markup.Escape(d.GetString() ?? "")}");
+    }
+});
+
+rootCommand.Add(migrateCommand);
 rootCommand.Add(versionCommand);
 
 return await rootCommand.Parse(args).InvokeAsync();

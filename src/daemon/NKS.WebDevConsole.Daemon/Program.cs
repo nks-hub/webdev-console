@@ -45,6 +45,7 @@ builder.Services.AddSingleton(sp => new SiteManager(
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wdc", "generated")
 ));
 builder.Services.AddSingleton<SiteOrchestrator>();
+builder.Services.AddSingleton<MampMigrator>();
 
 // Binary catalog / downloader / manager — own binaries under ~/.wdc/binaries/
 builder.Services.AddHttpClient("binary-downloader");
@@ -609,6 +610,35 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     // Re-apply through orchestrator so vhost is also written next to Apache binary
     await orchestrator.ApplyAsync(site);
     return Results.Ok(new { domain, restoredFrom = timestamp });
+});
+
+// MAMP PRO migration — Phase 5 plan item.
+// Discover-only: scan well-known MAMP install paths for vhost files, return parsed sites
+// without writing anything. Use POST /api/sites/migrate-mamp to actually import.
+app.MapGet("/api/sites/discover-mamp", (MampMigrator migrator) =>
+{
+    try
+    {
+        var found = migrator.Discover();
+        return Results.Ok(new { count = found.Count, sites = found });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Discovery failed: {ex.Message}");
+    }
+});
+
+app.MapPost("/api/sites/migrate-mamp", async (MampMigrator migrator, SiteManager sm) =>
+{
+    try
+    {
+        var imported = await migrator.ImportAsync(sm);
+        return Results.Ok(new { count = imported.Count, imported });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Migration failed: {ex.Message}");
+    }
 });
 
 app.MapPost("/api/sites/reapply-all", async (SiteManager sm, SiteOrchestrator orchestrator) =>
