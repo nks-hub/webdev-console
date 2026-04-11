@@ -8,11 +8,20 @@ import http from 'http'
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let daemon: ChildProcess | null = null
+let catalogApi: ChildProcess | null = null
 let daemonConnected = false
 let isQuitting = false
 let updaterStatus = 'Idle'
 let updateDownloaded = false
 let checkingForUpdates = false
+
+// Catalog API defaults — the Python FastAPI sidecar at services/catalog-api
+// that serves binary release metadata + config-sync. Electron spawns it
+// alongside the daemon in dev mode so Binaries page has a populated
+// catalog without the user running a second terminal. Production installs
+// can ship a pre-built venv or omit it and point at a remote catalog.
+const CATALOG_API_PORT = 8765
+const CATALOG_API_URL = `http://127.0.0.1:${CATALOG_API_PORT}`
 
 function getUpdateFeedOverride(): string | null {
   const raw = process.env.NKS_WDC_UPDATE_FEED_URL?.trim()
@@ -137,6 +146,95 @@ async function isDaemonAlive(): Promise<boolean> {
   }
 }
 
+// ─── Catalog API sidecar ────────────────────────────────────────────────
+// Finds and spawns the Python FastAPI catalog service. Best-effort: if the
+// venv or python itself is missing, we just skip it and the daemon falls
+// back to its built-in catalog list. Checks `/healthz` first so we don't
+// double-spawn if another instance is already running (user ran run.cmd
+// manually in a terminal).
+
+function findCatalogApiDir(): string | null {
+  // Dev: src/frontend/dist-electron/main.js → up to repo root → services/catalog-api
+  const candidates = [
+    join(__dirname, '../../../services/catalog-api'),
+    join(__dirname, '../../../../services/catalog-api'),
+    join(process.resourcesPath, 'catalog-api'),
+  ]
+  for (const c of candidates) {
+    if (existsSync(join(c, 'app/main.py'))) return c
+  }
+  return null
+}
+
+async function isCatalogApiAlive(): Promise<boolean> {
+  return new Promise(resolve => {
+    const req = http.get(`${CATALOG_API_URL}/healthz`, res => {
+      res.on('data', () => {})
+      res.on('end', () => resolve(res.statusCode === 200))
+    })
+    req.on('error', () => resolve(false))
+    req.setTimeout(1500, () => { req.destroy(); resolve(false) })
+  })
+}
+
+async function spawnCatalogApi() {
+  if (await isCatalogApiAlive()) {
+    console.log('[catalog-api] already running at', CATALOG_API_URL, '— reusing')
+    return
+  }
+
+  const dir = findCatalogApiDir()
+  if (!dir) {
+    console.warn('[catalog-api] directory not found — daemon will use built-in fallback catalog')
+    return
+  }
+
+  // Windows prefers the venv python if present, else falls back to system py.
+  const venvPy = process.platform === 'win32'
+    ? join(dir, '.venv', 'Scripts', 'python.exe')
+    : join(dir, '.venv', 'bin', 'python')
+  const pythonExe = existsSync(venvPy) ? venvPy : (process.platform === 'win32' ? 'py' : 'python3')
+
+  if (!existsSync(venvPy)) {
+    console.warn('[catalog-api] venv not found at', venvPy, '— run `services/catalog-api/run.cmd` once to create it')
+    return
+  }
+
+  const env: NodeJS.ProcessEnv = { ...process.env, NKS_WDC_CATALOG_DEV: '1' }
+
+  console.log('[catalog-api] starting from', dir)
+  catalogApi = spawn(
+    pythonExe,
+    ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(CATALOG_API_PORT)],
+    { cwd: dir, stdio: 'pipe', detached: false, env, windowsHide: true },
+  )
+
+  catalogApi.stdout?.on('data', d => {
+    try { console.log('[catalog-api]', d.toString().trim()) } catch {}
+  })
+  catalogApi.stderr?.on('data', d => {
+    try { console.error('[catalog-api]', d.toString().trim()) } catch {}
+  })
+  catalogApi.on('exit', code => {
+    console.log(`[catalog-api] exited code=${code}`)
+    catalogApi = null
+  })
+
+  // Poll for readiness so the daemon's initial catalog refresh (see below)
+  // happens AFTER the FastAPI service is serving /healthz. Max wait 6s — if
+  // it doesn't come up by then, daemon continues with empty catalog and
+  // users will still see installed binaries and the built-in fallback.
+  const deadline = Date.now() + 6000
+  while (Date.now() < deadline) {
+    if (await isCatalogApiAlive()) {
+      console.log('[catalog-api] ready')
+      return
+    }
+    await new Promise(r => setTimeout(r, 300))
+  }
+  console.warn('[catalog-api] did not become ready within 6s')
+}
+
 async function spawnDaemon() {
   // If a daemon is already running (e.g. started from CLI), reuse it
   if (await isDaemonAlive()) {
@@ -150,8 +248,13 @@ async function spawnDaemon() {
 
   // Pass the portable data directory through explicitly so the daemon's
   // WdcPaths helper redirects ~/.wdc/* to the USB-stick-local folder.
-  // Inherit everything else from the Electron process env.
-  const daemonEnv: NodeJS.ProcessEnv = { ...process.env }
+  // Inherit everything else from the Electron process env. Also hand the
+  // daemon the catalog API URL so `CatalogClient` points at our sidecar
+  // without the user having to edit settings.
+  const daemonEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    NKS_WDC_CATALOG_URL: CATALOG_API_URL,
+  }
   if (portableWdcDir) daemonEnv.WDC_DATA_DIR = portableWdcDir
 
   if (isDev) {
@@ -604,6 +707,13 @@ async function setupAutoUpdater() {
 
 app.on('before-quit', () => {
   isQuitting = true
+  // Best-effort kill of the catalog-api sidecar — Electron's ChildProcess
+  // subprocesses are detached=false so they'd die with the main process
+  // anyway, but this makes shutdown deterministic and surfaces any stray
+  // uvicorn workers that fail to exit on their own in the next dev run.
+  if (catalogApi && !catalogApi.killed) {
+    try { catalogApi.kill() } catch { /* ignore */ }
+  }
 })
 
 // Enable Chrome DevTools Protocol in dev mode so tooling/tests can read renderer console
@@ -612,6 +722,10 @@ if (!app.isPackaged) {
 }
 
 app.whenReady().then(async () => {
+  // Spawn the catalog API sidecar BEFORE the daemon so the daemon's
+  // first RefreshAsync() hits a live endpoint. Best-effort: if it fails
+  // the daemon still starts with the built-in fallback catalog.
+  await spawnCatalogApi()
   await spawnDaemon()
   createWindow()
   createTray()
