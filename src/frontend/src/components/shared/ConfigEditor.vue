@@ -8,7 +8,12 @@
     <div class="editor-toolbar">
       <span class="config-path">{{ configPath }}</span>
       <div class="toolbar-actions">
-        <ValidationBadge ref="badge" @confirmed="applyEdit" @revert="revertEdit" />
+        <ValidationBadge
+          ref="badge"
+          :service-id="serviceId"
+          @confirmed="applyEdit"
+          @revert="revertEdit"
+        />
         <el-button size="small" type="primary" :disabled="!dirty || validating" @click="validateAndApply">
           Save &amp; Apply
         </el-button>
@@ -33,6 +38,12 @@ const props = defineProps<{
   configPath: string
   syntax?: string
   initialContent?: string
+  // Optional — when set, ValidationBadge subscribes to SSE `validation`
+  // events for this service and mirrors phase updates into its state
+  // machine, complementing the imperative startValidation/setResult calls
+  // below so external triggers (CLI `wdc config validate`, another tab
+  // editing the same file) also reflect in this component.
+  serviceId?: string
 }>()
 
 const emit = defineEmits<{
@@ -51,17 +62,32 @@ watch(() => props.initialContent, (v) => {
 
 async function validateAndApply() {
   validating.value = true
+  // The imperative startValidation call below is a fallback for the case
+  // where the user edits a file that isn't tied to any specific serviceId
+  // (no SSE events will fire). When serviceId IS set, the daemon's SSE
+  // broadcast will also update the badge via the reactive path — both
+  // kick the state machine into the same "validating" phase so the
+  // double-call is idempotent.
   badge.value?.startValidation()
   try {
     const port = window.daemonApi?.getPort() ?? 50051
+    const token = window.daemonApi?.getToken?.() ?? ''
     const res = await fetch(`http://localhost:${port}/api/config/validate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: props.configPath, content: localContent.value }),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        configPath: props.configPath,
+        content: localContent.value,
+        serviceId: props.serviceId,
+      }),
     })
-    const data = await res.json() as { valid: boolean; error?: string }
-    badge.value?.setResult(data.valid, data.error)
-    if (!data.valid) { validating.value = false }
+    const data = await res.json() as { isValid?: boolean; valid?: boolean; output?: string; error?: string }
+    const ok = data.isValid ?? data.valid ?? false
+    badge.value?.setResult(ok, data.output ?? data.error)
+    if (!ok) { validating.value = false }
   } catch (e) {
     badge.value?.setResult(false, String(e))
     validating.value = false
