@@ -161,3 +161,22 @@ export class SkipError extends Error {
 }
 
 export function sleep(ms) { return new Promise((r) => setTimeout(r, ms)) }
+
+export async function waitFor(predicate, { timeoutMs = 5000, intervalMs = 100, label = 'condition' } = {}) {
+  const deadline = Date.now() + timeoutMs
+  let lastError = null
+
+  while (Date.now() < deadline) {
+    try {
+      const result = await predicate()
+      if (result) return result
+    } catch (error) {
+      lastError = error
+    }
+
+    await sleep(intervalMs)
+  }
+
+  if (lastError) throw lastError
+  throw new Error(`Timed out waiting for ${label} after ${timeoutMs}ms`)
+}

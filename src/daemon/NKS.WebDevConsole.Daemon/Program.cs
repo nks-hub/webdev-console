@@ -38,6 +38,7 @@ builder.Services.AddSingleton<SettingsStore>();
 builder.Services.AddSingleton<WindowsFirewallManager>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
+builder.Services.AddSingleton<ShutdownCoordinator>();
 builder.Services.AddHostedService<HealthMonitor>();
 builder.Services.AddSingleton<TemplateEngine>();
 builder.Services.AddSingleton<ConfigValidator>();
@@ -2003,7 +2004,14 @@ app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
 // Graceful shutdown — stop all services + cleanup
 app.Lifetime.ApplicationStopping.Register(() =>
 {
-    StopAllServicesOnShutdownAsync(app.Services, pluginLoader, portFile).GetAwaiter().GetResult();
+    app.Services.GetRequiredService<ShutdownCoordinator>()
+        .StopAllAsync(
+            app.Services.GetServices<IServiceModule>(),
+            pluginLoader.Plugins,
+            portFile,
+            CancellationToken.None)
+        .GetAwaiter()
+        .GetResult();
 });
 
 // Route uncaught exceptions through Sentry (no-op if SDK wasn't initialised).
@@ -2019,37 +2027,6 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 };
 
 await app.RunAsync();
-
-static async Task StopAllServicesOnShutdownAsync(IServiceProvider services, PluginLoader pluginLoader, string portFile)
-{
-    Console.WriteLine("[shutdown] Stopping all services...");
-    var modules = services.GetServices<IServiceModule>();
-    foreach (var module in modules)
-    {
-        try
-        {
-            var status = await module.GetStatusAsync(CancellationToken.None);
-            if (status.State == ServiceState.Running)
-            {
-                await module.StopAsync(CancellationToken.None);
-                Console.WriteLine($"[shutdown] {module.ServiceId}: stopped");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[shutdown] {module.ServiceId}: {ex.Message}");
-        }
-    }
-
-    foreach (var p in pluginLoader.Plugins)
-    {
-        try { await p.Instance.StopAsync(CancellationToken.None); }
-        catch { }
-    }
-
-    try { File.Delete(portFile); } catch { }
-    Console.WriteLine("[shutdown] Complete");
-}
 
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
 record InstallBinaryRequest(string App, string Version);
