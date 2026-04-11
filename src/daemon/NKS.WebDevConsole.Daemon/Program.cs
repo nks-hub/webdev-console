@@ -1654,6 +1654,40 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
     return Results.Ok(settings);
 });
 
+// Recent activity — Phase 4 Dashboard timeline. Returns the most recent rows
+// from the config_history table (populated by SiteManager / ConfigValidator /
+// plugin lifecycle events) so the Dashboard can render an el-timeline of
+// what has happened recently: "created myapp.loc", "edited php.ini", etc.
+//
+// Returns a JSON array newest-first, shape:
+//   [{ id, entityType, entityName, operation, changedFields, source, createdAt }]
+//
+// Limit is clamped to [1, 200] so the timeline query stays bounded even if
+// a misbehaving client passes ?limit=999999.
+app.MapGet("/api/activity", async (Database db, int? limit) =>
+{
+    var clamped = Math.Clamp(limit ?? 20, 1, 200);
+    try
+    {
+        using var conn = db.CreateConnection();
+        var rows = await conn.QueryAsync(
+            @"SELECT id, entity_type AS entityType, entity_name AS entityName,
+                     operation, changed_fields AS changedFields, source,
+                     created_at AS createdAt
+              FROM config_history
+              ORDER BY id DESC
+              LIMIT @Limit",
+            new { Limit = clamped });
+        return Results.Ok(rows);
+    }
+    catch (Exception ex)
+    {
+        // Table may not exist on very first boot before migrations complete.
+        // Return empty list rather than 500 so the Dashboard renders cleanly.
+        return Results.Ok(new { error = ex.Message, entries = Array.Empty<object>() });
+    }
+});
+
 // Database identifier validation.
 // MySQL identifier rules allow unquoted names matching [a-zA-Z0-9_$] (and $ in some versions).
 // We use a strict subset to avoid shell escape, path traversal, and SQL injection when the

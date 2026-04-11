@@ -165,6 +165,34 @@
           </div>
         </div>
       </div>
+
+      <!-- Recent activity — Phase 4 plan item. Reads config_history via
+           /api/activity so users can see what's happened recently without
+           opening a service's log viewer. Empty state hidden when nothing
+           has been recorded yet (first-run). -->
+      <div class="activity-section" v-if="activity.length > 0">
+        <div class="section-header">
+          <span class="section-title">Recent activity</span>
+          <el-button size="small" text @click="loadActivity">Refresh</el-button>
+        </div>
+        <el-timeline class="activity-timeline">
+          <el-timeline-item
+            v-for="row in activity"
+            :key="row.id"
+            :timestamp="row.createdAt"
+            :type="activityColor(row.operation)"
+            size="normal"
+            placement="top"
+          >
+            <div class="activity-row">
+              <span class="activity-op mono">{{ row.operation }}</span>
+              <span class="activity-entity">{{ row.entityType }}</span>
+              <span class="activity-name mono" v-if="row.entityName">{{ row.entityName }}</span>
+              <span class="activity-source" v-if="row.source && row.source !== 'app'">via {{ row.source }}</span>
+            </div>
+          </el-timeline-item>
+        </el-timeline>
+      </div>
     </template>
 
     <!-- Logs: full-view modal (NOT drawer). Opens large el-dialog with xterm-backed viewer. -->
@@ -212,7 +240,46 @@ const noneRunning = computed(() => runningCount.value === 0)
 const totalCpu = computed(() => services.value.reduce((s, x: any) => s + (x.cpuPercent ?? 0), 0))
 const totalRamMB = computed(() => Math.round(services.value.reduce((s, x: any) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
 
-onMounted(() => { void sitesStore.load() })
+// Recent activity timeline — Phase 4 plan item. Backed by /api/activity
+// which queries the config_history SQLite table. Loaded on mount and
+// refreshable via the section-header button. Empty array (first-run or
+// migration-in-flight) keeps the section hidden.
+interface ActivityRow {
+  id: number
+  entityType: string
+  entityName?: string
+  operation: string
+  changedFields?: string
+  source?: string
+  createdAt: string
+}
+const activity = ref<ActivityRow[]>([])
+
+async function loadActivity() {
+  try {
+    const port = (window as any).daemonApi?.getPort?.() ?? new URLSearchParams(window.location.search).get('port') ?? '5146'
+    const token = (window as any).daemonApi?.getToken?.() ?? new URLSearchParams(window.location.search).get('token') ?? ''
+    const r = await fetch(`http://localhost:${port}/api/activity?limit=20`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!r.ok) return
+    const data = await r.json()
+    activity.value = Array.isArray(data) ? data : (data?.entries ?? [])
+  } catch { /* offline — leave prior list in place */ }
+}
+
+function activityColor(operation: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' {
+  const op = (operation || '').toLowerCase()
+  if (op.includes('create') || op.includes('insert')) return 'success'
+  if (op.includes('delete') || op.includes('remove')) return 'danger'
+  if (op.includes('update') || op.includes('edit') || op.includes('apply')) return 'primary'
+  return 'info'
+}
+
+onMounted(() => {
+  void sitesStore.load()
+  void loadActivity()
+})
 
 const stateLabels: Record<number, string> = {
   0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled',
@@ -723,5 +790,54 @@ function openConfig(id: string) {
   border-radius: var(--wdc-radius-sm);
   max-height: 500px;
   overflow: auto;
+}
+
+/* Recent activity timeline (Phase 4) */
+.activity-section {
+  margin-top: 24px;
+  padding: 0 24px 24px;
+}
+.activity-section .section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.activity-section .section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wdc-text-3);
+}
+.activity-timeline {
+  padding-left: 4px;
+}
+.activity-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+.activity-op {
+  font-weight: 600;
+  color: var(--wdc-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.activity-entity {
+  color: var(--wdc-text-2);
+}
+.activity-name {
+  color: var(--wdc-accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+}
+.activity-source {
+  color: var(--wdc-text-3);
+  font-size: 0.72rem;
+  margin-left: auto;
 }
 </style>
