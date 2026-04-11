@@ -31,6 +31,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
+builder.Services.AddSingleton<TelemetryConsent>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
@@ -713,6 +714,45 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     // Re-apply through orchestrator so vhost is also written next to Apache binary
     await orchestrator.ApplyAsync(site);
     return Results.Ok(new { domain, restoredFrom = timestamp });
+});
+
+// Telemetry consent — Phase 7 plan item #111.
+// NKS WDC sends NO telemetry by default. This endpoint lets the Settings page
+// read the current consent state and update it. No actual Sentry/metrics
+// transport is wired yet — this iteration establishes the consent gate and
+// persistence so the wire-up can be a small future commit.
+app.MapGet("/api/telemetry/consent", (TelemetryConsent consent) =>
+{
+    consent.Load(); // pick up manual edits to the file
+    return Results.Ok(new
+    {
+        enabled = consent.Enabled,
+        crashReports = consent.CrashReports,
+        usageMetrics = consent.UsageMetrics,
+        consentGivenUtc = consent.ConsentGivenUtc,
+    });
+});
+
+app.MapPost("/api/telemetry/consent", async (HttpContext ctx, TelemetryConsent consent) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, bool>>();
+    var enabled = body?.GetValueOrDefault("enabled") ?? false;
+    var crashReports = body?.GetValueOrDefault("crashReports") ?? false;
+    var usageMetrics = body?.GetValueOrDefault("usageMetrics") ?? false;
+    consent.Save(enabled, crashReports, usageMetrics);
+    return Results.Ok(new
+    {
+        enabled = consent.Enabled,
+        crashReports = consent.CrashReports,
+        usageMetrics = consent.UsageMetrics,
+        consentGivenUtc = consent.ConsentGivenUtc,
+    });
+});
+
+app.MapDelete("/api/telemetry/consent", (TelemetryConsent consent) =>
+{
+    consent.Revoke();
+    return Results.NoContent();
 });
 
 // Onboarding state — Phase 7 plan item.

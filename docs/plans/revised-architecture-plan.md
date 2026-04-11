@@ -396,8 +396,8 @@ Items discovered during the v1 audit cycle that are valuable but not blocking th
 - [x] Crash-recovery smoke test: 7 xUnit tests in `tests/NKS.WebDevConsole.Daemon.Tests/BackupAndCrashRecoveryTests.cs` covering backup round trip, zip-slip defense, half-extracted .tmp skip, DaemonJobObject idempotency, ProcessMetricsSampler null handling
 - [x] i18n framework bootstrap (`vue-i18n@11`, `src/frontend/src/i18n.ts`, cs/en locales, header language switcher with auto-detect)
 - [x] Backup/restore CLI command (`wdc backup`, `wdc restore --from file.zip`) — `BackupManager` + REST endpoints + CLI
-- [ ] First-run onboarding wizard (binary install nudge, mkcert CA install, hosts permission grant)
-- [ ] Sentry/telemetry opt-in with explicit consent
+- [x] First-run onboarding wizard (`OnboardingWizard.vue` — 3-step el-dialog: binaries → mkcert CA → create first site, `/api/onboarding/state` + `/api/onboarding/complete` endpoints)
+- [x] Sentry/telemetry opt-in with explicit consent — off by default, `TelemetryConsent` singleton persists to `~/.wdc/data/telemetry-consent.json`, `GET/POST/DELETE /api/telemetry/consent`, sub-flags force-off when `enabled=false`
 - [x] Marketplace UI: `/api/plugins/install` endpoint + install button with HTTPS-only + traversal protection + restart-required flag
 
 ---
