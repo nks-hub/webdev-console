@@ -88,7 +88,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 export const fetchStatus = (): Promise<StatusResponse> =>
   json('/api/status')
 
-// System info (os tag, arch tag, daemon version, counts) — cached per session
+// System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }
   services: { running: number; total: number }
@@ -103,6 +103,13 @@ export interface SystemInfo {
     arch: 'x64' | 'x86' | 'arm64' | 'arm' | 'unknown'
   }
   runtime: { dotnet: string; arch: string }
+  /** Catalog health snapshot — populated after CatalogClient.RefreshAsync. */
+  catalog: {
+    url: string
+    cachedCount: number
+    lastFetch: string | null
+    reachable: boolean
+  }
 }
 export const fetchSystem = (): Promise<SystemInfo> => json('/api/system')
 

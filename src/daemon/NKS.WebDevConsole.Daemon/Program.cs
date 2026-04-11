@@ -279,7 +279,7 @@ app.MapGet("/api/status", () => Results.Ok(new
     uptime = Environment.TickCount64 / 1000
 }));
 
-app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm) =>
+app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm, CatalogClient cc, SettingsStore settings) =>
 {
     var modules = sp.GetServices<IServiceModule>();
     var running = 0; var total = 0;
@@ -317,7 +317,20 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
             tag = osTag,
             arch = archTag,
         },
-        runtime = new { dotnet = Environment.Version.ToString(), arch = archTag }
+        runtime = new { dotnet = Environment.Version.ToString(), arch = archTag },
+        // Catalog status block — lets the Binaries page + Settings
+        // Advanced tab surface "catalog reachable?" without a second
+        // round-trip. `lastFetch` is DateTime.MinValue when the catalog
+        // has never been refreshed, `cachedCount` is the number of
+        // flattened BinaryRelease rows across all apps after the last
+        // RefreshAsync (zero means fetch failed or catalog is empty).
+        catalog = new
+        {
+            url = settings.CatalogUrl,
+            cachedCount = cc.CachedReleases.Count,
+            lastFetch = cc.LastFetch == DateTime.MinValue ? (DateTime?)null : cc.LastFetch,
+            reachable = cc.CachedReleases.Count > 0,
+        },
     });
 });
 
