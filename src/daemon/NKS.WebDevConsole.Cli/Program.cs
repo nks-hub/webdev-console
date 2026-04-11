@@ -20,11 +20,48 @@ statusCommand.SetAction(async (parseResult, ct) =>
 
     var status = await client.GetJsonAsync("/api/status");
     var services = await client.GetJsonAsync("/api/services");
+    // /api/system is best-effort — adds host/catalog info on top of the
+    // bare /api/status response. If the daemon is an old build that
+    // doesn't expose /api/system, fall through silently so `wdc status`
+    // still prints the core daemon+services output.
+    System.Text.Json.JsonElement? system = null;
+    try { system = await client.GetJsonAsync("/api/system"); } catch { /* old daemon */ }
 
-    if (json) { PrintJson(new { status, services }); return; }
+    if (json) { PrintJson(new { status, services, system }); return; }
 
     AnsiConsole.MarkupLine($"[bold]Daemon[/]  [green]running[/]  v{status.GetProperty("version").GetString()}");
     AnsiConsole.MarkupLine($"Plugins: {status.GetProperty("plugins").GetInt32()}  Uptime: {FormatUptime(status.GetProperty("uptime").GetInt64())}");
+
+    if (system is System.Text.Json.JsonElement sys)
+    {
+        // Host line: os/arch tag + machine name
+        if (sys.TryGetProperty("os", out var os))
+        {
+            var osTag = os.TryGetProperty("tag", out var t) ? t.GetString() : "unknown";
+            var archTag = os.TryGetProperty("arch", out var a) ? a.GetString() : "unknown";
+            var machine = os.TryGetProperty("machine", out var m) ? m.GetString() : "";
+            AnsiConsole.MarkupLine($"Host:    [cyan]{osTag}/{archTag}[/]  {Markup.Escape(machine ?? string.Empty)}");
+        }
+
+        // Catalog health line — color-coded by reachable flag
+        if (sys.TryGetProperty("catalog", out var cat))
+        {
+            var url = cat.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
+            var count = cat.TryGetProperty("cachedCount", out var cnt) ? cnt.GetInt32() : 0;
+            var reachable = cat.TryGetProperty("reachable", out var r) && r.GetBoolean();
+            var lastFetchRaw = cat.TryGetProperty("lastFetch", out var lf) && lf.ValueKind != System.Text.Json.JsonValueKind.Null
+                ? lf.GetString() : null;
+            var lastFetchDisplay = lastFetchRaw is null
+                ? "never"
+                : DateTime.TryParse(lastFetchRaw, out var dt)
+                    ? dt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                    : lastFetchRaw;
+            var color = reachable ? "green" : "red";
+            var label = reachable ? $"{count} releases" : "unreachable";
+            AnsiConsole.MarkupLine($"Catalog: [{color}]{label}[/]  [dim]{Markup.Escape(url)}[/]  [dim]({lastFetchDisplay})[/]");
+        }
+    }
+
     AnsiConsole.WriteLine();
 
     if (services.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No services registered.[/]"); return; }
