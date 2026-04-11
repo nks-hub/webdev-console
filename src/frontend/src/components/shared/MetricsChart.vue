@@ -89,6 +89,13 @@ const chartOption = computed(() => {
 <style scoped>
 .metrics-chart {
   width: 100%;
+  /* Lock to the prop height so flex parents (Dashboard service cards) can't
+     stretch this sparkline unpredictably — charts without a fixed height tend
+     to grow to fill their container on the next ResizeObserver cycle and
+     push layout around. */
+  height: v-bind('chartHeight + "px"');
+  min-height: v-bind('chartHeight + "px"');
+  max-height: v-bind('chartHeight + "px"');
   overflow: hidden;
   flex-shrink: 0;
 }
