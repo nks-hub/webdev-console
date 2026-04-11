@@ -139,10 +139,19 @@
               >available</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="200" align="right">
+          <el-table-column label="Actions" width="220" align="right">
             <template #default="{ row }">
+              <el-tooltip
+                v-if="!row.installed && nativePlatform && row.platforms.length && !row.platforms.includes(nativePlatform)"
+                :content="`No ${nativePlatform} build in this release`"
+                placement="left"
+              >
+                <el-button size="small" type="info" plain disabled>
+                  Not available
+                </el-button>
+              </el-tooltip>
               <el-button
-                v-if="!row.installed"
+                v-else-if="!row.installed"
                 size="small"
                 type="primary"
                 plain
@@ -190,6 +199,7 @@ import { ElMessage } from 'element-plus'
 import {
   fetchBinaryCatalog,
   fetchInstalledBinaries,
+  fetchSystem,
   installBinary,
   uninstallBinary,
 } from '../../api/daemon'
@@ -344,6 +354,19 @@ const detailRows = computed<DetailRow[]>(() => {
     byVersion.set(i.version, row)
   }
 
+  // Sort each row's platform list so the native host appears first —
+  // makes the detail table scannable by OS at a glance ("where's my
+  // platform?" always at the left edge). Cross-platform entries after
+  // native are kept in stable alphabetical order for determinism.
+  const native = nativePlatform.value
+  for (const row of byVersion.values()) {
+    row.platforms.sort((a, b) => {
+      if (a === native && b !== native) return -1
+      if (b === native && a !== native) return 1
+      return a.localeCompare(b)
+    })
+  }
+
   return Array.from(byVersion.values()).sort((a, b) => versionGreater(a.version, b.version))
 })
 
@@ -410,25 +433,15 @@ async function uninstall(app: string, version: string) {
 }
 
 async function loadNativePlatform() {
-  // Single shot — the host os/arch never changes during a session, so we
-  // don't need to re-fetch on refresh. Failure is non-fatal: the table
-  // falls back to showing all chips in the neutral info style.
+  // Single shot — the host os/arch never changes during a session.
+  // Failure non-fatal: the table falls back to showing all chips
+  // in neutral style and the Install guard becomes a no-op.
   try {
-    const base = (window as any).daemonApi?.getPort?.()
-      ? `http://localhost:${(window as any).daemonApi.getPort()}`
-      : `http://localhost:${new URLSearchParams(window.location.search).get('port') ?? '5199'}`
-    const token = (window as any).daemonApi?.getToken?.()
-      ?? new URLSearchParams(window.location.search).get('token')
-      ?? ''
-    const r = await fetch(`${base}/api/system`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    if (!r.ok) return
-    const sys = await r.json()
+    const sys = await fetchSystem()
     if (sys?.os?.tag && sys?.os?.arch) {
       nativePlatform.value = `${sys.os.tag}/${sys.os.arch}`
     }
-  } catch { /* daemon not reachable yet — leave blank */ }
+  } catch { /* daemon not reachable yet */ }
 }
 
 onMounted(() => {

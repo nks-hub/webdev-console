@@ -88,6 +88,24 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 export const fetchStatus = (): Promise<StatusResponse> =>
   json('/api/status')
 
+// System info (os tag, arch tag, daemon version, counts) — cached per session
+export interface SystemInfo {
+  daemon: { version: string; uptime: number; pid: number }
+  services: { running: number; total: number }
+  sites: number
+  plugins: number
+  binaries: number
+  os: {
+    platform: string
+    version: string
+    machine: string
+    tag: 'windows' | 'linux' | 'macos' | 'unknown'
+    arch: 'x64' | 'x86' | 'arm64' | 'arm' | 'unknown'
+  }
+  runtime: { dotnet: string; arch: string }
+}
+export const fetchSystem = (): Promise<SystemInfo> => json('/api/system')
+
 // Services
 export const fetchServices = (): Promise<any[]> =>
   json('/api/services')
