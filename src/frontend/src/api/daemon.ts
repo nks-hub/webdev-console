@@ -127,6 +127,19 @@ export interface MarketplaceResponse {
 export const fetchMarketplace = (): Promise<MarketplaceResponse> =>
   json('/api/plugins/marketplace')
 
+export interface InstallPluginResponse {
+  installed: boolean
+  id: string
+  path: string
+  restartRequired: boolean
+  message: string
+}
+export const installPluginFromMarketplace = (id: string, downloadUrl: string): Promise<InstallPluginResponse> =>
+  json<InstallPluginResponse>('/api/plugins/install', {
+    method: 'POST',
+    body: JSON.stringify({ id, downloadUrl }),
+  })
+
 export const enablePlugin = (id: string) =>
   json<void>(`/api/plugins/${id}/enable`, { method: 'POST' })
 

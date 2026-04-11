@@ -81,15 +81,25 @@
               <span v-if="mp.author" class="pm-author">by {{ mp.author }}</span>
               <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
             </div>
-            <el-button
-              v-if="!mp.installed"
-              size="small"
-              type="primary"
-              :disabled="!mp.downloadUrl"
-              @click="copyDownloadUrl(mp.downloadUrl)"
-            >
-              Copy URL
-            </el-button>
+            <div v-if="!mp.installed" class="pm-mp-actions">
+              <el-button
+                size="small"
+                type="primary"
+                :loading="installing.has(mp.id)"
+                :disabled="!mp.downloadUrl"
+                @click="installFromMarketplace(mp)"
+              >
+                Install
+              </el-button>
+              <el-button
+                size="small"
+                text
+                :disabled="!mp.downloadUrl"
+                @click="copyDownloadUrl(mp.downloadUrl)"
+              >
+                Copy URL
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -156,9 +166,14 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { usePluginsStore } from '../../stores/plugins'
-import { fetchMarketplace, type MarketplaceResponse } from '../../api/daemon'
+import {
+  fetchMarketplace,
+  installPluginFromMarketplace,
+  type MarketplaceResponse,
+  type MarketplacePlugin,
+} from '../../api/daemon'
 
 const router = useRouter()
 const pluginsStore = usePluginsStore()
@@ -196,6 +211,44 @@ async function copyDownloadUrl(url: string) {
     ElMessage.success('Download URL copied to clipboard')
   } catch {
     ElMessage.warning('Could not access clipboard')
+  }
+}
+
+const installing = ref<Set<string>>(new Set())
+
+async function installFromMarketplace(mp: MarketplacePlugin) {
+  if (!mp.downloadUrl) return
+  try {
+    await ElMessageBox.confirm(
+      `Install ${mp.name} v${mp.version} from ${mp.downloadUrl}?\n\nA daemon restart will be required after installation.`,
+      'Confirm install',
+      { confirmButtonText: 'Install', cancelButtonText: 'Cancel', type: 'info' }
+    )
+  } catch { return }
+
+  installing.value.add(mp.id)
+  try {
+    const result = await installPluginFromMarketplace(mp.id, mp.downloadUrl)
+    ElNotification({
+      title: `${mp.name} installed`,
+      message: result.restartRequired
+        ? 'Restart the daemon to load the new plugin.'
+        : 'Plugin loaded.',
+      type: 'success',
+      duration: 6000,
+    })
+    // Mark as installed locally so the button hides on next render
+    mp.installed = true
+    void reloadMarketplace()
+  } catch (e: any) {
+    ElNotification({
+      title: 'Install failed',
+      message: e.message || 'Unknown error',
+      type: 'error',
+      duration: 0,
+    })
+  } finally {
+    installing.value.delete(mp.id)
   }
 }
 
@@ -350,5 +403,11 @@ onMounted(() => { void pluginsStore.loadAll() })
   display: flex;
   justify-content: center;
   padding: 40px 0;
+}
+
+.pm-mp-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 </style>

@@ -359,6 +359,107 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
     });
 });
 
+// Plugin install — Phase 7. Downloads a plugin .zip from a marketplace URL, validates,
+// extracts into the plugins directory. Daemon restart required to load the new DLL
+// because AssemblyLoadContext does not unload while assemblies are referenced.
+// Returns { installed: true, restartRequired: true, path: "..." }.
+app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory httpFactory) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    var downloadUrl = body?.GetValueOrDefault("downloadUrl") ?? "";
+    var pluginId = body?.GetValueOrDefault("id") ?? "";
+
+    if (string.IsNullOrWhiteSpace(downloadUrl))
+        return Results.BadRequest(new { error = "downloadUrl required" });
+    if (string.IsNullOrWhiteSpace(pluginId))
+        return Results.BadRequest(new { error = "id required" });
+
+    // Validate plugin id — only [a-z0-9.-]+ to prevent directory traversal in extract path
+    if (!System.Text.RegularExpressions.Regex.IsMatch(pluginId, @"^[a-zA-Z0-9._\-]{1,128}$"))
+        return Results.BadRequest(new { error = "Invalid plugin id" });
+
+    // Validate download URL — must be HTTPS (or HTTP for localhost dev)
+    if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri))
+        return Results.BadRequest(new { error = "Invalid downloadUrl" });
+    var schemeOk = uri.Scheme == "https" ||
+                   (uri.Scheme == "http" && (uri.Host == "localhost" || uri.Host == "127.0.0.1"));
+    if (!schemeOk)
+        return Results.BadRequest(new { error = "downloadUrl must be HTTPS (or HTTP localhost)" });
+
+    var pluginsRoot = Path.GetFullPath(pluginDir);
+    var targetDir = Path.GetFullPath(Path.Combine(pluginsRoot, pluginId));
+    if (!targetDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "Resolved path escapes plugins root" });
+
+    var cacheDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".wdc", "cache", "plugin-installs");
+    Directory.CreateDirectory(cacheDir);
+    var tempZip = Path.Combine(cacheDir, $"{pluginId}-{Guid.NewGuid():N}.zip");
+
+    try
+    {
+        using (var client = httpFactory.CreateClient())
+        {
+            client.Timeout = TimeSpan.FromMinutes(2);
+            using var stream = await client.GetStreamAsync(uri);
+            using var fs = File.Create(tempZip);
+            await stream.CopyToAsync(fs);
+        }
+
+        // Extract to staging dir first, then atomic rename onto target
+        var stagingDir = targetDir + ".staging";
+        if (Directory.Exists(stagingDir)) Directory.Delete(stagingDir, recursive: true);
+        Directory.CreateDirectory(stagingDir);
+
+        using (var fs = File.OpenRead(tempZip))
+        using (var zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Read))
+        {
+            foreach (var entry in zip.Entries)
+            {
+                if (string.IsNullOrEmpty(entry.Name)) continue;
+                if (entry.FullName.Contains("..")) continue; // zip-slip defense
+                var dest = Path.GetFullPath(Path.Combine(stagingDir, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
+                if (!dest.StartsWith(Path.GetFullPath(stagingDir), StringComparison.OrdinalIgnoreCase))
+                    continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                using var entryStream = entry.Open();
+                using var outFs = File.Create(dest);
+                await entryStream.CopyToAsync(outFs);
+            }
+        }
+
+        // Sanity check: at least one .dll matching the plugin id
+        var dllExists = Directory.EnumerateFiles(stagingDir, $"*{pluginId}*.dll", SearchOption.AllDirectories).Any()
+                     || Directory.EnumerateFiles(stagingDir, "*.dll", SearchOption.AllDirectories).Any();
+        if (!dllExists)
+        {
+            Directory.Delete(stagingDir, recursive: true);
+            return Results.BadRequest(new { error = "Archive contains no DLL" });
+        }
+
+        if (Directory.Exists(targetDir)) Directory.Delete(targetDir, recursive: true);
+        Directory.Move(stagingDir, targetDir);
+
+        return Results.Ok(new
+        {
+            installed = true,
+            id = pluginId,
+            path = targetDir,
+            restartRequired = true,
+            message = "Plugin extracted. Restart the daemon to load it."
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Install failed: {ex.Message}");
+    }
+    finally
+    {
+        try { if (File.Exists(tempZip)) File.Delete(tempZip); } catch { }
+    }
+});
+
 // Plugin brand icon: streams embedded SVG resource from plugin DLL
 app.MapGet("/api/plugins/{id}/icon", (string id) =>
 {
