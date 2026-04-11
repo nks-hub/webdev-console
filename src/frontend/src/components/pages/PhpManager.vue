@@ -54,7 +54,15 @@
               :class="{ enabled: ext.enabled }"
             >
               <span class="ext-name">{{ ext.name }}</span>
-              <span class="ext-status">{{ ext.enabled ? 'ON' : 'OFF' }}</span>
+              <el-switch
+                :model-value="ext.enabled"
+                :loading="togglingExt === ext.name"
+                size="small"
+                inline-prompt
+                active-text="ON"
+                inactive-text="OFF"
+                @change="(val: boolean) => toggleExtension(ext.name, val)"
+              />
             </div>
           </div>
         </div>
@@ -91,6 +99,7 @@ const loading = ref(false)
 const selectedVersion = ref('')
 const selectedConfig = ref('')
 const extensions = ref<ExtInfo[]>([])
+const togglingExt = ref<string>('')
 
 const enabledCount = computed(() => extensions.value.filter(e => e.enabled).length)
 
@@ -163,6 +172,41 @@ function parseExtensions(iniContent: string) {
     }
   }
   extensions.value = exts
+}
+
+async function toggleExtension(name: string, enabled: boolean) {
+  if (!selectedVersion.value) return
+  // Derive major.minor from the full version so the endpoint can locate the
+  // installation (path is keyed by the full version directory, e.g. 8.4.20,
+  // but the endpoint accepts the major.minor form and globs matching dirs).
+  const majorMinor = selectedVersion.value.split('.').slice(0, 2).join('.')
+  togglingExt.value = name
+  try {
+    const r = await fetch(
+      `${daemonBase()}/api/php/${encodeURIComponent(majorMinor)}/extensions/${encodeURIComponent(name)}`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ enabled }),
+      },
+    )
+    if (!r.ok) {
+      const text = await r.text().catch(() => r.statusText)
+      ElMessage.error(`Failed to toggle ${name}: ${text}`)
+      return
+    }
+    // Optimistically update local state; daemon also restarted PHP so a
+    // follow-up config reload picks up the real result.
+    const ext = extensions.value.find((e) => e.name === name)
+    if (ext) ext.enabled = enabled
+    ElMessage.success(`${name} ${enabled ? 'enabled' : 'disabled'} — PHP restarted`)
+    // Reload config after a brief pause so the ini content matches the new state.
+    setTimeout(() => { void loadConfig(selectedVersion.value) }, 400)
+  } catch (e: any) {
+    ElMessage.error(`Toggle failed: ${e.message}`)
+  } finally {
+    togglingExt.value = ''
+  }
 }
 
 async function setDefault(version: string) {
