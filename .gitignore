@@ -47,3 +47,13 @@ out/
 appsettings.*.json
 !src/daemon/NKS.WebDevConsole.Daemon/appsettings.json
 !src/daemon/NKS.WebDevConsole.Daemon/appsettings.Development.json
+/*.png
+/src/frontend/dist
+
+# Safety net for daemon cwd-leaked artifacts (dotnet run sets project dir as cwd;
+# any code that writes relative paths would land here). ApacheConfig defaults are
+# absolute now, but keep this as defence-in-depth so stray artifacts never
+# accidentally get staged.
+/src/daemon/NKS.WebDevConsole.Daemon/conf/
+/src/daemon/NKS.WebDevConsole.Daemon/generated/
+/src/daemon/NKS.WebDevConsole.Daemon/logs/

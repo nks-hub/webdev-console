@@ -770,6 +770,12 @@ function openConfig(id: string) {
   font-size: 0.7rem;
   font-family: 'JetBrains Mono', monospace;
   color: var(--wdc-text-3);
+  /* Prevent long Windows paths (C:\Users\...\httpd.conf) from overflowing
+     the drawer header. Per ui-audit 2026-04-11 §5. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
 }
 
 .config-pre {
