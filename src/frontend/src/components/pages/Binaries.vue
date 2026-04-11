@@ -227,18 +227,41 @@ type DetailRow = {
   isDefault: boolean
 }
 
-// Semver-ish descending sort so "latest" always wins and the detail table
-// shows newest at the top. Versions without dots fall back to lexical.
+// Semver descending sort so "latest" always wins and the detail table
+// shows newest at the top.
+//
+// Previously we naively split on /[.-]/ which turned `2.11.0-beta.1` into
+// `["2", "11", "0", "beta", "1"]` — `parseInt("beta")` returns NaN → the
+// function fell through to `localeCompare`, so caddy pre-releases were
+// sorted AFTER stable in the detail table (wrong per semver).
+//
+// New logic:
+//   1. Split off the pre-release segment on the first dash (`.patch-pre`).
+//   2. Compare numeric major.minor.patch parts first — if any differ, done.
+//   3. If all numerics equal, a release WITHOUT a pre-release beats one
+//      WITH (per semver spec: `1.0.0 > 1.0.0-rc.1`).
+//   4. If both have pre-release, compare the pre-release strings lexically.
 function versionGreater(a: string, b: string): number {
-  const pa = a.split(/[.-]/).map(s => parseInt(s, 10))
-  const pb = b.split(/[.-]/).map(s => parseInt(s, 10))
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+  const [aMain, aPre = ''] = a.split('-', 2)
+  const [bMain, bPre = ''] = b.split('-', 2)
+
+  const pa = aMain.split('.').map(s => parseInt(s, 10) || 0)
+  const pb = bMain.split('.').map(s => parseInt(s, 10) || 0)
+
+  const len = Math.max(pa.length, pb.length)
+  for (let i = 0; i < len; i++) {
     const av = pa[i] ?? 0
     const bv = pb[i] ?? 0
-    if (Number.isNaN(av) || Number.isNaN(bv)) return a.localeCompare(b)
     if (av !== bv) return bv - av
   }
-  return 0
+
+  // Numerics equal. Stable (no pre-release) outranks pre-release.
+  if (!aPre && bPre) return -1  // a comes first (higher)
+  if (aPre && !bPre) return 1   // b comes first (higher)
+  if (!aPre && !bPre) return 0
+
+  // Both have pre-release — descending lexical (beta.2 > beta.1 > alpha.1).
+  return bPre.localeCompare(aPre)
 }
 
 const moduleCards = computed<ModuleCard[]>(() => {
