@@ -4,10 +4,17 @@ import { fetchStatus, fetchServices, subscribeEvents } from '../api/daemon'
 import type { ValidationUpdate } from '../api/daemon'
 import type { StatusResponse, ServiceInfo } from '../api/types'
 
+type OnConnectListener = () => void | Promise<void>
+const onConnectListeners = new Set<OnConnectListener>()
+
 export const useDaemonStore = defineStore('daemon', () => {
   const status = ref<StatusResponse | null>(null)
   const services = ref<ServiceInfo[]>([])
   const connected = ref(false)
+  // True only after the very first successful /api/status. Distinguishes
+  // "boot — backend still starting" (show splash spinner) from "runtime
+  // offline" (show inline offline badge). Never flips back to false.
+  const hasEverConnected = ref(false)
   // Per-service validation state broadcast by the daemon on /api/config/validate
   // so ValidationBadge can show Validating/Passed/Failed without the parent
   // component needing to imperatively call startValidation()/setResult().
@@ -43,9 +50,18 @@ export const useDaemonStore = defineStore('daemon', () => {
     try {
       status.value = await fetchStatus()
       services.value = await fetchServices()
+      const wasConnected = connected.value
       connected.value = true
       retryCount = 0
       consecutiveFailures = 0
+      // Fire onConnect listeners: either on the very first successful poll
+      // OR on any transition from offline→online (daemon restart scenario).
+      if (!hasEverConnected.value || !wasConnected) {
+        hasEverConnected.value = true
+        for (const l of onConnectListeners) {
+          try { void l() } catch { /* ignore listener failures */ }
+        }
+      }
       // Clear any pending fast retry — we're back online
       if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
 
@@ -116,5 +132,24 @@ export const useDaemonStore = defineStore('daemon', () => {
     sseCleanup?.()
   }
 
-  return { status, services, connected, validation, runningServices, allRunning, cpuHistory, ramHistory, startPolling, stopPolling, poll }
+  /** Register a callback fired on first connect + every reconnect.
+   *  Returns an unsubscribe function. Used by other stores (sites, plugins,
+   *  services) to refetch whenever the daemon comes online, so Electron's
+   *  startup window or a mid-session daemon restart doesn't leave the
+   *  UI showing stale / empty data. */
+  function onConnect(listener: OnConnectListener): () => void {
+    onConnectListeners.add(listener)
+    // If we are already connected at registration time, fire immediately so
+    // callers that mount AFTER the first connection don't miss the event.
+    if (hasEverConnected.value && connected.value) {
+      try { void listener() } catch { /* ignore */ }
+    }
+    return () => { onConnectListeners.delete(listener) }
+  }
+
+  return {
+    status, services, connected, hasEverConnected, validation,
+    runningServices, allRunning, cpuHistory, ramHistory,
+    startPolling, stopPolling, poll, onConnect,
+  }
 })

@@ -37,58 +37,78 @@
         class="sites-table"
         row-class-name="cursor-pointer"
       >
-        <el-table-column prop="domain" label="Domain" min-width="160">
+        <el-table-column prop="domain" label="Domain" min-width="220">
           <template #default="{ row }">
-            <div>
-              <span class="col-domain">{{ row.domain }}</span>
+            <div class="cell-domain">
+              <div class="cell-domain-row">
+                <span class="col-domain">{{ row.domain }}</span>
+                <span class="cell-port">:{{ row.httpPort || 80 }}</span>
+                <el-tag
+                  v-if="row.sslEnabled"
+                  size="small"
+                  type="success"
+                  effect="dark"
+                  class="cell-tag"
+                  title="HTTPS enabled"
+                >SSL</el-tag>
+              </div>
               <div v-if="row.aliases?.length" class="col-aliases">
+                <span class="alias-dot">↳</span>
                 {{ row.aliases.join(', ') }}
               </div>
             </div>
           </template>
         </el-table-column>
 
-        <el-table-column label="Document Root" min-width="200">
+        <el-table-column label="Document Root" min-width="260">
           <template #default="{ row }">
             <span class="col-mono">{{ row.documentRoot }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="PHP" width="75">
+        <el-table-column label="Runtime" width="130">
           <template #default="{ row }">
-            <el-tag v-if="row.phpVersion && row.phpVersion !== 'none'" size="small" effect="plain">
-              {{ row.phpVersion }}
-            </el-tag>
+            <el-tag
+              v-if="row.phpVersion && row.phpVersion !== 'none'"
+              size="small"
+              effect="dark"
+              class="runtime-tag runtime-php"
+            >PHP {{ row.phpVersion }}</el-tag>
+            <el-tag
+              v-else-if="row.framework === 'node' || row.framework === 'nextjs'"
+              size="small"
+              effect="dark"
+              class="runtime-tag runtime-node"
+            >Node</el-tag>
+            <el-tag
+              v-else
+              size="small"
+              effect="plain"
+              class="runtime-tag runtime-static"
+            >Static</el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Framework" width="140">
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.framework"
+              size="small"
+              type="warning"
+              effect="dark"
+              class="cell-tag"
+            >{{ row.framework }}</el-tag>
             <span v-else class="col-empty">—</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="Framework" width="110">
+        <el-table-column label="Actions" width="280" fixed="right">
           <template #default="{ row }">
-            <el-tag v-if="row.framework" size="small" type="warning" effect="plain">{{ row.framework }}</el-tag>
-            <span v-else class="col-empty">—</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="SSL" width="52" align="center">
-          <template #default="{ row }">
-            <el-icon :color="row.sslEnabled ? '#22c55e' : '#64748b'" :title="row.sslEnabled ? 'SSL enabled' : 'No SSL'">
-              <Lock />
-            </el-icon>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="Port" width="70" align="center">
-          <template #default="{ row }">
-            <span class="col-mono col-empty">{{ row.httpPort || 80 }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="Actions" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" text @click.stop="openInBrowser(row)">Open</el-button>
-            <el-button size="small" text @click.stop="detectFramework(row.domain)" title="Auto-detect framework">Detect</el-button>
-            <el-button size="small" type="danger" text @click.stop="confirmDelete(row.domain)">Del</el-button>
+            <div class="site-actions">
+              <el-button size="small" type="primary" @click.stop="openInBrowser(row)">Open</el-button>
+              <el-button size="small" @click.stop="detectFramework(row.domain)" title="Auto-detect framework">Detect</el-button>
+              <el-button size="small" type="danger" plain @click.stop="confirmDelete(row.domain)">Delete</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -144,7 +164,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Lock } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import type { SiteInfo } from '../../api/types'
@@ -417,27 +436,106 @@ function formatDate(iso: string): string {
   padding: 0 24px 24px;
 }
 
+.sites-table :deep(.el-table__header) {
+  background: var(--wdc-surface-2);
+}
+.sites-table :deep(.el-table__header th) {
+  background: var(--wdc-surface-2) !important;
+  color: var(--wdc-text-2) !important;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--wdc-border-strong) !important;
+}
+.sites-table :deep(.el-table__row) {
+  transition: background 0.12s;
+}
+.sites-table :deep(.el-table__row:hover > td) {
+  background: var(--wdc-hover) !important;
+}
+.sites-table :deep(td) {
+  padding: 14px 12px !important;
+  border-bottom: 1px solid var(--wdc-border) !important;
+}
+
+.cell-domain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cell-domain-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .col-domain {
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--wdc-text);
+  letter-spacing: 0.01em;
+}
+.cell-port {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--wdc-text-3);
+  font-weight: 500;
+}
+.cell-tag {
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem !important;
 }
 
 .col-aliases {
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: var(--wdc-text-2);
-  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
 }
+.alias-dot { color: var(--wdc-text-3); }
 
 .col-mono {
-  font-size: 0.78rem;
-  font-family: monospace;
-  color: var(--el-text-color-regular);
+  font-size: 0.82rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--wdc-text-2);
 }
 
 .col-empty {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
+}
+
+.runtime-tag {
+  font-weight: 700 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.04em;
+}
+.runtime-tag.runtime-php {
+  /* PHP brand indigo, strong contrast white text — 7.2:1 AAA */
+  background: #4f5b93 !important;
+  border-color: #4f5b93 !important;
+  color: #ffffff !important;
+}
+.runtime-tag.runtime-node {
+  background: #3c873a !important;
+  border-color: #3c873a !important;
+  color: #fff !important;
+}
+.runtime-tag.runtime-static {
+  background: transparent !important;
+  border-color: var(--wdc-border-strong) !important;
+  color: var(--wdc-text-3) !important;
+}
+
+.site-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .site-detail {

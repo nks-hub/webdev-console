@@ -235,10 +235,34 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 
 .el-button {
   border-radius: var(--wdc-radius-sm) !important;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.82rem;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.12s;
+  /* Border is now a hard 1px line — no rgba fall-through */
+  border-width: 1px !important;
+  border-style: solid !important;
+  /* Subtle bottom inset gives every button perceivable depth even without
+     a drop shadow, so text/plain variants still read as "clickable shape"
+     instead of flat text with a hover tint. Uses currentColor derivatives
+     via plain rgba so it applies regardless of variant colour. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 1px 0 rgba(0, 0, 0, 0.18) !important;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.12s, transform 0.08s, box-shadow 0.12s;
   letter-spacing: 0.01em;
+}
+.el-button:active:not(.is-disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.2) !important;
+}
+/* Light mode — swap inset highlights */
+html:not(.dark) .el-button {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(12, 16, 32, 0.08) !important;
 }
 
 /* Size heights — match Element Plus conventions, narrower horizontal padding
@@ -387,15 +411,20 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   color: var(--wdc-text) !important;
 }
 
-/* ── Text variants — no border, no bg until hover ──────────────────────── */
+/* ── Text variants — now button-shaped at rest (subtle bg + border) ──────
+   Previous iteration left them fully transparent which read as "bare text
+   with hover tint" to the user. Give them a faint surface tint and
+   subtle border so they are clearly clickable at rest without competing
+   visually with primary/plain variants. */
 .el-button.is-text {
-  background: transparent !important;
-  border-color: transparent !important;
+  background: var(--wdc-surface-2) !important;
+  border-color: var(--wdc-border) !important;
   color: var(--wdc-text-2) !important;
-  padding: 0 10px !important;
+  padding: 0 12px !important;
 }
 .el-button.is-text:hover:not(.is-disabled) {
-  background: var(--wdc-hover) !important;
+  background: var(--wdc-elevated) !important;
+  border-color: var(--wdc-border-strong) !important;
   color: var(--wdc-text) !important;
 }
 .el-button.is-text.el-button--primary {
@@ -870,4 +899,80 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Toast / ElMessage — centered, prominent, readable
+   ─────────────────────────────────────────────────────────────────────────
+   Default Element Plus spawns a tiny message at the top of the viewport
+   which is unreadable at high DPI and gets lost behind the header. Center
+   it horizontally and push it down under the app header, then scale the
+   card up so it's actually noticeable.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.el-message {
+  /* Center horizontally — Element Plus positions via `left: 50%` + its own
+     transform, so we only override sizing/colours here to avoid fighting the
+     library's slide-in animation. */
+  min-width: 360px !important;
+  max-width: 560px !important;
+  padding: 14px 20px !important;
+  background: var(--wdc-surface) !important;
+  border: 1px solid var(--wdc-border-strong) !important;
+  border-radius: var(--wdc-radius) !important;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 0 1px var(--wdc-border-strong) !important;
+  top: 72px !important;
+  font-size: 0.92rem !important;
+  font-weight: 600;
+}
+
+.el-message .el-message__content {
+  color: var(--wdc-text) !important;
+  font-size: 0.92rem !important;
+  line-height: 1.4 !important;
+  font-weight: 600;
+}
+
+.el-message .el-message__icon {
+  font-size: 1.2rem !important;
+  margin-right: 10px !important;
+}
+
+.el-message--info {
+  border-left: 4px solid var(--wdc-accent) !important;
+}
+.el-message--info .el-message__icon { color: var(--wdc-accent) !important; }
+
+.el-message--success {
+  border-left: 4px solid var(--wdc-status-running) !important;
+}
+.el-message--success .el-message__icon { color: var(--wdc-status-running) !important; }
+
+.el-message--warning {
+  border-left: 4px solid var(--wdc-status-starting) !important;
+}
+.el-message--warning .el-message__icon { color: var(--wdc-status-starting) !important; }
+
+.el-message--error {
+  border-left: 4px solid var(--wdc-status-error) !important;
+}
+.el-message--error .el-message__icon { color: var(--wdc-status-error) !important; }
+
+/* Notification (ElNotification) — same treatment, positioned top-right */
+.el-notification {
+  background: var(--wdc-surface) !important;
+  border: 1px solid var(--wdc-border-strong) !important;
+  border-radius: var(--wdc-radius) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  min-width: 380px !important;
+}
+.el-notification .el-notification__title {
+  color: var(--wdc-text) !important;
+  font-size: 0.95rem !important;
+  font-weight: 700;
+}
+.el-notification .el-notification__content {
+  color: var(--wdc-text-2) !important;
+  font-size: 0.85rem !important;
 }

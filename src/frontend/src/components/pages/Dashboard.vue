@@ -3,15 +3,14 @@
     <!-- Page header -->
     <div class="page-header">
       <div class="header-title-block">
-        <span class="page-title">Services</span>
-        <span class="page-count" v-if="services.length > 0">
-          <span class="count-running">{{ runningCount }}</span>
-          <span class="count-sep">/</span>
-          <span class="count-total">{{ totalCount }}</span>
-          <span class="count-label">running</span>
-        </span>
+        <span class="page-title">Dashboard</span>
+        <span class="page-subtitle">System overview &amp; service health</span>
       </div>
       <div class="header-actions">
+        <el-button
+          size="small"
+          @click="$router.push({ path: '/sites', query: { create: '1' } })"
+        >+ New Site</el-button>
         <el-button
           type="success"
           size="small"
@@ -47,8 +46,70 @@
     </div>
 
     <template v-else>
-      <!-- Service list -->
-      <div class="service-list">
+      <!-- 1. Quick stats strip (top) — at-a-glance counters -->
+      <div class="stats-grid">
+        <div class="stat-card stat-clickable" @click="$router.push('/sites')">
+          <div class="stat-icon">◱</div>
+          <div class="stat-content">
+            <div class="stat-value mono">{{ sitesStore.sites.length }}</div>
+            <div class="stat-label">Sites</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-running">●</div>
+          <div class="stat-content">
+            <div class="stat-value mono">{{ runningCount }} / {{ totalCount }}</div>
+            <div class="stat-label">Services running</div>
+          </div>
+        </div>
+        <div class="stat-card stat-clickable" @click="$router.push('/settings')">
+          <div class="stat-icon">◐</div>
+          <div class="stat-content">
+            <div class="stat-value mono">{{ daemonStore.status?.plugins ?? 0 }}</div>
+            <div class="stat-label">Plugins loaded</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏱</div>
+          <div class="stat-content">
+            <div class="stat-value mono">{{ formatUptime(daemonStore.status?.uptime ?? 0) }}</div>
+            <div class="stat-label">Daemon uptime</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Metric charts (CPU + Memory) -->
+      <div class="metrics-section" v-if="daemonStore.cpuHistory.length > 2">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <span class="metric-card-title">CPU Usage</span>
+              <span class="metric-card-value mono">{{ totalCpu.toFixed(1) }}%</span>
+            </div>
+            <MetricsChart :data="daemonStore.cpuHistory" color="#6366f1" />
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <span class="metric-card-title">Memory</span>
+              <span class="metric-card-value mono">{{ totalRamMB }} MB</span>
+            </div>
+            <MetricsChart :data="daemonStore.ramHistory" color="#22c55e" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Services list (main panel) -->
+      <div class="services-panel">
+        <div class="panel-header">
+          <span class="panel-title">Services</span>
+          <span class="panel-count" v-if="services.length > 0">
+            <span class="count-running">{{ runningCount }}</span>
+            <span class="count-sep">/</span>
+            <span class="count-total">{{ totalCount }}</span>
+            <span class="count-label">running</span>
+          </span>
+        </div>
+        <div class="service-list">
         <div
           v-for="service in services"
           :key="service.id"
@@ -115,61 +176,22 @@
           </div>
         </div>
 
-        <!-- Empty state -->
-        <el-empty
-          v-if="services.length === 0"
-          description="No services registered. Check daemon configuration."
-          :image-size="64"
-          class="empty-state"
-        />
-      </div>
-
-      <!-- Quick stats -->
-      <div class="quick-stats" v-if="daemonStore.connected">
-        <div class="stat-item" @click="$router.push('/sites')">
-          <span class="stat-value mono">{{ sitesStore.sites.length }}</span>
-          <span class="stat-label">Sites</span>
-        </div>
-        <div class="stat-item" @click="$router.push('/databases')">
-          <span class="stat-value mono">{{ daemonStore.status?.plugins ?? 0 }}</span>
-          <span class="stat-label">Plugins</span>
-        </div>
-        <div class="stat-item" @click="$router.push('/php')">
-          <span class="stat-value mono">{{ runningCount }}</span>
-          <span class="stat-label">Running</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value mono">{{ formatUptime(daemonStore.status?.uptime ?? 0) }}</span>
-          <span class="stat-label">Uptime</span>
+          <!-- Empty state -->
+          <el-empty
+            v-if="services.length === 0"
+            description="No services registered. Check daemon configuration."
+            :image-size="64"
+            class="empty-state"
+          />
         </div>
       </div>
 
-      <!-- Quick actions -->
-      <div class="quick-actions" v-if="daemonStore.connected">
-        <el-button size="small" @click="$router.push({ path: '/sites', query: { create: '1' } })">+ New Site</el-button>
+      <!-- 4. Quick actions bar (shortcuts) -->
+      <div class="quick-actions">
         <el-button size="small" @click="openMailpit">Open Mailpit</el-button>
         <el-button size="small" @click="$router.push('/ssl')">SSL Manager</el-button>
         <el-button size="small" @click="$router.push('/databases')">Databases</el-button>
-      </div>
-
-      <!-- Metrics sparklines -->
-      <div class="metrics-section" v-if="daemonStore.cpuHistory.length > 2">
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-card-header">
-              <span class="metric-card-title">CPU Usage</span>
-              <span class="metric-card-value mono">{{ totalCpu.toFixed(1) }}%</span>
-            </div>
-            <MetricsChart :data="daemonStore.cpuHistory" color="#6366f1" />
-          </div>
-          <div class="metric-card">
-            <div class="metric-card-header">
-              <span class="metric-card-title">Memory</span>
-              <span class="metric-card-value mono">{{ totalRamMB }} MB</span>
-            </div>
-            <MetricsChart :data="daemonStore.ramHistory" color="#22c55e" />
-          </div>
-        </div>
+        <el-button size="small" @click="$router.push('/settings')">Settings</el-button>
       </div>
 
       <!-- Recent activity — Phase 4 plan item. Reads config_history via
@@ -617,9 +639,10 @@ function closeConfig() {
 .svc-metrics {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
-  width: 170px;
+  width: 240px;
+  justify-content: flex-start;
 }
 
 .metric {
@@ -704,53 +727,76 @@ function closeConfig() {
   padding: 16px 0;
 }
 
-/* ─── Quick stats ────────────────────────────────────────────────────────── */
-.quick-stats {
-  display: flex;
-  gap: 12px;
-  padding: 14px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+/* ─── Dashboard subtitle ────────────────────────────────────────────────── */
+.page-subtitle {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+  font-weight: 500;
 }
 
-.stat-item {
+/* ─── Stats strip (top row) ─────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 18px 24px 8px;
+}
+
+.stat-card {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 16px;
+  gap: 14px;
+  padding: 16px 18px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  cursor: pointer;
-  transition: border-color 0.12s;
-  min-width: 80px;
+  border-radius: var(--wdc-radius);
+  transition: border-color 0.12s, transform 0.1s;
+}
+.stat-card.stat-clickable { cursor: pointer; }
+.stat-card.stat-clickable:hover {
+  border-color: var(--wdc-accent);
+  transform: translateY(-1px);
 }
 
-.stat-item:hover { border-color: var(--wdc-accent); }
+.stat-icon {
+  font-size: 1.8rem;
+  color: var(--wdc-text-3);
+  line-height: 1;
+  width: 34px;
+  text-align: center;
+}
+.stat-icon-running {
+  color: var(--wdc-status-running);
+  font-size: 1rem;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
 
 .stat-value {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: var(--wdc-text);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
 .stat-label {
-  font-size: 0.68rem;
-  font-weight: 500;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--wdc-text-3);
 }
 
-/* ─── Quick actions ──────────────────────────────────────────────────────── */
-.quick-actions {
-  display: flex;
-  gap: 8px;
-  padding: 10px 24px 14px;
-}
-
+/* ─── Metrics charts row ─────────────────────────────────────────────────── */
 .metrics-section {
-  padding: 0 16px 16px;
+  padding: 8px 24px 16px;
   flex-shrink: 0;
 }
 
@@ -764,9 +810,51 @@ function closeConfig() {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 12px 16px;
-  height: 130px;
+  padding: 14px 16px;
+  height: 140px;
   overflow: hidden;
+}
+
+/* ─── Services panel ─────────────────────────────────────────────────────── */
+.services-panel {
+  margin: 0 24px 16px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--wdc-border);
+  background: var(--wdc-surface-2);
+}
+
+.panel-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text);
+}
+
+.panel-count {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── Quick actions ──────────────────────────────────────────────────────── */
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 24px 20px;
+  flex-wrap: wrap;
 }
 
 .metric-card-header {
