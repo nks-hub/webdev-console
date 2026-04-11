@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Plugin;
+using System.Text;
 
 namespace NKS.WebDevConsole.Daemon.Sites;
 
@@ -14,6 +15,9 @@ namespace NKS.WebDevConsole.Daemon.Sites;
 /// </summary>
 public sealed class SiteOrchestrator
 {
+    internal const string HostsBlockBegin = "# BEGIN NKS WebDev Console";
+    internal const string HostsBlockEnd = "# END NKS WebDev Console";
+
     private readonly ILogger<SiteOrchestrator> _logger;
     private readonly IServiceProvider _sp;
 
@@ -206,11 +210,9 @@ public sealed class SiteOrchestrator
     /// </summary>
     private async Task UpdateHostsFileAsync(IEnumerable<string> domainsToAdd, CancellationToken ct)
     {
-        if (!OperatingSystem.IsWindows()) return; // TODO: Unix implementation
-
-        var hostsPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            "drivers", "etc", "hosts");
+        var hostsPath = OperatingSystem.IsWindows()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts")
+            : "/etc/hosts";
 
         // Collect ALL managed domains (existing + new) so we can write the complete block.
         // Wildcard aliases (*.myapp.loc) are valid in Apache ServerAlias and mkcert certs but
@@ -284,12 +286,18 @@ public sealed class SiteOrchestrator
             return;
         }
 
+        if (!OperatingSystem.IsWindows())
+        {
+            await WriteHostsFileDirectAsync(hostsPath, allDomains, ct);
+            return;
+        }
+
         // Build PowerShell command that writes managed block with elevation
         var entries = string.Join("\\n", allDomains.Select(d => $"127.0.0.1\\t{d}"));
         var psScript = $@"
 $hostsPath = '{hostsPath.Replace("'", "''")}'
-$begin = '# BEGIN NKS WebDev Console'
-$end = '# END NKS WebDev Console'
+$begin = '{HostsBlockBegin}'
+$end = '{HostsBlockEnd}'
 $block = @""
 $begin
 {string.Join(Environment.NewLine, allDomains.Select(d => $"127.0.0.1\t{d}"))}
@@ -425,6 +433,137 @@ ipconfig /flushdns | Out-Null
         }
 
         return requiredDomains.All(d => mapped.Contains(d));
+    }
+
+    private async Task WriteHostsFileDirectAsync(string hostsPath, HashSet<string> allDomains, CancellationToken ct)
+    {
+        var content = await File.ReadAllTextAsync(hostsPath, ct);
+        var newContent = RewriteManagedHostsContent(content, allDomains);
+
+        RotateHostsBackups(hostsPath);
+        await File.WriteAllTextAsync(hostsPath, newContent, Encoding.ASCII, ct);
+        await FlushDnsCacheAsync(ct);
+
+        _logger.LogInformation("Hosts file updated directly at {HostsPath} with {Count} domains", hostsPath, allDomains.Count);
+    }
+
+    internal static string RewriteManagedHostsContent(string content, IReadOnlyCollection<string> allDomains)
+    {
+        var block = allDomains.Count == 0
+            ? string.Empty
+            : string.Join(Environment.NewLine,
+                new[] { HostsBlockBegin }
+                    .Concat(allDomains.Select(d => $"127.0.0.1\t{d}"))
+                    .Concat(new[] { HostsBlockEnd }));
+
+        var originalLines = content.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var nonManagedOriginal = new List<string>();
+        var inManagedBlock = false;
+        foreach (var raw in originalLines)
+        {
+            if (raw.Contains(HostsBlockBegin, StringComparison.Ordinal))
+            {
+                inManagedBlock = true;
+                continue;
+            }
+            if (raw.Contains(HostsBlockEnd, StringComparison.Ordinal))
+            {
+                inManagedBlock = false;
+                continue;
+            }
+            if (!inManagedBlock)
+                nonManagedOriginal.Add(raw);
+        }
+
+        var beginIndex = content.IndexOf(HostsBlockBegin, StringComparison.Ordinal);
+        var endIndex = beginIndex >= 0
+            ? content.IndexOf(HostsBlockEnd, beginIndex, StringComparison.Ordinal)
+            : -1;
+
+        string newContent;
+        if (beginIndex >= 0 && endIndex >= 0)
+        {
+            var before = content[..beginIndex].TrimEnd();
+            var after = content[(endIndex + HostsBlockEnd.Length)..].TrimStart();
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(before)) parts.Add(before);
+            if (!string.IsNullOrWhiteSpace(block)) parts.Add(block);
+            if (!string.IsNullOrWhiteSpace(after)) parts.Add(after);
+            newContent = parts.Count == 0
+                ? string.Empty
+                : string.Join($"{Environment.NewLine}{Environment.NewLine}", parts) + Environment.NewLine;
+        }
+        else if (string.IsNullOrWhiteSpace(block))
+        {
+            newContent = content;
+        }
+        else
+        {
+            newContent = content.TrimEnd() + $"{Environment.NewLine}{Environment.NewLine}{block}{Environment.NewLine}";
+        }
+
+        foreach (var originalLine in nonManagedOriginal)
+        {
+            var trimmed = originalLine.Trim();
+            if (trimmed.Length == 0) continue;
+            if (!newContent.Contains(trimmed, StringComparison.Ordinal))
+                throw new InvalidOperationException($"SAFETY ABORT: original line would be lost: {trimmed}");
+        }
+
+        if (content.Length > 0 && newContent.Length < (content.Length / 4))
+            throw new InvalidOperationException($"SAFETY ABORT: new content is suspiciously small (orig={content.Length}, new={newContent.Length})");
+
+        return newContent;
+    }
+
+    private static void RotateHostsBackups(string hostsPath)
+    {
+        for (var i = 4; i >= 1; i--)
+        {
+            var src = $"{hostsPath}.wdc-backup.{i}";
+            var dst = $"{hostsPath}.wdc-backup.{i + 1}";
+            if (File.Exists(src))
+                File.Move(src, dst, overwrite: true);
+        }
+
+        File.Copy(hostsPath, $"{hostsPath}.wdc-backup.1", overwrite: true);
+    }
+
+    private async Task FlushDnsCacheAsync(CancellationToken ct)
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            await RunBestEffortAsync("dscacheutil", "-flushcache", ct);
+            await RunBestEffortAsync("killall", "-HUP mDNSResponder", ct);
+            return;
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            await RunBestEffortAsync("resolvectl", "flush-caches", ct);
+            await RunBestEffortAsync("systemd-resolve", "--flush-caches", ct);
+        }
+    }
+
+    private async Task RunBestEffortAsync(string fileName, string arguments, CancellationToken ct)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+
+            if (process is not null)
+                await process.WaitForExitAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Best-effort command failed: {FileName} {Arguments}", fileName, arguments);
+        }
     }
 
     /// <summary>
