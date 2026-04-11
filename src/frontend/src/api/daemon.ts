@@ -57,7 +57,30 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: authHeaders(init?.headers),
   })
-  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`)
+  if (!r.ok) {
+    // Extract the real error from the response body when available.
+    // Daemon endpoints consistently return { error: "..." } or plain JSON
+    // with a message/detail field — try all common shapes before falling
+    // back to the generic HTTP status. Without this, any 400/500 from the
+    // daemon renders as "HTTP 400 Bad Request" in the UI with zero context.
+    let detail = ''
+    try {
+      const txt = await r.text()
+      if (txt) {
+        try {
+          const body = JSON.parse(txt)
+          detail = body?.error ?? body?.message ?? body?.detail ?? body?.title ?? ''
+          if (!detail && typeof body === 'string') detail = body
+          if (!detail) detail = txt.length < 300 ? txt : ''
+        } catch {
+          // non-JSON plain-text body
+          if (txt.length < 300) detail = txt
+        }
+      }
+    } catch { /* couldn't read body — fall through */ }
+    const prefix = `HTTP ${r.status} ${r.statusText}`
+    throw new Error(detail ? `${prefix}: ${detail}` : prefix)
+  }
   return r.json() as Promise<T>
 }
 
