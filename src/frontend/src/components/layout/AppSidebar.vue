@@ -147,6 +147,15 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
         <span class="nav-label" v-if="!collapsed">Binaries</span>
       </div>
+      <div
+        class="nav-item"
+        :class="{ active: isActive('/cloudflare'), 'nav-item-tunnel': cloudflareRunning }"
+        @click="navigate('/cloudflare')"
+      >
+        <span class="nav-icon-shell"><el-icon :size="18"><Connection /></el-icon></span>
+        <span class="nav-label" v-if="!collapsed">Tunnel</span>
+        <span v-if="!collapsed && exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
+      </div>
       <div class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
         <span class="nav-label" v-if="!collapsed">Plugins</span>
@@ -162,9 +171,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, Fold, Expand, House } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, Fold, Expand, House, Connection } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
+import { useSitesStore } from '../../stores/sites'
 import { useServicesStore } from '../../stores/services'
 import { ElMessage } from 'element-plus'
 
@@ -172,6 +182,7 @@ const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
+const sitesStore = useSitesStore()
 
 const collapsed = ref(localStorage.getItem('wdc-sidebar-collapsed') === 'true')
 
@@ -182,6 +193,16 @@ function toggleCollapse() {
 
 const services = computed(() => daemonStore.services as any[])
 const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
+
+// Tunnel entry in the bottom nav lights up when cloudflared is running AND
+// shows a badge with the count of sites currently exposed through it.
+// Both are derived state — no extra fetches, just reuse daemon + sites stores.
+const cloudflareRunning = computed(() =>
+  services.value.some(s => s.id === 'cloudflare' && (s.state === 2 || s.status === 'running'))
+)
+const exposedSiteCount = computed(() =>
+  (sitesStore.sites as any[]).filter(s => s.cloudflare?.enabled).length
+)
 
 const SHORT_NAMES: Record<string, string> = {
   'Apache HTTP Server': 'Apache',
@@ -441,9 +462,36 @@ async function toggleSvc(svc: any) {
   border-left-color: var(--wdc-accent);
 }
 
+/* Tunnel entry — when cloudflared is actively running, tint the icon
+   + border in the Cloudflare brand orange so users get a visual "live"
+   indicator without hunting through the page. Overrides the accent blue
+   from .nav-item.active when both apply. */
+.nav-item-tunnel {
+  border-left-color: #f38020;
+}
+.nav-item-tunnel .nav-icon-shell {
+  color: #f38020;
+}
+.nav-item-tunnel.active {
+  background: rgba(243, 128, 32, 0.12);
+  border-left-color: #f38020;
+}
+
 .nav-label {
   flex: 1;
   white-space: nowrap;
+}
+
+.nav-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  background: #f38020;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
 }
 
 .nav-icon-shell {
