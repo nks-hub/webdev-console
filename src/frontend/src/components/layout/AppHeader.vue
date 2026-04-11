@@ -114,13 +114,13 @@ function isActive(path: string) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--wdc-accent), var(--wdc-accent-2));
-  color: #081017;
+  border-radius: 4px;
+  /* Flat: solid fill, no gradient, no drop shadow */
+  background: var(--wdc-accent);
+  color: var(--wdc-bg);
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  box-shadow: 0 10px 18px rgba(86, 194, 255, 0.18);
 }
 
 .logo-copy {

@@ -178,13 +178,15 @@ function formatUptime(seconds: number): string {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  border-left-width: 3px;
+  transition: border-color 0.12s, background 0.12s;
+  border-left-width: 4px;
   border-left-style: solid;
 }
 
+/* Flat redesign: hover just brightens the border, no drop shadow */
 .svc-card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  border-color: var(--wdc-border-strong);
+  background: var(--wdc-surface-2);
 }
 
 .svc-running  { border-left-color: var(--wdc-status-running); }
@@ -214,9 +216,10 @@ function formatUptime(seconds: number): string {
   flex-shrink: 0;
 }
 
-.dot-running  { background: var(--wdc-status-running); box-shadow: 0 0 6px var(--wdc-status-running); }
+/* Flat: no glow, rely on saturated token colors for visibility */
+.dot-running  { background: var(--wdc-status-running); }
 .dot-stopped  { background: var(--wdc-status-stopped); }
-.dot-crashed  { background: var(--wdc-status-error); box-shadow: 0 0 6px var(--wdc-status-error); }
+.dot-crashed  { background: var(--wdc-status-error); }
 .dot-starting { background: var(--wdc-status-starting); animation: pulse 1s infinite; }
 .dot-stopping { background: var(--wdc-status-starting); animation: pulse 1s infinite; }
 .dot-disabled { background: var(--el-border-color); }

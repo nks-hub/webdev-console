@@ -504,14 +504,9 @@ function openConfig(id: string) {
   flex-shrink: 0;
 }
 
-.dot-running {
-  background: var(--wdc-status-running);
-  box-shadow: 0 0 5px var(--wdc-status-running);
-}
-
-.dot-stopped {
-  background: var(--wdc-status-stopped);
-}
+/* Flat: no glow, pure saturated dots */
+.dot-running { background: var(--wdc-status-running); }
+.dot-stopped { background: var(--wdc-status-stopped); }
 
 .dot-starting,
 .dot-stopping {
@@ -519,10 +514,7 @@ function openConfig(id: string) {
   animation: svc-pulse 1s ease-in-out infinite;
 }
 
-.dot-crashed {
-  background: var(--wdc-status-error);
-  box-shadow: 0 0 5px var(--wdc-status-error);
-}
+.dot-crashed { background: var(--wdc-status-error); }
 
 .dot-disabled,
 .dot-unknown {

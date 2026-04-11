@@ -70,14 +70,12 @@ watch(() => props.service, () => { loadError.value = false })
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border-radius: 10px;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.16), transparent 48%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: var(--wdc-radius-sm);
+  /* Flat: solid surface-2 tile, single border — no gradients, no inset shadow */
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
   color: var(--wdc-text-3);
-  transition: opacity 0.12s, filter 0.12s, transform 0.12s, border-color 0.12s;
+  transition: border-color 0.12s, background 0.12s;
   user-select: none;
 }
 .svc-icon img {

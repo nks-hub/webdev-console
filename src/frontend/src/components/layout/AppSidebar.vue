@@ -266,12 +266,10 @@ async function toggleSvc(svc: any) {
   align-items: center;
   gap: 12px;
   padding: 14px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(145deg, rgba(86, 194, 255, 0.14), rgba(124, 255, 165, 0.05)),
-    rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--wdc-radius);
+  /* Flat: solid border, solid fill — no gradient, no inner glow */
+  border: 1px solid var(--wdc-border);
+  background: var(--wdc-surface-2);
 }
 
 .workspace-mark {
@@ -280,13 +278,13 @@ async function toggleSvc(svc: any) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--wdc-accent), var(--wdc-accent-2));
-  color: #081017;
+  border-radius: 4px;
+  /* Flat: solid accent tile */
+  background: var(--wdc-accent);
+  color: var(--wdc-bg);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  box-shadow: 0 8px 18px rgba(86, 194, 255, 0.24);
 }
 
 .workspace-copy {
@@ -400,13 +398,13 @@ async function toggleSvc(svc: any) {
   height: 8px;
   flex-shrink: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  /* Flat: use token for "off" state so it's visible in both modes */
+  background: var(--wdc-status-stopped);
 }
 
 .svc-led.on {
+  /* Flat: solid dot, no outer glow ring */
   background: var(--wdc-status-running);
-  box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.12);
 }
 
 .nav-item {
@@ -414,25 +412,27 @@ async function toggleSvc(svc: any) {
   align-items: center;
   gap: 12px;
   padding: 11px 12px;
-  border-radius: 14px;
+  border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   color: var(--wdc-text-2);
   font-size: 0.92rem;
   font-weight: 600;
-  transition: all 0.1s;
-  border: 1px solid transparent;
+  transition: background 0.1s, color 0.1s, border-left-color 0.1s;
+  /* Flat: 3px left edge that becomes accent when active */
+  border-left: 3px solid transparent;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  /* Flat: solid surface-2, no alpha layering */
+  background: var(--wdc-surface-2);
   color: var(--wdc-text);
-  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .nav-item.active {
-  background: linear-gradient(180deg, rgba(86, 194, 255, 0.16), rgba(86, 194, 255, 0.08));
+  /* Flat: strong solid left indicator + subtle accent-tinted fill */
+  background: var(--wdc-accent-dim);
   color: var(--wdc-text);
-  border-color: rgba(86, 194, 255, 0.24);
+  border-left-color: var(--wdc-accent);
 }
 
 .nav-label {
@@ -446,9 +446,10 @@ async function toggleSvc(svc: any) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--wdc-radius-sm);
+  /* Flat: solid surface-2 tile, no alpha */
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
 }
 
 .collapse-toggle {
@@ -459,14 +460,14 @@ async function toggleSvc(svc: any) {
   margin-bottom: 4px;
   cursor: pointer;
   color: var(--wdc-text-3);
-  border-radius: 12px;
+  border-radius: var(--wdc-radius-sm);
   transition: all 0.12s;
   align-self: flex-end;
 }
 
 .collapse-toggle:hover {
   color: var(--wdc-text);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--wdc-surface-2);
 }
 
 .sidebar.collapsed {
