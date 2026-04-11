@@ -1118,12 +1118,36 @@ app.MapGet("/api/services/{id}/config", async (string id) =>
 // Config validation — dispatches to Apache / PHP / MySQL / Redis based on serviceId.
 // Frontend sends serviceId from the ServiceConfig.vue editor; legacy callers that
 // omit serviceId get Apache validation (backwards compat with the original endpoint).
-app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm) =>
+// Broadcasts SSE `validation` events (phase: started|passed|failed) so the UI
+// ValidationBadge can update live — originally specified in Phase 2 but never
+// wired; filled in during the 2026-04-11 strict audit cycle.
+app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm, SseService sse) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
     if (body == null) return Results.BadRequest();
 
     var service = (body.ServiceId ?? "apache").ToLowerInvariant();
+
+    // Emit "started" immediately so the UI can show the spinner while
+    // the validator binary runs.
+    await sse.BroadcastAsync("validation", new
+    {
+        phase = "started",
+        serviceId = service,
+        configPath = body.ConfigPath,
+    });
+
+    async Task<IResult> Finish(bool isValid, string output)
+    {
+        await sse.BroadcastAsync("validation", new
+        {
+            phase = isValid ? "passed" : "failed",
+            serviceId = service,
+            configPath = body.ConfigPath,
+            output,
+        });
+        return Results.Ok(new { isValid, output });
+    }
 
     // Helper: resolve a managed binary executable for a given app key, never falling
     // back to PATH. Rule: NKS WDC only uses its own binaries under ~/.wdc/binaries/.
@@ -1148,37 +1172,37 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
         {
             var httpdPath = ResolveBinary("apache", "nks.wdc.apache", "HttpdPath");
             if (string.IsNullOrEmpty(httpdPath) || !File.Exists(httpdPath))
-                return Results.BadRequest(new { error = "Apache httpd not found in managed binaries — install it first via POST /api/binaries/install" });
+                return await Finish(false, "Apache httpd not found in managed binaries — install it first via POST /api/binaries/install");
             var (isValid, output) = await validator.ValidateApacheConfig(httpdPath, body.ConfigPath);
-            return Results.Ok(new { isValid, output });
+            return await Finish(isValid, output);
         }
         case "php":
         {
             var phpPath = bm.ListInstalled("php").FirstOrDefault()?.Executable;
             if (string.IsNullOrEmpty(phpPath) || !File.Exists(phpPath))
-                return Results.BadRequest(new { error = "PHP not found in managed binaries" });
+                return await Finish(false, "PHP not found in managed binaries");
             var (isValid, output) = await validator.ValidatePhpIni(phpPath, body.ConfigPath);
-            return Results.Ok(new { isValid, output });
+            return await Finish(isValid, output);
         }
         case "mysql":
         case "mariadb":
         {
             var mysqldPath = bm.ListInstalled("mysql").FirstOrDefault()?.Executable;
             if (string.IsNullOrEmpty(mysqldPath) || !File.Exists(mysqldPath))
-                return Results.BadRequest(new { error = "mysqld not found in managed binaries" });
+                return await Finish(false, "mysqld not found in managed binaries");
             var (isValid, output) = await validator.ValidateMyCnf(mysqldPath, body.ConfigPath);
-            return Results.Ok(new { isValid, output });
+            return await Finish(isValid, output);
         }
         case "redis":
         {
             var redisPath = bm.ListInstalled("redis").FirstOrDefault()?.Executable;
             if (string.IsNullOrEmpty(redisPath) || !File.Exists(redisPath))
-                return Results.BadRequest(new { error = "redis-server not found in managed binaries" });
+                return await Finish(false, "redis-server not found in managed binaries");
             var (isValid, output) = await validator.ValidateRedisConf(redisPath, body.ConfigPath);
-            return Results.Ok(new { isValid, output });
+            return await Finish(isValid, output);
         }
         default:
-            return Results.BadRequest(new { error = $"Unknown serviceId '{body.ServiceId}'. Use apache | php | mysql | redis." });
+            return await Finish(false, $"Unknown serviceId '{body.ServiceId}'. Use apache | php | mysql | redis.");
     }
 });
 

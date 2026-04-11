@@ -207,11 +207,19 @@ export const fetchServiceConfig = (id: string): Promise<{ serviceId: string; fil
  * port/token change, so we must rebuild the URL from current location.search
  * (which Electron main refreshes on window reload) before each reconnect attempt.
  */
+export interface ValidationUpdate {
+  phase: 'started' | 'passed' | 'failed'
+  serviceId: string
+  configPath?: string
+  output?: string
+}
+
 export function subscribeEvents(
   onService: (data: import('./types').ServiceInfo) => void,
   onProgress: (data: ProgressUpdate) => void,
   onMetrics?: (data: MetricsUpdate) => void,
   onLog?: (data: LogEntry) => void,
+  onValidation?: (data: ValidationUpdate) => void,
 ): () => void {
   let es: EventSource | null = null
   let closed = false
@@ -257,6 +265,10 @@ export function subscribeEvents(
 
     es.addEventListener('log', (e: MessageEvent) => {
       try { onLog?.(JSON.parse(e.data) as LogEntry) } catch { /* ignore */ }
+    })
+
+    es.addEventListener('validation', (e: MessageEvent) => {
+      try { onValidation?.(JSON.parse(e.data) as ValidationUpdate) } catch { /* ignore */ }
     })
 
     es.onerror = () => {

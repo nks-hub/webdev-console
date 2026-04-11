@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchStatus, fetchServices, subscribeEvents } from '../api/daemon'
+import type { ValidationUpdate } from '../api/daemon'
 import type { StatusResponse, ServiceInfo } from '../api/types'
 
 export const useDaemonStore = defineStore('daemon', () => {
   const status = ref<StatusResponse | null>(null)
   const services = ref<ServiceInfo[]>([])
   const connected = ref(false)
+  // Per-service validation state broadcast by the daemon on /api/config/validate
+  // so ValidationBadge can show Validating/Passed/Failed without the parent
+  // component needing to imperatively call startValidation()/setResult().
+  const validation = ref<Record<string, ValidationUpdate>>({})
   let pollTimer: ReturnType<typeof setInterval> | null = null
   let sseCleanup: (() => void) | null = null
 
@@ -80,6 +85,13 @@ export const useDaemonStore = defineStore('daemon', () => {
         else services.value.push(service)
       },
       () => {},
+      undefined, // onMetrics
+      undefined, // onLog
+      (update) => {
+        // Record latest validation phase per serviceId. Components bind to
+        // `daemonStore.validation[serviceId]` for live updates.
+        validation.value = { ...validation.value, [update.serviceId]: update }
+      },
     )
   }
 
@@ -89,5 +101,5 @@ export const useDaemonStore = defineStore('daemon', () => {
     sseCleanup?.()
   }
 
-  return { status, services, connected, runningServices, allRunning, cpuHistory, ramHistory, startPolling, stopPolling, poll }
+  return { status, services, connected, validation, runningServices, allRunning, cpuHistory, ramHistory, startPolling, stopPolling, poll }
 })

@@ -105,7 +105,10 @@ onMounted(async () => {
     fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
     convertEol: true,
     disableStdin: true,
-    scrollback: 5000,
+    // Scrollback sized to match the Phase 4 acceptance criterion
+    // ("handles 10k+ lines without lag") and e2e scenario #14 which
+    // fetches 10 000 lines from /api/services/{id}/logs.
+    scrollback: 10000,
   })
 
   fitAddon = new FitAddon()

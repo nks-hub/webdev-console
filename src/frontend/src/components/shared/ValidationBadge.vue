@@ -28,6 +28,16 @@
 import { reactive, watch } from 'vue'
 import { Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import type { ValidationState } from '../../api/types'
+import { useDaemonStore } from '../../stores/daemon'
+
+// Optional serviceId prop — when provided, the badge auto-subscribes to the
+// daemon's SSE `validation` events via the daemon store and shows live state
+// without needing the parent to call startValidation()/setResult(). This is
+// the Phase 2 "ValidationBadge SSE flow" — daemon emits validation.started/
+// passed/failed, frontend shows Validating/Passed/Failed.
+const props = defineProps<{
+  serviceId?: string
+}>()
 
 const emit = defineEmits<{
   confirmed: []
@@ -67,6 +77,21 @@ function reset() {
   state.phase = 'idle'
   state.message = ''
 }
+
+// Reactive binding to the daemon store's per-service validation map. Fires
+// startValidation()/setResult() mirroring the imperative API so existing
+// parents keep working and new ones don't need to wire anything.
+const daemonStore = useDaemonStore()
+watch(
+  () => props.serviceId ? daemonStore.validation[props.serviceId] : undefined,
+  (update) => {
+    if (!update) return
+    if (update.phase === 'started') startValidation()
+    else if (update.phase === 'passed') setResult(true)
+    else if (update.phase === 'failed') setResult(false, update.output)
+  },
+  { deep: true },
+)
 
 defineExpose({ startValidation, setResult, reset })
 </script>
