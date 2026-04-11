@@ -62,15 +62,19 @@ public class SiteManager
         if (domain.Length > 253)
             throw new ArgumentException("Domain name too long (max 253 chars)");
         // Reject dangerous characters per SPEC section 18
-        var forbidden = new[] { ' ', '\t', '\n', '\r', '\0', ';', '|', '&', '$', '`', '>', '<', '"', '\'' };
+        var forbidden = new[] { ' ', '\t', '\n', '\r', '\0', ';', '|', '&', '$', '`', '>', '<', '"', '\'', '%' };
         foreach (var c in forbidden)
             if (domain.Contains(c))
                 throw new ArgumentException($"Domain contains forbidden character: '{c}'");
-        if (domain.Contains("../") || domain.Contains("..\\"))
-            throw new ArgumentException("Domain contains path traversal sequence");
+        if (domain.Contains("../") || domain.Contains("..\\") || domain.Contains(".."))
+            throw new ArgumentException("Domain contains consecutive dots / path traversal sequence");
         // Must look like a hostname (primary site domain must not be wildcard — wildcards are aliases only)
         if (!System.Text.RegularExpressions.Regex.IsMatch(domain, @"^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$"))
             throw new ArgumentException("Domain must be a valid hostname (letters, digits, hyphens, dots)");
+        // RFC 1035: each DNS label between dots is max 63 chars.
+        foreach (var label in domain.Split('.'))
+            if (label.Length > 63)
+                throw new ArgumentException($"Domain label '{label}' exceeds 63 characters (RFC 1035)");
     }
 
     /// <summary>
@@ -201,6 +205,17 @@ public class SiteManager
             return;
         }
 
+        // Canonical SSL paths written by the SSL plugin (mkcert):
+        // ~/.wdc/ssl/sites/{domain}/cert.pem + key.pem. Older versions of this
+        // file generated ~/.wdc/ssl/{domain}.crt paths that never existed,
+        // which silently broke the history-preview vhost for SSL-enabled
+        // sites. The real Apache vhost is still produced by ApacheModule
+        // under sites-enabled/ with the correct paths, but this display copy
+        // needs to match so rollback works.
+        var sslDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".wdc", "ssl", "sites", site.Domain);
+
         var model = new
         {
             site = new
@@ -212,10 +227,8 @@ public class SiteManager
                 php_version = site.PhpVersion,
                 php_fcgi_port = 9000,
                 ssl = site.SslEnabled,
-                cert_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".wdc", "ssl", $"{site.Domain}.crt"),
-                key_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".wdc", "ssl", $"{site.Domain}.key"),
+                cert_path = Path.Combine(sslDir, "cert.pem"),
+                key_path = Path.Combine(sslDir, "key.pem"),
                 redirects = Array.Empty<object>()
             },
             port = site.SslEnabled ? site.HttpsPort : site.HttpPort,

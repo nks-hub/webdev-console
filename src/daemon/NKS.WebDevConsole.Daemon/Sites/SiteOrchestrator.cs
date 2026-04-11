@@ -408,13 +408,28 @@ ipconfig /flushdns | Out-Null
 
     /// <summary>
     /// Invokes a named async method on a cross-assembly plugin instance via reflection.
+    /// Unwraps <see cref="System.Reflection.TargetInvocationException"/> so callers see
+    /// the real plugin error (with the plugin's stack trace) instead of a generic outer
+    /// wrapper. Without this, every plugin failure logs "Exception has been thrown by
+    /// the target of an invocation" with no root cause, making debugging opaque.
     /// </summary>
     private static async Task InvokeAsync(object target, string methodName, object[] args)
     {
         var method = target.GetType().GetMethod(methodName)
             ?? throw new MissingMethodException(target.GetType().FullName, methodName);
 
-        if (method.Invoke(target, args) is Task task)
-            await task;
+        object? result;
+        try
+        {
+            result = method.Invoke(target, args);
+        }
+        catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
+        {
+            // Rethrow the inner exception preserving its stack trace.
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(tie.InnerException).Throw();
+            throw; // unreachable
+        }
+
+        if (result is Task task) await task;
     }
 }
