@@ -1,166 +1,174 @@
 <template>
   <div class="binaries-page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Binaries</h1>
-        <p class="page-subtitle">Manage installed runtimes and server binaries</p>
+    <!-- Grid view: one card per managed runtime -->
+    <template v-if="!selectedApp">
+      <div class="page-header">
+        <div class="header-title-block">
+          <h1 class="page-title">Binaries</h1>
+          <p class="page-subtitle">
+            {{ moduleCards.length }} modules ·
+            {{ installed.length }} installed ·
+            {{ totalAvailable }} available
+          </p>
+        </div>
+        <div class="header-actions">
+          <el-input
+            v-model="gridSearch"
+            placeholder="Filter modules…"
+            clearable
+            size="small"
+            style="width: 220px"
+            prefix-icon="Search"
+          />
+          <el-button size="small" :loading="loading" @click="refresh">Refresh</el-button>
+        </div>
       </div>
-      <el-button size="small" @click="refresh" :loading="loading" title="Refresh catalog and installed list">
-        Refresh
-      </el-button>
-    </div>
 
-    <!-- Installed binaries section -->
-    <div class="page-section">
-      <div class="section-header">
-        <span class="section-title">Installed</span>
-        <el-tag size="small" type="success" effect="plain">{{ installed.length }} installed</el-tag>
+      <div v-if="loading" class="page-body-pad">
+        <el-skeleton :rows="5" animated />
       </div>
 
-      <div v-if="installed.length === 0 && !loading" class="empty-box">
-        <span class="empty-msg">No binaries installed yet. Install from catalog below.</span>
+      <div v-else-if="filteredModules.length === 0" class="page-body-pad">
+        <el-empty :description="gridSearch ? `No modules matching \u2018${gridSearch}\u2019` : 'No catalog entries. Check daemon connection.'" :image-size="80" />
       </div>
 
-      <div v-else class="installed-groups">
+      <div v-else class="bin-grid page-body-pad">
         <div
-          v-for="(versions, appName) in groupedInstalled"
-          :key="appName"
-          class="installed-group"
+          v-for="card in filteredModules"
+          :key="card.app"
+          class="bin-card"
+          :class="{ 'bin-card--has-installed': card.installedCount > 0 }"
+          @click="selectedApp = card.app"
         >
-          <div class="group-header">
-            <span class="group-app-name">{{ appName }}</span>
-            <span class="group-count">{{ versions.length }} version{{ versions.length !== 1 ? 's' : '' }}</span>
-          </div>
-          <div class="group-versions">
-            <div
-              v-for="bin in versions"
-              :key="`${bin.app}-${bin.version}`"
-              class="installed-row"
-            >
-              <div class="installed-row-info">
-                <span class="installed-version">{{ bin.version }}</span>
-                <el-tag v-if="bin.isDefault" size="small" type="success" effect="plain">default</el-tag>
-                <span class="installed-path">{{ bin.path }}</span>
-              </div>
-              <el-button
-                size="small"
-                type="danger"
-                text
-                :loading="uninstalling.has(`${bin.app}-${bin.version}`)"
-                @click="uninstall(bin.app, bin.version)"
-              >
-                Remove
-              </el-button>
+          <div class="bin-card-header">
+            <ServiceIcon :service="card.app" :active="card.installedCount > 0" />
+            <div class="bin-card-title">
+              <span class="bin-card-name">{{ card.app }}</span>
+              <span class="bin-card-latest mono">latest v{{ card.latest }}</span>
             </div>
+          </div>
+          <div class="bin-card-metrics">
+            <div class="metric">
+              <span class="metric-num mono">{{ card.installedCount }}</span>
+              <span class="metric-label">installed</span>
+            </div>
+            <div class="metric">
+              <span class="metric-num mono">{{ card.available }}</span>
+              <span class="metric-label">available</span>
+            </div>
+            <div class="metric" v-if="card.defaultVersion">
+              <span class="metric-num mono">{{ card.defaultVersion }}</span>
+              <span class="metric-label">default</span>
+            </div>
+          </div>
+          <div class="bin-card-actions">
+            <el-button size="small" type="primary" plain class="bin-open-btn">
+              Manage versions &rarr;
+            </el-button>
           </div>
         </div>
       </div>
-    </div>
+    </template>
 
-    <el-divider />
-
-    <!-- Catalog section -->
-    <div class="page-section">
-      <div class="section-header">
-        <span class="section-title">Available Catalog</span>
-        <el-input
-          v-model="catalogSearch"
-          placeholder="Filter apps..."
-          clearable
-          size="small"
-          style="width: 200px"
-          prefix-icon="Search"
-        />
+    <!-- Detail view: merged installed + catalog table for a single module -->
+    <template v-else>
+      <div class="page-header">
+        <div class="header-title-block">
+          <el-button size="small" text class="back-btn" @click="selectedApp = null">
+            &larr; Back
+          </el-button>
+          <h1 class="page-title page-title-detail">
+            <ServiceIcon :service="selectedApp" :active="true" />
+            <span>{{ selectedApp }}</span>
+          </h1>
+          <p class="page-subtitle">
+            {{ detailRows.filter(r => r.installed).length }} of {{ detailRows.length }} versions installed
+          </p>
+        </div>
+        <div class="header-actions">
+          <el-button size="small" :loading="loading" @click="refresh">Refresh</el-button>
+        </div>
       </div>
 
-      <div v-if="loading">
-        <el-skeleton :rows="6" animated />
-      </div>
-
-      <el-collapse v-else v-model="openApps" class="catalog-collapse">
-        <el-collapse-item
-          v-for="(releases, app) in filteredCatalog"
-          :key="app"
-          :name="app"
+      <div class="page-body-pad">
+        <el-table
+          v-if="detailRows.length > 0"
+          :data="detailRows"
+          class="bin-detail-table"
+          stripe
+          row-key="version"
         >
-          <template #title>
-            <div class="catalog-app-header">
-              <span class="catalog-app-name">{{ app }}</span>
-              <el-tag size="small" type="info" effect="plain">{{ releases.length }} releases</el-tag>
+          <el-table-column label="Version" prop="version" min-width="140">
+            <template #default="{ row }">
+              <span class="mono col-version">{{ row.version }}</span>
+              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">default</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="Platform" width="120">
+            <template #default="{ row }">
+              <span class="mono col-muted">{{ row.platform || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="Size" width="100" align="right">
+            <template #default="{ row }">
+              <span class="mono col-muted">{{ row.size ? formatSize(row.size) : '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="Status" width="120">
+            <template #default="{ row }">
               <el-tag
-                v-if="installedApps.has(app)"
+                v-if="row.installed"
                 size="small"
                 type="success"
                 effect="plain"
+              >installed</el-tag>
+              <el-tag
+                v-else
+                size="small"
+                type="info"
+                effect="plain"
+              >available</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="Actions" width="200" align="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="!row.installed"
+                size="small"
+                type="primary"
+                plain
+                :loading="installing.has(`${selectedApp}-${row.version}`)"
+                @click="install(selectedApp!, row.version)"
               >
-                installed
-              </el-tag>
-            </div>
-          </template>
+                Install
+              </el-button>
+              <el-button
+                v-else
+                size="small"
+                type="danger"
+                plain
+                :loading="uninstalling.has(`${selectedApp}-${row.version}`)"
+                @click="uninstall(selectedApp!, row.version)"
+              >
+                Remove
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-          <div class="release-list">
-            <div
-              v-for="(release, ri) in releases"
-              :key="release?.version ?? ri"
-              class="release-row"
-              v-if="release?.version"
-            >
-              <div class="release-info">
-                <span class="release-version">{{ release.version }}</span>
-                <span v-if="release.platform" class="release-meta">{{ release.platform }}</span>
-                <span v-if="release.size" class="release-meta">{{ formatSize(release.size) }}</span>
-                <el-tag
-                  v-if="isInstalled(app, release.version)"
-                  size="small"
-                  type="success"
-                  effect="plain"
-                >
-                  installed
-                </el-tag>
-              </div>
-              <div class="release-actions">
-                <el-button
-                  v-if="!isInstalled(app, release.version)"
-                  size="small"
-                  type="primary"
-                  plain
-                  :loading="installing.has(`${app}-${release.version}`)"
-                  @click="install(app, release.version)"
-                >
-                  Install
-                </el-button>
-                <el-button
-                  v-else
-                  size="small"
-                  type="danger"
-                  text
-                  :loading="uninstalling.has(`${app}-${release.version}`)"
-                  @click="uninstall(app, release.version)"
-                >
-                  Remove
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </el-collapse-item>
-      </el-collapse>
-
-      <el-empty
-        v-if="!loading && Object.keys(filteredCatalog).length === 0"
-        description="No catalog entries. Check daemon connection."
-        :image-size="80"
-      />
-    </div>
+        <el-empty v-else description="No versions in catalog for this module." :image-size="80" />
+      </div>
+    </template>
 
     <!-- Install progress dialog -->
-    <el-dialog v-model="progressVisible" title="Installing..." width="400px" :close-on-click-modal="false">
+    <el-dialog v-model="progressVisible" title="Installing binary" width="420px" :close-on-click-modal="false">
       <div class="progress-content">
         <p class="progress-msg">{{ progressMessage }}</p>
         <el-progress :percentage="progressPercent" :status="progressError ? 'exception' : (progressDone ? 'success' : undefined)" />
       </div>
       <template #footer>
         <el-button @click="progressVisible = false" :disabled="!progressDone && !progressError">
-          {{ progressDone ? 'Done' : progressError ? 'Close' : 'Installing...' }}
+          {{ progressDone ? 'Done' : progressError ? 'Close' : 'Installing…' }}
         </el-button>
       </template>
     </el-dialog>
@@ -177,14 +185,16 @@ import {
   uninstallBinary,
 } from '../../api/daemon'
 import type { BinaryRelease, InstalledBinary } from '../../api/types'
+import ServiceIcon from '../shared/ServiceIcon.vue'
 
 const loading = ref(false)
 const catalog = ref<Record<string, BinaryRelease[]>>({})
 const installed = ref<InstalledBinary[]>([])
 const installing = ref<Set<string>>(new Set())
 const uninstalling = ref<Set<string>>(new Set())
-const catalogSearch = ref('')
-const openApps = ref<string[]>([])
+
+const gridSearch = ref('')
+const selectedApp = ref<string | null>(null)
 
 // Progress dialog
 const progressVisible = ref(false)
@@ -193,28 +203,101 @@ const progressPercent = ref(0)
 const progressDone = ref(false)
 const progressError = ref(false)
 
-const installedApps = computed(() => new Set(installed.value.map(b => b.app)))
-
-const groupedInstalled = computed(() => {
-  const groups: Record<string, InstalledBinary[]> = {}
-  for (const bin of installed.value) {
-    if (!groups[bin.app]) groups[bin.app] = []
-    groups[bin.app].push(bin)
-  }
-  return groups
-})
-
-const filteredCatalog = computed(() => {
-  const q = catalogSearch.value.toLowerCase()
-  if (!q) return catalog.value
-  return Object.fromEntries(
-    Object.entries(catalog.value).filter(([app]) => app.toLowerCase().includes(q))
-  )
-})
-
-function isInstalled(app: string, version: string): boolean {
-  return installed.value.some(b => b.app === app && b.version === version)
+type ModuleCard = {
+  app: string
+  latest: string
+  available: number
+  installedCount: number
+  defaultVersion: string | null
 }
+
+type DetailRow = {
+  version: string
+  platform?: string
+  size?: number
+  installed: boolean
+  isDefault: boolean
+}
+
+// Semver-ish descending sort so "latest" always wins and the detail table
+// shows newest at the top. Versions without dots fall back to lexical.
+function versionGreater(a: string, b: string): number {
+  const pa = a.split(/[.-]/).map(s => parseInt(s, 10))
+  const pb = b.split(/[.-]/).map(s => parseInt(s, 10))
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const av = pa[i] ?? 0
+    const bv = pb[i] ?? 0
+    if (Number.isNaN(av) || Number.isNaN(bv)) return a.localeCompare(b)
+    if (av !== bv) return bv - av
+  }
+  return 0
+}
+
+const moduleCards = computed<ModuleCard[]>(() => {
+  const apps = new Set<string>([
+    ...Object.keys(catalog.value),
+    ...installed.value.map(b => b.app),
+  ])
+  return Array.from(apps).map(app => {
+    const releases = catalog.value[app] ?? []
+    const sortedReleases = [...releases].sort((a, b) => versionGreater(a.version, b.version))
+    const installedForApp = installed.value.filter(b => b.app === app)
+    const def = installedForApp.find(b => b.isDefault)
+    return {
+      app,
+      latest: sortedReleases[0]?.version ?? installedForApp[0]?.version ?? '—',
+      available: releases.length,
+      installedCount: installedForApp.length,
+      defaultVersion: def?.version ?? null,
+    }
+  }).sort((a, b) => a.app.localeCompare(b.app))
+})
+
+const totalAvailable = computed(() =>
+  Object.values(catalog.value).reduce((s, arr) => s + arr.length, 0)
+)
+
+const filteredModules = computed(() => {
+  const q = gridSearch.value.toLowerCase().trim()
+  if (!q) return moduleCards.value
+  return moduleCards.value.filter(c => c.app.toLowerCase().includes(q))
+})
+
+// Build the merged table rows for the selected module: catalog entries get
+// annotated with installed/default state from the installed list. Installed
+// versions that don't appear in the catalog (e.g., manually dropped
+// binaries) also show up so Remove works.
+const detailRows = computed<DetailRow[]>(() => {
+  if (!selectedApp.value) return []
+  const app = selectedApp.value
+  const releases = catalog.value[app] ?? []
+  const installedForApp = installed.value.filter(b => b.app === app)
+
+  const byVersion = new Map<string, DetailRow>()
+  for (const r of releases) {
+    byVersion.set(r.version, {
+      version: r.version,
+      platform: r.platform,
+      size: r.size,
+      installed: false,
+      isDefault: false,
+    })
+  }
+  for (const i of installedForApp) {
+    const row = byVersion.get(i.version) ?? {
+      version: i.version,
+      platform: undefined,
+      size: undefined,
+      installed: true,
+      isDefault: !!i.isDefault,
+    }
+    row.installed = true
+    row.isDefault = !!i.isDefault
+    byVersion.set(i.version, row)
+  }
+
+  return Array.from(byVersion.values()).sort((a, b) => versionGreater(a.version, b.version))
+})
 
 async function refresh() {
   loading.value = true
@@ -236,7 +319,7 @@ async function install(app: string, version: string) {
   const key = `${app}-${version}`
   installing.value.add(key)
   progressVisible.value = true
-  progressMessage.value = `Installing ${app} ${version}...`
+  progressMessage.value = `Installing ${app} ${version}…`
   progressPercent.value = 10
   progressDone.value = false
   progressError.value = false
@@ -280,7 +363,8 @@ async function uninstall(app: string, version: string) {
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
 onMounted(() => { void refresh() })
@@ -296,197 +380,174 @@ onMounted(() => { void refresh() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 0;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-}
-
-.page-subtitle {
-  font-size: 0.82rem;
-  color: var(--wdc-text-2);
-  margin-top: 2px;
-}
-
-.page-section {
-  padding: 0 24px 24px;
-}
-
-.empty-msg {
-  font-size: 0.88rem;
-  color: var(--wdc-text-2);
-}
-
-.installed-groups {
-  display: flex;
-  flex-direction: column;
+  padding: 20px 24px 0;
+  margin-bottom: 16px;
   gap: 12px;
 }
 
-.installed-group {
-  background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--wdc-surface-2);
-  border-bottom: 1px solid var(--el-border-color);
-}
-
-.group-app-name {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  text-transform: capitalize;
-}
-
-.group-count {
-  font-size: 0.72rem;
-  color: var(--wdc-text-2);
-}
-
-.group-versions {
+.header-title-block {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
-.installed-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter, rgba(255,255,255,0.04));
-  transition: background 0.1s;
+.page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  letter-spacing: 0.01em;
+  margin: 0;
 }
 
-.installed-row:last-child { border-bottom: none; }
-.installed-row:hover { background: var(--wdc-hover); }
-
-.installed-row-info {
+.page-title-detail {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
-  min-width: 0;
 }
 
-.progress-msg {
-  font-size: 0.88rem;
-  color: var(--el-text-color-regular);
-  margin-bottom: 12px;
+.page-subtitle {
+  font-size: 0.76rem;
+  color: var(--wdc-text-3);
+  margin: 0;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.section-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--el-text-color-secondary);
-}
-
-.empty-box {
-  padding: 24px;
-  background: var(--wdc-surface);
-  border: 1px dashed var(--el-border-color);
-  border-radius: 8px;
-  text-align: center;
-}
-
-.installed-version {
-  font-size: 0.78rem;
-  font-family: monospace;
-  color: var(--el-color-primary);
-}
-
-.installed-path {
-  font-size: 0.72rem;
-  font-family: monospace;
-  color: var(--el-text-color-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
-}
-
-.catalog-collapse {
-  background: transparent;
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.catalog-app-header {
+.header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.catalog-app-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  text-transform: capitalize;
+.back-btn {
+  padding: 2px 6px !important;
+  height: auto !important;
+  font-size: 0.76rem !important;
 }
 
-.release-list {
+.page-body-pad {
+  padding: 0 24px 24px;
+}
+
+/* Grid of module cards */
+.bin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.bin-card {
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-left: 3px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 4px 0;
+  gap: 14px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
 }
 
-.release-row {
+.bin-card--has-installed {
+  border-left-color: var(--wdc-accent);
+}
+
+.bin-card:hover {
+  border-color: var(--wdc-border-strong);
+  background: var(--wdc-surface-2);
+}
+.bin-card--has-installed:hover {
+  border-left-color: var(--wdc-accent);
+}
+
+.bin-card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--el-border-color-lighter, #2a2d3a);
-  transition: background 0.1s;
+  gap: 12px;
 }
 
-.release-row:last-child { border-bottom: none; }
-.release-row:hover { background: var(--wdc-elevated, #242736); }
-
-.release-info {
+.bin-card-title {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.release-version {
-  font-size: 0.85rem;
-  font-family: monospace;
-  color: var(--el-text-color-primary);
-  font-weight: 500;
+.bin-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  text-transform: capitalize;
+  letter-spacing: 0.005em;
 }
 
-.release-meta {
-  font-size: 0.75rem;
-  color: var(--el-text-color-secondary);
+.bin-card-latest {
+  font-size: 0.68rem;
+  color: var(--wdc-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.release-actions { flex-shrink: 0; }
+.bin-card-metrics {
+  display: flex;
+  gap: 24px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-num {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  line-height: 1.1;
+}
+
+.metric-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text-3);
+}
+
+.bin-card-actions {
+  padding-top: 4px;
+  border-top: 1px solid var(--wdc-border);
+  margin-top: auto;
+}
+
+.bin-open-btn {
+  width: 100%;
+  font-weight: 600;
+}
+
+/* Detail table */
+.bin-detail-table {
+  background: transparent;
+}
+
+.col-version {
+  font-weight: 600;
+  color: var(--wdc-text);
+}
+
+.col-tag {
+  margin-left: 8px;
+}
+
+.col-muted {
+  color: var(--wdc-text-3);
+}
 
 .progress-content {
   padding: 8px 0;
+}
+
+.progress-msg {
+  font-size: 0.86rem;
+  margin-bottom: 12px;
+  color: var(--wdc-text);
 }
 </style>

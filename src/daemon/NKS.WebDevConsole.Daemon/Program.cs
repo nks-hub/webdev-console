@@ -304,6 +304,41 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
 // and returns the list of available plugins. Cross-references installed plugin ids so the
 // UI can mark entries as "installed" / "update available". Graceful fallback to an empty
 // list if the remote manifest is unreachable — the feature is best-effort, not critical path.
+// Built-in fallback catalogue — used when no external marketplace is reachable.
+// Every entry is a first-party plugin shipped with the NKS WDC source tree, so
+// the list is always meaningful even on a fresh install with no network. When
+// a real marketplace server comes online it takes precedence.
+static IEnumerable<object> BuiltInMarketplaceCatalogue(HashSet<string> installedIds)
+{
+    var entries = new (string id, string name, string version, string description, string category)[]
+    {
+        ("nks.wdc.apache",  "Apache HTTP Server",  "1.0.0", "Bundled httpd with Scriban-generated vhosts, SSL via mkcert, per-site PHP FastCGI.", "Web Servers"),
+        ("nks.wdc.caddy",   "Caddy",               "1.0.0", "Modern HTTP/2 + automatic HTTPS alternative to Apache, drives sites via Caddyfile fragments.", "Web Servers"),
+        ("nks.wdc.php",     "PHP (Multi-version)", "1.0.0", "Multi-version PHP manager with per-version php.ini + extensions + CLI alias shims.", "Runtimes"),
+        ("nks.wdc.mysql",   "MySQL",               "1.0.0", "Managed MySQL server with DPAPI-protected root password, my.ini templates, database tooling.", "Databases"),
+        ("nks.wdc.redis",   "Redis",               "1.0.0", "Redis cache server with managed redis.conf, graceful shutdown via redis-cli SHUTDOWN.", "Caches"),
+        ("nks.wdc.mailpit", "Mailpit",             "1.0.0", "Local SMTP sink with web UI for development email testing.", "Mail"),
+        ("nks.wdc.ssl",     "SSL (mkcert)",        "1.0.0", "Per-site TLS certificates via mkcert, local root CA install.", "Security"),
+        ("nks.wdc.hosts",   "Hosts Manager",       "1.0.0", "Windows hosts file manager with 5-backup rotation and managed block delimiters.", "System"),
+    };
+    foreach (var e in entries)
+    {
+        yield return new
+        {
+            id = e.id,
+            name = e.name,
+            version = e.version,
+            description = e.description,
+            downloadUrl = (string?)null,
+            author = "NKS",
+            license = "MIT",
+            category = e.category,
+            installed = installedIds.Contains(e.id),
+            builtIn = true,
+        };
+    }
+}
+
 app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
 {
     var marketplaceUrl = Environment.GetEnvironmentVariable("NKS_WDC_MARKETPLACE_URL")
@@ -320,12 +355,14 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
         using var response = await client.GetAsync(marketplaceUrl);
         if (!response.IsSuccessStatusCode)
         {
+            var fallback = BuiltInMarketplaceCatalogue(installedIds).ToList();
             return Results.Ok(new
             {
-                source = marketplaceUrl,
-                reachable = false,
-                plugins = Array.Empty<object>(),
-                error = $"Marketplace returned HTTP {(int)response.StatusCode}"
+                source = "built-in",
+                reachable = true,
+                plugins = fallback,
+                count = fallback.Count,
+                error = $"Remote marketplace unreachable ({(int)response.StatusCode}) — showing built-in catalogue"
             });
         }
 
@@ -367,12 +404,18 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
     }
     catch (Exception ex)
     {
+        // Network/DNS/timeout — fall back to the built-in catalogue so the
+        // user always has something to install from the Marketplace tab on a
+        // fresh install with no network. The error field is surfaced by
+        // PluginManager.vue as a warning banner.
+        var fallback = BuiltInMarketplaceCatalogue(installedIds).ToList();
         return Results.Ok(new
         {
-            source = marketplaceUrl,
-            reachable = false,
-            plugins = Array.Empty<object>(),
-            error = ex.Message
+            source = "built-in",
+            reachable = true,
+            plugins = fallback,
+            count = fallback.Count,
+            error = $"Remote marketplace unreachable ({ex.Message}) — showing built-in catalogue"
         });
     }
 });
