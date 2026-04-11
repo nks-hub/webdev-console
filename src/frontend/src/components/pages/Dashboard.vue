@@ -216,6 +216,13 @@
         :service-id="logsDialog.serviceId"
       />
     </el-dialog>
+
+    <!-- Config: slide-in side panel (NOT drawer, NOT full-view route). -->
+    <ConfigSidePanel
+      :open="configPanel.open"
+      :service-id="configPanel.serviceId"
+      @close="closeConfig"
+    />
   </div>
 </template>
 
@@ -229,6 +236,7 @@ import { ElMessage, ElNotification } from 'element-plus'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
+import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 
 const router = useRouter()
 
@@ -409,9 +417,21 @@ function openLogs(id: string) {
   logsDialog.open = true
 }
 
-// Config opens full view route (NOT drawer, NOT side panel)
+// Config opens a slide-in SIDE PANEL (per user directive: "config editor
+// jako postranní panel místo drawer"). NOT a router-view navigation, NOT
+// an el-drawer modal. Closing restores the Dashboard state unchanged.
+const configPanel = reactive({
+  open: false,
+  serviceId: null as string | null,
+})
 function openConfig(id: string) {
-  void router.push(`/service/${id}/config`)
+  configPanel.serviceId = id
+  configPanel.open = true
+}
+function closeConfig() {
+  configPanel.open = false
+  // Keep serviceId set briefly so the slide-out animation doesn't jump;
+  // ConfigSidePanel ignores serviceId when open=false.
 }
 </script>
 
