@@ -286,20 +286,29 @@
                 </div>
 
                 <template v-if="cloudflareEnabled">
-                  <!-- Tunnel status + start/stop button so the user never has
-                       to leave SiteEdit to bring the tunnel online. -->
+                  <!-- Tunnel status + start/stop button. IMPORTANT: cloudflared
+                       is a SHARED process that carries every exposed site, so
+                       stopping it takes them ALL offline. The button label and
+                       confirmation dialog reflect that explicitly so the user
+                       doesn't misread this as a per-site switch. -->
                   <div class="tunnel-status-row">
                     <div class="tunnel-status-meta">
                       <div class="tunnel-status-title">
-                        Tunnel:
+                        Shared tunnel:
                         <span :class="['tunnel-pill', cloudflareRunning ? 'tunnel-pill-on' : 'tunnel-pill-off']">
                           {{ cloudflareRunning ? 'Running' : 'Stopped' }}
                         </span>
+                        <span class="tunnel-shared-count" v-if="totalExposedCount > 0">
+                          · {{ totalExposedCount }} site{{ totalExposedCount === 1 ? '' : 's' }} exposed
+                        </span>
                       </div>
                       <div class="tunnel-status-desc">
-                        {{ cloudflareRunning
-                          ? 'cloudflared is connected — this site is reachable via the public URL above.'
-                          : 'Start the tunnel to make the public URL reachable.' }}
+                        One <code>cloudflared</code> process carries every
+                        exposed site. Starting/stopping it here affects
+                        <strong>all</strong> sites that have the tunnel enabled.
+                        To hide only this site, flip the switch above —
+                        the ingress rule is removed on save without touching
+                        cloudflared.
                       </div>
                     </div>
                     <el-button
@@ -308,7 +317,7 @@
                       :loading="togglingTunnel"
                       @click="toggleCloudflared"
                     >
-                      {{ cloudflareRunning ? 'Stop tunnel' : 'Start tunnel' }}
+                      {{ cloudflareRunning ? 'Stop shared tunnel' : 'Start shared tunnel' }}
                     </el-button>
                   </div>
 
@@ -675,17 +684,40 @@ const cloudflareRunning = computed(() => {
   const svc = daemonStore.services.find((s: any) => s.id === 'cloudflare')
   return svc?.state === 2 || svc?.status === 'running'
 })
+// Total number of sites currently using the shared tunnel. Shown in the
+// status row so the user knows exactly how much traffic a "Stop shared
+// tunnel" click is about to kill.
+const totalExposedCount = computed(() =>
+  sitesStore.sites.filter((s: any) => s.cloudflare?.enabled).length
+)
 const togglingTunnel = ref(false)
 
 async function toggleCloudflared() {
+  // Confirm before taking other sites down — the action is cheap to
+  // re-start but a pop-up production site could be wedged for minutes
+  // if the user misclicks.
+  if (cloudflareRunning.value && totalExposedCount.value > 1) {
+    try {
+      await ElMessageBox.confirm(
+        `Stop the shared tunnel? This will take ALL ${totalExposedCount.value} exposed sites offline until it is restarted.`,
+        'Stop shared tunnel',
+        {
+          confirmButtonText: 'Stop tunnel',
+          cancelButtonText: 'Cancel',
+          type: 'warning',
+        },
+      )
+    } catch { return /* user cancelled */ }
+  }
+
   togglingTunnel.value = true
   try {
     if (cloudflareRunning.value) {
       await stopService('cloudflare')
-      ElMessage.success('Tunnel stopped')
+      ElMessage.success('Shared tunnel stopped')
     } else {
       await startService('cloudflare')
-      ElMessage.success('Tunnel started')
+      ElMessage.success('Shared tunnel started')
     }
   } catch (e: any) {
     ElMessage.error(`${cloudflareRunning.value ? 'Stop' : 'Start'} failed: ${e.message}`)
@@ -1199,9 +1231,23 @@ onMounted(() => {
   color: var(--wdc-text-3);
   border: 1px solid var(--wdc-border);
 }
+.tunnel-shared-count {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+  margin-left: 2px;
+}
 .tunnel-status-desc {
   font-size: 0.8rem;
   color: var(--wdc-text-3);
+  line-height: 1.5;
+}
+.tunnel-status-desc code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--wdc-surface);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--wdc-accent);
+  font-size: 0.76rem;
 }
 
 .cf-subdomain-row {
