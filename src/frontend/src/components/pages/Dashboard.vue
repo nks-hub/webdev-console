@@ -55,7 +55,7 @@
           class="service-row"
           :class="[`row-${statusText(service)}`]"
         >
-          <!-- Status dot -->
+          <ServiceIcon :service="service.id" :active="isRunning(service)" />
           <span class="status-dot" :class="`dot-${statusText(service)}`" />
 
           <!-- Name + version -->
@@ -222,6 +222,7 @@ import { useSitesStore } from '../../stores/sites'
 import { ElMessage, ElNotification } from 'element-plus'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
+import ServiceIcon from '../shared/ServiceIcon.vue'
 
 const router = useRouter()
 
@@ -414,8 +415,9 @@ function openConfig(id: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 12px;
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
 }
 
 .header-title-block {
@@ -425,10 +427,10 @@ function openConfig(id: string) {
 }
 
 .page-title {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.18rem;
+  font-weight: 800;
   color: var(--wdc-text);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .page-count {
@@ -479,10 +481,10 @@ function openConfig(id: string) {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 20px;
-  height: 56px;
-  border-bottom: 1px solid var(--wdc-border);
-  transition: background 0.1s;
+  padding: 0 24px;
+  height: 58px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.1s, border-color 0.1s;
   cursor: default;
 }
 
@@ -491,13 +493,13 @@ function openConfig(id: string) {
 }
 
 .service-row:hover {
-  background: var(--wdc-hover);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 /* ─── Status dot ──────────────────────────────────────────────────────────── */
 .status-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -673,8 +675,8 @@ function openConfig(id: string) {
 .quick-stats {
   display: flex;
   gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .stat-item {
@@ -711,7 +713,7 @@ function openConfig(id: string) {
 .quick-actions {
   display: flex;
   gap: 8px;
-  padding: 8px 20px 12px;
+  padding: 10px 24px 14px;
 }
 
 .metrics-section {

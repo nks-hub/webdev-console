@@ -20,10 +20,10 @@
   --wdc-text-3:      #a8acc8;
 
   /* Accent — brighter violet for dark bg readability */
-  --wdc-accent:      #a78bfa;
-  --wdc-accent-2:    #c4b5fd;
-  --wdc-accent-glow: rgba(167, 139, 250, 0.20);
-  --wdc-accent-dim:  rgba(167, 139, 250, 0.22);
+  --wdc-accent:      #56c2ff;
+  --wdc-accent-2:    #7cffa5;
+  --wdc-accent-glow: rgba(86, 194, 255, 0.20);
+  --wdc-accent-dim:  rgba(86, 194, 255, 0.18);
 
   /* Status */
   --wdc-status-running:  #22c55e;
@@ -60,10 +60,10 @@ html:not(.dark) {
   --wdc-text:        #0b0c14;
   --wdc-text-2:      #3b3e52;
   --wdc-text-3:      #4a4d62;
-  --wdc-accent-glow: rgba(79, 70, 229, 0.12);
-  --wdc-accent-dim:  rgba(79, 70, 229, 0.12);
-  --wdc-accent:        #4338ca;
-  --wdc-accent-2:      #6d28d9;
+  --wdc-accent-glow: rgba(8, 145, 178, 0.14);
+  --wdc-accent-dim:  rgba(8, 145, 178, 0.12);
+  --wdc-accent:        #0891b2;
+  --wdc-accent-2:      #0f766e;
   --wdc-status-running: #15803d;
   --wdc-status-error:   #b91c1c;
   --wdc-status-starting: #b45309;
@@ -402,13 +402,13 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 
 .el-menu-item,
 .el-sub-menu__title {
-  height: 36px !important;
-  line-height: 36px !important;
+  height: 38px !important;
+  line-height: 38px !important;
   border-radius: var(--wdc-radius-sm) !important;
   margin: 2px 8px !important;
   width: calc(100% - 16px) !important;
   color: var(--wdc-text-2) !important;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   font-weight: 500;
   transition: all 0.12s ease;
 }

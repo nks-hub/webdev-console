@@ -1,5 +1,6 @@
 <template>
   <div class="app-root">
+    <div class="app-backdrop" />
     <AppHeader />
 
     <div class="app-body">
@@ -72,6 +73,7 @@ onUnmounted(() => {
 .app-root {
   display: flex;
   flex-direction: column;
+  position: relative;
   height: 100vh;
   overflow: hidden;
   min-width: 860px;
@@ -79,17 +81,30 @@ onUnmounted(() => {
   background: var(--wdc-bg);
 }
 
+.app-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top left, rgba(86, 194, 255, 0.13), transparent 24%),
+    radial-gradient(circle at 80% 10%, rgba(124, 255, 165, 0.06), transparent 20%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
+}
+
 .app-body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .content-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--wdc-bg);
+  background: transparent;
   scroll-behavior: smooth;
+  padding: 0 0 18px;
 }
 </style>

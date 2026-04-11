@@ -2,9 +2,11 @@
   <header class="app-header" :style="{ WebkitAppRegion: 'drag' } as any">
     <div class="header-left" style="-webkit-app-region: no-drag">
       <span class="app-logo" @click="router.push('/sites')">
-        <span class="logo-text">NKS</span>
-        <span class="logo-sep">|</span>
-        <span class="logo-sub">WDC</span>
+        <span class="logo-mark">NW</span>
+        <span class="logo-copy">
+          <span class="logo-text">NKS WDC</span>
+          <span class="logo-sub">{{ currentTitle }}</span>
+        </span>
       </span>
     </div>
 
@@ -65,6 +67,7 @@ const themeStore = useThemeStore()
 const { t, locale } = useI18n()
 const isDark = computed(() => themeStore.isDark)
 const currentLocale = computed(() => String(locale.value))
+const currentTitle = computed(() => String(route.meta?.title || 'Control Surface'))
 function toggleTheme() { themeStore.toggle() }
 function onLocaleChange(next: Locale) { setLocale(next) }
 
@@ -87,40 +90,58 @@ function isActive(path: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 42px;
-  padding: 0 16px;
-  background: var(--wdc-surface);
-  border-bottom: 1px solid var(--wdc-border);
+  height: 48px;
+  padding: 0 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--wdc-surface);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   gap: 16px;
 }
 
 .app-logo {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
   cursor: pointer;
   user-select: none;
 }
 
-.logo-text {
-  font-size: 0.88rem;
+.logo-mark {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--wdc-accent), var(--wdc-accent-2));
+  color: #081017;
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--wdc-accent);
+  box-shadow: 0 10px 18px rgba(86, 194, 255, 0.18);
 }
 
-.logo-sep {
-  font-size: 0.75rem;
-  color: var(--wdc-text-3);
-  margin: 0 2px;
+.logo-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.logo-text {
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text);
 }
 
 .logo-sub {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--wdc-text-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wdc-text-3);
 }
 
 /* Header nav tabs */
@@ -133,12 +154,12 @@ function isActive(path: string) {
 }
 
 .nav-tab {
-  padding: 6px 14px;
-  font-size: 0.82rem;
-  font-weight: 500;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--wdc-text-2);
   text-decoration: none;
-  border-radius: var(--wdc-radius-sm);
+  border-radius: 999px;
   transition: all 0.12s;
   white-space: nowrap;
 }
@@ -150,7 +171,7 @@ function isActive(path: string) {
 
 .nav-tab.active {
   color: var(--wdc-text);
-  background: var(--wdc-accent-dim);
+  background: linear-gradient(180deg, rgba(86, 194, 255, 0.16), rgba(86, 194, 255, 0.08));
   font-weight: 600;
 }
 
@@ -164,10 +185,12 @@ function isActive(path: string) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 500;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   border: 1px solid;
 }
 
