@@ -1145,6 +1145,93 @@ app.MapPost("/api/sites/{domain}/detect-framework", async (string domain, SiteMa
     return Results.Ok(new { domain, framework });
 });
 
+// Filesystem browse — backs the FolderBrowser dialog in the site-edit UI
+// so users can pick a document root via a tree instead of typing a raw
+// Windows path. No sandboxing: the GUI runs with the same permissions as
+// the user who launched it anyway, and the alternative (restricting to
+// %USERPROFILE%) would block legitimate picks like C:\xampp\htdocs.
+app.MapGet("/api/fs/browse", (string? path) =>
+{
+    try
+    {
+        string target;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            // Default landing: drives on Windows, $HOME otherwise
+            if (OperatingSystem.IsWindows())
+            {
+                var drives = DriveInfo.GetDrives()
+                    .Where(d => d.IsReady)
+                    .Select(d => new
+                    {
+                        name = d.Name,
+                        path = d.Name,
+                        isDir = true,
+                        isFile = false,
+                        size = 0L,
+                    })
+                    .ToArray();
+                return Results.Ok(new
+                {
+                    path = "",
+                    parent = (string?)null,
+                    entries = drives,
+                });
+            }
+            target = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        }
+        else
+        {
+            target = Path.GetFullPath(path);
+        }
+
+        if (!Directory.Exists(target)) return Results.NotFound(new { error = $"Not a directory: {target}" });
+
+        var parent = Directory.GetParent(target)?.FullName;
+
+        var dirs = Directory.EnumerateDirectories(target)
+            .Select(d => new DirectoryInfo(d))
+            .Where(di => (di.Attributes & FileAttributes.Hidden) == 0
+                     && (di.Attributes & FileAttributes.System) == 0)
+            .Select(di => new
+            {
+                name = di.Name,
+                path = di.FullName,
+                isDir = true,
+                isFile = false,
+                size = 0L,
+            });
+
+        var files = Directory.EnumerateFiles(target)
+            .Select(f => new FileInfo(f))
+            .Where(fi => (fi.Attributes & FileAttributes.Hidden) == 0
+                     && (fi.Attributes & FileAttributes.System) == 0)
+            .Select(fi => new
+            {
+                name = fi.Name,
+                path = fi.FullName,
+                isDir = false,
+                isFile = true,
+                size = fi.Length,
+            });
+
+        return Results.Ok(new
+        {
+            path = target,
+            parent,
+            entries = dirs.OrderBy(e => e.name).Concat(files.OrderBy(e => e.name)).ToArray(),
+        });
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.StatusCode(403);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
 // PHP versions — delegate to PhpPlugin via reflection
 app.MapGet("/api/php/versions", () =>
 {

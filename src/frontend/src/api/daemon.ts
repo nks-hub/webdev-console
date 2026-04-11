@@ -95,6 +95,22 @@ export const updateSite = (id: string, data: Partial<SiteInfo>) =>
 export const fetchPhpVersions = (): Promise<PhpVersion[]> =>
   json('/api/php/versions')
 
+// Filesystem browse (folder picker dialog)
+export interface FsEntry {
+  name: string
+  path: string
+  isDir: boolean
+  isFile: boolean
+  size: number
+}
+export interface FsBrowseResponse {
+  path: string
+  parent: string | null
+  entries: FsEntry[]
+}
+export const browseFolder = (path?: string): Promise<FsBrowseResponse> =>
+  json(`/api/fs/browse${path ? `?path=${encodeURIComponent(path)}` : ''}`)
+
 // Databases
 export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
   json('/api/databases')
