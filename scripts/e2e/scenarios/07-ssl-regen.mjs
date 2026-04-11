@@ -39,6 +39,21 @@ export default scenario('7', 'SSL certificate regeneration', 'P2', async (ctx) =
   ctx.cleanup(() => api.delete(`/api/sites/${DOMAIN}`).catch(() => {}))
   assert.statusOk(create, 'POST /api/sites')
 
+  // Regression guard: the SiteManager-generated vhost (displayed in the UI
+  // config-history view) must reference the canonical cert.pem / key.pem
+  // paths under ~/.wdc/ssl/sites/{domain}/, not the obsolete
+  // ~/.wdc/ssl/{domain}.crt that never existed.
+  const { readFileSync: rf, existsSync: ex } = await import('node:fs')
+  const { join: jp } = await import('node:path')
+  const { homedir: hd } = await import('node:os')
+  const vhostFile = jp(hd(), '.wdc', 'generated', `${DOMAIN}.conf`)
+  if (ex(vhostFile)) {
+    const vhost = rf(vhostFile, 'utf-8')
+    assert.contains(vhost, '/cert.pem', 'vhost references cert.pem (canonical path)')
+    assert.contains(vhost, '/key.pem', 'vhost references key.pem (canonical path)')
+    assert.notContains(vhost, '.crt', 'vhost does NOT reference obsolete .crt path')
+  }
+
   // Cert path per the plugin convention.
   const certDir = join(homedir(), '.wdc', 'ssl', 'sites', DOMAIN)
   const certFile = join(certDir, 'cert.pem')
