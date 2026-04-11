@@ -1476,11 +1476,18 @@ app.MapPost("/api/cloudflare/sync", async (IServiceProvider sp, SiteManager sm) 
                  && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneId)
                  && !string.IsNullOrWhiteSpace(s.Cloudflare.Subdomain))
         .ToList();
+    var dormantCf = sm.Sites.Values
+        .Where(s => s.Cloudflare is { Enabled: false }
+                 && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneId)
+                 && !string.IsNullOrWhiteSpace(s.Cloudflare.Subdomain)
+                 && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneName))
+        .ToList();
 
     var upserted = new List<object>();
+    var deleted = new List<object>();
     try
     {
-        // DNS: one CNAME per site
+        // DNS: one CNAME per enabled site
         var upsertMethod = api.GetType().GetMethod("UpsertCnameToTunnelAsync");
         foreach (var s in sitesWithCf)
         {
@@ -1490,6 +1497,23 @@ app.MapPost("/api/cloudflare/sync", async (IServiceProvider sp, SiteManager sm) 
                 new object[] { cf.ZoneId, fullName, tunnelId, CancellationToken.None })!;
             await task;
             upserted.Add(new { domain = s.Domain, cname = fullName });
+        }
+
+        // DNS: delete CNAME for dormant (disabled-but-configured) sites so
+        // toggling off in SiteEdit actually takes the public hostname down.
+        var deleteMethod = api.GetType().GetMethod("DeleteCnameByNameAsync");
+        foreach (var s in dormantCf)
+        {
+            var cf = s.Cloudflare!;
+            var fullName = $"{cf.Subdomain}.{cf.ZoneName}";
+            try
+            {
+                var task = (Task)deleteMethod!.Invoke(api,
+                    new object[] { cf.ZoneId, fullName, CancellationToken.None })!;
+                await task;
+                deleted.Add(new { domain = s.Domain, cname = fullName });
+            }
+            catch { /* best-effort per-site */ }
         }
 
         // Ingress: one rule per site with httpHostHeader override
@@ -1539,6 +1563,8 @@ app.MapPost("/api/cloudflare/sync", async (IServiceProvider sp, SiteManager sm) 
             ok = true,
             synced = upserted.Count,
             sites = upserted,
+            deleted = deleted.Count,
+            dormant = deleted,
         });
     }
     catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)

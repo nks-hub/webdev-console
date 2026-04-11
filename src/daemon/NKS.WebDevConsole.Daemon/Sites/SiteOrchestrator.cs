@@ -206,16 +206,27 @@ public sealed class SiteOrchestrator
             return;
         }
 
-        // Collect every site with a populated + enabled cloudflare sub-config.
+        // Partition sites into:
+        //   enabled — have a live ingress rule + a proxied CNAME
+        //   dormant — previously enabled but the user just turned the toggle
+        //             off. We keep the sub-config around so re-enabling is
+        //             one click, but we must delete the CNAME from the zone
+        //             (user asked: "deaktivace by mela zrusit i dns zaznam")
+        //             so the public hostname stops resolving.
         var sm = _sp.GetRequiredService<SiteManager>();
         var enabledSites = sm.Sites.Values
             .Where(s => s.Cloudflare is { Enabled: true }
                      && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneId)
                      && !string.IsNullOrWhiteSpace(s.Cloudflare.Subdomain))
             .ToList();
+        var dormantSites = sm.Sites.Values
+            .Where(s => s.Cloudflare is { Enabled: false }
+                     && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneId)
+                     && !string.IsNullOrWhiteSpace(s.Cloudflare.Subdomain)
+                     && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneName))
+            .ToList();
 
-        // Even when nothing is enabled, we still push an empty ingress so a
-        // just-disabled rule is actually removed from the tunnel config.
+        // Upsert CNAMEs for the currently enabled set.
         var upsertMethod = apiType.GetMethod("UpsertCnameToTunnelAsync");
         foreach (var s in enabledSites)
         {
@@ -230,6 +241,27 @@ public sealed class SiteOrchestrator
             catch (Exception ex)
             {
                 _logger.LogWarning("DNS upsert failed for {Domain}: {Error}", s.Domain, ex.Message);
+            }
+        }
+
+        // Delete CNAMEs for the dormant set so disabling a site actually
+        // takes its public hostname offline at the DNS layer, not just in
+        // the tunnel routing table.
+        var deleteMethod = apiType.GetMethod("DeleteCnameByNameAsync");
+        foreach (var s in dormantSites)
+        {
+            var cf = s.Cloudflare!;
+            var fullName = $"{cf.Subdomain}.{cf.ZoneName}";
+            try
+            {
+                var t = (Task)deleteMethod!.Invoke(api,
+                    new object[] { cf.ZoneId, fullName, ct })!;
+                await t;
+                _logger.LogInformation("Deleted CNAME {Fqdn} for deactivated site {Domain}", fullName, s.Domain);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("DNS delete failed for dormant {Domain}: {Error}", s.Domain, ex.Message);
             }
         }
 

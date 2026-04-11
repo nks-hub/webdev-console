@@ -271,11 +271,15 @@
               <div class="edit-card-body">
                 <div class="ssl-toggle-row">
                   <div class="ssl-toggle-meta">
-                    <div class="ssl-toggle-title">Enable tunnel for this site</div>
+                    <div class="ssl-toggle-title">Expose this site</div>
                     <div class="ssl-toggle-desc">
-                      Creates a CNAME on your Cloudflare zone and adds an ingress
-                      rule to the managed tunnel so this site is reachable from
-                      the internet over HTTPS without port forwarding.
+                      Enabling creates a proxied CNAME on your Cloudflare zone
+                      and adds an ingress rule to the shared tunnel so this
+                      site is reachable over HTTPS. Disabling deletes the
+                      CNAME and removes the ingress rule, so the public
+                      hostname stops resolving. Other exposed sites and the
+                      tunnel process itself are not affected — this toggle
+                      is strictly per-site.
                     </div>
                   </div>
                   <el-switch
@@ -286,15 +290,14 @@
                 </div>
 
                 <template v-if="cloudflareEnabled">
-                  <!-- Tunnel status + start/stop button. IMPORTANT: cloudflared
-                       is a SHARED process that carries every exposed site, so
-                       stopping it takes them ALL offline. The button label and
-                       confirmation dialog reflect that explicitly so the user
-                       doesn't misread this as a per-site switch. -->
-                  <div class="tunnel-status-row">
+                  <!-- Read-only status indicator. Start/Stop of the shared
+                       cloudflared process lives on the /cloudflare page
+                       so users can't accidentally kill every exposed site
+                       from a single site's settings. -->
+                  <div class="tunnel-status-row tunnel-status-readonly">
                     <div class="tunnel-status-meta">
                       <div class="tunnel-status-title">
-                        Shared tunnel:
+                        Shared tunnel status:
                         <span :class="['tunnel-pill', cloudflareRunning ? 'tunnel-pill-on' : 'tunnel-pill-off']">
                           {{ cloudflareRunning ? 'Running' : 'Stopped' }}
                         </span>
@@ -303,22 +306,18 @@
                         </span>
                       </div>
                       <div class="tunnel-status-desc">
-                        One <code>cloudflared</code> process carries every
-                        exposed site. Starting/stopping it here affects
-                        <strong>all</strong> sites that have the tunnel enabled.
-                        To hide only this site, flip the switch above —
-                        the ingress rule is removed on save without touching
-                        cloudflared.
+                        <template v-if="cloudflareRunning">
+                          The <code>cloudflared</code> process is online.
+                          Your public URL is ready once you save.
+                        </template>
+                        <template v-else>
+                          The shared tunnel is currently stopped.
+                          Start it from the
+                          <router-link to="/cloudflare">Cloudflare Tunnel page</router-link>
+                          to make your public URL reachable.
+                        </template>
                       </div>
                     </div>
-                    <el-button
-                      size="default"
-                      :type="cloudflareRunning ? 'danger' : 'success'"
-                      :loading="togglingTunnel"
-                      @click="toggleCloudflared"
-                    >
-                      {{ cloudflareRunning ? 'Stop shared tunnel' : 'Start shared tunnel' }}
-                    </el-button>
                   </div>
 
                   <el-form label-position="top" size="default" style="margin-top: 20px;">
@@ -497,7 +496,6 @@ import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
-  startService, stopService,
 } from '../../api/daemon'
 
 const route = useRoute()
@@ -651,6 +649,27 @@ function renderSubdomainTemplate(): string {
 }
 
 async function onCloudflareToggle(v: boolean) {
+  // Disabling needs user confirmation — save flow will delete the CNAME
+  // from Cloudflare and strip the ingress rule, which means the public
+  // URL stops resolving immediately after the next save.
+  if (!v && cloudflareSubdomain.value && cloudflareZoneName.value) {
+    try {
+      await ElMessageBox.confirm(
+        `Disable Cloudflare Tunnel for ${site.value?.domain}? The public URL https://${cloudflareSubdomain.value}.${cloudflareZoneName.value} will be taken offline when you click Save.`,
+        'Disable tunnel for this site',
+        {
+          confirmButtonText: 'Disable',
+          cancelButtonText: 'Cancel',
+          type: 'warning',
+        },
+      )
+    } catch {
+      // User cancelled — flip the switch back on
+      cloudflareEnabled.value = true
+      return
+    }
+  }
+
   markDirty()
   if (v && cfZones.value.length === 0) void loadCfZones()
   // Auto-fill the subdomain from the backend-rendered template (which
@@ -679,52 +698,16 @@ function onZoneChange(zoneId: string) {
   markDirty()
 }
 
-// ── cloudflared service status (drives Start/Stop button) ───────────
+// ── cloudflared service status (read-only indicator only) ──────────
+// The Start/Stop button lives on the /cloudflare page so per-site edits
+// can't accidentally kill other exposed sites.
 const cloudflareRunning = computed(() => {
   const svc = daemonStore.services.find((s: any) => s.id === 'cloudflare')
   return svc?.state === 2 || svc?.status === 'running'
 })
-// Total number of sites currently using the shared tunnel. Shown in the
-// status row so the user knows exactly how much traffic a "Stop shared
-// tunnel" click is about to kill.
 const totalExposedCount = computed(() =>
   sitesStore.sites.filter((s: any) => s.cloudflare?.enabled).length
 )
-const togglingTunnel = ref(false)
-
-async function toggleCloudflared() {
-  // Confirm before taking other sites down — the action is cheap to
-  // re-start but a pop-up production site could be wedged for minutes
-  // if the user misclicks.
-  if (cloudflareRunning.value && totalExposedCount.value > 1) {
-    try {
-      await ElMessageBox.confirm(
-        `Stop the shared tunnel? This will take ALL ${totalExposedCount.value} exposed sites offline until it is restarted.`,
-        'Stop shared tunnel',
-        {
-          confirmButtonText: 'Stop tunnel',
-          cancelButtonText: 'Cancel',
-          type: 'warning',
-        },
-      )
-    } catch { return /* user cancelled */ }
-  }
-
-  togglingTunnel.value = true
-  try {
-    if (cloudflareRunning.value) {
-      await stopService('cloudflare')
-      ElMessage.success('Shared tunnel stopped')
-    } else {
-      await startService('cloudflare')
-      ElMessage.success('Shared tunnel started')
-    }
-  } catch (e: any) {
-    ElMessage.error(`${cloudflareRunning.value ? 'Stop' : 'Start'} failed: ${e.message}`)
-  } finally {
-    togglingTunnel.value = false
-  }
-}
 
 // ── Auto-detect framework ──────────────────────────────────────────────
 const detecting = ref(false)
