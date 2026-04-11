@@ -144,7 +144,116 @@ public sealed class SiteOrchestrator
                 site.Domain, ex.Message);
         }
 
+        // 5. Cloudflare Tunnel — auto-sync DNS + ingress for every site that has
+        // cloudflare.enabled, so saving a site in the UI immediately pushes the
+        // public hostname live without a manual "Sync all sites" click. Best-effort:
+        // logs and continues if the plugin isn't loaded or the tunnel isn't set up.
+        try
+        {
+            await SyncCloudflareIfConfiguredAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Cloudflare sync failed for {Domain}: {Error}", site.Domain, ex.Message);
+        }
+
         _logger.LogInformation("Site {Domain} applied", site.Domain);
+    }
+
+    /// <summary>
+    /// Invokes the Cloudflare plugin's sync flow via reflection when the
+    /// plugin is loaded AND a tunnel is configured. Reads every site with
+    /// cloudflare.enabled and rebuilds the tunnel ingress in one call so
+    /// rules for OTHER sites are preserved. Called from ApplyAsync so
+    /// saving any site (even one without cloudflare set) refreshes the
+    /// full ingress — handles the edge case where the user disables a
+    /// site's tunnel and the rule must be removed from the tunnel config.
+    /// </summary>
+    private async Task SyncCloudflareIfConfiguredAsync(CancellationToken ct)
+    {
+        var pluginLoader = _sp.GetService<PluginLoader>();
+        var cfPlugin = pluginLoader?.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.cloudflare");
+        if (cfPlugin == null)
+        {
+            _logger.LogDebug("Cloudflare plugin not loaded — skipping auto-sync");
+            return;
+        }
+
+        // Resolve CloudflareApi + CloudflareConfig from the plugin's DI container.
+        // Both live in the plugin's AssemblyLoadContext, so we must look them up
+        // by type through the plugin assembly rather than with a direct reference.
+        var apiType = cfPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.Cloudflare.CloudflareApi");
+        var cfgType = cfPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.Cloudflare.CloudflareConfig");
+        if (apiType == null || cfgType == null)
+        {
+            _logger.LogDebug("Cloudflare plugin types not found");
+            return;
+        }
+
+        var api = _sp.GetService(apiType);
+        var cfg = _sp.GetService(cfgType);
+        if (api == null || cfg == null)
+        {
+            _logger.LogDebug("Cloudflare services not registered in DI");
+            return;
+        }
+
+        var tunnelId = cfgType.GetProperty("TunnelId")?.GetValue(cfg) as string;
+        var accountId = cfgType.GetProperty("AccountId")?.GetValue(cfg) as string;
+        if (string.IsNullOrWhiteSpace(tunnelId) || string.IsNullOrWhiteSpace(accountId))
+        {
+            _logger.LogDebug("Cloudflare tunnel not set up — skipping sync");
+            return;
+        }
+
+        // Collect every site with a populated + enabled cloudflare sub-config.
+        var sm = _sp.GetRequiredService<SiteManager>();
+        var enabledSites = sm.Sites.Values
+            .Where(s => s.Cloudflare is { Enabled: true }
+                     && !string.IsNullOrWhiteSpace(s.Cloudflare.ZoneId)
+                     && !string.IsNullOrWhiteSpace(s.Cloudflare.Subdomain))
+            .ToList();
+
+        // Even when nothing is enabled, we still push an empty ingress so a
+        // just-disabled rule is actually removed from the tunnel config.
+        var upsertMethod = apiType.GetMethod("UpsertCnameToTunnelAsync");
+        foreach (var s in enabledSites)
+        {
+            var cf = s.Cloudflare!;
+            var fullName = $"{cf.Subdomain}.{cf.ZoneName}";
+            try
+            {
+                var t = (Task)upsertMethod!.Invoke(api,
+                    new object[] { cf.ZoneId, fullName, tunnelId, ct })!;
+                await t;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("DNS upsert failed for {Domain}: {Error}", s.Domain, ex.Message);
+            }
+        }
+
+        // Rebuild the ingress from the current enabled set so disabling a site
+        // actually strips its rule — we can't PATCH a single rule, the whole
+        // ingress array is replaced.
+        var ruleType = apiType.Assembly.GetType("NKS.WebDevConsole.Plugin.Cloudflare.TunnelIngressRule")!;
+        var ruleListType = typeof(List<>).MakeGenericType(ruleType);
+        var ruleList = (System.Collections.IList)Activator.CreateInstance(ruleListType)!;
+        var ruleCtor = ruleType.GetConstructors().First();
+        foreach (var s in enabledSites)
+        {
+            var cf = s.Cloudflare!;
+            var hostname = $"{cf.Subdomain}.{cf.ZoneName}";
+            var service = $"{cf.Protocol}://{cf.LocalService}";
+            // ctor: (string Hostname, string Service, string? HttpHostHeader = null)
+            ruleList.Add(ruleCtor.Invoke(new object?[] { hostname, service, s.Domain }));
+        }
+
+        var ingressMethod = apiType.GetMethod("UpdateTunnelIngressAsync");
+        var ingressTask = (Task)ingressMethod!.Invoke(api, new object[] { tunnelId, ruleList, ct })!;
+        await ingressTask;
+
+        _logger.LogInformation("Cloudflare sync complete: {Count} rule(s) pushed", enabledSites.Count);
     }
 
     /// <summary>
@@ -181,6 +290,17 @@ public sealed class SiteOrchestrator
             {
                 _logger.LogError(ex, "Failed to reload Apache after removing {Domain}", domain);
             }
+        }
+
+        // Strip the removed site's rule from the tunnel ingress so a stale
+        // CNAME no longer resolves to a 502.
+        try
+        {
+            await SyncCloudflareIfConfiguredAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Cloudflare sync after remove failed: {Error}", ex.Message);
         }
 
         try

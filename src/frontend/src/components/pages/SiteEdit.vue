@@ -286,6 +286,32 @@
                 </div>
 
                 <template v-if="cloudflareEnabled">
+                  <!-- Tunnel status + start/stop button so the user never has
+                       to leave SiteEdit to bring the tunnel online. -->
+                  <div class="tunnel-status-row">
+                    <div class="tunnel-status-meta">
+                      <div class="tunnel-status-title">
+                        Tunnel:
+                        <span :class="['tunnel-pill', cloudflareRunning ? 'tunnel-pill-on' : 'tunnel-pill-off']">
+                          {{ cloudflareRunning ? 'Running' : 'Stopped' }}
+                        </span>
+                      </div>
+                      <div class="tunnel-status-desc">
+                        {{ cloudflareRunning
+                          ? 'cloudflared is connected — this site is reachable via the public URL above.'
+                          : 'Start the tunnel to make the public URL reachable.' }}
+                      </div>
+                    </div>
+                    <el-button
+                      size="default"
+                      :type="cloudflareRunning ? 'danger' : 'success'"
+                      :loading="togglingTunnel"
+                      @click="toggleCloudflared"
+                    >
+                      {{ cloudflareRunning ? 'Stop tunnel' : 'Start tunnel' }}
+                    </el-button>
+                  </div>
+
                   <el-form label-position="top" size="default" style="margin-top: 20px;">
                     <el-form-item label="Zone (Cloudflare domain)">
                       <el-select
@@ -457,13 +483,15 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
+import { useDaemonStore } from '../../stores/daemon'
 import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
-import { fetchCloudflareZones } from '../../api/daemon'
+import { fetchCloudflareZones, startService, stopService } from '../../api/daemon'
 
 const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
+const daemonStore = useDaemonStore()
 
 const domain = computed(() => String(route.params.domain || ''))
 
@@ -594,6 +622,30 @@ function onZoneChange(zoneId: string) {
   const z = cfZones.value.find(x => x.id === zoneId)
   cloudflareZoneName.value = z?.name ?? ''
   markDirty()
+}
+
+// ── cloudflared service status (drives Start/Stop button) ───────────
+const cloudflareRunning = computed(() => {
+  const svc = daemonStore.services.find((s: any) => s.id === 'cloudflare')
+  return svc?.state === 2 || svc?.status === 'running'
+})
+const togglingTunnel = ref(false)
+
+async function toggleCloudflared() {
+  togglingTunnel.value = true
+  try {
+    if (cloudflareRunning.value) {
+      await stopService('cloudflare')
+      ElMessage.success('Tunnel stopped')
+    } else {
+      await startService('cloudflare')
+      ElMessage.success('Tunnel started')
+    }
+  } catch (e: any) {
+    ElMessage.error(`${cloudflareRunning.value ? 'Stop' : 'Start'} failed: ${e.message}`)
+  } finally {
+    togglingTunnel.value = false
+  }
 }
 
 // ── Auto-detect framework ──────────────────────────────────────────────
@@ -1059,6 +1111,59 @@ onMounted(() => { void load() })
 .port-item {
   display: flex;
   flex-direction: column;
+}
+
+/* ─── Tunnel status row (inside Cloudflare tab) ──────────────────────── */
+.tunnel-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 18px;
+  margin-top: 16px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+}
+.tunnel-status-meta { flex: 1; }
+.tunnel-status-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  margin-bottom: 4px;
+}
+.tunnel-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-left: 6px;
+}
+.tunnel-pill-on {
+  background: var(--wdc-status-running);
+  color: var(--wdc-bg);
+}
+.tunnel-pill-off {
+  background: var(--wdc-surface);
+  color: var(--wdc-text-3);
+  border: 1px solid var(--wdc-border);
+}
+.tunnel-status-desc {
+  font-size: 0.8rem;
+  color: var(--wdc-text-3);
+}
+
+.cf-subdomain-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cf-zone-suffix {
+  font-size: 0.85rem;
+  color: var(--wdc-text-3);
+  white-space: nowrap;
 }
 
 /* ─── SSL toggle rows ────────────────────────────────────────────────── */

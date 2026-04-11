@@ -56,6 +56,14 @@
                 <span class="alias-dot">↳</span>
                 {{ row.aliases.join(', ') }}
               </div>
+              <div v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain" class="col-tunnel">
+                <span class="tunnel-icon">☁</span>
+                <a
+                  :href="`https://${row.cloudflare.subdomain}.${row.cloudflare.zoneName}`"
+                  target="_blank"
+                  @click.stop
+                >{{ row.cloudflare.subdomain }}.{{ row.cloudflare.zoneName }}</a>
+              </div>
             </div>
           </template>
         </el-table-column>
@@ -497,6 +505,25 @@ function formatDate(iso: string): string {
   font-family: 'JetBrains Mono', monospace;
 }
 .alias-dot { color: var(--wdc-text-3); }
+
+.col-tunnel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.col-tunnel a {
+  color: #f38020; /* Cloudflare orange */
+  font-weight: 600;
+  text-decoration: none;
+}
+.col-tunnel a:hover { text-decoration: underline; }
+.tunnel-icon {
+  color: #f38020;
+  font-size: 0.95rem;
+}
 
 .col-mono {
   font-size: 0.82rem;
