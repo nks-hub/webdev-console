@@ -12,7 +12,8 @@
     "stage:daemon:linux": "dotnet publish ../daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r linux-x64 --self-contained -o resources/daemon",
     "dist": "npm run stage:daemon:win && electron-vite build && electron-builder --config electron-builder.yml --win",
     "dist:mac": "npm run stage:daemon:mac && electron-vite build && electron-builder --config electron-builder.yml --mac",
-    "dist:linux": "npm run stage:daemon:linux && electron-vite build && electron-builder --config electron-builder.yml --linux"
+    "dist:linux": "npm run stage:daemon:linux && electron-vite build && electron-builder --config electron-builder.yml --linux",
+    "smoke:packaged:win": "node ../../scripts/smoke-packaged-electron.mjs --replace-dev-daemon --exe \"./release/win-unpacked/NKS WebDev Console.exe\""
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
