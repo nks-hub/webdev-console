@@ -10,6 +10,24 @@
             {{ installed.length }} installed ·
             {{ totalAvailable }} available
           </p>
+          <!-- Catalog health pill — reactive to /api/system polled on mount.
+               When unreachable the background flips red + hint points users
+               at Settings → Advanced to change the catalog URL. -->
+          <div
+            v-if="catalogStatus"
+            class="catalog-health"
+            :class="catalogStatus.reachable ? 'catalog-health-ok' : 'catalog-health-err'"
+            :title="catalogStatusTitle"
+          >
+            <span class="catalog-health-dot"></span>
+            <span class="catalog-health-label">
+              Catalog:
+              {{ catalogStatus.reachable
+                ? `${catalogStatus.cachedCount} releases`
+                : 'unreachable' }}
+            </span>
+            <span class="catalog-health-url mono">{{ catalogUrlShort }}</span>
+          </div>
         </div>
         <div class="header-actions">
           <el-input
@@ -217,6 +235,27 @@ const uninstalling = ref<Set<string>>(new Set())
 // don't misread the 6 cross-platform chips as "I need to pick one".
 const nativePlatform = ref<string>('')
 
+// Catalog health pulled from /api/system once on mount. Null until the
+// first successful fetch; null hides the pill. Updated on refresh click
+// so users see the post-refresh state without reloading the page.
+const catalogStatus = ref<{ url: string; cachedCount: number; lastFetch: string | null; reachable: boolean } | null>(null)
+
+// Short form of the catalog URL for inline display — strips protocol
+// and trailing slash so "http://127.0.0.1:8765/" renders as "127.0.0.1:8765".
+const catalogUrlShort = computed(() => {
+  const u = catalogStatus.value?.url ?? ''
+  return u.replace(/^https?:\/\//, '').replace(/\/$/, '')
+})
+
+const catalogStatusTitle = computed(() => {
+  if (!catalogStatus.value) return ''
+  const { url, cachedCount, lastFetch, reachable } = catalogStatus.value
+  const when = lastFetch ? new Date(lastFetch).toLocaleString() : 'never'
+  return reachable
+    ? `Catalog at ${url}\n${cachedCount} releases cached\nLast fetch: ${when}`
+    : `Catalog unreachable\nConfigured URL: ${url}\nLast fetch: ${when}\nConfigure a different URL in Settings → Advanced.`
+})
+
 const gridSearch = ref('')
 const selectedApp = ref<string | null>(null)
 
@@ -379,6 +418,10 @@ async function refresh() {
     ])
     catalog.value = cat
     installed.value = inst
+    // Re-fetch catalog health after the data refresh so the pill shows
+    // the latest snapshot. Runs in parallel with the other two calls
+    // above via fire-and-forget — no need to block the UI on it.
+    void loadSystemInfo()
   } catch (e: any) {
     ElMessage.error(`Failed to load: ${e.message}`)
   } finally {
@@ -432,21 +475,25 @@ async function uninstall(app: string, version: string) {
   }
 }
 
-async function loadNativePlatform() {
-  // Single shot — the host os/arch never changes during a session.
-  // Failure non-fatal: the table falls back to showing all chips
-  // in neutral style and the Install guard becomes a no-op.
+async function loadSystemInfo() {
+  // Fetches OS tag + catalog health in one call. OS never changes during
+  // the session but catalog health does (user may click Refresh after
+  // fixing their catalog URL), so we re-hit /api/system after any
+  // successful refresh() call below.
   try {
     const sys = await fetchSystem()
     if (sys?.os?.tag && sys?.os?.arch) {
       nativePlatform.value = `${sys.os.tag}/${sys.os.arch}`
     }
-  } catch { /* daemon not reachable yet */ }
+    if (sys?.catalog) {
+      catalogStatus.value = sys.catalog
+    }
+  } catch { /* daemon not reachable yet — pill stays hidden */ }
 }
 
 onMounted(() => {
   void refresh()
-  void loadNativePlatform()
+  void loadSystemInfo()
 })
 </script>
 
@@ -489,6 +536,43 @@ onMounted(() => {
   font-size: 0.76rem;
   color: var(--wdc-text-3);
   margin: 0;
+}
+
+/* Catalog health pill below the page subtitle — green when the daemon
+   has a populated cache, red when the fetch returned zero. Title
+   attribute carries the full multi-line explanation. */
+.catalog-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: help;
+}
+.catalog-health-ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--wdc-status-running);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+.catalog-health-err {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--wdc-status-error);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+}
+.catalog-health-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.catalog-health-label { font-weight: 700; }
+.catalog-health-url {
+  color: var(--wdc-text-3);
+  font-size: 0.68rem;
+  font-weight: 500;
 }
 
 .header-actions {
