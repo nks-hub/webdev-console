@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, shell } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import http from 'http'
 
@@ -182,10 +182,51 @@ async function waitForPortFile(maxWaitMs = 15000): Promise<{ port: number; token
   return readPortFile()
 }
 
+// Window state persistence — per plan Phase 4 "remember size/position".
+// Stored as a tiny JSON blob in app.getPath('userData')/window-state.json so
+// it travels with the user profile (or with the portable.txt override).
+// Defaults are used when the file is missing, corrupted, or off-screen.
+interface WindowState { width: number; height: number; x?: number; y?: number; maximized?: boolean }
+
+function windowStateFile(): string {
+  return join(app.getPath('userData'), 'window-state.json')
+}
+
+function loadWindowState(): WindowState {
+  const defaults: WindowState = { width: 960, height: 640 }
+  try {
+    const raw = readFileSync(windowStateFile(), 'utf-8')
+    const parsed = JSON.parse(raw) as Partial<WindowState>
+    if (typeof parsed.width === 'number' && typeof parsed.height === 'number'
+      && parsed.width >= 400 && parsed.height >= 300
+      && parsed.width <= 10000 && parsed.height <= 10000) {
+      return {
+        width: parsed.width,
+        height: parsed.height,
+        x: typeof parsed.x === 'number' ? parsed.x : undefined,
+        y: typeof parsed.y === 'number' ? parsed.y : undefined,
+        maximized: !!parsed.maximized,
+      }
+    }
+  } catch { /* missing or malformed — use defaults */ }
+  return defaults
+}
+
+function saveWindowState(state: WindowState): void {
+  try {
+    const dir = app.getPath('userData')
+    if (!existsSync(dir)) return
+    writeFileSync(windowStateFile(), JSON.stringify(state, null, 2))
+  } catch { /* non-fatal — we'd rather lose window state than crash the app */ }
+}
+
 async function createWindow() {
+  const saved = loadWindowState()
   win = new BrowserWindow({
-    width: 960,
-    height: 640,
+    width: saved.width,
+    height: saved.height,
+    x: saved.x,
+    y: saved.y,
     backgroundColor: '#141620',
     show: false,
     webPreferences: {
@@ -194,6 +235,8 @@ async function createWindow() {
       sandbox: false
     }
   })
+
+  if (saved.maximized) win.maximize()
 
   // Wait for daemon port file before loading renderer
   const info = await waitForPortFile()
@@ -226,6 +269,29 @@ async function createWindow() {
       win?.hide()
     }
   })
+
+  // Persist window state on resize/move/close so next launch restores the
+  // exact same footprint. Debounced via a trailing timer so we don't thrash
+  // the disk while the user is actively dragging / resizing.
+  let saveTimer: NodeJS.Timeout | null = null
+  const schedulePersist = () => {
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      if (!win || win.isDestroyed()) return
+      const bounds = win.getBounds()
+      saveWindowState({
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
+        maximized: win.isMaximized(),
+      })
+    }, 500)
+  }
+  win.on('resize', schedulePersist)
+  win.on('move', schedulePersist)
+  win.on('maximize', schedulePersist)
+  win.on('unmaximize', schedulePersist)
 }
 
 interface ServiceEntry {
