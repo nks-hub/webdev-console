@@ -34,6 +34,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddSingleton<TelemetryConsent>();
 builder.Services.AddSingleton<PluginState>();
 builder.Services.AddSingleton<PhpExtensionOverrides>();
+builder.Services.AddSingleton<SettingsStore>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddHostedService<HealthMonitor>();
@@ -651,8 +652,10 @@ foreach (var siteToApply in siteManager.Sites.Values)
     }
 }
 
-// Auto-start services if setting enabled (default: true)
-var autoStartEnabled = true; // TODO: read from settings DB
+// Auto-start services if setting enabled (default: true). Backed by SettingsStore
+// so the user can flip it from the Settings page without recompiling. See
+// GET/PUT /api/settings endpoints below.
+var autoStartEnabled = app.Services.GetRequiredService<SettingsStore>().AutoStartEnabled;
 if (autoStartEnabled)
 {
     var modules = app.Services.GetServices<IServiceModule>();
