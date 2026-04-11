@@ -23,6 +23,27 @@ export interface StatusResponse {
   uptime: number
 }
 
+/**
+ * Per-site Cloudflare Tunnel exposure. Mirrors `SiteCloudflareConfig` in
+ * `NKS.WebDevConsole.Core/Models/SiteConfig.cs` — keep the field names
+ * in sync with the C# record (snake→camel is handled by
+ * System.Text.Json's default camelCase serializer).
+ */
+export interface CloudflareSiteConfig {
+  /** True when the site is actively routed through the tunnel. */
+  enabled: boolean
+  /** Public subdomain label, e.g. "blog" for blog.nks-dev.cz. */
+  subdomain: string
+  /** Cloudflare zone ID from /api/cloudflare/zones. */
+  zoneId: string
+  /** Zone apex cached for display (e.g. "nks-dev.cz"). */
+  zoneName: string
+  /** Local service URL fragment, e.g. "localhost:80". */
+  localService: string
+  /** HTTP protocol for the local service: "http" or "https". */
+  protocol: 'http' | 'https'
+}
+
 export interface SiteInfo {
   domain: string
   documentRoot: string
@@ -33,6 +54,13 @@ export interface SiteInfo {
   aliases: string[]
   framework?: string
   environment?: Record<string, string>
+  /**
+   * Optional Cloudflare Tunnel exposure. Null / undefined means the site
+   * is only reachable locally. Present but `enabled=false` means it was
+   * configured before but is currently dormant — the DNS CNAME has been
+   * removed but the sub-config is kept so re-enabling is one click.
+   */
+  cloudflare?: CloudflareSiteConfig | null
 }
 
 export interface PhpVersion {
