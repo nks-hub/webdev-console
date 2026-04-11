@@ -147,6 +147,33 @@
 
           <section class="edit-card">
             <header class="edit-card-header">
+              <span class="edit-card-title">Subdomain template</span>
+              <span class="edit-card-hint">Default public hostname when enabling tunnel on a site</span>
+            </header>
+            <div class="edit-card-body">
+              <el-input
+                v-model="config.subdomainTemplate"
+                class="mono"
+                placeholder="{stem}-dev"
+              />
+              <div class="hint">
+                Placeholders:
+                <code>{stem}</code> = local domain without
+                <code>.loc</code>/<code>.local</code>/<code>.test</code>,
+                <code>{user}</code> = OS username.
+                Example for <code>myapp.loc</code> →
+                <code>{{ previewTemplate }}</code>
+              </div>
+              <div class="card-actions">
+                <el-button size="small" :loading="savingConfig" @click="saveSubdomainTemplate">
+                  Save template
+                </el-button>
+              </div>
+            </div>
+          </section>
+
+          <section class="edit-card">
+            <header class="edit-card-header">
               <span class="edit-card-title">Step 3 — start the tunnel</span>
               <span class="edit-card-hint">Launches cloudflared as a managed service</span>
             </header>
@@ -448,6 +475,31 @@ async function saveBinaryPath() {
     savingConfig.value = false
   }
 }
+
+async function saveSubdomainTemplate() {
+  savingConfig.value = true
+  try {
+    await saveCloudflareConfig({ subdomainTemplate: config.subdomainTemplate || '{stem}-dev' })
+    ElMessage.success('Subdomain template saved')
+  } catch (e: any) {
+    ElMessage.error(`Save failed: ${e.message}`)
+  } finally {
+    savingConfig.value = false
+  }
+}
+
+// Live preview of how the template resolves for the stem "myapp".
+// {hash} is rendered as a fixed example — the real value comes from
+// backend where the install salt lives, but that's fine for a preview.
+const previewTemplate = computed(() => {
+  const t = config.subdomainTemplate || '{stem}-{hash}'
+  return t
+    .replace('{stem}', 'myapp')
+    .replace('{hash}', 'bffa44')
+    .replace('{user}', 'lury')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+})
 
 // ── Auto-setup (one-token flow) ──────────────────────────────────────
 const autoSettingUp = ref(false)

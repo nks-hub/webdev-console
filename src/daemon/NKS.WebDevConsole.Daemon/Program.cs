@@ -1330,6 +1330,7 @@ app.MapPut("/api/cloudflare/config", async (HttpContext ctx, IServiceProvider sp
     Apply("apiToken", "ApiToken");
     Apply("accountId", "AccountId");
     Apply("defaultZoneId", "DefaultZoneId");
+    Apply("subdomainTemplate", "SubdomainTemplate");
 
     var saveMethod = t.GetMethod("Save");
     saveMethod?.Invoke(cfg, null);
@@ -1340,6 +1341,23 @@ app.MapPut("/api/cloudflare/config", async (HttpContext ctx, IServiceProvider sp
 
 app.MapGet("/api/cloudflare/verify", (IServiceProvider sp) =>
     InvokeCfAsync("VerifyTokenAsync", new object[] { CancellationToken.None }, sp));
+
+// Compute a suggested public subdomain for a local domain. The Cloudflare
+// plugin owns the template + install-salt hash logic, so SiteEdit can show
+// a stable auto-filled value like "myapp-bffa44" that doesn't drift.
+app.MapGet("/api/cloudflare/suggest-subdomain", (string domain, IServiceProvider sp) =>
+{
+    if (string.IsNullOrWhiteSpace(domain))
+        return Results.BadRequest(new { error = "domain query param required" });
+    var cfg = ResolveCloudflareServiceOrNull(sp, "CloudflareConfig");
+    if (cfg == null)
+        return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
+    var renderMethod = cfg.GetType().GetMethod("RenderSubdomain");
+    if (renderMethod == null)
+        return Results.Problem("RenderSubdomain not available");
+    var suggestion = renderMethod.Invoke(cfg, new object[] { domain }) as string;
+    return Results.Ok(new { suggestion, domain });
+});
 
 // One-token auto-setup: user pastes an API token → we verify it, list
 // accounts, pick the first one, find or create a tunnel named

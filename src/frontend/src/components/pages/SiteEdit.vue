@@ -486,7 +486,10 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
-import { fetchCloudflareZones, startService, stopService } from '../../api/daemon'
+import {
+  fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
+  startService, stopService,
+} from '../../api/daemon'
 
 const route = useRoute()
 const router = useRouter()
@@ -576,6 +579,7 @@ const cloudflareLocalService = ref('localhost:80')
 const cloudflareProtocol = ref<'http' | 'https'>('http')
 const cfZones = ref<any[]>([])
 const loadingCfZones = ref(false)
+const cfSubdomainTemplate = ref('{stem}-dev')
 
 const selectedCfZoneName = computed(() => {
   const z = cfZones.value.find(x => x.id === cloudflareZoneId.value)
@@ -604,12 +608,54 @@ async function loadCfZones() {
   }
 }
 
-function onCloudflareToggle(v: boolean) {
+// Load subdomain template from global Cloudflare config on mount so the
+// auto-fill uses whatever prefix/suffix the user has configured.
+async function loadCfSubdomainTemplate() {
+  try {
+    const cfg = await fetchCloudflareConfig()
+    if (cfg?.subdomainTemplate) cfSubdomainTemplate.value = cfg.subdomainTemplate
+  } catch { /* plugin not loaded — keep default */ }
+}
+
+/**
+ * Render the subdomain template with the current site. Supports:
+ *   {stem}  — local domain stripped of .loc/.local/.test
+ *   {user}  — lowercased guess at the username (falls back to empty)
+ * Keeps the template simple on purpose: users who need something fancier
+ * can just edit the generated value in the subdomain input field.
+ */
+function renderSubdomainTemplate(): string {
+  if (!site.value) return ''
+  const stem = site.value.domain.replace(/\.(loc|local|test)$/i, '')
+  // No reliable OS username source in a vanilla browser — Electron main
+  // could expose it via preload, but defaulting to empty avoids a hard
+  // dependency and keeps the default template ({stem}-dev) unambiguous.
+  const user = ''
+  return cfSubdomainTemplate.value
+    .replace('{stem}', stem)
+    .replace('{user}', user)
+    // Collapse stray double dashes from empty placeholders and strip
+    // leading/trailing ones so "{user}-{stem}" with empty user doesn't
+    // produce "-myapp".
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+async function onCloudflareToggle(v: boolean) {
   markDirty()
   if (v && cfZones.value.length === 0) void loadCfZones()
-  // Auto-pick a sensible subdomain from the local domain stem
+  // Auto-fill the subdomain from the backend-rendered template (which
+  // knows the install salt and computes a deterministic 6-char hash)
+  // only if the user hasn't already typed something. Falls back to a
+  // client-side render if the backend endpoint is unavailable.
   if (v && !cloudflareSubdomain.value && site.value) {
-    cloudflareSubdomain.value = site.value.domain.replace(/\.(loc|local|test)$/i, '')
+    try {
+      const res = await suggestCloudflareSubdomain(site.value.domain)
+      if (res.suggestion) cloudflareSubdomain.value = res.suggestion
+      else cloudflareSubdomain.value = renderSubdomainTemplate()
+    } catch {
+      cloudflareSubdomain.value = renderSubdomainTemplate()
+    }
   }
   // Auto-fill local service from the site's HTTP port
   if (v && site.value) {
@@ -789,7 +835,10 @@ function formatDate(s: string): string {
 }
 
 watch(domain, () => { void load() })
-onMounted(() => { void load() })
+onMounted(() => {
+  void load()
+  void loadCfSubdomainTemplate()
+})
 </script>
 
 <style scoped>

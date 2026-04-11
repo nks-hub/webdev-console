@@ -144,6 +144,7 @@ export interface CloudflareConfig {
   accountId?: string | null
   defaultZoneId?: string | null
   startupTimeoutSecs?: number
+  subdomainTemplate?: string | null
 }
 
 export const fetchCloudflareConfig = (): Promise<CloudflareConfig> =>
@@ -207,6 +208,9 @@ export const cloudflareAutoSetup = (apiToken: string): Promise<CloudflareAutoSet
 
 export const cloudflareSync = (): Promise<{ ok: boolean; synced: number; sites: any[] }> =>
   json('/api/cloudflare/sync', { method: 'POST' })
+
+export const suggestCloudflareSubdomain = (domain: string): Promise<{ suggestion: string; domain: string }> =>
+  json(`/api/cloudflare/suggest-subdomain?domain=${encodeURIComponent(domain)}`)
 
 // Databases
 export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
