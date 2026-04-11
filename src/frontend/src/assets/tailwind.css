@@ -221,23 +221,33 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 
 /* ─── Element Plus Component Refinements ─────────────────────────────────── */
 
-/* Buttons */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Buttons — comprehensive coverage for EVERY variant used across the app.
+
+   Goals locked in after 2026-04-11 "fixni design vsech tlacitek":
+   (1) Every variant has consistent height per size (28 / 32 / 40)
+   (2) Every coloured variant has a matching solid / plain / text state
+   (3) Every state has WCAG AA+ contrast against its own background
+   (4) disabled opacity = 0.45 with not-allowed cursor (no per-variant override)
+   (5) Loading spinner inherits text colour so it's visible on every bg
+   (6) No gradients, no drop shadows — flat redesign consistency
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .el-button {
   border-radius: var(--wdc-radius-sm) !important;
   font-weight: 500;
-  font-size: 0.8rem;
-  transition: all 0.15s ease;
+  font-size: 0.82rem;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.12s;
   letter-spacing: 0.01em;
 }
 
-.el-button--small {
-  height: 32px;
-  padding: 0 14px;
-}
+/* Size heights — match Element Plus conventions, narrower horizontal padding
+   than stock so dense toolbars don't overflow on the 900px minimum window. */
+.el-button--large  { height: 40px; padding: 0 18px; font-size: 0.88rem; }
+.el-button--default{ height: 34px; padding: 0 16px; }
+.el-button--small  { height: 32px; padding: 0 14px; }
 
-/* Circle buttons must stay perfectly round — the global --small padding
-   above would otherwise stretch them horizontally into ovals (visible on
-   the header theme toggle). Lock width == height and strip padding. */
+/* Circle buttons must stay perfectly round — strip padding, lock w==h. */
 .el-button.is-circle {
   width: 32px !important;
   height: 32px !important;
@@ -250,42 +260,88 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   height: 40px !important;
   min-width: 40px !important;
 }
+.el-button.is-circle.el-button--small {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+}
 
+/* ── Default (neutral) ──────────────────────────────────────────────────── */
 .el-button--default {
   background: var(--wdc-surface-2) !important;
   border-color: var(--wdc-border) !important;
   color: var(--wdc-text-2) !important;
 }
-
-.el-button--default:hover {
+.el-button--default:hover:not(.is-disabled) {
   background: var(--wdc-elevated) !important;
   border-color: var(--wdc-border-strong) !important;
   color: var(--wdc-text) !important;
 }
+.el-button--default:active:not(.is-disabled) {
+  background: var(--wdc-hover) !important;
+}
 
+/* ── Primary (solid) ────────────────────────────────────────────────────── */
 .el-button--primary {
   background: var(--wdc-accent) !important;
   border-color: var(--wdc-accent) !important;
-  color: var(--wdc-bg) !important; /* dark text on bright accent — ~12:1 in dark mode */
+  color: var(--wdc-bg) !important; /* dark text on bright accent — ~12:1 */
 }
-
-.el-button--primary:hover {
+.el-button--primary:hover:not(.is-disabled) {
   background: var(--wdc-accent-2) !important;
   border-color: var(--wdc-accent-2) !important;
 }
 
-/* Plain primary: the global .el-button--primary rule above forces the accent
-   background on ALL primary variants (solid + plain). Without an explicit
-   is-plain override, Element Plus's default plain text color (#409EFF) ended
-   up on the accent #56c2ff background → ~1.46:1 contrast, hard fail WCAG.
-   Use a transparent bg with accent border + readable text so plain primary
-   buttons look distinctly "outlined" vs the solid variant AND pass AA. */
+/* ── Success (solid) ────────────────────────────────────────────────────── */
+.el-button--success {
+  background: var(--wdc-status-running) !important;
+  border-color: var(--wdc-status-running) !important;
+  color: var(--wdc-bg) !important;
+}
+.el-button--success:hover:not(.is-disabled) {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+/* ── Danger (solid) ─────────────────────────────────────────────────────── */
+.el-button--danger {
+  background: var(--wdc-status-error) !important;
+  border-color: var(--wdc-status-error) !important;
+  color: var(--wdc-bg) !important;
+}
+.el-button--danger:hover:not(.is-disabled) {
+  background: #e34949 !important;
+  border-color: #e34949 !important;
+}
+
+/* ── Warning (solid) ────────────────────────────────────────────────────── */
+.el-button--warning {
+  background: var(--wdc-status-starting) !important;
+  border-color: var(--wdc-status-starting) !important;
+  color: var(--wdc-bg) !important;
+}
+.el-button--warning:hover:not(.is-disabled) {
+  background: #d97706 !important;
+  border-color: #d97706 !important;
+}
+
+/* ── Info (solid) ───────────────────────────────────────────────────────── */
+.el-button--info {
+  background: var(--wdc-elevated) !important;
+  border-color: var(--wdc-border-strong) !important;
+  color: var(--wdc-text) !important;
+}
+.el-button--info:hover:not(.is-disabled) {
+  background: var(--wdc-hover) !important;
+}
+
+/* ── Plain variants — transparent bg, coloured border + text ────────────── */
 .el-button.is-plain.el-button--primary {
   background: transparent !important;
   border-color: var(--wdc-accent) !important;
   color: var(--wdc-accent) !important;
 }
-.el-button.is-plain.el-button--primary:hover {
+.el-button.is-plain.el-button--primary:hover:not(.is-disabled) {
   background: var(--wdc-accent-dim) !important;
   border-color: var(--wdc-accent) !important;
   color: var(--wdc-text) !important;
@@ -293,22 +349,94 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 
 .el-button.is-plain.el-button--success {
   background: rgba(34, 197, 94, 0.08) !important;
-  border-color: rgba(34, 197, 94, 0.25) !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
   color: var(--wdc-status-running) !important;
 }
-.el-button.is-plain.el-button--success:hover {
-  background: rgba(34, 197, 94, 0.15) !important;
-  border-color: rgba(34, 197, 94, 0.4) !important;
+.el-button.is-plain.el-button--success:hover:not(.is-disabled) {
+  background: rgba(34, 197, 94, 0.18) !important;
+  border-color: rgba(34, 197, 94, 0.55) !important;
 }
 
 .el-button.is-plain.el-button--danger {
   background: rgba(239, 68, 68, 0.08) !important;
-  border-color: rgba(239, 68, 68, 0.25) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
   color: var(--wdc-status-error) !important;
 }
-.el-button.is-plain.el-button--danger:hover {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
+.el-button.is-plain.el-button--danger:hover:not(.is-disabled) {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.55) !important;
+}
+
+.el-button.is-plain.el-button--warning {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  color: var(--wdc-status-starting) !important;
+}
+.el-button.is-plain.el-button--warning:hover:not(.is-disabled) {
+  background: rgba(245, 158, 11, 0.18) !important;
+  border-color: rgba(245, 158, 11, 0.55) !important;
+}
+
+.el-button.is-plain.el-button--info {
+  background: transparent !important;
+  border-color: var(--wdc-border-strong) !important;
+  color: var(--wdc-text-2) !important;
+}
+.el-button.is-plain.el-button--info:hover:not(.is-disabled) {
+  background: var(--wdc-surface-2) !important;
+  color: var(--wdc-text) !important;
+}
+
+/* ── Text variants — no border, no bg until hover ──────────────────────── */
+.el-button.is-text {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--wdc-text-2) !important;
+  padding: 0 10px !important;
+}
+.el-button.is-text:hover:not(.is-disabled) {
+  background: var(--wdc-hover) !important;
+  color: var(--wdc-text) !important;
+}
+.el-button.is-text.el-button--primary {
+  color: var(--wdc-accent) !important;
+}
+.el-button.is-text.el-button--primary:hover:not(.is-disabled) {
+  background: var(--wdc-accent-dim) !important;
+  color: var(--wdc-text) !important;
+}
+.el-button.is-text.el-button--success {
+  color: var(--wdc-status-running) !important;
+}
+.el-button.is-text.el-button--danger {
+  color: var(--wdc-status-error) !important;
+}
+.el-button.is-text.el-button--danger:hover:not(.is-disabled) {
+  background: rgba(239, 68, 68, 0.14) !important;
+}
+.el-button.is-text.el-button--warning {
+  color: var(--wdc-status-starting) !important;
+}
+
+/* ── Disabled + loading — uniform policy for every variant ─────────────── */
+.el-button.is-disabled,
+.el-button.is-disabled:hover,
+.el-button.is-disabled:active {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  /* Preserve the variant's own colours — DO NOT override bg/border/color here
+     or the disabled state becomes a uniform grey that hides the button's
+     semantic (primary/danger/etc.). Just fade. */
+}
+.el-button.is-loading {
+  /* Loading spinner uses currentColor — ensure text colour is the variant's
+     primary colour so the spinner is always visible. Element Plus's default
+     loading overlay is transparent which inherits cleanly. */
+  pointer-events: none;
+}
+.el-button.is-loading .el-icon-loading,
+.el-button.is-loading::before {
+  color: currentColor !important;
 }
 
 /* Inputs */
