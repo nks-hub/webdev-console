@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
@@ -10,6 +10,9 @@ let tray: Tray | null = null
 let daemon: ChildProcess | null = null
 let daemonConnected = false
 let isQuitting = false
+let updaterStatus = 'Idle'
+let updateDownloaded = false
+let checkingForUpdates = false
 
 // Portable mode: if portable.txt exists next to the app, redirect both
 // Electron's userData AND the C# daemon's ~/.wdc tree to a local subfolder
@@ -356,6 +359,37 @@ async function updateTray() {
   tray.setToolTip(`NKS WDC — ${daemonConnected ? 'Connected' : 'Offline'}`)
 
   const serviceItems = await buildServiceSubmenu()
+  const updaterItems: Electron.MenuItemConstructorOptions[] = app.isPackaged && !isPortable
+    ? [
+        {
+          label: checkingForUpdates ? 'Checking for updates...' : `Updates: ${updaterStatus}`,
+          enabled: false,
+        },
+        {
+          label: updateDownloaded ? 'Install Update and Restart' : 'Check for Updates',
+          enabled: !checkingForUpdates,
+          click: async () => {
+            if (updateDownloaded) {
+              isQuitting = true
+              try {
+                const { autoUpdater } = await import('electron-updater')
+                autoUpdater.quitAndInstall(false, true)
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error)
+                void dialog.showMessageBox({
+                  type: 'error',
+                  title: 'Update failed',
+                  message: `Unable to install the downloaded update: ${message}`,
+                })
+              }
+              return
+            }
+
+            void checkForAppUpdates(true)
+          }
+        }
+      ]
+    : [{ label: 'Updates disabled in portable/dev mode', enabled: false }]
 
   const menu = Menu.buildFromTemplate([
     { label, enabled: false },
@@ -376,6 +410,11 @@ async function updateTray() {
     {
       label: 'Services',
       submenu: serviceItems
+    },
+    { type: 'separator' },
+    {
+      label: 'Updates',
+      submenu: updaterItems
     },
     { type: 'separator' },
     {
@@ -428,6 +467,112 @@ function createTray() {
   })
 }
 
+async function checkForAppUpdates(showNoUpdateDialog = false) {
+  if (!app.isPackaged || isPortable || checkingForUpdates) return
+
+  checkingForUpdates = true
+  updaterStatus = 'Checking'
+  updateTray()
+
+  try {
+    const { autoUpdater } = await import('electron-updater')
+    const result = await autoUpdater.checkForUpdates()
+    if (!result?.updateInfo?.version) {
+      updaterStatus = 'No update available'
+      if (showNoUpdateDialog) {
+        await dialog.showMessageBox({
+          type: 'info',
+          title: 'No updates available',
+          message: 'NKS WebDev Console is already up to date.',
+        })
+      }
+    }
+  } catch (error) {
+    updaterStatus = 'Update check failed'
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[updater] check failed:', message)
+    if (showNoUpdateDialog) {
+      await dialog.showMessageBox({
+        type: 'error',
+        title: 'Update check failed',
+        message,
+      })
+    }
+  } finally {
+    checkingForUpdates = false
+    updateTray()
+  }
+}
+
+async function setupAutoUpdater() {
+  if (!app.isPackaged || isPortable) {
+    updaterStatus = 'Disabled'
+    updateTray()
+    return
+  }
+
+  try {
+    const { autoUpdater } = await import('electron-updater')
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
+
+    autoUpdater.on('checking-for-update', () => {
+      checkingForUpdates = true
+      updaterStatus = 'Checking'
+      updateTray()
+    })
+    autoUpdater.on('update-available', (info) => {
+      updaterStatus = `Downloading ${info.version}`
+      updateTray()
+      console.log('[updater] Update available:', info.version)
+    })
+    autoUpdater.on('update-not-available', () => {
+      checkingForUpdates = false
+      updaterStatus = 'Up to date'
+      updateTray()
+      console.log('[updater] No update available')
+    })
+    autoUpdater.on('download-progress', (progress) => {
+      updaterStatus = `Downloading ${Math.round(progress.percent)}%`
+      updateTray()
+    })
+    autoUpdater.on('update-downloaded', async (info) => {
+      checkingForUpdates = false
+      updateDownloaded = true
+      updaterStatus = `Ready to install ${info.version}`
+      updateTray()
+      console.log('[updater] Update downloaded:', info.version)
+
+      const result = await dialog.showMessageBox({
+        type: 'info',
+        title: 'Update ready',
+        message: `Version ${info.version} has been downloaded.`,
+        detail: 'Restart now to install the update, or quit later and it will be installed automatically on exit.',
+        buttons: ['Restart and Install', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+
+      if (result.response === 0) {
+        isQuitting = true
+        autoUpdater.quitAndInstall(false, true)
+      }
+    })
+    autoUpdater.on('error', (error) => {
+      checkingForUpdates = false
+      updaterStatus = 'Update error'
+      updateTray()
+      console.error('[updater] error:', error?.message ?? error)
+    })
+
+    void checkForAppUpdates(false)
+  } catch (error) {
+    updaterStatus = 'Unavailable'
+    updateTray()
+    console.warn('[updater] electron-updater unavailable:', error)
+  }
+}
+
 app.on('before-quit', () => {
   isQuitting = true
 })
@@ -441,9 +586,10 @@ app.whenReady().then(async () => {
   await spawnDaemon()
   createWindow()
   createTray()
+  await setupAutoUpdater()
 
   // Auto-updater: check for updates when packaged (not in dev)
-  if (app.isPackaged && !isPortable) {
+  if (false) {
     try {
       const { autoUpdater } = await import('electron-updater')
       autoUpdater.checkForUpdatesAndNotify()

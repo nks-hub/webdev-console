@@ -6,7 +6,24 @@
   "extraMetadata": {
     "main": "out/main/main.js"
   },
-  "win": { "target": "dir" },
-  "mac": { "target": "dmg" },
-  "linux": { "target": "AppImage" }
+  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "nks-hub",
+      "repo": "webdev-console",
+      "releaseType": "release"
+    }
+  ],
+  "win": {
+    "target": ["nsis", "portable"],
+    "publisherName": "NKS Hub"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "perMachine": false
+  },
+  "mac": { "target": ["dmg", "zip"] },
+  "linux": { "target": ["AppImage"] }
 }
