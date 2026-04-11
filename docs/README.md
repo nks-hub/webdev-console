@@ -78,6 +78,7 @@ All services start automatically. No configuration needed.
 - **[Migration Guides](./migration.md)** – Move from MAMP PRO, XAMPP, WampServer, Laragon
 - **[Plugin Development](./plugin-development.md)** – Extend NKS WebDev Console
 - **[Architecture](./architecture.md)** – How NKS WebDev Console works internally
+- **[Release & Updates](./release-update-runbook.md)** – Packaging, updater metadata, tagged release validation
 
 ## System Requirements
 
