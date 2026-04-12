@@ -1646,6 +1646,48 @@ nodeRestartCmd.SetAction(async (parseResult, ct) =>
 });
 nodeCommand.Add(nodeRestartCmd);
 
+// ── Docker Compose detection ─────────────────────────────────────────
+var composeCommand = new Command("compose", "Docker Compose detection for a site");
+
+var composeDomainArg = new Argument<string>("domain") { Description = "Site domain to check" };
+var composeCheckCmd = new Command("check", "Check whether a site's document root has a Compose file") { composeDomainArg };
+composeCheckCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(composeDomainArg);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        var result = await client.GetJsonAsync($"/api/sites/{domain}/docker-compose");
+        if (json) { PrintJson(result); return; }
+
+        var hasCompose = result.TryGetProperty("hasCompose", out var hc) && hc.GetBoolean();
+        var fileName = result.TryGetProperty("fileName", out var fn) && fn.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? fn.GetString() ?? "" : "";
+        var composeFile = result.TryGetProperty("composeFile", out var cf) && cf.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? cf.GetString() ?? "" : "";
+
+        if (hasCompose)
+        {
+            AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")} has [cyan]{Markup.Escape(fileName)}[/]");
+            AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(composeFile)}[/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[dim]—[/] {Markup.Escape(domain ?? "")} has no compose file");
+            Environment.Exit(2);
+        }
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+    }
+});
+composeCommand.Add(composeCheckCmd);
+
+rootCommand.Add(composeCommand);
 rootCommand.Add(nodeCommand);
 rootCommand.Add(sslCommand);
 rootCommand.Add(hostsCmd);
