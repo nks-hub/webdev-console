@@ -102,4 +102,35 @@ public sealed class SiteOrchestratorHostsTests
     {
         Assert.Equal("# END NKS WebDev Console", SiteOrchestrator.HostsBlockEnd);
     }
+
+    [Fact]
+    public void RewriteManagedHostsContent_Idempotent()
+    {
+        var original = "127.0.0.1\tlocalhost\n";
+        var domains = new[] { "foo.loc", "bar.loc" };
+
+        var first = SiteOrchestrator.RewriteManagedHostsContent(original, domains);
+        var second = SiteOrchestrator.RewriteManagedHostsContent(first, domains);
+
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public void RewriteManagedHostsContent_HashSetCallerDedupes()
+    {
+        // The production call site WriteHostsFileDirectAsync passes a HashSet<string>,
+        // so deduplication happens at the caller. This test documents that contract —
+        // when the caller passes a HashSet, output has no duplicates.
+        var domains = new HashSet<string> { "x.loc", "x.loc", "y.loc" };
+        Assert.Equal(2, domains.Count);
+        var rewritten = SiteOrchestrator.RewriteManagedHostsContent("", domains);
+        var occurrences = 0;
+        var index = 0;
+        while ((index = rewritten.IndexOf("x.loc", index, StringComparison.Ordinal)) != -1)
+        {
+            occurrences++;
+            index++;
+        }
+        Assert.Equal(1, occurrences);
+    }
 }
