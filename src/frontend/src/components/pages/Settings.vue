@@ -276,12 +276,29 @@
                 </header>
                 <div class="settings-card-body">
                   <el-table v-if="accountDevices.length > 0" :data="accountDevices" size="small" stripe>
-                    <el-table-column label="Name" min-width="150">
+                    <el-table-column label="Name" min-width="180">
                       <template #default="{ row }">
-                        <span class="mono" :style="row.device_id === deviceId ? 'font-weight: 700' : ''">
-                          {{ row.name || row.device_id.slice(0, 12) + '…' }}
-                        </span>
-                        <el-tag v-if="row.device_id === deviceId" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
+                        <div class="device-name-cell">
+                          <el-input
+                            v-if="editingDeviceName === row.device_id"
+                            v-model="editingDeviceValue"
+                            size="small"
+                            class="device-name-input"
+                            @blur="saveDeviceName(row)"
+                            @keydown.enter.prevent="saveDeviceName(row)"
+                            @keydown.escape.prevent="editingDeviceName = null"
+                          />
+                          <span
+                            v-else
+                            class="device-name-text mono"
+                            :style="row.device_id === deviceId ? 'font-weight: 700' : ''"
+                            @dblclick="startEditDeviceName(row)"
+                            title="Double-click to rename"
+                          >
+                            {{ row.name || row.device_id.slice(0, 12) + '…' }}
+                          </span>
+                          <el-tag v-if="row.device_id === deviceId" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
+                        </div>
                       </template>
                     </el-table-column>
                     <el-table-column label="OS" width="120">
@@ -734,6 +751,31 @@ const authError = ref('')
 const accountDevices = ref<CatalogDeviceInfo[]>([])
 const devicesLoading = ref(false)
 const pushingTo = ref<string | null>(null)
+const editingDeviceName = ref<string | null>(null)
+const editingDeviceValue = ref('')
+
+function startEditDeviceName(row: CatalogDeviceInfo) {
+  editingDeviceName.value = row.device_id
+  editingDeviceValue.value = row.name || ''
+}
+
+async function saveDeviceName(row: CatalogDeviceInfo) {
+  const newName = editingDeviceValue.value.trim()
+  editingDeviceName.value = null
+  if (newName === (row.name || '')) return
+  try {
+    const url = getCatalogUrl()
+    const r = await fetch(`${url}/api/v1/devices/${row.device_id}?name=${encodeURIComponent(newName)}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accountToken.value}` },
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    row.name = newName
+    ElMessage.success('Device renamed')
+  } catch (e: any) {
+    ElMessage.error(`Rename failed: ${e.message}`)
+  }
+}
 
 function getCatalogUrl(): string {
   return (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
@@ -1363,4 +1405,9 @@ async function save() {
 }
 .sync-ok { background: rgba(34, 197, 94, 0.15); color: var(--wdc-status-running); }
 .sync-err { background: rgba(255, 107, 107, 0.15); color: var(--wdc-status-error); }
+
+.device-name-cell { display: flex; align-items: center; gap: 6px; }
+.device-name-text { cursor: pointer; }
+.device-name-text:hover { text-decoration: underline dashed var(--wdc-text-3); text-underline-offset: 3px; }
+.device-name-input { max-width: 160px; }
 </style>
