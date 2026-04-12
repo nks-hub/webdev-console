@@ -25,6 +25,16 @@
       </div>
     </div>
 
+    <el-alert
+      v-if="pageLoadError"
+      type="error"
+      :title="pageLoadError"
+      :closable="true"
+      @close="pageLoadError = ''"
+      show-icon
+      style="margin: 0 24px 16px"
+    />
+
     <!-- Status strip -->
     <div class="status-strip">
       <div class="status-card" :class="{ 'status-active': serviceRunning }">
@@ -417,6 +427,7 @@ const activeTab = ref<'settings' | 'ingress' | 'dns'>('settings')
 
 // ── Config state ─────────────────────────────────────────────────────
 const config = reactive<CloudflareConfig>({})
+const pageLoadError = ref('')
 const apiTokenInput = ref('')
 const tunnelTokenInput = ref('')
 
@@ -427,11 +438,13 @@ const savingConfig = ref(false)
 const saveStatus = ref<{ kind: 'ok' | 'err'; message: string } | null>(null)
 
 async function loadConfig() {
+  pageLoadError.value = ''
   try {
     const res = await fetchCloudflareConfig()
     Object.assign(config, res)
   } catch (e: any) {
-    ElMessage.error(`Failed to load Cloudflare config: ${e.message}`)
+    pageLoadError.value = `Failed to load Cloudflare config: ${e.message}`
+    ElMessage.error(pageLoadError.value)
   }
 }
 
