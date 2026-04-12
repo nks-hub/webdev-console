@@ -207,14 +207,19 @@ sitesCommand.SetAction(async (parseResult, ct) =>
     if (sites.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No sites configured.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("Domain"); table.AddColumn("PHP"); table.AddColumn("SSL"); table.AddColumn("Framework");
+    table.AddColumn("Domain"); table.AddColumn("Runtime"); table.AddColumn("SSL"); table.AddColumn("Framework");
     foreach (var site in sites.EnumerateArray())
     {
         var ssl = site.TryGetProperty("sslEnabled", out var s) && s.GetBoolean();
         var fw = site.TryGetProperty("framework", out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() : null;
+        var nodePort = site.TryGetProperty("nodeUpstreamPort", out var np) ? np.GetInt32() : 0;
+        var phpVer = site.GetProperty("phpVersion").GetString() ?? "none";
+        var runtime = nodePort > 0
+            ? $"[green]Node:{nodePort}[/]"
+            : (phpVer != "none" ? $"[blue]PHP {phpVer}[/]" : "[dim]Static[/]");
         table.AddRow(
             site.GetProperty("domain").GetString() ?? "?",
-            site.GetProperty("phpVersion").GetString() ?? "-",
+            runtime,
             ssl ? "[green]Yes[/]" : "[dim]No[/]",
             fw != null ? Markup.Escape(fw) : "[dim]-[/]");
     }
