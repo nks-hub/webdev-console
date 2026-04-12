@@ -207,7 +207,7 @@ sitesCommand.SetAction(async (parseResult, ct) =>
     if (sites.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No sites configured.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("Domain"); table.AddColumn("Runtime"); table.AddColumn("SSL"); table.AddColumn("Framework");
+    table.AddColumn("Domain"); table.AddColumn("Runtime"); table.AddColumn("SSL"); table.AddColumn("Tunnel"); table.AddColumn("Framework");
     foreach (var site in sites.EnumerateArray())
     {
         var ssl = site.TryGetProperty("sslEnabled", out var s) && s.GetBoolean();
@@ -217,10 +217,25 @@ sitesCommand.SetAction(async (parseResult, ct) =>
         var runtime = nodePort > 0
             ? $"[green]Node:{nodePort}[/]"
             : (phpVer != "none" ? $"[blue]PHP {phpVer}[/]" : "[dim]Static[/]");
+        // Cloudflare tunnel status
+        var tunnelLabel = "[dim]-[/]";
+        if (site.TryGetProperty("cloudflare", out var cf) && cf.ValueKind == JsonValueKind.Object)
+        {
+            var cfEnabled = cf.TryGetProperty("enabled", out var en) && en.GetBoolean();
+            if (cfEnabled)
+            {
+                var sub = cf.TryGetProperty("subdomain", out var sd) ? sd.GetString() ?? "" : "";
+                var zone = cf.TryGetProperty("zoneName", out var zn) ? zn.GetString() ?? "" : "";
+                tunnelLabel = sub.Length > 0 && zone.Length > 0
+                    ? $"[cyan]{Markup.Escape(sub)}.{Markup.Escape(zone)}[/]"
+                    : "[green]Yes[/]";
+            }
+        }
         table.AddRow(
             site.GetProperty("domain").GetString() ?? "?",
             runtime,
             ssl ? "[green]Yes[/]" : "[dim]No[/]",
+            tunnelLabel,
             fw != null ? Markup.Escape(fw) : "[dim]-[/]");
     }
     AnsiConsole.Write(table);
