@@ -11,8 +11,23 @@
     </div>
 
     <div class="page-body">
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :title="loadError"
+        :closable="true"
+        @close="loadError = ''"
+        show-icon
+        style="margin-bottom: 16px"
+      />
+
+      <!-- Loading skeleton -->
+      <div v-if="loading && versions.length === 0" style="padding: 24px">
+        <el-skeleton :rows="3" animated />
+      </div>
+
       <!-- Version cards -->
-      <div class="version-grid" v-if="versions.length > 0">
+      <div class="version-grid" v-else-if="versions.length > 0">
         <div
           v-for="ver in versions"
           :key="ver.version"
@@ -96,6 +111,7 @@ interface ExtInfo {
 
 const versions = ref<PhpVersion[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const selectedVersion = ref('')
 const selectedConfig = ref('')
 const extensions = ref<ExtInfo[]>([])
@@ -119,13 +135,17 @@ function authHeaders(): Record<string, string> {
 
 async function loadVersions() {
   loading.value = true
+  loadError.value = ''
   try {
     const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: authHeaders() })
     if (r.ok) {
       versions.value = await r.json()
+    } else {
+      loadError.value = `Failed to load PHP versions: HTTP ${r.status}`
     }
-  } catch { /* not connected */ }
-  finally { loading.value = false }
+  } catch (e: any) {
+    loadError.value = `Cannot connect to daemon: ${e.message}`
+  } finally { loading.value = false }
 }
 
 function selectVersion(ver: PhpVersion) {
