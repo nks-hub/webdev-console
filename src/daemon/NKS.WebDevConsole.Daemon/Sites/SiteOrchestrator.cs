@@ -147,6 +147,41 @@ public sealed class SiteOrchestrator
             }
         }
 
+        // 3b. Node.js — start/restart the site's Node process if NodeUpstreamPort is set
+        if (site.NodeUpstreamPort > 0)
+        {
+            try
+            {
+                var nodeModule = modules.FirstOrDefault(m =>
+                    m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+                if (nodeModule is not null)
+                {
+                    // Cross-ALC: invoke StartSiteAsync(domain, documentRoot, port, startCommand, ct)
+                    await InvokeAsync(nodeModule, "StartSiteAsync",
+                        new object[] { site.Domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", ct });
+                    _logger.LogInformation("Node.js process started for {Domain} on port {Port}", site.Domain, site.NodeUpstreamPort);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to start Node.js process for {Domain}", site.Domain);
+            }
+        }
+        else
+        {
+            // If site was previously a Node site but switched to Static/PHP, stop the orphaned process
+            var nodeModule2 = modules.FirstOrDefault(m =>
+                m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+            if (nodeModule2 is not null)
+            {
+                try
+                {
+                    await InvokeAsync(nodeModule2, "StopSiteAsync", new object[] { site.Domain, ct });
+                }
+                catch { /* best-effort cleanup */ }
+            }
+        }
+
         // 4. Hosts file — add domain + aliases to system hosts (requires elevation on Windows)
         try
         {
@@ -367,6 +402,21 @@ public sealed class SiteOrchestrator
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reload Apache after removing {Domain}", domain);
+            }
+        }
+
+        // Stop any Node.js process for the removed site
+        var nodeModule = modules.FirstOrDefault(m =>
+            m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+        if (nodeModule is not null)
+        {
+            try
+            {
+                await InvokeAsync(nodeModule, "RemoveSiteAsync", new object[] { domain, ct });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Node process cleanup for removed site {Domain}", domain);
             }
         }
 

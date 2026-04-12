@@ -794,6 +794,102 @@ app.MapPost("/api/services/{id}/restart", async (string id, IServiceProvider sp,
     }
 });
 
+// Per-site Node.js process management — delegates to NodeModule via reflection
+// because the plugin is in an isolated ALC. These endpoints let the frontend
+// start/stop/restart individual site processes without touching the aggregate
+// "node" service module.
+app.MapGet("/api/node/sites", (IServiceProvider sp) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var nodeModule = modules.FirstOrDefault(m => m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+    if (nodeModule == null) return Results.Ok(Array.Empty<object>());
+
+    var listMethod = nodeModule.GetType().GetMethod("ListSiteProcesses");
+    if (listMethod == null) return Results.Ok(Array.Empty<object>());
+
+    var result = listMethod.Invoke(nodeModule, null);
+    return Results.Ok(result);
+});
+
+app.MapPost("/api/node/sites/{domain}/start", async (string domain, IServiceProvider sp, ILoggerFactory lf) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var nodeModule = modules.FirstOrDefault(m => m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+    if (nodeModule == null) return Results.NotFound(new { error = "Node.js plugin not loaded" });
+
+    var sm = sp.GetRequiredService<SiteManager>();
+    if (!sm.Sites.TryGetValue(domain, out var site)) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+    if (site.NodeUpstreamPort == 0) return Results.BadRequest(new { error = "Site is not configured as a Node.js site" });
+
+    try
+    {
+        var startMethod = nodeModule.GetType().GetMethod("StartSiteAsync");
+        var task = (Task)startMethod!.Invoke(nodeModule,
+            new object[] { domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", CancellationToken.None })!;
+        await task;
+
+        var statusMethod = nodeModule.GetType().GetMethod("GetSiteStatus");
+        var status = statusMethod!.Invoke(nodeModule, new object[] { domain });
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("NodeControl").LogError(ex, "Failed to start Node for {Domain}", domain);
+        return Results.Problem(title: $"Failed to start Node for {domain}", detail: ex.Message, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/node/sites/{domain}/stop", async (string domain, IServiceProvider sp, ILoggerFactory lf) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var nodeModule = modules.FirstOrDefault(m => m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+    if (nodeModule == null) return Results.NotFound(new { error = "Node.js plugin not loaded" });
+
+    try
+    {
+        var stopMethod = nodeModule.GetType().GetMethod("StopSiteAsync");
+        var task = (Task)stopMethod!.Invoke(nodeModule, new object[] { domain, CancellationToken.None })!;
+        await task;
+        return Results.Ok(new { ok = true, domain });
+    }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("NodeControl").LogError(ex, "Failed to stop Node for {Domain}", domain);
+        return Results.Problem(title: $"Failed to stop Node for {domain}", detail: ex.Message, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/node/sites/{domain}/restart", async (string domain, IServiceProvider sp, ILoggerFactory lf) =>
+{
+    var modules = sp.GetServices<IServiceModule>();
+    var nodeModule = modules.FirstOrDefault(m => m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
+    if (nodeModule == null) return Results.NotFound(new { error = "Node.js plugin not loaded" });
+
+    var sm = sp.GetRequiredService<SiteManager>();
+    if (!sm.Sites.TryGetValue(domain, out var site)) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+
+    try
+    {
+        var stopMethod = nodeModule.GetType().GetMethod("StopSiteAsync");
+        var stopTask = (Task)stopMethod!.Invoke(nodeModule, new object[] { domain, CancellationToken.None })!;
+        await stopTask;
+
+        var startMethod = nodeModule.GetType().GetMethod("StartSiteAsync");
+        var startTask = (Task)startMethod!.Invoke(nodeModule,
+            new object[] { domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", CancellationToken.None })!;
+        await startTask;
+
+        var statusMethod = nodeModule.GetType().GetMethod("GetSiteStatus");
+        var status = statusMethod!.Invoke(nodeModule, new object[] { domain });
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("NodeControl").LogError(ex, "Failed to restart Node for {Domain}", domain);
+        return Results.Problem(title: $"Failed to restart Node for {domain}", detail: ex.Message, statusCode: 500);
+    }
+});
+
 // Sites CRUD
 var siteManager = app.Services.GetRequiredService<SiteManager>();
 siteManager.LoadAll();

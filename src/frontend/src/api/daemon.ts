@@ -490,6 +490,31 @@ export const saveServiceConfig = (
     body: JSON.stringify({ path, content }),
   })
 
+// ── Node.js per-site process management ──────────────────────────────
+
+export interface NodeSiteStatus {
+  domain: string
+  state: number // 0=Stopped, 1=Starting, 2=Running, 3=Stopping, 4=Crashed
+  pid: number | null
+  port: number
+  startCommand: string
+  cpuPercent: number
+  memoryBytes: number
+  uptime: string | null
+}
+
+export const fetchNodeSites = () =>
+  json<NodeSiteStatus[]>('/api/node/sites')
+
+export const startNodeSite = (domain: string) =>
+  json<NodeSiteStatus>(`/api/node/sites/${encodeURIComponent(domain)}/start`, { method: 'POST' })
+
+export const stopNodeSite = (domain: string) =>
+  json<{ ok: boolean; domain: string }>(`/api/node/sites/${encodeURIComponent(domain)}/stop`, { method: 'POST' })
+
+export const restartNodeSite = (domain: string) =>
+  json<NodeSiteStatus>(`/api/node/sites/${encodeURIComponent(domain)}/restart`, { method: 'POST' })
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.

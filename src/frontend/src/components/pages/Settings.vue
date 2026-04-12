@@ -987,7 +987,7 @@ function isSettingSyncable(key: string): boolean {
 
 const SITE_SYNC_FIELDS = new Set([
   'domain', 'phpVersion', 'sslEnabled', 'aliases', 'framework',
-  'environment', 'cloudflare',
+  'environment', 'cloudflare', 'nodeUpstreamPort', 'nodeStartCommand',
 ])
 const SITE_LOCAL_FIELDS = new Set([
   'documentRoot', 'httpPort', 'httpsPort',

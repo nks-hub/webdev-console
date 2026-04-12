@@ -198,7 +198,7 @@
                   </button>
                 </div>
 
-                <!-- Node.js upstream port (only when Node is selected) -->
+                <!-- Node.js upstream port + start command (only when Node is selected) -->
                 <div v-if="selectedRuntime === 'node'" class="php-version-picker">
                   <label class="sub-label">Upstream port</label>
                   <el-input-number
@@ -210,8 +210,55 @@
                     @change="markDirty"
                   />
                   <div class="hint" style="margin-top: 8px">
-                    Port your Node.js app listens on (e.g. <code>npm start</code> → <code>localhost:3000</code>).
-                    Apache will <code>ProxyPass / http://localhost:{port}/</code> all requests to it.
+                    Port your Node.js app listens on. Apache will <code>ProxyPass</code> all requests to it.
+                  </div>
+
+                  <label class="sub-label" style="margin-top: 16px">Start command</label>
+                  <el-input
+                    v-model="nodeStartCommand"
+                    placeholder="npm start"
+                    clearable
+                    style="width: 320px"
+                    @input="markDirty"
+                  />
+                  <div class="hint" style="margin-top: 4px">
+                    Command to start your app (e.g. <code>npm start</code>, <code>npm run dev</code>, <code>node server.js</code>).
+                    Empty defaults to <code>npm start</code>.
+                  </div>
+
+                  <!-- Per-site Node process controls -->
+                  <div class="node-process-controls" style="margin-top: 16px">
+                    <label class="sub-label">Process</label>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
+                      <span
+                        class="status-dot"
+                        :class="nodeProcessState === 2 ? 'running' : nodeProcessState === 4 ? 'crashed' : 'stopped'"
+                      />
+                      <span style="font-size: 0.85rem; color: var(--wdc-text-2)">
+                        {{ nodeProcessState === 2 ? 'Running' : nodeProcessState === 4 ? 'Crashed' : nodeProcessState === 1 ? 'Starting...' : 'Stopped' }}
+                        <template v-if="nodeProcessPid"> (PID {{ nodeProcessPid }})</template>
+                      </span>
+                      <el-button
+                        v-if="nodeProcessState !== 2"
+                        size="small"
+                        type="success"
+                        @click="startNodeProcess"
+                        :loading="nodeProcessLoading"
+                      >Start</el-button>
+                      <el-button
+                        v-if="nodeProcessState === 2"
+                        size="small"
+                        type="danger"
+                        @click="stopNodeProcess"
+                        :loading="nodeProcessLoading"
+                      >Stop</el-button>
+                      <el-button
+                        v-if="nodeProcessState === 2"
+                        size="small"
+                        @click="restartNodeProcess"
+                        :loading="nodeProcessLoading"
+                      >Restart</el-button>
+                    </div>
                   </div>
                 </div>
 
@@ -558,6 +605,7 @@ function removeAlias(a: string) {
 
 // ── Runtime picker ─────────────────────────────────────────────────────
 const nodeUpstreamPort = ref(3000)
+const nodeStartCommand = ref('')
 
 const selectedRuntime = computed<'static' | 'php' | 'node'>(() => {
   if (site.value?.nodeUpstreamPort && site.value.nodeUpstreamPort > 0) return 'node'
@@ -568,6 +616,70 @@ const selectedRuntime = computed<'static' | 'php' | 'node'>(() => {
 watch(() => site.value?.nodeUpstreamPort, (v) => {
   if (typeof v === 'number' && v > 0) nodeUpstreamPort.value = v
 }, { immediate: true })
+
+watch(() => site.value?.nodeStartCommand, (v) => {
+  nodeStartCommand.value = v ?? ''
+}, { immediate: true })
+
+// ── Node.js process control ───────────────────────────────────────────
+const nodeProcessState = ref(0)
+const nodeProcessPid = ref<number | null>(null)
+const nodeProcessLoading = ref(false)
+
+async function refreshNodeStatus() {
+  if (!site.value || selectedRuntime.value !== 'node') return
+  try {
+    const list = await import('../../api/daemon').then(m => m.fetchNodeSites())
+    const proc = list.find(p => p.domain === site.value!.domain)
+    nodeProcessState.value = proc?.state ?? 0
+    nodeProcessPid.value = proc?.pid ?? null
+  } catch { /* ignore — plugin may not be loaded */ }
+}
+
+async function startNodeProcess() {
+  if (!site.value) return
+  nodeProcessLoading.value = true
+  try {
+    const { startNodeSite } = await import('../../api/daemon')
+    const result = await startNodeSite(site.value.domain)
+    nodeProcessState.value = result.state
+    nodeProcessPid.value = result.pid
+  } catch (e: any) {
+    ElMessage.error(`Failed to start Node: ${e.message}`)
+  } finally {
+    nodeProcessLoading.value = false
+  }
+}
+
+async function stopNodeProcess() {
+  if (!site.value) return
+  nodeProcessLoading.value = true
+  try {
+    const { stopNodeSite } = await import('../../api/daemon')
+    await stopNodeSite(site.value.domain)
+    nodeProcessState.value = 0
+    nodeProcessPid.value = null
+  } catch (e: any) {
+    ElMessage.error(`Failed to stop Node: ${e.message}`)
+  } finally {
+    nodeProcessLoading.value = false
+  }
+}
+
+async function restartNodeProcess() {
+  if (!site.value) return
+  nodeProcessLoading.value = true
+  try {
+    const { restartNodeSite } = await import('../../api/daemon')
+    const result = await restartNodeSite(site.value.domain)
+    nodeProcessState.value = result.state
+    nodeProcessPid.value = result.pid
+  } catch (e: any) {
+    ElMessage.error(`Failed to restart Node: ${e.message}`)
+  } finally {
+    nodeProcessLoading.value = false
+  }
+}
 
 function selectRuntime(rt: 'static' | 'php' | 'node') {
   if (!site.value) return
@@ -790,6 +902,9 @@ async function load() {
       })
       if (res.ok) history.value = await res.json() as Array<{ timestamp: string; label?: string }>
     } catch { /* optional */ }
+
+    // Node process status (non-blocking)
+    refreshNodeStatus()
   } finally {
     loading.value = false
   }
@@ -801,11 +916,13 @@ async function save() {
   try {
     // Commit aliases from chip picker (no more comma-separated string)
     site.value.aliases = [...aliases.value]
-    // Commit Node.js proxy port from runtime tab
+    // Commit Node.js proxy port + start command from runtime tab
     if (selectedRuntime.value === 'node') {
       site.value.nodeUpstreamPort = nodeUpstreamPort.value
+      site.value.nodeStartCommand = nodeStartCommand.value || ''
     } else {
       site.value.nodeUpstreamPort = 0
+      site.value.nodeStartCommand = ''
     }
     // Commit Cloudflare sub-config from the dedicated tab. When disabled we
     // still send the object so the daemon can clear any previous ingress
@@ -1149,6 +1266,18 @@ onMounted(() => {
   color: var(--wdc-text-3);
   line-height: 1.4;
 }
+
+/* ─── Node process status dot ───────────────────────────────────────── */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--wdc-text-3);
+}
+.status-dot.running { background: var(--el-color-success); }
+.status-dot.crashed { background: var(--el-color-danger); }
+.status-dot.stopped { background: var(--wdc-text-3); }
 
 /* ─── PHP version sub-picker ─────────────────────────────────────────── */
 .php-version-picker {

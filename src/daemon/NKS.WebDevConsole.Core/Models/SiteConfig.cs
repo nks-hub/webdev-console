@@ -22,6 +22,14 @@ public class SiteConfig
     public int NodeUpstreamPort { get; set; }
 
     /// <summary>
+    /// Shell command the Node plugin uses to start the app process for
+    /// this site, e.g. <c>npm start</c>, <c>npm run dev</c>, or
+    /// <c>node server.js</c>. When empty, defaults to <c>npm start</c>.
+    /// Only meaningful when <see cref="NodeUpstreamPort"/> is non-zero.
+    /// </summary>
+    public string NodeStartCommand { get; set; } = "";
+
+    /// <summary>
     /// Optional Cloudflare Tunnel exposure for this site. Null means the
     /// site is only accessible locally (default). Set to a populated
     /// <see cref="SiteCloudflareConfig"/> to expose the site via the

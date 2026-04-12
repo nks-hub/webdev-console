@@ -56,6 +56,8 @@ export interface SiteInfo {
   environment?: Record<string, string>
   /** When non-zero, Apache reverse-proxies to http://localhost:{port} instead of serving DocumentRoot. */
   nodeUpstreamPort?: number
+  /** Shell command to start the Node.js process (e.g. "npm start", "npm run dev"). */
+  nodeStartCommand?: string
   /**
    * Optional Cloudflare Tunnel exposure. Null / undefined means the site
    * is only reachable locally. Present but `enabled=false` means it was
