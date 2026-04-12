@@ -715,13 +715,23 @@ tablesCmd.SetAction(async (parseResult, ct) =>
         FileName = mysqlCli,
         Arguments = $"-h 127.0.0.1 -P 3306 -u root -N -e \"SHOW TABLES\" {name}",
         RedirectStandardOutput = true,
+        RedirectStandardError = true,
         UseShellExecute = false,
         CreateNoWindow = true
     };
     var proc = System.Diagnostics.Process.Start(psi);
     if (proc == null) return;
-    var output = await proc.StandardOutput.ReadToEndAsync();
+    var outputTask = proc.StandardOutput.ReadToEndAsync();
+    var errTask = proc.StandardError.ReadToEndAsync();
     await proc.WaitForExitAsync();
+    var output = await outputTask;
+    var err = await errTask;
+    if (proc.ExitCode != 0 && err.Length > 0)
+    {
+        AnsiConsole.MarkupLine($"[red]MySQL error:[/] {Markup.Escape(err.Trim())}");
+        Environment.Exit(1);
+        return;
+    }
     var tables = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToArray();
     if (json) { PrintJson(new { database = name, tables }); return; }
     if (tables.Length == 0) { AnsiConsole.MarkupLine($"[dim]No tables in {Markup.Escape(name)}[/]"); return; }
