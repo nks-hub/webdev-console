@@ -55,5 +55,22 @@ public sealed class WdcPathsAdditionalTests
         Assert.EndsWith("logs", WdcPaths.LogsRoot);
         Assert.EndsWith("ssl", WdcPaths.SslRoot);
         Assert.EndsWith("backups", WdcPaths.BackupsRoot);
+        Assert.EndsWith("cache", WdcPaths.CacheRoot);
+        Assert.EndsWith("generated", WdcPaths.GeneratedRoot);
+        Assert.EndsWith("caddy", WdcPaths.CaddyRoot);
+        Assert.EndsWith("cloudflare", WdcPaths.CloudflareRoot);
+    }
+
+    [Fact]
+    public void AllSubPathsAreDistinct()
+    {
+        var paths = new[]
+        {
+            WdcPaths.BinariesRoot, WdcPaths.DataRoot, WdcPaths.SitesRoot,
+            WdcPaths.LogsRoot, WdcPaths.SslRoot, WdcPaths.BackupsRoot,
+            WdcPaths.CacheRoot, WdcPaths.GeneratedRoot,
+            WdcPaths.CaddyRoot, WdcPaths.CloudflareRoot,
+        };
+        Assert.Equal(paths.Length, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 }
