@@ -458,12 +458,19 @@ detectCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync($"/api/sites/{domain}/detect-framework");
-    if (json) { PrintJson(result); return; }
-    var fw = result.TryGetProperty("framework", out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() : null;
-    AnsiConsole.MarkupLine(fw != null
-        ? $"[green]Detected:[/] {Markup.Escape(fw)} for {Markup.Escape(domain)}"
-        : $"[dim]No framework detected for {Markup.Escape(domain)}[/]");
+    try
+    {
+        var result = await client.PostAsync($"/api/sites/{domain}/detect-framework");
+        if (json) { PrintJson(result); return; }
+        var fw = result.TryGetProperty("framework", out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() : null;
+        AnsiConsole.MarkupLine(fw != null
+            ? $"[green]Detected:[/] {Markup.Escape(fw)} for {Markup.Escape(domain)}"
+            : $"[dim]No framework detected for {Markup.Escape(domain)}[/]");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Detection failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sitesCommand.Add(detectCmd);
 
@@ -473,16 +480,23 @@ reapplyCmd.SetAction(async (parseResult, ct) =>
 {
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync("/api/sites/reapply-all");
-    if (parseResult.GetValue(jsonOption)) { PrintJson(result); return; }
-    if (result.GetArrayLength() > 0)
+    try
     {
-        foreach (var r in result.EnumerateArray())
+        var result = await client.PostAsync("/api/sites/reapply-all");
+        if (parseResult.GetValue(jsonOption)) { PrintJson(result); return; }
+        if (result.GetArrayLength() > 0)
         {
-            var domain = r.GetProperty("domain").GetString() ?? "?";
-            var ok = r.TryGetProperty("ok", out var o) && o.GetBoolean();
-            AnsiConsole.MarkupLine(ok ? $"[green]✓[/] {Markup.Escape(domain)}" : $"[red]✗[/] {Markup.Escape(domain)}");
+            foreach (var r in result.EnumerateArray())
+            {
+                var domain = r.GetProperty("domain").GetString() ?? "?";
+                var ok = r.TryGetProperty("ok", out var o) && o.GetBoolean();
+                AnsiConsole.MarkupLine(ok ? $"[green]✓[/] {Markup.Escape(domain)}" : $"[red]✗[/] {Markup.Escape(domain)}");
+            }
         }
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Reapply failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
 sitesCommand.Add(reapplyCmd);
