@@ -264,7 +264,15 @@ sitesCommand.SetAction(async (parseResult, ct) =>
 
     var sites = await client.GetJsonAsync("/api/sites");
     if (json) { PrintJson(sites); return; }
-    if (sites.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No sites configured.[/]"); return; }
+    // --plain mode: one domain per line for piping (wdc sites --json | jq, or wdc sites | grep)
+    // Detect piped output: if stdout is redirected, auto-switch to plain
+    if (!Console.IsOutputRedirected && sites.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No sites configured.[/]"); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var site in sites.EnumerateArray())
+            Console.WriteLine(site.GetProperty("domain").GetString() ?? "");
+        return;
+    }
 
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Domain"); table.AddColumn("Runtime"); table.AddColumn("SSL"); table.AddColumn("Tunnel"); table.AddColumn("Framework");
