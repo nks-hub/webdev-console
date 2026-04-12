@@ -7,8 +7,18 @@ using NKS.WebDevConsole.Core.Services;
 using Spectre.Console;
 
 var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON instead of formatted tables", Recursive = true };
+var versionOption = new Option<bool>("--version", "-v") { Description = "Show CLI version and exit" };
 
-var rootCommand = new RootCommand("NKS WebDev Console CLI") { jsonOption };
+var rootCommand = new RootCommand("NKS WebDev Console CLI") { jsonOption, versionOption };
+rootCommand.SetAction((parseResult, ct) =>
+{
+    if (parseResult.GetValue(versionOption))
+    {
+        var ver = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+        Console.WriteLine($"wdc {ver}");
+    }
+    return Task.CompletedTask;
+});
 
 // --- wdc status ---
 var quietOption = new Option<bool>("--quiet", "-q") { Description = "Exit 0 if daemon running, 1 if not (no output)" };
