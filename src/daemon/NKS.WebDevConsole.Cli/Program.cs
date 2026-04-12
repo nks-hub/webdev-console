@@ -1527,22 +1527,29 @@ configListCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
-    var settings = await client.GetJsonAsync("/api/settings");
-    if (json) { PrintJson(settings); return; }
-    if (Console.IsOutputRedirected)
+    try
     {
+        var settings = await client.GetJsonAsync("/api/settings");
+        if (json) { PrintJson(settings); return; }
+        if (Console.IsOutputRedirected)
+        {
+            foreach (var prop in settings.EnumerateObject())
+                Console.WriteLine($"{prop.Name}\t{prop.Value.GetString() ?? ""}");
+            return;
+        }
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("Setting"); table.AddColumn("Value");
         foreach (var prop in settings.EnumerateObject())
-            Console.WriteLine($"{prop.Name}\t{prop.Value.GetString() ?? ""}");
-        return;
+            table.AddRow(Markup.Escape(prop.Name), Markup.Escape(prop.Value.GetString() ?? ""));
+        if (table.Rows.Count == 0)
+            AnsiConsole.MarkupLine("[dim]No settings configured.[/]");
+        else
+            AnsiConsole.Write(table);
     }
-    var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("Setting"); table.AddColumn("Value");
-    foreach (var prop in settings.EnumerateObject())
-        table.AddRow(Markup.Escape(prop.Name), Markup.Escape(prop.Value.GetString() ?? ""));
-    if (table.Rows.Count == 0)
-        AnsiConsole.MarkupLine("[dim]No settings configured.[/]");
-    else
-        AnsiConsole.Write(table);
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to list settings:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 configCommand.Add(configListCmd);
 
@@ -1555,18 +1562,26 @@ configGetCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
-    var settings = await client.GetJsonAsync("/api/settings");
-    if (settings.TryGetProperty(key, out var val))
+    try
     {
-        var value = val.GetString() ?? "";
-        if (json) { PrintJson(new { key, value }); return; }
-        if (Console.IsOutputRedirected) { Console.WriteLine(value); return; }
-        AnsiConsole.MarkupLine($"[bold]{Markup.Escape(key)}[/] = {Markup.Escape(value)}");
+        var settings = await client.GetJsonAsync("/api/settings");
+        if (settings.TryGetProperty(key, out var val))
+        {
+            var value = val.GetString() ?? "";
+            if (json) { PrintJson(new { key, value }); return; }
+            if (Console.IsOutputRedirected) { Console.WriteLine(value); return; }
+            AnsiConsole.MarkupLine($"[bold]{Markup.Escape(key)}[/] = {Markup.Escape(value)}");
+        }
+        else
+        {
+            if (json) { PrintJson(new { key, value = (string?)null, found = false }); return; }
+            AnsiConsole.MarkupLine($"[yellow]Setting '{Markup.Escape(key)}' not found.[/]");
+        }
     }
-    else
+    catch (HttpRequestException ex)
     {
-        if (json) { PrintJson(new { key, value = (string?)null, found = false }); return; }
-        AnsiConsole.MarkupLine($"[yellow]Setting '{Markup.Escape(key)}' not found.[/]");
+        if (json) { PrintJson(new { key, error = ex.Message }); return; }
+        AnsiConsole.MarkupLine($"[red]Failed to get setting:[/] {Markup.Escape(ex.Message)}");
     }
 });
 configCommand.Add(configGetCmd);
@@ -1582,10 +1597,18 @@ configSetCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
-    var body = JsonContent.Create(new Dictionary<string, string> { [key] = value });
-    await client.PutAsync("/api/settings", body);
-    if (json) { PrintJson(new { key, value, ok = true }); return; }
-    AnsiConsole.MarkupLine($"[green]Set[/] {Markup.Escape(key)} = {Markup.Escape(value)}");
+    try
+    {
+        var body = JsonContent.Create(new Dictionary<string, string> { [key] = value });
+        await client.PutAsync("/api/settings", body);
+        if (json) { PrintJson(new { key, value, ok = true }); return; }
+        AnsiConsole.MarkupLine($"[green]Set[/] {Markup.Escape(key)} = {Markup.Escape(value)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        if (json) { PrintJson(new { key, value, ok = false, error = ex.Message }); return; }
+        AnsiConsole.MarkupLine($"[red]Failed to set {Markup.Escape(key)}:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 configCommand.Add(configSetCmd);
 
