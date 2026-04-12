@@ -58,6 +58,7 @@ builder.Services.AddSingleton(sp => new SiteManager(
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
 builder.Services.AddSingleton<BackupManager>();
+builder.Services.AddSingleton<BackupScheduler>();
 
 // Binary catalog / downloader / manager — own binaries under ~/.wdc/binaries/
 builder.Services.AddHttpClient("binary-downloader");
@@ -877,6 +878,10 @@ if (autoStartEnabled)
     });
     await Task.WhenAll(startTasks);
 }
+
+// Start the backup scheduler — reads backup.scheduleHours from SettingsStore
+// and creates timestamped zip backups on a timer. Dormant when set to 0.
+app.Services.GetRequiredService<BackupScheduler>().Start();
 
 app.MapGet("/api/sites", (SiteManager sm) => Results.Ok(sm.Sites.Values));
 
