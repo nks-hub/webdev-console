@@ -131,6 +131,24 @@ public sealed class NodeModuleSecurityTests
         // Must not throw when asked to stop a site that was never started.
         await module.StopSiteAsync("never-started.loc", CancellationToken.None);
     }
+
+    [Fact]
+    public void NodeSiteStatus_RecordEquality()
+    {
+        var a = new NodeSiteStatus("test.loc", ServiceState.Running, 1234, 3000, "npm start", 1.5, 1024, TimeSpan.FromSeconds(60));
+        var b = new NodeSiteStatus("test.loc", ServiceState.Running, 1234, 3000, "npm start", 1.5, 1024, TimeSpan.FromSeconds(60));
+        Assert.Equal(a, b);
+        Assert.Equal(a.Domain, "test.loc");
+        Assert.Equal(a.Port, 3000);
+    }
+
+    [Fact]
+    public void NodeSiteStatus_NullableFields()
+    {
+        var status = new NodeSiteStatus("x.loc", ServiceState.Stopped, null, 0, "", 0, 0, null);
+        Assert.Null(status.Pid);
+        Assert.Null(status.Uptime);
+    }
 }
 
 /// <summary>
