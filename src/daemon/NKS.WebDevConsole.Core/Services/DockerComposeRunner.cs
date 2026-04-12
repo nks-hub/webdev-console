@@ -29,7 +29,7 @@ public static class DockerComposeRunner
     /// Run <c>docker compose up -d</c> to start all services in detached mode.
     /// </summary>
     public static async Task<ComposeResult> UpAsync(string workingDir, CancellationToken ct = default)
-        => await RunAsync(workingDir, "up -d", ct);
+        => await RunAsync(workingDir, "up -d", ct, timeoutSeconds: 300);
 
     /// <summary>
     /// Run <c>docker compose down</c> to stop and remove containers.
@@ -49,18 +49,22 @@ public static class DockerComposeRunner
     public static async Task<ComposeResult> LogsAsync(string workingDir, int tail = 100, CancellationToken ct = default)
         => await RunAsync(workingDir, $"logs --tail={tail} --no-color", ct);
 
-    private static async Task<ComposeResult> RunAsync(string workingDir, string args, CancellationToken ct)
+    private static async Task<ComposeResult> RunAsync(
+        string workingDir, string args, CancellationToken ct, int timeoutSeconds = 120)
     {
         if (!Directory.Exists(workingDir))
             return new ComposeResult(false, -1, $"Directory not found: {workingDir}");
 
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
         // Try Compose V2 first (docker compose), fall back to V1 (docker-compose)
-        var result = await ExecuteAsync("docker", $"compose {args}", workingDir, ct);
+        var result = await ExecuteAsync("docker", $"compose {args}", workingDir, cts.Token);
         if (result.ExitCode == 0 || !result.Output.Contains("is not a docker command"))
             return result;
 
         // Fallback to docker-compose standalone
-        return await ExecuteAsync("docker-compose", args, workingDir, ct);
+        return await ExecuteAsync("docker-compose", args, workingDir, cts.Token);
     }
 
     private static async Task<ComposeResult> ExecuteAsync(
