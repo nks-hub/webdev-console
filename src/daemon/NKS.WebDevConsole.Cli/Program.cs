@@ -2329,7 +2329,9 @@ nodeListCmd.SetAction(async (parseResult, ct) =>
         {
             var domain = p.GetProperty("domain").GetString() ?? "";
             var state = p.TryGetProperty("state", out var s2) ? StateNumToStr(s2.GetInt32()) : "stopped";
-            Console.WriteLine($"{domain}\t{state}");
+            var pid = p.TryGetProperty("pid", out var pp) && pp.ValueKind != JsonValueKind.Null ? pp.GetInt32().ToString() : "";
+            var port = p.TryGetProperty("port", out var pt2) ? pt2.GetInt32().ToString() : "";
+            Console.WriteLine($"{domain}\t{state}\t{pid}\t{port}");
         }
         return;
     }
