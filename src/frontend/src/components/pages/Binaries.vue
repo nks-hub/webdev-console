@@ -9,6 +9,7 @@
             {{ moduleCards.length }} modules ·
             {{ installed.length }} installed ·
             {{ totalAvailable }} available
+            <template v-if="outdatedCount > 0"> · <span style="color: var(--el-color-warning)">{{ outdatedCount }} outdated</span></template>
           </p>
           <!-- Catalog health pill — reactive to /api/system polled on mount.
                When unreachable the background flips red + hint points users
@@ -344,6 +345,18 @@ const moduleCards = computed<ModuleCard[]>(() => {
 const totalAvailable = computed(() =>
   Object.values(catalog.value).reduce((s, arr) => s + arr.length, 0)
 )
+
+const outdatedCount = computed(() => {
+  const seen = new Set<string>()
+  let count = 0
+  for (const bin of installed.value) {
+    if (seen.has(bin.app)) continue
+    seen.add(bin.app)
+    const releases = catalog.value[bin.app]
+    if (releases?.length && releases[0].version !== bin.version) count++
+  }
+  return count
+})
 
 const filteredModules = computed(() => {
   const q = gridSearch.value.toLowerCase().trim()
