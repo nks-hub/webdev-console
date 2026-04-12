@@ -191,7 +191,8 @@
         <el-button size="small" @click="openMailpit">Open Mailpit</el-button>
         <el-button size="small" @click="$router.push('/ssl')">SSL Manager</el-button>
         <el-button size="small" @click="$router.push('/databases')">Databases</el-button>
-        <el-button size="small" @click="$router.push('/settings')">Settings</el-button>
+        <el-button size="small" @click="$router.push('/binaries')">Binaries</el-button>
+        <el-button size="small" @click="$router.push('/cloudflare')">Tunnel</el-button>
       </div>
 
       <!-- Recent activity — Phase 4 plan item. Reads config_history via
