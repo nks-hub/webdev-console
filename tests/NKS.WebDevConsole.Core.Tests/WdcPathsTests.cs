@@ -24,4 +24,36 @@ public sealed class WdcPathsAdditionalTests
         Assert.StartsWith(root, WdcPaths.CaddyRoot);
         Assert.StartsWith(root, WdcPaths.CloudflareRoot);
     }
+
+    [Fact]
+    public void Root_IsAbsolutePath()
+    {
+        Assert.True(Path.IsPathRooted(WdcPaths.Root));
+    }
+
+    [Fact]
+    public void Root_IsConsistentAcrossCalls()
+    {
+        var a = WdcPaths.Root;
+        var b = WdcPaths.Root;
+        Assert.Same(a, b);
+    }
+
+    [Fact]
+    public void IsPortableMode_ReturnsBool()
+    {
+        // Just verify it doesn't throw — value depends on env var
+        _ = WdcPaths.IsPortableMode;
+    }
+
+    [Fact]
+    public void SubPaths_EndWithExpectedDirectoryName()
+    {
+        Assert.EndsWith("binaries", WdcPaths.BinariesRoot);
+        Assert.EndsWith("data", WdcPaths.DataRoot);
+        Assert.EndsWith("sites", WdcPaths.SitesRoot);
+        Assert.EndsWith("logs", WdcPaths.LogsRoot);
+        Assert.EndsWith("ssl", WdcPaths.SslRoot);
+        Assert.EndsWith("backups", WdcPaths.BackupsRoot);
+    }
 }
