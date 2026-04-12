@@ -240,6 +240,73 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void DetectFramework_FindsNextjs_ByPackageJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "nextapp");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""next"":""^15.0.0"",""react"":""^19.0.0""}}");
+
+        Assert.Equal("nextjs", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_FindsNuxt_ByPackageJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "nuxtapp");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""nuxt"":""^3.15.0""}}");
+
+        Assert.Equal("nuxt", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_FindsExpress_ByPackageJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "expressapp");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""express"":""^5.0.0""}}");
+
+        Assert.Equal("express", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_FindsAstro_ByPackageJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "astroapp");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""astro"":""^5.0.0""}}");
+
+        Assert.Equal("astro", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_PrefersNextOverExpress_InSamePackageJson()
+    {
+        var docRoot = Path.Combine(_tempDir, "next-express");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""next"":""^15.0.0"",""express"":""^5.0.0""}}");
+
+        Assert.Equal("nextjs", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_PrefersPhpOverNode_WhenBothPresent()
+    {
+        var docRoot = Path.Combine(_tempDir, "laravel-next");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "artisan"), "#!/usr/bin/env php\n");
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""next"":""^15.0.0""}}");
+
+        Assert.Equal("laravel", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
     public void LoadAll_ReadsExistingTomlFiles()
     {
         // Use the same serializer that SiteManager.CreateAsync uses
