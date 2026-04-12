@@ -4,7 +4,10 @@
     <div class="page-header">
       <div class="header-title-block">
         <span class="page-title">Dashboard</span>
-        <span class="page-subtitle">System overview &amp; service health</span>
+        <span class="page-subtitle">
+          v{{ daemonStore.status?.version ?? '...' }} ·
+          {{ daemonStore.connected ? 'Connected' : 'Connecting...' }}
+        </span>
       </div>
       <div class="header-actions">
         <el-button
