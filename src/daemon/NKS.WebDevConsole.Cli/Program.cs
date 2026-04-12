@@ -2675,7 +2675,18 @@ cfDnsCmd.SetAction(async (parseResult, ct) =>
         if (json) { PrintJson(records); return; }
         if (records.ValueKind != System.Text.Json.JsonValueKind.Array || records.GetArrayLength() == 0)
         {
-            AnsiConsole.MarkupLine("[dim]No DNS records.[/]");
+            if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No DNS records.[/]");
+            return;
+        }
+        if (Console.IsOutputRedirected)
+        {
+            foreach (var r in records.EnumerateArray())
+            {
+                var type = r.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
+                var name = r.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                var content = r.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "";
+                Console.WriteLine($"{type}\t{name}\t{content}");
+            }
             return;
         }
         var table = new Table().Border(TableBorder.Rounded);
