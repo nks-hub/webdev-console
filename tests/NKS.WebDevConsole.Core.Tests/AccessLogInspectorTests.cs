@@ -163,4 +163,26 @@ public sealed class AccessLogInspectorTests : IDisposable
         Assert.NotNull(stats);
         Assert.Equal(3, stats!.LineCount);
     }
+
+    [Fact]
+    public void Inspect_ZeroScanCap_DoesNotCrash()
+    {
+        // Edge case: caller passes 0 as max scan cap — should not hang or crash.
+        // With scanLimit=0, no bytes are scanned, lineCount=0.
+        var path = Path.Combine(_tempDir, "zero-cap.log");
+        File.WriteAllText(path, "line1\nline2\nline3\n");
+
+        var stats = AccessLogInspector.Inspect(new[] { path }, maxLineScanBytes: 0);
+        Assert.NotNull(stats);
+        // With scanLimit=0 and fileSize>0, extrapolation is skipped (scanned=0)
+        Assert.Equal(0, stats!.LineCount);
+        Assert.True(stats.SizeBytes > 0);
+    }
+
+    [Fact]
+    public void Inspect_AllCandidatesWhitespace_ReturnsNull()
+    {
+        var stats = AccessLogInspector.Inspect(new[] { "  ", "\t", "" });
+        Assert.Null(stats);
+    }
 }
