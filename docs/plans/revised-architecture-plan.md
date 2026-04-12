@@ -466,6 +466,22 @@ Multi-device configuration management with user accounts, JWT auth, device fleet
 - [x] **Settings → Sync tab** — Device ID, name, cloud push/pull with JWT, file export/import.
 - [x] **CLI sync commands** — `wdc sync push/pull/export`.
 - [x] **Settings completion** — 8 tabs covering all SPEC requirements: language, telemetry, PHP-FPM port, hosts path, backup dir, data path display.
+- [x] **Node.js reverse-proxy runtime** — `SiteConfig.NodeUpstreamPort`, Apache `ProxyPass/ProxyPassReverse` in vhost template, SiteEdit Runtime tab Node card enabled with upstream port input.
+
+### Phase 11: Future Roadmap (post-v1, post-Phase 10)
+
+Features identified through competitor analysis (FlyEnv, Laragon, Herd, ServBay) and user feedback patterns. Ordered by estimated user impact.
+
+- [ ] **Per-project .php-version auto-detection** — When a site's document root contains a `.php-version` file, automatically use that PHP version without requiring manual SiteEdit configuration. Matches Herd/Valet zero-config model. Requires: FileSystemWatcher on sites root, fallback to global default if file absent.
+- [ ] **Node.js process management plugin** — Manage Node.js apps as services (start/stop/restart `npm start` or custom command). Currently NKS WDC only proxies to a user-started Node process; a proper plugin would spawn/supervise the process lifecycle. Requires: new `NKS.WebDevConsole.Plugin.Node` with `IServiceModule` implementation, per-site command configuration in SiteEdit.
+- [ ] **Nginx plugin** — Alternative to Apache with native reverse-proxy. Nginx is already in the binary catalog but not wired as a service module. Requires: `NKS.WebDevConsole.Plugin.Nginx` with config template generation, start/stop lifecycle.
+- [ ] **PostgreSQL plugin** — Database alternative to MySQL. Many modern stacks (Rails, Django, Phoenix) default to Postgres. Requires: `NKS.WebDevConsole.Plugin.PostgreSQL` with initdb, start/stop, pg_hba.conf management.
+- [ ] **Docker Compose integration** — Detect `docker-compose.yml` in site root, show compose services alongside WDC services, allow start/stop from Dashboard. Many modern projects ship as Docker stacks.
+- [ ] **Multi-user RBAC** — catalog-api currently has single admin + account system. Add roles (admin/viewer/deployer) so teams can share a catalog-api instance with different permission levels.
+- [ ] **Real-time WebSocket log streaming** — Replace SSE polling with WebSocket for log viewer so logs arrive with zero delay. Current SSE has ~1s batching latency.
+- [ ] **Scheduled backups** — The Settings page has `backup.scheduleHours` field but no daemon-side scheduler actually runs backups on a timer. Requires: `BackupScheduler` singleton with cron-style timer reading the setting from SettingsStore.
+- [ ] **Site templates** — Pre-configured site blueprints (WordPress, Laravel, Next.js, Nette) that auto-set PHP version, SSL, framework detection, and optionally scaffold the project directory.
+- [ ] **Performance monitoring dashboard** — Per-site request latency tracking via Apache access log parsing, response time charts in SiteEdit. Currently only shows aggregate CPU/RAM for services, not per-site traffic.
 
 ---
 
