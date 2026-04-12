@@ -229,7 +229,14 @@
                   <!-- Per-site Node process controls -->
                   <div class="node-process-controls" style="margin-top: 16px">
                     <label class="sub-label">Process</label>
-                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
+                    <div v-if="!nodePluginAvailable" class="hint" style="margin-top: 4px">
+                      <span style="color: var(--el-color-warning)">⚠</span>
+                      Node.js plugin not loaded in daemon. Apache will still reverse-proxy
+                      to <code>localhost:{{ nodeUpstreamPort }}</code>, but you must start
+                      the Node process yourself. Install <code>NKS.WebDevConsole.Plugin.Node</code>
+                      and restart the daemon to enable per-site process management.
+                    </div>
+                    <div v-else style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
                       <span
                         class="status-dot"
                         :class="nodeProcessState === 2 ? 'running' : nodeProcessState === 4 ? 'crashed' : 'stopped'"
@@ -626,15 +633,26 @@ watch(() => site.value?.nodeStartCommand, (v) => {
 const nodeProcessState = ref(0)
 const nodeProcessPid = ref<number | null>(null)
 const nodeProcessLoading = ref(false)
+// True when the daemon has the Node plugin loaded. False means /api/node/sites
+// returned an error or the plugin DLL isn't present — we hide the process
+// controls and show an explanatory message so the user knows why.
+const nodePluginAvailable = ref(true)
 
 async function refreshNodeStatus() {
   if (!site.value || selectedRuntime.value !== 'node') return
   try {
     const list = await fetchNodeSites()
+    nodePluginAvailable.value = true
     const proc = list.find(p => p.domain === site.value!.domain)
     nodeProcessState.value = proc?.state ?? 0
     nodeProcessPid.value = proc?.pid ?? null
-  } catch { /* ignore — plugin may not be loaded */ }
+  } catch {
+    // Plugin not loaded or daemon unreachable — disable controls instead
+    // of leaving a blank/misleading status pill.
+    nodePluginAvailable.value = false
+    nodeProcessState.value = 0
+    nodeProcessPid.value = null
+  }
 }
 
 async function startNodeProcess() {

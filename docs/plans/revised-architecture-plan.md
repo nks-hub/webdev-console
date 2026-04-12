@@ -470,6 +470,8 @@ Multi-device configuration management with user accounts, JWT auth, device fleet
 
 ### Phase 11: Future Roadmap (post-v1, post-Phase 10)
 
+**Progress: 4/10 done** — `.php-version` auto-detection, Node.js plugin, Scheduled backups, Site templates. Remaining: Nginx, PostgreSQL, Docker Compose, Multi-user RBAC, WebSocket logs, Performance dashboard.
+
 Features identified through competitor analysis (FlyEnv, Laragon, Herd, ServBay) and user feedback patterns. Ordered by estimated user impact.
 
 - [x] **Per-project .php-version auto-detection** — `SiteManager.DetectPhpVersion` scans docroot + parent for `.php-version` file, normalizes to major.minor. `SiteOrchestrator.ApplyAsync` step 0 auto-sets when phpVersion is empty/none and not a Node proxy site. Persists via `UpdateAsync` so vhost reflects the detected version.
