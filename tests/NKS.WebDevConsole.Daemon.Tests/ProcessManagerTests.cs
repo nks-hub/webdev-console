@@ -225,6 +225,31 @@ public class ProcessManagerTests
     }
 
     [Fact]
+    public void RestartPolicy_ShouldRestart_FalseWhenMaxRestartsIsZero()
+    {
+        var policy = new RestartPolicy { MaxRestarts = 0 };
+        Assert.False(policy.ShouldRestart(0, DateTime.UtcNow));
+    }
+
+    [Fact]
+    public void RestartPolicy_GetBackoff_HandlesLargeRestartCount()
+    {
+        var policy = new RestartPolicy { MaxBackoff = TimeSpan.FromMinutes(5) };
+        var backoff = policy.GetBackoff(50);
+        Assert.Equal(TimeSpan.FromMinutes(5), backoff);
+    }
+
+    [Fact]
+    public void RestartPolicy_DefaultValues_AreReasonable()
+    {
+        var policy = new RestartPolicy();
+        Assert.True(policy.MaxRestarts > 0);
+        Assert.True(policy.MinBackoff > TimeSpan.Zero);
+        Assert.True(policy.MaxBackoff >= policy.MinBackoff);
+        Assert.True(policy.Window > TimeSpan.Zero);
+    }
+
+    [Fact]
     public void ServiceUnit_DefaultState_IsStopped()
     {
         var unit = new ServiceUnit();
