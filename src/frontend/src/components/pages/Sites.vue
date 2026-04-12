@@ -219,13 +219,10 @@ function daemonBase(): string {
   const port = (window as any).daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
   return `http://localhost:${port}`
 }
-const drawerOpen = ref(false)
-const selectedSite = ref<SiteInfo | null>(null)
 const showCreate = ref(false)
 const creating = ref(false)
 const reapplying = ref(false)
 const search = ref('')
-const siteHistory = ref<Array<{ timestamp: string; label?: string }>>([])
 
 const newSite = reactive({
   template: '',

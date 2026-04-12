@@ -560,12 +560,12 @@ function removeAlias(a: string) {
 const nodeUpstreamPort = ref(3000)
 
 const selectedRuntime = computed<'static' | 'php' | 'node'>(() => {
-  if ((site.value as any)?.nodeUpstreamPort > 0) return 'node'
+  if (site.value?.nodeUpstreamPort && site.value.nodeUpstreamPort > 0) return 'node'
   if (site.value?.phpVersion && site.value.phpVersion !== 'none') return 'php'
   return 'static'
 })
 
-watch(() => (site.value as any)?.nodeUpstreamPort, (v) => {
+watch(() => site.value?.nodeUpstreamPort, (v) => {
   if (typeof v === 'number' && v > 0) nodeUpstreamPort.value = v
 }, { immediate: true })
 
@@ -573,13 +573,13 @@ function selectRuntime(rt: 'static' | 'php' | 'node') {
   if (!site.value) return
   if (rt === 'static') {
     site.value.phpVersion = 'none'
-    ;(site.value as any).nodeUpstreamPort = 0
+    site.value.nodeUpstreamPort = 0
   } else if (rt === 'php') {
     site.value.phpVersion = phpVersions.value[0] ?? '8.4'
-    ;(site.value as any).nodeUpstreamPort = 0
+    site.value.nodeUpstreamPort = 0
   } else if (rt === 'node') {
     site.value.phpVersion = 'none'
-    ;(site.value as any).nodeUpstreamPort = nodeUpstreamPort.value || 3000
+    site.value.nodeUpstreamPort = nodeUpstreamPort.value || 3000
   }
   markDirty()
 }
@@ -803,14 +803,14 @@ async function save() {
     site.value.aliases = [...aliases.value]
     // Commit Node.js proxy port from runtime tab
     if (selectedRuntime.value === 'node') {
-      ;(site.value as any).nodeUpstreamPort = nodeUpstreamPort.value
+      site.value.nodeUpstreamPort = nodeUpstreamPort.value
     } else {
-      ;(site.value as any).nodeUpstreamPort = 0
+      site.value.nodeUpstreamPort = 0
     }
     // Commit Cloudflare sub-config from the dedicated tab. When disabled we
     // still send the object so the daemon can clear any previous ingress
     // rule on apply rather than leaving a stale CNAME pointing here.
-    ;(site.value as any).cloudflare = {
+    site.value.cloudflare = {
       enabled: cloudflareEnabled.value,
       subdomain: cloudflareSubdomain.value,
       zoneId: cloudflareZoneId.value,
