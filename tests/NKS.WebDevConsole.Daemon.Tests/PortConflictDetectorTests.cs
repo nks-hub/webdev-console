@@ -113,6 +113,56 @@ public class PortConflictDetectorTests
         Assert.Contains("3307", msg);
     }
 
+    [Fact]
+    public void SuggestFallback_ReturnsAlternative_ForSslPort443()
+    {
+        var fallback = PortConflictDetector.SuggestFallback(443);
+        Assert.NotNull(fallback);
+        Assert.Contains(fallback!.Value, new[] { 8443, 4443, 9443 });
+    }
+
+    [Fact]
+    public void SuggestFallback_ReturnsAlternative_ForRedisPort6379()
+    {
+        var fallback = PortConflictDetector.SuggestFallback(6379);
+        Assert.NotNull(fallback);
+        Assert.Contains(fallback!.Value, new[] { 6380, 6381, 16379 });
+    }
+
+    [Fact]
+    public void SuggestFallback_ReturnsAlternative_ForSmtpPort1025()
+    {
+        var fallback = PortConflictDetector.SuggestFallback(1025);
+        Assert.NotNull(fallback);
+        Assert.Contains(fallback!.Value, new[] { 1026, 2525, 25252 });
+    }
+
+    [Fact]
+    public void SuggestFallback_ReturnsAlternative_ForMailpitUiPort8025()
+    {
+        var fallback = PortConflictDetector.SuggestFallback(8025);
+        Assert.NotNull(fallback);
+        Assert.Contains(fallback!.Value, new[] { 8026, 18025 });
+    }
+
+    [Fact]
+    public void SuggestFallback_AcceptsCustomCandidates()
+    {
+        var fallback = PortConflictDetector.SuggestFallback(80, new[] { 9090, 9091 });
+        Assert.NotNull(fallback);
+        Assert.Contains(fallback!.Value, new[] { 9090, 9091 });
+    }
+
+    [Fact]
+    public void ToUserMessage_NoFallback_SuggestsStopProcess()
+    {
+        var info = new PortConflictInfo(3306, 999, "mysqld", "0.0.0.0");
+        var msg = info.ToUserMessage(suggestedFallback: null);
+        Assert.Contains("Port 3306", msg);
+        Assert.Contains("mysqld", msg);
+        Assert.Contains("Stop the conflicting process", msg);
+    }
+
     private static int GetFreePort()
     {
         var l = new TcpListener(IPAddress.Loopback, 0);
