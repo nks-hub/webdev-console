@@ -75,6 +75,28 @@
     "saveAndApply": "Save & Apply",
     "history": "Config History"
   },
+  "databases": {
+    "title": "Databases",
+    "create": "New Database",
+    "drop": "Drop",
+    "import": "Import SQL",
+    "export": "Export SQL",
+    "query": "SQL Query",
+    "execute": "Execute",
+    "tables": "Tables",
+    "noTables": "No tables",
+    "noDatabases": "No user databases. Create one to get started.",
+    "selectFirst": "Select a database first"
+  },
+  "binaries": {
+    "title": "Binaries",
+    "installed": "installed",
+    "available": "available",
+    "outdated": "outdated",
+    "install": "Install",
+    "remove": "Remove",
+    "catalog": "Catalog"
+  },
   "plugins": {
     "title": "Plugins",
     "installed": "Installed",

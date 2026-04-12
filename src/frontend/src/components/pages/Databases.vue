@@ -2,12 +2,12 @@
   <div class="databases-page">
     <div class="page-header">
       <div class="header-left">
-        <h1 class="page-title">Databases</h1>
+        <h1 class="page-title">{{ $t('databases.title') }}</h1>
         <span class="db-count" v-if="databases.length > 0">{{ databases.length }}</span>
       </div>
       <div class="header-actions">
-        <el-button size="small" @click="loadDatabases" :loading="loading">Refresh</el-button>
-        <el-button type="primary" size="small" @click="showCreateDialog = true">+ New Database</el-button>
+        <el-button size="small" @click="loadDatabases" :loading="loading">{{ $t('common.refresh') }}</el-button>
+        <el-button type="primary" size="small" @click="showCreateDialog = true">{{ $t('databases.create') }}</el-button>
       </div>
     </div>
 

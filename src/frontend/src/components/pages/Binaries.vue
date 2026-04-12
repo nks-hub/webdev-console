@@ -4,12 +4,12 @@
     <template v-if="!selectedApp">
       <div class="page-header">
         <div class="header-title-block">
-          <h1 class="page-title">Binaries</h1>
+          <h1 class="page-title">{{ $t('binaries.title') }}</h1>
           <p class="page-subtitle">
             {{ moduleCards.length }} modules ·
-            {{ installed.length }} installed ·
-            {{ totalAvailable }} available
-            <template v-if="outdatedCount > 0"> · <span style="color: var(--el-color-warning)">{{ outdatedCount }} outdated</span></template>
+            {{ installed.length }} {{ $t('binaries.installed') }} ·
+            {{ totalAvailable }} {{ $t('binaries.available') }}
+            <template v-if="outdatedCount > 0"> · <span style="color: var(--el-color-warning)">{{ outdatedCount }} {{ $t('binaries.outdated') }}</span></template>
           </p>
           <!-- Catalog health pill — reactive to /api/system polled on mount.
                When unreachable the background flips red + hint points users

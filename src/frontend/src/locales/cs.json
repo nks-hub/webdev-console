@@ -75,6 +75,28 @@
     "saveAndApply": "Uložit a použít",
     "history": "Historie konfigurace"
   },
+  "databases": {
+    "title": "Databáze",
+    "create": "Nová databáze",
+    "drop": "Smazat",
+    "import": "Importovat SQL",
+    "export": "Exportovat SQL",
+    "query": "SQL dotaz",
+    "execute": "Spustit",
+    "tables": "Tabulky",
+    "noTables": "Žádné tabulky",
+    "noDatabases": "Žádné uživatelské databáze. Vytvoř první.",
+    "selectFirst": "Nejprve vyber databázi"
+  },
+  "binaries": {
+    "title": "Binárky",
+    "installed": "nainstalováno",
+    "available": "dostupné",
+    "outdated": "zastaralé",
+    "install": "Instalovat",
+    "remove": "Odebrat",
+    "catalog": "Katalog"
+  },
   "plugins": {
     "title": "Pluginy",
     "installed": "Nainstalované",
