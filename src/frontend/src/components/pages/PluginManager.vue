@@ -2,10 +2,10 @@
   <div class="pm-page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Plugins</h1>
+        <h1 class="page-title">{{ $t('plugins.title') }}</h1>
         <p class="page-subtitle">
-          {{ pluginsStore.manifests.length }} installed
-          <span v-if="marketplace.reachable">· {{ marketplace.plugins.length }} in marketplace</span>
+          {{ $t('plugins.installedCount', { count: pluginsStore.manifests.length }) }}
+          <span v-if="marketplace.reachable">· {{ $t('plugins.marketplaceCount', { count: marketplace.plugins.length }) }}</span>
         </p>
       </div>
       <el-input
@@ -23,15 +23,15 @@
         :loading="loadingMarketplace"
         @click="reloadMarketplace"
       >
-        Refresh
+        {{ $t('common.refresh') }}
       </el-button>
     </div>
 
     <el-tabs v-model="activeTab" class="pm-tabs">
-      <el-tab-pane label="Installed" name="installed" />
+      <el-tab-pane :label="$t('plugins.installed')" name="installed" />
       <el-tab-pane name="marketplace">
         <template #label>
-          <span>Marketplace</span>
+          <span>{{ $t('plugins.marketplace') }}</span>
           <el-tag v-if="marketplace.reachable" size="small" type="success" effect="plain" style="margin-left:6px">
             {{ marketplace.plugins.length }}
           </el-tag>
