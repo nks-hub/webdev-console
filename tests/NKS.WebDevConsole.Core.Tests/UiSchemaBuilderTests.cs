@@ -141,4 +141,30 @@ public class UiSchemaBuilderTests
         Assert.Single(def.Panels);
         Assert.Empty(def.Panels[0].Props);
     }
+
+    [Fact]
+    public void Build_Result_SerializesToJson()
+    {
+        var def = new UiSchemaBuilder("mysql")
+            .Category("Databases")
+            .Icon("el-icon-database")
+            .AddServiceCard("mysqld")
+            .Build();
+
+        var json = System.Text.Json.JsonSerializer.Serialize(def);
+        Assert.Contains("mysql", json);
+        Assert.Contains("Databases", json);
+        Assert.Contains("el-icon-database", json);
+        Assert.Contains("service-status-card", json);
+    }
+
+    [Fact]
+    public void Build_CalledTwice_ReturnsSameShape()
+    {
+        var builder = new UiSchemaBuilder("test").AddServiceCard("svc");
+        var first = builder.Build();
+        var second = builder.Build();
+        Assert.Equal(first.PluginId, second.PluginId);
+        Assert.Equal(first.Panels.Length, second.Panels.Length);
+    }
 }
