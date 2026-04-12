@@ -92,4 +92,23 @@ public sealed class SemverVersionComparerTests
         // 20.5.0 (stable) beats 20.5.0-rc.1.
         Assert.Equal(new[] { "21.0.0-beta", "20.5.0", "20.5.0-rc.1", "20.4.0" }, sorted);
     }
+
+    [Theory]
+    [InlineData("2.4.62", "2.4.62-alpine", 1)]
+    [InlineData("10.11.2-MariaDB", "10.11.1-MariaDB", 1)]
+    [InlineData("abc", "def", -1)]
+    public void CompareAscending_HandlesNonNumericSegments(string a, string b, int expectedSign)
+    {
+        Assert.Equal(expectedSign, Math.Sign(SemverVersionComparer.CompareAscending(a, b)));
+    }
+
+    [Fact]
+    public void OrderByDescending_HandlesApacheVersions()
+    {
+        var versions = new[] { "2.4.58", "2.4.62", "2.4.59" };
+        var sorted = versions
+            .OrderByDescending(v => v, SemverVersionComparer.Instance)
+            .ToArray();
+        Assert.Equal(new[] { "2.4.62", "2.4.59", "2.4.58" }, sorted);
+    }
 }
