@@ -1518,7 +1518,12 @@ doctorCommand.SetAction(async (parseResult, ct) =>
 
     var allOk = checks.All(c => c.ok);
     AnsiConsole.WriteLine();
-    AnsiConsole.MarkupLine(allOk ? "[green bold]All checks passed![/]" : "[yellow]Some checks failed. See details above.[/]");
+    var passed = checks.Count(c => c.ok);
+    var failed = checks.Count - passed;
+    AnsiConsole.MarkupLine(allOk
+        ? $"[green bold]All {checks.Count} checks passed![/]"
+        : $"[yellow]{passed} passed, {failed} failed. See details above.[/]");
+    if (!allOk) Environment.Exit(1);
 });
 
 // --- wdc start-all / stop-all ---
