@@ -138,4 +138,29 @@ public sealed class AccessLogInspectorTests : IDisposable
         // allow generous margin since tail-half distribution can skew.
         Assert.InRange(stats!.LineCount, 100, 400);
     }
+
+    [Fact]
+    public void Inspect_FileLockedByWriter_DoesNotThrow()
+    {
+        var path = Path.Combine(_tempDir, "locked.log");
+        File.WriteAllText(path, "line1\nline2\n");
+
+        // Open file with FileShare.ReadWrite to simulate Apache holding a write handle
+        using var writer = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+
+        var stats = AccessLogInspector.Inspect(new[] { path });
+        Assert.NotNull(stats);
+        Assert.Equal(2, stats!.LineCount);
+    }
+
+    [Fact]
+    public void Inspect_CrlfLineEndings_CountsCorrectly()
+    {
+        var path = Path.Combine(_tempDir, "crlf.log");
+        File.WriteAllText(path, "line1\r\nline2\r\nline3\r\n");
+
+        var stats = AccessLogInspector.Inspect(new[] { path });
+        Assert.NotNull(stats);
+        Assert.Equal(3, stats!.LineCount);
+    }
 }
