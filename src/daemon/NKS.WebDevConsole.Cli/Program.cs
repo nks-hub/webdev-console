@@ -1201,6 +1201,37 @@ doctorCommand.SetAction(async (parseResult, ct) =>
             checks.Add(("Binaries installed", bins.GetArrayLength() > 0, $"{bins.GetArrayLength()} packages"));
         }
         catch { checks.Add(("Binaries", false, "Query failed")); }
+
+        // 6. PHP versions
+        try
+        {
+            var phpVersions = await client.GetJsonAsync("/api/php/versions");
+            var phpCount = phpVersions.GetArrayLength();
+            checks.Add(("PHP versions", phpCount > 0, phpCount > 0 ? $"{phpCount} installed" : "None — install via Binaries page"));
+        }
+        catch { checks.Add(("PHP versions", false, "Query failed")); }
+
+        // 7. Node.js plugin
+        try
+        {
+            var nodeSites = await client.GetJsonAsync("/api/node/sites");
+            checks.Add(("Node.js plugin", true, $"Loaded, {nodeSites.GetArrayLength()} tracked site(s)"));
+        }
+        catch
+        {
+            checks.Add(("Node.js plugin", true, "Not loaded (optional)"));
+        }
+
+        // 8. Catalog API
+        try
+        {
+            var sys = await client.GetJsonAsync("/api/system");
+            var catOk = sys.TryGetProperty("catalog", out var cat)
+                && cat.TryGetProperty("healthy", out var h) && h.GetBoolean();
+            var catUrl = cat.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
+            checks.Add(("Catalog API", catOk, catOk ? catUrl : "Unreachable or not configured"));
+        }
+        catch { checks.Add(("Catalog API", false, "System info query failed")); }
     }
 
     // 6. Hosts file writable
