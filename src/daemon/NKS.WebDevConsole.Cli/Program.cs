@@ -1693,6 +1693,127 @@ rootCommand.Add(uninstallCommand);
 rootCommand.Add(migrateCommand);
 rootCommand.Add(versionCommand);
 
+// --- wdc cloudflare --- (mirrors /cloudflare page for terminal users)
+var cfCommand = new Command("cloudflare", "Cloudflare Tunnel management");
+
+// wdc cloudflare status
+var cfStatusCmd = new Command("status", "Show tunnel config and status");
+cfStatusCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var cfg = await client.GetJsonAsync("/api/cloudflare/config");
+    if (json) { PrintJson(cfg); return; }
+
+    var tunnelName = cfg.TryGetProperty("tunnelName", out var tn) ? tn.GetString() : null;
+    var tunnelId = cfg.TryGetProperty("tunnelId", out var ti) ? ti.GetString() : null;
+    var accountId = cfg.TryGetProperty("accountId", out var ai) ? ai.GetString() : null;
+    var path = cfg.TryGetProperty("cloudflaredPath", out var cp) ? cp.GetString() : null;
+    var apiToken = cfg.TryGetProperty("apiToken", out var at) ? at.GetString() : null;
+
+    AnsiConsole.MarkupLine($"[bold]Cloudflare Tunnel[/]");
+    AnsiConsole.MarkupLine($"  Tunnel:     {Markup.Escape(tunnelName ?? "(not configured)")}");
+    AnsiConsole.MarkupLine($"  Tunnel ID:  [dim]{Markup.Escape(tunnelId ?? "—")}[/]");
+    AnsiConsole.MarkupLine($"  Account:    [dim]{Markup.Escape(accountId ?? "—")}[/]");
+    AnsiConsole.MarkupLine($"  Binary:     [dim]{Markup.Escape(path ?? "(auto-detect)")}[/]");
+    AnsiConsole.MarkupLine($"  API Token:  {Markup.Escape(apiToken ?? "(not set)")}");
+
+    // Check service state
+    try
+    {
+        var services = await client.GetJsonAsync("/api/services");
+        foreach (var svc in services.EnumerateArray())
+        {
+            if ((svc.GetProperty("id").GetString() ?? "") == "cloudflare")
+            {
+                var state = svc.GetProperty("state").ValueKind == System.Text.Json.JsonValueKind.Number
+                    ? StateNumToStr(svc.GetProperty("state").GetInt32())
+                    : svc.GetProperty("state").GetString() ?? "unknown";
+                AnsiConsole.MarkupLine($"  Service:    {FormatState(state)}");
+                break;
+            }
+        }
+    }
+    catch { /* service list may fail if plugin not loaded */ }
+});
+cfCommand.Add(cfStatusCmd);
+
+// wdc cloudflare setup <api-token>
+var cfSetupTokenArg = new Argument<string>("api-token") { Description = "Cloudflare API token with Tunnel + DNS scopes" };
+var cfSetupCmd = new Command("setup", "Auto-setup tunnel from API token") { cfSetupTokenArg };
+cfSetupCmd.SetAction(async (parseResult, ct) =>
+{
+    var token = parseResult.GetValue(cfSetupTokenArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    AnsiConsole.MarkupLine("Running auto-setup...");
+    var content = JsonContent.Create(new { apiToken = token });
+    try
+    {
+        var result = await client.PostAsync("/api/cloudflare/auto-setup", content);
+        if (json) { PrintJson(result); return; }
+        var account = result.TryGetProperty("account", out var a)
+            ? a.TryGetProperty("name", out var an) ? an.GetString() : "?"
+            : "?";
+        var tunnel = result.TryGetProperty("tunnel", out var t)
+            ? t.TryGetProperty("name", out var tname) ? tname.GetString() : "?"
+            : "?";
+        AnsiConsole.MarkupLine($"[green]Auto-setup complete[/]");
+        AnsiConsole.MarkupLine($"  Account: [cyan]{Markup.Escape(account ?? "?")}[/]");
+        AnsiConsole.MarkupLine($"  Tunnel:  [cyan]{Markup.Escape(tunnel ?? "?")}[/]");
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Setup failed:[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+    }
+});
+cfCommand.Add(cfSetupCmd);
+
+// wdc cloudflare sync
+var cfSyncCmd = new Command("sync", "Push all enabled sites to Cloudflare (DNS + ingress)");
+cfSyncCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.PostAsync("/api/cloudflare/sync");
+    if (json) { PrintJson(result); return; }
+    var synced = result.TryGetProperty("synced", out var s) ? s.GetInt32() : 0;
+    var deleted = result.TryGetProperty("deleted", out var d) ? d.GetInt32() : 0;
+    AnsiConsole.MarkupLine($"[green]Synced:[/] {synced} site(s) pushed, {deleted} dormant CNAME(s) deleted");
+});
+cfCommand.Add(cfSyncCmd);
+
+// wdc cloudflare zones
+var cfZonesCmd = new Command("zones", "List Cloudflare zones accessible with the configured token");
+cfZonesCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.GetJsonAsync("/api/cloudflare/zones");
+    if (json) { PrintJson(result); return; }
+    if (!result.TryGetProperty("result", out var zones) || zones.GetArrayLength() == 0)
+    {
+        AnsiConsole.MarkupLine("[dim]No zones found. Check API token scopes.[/]");
+        return;
+    }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Name"); table.AddColumn("Status"); table.AddColumn("ID");
+    foreach (var z in zones.EnumerateArray())
+        table.AddRow(
+            z.GetProperty("name").GetString() ?? "?",
+            z.TryGetProperty("status", out var st) ? st.GetString()! : "?",
+            z.GetProperty("id").GetString() ?? "?");
+    AnsiConsole.Write(table);
+});
+cfCommand.Add(cfZonesCmd);
+
+rootCommand.Add(cfCommand);
+
 return await rootCommand.Parse(args).InvokeAsync();
 
 // --- Helpers ---
