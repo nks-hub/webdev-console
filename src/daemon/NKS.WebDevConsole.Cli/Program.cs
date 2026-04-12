@@ -358,9 +358,16 @@ deleteSiteCmd.SetAction(async (parseResult, ct) =>
 
     if (!json && !AnsiConsole.Confirm($"Delete [red]{Markup.Escape(domain)}[/]?", false)) return;
 
-    await client.DeleteAsync($"/api/sites/{domain}");
-    if (json) PrintJson(new { deleted = domain });
-    else AnsiConsole.MarkupLine($"[yellow]Deleted:[/] {Markup.Escape(domain)}");
+    try
+    {
+        await client.DeleteAsync($"/api/sites/{domain}");
+        if (json) PrintJson(new { deleted = domain });
+        else AnsiConsole.MarkupLine($"[yellow]Deleted:[/] {Markup.Escape(domain)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to delete {Markup.Escape(domain)}:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sitesCommand.Add(deleteSiteCmd);
 
@@ -426,13 +433,19 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
         environment = new Dictionary<string, string>()
     };
 
-    var content = JsonContent.Create(payload);
-    var result = await client.PostAsync("/api/sites", content);
-
-    if (json) { PrintJson(result); return; }
-    var msg = tplApplied ? $"[green]Site created:[/] {Markup.Escape(domain)} [dim](template: {tplName})[/]"
-                         : $"[green]Site created:[/] {Markup.Escape(domain)}";
-    AnsiConsole.MarkupLine(msg);
+    try
+    {
+        var content = JsonContent.Create(payload);
+        var result = await client.PostAsync("/api/sites", content);
+        if (json) { PrintJson(result); return; }
+        var msg = tplApplied ? $"[green]Site created:[/] {Markup.Escape(domain)} [dim](template: {tplName})[/]"
+                             : $"[green]Site created:[/] {Markup.Escape(domain)}";
+        AnsiConsole.MarkupLine(msg);
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to create site:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sitesCommand.Add(createSiteCmd);
 
@@ -492,25 +505,32 @@ updateSiteCmd.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
 
-    var site = await client.GetJsonAsync($"/api/sites/{domain}");
-    var payload = new Dictionary<string, object?>
+    try
     {
-        ["domain"] = domain,
-        ["documentRoot"] = docroot ?? (site.TryGetProperty("documentRoot", out var dr) ? dr.GetString() : null),
-        ["phpVersion"] = php ?? (site.TryGetProperty("phpVersion", out var pv) ? pv.GetString() : null),
-        ["sslEnabled"] = sslOpt ?? (site.TryGetProperty("sslEnabled", out var ssl) && ssl.GetBoolean()),
-        ["httpPort"] = site.TryGetProperty("httpPort", out var hp) ? hp.GetInt32() : 80,
-        ["httpsPort"] = site.TryGetProperty("httpsPort", out var hps) ? hps.GetInt32() : 443,
-        ["nodeUpstreamPort"] = nodePort ?? (site.TryGetProperty("nodeUpstreamPort", out var np) ? np.GetInt32() : 0),
-    };
-    var content = JsonContent.Create(payload);
-    var result = await client.PutAsync($"/api/sites/{domain}", content);
-    if (json) { PrintJson(result); return; }
-    AnsiConsole.MarkupLine($"[green]Updated[/] {Markup.Escape(domain)}");
-    if (php != null) AnsiConsole.MarkupLine($"  PHP → {Markup.Escape(php)}");
-    if (docroot != null) AnsiConsole.MarkupLine($"  DocRoot → {Markup.Escape(docroot)}");
-    if (sslOpt != null) AnsiConsole.MarkupLine($"  SSL → {(sslOpt.Value ? "[green]on[/]" : "[dim]off[/]")}");
-    if (nodePort != null) AnsiConsole.MarkupLine($"  Node port → {nodePort}");
+        var site = await client.GetJsonAsync($"/api/sites/{domain}");
+        var payload = new Dictionary<string, object?>
+        {
+            ["domain"] = domain,
+            ["documentRoot"] = docroot ?? (site.TryGetProperty("documentRoot", out var dr) ? dr.GetString() : null),
+            ["phpVersion"] = php ?? (site.TryGetProperty("phpVersion", out var pv) ? pv.GetString() : null),
+            ["sslEnabled"] = sslOpt ?? (site.TryGetProperty("sslEnabled", out var ssl) && ssl.GetBoolean()),
+            ["httpPort"] = site.TryGetProperty("httpPort", out var hp) ? hp.GetInt32() : 80,
+            ["httpsPort"] = site.TryGetProperty("httpsPort", out var hps) ? hps.GetInt32() : 443,
+            ["nodeUpstreamPort"] = nodePort ?? (site.TryGetProperty("nodeUpstreamPort", out var np) ? np.GetInt32() : 0),
+        };
+        var content = JsonContent.Create(payload);
+        var result = await client.PutAsync($"/api/sites/{domain}", content);
+        if (json) { PrintJson(result); return; }
+        AnsiConsole.MarkupLine($"[green]Updated[/] {Markup.Escape(domain)}");
+        if (php != null) AnsiConsole.MarkupLine($"  PHP → {Markup.Escape(php)}");
+        if (docroot != null) AnsiConsole.MarkupLine($"  DocRoot → {Markup.Escape(docroot)}");
+        if (sslOpt != null) AnsiConsole.MarkupLine($"  SSL → {(sslOpt.Value ? "[green]on[/]" : "[dim]off[/]")}");
+        if (nodePort != null) AnsiConsole.MarkupLine($"  Node port → {nodePort}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to update {Markup.Escape(domain)}:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sitesCommand.Add(updateSiteCmd);
 
@@ -555,9 +575,16 @@ rollbackCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync($"/api/sites/{domain}/rollback/{ts}");
-    if (json) { PrintJson(result); return; }
-    AnsiConsole.MarkupLine($"[green]Rolled back[/] {Markup.Escape(domain)} to {Markup.Escape(ts)}");
+    try
+    {
+        var result = await client.PostAsync($"/api/sites/{domain}/rollback/{ts}");
+        if (json) { PrintJson(result); return; }
+        AnsiConsole.MarkupLine($"[green]Rolled back[/] {Markup.Escape(domain)} to {Markup.Escape(ts)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Rollback failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sitesCommand.Add(rollbackCmd);
 
@@ -1191,10 +1218,17 @@ installBinCmd.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
     AnsiConsole.MarkupLine($"Installing [bold]{Markup.Escape(app)}[/] {Markup.Escape(ver)}...");
-    var content = JsonContent.Create(new { app, version = ver });
-    var result = await client.PostAsync("/api/binaries/install", content);
-    AnsiConsole.MarkupLine($"[green]Installed![/]");
-    PrintJson(result);
+    try
+    {
+        var content = JsonContent.Create(new { app, version = ver });
+        var result = await client.PostAsync("/api/binaries/install", content);
+        AnsiConsole.MarkupLine($"[green]Installed![/]");
+        PrintJson(result);
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Install failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 binariesCommand.Add(installBinCmd);
 
@@ -1209,9 +1243,16 @@ removeBinCmd.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
     if (!json && !AnsiConsole.Confirm($"Remove [red]{Markup.Escape(app)} {Markup.Escape(ver)}[/]?", false)) return;
-    await client.DeleteAsync($"/api/binaries/{app}/{ver}");
-    if (json) PrintJson(new { removed = $"{app}/{ver}" });
-    else AnsiConsole.MarkupLine($"[yellow]Removed:[/] {Markup.Escape(app)} {Markup.Escape(ver)}");
+    try
+    {
+        await client.DeleteAsync($"/api/binaries/{app}/{ver}");
+        if (json) PrintJson(new { removed = $"{app}/{ver}" });
+        else AnsiConsole.MarkupLine($"[yellow]Removed:[/] {Markup.Escape(app)} {Markup.Escape(ver)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Remove failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 binariesCommand.Add(removeBinCmd);
 
