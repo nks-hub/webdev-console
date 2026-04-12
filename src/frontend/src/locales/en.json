@@ -92,6 +92,14 @@
   },
   "settings": {
     "title": "Settings",
+    "subtitle": "Configure NKS WDC daemon and UI preferences",
+    "ports": "Ports",
+    "general": "General",
+    "paths": "Paths",
+    "databases": "Databases",
+    "advanced": "Advanced",
+    "account": "Account",
+    "sync": "Sync",
     "language": "Language",
     "languageEn": "English",
     "languageCs": "Čeština"
