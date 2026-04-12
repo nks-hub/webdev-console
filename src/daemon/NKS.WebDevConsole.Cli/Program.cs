@@ -826,17 +826,20 @@ importDbCmd.SetAction(async (parseResult, ct) =>
         FileName = mysqlCli,
         Arguments = $"-h 127.0.0.1 -P 3306 -u root {name}",
         RedirectStandardInput = true,
+        RedirectStandardError = true,
         UseShellExecute = false,
         CreateNoWindow = true
     };
     var proc = System.Diagnostics.Process.Start(psi);
     if (proc != null)
     {
+        var errTask = proc.StandardError.ReadToEndAsync();
         await using var input = proc.StandardInput;
         await input.WriteAsync(await File.ReadAllTextAsync(file));
         await proc.WaitForExitAsync();
+        var stderr = await errTask;
         if (proc.ExitCode == 0) AnsiConsole.MarkupLine("[green]Import complete[/]");
-        else AnsiConsole.MarkupLine($"[red]Import failed (exit {proc.ExitCode})[/]");
+        else AnsiConsole.MarkupLine($"[red]Import failed:[/] {Markup.Escape(stderr.Trim().Length > 0 ? stderr.Trim() : $"exit code {proc.ExitCode}")}");
     }
 });
 dbCommand.Add(importDbCmd);
