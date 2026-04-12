@@ -1185,6 +1185,13 @@ watch(activeTab, (tab) => {
 onMounted(() => {
   void load()
   void loadCfSubdomainTemplate()
+  // If the page mounts with the Metrics tab already active (state restore
+  // after reload), the activeTab watcher won't fire because the value hasn't
+  // changed — so start the ticker and fetch metrics explicitly here.
+  if (activeTab.value === 'metrics') {
+    void refreshMetrics()
+    startMetricsTicker()
+  }
 })
 onBeforeUnmount(() => {
   stopMetricsTicker()
