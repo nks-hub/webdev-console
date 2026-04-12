@@ -142,14 +142,53 @@ foreach (var (verb, label, color) in new[] { ("start", "Started", "green"), ("st
 // --- wdc logs {id} ---
 var logsIdArg = new Argument<string>("id") { Description = "Service ID" };
 var logsLinesOpt = new Option<int?>("--lines") { Description = "Number of lines (default: 50)" };
-var logsCommand = new Command("logs", "Show service logs") { logsIdArg, logsLinesOpt };
+var logsFollowOpt = new Option<bool>("--follow", "-f") { Description = "Stream logs in real-time via WebSocket" };
+var logsCommand = new Command("logs", "Show service logs") { logsIdArg, logsLinesOpt, logsFollowOpt };
 logsCommand.SetAction(async (parseResult, ct) =>
 {
     var id = parseResult.GetValue(logsIdArg)!;
     var lines = parseResult.GetValue(logsLinesOpt) ?? 50;
+    var follow = parseResult.GetValue(logsFollowOpt);
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
+
+    // Follow mode: connect via WebSocket for real-time streaming
+    if (follow)
+    {
+        // Read port+token from the same port file DaemonClient uses
+        var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
+        var pf = File.ReadAllLines(portFile);
+        var port = pf[0];
+        var token = pf.Length > 1 ? pf[1] : "";
+        var wsUrl = $"ws://localhost:{port}/api/logs/{id}/stream{(string.IsNullOrEmpty(token) ? "" : $"?token={Uri.EscapeDataString(token)}")}";
+        try
+        {
+            using var ws = new System.Net.WebSockets.ClientWebSocket();
+            await ws.ConnectAsync(new Uri(wsUrl), CancellationToken.None);
+            AnsiConsole.MarkupLine($"[dim]Streaming logs for {Markup.Escape(id)} (Ctrl+C to stop)...[/]");
+            var buf = new byte[8192];
+            while (ws.State == System.Net.WebSockets.WebSocketState.Open)
+            {
+                var result2 = await ws.ReceiveAsync(new ArraySegment<byte>(buf), CancellationToken.None);
+                if (result2.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) break;
+                var msg = System.Text.Encoding.UTF8.GetString(buf, 0, result2.Count);
+                try
+                {
+                    var parsed = System.Text.Json.JsonDocument.Parse(msg);
+                    var line = parsed.RootElement.GetProperty("line").GetString() ?? "";
+                    Console.WriteLine(line);
+                }
+                catch { Console.WriteLine(msg); }
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]WebSocket error:[/] {Markup.Escape(ex.Message)}");
+            Environment.Exit(1);
+        }
+        return;
+    }
 
     var result = await client.GetJsonAsync($"/api/services/{id}/logs?lines={lines}");
     if (json) { PrintJson(result); return; }
