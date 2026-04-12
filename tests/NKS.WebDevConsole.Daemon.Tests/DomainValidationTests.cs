@@ -117,4 +117,20 @@ public class DomainValidationTests
     {
         SiteManager.ValidateDomain(domain);
     }
+
+    [Theory]
+    [InlineData("foo.")]
+    [InlineData(".foo")]
+    [InlineData(".")]
+    [InlineData("foo...bar")]
+    public void Rejects_LeadingTrailingConsecutiveDots(string domain)
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateDomain(domain));
+    }
+
+    [Fact]
+    public void Rejects_AllDots()
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateDomain("..."));
+    }
 }
