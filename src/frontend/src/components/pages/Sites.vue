@@ -105,16 +105,29 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Framework" width="140">
+        <el-table-column label="Framework" width="180">
           <template #default="{ row }">
-            <el-tag
-              v-if="row.framework"
-              size="small"
-              type="warning"
-              effect="dark"
-              class="cell-tag"
-            >{{ row.framework }}</el-tag>
-            <span v-else class="col-empty">—</span>
+            <div class="framework-cell">
+              <el-tag
+                v-if="row.framework"
+                size="small"
+                type="warning"
+                effect="dark"
+                class="cell-tag"
+              >{{ row.framework }}</el-tag>
+              <el-tag
+                v-if="composeStatus[row.domain]?.hasCompose"
+                size="small"
+                type="info"
+                effect="plain"
+                class="cell-tag compose-tag"
+                :title="composeStatus[row.domain]?.composeFile || ''"
+              >🐳 Compose</el-tag>
+              <span
+                v-if="!row.framework && !composeStatus[row.domain]?.hasCompose"
+                class="col-empty"
+              >—</span>
+            </div>
           </template>
         </el-table-column>
 
@@ -196,6 +209,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import type { SiteInfo } from '../../api/types'
+import { fetchDockerComposeStatus, type DockerComposeStatus } from '../../api/daemon'
 
 const route = useRoute()
 const router = useRouter()
@@ -213,6 +227,10 @@ const cloudflaredRunning = computed(() =>
   )
 )
 const phpVersions = ref<string[]>([])
+// Docker Compose detection map: domain -> status. Lazy-populated after
+// sites load so the Compose badge in the Framework column reflects what
+// the daemon sees on disk without blocking the site list itself.
+const composeStatus = reactive<Record<string, DockerComposeStatus>>({})
 
 function daemonBase(): string {
   const urlPort = new URLSearchParams(window.location.search).get('port')
@@ -267,8 +285,22 @@ watch(() => route.query.create, (val) => {
   if (val === '1') showCreate.value = true
 }, { immediate: true })
 
+async function refreshComposeStatuses() {
+  // Fire-and-forget compose detection per site. Individual failures
+  // (network, permission, plugin disabled) are silently skipped so one
+  // bad row never blocks the badge column as a whole.
+  const tasks = sitesStore.sites.map(async (s) => {
+    try {
+      const status = await fetchDockerComposeStatus(s.domain)
+      composeStatus[s.domain] = status
+    } catch { /* leave entry absent — no badge rendered */ }
+  })
+  await Promise.all(tasks)
+}
+
 onMounted(async () => {
-  void sitesStore.load()
+  await sitesStore.load()
+  void refreshComposeStatuses()
   try {
     const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: sitesStore.authHeaders() })
     if (r.ok) {
@@ -277,6 +309,10 @@ onMounted(async () => {
     }
   } catch { phpVersions.value = ['8.4', '8.3', '8.2'] }
 })
+
+// Re-scan compose status after any mutation that could change the set
+// of sites or their document roots.
+watch(() => sitesStore.sites.length, () => { void refreshComposeStatuses() })
 
 function selectSite(row: SiteInfo) {
   // Navigate to full-view edit page instead of opening a drawer
@@ -556,6 +592,18 @@ function openInBrowser(site: SiteInfo) {
 .col-empty {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
+}
+
+/* Framework column can now hold a framework tag + a Compose badge side-by-side */
+.framework-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.compose-tag {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.02em;
 }
 
 .runtime-tag {

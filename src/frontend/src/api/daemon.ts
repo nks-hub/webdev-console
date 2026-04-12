@@ -139,6 +139,16 @@ export const deleteSite = (id: string) =>
 export const updateSite = (id: string, data: Partial<SiteInfo>) =>
   json<SiteInfo>(`/api/sites/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 
+// Docker Compose detection — returns whether the site's document root
+// contains a compose file. Phase 11 foothold (commit 2a92687).
+export interface DockerComposeStatus {
+  hasCompose: boolean
+  composeFile: string | null
+  fileName: string | null
+}
+export const fetchDockerComposeStatus = (domain: string): Promise<DockerComposeStatus> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/docker-compose`)
+
 // PHP
 export const fetchPhpVersions = (): Promise<PhpVersion[]> =>
   json('/api/php/versions')
