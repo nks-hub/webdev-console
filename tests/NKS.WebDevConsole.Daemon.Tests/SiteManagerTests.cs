@@ -640,6 +640,24 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void DetectFramework_EmptyString_ReturnsNull()
+    {
+        Assert.Null(_manager.DetectFramework(""));
+    }
+
+    [Fact]
+    public void DetectFramework_NonExistentPath_ReturnsNull()
+    {
+        Assert.Null(_manager.DetectFramework(Path.Combine(_tempDir, "does-not-exist")));
+    }
+
+    [Fact]
+    public void DetectFramework_NullPath_ReturnsNull()
+    {
+        Assert.Null(_manager.DetectFramework(null!));
+    }
+
+    [Fact]
     public void Delete_PathTraversalDomain_ThrowsBeforeFileAccess()
     {
         Assert.Throws<ArgumentException>(() => _manager.Delete("../etc/passwd"));
