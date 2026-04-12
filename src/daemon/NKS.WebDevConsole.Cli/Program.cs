@@ -1475,7 +1475,7 @@ openCommand.SetAction(async (parseResult, ct) =>
 });
 
 // --- wdc config ---
-var configCommand = new Command("config", "Show configuration paths");
+var configCommand = new Command("config", "Show configuration paths and manage daemon settings");
 configCommand.SetAction((parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
@@ -1519,6 +1519,75 @@ configCommand.SetAction((parseResult, ct) =>
     AnsiConsole.Write(table);
     return Task.CompletedTask;
 });
+
+// --- wdc config list ---
+var configListCmd = new Command("list", "List all daemon settings");
+configListCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
+    var settings = await client.GetJsonAsync("/api/settings");
+    if (json) { PrintJson(settings); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var prop in settings.EnumerateObject())
+            Console.WriteLine($"{prop.Name}\t{prop.Value.GetString() ?? ""}");
+        return;
+    }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Setting"); table.AddColumn("Value");
+    foreach (var prop in settings.EnumerateObject())
+        table.AddRow(Markup.Escape(prop.Name), Markup.Escape(prop.Value.GetString() ?? ""));
+    if (table.Rows.Count == 0)
+        AnsiConsole.MarkupLine("[dim]No settings configured.[/]");
+    else
+        AnsiConsole.Write(table);
+});
+configCommand.Add(configListCmd);
+
+// --- wdc config get <key> ---
+var configGetKeyArg = new Argument<string>("key") { Description = "Setting key (e.g. daemon.autoStartEnabled)" };
+var configGetCmd = new Command("get", "Get a daemon setting value") { configGetKeyArg };
+configGetCmd.SetAction(async (parseResult, ct) =>
+{
+    var key = parseResult.GetValue(configGetKeyArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
+    var settings = await client.GetJsonAsync("/api/settings");
+    if (settings.TryGetProperty(key, out var val))
+    {
+        var value = val.GetString() ?? "";
+        if (json) { PrintJson(new { key, value }); return; }
+        if (Console.IsOutputRedirected) { Console.WriteLine(value); return; }
+        AnsiConsole.MarkupLine($"[bold]{Markup.Escape(key)}[/] = {Markup.Escape(value)}");
+    }
+    else
+    {
+        if (json) { PrintJson(new { key, value = (string?)null, found = false }); return; }
+        AnsiConsole.MarkupLine($"[yellow]Setting '{Markup.Escape(key)}' not found.[/]");
+    }
+});
+configCommand.Add(configGetCmd);
+
+// --- wdc config set <key> <value> ---
+var configSetKeyArg = new Argument<string>("key") { Description = "Setting key (e.g. daemon.autoStartEnabled)" };
+var configSetValueArg = new Argument<string>("value") { Description = "Value to set" };
+var configSetCmd = new Command("set", "Set a daemon setting") { configSetKeyArg, configSetValueArg };
+configSetCmd.SetAction(async (parseResult, ct) =>
+{
+    var key = parseResult.GetValue(configSetKeyArg)!;
+    var value = parseResult.GetValue(configSetValueArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
+    var body = JsonContent.Create(new Dictionary<string, string> { [key] = value });
+    await client.PutAsync("/api/settings", body);
+    if (json) { PrintJson(new { key, value, ok = true }); return; }
+    AnsiConsole.MarkupLine($"[green]Set[/] {Markup.Escape(key)} = {Markup.Escape(value)}");
+});
+configCommand.Add(configSetCmd);
 
 // --- wdc doctor ---
 var doctorCommand = new Command("doctor", "Run health checks on the NKS WDC stack");
