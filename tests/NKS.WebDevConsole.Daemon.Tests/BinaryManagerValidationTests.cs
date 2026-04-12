@@ -29,4 +29,24 @@ public sealed class BinaryManagerValidationTests
     {
         Assert.Throws<ArgumentException>(() => BinaryManager.ValidateAppVersion(app, version));
     }
+
+    [Theory]
+    [InlineData("app", "1.0|cmd")]
+    [InlineData("app", "1.0&whoami")]
+    [InlineData("app", "1.0`id`")]
+    [InlineData("app", "1.0\nrm")]
+    [InlineData("app", "1.0\0nul")]
+    public void ValidateAppVersion_RejectsShellMetacharsInVersion(string app, string version)
+    {
+        Assert.Throws<ArgumentException>(() => BinaryManager.ValidateAppVersion(app, version));
+    }
+
+    [Theory]
+    [InlineData("app|evil", "1.0")]
+    [InlineData("app&bg", "1.0")]
+    [InlineData("app`cmd`", "1.0")]
+    public void ValidateAppVersion_RejectsShellMetacharsInApp(string app, string version)
+    {
+        Assert.Throws<ArgumentException>(() => BinaryManager.ValidateAppVersion(app, version));
+    }
 }
