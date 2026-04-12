@@ -549,6 +549,14 @@
             <span class="tab-label"><el-icon><DataLine /></el-icon> {{ $t('siteEdit.metrics') }}</span>
           </template>
           <div class="tab-content">
+            <div class="metrics-toolbar">
+              <el-button size="small" :loading="metricsLoading" :icon="Refresh" @click="refreshMetrics">
+                Refresh
+              </el-button>
+              <span v-if="metricsLastRefresh" class="hint metrics-timestamp">
+                Last updated {{ formatAge(metricsLastRefresh) }}
+              </span>
+            </div>
             <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">
               <span v-if="metricsLoading">Loading metrics...</span>
               <span v-else>No access log data found for this site. Start Apache with the generated vhost and make some requests.</span>
@@ -614,7 +622,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
-  FolderOpened, Check, Search, Link, DataLine,
+  FolderOpened, Check, Search, Link, DataLine, Refresh,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
@@ -1103,6 +1111,7 @@ function openInBrowser() {
 // ── Site metrics (Phase 11 performance monitoring) ────────────────────
 const siteMetrics = ref<SiteMetrics | null>(null)
 const metricsLoading = ref(false)
+const metricsLastRefresh = ref<string | null>(null)
 
 async function refreshMetrics() {
   if (!site.value) return
@@ -1110,6 +1119,7 @@ async function refreshMetrics() {
   try {
     const m = await fetchSiteMetrics(site.value.domain)
     siteMetrics.value = m.hasMetrics ? m : null
+    metricsLastRefresh.value = new Date().toISOString()
   } catch { siteMetrics.value = null }
   finally { metricsLoading.value = false }
 }
@@ -1607,6 +1617,16 @@ onMounted(() => {
 }
 
 /* ─── Metrics cards ──────────────────────────────────────────────────── */
+.metrics-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.metrics-timestamp {
+  font-size: 0.8rem;
+  color: var(--wdc-text-3);
+}
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
