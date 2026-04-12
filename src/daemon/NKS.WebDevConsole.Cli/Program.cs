@@ -1240,7 +1240,13 @@ phpCommand.SetAction(async (parseResult, ct) =>
     if (!EnsureConnected(client)) return;
     var versions = await client.GetJsonAsync("/api/php/versions");
     if (json) { PrintJson(versions); return; }
-    if (versions.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No PHP versions detected.[/]"); return; }
+    if (versions.GetArrayLength() == 0) { if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No PHP versions detected.[/]"); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var v in versions.EnumerateArray())
+            Console.WriteLine(v.GetProperty("version").GetString() ?? "");
+        return;
+    }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Version"); table.AddColumn("Path"); table.AddColumn("CGI"); table.AddColumn("Port"); table.AddColumn("Ext"); table.AddColumn("Active");
     foreach (var v in versions.EnumerateArray())
