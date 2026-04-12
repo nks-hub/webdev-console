@@ -15,6 +15,14 @@
       {{ crashedCount }} crashed
     </span>
 
+    <span
+      v-if="tunnelRunning"
+      class="status-item status-tunnel"
+      title="Cloudflare Tunnel is running — exposed sites are publicly reachable"
+    >
+      ☁ Tunnel
+    </span>
+
     <template v-if="daemonStore.connected && totalRam > 0">
       <span class="status-sep" />
       <span class="status-item mono">CPU {{ totalCpu.toFixed(1) }}%</span>
@@ -36,6 +44,9 @@ const services = computed(() => daemonStore.services as any[])
 const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
 const crashedCount = computed(() => services.value.filter(s => s.state === 4).length)
+const tunnelRunning = computed(() =>
+  services.value.some(s => s.id === 'cloudflare' && (s.state === 2 || s.status === 'running'))
+)
 const totalCpu = computed(() => services.value.reduce((sum: number, s: any) => sum + (s.cpuPercent ?? 0), 0))
 const totalRam = computed(() => services.value.reduce((sum: number, s: any) => sum + (s.memoryBytes ?? 0), 0))
 
@@ -68,6 +79,7 @@ function formatMem(bytes: number): string {
 }
 
 .status-alert { color: var(--wdc-status-error); font-weight: 600; }
+.status-tunnel { color: #f38020; font-weight: 600; }
 
 .status-sep {
   width: 1px;
