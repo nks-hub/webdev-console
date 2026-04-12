@@ -73,4 +73,33 @@ public class SseServiceTests
     {
         await _service.BroadcastAsync("test-event", new { message = "hello" });
     }
+
+    [Fact]
+    public void AddAndRemove_SameClient_ReturnsToZero()
+    {
+        var id = _service.AddClient(CreateMockResponse());
+        Assert.Equal(1, _service.ClientCount);
+        _service.RemoveClient(id);
+        Assert.Equal(0, _service.ClientCount);
+    }
+
+    [Fact]
+    public void RemoveClient_CalledTwice_DoesNotThrow()
+    {
+        var id = _service.AddClient(CreateMockResponse());
+        _service.RemoveClient(id);
+        _service.RemoveClient(id);
+        Assert.Equal(0, _service.ClientCount);
+    }
+
+    [Fact]
+    public void AddClient_MultipleThenRemoveOne_CountCorrect()
+    {
+        var id1 = _service.AddClient(CreateMockResponse());
+        var id2 = _service.AddClient(CreateMockResponse());
+        var id3 = _service.AddClient(CreateMockResponse());
+        Assert.Equal(3, _service.ClientCount);
+        _service.RemoveClient(id2);
+        Assert.Equal(2, _service.ClientCount);
+    }
 }
