@@ -923,6 +923,12 @@ binariesCommand.SetAction(async (parseResult, ct) =>
 
     var bins = await client.GetJsonAsync("/api/binaries/installed");
     if (json) { PrintJson(bins); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var b in bins.EnumerateArray())
+            Console.WriteLine($"{b.GetProperty("app").GetString()}\t{b.GetProperty("version").GetString()}");
+        return;
+    }
     if (bins.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No binaries installed.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
