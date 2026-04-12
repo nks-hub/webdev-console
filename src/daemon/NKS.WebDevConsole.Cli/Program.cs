@@ -372,12 +372,16 @@ sitesCommand.Add(reapplyCmd);
 var updateDomainArg = new Argument<string>("domain");
 var updatePhpOpt = new Option<string?>("--php") { Description = "Set PHP version" };
 var updateDocrootOpt = new Option<string?>("--docroot") { Description = "Set document root" };
-var updateSiteCmd = new Command("update", "Update a site") { updateDomainArg, updatePhpOpt, updateDocrootOpt };
+var updateSslOpt = new Option<bool?>("--ssl") { Description = "Enable/disable SSL" };
+var updateNodePortOpt = new Option<int?>("--node-port") { Description = "Set Node.js upstream port (0 to disable)" };
+var updateSiteCmd = new Command("update", "Update a site") { updateDomainArg, updatePhpOpt, updateDocrootOpt, updateSslOpt, updateNodePortOpt };
 updateSiteCmd.SetAction(async (parseResult, ct) =>
 {
     var domain = parseResult.GetValue(updateDomainArg)!;
     var php = parseResult.GetValue(updatePhpOpt);
     var docroot = parseResult.GetValue(updateDocrootOpt);
+    var sslOpt = parseResult.GetValue(updateSslOpt);
+    var nodePort = parseResult.GetValue(updateNodePortOpt);
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
@@ -388,9 +392,10 @@ updateSiteCmd.SetAction(async (parseResult, ct) =>
         ["domain"] = domain,
         ["documentRoot"] = docroot ?? (site.TryGetProperty("documentRoot", out var dr) ? dr.GetString() : null),
         ["phpVersion"] = php ?? (site.TryGetProperty("phpVersion", out var pv) ? pv.GetString() : null),
-        ["sslEnabled"] = site.TryGetProperty("sslEnabled", out var ssl) && ssl.GetBoolean(),
+        ["sslEnabled"] = sslOpt ?? (site.TryGetProperty("sslEnabled", out var ssl) && ssl.GetBoolean()),
         ["httpPort"] = site.TryGetProperty("httpPort", out var hp) ? hp.GetInt32() : 80,
         ["httpsPort"] = site.TryGetProperty("httpsPort", out var hps) ? hps.GetInt32() : 443,
+        ["nodeUpstreamPort"] = nodePort ?? (site.TryGetProperty("nodeUpstreamPort", out var np) ? np.GetInt32() : 0),
     };
     var content = JsonContent.Create(payload);
     var result = await client.PutAsync($"/api/sites/{domain}", content);
@@ -398,6 +403,8 @@ updateSiteCmd.SetAction(async (parseResult, ct) =>
     AnsiConsole.MarkupLine($"[green]Updated[/] {Markup.Escape(domain)}");
     if (php != null) AnsiConsole.MarkupLine($"  PHP → {Markup.Escape(php)}");
     if (docroot != null) AnsiConsole.MarkupLine($"  DocRoot → {Markup.Escape(docroot)}");
+    if (sslOpt != null) AnsiConsole.MarkupLine($"  SSL → {(sslOpt.Value ? "[green]on[/]" : "[dim]off[/]")}");
+    if (nodePort != null) AnsiConsole.MarkupLine($"  Node port → {nodePort}");
 });
 sitesCommand.Add(updateSiteCmd);
 
