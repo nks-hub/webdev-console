@@ -1123,13 +1123,31 @@ phpCommand.Add(phpVersionsCmd);
 // --- wdc open {domain} ---
 var openDomainArg = new Argument<string>("domain") { Description = "Site domain to open in browser" };
 var openCommand = new Command("open", "Open a site in the default browser") { openDomainArg };
-openCommand.SetAction((parseResult, ct) =>
+openCommand.SetAction(async (parseResult, ct) =>
 {
     var domain = parseResult.GetValue(openDomainArg)!;
-    var url = $"http://{domain}";
+    // Fetch site config to build an SSL-aware URL with the correct port,
+    // matching the CommandPalette's "Open {domain}" logic in the frontend.
+    var proto = "http";
+    var port = 80;
+    using var client = new DaemonClient();
+    if (client.Connect())
+    {
+        try
+        {
+            var site = await client.GetJsonAsync($"/api/sites/{domain}");
+            var ssl = site.TryGetProperty("sslEnabled", out var s) && s.GetBoolean();
+            proto = ssl ? "https" : "http";
+            port = ssl
+                ? (site.TryGetProperty("httpsPort", out var hp) ? hp.GetInt32() : 443)
+                : (site.TryGetProperty("httpPort", out var htp) ? htp.GetInt32() : 80);
+        }
+        catch { /* fall through to default http */ }
+    }
+    var portSuffix = (proto == "https" && port == 443) || (proto == "http" && port == 80) ? "" : $":{port}";
+    var url = $"{proto}://{domain}{portSuffix}";
     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
     AnsiConsole.MarkupLine($"Opening [blue]{Markup.Escape(url)}[/]...");
-    return Task.CompletedTask;
 });
 
 // --- wdc config ---
