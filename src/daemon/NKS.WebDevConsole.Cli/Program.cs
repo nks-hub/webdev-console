@@ -474,12 +474,38 @@ versionCommand.SetAction(async (parseResult, ct) =>
     if (connected)
         try { daemonVer = (await client.GetJsonAsync("/api/status")).GetProperty("version").GetString(); } catch { }
 
-    if (json) { PrintJson(new { cli = cliVersion, daemon = daemonVer }); return; }
+    // Fetch installed binary versions for a compact diagnostic overview
+    var binVersions = new Dictionary<string, string>();
+    if (connected)
+    {
+        try
+        {
+            var installed = await client.GetJsonAsync("/api/binaries/installed");
+            var keyApps = new[] { "apache", "php", "mysql", "node", "redis", "nginx", "mariadb" };
+            foreach (var app in keyApps)
+            {
+                var first = installed.EnumerateArray()
+                    .FirstOrDefault(b => b.GetProperty("app").GetString()?.Equals(app, StringComparison.OrdinalIgnoreCase) == true);
+                if (first.ValueKind != System.Text.Json.JsonValueKind.Undefined)
+                    binVersions[app] = first.GetProperty("version").GetString() ?? "?";
+            }
+        }
+        catch { /* binaries endpoint optional */ }
+    }
+
+    if (json) { PrintJson(new { cli = cliVersion, daemon = daemonVer, binaries = binVersions }); return; }
 
     AnsiConsole.MarkupLine($"[bold]wdc CLI[/]    v{cliVersion}");
     AnsiConsole.MarkupLine(daemonVer != null
         ? $"[bold]Daemon[/]     v{daemonVer} [green](connected)[/]"
         : "[bold]Daemon[/]     [dim]not running[/]");
+    if (binVersions.Count > 0)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[bold]Installed binaries:[/]");
+        foreach (var (app, ver) in binVersions)
+            AnsiConsole.MarkupLine($"  [cyan]{app,-10}[/] {ver}");
+    }
 });
 
 // --- wdc databases ---
