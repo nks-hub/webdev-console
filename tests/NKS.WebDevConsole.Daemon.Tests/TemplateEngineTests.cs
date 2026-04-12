@@ -127,4 +127,30 @@ public class TemplateEngineTests : IDisposable
         Assert.Contains("test.loc", result);
         Assert.Contains("api.test.loc", result);
     }
+
+    [Fact]
+    public void Render_NestedObject_AccessesDotNotation()
+    {
+        // Scriban converts .NET property names to snake_case by default,
+        // so site.Domain becomes site.domain in the template.
+        var template = "ServerName {{ site.domain }}\nDocumentRoot {{ site.root }}";
+        var model = new { site = new { domain = "nested.loc", root = "C:/htdocs/nested" } };
+
+        var result = _engine.Render(template, model);
+
+        Assert.Contains("ServerName nested.loc", result);
+        Assert.Contains("DocumentRoot C:/htdocs/nested", result);
+    }
+
+    [Fact]
+    public void Render_NullModel_DoesNotCrash()
+    {
+        // Passing an anonymous object with null values shouldn't crash the renderer
+        var template = "Name: {{ name }}";
+        var model = new { name = (string?)null };
+
+        var result = _engine.Render(template, model);
+
+        Assert.StartsWith("Name:", result);
+    }
 }
