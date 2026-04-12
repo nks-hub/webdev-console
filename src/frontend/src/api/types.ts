@@ -54,6 +54,8 @@ export interface SiteInfo {
   aliases: string[]
   framework?: string
   environment?: Record<string, string>
+  /** When non-zero, Apache reverse-proxies to http://localhost:{port} instead of serving DocumentRoot. */
+  nodeUpstreamPort?: number
   /**
    * Optional Cloudflare Tunnel exposure. Null / undefined means the site
    * is only reachable locally. Present but `enabled=false` means it was

@@ -191,13 +191,28 @@
                     :class="{ active: selectedRuntime === 'node' }"
                     @click="selectRuntime('node')"
                     type="button"
-                    disabled
-                    title="Coming soon"
                   >
                     <div class="runtime-card-icon runtime-node">N</div>
                     <div class="runtime-card-title">Node.js</div>
-                    <div class="runtime-card-desc">Proxy to a Node upstream (coming soon).</div>
+                    <div class="runtime-card-desc">Reverse-proxy to your app's HTTP listener.</div>
                   </button>
+                </div>
+
+                <!-- Node.js upstream port (only when Node is selected) -->
+                <div v-if="selectedRuntime === 'node'" class="php-version-picker">
+                  <label class="sub-label">Upstream port</label>
+                  <el-input-number
+                    v-model="nodeUpstreamPort"
+                    :min="1024"
+                    :max="65535"
+                    controls-position="right"
+                    style="width: 180px"
+                    @change="markDirty"
+                  />
+                  <div class="hint" style="margin-top: 8px">
+                    Port your Node.js app listens on (e.g. <code>npm start</code> → <code>localhost:3000</code>).
+                    Apache will <code>ProxyPass / http://localhost:{port}/</code> all requests to it.
+                  </div>
                 </div>
 
                 <!-- PHP version sub-picker (only when PHP is selected) -->
@@ -542,22 +557,29 @@ function removeAlias(a: string) {
 }
 
 // ── Runtime picker ─────────────────────────────────────────────────────
+const nodeUpstreamPort = ref(3000)
+
 const selectedRuntime = computed<'static' | 'php' | 'node'>(() => {
+  if ((site.value as any)?.nodeUpstreamPort > 0) return 'node'
   if (site.value?.phpVersion && site.value.phpVersion !== 'none') return 'php'
-  if (site.value?.framework === 'node' || site.value?.framework === 'nextjs') return 'node'
   return 'static'
 })
+
+watch(() => (site.value as any)?.nodeUpstreamPort, (v) => {
+  if (typeof v === 'number' && v > 0) nodeUpstreamPort.value = v
+}, { immediate: true })
 
 function selectRuntime(rt: 'static' | 'php' | 'node') {
   if (!site.value) return
   if (rt === 'static') {
     site.value.phpVersion = 'none'
+    ;(site.value as any).nodeUpstreamPort = 0
   } else if (rt === 'php') {
-    // Pick the first available version, fallback to 8.4
     site.value.phpVersion = phpVersions.value[0] ?? '8.4'
+    ;(site.value as any).nodeUpstreamPort = 0
   } else if (rt === 'node') {
-    // Reserved — doesn't change phpVersion yet
-    return
+    site.value.phpVersion = 'none'
+    ;(site.value as any).nodeUpstreamPort = nodeUpstreamPort.value || 3000
   }
   markDirty()
 }
@@ -779,6 +801,12 @@ async function save() {
   try {
     // Commit aliases from chip picker (no more comma-separated string)
     site.value.aliases = [...aliases.value]
+    // Commit Node.js proxy port from runtime tab
+    if (selectedRuntime.value === 'node') {
+      ;(site.value as any).nodeUpstreamPort = nodeUpstreamPort.value
+    } else {
+      ;(site.value as any).nodeUpstreamPort = 0
+    }
     // Commit Cloudflare sub-config from the dedicated tab. When disabled we
     // still send the object so the daemon can clear any previous ingress
     // rule on apply rather than leaving a stale CNAME pointing here.

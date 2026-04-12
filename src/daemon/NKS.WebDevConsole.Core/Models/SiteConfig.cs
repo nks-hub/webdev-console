@@ -13,6 +13,15 @@ public class SiteConfig
     public Dictionary<string, string> Environment { get; set; } = new();
 
     /// <summary>
+    /// When non-zero, Apache reverse-proxies all requests to
+    /// <c>http://localhost:{NodeUpstreamPort}</c> instead of serving from
+    /// DocumentRoot. Used for Node.js/Next.js/Express apps that have
+    /// their own HTTP listener. Setting this also disables PHP routing
+    /// for this site (phpVersion is ignored when proxying).
+    /// </summary>
+    public int NodeUpstreamPort { get; set; }
+
+    /// <summary>
     /// Optional Cloudflare Tunnel exposure for this site. Null means the
     /// site is only accessible locally (default). Set to a populated
     /// <see cref="SiteCloudflareConfig"/> to expose the site via the
