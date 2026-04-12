@@ -73,6 +73,18 @@ statusCommand.SetAction(async (parseResult, ct) =>
 
     if (services.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No services registered.[/]"); return; }
 
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var svc in services.EnumerateArray())
+        {
+            var id = svc.GetProperty("id").GetString() ?? "";
+            var stateStr = svc.GetProperty("state").ValueKind == JsonValueKind.Number
+                ? StateNumToStr(svc.GetProperty("state").GetInt32()) : "unknown";
+            Console.WriteLine($"{id}\t{stateStr}");
+        }
+        return;
+    }
+
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Service"); table.AddColumn("State"); table.AddColumn("PID"); table.AddColumn("Memory");
     foreach (var svc in services.EnumerateArray())
