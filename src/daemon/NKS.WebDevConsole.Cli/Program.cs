@@ -1365,7 +1365,13 @@ phpCommand.SetAction(async (parseResult, ct) =>
     if (Console.IsOutputRedirected)
     {
         foreach (var v in versions.EnumerateArray())
-            Console.WriteLine(v.GetProperty("version").GetString() ?? "");
+        {
+            var ver = v.GetProperty("version").GetString() ?? "";
+            var path = v.TryGetProperty("phpExePath", out var ep) ? ep.GetString() ?? ""
+                     : v.TryGetProperty("executablePath", out var ep2) ? ep2.GetString() ?? "" : "";
+            var active = v.TryGetProperty("isActive", out var a) && a.GetBoolean() ? "active" : "";
+            Console.WriteLine($"{ver}\t{path}\t{active}");
+        }
         return;
     }
     var table = new Table().Border(TableBorder.Rounded);
@@ -1438,7 +1444,8 @@ phpExtCmd.SetAction(async (parseResult, ct) =>
         {
             var name = e.GetProperty("name").GetString() ?? "";
             var loaded = e.TryGetProperty("isLoaded", out var l) && l.GetBoolean();
-            Console.WriteLine($"{name}\t{(loaded ? "loaded" : "disabled")}");
+            var core = e.TryGetProperty("isCore", out var c) && c.GetBoolean();
+            Console.WriteLine($"{name}\t{(loaded ? "loaded" : "disabled")}\t{(core ? "core" : "")}");
         }
         return;
     }
