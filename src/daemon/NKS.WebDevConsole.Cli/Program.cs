@@ -245,18 +245,46 @@ var docrootOpt = new Option<string?>("--docroot") { Description = "Document root
 var phpOpt = new Option<string?>("--php") { Description = "PHP version (default: 8.4)" };
 var sslOpt = new Option<bool>("--ssl") { Description = "Enable SSL" };
 var aliasesOpt = new Option<string?>("--aliases") { Description = "Comma-separated aliases" };
-var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt };
+// Site creation templates — pre-configured blueprints that set sensible
+// defaults for common stacks. The --template flag applies the blueprint
+// BEFORE any explicit flags, so `--template laravel --php 8.2` starts
+// from the Laravel defaults but overrides PHP to 8.2.
+var siteTemplates = new Dictionary<string, (string php, bool ssl, string? framework)>(StringComparer.OrdinalIgnoreCase)
+{
+    ["wordpress"] = ("8.4", true, "wordpress"),
+    ["laravel"]   = ("8.4", true, "laravel"),
+    ["nette"]     = ("8.4", true, "nette"),
+    ["symfony"]   = ("8.4", true, "symfony"),
+    ["nextjs"]    = ("none", true, null),  // Node proxy, phpVersion=none
+    ["static"]    = ("none", false, null),
+    ["node"]      = ("none", false, null),
+};
+var templateOpt = new Option<string?>("--template", $"Site blueprint: {string.Join(", ", siteTemplates.Keys)}");
+var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt, templateOpt };
 createSiteCmd.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
 
+    // Apply template defaults first, then override with explicit flags
+    var tplName = parseResult.GetValue(templateOpt);
+    var tpl = tplName is not null && siteTemplates.TryGetValue(tplName, out var t) ? t : default;
+    var tplApplied = tplName is not null && siteTemplates.ContainsKey(tplName);
+
     var domain = parseResult.GetValue(domainOpt) ?? AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):");
     var docRoot = parseResult.GetValue(docrootOpt) ?? AnsiConsole.Ask<string>("Document root:");
-    var php = parseResult.GetValue(phpOpt) ?? "8.4";
-    var ssl = parseResult.GetValue(sslOpt) || (!json && domain == null && AnsiConsole.Confirm("Enable SSL?", false));
+    var php = parseResult.GetValue(phpOpt) ?? (tplApplied ? tpl.php : "8.4");
+    var ssl = parseResult.GetValue(sslOpt) || (tplApplied && tpl.ssl)
+              || (!json && !tplApplied && domain == null && AnsiConsole.Confirm("Enable SSL?", false));
     var aliasStr = parseResult.GetValue(aliasesOpt);
+
+    var nodePort = 0;
+    if (tplApplied && tplName is "nextjs" or "node")
+    {
+        nodePort = 3000;
+        if (!json) AnsiConsole.MarkupLine($"[dim]Template '{tplName}': Node.js reverse-proxy mode, upstream port 3000[/]");
+    }
 
     var payload = new
     {
@@ -266,6 +294,8 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
         sslEnabled = ssl,
         httpPort = 80,
         httpsPort = 443,
+        nodeUpstreamPort = nodePort,
+        framework = tplApplied ? tpl.framework : null,
         aliases = aliasStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>(),
         environment = new Dictionary<string, string>()
     };
@@ -274,7 +304,9 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
     var result = await client.PostAsync("/api/sites", content);
 
     if (json) { PrintJson(result); return; }
-    AnsiConsole.MarkupLine($"[green]Site created:[/] {Markup.Escape(domain)}");
+    var msg = tplApplied ? $"[green]Site created:[/] {Markup.Escape(domain)} [dim](template: {tplName})[/]"
+                         : $"[green]Site created:[/] {Markup.Escape(domain)}";
+    AnsiConsole.MarkupLine(msg);
 });
 sitesCommand.Add(createSiteCmd);
 
