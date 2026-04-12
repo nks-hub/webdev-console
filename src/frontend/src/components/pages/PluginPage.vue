@@ -8,6 +8,15 @@
       <el-skeleton :rows="4" animated />
     </div>
 
+    <div v-else-if="loadError" class="page-empty">
+      <el-empty description="Failed to load plugin">
+        <template #default>
+          <div style="color: var(--el-color-danger); margin-bottom: 12px">{{ loadError }}</div>
+          <el-button type="primary" @click="$router.push('/dashboard')">Back to Dashboard</el-button>
+        </template>
+      </el-empty>
+    </div>
+
     <div v-else-if="!manifest" class="page-empty">
       <el-empty :description="`Plugin '${id}' not found.`" />
     </div>
@@ -87,6 +96,7 @@ const props = defineProps<{ id: string }>()
 const router = useRouter()
 const pluginsStore = usePluginsStore()
 const loading = ref(false)
+const loadError = ref('')
 
 // Plugins with dedicated full-page routes (not schema-driven) redirect
 // away from the generic PluginPage to their custom page so users don't
@@ -111,8 +121,11 @@ onMounted(async () => {
 
   if (!manifest.value || !uiDef.value) {
     loading.value = true
+    loadError.value = ''
     try {
       await pluginsStore.loadAll()
+    } catch (e: any) {
+      loadError.value = e.message || 'Failed to load plugins'
     } finally {
       loading.value = false
     }

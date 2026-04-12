@@ -165,6 +165,40 @@
                 </div>
               </el-form-item>
             </el-form>
+
+            <!-- Manual backup management -->
+            <div style="margin-top: 24px; border-top: 1px solid var(--wdc-border); padding-top: 16px">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+                <span style="font-weight: 600; font-size: 0.95rem">Backups</span>
+                <div style="display: flex; gap: 8px">
+                  <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
+                    Create Backup
+                  </el-button>
+                  <el-button size="small" @click="loadBackups" :loading="backupsLoading">
+                    Refresh
+                  </el-button>
+                </div>
+              </div>
+              <div v-if="backupsLoading" class="hint">Loading backups...</div>
+              <div v-else-if="backupsList.length === 0" class="hint">No backups yet. Click "Create Backup" to create one.</div>
+              <el-table v-else :data="backupsList" size="small" stripe style="width: 100%">
+                <el-table-column label="Date" width="180">
+                  <template #default="{ row }">
+                    {{ new Date(row.createdUtc).toLocaleString() }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="Size" width="100">
+                  <template #default="{ row }">
+                    {{ (row.size / 1024 / 1024).toFixed(1) }} MB
+                  </template>
+                </el-table-column>
+                <el-table-column label="Actions">
+                  <template #default="{ row }">
+                    <el-button size="small" @click="downloadBackupFile(row.path)">Download</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -597,6 +631,38 @@ const telemetryEnabled = ref(false)
 const telemetryCrashReports = ref(false)
 const backupDir = ref('')
 const backupScheduleHours = ref(0)
+
+// Backup management
+import { fetchBackups, createBackup, downloadBackup, type BackupEntry } from '../../api/daemon'
+const backupsList = ref<BackupEntry[]>([])
+const backupsLoading = ref(false)
+const backupCreating = ref(false)
+
+async function loadBackups() {
+  backupsLoading.value = true
+  try {
+    const data = await fetchBackups()
+    backupsList.value = data.backups
+  } catch { backupsList.value = [] }
+  finally { backupsLoading.value = false }
+}
+
+async function manualBackup() {
+  backupCreating.value = true
+  try {
+    const result = await createBackup()
+    ElMessage.success(`Backup created: ${result.files} files, ${(result.size / 1024 / 1024).toFixed(1)} MB`)
+    void loadBackups()
+  } catch (e: any) {
+    ElMessage.error(`Backup failed: ${e.message}`)
+  } finally {
+    backupCreating.value = false
+  }
+}
+
+function downloadBackupFile(path: string) {
+  downloadBackup(path)
+}
 
 // ── Catalog API integration (Advanced tab) ────────────────────────────
 const catalogUrl = ref('')
@@ -1193,6 +1259,7 @@ onMounted(async () => {
   void loadSettings()
   void loadDatabases()
   void loadPhpVersions()
+  void loadBackups()
   void loadDeviceId()
   if (accountToken.value) void loadDevicesAccount()
   try {

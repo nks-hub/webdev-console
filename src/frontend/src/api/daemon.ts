@@ -161,6 +161,25 @@ export const composeRestart = (domain: string) =>
 export const composePs = (domain: string) =>
   json<{ ok: boolean; output: string }>(`/api/sites/${encodeURIComponent(domain)}/docker-compose/ps`)
 
+// Backup management
+export interface BackupEntry {
+  path: string
+  size: number
+  createdUtc: string
+}
+export const fetchBackups = () =>
+  json<{ count: number; backups: BackupEntry[] }>('/api/backup/list')
+
+export const createBackup = () =>
+  json<{ path: string; files: number; size: number }>('/api/backup', { method: 'POST' })
+
+export const downloadBackup = (path?: string) => {
+  const url = path
+    ? `${base()}/api/backup/download?path=${encodeURIComponent(path)}`
+    : `${base()}/api/backup/download`
+  window.open(url, '_blank')
+}
+
 // Per-site metrics — Phase 11 performance monitoring foothold
 export interface SiteMetrics {
   domain: string
