@@ -849,11 +849,20 @@ catch (Exception fwEx)
 // Auto-start services if setting enabled (default: true). Backed by SettingsStore
 // so the user can flip it from the Settings page without recompiling. See
 // GET/PUT /api/settings endpoints below.
+//
+// SPEC section 5.4 requires parallel startup (<3s cold start target):
+//   MySQL, Redis, PHP-FPM, Mailpit, Caddy, Cloudflare start simultaneously.
+//   Apache depends on PHP being ready, but Apache's own StartAsync handles
+//   that internally (it checks phpVersion before binding vhosts), so we
+//   don't need to order modules here — just fire them all and let each
+//   module's StartAsync resolve its own dependencies. Task.WhenAll gives
+//   us wall-clock parallelism while per-task try/catch ensures one failing
+//   module doesn't abort the others.
 var autoStartEnabled = app.Services.GetRequiredService<SettingsStore>().AutoStartEnabled;
 if (autoStartEnabled)
 {
-    var modules = app.Services.GetServices<IServiceModule>();
-    foreach (var module in modules)
+    var modules = app.Services.GetServices<IServiceModule>().ToList();
+    var startTasks = modules.Select(async module =>
     {
         try
         {
@@ -865,7 +874,8 @@ if (autoStartEnabled)
         {
             Console.WriteLine($"[auto-start] {module.ServiceId} failed: {ex.Message}");
         }
-    }
+    });
+    await Task.WhenAll(startTasks);
 }
 
 app.MapGet("/api/sites", (SiteManager sm) => Results.Ok(sm.Sites.Values));
