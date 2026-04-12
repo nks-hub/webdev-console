@@ -82,20 +82,20 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Runtime" width="130">
+        <el-table-column label="Runtime" width="140">
           <template #default="{ row }">
             <el-tag
-              v-if="row.phpVersion && row.phpVersion !== 'none'"
+              v-if="row.nodeUpstreamPort && row.nodeUpstreamPort > 0"
+              size="small"
+              effect="dark"
+              class="runtime-tag runtime-node"
+            >Node:{{ row.nodeUpstreamPort }}</el-tag>
+            <el-tag
+              v-else-if="row.phpVersion && row.phpVersion !== 'none'"
               size="small"
               effect="dark"
               class="runtime-tag runtime-php"
             >PHP {{ row.phpVersion }}</el-tag>
-            <el-tag
-              v-else-if="row.framework === 'node' || row.framework === 'nextjs'"
-              size="small"
-              effect="dark"
-              class="runtime-tag runtime-node"
-            >Node</el-tag>
             <el-tag
               v-else
               size="small"
