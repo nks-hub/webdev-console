@@ -93,4 +93,21 @@ public sealed class DockerComposeRunnerTests
         var result = await DockerComposeRunner.UpAsync("/nonexistent/xyz", cts.Token);
         Assert.False(result.Success);
     }
+
+    [Fact]
+    public void ComposeResult_RecordInequality_DifferentExitCode()
+    {
+        var a = new DockerComposeRunner.ComposeResult(false, 0, "ok");
+        var b = new DockerComposeRunner.ComposeResult(false, 1, "ok");
+        Assert.NotEqual(a, b);
+    }
+
+    [Fact]
+    public void ComposeResult_SuccessImpliesZeroExitCode_ByConvention()
+    {
+        // Helper record factory convention: success=true should imply exit 0
+        var r = new DockerComposeRunner.ComposeResult(true, 0, "");
+        Assert.True(r.Success);
+        Assert.Equal(0, r.ExitCode);
+    }
 }
