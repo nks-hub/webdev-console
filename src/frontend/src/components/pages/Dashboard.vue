@@ -76,6 +76,13 @@
             <div class="stat-label">Daemon uptime</div>
           </div>
         </div>
+        <div class="stat-card" v-if="nodeProcessCount >= 0">
+          <div class="stat-icon">🟢</div>
+          <div class="stat-content">
+            <div class="stat-value mono">{{ nodeProcessCount }}</div>
+            <div class="stat-label">Node.js processes</div>
+          </div>
+        </div>
       </div>
 
       <!-- 2. Metric charts (CPU + Memory) -->
@@ -278,6 +285,17 @@ const noneRunning = computed(() => runningCount.value === 0)
 const totalCpu = computed(() => services.value.reduce((s, x: any) => s + (x.cpuPercent ?? 0), 0))
 const totalRamMB = computed(() => Math.round(services.value.reduce((s, x: any) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
 
+// Node.js process count — shown in the stat cards when the plugin is loaded.
+// -1 means "not fetched yet / plugin not available" and hides the card.
+const nodeProcessCount = ref(-1)
+async function loadNodeProcessCount() {
+  try {
+    const { fetchNodeSites } = await import('../../api/daemon')
+    const list = await fetchNodeSites()
+    nodeProcessCount.value = list.filter(p => p.state === 2).length
+  } catch { nodeProcessCount.value = -1 }
+}
+
 // Recent activity timeline — Phase 4 plan item. Backed by /api/activity
 // which queries the config_history SQLite table. Loaded on mount and
 // refreshable via the section-header button. Empty array (first-run or
@@ -317,6 +335,7 @@ function activityColor(operation: string): 'primary' | 'success' | 'warning' | '
 onMounted(() => {
   void sitesStore.load()
   void loadActivity()
+  void loadNodeProcessCount()
 })
 
 const stateLabels: Record<number, string> = {
