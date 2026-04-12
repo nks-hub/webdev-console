@@ -36,8 +36,11 @@ statusCommand.SetAction(async (parseResult, ct) =>
 
     if (json) { PrintJson(new { status, services, system }); return; }
 
+    var svcRunning = 0;
+    foreach (var s in services.EnumerateArray())
+        if (s.GetProperty("state").ValueKind == JsonValueKind.Number && s.GetProperty("state").GetInt32() == 2) svcRunning++;
     AnsiConsole.MarkupLine($"[bold]Daemon[/]  [green]running[/]  v{status.GetProperty("version").GetString()}");
-    AnsiConsole.MarkupLine($"Plugins: {status.GetProperty("plugins").GetInt32()}  Uptime: {FormatUptime(status.GetProperty("uptime").GetInt64())}");
+    AnsiConsole.MarkupLine($"Plugins: {status.GetProperty("plugins").GetInt32()}  Services: {svcRunning}/{services.GetArrayLength()} running  Uptime: {FormatUptime(status.GetProperty("uptime").GetInt64())}");
 
     if (system is System.Text.Json.JsonElement sys)
     {
