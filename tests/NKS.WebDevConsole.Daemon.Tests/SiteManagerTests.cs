@@ -495,6 +495,39 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void LoadAll_PreservesAliasesAndEnvironment()
+    {
+        var siteObj = new SiteConfig
+        {
+            Domain = "full.loc",
+            DocumentRoot = "C:/htdocs/full",
+            PhpVersion = "8.4",
+            SslEnabled = true,
+            HttpPort = 80,
+            HttpsPort = 443,
+            Aliases = new[] { "www.full.loc", "api.full.loc" },
+            Framework = "laravel",
+            Environment = new Dictionary<string, string>
+            {
+                ["APP_ENV"] = "local",
+                ["DB_HOST"] = "127.0.0.1",
+            },
+        };
+        var toml = TomlSerializer.Serialize(siteObj);
+        File.WriteAllText(Path.Combine(_sitesDir, "full.loc.toml"), toml);
+
+        _manager.LoadAll();
+
+        var site = _manager.Get("full.loc");
+        Assert.NotNull(site);
+        Assert.True(site!.SslEnabled);
+        Assert.Equal(2, site.Aliases.Length);
+        Assert.Contains("www.full.loc", site.Aliases);
+        Assert.Equal("laravel", site.Framework);
+        Assert.Equal("local", site.Environment["APP_ENV"]);
+    }
+
+    [Fact]
     public void LoadAll_SkipsInvalidToml_WithWarning()
     {
         File.WriteAllText(Path.Combine(_sitesDir, "bad.toml"), "this is not valid toml = [[[");
