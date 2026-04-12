@@ -44,7 +44,7 @@
         <!-- ── General ──────────────────────────── -->
         <el-tab-pane name="general">
           <template #label>
-            <span class="tab-label"><el-icon><Setting /></el-icon> General</span>
+            <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('siteEdit.general') }}</span>
           </template>
           <div class="tab-content">
             <!-- Identity card -->
@@ -184,7 +184,7 @@
         <!-- ── Runtime ──────────────────────────── -->
         <el-tab-pane name="runtime">
           <template #label>
-            <span class="tab-label"><el-icon><Cpu /></el-icon> Runtime</span>
+            <span class="tab-label"><el-icon><Cpu /></el-icon> {{ $t('siteEdit.runtime') }}</span>
           </template>
           <div class="tab-content">
             <section class="edit-card">
@@ -357,7 +357,7 @@
         <!-- ── Cloudflare Tunnel ────────────────── -->
         <el-tab-pane name="cloudflare">
           <template #label>
-            <span class="tab-label"><el-icon><Link /></el-icon> Cloudflare</span>
+            <span class="tab-label"><el-icon><Link /></el-icon> {{ $t('siteEdit.cloudflare') }}</span>
           </template>
           <div class="tab-content">
             <section class="edit-card">
@@ -546,7 +546,7 @@
         <!-- ── Metrics ──────────────────────────── -->
         <el-tab-pane name="metrics">
           <template #label>
-            <span class="tab-label"><el-icon><DataLine /></el-icon> Metrics</span>
+            <span class="tab-label"><el-icon><DataLine /></el-icon> {{ $t('siteEdit.metrics') }}</span>
           </template>
           <div class="tab-content">
             <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">

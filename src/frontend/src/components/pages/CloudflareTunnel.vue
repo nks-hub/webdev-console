@@ -3,9 +3,9 @@
     <!-- Page header -->
     <div class="page-header">
       <div class="header-left">
-        <h1 class="page-title">Cloudflare Tunnel</h1>
+        <h1 class="page-title">{{ $t('cloudflare.title') }}</h1>
         <span class="page-subtitle">
-          Expose local sites to the internet via an encrypted tunnel
+          {{ $t('cloudflare.subtitle') }}
         </span>
       </div>
       <div class="header-actions">

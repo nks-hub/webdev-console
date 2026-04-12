@@ -127,6 +127,19 @@
     "installFailed": "Instalace selhala",
     "restartRequired": "Restartuj démona pro načtení nového pluginu."
   },
+  "cloudflare": {
+    "title": "Cloudflare Tunnel",
+    "subtitle": "Zpřístupni lokální weby přes šifrovaný tunel",
+    "startTunnel": "Spustit tunel",
+    "stopTunnel": "Zastavit tunel"
+  },
+  "siteEdit": {
+    "general": "Obecné",
+    "runtime": "Runtime",
+    "cloudflare": "Cloudflare",
+    "metrics": "Metriky",
+    "danger": "Nebezpečné"
+  },
   "settings": {
     "title": "Nastavení",
     "subtitle": "Konfigurace NKS WDC daemonu a uživatelského rozhraní",

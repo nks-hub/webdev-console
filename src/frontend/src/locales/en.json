@@ -127,6 +127,19 @@
     "installFailed": "Install failed",
     "restartRequired": "Restart the daemon to load the new plugin."
   },
+  "cloudflare": {
+    "title": "Cloudflare Tunnel",
+    "subtitle": "Expose local sites to the internet via an encrypted tunnel",
+    "startTunnel": "Start tunnel",
+    "stopTunnel": "Stop tunnel"
+  },
+  "siteEdit": {
+    "general": "General",
+    "runtime": "Runtime",
+    "cloudflare": "Cloudflare",
+    "metrics": "Metrics",
+    "danger": "Danger"
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "Configure NKS WDC daemon and UI preferences",
