@@ -441,6 +441,29 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void LoadAll_PreservesNodeFields()
+    {
+        var siteObj = new SiteConfig
+        {
+            Domain = "node-app.loc",
+            DocumentRoot = "C:/apps/node-app",
+            PhpVersion = "none",
+            NodeUpstreamPort = 3000,
+            NodeStartCommand = "npm run dev",
+        };
+        var toml = TomlSerializer.Serialize(siteObj);
+        File.WriteAllText(Path.Combine(_sitesDir, "node-app.loc.toml"), toml);
+
+        _manager.LoadAll();
+
+        var site = _manager.Get("node-app.loc");
+        Assert.NotNull(site);
+        Assert.Equal(3000, site!.NodeUpstreamPort);
+        Assert.Equal("npm run dev", site.NodeStartCommand);
+        Assert.Equal("none", site.PhpVersion);
+    }
+
+    [Fact]
     public void LoadAll_SkipsInvalidToml_WithWarning()
     {
         File.WriteAllText(Path.Combine(_sitesDir, "bad.toml"), "this is not valid toml = [[[");
