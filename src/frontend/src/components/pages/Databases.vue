@@ -249,7 +249,8 @@ async function confirmDrop(db: string) {
 }
 
 async function executeQuery() {
-  if (!sqlQuery.value.trim() || !selectedDb.value) return
+  if (!selectedDb.value) { ElMessage.warning('Select a database first'); return }
+  if (!sqlQuery.value.trim()) return
   queryRunning.value = true
   queryResult.value = ''
   queryTime.value = null
@@ -302,7 +303,7 @@ async function handleImportFile(e: Event) {
 }
 
 async function exportDb() {
-  if (!selectedDb.value) return
+  if (!selectedDb.value) { ElMessage.warning('Select a database first'); return }
   try {
     const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/export`, {
       headers: authHeaders(),
