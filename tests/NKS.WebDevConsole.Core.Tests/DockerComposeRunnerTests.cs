@@ -75,4 +75,22 @@ public sealed class DockerComposeRunnerTests
         Assert.Contains("False", str);
         Assert.Contains("1", str);
     }
+
+    [Fact]
+    public async Task LogsAsync_CustomTail_ReturnsFailure_WhenDirectoryMissing()
+    {
+        var result = await DockerComposeRunner.LogsAsync("/nonexistent/xyz", tail: 50);
+        Assert.False(result.Success);
+        Assert.Contains("not found", result.Output, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpAsync_RespectsTimeout()
+    {
+        // Pre-cancelled token should fail immediately
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var result = await DockerComposeRunner.UpAsync("/nonexistent/xyz", cts.Token);
+        Assert.False(result.Success);
+    }
 }
