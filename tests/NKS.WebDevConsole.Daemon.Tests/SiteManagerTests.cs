@@ -11,7 +11,6 @@ public class SiteManagerTests : IDisposable
 {
     private readonly Mock<ILogger<SiteManager>> _loggerMock = new();
     private readonly TemplateEngine _templateEngine = new();
-    private readonly ConfigValidator _validator;
     private readonly AtomicWriter _writer = new();
     private readonly string _sitesDir;
     private readonly string _generatedDir;
@@ -24,13 +23,9 @@ public class SiteManagerTests : IDisposable
         _sitesDir = Path.Combine(_tempDir, "sites");
         _generatedDir = Path.Combine(_tempDir, "generated");
 
-        var validatorLogger = new Mock<ILogger<ConfigValidator>>();
-        _validator = new ConfigValidator(validatorLogger.Object);
-
         _manager = new SiteManager(
             _loggerMock.Object,
             _templateEngine,
-            _validator,
             _writer,
             _sitesDir,
             _generatedDir);

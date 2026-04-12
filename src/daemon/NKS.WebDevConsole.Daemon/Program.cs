@@ -52,7 +52,6 @@ builder.Services.AddSingleton(sp => new ServiceConfigManager(
 builder.Services.AddSingleton(sp => new SiteManager(
     sp.GetRequiredService<ILogger<SiteManager>>(),
     sp.GetRequiredService<TemplateEngine>(),
-    sp.GetRequiredService<ConfigValidator>(),
     sp.GetRequiredService<AtomicWriter>(),
     NKS.WebDevConsole.Core.Services.WdcPaths.SitesRoot,
     NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot

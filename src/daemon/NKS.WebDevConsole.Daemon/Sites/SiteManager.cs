@@ -11,17 +11,15 @@ public class SiteManager
 {
     private readonly ILogger<SiteManager> _logger;
     private readonly TemplateEngine _templateEngine;
-    private readonly ConfigValidator _validator;
     private readonly AtomicWriter _writer;
     private readonly string _sitesDir;
     private readonly string _generatedDir;
     private readonly Dictionary<string, SiteConfig> _sites = new();
 
-    public SiteManager(ILogger<SiteManager> logger, TemplateEngine te, ConfigValidator cv, AtomicWriter aw, string sitesDir, string generatedDir)
+    public SiteManager(ILogger<SiteManager> logger, TemplateEngine te, AtomicWriter aw, string sitesDir, string generatedDir)
     {
         _logger = logger;
         _templateEngine = te;
-        _validator = cv;
         _writer = aw;
         _sitesDir = sitesDir;
         _generatedDir = generatedDir;
