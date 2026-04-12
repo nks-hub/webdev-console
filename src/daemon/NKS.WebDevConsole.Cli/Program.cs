@@ -2952,8 +2952,10 @@ activityCommand.SetAction(async (parseResult, ct) =>
         {
             var time = row.TryGetProperty("createdAt", out var t2) ? t2.GetString()?[..19] ?? "" : "";
             var op = row.TryGetProperty("operation", out var o2) ? o2.GetString() ?? "" : "";
+            var entityType = row.TryGetProperty("entityType", out var et2) ? et2.GetString() ?? "" : "";
             var entity = row.TryGetProperty("entityName", out var en2) ? en2.GetString() ?? "" : "";
-            Console.WriteLine($"{time}\t{op}\t{entity}");
+            var source = row.TryGetProperty("source", out var s2) ? s2.GetString() ?? "" : "";
+            Console.WriteLine($"{time}\t{op}\t{entityType}\t{entity}\t{source}");
         }
         return;
     }
