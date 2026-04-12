@@ -262,15 +262,6 @@ const filteredSites = computed(() => {
   )
 })
 
-const aliasesStr = computed({
-  get: () => selectedSite.value?.aliases?.join(', ') ?? '',
-  set: (v: string) => {
-    if (selectedSite.value) {
-      selectedSite.value.aliases = v.split(',').map(s => s.trim()).filter(Boolean)
-    }
-  },
-})
-
 // Open create dialog if navigated with ?create=1
 watch(() => route.query.create, (val) => {
   if (val === '1') showCreate.value = true
@@ -290,29 +281,6 @@ onMounted(async () => {
 function selectSite(row: SiteInfo) {
   // Navigate to full-view edit page instead of opening a drawer
   void router.push(`/sites/${encodeURIComponent(row.domain)}/edit`)
-}
-
-async function loadHistory(domain: string) {
-  siteHistory.value = []
-  try {
-    const res = await fetch(`${daemonBase()}/api/sites/${domain}/history`, {
-      headers: sitesStore.authHeaders(),
-    })
-    if (res.ok) {
-      siteHistory.value = await res.json() as Array<{ timestamp: string; label?: string }>
-    }
-  } catch { /* history endpoint optional */ }
-}
-
-async function saveSelected() {
-  if (!selectedSite.value) return
-  try {
-    await sitesStore.update(selectedSite.value.domain, selectedSite.value)
-    ElMessage.success('Site updated')
-    drawerOpen.value = false
-  } catch (e: any) {
-    ElMessage.error(`Update failed: ${e.message}`)
-  }
 }
 
 async function createSite() {
@@ -421,24 +389,7 @@ function openInBrowser(site: SiteInfo) {
   window.open(`${proto}://${site.domain}${portSuffix}`, '_blank')
 }
 
-async function rollbackConfig(domain: string, timestamp: string) {
-  try {
-    const res = await fetch(`${daemonBase()}/api/sites/${domain}/rollback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...sitesStore.authHeaders() },
-      body: JSON.stringify({ timestamp }),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    ElMessage.success(`Config restored to ${timestamp}`)
-    await sitesStore.load()
-  } catch (e: any) {
-    ElMessage.error(`Rollback failed: ${e.message}`)
-  }
-}
-
-function formatDate(iso: string): string {
-  try { return new Date(iso).toLocaleString() } catch { return iso }
-}
+// rollbackConfig + formatDate removed — rollback is handled in SiteEdit History tab
 </script>
 
 <style scoped>
