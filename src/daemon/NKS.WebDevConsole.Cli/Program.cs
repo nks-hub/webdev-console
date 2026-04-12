@@ -2223,7 +2223,12 @@ sslListCmd.SetAction(async (parseResult, ct) =>
     {
         if (data.TryGetProperty("certs", out var certs2) && certs2.GetArrayLength() > 0)
             foreach (var c in certs2.EnumerateArray())
-                Console.WriteLine(c.GetProperty("domain").GetString() ?? "");
+            {
+                var d = c.GetProperty("domain").GetString() ?? "";
+                var cr = c.TryGetProperty("createdUtc", out var cv) ? cv.GetString()?[..10] ?? "" : "";
+                var cp = c.TryGetProperty("certPath", out var cpv) ? cpv.GetString() ?? "" : "";
+                Console.WriteLine($"{d}\t{cr}\t{cp}");
+            }
         return;
     }
 
