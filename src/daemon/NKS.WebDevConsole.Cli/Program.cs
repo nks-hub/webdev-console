@@ -489,10 +489,22 @@ pluginsCommand.SetAction(async (parseResult, ct) =>
     if (plugins.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No plugins loaded.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("ID"); table.AddColumn("Name"); table.AddColumn("Version");
+    table.AddColumn("ID"); table.AddColumn("Name"); table.AddColumn("Version"); table.AddColumn("Status"); table.AddColumn("Description");
     foreach (var p in plugins.EnumerateArray())
-        table.AddRow(p.GetProperty("id").GetString() ?? "?", p.GetProperty("name").GetString() ?? "-", p.GetProperty("version").GetString() ?? "-");
+    {
+        var enabled = p.TryGetProperty("enabled", out var en) && en.GetBoolean();
+        var desc = p.TryGetProperty("description", out var d) && d.ValueKind == System.Text.Json.JsonValueKind.String
+            ? d.GetString() ?? "" : "";
+        if (desc.Length > 50) desc = desc[..47] + "...";
+        table.AddRow(
+            p.GetProperty("id").GetString() ?? "?",
+            p.GetProperty("name").GetString() ?? "-",
+            p.GetProperty("version").GetString() ?? "-",
+            enabled ? "[green]enabled[/]" : "[dim]disabled[/]",
+            Markup.Escape(desc));
+    }
     AnsiConsole.Write(table);
+    AnsiConsole.MarkupLine($"[dim]{plugins.GetArrayLength()} plugin(s)[/]");
 });
 
 // --- wdc version ---
