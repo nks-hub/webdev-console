@@ -1830,6 +1830,78 @@ composeCheckCmd.SetAction(async (parseResult, ct) =>
 });
 composeCommand.Add(composeCheckCmd);
 
+// Docker Compose lifecycle commands
+foreach (var (cmdName, desc, method) in new[] {
+    ("up", "Start compose services (docker compose up -d)", "up"),
+    ("down", "Stop and remove compose services", "down"),
+    ("restart", "Restart compose services", "restart"),
+})
+{
+    var domArg = new Argument<string>("domain") { Description = "Site domain" };
+    var cmd = new Command(cmdName, desc) { domArg };
+    var capturedMethod = method;
+    cmd.SetAction(async (parseResult, ct) =>
+    {
+        var domain = parseResult.GetValue(domArg);
+        var json = parseResult.GetValue(jsonOption);
+        using var client = new DaemonClient();
+        if (!EnsureConnected(client)) return;
+        try
+        {
+            var result = await client.PostAsync($"/api/sites/{domain}/docker-compose/{capturedMethod}");
+            if (json) { PrintJson(result); return; }
+            var ok = result.TryGetProperty("ok", out var okv) && okv.GetBoolean();
+            var output = result.TryGetProperty("output", out var o) ? o.GetString() ?? "" : "";
+            if (ok)
+                AnsiConsole.MarkupLine($"[green]✓[/] compose {capturedMethod} for {Markup.Escape(domain ?? "")}");
+            else
+                AnsiConsole.MarkupLine($"[red]✗[/] compose {capturedMethod} failed for {Markup.Escape(domain ?? "")}");
+            if (output.Length > 0) AnsiConsole.WriteLine(output);
+            if (!ok) Environment.Exit(1);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+            Environment.Exit(1);
+        }
+    });
+    composeCommand.Add(cmd);
+}
+
+// wdc compose ps <domain>
+var composePsDomainArg = new Argument<string>("domain") { Description = "Site domain" };
+var composePsCmd = new Command("ps", "List running compose containers") { composePsDomainArg };
+composePsCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(composePsDomainArg);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.GetJsonAsync($"/api/sites/{domain}/docker-compose/ps");
+    if (json) { PrintJson(result); return; }
+    var output = result.TryGetProperty("output", out var o) ? o.GetString() ?? "" : "";
+    if (output.Length > 0) AnsiConsole.WriteLine(output);
+    else AnsiConsole.MarkupLine("[dim]No containers running[/]");
+});
+composeCommand.Add(composePsCmd);
+
+// wdc compose logs <domain>
+var composeLogsDomainArg = new Argument<string>("domain") { Description = "Site domain" };
+var composeLogsCmd = new Command("logs", "Show recent compose logs") { composeLogsDomainArg };
+composeLogsCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(composeLogsDomainArg);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var result = await client.GetJsonAsync($"/api/sites/{domain}/docker-compose/logs");
+    if (json) { PrintJson(result); return; }
+    var output = result.TryGetProperty("output", out var o) ? o.GetString() ?? "" : "";
+    if (output.Length > 0) AnsiConsole.WriteLine(output);
+    else AnsiConsole.MarkupLine("[dim]No log output[/]");
+});
+composeCommand.Add(composeLogsCmd);
+
 // ── Per-site metrics (Phase 11 performance foothold) ─────────────────
 var metricsCommand = new Command("metrics", "Show access log metrics for a site");
 var metricsDomainArg = new Argument<string>("domain") { Description = "Site domain to inspect" };

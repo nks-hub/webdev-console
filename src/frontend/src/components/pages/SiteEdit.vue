@@ -151,18 +151,30 @@
               </div>
             </section>
 
-            <!-- Docker Compose detection card -->
+            <!-- Docker Compose detection + lifecycle card -->
             <section v-if="composeInfo" class="edit-card">
               <header class="edit-card-header">
                 <span class="edit-card-title">Docker Compose</span>
-                <span class="edit-card-hint">Detected in document root</span>
+                <span class="edit-card-hint">{{ composeInfo.fileName }}</span>
               </header>
               <div class="edit-card-body">
-                <div style="display: flex; align-items: center; gap: 8px">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
                   <el-tag size="small" type="info" effect="plain">🐳 {{ composeInfo.fileName }}</el-tag>
-                  <span class="hint" style="margin: 0">
-                    This site ships with a Compose stack. Use <code>docker compose up</code> to start services.
-                  </span>
+                  <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
+                    Up
+                  </el-button>
+                  <el-button size="small" type="danger" plain @click="runCompose('down')" :loading="composeLoading">
+                    Down
+                  </el-button>
+                  <el-button size="small" @click="runCompose('restart')" :loading="composeLoading">
+                    Restart
+                  </el-button>
+                  <el-button size="small" @click="runCompose('ps')" :loading="composeLoading">
+                    Status
+                  </el-button>
+                </div>
+                <div v-if="composeOutput" class="compose-output">
+                  <pre>{{ composeOutput }}</pre>
                 </div>
               </div>
             </section>
@@ -614,6 +626,7 @@ import {
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
   fetchSiteMetrics, type SiteMetrics,
   fetchDockerComposeStatus, type DockerComposeStatus,
+  composeUp, composeDown, composeRestart, composePs,
 } from '../../api/daemon'
 
 const route = useRoute()
@@ -631,6 +644,28 @@ const activeTab = ref('general')
 const phpVersions = ref<string[]>([])
 const history = ref<Array<{ timestamp: string; label?: string }>>([])
 const composeInfo = ref<DockerComposeStatus | null>(null)
+const composeLoading = ref(false)
+const composeOutput = ref('')
+
+async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
+  if (!site.value) return
+  composeLoading.value = true
+  composeOutput.value = ''
+  try {
+    const fn = action === 'up' ? composeUp
+      : action === 'down' ? composeDown
+      : action === 'restart' ? composeRestart
+      : composePs
+    const result = await fn(site.value.domain)
+    composeOutput.value = result.output || (result.ok ? 'Done' : 'Failed')
+    if (!result.ok) ElMessage.warning(`Compose ${action} returned non-zero exit code`)
+  } catch (e: any) {
+    composeOutput.value = e.message
+    ElMessage.error(`Compose ${action} failed: ${e.message}`)
+  } finally {
+    composeLoading.value = false
+  }
+}
 const redirectHttps = ref(true)
 
 // ── Alias chip picker ──────────────────────────────────────────────────
@@ -1589,6 +1624,24 @@ onMounted(() => {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
   margin-top: 4px;
+}
+
+/* ─── Compose output ─────────────────────────────────────────────────── */
+.compose-output {
+  margin-top: 12px;
+  background: var(--wdc-surface-2);
+  border-radius: var(--wdc-radius-sm);
+  padding: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.compose-output pre {
+  margin: 0;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--wdc-text-2);
 }
 
 .danger-box {

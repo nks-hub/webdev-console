@@ -1030,6 +1030,60 @@ app.MapGet("/api/sites/{domain}/docker-compose", (string domain, SiteManager sm)
     });
 });
 
+// Docker Compose lifecycle — up/down/restart/ps/logs for sites with compose files.
+app.MapPost("/api/sites/{domain}/docker-compose/up", async (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+    if (!DockerComposeDetector.HasCompose(site.DocumentRoot))
+        return Results.BadRequest(new { error = "No compose file in document root" });
+    var result = await DockerComposeRunner.UpAsync(site.DocumentRoot);
+    return result.Success ? Results.Ok(new { ok = true, output = result.Output })
+        : Results.Json(new { ok = false, exitCode = result.ExitCode, output = result.Output }, statusCode: 500);
+});
+
+app.MapPost("/api/sites/{domain}/docker-compose/down", async (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+    if (!DockerComposeDetector.HasCompose(site.DocumentRoot))
+        return Results.BadRequest(new { error = "No compose file in document root" });
+    var result = await DockerComposeRunner.DownAsync(site.DocumentRoot);
+    return result.Success ? Results.Ok(new { ok = true, output = result.Output })
+        : Results.Json(new { ok = false, exitCode = result.ExitCode, output = result.Output }, statusCode: 500);
+});
+
+app.MapPost("/api/sites/{domain}/docker-compose/restart", async (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+    if (!DockerComposeDetector.HasCompose(site.DocumentRoot))
+        return Results.BadRequest(new { error = "No compose file in document root" });
+    var result = await DockerComposeRunner.RestartAsync(site.DocumentRoot);
+    return result.Success ? Results.Ok(new { ok = true, output = result.Output })
+        : Results.Json(new { ok = false, exitCode = result.ExitCode, output = result.Output }, statusCode: 500);
+});
+
+app.MapGet("/api/sites/{domain}/docker-compose/ps", async (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+    if (!DockerComposeDetector.HasCompose(site.DocumentRoot))
+        return Results.BadRequest(new { error = "No compose file in document root" });
+    var result = await DockerComposeRunner.PsAsync(site.DocumentRoot);
+    return Results.Ok(new { ok = result.Success, output = result.Output });
+});
+
+app.MapGet("/api/sites/{domain}/docker-compose/logs", async (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+    if (!DockerComposeDetector.HasCompose(site.DocumentRoot))
+        return Results.BadRequest(new { error = "No compose file in document root" });
+    var result = await DockerComposeRunner.LogsAsync(site.DocumentRoot);
+    return Results.Ok(new { ok = result.Success, output = result.Output });
+});
+
 // Access log metrics — Phase 11 Performance monitoring foothold.
 // Looks at each installed Apache version's logs/ directory for the
 // site's per-domain access log (the vhost template always writes to

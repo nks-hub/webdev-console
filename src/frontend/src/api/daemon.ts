@@ -149,6 +149,18 @@ export interface DockerComposeStatus {
 export const fetchDockerComposeStatus = (domain: string): Promise<DockerComposeStatus> =>
   json(`/api/sites/${encodeURIComponent(domain)}/docker-compose`)
 
+export const composeUp = (domain: string) =>
+  json<{ ok: boolean; output: string }>(`/api/sites/${encodeURIComponent(domain)}/docker-compose/up`, { method: 'POST' })
+
+export const composeDown = (domain: string) =>
+  json<{ ok: boolean; output: string }>(`/api/sites/${encodeURIComponent(domain)}/docker-compose/down`, { method: 'POST' })
+
+export const composeRestart = (domain: string) =>
+  json<{ ok: boolean; output: string }>(`/api/sites/${encodeURIComponent(domain)}/docker-compose/restart`, { method: 'POST' })
+
+export const composePs = (domain: string) =>
+  json<{ ok: boolean; output: string }>(`/api/sites/${encodeURIComponent(domain)}/docker-compose/ps`)
+
 // Per-site metrics — Phase 11 performance monitoring foothold
 export interface SiteMetrics {
   domain: string
