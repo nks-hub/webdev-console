@@ -222,10 +222,18 @@ logsCommand.SetAction(async (parseResult, ct) =>
     foreach (var line in result.EnumerateArray())
     {
         var text = line.GetString() ?? "";
-        if (text.Contains("ERR", StringComparison.OrdinalIgnoreCase))
+        if (Console.IsOutputRedirected)
+        {
+            Console.WriteLine(text);
+        }
+        else if (text.Contains("ERR", StringComparison.OrdinalIgnoreCase))
+        {
             AnsiConsole.MarkupLine($"[red]{Markup.Escape(text)}[/]");
+        }
         else
+        {
             AnsiConsole.WriteLine(text);
+        }
     }
 });
 
