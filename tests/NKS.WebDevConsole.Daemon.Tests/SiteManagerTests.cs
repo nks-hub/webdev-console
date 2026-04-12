@@ -307,6 +307,28 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void DetectFramework_NoFalsePositive_WhenNameAppearsInDescription()
+    {
+        var docRoot = Path.Combine(_tempDir, "not-next");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""name"":""my-app"",""description"":""The next generation tool for express delivery"",""dependencies"":{""lodash"":""^4.0.0""}}");
+
+        Assert.Null(_manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_NoFalsePositive_OnSimilarPackageNames()
+    {
+        var docRoot = Path.Combine(_tempDir, "express-sub");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(docRoot, "package.json"),
+            @"{""dependencies"":{""express-validator"":""^7.0.0"",""next-auth"":""^5.0.0""}}");
+
+        Assert.Null(_manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
     public void LoadAll_ReadsExistingTomlFiles()
     {
         // Use the same serializer that SiteManager.CreateAsync uses
