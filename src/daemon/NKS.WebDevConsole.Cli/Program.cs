@@ -1963,7 +1963,17 @@ nodeListCmd.SetAction(async (parseResult, ct) =>
 
     if (data.ValueKind != System.Text.Json.JsonValueKind.Array || data.GetArrayLength() == 0)
     {
-        AnsiConsole.MarkupLine("[dim]No Node.js site processes tracked.[/]");
+        if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No Node.js site processes tracked.[/]");
+        return;
+    }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var p in data.EnumerateArray())
+        {
+            var domain = p.GetProperty("domain").GetString() ?? "";
+            var state = p.TryGetProperty("state", out var s2) ? StateNumToStr(s2.GetInt32()) : "stopped";
+            Console.WriteLine($"{domain}\t{state}");
+        }
         return;
     }
     var table = new Table().Border(TableBorder.Rounded)
