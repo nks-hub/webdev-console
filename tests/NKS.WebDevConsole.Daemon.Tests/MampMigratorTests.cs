@@ -3,16 +3,27 @@ using NKS.WebDevConsole.Daemon.Sites;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
 
-public sealed class MampMigratorTests
+public sealed class MampMigratorTests : IDisposable
 {
+    private readonly string _tempDir;
+    private readonly MampMigrator _migrator = new(NullLogger<MampMigrator>.Instance);
+
+    public MampMigratorTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), $"nks-mamp-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    public void Dispose()
+    {
+        try { if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true); } catch { }
+    }
+
     [Fact]
     public void Discover_ReturnsEmptyList_WhenNoMampInstalled()
     {
-        var migrator = new MampMigrator(NullLogger<MampMigrator>.Instance);
-        var sites = migrator.Discover();
+        var sites = _migrator.Discover();
         Assert.NotNull(sites);
-        // On a machine without MAMP, should return empty — not throw.
-        // If MAMP IS installed, we'd get real results (also valid).
         Assert.True(sites.Count >= 0);
     }
 
@@ -21,8 +32,37 @@ public sealed class MampMigratorTests
     {
         var a = new MampMigrator.DiscoveredSite("test.loc", "C:/htdocs", "8.4", false, Array.Empty<string>(), "test.conf");
         var b = new MampMigrator.DiscoveredSite("test.loc", "C:/htdocs", "8.4", false, Array.Empty<string>(), "test.conf");
-        // Record value equality — ensures the record is well-formed
         Assert.Equal(a.Domain, b.Domain);
         Assert.Equal(a.DocumentRoot, b.DocumentRoot);
+    }
+
+    [Fact]
+    public void DiscoveredSite_AllFieldsPopulated()
+    {
+        var site = new MampMigrator.DiscoveredSite(
+            "shop.loc", "C:/htdocs/shop", "8.3", true,
+            new[] { "www.shop.loc" }, "vhost.conf");
+        Assert.Equal("shop.loc", site.Domain);
+        Assert.Equal("C:/htdocs/shop", site.DocumentRoot);
+        Assert.Equal("8.3", site.PhpVersion);
+        Assert.True(site.SslEnabled);
+        Assert.Single(site.Aliases);
+        Assert.Equal("www.shop.loc", site.Aliases[0]);
+        Assert.Equal("vhost.conf", site.SourcePath);
+    }
+
+    [Fact]
+    public void DiscoveredSite_EmptyAliases_IsValid()
+    {
+        var site = new MampMigrator.DiscoveredSite("x.loc", "/var/www", "8.4", false, Array.Empty<string>(), "f.conf");
+        Assert.Empty(site.Aliases);
+    }
+
+    [Fact]
+    public void Discover_IsDeterministic_OnSameMachine()
+    {
+        var first = _migrator.Discover();
+        var second = _migrator.Discover();
+        Assert.Equal(first.Count, second.Count);
     }
 }
