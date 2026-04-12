@@ -1804,7 +1804,22 @@ doctorCommand.SetAction(async (parseResult, ct) =>
     }
     catch { checks.Add(("Docker", true, "Not installed (optional)")); }
 
-    // 9. Backup freshness
+    // 10. SSL CA (mkcert root CA installed)
+    if (connected)
+    {
+        try
+        {
+            var certs = await client.GetJsonAsync("/api/ssl/certs");
+            var mkcertOk = certs.TryGetProperty("mkcertInstalled", out var mi) && mi.GetBoolean();
+            var certCount = certs.TryGetProperty("certs", out var ca) ? ca.GetArrayLength() : 0;
+            checks.Add(("SSL (mkcert)", mkcertOk, mkcertOk
+                ? $"CA installed, {certCount} cert(s)"
+                : "mkcert not installed — run wdc ssl install-ca"));
+        }
+        catch { checks.Add(("SSL (mkcert)", true, "Check skipped")); }
+    }
+
+    // 11. Backup freshness
     if (connected)
     {
         try
