@@ -385,23 +385,25 @@ public class SiteManager
                 catch { /* unreadable composer.json */ }
             }
 
-            // package.json dependency marker — Node.js frameworks
+            // package.json dependency marker — Node.js frameworks.
+            // Match "pkg": to reduce false positives from values or descriptions
+            // that happen to contain the package name as a substring.
             var packageJson = Path.Combine(dir, "package.json");
             if (File.Exists(packageJson))
             {
                 try
                 {
                     var content = File.ReadAllText(packageJson);
-                    if (content.Contains("\"next\"")) return "nextjs";
-                    if (content.Contains("\"nuxt\"")) return "nuxt";
+                    if (content.Contains("\"next\":")) return "nextjs";
+                    if (content.Contains("\"nuxt\":")) return "nuxt";
                     if (content.Contains("\"@remix-run/")) return "remix";
-                    if (content.Contains("\"astro\"")) return "astro";
-                    if (content.Contains("\"gatsby\"")) return "gatsby";
-                    if (content.Contains("\"svelte\"") || content.Contains("\"@sveltejs/kit\"")) return "sveltekit";
-                    if (content.Contains("\"fastify\"")) return "fastify";
-                    if (content.Contains("\"express\"")) return "express";
-                    if (content.Contains("\"koa\"")) return "koa";
-                    if (content.Contains("\"hono\"")) return "hono";
+                    if (content.Contains("\"astro\":")) return "astro";
+                    if (content.Contains("\"gatsby\":")) return "gatsby";
+                    if (content.Contains("\"svelte\":") || content.Contains("\"@sveltejs/kit\":")) return "sveltekit";
+                    if (content.Contains("\"fastify\":")) return "fastify";
+                    if (content.Contains("\"express\":")) return "express";
+                    if (content.Contains("\"koa\":")) return "koa";
+                    if (content.Contains("\"hono\":")) return "hono";
                 }
                 catch { /* unreadable package.json */ }
             }
