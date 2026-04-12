@@ -37,8 +37,13 @@
         style="margin-bottom: 16px"
       />
 
+      <!-- Loading -->
+      <div v-if="loading && certs.length === 0" style="padding: 24px">
+        <el-skeleton :rows="3" animated />
+      </div>
+
       <!-- Cert list -->
-      <div v-if="certs.length > 0" class="cert-list">
+      <div v-else-if="certs.length > 0" class="cert-list">
         <div v-for="cert in certs" :key="cert.domain" class="cert-card">
           <div class="cert-main">
             <div class="cert-domain">
