@@ -418,7 +418,10 @@ async function detectFramework(domain: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...sitesStore.authHeaders() },
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText)
+      throw new Error(text || `HTTP ${res.status}`)
+    }
     const data = await res.json() as { framework?: string }
     if (data.framework) {
       ElMessage.success(`Detected: ${data.framework}`)
@@ -426,8 +429,8 @@ async function detectFramework(domain: string) {
       ElMessage.info('No framework detected')
     }
     await sitesStore.load()
-  } catch {
-    ElMessage.error('Detection failed')
+  } catch (e: any) {
+    ElMessage.error(`Detection failed: ${e?.message || e}`)
   }
 }
 

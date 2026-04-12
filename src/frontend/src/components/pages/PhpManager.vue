@@ -240,10 +240,14 @@ async function setDefault(version: string) {
       ElMessage.success(`PHP ${version} set as default`)
       await loadVersions()
     } else {
-      ElMessage.error('Failed to set default')
+      // Surface the daemon's response body so the user can see WHY the
+      // operation failed (permission denied, invalid version, file locked…)
+      // instead of a generic "Failed to set default" dead-end.
+      const text = await r.text().catch(() => r.statusText)
+      ElMessage.error(`Failed to set default: ${text || `HTTP ${r.status}`}`)
     }
   } catch (e: any) {
-    ElMessage.error(e.message)
+    ElMessage.error(`Cannot set default: ${e.message || e}`)
   }
 }
 
