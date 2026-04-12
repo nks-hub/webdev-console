@@ -92,6 +92,16 @@ servicesCommand.SetAction(async (parseResult, ct) =>
 
     var services = await client.GetJsonAsync("/api/services");
     if (json) { PrintJson(services); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var svc in services.EnumerateArray())
+        {
+            var id = svc.GetProperty("id").GetString() ?? "";
+            var st = svc.GetProperty("state").ValueKind == JsonValueKind.Number ? svc.GetProperty("state").GetInt32() : 0;
+            Console.WriteLine($"{id}\t{StateNumToStr(st)}");
+        }
+        return;
+    }
     if (services.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No services registered.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
