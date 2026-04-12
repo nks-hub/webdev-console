@@ -221,6 +221,122 @@
           </div>
         </el-tab-pane>
 
+        <!-- Sync tab — cloud config sync + export/import -->
+        <el-tab-pane label="Sync" name="sync">
+          <div class="tab-content">
+            <p class="tab-desc">
+              Synchronize your NKS WDC configuration with the cloud catalog
+              service, or export/import settings as a file for offline transfer.
+            </p>
+
+            <!-- Device identity -->
+            <section class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-title">Device</span>
+              </header>
+              <div class="settings-card-body">
+                <el-form label-position="left" label-width="140px" size="small" style="max-width: 500px">
+                  <el-form-item label="Device ID">
+                    <el-input :model-value="deviceId" disabled class="mono-input">
+                      <template #append>
+                        <el-button @click="copyDeviceId" title="Copy to clipboard">Copy</el-button>
+                      </template>
+                    </el-input>
+                    <div class="hint">
+                      Auto-generated unique identifier for this machine.
+                      Used as the key for cloud sync.
+                    </div>
+                  </el-form-item>
+                  <el-form-item label="Device name">
+                    <el-input v-model="deviceName" placeholder="e.g. Work Laptop" />
+                    <div class="hint">Optional label to identify this device in the sync UI.</div>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </section>
+
+            <!-- Cloud sync -->
+            <section class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-title">Cloud sync</span>
+                <span v-if="syncStatus" :class="['sync-badge', syncStatus.ok ? 'sync-ok' : 'sync-err']">
+                  {{ syncStatus.message }}
+                </span>
+              </header>
+              <div class="settings-card-body">
+                <p class="tab-desc" style="margin-bottom: 12px;">
+                  Push your current settings (sites, services, ports, paths, plugin
+                  toggles) to the catalog-api service so a fresh install can
+                  restore them with one click.
+                </p>
+                <div class="sync-actions">
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :loading="syncing"
+                    :disabled="!catalogUrl && !deviceId"
+                    @click="pushToCloud"
+                  >
+                    <el-icon><Upload /></el-icon>
+                    <span>Push to cloud</span>
+                  </el-button>
+                  <el-button
+                    size="small"
+                    :loading="pulling"
+                    :disabled="!catalogUrl && !deviceId"
+                    @click="pullFromCloud"
+                  >
+                    <el-icon><Download /></el-icon>
+                    <span>Pull from cloud</span>
+                  </el-button>
+                  <el-button
+                    size="small"
+                    :disabled="!catalogUrl && !deviceId"
+                    @click="checkCloudExists"
+                    :loading="checkingCloud"
+                  >
+                    Check status
+                  </el-button>
+                </div>
+                <div class="hint" v-if="lastSyncTime">
+                  Last synced: {{ lastSyncTime }}
+                </div>
+              </div>
+            </section>
+
+            <!-- File export / import -->
+            <section class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-title">Export / Import</span>
+              </header>
+              <div class="settings-card-body">
+                <p class="tab-desc" style="margin-bottom: 12px;">
+                  Download a JSON file of all settings, or import from a
+                  previously exported file. Useful for offline transfers or
+                  version-controlled team configs.
+                </p>
+                <div class="sync-actions">
+                  <el-button size="small" @click="exportSettings">
+                    <el-icon><Download /></el-icon>
+                    <span>Export to file</span>
+                  </el-button>
+                  <el-button size="small" @click="triggerImport">
+                    <el-icon><Upload /></el-icon>
+                    <span>Import from file</span>
+                  </el-button>
+                  <input
+                    ref="importFileInput"
+                    type="file"
+                    accept=".json"
+                    style="display: none"
+                    @change="importSettings"
+                  />
+                </div>
+              </div>
+            </section>
+          </div>
+        </el-tab-pane>
+
         <!-- About tab -->
         <el-tab-pane label="About" name="about">
           <div class="tab-content">
@@ -292,6 +408,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Upload, Download } from '@element-plus/icons-vue'
 import { useThemeStore, type ThemeMode } from '../../stores/theme'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
@@ -498,10 +615,207 @@ function openCatalogAdmin() {
   window.open(url.replace(/\/$/, '') + '/admin', '_blank')
 }
 
+// ── Sync tab state ────────────────────────────────────────────────────
+const deviceId = ref('')
+const deviceName = ref('')
+const syncing = ref(false)
+const pulling = ref(false)
+const checkingCloud = ref(false)
+const syncStatus = ref<{ ok: boolean; message: string } | null>(null)
+const lastSyncTime = ref<string | null>(null)
+const importFileInput = ref<HTMLInputElement | null>(null)
+
+async function loadDeviceId() {
+  // Device ID is persisted in daemon settings; generate if missing
+  try {
+    const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+    if (!r.ok) return
+    const data = await r.json() as Record<string, string>
+    if (data['sync.deviceId']) {
+      deviceId.value = data['sync.deviceId']
+    } else {
+      // First run: generate a UUID and persist it
+      const id = crypto.randomUUID()
+      deviceId.value = id
+      await fetch(`${daemonBase()}/api/settings`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ 'sync.deviceId': id }),
+      })
+    }
+    if (data['sync.deviceName']) deviceName.value = data['sync.deviceName']
+    if (data['sync.lastSyncTime']) lastSyncTime.value = data['sync.lastSyncTime']
+  } catch { /* daemon not reachable */ }
+}
+
+function copyDeviceId() {
+  navigator.clipboard.writeText(deviceId.value)
+    .then(() => ElMessage.success('Device ID copied'))
+    .catch(() => ElMessage.warning('Cannot access clipboard'))
+}
+
+async function buildSyncPayload(): Promise<Record<string, any>> {
+  // Collect all daemon settings + sites + service states into one object
+  const [settingsRes, sitesRes] = await Promise.all([
+    fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() }),
+    fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() }),
+  ])
+  const settings = settingsRes.ok ? await settingsRes.json() : {}
+  const sites = sitesRes.ok ? await sitesRes.json() : []
+  return {
+    exportedAt: new Date().toISOString(),
+    version: appVersion,
+    deviceId: deviceId.value,
+    deviceName: deviceName.value,
+    settings,
+    sites,
+  }
+}
+
+async function pushToCloud() {
+  syncing.value = true
+  syncStatus.value = null
+  try {
+    // Save device name first
+    await fetch(`${daemonBase()}/api/settings`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        'sync.deviceName': deviceName.value,
+        'sync.lastSyncTime': new Date().toISOString(),
+      }),
+    })
+
+    const payload = await buildSyncPayload()
+    const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+    const r = await fetch(`${url}/api/v1/sync/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: deviceId.value, payload }),
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    lastSyncTime.value = new Date().toLocaleString()
+    syncStatus.value = { ok: true, message: 'Pushed successfully' }
+    ElMessage.success('Configuration pushed to cloud')
+  } catch (e: any) {
+    syncStatus.value = { ok: false, message: `Push failed: ${e.message}` }
+    ElMessage.error(`Push failed: ${e.message}`)
+  } finally {
+    syncing.value = false
+  }
+}
+
+async function pullFromCloud() {
+  pulling.value = true
+  syncStatus.value = null
+  try {
+    const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}`)
+    if (!r.ok) {
+      if (r.status === 404) {
+        syncStatus.value = { ok: false, message: 'No cloud snapshot found for this device' }
+        ElMessage.info('No cloud snapshot found — push first')
+        return
+      }
+      throw new Error(`HTTP ${r.status}`)
+    }
+    const data = await r.json()
+    const payload = data.payload
+
+    // Apply settings from snapshot
+    if (payload?.settings && typeof payload.settings === 'object') {
+      await fetch(`${daemonBase()}/api/settings`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(payload.settings),
+      })
+    }
+
+    syncStatus.value = { ok: true, message: `Pulled from cloud (${data.updated_at ?? 'unknown'})` }
+    ElMessage.success('Configuration pulled from cloud — reload the page to see changes')
+    await loadSettings()
+  } catch (e: any) {
+    syncStatus.value = { ok: false, message: `Pull failed: ${e.message}` }
+    ElMessage.error(`Pull failed: ${e.message}`)
+  } finally {
+    pulling.value = false
+  }
+}
+
+async function checkCloudExists() {
+  checkingCloud.value = true
+  syncStatus.value = null
+  try {
+    const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}/exists`)
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const data = await r.json()
+    syncStatus.value = {
+      ok: data.has_config,
+      message: data.has_config
+        ? `Cloud snapshot exists (updated ${data.updated_at ?? 'unknown'})`
+        : 'No cloud snapshot for this device',
+    }
+  } catch (e: any) {
+    syncStatus.value = { ok: false, message: `Check failed: ${e.message}` }
+  } finally {
+    checkingCloud.value = false
+  }
+}
+
+async function exportSettings() {
+  try {
+    const payload = await buildSyncPayload()
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `nks-wdc-settings-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('Settings exported')
+  } catch (e: any) {
+    ElMessage.error(`Export failed: ${e.message}`)
+  }
+}
+
+function triggerImport() {
+  importFileInput.value?.click()
+}
+
+async function importSettings(event: Event) {
+  const file = (event.target as HTMLInputElement)?.files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const data = JSON.parse(text)
+    if (!data.settings || typeof data.settings !== 'object') {
+      throw new Error('Invalid settings file — missing "settings" object')
+    }
+    await ElMessageBox.confirm(
+      `Import settings from "${file.name}"? This will overwrite current configuration.`,
+      'Import settings',
+      { confirmButtonText: 'Import', type: 'warning' },
+    )
+    await fetch(`${daemonBase()}/api/settings`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(data.settings),
+    })
+    ElMessage.success('Settings imported — reload the page to see changes')
+    await loadSettings()
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error(`Import failed: ${e.message}`)
+  }
+  // Reset file input so the same file can be re-imported
+  if (importFileInput.value) importFileInput.value.value = ''
+}
+
 onMounted(async () => {
   void loadSettings()
   void loadDatabases()
   void loadPhpVersions()
+  void loadDeviceId()
   try {
     const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
@@ -703,4 +1017,38 @@ async function save() {
 .db-row:last-child { border-bottom: none; }
 .db-name { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--wdc-text); }
 .db-create { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Sync tab */
+.settings-card {
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--wdc-surface-2);
+  border-bottom: 1px solid var(--wdc-border);
+}
+.settings-card-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text);
+}
+.settings-card-body { padding: 18px; }
+.sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sync-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.sync-ok { background: rgba(34, 197, 94, 0.15); color: var(--wdc-status-running); }
+.sync-err { background: rgba(255, 107, 107, 0.15); color: var(--wdc-status-error); }
 </style>
