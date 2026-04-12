@@ -91,4 +91,28 @@ public class EndpointRegistrationTests
         var reg = new EndpointRegistration("empty");
         Assert.Empty(reg.Endpoints);
     }
+
+    [Fact]
+    public void MapGet_EmptyPath_UsesPluginRoot()
+    {
+        var reg = new EndpointRegistration("redis");
+        reg.MapGet("", () => "ok");
+        Assert.Equal("/api/redis/", reg.Endpoints[0].Path);
+    }
+
+    [Fact]
+    public void MapGet_NestedPath_ComposesCorrectly()
+    {
+        var reg = new EndpointRegistration("mysql");
+        reg.MapGet("databases/{name}/tables", () => "ok");
+        Assert.Equal("/api/mysql/databases/{name}/tables", reg.Endpoints[0].Path);
+    }
+
+    [Fact]
+    public void FluentChaining_ReturnsRegistration()
+    {
+        var reg = new EndpointRegistration("test");
+        var result = reg.MapGet("a", () => "ok").MapPost("b", () => "ok");
+        Assert.Same(reg, result);
+    }
 }
