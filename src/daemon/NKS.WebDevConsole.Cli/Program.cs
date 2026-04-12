@@ -2640,7 +2640,13 @@ cfZonesCmd.SetAction(async (parseResult, ct) =>
     if (json) { PrintJson(result); return; }
     if (!result.TryGetProperty("result", out var zones) || zones.GetArrayLength() == 0)
     {
-        AnsiConsole.MarkupLine("[dim]No zones found. Check API token scopes.[/]");
+        if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No zones found. Check API token scopes.[/]");
+        return;
+    }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var z in zones.EnumerateArray())
+            Console.WriteLine($"{z.GetProperty("name").GetString()}\t{z.GetProperty("id").GetString()}");
         return;
     }
     var table = new Table().Border(TableBorder.Rounded);
