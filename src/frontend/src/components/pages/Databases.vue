@@ -23,8 +23,13 @@
         style="margin-bottom: 16px"
       />
 
+      <!-- Loading state -->
+      <div v-if="loading && databases.length === 0" style="padding: 24px">
+        <el-skeleton :rows="3" animated />
+      </div>
+
       <!-- Database list -->
-      <div class="db-grid" v-if="databases.length > 0">
+      <div class="db-grid" v-else-if="databases.length > 0">
         <div
           v-for="db in databases"
           :key="db"
