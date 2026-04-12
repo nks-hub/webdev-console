@@ -129,3 +129,51 @@ public sealed class NodeModuleSecurityTests
         await module.StopSiteAsync("never-started.loc", CancellationToken.None);
     }
 }
+
+/// <summary>
+/// Protects the semver-aware version comparer used by NodeModule.DetectNodeExecutable
+/// to pick the highest installed Node version under ~/.wdc/binaries/node/.
+/// Ordinal comparison would rank "9.0.0" > "20.5.0" because ASCII '9' > '2',
+/// causing the plugin to boot a stale Node 9 alongside a fresh Node 20.
+/// </summary>
+public sealed class SemverDescendingComparerTests
+{
+    [Theory]
+    [InlineData("20.5.0", "9.0.0", 1)]     // 20 > 9 (numeric, not ordinal)
+    [InlineData("18.17.0", "18.16.0", 1)]  // patch compare
+    [InlineData("18.17.0", "18.17.1", -1)] // patch compare reverse
+    [InlineData("20.0.0", "20.0.0", 0)]    // equality
+    [InlineData("10.0.0", "9.99.0", 1)]    // the classic failure case
+    [InlineData("1.0.0", "1.0.0-beta.1", 1)]   // stable > pre-release
+    [InlineData("1.0.0-rc.2", "1.0.0-rc.1", 1)] // pre-release ordinal
+    [InlineData("1.0.0-beta", "1.0.0-alpha", 1)] // pre-release ordinal
+    public void CompareAscending_RanksVersionsCorrectly(string a, string b, int expectedSign)
+    {
+        var actual = SemverDescendingComparer.CompareAscending(a, b);
+        Assert.Equal(expectedSign, Math.Sign(actual));
+    }
+
+    [Fact]
+    public void DescendingSort_PutsLatestFirst()
+    {
+        var versions = new[] { "9.0.0", "20.5.0", "18.17.0", "16.20.0", "10.24.1" };
+        var sorted = versions.OrderByDescending(v => v, SemverDescendingComparer.Instance).ToArray();
+
+        Assert.Equal("20.5.0", sorted[0]);
+        Assert.Equal("18.17.0", sorted[1]);
+        Assert.Equal("16.20.0", sorted[2]);
+        Assert.Equal("10.24.1", sorted[3]);
+        Assert.Equal("9.0.0", sorted[4]);
+    }
+
+    [Fact]
+    public void DescendingSort_PrefersStableOverPrerelease()
+    {
+        var versions = new[] { "20.5.0-rc.1", "20.5.0", "20.4.0" };
+        var sorted = versions.OrderByDescending(v => v, SemverDescendingComparer.Instance).ToArray();
+
+        Assert.Equal("20.5.0", sorted[0]);      // stable wins over same-main pre-release
+        Assert.Equal("20.5.0-rc.1", sorted[1]);
+        Assert.Equal("20.4.0", sorted[2]);
+    }
+}
