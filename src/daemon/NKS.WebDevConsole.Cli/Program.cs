@@ -314,7 +314,13 @@ sitesCommand.SetAction(async (parseResult, ct) =>
     if (Console.IsOutputRedirected)
     {
         foreach (var site in sites.EnumerateArray())
-            Console.WriteLine(site.GetProperty("domain").GetString() ?? "");
+        {
+            var domain = site.GetProperty("domain").GetString() ?? "";
+            var docRoot = site.GetProperty("documentRoot").GetString() ?? "";
+            var php = site.GetProperty("phpVersion").GetString() ?? "";
+            var sslOn = site.TryGetProperty("sslEnabled", out var se) && se.GetBoolean() ? "ssl" : "";
+            Console.WriteLine($"{domain}\t{docRoot}\t{php}\t{sslOn}");
+        }
         return;
     }
 
