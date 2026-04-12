@@ -167,10 +167,14 @@ logsCommand.SetAction(async (parseResult, ct) =>
             using var ws = new System.Net.WebSockets.ClientWebSocket();
             await ws.ConnectAsync(new Uri(wsUrl), CancellationToken.None);
             AnsiConsole.MarkupLine($"[dim]Streaming logs for {Markup.Escape(id)} (Ctrl+C to stop)...[/]");
+            using var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
             var buf = new byte[8192];
-            while (ws.State == System.Net.WebSockets.WebSocketState.Open)
+            while (ws.State == System.Net.WebSockets.WebSocketState.Open && !cts.IsCancellationRequested)
             {
-                var result2 = await ws.ReceiveAsync(new ArraySegment<byte>(buf), CancellationToken.None);
+                System.Net.WebSockets.WebSocketReceiveResult result2;
+                try { result2 = await ws.ReceiveAsync(new ArraySegment<byte>(buf), cts.Token); }
+                catch (OperationCanceledException) { break; }
                 if (result2.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) break;
                 var msg = System.Text.Encoding.UTF8.GetString(buf, 0, result2.Count);
                 try
