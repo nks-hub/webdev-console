@@ -2764,8 +2764,9 @@ backupListCmd.SetAction(async (parseResult, ct) =>
         foreach (var b in arr.EnumerateArray())
         {
             var created = b.TryGetProperty("createdUtc", out var c) ? c.GetString()?[..19] ?? "" : "";
+            var size = b.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
             var path = b.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
-            Console.WriteLine($"{created}\t{Path.GetFileName(path)}");
+            Console.WriteLine($"{created}\t{size}\t{Path.GetFileName(path)}");
         }
         return;
     }
