@@ -1317,10 +1317,17 @@ refreshCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync("/api/binaries/catalog/refresh");
-    if (json) { PrintJson(result); return; }
-    var count = result.TryGetProperty("count", out var c) ? c.GetInt32() : 0;
-    AnsiConsole.MarkupLine($"[green]Catalog refreshed:[/] {count} releases");
+    try
+    {
+        var result = await client.PostAsync("/api/binaries/catalog/refresh");
+        if (json) { PrintJson(result); return; }
+        var count = result.TryGetProperty("count", out var c) ? c.GetInt32() : 0;
+        AnsiConsole.MarkupLine($"[green]Catalog refreshed:[/] {count} releases");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Catalog refresh failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 binariesCommand.Add(refreshCmd);
 
