@@ -1242,6 +1242,17 @@ doctorCommand.SetAction(async (parseResult, ct) =>
     try { using var f = File.Open(hostsPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite); hostsOk = true; } catch { }
     checks.Add(("Hosts file writable", hostsOk, hostsOk ? hostsPath : "Need admin elevation"));
 
+    // 7. Disk space on data root
+    try
+    {
+        var dataRoot = NKS.WebDevConsole.Core.Services.WdcPaths.Root;
+        var drive = new DriveInfo(Path.GetPathRoot(dataRoot) ?? "C:");
+        var freeGb = drive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0);
+        var diskOk = freeGb > 1.0;
+        checks.Add(("Disk space", diskOk, $"{freeGb:F1} GB free on {drive.Name}"));
+    }
+    catch (Exception ex) { checks.Add(("Disk space", false, ex.Message)); }
+
     if (json) { PrintJson(checks.Select(c => new { c.name, c.ok, c.detail })); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
