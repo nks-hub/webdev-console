@@ -1561,11 +1561,19 @@ doctorCommand.SetAction(async (parseResult, ct) =>
 
     if (json) { PrintJson(checks.Select(c => new { c.name, c.ok, c.detail })); return; }
 
-    var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("Check"); table.AddColumn("Status"); table.AddColumn("Detail");
-    foreach (var (name, ok, detail) in checks)
-        table.AddRow(Markup.Escape(name), ok ? "[green]PASS[/]" : "[red]FAIL[/]", Markup.Escape(detail));
-    AnsiConsole.Write(table);
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var (name, ok, detail) in checks)
+            Console.WriteLine($"{(ok ? "PASS" : "FAIL")}\t{name}\t{detail}");
+    }
+    else
+    {
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("Check"); table.AddColumn("Status"); table.AddColumn("Detail");
+        foreach (var (name, ok, detail) in checks)
+            table.AddRow(Markup.Escape(name), ok ? "[green]PASS[/]" : "[red]FAIL[/]", Markup.Escape(detail));
+        AnsiConsole.Write(table);
+    }
 
     var allOk = checks.All(c => c.ok);
     AnsiConsole.WriteLine();
