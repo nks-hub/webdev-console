@@ -3,17 +3,17 @@
     <!-- Page header -->
     <div class="page-header">
       <div class="header-title-block">
-        <span class="page-title">Dashboard</span>
+        <span class="page-title">{{ $t('dashboard.title') }}</span>
         <span class="page-subtitle">
           v{{ daemonStore.status?.version ?? '...' }} ·
-          {{ daemonStore.connected ? 'Connected' : 'Connecting...' }}
+          {{ daemonStore.connected ? $t('header.connected') : 'Connecting...' }}
         </span>
       </div>
       <div class="header-actions">
         <el-button
           size="small"
           @click="$router.push({ path: '/sites', query: { create: '1' } })"
-        >+ New Site</el-button>
+        >{{ $t('dashboard.newSite') }}</el-button>
         <el-button
           type="success"
           size="small"
@@ -21,7 +21,7 @@
           :disabled="allRunning || !daemonStore.connected"
           @click="startAll"
         >
-          Start All
+          {{ $t('dashboard.startAll') }}
         </el-button>
         <el-button
           type="danger"
@@ -30,7 +30,7 @@
           :disabled="noneRunning || !daemonStore.connected"
           @click="stopAll"
         >
-          Stop All
+          {{ $t('dashboard.stopAll') }}
         </el-button>
       </div>
     </div>
@@ -166,7 +166,7 @@
               class="action-btn"
               @click="openLogs(service.id)"
             >
-              Logs
+              {{ $t('dashboard.logs') }}
             </el-button>
             <el-button
               size="small"
@@ -174,7 +174,7 @@
               class="action-btn"
               @click="openConfig(service.id)"
             >
-              Config
+              {{ $t('dashboard.config') }}
             </el-button>
             <!-- Transitional states (starting=1, stopping=3) must block further
                  toggles AND show the spinner so the user doesn't think their
@@ -205,11 +205,11 @@
 
       <!-- 4. Quick actions bar (shortcuts) -->
       <div class="quick-actions">
-        <el-button size="small" @click="openMailpit">Open Mailpit</el-button>
-        <el-button size="small" @click="$router.push('/ssl')">SSL Manager</el-button>
-        <el-button size="small" @click="$router.push('/databases')">Databases</el-button>
-        <el-button size="small" @click="$router.push('/binaries')">Binaries</el-button>
-        <el-button size="small" @click="$router.push('/cloudflare')">Tunnel</el-button>
+        <el-button size="small" @click="openMailpit">{{ $t('dashboard.openMailpit') }}</el-button>
+        <el-button size="small" @click="$router.push('/ssl')">{{ $t('dashboard.sslManager') }}</el-button>
+        <el-button size="small" @click="$router.push('/databases')">{{ $t('nav.databases') }}</el-button>
+        <el-button size="small" @click="$router.push('/binaries')">{{ $t('dashboard.binaries') }}</el-button>
+        <el-button size="small" @click="$router.push('/cloudflare')">{{ $t('dashboard.tunnel') }}</el-button>
       </div>
 
       <!-- Recent activity — Phase 4 plan item. Reads config_history via
