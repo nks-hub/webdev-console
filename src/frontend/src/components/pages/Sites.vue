@@ -2,7 +2,7 @@
   <div class="sites-page">
     <div class="page-header">
       <div class="header-left">
-        <h1 class="page-title">Sites</h1>
+        <h1 class="page-title">{{ $t('sites.title') }}</h1>
         <span class="site-count">{{ sitesStore.sites.length }}</span>
       </div>
       <div class="header-actions">
@@ -15,7 +15,7 @@
         <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" title="Import sites from MAMP PRO">
           Migrate MAMP
         </el-button>
-        <el-button type="primary" size="small" @click="showCreate = true">+ New Site</el-button>
+        <el-button type="primary" size="small" @click="showCreate = true">{{ $t('sites.create') }}</el-button>
       </div>
     </div>
 
@@ -40,7 +40,7 @@
         class="sites-table"
         row-class-name="cursor-pointer"
       >
-        <el-table-column prop="domain" label="Domain" min-width="220">
+        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="220">
           <template #default="{ row }">
             <div class="cell-domain">
               <div class="cell-domain-row">
@@ -85,7 +85,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Runtime" width="140">
+        <el-table-column :label="$t('sites.phpVersion')" width="140">
           <template #default="{ row }">
             <el-tag
               v-if="row.nodeUpstreamPort && row.nodeUpstreamPort > 0"
@@ -108,7 +108,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Framework" width="180">
+        <el-table-column :label="$t('sites.framework')" width="180">
           <template #default="{ row }">
             <div class="framework-cell">
               <el-tag
@@ -155,7 +155,7 @@
     <!-- Site edit is a full-view route at /sites/:domain/edit (no drawer). -->
 
     <!-- Create dialog -->
-    <el-dialog v-model="showCreate" title="New Site" width="520px">
+    <el-dialog v-model="showCreate" :title="$t('sites.create')" width="520px">
       <el-form :model="newSite" label-position="top" size="small">
         <el-form-item label="Template">
           <el-select v-model="newSite.template" style="width: 100%" placeholder="Choose a template…" @change="applyTemplate">
