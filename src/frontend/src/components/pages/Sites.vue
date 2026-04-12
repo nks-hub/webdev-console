@@ -12,6 +12,9 @@
         <el-button size="small" @click="reapplyAll" :loading="reapplying" title="Regenerate all vhosts">
           Reapply All
         </el-button>
+        <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" title="Import sites from MAMP PRO">
+          Migrate MAMP
+        </el-button>
         <el-button type="primary" size="small" @click="showCreate = true">+ New Site</el-button>
       </div>
     </div>
@@ -240,6 +243,39 @@ function daemonBase(): string {
 const showCreate = ref(false)
 const creating = ref(false)
 const reapplying = ref(false)
+const mampDiscovering = ref(false)
+
+async function discoverMamp() {
+  mampDiscovering.value = true
+  try {
+    const r = await fetch(`${daemonBase()}/api/sites/discover-mamp`, { headers: sitesStore.authHeaders() })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const data = await r.json()
+    if (!data.count || data.count === 0) {
+      ElMessage.info('No MAMP PRO sites found on this machine')
+      return
+    }
+    const confirmed = await ElMessageBox.confirm(
+      `Found ${data.count} MAMP site(s): ${data.sites.map((s: any) => s.domain || s.Domain).join(', ')}. Import them?`,
+      'MAMP Migration',
+      { confirmButtonText: 'Import', cancelButtonText: 'Cancel', type: 'info' },
+    )
+    if (confirmed) {
+      const ir = await fetch(`${daemonBase()}/api/sites/migrate-mamp`, {
+        method: 'POST',
+        headers: sitesStore.authHeaders(),
+      })
+      if (!ir.ok) throw new Error(`HTTP ${ir.status}`)
+      const result = await ir.json()
+      ElMessage.success(`Imported ${result.count} site(s) from MAMP`)
+      void sitesStore.load()
+    }
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${e.message}`)
+  } finally {
+    mampDiscovering.value = false
+  }
+}
 const search = ref('')
 
 const newSite = reactive({
