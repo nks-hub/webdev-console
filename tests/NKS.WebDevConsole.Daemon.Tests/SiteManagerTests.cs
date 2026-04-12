@@ -583,9 +583,28 @@ public class SiteManagerTests : IDisposable
     [InlineData("C:/htdocs/my&app")]
     [InlineData("C:/htdocs/my`app")]
     [InlineData("C:/htdocs/my>app")]
+    [InlineData("C:/htdocs/my<app")]
+    [InlineData("C:/htdocs/my\rapp")]
+    [InlineData("C:/htdocs/my\tapp")]
     public void ValidateDocumentRoot_RejectsForbiddenChars(string path)
     {
         Assert.Throws<ArgumentException>(() => SiteManager.ValidateDocumentRoot(path));
+    }
+
+    [Fact]
+    public void ValidateDocumentRoot_RejectsTooLong()
+    {
+        var tooLong = "C:/" + new string('a', 4100);
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateDocumentRoot(tooLong));
+    }
+
+    [Fact]
+    public void ValidateDocumentRoot_Accepts4096CharPath()
+    {
+        // Exactly at the limit (4096 chars) should pass
+        var exactly = "C:/" + new string('a', 4093);
+        Assert.Equal(4096, exactly.Length);
+        SiteManager.ValidateDocumentRoot(exactly);
     }
 
     [Fact]
