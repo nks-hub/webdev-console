@@ -873,20 +873,24 @@ exportDbCmd.SetAction(async (parseResult, ct) =>
         FileName = mysqldump,
         Arguments = $"-h 127.0.0.1 -P 3306 -u root {name}",
         RedirectStandardOutput = true,
+        RedirectStandardError = true,
         UseShellExecute = false,
         CreateNoWindow = true
     };
     var proc = System.Diagnostics.Process.Start(psi);
     if (proc != null)
     {
-        var sql = await proc.StandardOutput.ReadToEndAsync();
+        var sqlTask = proc.StandardOutput.ReadToEndAsync();
+        var errTask = proc.StandardError.ReadToEndAsync();
         await proc.WaitForExitAsync();
+        var sql = await sqlTask;
+        var stderr = await errTask;
         if (proc.ExitCode == 0)
         {
             await File.WriteAllTextAsync(file, sql);
             AnsiConsole.MarkupLine($"[green]Exported[/] ({new FileInfo(file).Length} bytes)");
         }
-        else AnsiConsole.MarkupLine($"[red]Export failed (exit {proc.ExitCode})[/]");
+        else AnsiConsole.MarkupLine($"[red]Export failed:[/] {Markup.Escape(stderr.Trim().Length > 0 ? stderr.Trim() : $"exit code {proc.ExitCode}")}");
     }
 });
 dbCommand.Add(exportDbCmd);
