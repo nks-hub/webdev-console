@@ -138,8 +138,8 @@ public sealed class NodeModuleSecurityTests
         var a = new NodeSiteStatus("test.loc", ServiceState.Running, 1234, 3000, "npm start", 1.5, 1024, TimeSpan.FromSeconds(60));
         var b = new NodeSiteStatus("test.loc", ServiceState.Running, 1234, 3000, "npm start", 1.5, 1024, TimeSpan.FromSeconds(60));
         Assert.Equal(a, b);
-        Assert.Equal(a.Domain, "test.loc");
-        Assert.Equal(a.Port, 3000);
+        Assert.Equal("test.loc", a.Domain);
+        Assert.Equal(3000, a.Port);
     }
 
     [Fact]
