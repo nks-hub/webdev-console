@@ -83,6 +83,13 @@
             <div class="stat-label">Node.js processes</div>
           </div>
         </div>
+        <div class="stat-card" v-if="lastBackupAge">
+          <div class="stat-icon">💾</div>
+          <div class="stat-content">
+            <div class="stat-value mono">{{ lastBackupAge }}</div>
+            <div class="stat-label">Last backup</div>
+          </div>
+        </div>
       </div>
 
       <!-- 2. Metric charts (CPU + Memory) -->
@@ -296,6 +303,20 @@ async function loadNodeProcessCount() {
   } catch { nodeProcessCount.value = -1 }
 }
 
+// Last backup age — shown in stat cards
+const lastBackupAge = ref('')
+async function loadLastBackup() {
+  try {
+    const { fetchBackups } = await import('../../api/daemon')
+    const data = await fetchBackups()
+    if (data.backups.length > 0) {
+      const age = Date.now() - new Date(data.backups[0].createdUtc).getTime()
+      const h = Math.floor(age / 3600000)
+      lastBackupAge.value = h < 1 ? 'Just now' : h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
+    }
+  } catch { /* optional */ }
+}
+
 // Recent activity timeline — Phase 4 plan item. Backed by /api/activity
 // which queries the config_history SQLite table. Loaded on mount and
 // refreshable via the section-header button. Empty array (first-run or
@@ -336,6 +357,7 @@ onMounted(() => {
   void sitesStore.load()
   void loadActivity()
   void loadNodeProcessCount()
+  void loadLastBackup()
 })
 
 const stateLabels: Record<number, string> = {
