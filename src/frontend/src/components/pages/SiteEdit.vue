@@ -515,6 +515,36 @@
           </div>
         </el-tab-pane>
 
+        <!-- ── Metrics ──────────────────────────── -->
+        <el-tab-pane name="metrics">
+          <template #label>
+            <span class="tab-label"><el-icon><DataLine /></el-icon> Metrics</span>
+          </template>
+          <div class="tab-content">
+            <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">
+              <span v-if="metricsLoading">Loading metrics...</span>
+              <span v-else>No access log data found for this site. Start Apache with the generated vhost and make some requests.</span>
+            </div>
+            <div v-else class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-value">{{ formatNumber(siteMetrics.accessLog?.requestCount ?? 0) }}</div>
+                <div class="metric-label">Total Requests</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">{{ formatSize(siteMetrics.accessLog?.sizeBytes ?? 0) }}</div>
+                <div class="metric-label">Access Log Size</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">{{ formatAge(siteMetrics.accessLog?.lastWriteUtc) }}</div>
+                <div class="metric-label">Last Request</div>
+              </div>
+            </div>
+            <div v-if="siteMetrics?.accessLog" class="hint" style="margin-top: 12px">
+              <code>{{ siteMetrics.accessLog.path }}</code>
+            </div>
+          </div>
+        </el-tab-pane>
+
         <!-- ── Danger ───────────────────────────── -->
         <el-tab-pane name="danger">
           <template #label>
@@ -556,7 +586,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
-  FolderOpened, Check, Search, Link,
+  FolderOpened, Check, Search, Link, DataLine,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
@@ -566,6 +596,7 @@ import FolderBrowser from '../shared/FolderBrowser.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
+  fetchSiteMetrics, type SiteMetrics,
 } from '../../api/daemon'
 
 const route = useRoute()
@@ -1007,6 +1038,42 @@ function openInBrowser() {
   window.open(`${proto}://${s.domain}${portSuffix}`, '_blank')
 }
 
+// ── Site metrics (Phase 11 performance monitoring) ────────────────────
+const siteMetrics = ref<SiteMetrics | null>(null)
+const metricsLoading = ref(false)
+
+async function refreshMetrics() {
+  if (!site.value) return
+  metricsLoading.value = true
+  try {
+    const m = await fetchSiteMetrics(site.value.domain)
+    siteMetrics.value = m.hasMetrics ? m : null
+  } catch { siteMetrics.value = null }
+  finally { metricsLoading.value = false }
+}
+
+function formatNumber(n: number): string {
+  return n.toLocaleString()
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatAge(iso?: string | null): string {
+  if (!iso) return '—'
+  const age = Date.now() - new Date(iso).getTime()
+  const s = Math.floor(age / 1000)
+  if (s < 60) return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
 function goBack() {
   router.push('/sites')
 }
@@ -1016,6 +1083,7 @@ function formatDate(s: string): string {
 }
 
 watch(domain, () => { void load() })
+watch(activeTab, (tab) => { if (tab === 'metrics') void refreshMetrics() })
 onMounted(() => {
   void load()
   void loadCfSubdomainTemplate()
@@ -1474,6 +1542,30 @@ onMounted(() => {
 .history-label {
   font-size: 0.85rem;
   color: var(--wdc-text);
+}
+
+/* ─── Metrics cards ──────────────────────────────────────────────────── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.metric-card {
+  background: var(--wdc-surface-2);
+  border-radius: var(--wdc-radius-sm);
+  padding: 20px;
+  text-align: center;
+}
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  font-family: 'JetBrains Mono', monospace;
+}
+.metric-label {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+  margin-top: 4px;
 }
 
 .danger-box {

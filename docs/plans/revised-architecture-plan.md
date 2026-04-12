@@ -470,7 +470,7 @@ Multi-device configuration management with user accounts, JWT auth, device fleet
 
 ### Phase 11: Future Roadmap (post-v1, post-Phase 10)
 
-**Progress: 4/10 done + 1 partial** — `.php-version` auto-detection, Node.js plugin, Scheduled backups, Site templates, **Docker Compose detection layer** (detection + API endpoint + Sites.vue badge + `wdc compose check` CLI; lifecycle control still pending). Remaining: Nginx, PostgreSQL, Docker Compose **lifecycle**, Multi-user RBAC, WebSocket logs, Performance dashboard.
+**Progress: 4/10 done + 2 partial** — `.php-version` auto-detection, Node.js plugin, Scheduled backups, Site templates, **Docker Compose detection** (API + badge + CLI; lifecycle pending), **Performance monitoring** (AccessLogInspector + `/api/sites/{domain}/metrics` + `wdc metrics` CLI; SiteEdit chart pending). Remaining: Nginx, PostgreSQL, Docker Compose lifecycle, Multi-user RBAC, WebSocket logs, Performance charts.
 
 Features identified through competitor analysis (FlyEnv, Laragon, Herd, ServBay) and user feedback patterns. Ordered by estimated user impact.
 
@@ -483,7 +483,7 @@ Features identified through competitor analysis (FlyEnv, Laragon, Herd, ServBay)
 - [ ] **Real-time WebSocket log streaming** — Replace SSE polling with WebSocket for log viewer so logs arrive with zero delay. Current SSE has ~1s batching latency.
 - [x] **Scheduled backups** — `BackupScheduler` singleton with 10-minute polling timer reads `backup.scheduleHours` from SettingsStore. Creates timestamped zip via `BackupManager.CreateBackup()` when newest backup age exceeds the interval. Prunes to 10 max. Settings UI has el-input-number for the interval.
 - [x] **Site templates** — `wdc sites create --template` with 7 built-in blueprints (wordpress/laravel/nette/symfony/nextjs/node/static). Template defaults applied before explicit flags. Node templates auto-set `nodeUpstreamPort=3000`.
-- [ ] **Performance monitoring dashboard** — Per-site request latency tracking via Apache access log parsing, response time charts in SiteEdit. Currently only shows aggregate CPU/RAM for services, not per-site traffic.
+- [~] **Performance monitoring dashboard** — _Detection done (commits `f1495b3`, `9658373`), SiteEdit chart pending._ `AccessLogInspector` in `Core.Services` inspects candidate Apache access log paths with shared-read FileStream (no lock conflict with Apache). `GET /api/sites/{domain}/metrics` returns `{ domain, hasMetrics, accessLog: { path, sizeBytes, requestCount, lastWriteUtc } }`. `wdc metrics <domain>` CLI shows formatted stats. **Still TODO:** SiteEdit metrics card, request-rate chart, historical aggregation.
 
 ---
 

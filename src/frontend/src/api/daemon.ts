@@ -149,6 +149,20 @@ export interface DockerComposeStatus {
 export const fetchDockerComposeStatus = (domain: string): Promise<DockerComposeStatus> =>
   json(`/api/sites/${encodeURIComponent(domain)}/docker-compose`)
 
+// Per-site metrics — Phase 11 performance monitoring foothold
+export interface SiteMetrics {
+  domain: string
+  hasMetrics: boolean
+  accessLog: {
+    path: string
+    sizeBytes: number
+    requestCount: number
+    lastWriteUtc: string
+  } | null
+}
+export const fetchSiteMetrics = (domain: string): Promise<SiteMetrics> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/metrics`)
+
 // PHP
 export const fetchPhpVersions = (): Promise<PhpVersion[]> =>
   json('/api/php/versions')
