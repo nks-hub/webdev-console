@@ -893,13 +893,17 @@ function copyDeviceId() {
 }
 
 async function buildSyncPayload(): Promise<Record<string, any>> {
-  // Collect all daemon settings + sites + service states into one object
-  const [settingsRes, sitesRes] = await Promise.all([
+  // Collect settings + sites + system info so the catalog-api can
+  // populate the device fleet table with OS/arch/site count without
+  // the user having to enter them manually.
+  const [settingsRes, sitesRes, systemRes] = await Promise.all([
     fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() }),
     fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() }),
+    fetch(`${daemonBase()}/api/system`, { headers: authHeaders() }),
   ])
   const settings = settingsRes.ok ? await settingsRes.json() : {}
   const sites = sitesRes.ok ? await sitesRes.json() : []
+  const system = systemRes.ok ? await systemRes.json() : null
   return {
     exportedAt: new Date().toISOString(),
     version: appVersion,
@@ -907,6 +911,7 @@ async function buildSyncPayload(): Promise<Record<string, any>> {
     deviceName: deviceName.value,
     settings,
     sites,
+    system,
   }
 }
 
