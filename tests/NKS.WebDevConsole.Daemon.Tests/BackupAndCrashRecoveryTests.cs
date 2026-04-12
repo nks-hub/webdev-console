@@ -167,6 +167,22 @@ public class BackupAndCrashRecoveryTests : IDisposable
         Assert.Equal(0, mem);
     }
 
+    [Fact]
+    public void CreateBackup_CreatesMissingOutputDirectory()
+    {
+        Directory.CreateDirectory(Path.Combine(_wdcDir, "sites"));
+        File.WriteAllText(Path.Combine(_wdcDir, "sites", "x.toml"), "domain = \"x.loc\"");
+
+        var bm = CreateBackupManagerForRoot();
+        var nestedOutput = Path.Combine(_tempRoot, "missing", "nested", "dir", "backup.zip");
+        Assert.False(Directory.Exists(Path.GetDirectoryName(nestedOutput)!));
+
+        var result = bm.CreateBackup(nestedOutput);
+
+        Assert.True(File.Exists(nestedOutput));
+        Assert.Equal(nestedOutput, result.Path);
+    }
+
     // ── helper ───────────────────────────────────────────────────────────────
 
     /// <summary>
