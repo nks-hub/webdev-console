@@ -1232,6 +1232,12 @@ outdatedCmd.SetAction(async (parseResult, ct) =>
     }
 
     if (json) { PrintJson(outdated.Select(o => new { o.app, o.current, o.latest })); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var (app, current, latest) in outdated)
+            Console.WriteLine($"{app}\t{current}\t{latest}");
+        return;
+    }
     if (outdated.Count == 0) { AnsiConsole.MarkupLine("[green]All binaries are up to date.[/]"); return; }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("App"); table.AddColumn("Installed"); table.AddColumn("Available");
