@@ -804,12 +804,48 @@ app.MapGet("/api/node/sites", (IServiceProvider sp) =>
     var nodeModule = modules.FirstOrDefault(m => m.ServiceId.Equals("node", StringComparison.OrdinalIgnoreCase));
     if (nodeModule == null) return Results.Ok(Array.Empty<object>());
 
+    // Use GetMethod to tolerate missing method (stale plugin, signature drift).
     var listMethod = nodeModule.GetType().GetMethod("ListSiteProcesses");
     if (listMethod == null) return Results.Ok(Array.Empty<object>());
 
-    var result = listMethod.Invoke(nodeModule, null);
-    return Results.Ok(result);
+    try
+    {
+        var result = listMethod.Invoke(nodeModule, null);
+        return Results.Ok(result);
+    }
+    catch (Exception)
+    {
+        return Results.Ok(Array.Empty<object>());
+    }
 });
+
+// Reflection helper — invokes a named method on NodeModule across the plugin
+// ALC boundary. Fails loudly with a descriptive error when the method is
+// missing (stale plugin DLL, signature drift) instead of NRE-ing through
+// the null-forgiving operator.
+static async Task<object?> InvokeNodeMethodAsync(object module, string methodName, object[] args)
+{
+    var method = module.GetType().GetMethod(methodName)
+        ?? throw new MissingMethodException(module.GetType().FullName, methodName);
+    object? result;
+    try
+    {
+        result = method.Invoke(module, args);
+    }
+    catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
+    {
+        // Unwrap so the real plugin error reaches the HTTP response.
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(tie.InnerException).Throw();
+        throw; // unreachable
+    }
+    if (result is Task task)
+    {
+        await task.ConfigureAwait(false);
+        var resultProp = task.GetType().GetProperty("Result");
+        return resultProp?.GetValue(task);
+    }
+    return result;
+}
 
 app.MapPost("/api/node/sites/{domain}/start", async (string domain, IServiceProvider sp, ILoggerFactory lf) =>
 {
@@ -823,13 +859,9 @@ app.MapPost("/api/node/sites/{domain}/start", async (string domain, IServiceProv
 
     try
     {
-        var startMethod = nodeModule.GetType().GetMethod("StartSiteAsync");
-        var task = (Task)startMethod!.Invoke(nodeModule,
-            new object[] { domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", CancellationToken.None })!;
-        await task;
-
-        var statusMethod = nodeModule.GetType().GetMethod("GetSiteStatus");
-        var status = statusMethod!.Invoke(nodeModule, new object[] { domain });
+        await InvokeNodeMethodAsync(nodeModule, "StartSiteAsync",
+            new object[] { domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", CancellationToken.None });
+        var status = await InvokeNodeMethodAsync(nodeModule, "GetSiteStatus", new object[] { domain });
         return Results.Ok(status);
     }
     catch (Exception ex)
@@ -847,9 +879,7 @@ app.MapPost("/api/node/sites/{domain}/stop", async (string domain, IServiceProvi
 
     try
     {
-        var stopMethod = nodeModule.GetType().GetMethod("StopSiteAsync");
-        var task = (Task)stopMethod!.Invoke(nodeModule, new object[] { domain, CancellationToken.None })!;
-        await task;
+        await InvokeNodeMethodAsync(nodeModule, "StopSiteAsync", new object[] { domain, CancellationToken.None });
         return Results.Ok(new { ok = true, domain });
     }
     catch (Exception ex)
@@ -870,17 +900,10 @@ app.MapPost("/api/node/sites/{domain}/restart", async (string domain, IServicePr
 
     try
     {
-        var stopMethod = nodeModule.GetType().GetMethod("StopSiteAsync");
-        var stopTask = (Task)stopMethod!.Invoke(nodeModule, new object[] { domain, CancellationToken.None })!;
-        await stopTask;
-
-        var startMethod = nodeModule.GetType().GetMethod("StartSiteAsync");
-        var startTask = (Task)startMethod!.Invoke(nodeModule,
-            new object[] { domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", CancellationToken.None })!;
-        await startTask;
-
-        var statusMethod = nodeModule.GetType().GetMethod("GetSiteStatus");
-        var status = statusMethod!.Invoke(nodeModule, new object[] { domain });
+        await InvokeNodeMethodAsync(nodeModule, "StopSiteAsync", new object[] { domain, CancellationToken.None });
+        await InvokeNodeMethodAsync(nodeModule, "StartSiteAsync",
+            new object[] { domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", CancellationToken.None });
+        var status = await InvokeNodeMethodAsync(nodeModule, "GetSiteStatus", new object[] { domain });
         return Results.Ok(status);
     }
     catch (Exception ex)
