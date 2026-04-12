@@ -558,6 +558,7 @@ import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
+  fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
 } from '../../api/daemon'
 
 const route = useRoute()
@@ -629,7 +630,7 @@ const nodeProcessLoading = ref(false)
 async function refreshNodeStatus() {
   if (!site.value || selectedRuntime.value !== 'node') return
   try {
-    const list = await import('../../api/daemon').then(m => m.fetchNodeSites())
+    const list = await fetchNodeSites()
     const proc = list.find(p => p.domain === site.value!.domain)
     nodeProcessState.value = proc?.state ?? 0
     nodeProcessPid.value = proc?.pid ?? null
@@ -640,7 +641,6 @@ async function startNodeProcess() {
   if (!site.value) return
   nodeProcessLoading.value = true
   try {
-    const { startNodeSite } = await import('../../api/daemon')
     const result = await startNodeSite(site.value.domain)
     nodeProcessState.value = result.state
     nodeProcessPid.value = result.pid
@@ -655,7 +655,6 @@ async function stopNodeProcess() {
   if (!site.value) return
   nodeProcessLoading.value = true
   try {
-    const { stopNodeSite } = await import('../../api/daemon')
     await stopNodeSite(site.value.domain)
     nodeProcessState.value = 0
     nodeProcessPid.value = null
@@ -670,7 +669,6 @@ async function restartNodeProcess() {
   if (!site.value) return
   nodeProcessLoading.value = true
   try {
-    const { restartNodeSite } = await import('../../api/daemon')
     const result = await restartNodeSite(site.value.domain)
     nodeProcessState.value = result.state
     nodeProcessPid.value = result.pid
@@ -938,6 +936,11 @@ async function save() {
     await sitesStore.update(site.value.domain, site.value)
     ElMessage.success('Site updated')
     dirty.value = false
+    // After apply, the orchestrator may have started/stopped a Node process.
+    // Refresh the status pill so the UI reflects the current state.
+    if (selectedRuntime.value === 'node') {
+      void refreshNodeStatus()
+    }
   } catch (e: any) {
     ElMessage.error(`Update failed: ${e.message}`)
   } finally {
