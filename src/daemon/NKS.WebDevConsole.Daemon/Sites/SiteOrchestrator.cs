@@ -34,6 +34,24 @@ public sealed class SiteOrchestrator
     {
         _logger.LogInformation("Orchestrating site {Domain}...", site.Domain);
 
+        // 0. Auto-detect PHP version from .php-version file in docroot
+        // (Herd/Valet zero-config model). Only overrides when the user
+        // hasn't explicitly set a version AND a .php-version file exists.
+        if ((string.IsNullOrEmpty(site.PhpVersion) || site.PhpVersion == "none")
+            && site.NodeUpstreamPort == 0)
+        {
+            var detected = SiteManager.DetectPhpVersion(site.DocumentRoot);
+            if (detected is not null)
+            {
+                _logger.LogInformation("Auto-detected PHP {Version} from .php-version for {Domain}",
+                    detected, site.Domain);
+                site.PhpVersion = detected;
+                // Persist so the site config reflects the auto-detected version
+                var sm = _sp.GetRequiredService<SiteManager>();
+                await sm.UpdateAsync(site);
+            }
+        }
+
         var modules = _sp.GetServices<IServiceModule>().ToList();
 
         // 1. Apache — generate vhost file via reflection (cross-ALC boundary)

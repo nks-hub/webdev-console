@@ -383,4 +383,44 @@ public class SiteManager
 
         return null;
     }
+
+    /// <summary>
+    /// Reads a <c>.php-version</c> file from the document root (or its
+    /// parent directory). Returns the version string (e.g. "8.4") if
+    /// found, or null if the file doesn't exist. Used by SiteOrchestrator
+    /// during ApplyAsync to auto-set the PHP version without requiring
+    /// manual configuration in SiteEdit — matching Herd/Valet's
+    /// zero-config model.
+    ///
+    /// The file format is a single line containing a major.minor version
+    /// (e.g. "8.4" or "8.2.30"). We normalize to major.minor.
+    /// </summary>
+    public static string? DetectPhpVersion(string documentRoot)
+    {
+        if (string.IsNullOrEmpty(documentRoot) || !Directory.Exists(documentRoot))
+            return null;
+
+        var searchDirs = new[] { documentRoot, Path.GetDirectoryName(documentRoot.TrimEnd('/', '\\')) ?? "" }
+            .Where(d => !string.IsNullOrEmpty(d) && Directory.Exists(d));
+
+        foreach (var dir in searchDirs)
+        {
+            var phpVersionFile = Path.Combine(dir, ".php-version");
+            if (!File.Exists(phpVersionFile)) continue;
+
+            try
+            {
+                var raw = File.ReadAllText(phpVersionFile).Trim();
+                if (string.IsNullOrEmpty(raw)) continue;
+                // Normalize "8.4.20" → "8.4", keep "8.4" as-is
+                var parts = raw.Split('.');
+                if (parts.Length >= 2)
+                    return $"{parts[0]}.{parts[1]}";
+                return raw;
+            }
+            catch { /* unreadable file */ }
+        }
+
+        return null;
+    }
 }
