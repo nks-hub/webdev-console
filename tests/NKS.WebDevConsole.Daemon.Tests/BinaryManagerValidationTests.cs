@@ -49,4 +49,21 @@ public sealed class BinaryManagerValidationTests
     {
         Assert.Throws<ArgumentException>(() => BinaryManager.ValidateAppVersion(app, version));
     }
+
+    [Fact]
+    public void ValidateAppVersion_Accepts64CharBoundary()
+    {
+        // Regex allows {0,63} after first char — 64 chars total max
+        var app = "a" + new string('b', 63);
+        Assert.Equal(64, app.Length);
+        BinaryManager.ValidateAppVersion(app, "1.0.0");
+    }
+
+    [Fact]
+    public void ValidateAppVersion_Rejects65CharApp()
+    {
+        var app = "a" + new string('b', 64);
+        Assert.Equal(65, app.Length);
+        Assert.Throws<ArgumentException>(() => BinaryManager.ValidateAppVersion(app, "1.0.0"));
+    }
 }
