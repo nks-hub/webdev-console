@@ -1538,7 +1538,7 @@ completionCmd.SetAction((parseResult, ct) =>
         case "zsh":
             AnsiConsole.WriteLine("# Add to ~/.bashrc or ~/.zshrc:");
             AnsiConsole.WriteLine("_wdc_completions() {");
-            AnsiConsole.WriteLine("  local commands=\"new open info config doctor system start-all stop-all restart-all status services logs sites php plugins databases binaries version node compose metrics ssl hosts backup restore migrate uninstall sync cf completion\"");
+            AnsiConsole.WriteLine("  local commands=\"new open info config doctor system start-all stop-all restart-all status services logs sites php plugins databases binaries version node compose metrics ssl hosts backup restore migrate uninstall sync cloudflare completion\"");
             AnsiConsole.WriteLine("  COMPREPLY=( $(compgen -W \"$commands\" -- ${COMP_WORDS[COMP_CWORD]}) )");
             AnsiConsole.WriteLine("}");
             AnsiConsole.WriteLine("complete -F _wdc_completions wdc");
