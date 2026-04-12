@@ -280,7 +280,8 @@ var siteTemplates = new Dictionary<string, (string php, bool ssl, string? framew
     ["node"]      = ("none", false, null),
 };
 var templateOpt = new Option<string?>("--template", $"Site blueprint: {string.Join(", ", siteTemplates.Keys)}");
-var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt, templateOpt };
+var createNodePortOpt = new Option<int?>("--node-port") { Description = "Node.js upstream port (enables reverse-proxy mode)" };
+var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt, templateOpt, createNodePortOpt };
 createSiteCmd.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
@@ -299,8 +300,8 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
               || (!json && !tplApplied && domain == null && AnsiConsole.Confirm("Enable SSL?", false));
     var aliasStr = parseResult.GetValue(aliasesOpt);
 
-    var nodePort = 0;
-    if (tplApplied && tplName is "nextjs" or "node")
+    var nodePort = parseResult.GetValue(createNodePortOpt) ?? 0;
+    if (nodePort == 0 && tplApplied && tplName is "nextjs" or "node")
     {
         nodePort = 3000;
         if (!json) AnsiConsole.MarkupLine($"[dim]Template '{tplName}': Node.js reverse-proxy mode, upstream port 3000[/]");
