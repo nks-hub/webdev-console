@@ -630,6 +630,12 @@ dbCommand.SetAction(async (parseResult, ct) =>
 
     if (result.TryGetProperty("databases", out var dbs) && dbs.GetArrayLength() > 0)
     {
+        if (Console.IsOutputRedirected)
+        {
+            foreach (var db in dbs.EnumerateArray())
+                Console.WriteLine(db.GetString() ?? "");
+            return;
+        }
         var table = new Table().Border(TableBorder.Rounded);
         table.AddColumn("Database");
         foreach (var db in dbs.EnumerateArray())
