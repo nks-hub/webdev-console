@@ -451,7 +451,14 @@ async function reapplyAll() {
       headers: sitesStore.authHeaders(),
     })
     if (res.ok) {
-      ElMessage.success('All vhosts regenerated')
+      const results: Array<{ domain: string; ok: boolean; error?: string }> = await res.json()
+      const ok = results.filter(r => r.ok).length
+      const failed = results.filter(r => !r.ok)
+      if (failed.length === 0) {
+        ElMessage.success(`All ${ok} vhosts regenerated`)
+      } else {
+        ElMessage.warning(`${ok} OK, ${failed.length} failed: ${failed.map(f => f.domain).join(', ')}`)
+      }
     } else {
       ElMessage.error(`Failed: HTTP ${res.status}`)
     }
