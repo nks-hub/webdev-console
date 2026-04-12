@@ -62,6 +62,21 @@ public sealed class BinaryCatalogTests
     }
 
     [Fact]
+    public void ForApp_NonWindowsOS_ReturnsEmpty()
+    {
+        // Catalog is Windows-only for now — linux/macos filter returns nothing.
+        Assert.Empty(BinaryCatalog.ForApp("php", os: "linux"));
+        Assert.Empty(BinaryCatalog.ForApp("php", os: "macos"));
+    }
+
+    [Fact]
+    public void ForApp_NonX64Arch_ReturnsEmpty()
+    {
+        // Catalog only has x64 builds — arm64 filter returns nothing.
+        Assert.Empty(BinaryCatalog.ForApp("php", arch: "arm64"));
+    }
+
+    [Fact]
     public void FindLatest_ReturnsFirstMatch()
     {
         var latest = BinaryCatalog.FindLatest("apache");
