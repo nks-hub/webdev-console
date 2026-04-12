@@ -472,14 +472,14 @@ Multi-device configuration management with user accounts, JWT auth, device fleet
 
 Features identified through competitor analysis (FlyEnv, Laragon, Herd, ServBay) and user feedback patterns. Ordered by estimated user impact.
 
-- [ ] **Per-project .php-version auto-detection** — When a site's document root contains a `.php-version` file, automatically use that PHP version without requiring manual SiteEdit configuration. Matches Herd/Valet zero-config model. Requires: FileSystemWatcher on sites root, fallback to global default if file absent.
+- [x] **Per-project .php-version auto-detection** — `SiteManager.DetectPhpVersion` scans docroot + parent for `.php-version` file, normalizes to major.minor. `SiteOrchestrator.ApplyAsync` step 0 auto-sets when phpVersion is empty/none and not a Node proxy site. Persists via `UpdateAsync` so vhost reflects the detected version.
 - [ ] **Node.js process management plugin** — Manage Node.js apps as services (start/stop/restart `npm start` or custom command). Currently NKS WDC only proxies to a user-started Node process; a proper plugin would spawn/supervise the process lifecycle. Requires: new `NKS.WebDevConsole.Plugin.Node` with `IServiceModule` implementation, per-site command configuration in SiteEdit.
 - [ ] **Nginx plugin** — Alternative to Apache with native reverse-proxy. Nginx is already in the binary catalog but not wired as a service module. Requires: `NKS.WebDevConsole.Plugin.Nginx` with config template generation, start/stop lifecycle.
 - [ ] **PostgreSQL plugin** — Database alternative to MySQL. Many modern stacks (Rails, Django, Phoenix) default to Postgres. Requires: `NKS.WebDevConsole.Plugin.PostgreSQL` with initdb, start/stop, pg_hba.conf management.
 - [ ] **Docker Compose integration** — Detect `docker-compose.yml` in site root, show compose services alongside WDC services, allow start/stop from Dashboard. Many modern projects ship as Docker stacks.
 - [ ] **Multi-user RBAC** — catalog-api currently has single admin + account system. Add roles (admin/viewer/deployer) so teams can share a catalog-api instance with different permission levels.
 - [ ] **Real-time WebSocket log streaming** — Replace SSE polling with WebSocket for log viewer so logs arrive with zero delay. Current SSE has ~1s batching latency.
-- [ ] **Scheduled backups** — The Settings page has `backup.scheduleHours` field but no daemon-side scheduler actually runs backups on a timer. Requires: `BackupScheduler` singleton with cron-style timer reading the setting from SettingsStore.
+- [x] **Scheduled backups** — `BackupScheduler` singleton with 10-minute polling timer reads `backup.scheduleHours` from SettingsStore. Creates timestamped zip via `BackupManager.CreateBackup()` when newest backup age exceeds the interval. Prunes to 10 max. Settings UI has el-input-number for the interval.
 - [ ] **Site templates** — Pre-configured site blueprints (WordPress, Laravel, Next.js, Nette) that auto-set PHP version, SSL, framework detection, and optionally scaffold the project directory.
 - [ ] **Performance monitoring dashboard** — Per-site request latency tracking via Apache access log parsing, response time charts in SiteEdit. Currently only shows aggregate CPU/RAM for services, not per-site traffic.
 
