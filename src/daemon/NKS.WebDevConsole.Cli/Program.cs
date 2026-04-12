@@ -2948,11 +2948,18 @@ cfSyncCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync("/api/cloudflare/sync");
-    if (json) { PrintJson(result); return; }
-    var synced = result.TryGetProperty("synced", out var s) ? s.GetInt32() : 0;
-    var deleted = result.TryGetProperty("deleted", out var d) ? d.GetInt32() : 0;
-    AnsiConsole.MarkupLine($"[green]Synced:[/] {synced} site(s) pushed, {deleted} dormant CNAME(s) deleted");
+    try
+    {
+        var result = await client.PostAsync("/api/cloudflare/sync");
+        if (json) { PrintJson(result); return; }
+        var synced = result.TryGetProperty("synced", out var s) ? s.GetInt32() : 0;
+        var deleted = result.TryGetProperty("deleted", out var d) ? d.GetInt32() : 0;
+        AnsiConsole.MarkupLine($"[green]Synced:[/] {synced} site(s) pushed, {deleted} dormant CNAME(s) deleted");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Cloudflare sync failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 cfCommand.Add(cfSyncCmd);
 
@@ -2963,27 +2970,34 @@ cfZonesCmd.SetAction(async (parseResult, ct) =>
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.GetJsonAsync("/api/cloudflare/zones");
-    if (json) { PrintJson(result); return; }
-    if (!result.TryGetProperty("result", out var zones) || zones.GetArrayLength() == 0)
+    try
     {
-        if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No zones found. Check API token scopes.[/]");
-        return;
-    }
-    if (Console.IsOutputRedirected)
-    {
+        var result = await client.GetJsonAsync("/api/cloudflare/zones");
+        if (json) { PrintJson(result); return; }
+        if (!result.TryGetProperty("result", out var zones) || zones.GetArrayLength() == 0)
+        {
+            if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No zones found. Check API token scopes.[/]");
+            return;
+        }
+        if (Console.IsOutputRedirected)
+        {
+            foreach (var z in zones.EnumerateArray())
+                Console.WriteLine($"{z.GetProperty("name").GetString()}\t{z.GetProperty("id").GetString()}");
+            return;
+        }
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("Name"); table.AddColumn("Status"); table.AddColumn("ID");
         foreach (var z in zones.EnumerateArray())
-            Console.WriteLine($"{z.GetProperty("name").GetString()}\t{z.GetProperty("id").GetString()}");
-        return;
+            table.AddRow(
+                z.GetProperty("name").GetString() ?? "?",
+                z.TryGetProperty("status", out var st) ? st.GetString()! : "?",
+                z.GetProperty("id").GetString() ?? "?");
+        AnsiConsole.Write(table);
     }
-    var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("Name"); table.AddColumn("Status"); table.AddColumn("ID");
-    foreach (var z in zones.EnumerateArray())
-        table.AddRow(
-            z.GetProperty("name").GetString() ?? "?",
-            z.TryGetProperty("status", out var st) ? st.GetString()! : "?",
-            z.GetProperty("id").GetString() ?? "?");
-    AnsiConsole.Write(table);
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to list zones:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 cfCommand.Add(cfZonesCmd);
 
