@@ -1062,6 +1062,8 @@ async function rollback(timestamp: string) {
       type: 'warning',
       confirmButtonText: 'Restore',
     })
+  } catch { return }
+  try {
     const res = await fetch(`${daemonBase()}/api/sites/${site.value.domain}/rollback`, {
       method: 'POST',
       headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
@@ -1070,7 +1072,9 @@ async function rollback(timestamp: string) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     ElMessage.success('Config restored')
     await load()
-  } catch { /* cancelled or error already shown */ }
+  } catch (e: any) {
+    ElMessage.error(`Restore failed: ${e.message}`)
+  }
 }
 
 async function confirmDelete() {
