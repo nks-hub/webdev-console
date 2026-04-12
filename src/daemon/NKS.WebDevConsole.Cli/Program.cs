@@ -1575,9 +1575,17 @@ nodeStartCmd.SetAction(async (parseResult, ct) =>
         var pid = result.TryGetProperty("pid", out var pv) && pv.ValueKind != System.Text.Json.JsonValueKind.Null
             ? pv.GetInt32().ToString() : "-";
         if (state == 2)
+        {
             AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")} running (PID {pid})");
+        }
         else
-            AnsiConsole.MarkupLine($"[yellow]![/] {Markup.Escape(domain ?? "")} state={state}");
+        {
+            // Surface a non-zero exit so shell scripts like
+            // `wdc node start app.loc && echo ok` don't falsely succeed
+            // when the Node process crashed or never reached Running.
+            AnsiConsole.MarkupLine($"[yellow]![/] {Markup.Escape(domain ?? "")} state={state} (expected Running)");
+            Environment.Exit(2);
+        }
     }
     catch (Exception ex)
     {
@@ -1621,9 +1629,14 @@ nodeRestartCmd.SetAction(async (parseResult, ct) =>
         var pid = result.TryGetProperty("pid", out var pv) && pv.ValueKind != System.Text.Json.JsonValueKind.Null
             ? pv.GetInt32().ToString() : "-";
         if (state == 2)
+        {
             AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")} restarted (PID {pid})");
+        }
         else
-            AnsiConsole.MarkupLine($"[yellow]![/] {Markup.Escape(domain ?? "")} state={state}");
+        {
+            AnsiConsole.MarkupLine($"[yellow]![/] {Markup.Escape(domain ?? "")} state={state} (expected Running)");
+            Environment.Exit(2);
+        }
     }
     catch (Exception ex)
     {
