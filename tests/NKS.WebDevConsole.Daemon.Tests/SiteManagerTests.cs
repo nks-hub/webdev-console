@@ -464,6 +464,37 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void LoadAll_PreservesCloudflareSubConfig()
+    {
+        var siteObj = new SiteConfig
+        {
+            Domain = "cf-site.loc",
+            DocumentRoot = "C:/apps/cf",
+            Cloudflare = new SiteCloudflareConfig
+            {
+                Enabled = true,
+                Subdomain = "blog",
+                ZoneId = "zone123",
+                ZoneName = "example.com",
+                LocalService = "localhost:80",
+                Protocol = "http",
+            }
+        };
+        var toml = TomlSerializer.Serialize(siteObj);
+        File.WriteAllText(Path.Combine(_sitesDir, "cf-site.loc.toml"), toml);
+
+        _manager.LoadAll();
+
+        var site = _manager.Get("cf-site.loc");
+        Assert.NotNull(site);
+        Assert.NotNull(site!.Cloudflare);
+        Assert.True(site.Cloudflare!.Enabled);
+        Assert.Equal("blog", site.Cloudflare.Subdomain);
+        Assert.Equal("zone123", site.Cloudflare.ZoneId);
+        Assert.Equal("example.com", site.Cloudflare.ZoneName);
+    }
+
+    [Fact]
     public void LoadAll_SkipsInvalidToml_WithWarning()
     {
         File.WriteAllText(Path.Combine(_sitesDir, "bad.toml"), "this is not valid toml = [[[");
