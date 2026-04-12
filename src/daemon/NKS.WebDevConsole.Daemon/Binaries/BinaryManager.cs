@@ -89,12 +89,23 @@ public sealed class BinaryManager
             if (app.StartsWith('.') || app.Equals("downloads", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            foreach (var versionDir in Directory.GetDirectories(appDir))
+            // Sort per-app version directories newest-first so FirstOrDefault()
+            // callers (Program.cs auto-detection paths for MySQL/PHP/Redis/etc.)
+            // get the latest installed version instead of whatever filesystem
+            // order alphabetises to. Without this, a user with both
+            // mysql/5.7.44 and mysql/8.4.0 installed would have the config
+            // defaulted to the ancient 5.7 every time.
+            var versionDirs = Directory.GetDirectories(appDir)
+                .Where(d =>
+                {
+                    var v = Path.GetFileName(d);
+                    return !v.StartsWith('.') && !v.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderByDescending(d => Path.GetFileName(d), SemverVersionComparer.Instance);
+
+            foreach (var versionDir in versionDirs)
             {
                 var version = Path.GetFileName(versionDir);
-                if (version.StartsWith('.') || version.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
                 var majorMinor = string.Join('.', version.Split('.').Take(2));
                 result.Add(new InstalledBinary(app, version, majorMinor, versionDir, ResolveExecutable(app, versionDir)));
             }
@@ -102,7 +113,11 @@ public sealed class BinaryManager
         return result;
     }
 
-    /// <summary>List installed versions for a specific app.</summary>
+    /// <summary>
+    /// List installed versions for a specific app. Returns versions in
+    /// newest-first order so <c>FirstOrDefault()</c> picks the latest
+    /// semver-ordered install (see <see cref="ListInstalled()"/>).
+    /// </summary>
     public IReadOnlyList<InstalledBinary> ListInstalled(string app)
         => ListInstalled().Where(b => b.App.Equals(app, StringComparison.OrdinalIgnoreCase)).ToList();
 
