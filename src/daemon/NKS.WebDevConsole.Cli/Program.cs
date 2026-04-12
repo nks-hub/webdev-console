@@ -2242,9 +2242,15 @@ syncPushCmd.SetAction(async (parseResult, ct) =>
     var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
     if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
 
+    // Send JWT if the user has logged in via Settings → Account, so the
+    // catalog-api's optional_account dependency auto-links the device to
+    // the user's account. Without this header pushes are anonymous.
+    var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
     var payload = new { exportedAt = DateTime.UtcNow.ToString("o"), settings, sites };
     var body = JsonContent.Create(new { device_id = deviceId, payload });
     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+    if (!string.IsNullOrEmpty(jwt))
+        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
     var resp = await http.PostAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config", body);
     resp.EnsureSuccessStatusCode();
     if (json) { PrintJson(await resp.Content.ReadAsStringAsync()); return; }
@@ -2270,8 +2276,11 @@ syncPullCmd.SetAction(async (parseResult, ct) =>
     }
     var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
     if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
+    var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
 
     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+    if (!string.IsNullOrEmpty(jwt))
+        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
     var resp = await http.GetAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config/{deviceId}");
     if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
     {
