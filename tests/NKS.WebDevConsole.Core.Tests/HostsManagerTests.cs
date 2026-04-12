@@ -196,4 +196,27 @@ public class HostsManagerTests : IDisposable
 
         Assert.Equal(customPath, manager.HostsPath);
     }
+
+    [Fact]
+    public void BuildUpdatedContent_HandlesUnixLineEndings()
+    {
+        var manager = new HostsManager(Path.Combine(_tempDir, "hosts"));
+        var content = "127.0.0.1 localhost\n# other\n";
+
+        var result = manager.BuildUpdatedContent(content, new[] { "unix.loc" });
+
+        Assert.Contains("127.0.0.1\tunix.loc", result);
+        Assert.Contains("localhost", result);
+    }
+
+    [Fact]
+    public void GenerateHostsBlock_MultipleDomains_OnePerLine()
+    {
+        var manager = new HostsManager(Path.Combine(_tempDir, "hosts"));
+        var block = manager.GenerateHostsBlock(new[] { "a.loc", "b.loc", "c.loc" });
+
+        Assert.Contains("127.0.0.1\ta.loc", block);
+        Assert.Contains("127.0.0.1\tb.loc", block);
+        Assert.Contains("127.0.0.1\tc.loc", block);
+    }
 }
