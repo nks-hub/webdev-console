@@ -111,4 +111,27 @@ public sealed class BinaryCatalogTests
         var pairs = BinaryCatalog.All.Select(r => $"{r.App}/{r.Version}/{r.Os}/{r.Arch}").ToList();
         Assert.Equal(pairs.Count, pairs.Distinct().Count());
     }
+
+    [Fact]
+    public void BinaryRelease_RecordEquality()
+    {
+        var a = new BinaryRelease("php", "8.4.20", "8.4", "https://example.com/php.zip", "windows", "x64", "zip", "test");
+        var b = new BinaryRelease("php", "8.4.20", "8.4", "https://example.com/php.zip", "windows", "x64", "zip", "test");
+        Assert.Equal(a, b);
+    }
+
+    [Fact]
+    public void BinaryRelease_RecordInequality_DifferentVersion()
+    {
+        var a = new BinaryRelease("php", "8.4.20", "8.4", "https://example.com/a.zip", "windows", "x64", "zip", "test");
+        var b = new BinaryRelease("php", "8.3.30", "8.3", "https://example.com/b.zip", "windows", "x64", "zip", "test");
+        Assert.NotEqual(a, b);
+    }
+
+    [Fact]
+    public void BinaryRelease_UserAgent_DefaultsToNull()
+    {
+        var r = new BinaryRelease("redis", "7.0.0", "7.0", "https://example.com/r.zip", "windows", "x64", "zip", "github");
+        Assert.Null(r.UserAgent);
+    }
 }
