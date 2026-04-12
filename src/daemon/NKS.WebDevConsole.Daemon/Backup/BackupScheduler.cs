@@ -21,6 +21,7 @@ public sealed class BackupScheduler : IDisposable
     private readonly SettingsStore _settings;
     private readonly ILogger<BackupScheduler> _logger;
     private Timer? _timer;
+    private int _running;
 
     private const int MaxBackups = 10;
 
@@ -46,6 +47,7 @@ public sealed class BackupScheduler : IDisposable
 
     private void OnTick(object? state)
     {
+        if (Interlocked.Exchange(ref _running, 1) != 0) return;
         try
         {
             var hours = _settings.GetString("backup", "scheduleHours");
@@ -92,6 +94,10 @@ public sealed class BackupScheduler : IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning("Backup scheduler tick failed: {Error}", ex.Message);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _running, 0);
         }
     }
 

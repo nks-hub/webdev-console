@@ -286,7 +286,10 @@ public class SiteManager
                 domain = site.Domain,
                 aliases = site.Aliases,
                 root = site.DocumentRoot,
-                php_enabled = !string.IsNullOrEmpty(site.PhpVersion) && site.PhpVersion != "none",
+                // Mirror ApacheModule's logic: Node proxy takes precedence
+                node_proxy_port = site.NodeUpstreamPort,
+                php_enabled = site.NodeUpstreamPort == 0
+                    && !string.IsNullOrEmpty(site.PhpVersion) && site.PhpVersion != "none",
                 php_version = site.PhpVersion,
                 php_fcgi_port = 9000,
                 ssl = site.SslEnabled,
@@ -294,8 +297,10 @@ public class SiteManager
                 key_path = Path.Combine(sslDir, "key.pem"),
                 redirects = Array.Empty<object>()
             },
-            port = site.SslEnabled ? site.HttpsPort : site.HttpPort,
-            is_windows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            port = site.HttpPort,
+            https_port = site.HttpsPort > 0 ? site.HttpsPort : 443,
+            is_windows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows),
+            php_cgi_path = "",
         };
 
         try
