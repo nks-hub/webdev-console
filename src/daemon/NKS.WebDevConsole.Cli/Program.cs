@@ -1030,6 +1030,42 @@ refreshCmd.SetAction(async (parseResult, ct) =>
 });
 binariesCommand.Add(refreshCmd);
 
+// wdc binaries outdated — compare installed vs catalog latest
+var outdatedCmd = new Command("outdated", "Show installed binaries with newer versions available");
+outdatedCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var installed = await client.GetJsonAsync("/api/binaries/installed");
+    var catalog = await client.GetJsonAsync("/api/binaries/catalog");
+
+    var outdated = new List<(string app, string current, string latest)>();
+    var seenApps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var bin in installed.EnumerateArray())
+    {
+        var app = bin.GetProperty("app").GetString() ?? "";
+        if (!seenApps.Add(app)) continue;
+        var ver = bin.GetProperty("version").GetString() ?? "";
+        if (catalog.TryGetProperty(app, out var releases) && releases.GetArrayLength() > 0)
+        {
+            var latestVer = releases[0].GetProperty("version").GetString() ?? "";
+            if (latestVer != ver && NKS.WebDevConsole.Core.Services.SemverVersionComparer.CompareAscending(latestVer, ver) > 0)
+                outdated.Add((app, ver, latestVer));
+        }
+    }
+
+    if (json) { PrintJson(outdated.Select(o => new { o.app, o.current, o.latest })); return; }
+    if (outdated.Count == 0) { AnsiConsole.MarkupLine("[green]All binaries are up to date.[/]"); return; }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("App"); table.AddColumn("Installed"); table.AddColumn("Available");
+    foreach (var (app, current, latest) in outdated)
+        table.AddRow(Markup.Escape(app), $"[yellow]{Markup.Escape(current)}[/]", $"[green]{Markup.Escape(latest)}[/]");
+    AnsiConsole.Write(table);
+    AnsiConsole.MarkupLine($"[yellow]{outdated.Count} package(s) can be updated.[/]");
+});
+binariesCommand.Add(outdatedCmd);
+
 // --- wdc php ---
 var phpCommand = new Command("php", "PHP version management");
 phpCommand.SetAction(async (parseResult, ct) =>
