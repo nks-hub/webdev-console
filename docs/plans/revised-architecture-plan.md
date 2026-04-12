@@ -480,7 +480,7 @@ Features identified through competitor analysis (FlyEnv, Laragon, Herd, ServBay)
 - [ ] **Multi-user RBAC** — catalog-api currently has single admin + account system. Add roles (admin/viewer/deployer) so teams can share a catalog-api instance with different permission levels.
 - [ ] **Real-time WebSocket log streaming** — Replace SSE polling with WebSocket for log viewer so logs arrive with zero delay. Current SSE has ~1s batching latency.
 - [x] **Scheduled backups** — `BackupScheduler` singleton with 10-minute polling timer reads `backup.scheduleHours` from SettingsStore. Creates timestamped zip via `BackupManager.CreateBackup()` when newest backup age exceeds the interval. Prunes to 10 max. Settings UI has el-input-number for the interval.
-- [ ] **Site templates** — Pre-configured site blueprints (WordPress, Laravel, Next.js, Nette) that auto-set PHP version, SSL, framework detection, and optionally scaffold the project directory.
+- [x] **Site templates** — `wdc sites create --template` with 7 built-in blueprints (wordpress/laravel/nette/symfony/nextjs/node/static). Template defaults applied before explicit flags. Node templates auto-set `nodeUpstreamPort=3000`.
 - [ ] **Performance monitoring dashboard** — Per-site request latency tracking via Apache access log parsing, response time charts in SiteEdit. Currently only shows aggregate CPU/RAM for services, not per-site traffic.
 
 ---
