@@ -1226,9 +1226,11 @@ doctorCommand.SetAction(async (parseResult, ct) =>
         try
         {
             var sys = await client.GetJsonAsync("/api/system");
-            var catOk = sys.TryGetProperty("catalog", out var cat)
+            var hasCat = sys.TryGetProperty("catalog", out var cat);
+            var catOk = hasCat
                 && cat.TryGetProperty("healthy", out var h) && h.GetBoolean();
-            var catUrl = cat.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
+            var catUrl = hasCat && cat.TryGetProperty("url", out var u)
+                ? u.GetString() ?? "" : "";
             checks.Add(("Catalog API", catOk, catOk ? catUrl : "Unreachable or not configured"));
         }
         catch { checks.Add(("Catalog API", false, "System info query failed")); }
