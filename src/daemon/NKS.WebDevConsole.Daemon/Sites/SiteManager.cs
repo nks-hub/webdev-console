@@ -146,8 +146,8 @@ public class SiteManager
         foreach (var c in forbidden)
             if (alias.Contains(c))
                 throw new ArgumentException($"Alias contains forbidden character: '{c}'");
-        if (alias.Contains("../") || alias.Contains("..\\"))
-            throw new ArgumentException("Alias contains path traversal sequence");
+        if (alias.Contains("..") || alias.StartsWith('.') || alias.EndsWith('.'))
+            throw new ArgumentException("Alias has empty DNS label (leading/trailing/consecutive dot)");
         // Allow leading `*.` or `?` for wildcards; rest must be hostname-safe
         var normalized = alias.StartsWith("*.") ? alias[2..] : alias;
         if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, @"^[a-zA-Z0-9\*\?]([a-zA-Z0-9\-\.\*\?]*[a-zA-Z0-9\*\?])?$"))

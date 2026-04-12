@@ -95,4 +95,26 @@ public class ValidateAliasTests
         if (alias.Length <= 253)
             SiteManager.ValidateAlias(alias);
     }
+
+    [Theory]
+    [InlineData("../../etc")]
+    [InlineData("..\\windows")]
+    [InlineData("..foo.loc")]   // literal ".." via regex-allowed dot
+    public void Rejects_PathTraversalVariants(string alias)
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateAlias(alias));
+    }
+
+    [Fact]
+    public void Rejects_EmptyLabelBetweenDots()
+    {
+        // foo..bar.loc — consecutive dots would create empty DNS label
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateAlias("foo..bar.loc"));
+    }
+
+    [Fact]
+    public void Rejects_LeadingDot()
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateAlias(".loc"));
+    }
 }
