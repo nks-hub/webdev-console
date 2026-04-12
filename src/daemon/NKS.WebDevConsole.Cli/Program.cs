@@ -807,13 +807,22 @@ sizeCmd.SetAction(async (parseResult, ct) =>
     var psi = new System.Diagnostics.ProcessStartInfo
     {
         FileName = mysqlCli, Arguments = $"-h 127.0.0.1 -P 3306 -u root {(json ? "-N" : "-t")} -e \"{sql}\"",
-        RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true
+        RedirectStandardOutput = true, RedirectStandardError = true,
+        UseShellExecute = false, CreateNoWindow = true
     };
     var proc = System.Diagnostics.Process.Start(psi);
     if (proc == null) return;
-    var output = await proc.StandardOutput.ReadToEndAsync();
+    var outputTask = proc.StandardOutput.ReadToEndAsync();
+    var errTask = proc.StandardError.ReadToEndAsync();
     await proc.WaitForExitAsync();
-    AnsiConsole.WriteLine(output);
+    var err = await errTask;
+    if (proc.ExitCode != 0 && err.Length > 0)
+    {
+        AnsiConsole.MarkupLine($"[red]MySQL error:[/] {Markup.Escape(err.Trim())}");
+        Environment.Exit(1);
+        return;
+    }
+    AnsiConsole.WriteLine(await outputTask);
 });
 dbCommand.Add(sizeCmd);
 
