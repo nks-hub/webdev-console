@@ -146,4 +146,32 @@ public sealed class SemverVersionComparerTests
             .ToArray();
         Assert.Empty(sorted);
     }
+
+    [Fact]
+    public void CompareAscending_BothNull_ReturnsZero()
+    {
+        Assert.Equal(0, SemverVersionComparer.CompareAscending(null, null));
+    }
+
+    [Fact]
+    public void CompareAscending_LeftNull_ReturnsNegative()
+    {
+        Assert.True(SemverVersionComparer.CompareAscending(null, "1.0.0") < 0);
+    }
+
+    [Fact]
+    public void CompareAscending_RightNull_ReturnsPositive()
+    {
+        Assert.True(SemverVersionComparer.CompareAscending("1.0.0", null) > 0);
+    }
+
+    [Theory]
+    [InlineData("2.0.0", "1.0.0", 1)]
+    [InlineData("1.0.0", "2.0.0", -1)]
+    [InlineData("1.0.0", "1.0.0", 0)]
+    public void CompareAscending_DirectCall_MatchesInstance(string a, string b, int expectedSign)
+    {
+        var result = SemverVersionComparer.CompareAscending(a, b);
+        Assert.Equal(expectedSign, Math.Sign(result));
+    }
 }
