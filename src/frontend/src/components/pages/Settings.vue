@@ -705,6 +705,35 @@ async function pushToCloud() {
   }
 }
 
+// ── Sync field classification (Strategy D) ────────────────────────────
+// Each settings key is tagged as "sync" (portable across devices) or
+// "local" (machine-specific paths/ports that must stay untouched on
+// pull). The classification lives here so adding a new settings key
+// forces the developer to decide "is this sync or local?" at definition
+// time. Site fields follow the same principle: domain/phpVersion/ssl/
+// aliases/framework/cloudflare are sync; documentRoot/ports are local.
+const SYNC_SETTINGS_PREFIXES = [
+  'general.', 'telemetry.', 'backup.scheduleHours', 'daemon.catalogUrl',
+  'sync.',
+]
+const LOCAL_SETTINGS_PREFIXES = [
+  'paths.', 'ports.', 'backup.dir',
+]
+
+function isSettingSyncable(key: string): boolean {
+  if (SYNC_SETTINGS_PREFIXES.some(p => key.startsWith(p))) return true
+  if (LOCAL_SETTINGS_PREFIXES.some(p => key.startsWith(p))) return false
+  return true // unknown keys default to sync
+}
+
+const SITE_SYNC_FIELDS = new Set([
+  'domain', 'phpVersion', 'sslEnabled', 'aliases', 'framework',
+  'environment', 'cloudflare',
+])
+const SITE_LOCAL_FIELDS = new Set([
+  'documentRoot', 'httpPort', 'httpsPort',
+])
+
 async function pullFromCloud() {
   pulling.value = true
   syncStatus.value = null
@@ -722,17 +751,82 @@ async function pullFromCloud() {
     const data = await r.json()
     const payload = data.payload
 
-    // Apply settings from snapshot
+    // ── Merge settings with local overrides ──────────────────────────
+    // Only apply sync-classified keys from the remote snapshot. Local
+    // keys (paths, ports, backup dir) stay untouched so pulling another
+    // device's snapshot doesn't overwrite C:\work\htdocs with /home/user.
     if (payload?.settings && typeof payload.settings === 'object') {
-      await fetch(`${daemonBase()}/api/settings`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(payload.settings),
-      })
+      const localSettings = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+        .then(r => r.ok ? r.json() : {}) as Record<string, string>
+
+      const merged: Record<string, string> = {}
+      for (const [key, value] of Object.entries(payload.settings as Record<string, string>)) {
+        if (isSettingSyncable(key)) {
+          merged[key] = value
+        }
+        // Local keys: keep existing local value (skip remote)
+      }
+
+      if (Object.keys(merged).length > 0) {
+        await fetch(`${daemonBase()}/api/settings`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify(merged),
+        })
+      }
+    }
+
+    // ── Merge sites ──────────────────────────────────────────────────
+    // Match by domain. Existing sites: merge sync fields, keep local.
+    // New sites: create with sync fields + empty documentRoot (user
+    // must set it via SiteEdit before the vhost is generated).
+    if (Array.isArray(payload?.sites)) {
+      const localSites = await fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() })
+        .then(r => r.ok ? r.json() : []) as any[]
+      const localByDomain = new Map(localSites.map((s: any) => [s.domain, s]))
+
+      let newSiteCount = 0
+      for (const remoteSite of payload.sites) {
+        const domain = remoteSite.domain
+        if (!domain) continue
+        const local = localByDomain.get(domain)
+
+        if (local) {
+          // Existing site: merge sync fields only
+          const update: any = { ...local }
+          for (const field of SITE_SYNC_FIELDS) {
+            if (field in remoteSite) update[field] = remoteSite[field]
+          }
+          await fetch(`${daemonBase()}/api/sites/${domain}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(update),
+          })
+        } else {
+          // New site: create with sync fields, leave documentRoot empty
+          // so the user is prompted to set it in SiteEdit.
+          const newSite: any = { domain, documentRoot: '' }
+          for (const field of SITE_SYNC_FIELDS) {
+            if (field in remoteSite) newSite[field] = remoteSite[field]
+          }
+          try {
+            await fetch(`${daemonBase()}/api/sites`, {
+              method: 'POST',
+              headers: authHeaders(),
+              body: JSON.stringify(newSite),
+            })
+            newSiteCount++
+          } catch { /* domain validation may reject invalid entries */ }
+        }
+      }
+
+      if (newSiteCount > 0) {
+        ElMessage.info(`${newSiteCount} new site(s) imported — set their document root in Sites`)
+      }
     }
 
     syncStatus.value = { ok: true, message: `Pulled from cloud (${data.updated_at ?? 'unknown'})` }
-    ElMessage.success('Configuration pulled from cloud — reload the page to see changes')
+    ElMessage.success('Configuration synced from cloud')
     await loadSettings()
   } catch (e: any) {
     syncStatus.value = { ok: false, message: `Pull failed: ${e.message}` }
@@ -792,22 +886,36 @@ async function importSettings(event: Event) {
     if (!data.settings || typeof data.settings !== 'object') {
       throw new Error('Invalid settings file — missing "settings" object')
     }
+    const fromDevice = data.deviceId ?? 'unknown'
+    const fromDate = data.exportedAt ? new Date(data.exportedAt).toLocaleString() : 'unknown'
     await ElMessageBox.confirm(
-      `Import settings from "${file.name}"? This will overwrite current configuration.`,
+      `Import settings from "${file.name}"?\n\n`
+      + `Source device: ${fromDevice}\n`
+      + `Exported: ${fromDate}\n\n`
+      + `Sync-classified settings (preferences, telemetry) will be applied.\n`
+      + `Local settings (paths, ports) will be kept unchanged.\n`
+      + (data.sites?.length ? `${data.sites.length} site(s) will be merged by domain.` : ''),
       'Import settings',
       { confirmButtonText: 'Import', type: 'warning' },
     )
-    await fetch(`${daemonBase()}/api/settings`, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(data.settings),
-    })
-    ElMessage.success('Settings imported — reload the page to see changes')
+
+    // Use the same merge logic as pullFromCloud — sync fields only
+    const merged: Record<string, string> = {}
+    for (const [key, value] of Object.entries(data.settings as Record<string, string>)) {
+      if (isSettingSyncable(key)) merged[key] = value
+    }
+    if (Object.keys(merged).length > 0) {
+      await fetch(`${daemonBase()}/api/settings`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(merged),
+      })
+    }
+    ElMessage.success(`Imported ${Object.keys(merged).length} sync settings from ${file.name}`)
     await loadSettings()
   } catch (e: any) {
     if (e !== 'cancel') ElMessage.error(`Import failed: ${e.message}`)
   }
-  // Reset file input so the same file can be re-imported
   if (importFileInput.value) importFileInput.value.value = ''
 }
 
