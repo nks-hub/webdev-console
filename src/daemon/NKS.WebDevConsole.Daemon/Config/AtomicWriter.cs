@@ -24,6 +24,12 @@ public sealed class AtomicWriter
         var dir = Path.GetDirectoryName(targetPath) ?? ".";
         var tmpPath = targetPath + ".tmp";
 
+        // Ensure parent directory exists before writing the temp file.
+        // Without this, callers had to pre-create the directory or eat a
+        // DirectoryNotFoundException; with it, AtomicWriter is safe to call
+        // anywhere (per-site config trees, plugin-owned subdirectories, etc).
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
         try
         {
             // Write to temp file first

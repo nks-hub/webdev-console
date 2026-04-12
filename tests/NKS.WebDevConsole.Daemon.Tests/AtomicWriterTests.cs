@@ -130,4 +130,27 @@ public class AtomicWriterTests : IDisposable
         var historyDir = Path.Combine(_tempDir, "history");
         Assert.False(Directory.Exists(historyDir));
     }
+
+    [Fact]
+    public async Task WriteAsync_CreatesParentDirectory_WhenMissing()
+    {
+        var deepPath = Path.Combine(_tempDir, "nested", "dir", "config.conf");
+        Assert.False(Directory.Exists(Path.GetDirectoryName(deepPath)!));
+
+        await _writer.WriteAsync(deepPath, "nested content");
+
+        Assert.True(File.Exists(deepPath));
+        Assert.Equal("nested content", await File.ReadAllTextAsync(deepPath));
+    }
+
+    [Fact]
+    public async Task WriteAsync_LargeContent_WritesCorrectly()
+    {
+        var target = Path.Combine(_tempDir, "large.conf");
+        var content = new string('x', 1024 * 100); // 100 KB
+
+        await _writer.WriteAsync(target, content);
+
+        Assert.Equal(content.Length, new FileInfo(target).Length);
+    }
 }
