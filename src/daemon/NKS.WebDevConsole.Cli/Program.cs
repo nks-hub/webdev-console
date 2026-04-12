@@ -1551,7 +1551,7 @@ completionCmd.SetAction((parseResult, ct) =>
         case "zsh":
             AnsiConsole.WriteLine("# Add to ~/.bashrc or ~/.zshrc:");
             AnsiConsole.WriteLine("_wdc_completions() {");
-            AnsiConsole.WriteLine("  local commands=\"new open info config doctor system start-all stop-all restart-all status services logs sites php plugins databases binaries version node compose metrics ssl hosts backup restore migrate uninstall sync cloudflare completion\"");
+            AnsiConsole.WriteLine("  local commands=\"new open info config doctor system start-all stop-all restart-all status services logs sites php plugins databases binaries version node compose metrics ssl hosts backup restore migrate uninstall sync cloudflare completion activity\"");
             AnsiConsole.WriteLine("  COMPREPLY=( $(compgen -W \"$commands\" -- ${COMP_WORDS[COMP_CWORD]}) )");
             AnsiConsole.WriteLine("}");
             AnsiConsole.WriteLine("complete -F _wdc_completions wdc");
@@ -2179,6 +2179,39 @@ rootCommand.Add(restoreCommand);
 rootCommand.Add(uninstallCommand);
 rootCommand.Add(migrateCommand);
 rootCommand.Add(versionCommand);
+
+// --- wdc activity ---
+var activityLimitOpt = new Option<int>("--limit") { Description = "Number of entries", DefaultValueFactory = _ => 15 };
+var activityCommand = new Command("activity", "Show recent config change history") { activityLimitOpt };
+activityCommand.SetAction(async (parseResult, ct) =>
+{
+    var limit = parseResult.GetValue(activityLimitOpt);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var data = await client.GetJsonAsync($"/api/activity?limit={limit}");
+    if (json) { PrintJson(data); return; }
+    if (data.ValueKind != System.Text.Json.JsonValueKind.Array || data.GetArrayLength() == 0)
+    {
+        AnsiConsole.MarkupLine("[dim]No activity history yet.[/]");
+        return;
+    }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Time"); table.AddColumn("Entity"); table.AddColumn("Op"); table.AddColumn("Source");
+    foreach (var row in data.EnumerateArray())
+    {
+        var time = row.TryGetProperty("createdAt", out var t) ? t.GetString()?[..19] ?? "" : "";
+        var entity = row.TryGetProperty("entityName", out var en) ? en.GetString() ?? "" : "";
+        var entityType = row.TryGetProperty("entityType", out var et) ? et.GetString() ?? "" : "";
+        var op = row.TryGetProperty("operation", out var o) ? o.GetString() ?? "" : "";
+        var source = row.TryGetProperty("source", out var s) ? s.GetString() ?? "" : "";
+        var label = entity.Length > 0 ? $"{entityType}/{entity}" : entityType;
+        var opColor = op.Contains("create") ? "green" : op.Contains("delete") ? "red" : "blue";
+        table.AddRow(time, Markup.Escape(label), $"[{opColor}]{Markup.Escape(op)}[/]", Markup.Escape(source));
+    }
+    AnsiConsole.Write(table);
+});
+rootCommand.Add(activityCommand);
 
 // --- wdc cloudflare --- (mirrors /cloudflare page for terminal users)
 var cfCommand = new Command("cloudflare", "Cloudflare Tunnel management");
