@@ -47,10 +47,12 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useServicesStore } from '../../stores/services'
 import { useDaemonStore } from '../../stores/daemon'
+import { useSitesStore } from '../../stores/sites'
 
 const router = useRouter()
 const servicesStore = useServicesStore()
 const daemonStore = useDaemonStore()
+const sitesStore = useSitesStore()
 
 const visible = ref(false)
 const query = ref('')
@@ -99,6 +101,24 @@ const commands = computed<Command[]>(() => [
   { id: 'stop-all', label: 'Stop All Services', icon: '🛑', action: () => {
     daemonStore.services.filter((s: any) => s.state === 2).forEach((s: any) => servicesStore.stop(s.id))
   }},
+  // Dynamic per-site commands — open in browser + edit
+  ...sitesStore.sites.map(site => ({
+    id: `open-site-${site.domain}`,
+    label: `Open ${site.domain}`,
+    icon: '🌐',
+    action: () => {
+      const proto = site.sslEnabled ? 'https' : 'http'
+      const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
+      const suffix = (site.sslEnabled && port === 443) || (!site.sslEnabled && port === 80) ? '' : `:${port}`
+      window.open(`${proto}://${site.domain}${suffix}`, '_blank')
+    },
+  })),
+  ...sitesStore.sites.map(site => ({
+    id: `edit-site-${site.domain}`,
+    label: `Edit ${site.domain}`,
+    icon: '✏️',
+    action: () => router.push(`/sites/${site.domain}/edit`),
+  })),
 ])
 
 const filteredCommands = computed(() => {
