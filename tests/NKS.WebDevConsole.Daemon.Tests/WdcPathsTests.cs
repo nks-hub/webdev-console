@@ -69,9 +69,26 @@ public class WdcPathsTests
     [Fact]
     public void IsPortableMode_ReturnsBoolean()
     {
-        // Just verify the property is read-safe and returns a bool.
-        // Exact value depends on whether WDC_DATA_DIR is set in the
-        // environment running the tests; both true and false are valid.
         _ = WdcPaths.IsPortableMode;
+    }
+
+    [Fact]
+    public void CloudflareRoot_IsChildOfRoot()
+    {
+        Assert.StartsWith(WdcPaths.Root, WdcPaths.CloudflareRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("cloudflare", Path.GetFileName(WdcPaths.CloudflareRoot));
+    }
+
+    [Fact]
+    public void AllSubRoots_AreDistinct()
+    {
+        var paths = new[]
+        {
+            WdcPaths.BinariesRoot, WdcPaths.DataRoot, WdcPaths.SitesRoot,
+            WdcPaths.GeneratedRoot, WdcPaths.SslRoot, WdcPaths.LogsRoot,
+            WdcPaths.CacheRoot, WdcPaths.BackupsRoot, WdcPaths.CaddyRoot,
+            WdcPaths.CloudflareRoot,
+        };
+        Assert.Equal(paths.Length, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 }
