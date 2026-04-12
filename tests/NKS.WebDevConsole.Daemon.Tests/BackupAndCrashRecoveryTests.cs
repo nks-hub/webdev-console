@@ -152,9 +152,9 @@ public class BackupAndCrashRecoveryTests : IDisposable
     [Fact]
     public void ProcessMetricsSampler_first_sample_returns_zero_cpu()
     {
-        // Without a previous snapshot the sampler must return 0% (delta requires 2 samples).
-        // We sample the current test process — guaranteed to be alive.
         var current = System.Diagnostics.Process.GetCurrentProcess();
+        // Clear any cached snapshot left by other test classes sharing the static dictionary.
+        ProcessMetricsSampler.Forget(current.Id);
         var (cpu, mem) = ProcessMetricsSampler.Sample(current);
         Assert.Equal(0, cpu);
         Assert.True(mem > 0, "memory should be > 0 for a live process");
