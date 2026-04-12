@@ -854,6 +854,11 @@ tablesCmd.SetAction(async (parseResult, ct) =>
     }
     var tables = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToArray();
     if (json) { PrintJson(new { database = name, tables }); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var t in tables) Console.WriteLine(t);
+        return;
+    }
     if (tables.Length == 0) { AnsiConsole.MarkupLine($"[dim]No tables in {Markup.Escape(name)}[/]"); return; }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn($"Tables in {name} ({tables.Length})");
