@@ -92,4 +92,27 @@ public sealed class DockerComposeDetectorTests : IDisposable
         Assert.Contains("compose.yaml", DockerComposeDetector.ComposeFileNames);
         Assert.Contains("docker-compose.yml", DockerComposeDetector.ComposeFileNames);
     }
+
+    [Fact]
+    public void ComposeFileNames_ModernCanonicalFormFirst()
+    {
+        Assert.Equal("compose.yaml", DockerComposeDetector.ComposeFileNames[0]);
+        Assert.Equal("compose.yml", DockerComposeDetector.ComposeFileNames[1]);
+    }
+
+    [Fact]
+    public void FindComposeFile_HandlesWhitespaceOnlyInput()
+    {
+        Assert.Null(DockerComposeDetector.FindComposeFile("   "));
+        Assert.Null(DockerComposeDetector.FindComposeFile("\t"));
+    }
+
+    [Fact]
+    public void HasCompose_WorksWithTrailingSlash()
+    {
+        var path = Path.Combine(_tempRoot, "trailing-slash");
+        Directory.CreateDirectory(path);
+        File.WriteAllText(Path.Combine(path, "compose.yaml"), "services: {}\n");
+        Assert.True(DockerComposeDetector.HasCompose(path + Path.DirectorySeparatorChar));
+    }
 }
