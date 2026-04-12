@@ -454,6 +454,19 @@ New features added during the second 48-hour session that extend the v1 core wit
 - [x] **Plugin description pipeline** — IWdcPlugin.Description default-impl property, PluginLoader.TryLoadManifest() reads plugin.json next to DLL, /api/plugins returns description/author/license/capabilities/supportedPlatforms, PluginPage.vue About card with metadata grid.
 - [x] **UI polish batch** — Inter font, splash overlay on boot, button depth (inset shadow), Sites table redesign (runtime tags, tunnel links, row hover), Dashboard reorder (stats → charts → services), toast styling (min-width, left-border color), SiteEdit redesign (folder browser, chip aliases, runtime cards, SSL toggle rows).
 
+### Phase 10: Account + Device Fleet + Smart Sync (2026-04-12)
+
+Multi-device configuration management with user accounts, JWT auth, device fleet, and smart config sync with per-field classification.
+
+- [x] **Account system** — `Account` model (email + bcrypt), JWT via `python-jose` (HS256, 30-day expiry). Endpoints: `/auth/register`, `/auth/login` → `{token, email}`, `/auth/me`.
+- [x] **Device fleet management** — `DeviceConfig` extended with `user_id` FK, `name`, `os`, `arch`, `site_count`, `last_seen_at`. `GET /devices` (user-scoped), `PUT/DELETE /devices/{id}`, `GET /devices/{id}/config`, `POST /devices/{id}/push-config`. Online: `last_seen_at < 5min`.
+- [x] **Auto-link devices to accounts** — `POST /sync/config` auto-links on first authenticated push. Extracts name/OS/arch/site_count from payload metadata.
+- [x] **Smart config sync** — Per-field classification: sync (general/telemetry/catalogUrl) vs local (paths/ports/backupDir). Sites matched by domain: sync fields merged, local fields untouched. New sites get placeholder documentRoot.
+- [x] **Settings → Account tab** — Login/register, device fleet table with status pills + "Push here" buttons. JWT persisted in localStorage.
+- [x] **Settings → Sync tab** — Device ID, name, cloud push/pull with JWT, file export/import.
+- [x] **CLI sync commands** — `wdc sync push/pull/export`.
+- [x] **Settings completion** — 8 tabs covering all SPEC requirements: language, telemetry, PHP-FPM port, hosts path, backup dir, data path display.
+
 ---
 
 ## 4. Total Timeline
