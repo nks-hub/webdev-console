@@ -607,6 +607,15 @@ public class SiteManagerTests : IDisposable
         SiteManager.ValidateDocumentRoot(exactly);
     }
 
+    [Theory]
+    [InlineData("C:/htdocs/app$")]          // $ allowed (Unix paths, volume labels)
+    [InlineData("C:/htdocs/app (v2)")]      // parentheses + space
+    [InlineData(@"\\server\share\app")]     // UNC path
+    public void ValidateDocumentRoot_AcceptsRealWorldPaths(string path)
+    {
+        SiteManager.ValidateDocumentRoot(path);
+    }
+
     [Fact]
     public void LoadAll_SkipsInvalidToml_WithWarning()
     {
