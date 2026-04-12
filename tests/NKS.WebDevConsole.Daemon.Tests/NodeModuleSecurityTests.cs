@@ -66,6 +66,8 @@ public sealed class NodeModuleSecurityTests
     [InlineData("start < /etc/passwd")]
     [InlineData("start\nrm -rf /")]
     [InlineData("start\rrm -rf /")]
+    [InlineData("start\tmalicious")]
+    [InlineData("run\0dev")]
     public void ContainsShellMetacharacters_BlocksShellInjection(string input)
     {
         Assert.True(NodeModule.ContainsShellMetacharacters(input),
