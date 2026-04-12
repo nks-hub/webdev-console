@@ -549,6 +549,12 @@ pluginsCommand.SetAction(async (parseResult, ct) =>
 
     var plugins = await client.GetJsonAsync("/api/plugins");
     if (json) { PrintJson(plugins); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var p in plugins.EnumerateArray())
+            Console.WriteLine($"{p.GetProperty("id").GetString()}\t{p.GetProperty("version").GetString()}");
+        return;
+    }
     if (plugins.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No plugins loaded.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
