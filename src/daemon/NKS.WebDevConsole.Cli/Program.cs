@@ -1075,16 +1075,29 @@ phpExtCmd.SetAction(async (parseResult, ct) =>
     // Toggle mode: flip an extension on/off
     if (!string.IsNullOrEmpty(toggle))
     {
-        var exts = await client.GetJsonAsync($"/api/php/{ver}/extensions");
-        var ext = exts.EnumerateArray().FirstOrDefault(e => e.GetProperty("name").GetString()?.Equals(toggle, StringComparison.OrdinalIgnoreCase) == true);
-        var currentlyLoaded = ext.ValueKind != System.Text.Json.JsonValueKind.Undefined
-            && ext.TryGetProperty("isLoaded", out var il) && il.GetBoolean();
-        var newState = !currentlyLoaded;
-        var body = JsonContent.Create(new { enabled = newState });
-        await client.PostAsync($"/api/php/{ver}/extensions/{toggle}", body);
-        AnsiConsole.MarkupLine(newState
-            ? $"[green]Enabled[/] {Markup.Escape(toggle)} for PHP {Markup.Escape(ver)}"
-            : $"[yellow]Disabled[/] {Markup.Escape(toggle)} for PHP {Markup.Escape(ver)}");
+        try
+        {
+            var exts = await client.GetJsonAsync($"/api/php/{ver}/extensions");
+            var ext = exts.EnumerateArray().FirstOrDefault(e => e.GetProperty("name").GetString()?.Equals(toggle, StringComparison.OrdinalIgnoreCase) == true);
+            if (ext.ValueKind == System.Text.Json.JsonValueKind.Undefined)
+            {
+                AnsiConsole.MarkupLine($"[red]Extension '{Markup.Escape(toggle)}' not found for PHP {Markup.Escape(ver)}[/]");
+                Environment.Exit(1);
+                return;
+            }
+            var currentlyLoaded = ext.TryGetProperty("isLoaded", out var il) && il.GetBoolean();
+            var newState = !currentlyLoaded;
+            var body = JsonContent.Create(new { enabled = newState });
+            await client.PostAsync($"/api/php/{ver}/extensions/{toggle}", body);
+            AnsiConsole.MarkupLine(newState
+                ? $"[green]Enabled[/] {Markup.Escape(toggle)} for PHP {Markup.Escape(ver)}"
+                : $"[yellow]Disabled[/] {Markup.Escape(toggle)} for PHP {Markup.Escape(ver)}");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+            Environment.Exit(1);
+        }
         return;
     }
 
