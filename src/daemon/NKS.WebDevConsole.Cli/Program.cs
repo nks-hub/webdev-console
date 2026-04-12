@@ -1511,10 +1511,17 @@ phpInstCmd.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
     AnsiConsole.MarkupLine($"Installing PHP [bold]{Markup.Escape(ver)}[/]...");
-    var content = JsonContent.Create(new { app = "php", version = ver });
-    var result = await client.PostAsync("/api/binaries/install", content);
-    if (parseResult.GetValue(jsonOption)) { PrintJson(result); return; }
-    AnsiConsole.MarkupLine($"[green]PHP {Markup.Escape(ver)} installed![/]");
+    try
+    {
+        var content = JsonContent.Create(new { app = "php", version = ver });
+        var result = await client.PostAsync("/api/binaries/install", content);
+        if (parseResult.GetValue(jsonOption)) { PrintJson(result); return; }
+        AnsiConsole.MarkupLine($"[green]PHP {Markup.Escape(ver)} installed![/]");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]PHP install failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 phpCommand.Add(phpInstCmd);
 
