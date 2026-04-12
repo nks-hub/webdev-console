@@ -640,6 +640,24 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void Delete_PathTraversalDomain_ThrowsBeforeFileAccess()
+    {
+        Assert.Throws<ArgumentException>(() => _manager.Delete("../etc/passwd"));
+    }
+
+    [Fact]
+    public void Delete_ShellMetacharDomain_ThrowsBeforeFileAccess()
+    {
+        Assert.Throws<ArgumentException>(() => _manager.Delete("foo;rm.loc"));
+    }
+
+    [Fact]
+    public void Delete_EmptyDomain_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => _manager.Delete(""));
+    }
+
+    [Fact]
     public void LoadAll_NodeProxySite_DisablesPhpLogic()
     {
         var site = new SiteConfig
