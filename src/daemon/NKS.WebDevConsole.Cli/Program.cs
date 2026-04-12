@@ -2367,7 +2367,17 @@ backupListCmd.SetAction(async (parseResult, ct) =>
     if (json) { PrintJson(data); return; }
     if (!data.TryGetProperty("backups", out var arr) || arr.GetArrayLength() == 0)
     {
-        AnsiConsole.MarkupLine("[dim]No backups found.[/]");
+        if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No backups found.[/]");
+        return;
+    }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var b in arr.EnumerateArray())
+        {
+            var created = b.TryGetProperty("createdUtc", out var c) ? c.GetString()?[..19] ?? "" : "";
+            var path = b.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+            Console.WriteLine($"{created}\t{Path.GetFileName(path)}");
+        }
         return;
     }
     var table = new Table().Border(TableBorder.Rounded);
