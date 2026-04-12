@@ -2993,6 +2993,15 @@ cfStatusCmd.SetAction(async (parseResult, ct) =>
     var path = cfg.TryGetProperty("cloudflaredPath", out var cp) ? cp.GetString() : null;
     var apiToken = cfg.TryGetProperty("apiToken", out var at) ? at.GetString() : null;
 
+    if (Console.IsOutputRedirected)
+    {
+        Console.WriteLine($"tunnel\t{tunnelName ?? ""}");
+        Console.WriteLine($"tunnel_id\t{tunnelId ?? ""}");
+        Console.WriteLine($"account\t{accountId ?? ""}");
+        Console.WriteLine($"api_token\t{(apiToken != null ? "set" : "missing")}");
+        return;
+    }
+
     AnsiConsole.MarkupLine($"[bold]Cloudflare Tunnel[/]");
     AnsiConsole.MarkupLine($"  Tunnel:     {Markup.Escape(tunnelName ?? "(not configured)")}");
     AnsiConsole.MarkupLine($"  Tunnel ID:  [dim]{Markup.Escape(tunnelId ?? "—")}[/]");
