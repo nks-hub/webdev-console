@@ -515,6 +515,11 @@
                   <span class="sys-label">Binaries</span>
                   <span class="sys-value">{{ systemInfo.binaries }}</span>
                 </div>
+                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: 12px">Installed Versions</div>
+                <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
+                  <span class="sys-label">{{ bin.app }}</span>
+                  <span class="sys-value">{{ bin.version }}</span>
+                </div>
                 <div class="about-sys-row">
                   <span class="sys-label">OS</span>
                   <span class="sys-value">{{ systemInfo.os?.version }}</span>
@@ -560,6 +565,7 @@ const saving = ref(false)
 const databases = ref<string[]>([])
 const newDbName = ref('')
 const systemInfo = ref<any>(null)
+const installedVersions = ref<Array<{ app: string; version: string }>>([])
 
 const ports = reactive({
   http: 80,
@@ -1193,6 +1199,19 @@ onMounted(async () => {
     const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
   } catch { /* not connected */ }
+  // Load installed binary versions for the About tab
+  try {
+    const r = await fetch(`${daemonBase()}/api/binaries/installed`, { headers: authHeaders() })
+    if (r.ok) {
+      const bins: Array<{ app: string; version: string }> = await r.json()
+      const seen = new Set<string>()
+      installedVersions.value = bins.filter(b => {
+        if (seen.has(b.app)) return false
+        seen.add(b.app)
+        return true
+      })
+    }
+  } catch { /* optional */ }
 })
 
 async function save() {
