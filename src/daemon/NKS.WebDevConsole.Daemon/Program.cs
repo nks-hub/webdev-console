@@ -10,6 +10,7 @@ using NKS.WebDevConsole.Daemon.Data;
 using CliWrap.Buffered;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Core.Services;
 
 // Windows: create the Job Object before anything spawns child processes so every
 // subsequent Process.Start() from ProcessManager + plugins gets assigned to it and
@@ -1008,6 +1009,25 @@ app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
 {
     var site = sm.Get(domain);
     return site is not null ? Results.Ok(site) : Results.NotFound();
+});
+
+// Docker Compose detection — returns whether the site's document root
+// contains a compose file and, if so, which one. Used by the frontend
+// to show a "Compose" badge and (in future iterations) surface lifecycle
+// controls. Kept as a separate endpoint rather than inline on /api/sites
+// so the cheap TOML listing doesn't have to hit the filesystem per site.
+app.MapGet("/api/sites/{domain}/docker-compose", (string domain, SiteManager sm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    var composePath = DockerComposeDetector.FindComposeFile(site.DocumentRoot);
+    return Results.Ok(new
+    {
+        hasCompose = composePath is not null,
+        composeFile = composePath,
+        fileName = composePath is not null ? Path.GetFileName(composePath) : null,
+    });
 });
 
 app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
