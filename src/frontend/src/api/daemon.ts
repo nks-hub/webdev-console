@@ -234,6 +234,98 @@ export const cloudflareAutoSetup = (apiToken: string): Promise<CloudflareAutoSet
 export const cloudflareSync = (): Promise<{ ok: boolean; synced: number; sites: any[] }> =>
   json('/api/cloudflare/sync', { method: 'POST' })
 
+// ─── Catalog API account + device management ──────────────────────────
+// These call the catalog-api directly (not the daemon), using JWT auth.
+
+function catalogBase(catalogUrl?: string): string {
+  return (catalogUrl || 'http://127.0.0.1:8765').replace(/\/$/, '')
+}
+
+function jwtHeaders(token: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  }
+}
+
+export interface CatalogTokenResponse {
+  token: string
+  email: string
+}
+
+export async function catalogRegister(
+  catalogUrl: string, email: string, password: string,
+): Promise<CatalogTokenResponse> {
+  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}))
+    throw new Error(body?.detail || `HTTP ${r.status}`)
+  }
+  return r.json()
+}
+
+export async function catalogLogin(
+  catalogUrl: string, email: string, password: string,
+): Promise<CatalogTokenResponse> {
+  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}))
+    throw new Error(body?.detail || `HTTP ${r.status}`)
+  }
+  return r.json()
+}
+
+export interface DeviceInfo {
+  device_id: string
+  name: string | null
+  os: string | null
+  arch: string | null
+  site_count: number | null
+  last_seen_at: string | null
+  updated_at: string | null
+  online: boolean
+  is_current: boolean
+}
+
+export async function fetchDevices(catalogUrl: string, token: string): Promise<DeviceInfo[]> {
+  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices`, {
+    headers: jwtHeaders(token),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function pushConfigToDevice(
+  catalogUrl: string, token: string, targetDeviceId: string, sourceDeviceId: string,
+): Promise<any> {
+  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices/${targetDeviceId}/push-config`, {
+    method: 'POST',
+    headers: jwtHeaders(token),
+    body: JSON.stringify({ source_device_id: sourceDeviceId }),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function deleteDevice(
+  catalogUrl: string, token: string, deviceId: string,
+): Promise<any> {
+  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices/${deviceId}`, {
+    method: 'DELETE',
+    headers: jwtHeaders(token),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
 export const suggestCloudflareSubdomain = (domain: string): Promise<{ suggestion: string; domain: string }> =>
   json(`/api/cloudflare/suggest-subdomain?domain=${encodeURIComponent(domain)}`)
 

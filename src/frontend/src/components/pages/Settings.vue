@@ -221,6 +221,111 @@
           </div>
         </el-tab-pane>
 
+        <!-- Account & Devices tab -->
+        <el-tab-pane label="Account" name="account">
+          <div class="tab-content">
+            <!-- Not logged in -->
+            <template v-if="!accountToken">
+              <section class="settings-card">
+                <header class="settings-card-header">
+                  <span class="settings-card-title">Sign in to NKS WDC Cloud</span>
+                </header>
+                <div class="settings-card-body">
+                  <p class="tab-desc">
+                    Sign in to sync settings across devices, manage your fleet,
+                    and push configs between machines.
+                  </p>
+                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
+                    <el-form-item label="Email">
+                      <el-input v-model="authEmail" placeholder="you@example.com" />
+                    </el-form-item>
+                    <el-form-item label="Password">
+                      <el-input v-model="authPassword" type="password" show-password />
+                    </el-form-item>
+                    <div class="sync-actions">
+                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">Sign in</el-button>
+                      <el-button size="small" :loading="authLoading" @click="doRegister">Register</el-button>
+                    </div>
+                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
+                      {{ authError }}
+                    </div>
+                  </el-form>
+                </div>
+              </section>
+            </template>
+
+            <!-- Logged in -->
+            <template v-else>
+              <section class="settings-card">
+                <header class="settings-card-header">
+                  <span class="settings-card-title">Account</span>
+                  <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
+                </header>
+                <div class="settings-card-body">
+                  <div class="sync-actions">
+                    <el-button size="small" @click="loadDevicesAccount" :loading="devicesLoading">Refresh devices</el-button>
+                    <el-button size="small" type="danger" plain @click="doLogout">Sign out</el-button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="settings-card">
+                <header class="settings-card-header">
+                  <span class="settings-card-title">My Devices</span>
+                  <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ accountDevices.length }} registered</span>
+                </header>
+                <div class="settings-card-body">
+                  <el-table v-if="accountDevices.length > 0" :data="accountDevices" size="small" stripe>
+                    <el-table-column label="Name" min-width="150">
+                      <template #default="{ row }">
+                        <span class="mono" :style="row.device_id === deviceId ? 'font-weight: 700' : ''">
+                          {{ row.name || row.device_id.slice(0, 12) + '…' }}
+                        </span>
+                        <el-tag v-if="row.device_id === deviceId" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="OS" width="120">
+                      <template #default="{ row }">
+                        <span class="mono">{{ (row.os ?? '') + '/' + (row.arch ?? '') }}</span>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="Sites" width="70" align="center">
+                      <template #default="{ row }">{{ row.site_count ?? '—' }}</template>
+                    </el-table-column>
+                    <el-table-column label="Status" width="90">
+                      <template #default="{ row }">
+                        <el-tag size="small" :type="row.online ? 'success' : 'info'" effect="dark">
+                          {{ row.online ? 'Online' : 'Offline' }}
+                        </el-tag>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="Last sync" width="150">
+                      <template #default="{ row }">
+                        <span style="font-size: 0.72rem; color: var(--wdc-text-3);">
+                          {{ row.last_seen_at ? new Date(row.last_seen_at).toLocaleString() : '—' }}
+                        </span>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="" width="110" align="right">
+                      <template #default="{ row }">
+                        <el-button
+                          v-if="row.device_id !== deviceId"
+                          size="small"
+                          type="primary"
+                          plain
+                          @click="pushMyConfigTo(row.device_id)"
+                          :loading="pushingTo === row.device_id"
+                        >Push here</el-button>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                  <el-empty v-else description="No devices registered yet. Push settings first." :image-size="48" />
+                </div>
+              </section>
+            </template>
+          </div>
+        </el-tab-pane>
+
         <!-- Sync tab — cloud config sync + export/import -->
         <el-tab-pane label="Sync" name="sync">
           <div class="tab-content">
@@ -410,6 +515,10 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download } from '@element-plus/icons-vue'
 import { useThemeStore, type ThemeMode } from '../../stores/theme'
+import {
+  catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
+  type DeviceInfo as CatalogDeviceInfo,
+} from '../../api/daemon'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
@@ -615,6 +724,93 @@ function openCatalogAdmin() {
   window.open(url.replace(/\/$/, '') + '/admin', '_blank')
 }
 
+// ── Account & Devices tab ─────────────────────────────────────────────
+const accountToken = ref(localStorage.getItem('nks-wdc-catalog-jwt') || '')
+const accountEmail = ref(localStorage.getItem('nks-wdc-catalog-email') || '')
+const authEmail = ref('')
+const authPassword = ref('')
+const authLoading = ref(false)
+const authError = ref('')
+const accountDevices = ref<CatalogDeviceInfo[]>([])
+const devicesLoading = ref(false)
+const pushingTo = ref<string | null>(null)
+
+function getCatalogUrl(): string {
+  return (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+}
+
+async function doLogin() {
+  authLoading.value = true
+  authError.value = ''
+  try {
+    const result = await catalogLogin(getCatalogUrl(), authEmail.value, authPassword.value)
+    accountToken.value = result.token
+    accountEmail.value = result.email
+    localStorage.setItem('nks-wdc-catalog-jwt', result.token)
+    localStorage.setItem('nks-wdc-catalog-email', result.email)
+    authPassword.value = ''
+    ElMessage.success(`Signed in as ${result.email}`)
+    void loadDevicesAccount()
+  } catch (e: any) {
+    authError.value = e.message
+  } finally {
+    authLoading.value = false
+  }
+}
+
+async function doRegister() {
+  authLoading.value = true
+  authError.value = ''
+  try {
+    const result = await catalogRegister(getCatalogUrl(), authEmail.value, authPassword.value)
+    accountToken.value = result.token
+    accountEmail.value = result.email
+    localStorage.setItem('nks-wdc-catalog-jwt', result.token)
+    localStorage.setItem('nks-wdc-catalog-email', result.email)
+    authPassword.value = ''
+    ElMessage.success(`Account created: ${result.email}`)
+  } catch (e: any) {
+    authError.value = e.message
+  } finally {
+    authLoading.value = false
+  }
+}
+
+function doLogout() {
+  accountToken.value = ''
+  accountEmail.value = ''
+  accountDevices.value = []
+  localStorage.removeItem('nks-wdc-catalog-jwt')
+  localStorage.removeItem('nks-wdc-catalog-email')
+  ElMessage.success('Signed out')
+}
+
+async function loadDevicesAccount() {
+  if (!accountToken.value) return
+  devicesLoading.value = true
+  try {
+    accountDevices.value = await fetchDevices(getCatalogUrl(), accountToken.value)
+  } catch (e: any) {
+    ElMessage.error(`Load devices failed: ${e.message}`)
+    if (e.message.includes('401')) doLogout()
+  } finally {
+    devicesLoading.value = false
+  }
+}
+
+async function pushMyConfigTo(targetDeviceId: string) {
+  if (!accountToken.value || !deviceId.value) return
+  pushingTo.value = targetDeviceId
+  try {
+    await pushConfigToDevice(getCatalogUrl(), accountToken.value, targetDeviceId, deviceId.value)
+    ElMessage.success(`Config pushed to device ${targetDeviceId.slice(0, 8)}…`)
+  } catch (e: any) {
+    ElMessage.error(`Push failed: ${e.message}`)
+  } finally {
+    pushingTo.value = null
+  }
+}
+
 // ── Sync tab state ────────────────────────────────────────────────────
 const deviceId = ref('')
 const deviceName = ref('')
@@ -687,10 +883,12 @@ async function pushToCloud() {
     })
 
     const payload = await buildSyncPayload()
-    const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+    const url = getCatalogUrl()
+    const pushHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (accountToken.value) pushHeaders['Authorization'] = `Bearer ${accountToken.value}`
     const r = await fetch(`${url}/api/v1/sync/config`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: pushHeaders,
       body: JSON.stringify({ device_id: deviceId.value, payload }),
     })
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -929,6 +1127,7 @@ onMounted(async () => {
   void loadDatabases()
   void loadPhpVersions()
   void loadDeviceId()
+  if (accountToken.value) void loadDevicesAccount()
   try {
     const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
