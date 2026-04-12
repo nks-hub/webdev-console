@@ -216,7 +216,7 @@
       <div class="activity-section" v-if="activity.length > 0">
         <div class="section-header">
           <span class="section-title">Recent activity</span>
-          <el-button size="small" text @click="loadActivity">Refresh</el-button>
+          <el-button size="small" text @click="loadActivity" :loading="activityLoading">Refresh</el-button>
         </div>
         <el-timeline class="activity-timeline">
           <el-timeline-item
@@ -332,7 +332,9 @@ interface ActivityRow {
 }
 const activity = ref<ActivityRow[]>([])
 
+const activityLoading = ref(false)
 async function loadActivity() {
+  activityLoading.value = true
   try {
     const port = (window as any).daemonApi?.getPort?.() ?? new URLSearchParams(window.location.search).get('port') ?? '5146'
     const token = (window as any).daemonApi?.getToken?.() ?? new URLSearchParams(window.location.search).get('token') ?? ''
@@ -343,6 +345,7 @@ async function loadActivity() {
     const data = await r.json()
     activity.value = Array.isArray(data) ? data : (data?.entries ?? [])
   } catch { /* offline — leave prior list in place */ }
+  finally { activityLoading.value = false }
 }
 
 function activityColor(operation: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' {
