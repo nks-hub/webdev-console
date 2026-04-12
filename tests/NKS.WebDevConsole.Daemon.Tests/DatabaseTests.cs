@@ -51,4 +51,36 @@ public class DatabaseTests
         var result = conn.QuerySingle<int>("SELECT 1 + 1;");
         Assert.Equal(2, result);
     }
+
+    [Fact]
+    public void CreateConnection_MultipleConnections_ShareState()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"wdc-db-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var db = new Database(path);
+            using (var conn1 = db.CreateConnection())
+                conn1.Execute("CREATE TABLE test (id INTEGER PRIMARY KEY, val TEXT);");
+            using (var conn2 = db.CreateConnection())
+            {
+                conn2.Execute("INSERT INTO test (val) VALUES ('hello');");
+                var count = conn2.QuerySingle<int>("SELECT COUNT(*) FROM test;");
+                Assert.Equal(1, count);
+            }
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
+    public void CreateConnection_ReturnsNewInstanceEachCall()
+    {
+        var db = new Database(":memory:");
+        using var conn1 = db.CreateConnection();
+        using var conn2 = db.CreateConnection();
+        Assert.NotSame(conn1, conn2);
+    }
 }
