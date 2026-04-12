@@ -25,6 +25,11 @@
       </div>
     </div>
 
+    <div v-if="initialLoading" style="padding: 24px">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <template v-else>
     <el-alert
       v-if="pageLoadError"
       type="error"
@@ -391,6 +396,8 @@
       </el-tab-pane>
     </el-tabs>
 
+    </template>
+
     <FolderBrowser
       v-model="showFolderBrowser"
       :initial-path="config.cloudflaredPath || undefined"
@@ -428,6 +435,7 @@ const activeTab = ref<'settings' | 'ingress' | 'dns'>('settings')
 // ── Config state ─────────────────────────────────────────────────────
 const config = reactive<CloudflareConfig>({})
 const pageLoadError = ref('')
+const initialLoading = ref(true)
 const apiTokenInput = ref('')
 const tunnelTokenInput = ref('')
 
@@ -830,6 +838,7 @@ function formatUptime(secs: number): string {
 
 onMounted(async () => {
   await loadConfig()
+  initialLoading.value = false
   if (sitesStore.sites.length === 0) void sitesStore.load()
   if (config.apiToken) {
     void loadZones()
