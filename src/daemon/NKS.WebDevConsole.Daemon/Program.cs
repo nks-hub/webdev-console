@@ -1030,6 +1030,43 @@ app.MapGet("/api/sites/{domain}/docker-compose", (string domain, SiteManager sm)
     });
 });
 
+// Access log metrics — Phase 11 Performance monitoring foothold.
+// Looks at each installed Apache version's logs/ directory for the
+// site's per-domain access log (the vhost template always writes to
+// ${APACHE_LOG_DIR}/{domain}-access.log or -ssl-access.log). Returns
+// file size, line count, and last-write timestamp so the UI can show
+// "1.2 MB · 15k requests · last hit 3m ago" without a full log parser.
+app.MapGet("/api/sites/{domain}/metrics", (string domain, SiteManager sm, BinaryManager bm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    // Build candidate paths from every installed Apache version.
+    // The vhost template writes access logs under that version's logs/
+    // subdirectory with {domain}-access.log / {domain}-ssl-access.log.
+    var candidates = new List<string>();
+    foreach (var apache in bm.ListInstalled("apache"))
+    {
+        var logsDir = Path.Combine(apache.InstallPath, "logs");
+        candidates.Add(Path.Combine(logsDir, $"{domain}-access.log"));
+        candidates.Add(Path.Combine(logsDir, $"{domain}-ssl-access.log"));
+    }
+
+    var accessStats = AccessLogInspector.Inspect(candidates);
+    return Results.Ok(new
+    {
+        domain,
+        hasMetrics = accessStats is not null,
+        accessLog = accessStats is null ? null : new
+        {
+            path = accessStats.Path,
+            sizeBytes = accessStats.SizeBytes,
+            requestCount = accessStats.LineCount,
+            lastWriteUtc = accessStats.LastWrittenUtc,
+        },
+    });
+});
+
 app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     try { SiteManager.ValidateDomain(site.Domain); }
