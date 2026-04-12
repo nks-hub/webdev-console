@@ -554,7 +554,7 @@
                 Refresh
               </el-button>
               <span v-if="metricsLastRefresh" class="hint metrics-timestamp">
-                Last updated {{ formatAge(metricsLastRefresh) }}
+                Last updated {{ metricsAgeDisplay }}
               </span>
             </div>
             <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">
@@ -618,7 +618,7 @@
 // this page — SiteEdit is parametric by :domain and MUST refresh state on
 // every navigation, unlike Dashboard/Sites/Binaries which benefit from cache.
 defineOptions({ name: 'SiteEdit' })
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
@@ -1112,6 +1112,17 @@ function openInBrowser() {
 const siteMetrics = ref<SiteMetrics | null>(null)
 const metricsLoading = ref(false)
 const metricsLastRefresh = ref<string | null>(null)
+// Ticker that nudges Vue to re-render `formatAge(metricsLastRefresh)` every
+// 5s so the "Last updated Xs ago" label doesn't freeze while the tab is open.
+// Without this, formatAge only recomputes on refresh and users see stale
+// relative-time text until they click Refresh or switch tabs.
+const metricsTick = ref(0)
+let metricsTickTimer: ReturnType<typeof setInterval> | null = null
+
+const metricsAgeDisplay = computed(() => {
+  void metricsTick.value // dep for reactivity
+  return metricsLastRefresh.value ? formatAge(metricsLastRefresh.value) : ''
+})
 
 async function refreshMetrics() {
   if (!site.value) return
@@ -1122,6 +1133,14 @@ async function refreshMetrics() {
     metricsLastRefresh.value = new Date().toISOString()
   } catch { siteMetrics.value = null }
   finally { metricsLoading.value = false }
+}
+
+function startMetricsTicker() {
+  if (metricsTickTimer) return
+  metricsTickTimer = setInterval(() => { metricsTick.value++ }, 5000)
+}
+function stopMetricsTicker() {
+  if (metricsTickTimer) { clearInterval(metricsTickTimer); metricsTickTimer = null }
 }
 
 function formatNumber(n: number): string {
@@ -1155,10 +1174,20 @@ function formatDate(s: string): string {
 }
 
 watch(domain, () => { void load() })
-watch(activeTab, (tab) => { if (tab === 'metrics') void refreshMetrics() })
+watch(activeTab, (tab) => {
+  if (tab === 'metrics') {
+    void refreshMetrics()
+    startMetricsTicker()
+  } else {
+    stopMetricsTicker()
+  }
+})
 onMounted(() => {
   void load()
   void loadCfSubdomainTemplate()
+})
+onBeforeUnmount(() => {
+  stopMetricsTicker()
 })
 </script>
 
