@@ -803,9 +803,14 @@ async function pullFromCloud() {
             body: JSON.stringify(update),
           })
         } else {
-          // New site: create with sync fields, leave documentRoot empty
-          // so the user is prompted to set it in SiteEdit.
-          const newSite: any = { domain, documentRoot: '' }
+          // New site: create with sync fields. DocumentRoot can't be empty
+          // (SiteManager.ValidateDocumentRoot throws) so we use a clear
+          // placeholder path that passes validation. The user replaces it
+          // in SiteEdit → General → Document Root before the vhost works.
+          const placeholder = navigator.platform?.startsWith('Win')
+            ? `C:\\pending-sync\\${domain}`
+            : `/tmp/pending-sync/${domain}`
+          const newSite: any = { domain, documentRoot: placeholder }
           for (const field of SITE_SYNC_FIELDS) {
             if (field in remoteSite) newSite[field] = remoteSite[field]
           }
