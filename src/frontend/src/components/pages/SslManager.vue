@@ -19,7 +19,16 @@
 
     <div class="page-body">
       <el-alert
-        v-if="!mkcertInstalled"
+        v-if="loadError"
+        type="error"
+        :title="loadError"
+        :closable="true"
+        @close="loadError = ''"
+        show-icon
+        style="margin-bottom: 16px"
+      />
+      <el-alert
+        v-if="!mkcertInstalled && !loadError"
         type="warning"
         title="mkcert not installed"
         description="Install mkcert via Binaries page to enable SSL certificate generation."
@@ -117,6 +126,7 @@ interface CertInfo {
 const certs = ref<CertInfo[]>([])
 const mkcertInstalled = ref(false)
 const loading = ref(false)
+const loadError = ref('')
 const installingCA = ref(false)
 const generating = ref(false)
 const revoking = ref(new Set<string>())
@@ -141,15 +151,19 @@ function authHeaders(): Record<string, string> {
 
 async function loadCerts() {
   loading.value = true
+  loadError.value = ''
   try {
     const r = await fetch(`${daemonBase()}/api/ssl/certs`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       certs.value = data.certs ?? []
       mkcertInstalled.value = data.mkcertInstalled ?? false
+    } else {
+      loadError.value = `Failed to load certificates: HTTP ${r.status}`
     }
-  } catch { /* not connected */ }
-  finally { loading.value = false }
+  } catch (e: any) {
+    loadError.value = `Cannot connect to daemon: ${e.message}`
+  } finally { loading.value = false }
 }
 
 async function loadSites() {
