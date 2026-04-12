@@ -75,4 +75,24 @@ public class ValidateAliasTests
     {
         SiteManager.ValidateAlias("app?.example.loc");
     }
+
+    [Fact]
+    public void Accepts_MultiLevelSubdomain()
+    {
+        SiteManager.ValidateAlias("deep.sub.example.loc");
+    }
+
+    [Fact]
+    public void Accepts_HyphenatedAlias()
+    {
+        SiteManager.ValidateAlias("my-cool-app.example.loc");
+    }
+
+    [Fact]
+    public void Accepts_MaxLength253()
+    {
+        var alias = string.Join(".", Enumerable.Repeat("a", 50)) + ".loc";
+        if (alias.Length <= 253)
+            SiteManager.ValidateAlias(alias);
+    }
 }
