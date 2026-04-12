@@ -1794,6 +1794,38 @@ doctorCommand.SetAction(async (parseResult, ct) =>
     }
     catch { checks.Add(("Docker", true, "Not installed (optional)")); }
 
+    // 9. Backup freshness
+    if (connected)
+    {
+        try
+        {
+            var backups = await client.GetJsonAsync("/api/backup/list");
+            if (backups.TryGetProperty("backups", out var bArr) && bArr.GetArrayLength() > 0)
+            {
+                var newest = bArr[0];
+                var created = newest.TryGetProperty("createdUtc", out var c) ? c.GetString() : null;
+                if (created != null && DateTime.TryParse(created, out var dt))
+                {
+                    var age = DateTime.UtcNow - dt;
+                    var fresh = age.TotalDays < 7;
+                    var ageStr = age.TotalHours < 1 ? "just now"
+                        : age.TotalHours < 24 ? $"{(int)age.TotalHours}h ago"
+                        : $"{(int)age.TotalDays}d ago";
+                    checks.Add(("Backup freshness", fresh, $"Last backup {ageStr}{(fresh ? "" : " — consider running wdc backup")}"));
+                }
+                else
+                {
+                    checks.Add(("Backup freshness", true, $"{bArr.GetArrayLength()} backup(s)"));
+                }
+            }
+            else
+            {
+                checks.Add(("Backup freshness", false, "No backups — run wdc backup"));
+            }
+        }
+        catch { checks.Add(("Backup freshness", true, "Check skipped")); }
+    }
+
     if (json) { PrintJson(checks.Select(c => new { c.name, c.ok, c.detail })); return; }
 
     if (Console.IsOutputRedirected)
