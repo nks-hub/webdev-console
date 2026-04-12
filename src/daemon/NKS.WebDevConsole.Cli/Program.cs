@@ -2137,13 +2137,20 @@ sslGenerateCmd.SetAction(async (parseResult, ct) =>
     var domain = parseResult.GetValue(sslGenerateArg);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync("/api/ssl/generate",
-        new StringContent(JsonSerializer.Serialize(new { domain, aliases = Array.Empty<string>() }),
-        System.Text.Encoding.UTF8, "application/json"));
-    var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
-    var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
-    if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
-    else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+    try
+    {
+        var result = await client.PostAsync("/api/ssl/generate",
+            new StringContent(JsonSerializer.Serialize(new { domain, aliases = Array.Empty<string>() }),
+            System.Text.Encoding.UTF8, "application/json"));
+        var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
+        var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+        if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
+        else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]SSL generate failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sslCommand.Add(sslGenerateCmd);
 
@@ -2152,11 +2159,18 @@ sslInstallCaCmd.SetAction(async (parseResult, ct) =>
 {
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var result = await client.PostAsync("/api/ssl/install-ca");
-    var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
-    var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
-    if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
-    else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+    try
+    {
+        var result = await client.PostAsync("/api/ssl/install-ca");
+        var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
+        var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+        if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
+        else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]CA install failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sslCommand.Add(sslInstallCaCmd);
 
@@ -2167,8 +2181,15 @@ sslRevokeCmd.SetAction(async (parseResult, ct) =>
     var domain = parseResult.GetValue(sslRevokeArg);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    await client.DeleteAsync($"/api/ssl/certs/{domain}");
-    AnsiConsole.MarkupLine($"[green]✓[/] Certificate for {Markup.Escape(domain)} revoked");
+    try
+    {
+        await client.DeleteAsync($"/api/ssl/certs/{domain}");
+        AnsiConsole.MarkupLine($"[green]✓[/] Certificate for {Markup.Escape(domain)} revoked");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Revoke failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 sslCommand.Add(sslRevokeCmd);
 
