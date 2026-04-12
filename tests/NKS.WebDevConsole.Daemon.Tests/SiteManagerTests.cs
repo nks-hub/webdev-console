@@ -590,12 +590,74 @@ public class SiteManagerTests : IDisposable
     [Fact]
     public void LoadAll_UsesDomainFromFilename_WhenDomainEmpty()
     {
-        // Serialize a SiteConfig with empty domain; the filename should become the key
         var site = new SiteConfig { Domain = "", DocumentRoot = "C:/htdocs/noname", PhpVersion = "8.3" };
         File.WriteAllText(Path.Combine(_sitesDir, "fromfile.loc.toml"), TomlSerializer.Serialize(site));
 
         _manager.LoadAll();
 
         Assert.True(_manager.Sites.ContainsKey("fromfile.loc"));
+    }
+
+    [Fact]
+    public void LoadAll_DefaultValues_PreservedOnMinimalConfig()
+    {
+        var site = new SiteConfig { Domain = "minimal.loc", DocumentRoot = "C:/htdocs/min" };
+        File.WriteAllText(Path.Combine(_sitesDir, "minimal.loc.toml"), TomlSerializer.Serialize(site));
+
+        _manager.LoadAll();
+
+        var loaded = _manager.Get("minimal.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal("8.4", loaded!.PhpVersion);
+        Assert.False(loaded.SslEnabled);
+        Assert.Equal(80, loaded.HttpPort);
+        Assert.Equal(443, loaded.HttpsPort);
+        Assert.Empty(loaded.Aliases);
+        Assert.Equal(0, loaded.NodeUpstreamPort);
+        Assert.Equal("", loaded.NodeStartCommand);
+        Assert.Null(loaded.Cloudflare);
+        Assert.Null(loaded.Framework);
+    }
+
+    [Fact]
+    public void LoadAll_NonDefaultPorts_Preserved()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "ports.loc",
+            DocumentRoot = "C:/htdocs/ports",
+            HttpPort = 8080,
+            HttpsPort = 8443,
+        };
+        File.WriteAllText(Path.Combine(_sitesDir, "ports.loc.toml"), TomlSerializer.Serialize(site));
+
+        _manager.LoadAll();
+
+        var loaded = _manager.Get("ports.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal(8080, loaded!.HttpPort);
+        Assert.Equal(8443, loaded.HttpsPort);
+    }
+
+    [Fact]
+    public void LoadAll_NodeProxySite_DisablesPhpLogic()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "node-proxy.loc",
+            DocumentRoot = "C:/apps/next",
+            PhpVersion = "none",
+            NodeUpstreamPort = 3000,
+            NodeStartCommand = "npm run dev",
+        };
+        File.WriteAllText(Path.Combine(_sitesDir, "node-proxy.loc.toml"), TomlSerializer.Serialize(site));
+
+        _manager.LoadAll();
+
+        var loaded = _manager.Get("node-proxy.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal("none", loaded!.PhpVersion);
+        Assert.Equal(3000, loaded.NodeUpstreamPort);
+        Assert.Equal("npm run dev", loaded.NodeStartCommand);
     }
 }
