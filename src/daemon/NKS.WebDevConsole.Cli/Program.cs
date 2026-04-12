@@ -525,7 +525,13 @@ histCmd.SetAction(async (parseResult, ct) =>
     if (!EnsureConnected(client)) return;
     var hist = await client.GetJsonAsync($"/api/sites/{domain}/history");
     if (json) { PrintJson(hist); return; }
-    if (hist.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No history entries[/]"); return; }
+    if (hist.GetArrayLength() == 0) { if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No history entries[/]"); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var h in hist.EnumerateArray())
+            Console.WriteLine(h.GetProperty("timestamp").GetString() ?? "");
+        return;
+    }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Timestamp"); table.AddColumn("Size");
     foreach (var h in hist.EnumerateArray())
