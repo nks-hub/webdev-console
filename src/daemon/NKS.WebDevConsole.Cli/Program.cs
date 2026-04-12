@@ -11,11 +11,18 @@ var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON ins
 var rootCommand = new RootCommand("NKS WebDev Console CLI") { jsonOption };
 
 // --- wdc status ---
-var statusCommand = new Command("status", "Show daemon and service status");
+var quietOption = new Option<bool>("--quiet", "-q") { Description = "Exit 0 if daemon running, 1 if not (no output)" };
+var statusCommand = new Command("status", "Show daemon and service status") { quietOption };
 statusCommand.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
+    var quiet = parseResult.GetValue(quietOption);
     using var client = new DaemonClient();
+    if (quiet)
+    {
+        Environment.Exit(client.Connect() ? 0 : 1);
+        return;
+    }
     if (!EnsureConnected(client)) return;
 
     var status = await client.GetJsonAsync("/api/status");
