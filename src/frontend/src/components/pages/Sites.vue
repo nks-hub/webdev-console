@@ -289,6 +289,15 @@ async function refreshComposeStatuses() {
   // Fire-and-forget compose detection per site. Individual failures
   // (network, permission, plugin disabled) are silently skipped so one
   // bad row never blocks the badge column as a whole.
+  const liveDomains = new Set(sitesStore.sites.map(s => s.domain))
+
+  // Drop entries for sites that no longer exist (deleted in another tab,
+  // renamed, etc.) so composeStatus doesn't accumulate garbage across
+  // long sessions.
+  for (const domain of Object.keys(composeStatus)) {
+    if (!liveDomains.has(domain)) delete composeStatus[domain]
+  }
+
   const tasks = sitesStore.sites.map(async (s) => {
     try {
       const status = await fetchDockerComposeStatus(s.domain)
@@ -310,9 +319,14 @@ onMounted(async () => {
   } catch { phpVersions.value = ['8.4', '8.3', '8.2'] }
 })
 
-// Re-scan compose status after any mutation that could change the set
-// of sites or their document roots.
-watch(() => sitesStore.sites.length, () => { void refreshComposeStatuses() })
+// Re-scan compose status whenever the set of sites OR any site's
+// document root changes. Watching .length alone would miss an edit
+// that swaps documentRoot without changing the count, leaving a stale
+// badge until the user refreshes the page.
+watch(
+  () => sitesStore.sites.map(s => `${s.domain}::${s.documentRoot}`).join('|'),
+  () => { void refreshComposeStatuses() },
+)
 
 function selectSite(row: SiteInfo) {
   // Navigate to full-view edit page instead of opening a drawer
