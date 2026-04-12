@@ -42,10 +42,13 @@
     "webServer": "Web Server",
     "languages": "Languages",
     "database": "Database",
-    "cacheMail": "Cache & Mail"
+    "cacheMail": "Cache & Mail",
+    "tunnel": "Tunnel",
+    "tools": "Tools"
   },
   "dashboard": {
-    "title": "Services",
+    "title": "Dashboard",
+    "subtitle": "System overview & service health",
     "startAll": "Start All",
     "stopAll": "Stop All",
     "logs": "Logs",
@@ -53,6 +56,8 @@
     "newSite": "+ New Site",
     "openMailpit": "Open Mailpit",
     "sslManager": "SSL Manager",
+    "binaries": "Binaries",
+    "tunnel": "Tunnel",
     "cpuUsage": "CPU Usage",
     "memory": "Memory",
     "uptime": "Uptime"

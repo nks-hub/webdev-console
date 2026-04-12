@@ -42,10 +42,13 @@
     "webServer": "Webový server",
     "languages": "Jazyky",
     "database": "Databáze",
-    "cacheMail": "Cache a Mail"
+    "cacheMail": "Cache a Mail",
+    "tunnel": "Tunel",
+    "tools": "Nástroje"
   },
   "dashboard": {
-    "title": "Služby",
+    "title": "Přehled",
+    "subtitle": "Stav systému a služeb",
     "startAll": "Spustit vše",
     "stopAll": "Zastavit vše",
     "logs": "Logy",
@@ -53,6 +56,8 @@
     "newSite": "+ Nový web",
     "openMailpit": "Otevřít Mailpit",
     "sslManager": "Správa SSL",
+    "binaries": "Binárky",
+    "tunnel": "Tunel",
     "cpuUsage": "Vytížení CPU",
     "memory": "Paměť",
     "uptime": "Doba běhu"
