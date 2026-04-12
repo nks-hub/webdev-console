@@ -1138,9 +1138,9 @@ openCommand.SetAction(async (parseResult, ct) =>
             var site = await client.GetJsonAsync($"/api/sites/{domain}");
             var ssl = site.TryGetProperty("sslEnabled", out var s) && s.GetBoolean();
             proto = ssl ? "https" : "http";
-            port = ssl
-                ? (site.TryGetProperty("httpsPort", out var hp) ? hp.GetInt32() : 443)
-                : (site.TryGetProperty("httpPort", out var htp) ? htp.GetInt32() : 80);
+            var httpsP = site.TryGetProperty("httpsPort", out var hp) ? hp.GetInt32() : 0;
+            var httpP = site.TryGetProperty("httpPort", out var htp) ? htp.GetInt32() : 0;
+            port = ssl ? (httpsP > 0 ? httpsP : 443) : (httpP > 0 ? httpP : 80);
         }
         catch { /* fall through to default http */ }
     }
