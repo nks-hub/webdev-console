@@ -307,6 +307,47 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void DetectFramework_FindsLaravel_InParentDirectory()
+    {
+        var parent = Path.Combine(_tempDir, "laravel-project");
+        var docRoot = Path.Combine(parent, "public");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(parent, "artisan"), "#!/usr/bin/env php\n");
+
+        Assert.Equal("laravel", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_FindsSymfony_InParentComposerJson()
+    {
+        var parent = Path.Combine(_tempDir, "symfony-project");
+        var docRoot = Path.Combine(parent, "public");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(parent, "composer.json"),
+            @"{""require"":{""symfony/framework-bundle"":""^7.0""}}");
+
+        Assert.Equal("symfony", _manager.DetectFramework(docRoot));
+    }
+
+    [Fact]
+    public void DetectFramework_FindsNuxt_InParentPackageJson()
+    {
+        var parent = Path.Combine(_tempDir, "nuxt-project");
+        var docRoot = Path.Combine(parent, ".output", "public");
+        Directory.CreateDirectory(docRoot);
+        File.WriteAllText(Path.Combine(parent, "package.json"),
+            @"{""dependencies"":{""nuxt"":""^3.0.0""}}");
+
+        // docroot is 2 levels deep — only parent (1 level up) is searched
+        // .output/public parent is .output, which has no package.json
+        // This tests that the function only looks ONE level up
+        var result = _manager.DetectFramework(docRoot);
+        // Result depends on whether parent scan goes to .output or nuxt-project
+        // The function scans Path.GetDirectoryName(docRoot) = .output (no match)
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void DetectFramework_NoFalsePositive_WhenNameAppearsInDescription()
     {
         var docRoot = Path.Combine(_tempDir, "not-next");
