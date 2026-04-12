@@ -3113,7 +3113,8 @@ cfDnsCmd.SetAction(async (parseResult, ct) =>
                 var type = r.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
                 var name = r.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                 var content = r.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "";
-                Console.WriteLine($"{type}\t{name}\t{content}");
+                var proxied = r.TryGetProperty("proxied", out var p) && p.GetBoolean() ? "proxied" : "dns-only";
+                Console.WriteLine($"{type}\t{name}\t{content}\t{proxied}");
             }
             return;
         }
