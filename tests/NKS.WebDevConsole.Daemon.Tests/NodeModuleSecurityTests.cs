@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Core.Services;
 using NKS.WebDevConsole.Plugin.Node;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
@@ -136,7 +137,7 @@ public sealed class NodeModuleSecurityTests
 /// Ordinal comparison would rank "9.0.0" > "20.5.0" because ASCII '9' > '2',
 /// causing the plugin to boot a stale Node 9 alongside a fresh Node 20.
 /// </summary>
-public sealed class SemverDescendingComparerTests
+public sealed class SemverVersionComparerTests
 {
     [Theory]
     [InlineData("20.5.0", "9.0.0", 1)]     // 20 > 9 (numeric, not ordinal)
@@ -149,7 +150,7 @@ public sealed class SemverDescendingComparerTests
     [InlineData("1.0.0-beta", "1.0.0-alpha", 1)] // pre-release ordinal
     public void CompareAscending_RanksVersionsCorrectly(string a, string b, int expectedSign)
     {
-        var actual = SemverDescendingComparer.CompareAscending(a, b);
+        var actual = SemverVersionComparer.CompareAscending(a, b);
         Assert.Equal(expectedSign, Math.Sign(actual));
     }
 
@@ -157,7 +158,7 @@ public sealed class SemverDescendingComparerTests
     public void DescendingSort_PutsLatestFirst()
     {
         var versions = new[] { "9.0.0", "20.5.0", "18.17.0", "16.20.0", "10.24.1" };
-        var sorted = versions.OrderByDescending(v => v, SemverDescendingComparer.Instance).ToArray();
+        var sorted = versions.OrderByDescending(v => v, SemverVersionComparer.Instance).ToArray();
 
         Assert.Equal("20.5.0", sorted[0]);
         Assert.Equal("18.17.0", sorted[1]);
@@ -170,7 +171,7 @@ public sealed class SemverDescendingComparerTests
     public void DescendingSort_PrefersStableOverPrerelease()
     {
         var versions = new[] { "20.5.0-rc.1", "20.5.0", "20.4.0" };
-        var sorted = versions.OrderByDescending(v => v, SemverDescendingComparer.Instance).ToArray();
+        var sorted = versions.OrderByDescending(v => v, SemverVersionComparer.Instance).ToArray();
 
         Assert.Equal("20.5.0", sorted[0]);      // stable wins over same-main pre-release
         Assert.Equal("20.5.0-rc.1", sorted[1]);
