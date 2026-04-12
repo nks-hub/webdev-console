@@ -586,7 +586,11 @@ histCmd.SetAction(async (parseResult, ct) =>
     if (Console.IsOutputRedirected)
     {
         foreach (var h in hist.EnumerateArray())
-            Console.WriteLine(h.GetProperty("timestamp").GetString() ?? "");
+        {
+            var ts2 = h.GetProperty("timestamp").GetString() ?? "";
+            var sz = h.TryGetProperty("size", out var s2) ? s2.GetInt64() : 0;
+            Console.WriteLine($"{ts2}\t{sz}");
+        }
         return;
     }
     var table = new Table().Border(TableBorder.Rounded);
