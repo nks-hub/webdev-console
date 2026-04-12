@@ -1431,17 +1431,37 @@ configCommand.SetAction((parseResult, ct) =>
         binaries = WdcPaths.BinariesRoot,
         sites = WdcPaths.SitesRoot,
         data = WdcPaths.DataRoot,
+        ssl = WdcPaths.SslRoot,
+        logs = WdcPaths.LogsRoot,
+        backups = WdcPaths.BackupsRoot,
+        cache = WdcPaths.CacheRoot,
         portable = WdcPaths.IsPortableMode,
         portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port"),
     };
     if (json) { PrintJson(paths); return Task.CompletedTask; }
+    if (Console.IsOutputRedirected)
+    {
+        Console.WriteLine($"root\t{paths.wdcRoot}");
+        Console.WriteLine($"binaries\t{paths.binaries}");
+        Console.WriteLine($"sites\t{paths.sites}");
+        Console.WriteLine($"data\t{paths.data}");
+        Console.WriteLine($"ssl\t{paths.ssl}");
+        Console.WriteLine($"logs\t{paths.logs}");
+        Console.WriteLine($"backups\t{paths.backups}");
+        return Task.CompletedTask;
+    }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Key"); table.AddColumn("Path");
     table.AddRow("WDC Root", paths.wdcRoot);
     table.AddRow("Binaries", paths.binaries);
     table.AddRow("Sites Config", paths.sites);
     table.AddRow("Data (SQLite)", paths.data);
+    table.AddRow("SSL Certs", paths.ssl);
+    table.AddRow("Logs", paths.logs);
+    table.AddRow("Backups", paths.backups);
+    table.AddRow("Cache", paths.cache);
     table.AddRow("Port File", paths.portFile);
+    if (paths.portable) table.AddRow("[yellow]Mode[/]", "[yellow]Portable[/]");
     AnsiConsole.Write(table);
     return Task.CompletedTask;
 });
