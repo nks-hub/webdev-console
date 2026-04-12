@@ -194,6 +194,21 @@ svcInfoCmd.SetAction(async (parseResult, ct) =>
 });
 servicesCommand.Add(svcInfoCmd);
 
+// wdc services count — script-friendly running/total
+var svcCountCmd = new Command("count", "Print running/total service count");
+svcCountCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var svcs = await client.GetJsonAsync("/api/services");
+    var total = svcs.GetArrayLength();
+    var running = 0;
+    foreach (var s in svcs.EnumerateArray())
+        if (s.TryGetProperty("state", out var st) && st.GetInt32() == 2) running++;
+    AnsiConsole.Write($"{running}/{total}");
+});
+servicesCommand.Add(svcCountCmd);
+
 // --- wdc sites ---
 var sitesCommand = new Command("sites", "List all sites");
 sitesCommand.SetAction(async (parseResult, ct) =>
