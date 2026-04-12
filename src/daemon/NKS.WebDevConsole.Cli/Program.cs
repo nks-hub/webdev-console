@@ -1062,19 +1062,38 @@ phpCommand.SetAction(async (parseResult, ct) =>
 
 // --- wdc php extensions {version} ---
 var phpExtVerArg = new Argument<string>("version") { Description = "PHP major.minor (e.g. 8.4)" };
-var phpExtCmd = new Command("extensions", "List extensions for a PHP version") { phpExtVerArg };
+var phpExtToggleOpt = new Option<string?>("--toggle") { Description = "Toggle an extension on/off (e.g. --toggle curl)" };
+var phpExtCmd = new Command("extensions", "List extensions for a PHP version") { phpExtVerArg, phpExtToggleOpt };
 phpExtCmd.SetAction(async (parseResult, ct) =>
 {
     var ver = parseResult.GetValue(phpExtVerArg)!;
+    var toggle = parseResult.GetValue(phpExtToggleOpt);
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var exts = await client.GetJsonAsync($"/api/php/{ver}/extensions");
-    if (json) { PrintJson(exts); return; }
-    if (exts.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No extensions for PHP {Markup.Escape(ver)}[/]"); return; }
+
+    // Toggle mode: flip an extension on/off
+    if (!string.IsNullOrEmpty(toggle))
+    {
+        var exts = await client.GetJsonAsync($"/api/php/{ver}/extensions");
+        var ext = exts.EnumerateArray().FirstOrDefault(e => e.GetProperty("name").GetString()?.Equals(toggle, StringComparison.OrdinalIgnoreCase) == true);
+        var currentlyLoaded = ext.ValueKind != System.Text.Json.JsonValueKind.Undefined
+            && ext.TryGetProperty("isLoaded", out var il) && il.GetBoolean();
+        var newState = !currentlyLoaded;
+        var body = JsonContent.Create(new { enabled = newState });
+        await client.PostAsync($"/api/php/{ver}/extensions/{toggle}", body);
+        AnsiConsole.MarkupLine(newState
+            ? $"[green]Enabled[/] {Markup.Escape(toggle)} for PHP {Markup.Escape(ver)}"
+            : $"[yellow]Disabled[/] {Markup.Escape(toggle)} for PHP {Markup.Escape(ver)}");
+        return;
+    }
+
+    var extensions = await client.GetJsonAsync($"/api/php/{ver}/extensions");
+    if (json) { PrintJson(extensions); return; }
+    if (extensions.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No extensions for PHP {Markup.Escape(ver)}[/]"); return; }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Extension"); table.AddColumn("Loaded"); table.AddColumn("Core");
-    foreach (var e in exts.EnumerateArray())
+    foreach (var e in extensions.EnumerateArray())
     {
         var loaded = e.TryGetProperty("isLoaded", out var l) && l.GetBoolean();
         var core = e.TryGetProperty("isCore", out var c) && c.GetBoolean();
