@@ -527,6 +527,40 @@ public class SiteManagerTests : IDisposable
         Assert.Equal("local", site.Environment["APP_ENV"]);
     }
 
+    // ── ValidateDocumentRoot ──────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("C:/htdocs/myapp")]
+    [InlineData("C:\\work\\sites\\blog")]
+    [InlineData("/var/www/html")]
+    [InlineData("D:/Projects/site with spaces")]
+    public void ValidateDocumentRoot_AcceptsValidPaths(string path)
+    {
+        SiteManager.ValidateDocumentRoot(path);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void ValidateDocumentRoot_RejectsEmptyOrNull(string? path)
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateDocumentRoot(path!));
+    }
+
+    [Theory]
+    [InlineData("C:/htdocs/my\"app")]
+    [InlineData("C:/htdocs/my\napp")]
+    [InlineData("C:/htdocs/my\0app")]
+    [InlineData("C:/htdocs/my|app")]
+    [InlineData("C:/htdocs/my&app")]
+    [InlineData("C:/htdocs/my`app")]
+    [InlineData("C:/htdocs/my>app")]
+    public void ValidateDocumentRoot_RejectsForbiddenChars(string path)
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateDocumentRoot(path));
+    }
+
     [Fact]
     public void LoadAll_SkipsInvalidToml_WithWarning()
     {
