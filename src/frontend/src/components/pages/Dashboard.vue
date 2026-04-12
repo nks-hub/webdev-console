@@ -77,7 +77,7 @@
           </div>
         </div>
         <div class="stat-card" v-if="nodeProcessCount >= 0">
-          <div class="stat-icon">🟢</div>
+          <div class="stat-icon">{{ nodeProcessCount > 0 ? '🟢' : '⚪' }}</div>
           <div class="stat-content">
             <div class="stat-value mono">{{ nodeProcessCount }}</div>
             <div class="stat-label">Node.js processes</div>
