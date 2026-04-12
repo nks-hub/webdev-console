@@ -121,4 +121,38 @@ public class SettingsStoreTests : IDisposable
         Assert.Equal("one", second.GetString("roundtrip", "a"));
         Assert.Equal("two", second.GetString("roundtrip", "b"));
     }
+
+    [Fact]
+    public void CatalogUrl_defaults_to_localhost_when_unset()
+    {
+        // Ensure env var is not set for this test
+        Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", null);
+        var store = new SettingsStore(_database);
+        Assert.Equal("http://127.0.0.1:8765", store.CatalogUrl);
+    }
+
+    [Fact]
+    public void CatalogUrl_reads_from_stored_setting()
+    {
+        Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", null);
+        var store = new SettingsStore(_database);
+        store.Set("daemon", "catalogUrl", "https://catalog.example.com");
+        Assert.Equal("https://catalog.example.com", store.CatalogUrl);
+    }
+
+    [Fact]
+    public void CatalogUrl_stored_overrides_env_var()
+    {
+        Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", "https://env.example.com");
+        try
+        {
+            var store = new SettingsStore(_database);
+            store.Set("daemon", "catalogUrl", "https://stored.example.com");
+            Assert.Equal("https://stored.example.com", store.CatalogUrl);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", null);
+        }
+    }
 }
