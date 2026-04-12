@@ -184,12 +184,14 @@ svcInfoCmd.SetAction(async (parseResult, ct) =>
     table.AddColumn("Key"); table.AddColumn("Value");
     table.AddRow("ID", svc.GetProperty("id").GetString() ?? "?");
     table.AddRow("Name", svc.GetProperty("displayName").GetString() ?? "-");
+    if (svc.TryGetProperty("type", out var tp) && tp.ValueKind == System.Text.Json.JsonValueKind.String)
+        table.AddRow("Type", tp.GetString() ?? "-");
     var st = svc.GetProperty("state").GetInt32();
     table.AddRow("State", FormatState(StateNumToStr(st)));
     table.AddRow("PID", GetInt(svc, "pid")?.ToString() ?? "-");
     table.AddRow("CPU", GetDouble(svc, "cpuPercent") is double c ? $"{c:F1}%" : "-");
     table.AddRow("Memory", GetLong(svc, "memoryBytes") is long m ? FormatBytes(m) : "-");
-    if (svc.TryGetProperty("uptime", out var up)) table.AddRow("Uptime", up.GetString() ?? "-");
+    if (svc.TryGetProperty("uptime", out var up)) table.AddRow("Uptime", FormatUptime(up.ValueKind == System.Text.Json.JsonValueKind.String ? long.TryParse(up.GetString(), out var us) ? us : 0 : up.ValueKind == System.Text.Json.JsonValueKind.Number ? (long)up.GetDouble() : 0));
     AnsiConsole.Write(table);
 });
 servicesCommand.Add(svcInfoCmd);
