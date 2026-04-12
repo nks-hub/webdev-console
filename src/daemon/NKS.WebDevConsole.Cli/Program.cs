@@ -2545,7 +2545,18 @@ activityCommand.SetAction(async (parseResult, ct) =>
     if (json) { PrintJson(data); return; }
     if (data.ValueKind != System.Text.Json.JsonValueKind.Array || data.GetArrayLength() == 0)
     {
-        AnsiConsole.MarkupLine("[dim]No activity history yet.[/]");
+        if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine("[dim]No activity history yet.[/]");
+        return;
+    }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var row in data.EnumerateArray())
+        {
+            var time = row.TryGetProperty("createdAt", out var t2) ? t2.GetString()?[..19] ?? "" : "";
+            var op = row.TryGetProperty("operation", out var o2) ? o2.GetString() ?? "" : "";
+            var entity = row.TryGetProperty("entityName", out var en2) ? en2.GetString() ?? "" : "";
+            Console.WriteLine($"{time}\t{op}\t{entity}");
+        }
         return;
     }
     var table = new Table().Border(TableBorder.Rounded);
