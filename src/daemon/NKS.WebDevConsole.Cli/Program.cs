@@ -117,23 +117,27 @@ servicesCommand.SetAction(async (parseResult, ct) =>
         {
             var id = svc.GetProperty("id").GetString() ?? "";
             var st = svc.GetProperty("state").ValueKind == JsonValueKind.Number ? svc.GetProperty("state").GetInt32() : 0;
-            Console.WriteLine($"{id}\t{StateNumToStr(st)}");
+            var ver = svc.TryGetProperty("version", out var vp) && vp.ValueKind == JsonValueKind.String ? vp.GetString() ?? "" : "";
+            Console.WriteLine($"{id}\t{StateNumToStr(st)}\t{ver}");
         }
         return;
     }
     if (services.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No services registered.[/]"); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
-    table.AddColumn("ID"); table.AddColumn("Name"); table.AddColumn("State");
-    table.AddColumn("PID"); table.AddColumn("CPU %"); table.AddColumn("Memory");
+    table.AddColumn("ID"); table.AddColumn("Name"); table.AddColumn("Version");
+    table.AddColumn("State"); table.AddColumn("PID"); table.AddColumn("CPU %"); table.AddColumn("Memory");
     foreach (var svc in services.EnumerateArray())
     {
         var sState = svc.GetProperty("state").ValueKind == JsonValueKind.Number
             ? StateNumToStr(svc.GetProperty("state").GetInt32())
             : svc.GetProperty("state").GetString() ?? "unknown";
+        var ver = svc.TryGetProperty("version", out var v) && v.ValueKind == JsonValueKind.String
+            ? v.GetString() ?? "-" : "-";
         table.AddRow(
             svc.GetProperty("id").GetString() ?? "?",
             svc.GetProperty("displayName").GetString() ?? "-",
+            ver,
             FormatState(sState),
             GetInt(svc, "pid")?.ToString() ?? "-",
             GetDouble(svc, "cpuPercent") is double c ? $"{c:F1}%" : "-",
