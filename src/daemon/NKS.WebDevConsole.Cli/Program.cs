@@ -1051,7 +1051,10 @@ binariesCommand.SetAction(async (parseResult, ct) =>
     if (Console.IsOutputRedirected)
     {
         foreach (var b in bins.EnumerateArray())
-            Console.WriteLine($"{b.GetProperty("app").GetString()}\t{b.GetProperty("version").GetString()}");
+        {
+            var path = b.TryGetProperty("installPath", out var ip) ? ip.GetString() ?? "" : "";
+            Console.WriteLine($"{b.GetProperty("app").GetString()}\t{b.GetProperty("version").GetString()}\t{path}");
+        }
         return;
     }
     if (bins.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No binaries installed.[/]"); return; }
