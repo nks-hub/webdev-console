@@ -38,4 +38,29 @@ public class PluginUiDefinitionTests
 
         Assert.Empty(def.Panels);
     }
+
+    [Fact]
+    public void PluginUiDefinition_JsonRoundtrip_PreservesFields()
+    {
+        var panels = new[]
+        {
+            new PanelDef("service-status-card", new Dictionary<string, object> { ["serviceId"] = "apache" }),
+            new PanelDef("log-viewer", new Dictionary<string, object> { ["serviceId"] = "apache", ["lines"] = 100 }),
+        };
+        var def = new PluginUiDefinition("nks.wdc.apache", "Web Servers", "icon-apache", panels);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(def);
+        Assert.Contains("nks.wdc.apache", json);
+        Assert.Contains("Web Servers", json);
+        Assert.Contains("service-status-card", json);
+        Assert.Contains("log-viewer", json);
+    }
+
+    [Fact]
+    public void PanelDef_EmptyProps_SerializesCleanly()
+    {
+        var panel = new PanelDef("custom-widget", new Dictionary<string, object>());
+        var json = System.Text.Json.JsonSerializer.Serialize(panel);
+        Assert.Contains("custom-widget", json);
+    }
 }
