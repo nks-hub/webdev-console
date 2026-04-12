@@ -2150,12 +2150,19 @@ newCommand.SetAction(async (parseResult, ct) =>
         aliases = aliasStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>(),
         environment = new Dictionary<string, string>()
     };
-    var content = JsonContent.Create(payload);
-    var result = await client.PostAsync("/api/sites", content);
-    if (json) { PrintJson(result); return; }
-    AnsiConsole.MarkupLine($"[green]Created:[/] {Markup.Escape(domain)}");
-    AnsiConsole.MarkupLine($"  PHP: {Markup.Escape(php)}  DocRoot: {Markup.Escape(docroot)}");
-    if (ssl) AnsiConsole.MarkupLine("  SSL: [green]enabled[/]");
+    try
+    {
+        var content = JsonContent.Create(payload);
+        var result = await client.PostAsync("/api/sites", content);
+        if (json) { PrintJson(result); return; }
+        AnsiConsole.MarkupLine($"[green]Created:[/] {Markup.Escape(domain)}");
+        AnsiConsole.MarkupLine($"  PHP: {Markup.Escape(php)}  DocRoot: {Markup.Escape(docroot)}");
+        if (ssl) AnsiConsole.MarkupLine("  SSL: [green]enabled[/]");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to create {Markup.Escape(domain)}:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 
 // --- wdc completion ---
