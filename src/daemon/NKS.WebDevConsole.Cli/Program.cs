@@ -1317,6 +1317,19 @@ doctorCommand.SetAction(async (parseResult, ct) =>
     }
     catch (Exception ex) { checks.Add(("Disk space", false, ex.Message)); }
 
+    // 8. Docker availability (needed for Compose lifecycle)
+    try
+    {
+        var dPsi = new System.Diagnostics.ProcessStartInfo("docker", "version --format {{.Server.Version}}")
+        { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+        using var dProc = System.Diagnostics.Process.Start(dPsi);
+        var dVer = dProc?.StandardOutput.ReadToEnd().Trim() ?? "";
+        dProc?.WaitForExit(3000);
+        var dOk = dProc?.ExitCode == 0 && dVer.Length > 0;
+        checks.Add(("Docker", dOk == true, dOk == true ? $"v{dVer}" : "Not running or not installed"));
+    }
+    catch { checks.Add(("Docker", true, "Not installed (optional)")); }
+
     if (json) { PrintJson(checks.Select(c => new { c.name, c.ok, c.detail })); return; }
 
     var table = new Table().Border(TableBorder.Rounded);
