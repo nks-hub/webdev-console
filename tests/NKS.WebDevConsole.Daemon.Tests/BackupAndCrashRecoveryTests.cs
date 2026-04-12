@@ -183,6 +183,27 @@ public class BackupAndCrashRecoveryTests : IDisposable
         Assert.Equal(nestedOutput, result.Path);
     }
 
+    [Fact]
+    public void RestoreBackup_NonexistentFile_ThrowsFileNotFound()
+    {
+        var bm = CreateBackupManagerForRoot();
+        var missing = Path.Combine(_tempRoot, "missing.zip");
+        Assert.Throws<FileNotFoundException>(() => bm.RestoreBackup(missing));
+    }
+
+    [Fact]
+    public void CreateBackup_DefaultPath_UsesBackupRoot()
+    {
+        Directory.CreateDirectory(Path.Combine(_wdcDir, "sites"));
+        File.WriteAllText(Path.Combine(_wdcDir, "sites", "def.toml"), "");
+
+        var bm = CreateBackupManagerForRoot();
+        var result = bm.CreateBackup();
+
+        Assert.True(File.Exists(result.Path));
+        Assert.Contains(_wdcDir, result.Path);
+    }
+
     // ── helper ───────────────────────────────────────────────────────────────
 
     /// <summary>
