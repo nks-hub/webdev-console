@@ -98,4 +98,23 @@ public class DomainValidationTests
         if (big.Length <= 253) big += new string('x', 254 - big.Length + 1);
         Assert.Throws<ArgumentException>(() => SiteManager.ValidateDomain(big));
     }
+
+    [Theory]
+    [InlineData("*.example.loc")]   // wildcard prefix is an alias concept, not a primary domain
+    [InlineData("*example.loc")]
+    [InlineData("foo.*.loc")]
+    public void Rejects_WildcardInPrimaryDomain(string domain)
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateDomain(domain));
+    }
+
+    [Theory]
+    [InlineData("a.b")]             // minimal 2-label
+    [InlineData("site.loc")]
+    [InlineData("www.example.com")]
+    [InlineData("api-v2.example.co.uk")]
+    public void Accepts_CommonValidDomains(string domain)
+    {
+        SiteManager.ValidateDomain(domain);
+    }
 }
