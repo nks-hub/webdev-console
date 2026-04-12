@@ -1814,6 +1814,104 @@ cfCommand.Add(cfZonesCmd);
 
 rootCommand.Add(cfCommand);
 
+// --- wdc sync --- (mirrors Settings → Sync tab)
+var syncCommand = new Command("sync", "Config sync: push/pull/export between devices");
+
+// wdc sync push
+var syncPushCmd = new Command("push", "Push settings + sites to catalog-api cloud");
+syncPushCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    // Build payload: settings + sites
+    var settings = await client.GetJsonAsync("/api/settings");
+    var sites = await client.GetJsonAsync("/api/sites");
+    var deviceId = settings.TryGetProperty("sync.deviceId", out var did) ? did.GetString() ?? "" : "";
+    if (string.IsNullOrEmpty(deviceId))
+    {
+        AnsiConsole.MarkupLine("[red]No device ID configured.[/] Open Settings → Sync to initialize.");
+        Environment.Exit(1);
+        return;
+    }
+
+    // Resolve catalog URL
+    var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
+    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
+
+    var payload = new { exportedAt = DateTime.UtcNow.ToString("o"), settings, sites };
+    var body = JsonContent.Create(new { device_id = deviceId, payload });
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+    var resp = await http.PostAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config", body);
+    resp.EnsureSuccessStatusCode();
+    if (json) { PrintJson(await resp.Content.ReadAsStringAsync()); return; }
+    AnsiConsole.MarkupLine($"[green]Pushed[/] settings + {sites.GetArrayLength()} sites to {Markup.Escape(catalogUrl)}");
+});
+syncCommand.Add(syncPushCmd);
+
+// wdc sync pull
+var syncPullCmd = new Command("pull", "Pull settings from catalog-api cloud (smart merge: sync fields only)");
+syncPullCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var settings = await client.GetJsonAsync("/api/settings");
+    var deviceId = settings.TryGetProperty("sync.deviceId", out var did) ? did.GetString() ?? "" : "";
+    if (string.IsNullOrEmpty(deviceId))
+    {
+        AnsiConsole.MarkupLine("[red]No device ID.[/] Open Settings → Sync first.");
+        Environment.Exit(1);
+        return;
+    }
+    var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
+    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
+
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+    var resp = await http.GetAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config/{deviceId}");
+    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+    {
+        AnsiConsole.MarkupLine("[yellow]No cloud snapshot found for this device.[/] Push first.");
+        return;
+    }
+    resp.EnsureSuccessStatusCode();
+    var data = await resp.Content.ReadAsStringAsync();
+    if (json) { PrintJson(data); return; }
+    AnsiConsole.MarkupLine($"[green]Pulled[/] snapshot from cloud. Apply via Settings → Sync → Pull in UI for smart merge.");
+    AnsiConsole.MarkupLine("[dim]CLI pull currently shows the raw snapshot — smart merge requires the UI.[/]");
+});
+syncCommand.Add(syncPullCmd);
+
+// wdc sync export <file>
+var syncExportFileArg = new Argument<string>("file") { Description = "Output JSON file path" };
+var syncExportCmd = new Command("export", "Export settings + sites to a JSON file") { syncExportFileArg };
+syncExportCmd.SetAction(async (parseResult, ct) =>
+{
+    var filePath = parseResult.GetValue(syncExportFileArg)!;
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    var settings = await client.GetJsonAsync("/api/settings");
+    var sites = await client.GetJsonAsync("/api/sites");
+    var payload = new
+    {
+        exportedAt = DateTime.UtcNow.ToString("o"),
+        version = "0.1.0",
+        deviceId = settings.TryGetProperty("sync.deviceId", out var d) ? d.GetString() : "",
+        settings,
+        sites,
+    };
+    var jsonStr = System.Text.Json.JsonSerializer.Serialize(payload,
+        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+    File.WriteAllText(filePath, jsonStr);
+    AnsiConsole.MarkupLine($"[green]Exported[/] to [cyan]{Markup.Escape(filePath)}[/] ({sites.GetArrayLength()} sites)");
+});
+syncCommand.Add(syncExportCmd);
+
+rootCommand.Add(syncCommand);
+
 return await rootCommand.Parse(args).InvokeAsync();
 
 // --- Helpers ---
