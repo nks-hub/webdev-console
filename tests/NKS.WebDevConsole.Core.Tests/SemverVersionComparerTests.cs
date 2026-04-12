@@ -111,4 +111,39 @@ public sealed class SemverVersionComparerTests
             .ToArray();
         Assert.Equal(new[] { "2.4.62", "2.4.59", "2.4.58" }, sorted);
     }
+
+    [Fact]
+    public void OrderByDescending_HandlesRedisVersions()
+    {
+        var versions = new[] { "7.4.1", "7.2.6", "7.4.0" };
+        var sorted = versions
+            .OrderByDescending(v => v, SemverVersionComparer.Instance)
+            .ToArray();
+        Assert.Equal(new[] { "7.4.1", "7.4.0", "7.2.6" }, sorted);
+    }
+
+    [Fact]
+    public void CompareAscending_EqualVersions_ReturnsZero()
+    {
+        Assert.Equal(0, SemverVersionComparer.CompareAscending("1.2.3", "1.2.3"));
+    }
+
+    [Fact]
+    public void OrderByDescending_SingleElement()
+    {
+        var sorted = new[] { "5.0.0" }
+            .OrderByDescending(v => v, SemverVersionComparer.Instance)
+            .ToArray();
+        Assert.Single(sorted);
+        Assert.Equal("5.0.0", sorted[0]);
+    }
+
+    [Fact]
+    public void OrderByDescending_EmptyArray()
+    {
+        var sorted = Array.Empty<string>()
+            .OrderByDescending(v => v, SemverVersionComparer.Instance)
+            .ToArray();
+        Assert.Empty(sorted);
+    }
 }
