@@ -78,13 +78,23 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
 import SchemaRenderer from '../../plugins/SchemaRenderer.vue'
 
 const props = defineProps<{ id: string }>()
 
+const router = useRouter()
 const pluginsStore = usePluginsStore()
 const loading = ref(false)
+
+// Plugins with dedicated full-page routes (not schema-driven) redirect
+// away from the generic PluginPage to their custom page so users don't
+// see a half-rendered SchemaRenderer fallback. Add new entries as
+// dedicated pages are built for other plugins.
+const PLUGIN_CUSTOM_ROUTES: Record<string, string> = {
+  'nks.wdc.cloudflare': '/cloudflare',
+}
 
 const manifest = computed(() =>
   pluginsStore.manifests.find(p => p.id === props.id)
@@ -92,6 +102,13 @@ const manifest = computed(() =>
 const uiDef = computed(() => pluginsStore.getUi(props.id))
 
 onMounted(async () => {
+  // Redirect to custom page if this plugin has one
+  const customRoute = PLUGIN_CUSTOM_ROUTES[props.id]
+  if (customRoute) {
+    void router.replace(customRoute)
+    return
+  }
+
   if (!manifest.value || !uiDef.value) {
     loading.value = true
     try {
