@@ -2078,11 +2078,21 @@ systemCmd.SetAction(async (parseResult, ct) =>
     if (Console.IsOutputRedirected)
     {
         if (sys.TryGetProperty("daemon", out var d2))
+        {
             Console.WriteLine($"version\t{d2.GetProperty("version").GetString()}");
+            if (d2.TryGetProperty("pid", out var pid2)) Console.WriteLine($"pid\t{pid2.GetInt32()}");
+        }
         if (sys.TryGetProperty("services", out var sv2))
             Console.WriteLine($"services\t{sv2.GetProperty("running").GetInt32()}/{sv2.GetProperty("total").GetInt32()}");
         if (sys.TryGetProperty("sites", out var st2))
             Console.WriteLine($"sites\t{st2.GetInt32()}");
+        if (sys.TryGetProperty("plugins", out var pl2))
+            Console.WriteLine($"plugins\t{pl2.GetInt32()}");
+        if (sys.TryGetProperty("os", out var os2))
+        {
+            Console.WriteLine($"os\t{(os2.TryGetProperty("tag", out var ot) ? ot.GetString() : "")}");
+            Console.WriteLine($"arch\t{(os2.TryGetProperty("arch", out var oa) ? oa.GetString() : "")}");
+        }
         return;
     }
     var table = new Table().Border(TableBorder.Rounded).HideHeaders();
