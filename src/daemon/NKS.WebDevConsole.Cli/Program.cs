@@ -450,6 +450,17 @@ rollbackCmd.SetAction(async (parseResult, ct) =>
 });
 sitesCommand.Add(rollbackCmd);
 
+// wdc sites count — script-friendly site count
+var countCmd = new Command("count", "Print the number of configured sites");
+countCmd.SetAction(async (parseResult, ct) =>
+{
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var sites = await client.GetJsonAsync("/api/sites");
+    AnsiConsole.Write(sites.GetArrayLength().ToString());
+});
+sitesCommand.Add(countCmd);
+
 // --- wdc plugins ---
 var pluginsCommand = new Command("plugins", "List loaded plugins");
 pluginsCommand.SetAction(async (parseResult, ct) =>
