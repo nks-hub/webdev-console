@@ -703,9 +703,16 @@ createDbCmd.SetAction(async (parseResult, ct) =>
     var name = parseResult.GetValue(createDbArg)!;
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
-    var content = JsonContent.Create(new { name });
-    await client.PostAsync("/api/databases", content);
-    AnsiConsole.MarkupLine($"[green]Database created:[/] {Markup.Escape(name)}");
+    try
+    {
+        var content = JsonContent.Create(new { name });
+        await client.PostAsync("/api/databases", content);
+        AnsiConsole.MarkupLine($"[green]Database created:[/] {Markup.Escape(name)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to create database:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 dbCommand.Add(createDbCmd);
 
@@ -718,8 +725,15 @@ dropDbCmd.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
     if (!json && !AnsiConsole.Confirm($"Drop database [red]{Markup.Escape(name)}[/]?", false)) return;
-    await client.DeleteAsync($"/api/databases/{name}");
-    AnsiConsole.MarkupLine($"[yellow]Dropped:[/] {Markup.Escape(name)}");
+    try
+    {
+        await client.DeleteAsync($"/api/databases/{name}");
+        AnsiConsole.MarkupLine($"[yellow]Dropped:[/] {Markup.Escape(name)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to drop database:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 dbCommand.Add(dropDbCmd);
 
