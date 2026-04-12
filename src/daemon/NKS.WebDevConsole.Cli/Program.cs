@@ -2368,6 +2368,41 @@ cfZonesCmd.SetAction(async (parseResult, ct) =>
 });
 cfCommand.Add(cfZonesCmd);
 
+// wdc cloudflare dns <zone-id>
+var cfDnsZoneArg = new Argument<string>("zone-id") { Description = "Cloudflare zone ID" };
+var cfDnsCmd = new Command("dns", "List DNS records for a zone") { cfDnsZoneArg };
+cfDnsCmd.SetAction(async (parseResult, ct) =>
+{
+    var zoneId = parseResult.GetValue(cfDnsZoneArg)!;
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        var records = await client.GetJsonAsync($"/api/cloudflare/zones/{zoneId}/dns");
+        if (json) { PrintJson(records); return; }
+        if (records.ValueKind != System.Text.Json.JsonValueKind.Array || records.GetArrayLength() == 0)
+        {
+            AnsiConsole.MarkupLine("[dim]No DNS records.[/]");
+            return;
+        }
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("Type"); table.AddColumn("Name"); table.AddColumn("Content"); table.AddColumn("Proxied");
+        foreach (var r in records.EnumerateArray())
+        {
+            var type = r.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
+            var name = r.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+            var content = r.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "";
+            var proxied = r.TryGetProperty("proxied", out var p) && p.GetBoolean();
+            table.AddRow(type, Markup.Escape(name), Markup.Escape(content.Length > 40 ? content[..37] + "..." : content),
+                proxied ? "[yellow]proxied[/]" : "[dim]DNS only[/]");
+        }
+        AnsiConsole.Write(table);
+    }
+    catch (Exception ex) { AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}"); Environment.Exit(1); }
+});
+cfCommand.Add(cfDnsCmd);
+
 rootCommand.Add(cfCommand);
 
 // --- wdc sync --- (mirrors Settings → Sync tab)
