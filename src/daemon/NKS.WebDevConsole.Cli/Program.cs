@@ -643,6 +643,15 @@ versionCommand.SetAction(async (parseResult, ct) =>
 
     if (json) { PrintJson(new { cli = cliVersion, daemon = daemonVer, binaries = binVersions }); return; }
 
+    if (Console.IsOutputRedirected)
+    {
+        Console.WriteLine($"cli\t{cliVersion}");
+        if (daemonVer != null) Console.WriteLine($"daemon\t{daemonVer}");
+        foreach (var (app, ver) in binVersions)
+            Console.WriteLine($"{app}\t{ver}");
+        return;
+    }
+
     AnsiConsole.MarkupLine($"[bold]wdc CLI[/]    v{cliVersion}");
     AnsiConsole.MarkupLine(daemonVer != null
         ? $"[bold]Daemon[/]     v{daemonVer} [green](connected)[/]"
