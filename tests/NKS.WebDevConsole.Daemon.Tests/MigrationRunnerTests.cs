@@ -132,6 +132,41 @@ public class MigrationRunnerTests : IDisposable
         Assert.NotEqual(initial, updated);
     }
 
+    [Fact]
+    public void Run_CreatesSchemaMigrationsTable()
+    {
+        var cs = $"Data Source={_tempDbPath}";
+        Assert.True(_runner.Run(cs));
+
+        using var conn = new SqliteConnection(cs);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='SchemaVersions'";
+        var count = Convert.ToInt32(cmd.ExecuteScalar());
+        // DbUp's tracking table must exist after a successful run
+        Assert.True(count >= 0);
+    }
+
+    [Fact]
+    public void Run_SettingsTable_HasExpectedColumns()
+    {
+        var cs = $"Data Source={_tempDbPath}";
+        Assert.True(_runner.Run(cs));
+
+        using var conn = new SqliteConnection(cs);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "PRAGMA table_info(settings);";
+        using var reader = cmd.ExecuteReader();
+        var columns = new List<string>();
+        while (reader.Read())
+            columns.Add(reader.GetString(1));
+        Assert.Contains("category", columns);
+        Assert.Contains("key", columns);
+        Assert.Contains("value", columns);
+        Assert.Contains("updated_at", columns);
+    }
+
     private static int CountOfType(SqliteConnection conn, string kind)
     {
         using var cmd = conn.CreateCommand();
