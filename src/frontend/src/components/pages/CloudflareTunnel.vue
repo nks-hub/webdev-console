@@ -609,11 +609,20 @@ async function verifyToken() {
     }
     const res = await verifyCloudflareToken()
     tokenVerdict.value = res?.success ? 'ok' : 'fail'
-    if (res?.success) ElMessage.success('Cloudflare API token is valid')
-    else ElMessage.error('Token rejected by Cloudflare')
+    if (res?.success) {
+      ElMessage.success('Cloudflare API token is valid')
+    } else {
+      // Cloudflare returns { success: false, errors: [{ code, message }, ...] }
+      // Surface the actual rejection reason instead of a generic toast so the
+      // user knows whether to regenerate the token, fix scopes, or check quota.
+      const errMsg = Array.isArray(res?.errors) && res.errors.length > 0
+        ? res.errors.map((e: any) => e?.message || e?.code || String(e)).join('; ')
+        : 'Token rejected by Cloudflare'
+      ElMessage.error(errMsg)
+    }
   } catch (e: any) {
     tokenVerdict.value = 'fail'
-    ElMessage.error(`Verify failed: ${e.message}`)
+    ElMessage.error(`Verify failed: ${e?.message || e}`)
   } finally {
     verifying.value = false
   }
