@@ -174,10 +174,12 @@ export const createBackup = () =>
   json<{ path: string; files: number; size: number }>('/api/backup', { method: 'POST' })
 
 export const downloadBackup = (path?: string) => {
-  const url = path
-    ? `${base()}/api/backup/download?path=${encodeURIComponent(path)}`
-    : `${base()}/api/backup/download`
-  window.open(url, '_blank')
+  const token = window.daemonApi?.getToken?.() || new URLSearchParams(window.location.search).get('token') || ''
+  const params = new URLSearchParams()
+  if (path) params.set('path', path)
+  if (token) params.set('token', token)
+  const qs = params.toString()
+  window.open(`${base()}/api/backup/download${qs ? '?' + qs : ''}`, '_blank')
 }
 
 // Per-site metrics — Phase 11 performance monitoring foothold
