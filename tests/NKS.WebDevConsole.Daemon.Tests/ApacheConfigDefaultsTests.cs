@@ -72,4 +72,19 @@ public class ApacheConfigDefaultsTests
         Assert.True(Path.IsPathRooted(cfg.BinariesRoot));
         Assert.StartsWith(WdcPaths.Root, cfg.BinariesRoot, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void DefaultPorts_MatchWellKnownValues()
+    {
+        var cfg = new ApacheConfig();
+        Assert.Equal(80, cfg.HttpPort);
+        Assert.Equal(443, cfg.HttpsPort);
+    }
+
+    [Fact]
+    public void VhostsDirectory_EndsWithExpectedLeaf()
+    {
+        var cfg = new ApacheConfig();
+        Assert.EndsWith("sites-enabled", cfg.VhostsDirectory);
+    }
 }
