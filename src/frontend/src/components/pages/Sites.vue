@@ -139,8 +139,20 @@
     <!-- Site edit is a full-view route at /sites/:domain/edit (no drawer). -->
 
     <!-- Create dialog -->
-    <el-dialog v-model="showCreate" title="New Site" width="480px">
+    <el-dialog v-model="showCreate" title="New Site" width="520px">
       <el-form :model="newSite" label-position="top" size="small">
+        <el-form-item label="Template">
+          <el-select v-model="newSite.template" style="width: 100%" placeholder="Choose a template…" @change="applyTemplate">
+            <el-option label="— No template —" value="" />
+            <el-option label="WordPress (PHP 8.4, SSL)" value="wordpress" />
+            <el-option label="Laravel (PHP 8.4, SSL)" value="laravel" />
+            <el-option label="Nette (PHP 8.4, SSL)" value="nette" />
+            <el-option label="Symfony (PHP 8.4, SSL)" value="symfony" />
+            <el-option label="Next.js (Node proxy, SSL)" value="nextjs" />
+            <el-option label="Node.js (Node proxy)" value="node" />
+            <el-option label="Static HTML" value="static" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="Domain" required>
           <el-input v-model="newSite.domain" placeholder="myapp.loc" />
         </el-form-item>
@@ -216,6 +228,7 @@ const search = ref('')
 const siteHistory = ref<Array<{ timestamp: string; label?: string }>>([])
 
 const newSite = reactive({
+  template: '',
   domain: '',
   documentRoot: '',
   phpVersion: '8.4',
@@ -224,6 +237,23 @@ const newSite = reactive({
   dbName: '',
   sslEnabled: false,
 })
+
+const TEMPLATES: Record<string, { php: string; ssl: boolean }> = {
+  wordpress: { php: '8.4', ssl: true },
+  laravel:   { php: '8.4', ssl: true },
+  nette:     { php: '8.4', ssl: true },
+  symfony:   { php: '8.4', ssl: true },
+  nextjs:    { php: 'none', ssl: true },
+  node:      { php: 'none', ssl: false },
+  static:    { php: 'none', ssl: false },
+}
+
+function applyTemplate(tplName: string) {
+  const tpl = TEMPLATES[tplName]
+  if (!tpl) return
+  newSite.phpVersion = tpl.php
+  newSite.sslEnabled = tpl.ssl
+}
 
 const filteredSites = computed(() => {
   const q = search.value.toLowerCase()
