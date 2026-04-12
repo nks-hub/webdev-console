@@ -1724,6 +1724,16 @@ infoCommand.SetAction(async (parseResult, ct) =>
     {
         var site = await client.GetJsonAsync($"/api/sites/{domain}");
         if (json) { PrintJson(site); return; }
+        if (Console.IsOutputRedirected)
+        {
+            Console.WriteLine($"domain\t{site.GetProperty("domain").GetString()}");
+            Console.WriteLine($"docroot\t{site.GetProperty("documentRoot").GetString()}");
+            Console.WriteLine($"php\t{site.GetProperty("phpVersion").GetString()}");
+            Console.WriteLine($"ssl\t{(site.TryGetProperty("sslEnabled", out var ssl2) && ssl2.GetBoolean() ? "true" : "false")}");
+            var np2 = site.TryGetProperty("nodeUpstreamPort", out var npp) ? npp.GetInt32() : 0;
+            if (np2 > 0) Console.WriteLine($"node_port\t{np2}");
+            return;
+        }
         var table = new Table().Border(TableBorder.Rounded).HideHeaders();
         table.AddColumn("Key"); table.AddColumn("Value");
         table.AddRow("Domain", site.GetProperty("domain").GetString() ?? "-");
