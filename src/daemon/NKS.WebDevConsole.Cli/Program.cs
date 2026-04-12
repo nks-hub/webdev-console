@@ -2598,17 +2598,24 @@ backupCommand.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
 
-    var url = "/api/backup" + (string.IsNullOrEmpty(outPath) ? "" : $"?out={Uri.EscapeDataString(outPath)}");
-    var result = await client.PostAsync(url);
-    if (json) { PrintJson(result); return; }
+    try
+    {
+        var url = "/api/backup" + (string.IsNullOrEmpty(outPath) ? "" : $"?out={Uri.EscapeDataString(outPath)}");
+        var result = await client.PostAsync(url);
+        if (json) { PrintJson(result); return; }
 
-    var path = result.GetProperty("path").GetString() ?? "?";
-    var files = result.GetProperty("files").GetInt32();
-    var size = result.GetProperty("size").GetInt64();
-    AnsiConsole.MarkupLine($"[green]✓[/] Backup created");
-    AnsiConsole.MarkupLine($"  Path:  [bold]{Markup.Escape(path)}[/]");
-    AnsiConsole.MarkupLine($"  Files: {files}");
-    AnsiConsole.MarkupLine($"  Size:  {FormatBytes(size)}");
+        var path = result.GetProperty("path").GetString() ?? "?";
+        var files = result.GetProperty("files").GetInt32();
+        var size = result.GetProperty("size").GetInt64();
+        AnsiConsole.MarkupLine($"[green]✓[/] Backup created");
+        AnsiConsole.MarkupLine($"  Path:  [bold]{Markup.Escape(path)}[/]");
+        AnsiConsole.MarkupLine($"  Files: {files}");
+        AnsiConsole.MarkupLine($"  Size:  {FormatBytes(size)}");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Backup failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 
 // wdc backup list
@@ -2680,17 +2687,24 @@ restoreCommand.SetAction(async (parseResult, ct) =>
 
     // The daemon endpoint accepts multipart upload OR JSON {path: ...} for in-place files.
     // We send the path directly because the daemon already lives on the same machine.
-    var content = new StringContent(
-        System.Text.Json.JsonSerializer.Serialize(new { path = from }),
-        System.Text.Encoding.UTF8,
-        "application/json");
-    var result = await client.PostAsync("/api/restore", content);
-    if (json) { PrintJson(result); return; }
+    try
+    {
+        var content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(new { path = from }),
+            System.Text.Encoding.UTF8,
+            "application/json");
+        var result = await client.PostAsync("/api/restore", content);
+        if (json) { PrintJson(result); return; }
 
-    var restored = result.GetProperty("restored").GetInt32();
-    var safety = result.GetProperty("safetyBackup").GetString() ?? "?";
-    AnsiConsole.MarkupLine($"[green]✓[/] Restored [bold]{restored}[/] file(s)");
-    AnsiConsole.MarkupLine($"[dim]Safety backup of previous state: {Markup.Escape(safety)}[/]");
+        var restored = result.GetProperty("restored").GetInt32();
+        var safety = result.GetProperty("safetyBackup").GetString() ?? "?";
+        AnsiConsole.MarkupLine($"[green]✓[/] Restored [bold]{restored}[/] file(s)");
+        AnsiConsole.MarkupLine($"[dim]Safety backup of previous state: {Markup.Escape(safety)}[/]");
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Restore failed:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 
 // --- wdc uninstall ---
@@ -2731,23 +2745,30 @@ uninstallCommand.SetAction(async (parseResult, ct) =>
         purge,
         hosts,
     };
-    var content = new StringContent(
-        System.Text.Json.JsonSerializer.Serialize(payload),
-        System.Text.Encoding.UTF8,
-        "application/json");
-    var result = await client.PostAsync("/api/uninstall", content);
-    if (json) { PrintJson(result); return; }
-
-    var msg = result.TryGetProperty("message", out var m) ? m.GetString() : "";
-    var backup = result.TryGetProperty("safetyBackup", out var b) ? b.GetString() : null;
-    AnsiConsole.MarkupLine(dryRun ? $"[yellow]⚠[/] {Markup.Escape(msg ?? "")}" : $"[green]✓[/] {Markup.Escape(msg ?? "")}");
-    if (!string.IsNullOrEmpty(backup)) AnsiConsole.MarkupLine($"[dim]Safety backup: {Markup.Escape(backup)}[/]");
-
-    if (result.TryGetProperty("plan", out var planEl) && planEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+    try
     {
-        AnsiConsole.MarkupLine("[bold]Plan:[/]");
-        foreach (var step in planEl.EnumerateArray())
-            AnsiConsole.MarkupLine($"  • {Markup.Escape(step.GetString() ?? "")}");
+        var content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(payload),
+            System.Text.Encoding.UTF8,
+            "application/json");
+        var result = await client.PostAsync("/api/uninstall", content);
+        if (json) { PrintJson(result); return; }
+
+        var msg = result.TryGetProperty("message", out var m) ? m.GetString() : "";
+        var backup = result.TryGetProperty("safetyBackup", out var b) ? b.GetString() : null;
+        AnsiConsole.MarkupLine(dryRun ? $"[yellow]⚠[/] {Markup.Escape(msg ?? "")}" : $"[green]✓[/] {Markup.Escape(msg ?? "")}");
+        if (!string.IsNullOrEmpty(backup)) AnsiConsole.MarkupLine($"[dim]Safety backup: {Markup.Escape(backup)}[/]");
+
+        if (result.TryGetProperty("plan", out var planEl) && planEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            AnsiConsole.MarkupLine("[bold]Plan:[/]");
+            foreach (var step in planEl.EnumerateArray())
+                AnsiConsole.MarkupLine($"  • {Markup.Escape(step.GetString() ?? "")}");
+        }
+    }
+    catch (HttpRequestException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Uninstall failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
 
