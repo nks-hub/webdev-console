@@ -32,6 +32,13 @@
               <el-form-item label="Mailpit HTTP">
                 <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
+              <el-form-item label="PHP-FPM base port">
+                <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
+                <div class="hint">
+                  Per-version ports are derived as base + major×10 + minor.
+                  E.g. base 9000 + PHP 8.4 → port 9084.
+                </div>
+              </el-form-item>
             </el-form>
           </div>
         </el-tab-pane>
@@ -40,7 +47,17 @@
         <el-tab-pane label="General" name="general">
           <div class="tab-content">
             <p class="tab-desc">Application behavior and startup preferences.</p>
-            <el-form label-position="left" label-width="180px" size="small" style="max-width: 440px">
+            <el-form label-position="left" label-width="180px" size="small" style="max-width: 500px">
+              <el-form-item label="Language">
+                <el-select
+                  :model-value="locale"
+                  @update:model-value="(v: string) => { locale = v; localStorage.setItem('wdc-locale', v) }"
+                  style="width: 160px"
+                >
+                  <el-option label="English" value="en" />
+                  <el-option label="Čeština" value="cs" />
+                </el-select>
+              </el-form-item>
               <el-form-item label="Theme">
                 <el-radio-group
                   :model-value="themeStore.mode"
@@ -67,6 +84,23 @@
                   Flush DNS Cache
                 </el-button>
               </el-form-item>
+
+              <el-divider />
+
+              <el-form-item label="Telemetry">
+                <el-switch v-model="telemetryEnabled" />
+                <div class="hint">
+                  Send anonymous usage statistics to help improve NKS WDC.
+                  No personal data, no site names, no code — just feature usage counts.
+                </div>
+              </el-form-item>
+              <el-form-item label="Crash reports" v-if="telemetryEnabled">
+                <el-switch v-model="telemetryCrashReports" />
+                <div class="hint">
+                  Send crash stack traces via Sentry when a daemon exception occurs.
+                  Disabled when telemetry is off.
+                </div>
+              </el-form-item>
             </el-form>
           </div>
         </el-tab-pane>
@@ -90,6 +124,31 @@
               </el-form-item>
               <el-form-item label="Sites config directory">
                 <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts" />
+              </el-form-item>
+              <el-form-item label="Hosts file">
+                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts" />
+                <div class="hint">
+                  Path to the system hosts file for local domain resolution.
+                  Leave blank for the OS default.
+                </div>
+              </el-form-item>
+
+              <el-divider />
+
+              <el-form-item label="Data directory">
+                <el-input
+                  :model-value="systemInfo?.os?.machine ? `${systemInfo?.daemon?.pid ? '~/.wdc' : '~/.wdc'}` : '~/.wdc'"
+                  disabled
+                  class="mono-input"
+                />
+                <div class="hint">
+                  Root for all daemon state: sites, binaries, SSL certs, backups, configs.
+                  Override with <code>WDC_DATA_DIR</code> environment variable or
+                  <code>portable.txt</code> next to the executable.
+                </div>
+              </el-form-item>
+              <el-form-item label="Backup directory">
+                <el-input v-model="backupDir" placeholder="~/.wdc/backups" />
               </el-form-item>
             </el-form>
           </div>
@@ -230,14 +289,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useThemeStore, type ThemeMode } from '../../stores/theme'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
+const { locale } = useI18n()
 
-const activeTab = ref('ports')
+const activeTab = ref('general')
 const saving = ref(false)
 const databases = ref<string[]>([])
 const newDbName = ref('')
@@ -264,7 +325,15 @@ const paths = reactive({
   php: '',
   redis: '',
   sitesDir: '',
+  hostsFile: '',
 })
+
+// ── Additional settings from SPEC ─────────────────────────────────────
+const phpFpmBasePort = ref(9000)
+const telemetryEnabled = ref(false)
+const telemetryCrashReports = ref(false)
+const backupDir = ref('')
+const backupScheduleHours = ref(0)
 
 // ── Catalog API integration (Advanced tab) ────────────────────────────
 const catalogUrl = ref('')
@@ -361,7 +430,13 @@ async function loadSettings() {
     if (data['paths.php'])       paths.php = data['paths.php']
     if (data['paths.redis'])     paths.redis = data['paths.redis']
     if (data['paths.sitesDir'])  paths.sitesDir = data['paths.sitesDir']
+    if (data['paths.hostsFile']) paths.hostsFile = data['paths.hostsFile']
+    if (data['ports.phpFpmBase']) phpFpmBasePort.value = parseInt(data['ports.phpFpmBase'])
     if (data['daemon.catalogUrl']) catalogUrl.value = data['daemon.catalogUrl']
+    if (data['telemetry.enabled']) telemetryEnabled.value = data['telemetry.enabled'] === 'true'
+    if (data['telemetry.crashReports']) telemetryCrashReports.value = data['telemetry.crashReports'] === 'true'
+    if (data['backup.dir']) backupDir.value = data['backup.dir']
+    if (data['backup.scheduleHours']) backupScheduleHours.value = parseInt(data['backup.scheduleHours'])
   } catch { /* daemon not reachable — keep defaults */ }
 }
 
@@ -450,7 +525,13 @@ async function save() {
       'paths.php':      paths.php,
       'paths.redis':    paths.redis,
       'paths.sitesDir': paths.sitesDir,
+      'paths.hostsFile': paths.hostsFile,
+      'ports.phpFpmBase': String(phpFpmBasePort.value),
       'daemon.catalogUrl': catalogUrl.value,
+      'telemetry.enabled': String(telemetryEnabled.value),
+      'telemetry.crashReports': String(telemetryCrashReports.value),
+      'backup.dir': backupDir.value,
+      'backup.scheduleHours': String(backupScheduleHours.value),
     }
     const r = await fetch(`${daemonBase()}/api/settings`, {
       method: 'PUT',
