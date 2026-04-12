@@ -150,6 +150,22 @@
                 </div>
               </div>
             </section>
+
+            <!-- Docker Compose detection card -->
+            <section v-if="composeInfo" class="edit-card">
+              <header class="edit-card-header">
+                <span class="edit-card-title">Docker Compose</span>
+                <span class="edit-card-hint">Detected in document root</span>
+              </header>
+              <div class="edit-card-body">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <el-tag size="small" type="info" effect="plain">🐳 {{ composeInfo.fileName }}</el-tag>
+                  <span class="hint" style="margin: 0">
+                    This site ships with a Compose stack. Use <code>docker compose up</code> to start services.
+                  </span>
+                </div>
+              </div>
+            </section>
           </div>
         </el-tab-pane>
 
@@ -597,6 +613,7 @@ import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
   fetchSiteMetrics, type SiteMetrics,
+  fetchDockerComposeStatus, type DockerComposeStatus,
 } from '../../api/daemon'
 
 const route = useRoute()
@@ -613,6 +630,7 @@ const dirty = ref(false)
 const activeTab = ref('general')
 const phpVersions = ref<string[]>([])
 const history = ref<Array<{ timestamp: string; label?: string }>>([])
+const composeInfo = ref<DockerComposeStatus | null>(null)
 const redirectHttps = ref(true)
 
 // ── Alias chip picker ──────────────────────────────────────────────────
@@ -949,6 +967,11 @@ async function load() {
       })
       if (res.ok) history.value = await res.json() as Array<{ timestamp: string; label?: string }>
     } catch { /* optional */ }
+
+    // Docker Compose detection (non-blocking)
+    fetchDockerComposeStatus(domain.value)
+      .then(s => { composeInfo.value = s.hasCompose ? s : null })
+      .catch(() => { composeInfo.value = null })
 
     // Node process status (non-blocking)
     refreshNodeStatus()
