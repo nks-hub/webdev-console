@@ -1893,6 +1893,14 @@ infoCommand.SetAction(async (parseResult, ct) =>
             Console.WriteLine($"ssl\t{(site.TryGetProperty("sslEnabled", out var ssl2) && ssl2.GetBoolean() ? "true" : "false")}");
             var np2 = site.TryGetProperty("nodeUpstreamPort", out var npp) ? npp.GetInt32() : 0;
             if (np2 > 0) Console.WriteLine($"node_port\t{np2}");
+            if (site.TryGetProperty("nodeStartCommand", out var nsc2) && nsc2.ValueKind == JsonValueKind.String && nsc2.GetString()?.Length > 0)
+                Console.WriteLine($"node_cmd\t{nsc2.GetString()}");
+            if (site.TryGetProperty("framework", out var fw2) && fw2.ValueKind == JsonValueKind.String)
+                Console.WriteLine($"framework\t{fw2.GetString()}");
+            if (site.TryGetProperty("cloudflare", out var cf2) && cf2.ValueKind == JsonValueKind.Object
+                && cf2.TryGetProperty("enabled", out var cfe2) && cfe2.GetBoolean()
+                && cf2.TryGetProperty("subdomain", out var cfs2))
+                Console.WriteLine($"tunnel\t{cfs2.GetString()}.{(cf2.TryGetProperty("zoneName", out var cfz2) ? cfz2.GetString() : "")}");
             return;
         }
         var table = new Table().Border(TableBorder.Rounded).HideHeaders();
@@ -1912,6 +1920,24 @@ infoCommand.SetAction(async (parseResult, ct) =>
             table.AddRow("Upstream Port", np.GetInt32().ToString());
             if (site.TryGetProperty("nodeStartCommand", out var nsc) && nsc.ValueKind == JsonValueKind.String && nsc.GetString()?.Length > 0)
                 table.AddRow("Start Command", nsc.GetString()!);
+        }
+        // Cloudflare tunnel
+        if (site.TryGetProperty("cloudflare", out var cf) && cf.ValueKind == JsonValueKind.Object)
+        {
+            var cfEnabled = cf.TryGetProperty("enabled", out var cfe) && cfe.GetBoolean();
+            var cfSub = cf.TryGetProperty("subdomain", out var cfs) ? cfs.GetString() ?? "" : "";
+            var cfZone = cf.TryGetProperty("zoneName", out var cfz) ? cfz.GetString() ?? "" : "";
+            if (cfEnabled && cfSub.Length > 0)
+                table.AddRow("Tunnel", $"[cyan]{Markup.Escape(cfSub)}.{Markup.Escape(cfZone)}[/]");
+            else if (cfSub.Length > 0)
+                table.AddRow("Tunnel", $"[dim]{Markup.Escape(cfSub)}.{Markup.Escape(cfZone)} (disabled)[/]");
+        }
+        // Environment variables
+        if (site.TryGetProperty("environment", out var env) && env.ValueKind == JsonValueKind.Object)
+        {
+            var envCount = env.EnumerateObject().Count();
+            if (envCount > 0)
+                table.AddRow("Env vars", $"{envCount} defined");
         }
         // Docker Compose detection
         try
