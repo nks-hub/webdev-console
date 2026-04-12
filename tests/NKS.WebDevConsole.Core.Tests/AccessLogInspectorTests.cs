@@ -97,6 +97,32 @@ public sealed class AccessLogInspectorTests : IDisposable
     }
 
     [Fact]
+    public void Inspect_SingleLineWithoutNewline()
+    {
+        var path = Path.Combine(_tempDir, "noeol.log");
+        File.WriteAllText(path, "127.0.0.1 - - [13/Apr/2026] \"GET / HTTP/1.1\" 200 42");
+
+        var stats = AccessLogInspector.Inspect(new[] { path });
+        Assert.NotNull(stats);
+        // No \n in file → line count is 0 (counts newline chars, not logical lines).
+        // This is by design: Apache always writes \n at the end of each log line,
+        // so a file without \n means it was truncated or is being written.
+        Assert.Equal(0, stats!.LineCount);
+        Assert.True(stats.SizeBytes > 0);
+    }
+
+    [Fact]
+    public void Inspect_ReportsLastWriteUtc()
+    {
+        var path = Path.Combine(_tempDir, "timed.log");
+        File.WriteAllText(path, "line1\n");
+
+        var stats = AccessLogInspector.Inspect(new[] { path });
+        Assert.NotNull(stats);
+        Assert.True((DateTime.UtcNow - stats!.LastWrittenUtc).TotalMinutes < 1);
+    }
+
+    [Fact]
     public void Inspect_ExtrapolatesWhenScanCapExceeded()
     {
         // Write a file larger than the scan cap and verify line count is
