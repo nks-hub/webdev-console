@@ -1310,7 +1310,17 @@ phpExtCmd.SetAction(async (parseResult, ct) =>
 
     var extensions = await client.GetJsonAsync($"/api/php/{ver}/extensions");
     if (json) { PrintJson(extensions); return; }
-    if (extensions.GetArrayLength() == 0) { AnsiConsole.MarkupLine($"[dim]No extensions for PHP {Markup.Escape(ver)}[/]"); return; }
+    if (extensions.GetArrayLength() == 0) { if (!Console.IsOutputRedirected) AnsiConsole.MarkupLine($"[dim]No extensions for PHP {Markup.Escape(ver)}[/]"); return; }
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var e in extensions.EnumerateArray())
+        {
+            var name = e.GetProperty("name").GetString() ?? "";
+            var loaded = e.TryGetProperty("isLoaded", out var l) && l.GetBoolean();
+            Console.WriteLine($"{name}\t{(loaded ? "loaded" : "disabled")}");
+        }
+        return;
+    }
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("Extension"); table.AddColumn("Loaded"); table.AddColumn("Core");
     foreach (var e in extensions.EnumerateArray())
