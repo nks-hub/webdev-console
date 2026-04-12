@@ -1687,6 +1687,63 @@ composeCheckCmd.SetAction(async (parseResult, ct) =>
 });
 composeCommand.Add(composeCheckCmd);
 
+// ── Per-site metrics (Phase 11 performance foothold) ─────────────────
+var metricsCommand = new Command("metrics", "Show access log metrics for a site");
+var metricsDomainArg = new Argument<string>("domain") { Description = "Site domain to inspect" };
+metricsCommand.Add(metricsDomainArg);
+metricsCommand.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(metricsDomainArg);
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        var result = await client.GetJsonAsync($"/api/sites/{domain}/metrics");
+        if (json) { PrintJson(result); return; }
+
+        var has = result.TryGetProperty("hasMetrics", out var hm) && hm.GetBoolean();
+        if (!has)
+        {
+            AnsiConsole.MarkupLine($"[dim]—[/] {Markup.Escape(domain ?? "")}: no access log found");
+            AnsiConsole.MarkupLine($"  [dim]Site hasn't been hit yet, or Apache hasn't been started with the generated vhost.[/]");
+            Environment.Exit(2);
+            return;
+        }
+
+        var log = result.GetProperty("accessLog");
+        var path = log.GetProperty("path").GetString() ?? "";
+        var size = log.GetProperty("sizeBytes").GetInt64();
+        var requests = log.GetProperty("requestCount").GetInt64();
+        var lastWrite = log.TryGetProperty("lastWriteUtc", out var lw) && lw.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? lw.GetDateTime() : (DateTime?)null;
+
+        var sizeDisplay = size < 1024 ? $"{size} B"
+            : size < 1024 * 1024 ? $"{size / 1024.0:F1} KB"
+            : $"{size / (1024.0 * 1024.0):F1} MB";
+
+        AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")}");
+        AnsiConsole.MarkupLine($"  [cyan]Requests:[/] {requests:N0}");
+        AnsiConsole.MarkupLine($"  [cyan]Size:[/]     {sizeDisplay}");
+        if (lastWrite.HasValue)
+        {
+            var age = DateTime.UtcNow - lastWrite.Value;
+            var ageDisplay = age.TotalSeconds < 60 ? $"{(int)age.TotalSeconds}s ago"
+                : age.TotalMinutes < 60 ? $"{(int)age.TotalMinutes}m ago"
+                : age.TotalHours < 24 ? $"{(int)age.TotalHours}h ago"
+                : $"{(int)age.TotalDays}d ago";
+            AnsiConsole.MarkupLine($"  [cyan]Last hit:[/] {ageDisplay}");
+        }
+        AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(path)}[/]");
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+    }
+});
+
+rootCommand.Add(metricsCommand);
 rootCommand.Add(composeCommand);
 rootCommand.Add(nodeCommand);
 rootCommand.Add(sslCommand);
