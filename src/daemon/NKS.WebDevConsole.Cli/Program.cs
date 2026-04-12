@@ -1519,6 +1519,121 @@ sslRevokeCmd.SetAction(async (parseResult, ct) =>
 });
 sslCommand.Add(sslRevokeCmd);
 
+// ── Node.js per-site process management ───────────────────────────────
+var nodeCommand = new Command("node", "Node.js per-site process management");
+
+var nodeListCmd = new Command("list", "List all tracked Node.js site processes");
+nodeListCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var data = await client.GetJsonAsync("/api/node/sites");
+    if (json) { PrintJson(data); return; }
+
+    if (data.ValueKind != System.Text.Json.JsonValueKind.Array || data.GetArrayLength() == 0)
+    {
+        AnsiConsole.MarkupLine("[dim]No Node.js site processes tracked.[/]");
+        return;
+    }
+    var table = new Table().Border(TableBorder.Rounded)
+        .AddColumn("Domain").AddColumn("State").AddColumn("PID")
+        .AddColumn("Port").AddColumn("Command");
+    foreach (var p in data.EnumerateArray())
+    {
+        var domain = p.GetProperty("domain").GetString() ?? "";
+        var state = p.TryGetProperty("state", out var s) ? s.GetInt32() : 0;
+        var pid = p.TryGetProperty("pid", out var pv) && pv.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? pv.GetInt32().ToString() : "-";
+        var port = p.TryGetProperty("port", out var pt) ? pt.GetInt32().ToString() : "-";
+        var cmd = p.TryGetProperty("startCommand", out var sc) ? sc.GetString() ?? "" : "";
+        var stateLabel = state switch
+        {
+            2 => "[green]running[/]",
+            1 => "[yellow]starting[/]",
+            3 => "[yellow]stopping[/]",
+            4 => "[red]crashed[/]",
+            _ => "[dim]stopped[/]"
+        };
+        table.AddRow(Markup.Escape(domain), stateLabel, pid, port, Markup.Escape(cmd));
+    }
+    AnsiConsole.Write(table);
+});
+nodeCommand.Add(nodeListCmd);
+
+var nodeStartArg = new Argument<string>("domain") { Description = "Site domain to start" };
+var nodeStartCmd = new Command("start", "Start the Node.js process for a site") { nodeStartArg };
+nodeStartCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(nodeStartArg);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        var result = await client.PostAsync($"/api/node/sites/{domain}/start");
+        var state = result.TryGetProperty("state", out var s) ? s.GetInt32() : -1;
+        var pid = result.TryGetProperty("pid", out var pv) && pv.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? pv.GetInt32().ToString() : "-";
+        if (state == 2)
+            AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")} running (PID {pid})");
+        else
+            AnsiConsole.MarkupLine($"[yellow]![/] {Markup.Escape(domain ?? "")} state={state}");
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+    }
+});
+nodeCommand.Add(nodeStartCmd);
+
+var nodeStopArg = new Argument<string>("domain") { Description = "Site domain to stop" };
+var nodeStopCmd = new Command("stop", "Stop the Node.js process for a site") { nodeStopArg };
+nodeStopCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(nodeStopArg);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        await client.PostAsync($"/api/node/sites/{domain}/stop");
+        AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")} stopped");
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+    }
+});
+nodeCommand.Add(nodeStopCmd);
+
+var nodeRestartArg = new Argument<string>("domain") { Description = "Site domain to restart" };
+var nodeRestartCmd = new Command("restart", "Restart the Node.js process for a site") { nodeRestartArg };
+nodeRestartCmd.SetAction(async (parseResult, ct) =>
+{
+    var domain = parseResult.GetValue(nodeRestartArg);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    try
+    {
+        var result = await client.PostAsync($"/api/node/sites/{domain}/restart");
+        var state = result.TryGetProperty("state", out var s) ? s.GetInt32() : -1;
+        var pid = result.TryGetProperty("pid", out var pv) && pv.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? pv.GetInt32().ToString() : "-";
+        if (state == 2)
+            AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(domain ?? "")} restarted (PID {pid})");
+        else
+            AnsiConsole.MarkupLine($"[yellow]![/] {Markup.Escape(domain ?? "")} state={state}");
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+    }
+});
+nodeCommand.Add(nodeRestartCmd);
+
+rootCommand.Add(nodeCommand);
 rootCommand.Add(sslCommand);
 rootCommand.Add(hostsCmd);
 rootCommand.Add(completionCmd);
