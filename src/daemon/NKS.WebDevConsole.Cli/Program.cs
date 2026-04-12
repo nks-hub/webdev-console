@@ -1880,6 +1880,12 @@ hostsCmd.SetAction((parseResult, ct) =>
 
     if (json) { PrintJson(entries); return Task.CompletedTask; }
 
+    if (Console.IsOutputRedirected)
+    {
+        foreach (var e in entries) Console.WriteLine(e.domain);
+        return Task.CompletedTask;
+    }
+
     var table = new Table().Border(TableBorder.Rounded);
     table.AddColumn("IP"); table.AddColumn("Domain");
     foreach (var e in entries) table.AddRow(e.ip, e.domain);
