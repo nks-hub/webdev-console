@@ -2,17 +2,17 @@
   <div class="ssl-page">
     <div class="page-header">
       <div class="header-left">
-        <h1 class="page-title">SSL Certificates</h1>
-        <el-tag v-if="mkcertInstalled" type="success" size="small" effect="plain">mkcert ready</el-tag>
-        <el-tag v-else type="danger" size="small" effect="plain">mkcert not found</el-tag>
+        <h1 class="page-title">{{ $t('ssl.title') }}</h1>
+        <el-tag v-if="mkcertInstalled" type="success" size="small" effect="plain">{{ $t('ssl.mkcertReady') }}</el-tag>
+        <el-tag v-else type="danger" size="small" effect="plain">{{ $t('ssl.mkcertMissing') }}</el-tag>
       </div>
       <div class="header-actions">
         <el-button size="small" @click="installCA" :loading="installingCA" :disabled="!mkcertInstalled">
-          Install CA
+          {{ $t('ssl.installCa') }}
         </el-button>
-        <el-button size="small" @click="loadCerts" :loading="loading">Refresh</el-button>
+        <el-button size="small" @click="loadCerts" :loading="loading">{{ $t('common.refresh') }}</el-button>
         <el-button type="primary" size="small" @click="showGenerateDialog = true" :disabled="!mkcertInstalled">
-          + Generate Cert
+          + {{ $t('ssl.generate') }}
         </el-button>
       </div>
     </div>

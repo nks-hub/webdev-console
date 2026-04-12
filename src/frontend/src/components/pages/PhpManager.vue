@@ -2,11 +2,11 @@
   <div class="php-page">
     <div class="page-header">
       <div class="header-left">
-        <h1 class="page-title">PHP Versions</h1>
-        <span class="version-count" v-if="versions.length">{{ versions.length }} installed</span>
+        <h1 class="page-title">{{ $t('php.title') }}</h1>
+        <span class="version-count" v-if="versions.length">{{ versions.length }} {{ $t('binaries.installed') }}</span>
       </div>
       <div class="header-actions">
-        <el-button size="small" @click="loadVersions" :loading="loading">Refresh</el-button>
+        <el-button size="small" @click="loadVersions" :loading="loading">{{ $t('common.refresh') }}</el-button>
       </div>
     </div>
 

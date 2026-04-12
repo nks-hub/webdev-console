@@ -97,6 +97,21 @@
     "remove": "Odebrat",
     "catalog": "Katalog"
   },
+  "php": {
+    "title": "Verze PHP",
+    "extensions": "Rozšíření",
+    "setDefault": "Nastavit výchozí",
+    "noVersions": "Žádné verze PHP nainstalovány"
+  },
+  "ssl": {
+    "title": "SSL certifikáty",
+    "generate": "Vygenerovat certifikát",
+    "installCa": "Instalovat CA",
+    "revoke": "Odvolat",
+    "noCerts": "Žádné SSL certifikáty. Vygeneruj jeden pro své weby.",
+    "mkcertReady": "mkcert připraven",
+    "mkcertMissing": "mkcert nenalezen"
+  },
   "plugins": {
     "title": "Pluginy",
     "installed": "Nainstalované",

@@ -97,6 +97,21 @@
     "remove": "Remove",
     "catalog": "Catalog"
   },
+  "php": {
+    "title": "PHP Versions",
+    "extensions": "Extensions",
+    "setDefault": "Set Default",
+    "noVersions": "No PHP versions installed"
+  },
+  "ssl": {
+    "title": "SSL Certificates",
+    "generate": "Generate Cert",
+    "installCa": "Install CA",
+    "revoke": "Revoke",
+    "noCerts": "No SSL certificates. Generate one for your sites.",
+    "mkcertReady": "mkcert ready",
+    "mkcertMissing": "mkcert not found"
+  },
   "plugins": {
     "title": "Plugins",
     "installed": "Installed",
