@@ -153,4 +153,58 @@ public class AtomicWriterTests : IDisposable
 
         Assert.Equal(content.Length, new FileInfo(target).Length);
     }
+
+    [Fact]
+    public void CleanupOrphanTempFiles_NonexistentDir_ReturnsZero()
+    {
+        var missing = Path.Combine(_tempDir, "does-not-exist");
+        var removed = AtomicWriter.CleanupOrphanTempFiles(missing);
+        Assert.Equal(0, removed);
+    }
+
+    [Fact]
+    public void CleanupOrphanTempFiles_EmptyDir_ReturnsZero()
+    {
+        var removed = AtomicWriter.CleanupOrphanTempFiles(_tempDir);
+        Assert.Equal(0, removed);
+    }
+
+    [Fact]
+    public void CleanupOrphanTempFiles_FreshTmpFiles_AreKept()
+    {
+        var tmpPath = Path.Combine(_tempDir, "fresh.conf.tmp");
+        File.WriteAllText(tmpPath, "recently written");
+
+        // Staleness cutoff: 1 hour — fresh file should NOT be removed
+        var removed = AtomicWriter.CleanupOrphanTempFiles(_tempDir);
+
+        Assert.Equal(0, removed);
+        Assert.True(File.Exists(tmpPath));
+    }
+
+    [Fact]
+    public void CleanupOrphanTempFiles_StaleTmpFiles_AreRemoved()
+    {
+        var tmpPath = Path.Combine(_tempDir, "stale.conf.tmp");
+        File.WriteAllText(tmpPath, "old orphan");
+        File.SetLastWriteTimeUtc(tmpPath, DateTime.UtcNow.AddHours(-2));
+
+        var removed = AtomicWriter.CleanupOrphanTempFiles(_tempDir);
+
+        Assert.Equal(1, removed);
+        Assert.False(File.Exists(tmpPath));
+    }
+
+    [Fact]
+    public void CleanupOrphanTempFiles_IgnoresNonTmpFiles()
+    {
+        var conf = Path.Combine(_tempDir, "real.conf");
+        File.WriteAllText(conf, "data");
+        File.SetLastWriteTimeUtc(conf, DateTime.UtcNow.AddDays(-5));
+
+        var removed = AtomicWriter.CleanupOrphanTempFiles(_tempDir);
+
+        Assert.Equal(0, removed);
+        Assert.True(File.Exists(conf));
+    }
 }
