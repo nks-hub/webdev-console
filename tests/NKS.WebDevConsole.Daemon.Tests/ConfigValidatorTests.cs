@@ -41,4 +41,31 @@ public class ConfigValidatorTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task ValidatePhpIni_NonexistentPath_ReturnsFalse()
+    {
+        var fakePath = Path.Combine(Path.GetTempPath(), "nonexistent-php-" + Guid.NewGuid().ToString("N") + ".exe");
+        var (isValid, output) = await _validator.ValidatePhpIni(fakePath, "dummy.ini");
+        Assert.False(isValid);
+        Assert.False(string.IsNullOrEmpty(output));
+    }
+
+    [Fact]
+    public async Task ValidateMyCnf_NonexistentPath_ReturnsFalse()
+    {
+        var fakePath = Path.Combine(Path.GetTempPath(), "nonexistent-mysqld-" + Guid.NewGuid().ToString("N") + ".exe");
+        var (isValid, output) = await _validator.ValidateMyCnf(fakePath, "dummy.cnf");
+        Assert.False(isValid);
+        Assert.False(string.IsNullOrEmpty(output));
+    }
+
+    [Fact]
+    public async Task ValidateRedisConf_NonexistentPath_ReturnsFalse()
+    {
+        var fakePath = Path.Combine(Path.GetTempPath(), "nonexistent-redis-" + Guid.NewGuid().ToString("N") + ".exe");
+        var (isValid, output) = await _validator.ValidateRedisConf(fakePath, "dummy.conf");
+        Assert.False(isValid);
+        Assert.False(string.IsNullOrEmpty(output));
+    }
 }
