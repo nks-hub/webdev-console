@@ -73,4 +73,20 @@ public class ServiceStatusTests
         Assert.False(result.IsValid);
         Assert.Equal("Port out of range", result.ErrorMessage);
     }
+
+    [Fact]
+    public void ValidationResult_RecordEquality()
+    {
+        var a = new ValidationResult(false, "err");
+        var b = new ValidationResult(false, "err");
+        Assert.Equal(a, b);
+    }
+
+    [Fact]
+    public void ValidationResult_Success_HasNullMessage()
+    {
+        var r = new ValidationResult(true);
+        Assert.True(r.IsValid);
+        Assert.Null(r.ErrorMessage);
+    }
 }
