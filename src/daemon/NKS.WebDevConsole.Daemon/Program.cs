@@ -38,6 +38,7 @@ builder.Services.AddSingleton<PhpExtensionOverrides>();
 builder.Services.AddSingleton<SettingsStore>();
 builder.Services.AddSingleton<WindowsFirewallManager>();
 builder.Services.AddSingleton<SseService>();
+builder.Services.AddSingleton<WebSocketLogStreamer>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddSingleton<ShutdownCoordinator>();
 builder.Services.AddHostedService<HealthMonitor>();
@@ -129,6 +130,7 @@ var migrationRunner = new MigrationRunner(earlyLoggerFactory.CreateLogger<Migrat
 migrationRunner.Run(database.ConnectionString);
 
 var app = builder.Build();
+app.UseWebSockets();
 app.UseCors();
 
 // Sentry crash reporting — opt-in only. The TelemetryConsent singleton is the
@@ -2915,6 +2917,44 @@ app.MapDelete("/api/binaries/{app}/{version}", (string app, string version, Bina
     }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
+// WebSocket log streaming — real-time per-service log lines with zero
+// batching delay. Complements the SSE /api/events endpoint which handles
+// service state, metrics, and validation events. The log viewer in the
+// frontend connects here for immediate log output.
+app.Map("/api/logs/{id}/stream", async (HttpContext ctx, string id, WebSocketLogStreamer streamer) =>
+{
+    if (!ctx.WebSockets.IsWebSocketRequest)
+    {
+        ctx.Response.StatusCode = 400;
+        await ctx.Response.WriteAsync("WebSocket upgrade required");
+        return;
+    }
+
+    var modules = ctx.RequestServices.GetServices<IServiceModule>();
+    var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase));
+    if (module == null)
+    {
+        ctx.Response.StatusCode = 404;
+        await ctx.Response.WriteAsync($"Service '{id}' not found");
+        return;
+    }
+
+    using var ws = await ctx.WebSockets.AcceptWebSocketAsync();
+
+    // Send recent log history first so the client doesn't start with an empty viewer
+    var history = await module.GetLogsAsync(50, ctx.RequestAborted);
+    foreach (var line in history)
+    {
+        var payload = System.Text.Json.JsonSerializer.Serialize(new { line, ts = DateTime.UtcNow });
+        var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
+        await ws.SendAsync(new ArraySegment<byte>(bytes),
+            System.Net.WebSockets.WebSocketMessageType.Text, true, ctx.RequestAborted);
+    }
+
+    // Stream new lines as they arrive
+    await streamer.StreamAsync(id, ws, ctx.RequestAborted);
 });
 
 // SSE endpoint
