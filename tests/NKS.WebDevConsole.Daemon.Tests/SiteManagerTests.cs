@@ -420,6 +420,33 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void DetectPhpVersion_TrimsWhitespaceAroundVersion()
+    {
+        var dir = Path.Combine(_tempDir, "php-whitespace");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, ".php-version"), "  8.2  \n");
+        Assert.Equal("8.2", SiteManager.DetectPhpVersion(dir));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_EmptyFile_ReturnsNull()
+    {
+        var dir = Path.Combine(_tempDir, "php-empty");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, ".php-version"), "");
+        Assert.Null(SiteManager.DetectPhpVersion(dir));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_MajorOnly_ReturnsAsIs()
+    {
+        var dir = Path.Combine(_tempDir, "php-major");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, ".php-version"), "8");
+        Assert.Equal("8", SiteManager.DetectPhpVersion(dir));
+    }
+
+    [Fact]
     public void LoadAll_ReadsExistingTomlFiles()
     {
         // Use the same serializer that SiteManager.CreateAsync uses
