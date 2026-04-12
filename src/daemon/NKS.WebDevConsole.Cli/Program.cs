@@ -1900,6 +1900,14 @@ sslListCmd.SetAction(async (parseResult, ct) =>
     var data = await client.GetJsonAsync("/api/ssl/certs");
     if (json) { PrintJson(data); return; }
 
+    if (Console.IsOutputRedirected)
+    {
+        if (data.TryGetProperty("certs", out var certs2) && certs2.GetArrayLength() > 0)
+            foreach (var c in certs2.EnumerateArray())
+                Console.WriteLine(c.GetProperty("domain").GetString() ?? "");
+        return;
+    }
+
     var mkcert = data.TryGetProperty("mkcertInstalled", out var mi) && mi.GetBoolean();
     AnsiConsole.MarkupLine($"mkcert: {(mkcert ? "[green]installed[/]" : "[red]not found[/]")}");
 
