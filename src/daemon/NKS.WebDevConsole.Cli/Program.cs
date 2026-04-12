@@ -2293,8 +2293,11 @@ metricsCommand.SetAction(async (parseResult, ct) =>
         var has = result.TryGetProperty("hasMetrics", out var hm) && hm.GetBoolean();
         if (!has)
         {
-            AnsiConsole.MarkupLine($"[dim]—[/] {Markup.Escape(domain ?? "")}: no access log found");
-            AnsiConsole.MarkupLine($"  [dim]Site hasn't been hit yet, or Apache hasn't been started with the generated vhost.[/]");
+            if (!Console.IsOutputRedirected)
+            {
+                AnsiConsole.MarkupLine($"[dim]—[/] {Markup.Escape(domain ?? "")}: no access log found");
+                AnsiConsole.MarkupLine($"  [dim]Site hasn't been hit yet, or Apache hasn't been started with the generated vhost.[/]");
+            }
             Environment.Exit(2);
             return;
         }
@@ -2303,6 +2306,14 @@ metricsCommand.SetAction(async (parseResult, ct) =>
         var path = log.GetProperty("path").GetString() ?? "";
         var size = log.GetProperty("sizeBytes").GetInt64();
         var requests = log.GetProperty("requestCount").GetInt64();
+
+        if (Console.IsOutputRedirected)
+        {
+            Console.WriteLine($"requests\t{requests}");
+            Console.WriteLine($"size\t{size}");
+            Console.WriteLine($"path\t{path}");
+            return;
+        }
         var lastWrite = log.TryGetProperty("lastWriteUtc", out var lw) && lw.ValueKind != System.Text.Json.JsonValueKind.Null
             ? lw.GetDateTime() : (DateTime?)null;
 
