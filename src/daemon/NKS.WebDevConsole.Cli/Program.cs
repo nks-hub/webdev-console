@@ -2072,6 +2072,34 @@ backupCommand.SetAction(async (parseResult, ct) =>
     AnsiConsole.MarkupLine($"  Size:  {FormatBytes(size)}");
 });
 
+// wdc backup list
+var backupListCmd = new Command("list", "List existing backups");
+backupListCmd.SetAction(async (parseResult, ct) =>
+{
+    var json = parseResult.GetValue(jsonOption);
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+    var data = await client.GetJsonAsync("/api/backup/list");
+    if (json) { PrintJson(data); return; }
+    if (!data.TryGetProperty("backups", out var arr) || arr.GetArrayLength() == 0)
+    {
+        AnsiConsole.MarkupLine("[dim]No backups found.[/]");
+        return;
+    }
+    var table = new Table().Border(TableBorder.Rounded);
+    table.AddColumn("Date"); table.AddColumn("Size"); table.AddColumn("Path");
+    foreach (var b in arr.EnumerateArray())
+    {
+        var created = b.TryGetProperty("createdUtc", out var c) ? c.GetString()?[..19] ?? "" : "";
+        var size = b.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
+        var path = b.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+        table.AddRow(created, FormatBytes(size), Markup.Escape(Path.GetFileName(path)));
+    }
+    AnsiConsole.Write(table);
+    AnsiConsole.MarkupLine($"[dim]{arr.GetArrayLength()} backup(s)[/]");
+});
+backupCommand.Add(backupListCmd);
+
 // --- wdc restore ---
 var restoreCommand = new Command("restore", "Restore a backup zip into NKS WDC state");
 var restoreFromOption = new Option<string>("--from") { Description = "Path to a backup zip", Required = true };
