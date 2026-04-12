@@ -40,4 +40,28 @@ public class ServiceStateTests
         var values = Enum.GetValues<ServiceType>();
         Assert.Equal(5, values.Length);
     }
+
+    [Theory]
+    [InlineData("Stopped", ServiceState.Stopped)]
+    [InlineData("Running", ServiceState.Running)]
+    [InlineData("Crashed", ServiceState.Crashed)]
+    [InlineData("Disabled", ServiceState.Disabled)]
+    public void ServiceState_ParsesFromString(string name, ServiceState expected)
+    {
+        Assert.True(Enum.TryParse<ServiceState>(name, out var result));
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ServiceState_InvalidString_FailsParse()
+    {
+        Assert.False(Enum.TryParse<ServiceState>("NotAState", out _));
+    }
+
+    [Fact]
+    public void ServiceState_AllValuesHaveDistinctIntRepresentation()
+    {
+        var values = Enum.GetValues<ServiceState>().Select(v => (int)v).ToArray();
+        Assert.Equal(values.Length, values.Distinct().Count());
+    }
 }
