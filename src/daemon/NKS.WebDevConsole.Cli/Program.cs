@@ -633,7 +633,10 @@ pluginsCommand.SetAction(async (parseResult, ct) =>
     if (Console.IsOutputRedirected)
     {
         foreach (var p in plugins.EnumerateArray())
-            Console.WriteLine($"{p.GetProperty("id").GetString()}\t{p.GetProperty("version").GetString()}");
+        {
+            var en = p.TryGetProperty("enabled", out var e) && e.GetBoolean() ? "enabled" : "disabled";
+            Console.WriteLine($"{p.GetProperty("id").GetString()}\t{p.GetProperty("version").GetString()}\t{en}");
+        }
         return;
     }
     if (plugins.GetArrayLength() == 0) { AnsiConsole.MarkupLine("[dim]No plugins loaded.[/]"); return; }
