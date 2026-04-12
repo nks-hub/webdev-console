@@ -1342,6 +1342,41 @@ infoCommand.SetAction(async (parseResult, ct) =>
             table.AddRow("Aliases", string.Join(", ", al.EnumerateArray().Select(a => a.GetString())));
         if (site.TryGetProperty("framework", out var fw) && fw.ValueKind == JsonValueKind.String)
             table.AddRow("Framework", fw.GetString()!);
+        if (site.TryGetProperty("nodeUpstreamPort", out var np) && np.GetInt32() > 0)
+        {
+            table.AddRow("Runtime", "[green]Node.js[/]");
+            table.AddRow("Upstream Port", np.GetInt32().ToString());
+            if (site.TryGetProperty("nodeStartCommand", out var nsc) && nsc.ValueKind == JsonValueKind.String && nsc.GetString()?.Length > 0)
+                table.AddRow("Start Command", nsc.GetString()!);
+        }
+        // Docker Compose detection
+        try
+        {
+            var compose = await client.GetJsonAsync($"/api/sites/{domain}/docker-compose");
+            if (compose.TryGetProperty("hasCompose", out var hc) && hc.GetBoolean())
+            {
+                var fn = compose.TryGetProperty("fileName", out var cfn) ? cfn.GetString() ?? "" : "";
+                table.AddRow("Docker Compose", $"[cyan]{Markup.Escape(fn)}[/]");
+            }
+        }
+        catch { /* optional — compose endpoint may not exist */ }
+        // Access log metrics
+        try
+        {
+            var metrics = await client.GetJsonAsync($"/api/sites/{domain}/metrics");
+            if (metrics.TryGetProperty("hasMetrics", out var hm) && hm.GetBoolean()
+                && metrics.TryGetProperty("accessLog", out var alog))
+            {
+                var reqs = alog.GetProperty("requestCount").GetInt64();
+                var size = alog.GetProperty("sizeBytes").GetInt64();
+                var sizeStr = size < 1024 ? $"{size} B"
+                    : size < 1024 * 1024 ? $"{size / 1024.0:F1} KB"
+                    : $"{size / (1024.0 * 1024.0):F1} MB";
+                table.AddRow("Requests", $"{reqs:N0}");
+                table.AddRow("Access Log", sizeStr);
+            }
+        }
+        catch { /* optional — metrics endpoint may not exist */ }
         AnsiConsole.Write(table);
     }
     catch { AnsiConsole.MarkupLine($"[red]Site {Markup.Escape(domain)} not found[/]"); }
