@@ -328,6 +328,56 @@ public class SiteManagerTests : IDisposable
         Assert.Null(_manager.DetectFramework(docRoot));
     }
 
+    // ── DetectPhpVersion ──────────────────────────────────────────────────
+
+    [Fact]
+    public void DetectPhpVersion_ReturnsNull_ForMissingDirectory()
+    {
+        Assert.Null(SiteManager.DetectPhpVersion("/nonexistent/path"));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_ReturnsNull_ForEmptyDirectory()
+    {
+        var dir = Path.Combine(_tempDir, "empty-php");
+        Directory.CreateDirectory(dir);
+        Assert.Null(SiteManager.DetectPhpVersion(dir));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_FindsVersionFile_InDocroot()
+    {
+        var dir = Path.Combine(_tempDir, "php-docroot");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, ".php-version"), "8.3");
+        Assert.Equal("8.3", SiteManager.DetectPhpVersion(dir));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_NormalizesToMajorMinor()
+    {
+        var dir = Path.Combine(_tempDir, "php-full");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, ".php-version"), "8.4.20");
+        Assert.Equal("8.4", SiteManager.DetectPhpVersion(dir));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_FindsVersionFile_InParent()
+    {
+        var parent = Path.Combine(_tempDir, "php-parent");
+        var child = Path.Combine(parent, "public");
+        Directory.CreateDirectory(child);
+        File.WriteAllText(Path.Combine(parent, ".php-version"), "7.4");
+        Assert.Equal("7.4", SiteManager.DetectPhpVersion(child));
+    }
+
+    [Fact]
+    public void DetectPhpVersion_ReturnsNull_ForNullInput()
+    {
+        Assert.Null(SiteManager.DetectPhpVersion(null!));
+    }
+
     [Fact]
     public void LoadAll_ReadsExistingTomlFiles()
     {
