@@ -1256,11 +1256,26 @@ app.MapGet("/api/telemetry/consent", (TelemetryConsent consent) =>
 
 app.MapPost("/api/telemetry/consent", async (HttpContext ctx, TelemetryConsent consent) =>
 {
-    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, bool>>();
+    Dictionary<string, bool>? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, bool>>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
     var enabled = body?.GetValueOrDefault("enabled") ?? false;
     var crashReports = body?.GetValueOrDefault("crashReports") ?? false;
     var usageMetrics = body?.GetValueOrDefault("usageMetrics") ?? false;
-    consent.Save(enabled, crashReports, usageMetrics);
+    try
+    {
+        consent.Save(enabled, crashReports, usageMetrics);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to persist telemetry consent: {ex.Message}");
+    }
     return Results.Ok(new
     {
         enabled = consent.Enabled,
@@ -1272,8 +1287,15 @@ app.MapPost("/api/telemetry/consent", async (HttpContext ctx, TelemetryConsent c
 
 app.MapDelete("/api/telemetry/consent", (TelemetryConsent consent) =>
 {
-    consent.Revoke();
-    return Results.NoContent();
+    try
+    {
+        consent.Revoke();
+        return Results.NoContent();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to revoke telemetry consent: {ex.Message}");
+    }
 });
 
 // Onboarding state — Phase 7 plan item.
@@ -2563,7 +2585,15 @@ app.MapPost("/api/ssl/install-ca", async () =>
 
 app.MapPost("/api/ssl/generate", async (HttpContext ctx) =>
 {
-    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object>>();
+    Dictionary<string, object>? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object>>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { ok = false, message = $"Invalid JSON body: {ex.Message}" });
+    }
     if (body == null || !body.ContainsKey("domain"))
         return Results.BadRequest(new { ok = false, message = "domain required" });
 
@@ -2578,15 +2608,25 @@ app.MapPost("/api/ssl/generate", async (HttpContext ctx) =>
     var method = sslPlugin.Instance.GetType().GetMethod("GenerateCert");
     if (method == null) return Results.BadRequest(new { ok = false, message = "GenerateCert method not found" });
 
-    var task = (Task)method.Invoke(sslPlugin.Instance, new object[] { domain, aliases })!;
-    await task;
-    var resultProp = task.GetType().GetProperty("Result");
-    var result = resultProp?.GetValue(task);
+    try
+    {
+        var task = (Task)method.Invoke(sslPlugin.Instance, new object[] { domain, aliases })!;
+        await task;
+        var resultProp = task.GetType().GetProperty("Result");
+        var result = resultProp?.GetValue(task);
 
-    if (result == null)
-        return Results.BadRequest(new { ok = false, message = "mkcert not installed or failed" });
+        if (result == null)
+            return Results.BadRequest(new { ok = false, message = "mkcert not installed or failed" });
 
-    return Results.Ok(new { ok = true, domain, message = $"Certificate generated for {domain}" });
+        return Results.Ok(new { ok = true, domain, message = $"Certificate generated for {domain}" });
+    }
+    catch (Exception ex)
+    {
+        // mkcert exec failure, missing binary, perms — surface the inner
+        // cause from reflection's TargetInvocationException wrapper.
+        return Results.Problem(
+            $"Certificate generation failed: {ex.InnerException?.Message ?? ex.Message}");
+    }
 });
 
 app.MapDelete("/api/ssl/certs/{domain}", (string domain) =>
@@ -2595,10 +2635,18 @@ app.MapDelete("/api/ssl/certs/{domain}", (string domain) =>
     if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
     var method = sslPlugin.Instance.GetType().GetMethod("RevokeCert");
     if (method == null) return Results.BadRequest(new { ok = false, message = "RevokeCert not found" });
-    var success = (bool)method.Invoke(sslPlugin.Instance, new object[] { domain })!;
-    return success
-        ? Results.Ok(new { ok = true, message = $"Certificate for {domain} revoked" })
-        : Results.NotFound(new { ok = false, message = $"No certificate found for {domain}" });
+    try
+    {
+        var success = (bool)method.Invoke(sslPlugin.Instance, new object[] { domain })!;
+        return success
+            ? Results.Ok(new { ok = true, message = $"Certificate for {domain} revoked" })
+            : Results.NotFound(new { ok = false, message = $"No certificate found for {domain}" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(
+            $"Certificate revoke failed: {ex.InnerException?.Message ?? ex.Message}");
+    }
 });
 
 // DNS flush
