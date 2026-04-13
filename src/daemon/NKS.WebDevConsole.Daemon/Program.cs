@@ -1723,11 +1723,21 @@ app.MapPost("/api/cloudflare/auto-setup", async (HttpContext ctx, IServiceProvid
     if (cfg == null || api == null)
         return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
 
-    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    System.Text.Json.JsonDocument doc;
+    try
+    {
+        doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
+    using var _doc = doc;
     if (!doc.RootElement.TryGetProperty("apiToken", out var tokenEl) ||
+        tokenEl.ValueKind != System.Text.Json.JsonValueKind.String ||
         string.IsNullOrWhiteSpace(tokenEl.GetString()))
     {
-        return Results.BadRequest(new { error = "apiToken is required" });
+        return Results.BadRequest(new { error = "apiToken is required and must be a non-empty string" });
     }
     var token = tokenEl.GetString()!;
 
@@ -1997,7 +2007,16 @@ app.MapPut("/api/cloudflare/tunnels/{tunnelId}/configuration",
     var api = ResolveCloudflareServiceOrNull(sp, "CloudflareApi");
     if (api == null) return Results.NotFound(new { error = "Cloudflare plugin not loaded" });
 
-    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    System.Text.Json.JsonDocument doc;
+    try
+    {
+        doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
+    using var _doc = doc;
     if (!doc.RootElement.TryGetProperty("rules", out var rulesEl) ||
         rulesEl.ValueKind != System.Text.Json.JsonValueKind.Array)
     {
