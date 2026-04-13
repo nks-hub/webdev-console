@@ -1150,6 +1150,12 @@ const currentRequestRate = computed(() => {
 
 async function refreshMetrics() {
   if (!site.value) return
+  // Re-entrancy guard: if a previous poll is still in-flight (e.g. slow
+  // daemon), skip this tick instead of racing with ourselves on the ring
+  // buffer. Without this guard two concurrent refreshes could both read
+  // `lastRequestCount`, compute deltas against the same baseline, and
+  // push duplicate/skewed samples that distort the timeseries.
+  if (metricsLoading.value) return
   metricsLoading.value = true
   try {
     const m = await fetchSiteMetrics(site.value.domain)
@@ -1172,7 +1178,12 @@ async function refreshMetrics() {
     }
     lastRequestCount = count
     lastPollTimestamp = now
-  } catch { siteMetrics.value = null }
+  } catch {
+    // Transient network errors shouldn't wipe the metrics display — keep
+    // the last good `siteMetrics` visible and just skip the sample.
+    // Only clear on permanent failures (which we can't distinguish here,
+    // so we rely on the user clicking Refresh manually to reset).
+  }
   finally { metricsLoading.value = false }
 }
 
