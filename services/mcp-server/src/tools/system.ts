@@ -4,16 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import { ResponseFormat, ResponseFormatSchema } from '../schemas.js'
-
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+import { safe } from '../formatting.js'
 
 export function registerSystemTools(server: McpServer, _opts: RegisterOptions): void {
   server.registerTool(
@@ -23,9 +14,7 @@ export function registerSystemTools(server: McpServer, _opts: RegisterOptions): 
       description:
         'Get daemon status: version, uptime in seconds, plugin count. ' +
         'Use this as a health check before calling other tools.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -33,7 +22,7 @@ export function registerSystemTools(server: McpServer, _opts: RegisterOptions): 
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/status'), response_format),
+    async () => safe(() => daemonClient.get('/api/status')),
   )
 
   server.registerTool(
@@ -43,9 +32,7 @@ export function registerSystemTools(server: McpServer, _opts: RegisterOptions): 
       description:
         'Get full system snapshot: daemon info, services running/total, sites count, ' +
         'plugins count, binaries count, OS tag/arch, .NET runtime, catalog cache status.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -53,7 +40,7 @@ export function registerSystemTools(server: McpServer, _opts: RegisterOptions): 
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/system'), response_format),
+    async () => safe(() => daemonClient.get('/api/system')),
   )
 
   server.registerTool(
@@ -72,7 +59,6 @@ export function registerSystemTools(server: McpServer, _opts: RegisterOptions): 
           .max(200)
           .default(20)
           .describe('Number of recent activity rows to return'),
-        response_format: ResponseFormatSchema.optional(),
       },
       annotations: {
         readOnlyHint: true,
@@ -81,7 +67,9 @@ export function registerSystemTools(server: McpServer, _opts: RegisterOptions): 
         openWorldHint: false,
       },
     },
-    async ({ limit, response_format }) =>
-      safe(() => daemonClient.get(`/api/activity?limit=${limit ?? 20}`), response_format),
+    async ({ limit }) => {
+      const qs = new URLSearchParams({ limit: String(limit) })
+      return safe(() => daemonClient.get(`/api/activity?${qs.toString()}`))
+    },
   )
 }

@@ -4,16 +4,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import { ConfirmYesSchema, ResponseFormat, ResponseFormatSchema } from '../schemas.js'
-
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+import { safe } from '../formatting.js'
+import { ConfirmYesSchema } from '../schemas.js'
 
 const AppNameSchema = z
   .string()
@@ -34,9 +26,7 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
         'List all known binary releases from the catalog API (Apache, PHP, MySQL, Caddy, ' +
         'mkcert, Mailpit, Redis, cloudflared, Node.js).\n\n' +
         'Returns: Flat array of BinaryRelease objects.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -44,8 +34,7 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: true,
       },
     },
-    async ({ response_format }) =>
-      safe(() => daemonClient.get('/api/binaries/catalog'), response_format),
+    async () => safe(() => daemonClient.get('/api/binaries/catalog')),
   )
 
   server.registerTool(
@@ -55,9 +44,7 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
       description:
         'List all currently installed binaries with app name, version, install path, ' +
         'and detected executable.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -65,8 +52,7 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: false,
       },
     },
-    async ({ response_format }) =>
-      safe(() => daemonClient.get('/api/binaries/installed'), response_format),
+    async () => safe(() => daemonClient.get('/api/binaries/installed')),
   )
 
   if (opts.readonly) return
@@ -101,7 +87,8 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
       description:
         'DESTRUCTIVE: Remove an installed binary version. Sites currently using it will ' +
         'fail to start until reconfigured.\n\n' +
-        'Args:\n  app: App identifier.\n  version: Version to remove.\n  confirm: Must be "YES".',
+        'Args:\n  app: App identifier.\n  version: Version to remove.\n  confirm: Must be "YES".\n\n' +
+        'You MUST list sites that use this binary before passing confirm="YES".',
       inputSchema: {
         app: AppNameSchema,
         version: VersionSchema,

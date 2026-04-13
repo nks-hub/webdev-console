@@ -6,21 +6,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import {
-  ConfirmYesSchema,
-  DomainSchema,
-  ResponseFormat,
-  ResponseFormatSchema,
-} from '../schemas.js'
-
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+import { safe } from '../formatting.js'
+import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
 export function registerSslTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -30,9 +17,7 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
       description:
         'List all locally-issued site certificates with subject, issuer, ' +
         'validFrom/validTo, and the corresponding domain.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -40,7 +25,7 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/ssl/certs'), response_format),
+    async () => safe(() => daemonClient.get('/api/ssl/certs')),
   )
 
   if (opts.readonly) return
@@ -97,7 +82,8 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
       description:
         'DESTRUCTIVE: Delete a site certificate. The vhost will fall back to HTTP-only ' +
         'on next reload.\n\n' +
-        'Args:\n  domain: Domain to revoke.\n  confirm: Must be "YES".',
+        'Args:\n  domain: Domain to revoke.\n  confirm: Must be "YES".\n\n' +
+        'You MUST show the user which cert will be removed before passing confirm="YES".',
       inputSchema: {
         domain: DomainSchema,
         confirm: ConfirmYesSchema,

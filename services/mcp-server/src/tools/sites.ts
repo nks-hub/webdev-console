@@ -1,30 +1,11 @@
-// Site management tools — Phase A MVP subset.
-// Each tool wraps a daemon REST endpoint. Tools are registered via
-// `server.registerTool()` with Zod input schemas so the MCP SDK can
-// auto-generate JSON Schema + validate arguments before calling the
-// handler.
-
+// Site management tools.
 import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import {
-  ConfirmYesSchema,
-  DomainSchema,
-  PhpVersionSchema,
-  ResponseFormat,
-  ResponseFormatSchema,
-} from '../schemas.js'
-
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+import { safe } from '../formatting.js'
+import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
 export function registerSitesTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -35,10 +16,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         'List all configured local development sites.\n\n' +
         'Returns: Array of SiteInfo objects with domain, documentRoot, phpVersion, ' +
         'sslEnabled, ports, framework, and Cloudflare config.\n\n' +
-        'Example: Use first to discover what sites exist before calling wdc_get_site for details.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+        'Use first to discover what sites exist before calling wdc_get_site for details.',
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -46,7 +25,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/sites'), response_format),
+    async () => safe(() => daemonClient.get('/api/sites')),
   )
 
   server.registerTool(
@@ -59,7 +38,6 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         'Returns: SiteInfo object, or error if not found.',
       inputSchema: {
         domain: DomainSchema,
-        response_format: ResponseFormatSchema.optional(),
       },
       annotations: {
         readOnlyHint: true,
@@ -68,8 +46,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         openWorldHint: false,
       },
     },
-    async ({ domain, response_format }) =>
-      safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}`), response_format),
+    async ({ domain }) =>
+      safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}`)),
   )
 
   server.registerTool(
@@ -83,7 +61,6 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         'Returns: Metrics snapshot, or null when the site has no Apache access log yet.',
       inputSchema: {
         domain: DomainSchema,
-        response_format: ResponseFormatSchema.optional(),
       },
       annotations: {
         readOnlyHint: true,
@@ -92,11 +69,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         openWorldHint: false,
       },
     },
-    async ({ domain, response_format }) =>
-      safe(
-        () => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}/metrics`),
-        response_format,
-      ),
+    async ({ domain }) =>
+      safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}/metrics`)),
   )
 
   if (opts.readonly) return
@@ -155,7 +129,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         'Args:\n' +
         '  domain: Local domain to remove.\n' +
         '  confirm: Must be the literal string "YES".\n\n' +
-        'Always confirm with the user before calling this tool.',
+        'You MUST show the user exactly which site will be removed and get explicit ' +
+        'verbal confirmation before passing confirm="YES".',
       inputSchema: {
         domain: DomainSchema,
         confirm: ConfirmYesSchema,

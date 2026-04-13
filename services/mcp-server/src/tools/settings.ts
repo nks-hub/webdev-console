@@ -4,16 +4,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import { ResponseFormat, ResponseFormatSchema } from '../schemas.js'
+import { safe } from '../formatting.js'
 
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+// The daemon stores settings as strings, but the MCP surface accepts
+// string | number | boolean and coerces to string for convenience.
+const SettingsValueSchema = z.union([z.string(), z.number(), z.boolean()])
 
 export function registerSettingsTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -23,9 +18,7 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
       description:
         'Get all daemon settings as a flat key/value dictionary. ' +
         'Keys are "category.name" like "general.theme", "ports.http", "sync.deviceId".',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -33,7 +26,7 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/settings'), response_format),
+    async () => safe(() => daemonClient.get('/api/settings')),
   )
 
   if (opts.readonly) return
@@ -45,11 +38,11 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
       description:
         'Update one or more daemon settings atomically (single SQLite transaction). ' +
         'Pass a partial dict — keys not in the body are untouched.\n\n' +
-        'Args:\n  settings: Map of "category.key" → string value.',
+        'Args:\n  settings: Map of "category.key" → string/number/boolean.',
       inputSchema: {
         settings: z
-          .record(z.string(), z.string())
-          .describe('Map of "category.key" → string value'),
+          .record(z.string(), SettingsValueSchema)
+          .describe('Map of "category.key" → string/number/boolean'),
       },
       annotations: {
         readOnlyHint: false,
@@ -58,6 +51,12 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: false,
       },
     },
-    async ({ settings }) => safe(() => daemonClient.put('/api/settings', settings)),
+    async ({ settings }) => {
+      const normalized: Record<string, string> = {}
+      for (const [k, v] of Object.entries(settings)) {
+        normalized[k] = String(v)
+      }
+      return safe(() => daemonClient.put('/api/settings', normalized))
+    },
   )
 }

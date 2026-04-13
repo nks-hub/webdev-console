@@ -4,16 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import { ResponseFormat, ResponseFormatSchema } from '../schemas.js'
-
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+import { safe } from '../formatting.js'
 
 const PluginIdSchema = z
   .string()
@@ -24,6 +15,14 @@ const PluginIdSchema = z
   })
   .describe('Plugin id like "nks.wdc.apache"')
 
+const PluginDownloadUrlSchema = z
+  .string()
+  .url()
+  .refine((s) => /^https?:\/\//i.test(s), {
+    message: 'Plugin download URL must use http:// or https:// scheme',
+  })
+  .describe('HTTPS URL (http://localhost permitted for dev)')
+
 export function registerPluginsTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
     'wdc_list_plugins',
@@ -32,9 +31,7 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
       description:
         'List all loaded WDC plugins with id, name, version, enabled state, ' +
         'capabilities, supported platforms, and UI definition.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -42,7 +39,7 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/plugins'), response_format),
+    async () => safe(() => daemonClient.get('/api/plugins')),
   )
 
   server.registerTool(
@@ -52,9 +49,7 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
       description:
         'Fetch the plugin marketplace catalog (third-party plugins available for install).\n\n' +
         'Returns: { source, reachable, count, plugins: [...] }.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -62,8 +57,7 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         openWorldHint: true,
       },
     },
-    async ({ response_format }) =>
-      safe(() => daemonClient.get('/api/plugins/marketplace'), response_format),
+    async () => safe(() => daemonClient.get('/api/plugins/marketplace')),
   )
 
   if (opts.readonly) return
@@ -118,13 +112,10 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         'Download and install a plugin from a marketplace entry. Requires id + downloadUrl ' +
         'from the marketplace catalog. The daemon will need a restart after install for the ' +
         'plugin to be active.\n\n' +
-        'Args:\n  id: Plugin id.\n  downloadUrl: HTTPS URL (or http://localhost for dev).',
+        'Args:\n  id: Plugin id.\n  downloadUrl: http(s) URL.',
       inputSchema: {
         id: PluginIdSchema,
-        downloadUrl: z
-          .string()
-          .url()
-          .describe('HTTPS URL (or http://localhost for dev). Daemon validates the scheme'),
+        downloadUrl: PluginDownloadUrlSchema,
       },
       annotations: {
         readOnlyHint: false,

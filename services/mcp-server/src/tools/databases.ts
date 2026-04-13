@@ -1,27 +1,18 @@
 // Database tools — wraps the daemon's MySQL endpoints.
-// All endpoints validate the database name against [a-zA-Z0-9_]+ and inject
-// the daemon-managed root password via MYSQL_PWD env var, so we just forward.
+// The daemon's /query endpoint handles both reads and writes against the
+// same code path, but at the MCP layer we split it into two tools so the
+// `destructiveHint` annotation stays honest: read-only SELECTs won't
+// trigger "destructive action" prompts in clients that honor hints.
 
 import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import {
-  ConfirmYesSchema,
-  DatabaseNameSchema,
-  ResponseFormat,
-  ResponseFormatSchema,
-} from '../schemas.js'
+import { safe, toolError } from '../formatting.js'
+import { ConfirmYesSchema, DatabaseNameSchema } from '../schemas.js'
 
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+const READ_ONLY_SQL = /^\s*(SELECT|SHOW|EXPLAIN|DESC(RIBE)?|WITH)\b/i
 
 export function registerDatabasesTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -31,9 +22,7 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
       description:
         'List all MySQL databases known to the daemon. System schemas ' +
         '(mysql/sys/information_schema/performance_schema) are filtered out.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -41,7 +30,7 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         openWorldHint: false,
       },
     },
-    async ({ response_format }) => safe(() => daemonClient.get('/api/databases'), response_format),
+    async () => safe(() => daemonClient.get('/api/databases')),
   )
 
   server.registerTool(
@@ -54,7 +43,6 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         'Returns: Array of { name, rows, size }.',
       inputSchema: {
         database: DatabaseNameSchema,
-        response_format: ResponseFormatSchema.optional(),
       },
       annotations: {
         readOnlyHint: true,
@@ -63,27 +51,69 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         openWorldHint: false,
       },
     },
-    async ({ database, response_format }) =>
-      safe(
-        () => daemonClient.get(`/api/databases/${encodeURIComponent(database)}/tables`),
-        response_format,
-      ),
+    async ({ database }) =>
+      safe(() => daemonClient.get(`/api/databases/${encodeURIComponent(database)}/tables`)),
   )
 
   server.registerTool(
     'wdc_query',
     {
-      title: 'Execute SQL query',
+      title: 'SELECT / SHOW query (read-only)',
       description:
-        'Execute a SQL query against a local MySQL database.\n\n' +
+        'Execute a read-only SQL query (SELECT / SHOW / EXPLAIN / DESCRIBE / WITH). ' +
+        'DDL/DML is rejected at the MCP layer — use wdc_execute for writes.\n\n' +
         'Args:\n' +
         '  database: MySQL database name.\n' +
         '  sql: SQL statement (max 64KB). Use parameterized SQL — the daemon does not interpolate variables.\n\n' +
-        'Returns: { columns, rows, rowCount } for SELECT; { rows: [], message } for DDL/DML.',
+        'Returns: { columns, rows, rowCount }.',
+      inputSchema: {
+        database: DatabaseNameSchema,
+        sql: z
+          .string()
+          .min(1)
+          .max(65535)
+          .describe('Read-only SQL: SELECT / SHOW / EXPLAIN / DESCRIBE / WITH'),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ database, sql }) => {
+      if (!READ_ONLY_SQL.test(sql)) {
+        return toolError(
+          'wdc_query accepts read-only statements only (SELECT / SHOW / EXPLAIN / DESCRIBE / WITH). ' +
+            'Use wdc_execute for INSERT / UPDATE / DELETE / DDL.',
+        )
+      }
+      return safe(() =>
+        daemonClient.post(`/api/databases/${encodeURIComponent(database)}/query`, { sql }),
+      )
+    },
+  )
+
+  if (opts.readonly) return
+
+  server.registerTool(
+    'wdc_execute',
+    {
+      title: 'Execute DDL/DML SQL (destructive)',
+      description:
+        'Execute a mutating SQL statement (INSERT/UPDATE/DELETE/DDL) against a local ' +
+        'MySQL database. Requires confirm: "YES" because statements can destroy data ' +
+        'irreversibly.\n\n' +
+        'Args:\n' +
+        '  database: MySQL database name.\n' +
+        '  sql: SQL statement.\n' +
+        '  confirm: Must be "YES".\n\n' +
+        'Returns: { rows: [], message } with the daemon result.\n\n' +
+        'You MUST show the user the exact SQL and the target database before passing confirm="YES".',
       inputSchema: {
         database: DatabaseNameSchema,
         sql: z.string().min(1).max(65535).describe('SQL statement to execute (max 64KB)'),
-        response_format: ResponseFormatSchema.optional(),
+        confirm: ConfirmYesSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -92,15 +122,11 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         openWorldHint: false,
       },
     },
-    async ({ database, sql, response_format }) =>
-      safe(
-        () =>
-          daemonClient.post(`/api/databases/${encodeURIComponent(database)}/query`, { sql }),
-        response_format,
+    async ({ database, sql }) =>
+      safe(() =>
+        daemonClient.post(`/api/databases/${encodeURIComponent(database)}/query`, { sql }),
       ),
   )
-
-  if (opts.readonly) return
 
   server.registerTool(
     'wdc_create_database',
@@ -129,7 +155,8 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
       description:
         'DESTRUCTIVE: Drop a MySQL database with all its tables.\n\n' +
         'Args:\n  name: Database to drop.\n  confirm: Must be "YES".\n\n' +
-        'Always confirm with the user before calling this tool.',
+        'You MUST show the user the exact database name and tables it contains ' +
+        '(call wdc_database_tables first) before passing confirm="YES".',
       inputSchema: {
         name: DatabaseNameSchema,
         confirm: ConfirmYesSchema,

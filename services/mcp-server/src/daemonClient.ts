@@ -66,25 +66,27 @@ class DaemonClient {
    * Send a request to the daemon, refreshing the port file once on 401
    * (token rotated due to daemon restart between calls).
    */
+  private buildInit(method: string, token: string, body?: unknown): RequestInit {
+    return {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }
+  }
+
   async request(
     method: string,
     path: string,
     body?: unknown,
   ): Promise<unknown> {
     const conn = this.ensureConnection()
-    const url = `http://127.0.0.1:${conn.port}${path}`
-    const init: RequestInit = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${conn.token}`,
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    }
     let res: Response
     try {
-      res = await fetch(url, init)
-    } catch (err: any) {
+      res = await fetch(`http://127.0.0.1:${conn.port}${path}`, this.buildInit(method, conn.token, body))
+    } catch {
       // Connection refused — daemon stopped between calls.
       this.current = null
       throw new DaemonNotRunningError()
@@ -93,15 +95,10 @@ class DaemonClient {
       // Token rotated. Re-read port file once and retry.
       this.current = null
       const fresh = this.ensureConnection()
-      const retryInit: RequestInit = {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${fresh.token}`,
-        },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      }
-      res = await fetch(`http://127.0.0.1:${fresh.port}${path}`, retryInit)
+      res = await fetch(
+        `http://127.0.0.1:${fresh.port}${path}`,
+        this.buildInit(method, fresh.token, body),
+      )
     }
     if (!res.ok) {
       // Surface the daemon's structured error body. All daemon endpoints

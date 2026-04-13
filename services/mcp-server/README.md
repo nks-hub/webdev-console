@@ -2,7 +2,7 @@
 
 MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon as AI-callable tools and resources. Lets Claude Desktop, Claude Code, Cursor, and other MCP clients fully manage your local development environment.
 
-> **48 tools across 11 modules** — built on the modern `McpServer.registerTool()` API with Zod input schemas, tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), shared response formatting with 25KB truncation, and per-tool `response_format` switch (`json` / `markdown`). See [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap.
+> **48 tools across 11 modules** — built on the modern `McpServer.registerTool()` API with Zod input schemas, honest tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), shared response formatting with JSON-envelope truncation at 25 KB, split read/write SQL tools (`wdc_query` vs `wdc_execute`), and non-empty credential schemas to prevent accidental wipes. See [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap.
 
 ## Quick start
 
@@ -66,12 +66,12 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 |---|---|
 | `wdc_get_status` / `wdc_get_system_info` / `wdc_get_recent_activity` | read |
 
-### Databases (5)
+### Databases (6)
 | Tool | Type |
 |---|---|
-| `wdc_list_databases` / `wdc_database_tables` | read |
-| `wdc_create_database` / `wdc_query` | mutate |
-| `wdc_drop_database` | **destructive** |
+| `wdc_list_databases` / `wdc_database_tables` / `wdc_query` | read (SELECT/SHOW/EXPLAIN/DESCRIBE/WITH only) |
+| `wdc_create_database` | mutate |
+| `wdc_execute` / `wdc_drop_database` | **destructive** |
 
 ### SSL (4)
 | Tool | Type |

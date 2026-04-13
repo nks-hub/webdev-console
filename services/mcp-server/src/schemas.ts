@@ -3,28 +3,21 @@
 
 import { z } from 'zod'
 
-/** Output format selector — every list/get tool accepts this. */
-export enum ResponseFormat {
-  MARKDOWN = 'markdown',
-  JSON = 'json',
-}
-
-export const ResponseFormatSchema = z
-  .nativeEnum(ResponseFormat)
-  .default(ResponseFormat.JSON)
-  .describe(
-    "Output format: 'json' for structured data (default, recommended for further AI processing) or 'markdown' for human-readable text",
-  )
-
 /** Local development domain — must end in a TLD. */
 export const DomainSchema = z
   .string()
   .min(3)
   .max(253)
-  .regex(/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/, {
-    message: "Domain must be lowercase, end in a TLD (e.g. 'myapp.loc')",
-  })
-  .describe("Local development domain like 'myapp.loc'")
+  // Accept mixed case, normalize to lowercase for the daemon.
+  .transform((s) => s.toLowerCase())
+  .pipe(
+    z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/, {
+        message: "Domain must end in a TLD (e.g. 'myapp.loc')",
+      }),
+  )
+  .describe("Local development domain like 'myapp.loc' (case-insensitive)")
 
 /** MySQL database identifier — strict subset to prevent SQL injection. */
 export const DatabaseNameSchema = z
@@ -48,5 +41,7 @@ export const PhpVersionSchema = z
 export const ConfirmYesSchema = z
   .literal('YES')
   .describe(
-    'Must be the literal string "YES" to confirm a destructive operation. Always present this requirement to the user before passing.',
+    'Must be the literal string "YES" to confirm a destructive operation. ' +
+      'The assistant MUST show the user exactly what will be affected and ' +
+      'receive explicit user confirmation before passing this value.',
   )

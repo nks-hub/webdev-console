@@ -4,16 +4,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
-import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
-import { PhpVersionSchema, ResponseFormat, ResponseFormatSchema } from '../schemas.js'
-
-async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
-  try {
-    return toolResponse(await fn(), format)
-  } catch (err) {
-    return toolError(err instanceof Error ? err.message : String(err))
-  }
-}
+import { safe } from '../formatting.js'
+import { PhpVersionSchema } from '../schemas.js'
 
 export function registerPhpTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -23,9 +15,7 @@ export function registerPhpTools(server: McpServer, opts: RegisterOptions): void
       description:
         'List all detected PHP installations with version, executable path, isDefault flag, ' +
         'extension count, and active site count.',
-      inputSchema: {
-        response_format: ResponseFormatSchema.optional(),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -33,8 +23,7 @@ export function registerPhpTools(server: McpServer, opts: RegisterOptions): void
         openWorldHint: false,
       },
     },
-    async ({ response_format }) =>
-      safe(() => daemonClient.get('/api/php/versions'), response_format),
+    async () => safe(() => daemonClient.get('/api/php/versions')),
   )
 
   if (opts.readonly) return
