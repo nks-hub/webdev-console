@@ -364,8 +364,16 @@ async function catalogErrorMessage(r: Response): Promise<string> {
   return text || `HTTP ${r.status}`
 }
 
-export async function fetchDevices(catalogUrl: string, token: string): Promise<DeviceInfo[]> {
-  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices`, {
+export async function fetchDevices(
+  catalogUrl: string,
+  token: string,
+  currentDeviceId?: string,
+): Promise<DeviceInfo[]> {
+  // Pass current device id so the server can flag `is_current=true` on
+  // the row representing the caller. The UI uses this for the "this
+  // device" badge in the Devices tab.
+  const qs = currentDeviceId ? `?current_device_id=${encodeURIComponent(currentDeviceId)}` : ''
+  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices${qs}`, {
     headers: jwtHeaders(token),
   })
   if (!r.ok) throw new Error(await catalogErrorMessage(r))

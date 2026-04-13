@@ -923,7 +923,11 @@ async function loadDevicesAccount() {
   if (!accountToken.value) return
   devicesLoading.value = true
   try {
-    accountDevices.value = await fetchDevices(getCatalogUrl(), accountToken.value)
+    accountDevices.value = await fetchDevices(
+      getCatalogUrl(),
+      accountToken.value,
+      deviceId.value || undefined,
+    )
   } catch (e: any) {
     const msg = e?.message || String(e)
     ElMessage.error(`Load devices failed: ${msg}`)
