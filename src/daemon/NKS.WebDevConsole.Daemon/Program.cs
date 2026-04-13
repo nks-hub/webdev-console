@@ -42,6 +42,7 @@ builder.Services.AddSingleton<WebSocketLogStreamer>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddSingleton<ShutdownCoordinator>();
 builder.Services.AddHostedService<HealthMonitor>();
+builder.Services.AddHostedService<MetricsHistoryService>();
 builder.Services.AddSingleton<TemplateEngine>();
 builder.Services.AddSingleton<ConfigValidator>();
 builder.Services.AddSingleton<AtomicWriter>();
@@ -1128,6 +1129,78 @@ app.MapGet("/api/sites/{domain}/metrics", (string domain, SiteManager sm, Binary
             lastWriteUtc = accessStats.LastWrittenUtc,
         },
     });
+});
+
+// Phase 11 perf monitoring: server-side history read endpoint.
+// Returns time-series samples written by MetricsHistoryService background
+// poller (60s cadence, 7-day retention). Frontend uses this to render
+// windows beyond the 5-minute client-side ring buffer.
+//
+// Range is parsed as ISO-8601 minutes-back (default 60). Returns up to
+// `limit` samples newest-first, each with cumulative request_count + the
+// pre-computed delta-from-previous so charts can render rate without a
+// second pass on the client.
+app.MapGet("/api/sites/{domain}/metrics/history", (string domain, int? minutes, int? limit, Database db) =>
+{
+    var clampedMinutes = Math.Clamp(minutes ?? 60, 1, 60 * 24 * 7); // 1 min .. 7 days
+    var clampedLimit = Math.Clamp(limit ?? 200, 1, 2000);
+    try
+    {
+        SiteManager.ValidateDomain(domain);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+
+    try
+    {
+        var cutoff = DateTime.UtcNow.AddMinutes(-clampedMinutes).ToString("o");
+        using var conn = db.CreateConnection();
+        // Pull samples ascending so the rate calculation can walk a sliding
+        // pair window. Then reverse before returning if needed.
+        var rows = conn.Query<(string sampled_at, long request_count, long size_bytes, string? last_write_utc)>(
+            "SELECT sampled_at, request_count, size_bytes, last_write_utc " +
+            "FROM metrics_history " +
+            "WHERE domain = @Domain AND sampled_at >= @Cutoff " +
+            "ORDER BY sampled_at ASC " +
+            "LIMIT @Limit",
+            new { Domain = domain, Cutoff = cutoff, Limit = clampedLimit }
+        ).ToList();
+
+        // Compute per-row delta from the previous sample. First row gets
+        // delta=0 (no baseline) — caller's chart should skip / render flat.
+        var samples = new List<object>();
+        long? prevCount = null;
+        DateTime? prevTime = null;
+        foreach (var r in rows)
+        {
+            DateTime.TryParse(r.sampled_at, null,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var t);
+            double requestsPerMin = 0;
+            if (prevCount.HasValue && prevTime.HasValue)
+            {
+                var deltaCount = Math.Max(0, r.request_count - prevCount.Value);
+                var deltaSec = (t - prevTime.Value).TotalSeconds;
+                if (deltaSec > 0) requestsPerMin = deltaCount * 60.0 / deltaSec;
+            }
+            samples.Add(new
+            {
+                sampledAt = r.sampled_at,
+                requestCount = r.request_count,
+                sizeBytes = r.size_bytes,
+                lastWriteUtc = r.last_write_utc,
+                requestsPerMin,
+            });
+            prevCount = r.request_count;
+            prevTime = t;
+        }
+        return Results.Ok(new { domain, minutes = clampedMinutes, samples });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to load metrics history: {ex.Message}");
+    }
 });
 
 app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
