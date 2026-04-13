@@ -414,6 +414,13 @@ export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
 export const fetchCerts = (): Promise<CertInfo[]> =>
   json('/api/ssl/certs')
 
+// Install the local mkcert CA into the system trust store so self-signed
+// site certificates become trusted in browsers + system HTTP clients.
+// Used by both SslManager.vue (as an explicit action) and OnboardingWizard
+// (as part of the first-run flow).
+export const installSslCa = (): Promise<{ ok: boolean }> =>
+  json('/api/ssl/install-ca', { method: 'POST' })
+
 // Plugins
 export const fetchPlugins = (): Promise<PluginManifest[]> =>
   json('/api/plugins')

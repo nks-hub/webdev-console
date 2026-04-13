@@ -115,6 +115,7 @@ import {
   fetchOnboardingState,
   completeOnboarding,
   installBinary,
+  installSslCa,
   type OnboardingState,
 } from '../../api/daemon'
 
@@ -162,13 +163,16 @@ async function doInstall(app: string) {
 async function installCa() {
   installingCa.value = true
   try {
-    // Uses the existing SSL plugin endpoint
-    const res = await fetch('/api/ssl/install-ca', { method: 'POST' })
-    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
+    // installSslCa() handles the daemon base URL and Bearer token via the
+    // shared `json()` helper. The previous implementation fetched the
+    // relative URL '/api/ssl/install-ca' with no headers, which 401'd
+    // under the daemon's global auth middleware and also couldn't resolve
+    // the base URL correctly in packaged Electron (file:// origin).
+    await installSslCa()
     ElMessage.success('Local CA trusted')
     await refreshState()
   } catch (e: any) {
-    ElMessage.error(`mkcert CA install failed: ${e.message}`)
+    ElMessage.error(`mkcert CA install failed: ${e?.message || e}`)
   } finally {
     installingCa.value = false
   }
