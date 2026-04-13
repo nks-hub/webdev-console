@@ -1426,6 +1426,13 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
         var (restored, safety) = bm.RestoreBackup(archivePath);
         return Results.Ok(new { restored, safetyBackup = safety, archive = archivePath });
     }
+    catch (System.Text.Json.JsonException ex)
+    {
+        // Malformed JSON in the body — distinct from server-side restore
+        // failure. Return 400 so the frontend can show a parse error
+        // instead of "Restore failed" which would suggest a server bug.
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
     catch (FileNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
     catch (Exception ex) { return Results.Problem($"Restore failed: {ex.Message}"); }
 });
