@@ -436,7 +436,7 @@ async function refresh() {
     // above via fire-and-forget — no need to block the UI on it.
     void loadSystemInfo()
   } catch (e: any) {
-    ElMessage.error(`Failed to load: ${e.message}`)
+    ElMessage.error(`Failed to load: ${e?.message || e}`)
   } finally {
     loading.value = false
   }
@@ -466,9 +466,10 @@ async function install(app: string, version: string) {
       throw new Error(result.message ?? 'Installation failed')
     }
   } catch (e: any) {
+    const msg = e?.message || String(e)
     progressError.value = true
-    progressMessage.value = `Error: ${e.message}`
-    ElMessage.error(`Install failed: ${e.message}`)
+    progressMessage.value = `Error: ${msg}`
+    ElMessage.error(`Install failed: ${msg}`)
   } finally {
     installing.value.delete(key)
   }
@@ -482,7 +483,7 @@ async function uninstall(app: string, version: string) {
     ElMessage.success(`${app} ${version} removed`)
     await refresh()
   } catch (e: any) {
-    ElMessage.error(`Remove failed: ${e.message}`)
+    ElMessage.error(`Remove failed: ${e?.message || e}`)
   } finally {
     uninstalling.value.delete(key)
   }
