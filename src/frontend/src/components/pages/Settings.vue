@@ -702,7 +702,7 @@ async function createDatabase() {
       headers: authHeaders(),
       body: JSON.stringify({ name: newDbName.value }),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success(`Database ${newDbName.value} created`)
     newDbName.value = ''
     await loadDatabases()
@@ -712,7 +712,7 @@ async function createDatabase() {
 async function dropDatabase(name: string) {
   try {
     const r = await fetch(`${daemonBase()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success(`Database ${name} dropped`)
     await loadDatabases()
   } catch (e: any) { ElMessage.error(`Drop failed: ${e.message}`) }
@@ -785,7 +785,7 @@ async function refreshCatalog() {
       method: 'POST',
       headers: authHeaders(),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const result = await r.json()
     catalogStatus.value = {
       ok: true,
@@ -806,7 +806,7 @@ async function testCatalogReachable() {
   const url = catalogUrl.value || 'http://127.0.0.1:8765'
   try {
     const r = await fetch(`${url.replace(/\/$/, '')}/healthz`)
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const body = await r.json()
     catalogStatus.value = {
       ok: true,
@@ -1375,7 +1375,7 @@ async function save() {
       headers: authHeaders(),
       body: JSON.stringify(payload),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success('Settings saved')
   } catch (e: any) {
     ElMessage.error(`Failed to save: ${e.message}`)
