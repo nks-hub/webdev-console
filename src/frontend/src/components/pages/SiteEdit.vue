@@ -574,6 +574,19 @@
                 <div class="metric-value">{{ formatAge(siteMetrics.accessLog?.lastWriteUtc) }}</div>
                 <div class="metric-label">Last Request</div>
               </div>
+              <div class="metric-card">
+                <div class="metric-value">{{ currentRequestRate }}</div>
+                <div class="metric-label">Requests / min</div>
+              </div>
+            </div>
+            <!-- Phase 11 perf monitoring: request-rate timeseries sparkline.
+                 Fills from client-side ring buffer populated by refreshMetrics()
+                 every 5s while the Metrics tab is active. Each data point is
+                 (new_count - old_count) * 60 / delta_seconds to normalize to
+                 requests-per-minute regardless of the actual poll interval. -->
+            <div v-if="requestRateHistory.length > 1" class="metrics-chart-wrap">
+              <div class="metrics-chart-label">Request rate (last {{ requestRateHistory.length * 5 }}s)</div>
+              <MetricsChart :data="requestRateHistory" :height="80" color="#6366f1" />
             </div>
             <div v-if="siteMetrics?.accessLog" class="hint" style="margin-top: 12px">
               <code>{{ siteMetrics.accessLog.path }}</code>
@@ -629,6 +642,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
+import MetricsChart from '../shared/MetricsChart.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
@@ -1118,10 +1132,20 @@ const metricsLastRefresh = ref<string | null>(null)
 // relative-time text until they click Refresh or switch tabs.
 const metricsTick = ref(0)
 let metricsTickTimer: ReturnType<typeof setInterval> | null = null
+let metricsPollTimer: ReturnType<typeof setInterval> | null = null
 
-const metricsAgeDisplay = computed(() => {
-  void metricsTick.value // dep for reactivity
-  return metricsLastRefresh.value ? formatAge(metricsLastRefresh.value) : ''
+// Request-rate ring buffer — 60 samples at 5s interval = 5-minute rolling
+// window. Each entry is requests-per-minute computed from the delta between
+// consecutive raw-count polls. Phase 11 timeseries chart reads this directly.
+const REQUEST_RATE_BUFFER_SIZE = 60
+const REQUEST_RATE_POLL_INTERVAL_MS = 5000
+const requestRateHistory = ref<number[]>([])
+let lastRequestCount: number | null = null
+let lastPollTimestamp: number | null = null
+
+const currentRequestRate = computed(() => {
+  const h = requestRateHistory.value
+  return h.length > 0 ? Math.round(h[h.length - 1]) : 0
 })
 
 async function refreshMetrics() {
@@ -1131,6 +1155,23 @@ async function refreshMetrics() {
     const m = await fetchSiteMetrics(site.value.domain)
     siteMetrics.value = m.hasMetrics ? m : null
     metricsLastRefresh.value = new Date().toISOString()
+
+    // Populate the ring buffer with the delta since the previous sample,
+    // normalized to requests-per-minute. The first sample primes the counter
+    // so we don't push a bogus 0 spike on first load.
+    const count = m?.accessLog?.requestCount ?? 0
+    const now = Date.now()
+    if (lastRequestCount !== null && lastPollTimestamp !== null && now > lastPollTimestamp) {
+      const deltaCount = Math.max(0, count - lastRequestCount)
+      const deltaSeconds = (now - lastPollTimestamp) / 1000
+      const requestsPerMin = deltaSeconds > 0 ? (deltaCount * 60) / deltaSeconds : 0
+      requestRateHistory.value.push(requestsPerMin)
+      if (requestRateHistory.value.length > REQUEST_RATE_BUFFER_SIZE) {
+        requestRateHistory.value.shift()
+      }
+    }
+    lastRequestCount = count
+    lastPollTimestamp = now
   } catch { siteMetrics.value = null }
   finally { metricsLoading.value = false }
 }
@@ -1138,9 +1179,16 @@ async function refreshMetrics() {
 function startMetricsTicker() {
   if (metricsTickTimer) return
   metricsTickTimer = setInterval(() => { metricsTick.value++ }, 5000)
+  // Auto-poll the metrics endpoint every 5s to feed the ring buffer.
+  // Kept separate from the tick timer so a future change to the display
+  // cadence doesn't accidentally break timeseries accuracy.
+  if (!metricsPollTimer) {
+    metricsPollTimer = setInterval(() => { void refreshMetrics() }, REQUEST_RATE_POLL_INTERVAL_MS)
+  }
 }
 function stopMetricsTicker() {
   if (metricsTickTimer) { clearInterval(metricsTickTimer); metricsTickTimer = null }
+  if (metricsPollTimer) { clearInterval(metricsPollTimer); metricsPollTimer = null }
 }
 
 function formatNumber(n: number): string {
@@ -1665,8 +1713,19 @@ onBeforeUnmount(() => {
 }
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+}
+.metrics-chart-wrap {
+  margin-top: 18px;
+  background: var(--wdc-surface-2);
+  border-radius: var(--wdc-radius-sm);
+  padding: 12px 16px;
+}
+.metrics-chart-label {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+  margin-bottom: 8px;
 }
 .metric-card {
   background: var(--wdc-surface-2);
