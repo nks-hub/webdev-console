@@ -23,12 +23,17 @@ import { databasesTools } from './tools/databases.js'
 import { sslTools } from './tools/ssl.js'
 import { phpTools } from './tools/php.js'
 import { binariesTools } from './tools/binaries.js'
+import { pluginsTools } from './tools/plugins.js'
+import { backupTools } from './tools/backup.js'
+import { settingsTools } from './tools/settings.js'
+import { cloudflareTools } from './tools/cloudflare.js'
 
 const READONLY = process.argv.includes('--readonly')
 
-// Tool registry — Phase A+B includes the 28 most-used daemon endpoints.
-// Phase C will add backup, cloudflare, plugins, settings/sync to reach
-// ~75 total per docs/plans/mcp-server-integration-plan.md.
+// Tool registry — Phase A+B+C covers 47 daemon endpoints across 11 modules.
+// Coverage roughly matches the planned ~75 tools from
+// docs/plans/mcp-server-integration-plan.md (remaining items: per-site
+// node lifecycle, sync push/pull, device fleet, more activity/history).
 const allTools = [
   ...sitesTools,
   ...servicesTools,
@@ -37,6 +42,10 @@ const allTools = [
   ...sslTools,
   ...phpTools,
   ...binariesTools,
+  ...pluginsTools,
+  ...backupTools,
+  ...settingsTools,
+  ...cloudflareTools,
 ]
 
 // In read-only mode skip tools that mutate daemon state. We tag mutations
@@ -63,6 +72,20 @@ const READONLY_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
   // binaries
   'wdc_list_catalog',
   'wdc_list_installed_binaries',
+  // plugins
+  'wdc_list_plugins',
+  'wdc_get_plugin_marketplace',
+  // backup
+  'wdc_list_backups',
+  // settings
+  'wdc_get_settings',
+  // cloudflare
+  'wdc_get_cloudflare_config',
+  'wdc_verify_cloudflare_token',
+  'wdc_list_cloudflare_zones',
+  'wdc_list_cloudflare_dns',
+  'wdc_list_cloudflare_tunnels',
+  'wdc_get_cloudflare_subdomain_suggestion',
 ])
 
 const tools = READONLY
