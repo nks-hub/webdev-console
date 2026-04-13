@@ -167,7 +167,7 @@ async function loadCerts() {
       loadError.value = `Failed to load certificates: HTTP ${r.status}`
     }
   } catch (e: any) {
-    loadError.value = `Cannot connect to daemon: ${e.message}`
+    loadError.value = `Cannot connect to daemon: ${e?.message || e}`
   } finally { loading.value = false }
 }
 
@@ -192,7 +192,7 @@ async function installCA() {
     if (data.ok) ElMessage.success('CA installed successfully')
     else ElMessage.error(data.message || 'CA install failed')
   } catch (e: any) {
-    ElMessage.error(`CA install failed: ${e.message}`)
+    ElMessage.error(`CA install failed: ${e?.message || e}`)
   } finally {
     installingCA.value = false
   }
@@ -221,7 +221,7 @@ async function generateCert() {
       ElMessage.error(data.message || 'Generation failed')
     }
   } catch (e: any) {
-    ElMessage.error(`Generation failed: ${e.message}`)
+    ElMessage.error(`Generation failed: ${e?.message || e}`)
   } finally {
     generating.value = false
   }
@@ -242,7 +242,7 @@ async function revokeCert(domain: string) {
       ElMessage.error(data.message || 'Revoke failed')
     }
   } catch (e: any) {
-    ElMessage.error(`Revoke failed: ${e.message}`)
+    ElMessage.error(`Revoke failed: ${e?.message || e}`)
   } finally {
     revoking.value.delete(domain)
   }
