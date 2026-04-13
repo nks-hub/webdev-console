@@ -271,7 +271,11 @@ async function discoverMamp() {
       void sitesStore.load()
     }
   } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${e.message}`)
+    // ElMessageBox.confirm rejects with literal string 'cancel' when the
+    // user clicks Cancel — don't treat that as an error. Any other reject
+    // value is either an Error (from our explicit throws) or a string
+    // from the promise chain, so coerce both safely.
+    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${e?.message || e}`)
   } finally {
     mampDiscovering.value = false
   }
