@@ -164,7 +164,7 @@ async function installCa() {
   try {
     // Uses the existing SSL plugin endpoint
     const res = await fetch('/api/ssl/install-ca', { method: 'POST' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
     ElMessage.success('Local CA trusted')
     await refreshState()
   } catch (e: any) {

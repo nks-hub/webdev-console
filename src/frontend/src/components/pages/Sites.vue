@@ -249,7 +249,7 @@ async function discoverMamp() {
   mampDiscovering.value = true
   try {
     const r = await fetch(`${daemonBase()}/api/sites/discover-mamp`, { headers: sitesStore.authHeaders() })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const data = await r.json()
     if (!data.count || data.count === 0) {
       ElMessage.info('No MAMP PRO sites found on this machine')
@@ -265,7 +265,7 @@ async function discoverMamp() {
         method: 'POST',
         headers: sitesStore.authHeaders(),
       })
-      if (!ir.ok) throw new Error(`HTTP ${ir.status}`)
+      if (!ir.ok) throw new Error((await ir.text().catch(() => '')) || `HTTP ${ir.status}`)
       const result = await ir.json()
       ElMessage.success(`Imported ${result.count} site(s) from MAMP`)
       void sitesStore.load()

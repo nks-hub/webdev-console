@@ -961,7 +961,7 @@ async function detectFramework() {
       method: 'POST',
       headers: sitesStore.authHeaders(),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
     const data = await res.json()
     if (data.framework) {
       site.value.framework = data.framework
@@ -1077,7 +1077,7 @@ async function rollback(timestamp: string) {
       headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ timestamp }),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
     ElMessage.success('Config restored')
     await load()
   } catch (e: any) {
