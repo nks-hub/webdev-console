@@ -167,16 +167,30 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
+// Thrown error message extractor for non-2xx fetch responses. Reads the
+// daemon's response body (usually a plain text error or a { error: "..." }
+// JSON object) so users see the real reason instead of "HTTP 500".
+async function httpError(r: Response): Promise<Error> {
+  const text = await r.text().catch(() => '')
+  if (!text) return new Error(`HTTP ${r.status}`)
+  try {
+    const obj = JSON.parse(text)
+    if (obj && typeof obj === 'object' && 'error' in obj) return new Error(String(obj.error))
+    if (obj && typeof obj === 'object' && 'detail' in obj) return new Error(String(obj.detail))
+  } catch { /* not JSON */ }
+  return new Error(text.length > 300 ? text.slice(0, 300) + '…' : text)
+}
+
 async function loadDatabases() {
   loading.value = true
   error.value = ''
   try {
     const r = await fetch(`${daemonBase()}/api/databases`, { headers: authHeaders() })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw await httpError(r)
     const data = await r.json()
     databases.value = data.databases ?? []
   } catch (e: any) {
-    error.value = `Failed to load databases: ${e.message}`
+    error.value = `Failed to load databases: ${e?.message || e}`
   } finally {
     loading.value = false
   }
@@ -218,13 +232,13 @@ async function createDatabase() {
       headers: authHeaders(),
       body: JSON.stringify({ name: newDbName.value }),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw await httpError(r)
     ElMessage.success(`Database ${newDbName.value} created`)
     newDbName.value = ''
     showCreateDialog.value = false
     await loadDatabases()
   } catch (e: any) {
-    ElMessage.error(`Create failed: ${e.message}`)
+    ElMessage.error(`Create failed: ${e?.message || e}`)
   } finally {
     creating.value = false
   }
@@ -241,11 +255,18 @@ async function confirmDrop(db: string) {
       method: 'DELETE',
       headers: authHeaders(),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) {
+      // Only surface an error toast if this wasn't a user-cancel. The
+      // outer try/catch swallows ElMessageBox.confirm rejection which
+      // is normal, but a DELETE HTTP failure deserves a visible error.
+      const err = await httpError(r)
+      ElMessage.error(`Drop failed: ${err.message}`)
+      return
+    }
     ElMessage.success(`Database ${db} dropped`)
     if (selectedDb.value === db) selectedDb.value = ''
     await loadDatabases()
-  } catch { /* cancelled or error */ }
+  } catch { /* cancelled */ }
 }
 
 async function executeQuery() {
@@ -293,11 +314,11 @@ async function handleImportFile(e: Event) {
       headers: { Authorization: authHeaders()['Authorization'] },
       body: formData,
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw await httpError(r)
     ElMessage.success(`Imported ${file.name} successfully`)
     await loadTables(selectedDb.value)
   } catch (e: any) {
-    ElMessage.error(`Import failed: ${e.message}`)
+    ElMessage.error(`Import failed: ${e?.message || e}`)
   }
   if (importFileRef.value) importFileRef.value.value = ''
 }
@@ -308,7 +329,7 @@ async function exportDb() {
     const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/export`, {
       headers: authHeaders(),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) throw await httpError(r)
     const blob = await r.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -318,7 +339,7 @@ async function exportDb() {
     URL.revokeObjectURL(url)
     ElMessage.success(`Exported ${selectedDb.value}.sql`)
   } catch (e: any) {
-    ElMessage.error(`Export failed: ${e.message}`)
+    ElMessage.error(`Export failed: ${e?.message || e}`)
   }
 }
 
