@@ -2,7 +2,7 @@
 
 MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon as AI-callable tools and resources. Lets Claude Desktop, Claude Code, Cursor, and other MCP clients fully manage your local development environment.
 
-> **Phase A + B (28 tools)** — see [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap (target ~75 tools).
+> **48 tools across 11 modules** — built on the modern `McpServer.registerTool()` API with Zod input schemas, tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), shared response formatting with 25KB truncation, and per-tool `response_format` switch (`json` / `markdown`). See [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap.
 
 ## Quick start
 
@@ -21,7 +21,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-Restart Claude Desktop. The 11 Phase A tools appear in the tool picker.
+Restart Claude Desktop. All 48 tools appear in the tool picker.
 
 ### Claude Code
 
@@ -46,7 +46,7 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 }
 ```
 
-## Phase A + B tool catalog (28 tools)
+## Tool catalog (48 tools)
 
 ### Sites (5)
 | Tool | Type |
@@ -93,7 +93,31 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 | `wdc_install_binary` / `wdc_refresh_catalog` | mutate |
 | `wdc_uninstall_binary` | **destructive** |
 
-Phase C adds the remaining ~47 tools (plugins, backup, Cloudflare, settings/sync, devices, more node/site lifecycle). See the integration plan for the full mapping.
+### Plugins (5)
+| Tool | Type |
+|---|---|
+| `wdc_list_plugins` / `wdc_get_plugin_marketplace` | read |
+| `wdc_enable_plugin` / `wdc_disable_plugin` / `wdc_install_plugin_from_marketplace` | mutate |
+
+### Backup (3)
+| Tool | Type |
+|---|---|
+| `wdc_list_backups` | read |
+| `wdc_create_backup` | mutate |
+| `wdc_restore_backup` | **destructive** |
+
+### Settings (2)
+| Tool | Type |
+|---|---|
+| `wdc_get_settings` | read |
+| `wdc_update_settings` | mutate |
+
+### Cloudflare (9)
+| Tool | Type |
+|---|---|
+| `wdc_get_cloudflare_config` / `wdc_verify_cloudflare_token` / `wdc_list_cloudflare_zones` / `wdc_list_cloudflare_dns` / `wdc_list_cloudflare_tunnels` / `wdc_get_cloudflare_subdomain_suggestion` | read |
+| `wdc_save_cloudflare_config` / `wdc_create_cloudflare_dns` | mutate |
+| `wdc_delete_cloudflare_dns` | **destructive** |
 
 ## Daemon discovery
 

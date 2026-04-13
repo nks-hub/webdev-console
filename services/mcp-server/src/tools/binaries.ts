@@ -1,71 +1,142 @@
 // Binary catalog + install/uninstall.
-import { daemonClient } from '../daemonClient.js'
+import { z } from 'zod'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-export const binariesTools = [
-  {
-    name: 'wdc_list_catalog',
-    description:
-      'List all known binary releases from the catalog API (Apache, PHP, MySQL, Caddy, mkcert, Mailpit, Redis, cloudflared, Node.js). Returns a flat array of BinaryRelease objects.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    handler: async () => daemonClient.get('/api/binaries/catalog'),
-  },
-  {
-    name: 'wdc_list_installed_binaries',
-    description:
-      'List all currently installed binaries with app name, version, install path, and detected executable.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    handler: async () => daemonClient.get('/api/binaries/installed'),
-  },
-  {
-    name: 'wdc_install_binary',
-    description:
-      'Download and extract a binary from the catalog. Synchronous — returns when extraction completes. Use the catalog list to find valid {app, version} pairs.',
-    inputSchema: {
-      type: 'object',
-      required: ['app', 'version'],
-      properties: {
-        app: {
-          type: 'string',
-          description: 'App identifier like "apache", "php", "mysql", "node", "mkcert".',
-        },
-        version: {
-          type: 'string',
-          description: 'Full version string like "2.4.62" — must match a catalog entry.',
-        },
+import { daemonClient } from '../daemonClient.js'
+import type { RegisterOptions } from '../index.js'
+import { toolResponse, toolError, ToolTextResult } from '../formatting.js'
+import { ConfirmYesSchema, ResponseFormat, ResponseFormatSchema } from '../schemas.js'
+
+async function safe(fn: () => Promise<unknown>, format?: ResponseFormat): Promise<ToolTextResult> {
+  try {
+    return toolResponse(await fn(), format)
+  } catch (err) {
+    return toolError(err instanceof Error ? err.message : String(err))
+  }
+}
+
+const AppNameSchema = z
+  .string()
+  .min(1)
+  .describe('App identifier like "apache", "php", "mysql", "node", "mkcert"')
+
+const VersionSchema = z
+  .string()
+  .min(1)
+  .describe('Full version string like "2.4.62" — must match a catalog entry')
+
+export function registerBinariesTools(server: McpServer, opts: RegisterOptions): void {
+  server.registerTool(
+    'wdc_list_catalog',
+    {
+      title: 'List binary catalog',
+      description:
+        'List all known binary releases from the catalog API (Apache, PHP, MySQL, Caddy, ' +
+        'mkcert, Mailpit, Redis, cloudflared, Node.js).\n\n' +
+        'Returns: Flat array of BinaryRelease objects.',
+      inputSchema: {
+        response_format: ResponseFormatSchema.optional(),
       },
-      additionalProperties: false,
-    },
-    handler: async (args: { app: string; version: string }) =>
-      daemonClient.post('/api/binaries/install', args),
-  },
-  {
-    name: 'wdc_uninstall_binary',
-    description:
-      'DESTRUCTIVE: Remove an installed binary version. Sites currently using it will fail to start until reconfigured. Requires confirm: "YES".',
-    inputSchema: {
-      type: 'object',
-      required: ['app', 'version', 'confirm'],
-      properties: {
-        app: { type: 'string' },
-        version: { type: 'string' },
-        confirm: { type: 'string', enum: ['YES'] },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
       },
-      additionalProperties: false,
     },
-    handler: async (args: { app: string; version: string; confirm: string }) => {
-      if (args.confirm !== 'YES') {
-        throw new Error('Refusing to uninstall binary without confirm: "YES"')
-      }
-      return daemonClient.delete(
-        `/api/binaries/${encodeURIComponent(args.app)}/${encodeURIComponent(args.version)}`,
-      )
+    async ({ response_format }) =>
+      safe(() => daemonClient.get('/api/binaries/catalog'), response_format),
+  )
+
+  server.registerTool(
+    'wdc_list_installed_binaries',
+    {
+      title: 'List installed binaries',
+      description:
+        'List all currently installed binaries with app name, version, install path, ' +
+        'and detected executable.',
+      inputSchema: {
+        response_format: ResponseFormatSchema.optional(),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
-  },
-  {
-    name: 'wdc_refresh_catalog',
-    description:
-      'Force a refresh of the binary catalog cache from the configured catalog API URL. Returns the new release count and last-fetch timestamp.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    handler: async () => daemonClient.post('/api/binaries/catalog/refresh'),
-  },
-] as const
+    async ({ response_format }) =>
+      safe(() => daemonClient.get('/api/binaries/installed'), response_format),
+  )
+
+  if (opts.readonly) return
+
+  server.registerTool(
+    'wdc_install_binary',
+    {
+      title: 'Install binary from catalog',
+      description:
+        'Download and extract a binary from the catalog. Synchronous — returns when ' +
+        'extraction completes. Use wdc_list_catalog first to find valid {app, version} pairs.\n\n' +
+        'Args:\n  app: App identifier.\n  version: Full version string.',
+      inputSchema: {
+        app: AppNameSchema,
+        version: VersionSchema,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ app, version }) =>
+      safe(() => daemonClient.post('/api/binaries/install', { app, version })),
+  )
+
+  server.registerTool(
+    'wdc_uninstall_binary',
+    {
+      title: 'Uninstall binary (destructive)',
+      description:
+        'DESTRUCTIVE: Remove an installed binary version. Sites currently using it will ' +
+        'fail to start until reconfigured.\n\n' +
+        'Args:\n  app: App identifier.\n  version: Version to remove.\n  confirm: Must be "YES".',
+      inputSchema: {
+        app: AppNameSchema,
+        version: VersionSchema,
+        confirm: ConfirmYesSchema,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ app, version }) =>
+      safe(() =>
+        daemonClient.delete(
+          `/api/binaries/${encodeURIComponent(app)}/${encodeURIComponent(version)}`,
+        ),
+      ),
+  )
+
+  server.registerTool(
+    'wdc_refresh_catalog',
+    {
+      title: 'Refresh binary catalog',
+      description:
+        'Force a refresh of the binary catalog cache from the configured catalog API URL. ' +
+        'Returns the new release count and last-fetch timestamp.',
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async () => safe(() => daemonClient.post('/api/binaries/catalog/refresh')),
+  )
+}
