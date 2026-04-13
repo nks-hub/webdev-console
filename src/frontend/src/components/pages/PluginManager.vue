@@ -204,7 +204,7 @@ async function reloadMarketplace() {
     marketplace.error = data.error
   } catch (e: any) {
     marketplace.reachable = false
-    marketplace.error = e.message
+    marketplace.error = e?.message || String(e)
     marketplace.plugins = []
   } finally {
     loadingMarketplace.value = false
@@ -249,7 +249,7 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
   } catch (e: any) {
     ElNotification({
       title: 'Install failed',
-      message: e.message || 'Unknown error',
+      message: e?.message || String(e) || 'Unknown error',
       type: 'error',
       duration: 0,
     })
@@ -278,7 +278,7 @@ async function toggle(id: string) {
   try {
     await pluginsStore.toggleEnable(id)
   } catch (e: any) {
-    ElMessage.error(`Plugin toggle failed: ${e.message}`)
+    ElMessage.error(`Plugin toggle failed: ${e?.message || e}`)
   } finally {
     toggling.value.delete(id)
   }
