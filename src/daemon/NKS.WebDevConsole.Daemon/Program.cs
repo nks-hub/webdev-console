@@ -1940,15 +1940,42 @@ app.MapGet("/api/cloudflare/zones/{zoneId}/dns", (string zoneId, IServiceProvide
 
 app.MapPost("/api/cloudflare/zones/{zoneId}/dns", async (string zoneId, HttpContext ctx, IServiceProvider sp) =>
 {
-    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
-    var root = doc.RootElement;
-    var type = root.TryGetProperty("type", out var tEl) ? tEl.GetString() ?? "CNAME" : "CNAME";
-    var name = root.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
-    var content = root.TryGetProperty("content", out var cEl) ? cEl.GetString() ?? "" : "";
-    var proxied = !root.TryGetProperty("proxied", out var pEl) || pEl.GetBoolean();
-    var ttl = root.TryGetProperty("ttl", out var tEl2) ? tEl2.GetInt32() : 1;
-    return await InvokeCfAsync("CreateDnsRecordAsync",
-        new object[] { zoneId, type, name, content, proxied, ttl, CancellationToken.None }, sp);
+    System.Text.Json.JsonDocument doc;
+    try
+    {
+        doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
+    using (doc)
+    {
+        var root = doc.RootElement;
+        try
+        {
+            // Each TryGetProperty + typed getter pair can throw InvalidOperationException
+            // if the value is the wrong shape (e.g. proxied="yes" instead of bool true).
+            // Wrap the whole shape coercion so type mismatches surface as 400 with a
+            // useful hint instead of bubbling to the auth middleware as 500.
+            var type = root.TryGetProperty("type", out var tEl) && tEl.ValueKind == System.Text.Json.JsonValueKind.String
+                ? tEl.GetString() ?? "CNAME" : "CNAME";
+            var name = root.TryGetProperty("name", out var nEl) && nEl.ValueKind == System.Text.Json.JsonValueKind.String
+                ? nEl.GetString() ?? "" : "";
+            var content = root.TryGetProperty("content", out var cEl) && cEl.ValueKind == System.Text.Json.JsonValueKind.String
+                ? cEl.GetString() ?? "" : "";
+            var proxied = !root.TryGetProperty("proxied", out var pEl) ||
+                          (pEl.ValueKind == System.Text.Json.JsonValueKind.True);
+            var ttl = root.TryGetProperty("ttl", out var tEl2) && tEl2.ValueKind == System.Text.Json.JsonValueKind.Number
+                ? tEl2.GetInt32() : 1;
+            return await InvokeCfAsync("CreateDnsRecordAsync",
+                new object[] { zoneId, type, name, content, proxied, ttl, CancellationToken.None }, sp);
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new { error = $"Invalid DNS record shape: {ex.Message}" });
+        }
+    }
 });
 
 app.MapDelete("/api/cloudflare/zones/{zoneId}/dns/{recordId}", (string zoneId, string recordId, IServiceProvider sp) =>
