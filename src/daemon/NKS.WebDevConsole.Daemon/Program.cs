@@ -2585,14 +2585,31 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
     var settings = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
     if (settings == null) return Results.BadRequest();
     using var conn = db.CreateConnection();
-    foreach (var (compositeKey, value) in settings)
+    conn.Open();
+    // Wrap the batch in a transaction so a sync-pull that touches many
+    // keys is atomic: either all rows land or none do. Without this, a
+    // partial failure (disk full, connection reset) could leave the
+    // settings table with a half-applied snapshot where some keys are
+    // from the new device and others are stale.
+    using var tx = conn.BeginTransaction();
+    try
     {
-        var parts = compositeKey.Split('.', 2);
-        var category = parts.Length > 1 ? parts[0] : "general";
-        var key = parts.Length > 1 ? parts[1] : parts[0];
-        await conn.ExecuteAsync(
-            "INSERT INTO settings (category, key, value) VALUES (@Category, @Key, @Value) ON CONFLICT(category, key) DO UPDATE SET value = @Value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
-            new { Category = category, Key = key, Value = value });
+        foreach (var (compositeKey, value) in settings)
+        {
+            var parts = compositeKey.Split('.', 2);
+            var category = parts.Length > 1 ? parts[0] : "general";
+            var key = parts.Length > 1 ? parts[1] : parts[0];
+            await conn.ExecuteAsync(
+                "INSERT INTO settings (category, key, value) VALUES (@Category, @Key, @Value) ON CONFLICT(category, key) DO UPDATE SET value = @Value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
+                new { Category = category, Key = key, Value = value },
+                transaction: tx);
+        }
+        tx.Commit();
+    }
+    catch
+    {
+        tx.Rollback();
+        throw;
     }
     return Results.Ok(settings);
 });
