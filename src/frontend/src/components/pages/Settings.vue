@@ -339,13 +339,13 @@
                           <span
                             v-else
                             class="device-name-text mono"
-                            :style="row.device_id === deviceId ? 'font-weight: 700' : ''"
+                            :style="row.is_current ? 'font-weight: 700' : ''"
                             @dblclick="startEditDeviceName(row)"
                             title="Double-click to rename"
                           >
                             {{ row.name || row.device_id.slice(0, 12) + '…' }}
                           </span>
-                          <el-tag v-if="row.device_id === deviceId" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
+                          <el-tag v-if="row.is_current" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
                         </div>
                       </template>
                     </el-table-column>
@@ -374,7 +374,7 @@
                     <el-table-column label="" width="110" align="right">
                       <template #default="{ row }">
                         <el-button
-                          v-if="row.device_id !== deviceId"
+                          v-if="!row.is_current"
                           size="small"
                           type="primary"
                           plain
