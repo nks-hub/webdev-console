@@ -581,7 +581,15 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
 // Returns { installed: true, restartRequired: true, path: "..." }.
 app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory httpFactory) =>
 {
-    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    Dictionary<string, string>? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
     var downloadUrl = body?.GetValueOrDefault("downloadUrl") ?? "";
     var pluginId = body?.GetValueOrDefault("id") ?? "";
 
@@ -2319,7 +2327,15 @@ app.MapPost("/api/services/{id}/config", async (
 // wired; filled in during the 2026-04-11 strict audit cycle.
 app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator validator, BinaryManager bm, SseService sse, ServiceConfigManager configManager) =>
 {
-    var body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
+    ConfigValidateRequest? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<ConfigValidateRequest>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { isValid = false, output = $"Invalid JSON body: {ex.Message}" });
+    }
     if (body == null) return Results.BadRequest();
 
     var service = (body.ServiceId ?? "apache").ToLowerInvariant();
@@ -2462,7 +2478,15 @@ app.MapPost("/api/config/validate", async (HttpContext ctx, ConfigValidator vali
 //   hosts:true    — also strip the managed BEGIN/END block from hosts file
 app.MapPost("/api/uninstall", async (HttpContext ctx, BackupManager backupManager, SiteOrchestrator orchestrator, SiteManager sm, IServiceProvider sp, ILoggerFactory lf) =>
 {
-    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>();
+    Dictionary<string, object?>? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
     bool flag(string key) => body is not null && body.TryGetValue(key, out var v) && v switch
     {
         bool b => b,
@@ -3177,7 +3201,15 @@ app.MapGet("/api/binaries/installed/{app}", (string app, BinaryManager bm) =>
 
 app.MapPost("/api/binaries/install", async (HttpContext ctx, BinaryManager bm) =>
 {
-    var req = await ctx.Request.ReadFromJsonAsync<InstallBinaryRequest>();
+    InstallBinaryRequest? req;
+    try
+    {
+        req = await ctx.Request.ReadFromJsonAsync<InstallBinaryRequest>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
     if (req is null || string.IsNullOrWhiteSpace(req.App) || string.IsNullOrWhiteSpace(req.Version))
         return Results.BadRequest(new { error = "app and version required" });
 
