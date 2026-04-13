@@ -2,7 +2,7 @@
 
 MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon as AI-callable tools and resources. Lets Claude Desktop, Claude Code, Cursor, and other MCP clients fully manage your local development environment.
 
-> **Phase A MVP** — see [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap.
+> **Phase A + B (28 tools)** — see [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap (target ~75 tools).
 
 ## Quick start
 
@@ -46,23 +46,54 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 }
 ```
 
-## Phase A tool catalog (11 tools)
+## Phase A + B tool catalog (28 tools)
 
-| Tool | Type | Description |
-|---|---|---|
-| `wdc_list_sites` | read | List all configured sites |
-| `wdc_get_site` | read | Get a single site by domain |
-| `wdc_create_site` | mutate | Create a new site (vhost + hosts + optional SSL) |
-| `wdc_delete_site` | **destructive** | Delete a site (requires `confirm: "YES"`) |
-| `wdc_get_site_metrics` | read | Live access-log metrics for a site |
-| `wdc_list_services` | read | List Apache/MySQL/PHP/etc. with state + CPU/RAM |
-| `wdc_start_service` | mutate | Start a service by id |
-| `wdc_stop_service` | mutate | Stop a service by id |
-| `wdc_get_status` | read | Daemon health check |
-| `wdc_get_system_info` | read | Full system snapshot |
-| `wdc_get_recent_activity` | read | Recent activity timeline |
+### Sites (5)
+| Tool | Type |
+|---|---|
+| `wdc_list_sites` / `wdc_get_site` / `wdc_get_site_metrics` | read |
+| `wdc_create_site` | mutate |
+| `wdc_delete_site` | **destructive** |
 
-Phases B–C add the remaining ~64 tools (databases, SSL, PHP versions, binaries, plugins, backup, Cloudflare, settings sync). See the integration plan for the full mapping.
+### Services (3)
+| Tool | Type |
+|---|---|
+| `wdc_list_services` | read |
+| `wdc_start_service` / `wdc_stop_service` | mutate |
+
+### System (3)
+| Tool | Type |
+|---|---|
+| `wdc_get_status` / `wdc_get_system_info` / `wdc_get_recent_activity` | read |
+
+### Databases (5)
+| Tool | Type |
+|---|---|
+| `wdc_list_databases` / `wdc_database_tables` | read |
+| `wdc_create_database` / `wdc_query` | mutate |
+| `wdc_drop_database` | **destructive** |
+
+### SSL (4)
+| Tool | Type |
+|---|---|
+| `wdc_list_certs` | read |
+| `wdc_install_ca` / `wdc_generate_cert` | mutate |
+| `wdc_revoke_cert` | **destructive** |
+
+### PHP (3)
+| Tool | Type |
+|---|---|
+| `wdc_list_php_versions` | read |
+| `wdc_set_default_php` / `wdc_toggle_php_extension` | mutate |
+
+### Binaries (5)
+| Tool | Type |
+|---|---|
+| `wdc_list_catalog` / `wdc_list_installed_binaries` | read |
+| `wdc_install_binary` / `wdc_refresh_catalog` | mutate |
+| `wdc_uninstall_binary` | **destructive** |
+
+Phase C adds the remaining ~47 tools (plugins, backup, Cloudflare, settings/sync, devices, more node/site lifecycle). See the integration plan for the full mapping.
 
 ## Daemon discovery
 

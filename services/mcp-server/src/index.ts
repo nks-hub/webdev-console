@@ -19,28 +19,50 @@ import {
 import { sitesTools } from './tools/sites.js'
 import { servicesTools } from './tools/services.js'
 import { systemTools } from './tools/system.js'
+import { databasesTools } from './tools/databases.js'
+import { sslTools } from './tools/ssl.js'
+import { phpTools } from './tools/php.js'
+import { binariesTools } from './tools/binaries.js'
 
 const READONLY = process.argv.includes('--readonly')
 
-// Tool registry — Phase A MVP includes the 11 most-used daemon endpoints.
-// Future phases add the full ~75 tools per docs/plans/mcp-server-integration-plan.md.
+// Tool registry — Phase A+B includes the 28 most-used daemon endpoints.
+// Phase C will add backup, cloudflare, plugins, settings/sync to reach
+// ~75 total per docs/plans/mcp-server-integration-plan.md.
 const allTools = [
   ...sitesTools,
   ...servicesTools,
   ...systemTools,
+  ...databasesTools,
+  ...sslTools,
+  ...phpTools,
+  ...binariesTools,
 ]
 
 // In read-only mode skip tools that mutate daemon state. We tag mutations
 // by inspecting the tool description for "DESTRUCTIVE" or by hard-coding
 // the read-only allowlist. Phase A uses the explicit allowlist.
 const READONLY_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
+  // sites
   'wdc_list_sites',
   'wdc_get_site',
   'wdc_get_site_metrics',
+  // services
   'wdc_list_services',
+  // system
   'wdc_get_status',
   'wdc_get_system_info',
   'wdc_get_recent_activity',
+  // databases
+  'wdc_list_databases',
+  'wdc_database_tables',
+  // ssl
+  'wdc_list_certs',
+  // php
+  'wdc_list_php_versions',
+  // binaries
+  'wdc_list_catalog',
+  'wdc_list_installed_binaries',
 ])
 
 const tools = READONLY
