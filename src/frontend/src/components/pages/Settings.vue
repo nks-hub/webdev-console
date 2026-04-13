@@ -706,7 +706,7 @@ async function createDatabase() {
     ElMessage.success(`Database ${newDbName.value} created`)
     newDbName.value = ''
     await loadDatabases()
-  } catch (e: any) { ElMessage.error(`Create failed: ${e.message}`) }
+  } catch (e: any) { ElMessage.error(`Create failed: ${e?.message || e}`) }
 }
 
 async function dropDatabase(name: string) {
@@ -715,7 +715,7 @@ async function dropDatabase(name: string) {
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success(`Database ${name} dropped`)
     await loadDatabases()
-  } catch (e: any) { ElMessage.error(`Drop failed: ${e.message}`) }
+  } catch (e: any) { ElMessage.error(`Drop failed: ${e?.message || e}`) }
 }
 
 async function flushDns() {
