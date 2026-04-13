@@ -67,15 +67,18 @@ public sealed class MetricsHistoryService : BackgroundService
         }
     }
 
-    private Task SampleOnceAsync()
+    private async Task SampleOnceAsync()
     {
+        // Snapshot the dictionary BEFORE any await so we don't enumerate
+        // a shared collection that could mutate from REST endpoints during
+        // an async gap. SiteManager._sites is not thread-safe.
         var sites = _siteManager.Sites.Values.ToList();
-        if (sites.Count == 0) return Task.CompletedTask;
+        if (sites.Count == 0) return;
 
         var apacheRoots = _binaryManager.ListInstalled("apache")
             .Select(a => Path.Combine(a.InstallPath, "logs"))
             .ToList();
-        if (apacheRoots.Count == 0) return Task.CompletedTask;
+        if (apacheRoots.Count == 0) return;
 
         var nowIso = DateTime.UtcNow.ToString("o");
         var samples = new List<(string Domain, string SampledAt, long RequestCount, long SizeBytes, string? LastWriteUtc)>();
@@ -97,17 +100,20 @@ public sealed class MetricsHistoryService : BackgroundService
                 stats.LastWrittenUtc.ToString("o")
             ));
         }
-        if (samples.Count == 0) return Task.CompletedTask;
+        if (samples.Count == 0) return;
 
         // Single connection + transaction for all inserts so one disk I/O
-        // failure can't leave the history half-applied.
+        // failure can't leave the history half-applied. Use ExecuteAsync so
+        // the BackgroundService thread doesn't block on disk during the
+        // 60-second tick — Dapper's sync Execute would tie up the thread
+        // pool worker for the duration of every insert.
         using var conn = _db.CreateConnection();
         using var tx = conn.BeginTransaction();
         try
         {
             foreach (var s in samples)
             {
-                conn.Execute(
+                await conn.ExecuteAsync(
                     "INSERT INTO metrics_history (domain, sampled_at, request_count, size_bytes, last_write_utc) " +
                     "VALUES (@Domain, @SampledAt, @RequestCount, @SizeBytes, @LastWriteUtc)",
                     new
@@ -124,7 +130,7 @@ public sealed class MetricsHistoryService : BackgroundService
             // Prune rows older than the retention period. Done in the same
             // transaction so a concurrent reader never sees the table mid-prune.
             var cutoff = DateTime.UtcNow.Subtract(RetentionPeriod).ToString("o");
-            conn.Execute(
+            await conn.ExecuteAsync(
                 "DELETE FROM metrics_history WHERE sampled_at < @Cutoff",
                 new { Cutoff = cutoff },
                 transaction: tx);
@@ -137,6 +143,5 @@ public sealed class MetricsHistoryService : BackgroundService
             tx.Rollback();
             throw;
         }
-        return Task.CompletedTask;
     }
 }
