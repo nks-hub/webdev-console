@@ -469,7 +469,7 @@
                   </el-button>
                 </div>
                 <div class="hint" v-if="lastSyncTime">
-                  Last synced: {{ lastSyncTime }}
+                  Last synced: {{ lastSyncDisplay }}
                 </div>
               </div>
             </section>
@@ -949,6 +949,17 @@ const syncStatus = ref<{ ok: boolean; message: string } | null>(null)
 const lastSyncTime = ref<string | null>(null)
 const importFileInput = ref<HTMLInputElement | null>(null)
 
+// Render lastSyncTime consistently regardless of whether it came from
+// sync.lastSyncTime in settings (ISO format) or a fresh push (toLocaleString
+// used to be stored directly). Try parsing as Date first; fall back to the
+// raw string if parse fails so legacy locale-formatted values still show.
+const lastSyncDisplay = computed(() => {
+  if (!lastSyncTime.value) return ''
+  const parsed = new Date(lastSyncTime.value)
+  if (isNaN(parsed.getTime())) return lastSyncTime.value
+  return parsed.toLocaleString()
+})
+
 async function loadDeviceId() {
   // Device ID is persisted in daemon settings; generate if missing
   try {
@@ -1054,7 +1065,9 @@ async function pushToCloud() {
       const text = await r.text().catch(() => r.statusText)
       throw new Error(text || `HTTP ${r.status}`)
     }
-    lastSyncTime.value = new Date().toLocaleString()
+    // Store ISO so loadDeviceId can re-parse it on next mount — lastSyncDisplay
+    // handles the locale-aware rendering.
+    lastSyncTime.value = new Date().toISOString()
     syncStatus.value = { ok: true, message: 'Pushed successfully' }
     ElMessage.success('Configuration pushed to cloud')
   } catch (e: any) {
