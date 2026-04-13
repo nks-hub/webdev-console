@@ -3288,6 +3288,14 @@ syncPullCmd.SetAction(async (parseResult, ct) =>
         Environment.Exit(1);
         return;
     }
+    if (!System.Text.RegularExpressions.Regex.IsMatch(
+            deviceId, @"^[a-z0-9][a-z0-9-]{2,63}$"))
+    {
+        AnsiConsole.MarkupLine(
+            $"[red]Invalid sync.deviceId:[/] {Markup.Escape(deviceId)} — must be 3-64 chars, lowercase alphanumeric + dashes.");
+        Environment.Exit(1);
+        return;
+    }
     var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
     if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
     var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
@@ -3301,7 +3309,15 @@ syncPullCmd.SetAction(async (parseResult, ct) =>
         AnsiConsole.MarkupLine("[yellow]No cloud snapshot found for this device.[/] Push first.");
         return;
     }
-    resp.EnsureSuccessStatusCode();
+    if (!resp.IsSuccessStatusCode)
+    {
+        var errBody = await resp.Content.ReadAsStringAsync();
+        var detail = TryExtractErrorDetail(errBody);
+        AnsiConsole.MarkupLine(
+            $"[red]Sync pull failed ({(int)resp.StatusCode}):[/] {Markup.Escape(detail)}");
+        Environment.Exit(1);
+        return;
+    }
     var data = await resp.Content.ReadAsStringAsync();
     if (json) { PrintJson(data); return; }
     AnsiConsole.MarkupLine($"[green]Pulled[/] snapshot from cloud. Apply via Settings → Sync → Pull in UI for smart merge.");
@@ -3320,20 +3336,116 @@ syncExportCmd.SetAction(async (parseResult, ct) =>
 
     var settings = await client.GetJsonAsync("/api/settings");
     var sites = await client.GetJsonAsync("/api/sites");
+    // Filter the same way sync push does — exports are typically shared
+    // with another machine via file, so local-only fields (paths, ports,
+    // documentRoot) would be meaningless at best and broken at worst on
+    // the importing side. Users who genuinely want a full dump including
+    // local fields should use `wdc config list --json` and `wdc sites list
+    // --json` directly; this command is explicitly for *portable* config.
+    var filteredSettings = FilterSyncSettings(settings);
+    var filteredSites = FilterSyncSites(sites);
     var payload = new
     {
         exportedAt = DateTime.UtcNow.ToString("o"),
         version = "0.1.0",
         deviceId = settings.TryGetProperty("sync.deviceId", out var d) ? d.GetString() : "",
-        settings,
-        sites,
+        settings = filteredSettings,
+        sites = filteredSites,
     };
-    var jsonStr = System.Text.Json.JsonSerializer.Serialize(payload,
-        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-    File.WriteAllText(filePath, jsonStr);
-    AnsiConsole.MarkupLine($"[green]Exported[/] to [cyan]{Markup.Escape(filePath)}[/] ({sites.GetArrayLength()} sites)");
+    var jsonStr = JsonSerializer.Serialize(payload,
+        new JsonSerializerOptions { WriteIndented = true });
+    // Use CreateDirectory on the parent so users can pass a path that
+    // doesn't yet exist (e.g. ./backups/wdc-snapshot.json) without
+    // getting DirectoryNotFoundException from File.WriteAllText.
+    var parent = Path.GetDirectoryName(Path.GetFullPath(filePath));
+    if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+    await File.WriteAllTextAsync(filePath, jsonStr, ct);
+    AnsiConsole.MarkupLine(
+        $"[green]Exported[/] to [cyan]{Markup.Escape(filePath)}[/] ({filteredSites.Count} sites, {filteredSettings.Count} sync-classified settings)");
 });
 syncCommand.Add(syncExportCmd);
+
+// wdc sync import <file> — reads a wdc sync export file and applies the
+// portable settings subset back to the local daemon. Same classification
+// rules as pull/export so local-only fields stay untouched.
+var syncImportFileArg = new Argument<string>("file") { Description = "Input JSON file (from `wdc sync export`)" };
+var syncImportCmd = new Command("import", "Import settings + sites from a JSON file (filtered to sync fields)") { syncImportFileArg };
+syncImportCmd.SetAction(async (parseResult, ct) =>
+{
+    var filePath = parseResult.GetValue(syncImportFileArg)!;
+    if (!File.Exists(filePath))
+    {
+        AnsiConsole.MarkupLine($"[red]File not found:[/] {Markup.Escape(filePath)}");
+        Environment.Exit(1);
+        return;
+    }
+
+    using var client = new DaemonClient();
+    if (!EnsureConnected(client)) return;
+
+    JsonDocument doc;
+    try
+    {
+        var content = await File.ReadAllTextAsync(filePath, ct);
+        doc = JsonDocument.Parse(content);
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Cannot parse JSON:[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
+        return;
+    }
+    using var _ = doc;
+
+    if (!doc.RootElement.TryGetProperty("settings", out var settingsElem) ||
+        !doc.RootElement.TryGetProperty("sites", out var sitesElem))
+    {
+        AnsiConsole.MarkupLine("[red]Import file missing[/] 'settings' or 'sites' — not a wdc sync export.");
+        Environment.Exit(1);
+        return;
+    }
+
+    // Re-filter on import in case the file was hand-edited or came from
+    // an older version that didn't filter on export. Belt-and-braces:
+    // local fields must never land in the local settings table.
+    var settingsToApply = FilterSyncSettings(settingsElem);
+    // Apply settings via /api/settings PUT (daemon handles the upsert in
+    // a transaction — see commit e834abf).
+    if (settingsToApply.Count > 0)
+    {
+        var settingsBody = new StringContent(
+            JsonSerializer.Serialize(settingsToApply),
+            System.Text.Encoding.UTF8,
+            "application/json");
+        await client.PutAsync("/api/settings", settingsBody);
+    }
+
+    // Apply sites one by one via POST /api/sites. Failures per site are
+    // non-fatal — we report the count at the end so an import of 10 sites
+    // where 1 has a domain conflict still lands the other 9.
+    var filteredSites = FilterSyncSites(sitesElem);
+    var imported = 0; var skipped = 0;
+    foreach (var site in filteredSites)
+    {
+        try
+        {
+            var body = new StringContent(
+                JsonSerializer.Serialize(site),
+                System.Text.Encoding.UTF8,
+                "application/json");
+            await client.PostAsync("/api/sites", body);
+            imported++;
+        }
+        catch
+        {
+            skipped++;
+        }
+    }
+
+    AnsiConsole.MarkupLine(
+        $"[green]Imported[/] {settingsToApply.Count} settings, {imported} sites ({skipped} skipped — likely existing or invalid).");
+});
+syncCommand.Add(syncImportCmd);
 
 rootCommand.Add(syncCommand);
 
