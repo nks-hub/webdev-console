@@ -3410,14 +3410,27 @@ syncImportCmd.SetAction(async (parseResult, ct) =>
     // local fields must never land in the local settings table.
     var settingsToApply = FilterSyncSettings(settingsElem);
     // Apply settings via /api/settings PUT (daemon handles the upsert in
-    // a transaction — see commit e834abf).
+    // a transaction — see commit e834abf). Wrap in try/catch because the
+    // DaemonClient throws raw HttpRequestException on non-2xx, which
+    // would otherwise dump a stack trace on import failure instead of a
+    // readable message.
     if (settingsToApply.Count > 0)
     {
-        var settingsBody = new StringContent(
-            JsonSerializer.Serialize(settingsToApply),
-            System.Text.Encoding.UTF8,
-            "application/json");
-        await client.PutAsync("/api/settings", settingsBody);
+        try
+        {
+            var settingsBody = new StringContent(
+                JsonSerializer.Serialize(settingsToApply),
+                System.Text.Encoding.UTF8,
+                "application/json");
+            await client.PutAsync("/api/settings", settingsBody);
+        }
+        catch (HttpRequestException ex)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]Failed to apply settings:[/] {Markup.Escape(ex.Message)}");
+            Environment.Exit(1);
+            return;
+        }
     }
 
     // Apply sites one by one via POST /api/sites. Failures per site are
