@@ -109,7 +109,7 @@ async function navigate(path?: string) {
     pathInput.value = res.path
     selectedPath.value = ''
   } catch (e: any) {
-    ElMessage.error(`Cannot open path: ${e.message ?? e}`)
+    ElMessage.error(`Cannot open path: ${e?.message ?? e}`)
   } finally {
     loading.value = false
   }

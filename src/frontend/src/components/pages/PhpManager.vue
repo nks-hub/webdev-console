@@ -247,7 +247,7 @@ async function setDefault(version: string) {
       ElMessage.error(`Failed to set default: ${text || `HTTP ${r.status}`}`)
     }
   } catch (e: any) {
-    ElMessage.error(`Cannot set default: ${e.message || e}`)
+    ElMessage.error(`Cannot set default: ${e?.message || e}`)
   }
 }
 
