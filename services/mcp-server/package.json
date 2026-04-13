@@ -1,0 +1,42 @@
+{
+  "name": "@nks-wdc/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server exposing the NKS WebDev Console daemon as AI-callable tools and resources",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "nks-wdc-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "nks-wdc",
+    "webdev",
+    "ai-tools"
+  ],
+  "license": "MIT"
+}
