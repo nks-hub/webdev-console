@@ -156,8 +156,12 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         ),
       },
       annotations: {
+        // This is an upsert on plugin config, not a destructive delete.
+        // Empty-string credential wipes are blocked by NonEmptyString above,
+        // so flip destructiveHint off — pairing it with no confirm gate
+        // was confusing AI clients that branch on the annotation.
         readOnlyHint: false,
-        destructiveHint: true,
+        destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
       },

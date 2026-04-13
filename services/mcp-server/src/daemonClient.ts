@@ -67,12 +67,17 @@ class DaemonClient {
    * (token rotated due to daemon restart between calls).
    */
   private buildInit(method: string, token: string, body?: unknown): RequestInit {
+    // Only advertise application/json when a body is actually present.
+    // Bodyless POSTs (start-service, install-ca, create-backup, etc.)
+    // should not carry a Content-Type header — some HTTP middleware
+    // rejects empty-body requests that claim to be JSON.
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    }
+    if (body !== undefined) headers['Content-Type'] = 'application/json'
     return {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }
   }
@@ -92,13 +97,21 @@ class DaemonClient {
       throw new DaemonNotRunningError()
     }
     if (res.status === 401) {
-      // Token rotated. Re-read port file once and retry.
+      // Token rotated. Re-read port file once and retry. Wrap the retry
+      // in try/catch mirroring the first fetch so a daemon crash between
+      // call and retry surfaces as DaemonNotRunningError, not a generic
+      // fetch failure.
       this.current = null
       const fresh = this.ensureConnection()
-      res = await fetch(
-        `http://127.0.0.1:${fresh.port}${path}`,
-        this.buildInit(method, fresh.token, body),
-      )
+      try {
+        res = await fetch(
+          `http://127.0.0.1:${fresh.port}${path}`,
+          this.buildInit(method, fresh.token, body),
+        )
+      } catch {
+        this.current = null
+        throw new DaemonNotRunningError()
+      }
     }
     if (!res.ok) {
       // Surface the daemon's structured error body. All daemon endpoints

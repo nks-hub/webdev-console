@@ -12,7 +12,53 @@ import type { RegisterOptions } from '../index.js'
 import { safe, toolError } from '../formatting.js'
 import { ConfirmYesSchema, DatabaseNameSchema } from '../schemas.js'
 
-const READ_ONLY_SQL = /^\s*(SELECT|SHOW|EXPLAIN|DESC(RIBE)?|WITH)\b/i
+// Allowed leading verbs for wdc_query. Anything else goes through wdc_execute.
+const READ_ONLY_VERBS = /^(SELECT|SHOW|EXPLAIN|DESC(RIBE)?|WITH)\b/i
+
+// Strip leading whitespace + comment blocks so payloads like
+// `/* trick */ DROP TABLE users` aren't mistaken for read-only, and
+// `SELECT 1 /*; DROP ... */` can't smuggle a second statement past the
+// semicolon check below.
+function stripLeadingCommentsAndWs(sql: string): string {
+  let i = 0
+  while (i < sql.length) {
+    const ch = sql[i]!
+    if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
+      i++
+      continue
+    }
+    // /* ... */ block comment
+    if (ch === '/' && sql[i + 1] === '*') {
+      const end = sql.indexOf('*/', i + 2)
+      if (end < 0) return sql.slice(i) // unterminated — let DB error out
+      i = end + 2
+      continue
+    }
+    // -- line comment
+    if (ch === '-' && sql[i + 1] === '-') {
+      const nl = sql.indexOf('\n', i + 2)
+      if (nl < 0) return ''
+      i = nl + 1
+      continue
+    }
+    break
+  }
+  return sql.slice(i)
+}
+
+// Reject any non-trailing `;` so multi-statement payloads
+// (`SELECT 1; DROP TABLE users`) can't sneak past the verb check.
+function hasInnerSemicolon(sql: string): boolean {
+  const trimmed = sql.trimEnd().replace(/;+\s*$/, '')
+  return /;/.test(trimmed)
+}
+
+function isReadOnlySql(sql: string): boolean {
+  const normalized = stripLeadingCommentsAndWs(sql)
+  if (!READ_ONLY_VERBS.test(normalized)) return false
+  if (hasInnerSemicolon(sql)) return false
+  return true
+}
 
 export function registerDatabasesTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -82,10 +128,14 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
       },
     },
     async ({ database, sql }) => {
-      if (!READ_ONLY_SQL.test(sql)) {
+      if (!isReadOnlySql(sql)) {
+        const executeHint = opts.readonly
+          ? 'Mutating SQL is disabled in --readonly mode.'
+          : 'Use wdc_execute for INSERT / UPDATE / DELETE / DDL.'
         return toolError(
-          'wdc_query accepts read-only statements only (SELECT / SHOW / EXPLAIN / DESCRIBE / WITH). ' +
-            'Use wdc_execute for INSERT / UPDATE / DELETE / DDL.',
+          'wdc_query accepts a single read-only statement only ' +
+            '(SELECT / SHOW / EXPLAIN / DESCRIBE / WITH, no inner semicolons, no leading DML/DDL in a comment). ' +
+            executeHint,
         )
       }
       return safe(() =>

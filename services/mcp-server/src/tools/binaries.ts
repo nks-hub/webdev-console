@@ -55,6 +55,25 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
     async () => safe(() => daemonClient.get('/api/binaries/installed')),
   )
 
+  server.registerTool(
+    'wdc_refresh_catalog',
+    {
+      title: 'Refresh binary catalog',
+      description:
+        'Force a refresh of the binary catalog cache from the configured catalog API URL. ' +
+        'Returns the new release count and last-fetch timestamp. Semantically read-only — ' +
+        'only refreshes an in-process cache, never mutates user state.',
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async () => safe(() => daemonClient.post('/api/binaries/catalog/refresh')),
+  )
+
   if (opts.readonly) return
 
   server.registerTool(
@@ -109,21 +128,4 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
       ),
   )
 
-  server.registerTool(
-    'wdc_refresh_catalog',
-    {
-      title: 'Refresh binary catalog',
-      description:
-        'Force a refresh of the binary catalog cache from the configured catalog API URL. ' +
-        'Returns the new release count and last-fetch timestamp.',
-      inputSchema: {},
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: true,
-      },
-    },
-    async () => safe(() => daemonClient.post('/api/binaries/catalog/refresh')),
-  )
 }

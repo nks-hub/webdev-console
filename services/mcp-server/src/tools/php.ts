@@ -28,29 +28,11 @@ export function registerPhpTools(server: McpServer, opts: RegisterOptions): void
 
   if (opts.readonly) return
 
-  server.registerTool(
-    'wdc_set_default_php',
-    {
-      title: 'Set default PHP version',
-      description:
-        'Set the default PHP version used by sites that do not override it. ' +
-        'Restarts the corresponding php-cgi pool.\n\n' +
-        'Args:\n  version: PHP major.minor like "8.3" or full version like "8.3.10".',
-      inputSchema: {
-        version: z
-          .string()
-          .min(3)
-          .describe('PHP major.minor like "8.3" or full version like "8.3.10"'),
-      },
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false,
-      },
-    },
-    async ({ version }) => safe(() => daemonClient.put('/api/php/default', { version })),
-  )
+  // NOTE: There is intentionally no `wdc_set_default_php` tool. In WDC
+  // every site carries its own `phpVersion` field — there is no global
+  // "default PHP" concept in the daemon, and the corresponding daemon
+  // endpoint does not exist. Use `wdc_create_site` / site update to
+  // pin a specific PHP version per site instead.
 
   server.registerTool(
     'wdc_toggle_php_extension',
