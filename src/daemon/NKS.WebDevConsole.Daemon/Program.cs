@@ -2661,11 +2661,15 @@ static bool IsValidDatabaseName(string? name)
 
 // Build the base argv list for invoking mysql/mysqldump CLI. Reads the
 // daemon-managed root password from MySqlRootPassword (DPAPI on Windows,
-// 0600 plaintext on Unix) and injects it via -p<password> WITHOUT a space
-// — the no-space form is the only way mysql.exe accepts the password
-// without prompting interactively. Returns a List<string> so callers use
-// the IEnumerable<string> overload of CliWrap.WithArguments() and avoid
+// 0600 plaintext on Unix). Returns a List<string> so callers use the
+// IEnumerable<string> overload of CliWrap.WithArguments() and avoid
 // shell-string parsing ambiguity entirely.
+//
+// Password is INTENTIONALLY NOT placed on the command line — `-p<pass>`
+// would leak the password to `ps aux` / Task Manager process listings.
+// Instead, callers pair this with MysqlEnvVars() which sets MYSQL_PWD,
+// the env var mysql.exe respects to bypass the interactive prompt
+// without exposing the password to other processes on the same host.
 //
 // BUG context: Before this helper, every mysql endpoint hard-coded
 // `-h 127.0.0.1 -P 3306 -u root` with NO password, which broke as soon
@@ -2675,20 +2679,27 @@ static bool IsValidDatabaseName(string? name)
 // for user root@localhost" and the user had no way to recover via UI.
 static List<string> MysqlBaseArgs()
 {
-    var args = new List<string>
+    return new List<string>
     {
         "-h", "127.0.0.1",
         "-P", "3306",
         "-u", "root",
     };
+}
+
+// Environment dictionary to pair with MysqlBaseArgs(). MYSQL_PWD is read
+// by mysql.exe / mysqldump.exe as the root password, bypassing the
+// interactive prompt. MySQL docs warn this is "extremely insecure" for
+// shared / multi-user systems because env vars CAN be inspected via
+// /proc/{pid}/environ, but for a single-user dev workstation it's
+// strictly better than -p<pass> on the command line which is visible
+// in ANY process listing.
+static IReadOnlyDictionary<string, string?> MysqlEnvVars()
+{
     var password = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
-    if (!string.IsNullOrEmpty(password))
-    {
-        // mysql.exe requires -p<pass> without a space — `-p <pass>` is parsed
-        // as an empty -p (interactive prompt) followed by a positional arg.
-        args.Add($"-p{password}");
-    }
-    return args;
+    return string.IsNullOrEmpty(password)
+        ? new Dictionary<string, string?>()
+        : new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
 }
 
 // Databases — list MySQL databases via mysql CLI
@@ -2710,6 +2721,7 @@ app.MapGet("/api/databases", async (BinaryManager bm) =>
         listArgs.Add("SHOW DATABASES");
         var result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(listArgs)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
 
@@ -2750,6 +2762,7 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm) =>
     {
         var result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
         return result.ExitCode == 0
@@ -2780,6 +2793,7 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm) =>
     {
         var result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
         return result.ExitCode == 0
@@ -2810,6 +2824,7 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm)
     {
         result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
     }
@@ -2846,6 +2861,7 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm) =
     {
         var result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
         if (result.ExitCode != 0)
@@ -2880,6 +2896,7 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
     {
         result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
     }
@@ -2922,6 +2939,7 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm)
     {
         var result = await CliWrap.Cli.Wrap(mysqldump)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
         if (result.ExitCode != 0)
@@ -2967,6 +2985,7 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
     {
         var result = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
             .WithStandardInputPipe(CliWrap.PipeSource.FromFile(tmpFile))
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
