@@ -1166,43 +1166,19 @@ app.MapGet("/api/sites/{domain}/metrics/history", (string domain, int? minutes, 
             "ORDER BY sampled_at ASC " +
             "LIMIT @Limit",
             new { Domain = domain, Cutoff = cutoff, Limit = clampedLimit }
-        ).ToList();
+        ).Select(r => new MetricsHistoryAggregator.RawRow(
+            r.sampled_at, r.request_count, r.size_bytes, r.last_write_utc));
 
-        // Compute per-row delta from the previous sample. First row gets
-        // delta=0 (no baseline) — caller's chart should skip / render flat.
-        // CRITICAL: DateTime.TryParse return value MUST be checked; on parse
-        // failure `t` is `default(DateTime)` (year 0001) and subsequent
-        // iterations would compute insane negative deltas. Skip the sample
-        // entirely on parse failure — bad timestamps in the history table
-        // mean the whole window is suspect.
-        var samples = new List<object>();
-        long? prevCount = null;
-        DateTime? prevTime = null;
-        foreach (var r in rows)
-        {
-            if (!DateTime.TryParse(r.sampled_at, null,
-                    System.Globalization.DateTimeStyles.RoundtripKind, out var t))
+        var samples = MetricsHistoryAggregator.ComputeDeltas(rows)
+            .Select(s => (object)new
             {
-                continue;
-            }
-            double requestsPerMin = 0;
-            if (prevCount.HasValue && prevTime.HasValue)
-            {
-                var deltaCount = Math.Max(0, r.request_count - prevCount.Value);
-                var deltaSec = (t - prevTime.Value).TotalSeconds;
-                if (deltaSec > 0) requestsPerMin = deltaCount * 60.0 / deltaSec;
-            }
-            samples.Add(new
-            {
-                sampledAt = r.sampled_at,
-                requestCount = r.request_count,
-                sizeBytes = r.size_bytes,
-                lastWriteUtc = r.last_write_utc,
-                requestsPerMin,
-            });
-            prevCount = r.request_count;
-            prevTime = t;
-        }
+                sampledAt = s.SampledAt,
+                requestCount = s.RequestCount,
+                sizeBytes = s.SizeBytes,
+                lastWriteUtc = s.LastWriteUtc,
+                requestsPerMin = s.RequestsPerMin,
+            })
+            .ToList();
         return Results.Ok(new { domain, minutes = clampedMinutes, samples });
     }
     catch (Exception ex)
