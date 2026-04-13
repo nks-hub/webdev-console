@@ -410,7 +410,7 @@ async function createSite() {
     showCreate.value = false
     Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false, createDb: false, dbName: '' })
   } catch (e: any) {
-    ElMessage.error(`Create failed: ${e.message}`)
+    ElMessage.error(`Create failed: ${e?.message || e}`)
   } finally {
     creating.value = false
   }
@@ -470,7 +470,7 @@ async function reapplyAll() {
       ElMessage.error(`Failed: HTTP ${res.status}`)
     }
   } catch (e: any) {
-    ElMessage.error(`Reapply failed: ${e.message}`)
+    ElMessage.error(`Reapply failed: ${e?.message || e}`)
   } finally {
     reapplying.value = false
   }

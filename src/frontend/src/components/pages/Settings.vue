@@ -654,7 +654,7 @@ async function manualBackup() {
     ElMessage.success(`Backup created: ${result.files} files, ${(result.size / 1024 / 1024).toFixed(1)} MB`)
     void loadBackups()
   } catch (e: any) {
-    ElMessage.error(`Backup failed: ${e.message}`)
+    ElMessage.error(`Backup failed: ${e?.message || e}`)
   } finally {
     backupCreating.value = false
   }
@@ -793,8 +793,8 @@ async function refreshCatalog() {
     }
     ElMessage.success(`Catalog refreshed: ${result.count ?? 0} releases`)
   } catch (e: any) {
-    catalogStatus.value = { ok: false, message: `Refresh failed: ${e.message}` }
-    ElMessage.error(`Refresh failed: ${e.message}`)
+    catalogStatus.value = { ok: false, message: `Refresh failed: ${e?.message || e}` }
+    ElMessage.error(`Refresh failed: ${e?.message || e}`)
   } finally {
     refreshingCatalog.value = false
   }
@@ -815,7 +815,7 @@ async function testCatalogReachable() {
   } catch (e: any) {
     catalogStatus.value = {
       ok: false,
-      message: `✗ Unreachable: ${e.message}. Is the sidecar running?`,
+      message: `✗ Unreachable: ${e?.message || e}. Is the sidecar running?`,
     }
   } finally {
     testingCatalog.value = false
@@ -1269,7 +1269,7 @@ async function exportSettings() {
     URL.revokeObjectURL(url)
     ElMessage.success('Settings exported')
   } catch (e: any) {
-    ElMessage.error(`Export failed: ${e.message}`)
+    ElMessage.error(`Export failed: ${e?.message || e}`)
   }
 }
 
@@ -1314,7 +1314,7 @@ async function importSettings(event: Event) {
     ElMessage.success(`Imported ${Object.keys(merged).length} sync settings from ${file.name}`)
     await loadSettings()
   } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(`Import failed: ${e.message}`)
+    if (e !== 'cancel') ElMessage.error(`Import failed: ${e?.message || e}`)
   }
   if (importFileInput.value) importFileInput.value.value = ''
 }
@@ -1378,7 +1378,7 @@ async function save() {
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success('Settings saved')
   } catch (e: any) {
-    ElMessage.error(`Failed to save: ${e.message}`)
+    ElMessage.error(`Failed to save: ${e?.message || e}`)
   } finally {
     saving.value = false
   }

@@ -451,7 +451,7 @@ async function loadConfig() {
     const res = await fetchCloudflareConfig()
     Object.assign(config, res)
   } catch (e: any) {
-    pageLoadError.value = `Failed to load Cloudflare config: ${e.message}`
+    pageLoadError.value = `Failed to load Cloudflare config: ${e?.message || e}`
     ElMessage.error(pageLoadError.value)
   }
 }
@@ -478,8 +478,8 @@ async function saveConfig() {
     saveStatus.value = { kind: 'ok', message: 'Settings saved' }
     ElMessage.success('Cloudflare settings saved')
   } catch (e: any) {
-    saveStatus.value = { kind: 'err', message: e.message }
-    ElMessage.error(`Save failed: ${e.message}`)
+    saveStatus.value = { kind: 'err', message: e?.message || String(e) }
+    ElMessage.error(`Save failed: ${e?.message || e}`)
   } finally {
     savingConfig.value = false
   }
@@ -491,7 +491,7 @@ async function saveBinaryPath() {
     await saveCloudflareConfig({ cloudflaredPath: config.cloudflaredPath || null })
     ElMessage.success('Binary path saved')
   } catch (e: any) {
-    ElMessage.error(`Save failed: ${e.message}`)
+    ElMessage.error(`Save failed: ${e?.message || e}`)
   } finally {
     savingConfig.value = false
   }
@@ -503,7 +503,7 @@ async function saveSubdomainTemplate() {
     await saveCloudflareConfig({ subdomainTemplate: config.subdomainTemplate || '{stem}-dev' })
     ElMessage.success('Subdomain template saved')
   } catch (e: any) {
-    ElMessage.error(`Save failed: ${e.message}`)
+    ElMessage.error(`Save failed: ${e?.message || e}`)
   } finally {
     savingConfig.value = false
   }
@@ -545,8 +545,8 @@ async function runAutoSetup() {
     ElMessage.success(`Auto-setup complete: tunnel "${autoSetupResult.value.tunnel.name}"`)
     void loadZones()
   } catch (e: any) {
-    saveStatus.value = { kind: 'err', message: e.message }
-    ElMessage.error(`Auto-setup failed: ${e.message}`)
+    saveStatus.value = { kind: 'err', message: e?.message || String(e) }
+    ElMessage.error(`Auto-setup failed: ${e?.message || e}`)
   } finally {
     autoSettingUp.value = false
   }
@@ -577,8 +577,8 @@ async function syncAllSites() {
     }
     ElMessage.success(`Synced ${res.synced} sites`)
   } catch (e: any) {
-    syncStatus.value = { kind: 'err', message: e.message }
-    ElMessage.error(`Sync failed: ${e.message}`)
+    syncStatus.value = { kind: 'err', message: e?.message || String(e) }
+    ElMessage.error(`Sync failed: ${e?.message || e}`)
   } finally {
     syncing.value = false
   }
@@ -638,7 +638,7 @@ async function loadZones() {
     const res = await fetchCloudflareZones()
     zones.value = res?.result ?? []
   } catch (e: any) {
-    ElMessage.error(`List zones failed: ${e.message}`)
+    ElMessage.error(`List zones failed: ${e?.message || e}`)
   } finally {
     loadingZones.value = false
   }
@@ -658,7 +658,7 @@ async function loadTunnels() {
     const res = await fetchCloudflareTunnels()
     tunnels.value = res?.result ?? []
   } catch (e: any) {
-    ElMessage.error(`List tunnels failed: ${e.message}`)
+    ElMessage.error(`List tunnels failed: ${e?.message || e}`)
   } finally {
     loadingTunnels.value = false
   }
@@ -689,7 +689,7 @@ async function toggleTunnel() {
     if (action === 'start') await startService('cloudflare')
     else await stopService('cloudflare')
   } catch (e: any) {
-    ElMessage.error(`${serviceRunning.value ? 'Stop' : 'Start'} failed: ${e.message}`)
+    ElMessage.error(`${serviceRunning.value ? 'Stop' : 'Start'} failed: ${e?.message || e}`)
   } finally {
     toggling.value = false
   }
@@ -713,7 +713,7 @@ async function loadIngress() {
       .filter((r: any) => r.hostname) // strip catch-all 404 rule
       .map((r: any) => ({ hostname: r.hostname, service: r.service }))
   } catch (e: any) {
-    ElMessage.error(`Load ingress failed: ${e.message}`)
+    ElMessage.error(`Load ingress failed: ${e?.message || e}`)
   } finally {
     loadingTunnelConfig.value = false
   }
@@ -751,7 +751,7 @@ async function applyIngress() {
     await updateCloudflareTunnelIngress(config.tunnelId, rules)
     ElMessage.success(`Applied ${rules.length} ingress rule${rules.length === 1 ? '' : 's'} to tunnel`)
   } catch (e: any) {
-    ElMessage.error(`Apply failed: ${e.message}`)
+    ElMessage.error(`Apply failed: ${e?.message || e}`)
   } finally {
     applyingIngress.value = false
   }
@@ -780,7 +780,7 @@ async function loadDns() {
     const res = await fetchCloudflareDns(selectedDnsZoneId.value)
     dnsRecords.value = res?.result ?? []
   } catch (e: any) {
-    ElMessage.error(`Load DNS failed: ${e.message}`)
+    ElMessage.error(`Load DNS failed: ${e?.message || e}`)
   } finally {
     loadingDns.value = false
   }
@@ -805,7 +805,7 @@ async function createDnsRecord() {
     newDns.content = ''
     await loadDns()
   } catch (e: any) {
-    ElMessage.error(`Create failed: ${e.message}`)
+    ElMessage.error(`Create failed: ${e?.message || e}`)
   } finally {
     creatingDns.value = false
   }

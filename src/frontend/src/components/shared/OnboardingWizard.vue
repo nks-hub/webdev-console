@@ -154,7 +154,7 @@ async function doInstall(app: string) {
     ElMessage.success(`${app} ${version} installed`)
     await refreshState()
   } catch (e: any) {
-    ElMessage.error(`${app}: ${e.message}`)
+    ElMessage.error(`${app}: ${e?.message || e}`)
   } finally {
     installing.value.delete(app)
   }
@@ -183,7 +183,7 @@ async function finish() {
     await completeOnboarding()
     visible.value = false
   } catch (e: any) {
-    ElMessage.error(`Failed to complete: ${e.message}`)
+    ElMessage.error(`Failed to complete: ${e?.message || e}`)
   }
 }
 

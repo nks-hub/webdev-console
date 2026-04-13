@@ -292,7 +292,7 @@ async function executeQuery() {
     }
   } catch (e: any) {
     queryTime.value = Date.now() - start
-    queryResult.value = `Error: ${e.message}`
+    queryResult.value = `Error: ${e?.message || e}`
   } finally {
     queryRunning.value = false
   }

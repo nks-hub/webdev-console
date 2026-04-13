@@ -125,7 +125,7 @@ onMounted(async () => {
     try {
       await pluginsStore.loadAll()
     } catch (e: any) {
-      loadError.value = e.message || 'Failed to load plugins'
+      loadError.value = e?.message || String(e) || 'Failed to load plugins'
     } finally {
       loading.value = false
     }

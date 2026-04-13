@@ -144,7 +144,7 @@ async function loadVersions() {
       loadError.value = `Failed to load PHP versions: HTTP ${r.status}`
     }
   } catch (e: any) {
-    loadError.value = `Cannot connect to daemon: ${e.message}`
+    loadError.value = `Cannot connect to daemon: ${e?.message || e}`
   } finally { loading.value = false }
 }
 
@@ -223,7 +223,7 @@ async function toggleExtension(name: string, enabled: boolean) {
     // Reload config after a brief pause so the ini content matches the new state.
     setTimeout(() => { void loadConfig(selectedVersion.value) }, 400)
   } catch (e: any) {
-    ElMessage.error(`Toggle failed: ${e.message}`)
+    ElMessage.error(`Toggle failed: ${e?.message || e}`)
   } finally {
     togglingExt.value = ''
   }
