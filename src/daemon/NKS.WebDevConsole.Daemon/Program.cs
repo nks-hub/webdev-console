@@ -1451,13 +1451,23 @@ app.MapPost("/api/sites/{domain}/detect-framework", async (string domain, SiteMa
 {
     var site = sm.Get(domain);
     if (site is null) return Results.NotFound();
-    var framework = sm.DetectFramework(site.DocumentRoot);
-    if (framework is not null && framework != site.Framework)
+    try
     {
-        site.Framework = framework;
-        await sm.UpdateAsync(site);
+        // DetectFramework reads files from documentRoot — can throw on
+        // missing dir, permission denied, or path traversal in domain.
+        // UpdateAsync writes the TOML config — can throw on disk full.
+        var framework = sm.DetectFramework(site.DocumentRoot);
+        if (framework is not null && framework != site.Framework)
+        {
+            site.Framework = framework;
+            await sm.UpdateAsync(site);
+        }
+        return Results.Ok(new { domain, framework });
     }
-    return Results.Ok(new { domain, framework });
+    catch (Exception ex)
+    {
+        return Results.Problem($"Detect framework failed: {ex.Message}");
+    }
 });
 
 // Filesystem browse — backs the FolderBrowser dialog in the site-edit UI
@@ -2122,24 +2132,42 @@ app.MapPost("/api/php/{version}/extensions/{name}", async (
 // Version validation (checks if a version string is available for a service)
 app.MapPost("/api/services/{id}/validate-version", async (string id, HttpContext ctx) =>
 {
-    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    Dictionary<string, string>? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
     var version = body?.GetValueOrDefault("version") ?? "";
-    // For PHP: check if the version exists in detected installations
+    // For PHP: check if the version exists in detected installations.
+    // Reflection wraps target exceptions, so catch and unwrap to surface
+    // the real cause instead of a 500 stack trace through auth middleware.
     if (id.Contains("php", StringComparison.OrdinalIgnoreCase))
     {
-        var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
-        if (phpPlugin != null)
+        try
         {
-            var method = phpPlugin.Instance.GetType().GetMethod("GetInstalledVersions");
-            if (method?.Invoke(phpPlugin.Instance, null) is System.Collections.IEnumerable versions)
+            var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
+            if (phpPlugin != null)
             {
-                foreach (var v in versions)
+                var method = phpPlugin.Instance.GetType().GetMethod("GetInstalledVersions");
+                if (method?.Invoke(phpPlugin.Instance, null) is System.Collections.IEnumerable versions)
                 {
-                    var vProp = v.GetType().GetProperty("Version");
-                    if (vProp?.GetValue(v)?.ToString()?.StartsWith(version) == true)
-                        return Results.Ok(new { valid = true, version = vProp.GetValue(v)?.ToString() });
+                    foreach (var v in versions)
+                    {
+                        var vProp = v.GetType().GetProperty("Version");
+                        if (vProp?.GetValue(v)?.ToString()?.StartsWith(version) == true)
+                            return Results.Ok(new { valid = true, version = vProp.GetValue(v)?.ToString() });
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                $"Failed to enumerate PHP versions: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
     return Results.Ok(new { valid = !string.IsNullOrEmpty(version), version });
