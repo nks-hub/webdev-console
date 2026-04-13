@@ -1024,13 +1024,20 @@ async function pushToCloud() {
       headers: pushHeaders,
       body: JSON.stringify({ device_id: deviceId.value, payload }),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) {
+      // Surface catalog-api's error body so users see "device_id must be
+      // 3–64 chars…" etc instead of a bare HTTP status, which is useless
+      // when debugging sync failures against a remote catalog.
+      const text = await r.text().catch(() => r.statusText)
+      throw new Error(text || `HTTP ${r.status}`)
+    }
     lastSyncTime.value = new Date().toLocaleString()
     syncStatus.value = { ok: true, message: 'Pushed successfully' }
     ElMessage.success('Configuration pushed to cloud')
   } catch (e: any) {
-    syncStatus.value = { ok: false, message: `Push failed: ${e.message}` }
-    ElMessage.error(`Push failed: ${e.message}`)
+    const msg = e?.message || String(e)
+    syncStatus.value = { ok: false, message: `Push failed: ${msg}` }
+    ElMessage.error(`Push failed: ${msg}`)
   } finally {
     syncing.value = false
   }
@@ -1077,7 +1084,8 @@ async function pullFromCloud() {
         ElMessage.info('No cloud snapshot found — push first')
         return
       }
-      throw new Error(`HTTP ${r.status}`)
+      const text = await r.text().catch(() => r.statusText)
+      throw new Error(text || `HTTP ${r.status}`)
     }
     const data = await r.json()
     const payload = data.payload
@@ -1165,8 +1173,9 @@ async function pullFromCloud() {
     ElMessage.success('Configuration synced from cloud')
     await loadSettings()
   } catch (e: any) {
-    syncStatus.value = { ok: false, message: `Pull failed: ${e.message}` }
-    ElMessage.error(`Pull failed: ${e.message}`)
+    const msg = e?.message || String(e)
+    syncStatus.value = { ok: false, message: `Pull failed: ${msg}` }
+    ElMessage.error(`Pull failed: ${msg}`)
   } finally {
     pulling.value = false
   }
@@ -1178,7 +1187,10 @@ async function checkCloudExists() {
   try {
     const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
     const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}/exists`)
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) {
+      const text = await r.text().catch(() => r.statusText)
+      throw new Error(text || `HTTP ${r.status}`)
+    }
     const data = await r.json()
     syncStatus.value = {
       ok: data.has_config,
@@ -1187,7 +1199,7 @@ async function checkCloudExists() {
         : 'No cloud snapshot for this device',
     }
   } catch (e: any) {
-    syncStatus.value = { ok: false, message: `Check failed: ${e.message}` }
+    syncStatus.value = { ok: false, message: `Check failed: ${e?.message || e}` }
   } finally {
     checkingCloud.value = false
   }
