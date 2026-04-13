@@ -1170,13 +1170,21 @@ app.MapGet("/api/sites/{domain}/metrics/history", (string domain, int? minutes, 
 
         // Compute per-row delta from the previous sample. First row gets
         // delta=0 (no baseline) — caller's chart should skip / render flat.
+        // CRITICAL: DateTime.TryParse return value MUST be checked; on parse
+        // failure `t` is `default(DateTime)` (year 0001) and subsequent
+        // iterations would compute insane negative deltas. Skip the sample
+        // entirely on parse failure — bad timestamps in the history table
+        // mean the whole window is suspect.
         var samples = new List<object>();
         long? prevCount = null;
         DateTime? prevTime = null;
         foreach (var r in rows)
         {
-            DateTime.TryParse(r.sampled_at, null,
-                System.Globalization.DateTimeStyles.RoundtripKind, out var t);
+            if (!DateTime.TryParse(r.sampled_at, null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var t))
+            {
+                continue;
+            }
             double requestsPerMin = 0;
             if (prevCount.HasValue && prevTime.HasValue)
             {
