@@ -3216,23 +3216,59 @@ syncPushCmd.SetAction(async (parseResult, ct) =>
         return;
     }
 
+    // Client-side device_id validation — mirrors catalog-api's
+    // _normalize_device_id regex. Fails fast with a clear message
+    // instead of bubbling a 400 from the server.
+    if (!System.Text.RegularExpressions.Regex.IsMatch(
+            deviceId, @"^[a-z0-9][a-z0-9-]{2,63}$"))
+    {
+        AnsiConsole.MarkupLine(
+            $"[red]Invalid sync.deviceId:[/] {Markup.Escape(deviceId)} — must be 3-64 chars, lowercase alphanumeric + dashes.");
+        Environment.Exit(1);
+        return;
+    }
+
     // Resolve catalog URL
     var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
     if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
+
+    // Filter settings + sites before upload so local-only fields (paths,
+    // ports, documentRoot) don't leak to the shared catalog. Mirrors the
+    // frontend's isSettingSyncable / SITE_SYNC_FIELDS classification
+    // from Settings.vue so CLI and UI pushes behave identically.
+    var filteredSettings = FilterSyncSettings(settings);
+    var filteredSites = FilterSyncSites(sites);
 
     // Send JWT if the user has logged in via Settings → Account, so the
     // catalog-api's optional_account dependency auto-links the device to
     // the user's account. Without this header pushes are anonymous.
     var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
-    var payload = new { exportedAt = DateTime.UtcNow.ToString("o"), settings, sites };
+    var payload = new
+    {
+        exportedAt = DateTime.UtcNow.ToString("o"),
+        settings = filteredSettings,
+        sites = filteredSites,
+    };
     var body = JsonContent.Create(new { device_id = deviceId, payload });
     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     if (!string.IsNullOrEmpty(jwt))
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
     var resp = await http.PostAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config", body);
-    resp.EnsureSuccessStatusCode();
+    if (!resp.IsSuccessStatusCode)
+    {
+        // Surface catalog-api's { detail: "..." } body so users see the
+        // real reason (device_id format, duplicate email, auth failure)
+        // instead of a bare "An error occurred" .NET exception.
+        var errBody = await resp.Content.ReadAsStringAsync();
+        var detail = TryExtractErrorDetail(errBody);
+        AnsiConsole.MarkupLine(
+            $"[red]Sync push failed ({(int)resp.StatusCode}):[/] {Markup.Escape(detail)}");
+        Environment.Exit(1);
+        return;
+    }
     if (json) { PrintJson(await resp.Content.ReadAsStringAsync()); return; }
-    AnsiConsole.MarkupLine($"[green]Pushed[/] settings + {sites.GetArrayLength()} sites to {Markup.Escape(catalogUrl)}");
+    AnsiConsole.MarkupLine(
+        $"[green]Pushed[/] {filteredSites.Count} sites + {filteredSettings.Count} sync-classified settings to {Markup.Escape(catalogUrl)}");
 });
 syncCommand.Add(syncPushCmd);
 
@@ -3350,3 +3386,103 @@ static long? GetLong(JsonElement e, string prop) =>
 
 static double? GetDouble(JsonElement e, string prop) =>
     e.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : null;
+
+static Dictionary<string, object?> FilterSyncSettings(JsonElement settings)
+    => SyncClassification.FilterSettings(settings);
+
+static List<Dictionary<string, object?>> FilterSyncSites(JsonElement sites)
+    => SyncClassification.FilterSites(sites);
+
+static string TryExtractErrorDetail(string body)
+    => SyncClassification.ExtractErrorDetail(body);
+
+// Helper class holding the static classification rules. Top-level Program.cs
+// can't declare `static readonly` fields directly (C# top-level syntax rule),
+// so we keep the state in a nested class and expose thin wrappers above for
+// existing call sites.
+internal static class SyncClassification
+{
+    // Mirror of Settings.vue SYNC_SETTINGS_PREFIXES / LOCAL_SETTINGS_PREFIXES
+    // so CLI and UI pushes filter identically.
+    private static readonly string[] SyncPrefixes = new[]
+    {
+        "general.", "telemetry.", "backup.scheduleHours", "daemon.catalogUrl", "sync.",
+    };
+    private static readonly string[] LocalPrefixes = new[]
+    {
+        "paths.", "ports.", "backup.dir",
+    };
+    private static readonly HashSet<string> SiteSyncFields =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "domain", "phpVersion", "sslEnabled", "aliases", "framework",
+            "environment", "cloudflare", "nodeUpstreamPort", "nodeStartCommand",
+        };
+
+    public static bool IsSyncable(string key)
+    {
+        foreach (var p in SyncPrefixes)
+            if (key.StartsWith(p, StringComparison.Ordinal)) return true;
+        foreach (var p in LocalPrefixes)
+            if (key.StartsWith(p, StringComparison.Ordinal)) return false;
+        return true; // unknown keys default to sync, same as UI
+    }
+
+    public static Dictionary<string, object?> FilterSettings(JsonElement settings)
+    {
+        var result = new Dictionary<string, object?>();
+        if (settings.ValueKind != JsonValueKind.Object) return result;
+        foreach (var prop in settings.EnumerateObject())
+        {
+            if (!IsSyncable(prop.Name)) continue;
+            result[prop.Name] = JsonElementToObject(prop.Value);
+        }
+        return result;
+    }
+
+    public static List<Dictionary<string, object?>> FilterSites(JsonElement sites)
+    {
+        var result = new List<Dictionary<string, object?>>();
+        if (sites.ValueKind != JsonValueKind.Array) return result;
+        foreach (var site in sites.EnumerateArray())
+        {
+            if (site.ValueKind != JsonValueKind.Object) continue;
+            var filtered = new Dictionary<string, object?>();
+            foreach (var prop in site.EnumerateObject())
+            {
+                if (!SiteSyncFields.Contains(prop.Name)) continue;
+                filtered[prop.Name] = JsonElementToObject(prop.Value);
+            }
+            result.Add(filtered);
+        }
+        return result;
+    }
+
+    private static object? JsonElementToObject(JsonElement e) => e.ValueKind switch
+    {
+        JsonValueKind.String => e.GetString(),
+        JsonValueKind.Number => e.TryGetInt64(out var l) ? (object)l : e.GetDouble(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Null => null,
+        JsonValueKind.Array => e.EnumerateArray().Select(JsonElementToObject).ToArray(),
+        JsonValueKind.Object => JsonSerializer.Deserialize<Dictionary<string, object?>>(e.GetRawText()),
+        _ => e.ToString(),
+    };
+
+    // catalog-api returns errors as { "detail": "..." } per FastAPI convention.
+    // Fall back to raw body (truncated) if JSON parse fails so we still show
+    // something useful (e.g. HTML error pages from a reverse proxy).
+    public static string ExtractErrorDetail(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return "(empty response)";
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("detail", out var d) && d.ValueKind == JsonValueKind.String)
+                return d.GetString() ?? body;
+        }
+        catch { /* not JSON, fall through */ }
+        return body.Length > 500 ? body[..500] + "…" : body;
+    }
+}
