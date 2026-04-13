@@ -2659,6 +2659,38 @@ static bool IsValidDatabaseName(string? name)
     return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z0-9_]+$");
 }
 
+// Build the base argv list for invoking mysql/mysqldump CLI. Reads the
+// daemon-managed root password from MySqlRootPassword (DPAPI on Windows,
+// 0600 plaintext on Unix) and injects it via -p<password> WITHOUT a space
+// — the no-space form is the only way mysql.exe accepts the password
+// without prompting interactively. Returns a List<string> so callers use
+// the IEnumerable<string> overload of CliWrap.WithArguments() and avoid
+// shell-string parsing ambiguity entirely.
+//
+// BUG context: Before this helper, every mysql endpoint hard-coded
+// `-h 127.0.0.1 -P 3306 -u root` with NO password, which broke as soon
+// as the daemon's MySQL plugin set a root password via MySqlRootPassword
+// .EnsureExists() during initial mysqld --initialize-insecure flow. After
+// that point all GUI database operations would fail with "access denied
+// for user root@localhost" and the user had no way to recover via UI.
+static List<string> MysqlBaseArgs()
+{
+    var args = new List<string>
+    {
+        "-h", "127.0.0.1",
+        "-P", "3306",
+        "-u", "root",
+    };
+    var password = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
+    if (!string.IsNullOrEmpty(password))
+    {
+        // mysql.exe requires -p<pass> without a space — `-p <pass>` is parsed
+        // as an empty -p (interactive prompt) followed by a positional arg.
+        args.Add($"-p{password}");
+    }
+    return args;
+}
+
 // Databases — list MySQL databases via mysql CLI
 app.MapGet("/api/databases", async (BinaryManager bm) =>
 {
@@ -2672,8 +2704,12 @@ app.MapGet("/api/databases", async (BinaryManager bm) =>
 
     try
     {
+        var listArgs = MysqlBaseArgs();
+        listArgs.Add("-N");
+        listArgs.Add("-e");
+        listArgs.Add("SHOW DATABASES");
         var result = await CliWrap.Cli.Wrap(mysqlCli)
-            .WithArguments("-h 127.0.0.1 -P 3306 -u root -N -e \"SHOW DATABASES\"")
+            .WithArguments(listArgs)
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
 
@@ -2707,14 +2743,23 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm) =>
         return Results.BadRequest(new { error = "MySQL not installed" });
 
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var result = await CliWrap.Cli.Wrap(mysqlCli)
-        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -e \"CREATE DATABASE IF NOT EXISTS `{dbName}`\"")
-        .WithValidation(CliWrap.CommandResultValidation.None)
-        .ExecuteBufferedAsync();
-
-    return result.ExitCode == 0
-        ? Results.Created($"/api/databases/{dbName}", new { name = dbName })
-        : Results.BadRequest(new { error = result.StandardError.Trim() });
+    var args = MysqlBaseArgs();
+    args.Add("-e");
+    args.Add($"CREATE DATABASE IF NOT EXISTS `{dbName}`");
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+        return result.ExitCode == 0
+            ? Results.Created($"/api/databases/{dbName}", new { name = dbName })
+            : Results.BadRequest(new { error = result.StandardError.Trim() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+    }
 });
 
 // Drop database
@@ -2728,14 +2773,23 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm) =>
         return Results.BadRequest(new { error = "MySQL not installed" });
 
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var result = await CliWrap.Cli.Wrap(mysqlCli)
-        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -e \"DROP DATABASE IF EXISTS `{name}`\"")
-        .WithValidation(CliWrap.CommandResultValidation.None)
-        .ExecuteBufferedAsync();
-
-    return result.ExitCode == 0
-        ? Results.NoContent()
-        : Results.BadRequest(new { error = result.StandardError.Trim() });
+    var args = MysqlBaseArgs();
+    args.Add("-e");
+    args.Add($"DROP DATABASE IF EXISTS `{name}`");
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+        return result.ExitCode == 0
+            ? Results.NoContent()
+            : Results.BadRequest(new { error = result.StandardError.Trim() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+    }
 });
 
 // Database tables
@@ -2747,10 +2801,22 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm)
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var result = await CliWrap.Cli.Wrap(mysqlCli)
-        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -N -e \"SELECT TABLE_NAME, TABLE_ROWS, ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}' ORDER BY TABLE_NAME\"")
-        .WithValidation(CliWrap.CommandResultValidation.None)
-        .ExecuteBufferedAsync();
+    var args = MysqlBaseArgs();
+    args.Add("-N");
+    args.Add("-e");
+    args.Add($"SELECT TABLE_NAME, TABLE_ROWS, ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}' ORDER BY TABLE_NAME");
+    CliWrap.Buffered.BufferedCommandResult result;
+    try
+    {
+        result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+    }
     if (result.ExitCode != 0)
         return Results.BadRequest(new { error = result.StandardError.Trim() });
     var tables = result.StandardOutput.Trim()
@@ -2772,13 +2838,24 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm) =
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var result = await CliWrap.Cli.Wrap(mysqlCli)
-        .WithArguments($"-h 127.0.0.1 -P 3306 -u root -N -e \"SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}'\"")
-        .WithValidation(CliWrap.CommandResultValidation.None)
-        .ExecuteBufferedAsync();
-    if (result.ExitCode != 0)
-        return Results.BadRequest(new { error = result.StandardError.Trim() });
-    return Results.Ok(new { size = result.StandardOutput.Trim() + " MB" });
+    var args = MysqlBaseArgs();
+    args.Add("-N");
+    args.Add("-e");
+    args.Add($"SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}'");
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+        if (result.ExitCode != 0)
+            return Results.BadRequest(new { error = result.StandardError.Trim() });
+        return Results.Ok(new { size = result.StandardOutput.Trim() + " MB" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+    }
 });
 
 // Database query execution
@@ -2794,10 +2871,22 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var result = await CliWrap.Cli.Wrap(mysqlCli)
-        .WithArguments($"-h 127.0.0.1 -P 3306 -u root {name} -e \"{sql.Replace("\"", "\\\"")}\"")
-        .WithValidation(CliWrap.CommandResultValidation.None)
-        .ExecuteBufferedAsync();
+    var args = MysqlBaseArgs();
+    args.Add(name);
+    args.Add("-e");
+    args.Add(sql);
+    CliWrap.Buffered.BufferedCommandResult result;
+    try
+    {
+        result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+    }
     if (result.ExitCode != 0)
         return Results.BadRequest(new { error = result.StandardError.Trim() });
     // Parse tab-separated output to JSON
@@ -2827,13 +2916,22 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm)
     var mysqldump = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqldump.exe");
     if (!File.Exists(mysqldump))
         return Results.BadRequest(new { error = "mysqldump.exe not found" });
-    var result = await CliWrap.Cli.Wrap(mysqldump)
-        .WithArguments($"-h 127.0.0.1 -P 3306 -u root {name}")
-        .WithValidation(CliWrap.CommandResultValidation.None)
-        .ExecuteBufferedAsync();
-    if (result.ExitCode != 0)
-        return Results.BadRequest(new { error = result.StandardError.Trim() });
-    return Results.Text(result.StandardOutput, "application/sql");
+    var args = MysqlBaseArgs();
+    args.Add(name);
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqldump)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+        if (result.ExitCode != 0)
+            return Results.BadRequest(new { error = result.StandardError.Trim() });
+        return Results.Text(result.StandardOutput, "application/sql");
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysqldump: {ex.Message}" });
+    }
 });
 
 // Database import (mysql < file)
@@ -2863,10 +2961,12 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
 
     var tmpFile = Path.GetTempFileName();
     await File.WriteAllTextAsync(tmpFile, sql);
+    var args = MysqlBaseArgs();
+    args.Add(name);
     try
     {
         var result = await CliWrap.Cli.Wrap(mysqlCli)
-            .WithArguments($"-h 127.0.0.1 -P 3306 -u root {name}")
+            .WithArguments(args)
             .WithStandardInputPipe(CliWrap.PipeSource.FromFile(tmpFile))
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
@@ -2874,9 +2974,13 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
             ? Results.Ok(new { ok = true, message = "Import completed" })
             : Results.BadRequest(new { error = result.StandardError.Trim() });
     }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+    }
     finally
     {
-        File.Delete(tmpFile);
+        try { File.Delete(tmpFile); } catch { /* best-effort */ }
     }
 });
 
