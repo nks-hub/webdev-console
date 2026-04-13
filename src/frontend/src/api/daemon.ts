@@ -352,11 +352,23 @@ export interface DeviceInfo {
   is_current: boolean
 }
 
+// Shared helper: extract { detail: "..." } or raw text from a failed
+// catalog-api response so thrown errors surface the actual cause (auth
+// expired, device not found, validation error) instead of a bare status.
+async function catalogErrorMessage(r: Response): Promise<string> {
+  const body = await r.json().catch(() => null)
+  if (body && typeof body === 'object' && 'detail' in body && body.detail) {
+    return String(body.detail)
+  }
+  const text = await r.text().catch(() => '')
+  return text || `HTTP ${r.status}`
+}
+
 export async function fetchDevices(catalogUrl: string, token: string): Promise<DeviceInfo[]> {
   const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices`, {
     headers: jwtHeaders(token),
   })
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  if (!r.ok) throw new Error(await catalogErrorMessage(r))
   return r.json()
 }
 
@@ -368,7 +380,7 @@ export async function pushConfigToDevice(
     headers: jwtHeaders(token),
     body: JSON.stringify({ source_device_id: sourceDeviceId }),
   })
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  if (!r.ok) throw new Error(await catalogErrorMessage(r))
   return r.json()
 }
 
@@ -379,7 +391,7 @@ export async function deleteDevice(
     method: 'DELETE',
     headers: jwtHeaders(token),
   })
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  if (!r.ok) throw new Error(await catalogErrorMessage(r))
   return r.json()
 }
 

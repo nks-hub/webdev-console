@@ -855,11 +855,17 @@ async function saveDeviceName(row: CatalogDeviceInfo) {
       method: 'PUT',
       headers: { Authorization: `Bearer ${accountToken.value}` },
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) {
+      // Surface catalog-api's detail body so auth/validation failures
+      // show "Not authenticated" / "Device not found" etc instead of
+      // a bare HTTP status that gives zero hint about the fix.
+      const body = await r.json().catch(() => null) as { detail?: string } | null
+      throw new Error(body?.detail || `HTTP ${r.status}`)
+    }
     row.name = newName
     ElMessage.success('Device renamed')
   } catch (e: any) {
-    ElMessage.error(`Rename failed: ${e.message}`)
+    ElMessage.error(`Rename failed: ${e?.message || e}`)
   }
 }
 
@@ -880,7 +886,7 @@ async function doLogin() {
     ElMessage.success(`Signed in as ${result.email}`)
     void loadDevicesAccount()
   } catch (e: any) {
-    authError.value = e.message
+    authError.value = e?.message || String(e)
   } finally {
     authLoading.value = false
   }
@@ -898,7 +904,7 @@ async function doRegister() {
     authPassword.value = ''
     ElMessage.success(`Account created: ${result.email}`)
   } catch (e: any) {
-    authError.value = e.message
+    authError.value = e?.message || String(e)
   } finally {
     authLoading.value = false
   }
@@ -919,8 +925,14 @@ async function loadDevicesAccount() {
   try {
     accountDevices.value = await fetchDevices(getCatalogUrl(), accountToken.value)
   } catch (e: any) {
-    ElMessage.error(`Load devices failed: ${e.message}`)
-    if (e.message.includes('401')) doLogout()
+    const msg = e?.message || String(e)
+    ElMessage.error(`Load devices failed: ${msg}`)
+    // Auto-logout on auth failure — use case-insensitive match and
+    // check for common catalog-api auth wording so a 403 / "Not
+    // authenticated" / "token expired" message all trigger cleanup.
+    if (/401|403|unauthori[sz]ed|not authenticated|token/i.test(msg)) {
+      doLogout()
+    }
   } finally {
     devicesLoading.value = false
   }
@@ -933,7 +945,7 @@ async function pushMyConfigTo(targetDeviceId: string) {
     await pushConfigToDevice(getCatalogUrl(), accountToken.value, targetDeviceId, deviceId.value)
     ElMessage.success(`Config pushed to device ${targetDeviceId.slice(0, 8)}…`)
   } catch (e: any) {
-    ElMessage.error(`Push failed: ${e.message}`)
+    ElMessage.error(`Push failed: ${e?.message || e}`)
   } finally {
     pushingTo.value = null
   }
