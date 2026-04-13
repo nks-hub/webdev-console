@@ -982,14 +982,37 @@ async function buildSyncPayload(): Promise<Record<string, any>> {
   // Collect settings + sites + system info so the catalog-api can
   // populate the device fleet table with OS/arch/site count without
   // the user having to enter them manually.
+  //
+  // CRITICAL: both `settings` and `sites` are filtered through the same
+  // sync/local classification the pull side uses. Without this filter,
+  // local-only fields (absolute paths like C:\work\htdocs\project, ports
+  // like 8081, documentRoot) would get uploaded to the shared catalog,
+  // leaking machine-specific paths and polluting the stored snapshot
+  // with values that the pull side would refuse to apply anyway.
   const [settingsRes, sitesRes, systemRes] = await Promise.all([
     fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() }),
     fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() }),
     fetch(`${daemonBase()}/api/system`, { headers: authHeaders() }),
   ])
-  const settings = settingsRes.ok ? await settingsRes.json() : {}
-  const sites = sitesRes.ok ? await sitesRes.json() : []
+  const rawSettings = settingsRes.ok ? await settingsRes.json() as Record<string, any> : {}
+  const rawSites = sitesRes.ok ? await sitesRes.json() as any[] : []
   const system = systemRes.ok ? await systemRes.json() : null
+
+  // Filter settings: drop local-only keys (paths, ports, backup.dir)
+  const settings: Record<string, any> = {}
+  for (const [key, value] of Object.entries(rawSettings)) {
+    if (isSettingSyncable(key)) settings[key] = value
+  }
+
+  // Filter sites: keep only SITE_SYNC_FIELDS per site (plus domain as the key)
+  const sites = rawSites.map(site => {
+    const filtered: Record<string, any> = { domain: site.domain }
+    for (const field of SITE_SYNC_FIELDS) {
+      if (field in site) filtered[field] = site[field]
+    }
+    return filtered
+  })
+
   return {
     exportedAt: new Date().toISOString(),
     version: appVersion,
