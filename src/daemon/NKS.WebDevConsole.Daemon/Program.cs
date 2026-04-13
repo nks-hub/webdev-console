@@ -1606,33 +1606,57 @@ app.MapPut("/api/cloudflare/config", async (HttpContext ctx, IServiceProvider sp
 
     // Accept a loose JSON body and copy known properties onto the live
     // config instance. Fields omitted from the body stay untouched.
-    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
-    var root = doc.RootElement;
-    var t = cfg.GetType();
-
-    void Apply(string jsonKey, string propName)
+    System.Text.Json.JsonDocument doc;
+    try
     {
-        if (!root.TryGetProperty(jsonKey, out var el)) return;
-        if (el.ValueKind != System.Text.Json.JsonValueKind.String &&
-            el.ValueKind != System.Text.Json.JsonValueKind.Null) return;
-        var prop = t.GetProperty(propName);
-        prop?.SetValue(cfg, el.ValueKind == System.Text.Json.JsonValueKind.Null ? null : el.GetString());
+        doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        // Malformed JSON in the body — return 400 with the parser's
+        // line/column hint instead of letting the auth middleware
+        // surface a generic 500 stack trace from the unhandled throw.
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
     }
 
-    Apply("cloudflaredPath", "CloudflaredPath");
-    Apply("tunnelToken", "TunnelToken");
-    Apply("tunnelName", "TunnelName");
-    Apply("tunnelId", "TunnelId");
-    Apply("apiToken", "ApiToken");
-    Apply("accountId", "AccountId");
-    Apply("defaultZoneId", "DefaultZoneId");
-    Apply("subdomainTemplate", "SubdomainTemplate");
+    using (doc)
+    {
+        var root = doc.RootElement;
+        var t = cfg.GetType();
 
-    var saveMethod = t.GetMethod("Save");
-    saveMethod?.Invoke(cfg, null);
+        void Apply(string jsonKey, string propName)
+        {
+            if (!root.TryGetProperty(jsonKey, out var el)) return;
+            if (el.ValueKind != System.Text.Json.JsonValueKind.String &&
+                el.ValueKind != System.Text.Json.JsonValueKind.Null) return;
+            var prop = t.GetProperty(propName);
+            prop?.SetValue(cfg, el.ValueKind == System.Text.Json.JsonValueKind.Null ? null : el.GetString());
+        }
 
-    var redacted = t.GetMethod("Redacted")?.Invoke(cfg, null);
-    return Results.Ok(redacted);
+        Apply("cloudflaredPath", "CloudflaredPath");
+        Apply("tunnelToken", "TunnelToken");
+        Apply("tunnelName", "TunnelName");
+        Apply("tunnelId", "TunnelId");
+        Apply("apiToken", "ApiToken");
+        Apply("accountId", "AccountId");
+        Apply("defaultZoneId", "DefaultZoneId");
+        Apply("subdomainTemplate", "SubdomainTemplate");
+
+        // Save can fail with IOException (disk full, perms) — surface that
+        // as a 500 with the actual cause instead of a stack trace.
+        try
+        {
+            var saveMethod = t.GetMethod("Save");
+            saveMethod?.Invoke(cfg, null);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem($"Failed to persist Cloudflare config: {ex.InnerException?.Message ?? ex.Message}");
+        }
+
+        var redacted = t.GetMethod("Redacted")?.Invoke(cfg, null);
+        return Results.Ok(redacted);
+    }
 });
 
 app.MapGet("/api/cloudflare/verify", (IServiceProvider sp) =>
