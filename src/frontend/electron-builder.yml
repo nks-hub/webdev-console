@@ -8,7 +8,6 @@ directories:
 
 files:
   - dist-electron/**/*
-  - out/**/*
   - "!node_modules/**/*"
 
 extraResources:
