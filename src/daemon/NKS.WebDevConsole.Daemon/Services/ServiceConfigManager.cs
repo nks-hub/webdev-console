@@ -56,9 +56,65 @@ public sealed class ServiceConfigManager
 
         if (serviceId.Equals("mysql", StringComparison.OrdinalIgnoreCase))
         {
-            var myIni = Path.Combine(_wdcRoot, "data", "mysql", "my.ini");
-            await AddIfExistsAsync(files, "my.ini", myIni);
+            // WDC-provisioned MySQL keeps its my.ini either under the data dir
+            // (when initialised with an explicit --defaults-file) or next to
+            // the binary (classic MySQL layout). Look at both so the editor
+            // always finds it, whichever flavour was installed.
+            var candidates = new List<string>
+            {
+                Path.Combine(_wdcRoot, "data", "mysql", "my.ini"),
+            };
+            var mysqlBinRoot = Path.Combine(_wdcRoot, "binaries", "mysql");
+            if (Directory.Exists(mysqlBinRoot))
+            {
+                foreach (var versionDir in Directory.GetDirectories(mysqlBinRoot)
+                             .OrderByDescending(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
+                {
+                    candidates.Add(Path.Combine(versionDir, "my.ini"));
+                    candidates.Add(Path.Combine(versionDir, "my.cnf"));
+                }
+            }
+            foreach (var candidate in candidates)
+                await AddIfExistsAsync(files, Path.GetFileName(candidate), candidate);
+
+            return files;
         }
+
+        if (serviceId.Equals("redis", StringComparison.OrdinalIgnoreCase))
+        {
+            var redisRoot = FindLatestVersionDir(Path.Combine(_wdcRoot, "binaries", "redis"));
+            if (redisRoot is null) return files;
+            foreach (var name in new[] { "redis.conf", "sentinel.conf" })
+                await AddIfExistsAsync(files, name, Path.Combine(redisRoot, name));
+            return files;
+        }
+
+        if (serviceId.Equals("caddy", StringComparison.OrdinalIgnoreCase))
+        {
+            // Caddy reads a Caddyfile at the daemon-managed location when the
+            // plugin is installed; falls back to one next to the binary.
+            var caddyfileCandidates = new List<string>
+            {
+                Path.Combine(_wdcRoot, "caddy", "Caddyfile"),
+            };
+            var caddyBinRoot = Path.Combine(_wdcRoot, "binaries", "caddy");
+            if (Directory.Exists(caddyBinRoot))
+            {
+                foreach (var versionDir in Directory.GetDirectories(caddyBinRoot)
+                             .OrderByDescending(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
+                {
+                    caddyfileCandidates.Add(Path.Combine(versionDir, "Caddyfile"));
+                }
+            }
+            foreach (var candidate in caddyfileCandidates)
+                await AddIfExistsAsync(files, Path.GetFileName(candidate), candidate);
+            return files;
+        }
+
+        // Mailpit, Node.js, Cloudflared: these services configure themselves
+        // via CLI args, per-site TOML, or environment variables — there is
+        // no single config file to edit. Return an empty list; the frontend
+        // shows a friendly "This service uses CLI-only configuration" hint.
 
         return files;
     }
@@ -160,9 +216,52 @@ public sealed class ServiceConfigManager
 
         if (serviceId.Equals("mysql", StringComparison.OrdinalIgnoreCase))
         {
-            var myIni = Path.Combine(_wdcRoot, "data", "mysql", "my.ini");
-            if (File.Exists(myIni))
-                yield return Path.GetFullPath(myIni);
+            var dataMyIni = Path.Combine(_wdcRoot, "data", "mysql", "my.ini");
+            if (File.Exists(dataMyIni))
+                yield return Path.GetFullPath(dataMyIni);
+            var mysqlBinRoot = Path.Combine(_wdcRoot, "binaries", "mysql");
+            if (Directory.Exists(mysqlBinRoot))
+            {
+                foreach (var versionDir in Directory.GetDirectories(mysqlBinRoot))
+                {
+                    foreach (var name in new[] { "my.ini", "my.cnf" })
+                    {
+                        var path = Path.Combine(versionDir, name);
+                        if (File.Exists(path)) yield return Path.GetFullPath(path);
+                    }
+                }
+            }
+            yield break;
+        }
+
+        if (serviceId.Equals("redis", StringComparison.OrdinalIgnoreCase))
+        {
+            var redisRoot = Path.Combine(_wdcRoot, "binaries", "redis");
+            if (!Directory.Exists(redisRoot)) yield break;
+            foreach (var versionDir in Directory.GetDirectories(redisRoot))
+            {
+                foreach (var name in new[] { "redis.conf", "sentinel.conf" })
+                {
+                    var path = Path.Combine(versionDir, name);
+                    if (File.Exists(path)) yield return Path.GetFullPath(path);
+                }
+            }
+            yield break;
+        }
+
+        if (serviceId.Equals("caddy", StringComparison.OrdinalIgnoreCase))
+        {
+            var managed = Path.Combine(_wdcRoot, "caddy", "Caddyfile");
+            if (File.Exists(managed)) yield return Path.GetFullPath(managed);
+            var caddyBinRoot = Path.Combine(_wdcRoot, "binaries", "caddy");
+            if (Directory.Exists(caddyBinRoot))
+            {
+                foreach (var versionDir in Directory.GetDirectories(caddyBinRoot))
+                {
+                    var path = Path.Combine(versionDir, "Caddyfile");
+                    if (File.Exists(path)) yield return Path.GetFullPath(path);
+                }
+            }
         }
     }
 
