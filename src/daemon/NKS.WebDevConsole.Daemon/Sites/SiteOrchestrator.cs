@@ -54,26 +54,11 @@ public sealed class SiteOrchestrator
 
         var modules = _sp.GetServices<IServiceModule>().ToList();
 
-        // 1. Apache — generate vhost file via reflection (cross-ALC boundary)
-        var apacheModule = modules.FirstOrDefault(m =>
-            m.ServiceId.Equals("apache", StringComparison.OrdinalIgnoreCase));
-        if (apacheModule is not null)
-        {
-            try
-            {
-                await InvokeAsync(apacheModule, "GenerateVhostAsync", new object[] { site, ct });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to generate vhost for {Domain}", site.Domain);
-            }
-        }
-        else
-        {
-            _logger.LogWarning("Apache module not registered — skipping vhost generation");
-        }
-
-        // 1b. SSL — generate certificate if sslEnabled
+        // 1. SSL — generate certificate FIRST so the Apache vhost generator
+        // can embed the cert/key paths in the rendered HTTPS VirtualHost block.
+        // Previously this step ran AFTER vhost generation, which meant the
+        // first apply always produced an HTTP-only vhost (cert didn't exist
+        // yet) and a second reapply was required to pick up the SSL block.
         if (site.SslEnabled)
         {
             try
@@ -107,7 +92,28 @@ public sealed class SiteOrchestrator
             }
         }
 
-        // 2. PHP — ensure module is running (it manages all installed versions internally)
+        // 2. Apache — generate vhost file via reflection (cross-ALC boundary).
+        // Runs AFTER SSL so the template can pick up the freshly-written
+        // cert/key paths and render the HTTPS VirtualHost block correctly.
+        var apacheModule = modules.FirstOrDefault(m =>
+            m.ServiceId.Equals("apache", StringComparison.OrdinalIgnoreCase));
+        if (apacheModule is not null)
+        {
+            try
+            {
+                await InvokeAsync(apacheModule, "GenerateVhostAsync", new object[] { site, ct });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate vhost for {Domain}", site.Domain);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Apache module not registered — skipping vhost generation");
+        }
+
+        // 3. PHP — ensure module is running (it manages all installed versions internally)
         var phpModule = modules.FirstOrDefault(m =>
             m.ServiceId.Equals("php", StringComparison.OrdinalIgnoreCase)
             || m.ServiceId.Equals("php-cgi", StringComparison.OrdinalIgnoreCase));
