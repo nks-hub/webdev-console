@@ -53,11 +53,21 @@ public sealed class MampMigrator
     /// create the <see cref="SiteConfig"/> entries.
     /// </summary>
     public IReadOnlyList<DiscoveredSite> Discover()
+        => DiscoverFromPaths(EnumerateProDatabases(), EnumerateMampRoots());
+
+    /// <summary>
+    /// Core discovery logic with explicit path lists — used directly by tests
+    /// to inject temp fixtures. The default <see cref="Discover"/> overload
+    /// enumerates platform-standard locations.
+    /// </summary>
+    internal IReadOnlyList<DiscoveredSite> DiscoverFromPaths(
+        IEnumerable<string> proDbPaths,
+        IEnumerable<string> mampRoots)
     {
         var found = new List<DiscoveredSite>();
 
         // 1. Preferred: MAMP PRO settings DB (has exact PHP versions + aliases)
-        foreach (var dbPath in EnumerateProDatabases())
+        foreach (var dbPath in proDbPaths)
         {
             try
             {
@@ -72,7 +82,7 @@ public sealed class MampMigrator
         }
 
         // 2. Fallback: Apache vhost files (classic MAMP + manually added vhosts)
-        foreach (var root in EnumerateMampRoots())
+        foreach (var root in mampRoots)
         {
             if (!Directory.Exists(root)) continue;
             _logger.LogInformation("Scanning MAMP vhost files under {Root}", root);

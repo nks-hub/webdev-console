@@ -35,4 +35,8 @@
     <EmbeddedResource Include="Migrations\*.sql" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="NKS.WebDevConsole.Daemon.Tests" />
+  </ItemGroup>
+
 </Project>
