@@ -10,6 +10,8 @@ bin/
 obj/
 publish/
 build/
+# Electron build resources (icons, tray images) must ship in git
+!src/frontend/build/
 
 # Go
 prototype/daemon/wdc-daemon
