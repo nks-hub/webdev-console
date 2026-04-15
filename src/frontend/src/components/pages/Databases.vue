@@ -39,15 +39,13 @@
         >
           <div class="db-card-header">
             <span class="db-card-name">{{ db }}</span>
-            <el-button
-              size="small"
-              type="danger"
-              text
-              @click.stop="confirmDrop(db)"
-              title="Drop database"
-            >
-              Drop
-            </el-button>
+            <!--
+              Drop button intentionally NOT on the list view — dropping a
+              database from a single accidental click (or from a grid that
+              might be scrolled to the wrong row) is too risky. The drop
+              action lives only inside the selected-database detail panel
+              behind an explicit text-input confirm dialog.
+            -->
           </div>
           <div class="db-card-meta" v-if="dbTables[db]">
             <span class="meta-item">{{ dbTables[db].length }} tables</span>
