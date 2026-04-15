@@ -7,6 +7,14 @@ import type { RegisterOptions } from '../index.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
+const AccessLogLimitSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(1000)
+  .default(100)
+  .describe('Max number of recent access log entries to return (1-1000)')
+
 export function registerSitesTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
     'wdc_list_sites',
@@ -48,6 +56,41 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
     },
     async ({ domain }) =>
       safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}`)),
+  )
+
+  server.registerTool(
+    'wdc_get_site_access_log',
+    {
+      title: 'Get recent site access log entries',
+      description:
+        'Tail the last N Apache access log entries for a site. Returns parsed ' +
+        'entries with timestamp, client IP, HTTP method + path, status code, ' +
+        'response size, referer, and user agent. Also returns the top 10 ' +
+        'client IPs by hit count within the window.\n\n' +
+        'Args:\n' +
+        '  domain: Local site domain.\n' +
+        '  limit: Number of most-recent entries to return (1-1000, default 100).\n\n' +
+        'Returns: { domain, count, topClients, entries } sorted oldest → newest.\n\n' +
+        'Use this for diagnosing traffic spikes, spotting scrapers, verifying ' +
+        'that a deployment is actually serving requests, or auditing who just ' +
+        'visited a specific site.',
+      inputSchema: {
+        domain: DomainSchema,
+        limit: AccessLogLimitSchema.optional(),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ domain, limit }) => {
+      const qs = new URLSearchParams()
+      if (limit !== undefined) qs.set('limit', String(limit))
+      const path = `/api/sites/${encodeURIComponent(domain)}/access-log${qs.toString() ? '?' + qs.toString() : ''}`
+      return safe(() => daemonClient.get(path))
+    },
   )
 
   server.registerTool(
