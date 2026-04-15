@@ -378,8 +378,10 @@ async function createWindow() {
     const qs = params.toString()
     win.loadURL(`${process.env.ELECTRON_RENDERER_URL}${qs ? '?' + qs : ''}`)
   } else {
-    // Production: load from dist, pass params via hash query
-    const indexPath = join(__dirname, '../renderer/index.html')
+    // Production: load the bundled renderer. Electron-vite writes the
+    // Vue SPA to `dist-electron/renderer/` (sibling of this file inside
+    // the packaged app.asar), so the path is `./renderer/index.html`.
+    const indexPath = join(__dirname, 'renderer', 'index.html')
     const params = new URLSearchParams()
     if (info?.port) params.set('port', String(info.port))
     if (info?.token) params.set('token', info.token)

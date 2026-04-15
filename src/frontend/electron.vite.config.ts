@@ -26,6 +26,13 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src'),
     build: {
+      // Keep the renderer output alongside main/preload under dist-electron/
+      // so main.ts can resolve '../renderer/index.html' relative to its own
+      // __dirname in the packaged app.asar. The default electron-vite layout
+      // drops renderer into `out/renderer/`, which sits at a different path
+      // in the packaged tree and produced a blank-window production build.
+      outDir: 'dist-electron/renderer',
+      emptyOutDir: true,
       rollupOptions: {
         input: resolve(__dirname, 'src/index.html')
       }
