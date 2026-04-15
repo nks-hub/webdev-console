@@ -92,6 +92,20 @@ public sealed class SiteOrchestrator
             }
         }
 
+        // 1c. Per-site PHP overrides — write ~/.wdc/sites-php/{domain}/php.ini
+        // before the vhost is generated so the template can reference its
+        // path via FcgidInitialEnv PHPRC. If PhpSettings is null the writer
+        // returns null and no vhost directive is emitted.
+        try
+        {
+            var phpIniWriter = _sp.GetService<SitePhpIniWriter>();
+            phpIniWriter?.Write(site);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to write per-site php.ini for {Domain}", site.Domain);
+        }
+
         // 2. Apache — generate vhost file via reflection (cross-ALC boundary).
         // Runs AFTER SSL so the template can pick up the freshly-written
         // cert/key paths and render the HTTPS VirtualHost block correctly.

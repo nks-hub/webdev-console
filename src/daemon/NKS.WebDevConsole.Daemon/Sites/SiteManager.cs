@@ -319,6 +319,18 @@ public class SiteManager
         }
         catch { /* best-effort; empty rootParent skips the parent-lock stanza */ }
 
+        // Per-site php.ini override path (same lookup as ApacheModule) so
+        // the history copy also mentions FcgidInitialEnv when rendering.
+        string sitePhpIni = "";
+        try
+        {
+            var p = Path.Combine(WdcPaths.Root, "sites-php", site.Domain, "php.ini");
+            if (File.Exists(p)) sitePhpIni = p;
+        }
+        catch { /* ignore */ }
+
+        var apacheSettings = site.ApacheSettings;
+
         var model = new
         {
             site = new
@@ -327,6 +339,13 @@ public class SiteManager
                 aliases = site.Aliases,
                 root = site.DocumentRoot,
                 root_parent = rootParent,
+                php_ini_path = sitePhpIni,
+                apache_timeout = apacheSettings?.Timeout,
+                fcgid_io_timeout = apacheSettings?.FcgidIOTimeout,
+                fcgid_busy_timeout = apacheSettings?.FcgidBusyTimeout,
+                fcgid_idle_timeout = apacheSettings?.FcgidIdleTimeout,
+                fcgid_process_life_time = apacheSettings?.FcgidProcessLifeTime,
+                fcgid_max_request_len = apacheSettings?.FcgidMaxRequestLen,
                 // Mirror ApacheModule's logic: Node proxy takes precedence
                 node_proxy_port = site.NodeUpstreamPort,
                 php_enabled = site.NodeUpstreamPort == 0

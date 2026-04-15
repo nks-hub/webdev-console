@@ -59,6 +59,7 @@ builder.Services.AddSingleton(sp => new SiteManager(
 ));
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
+builder.Services.AddSingleton<SitePhpIniWriter>();
 builder.Services.AddSingleton<BackupManager>();
 builder.Services.AddSingleton<BackupScheduler>();
 
