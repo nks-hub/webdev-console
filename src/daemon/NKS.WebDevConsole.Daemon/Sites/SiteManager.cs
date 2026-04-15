@@ -276,6 +276,48 @@ public class SiteManager
         // under sites-enabled/ with the correct paths, but this display copy
         // needs to match so rollback works.
         var sslDir = Path.Combine(WdcPaths.SslRoot, "sites", site.Domain);
+        var certPath = Path.Combine(sslDir, "cert.pem");
+        var keyPath = Path.Combine(sslDir, "key.pem");
+        // Same rule as ApacheModule: SSL block only appears when cert + key
+        // actually exist on disk. Otherwise the template renders an HTTP-only
+        // vhost and waits for the cert to be generated on the next apply.
+        var sslReady = site.SslEnabled && File.Exists(certPath) && File.Exists(keyPath);
+
+        // Mirror ApacheModule.ResolvePhpCgiPath: accept exact match or
+        // major.minor prefix (e.g. "8.4" → "8.4.20"). Leaving this empty
+        // (as older code did) makes the rendered FcgidWrapper directive
+        // invalid — Apache rejects it on reload with a syntax error.
+        string phpCgiPath = "";
+        if (OperatingSystem.IsWindows()
+            && !string.IsNullOrEmpty(site.PhpVersion) && site.PhpVersion != "none")
+        {
+            var phpRoot = Path.Combine(WdcPaths.BinariesRoot, "php");
+            if (Directory.Exists(phpRoot))
+            {
+                var requested = site.PhpVersion.TrimEnd('.');
+                var candidate = Directory.GetDirectories(phpRoot)
+                    .Where(d =>
+                    {
+                        var name = Path.GetFileName(d);
+                        return name == requested || name.StartsWith(requested + ".");
+                    })
+                    .OrderByDescending(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase)
+                    .Select(d => Path.Combine(d, "php-cgi.exe"))
+                    .FirstOrDefault(File.Exists);
+                if (candidate is not null) phpCgiPath = candidate;
+            }
+        }
+
+        string rootParent = "";
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(site.DocumentRoot))
+            {
+                var p = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(site.DocumentRoot));
+                if (!string.IsNullOrEmpty(p)) rootParent = p;
+            }
+        }
+        catch { /* best-effort; empty rootParent skips the parent-lock stanza */ }
 
         var model = new
         {
@@ -284,21 +326,22 @@ public class SiteManager
                 domain = site.Domain,
                 aliases = site.Aliases,
                 root = site.DocumentRoot,
+                root_parent = rootParent,
                 // Mirror ApacheModule's logic: Node proxy takes precedence
                 node_proxy_port = site.NodeUpstreamPort,
                 php_enabled = site.NodeUpstreamPort == 0
                     && !string.IsNullOrEmpty(site.PhpVersion) && site.PhpVersion != "none",
                 php_version = site.PhpVersion,
                 php_fcgi_port = 9000,
-                ssl = site.SslEnabled,
-                cert_path = Path.Combine(sslDir, "cert.pem"),
-                key_path = Path.Combine(sslDir, "key.pem"),
+                ssl = sslReady,
+                cert_path = certPath,
+                key_path = keyPath,
                 redirects = Array.Empty<object>()
             },
             port = site.HttpPort,
             https_port = site.HttpsPort > 0 ? site.HttpsPort : 443,
             is_windows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows),
-            php_cgi_path = "",
+            php_cgi_path = phpCgiPath,
         };
 
         try
