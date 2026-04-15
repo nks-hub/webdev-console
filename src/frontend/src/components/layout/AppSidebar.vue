@@ -1,32 +1,28 @@
 <template>
-  <nav class="sidebar" :class="{ collapsed }">
+  <nav class="sidebar">
     <div class="sidebar-top">
-      <div v-if="!collapsed" class="workspace-card">
+      <div class="workspace-card">
         <div class="workspace-mark">NW</div>
         <div class="workspace-copy">
           <span class="workspace-title">NKS WebDev Console</span>
           <span class="workspace-subtitle">{{ runningCount }}/{{ services.length }} services online</span>
         </div>
       </div>
-
-      <div class="collapse-toggle" @click="toggleCollapse" :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
-        <el-icon :size="16"><Fold v-if="!collapsed" /><Expand v-else /></el-icon>
-      </div>
     </div>
 
     <div class="nav-cluster">
       <div class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
         <span class="nav-icon-shell"><el-icon :size="18"><House /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Overview</span>
+        <span class="nav-label">Overview</span>
       </div>
       <div class="nav-item sites-btn" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
         <span class="nav-icon-shell"><el-icon :size="18"><Link /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Sites</span>
+        <span class="nav-label">Sites</span>
       </div>
     </div>
 
     <div class="sidebar-section">
-      <div class="section-label" v-if="!collapsed">
+      <div class="section-label">
         <span>Web Server</span>
         <span class="section-count">{{ webServices.length }}</span>
       </div>
@@ -52,7 +48,7 @@
     </div>
 
     <div class="sidebar-section" v-if="langServices.length">
-      <div class="section-label" v-if="!collapsed">
+      <div class="section-label">
         <span>Languages</span>
         <span class="section-count">{{ langServices.length }}</span>
       </div>
@@ -78,7 +74,7 @@
     </div>
 
     <div class="sidebar-section" v-if="dbServices.length">
-      <div class="section-label" v-if="!collapsed">
+      <div class="section-label">
         <span>Database</span>
         <span class="section-count">{{ dbServices.length }}</span>
       </div>
@@ -104,7 +100,7 @@
     </div>
 
     <div class="sidebar-section" v-if="cacheServices.length">
-      <div class="section-label" v-if="!collapsed">
+      <div class="section-label">
         <span>Cache &amp; Mail</span>
         <span class="section-count">{{ cacheServices.length }}</span>
       </div>
@@ -134,18 +130,18 @@
     <div class="sidebar-bottom">
       <div class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
         <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Databases</span>
+        <span class="nav-label">Databases</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">SSL</span>
+        <span class="nav-label">SSL</span>
       </div>
       <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
            fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
            Dashboard service toggle and the /plugin/nks.wdc.php panel. -->
       <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Binaries</span>
+        <span class="nav-label">Binaries</span>
       </div>
       <div
         class="nav-item"
@@ -153,25 +149,25 @@
         @click="navigate('/cloudflare')"
       >
         <span class="nav-icon-shell"><el-icon :size="18"><Connection /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Tunnel</span>
-        <span v-if="!collapsed && exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
+        <span class="nav-label">Tunnel</span>
+        <span v-if="exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Plugins</span>
+        <span class="nav-label">Plugins</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
-        <span class="nav-label" v-if="!collapsed">Settings</span>
+        <span class="nav-label">Settings</span>
       </div>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, Fold, Expand, House, Connection } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
@@ -184,13 +180,9 @@ const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 
-const collapsed = ref(localStorage.getItem('wdc-sidebar-collapsed') === 'true')
-
-function toggleCollapse() {
-  collapsed.value = !collapsed.value
-  localStorage.setItem('wdc-sidebar-collapsed', String(collapsed.value))
-}
-
+// Sidebar is always expanded — the collapse toggle was dropped because
+// it added no value (sidebar fits at any reasonable window width) and
+// the icon-only mode hid service names that users needed to glance at.
 const services = computed(() => daemonStore.services as any[])
 const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
 
@@ -504,52 +496,6 @@ async function toggleSvc(svc: any) {
   /* Flat: solid surface-2 tile, no alpha */
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-}
-
-.collapse-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  margin-bottom: 4px;
-  cursor: pointer;
-  color: var(--wdc-text-3);
-  border-radius: var(--wdc-radius-sm);
-  transition: all 0.12s;
-  align-self: flex-end;
-}
-
-.collapse-toggle:hover {
-  color: var(--wdc-text);
-  background: var(--wdc-surface-2);
-}
-
-.sidebar.collapsed {
-  width: 64px;
-  padding: 10px 6px;
-}
-
-.sidebar.collapsed .nav-item {
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.sidebar.collapsed .service-item {
-  justify-content: center;
-  padding: 9px 0;
-  gap: 0;
-}
-
-.sidebar.collapsed .service-item .svc-copy,
-.sidebar.collapsed .service-item .svc-led,
-.sidebar.collapsed .service-item .el-switch,
-.sidebar.collapsed .workspace-card,
-.sidebar.collapsed .nav-label {
-  display: none;
-}
-
-.sidebar.collapsed .collapse-toggle {
-  align-self: center;
 }
 
 .sidebar-spacer {
