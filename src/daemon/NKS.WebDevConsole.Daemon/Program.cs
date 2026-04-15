@@ -1132,6 +1132,67 @@ app.MapGet("/api/sites/{domain}/metrics", (string domain, SiteManager sm, Binary
     });
 });
 
+// Per-site recent access log tail. Returns the last N parsed entries in
+// Combined Log Format order (oldest → newest). Powers the SiteEdit
+// "Recent visitors" panel: IP, path, status, timestamp, user agent.
+app.MapGet("/api/sites/{domain}/access-log", (string domain, int? limit, SiteManager sm, BinaryManager bm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    var clamped = Math.Clamp(limit ?? 100, 1, 1000);
+    var candidates = new List<string>();
+    foreach (var apache in bm.ListInstalled("apache"))
+    {
+        var logsDir = Path.Combine(apache.InstallPath, "logs");
+        // Prefer the SSL log for HTTPS sites — it contains the real
+        // traffic once the plaintext vhost turns into a redirect stub.
+        if (site.SslEnabled)
+        {
+            candidates.Add(Path.Combine(logsDir, $"{domain}-ssl-access.log"));
+            candidates.Add(Path.Combine(logsDir, $"{domain}-access.log"));
+        }
+        else
+        {
+            candidates.Add(Path.Combine(logsDir, $"{domain}-access.log"));
+            candidates.Add(Path.Combine(logsDir, $"{domain}-ssl-access.log"));
+        }
+    }
+
+    try
+    {
+        var entries = AccessLogInspector.Tail(candidates, clamped);
+        var top = entries
+            .GroupBy(e => e.RemoteAddr)
+            .Select(g => new { ip = g.Key, hits = g.Count() })
+            .OrderByDescending(x => x.hits)
+            .Take(10)
+            .ToList();
+        return Results.Ok(new
+        {
+            domain,
+            count = entries.Count,
+            topClients = top,
+            entries = entries.Select(e => new
+            {
+                timestamp = e.TimestampUtc,
+                ip = e.RemoteAddr,
+                method = e.Method,
+                path = e.Path,
+                protocol = e.Protocol,
+                status = e.Status,
+                bytes = e.ResponseBytes,
+                referer = e.Referer,
+                userAgent = e.UserAgent,
+            }),
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to read access log: {ex.Message}");
+    }
+});
+
 // Phase 11 perf monitoring: server-side history read endpoint.
 // Returns time-series samples written by MetricsHistoryService background
 // poller (60s cadence, 7-day retention). Frontend uses this to render
