@@ -36,7 +36,22 @@
 
     <!-- Empty state -->
     <div v-else-if="files.length === 0" class="state-box">
-      <el-empty description="No config files found for this service." />
+      <el-empty :description="emptyStateMessage">
+        <template v-if="isConfigless">
+          <p class="empty-hint">
+            Nastavení se pro tuto službu předává přes CLI argumenty /
+            per-site TOML konfiguraci / proměnné prostředí. Upravovat
+            jednotlivé soubory tu není co.
+          </p>
+        </template>
+        <template v-else>
+          <p class="empty-hint">
+            Daemon hledal <code>{{ expectedPathsHint }}</code>. Zkontroluj,
+            že je binárka nainstalovaná přes <strong>Binaries</strong> a
+            že služba byla alespoň jednou spuštěná.
+          </p>
+        </template>
+      </el-empty>
     </div>
 
     <!-- Content -->
@@ -206,6 +221,31 @@ const fileFormat = computed(() => {
 const displayName = computed(() => {
   const svc = daemonStore.services.find((s: any) => s.id === serviceId.value)
   return svc?.displayName || svc?.id || serviceId.value
+})
+
+// Services that legitimately have no file-backed config — they configure
+// themselves via CLI args, per-site TOML, or environment variables. The
+// empty-state card shows a friendly hint for these instead of suggesting
+// the daemon broke.
+const CONFIGLESS_SERVICES = new Set(['mailpit', 'node', 'cloudflare', 'cloudflared', 'mkcert'])
+const isConfigless = computed(() => CONFIGLESS_SERVICES.has(serviceId.value.toLowerCase()))
+
+const emptyStateMessage = computed(() =>
+  isConfigless.value
+    ? `${displayName.value} se konfiguruje jinak`
+    : `Žádný konfigurační soubor pro službu ${displayName.value}`
+)
+
+// Shown to the user so they know where WDC looked. Matches the lookup
+// order in ServiceConfigManager.GetFilesAsync — keep in sync.
+const expectedPathsHint = computed(() => {
+  const id = serviceId.value.toLowerCase()
+  if (id === 'apache') return '~/.wdc/binaries/apache/<version>/conf/httpd.conf'
+  if (id === 'php') return '~/.wdc/binaries/php/<version>/php.ini'
+  if (id === 'mysql') return '~/.wdc/data/mysql/my.ini, ~/.wdc/binaries/mysql/<version>/my.ini'
+  if (id === 'redis') return '~/.wdc/binaries/redis/<version>/redis.conf'
+  if (id === 'caddy') return '~/.wdc/caddy/Caddyfile, ~/.wdc/binaries/caddy/<version>/Caddyfile'
+  return 'well-known plugin config locations'
 })
 
 function onEdit() {
