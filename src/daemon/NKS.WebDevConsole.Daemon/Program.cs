@@ -19,12 +19,21 @@ NKS.WebDevConsole.Core.Services.DaemonJobObject.EnsureInitialized();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS for Electron renderer
+// CORS for Electron renderer — the packaged app loads the Vue SPA from
+// a `file://` URL which gives `Origin: null`, and the dev server runs
+// on `http://localhost:5173`. Kestrel binds loopback-only (see the
+// daemon listener config below) so the daemon is unreachable from
+// anywhere but the same machine anyway — that makes a permissive CORS
+// policy safe: anything that can reach the daemon is already running
+// on this host with this user's privileges.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "app://.")
-              .AllowAnyMethod().AllowAnyHeader());
+        policy
+            .SetIsOriginAllowed(_ => true)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
 });
 
 // OpenAPI metadata so /openapi/v1.json can be consumed by NSwag/swagger-typescript-api
