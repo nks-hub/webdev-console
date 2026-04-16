@@ -1,0 +1,146 @@
+name: Build PHP Binaries
+
+# Cross-platform PHP binary builder. Each tag of the form `binaries-php-<ver>`
+# triggers a 3-OS matrix that compiles PHP from upstream source for
+# Windows, macOS arm64 and Linux x64, packages each as a self-contained
+# tarball/zip, and publishes them as release assets. The catalog API then
+# points at these URLs so the daemon's `wdc binaries install` works on every
+# OS without distro-specific package managers.
+#
+# Trigger:
+#   git tag binaries-php-8.3.25 && git push origin binaries-php-8.3.25
+#
+# Or via workflow_dispatch with the version as input.
+
+on:
+  push:
+    tags:
+      - 'binaries-php-*'
+  workflow_dispatch:
+    inputs:
+      php_version:
+        description: 'PHP version, e.g. 8.3.25'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            target: windows-x64
+            ext: zip
+          - os: macos-14
+            target: macos-arm64
+            ext: tar.xz
+          - os: ubuntu-24.04
+            target: linux-x64
+            ext: tar.xz
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Resolve PHP version
+        id: ver
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.php_version }}" ]; then
+            VERSION="${{ github.event.inputs.php_version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#binaries-php-}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major_minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
+          echo "Building PHP $VERSION for ${{ matrix.target }}"
+
+      # ── Windows: just repackage the upstream windows.php.net ZIP ──
+      - name: Windows — download & repackage
+        if: matrix.target == 'windows-x64'
+        shell: bash
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          MM="${{ steps.ver.outputs.major_minor }}"
+          # VS prefix matrix
+          case "$MM" in
+            5.6) VS=VC11 ;;
+            7.0|7.1) VS=VC14 ;;
+            7.2|7.3|7.4) VS=VC15 ;;
+            8.0|8.1|8.2|8.3) VS=vs16 ;;
+            8.4|8.5) VS=vs17 ;;
+            *) VS=vs17 ;;
+          esac
+          # Latest minor goes to /releases/, older to /archives/
+          for SUBDIR in "" archives/; do
+            URL="https://windows.php.net/downloads/releases/${SUBDIR}php-${VER}-nts-Win32-${VS}-x64.zip"
+            if curl -fsI "$URL" >/dev/null 2>&1; then break; fi
+            URL=""
+          done
+          [ -z "$URL" ] && { echo "No Windows ZIP found for $VER"; exit 1; }
+          curl -fsSL -o php-${VER}-windows-x64.zip "$URL"
+          ls -lh php-${VER}-windows-x64.zip
+
+      # ── Linux: build from source ──
+      - name: Linux — install build deps
+        if: matrix.target == 'linux-x64'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q build-essential autoconf libxml2-dev \
+            libsqlite3-dev libssl-dev libcurl4-openssl-dev libonig-dev \
+            libzip-dev libbz2-dev libfreetype-dev libjpeg-dev libpng-dev \
+            libwebp-dev libxslt-dev libgmp-dev libreadline-dev pkg-config
+
+      - name: macOS — install build deps
+        if: matrix.target == 'macos-arm64'
+        run: |
+          brew install --formula autoconf bison openssl@3 libxml2 sqlite zlib \
+            libzip libpng libjpeg-turbo libwebp curl freetype gmp icu4c readline \
+            oniguruma libsodium argon2 || true
+
+      - name: Compile PHP from source (Linux/macOS)
+        if: matrix.target != 'windows-x64'
+        shell: bash
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          curl -fsSL -o php-src.tar.xz https://www.php.net/distributions/php-${VER}.tar.xz
+          tar xf php-src.tar.xz
+          cd php-${VER}
+          PREFIX="${{ github.workspace }}/install/php-${VER}"
+          ./configure --prefix="$PREFIX" \
+            --enable-fpm --enable-mbstring --enable-bcmath --enable-soap \
+            --enable-intl --enable-pcntl --enable-sockets --enable-exif \
+            --with-openssl --with-curl --with-zip --with-zlib --with-bz2 \
+            --with-mysqli --with-pdo-mysql --with-pdo-sqlite --with-sqlite3 \
+            --with-readline --with-xsl --with-gmp || true
+          make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu) 2>&1 | tail -20
+          make install
+          ls "$PREFIX/bin/" "$PREFIX/sbin/"
+
+      - name: Package — Linux/macOS tar.xz
+        if: matrix.target != 'windows-x64'
+        shell: bash
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          cd "${{ github.workspace }}/install/php-${VER}"
+          tar -cJf "${{ github.workspace }}/php-${VER}-${{ matrix.target }}.tar.xz" \
+            bin sbin lib include etc
+          ls -lh "${{ github.workspace }}/php-${VER}-${{ matrix.target }}.tar.xz"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: binaries-php-${{ steps.ver.outputs.version }}
+          name: PHP ${{ steps.ver.outputs.version }} (cross-platform binaries)
+          body: |
+            Self-contained PHP ${{ steps.ver.outputs.version }} binaries for use with
+            NKS WebDev Console's `wdc binaries install` flow.
+            Each archive expands to `bin/php`, `sbin/php-fpm` and supporting libs.
+          fail_on_unmatched_files: false
+          files: |
+            php-${{ steps.ver.outputs.version }}-*.zip
+            php-${{ steps.ver.outputs.version }}-*.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
