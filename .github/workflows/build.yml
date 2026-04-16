@@ -6,9 +6,13 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-2022
@@ -38,18 +42,19 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Generate macOS .icns icon
+        if: matrix.target == 'mac'
+        run: |
+          if [ ! -f src/frontend/build/icon.icns ]; then
+            sips -s format icns src/frontend/build/icon.png --out src/frontend/build/icon.icns
+          fi
+        shell: bash
+
       - name: Build daemon
         run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r ${{ matrix.daemon_rid }} --self-contained -o src/frontend/resources/daemon
 
-      - name: Build plugins
-        run: |
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Apache/NKS.WebDevConsole.Plugin.Apache.csproj -c Release
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.PHP/NKS.WebDevConsole.Plugin.PHP.csproj -c Release
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.MySQL/NKS.WebDevConsole.Plugin.MySQL.csproj -c Release
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Redis/NKS.WebDevConsole.Plugin.Redis.csproj -c Release
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Mailpit/NKS.WebDevConsole.Plugin.Mailpit.csproj -c Release
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.Hosts/NKS.WebDevConsole.Plugin.Hosts.csproj -c Release
-          dotnet build src/plugins/NKS.WebDevConsole.Plugin.SSL/NKS.WebDevConsole.Plugin.SSL.csproj -c Release
+      - name: Build solution (plugins + tests)
+        run: dotnet build WebDevConsole.sln -c Release
 
       - name: Install frontend dependencies
         working-directory: src/frontend
@@ -60,9 +65,12 @@ jobs:
         run: npm run ${{ matrix.npm_script }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Skip auto-publish from electron-builder; we publish via softprops/action-gh-release below.
+          EP_PRE_RELEASE: 'false'
 
       - name: Verify release artifacts
         run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target ${{ matrix.target }}
+        shell: bash
 
       - name: Smoke packaged Electron runtime
         if: matrix.target == 'win'
@@ -74,3 +82,21 @@ jobs:
         with:
           name: release-${{ matrix.target }}
           path: src/frontend/release/**
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            src/frontend/release/*.exe
+            src/frontend/release/*.dmg
+            src/frontend/release/*.zip
+            src/frontend/release/*.AppImage
+            src/frontend/release/*.blockmap
+            src/frontend/release/latest*.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

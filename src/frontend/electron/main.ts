@@ -100,10 +100,13 @@ function daemonPost(path: string): Promise<void> {
   })
 }
 function findPackagedDaemonExecutable(): string {
+  const exeName = process.platform === 'win32'
+    ? 'NKS.WebDevConsole.Daemon.exe'
+    : 'NKS.WebDevConsole.Daemon'
   const candidates = [
-    join(process.resourcesPath, 'daemon', 'NKS.WebDevConsole.Daemon.exe'),
-    join(appInstallDir, 'daemon', 'NKS.WebDevConsole.Daemon.exe'),
-    join(__dirname, '../../daemon/bin/NKS.WebDevConsole.Daemon.exe'),
+    join(process.resourcesPath, 'daemon', exeName),
+    join(appInstallDir, 'daemon', exeName),
+    join(__dirname, '../../daemon/bin', exeName),
   ]
 
   for (const candidate of candidates) {
