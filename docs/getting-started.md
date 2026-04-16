@@ -1,263 +1,142 @@
-# Getting Started with NKS WebDev Console
+# Getting Started
 
-This guide walks you through installing NKS WebDev Console and creating your first local development site.
+This guide walks you through installing **NKS WebDev Console** from a tagged
+GitHub release (or building it yourself), running the first-time wizard and
+creating your first local site.
 
-## System Requirements
+## System requirements
 
-### Windows
-- Windows 10 (build 19041) or Windows 11
-- 2 GB RAM minimum, 4 GB recommended
-- 500 MB free disk space
-- Administrator access for initial setup
-- No conflicts with existing MAMP PRO, XAMPP, or WampServer installations
+| OS      | Tested versions                                     |
+| ------- | --------------------------------------------------- |
+| Windows | Windows 10 build 19041+, Windows 11                 |
+| macOS   | macOS 11 Big Sur or later, Apple Silicon (arm64)    |
+| Linux   | Ubuntu 22.04+, Debian 12+, Fedora 39+ (x86_64)      |
 
-### macOS
-- macOS 11 Big Sur or later
-- Intel or Apple Silicon (M1/M2/M3)
-- 2 GB RAM minimum, 4 GB recommended
-- Administrator access for initial setup
-- Xcode Command Line Tools (auto-installed on first run)
+Minimum 2 GB RAM (4 GB recommended). 500 MB free disk space for the app +
+~2–4 GB for downloaded PHP/Apache/MySQL binaries.
 
-### Linux
-- Ubuntu 20.04 LTS, Debian 10+, Fedora 32+, or equivalent
-- 2 GB RAM minimum, 4 GB recommended
-- `sudo` privileges for service management
-- systemd-based init system
+Administrator rights required for the first-run wizard (creates services and
+modifies `hosts` file). The daemon itself runs unprivileged after setup.
 
-## Installation
+## Install
+
+There is **no winget package, no Homebrew tap and no apt repository** — the
+project ships pre-built artifacts via GitHub Releases.
 
 ### Windows
 
-**Option 1: Windows Package Manager (Recommended)**
-```bash
-winget install nks-wdc
-```
+1. Download from <https://github.com/nks-hub/webdev-console/releases/latest>:
+   - `NKS WebDev Console-<ver>-setup-x64.exe` — NSIS installer (recommended), or
+   - `NKS WebDev Console-<ver>-portable-x64.exe` — single-file portable build
+2. Run the installer and accept the UAC prompt.
 
-**Option 2: Download Installer**
-1. Visit https://nks-wdc.sh/download
-2. Download `NKS WebDev Console-2.0.0-windows-x64.exe`
-3. Run the installer
-4. Click "Install" and accept Administrator privileges
-5. Choose installation directory (default: `C:\Program Files\NKS WebDev Console`)
+### macOS (Apple Silicon)
 
-**Option 3: Portable Version**
-Download `NKS WebDev Console-2.0.0-windows-portable.zip`, extract, and run `wdc.exe`.
-
-### macOS
-
-**Option 1: Homebrew (Recommended)**
-```bash
-brew tap nks-wdc/tap
-brew install nks-wdc
-```
-
-**Option 2: Download DMG**
-1. Visit https://nks-wdc.sh/download
-2. Download `NKS WebDev Console-2.0.0.dmg`
-3. Mount the image and drag NKS WebDev Console to Applications
-4. Launch from Applications folder
-
-**Option 3: Direct Download (M1/M2/M3)**
-Download the ARM64 version from releases page for faster performance.
+1. Download `NKS WebDev Console-<ver>-mac-arm64.dmg` from the releases page.
+2. Open the DMG and drag the app to `/Applications`.
+3. The app is signed with a developer-distribution certificate but **not yet
+   notarized**. On first launch macOS Gatekeeper may show "cannot be opened
+   because the developer cannot be verified" — right-click → **Open** → confirm
+   once, and macOS remembers it.
 
 ### Linux
 
-**Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install nks-wdc
-```
+1. Download the `.AppImage` from the releases page.
+2. `chmod +x NKS\ WebDev\ Console-<ver>.AppImage` and run it.
 
-**Fedora/RHEL:**
-```bash
-sudo dnf install nks-wdc
-```
-
-**Build from Source:**
-```bash
-git clone https://github.com/nks-hub/webdev-console.git
-cd nks-wdc
-./build.sh
-sudo ./install.sh
-```
-
-## First-Run Wizard
-
-When you launch NKS WebDev Console for the first time:
-
-### Step 1: Welcome Screen
-- Review the system requirements check
-- Choose preferred port range (default: 8000–8010)
-- Select HTTP/HTTPS preference
-
-### Step 2: Locations
-- **Data Directory**: Where NKS WebDev Console stores configurations, databases, and certificates
-  - Windows: `C:\Users\{username}\AppData\Local\NKS WebDev Console`
-  - macOS: `~/Library/Application Support/NKS WebDev Console`
-  - Linux: `~/.local/share/nks-wdc`
-- **Projects Directory**: Where your sites are stored (default: `~/projects`)
-
-### Step 3: Database
-- Choose MySQL or MariaDB (MariaDB recommended for new installations)
-- Set root password (minimum 8 characters)
-- Choose port (default: 3306)
-
-### Step 4: PHP
-- Select PHP version for default site (recommended: PHP 8.2)
-- Choose default web server: Apache or Nginx (recommended: Nginx)
-- Enable/disable common extensions (GD, Intl, PDO, etc.)
-
-### Step 5: Services
-- Toggle services to auto-start on boot: Apache/Nginx, PHP-FPM, MySQL/MariaDB
-- Review memory limits (default: 256 MB each)
-- Configure firewall rules (if on Windows with Windows Defender)
-
-### Step 6: Review & Install
-- Review all selections
-- Click "Install" to create services
-- Wait 2–3 minutes for first-run setup
-- Click "Open Dashboard" to continue
-
-## Creating Your First Site
-
-### Via GUI
-
-1. Open NKS WebDev Console
-2. Click **File → New Site** or click the **+** button
-3. Fill in the form:
-   - **Site Name**: `my-project` (letters, numbers, hyphens only)
-   - **Local Domain**: `my-project.local`
-   - **Project Path**: `/Users/you/projects/my-project` (auto-created if doesn't exist)
-   - **PHP Version**: 8.2 (can change per-site anytime)
-   - **Web Server**: Nginx (default)
-   - **Enable SSL**: Yes (recommended)
-4. Click **Create Site**
-5. Wait 10–15 seconds while NKS WebDev Console:
-   - Creates web root directory
-   - Generates SSL certificate
-   - Creates virtual host configuration
-   - Reloads web server
-
-### Via CLI
+### Build from source (all platforms)
 
 ```bash
-wdc site create \
-  --name my-project \
-  --path /Users/you/projects/my-project \
-  --php 8.2 \
-  --domain my-project.local \
-  --ssl true
+git clone https://github.com/nks-hub/webdev-console.git nks-ws
+cd nks-ws
+dotnet build WebDevConsole.sln -c Release      # daemon + 10 plugins
+cd src/frontend
+npm install                                     # ~5 min, downloads Electron
+npm run dist        # Windows
+npm run dist:mac    # macOS  (arm64)
+npm run dist:linux  # Linux  (AppImage)
 ```
 
-## Accessing Your Site
+Build prerequisites: .NET 9 SDK, Node.js 20+. On macOS install via
+`brew install dotnet@9` (the `dotnet` CLI from Microsoft installer also works).
 
-### Browser Access
-- **HTTPS**: `https://my-project.local`
-- **HTTP**: `http://my-project.local` (auto-redirects to HTTPS if enabled)
+## First run
 
-**Note**: First visit shows a browser warning about self-signed certificate. Click "Advanced → Proceed" to continue. This is normal and safe for local development.
+Launch the app. It auto-starts the bundled `NKS.WebDevConsole.Daemon`
+(self-contained .NET 9, no separate runtime needed) and writes its listening
+port + Bearer token to:
 
-### SSH/Terminal Access
+| OS      | Port file                                     |
+| ------- | --------------------------------------------- |
+| Windows | `%TEMP%\nks-wdc-daemon.port`                  |
+| macOS   | `$TMPDIR/nks-wdc-daemon.port`                 |
+| Linux   | `/tmp/nks-wdc-daemon.port`                    |
+
+The Electron renderer reads the same file and connects automatically.
+
+The first-run wizard asks you to:
+
+- pick a **projects directory** (default `~/projects` / `%USERPROFILE%\projects`)
+- choose a **default PHP version** (catalog is loaded from the configured
+  catalog API — default is the bundled fallback list)
+- set a **MySQL root password** (stored DPAPI-encrypted on Windows, in macOS
+  Keychain on macOS, plaintext file `chmod 600` on Linux)
+
+The wizard creates `~/.wdc/` (or `%USERPROFILE%\.wdc\`) for daemon state, plus
+SQLite databases for sites, services, settings and migrations.
+
+## Create your first site
+
+### From the GUI
+
+1. Click the **+** button on the Sites page.
+2. Fill in:
+   - **Domain** — e.g. `my-app.local` (`.local`/`.test`/`.localhost` work
+     out of the box; the Hosts plugin updates `/etc/hosts` atomically)
+   - **Project root** — auto-created if it doesn't exist
+   - **PHP version** — pick from installed versions
+   - **Web server** — Apache (default) or Caddy
+   - **SSL** — leave on; mkcert generates a per-site cert from the local CA
+3. Click **Create**.
+
+The site is reachable at `https://my-app.local` within 10–15 seconds. Apache
+reload, hosts entry, vhost template render and SSL cert generation happen
+inside a single orchestrated transaction (`SiteOrchestrator`).
+
+### From the CLI
+
+The `wdc` binary is published next to the daemon. Add it to your PATH (the
+installer does this automatically on Windows; on macOS/Linux it lives inside
+the app bundle, e.g. `/Applications/NKS WebDev Console.app/Contents/Resources/daemon/wdc`).
+
 ```bash
-# SSH into site (macOS/Linux only)
-nks-wdc ssh my-project
-
-# This opens a shell in your project directory with proper PATH
+wdc site create --domain my-app.local --root ~/projects/my-app --php 8.3 --ssl
+wdc site list
+wdc service start apache
+wdc database create my_app_db
+wdc doctor                           # 13 health checks
+wdc binaries catalog                 # list available PHP/Apache/MySQL versions
+wdc --json site list                 # JSON output for scripting
 ```
 
-### Database Access
+Run `wdc --help` for the full command reference.
 
-**phpMyAdmin (Web UI):**
-- Visit: `http://localhost/phpmyadmin`
-- Username: `root`
-- Password: (the one you set in the wizard)
+## Stopping services
 
-**CLI Access:**
 ```bash
-nks-wdc database connect
-# or MySQL client directly:
-mysql -u root -p -h 127.0.0.1
+wdc service stop apache
+wdc service stop mysql
+# or stop everything the daemon manages:
+wdc service stop --all
 ```
 
-## Stopping Services
+The Electron tray icon also exposes a service menu (right-click).
 
-### GUI Method
-1. Open NKS WebDev Console
-2. Click the service in the sidebar
-3. Click **Stop** button
+## Troubleshooting
 
-### CLI Method
-```bash
-nks-wdc service stop nginx
-nks-wdc service stop php-fpm
-nks-wdc service stop mysql
-```
+If something doesn't work, check [`troubleshooting.md`](./troubleshooting.md).
+The first thing to try is `wdc doctor` — it covers port collisions, DNS,
+permissions, missing extensions, daemon connectivity and more.
 
-### Stop All
-```bash
-nks-wdc service stop all
-```
-
-## Troubleshooting First-Run Issues
-
-### Port Already in Use
-**Symptom**: Installation fails with "Port 3306 already in use"
-
-**Solution**:
-1. Run: `wdc port-check`
-2. If another service is on port 3306, either:
-   - Stop the conflicting service
-   - Change MySQL port in wizard to 3307 or higher
-3. Restart the wizard: `wdc setup --force`
-
-### DNS Not Resolving
-**Symptom**: `my-project.local` shows "Site can't be reached"
-
-**Solution**:
-- **Windows**: Check Control Panel → Network → DNS settings. Should show `127.0.0.1` for local domains
-- **macOS/Linux**: Run `wdc dns-sync` to update `/etc/hosts`
-- Manual fix: Add to `/etc/hosts`:
-  ```
-  127.0.0.1    my-project.local
-  ```
-
-### PHP Extension Missing
-**Symptom**: "Call to undefined function" in browser
-
-**Solution**:
-1. Check if extension is installed: `wdc php extensions`
-2. Install missing extension: `wdc php install-extension gd`
-3. Restart PHP: `wdc service restart php-fpm`
-
-### Slow File Access (macOS)
-**Symptom**: Page loads slowly even with simple sites
-
-**Solution**: File access on networked drives is slow. Keep projects on local SSD, not external drives or cloud folders.
-
-## Next Steps
-
-- **[Creating & Managing Sites](./guides/sites.md)** – Advanced site configuration
-- **[PHP Management](./guides/php.md)** – Install versions, configure extensions
-- **[Database Guide](./guides/databases.md)** – Import data, manage databases
-- **[CLI Reference](./cli-reference.md)** – Full command documentation
-
-## Common First-Time Questions
-
-**Q: Can I use MAMP PRO and NKS WebDev Console simultaneously?**
-A: Not recommended. Both bind to port 80/443. Uninstall MAMP PRO first, or change NKS WebDev Console's port in Settings.
-
-**Q: How do I move a site from MAMP PRO?**
-A: See [Migrating from MAMP PRO](./migration.md#mamp-pro).
-
-**Q: Can I have multiple PHP versions?**
-A: Yes. Install additional versions via `wdc php install 7.4` and assign to specific sites.
-
-**Q: Is my data backed up?**
-A: NKS WebDev Console keeps configurations in the Data Directory. Databases are stored in the MySQL data folder. Regular backups recommended for production data.
-
-**Q: Can I use this for production?**
-A: No. NKS WebDev Console is for local development only. For production, use a proper server (DigitalOcean, AWS, etc.).
-
----
-
-**Successfully installed?** Open NKS WebDev Console and create your first site using the GUI wizard above.
+For implementation details and API surface, see [`../README.md`](../README.md)
+and [`../SPEC.md`](../SPEC.md).
