@@ -161,7 +161,7 @@ public sealed class BinaryManager
         // Extract to a temp dir then move into place — avoids partial extracts
         var tempExtract = installPath + ".tmp";
         if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, recursive: true);
-        await _downloader.ExtractAsync(archive, tempExtract, ct);
+        await _downloader.ExtractAsync(archive, tempExtract, ct, release.ArchiveType);
 
         // Some archives wrap their content in a single top-level directory (e.g. mysql-8.4.8-winx64/...,
         // Apache24/...). Flatten if there's exactly one *significant* top-level directory — ignoring

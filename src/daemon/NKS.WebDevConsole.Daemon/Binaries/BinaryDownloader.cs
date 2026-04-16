@@ -75,20 +75,24 @@ public sealed class BinaryDownloader
     public async Task<string> ExtractAsync(
         string archivePath,
         string destinationDir,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? archiveType = null)
     {
         if (!File.Exists(archivePath))
             throw new FileNotFoundException("Archive not found", archivePath);
 
         Directory.CreateDirectory(destinationDir);
-        _logger.LogInformation("Extracting {Archive} to {Dir}", Path.GetFileName(archivePath), destinationDir);
+        _logger.LogInformation("Extracting {Archive} to {Dir} (type={Type})", Path.GetFileName(archivePath), destinationDir, archiveType ?? "auto");
 
         var ext = Path.GetExtension(archivePath).ToLowerInvariant();
+        var hint = (archiveType ?? "").ToLowerInvariant();
 
         // Single-file binaries (cloudflared, caddy releases that ship as a
-        // bare .exe) don't need extraction — just copy the file into the
-        // destination under a well-known name so ResolveExecutable finds it.
-        if (ext is ".exe" or ".bin" or "")
+        // bare .exe; mkcert macOS/Linux releases that ship as a bare binary
+        // with no extension at all — Path.GetExtension on
+        // "mkcert-v1.4.4-darwin-arm64" returns ".4-darwin-arm64", which is
+        // why we also accept the explicit catalog hint "bin"/"exe").
+        if (hint is "bin" or "exe" || ext is ".exe" or ".bin" or "")
         {
             var guessedName = Path.GetFileName(archivePath);
             // Re-name single-file binaries to their canonical executable name so
@@ -104,8 +108,8 @@ public sealed class BinaryDownloader
             return destinationDir;
         }
 
-        if (ext != ".zip")
-            throw new NotSupportedException($"Archive format not supported: {ext}");
+        if (ext != ".zip" && hint != "zip")
+            throw new NotSupportedException($"Archive format not supported: ext='{ext}' hint='{hint}'");
 
         // Explicit zip-slip defense on top of .NET 9's built-in `ExtractRelativeToDirectory`
         // check — the managed binary catalog is network-sourced and mirrors Apache
