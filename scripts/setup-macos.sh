@@ -28,8 +28,8 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-echo "==> Installing brew packages (httpd, php, mariadb, mkcert)..."
-brew install httpd php mariadb mkcert >/dev/null
+echo "==> Installing brew packages (httpd, php, mariadb, mkcert, caddy, mailpit, cloudflared, redis)..."
+brew install httpd php mariadb mkcert caddy mailpit cloudflare/cloudflare/cloudflared redis >/dev/null
 
 # Detect installed versions so symlink directories match.
 HTTPD_VER=$(/opt/homebrew/opt/httpd/bin/httpd -v | awk '/Server version/ { split($3, a, "/"); print a[2] }')
@@ -77,6 +77,20 @@ ln -sfn "$BIN/mariadb/$MARIA_VER" "$BIN/mysql/$MARIA_VER"
 ln -sfn "/opt/homebrew/opt/php/bin/php"      "$BIN/php/$PHP_VER/php"
 ln -sfn "/opt/homebrew/opt/php/sbin/php-fpm" "$BIN/php/$PHP_VER/php-fpm"
 ln -sfn "/opt/homebrew/opt/php/lib/php"      "$BIN/php/$PHP_VER/ext"
+
+# --- Single-binary services (Mailpit/Caddy/Redis/Cloudflared) ---
+# Plugins look at <BinariesRoot>/<svc>/<ver>/<binary> directly (top-level),
+# not under bin/ — so the file goes one level above the bin/ pattern.
+CADDY_VER=$(/opt/homebrew/opt/caddy/bin/caddy version 2>&1 | head -1 | awk '{print $1}' | sed 's/^v//')
+MAIL_VER=$(/opt/homebrew/opt/mailpit/bin/mailpit version 2>&1 | head -1 | awk '{print $2}' | sed 's/^v//')
+CLOUD_VER=$(cloudflared --version 2>&1 | head -1 | awk '{print $3}')
+REDIS_VER=$(/opt/homebrew/opt/redis/bin/redis-server --version 2>&1 | grep -oE 'v=[^ ]+' | sed 's/v=//')
+
+mkdir -p "$BIN/caddy/$CADDY_VER" "$BIN/mailpit/$MAIL_VER" "$BIN/cloudflared/$CLOUD_VER" "$BIN/redis/$REDIS_VER"
+ln -sfn "/opt/homebrew/opt/caddy/bin/caddy"        "$BIN/caddy/$CADDY_VER/caddy"
+ln -sfn "/opt/homebrew/opt/mailpit/bin/mailpit"    "$BIN/mailpit/$MAIL_VER/mailpit"
+ln -sfn "/opt/homebrew/bin/cloudflared"            "$BIN/cloudflared/$CLOUD_VER/cloudflared"
+ln -sfn "/opt/homebrew/opt/redis/bin/redis-server" "$BIN/redis/$REDIS_VER/redis-server"
 
 echo "==> Layout ready under $BIN"
 echo "    apache:  $BIN/apache/$HTTPD_VER"
