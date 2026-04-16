@@ -138,9 +138,20 @@ public sealed class BinaryManager
             return ToInstalled(app, version, installPath);
         }
 
-        var release = _catalog.Find(app, version)
+        var os = OperatingSystem.IsWindows() ? "windows"
+               : OperatingSystem.IsLinux() ? "linux"
+               : OperatingSystem.IsMacOS() ? "macos"
+               : "windows";
+        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+            System.Runtime.InteropServices.Architecture.X64 => "x64",
+            System.Runtime.InteropServices.Architecture.X86 => "x86",
+            _ => "x64",
+        };
+        var release = _catalog.Find(app, version, os, arch)
             ?? throw new InvalidOperationException(
-                $"No catalog entry for {app} {version}. Available: {string.Join(", ", _catalog.ForApp(app).Select(r => r.Version))}");
+                $"No catalog entry for {app} {version} ({os}/{arch}). Available: {string.Join(", ", _catalog.ForApp(app).Select(r => r.Version + " " + r.Os + "/" + r.Arch))}");
 
         var cacheDir = Path.Combine(_root, ".cache");
         Directory.CreateDirectory(cacheDir);
