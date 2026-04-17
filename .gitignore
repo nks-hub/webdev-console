@@ -34,6 +34,22 @@ vendor/
 Thumbs.db
 .DS_Store
 
+# Secrets — defence-in-depth (the .[a-z]*/ glob above only catches dirs).
+# Anything that smells like a credential should never land in git.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+.npmrc
+.pypirc
+secrets/
+credentials/
+
 # Archives
 *.zip
 

@@ -517,7 +517,7 @@ const previewTemplate = computed(() => {
   return t
     .replace('{stem}', 'myapp')
     .replace('{hash}', 'bffa44')
-    .replace('{user}', 'lury')
+    .replace('{user}', 'me')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
 })
