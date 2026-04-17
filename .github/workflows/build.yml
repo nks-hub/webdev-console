@@ -69,17 +69,11 @@ jobs:
           EP_PRE_RELEASE: 'false'
           # Disable code-signing on CI runners — they don't have a Developer ID
           # certificate, and electron-builder's auto-discovery would otherwise
-          # try to sign with whatever it finds in the runner's keychain (or
-          # abort if nothing matches). The user can re-enable later by adding
-          # CSC_LINK + CSC_KEY_PASSWORD secrets and removing these envs.
+          # try to sign with whatever it finds in the runner's keychain.
+          # NOTE: do NOT set CSC_LINK='' or APPLE_ID='' — empty strings get
+          # path.resolve()d against CWD by app-builder-lib, producing
+          # "<cwd> not a file" failures. Leave them unset.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          CSC_LINK: ''
-          # Same for Apple notarization — needs APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID.
-          # Without them, electron-builder's notarize step is skipped (current
-          # behaviour) but better to be explicit.
-          APPLE_ID: ''
-          APPLE_APP_SPECIFIC_PASSWORD: ''
-          APPLE_TEAM_ID: ''
 
       - name: Verify release artifacts
         run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target ${{ matrix.target }}
