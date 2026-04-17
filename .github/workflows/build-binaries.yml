@@ -51,7 +51,9 @@ jobs:
           if [ -n "${{ github.event.inputs.php_version }}" ]; then
             VERSION="${{ github.event.inputs.php_version }}"
           else
-            VERSION="${GITHUB_REF_NAME#binaries-php-}"
+            # Strip prefix and any -rN retry suffix (e.g. binaries-php-8.3.25-r2 → 8.3.25)
+            RAW="${GITHUB_REF_NAME#binaries-php-}"
+            VERSION="${RAW%-r*}"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "major_minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
