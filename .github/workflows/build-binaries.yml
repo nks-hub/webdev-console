@@ -84,8 +84,22 @@ jobs:
           ls -lh php-${VER}-windows-x64.zip
 
       # ── Linux: build from source ──
+      # PHP < 8.0 nelze sestavit s OpenSSL 3 (Ubuntu 24.04+). 20.04 už není
+      # GitHub-hosted runner. Pro starší PHP by bylo třeba OpenSSL 1.1 z source
+      # nebo Docker container. Pragmaticky podporujeme jen 8.0+ na Linuxu/Macu;
+      # Windows má všechny verze přes oficiální php.net ZIPy.
+      - name: Mark legacy PHP unsupported (Linux/Mac source build)
+        if: matrix.target != 'windows-x64'
+        shell: bash
+        run: |
+          MM="${{ steps.ver.outputs.major_minor }}"
+          case "$MM" in
+            5.*|7.*) echo "skip_source=true" >> $GITHUB_ENV; echo "::warning::PHP $MM not buildable on modern OS — skipping source compile" ;;
+            *) echo "skip_source=false" >> $GITHUB_ENV ;;
+          esac
+
       - name: Linux — install build deps
-        if: matrix.target == 'linux-x64'
+        if: matrix.target == 'linux-x64' && env.skip_source != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q build-essential autoconf libxml2-dev \
@@ -94,14 +108,14 @@ jobs:
             libwebp-dev libxslt-dev libgmp-dev libreadline-dev pkg-config
 
       - name: macOS — install build deps
-        if: matrix.target == 'macos-arm64'
+        if: matrix.target == 'macos-arm64' && env.skip_source != 'true'
         run: |
           brew install --formula autoconf bison openssl@3 libxml2 sqlite zlib \
             libzip libpng libjpeg-turbo libwebp curl freetype gmp icu4c readline \
-            oniguruma libsodium argon2 || true
+            oniguruma libsodium argon2 bzip2 || true
 
       - name: Compile PHP from source (Linux/macOS)
-        if: matrix.target != 'windows-x64'
+        if: matrix.target != 'windows-x64' && env.skip_source != 'true'
         shell: bash
         run: |
           VER="${{ steps.ver.outputs.version }}"
@@ -109,18 +123,26 @@ jobs:
           tar xf php-src.tar.xz
           cd php-${VER}
           PREFIX="${{ github.workspace }}/install/php-${VER}"
+          # macOS Homebrew bzip2 is keg-only, requires explicit prefix. Other
+          # libs (openssl@3, libxml2, sqlite, etc.) are picked up via pkg-config
+          # from /opt/homebrew so leave them as bare flags.
+          BZ2_FLAG="--with-bz2"
+          if [ "${{ matrix.target }}" = "macos-arm64" ]; then
+            BZ2_FLAG="--with-bz2=$(brew --prefix bzip2)"
+            export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$PKG_CONFIG_PATH"
+          fi
           ./configure --prefix="$PREFIX" \
             --enable-fpm --enable-mbstring --enable-bcmath --enable-soap \
             --enable-intl --enable-pcntl --enable-sockets --enable-exif \
-            --with-openssl --with-curl --with-zip --with-zlib --with-bz2 \
+            --with-openssl --with-curl --with-zip --with-zlib $BZ2_FLAG \
             --with-mysqli --with-pdo-mysql --with-pdo-sqlite --with-sqlite3 \
-            --with-readline --with-xsl --with-gmp || true
+            --with-readline --with-xsl --with-gmp
           make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu) 2>&1 | tail -20
           make install
           ls "$PREFIX/bin/" "$PREFIX/sbin/"
 
       - name: Package — Linux/macOS tar.xz
-        if: matrix.target != 'windows-x64'
+        if: matrix.target != 'windows-x64' && env.skip_source != 'true'
         shell: bash
         run: |
           VER="${{ steps.ver.outputs.version }}"
