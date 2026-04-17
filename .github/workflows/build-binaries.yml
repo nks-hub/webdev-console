@@ -85,23 +85,29 @@ jobs:
           curl -fsSL -o php-${VER}-windows-x64.zip "$URL"
           ls -lh php-${VER}-windows-x64.zip
 
-      # ── Linux: build from source ──
-      # PHP < 8.0 nelze sestavit s OpenSSL 3 (Ubuntu 24.04+). 20.04 už není
-      # GitHub-hosted runner. Pro starší PHP by bylo třeba OpenSSL 1.1 z source
-      # nebo Docker container. Pragmaticky podporujeme jen 8.0+ na Linuxu/Macu;
-      # Windows má všechny verze přes oficiální php.net ZIPy.
-      - name: Mark legacy PHP unsupported (Linux/Mac source build)
+      # ── Linux/macOS: build from source ──
+      # OpenSSL strategy by PHP minor:
+      #   5.6, 7.x, 8.0  → OpenSSL 1.1 (php-src uses RSA_public_decrypt() etc.,
+      #                    removed in OpenSSL 3 → won't compile on Ubuntu 24+
+      #                    or Homebrew openssl@3). Use docker:ubuntu:20.04 on
+      #                    Linux runner and openssl@1.1 on macOS runner.
+      #   8.1+           → OpenSSL 3 works fine, use system/openssl@3.
+      # 5.x is also gated by other deprecations (libxml2, etc.) — keep it
+      # opt-in until we have a 16.04-style image; for now skip on Linux/Mac.
+      - name: Classify PHP version (legacy_ssl, skip_source)
         if: matrix.target != 'windows-x64'
         shell: bash
         run: |
           MM="${{ steps.ver.outputs.major_minor }}"
           case "$MM" in
-            5.*|7.*) echo "skip_source=true" >> $GITHUB_ENV; echo "::warning::PHP $MM not buildable on modern OS — skipping source compile" ;;
-            *) echo "skip_source=false" >> $GITHUB_ENV ;;
+            5.*) echo "skip_source=true" >> $GITHUB_ENV; echo "legacy_ssl=true" >> $GITHUB_ENV; echo "::warning::PHP $MM Linux/Mac builds disabled (too many deprecations)" ;;
+            7.*|8.0) echo "skip_source=false" >> $GITHUB_ENV; echo "legacy_ssl=true" >> $GITHUB_ENV ;;
+            *) echo "skip_source=false" >> $GITHUB_ENV; echo "legacy_ssl=false" >> $GITHUB_ENV ;;
           esac
 
-      - name: Linux — install build deps
-        if: matrix.target == 'linux-x64' && env.skip_source != 'true'
+      # Linux modern (8.1+): native build on ubuntu-24.04
+      - name: Linux — install build deps (modern openssl3)
+        if: matrix.target == 'linux-x64' && env.skip_source != 'true' && env.legacy_ssl != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q build-essential autoconf libxml2-dev \
@@ -109,18 +115,65 @@ jobs:
             libzip-dev libbz2-dev libfreetype-dev libjpeg-dev libpng-dev \
             libwebp-dev libxslt-dev libgmp-dev libreadline-dev pkg-config
 
-      - name: macOS — install build deps
-        if: matrix.target == 'macos-arm64' && env.skip_source != 'true'
+      # Linux legacy (7.x, 8.0): docker container with ubuntu:20.04 → OpenSSL 1.1.1
+      - name: Linux — build legacy PHP in docker (ubuntu:20.04, openssl 1.1)
+        if: matrix.target == 'linux-x64' && env.legacy_ssl == 'true' && env.skip_source != 'true'
+        shell: bash
         run: |
-          # NOTE: 'libwebp' was renamed to 'webp' in Homebrew. Don't use '|| true'
-          # here — first failure aborts brew install and silently leaves later
-          # formulae (bzip2, argon2, libsodium...) uninstalled, breaking configure.
+          VER="${{ steps.ver.outputs.version }}"
+          PREFIX="${{ github.workspace }}/install/php-${VER}"
+          mkdir -p "$PREFIX"
+          docker run --rm -v "${{ github.workspace }}:/work" -w /work ubuntu:20.04 bash -c "
+            set -e
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -q
+            apt-get install -y -q build-essential autoconf libxml2-dev libsqlite3-dev \
+              libssl-dev libcurl4-openssl-dev libonig-dev libzip-dev libbz2-dev \
+              libfreetype-dev libjpeg-dev libpng-dev libwebp-dev libxslt-dev \
+              libgmp-dev libreadline-dev pkg-config curl xz-utils ca-certificates
+            curl -fsSL -o /tmp/php-src.tar.xz https://www.php.net/distributions/php-${VER}.tar.xz
+            cd /tmp && tar xf php-src.tar.xz && cd php-${VER}
+            ./configure --prefix=/work/install/php-${VER} \
+              --enable-fpm --enable-mbstring --enable-bcmath --enable-soap \
+              --enable-intl --enable-pcntl --enable-sockets --enable-exif \
+              --with-openssl --with-curl --with-zip --with-zlib --with-bz2 \
+              --with-mysqli --with-pdo-mysql --with-pdo-sqlite --with-sqlite3 \
+              --with-readline --with-xsl --with-gmp
+            make -j\$(nproc) 2>&1 | tail -20
+            make install
+            ls /work/install/php-${VER}/bin/ /work/install/php-${VER}/sbin/
+          "
+          # Bundle the OpenSSL 1.1 .so files from the container so the binary runs
+          # outside the docker image. `apt-get download` from a sibling container.
+          docker run --rm -v "$PREFIX:/dst" ubuntu:20.04 bash -c "
+            set -e
+            apt-get update -q && apt-get install -y -q libssl1.1
+            mkdir -p /dst/lib
+            cp -L /usr/lib/x86_64-linux-gnu/libssl.so.1.1 /dst/lib/
+            cp -L /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 /dst/lib/
+          "
+
+      # macOS modern (8.1+): brew openssl@3
+      - name: macOS — install build deps (modern openssl3)
+        if: matrix.target == 'macos-arm64' && env.skip_source != 'true' && env.legacy_ssl != 'true'
+        run: |
+          # NOTE: 'libwebp' renamed to 'webp', 'libjpeg-turbo' to 'jpeg-turbo'.
+          # Don't use '|| true' here — first failure aborts brew install and
+          # silently leaves later formulae uninstalled, breaking configure.
           brew install --formula autoconf bison openssl@3 libxml2 sqlite zlib \
             libzip libpng jpeg-turbo webp curl freetype gmp icu4c readline \
             oniguruma libsodium argon2 bzip2
 
-      - name: Compile PHP from source (Linux/macOS)
-        if: matrix.target != 'windows-x64' && env.skip_source != 'true'
+      # macOS legacy (7.x, 8.0): brew openssl@1.1 (deprecated but still installable)
+      - name: macOS — install build deps (legacy openssl1.1)
+        if: matrix.target == 'macos-arm64' && env.legacy_ssl == 'true' && env.skip_source != 'true'
+        run: |
+          brew install --formula autoconf bison openssl@1.1 libxml2 sqlite zlib \
+            libzip libpng jpeg-turbo webp curl freetype gmp icu4c readline \
+            oniguruma libsodium argon2 bzip2
+
+      - name: Compile PHP from source (Linux modern + macOS)
+        if: (matrix.target == 'macos-arm64' || (matrix.target == 'linux-x64' && env.legacy_ssl != 'true')) && env.skip_source != 'true'
         shell: bash
         run: |
           VER="${{ steps.ver.outputs.version }}"
@@ -128,13 +181,15 @@ jobs:
           tar xf php-src.tar.xz
           cd php-${VER}
           PREFIX="${{ github.workspace }}/install/php-${VER}"
-          # macOS Homebrew bzip2 is keg-only, requires explicit prefix. Other
-          # libs (openssl@3, libxml2, sqlite, etc.) are picked up via pkg-config
-          # from /opt/homebrew so leave them as bare flags.
           BZ2_FLAG="--with-bz2"
           if [ "${{ matrix.target }}" = "macos-arm64" ]; then
             BZ2_FLAG="--with-bz2=$(brew --prefix bzip2)"
-            export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$PKG_CONFIG_PATH"
+            if [ "${{ env.legacy_ssl }}" = "true" ]; then
+              SSL_PREFIX="$(brew --prefix openssl@1.1)"
+            else
+              SSL_PREFIX="$(brew --prefix openssl@3)"
+            fi
+            export PKG_CONFIG_PATH="$SSL_PREFIX/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$PKG_CONFIG_PATH"
           fi
           ./configure --prefix="$PREFIX" \
             --enable-fpm --enable-mbstring --enable-bcmath --enable-soap \
