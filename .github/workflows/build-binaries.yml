@@ -112,9 +112,12 @@ jobs:
       - name: macOS — install build deps
         if: matrix.target == 'macos-arm64' && env.skip_source != 'true'
         run: |
+          # NOTE: 'libwebp' was renamed to 'webp' in Homebrew. Don't use '|| true'
+          # here — first failure aborts brew install and silently leaves later
+          # formulae (bzip2, argon2, libsodium...) uninstalled, breaking configure.
           brew install --formula autoconf bison openssl@3 libxml2 sqlite zlib \
-            libzip libpng libjpeg-turbo libwebp curl freetype gmp icu4c readline \
-            oniguruma libsodium argon2 bzip2 || true
+            libzip libpng jpeg-turbo webp curl freetype gmp icu4c readline \
+            oniguruma libsodium argon2 bzip2
 
       - name: Compile PHP from source (Linux/macOS)
         if: matrix.target != 'windows-x64' && env.skip_source != 'true'
