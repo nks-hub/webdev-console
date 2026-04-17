@@ -39,7 +39,7 @@ public sealed class SettingsStore
     /// point at their self-hosted <c>services/catalog-api</c> deployment
     /// without restarting. Fallback order:
     /// <c>settings.daemon.catalogUrl</c> → env <c>NKS_WDC_CATALOG_URL</c>
-    /// → built-in default (localhost:8765 — matches the dev run.cmd).
+    /// → built-in default (the public NKS catalog at https://wdc.nks-hub.cz).
     /// </summary>
     public string CatalogUrl
     {
@@ -49,7 +49,7 @@ public sealed class SettingsStore
             if (!string.IsNullOrWhiteSpace(stored)) return stored;
             var env = Environment.GetEnvironmentVariable("NKS_WDC_CATALOG_URL");
             if (!string.IsNullOrWhiteSpace(env)) return env;
-            return "http://127.0.0.1:8765";
+            return "https://wdc.nks-hub.cz";
         }
     }
 
