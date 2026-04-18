@@ -445,9 +445,16 @@ async function confirmDelete(domain: string) {
       confirmButtonText: 'Delete',
       confirmButtonClass: 'el-button--danger',
     })
+  } catch {
+    // User cancelled the confirm dialog — don't proceed and don't surface an error.
+    return
+  }
+  try {
     await sitesStore.remove(domain)
     ElMessage.success('Site deleted')
-  } catch { /* user cancelled */ }
+  } catch (e: any) {
+    ElMessage.error(`Delete failed: ${e?.message || e}`)
+  }
 }
 
 async function reapplyAll() {

@@ -818,10 +818,17 @@ async function deleteDnsRecord(row: any) {
       'Confirm delete',
       { type: 'warning', confirmButtonText: 'Delete' }
     )
+  } catch {
+    // ElMessageBox rejects with 'cancel'/'close' when dismissed — that's fine.
+    return
+  }
+  try {
     await deleteCloudflareDns(selectedDnsZoneId.value, row.id)
     ElMessage.success('Record deleted')
     await loadDns()
-  } catch { /* cancelled or error shown */ }
+  } catch (e: any) {
+    ElMessage.error(`Delete failed: ${e?.message || e}`)
+  }
 }
 
 // ── Folder browser for binary path ───────────────────────────────────
