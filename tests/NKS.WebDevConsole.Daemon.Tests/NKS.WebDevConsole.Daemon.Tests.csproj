@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.PHP\NKS.WebDevConsole.Plugin.PHP.csproj" />
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Apache\NKS.WebDevConsole.Plugin.Apache.csproj" />
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Nginx\NKS.WebDevConsole.Plugin.Nginx.csproj" />
+    <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.MariaDB\NKS.WebDevConsole.Plugin.MariaDB.csproj" />
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Node\NKS.WebDevConsole.Plugin.Node.csproj" />
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Cloudflare\NKS.WebDevConsole.Plugin.Cloudflare.csproj" />
   </ItemGroup>

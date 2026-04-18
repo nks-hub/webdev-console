@@ -405,6 +405,7 @@ static IEnumerable<object> BuiltInMarketplaceCatalogue(HashSet<string> installed
         ("nks.wdc.php",     "PHP (Multi-version)", "1.0.0", "Multi-version PHP manager with per-version php.ini + extensions + CLI alias shims.", "Runtimes"),
         ("nks.wdc.node",    "Node.js",             "1.0.0", "Multi-version Node.js manager — detected binaries under ~/.wdc/binaries/node/ with shims for npm/npx and active-version switching.", "Runtimes"),
         ("nks.wdc.mysql",   "MySQL",               "1.0.0", "Managed MySQL server with DPAPI-protected root password, my.ini templates, database tooling.", "Databases"),
+        ("nks.wdc.mariadb", "MariaDB",             "1.0.0", "Drop-in MySQL-compatible RDBMS — bundled mariadbd with DPAPI-protected root password, my.cnf templates. Alternative to MySQL for new installs.", "Databases"),
         ("nks.wdc.redis",   "Redis",               "1.0.0", "Redis cache server with managed redis.conf, graceful shutdown via redis-cli SHUTDOWN.", "Caches"),
         ("nks.wdc.mailpit", "Mailpit",             "1.0.0", "Local SMTP sink with web UI for development email testing.", "Mail"),
         ("nks.wdc.ssl",     "SSL (mkcert)",        "1.0.0", "Per-site TLS certificates via mkcert, local root CA install.", "Security"),

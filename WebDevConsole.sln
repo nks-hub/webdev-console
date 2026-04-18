@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKS.WebDevConsole.Plugin.No
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKS.WebDevConsole.Plugin.Nginx", "src\plugins\NKS.WebDevConsole.Plugin.Nginx\NKS.WebDevConsole.Plugin.Nginx.csproj", "{9B25C9C4-4C31-4EE2-816E-836620C183DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKS.WebDevConsole.Plugin.MariaDB", "src\plugins\NKS.WebDevConsole.Plugin.MariaDB\NKS.WebDevConsole.Plugin.MariaDB.csproj", "{86FE2D39-229C-46AF-9F58-163F2CDC332F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -259,6 +261,18 @@ Global
 		{9B25C9C4-4C31-4EE2-816E-836620C183DF}.Release|x64.Build.0 = Release|Any CPU
 		{9B25C9C4-4C31-4EE2-816E-836620C183DF}.Release|x86.ActiveCfg = Release|Any CPU
 		{9B25C9C4-4C31-4EE2-816E-836620C183DF}.Release|x86.Build.0 = Release|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Debug|x64.Build.0 = Debug|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Debug|x86.Build.0 = Debug|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Release|x64.ActiveCfg = Release|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Release|x64.Build.0 = Release|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Release|x86.ActiveCfg = Release|Any CPU
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -283,5 +297,6 @@ Global
 		{DB44A4E5-1850-4304-A103-00263CB62E16} = {58D3A2C3-F96F-5E57-2C6B-ECE59D6A18FC}
 		{94385198-0BBE-448D-835B-CE6E3CE5FED3} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 		{9B25C9C4-4C31-4EE2-816E-836620C183DF} = {58D3A2C3-F96F-5E57-2C6B-ECE59D6A18FC}
+		{86FE2D39-229C-46AF-9F58-163F2CDC332F} = {58D3A2C3-F96F-5E57-2C6B-ECE59D6A18FC}
 	EndGlobalSection
 EndGlobal
