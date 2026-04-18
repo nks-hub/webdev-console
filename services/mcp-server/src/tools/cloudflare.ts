@@ -7,7 +7,23 @@ import type { RegisterOptions } from '../index.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
-const ZoneIdSchema = z.string().min(1).describe('Cloudflare zone id from wdc_list_cloudflare_zones')
+// Cloudflare zone + record ids are 32-char lowercase hex. Pinning the
+// shape blocks traversal-style payloads and trims the surface to what
+// the daemon actually forwards to the Cloudflare API. Mirrors the
+// ServiceIdSchema / PluginIdSchema hardening from today's commits
+// fda3f9c + 8332610.
+const CloudflareIdSchema = z
+  .string()
+  .length(32)
+  .regex(/^[a-f0-9]{32}$/, {
+    message: 'Cloudflare id must be 32 lowercase hex characters',
+  })
+const ZoneIdSchema = CloudflareIdSchema.describe(
+  'Cloudflare zone id from wdc_list_cloudflare_zones (32 lowercase hex chars)',
+)
+const RecordIdSchema = CloudflareIdSchema.describe(
+  'Cloudflare DNS record id (32 lowercase hex chars)',
+)
 
 // Non-empty string — prevents accidentally wiping credentials by passing
 // an empty string through Zod's default string schema.
@@ -220,7 +236,7 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         'before passing confirm="YES".',
       inputSchema: {
         zoneId: ZoneIdSchema,
-        recordId: z.string().min(1).describe('DNS record id to delete'),
+        recordId: RecordIdSchema,
         confirm: ConfirmYesSchema,
       },
       annotations: {
