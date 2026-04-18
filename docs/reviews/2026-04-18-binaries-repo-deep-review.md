@@ -134,8 +134,8 @@ Observations:
 ## §5. Governance / supply chain
 
 - **[CRITICAL-G1]** `main` branch: no protection (see top-5 #3).
-- **[HIGH-G1]** No `CODEOWNERS`. Workflow-file changes require no reviewer. Should at minimum require `@<maintainer-handle>` approval on `.github/workflows/**`.
-- **[HIGH-G2]** Security toggles off. `secret_scanning`, `secret_scanning_push_protection`, `dependabot_security_updates` all `disabled`. Public repo — $0 cost to enable, defense-in-depth for leaked PATs (the WDC project uses PATs for the catalog-api deploy elsewhere; a `.env` accidentally committed here is auto-blocked only if push-protection is on).
+- **[HIGH-G1] ~~No `CODEOWNERS`~~ — ✅ RESOLVED 2026-04-18 (binaries-repo commit `97b62664`)** — `.github/CODEOWNERS` committed with `* @LuRy`, covers `.github/workflows/**` via the wildcard.
+- **[HIGH-G2] ~~Security toggles off~~ — ✅ RESOLVED 2026-04-18** — secret_scanning + secret_scanning_push_protection + vulnerability_alerts + automated_security_fixes all enabled (see top-5 #3).
 - **[LOW-G3]** `dependabot.yml` is correct scope (`github-actions`, weekly), BUT because no workflow is SHA-pinned (prior audit C1), Dependabot has no concrete pins to bump — its only visible work so far is 2 successful runs that likely closed no-op PRs. After SHA-pinning the ~15 action refs across 7 workflows, Dependabot becomes active.
 - **[INFO-G4]** SECURITY.md is better than most hobby-project repos: names an email contact, 5-day SLA, roadmap items are concrete. Out-of-date claim about "Built from" link (see RB1) is the only factual error.
 
