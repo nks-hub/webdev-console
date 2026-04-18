@@ -104,8 +104,8 @@
 
 ## §2. Build reproducibility (deeper)
 
-- **[MEDIUM-RP1] No `SOURCE_DATE_EPOCH` export in any workflow.** Standard reproducible-build env var. Adding `export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct 2>/dev/null || date +%s)` at the top of each build job is one line. Most GNU toolchain, autoconf-based builds (Apache, PHP, Nginx, Redis) honor it for mtime and archive deterministic ordering.
-- **[MEDIUM-RP2] `tar -cJf` is non-deterministic by default.** Add `--sort=name --owner=0 --group=0 --mtime="@${SOURCE_DATE_EPOCH}" --numeric-owner --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime` for reproducibility. Specifically line `build-apache.yml:155`, `build-nginx.yml:114`, `build-redis.yml:111`, `build-binaries.yml:436`.
+- **[MEDIUM-RP1] ~~No `SOURCE_DATE_EPOCH` export~~ — ✅ RESOLVED 2026-04-18 (binaries-repo PR [#19](https://github.com/nks-hub/webdev-console-binaries/pull/19), commit `899fcae`, awaits merge).** Epoch derived from `github.event.head_commit.timestamp` (push trigger) with `python3` ISO8601 + `date +%s` fallbacks for `workflow_dispatch`. Exported via `$GITHUB_ENV` so autoconf/libtool inherit. Covers apache/nginx/redis/binaries(PHP); mariadb/mirror/mkcert skipped per scope (they don't build from source).
+- **[MEDIUM-RP2] ~~`tar -cJf` non-deterministic flags~~ — ✅ RESOLVED 2026-04-18 (binaries-repo PR [#19](https://github.com/nks-hub/webdev-console-binaries/pull/19), commit `899fcae`).** All 4 tar commands in apache/nginx/redis/binaries get `--sort=name --owner=0 --group=0 --numeric-owner --mtime="@${SOURCE_DATE_EPOCH}" --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime`. macOS `brew install gnu-tar` + `gtar` substitute (BSD tar doesn't support `--sort`/`--pax-option`).
 - **[INFO-RP3] `macos-14` runner image is rolling.** GitHub pins `macos-14.x.y` underneath but the workflow uses the short alias. Xcode / Homebrew versions move. Pinning to a digest is impractical on hosted runners; accept as-is, document in SECURITY.md.
 
 ## §3. Release body provenance (completely missing)
