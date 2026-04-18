@@ -1,14 +1,19 @@
+using System.Formats.Tar;
 using System.IO.Compression;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 using NKS.WebDevConsole.Core.Models;
+
+using XZStream = SharpCompress.Compressors.Xz.XZStream;
 
 namespace NKS.WebDevConsole.Daemon.Binaries;
 
 /// <summary>
 /// Downloads a binary release from its source URL into a destination folder.
-/// Supports zip extraction. Reports progress via callback.
+/// Supports zip, tar.gz and tar.xz extraction plus single-file binaries.
+/// Reports progress via callback.
 /// </summary>
 public sealed class BinaryDownloader
 {
@@ -108,8 +113,34 @@ public sealed class BinaryDownloader
             return destinationDir;
         }
 
+        // Tar-family archives are the canonical distribution format for the
+        // Linux/macOS binaries our CI produces (apache/nginx/php/redis/mailpit/
+        // caddy all ship either tar.gz or tar.xz). Route before the zip path
+        // since .tar.gz / .tar.xz have compound extensions that Path.GetExtension
+        // only sees as .gz / .xz.
+        var fileName = Path.GetFileName(archivePath).ToLowerInvariant();
+        var isTarGz = hint is "tar.gz" or "tgz"
+            || fileName.EndsWith(".tar.gz", StringComparison.Ordinal)
+            || fileName.EndsWith(".tgz", StringComparison.Ordinal);
+        var isTarXz = hint is "tar.xz" or "txz"
+            || fileName.EndsWith(".tar.xz", StringComparison.Ordinal)
+            || fileName.EndsWith(".txz", StringComparison.Ordinal);
+
+        if (isTarGz || isTarXz)
+        {
+            _logger.LogInformation(
+                "Extracting tar archive via {Path}: {Archive}",
+                isTarGz ? "System.Formats.Tar+GZipStream" : "System.Formats.Tar+SharpCompress.XZ",
+                Path.GetFileName(archivePath));
+            await Task.Run(() => ExtractTar(archivePath, destinationDir, isTarXz, ct), ct);
+            _logger.LogInformation("Extraction complete: {Dir}", destinationDir);
+            return destinationDir;
+        }
+
         if (ext != ".zip" && hint != "zip")
             throw new NotSupportedException($"Archive format not supported: ext='{ext}' hint='{hint}'");
+
+        _logger.LogInformation("Extracting zip archive via System.IO.Compression: {Archive}", Path.GetFileName(archivePath));
 
         // Explicit zip-slip defense on top of .NET 9's built-in `ExtractRelativeToDirectory`
         // check — the managed binary catalog is network-sourced and mirrors Apache
@@ -161,6 +192,116 @@ public sealed class BinaryDownloader
 
         _logger.LogInformation("Extraction complete: {Dir}", destinationDir);
         return destinationDir;
+    }
+
+    /// <summary>
+    /// Extract a tar.gz or tar.xz archive using System.Formats.Tar. The
+    /// decompression stream is GZipStream (BCL) for .tar.gz or SharpCompress
+    /// <see cref="XZStream"/> for .tar.xz — xz is not in the BCL. Applies
+    /// the same zip-slip defense as the zip path: any entry containing a
+    /// parent-dir segment or resolving outside the destination root is
+    /// skipped with a warning, never extracted. On Unix, executable bits
+    /// from the tar header are preserved so the extracted binary is
+    /// launchable without an explicit chmod +x.
+    /// </summary>
+    private void ExtractTar(string archivePath, string destinationDir, bool isXz, CancellationToken ct)
+    {
+        var destFull = Path.GetFullPath(destinationDir).TrimEnd(Path.DirectorySeparatorChar)
+                     + Path.DirectorySeparatorChar;
+
+        using var fileStream = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using Stream decompressed = isXz
+            ? new XZStream(fileStream)
+            : new GZipStream(fileStream, CompressionMode.Decompress);
+        using var tar = new TarReader(decompressed, leaveOpen: false);
+
+        TarEntry? entry;
+        while ((entry = tar.GetNextEntry()) is not null)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var name = entry.Name;
+
+            if (name.Contains(".."))
+            {
+                _logger.LogWarning(
+                    "Skipping suspicious tar entry with parent-dir segment: {Entry}",
+                    name);
+                continue;
+            }
+
+            var relative = name.Replace('/', Path.DirectorySeparatorChar);
+            var destPath = Path.GetFullPath(Path.Combine(destinationDir, relative));
+
+            if (!destPath.StartsWith(destFull, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Skipping tar entry that would escape destination root: {Entry} -> {Path}",
+                    name, destPath);
+                continue;
+            }
+
+            switch (entry.EntryType)
+            {
+                case TarEntryType.Directory:
+                case TarEntryType.DirectoryList:
+                    Directory.CreateDirectory(destPath);
+                    break;
+
+                case TarEntryType.RegularFile:
+                case TarEntryType.V7RegularFile:
+                case TarEntryType.ContiguousFile:
+                    Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                    // Use ExtractToFile with overwrite so reinstalling a binary
+                    // over an existing installation succeeds.
+                    entry.ExtractToFile(destPath, overwrite: true);
+                    TrySetUnixExecutableBit(destPath, entry.Mode);
+                    break;
+
+                case TarEntryType.SymbolicLink:
+                case TarEntryType.HardLink:
+                    // Cross-platform symlink creation inside the zip-slip
+                    // sandbox is a can of worms we don't need — none of our
+                    // catalog binaries rely on intra-archive links. Log and
+                    // skip so extraction doesn't abort on the first link.
+                    _logger.LogDebug("Skipping tar link entry: {Entry} -> {Target}", name, entry.LinkName);
+                    break;
+
+                default:
+                    _logger.LogDebug("Skipping tar entry of type {Type}: {Entry}", entry.EntryType, name);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// On Linux/macOS, preserve the Unix executable bits carried by the tar
+    /// entry so the extracted binary is launchable without a subsequent
+    /// chmod +x. No-op on Windows (NTFS has no Unix mode). We only honour
+    /// the execute bits — setting arbitrary modes from a network-sourced
+    /// archive is a foot-gun.
+    /// </summary>
+    private static void TrySetUnixExecutableBit(string path, UnixFileMode mode)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
+        const UnixFileMode executeBits =
+            UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+
+        if ((mode & executeBits) == 0)
+            return;
+
+        try
+        {
+            var current = File.GetUnixFileMode(path);
+            File.SetUnixFileMode(path, current | (mode & executeBits));
+        }
+        catch
+        {
+            // Best-effort — mismatched filesystem (e.g. tmpfs mounted noexec)
+            // or permission errors shouldn't abort extraction.
+        }
     }
 }
 

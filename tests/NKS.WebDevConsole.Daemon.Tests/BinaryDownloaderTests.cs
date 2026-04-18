@@ -1,3 +1,4 @@
+using System.Formats.Tar;
 using System.IO.Compression;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -137,6 +138,51 @@ public sealed class BinaryDownloaderTests : IDisposable
     }
 
     [Fact]
+    public async Task ExtractAsync_ValidTarGz_ExtractsAllFiles()
+    {
+        // Build a tiny tar.gz on disk: two files under a top-level
+        // `httpd-2.4.66-linux-x64/` directory, matching the layout our
+        // build-apache.yml workflow produces for Linux binaries. The test
+        // exercises the new .NET 9 System.Formats.Tar + GZipStream path.
+        var tarGzPath = Path.Combine(_tempDir, "httpd-linux.tar.gz");
+        var destDir = Path.Combine(_tempDir, "out-targz");
+
+        BuildTarGz(tarGzPath, new (string entryName, string content)[]
+        {
+            ("httpd-2.4.66-linux-x64/bin/httpd", "ELF-like payload"),
+            ("httpd-2.4.66-linux-x64/conf/httpd.conf", "ServerRoot /opt/httpd"),
+            ("httpd-2.4.66-linux-x64/README", "Apache httpd"),
+        });
+
+        await _sut.ExtractAsync(tarGzPath, destDir, archiveType: "tar.gz");
+
+        Assert.True(File.Exists(Path.Combine(destDir, "httpd-2.4.66-linux-x64", "bin", "httpd")));
+        Assert.True(File.Exists(Path.Combine(destDir, "httpd-2.4.66-linux-x64", "conf", "httpd.conf")));
+        Assert.True(File.Exists(Path.Combine(destDir, "httpd-2.4.66-linux-x64", "README")));
+        Assert.Equal(
+            "ServerRoot /opt/httpd",
+            await File.ReadAllTextAsync(Path.Combine(destDir, "httpd-2.4.66-linux-x64", "conf", "httpd.conf")));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_TarGz_ZipSlip_ParentDirSegment_Skipped()
+    {
+        var tarGzPath = Path.Combine(_tempDir, "evil.tar.gz");
+        var destDir = Path.Combine(_tempDir, "out-evil-tar");
+
+        BuildTarGz(tarGzPath, new (string entryName, string content)[]
+        {
+            ("../../escaped-from-tar.txt", "pwned"),
+            ("safe/ok.txt", "ok"),
+        });
+
+        await _sut.ExtractAsync(tarGzPath, destDir, archiveType: "tar.gz");
+
+        Assert.True(File.Exists(Path.Combine(destDir, "safe", "ok.txt")));
+        Assert.False(File.Exists(Path.Combine(_tempDir, "escaped-from-tar.txt")));
+    }
+
+    [Fact]
     public async Task ExtractAsync_DirectoryEntryInZip_CreatesDirectory()
     {
         var zipPath = Path.Combine(_tempDir, "dirs.zip");
@@ -215,5 +261,27 @@ public sealed class BinaryDownloaderTests : IDisposable
         var entry = zip.CreateEntry(path);
         using var w = new StreamWriter(entry.Open());
         w.Write(content);
+    }
+
+    /// <summary>
+    /// Build a minimal tar.gz archive on disk via System.Formats.Tar wrapped
+    /// in GZipStream — the same pair the production code uses to read it,
+    /// which keeps this test honest about the round-trip rather than relying
+    /// on an external fixture binary checked in to the repo.
+    /// </summary>
+    private static void BuildTarGz(string path, (string entryName, string content)[] entries)
+    {
+        using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        using var gzip = new GZipStream(fs, CompressionLevel.Fastest);
+        using var writer = new TarWriter(gzip, TarEntryFormat.Pax, leaveOpen: false);
+        foreach (var (name, content) in entries)
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            var entry = new PaxTarEntry(TarEntryType.RegularFile, name)
+            {
+                DataStream = new MemoryStream(bytes),
+            };
+            writer.WriteEntry(entry);
+        }
     }
 }
