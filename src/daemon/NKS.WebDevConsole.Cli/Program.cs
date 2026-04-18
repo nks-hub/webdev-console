@@ -1189,7 +1189,7 @@ catalogUrlCmd.SetAction(async (parseResult, ct) =>
     {
         var settings = await client.GetJsonAsync("/api/settings");
         var url = settings.TryGetProperty("daemon.catalogUrl", out var v) ? v.GetString() : null;
-        var display = string.IsNullOrWhiteSpace(url) ? "(default: http://127.0.0.1:8765)" : url!;
+        var display = string.IsNullOrWhiteSpace(url) ? "(default: https://wdc.nks-hub.cz)" : url!;
         if (json) { PrintJson(new { catalogUrl = url ?? "" }); return; }
         AnsiConsole.MarkupLine($"Current catalog URL: [cyan]{Markup.Escape(display)}[/]");
         return;
@@ -3230,7 +3230,7 @@ syncPushCmd.SetAction(async (parseResult, ct) =>
 
     // Resolve catalog URL
     var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
-    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
+    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "https://wdc.nks-hub.cz";
 
     // Filter settings + sites before upload so local-only fields (paths,
     // ports, documentRoot) don't leak to the shared catalog. Mirrors the
@@ -3297,7 +3297,7 @@ syncPullCmd.SetAction(async (parseResult, ct) =>
         return;
     }
     var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
-    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "http://127.0.0.1:8765";
+    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "https://wdc.nks-hub.cz";
     var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
 
     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };

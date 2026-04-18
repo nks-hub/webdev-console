@@ -429,7 +429,7 @@ static IEnumerable<object> BuiltInMarketplaceCatalogue(HashSet<string> installed
 app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
 {
     var marketplaceUrl = Environment.GetEnvironmentVariable("NKS_WDC_MARKETPLACE_URL")
-        ?? "http://127.0.0.1:8765/plugins.json";
+        ?? "https://wdc.nks-hub.cz/plugins.json";
 
     var installedIds = new HashSet<string>(
         pluginLoader.Plugins.Select(p => p.Instance.Id),
