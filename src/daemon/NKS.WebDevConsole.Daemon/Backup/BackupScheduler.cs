@@ -13,7 +13,9 @@ namespace NKS.WebDevConsole.Daemon.Backup;
 ///
 /// Re-reads the setting on every tick so the user can change the interval
 /// from the Settings page without restarting the daemon. The scheduler
-/// also prunes old backups, keeping the 5 most recent.
+/// also prunes old backups, keeping the <see cref="DefaultRetainCount"/>
+/// most recent by default — override via the <c>backup.retainCount</c>
+/// setting (1…100, clamped).
 /// </summary>
 public sealed class BackupScheduler : IDisposable
 {
@@ -23,7 +25,9 @@ public sealed class BackupScheduler : IDisposable
     private Timer? _timer;
     private int _running;
 
-    private const int MaxBackups = 10;
+    private const int DefaultRetainCount = 10;
+    private const int MinRetainCount = 1;
+    private const int MaxRetainCount = 100;
 
     public BackupScheduler(
         BackupManager backupManager,
@@ -73,11 +77,19 @@ public sealed class BackupScheduler : IDisposable
             _logger.LogInformation("Scheduled backup created: {Path} ({Files} files, {Size} bytes)",
                 result.Path, result.FileCount, result.SizeBytes);
 
-            // Prune: keep only the most recent MaxBackups
+            // Prune: keep only the most recent N where N = backup.retainCount
+            // (clamped to [MinRetainCount, MaxRetainCount]) or the default when
+            // unset. Re-read per tick so operators can tune via Settings
+            // without restarting the daemon.
+            var retain = DefaultRetainCount;
+            var retainRaw = _settings.GetString("backup", "retainCount");
+            if (!string.IsNullOrWhiteSpace(retainRaw) && int.TryParse(retainRaw, out var r))
+                retain = Math.Clamp(r, MinRetainCount, MaxRetainCount);
+
             var all = _backupManager.ListBackups();
-            if (all.Count > MaxBackups)
+            if (all.Count > retain)
             {
-                foreach (var old in all.Skip(MaxBackups))
+                foreach (var old in all.Skip(retain))
                 {
                     try
                     {
