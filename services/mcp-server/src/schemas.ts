@@ -15,7 +15,17 @@ export const DomainSchema = z
       .string()
       .regex(/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/, {
         message: "Domain must end in a TLD (e.g. 'myapp.loc')",
-      }),
+      })
+      // Reject RFC-invalid shapes the outer regex still accepts:
+      // consecutive dots (`a..loc`) and labels ending in a hyphen
+      // (`a-.loc`). Cheap safeguard before it hits the daemon.
+      .refine((s) => !s.includes('..'), {
+        message: 'Domain must not contain consecutive dots',
+      })
+      .refine(
+        (s) => !s.split('.').some((label) => label.endsWith('-') || label.startsWith('-')),
+        { message: 'Domain labels must not start or end with a hyphen' },
+      ),
   )
   .describe("Local development domain like 'myapp.loc' (case-insensitive)")
 
