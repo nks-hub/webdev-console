@@ -1,11 +1,28 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
 public class SseService
 {
     private readonly ConcurrentDictionary<string, SseClient> _clients = new();
+    private readonly ILogger<SseService> _logger;
+
+    // Per-client write timeout. A broadcast never blocks longer than this
+    // on a slow client before the client gets evicted. Keeps a stalled
+    // browser tab from wedging the lock — without this, the next broadcast
+    // to the same client serializes behind the slow writer until its TCP
+    // timeout (typically minutes). 5 s is well above a healthy LAN flush
+    // and fast enough that stale clients disappear from /metrics within
+    // one tick of the HealthMonitor.
+    private static readonly TimeSpan ClientWriteTimeout = TimeSpan.FromSeconds(5);
+
+    public SseService(ILogger<SseService>? logger = null)
+    {
+        _logger = logger ?? NullLogger<SseService>.Instance;
+    }
 
     public string AddClient(HttpResponse response)
     {
@@ -35,15 +52,21 @@ public class SseService
         var tasks = snapshot.Select(async kvp =>
         {
             var (id, client) = kvp;
+            using var cts = new CancellationTokenSource(ClientWriteTimeout);
             await client.WriteLock.WaitAsync();
             try
             {
-                await client.Response.WriteAsync(message);
-                await client.Response.Body.FlushAsync();
+                await client.Response.WriteAsync(message, cts.Token);
+                await client.Response.Body.FlushAsync(cts.Token);
                 return (id, alive: true);
             }
-            catch
+            catch (Exception ex)
             {
+                // Debug-level — dead clients are expected when browsers
+                // close tabs or networks hiccup. Log at a level that
+                // lets operators diagnose "why did metrics stop" without
+                // spamming the daemon log.
+                _logger.LogDebug(ex, "SSE client {ClientId} evicted on write: {Error}", id, ex.Message);
                 return (id, alive: false);
             }
             finally
