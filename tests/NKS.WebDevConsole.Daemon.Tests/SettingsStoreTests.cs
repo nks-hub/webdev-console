@@ -123,12 +123,15 @@ public class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void CatalogUrl_defaults_to_localhost_when_unset()
+    public void CatalogUrl_defaults_to_public_nks_hub_when_unset()
     {
-        // Ensure env var is not set for this test
+        // Since commit 3370d3b the built-in default points at the public
+        // catalog at https://wdc.nks-hub.cz so end-users don't have to
+        // edit settings before binaries installs work. Local dev still
+        // overrides via NKS_WDC_CATALOG_URL env.
         Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", null);
         var store = new SettingsStore(_database);
-        Assert.Equal("http://127.0.0.1:8765", store.CatalogUrl);
+        Assert.Equal("https://wdc.nks-hub.cz", store.CatalogUrl);
     }
 
     [Fact]
