@@ -6,9 +6,17 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { safe } from '../formatting.js'
 
+// Mirror the PluginIdSchema shape — service ids live in a URL path segment,
+// so accepting arbitrary characters risks traversal-style payloads reaching
+// the daemon routing layer. Service ids are always lowercase alphanumerics
+// with optional dots/hyphens/underscores (e.g. "apache", "php8.3", "nks.wdc.mysql").
 const ServiceIdSchema = z
   .string()
   .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9._-]+$/, {
+    message: 'Service id allows only [a-zA-Z0-9._-]',
+  })
   .describe('Service identifier — typically the lowercase plugin name like "apache" or "mysql"')
 
 export function registerServicesTools(server: McpServer, opts: RegisterOptions): void {
