@@ -9,12 +9,13 @@ namespace NKS.WebDevConsole.Daemon.Binaries;
 public sealed class CatalogClientOptions
 {
     /// <summary>
-    /// Base URL of the binary catalog API. Default points at a locally-hosted
-    /// reference implementation — any HTTP service that returns the expected
-    /// JSON shape works (see docs/catalog-api.md). Override via
-    /// <c>NKS_WDC_CATALOG_URL</c> env var to point at an upstream service.
+    /// Base URL of the binary catalog API. Defaults to the public NKS
+    /// catalog at https://wdc.nks-hub.cz — matches SettingsStore.CatalogUrl
+    /// fallback chain, so end-users get working binaries installs without
+    /// editing config. Override via <c>NKS_WDC_CATALOG_URL</c> env var or
+    /// the Settings page when running a self-hosted catalog-api.
     /// </summary>
-    public string BaseUrl { get; set; } = "http://127.0.0.1:8765";
+    public string BaseUrl { get; set; } = "https://wdc.nks-hub.cz";
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 }
 
@@ -73,9 +74,10 @@ public sealed class CatalogClient
             url = _options.BaseUrl;
         // Last-resort fallback so GetAsync() never sees an empty relative URI
         // (HttpClient has no BaseAddress on this instance, so an empty base
-        // + "/api/v1/catalog" would throw "invalid request URI").
+        // + "/api/v1/catalog" would throw "invalid request URI"). Matches
+        // SettingsStore.CatalogUrl default — public NKS catalog.
         if (string.IsNullOrWhiteSpace(url))
-            url = "http://127.0.0.1:8765";
+            url = "https://wdc.nks-hub.cz";
         return url.TrimEnd('/');
     }
 
