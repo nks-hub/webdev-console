@@ -200,11 +200,16 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         '  ttl: TTL in seconds (1 = auto).',
       inputSchema: {
         zoneId: ZoneIdSchema,
-        name: z.string().min(1).describe('DNS record name (subdomain or @)'),
-        content: z.string().min(1).describe('Target — IP, hostname, or text'),
+        // RFC 1035 caps DNS names at 253 chars (and labels at 63).
+        // Content is record-type dependent so we keep it loose but
+        // capped at 4 KB — enough for a long TXT/SPF record without
+        // letting megabyte blobs through to Cloudflare's API.
+        name: z.string().min(1).max(253).describe('DNS record name (subdomain or @, max 253 chars)'),
+        content: z.string().min(1).max(4096).describe('Target — IP, hostname, or text (max 4 KB)'),
         type: z.enum(['A', 'AAAA', 'CNAME', 'TXT', 'MX']).default('CNAME'),
         proxied: z.boolean().default(true),
-        ttl: z.number().int().min(1).default(1),
+        // Cloudflare accepts 1 (auto) or 60…86400 seconds.
+        ttl: z.number().int().min(1).max(86400).default(1),
       },
       annotations: {
         readOnlyHint: false,
