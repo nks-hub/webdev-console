@@ -232,6 +232,20 @@ public sealed class CloudflareConfigTests
         Assert.DoesNotContain("very-long-secret", safe.ApiToken!);
     }
 
+    [Theory]
+    [InlineData("a")]
+    [InlineData("ab")]
+    [InlineData("abc")]
+    public void Redacted_ShortApiToken_FullyMaskedWithoutCrash(string token)
+    {
+        // Regression: ApiToken[^4..] threw IndexOutOfRangeException when len < 4.
+        // Malformed user input must not bubble up as a 500 from the settings endpoint.
+        var cfg = new CloudflareConfig { ApiToken = token };
+        var safe = cfg.Redacted();
+        Assert.Equal("••••••••", safe.ApiToken);
+        Assert.DoesNotContain(token, safe.ApiToken!);
+    }
+
     // ── Defaults ────────────────────────────────────────────────────────
 
     [Fact]
