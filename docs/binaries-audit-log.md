@@ -84,3 +84,14 @@ None. Every catalog URL pointing at `nks-hub/webdev-console-binaries` resolves t
 
 **Next step:** Open a proper ticket for a "resync catalog JSON → DB" admin action, or accept that live updates flow only through the admin UI and not through git. Decision needed from owner.
 
+
+## 2026-04-18 16:11 UTC — URL sweep second pass (range-GET probe)
+
+**Method change:** HEAD+`-L` against GitHub-release URLs was returning final `302` (CDN signed URL doesn't support HEAD), producing 55 false positives. Switched to `GET -r 0-0` (1-byte range) which follows redirects to the real object → `200/206`. Zero false positives on this pass.
+
+**Anomaly delta vs 16:09 sweep (same 3 real findings):**
+- `apache 2.4.65 windows/x64` — HTML-as-ZIP (ApacheLounge rotated). **Owner decision pending** — no canonical upstream, no mirror tag.
+- `apache 2.4.62 windows/x64` — same class as above. **Owner decision pending.**
+- `php 8.3.25 windows/x64` — ✅ auto-patched in `wdc-catalog-api@c21937a` (redirect to `/releases/archives/`).
+
+Full `/releases/archives/` scan confirms all PHP ≤8.3 Windows URLs still on `/releases/` (not rotated yet). PHP 8.3.25 was the only one at the cliff today.
