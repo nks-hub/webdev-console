@@ -6,6 +6,57 @@ For the full baseline audit with per-app coverage matrix, see [`binaries-audit-2
 
 ---
 
+## 2026-04-18 16:09 UTC — Catalog + binaries live-verify sweep
+
+**Catalog endpoints probed:** 61 URLs across 10 apps (`mkcert`, `mysql`, `redis`, `nginx`, `apache`, `mariadb`, `caddy`, `mailpit`, `cloudflared`, `php`)
+**Binaries repo tags:** 22 tags, 57 assets total
+**Method:** `curl -sI -L` per URL (HEAD, up to 5 redirects), size 0 tolerated (HEAD often omits Content-Length on CDN). Non-OK classes confirmed with a `GET -r 0-2047` range read.
+
+### Anomalies
+
+| App | Version | OS/Arch | Status | Notes |
+|---|---|---|---|---|
+| apache | 2.4.65 | windows/x64 | HTML_AS_BINARY | `https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.65-250401-win64-VS18.zip` — ApacheLounge returns HTTP 200 with an HTML listing/error body when the file is no longer hosted; only 2.4.66 currently published. No canonical upstream for 2.4.65 Windows exists. |
+| apache | 2.4.62 | windows/x64 | HTML_AS_BINARY | Same failure mode as 2.4.65 on `VS17/binaries/httpd-2.4.62-240718-win64-VS17.zip`. No canonical upstream. |
+| php | 8.3.25 | windows/x64 | BROKEN_HTTP | `https://windows.php.net/downloads/releases/php-8.3.25-nts-Win32-vs16-x64.zip` → 404 (8.3.25 rotated out of /releases/ after 8.3.26 shipped). Fixed by re-routing to `/releases/archives/` — wdc-catalog-api commit `c21937a`. |
+
+### Immediate action taken
+
+- **php 8.3.25 windows/x64** → `wdc-catalog-api@c21937a` repoints URL to `/releases/archives/…` and adds a `notes` field flagging it as temporary until the catalog is bumped to the current 8.3 patch. Verified post-fix: HTTP 200, `application/zip`, 4,242,524 bytes, starts with `PK\x03\x04`.
+- **apache 2.4.65 / 2.4.62 windows/x64** — NOT auto-patched. ApacheLounge does not host these builds anymore and nks-hub/webdev-console-binaries has no mirror tag for them (only `binaries-apache-2.4.66`). Remediation requires either (a) removing these versions from the catalog, (b) dispatching a new `build-apache.yml` run that targets 2.4.65/2.4.62 Windows so nks-hub gains a mirror tag, or (c) accepting that WDC cannot install Apache 2.4.65/2.4.62 on Windows at all. Owner decision needed.
+
+### Stranded binaries releases (tag exists, no catalog URL references it)
+
+All six are intentional: catalog points to an authoritative upstream instead of the in-house mirror, so the mirror tag sits as a fallback.
+
+- `binaries-mariadb-12.3.1` — catalog uses `https://archive.mariadb.org/…-winx64.zip` (Windows only, no Linux/macOS in catalog)
+- `binaries-mariadb-11.8.3` — same pattern
+- `binaries-php-7.0.33` — catalog uses `https://windows.php.net/downloads/releases/archives/…`
+- `binaries-php-5.6.40` — same pattern
+- `binaries-redis-7.4.2` — catalog uses `https://github.com/redis-windows/redis-windows/releases/…`
+- `binaries-mkcert-1.4.4` — catalog uses `https://github.com/FiloSottile/mkcert/releases/…`
+
+### Broken catalog references (URL points to nonexistent release)
+
+None. Every catalog URL pointing at `nks-hub/webdev-console-binaries` resolves to an existing tag and asset.
+
+### Assets flagged in binaries repo
+
+- `binaries-apache-2.4.66 / httpd-2.4.66-windows-x64.zip` — size 2,451 bytes (HTML error page, pre-existing known issue already temp-routed to ApacheLounge via `wdc-catalog-api@6b63ff9`). No other asset < 10 KB across the 57 assets.
+
+### Summary
+
+| Class | Count |
+|---|---|
+| OK | 58 |
+| HTML_AS_BINARY | 2 |
+| BROKEN_HTTP | 1 |
+| TOO_SMALL | 0 |
+| SIZE_MISMATCH | 0 |
+| NO_FOLLOW | 0 |
+
+---
+
 ## 2026-04-18 08:50 UTC — Triggered missing MariaDB builds
 
 **Context:** Comprehensive audit published 08:38 UTC flagged `mariadb 11.8.3` and `12.3.1` as Windows-only (gap #2). Workflow `build-mariadb.yml` (id 262267922) exists and accepts a `version` input.
