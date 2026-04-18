@@ -53,7 +53,17 @@ public class SseService
         {
             var (id, client) = kvp;
             using var cts = new CancellationTokenSource(ClientWriteTimeout);
-            await client.WriteLock.WaitAsync();
+            // Pass the timeout token to WaitAsync too so a stalled
+            // prior write on the same client doesn't extend the
+            // combined lock+write budget past ClientWriteTimeout.
+            try
+            {
+                await client.WriteLock.WaitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return (id, alive: false);
+            }
             try
             {
                 await client.Response.WriteAsync(message, cts.Token);
@@ -71,6 +81,10 @@ public class SseService
             }
             finally
             {
+                // Release only if WaitAsync actually acquired — the
+                // early-return path for the cancelled lock-wait above
+                // never touched the semaphore, so this block only runs
+                // for the successful-acquire code path.
                 client.WriteLock.Release();
             }
         }).ToArray();
