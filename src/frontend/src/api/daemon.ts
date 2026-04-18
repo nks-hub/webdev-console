@@ -319,7 +319,7 @@ export const cloudflareSync = (): Promise<{ ok: boolean; synced: number; sites: 
 // These call the catalog-api directly (not the daemon), using JWT auth.
 
 function catalogBase(catalogUrl?: string): string {
-  return (catalogUrl || 'http://127.0.0.1:8765').replace(/\/$/, '')
+  return (catalogUrl || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
 }
 
 function jwtHeaders(token: string): Record<string, string> {

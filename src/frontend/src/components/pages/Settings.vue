@@ -231,7 +231,7 @@
               <el-form-item label="Catalog API URL">
                 <el-input
                   v-model="catalogUrl"
-                  placeholder="http://127.0.0.1:8765"
+                  placeholder="https://wdc.nks-hub.cz"
                   class="mono-input"
                 >
                   <template #append>
@@ -803,7 +803,7 @@ async function refreshCatalog() {
 async function testCatalogReachable() {
   testingCatalog.value = true
   catalogStatus.value = null
-  const url = catalogUrl.value || 'http://127.0.0.1:8765'
+  const url = catalogUrl.value || 'https://wdc.nks-hub.cz'
   try {
     const r = await fetch(`${url.replace(/\/$/, '')}/healthz`)
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
@@ -823,7 +823,7 @@ async function testCatalogReachable() {
 }
 
 function openCatalogAdmin() {
-  const url = catalogUrl.value || 'http://127.0.0.1:8765'
+  const url = catalogUrl.value || 'https://wdc.nks-hub.cz'
   window.open(url.replace(/\/$/, '') + '/admin', '_blank')
 }
 
@@ -870,7 +870,7 @@ async function saveDeviceName(row: CatalogDeviceInfo) {
 }
 
 function getCatalogUrl(): string {
-  return (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+  return (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
 }
 
 async function doLogin() {
@@ -1128,7 +1128,7 @@ async function pullFromCloud() {
   pulling.value = true
   syncStatus.value = null
   try {
-    const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+    const url = (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
     const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}`)
     if (!r.ok) {
       if (r.status === 404) {
@@ -1237,7 +1237,7 @@ async function checkCloudExists() {
   checkingCloud.value = true
   syncStatus.value = null
   try {
-    const url = (catalogUrl.value || 'http://127.0.0.1:8765').replace(/\/$/, '')
+    const url = (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
     const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}/exists`)
     if (!r.ok) {
       const text = await r.text().catch(() => r.statusText)
