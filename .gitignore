@@ -77,3 +77,4 @@ appsettings.*.json
 /src/daemon/NKS.WebDevConsole.Daemon/logs/
 src/frontend/resources/daemon/
 src/frontend/release/
+/docs/
