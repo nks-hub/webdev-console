@@ -17,6 +17,11 @@ const ServiceIdSchema = z
   .regex(/^[a-zA-Z0-9._-]+$/, {
     message: 'Service id allows only [a-zA-Z0-9._-]',
   })
+  // Reject "." / ".." — dot is in the class above so "." alone is accepted,
+  // and "x..y" would pass too. Block traversal-shaped ids at the MCP edge.
+  .refine((s) => s !== '.' && s !== '..' && !s.includes('..'), {
+    message: 'Service id must not be "." / ".." or contain ".."',
+  })
   .describe('Service identifier — typically the lowercase plugin name like "apache" or "mysql"')
 
 export function registerServicesTools(server: McpServer, opts: RegisterOptions): void {

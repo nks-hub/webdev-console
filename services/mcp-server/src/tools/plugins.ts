@@ -13,6 +13,12 @@ const PluginIdSchema = z
   .regex(/^[a-zA-Z0-9._-]+$/, {
     message: 'Plugin id allows only [a-zA-Z0-9._-]',
   })
+  // Reject "." and ".." — the character class above accepts them as valid,
+  // but sending them into a URL path segment invites traversal even when
+  // the server-side router normalizes, so hard-fail at the MCP edge.
+  .refine((s) => s !== '.' && s !== '..' && !s.includes('..'), {
+    message: 'Plugin id must not be "." / ".." or contain ".."',
+  })
   .describe('Plugin id like "nks.wdc.apache"')
 
 const PluginDownloadUrlSchema = z
