@@ -591,6 +591,79 @@
             <div v-if="siteMetrics?.accessLog" class="hint" style="margin-top: 12px">
               <code>{{ siteMetrics.accessLog.path }}</code>
             </div>
+
+            <!-- Historical data section -->
+            <div class="historical-section">
+              <div class="historical-header">
+                <span class="historical-title">Historical</span>
+                <div class="historical-controls">
+                  <div class="historical-control-item">
+                    <label class="historical-label">{{ $t('metrics.historical.dateLabel') }}</label>
+                    <el-date-picker
+                      v-model="historicalDate"
+                      type="date"
+                      size="small"
+                      :disabled-date="isDateDisabled"
+                      value-format="YYYY-MM-DD"
+                      format="YYYY-MM-DD"
+                      style="width: 150px"
+                      @change="onHistoricalParamsChange"
+                    />
+                  </div>
+                  <div class="historical-control-item">
+                    <label class="historical-label">{{ $t('metrics.historical.granularityLabel') }}</label>
+                    <el-select
+                      v-model="historicalGranularity"
+                      size="small"
+                      style="width: 90px"
+                      @change="onHistoricalParamsChange"
+                    >
+                      <el-option label="1m" value="1m" />
+                      <el-option label="5m" value="5m" />
+                      <el-option label="15m" value="15m" />
+                      <el-option label="1h" value="1h" />
+                    </el-select>
+                  </div>
+                  <el-button
+                    size="small"
+                    :loading="historicalLoading"
+                    :icon="Refresh"
+                    @click="loadHistoricalMetrics"
+                  >
+                    {{ $t('metrics.historical.refresh') }}
+                  </el-button>
+                  <div class="historical-series-toggles">
+                    <el-check-tag
+                      v-for="s in historicalSeriesOptions"
+                      :key="s.key"
+                      :checked="historicalActiveSeries.includes(s.key)"
+                      :style="{ '--check-tag-color': s.color }"
+                      class="series-toggle"
+                      @change="(checked: boolean) => toggleSeries(s.key, checked)"
+                    >
+                      {{ $t(s.labelKey) }}
+                    </el-check-tag>
+                  </div>
+                </div>
+              </div>
+
+              <div class="historical-chart-wrap">
+                <div v-if="historicalLoading" class="historical-overlay">
+                  <span class="hint">{{ $t('metrics.historical.loading') }}</span>
+                </div>
+                <div
+                  v-if="!historicalLoading && historicalIsEmptyDay"
+                  class="historical-overlay historical-empty"
+                >
+                  {{ $t('metrics.historical.emptyDay') }}
+                </div>
+                <v-chart
+                  :option="historicalChartOption"
+                  :autoresize="true"
+                  style="width: 100%; height: 220px"
+                />
+              </div>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -650,7 +723,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
-import type { SiteInfo } from '../../api/types'
+import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import MetricsChart from '../shared/MetricsChart.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
@@ -660,7 +733,15 @@ import {
   fetchSiteMetrics, type SiteMetrics,
   fetchDockerComposeStatus, type DockerComposeStatus,
   composeUp, composeDown, composeRestart, composePs,
+  getHistoricalMetrics,
 } from '../../api/daemon'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
+
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent])
 
 const route = useRoute()
 const router = useRouter()
@@ -1243,11 +1324,176 @@ function formatDate(s: string): string {
   try { return new Date(s).toLocaleString() } catch { return s }
 }
 
+// Reactive display of "Last updated Xs ago" — depends on metricsTick so Vue
+// re-renders it on the 5s tick without any manual string interpolation.
+const metricsAgeDisplay = computed(() => {
+  void metricsTick.value // register dependency
+  return formatAge(metricsLastRefresh.value)
+})
+
+// ── Historical metrics (Phase 7.2) ────────────────────────────────────
+
+function todayString(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const historicalDate = ref<string>(todayString())
+const historicalGranularity = ref<string>('5m')
+const historicalLoading = ref(false)
+const historicalData = ref<HistoricalMetrics | null>(null)
+
+const historicalSeriesOptions = [
+  { key: 'requests', labelKey: 'metrics.historical.seriesRequests', color: '#6366f1' },
+  { key: 'bytes',    labelKey: 'metrics.historical.seriesBytes',    color: '#10b981' },
+  { key: 'errors',   labelKey: 'metrics.historical.seriesErrors',   color: '#ef4444' },
+] as const
+
+type SeriesKey = typeof historicalSeriesOptions[number]['key']
+
+const historicalActiveSeries = ref<SeriesKey[]>(['requests'])
+
+function toggleSeries(key: SeriesKey, checked: boolean) {
+  if (checked) {
+    if (!historicalActiveSeries.value.includes(key)) {
+      historicalActiveSeries.value = [...historicalActiveSeries.value, key]
+    }
+  } else {
+    historicalActiveSeries.value = historicalActiveSeries.value.filter(k => k !== key)
+  }
+}
+
+function isDateDisabled(date: Date): boolean {
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  return date > today
+}
+
+async function loadHistoricalMetrics() {
+  if (!site.value) return
+  historicalLoading.value = true
+  try {
+    historicalData.value = await getHistoricalMetrics(site.value.domain, {
+      date: historicalDate.value,
+      granularity: historicalGranularity.value,
+    })
+  } catch (e: any) {
+    ElMessage.error(`Historical metrics failed: ${e?.message || e}`)
+    historicalData.value = null
+  } finally {
+    historicalLoading.value = false
+  }
+}
+
+function onHistoricalParamsChange() {
+  void loadHistoricalMetrics()
+}
+
+const historicalIsEmptyDay = computed(() => {
+  if (!historicalData.value) return false
+  return historicalData.value.series.every(s => s.data.every(p => p.value === 0))
+})
+
+const SERIES_COLORS: Record<SeriesKey, string> = {
+  requests: '#6366f1',
+  bytes:    '#10b981',
+  errors:   '#ef4444',
+}
+
+const historicalChartOption = computed(() => {
+  const data = historicalData.value
+  const activeSeries = historicalActiveSeries.value
+
+  // Build xAxis labels from the first available series, or an empty array
+  const firstSeries = data?.series[0]
+  const xLabels: string[] = firstSeries
+    ? firstSeries.data.map(p => {
+        try {
+          const d = new Date(p.ts)
+          return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+        } catch {
+          return p.ts
+        }
+      })
+    : []
+
+  const seriesDef = historicalSeriesOptions
+    .filter(s => activeSeries.includes(s.key))
+    .map(s => {
+      const found = data?.series.find(sr => sr.name === s.key)
+      const values: number[] = found ? found.data.map(p => p.value) : xLabels.map(() => 0)
+      const color = SERIES_COLORS[s.key]
+      return {
+        name: s.key,
+        type: 'line' as const,
+        data: values,
+        smooth: 0.2,
+        symbol: 'none',
+        lineStyle: { color, width: 1.5 },
+        areaStyle: {
+          color: {
+            type: 'linear' as const,
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: color + '22' },
+              { offset: 1, color: color + '03' },
+            ],
+          },
+        },
+      }
+    })
+
+  return {
+    animation: false,
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1c1e2a',
+      borderColor: 'rgba(255,255,255,0.12)',
+      textStyle: { color: '#eceef6', fontSize: 11 },
+    },
+    legend: { show: false },
+    grid: { top: 12, right: 16, bottom: 40, left: 48 },
+    dataZoom: [
+      { type: 'inside', start: 0, end: 100 },
+      { type: 'slider', height: 20, bottom: 4, borderColor: 'transparent', fillerColor: 'rgba(99,102,241,0.12)' },
+    ],
+    xAxis: {
+      type: 'category',
+      data: xLabels,
+      boundaryGap: false,
+      axisLabel: {
+        fontSize: 10,
+        color: '#8b8fa8',
+        interval: Math.max(0, Math.floor(xLabels.length / 12) - 1),
+      },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      splitLine: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      splitNumber: 3,
+      axisLabel: {
+        fontSize: 10,
+        color: '#8b8fa8',
+        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+      },
+      splitLine: {
+        lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' },
+      },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    },
+    series: seriesDef,
+  }
+})
+
 watch(domain, () => { void load() })
 watch(activeTab, (tab) => {
   if (tab === 'metrics') {
     void refreshMetrics()
     startMetricsTicker()
+    if (!historicalData.value) void loadHistoricalMetrics()
   } else {
     stopMetricsTicker()
   }
@@ -1261,6 +1507,7 @@ onMounted(() => {
   if (activeTab.value === 'metrics') {
     void refreshMetrics()
     startMetricsTicker()
+    void loadHistoricalMetrics()
   }
 })
 onBeforeUnmount(() => {
@@ -1805,5 +2052,82 @@ onBeforeUnmount(() => {
   font-size: 0.85rem;
   color: var(--wdc-text-2);
   margin-bottom: 14px;
+}
+
+/* ─── Historical metrics section ─────────────────────────────────────── */
+.historical-section {
+  margin-top: 24px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  overflow: hidden;
+}
+.historical-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--wdc-surface-2);
+  border-bottom: 1px solid var(--wdc-border);
+}
+.historical-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text);
+  flex-shrink: 0;
+}
+.historical-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.historical-control-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.historical-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wdc-text-3);
+  white-space: nowrap;
+}
+.historical-series-toggles {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.series-toggle {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  cursor: pointer;
+}
+.historical-chart-wrap {
+  position: relative;
+  padding: 12px 8px 4px;
+}
+.historical-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  background: transparent;
+}
+.historical-empty {
+  font-size: 0.82rem;
+  color: var(--wdc-text-3);
+  font-style: italic;
 }
 </style>

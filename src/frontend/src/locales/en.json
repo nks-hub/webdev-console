@@ -147,6 +147,18 @@
     "errors": "Errors",
     "danger": "Danger"
   },
+  "metrics": {
+    "historical": {
+      "dateLabel": "Date",
+      "granularityLabel": "Granularity",
+      "refresh": "Refresh",
+      "loading": "Loading...",
+      "emptyDay": "No traffic on this day",
+      "seriesRequests": "Requests",
+      "seriesBytes": "Bytes",
+      "seriesErrors": "Errors"
+    }
+  },
   "logs": {
     "errors": {
       "timestamp": "Timestamp",

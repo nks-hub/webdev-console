@@ -147,6 +147,18 @@
     "errors": "Chyby",
     "danger": "Nebezpečné"
   },
+  "metrics": {
+    "historical": {
+      "dateLabel": "Datum",
+      "granularityLabel": "Granularita",
+      "refresh": "Obnovit",
+      "loading": "Načítání...",
+      "emptyDay": "Žádný provoz v tento den",
+      "seriesRequests": "Požadavky",
+      "seriesBytes": "Bajty",
+      "seriesErrors": "Chyby"
+    }
+  },
   "logs": {
     "errors": {
       "timestamp": "Čas",

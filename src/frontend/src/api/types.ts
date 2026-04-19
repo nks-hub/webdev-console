@@ -210,3 +210,20 @@ export interface SiteErrorLogEntry {
   pid: string | null
   client: string | null
 }
+
+export interface HistoricalMetricPoint {
+  ts: string
+  value: number
+}
+
+export interface HistoricalMetricSeries {
+  name: string
+  data: HistoricalMetricPoint[]
+}
+
+export interface HistoricalMetrics {
+  date: string
+  granularity: string
+  bucketCount: number
+  series: HistoricalMetricSeries[]
+}

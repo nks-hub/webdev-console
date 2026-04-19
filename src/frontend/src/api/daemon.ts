@@ -11,6 +11,7 @@ import type {
   BinaryRelease,
   InstalledBinary,
   SiteErrorLogEntry,
+  HistoricalMetrics,
 } from './types'
 
 declare global {
@@ -220,6 +221,17 @@ export const fetchSiteMetricsHistory = (
   limit: number = 200,
 ): Promise<SiteMetricsHistory> =>
   json(`/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=${minutes}&limit=${limit}`)
+
+export const getHistoricalMetrics = (
+  domain: string,
+  opts?: { date?: string; granularity?: string },
+): Promise<HistoricalMetrics> => {
+  const params = new URLSearchParams()
+  if (opts?.date) params.set('date', opts.date)
+  if (opts?.granularity) params.set('granularity', opts.granularity)
+  const qs = params.toString()
+  return json(`/api/sites/${encodeURIComponent(domain)}/metrics/historical${qs ? '?' + qs : ''}`)
+}
 
 export const getErrorLogs = (
   domain: string,
