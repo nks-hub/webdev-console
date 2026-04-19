@@ -5,7 +5,7 @@
         <div class="workspace-mark">NW</div>
         <div class="workspace-copy">
           <span class="workspace-title">NKS WebDev Console</span>
-          <span class="workspace-subtitle">{{ runningCount }}/{{ services.length }} services online</span>
+          <span class="workspace-subtitle">{{ runningCount }}/{{ services.length }} {{ $t('sidebar.servicesOnline') }}</span>
         </div>
       </div>
     </div>

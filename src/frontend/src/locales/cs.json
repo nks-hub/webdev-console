@@ -55,6 +55,9 @@
     "tunnel": "Tunel",
     "tools": "Nástroje"
   },
+  "sidebar": {
+    "servicesOnline": "Služeb online"
+  },
   "dashboard": {
     "title": "Přehled",
     "subtitle": "Stav systému a služeb",

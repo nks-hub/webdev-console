@@ -55,6 +55,9 @@
     "tunnel": "Tunnel",
     "tools": "Tools"
   },
+  "sidebar": {
+    "servicesOnline": "services online"
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "System overview & service health",

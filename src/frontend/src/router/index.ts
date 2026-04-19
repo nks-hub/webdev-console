@@ -15,7 +15,7 @@ import CloudflareTunnel from '../components/pages/CloudflareTunnel.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
-  { path: '/dashboard', component: Dashboard, meta: { title: 'Dashboard', titleKey: 'nav.services' } },
+  { path: '/dashboard', component: Dashboard, meta: { title: 'Dashboard', titleKey: 'nav.overview' } },
   { path: '/sites', component: Sites, meta: { title: 'Sites', titleKey: 'nav.sites' } },
   { path: '/sites/:domain/edit', component: SiteEdit, props: true, meta: { title: 'Edit Site', titleKey: 'nav.editSite' } },
   { path: '/databases', component: Databases, meta: { title: 'Databases', titleKey: 'nav.databases', requiresAdvanced: true } },
