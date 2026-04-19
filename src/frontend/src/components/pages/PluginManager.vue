@@ -155,7 +155,7 @@
             class="pm-open-btn"
             @click="router.push(`/plugin/${plugin.id}`)"
           >
-            Open panel &rarr;
+            Open panel <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
       </div>
@@ -172,6 +172,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { ArrowRight } from '@element-plus/icons-vue'
 import { usePluginsStore } from '../../stores/plugins'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import {

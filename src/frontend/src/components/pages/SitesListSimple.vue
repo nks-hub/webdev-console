@@ -82,7 +82,7 @@
           />
 
           <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, site.domain)">
-            <el-button size="small" circle>&#8942;</el-button>
+            <el-button size="small" circle><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="delete" class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>
@@ -100,6 +100,7 @@ import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { MoreFilled } from '@element-plus/icons-vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { startService, stopService } from '../../api/daemon'

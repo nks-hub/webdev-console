@@ -137,12 +137,21 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Actions" width="280" fixed="right">
+        <el-table-column label="Actions" width="160" fixed="right">
           <template #default="{ row }">
             <div class="site-actions">
               <el-button size="small" type="primary" @click.stop="openInBrowser(row)">{{ $t('sites.open') }}</el-button>
-              <el-button size="small" @click.stop="detectFramework(row.domain)" title="Auto-detect framework">{{ $t('sites.detect') }}</el-button>
-              <el-button size="small" type="danger" plain @click.stop="confirmDelete(row.domain)">{{ $t('sites.delete') }}</el-button>
+              <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)" @click.stop>
+                <el-button size="small" @click.stop title="More actions">
+                  <el-icon><MoreFilled /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="detect">{{ $t('sites.detect') }}</el-dropdown-item>
+                    <el-dropdown-item command="delete" class="danger-item">{{ $t('sites.delete') }}</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </template>
         </el-table-column>
@@ -264,6 +273,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo } from '../../api/types'
 import { fetchDockerComposeStatus, type DockerComposeStatus } from '../../api/daemon'
+import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
 
 const route = useRoute()
@@ -558,6 +568,11 @@ function openInBrowser(site: SiteInfo) {
   window.open(`${proto}://${site.domain}${portSuffix}`, '_blank')
 }
 
+function handleRowAction(cmd: string, row: SiteInfo) {
+  if (cmd === 'detect') void detectFramework(row.domain)
+  else if (cmd === 'delete') void confirmDelete(row.domain)
+}
+
 // rollbackConfig + formatDate removed — rollback is handled in SiteEdit History tab
 </script>
 
@@ -766,6 +781,11 @@ function openInBrowser(site: SiteInfo) {
   gap: 6px;
   align-items: center;
   flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+:global(.danger-item) {
+  color: var(--el-color-danger) !important;
 }
 
 .site-detail {

@@ -47,7 +47,7 @@
         <div v-for="cert in certs" :key="cert.domain" class="cert-card">
           <div class="cert-main">
             <div class="cert-domain">
-              <span class="cert-lock">&#128274;</span>
+              <el-icon class="cert-lock"><Lock /></el-icon>
               <span class="cert-name">{{ cert.domain }}</span>
             </div>
             <div class="cert-meta">
@@ -119,6 +119,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Lock } from '@element-plus/icons-vue'
 
 interface CertInfo {
   domain: string

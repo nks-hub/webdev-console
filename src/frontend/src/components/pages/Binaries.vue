@@ -82,7 +82,7 @@
           </div>
           <div class="bin-card-actions">
             <el-button size="small" type="primary" plain class="bin-open-btn">
-              Manage versions &rarr;
+              Manage versions <el-icon><ArrowRight /></el-icon>
             </el-button>
           </div>
         </div>
@@ -215,6 +215,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ArrowRight } from '@element-plus/icons-vue'
 import {
   fetchBinaryCatalog,
   fetchInstalledBinaries,

@@ -1689,15 +1689,23 @@ onBeforeUnmount(() => {
 /* ─── Path input + Browse ────────────────────────────────────────────── */
 .path-input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.path-input :deep(.el-input__wrapper) {
+  min-width: 0;
+  flex: 1 1 0%;
 }
 .path-input :deep(.el-input__inner) {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
+  min-width: 0;
 }
 .path-input :deep(.el-input-group__append) {
   padding: 0 !important;
   background: var(--wdc-surface-2) !important;
   border-color: var(--wdc-border) !important;
+  flex-shrink: 0;
 }
 .browse-append-btn {
   border: none !important;
@@ -1705,11 +1713,29 @@ onBeforeUnmount(() => {
   color: var(--wdc-accent) !important;
   font-weight: 700 !important;
   height: 100% !important;
-  padding: 0 16px !important;
+  padding: 0 12px !important;
   box-shadow: none !important;
+  white-space: nowrap;
 }
 .browse-append-btn:hover {
   background: var(--wdc-accent-dim) !important;
+}
+
+/* ─── Form overflow guard ─────────────────────────────────────────────── */
+.edit-card-body :deep(.el-form-item__content) {
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.edit-card-body :deep(.el-form) {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .edit-card-body :deep(.el-form--label-top .el-form-item) {
+    flex-direction: column;
+  }
 }
 
 /* ─── Alias chip picker ──────────────────────────────────────────────── */
