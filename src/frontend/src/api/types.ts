@@ -258,6 +258,7 @@ export interface ComposerCommandResult {
 export interface AccessLogEntry {
   timestamp: string
   remoteIp: string
+  realIp: string
   method: string | null
   path: string | null
   protocol: string | null
@@ -265,4 +266,6 @@ export interface AccessLogEntry {
   bytes: number
   referer: string | null
   userAgent: string | null
+  xForwardedFor: string | null
+  cfConnectingIp: string | null
 }

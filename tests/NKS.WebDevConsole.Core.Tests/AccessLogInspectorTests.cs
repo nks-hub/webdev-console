@@ -185,4 +185,68 @@ public sealed class AccessLogInspectorTests : IDisposable
         var stats = AccessLogInspector.Inspect(new[] { "  ", "\t", "" });
         Assert.Null(stats);
     }
+
+    // ── ParseLine: XFF / CF-Connecting-IP field tests ────────────────────────
+
+    [Fact]
+    public void ParseLine_ClassicCombined_NoXffFields_ParsesSuccessfully()
+    {
+        // Classic combined format — no trailing XFF/CF-IP fields.
+        // Both optional fields must be null and EffectiveClientIp falls back to socket IP.
+        const string line = "203.0.113.5 - - [19/Apr/2026:10:00:00 +0000] \"GET / HTTP/1.1\" 200 1024 \"-\" \"Mozilla/5.0\"";
+
+        var entry = AccessLogInspector.ParseLine(line);
+
+        Assert.NotNull(entry);
+        Assert.Equal("203.0.113.5", entry!.RemoteAddr);
+        Assert.Null(entry.XForwardedFor);
+        Assert.Null(entry.CfConnectingIp);
+        Assert.Equal("203.0.113.5", entry.EffectiveClientIp);
+    }
+
+    [Fact]
+    public void ParseLine_WdcCombined_WithCfIp_ReturnsCfIpAsEffective()
+    {
+        // wdc-combined format — both XFF and CF-IP are present.
+        // EffectiveClientIp must prefer CF-Connecting-IP.
+        const string line = "::1 - - [19/Apr/2026:10:00:00 +0000] \"GET /api HTTP/1.1\" 200 512 \"-\" \"curl/8.0\" \"1.2.3.4\" \"1.2.3.4\"";
+
+        var entry = AccessLogInspector.ParseLine(line);
+
+        Assert.NotNull(entry);
+        Assert.Equal("::1", entry!.RemoteAddr);
+        Assert.Equal("1.2.3.4", entry.XForwardedFor);
+        Assert.Equal("1.2.3.4", entry.CfConnectingIp);
+        Assert.Equal("1.2.3.4", entry.EffectiveClientIp);
+    }
+
+    [Fact]
+    public void ParseLine_WdcCombined_XffMultipleIps_ReturnsFirstIp()
+    {
+        // XFF contains a comma-list; CF-IP is absent (dash).
+        // EffectiveClientIp must take the leftmost (original client) IP from XFF.
+        const string line = "127.0.0.1 - - [19/Apr/2026:10:00:00 +0000] \"GET / HTTP/1.1\" 200 0 \"-\" \"-\" \"10.0.0.1, 192.168.1.1\" \"-\"";
+
+        var entry = AccessLogInspector.ParseLine(line);
+
+        Assert.NotNull(entry);
+        Assert.Equal("10.0.0.1, 192.168.1.1", entry!.XForwardedFor);
+        Assert.Null(entry.CfConnectingIp);
+        Assert.Equal("10.0.0.1", entry.EffectiveClientIp);
+    }
+
+    [Fact]
+    public void ParseLine_WdcCombined_BothDash_FallsBackToSocketIp()
+    {
+        // Both XFF and CF-IP are "-" (tunnel not active / direct connection).
+        // EffectiveClientIp must fall back to socket RemoteAddr.
+        const string line = "192.168.0.1 - - [19/Apr/2026:10:00:00 +0000] \"GET / HTTP/1.1\" 200 0 \"-\" \"Agent\" \"-\" \"-\"";
+
+        var entry = AccessLogInspector.ParseLine(line);
+
+        Assert.NotNull(entry);
+        Assert.Null(entry!.XForwardedFor);
+        Assert.Null(entry.CfConnectingIp);
+        Assert.Equal("192.168.0.1", entry.EffectiveClientIp);
+    }
 }

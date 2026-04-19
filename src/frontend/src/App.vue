@@ -4,7 +4,25 @@
     <AppHeader />
 
     <div class="app-body">
-      <AppSidebar />
+      <!-- Sidebar: always visible at >=960px; hidden below that breakpoint -->
+      <AppSidebar class="sidebar-desktop" @navigate="drawerOpen = false" />
+
+      <!-- Hamburger button — only rendered at <960px -->
+      <button class="hamburger-btn" aria-label="Open menu" @click="drawerOpen = true">
+        <span /><span /><span />
+      </button>
+
+      <!-- Mobile drawer sidebar -->
+      <el-drawer
+        v-model="drawerOpen"
+        direction="ltr"
+        size="256px"
+        :with-header="false"
+        class="sidebar-drawer"
+      >
+        <AppSidebar @navigate="drawerOpen = false" />
+      </el-drawer>
+
       <main class="content-area">
         <!-- keep-alive caches mounted page components so clicking a nav
              item doesn't re-mount the whole tree AND re-run onMounted's
@@ -42,7 +60,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
@@ -55,7 +74,12 @@ import { useSitesStore } from './stores/sites'
 import { useThemeStore } from './stores/theme'
 
 const router = useRouter()
+const route = useRoute()
 const daemonStore = useDaemonStore()
+const drawerOpen = ref(false)
+
+// Close mobile drawer on route change
+watch(() => route.path, () => { drawerOpen.value = false })
 const pluginsStore = usePluginsStore()
 const sitesStore = useSitesStore()
 useThemeStore()
@@ -136,7 +160,6 @@ onUnmounted(() => {
   position: relative;
   height: 100vh;
   overflow: hidden;
-  min-width: 860px;
   min-height: 580px;
   background: var(--wdc-bg);
 }
@@ -240,5 +263,48 @@ onUnmounted(() => {
 .splash-fade-enter-from,
 .splash-fade-leave-to {
   opacity: 0;
+}
+
+/* ═══ Mobile sidebar drawer ═══════════════════════════════════════════════ */
+.hamburger-btn {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 200;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+  cursor: pointer;
+}
+.hamburger-btn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--wdc-text);
+  border-radius: 2px;
+}
+
+.sidebar-drawer :deep(.el-drawer__body) {
+  padding: 0;
+  overflow: hidden;
+}
+.sidebar-drawer :deep(.el-drawer) {
+  background: var(--wdc-surface);
+}
+
+@media (max-width: 959px) {
+  .sidebar-desktop {
+    display: none;
+  }
+  .hamburger-btn {
+    display: flex;
+  }
+  .content-area {
+    padding-left: 0;
+  }
 }
 </style>

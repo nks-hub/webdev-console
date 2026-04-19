@@ -1397,13 +1397,16 @@ app.MapGet("/api/sites/{domain}/logs/access", (
             .Select(e => new AccessEntry(
                 Timestamp: new DateTimeOffset(e.TimestampUtc, TimeSpan.Zero),
                 RemoteIp: e.RemoteAddr,
+                RealIp: e.EffectiveClientIp,
                 Method: string.IsNullOrEmpty(e.Method) ? null : e.Method,
                 Path: string.IsNullOrEmpty(e.Path) ? null : e.Path,
                 Protocol: string.IsNullOrEmpty(e.Protocol) ? null : e.Protocol,
                 Status: e.Status,
                 Bytes: e.ResponseBytes,
                 Referer: string.IsNullOrEmpty(e.Referer) ? null : e.Referer,
-                UserAgent: string.IsNullOrEmpty(e.UserAgent) ? null : e.UserAgent))
+                UserAgent: string.IsNullOrEmpty(e.UserAgent) ? null : e.UserAgent,
+                XForwardedFor: e.XForwardedFor,
+                CfConnectingIp: e.CfConnectingIp))
             .Where(e => since is null || e.Timestamp >= since)
             .Reverse()
             .ToList();
@@ -3948,10 +3951,13 @@ record InstallBinaryRequest(string App, string Version);
 record AccessEntry(
     DateTimeOffset Timestamp,
     string RemoteIp,
+    string RealIp,
     string? Method,
     string? Path,
     string? Protocol,
     int Status,
     long Bytes,
     string? Referer,
-    string? UserAgent);
+    string? UserAgent,
+    string? XForwardedFor,
+    string? CfConnectingIp);

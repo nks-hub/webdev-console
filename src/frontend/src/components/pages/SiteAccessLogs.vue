@@ -53,119 +53,128 @@
     />
 
     <!-- Log table -->
-    <el-table
-      v-else
-      :data="entries"
-      size="small"
-      stripe
-      class="logs-table"
-    >
-      <el-table-column
-        :label="$t('sites.access.timestamp')"
-        prop="timestamp"
-        width="165"
-        fixed
+    <div v-else class="table-responsive">
+      <el-table
+        :data="entries"
+        size="small"
+        stripe
+        class="logs-table"
       >
-        <template #default="{ row }">
-          <span class="mono">{{ formatTimestamp(row.timestamp) }}</span>
-        </template>
-      </el-table-column>
+        <el-table-column
+          :label="$t('sites.access.timestamp')"
+          prop="timestamp"
+          width="165"
+          fixed
+        >
+          <template #default="{ row }">
+            <span class="mono">{{ formatTimestamp(row.timestamp) }}</span>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="$t('sites.access.ip')"
-        prop="remoteIp"
-        width="130"
-      >
-        <template #default="{ row }">
-          <span class="mono dim">{{ row.remoteIp }}</span>
-        </template>
-      </el-table-column>
+        <el-table-column
+          prop="realIp"
+          width="140"
+        >
+          <template #header>
+            <el-tooltip
+              content="Real client IP (prefers CF-Connecting-IP / XFF, falls back to socket)"
+              placement="top"
+              :show-after="300"
+            >
+              <span>{{ $t('sites.access.ip') }}</span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <span class="mono dim">{{ row.realIp }}</span>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="$t('sites.access.method')"
-        prop="method"
-        width="90"
-        align="center"
-      >
-        <template #default="{ row }">
-          <el-tag
-            v-if="row.method"
-            :type="methodType(row.method)"
-            size="small"
-            effect="dark"
-            class="method-tag"
-          >
-            {{ row.method }}
-          </el-tag>
-          <span v-else class="dim">—</span>
-        </template>
-      </el-table-column>
+        <el-table-column
+          :label="$t('sites.access.method')"
+          prop="method"
+          width="80"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.method"
+              :type="methodType(row.method)"
+              size="small"
+              effect="dark"
+              class="method-tag"
+            >
+              {{ row.method }}
+            </el-tag>
+            <span v-else class="dim">—</span>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="$t('sites.access.path')"
-        prop="path"
-        min-width="220"
-      >
-        <template #default="{ row }">
-          <el-tooltip
-            v-if="row.path && row.path.length > 60"
-            :content="row.path"
-            placement="top"
-            :show-after="300"
-          >
-            <span class="mono path-truncated">{{ row.path }}</span>
-          </el-tooltip>
-          <span v-else class="mono">{{ row.path ?? '—' }}</span>
-        </template>
-      </el-table-column>
+        <el-table-column
+          :label="$t('sites.access.path')"
+          prop="path"
+          min-width="220"
+        >
+          <template #default="{ row }">
+            <el-tooltip
+              v-if="row.path && row.path.length > 60"
+              :content="row.path"
+              placement="top"
+              :show-after="300"
+            >
+              <span class="mono path-truncated">{{ row.path }}</span>
+            </el-tooltip>
+            <span v-else class="mono">{{ row.path ?? '—' }}</span>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="$t('sites.access.status')"
-        prop="status"
-        width="80"
-        align="center"
-      >
-        <template #default="{ row }">
-          <el-tag
-            :type="statusType(row.status)"
-            size="small"
-            effect="plain"
-            class="status-tag"
-          >
-            {{ row.status }}
-          </el-tag>
-        </template>
-      </el-table-column>
+        <el-table-column
+          :label="$t('sites.access.status')"
+          prop="status"
+          width="80"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-tag
+              :type="statusType(row.status)"
+              size="small"
+              effect="plain"
+              class="status-tag"
+            >
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="$t('sites.access.bytes')"
-        prop="bytes"
-        width="90"
-        align="right"
-      >
-        <template #default="{ row }">
-          <span class="mono dim">{{ formatBytes(row.bytes) }}</span>
-        </template>
-      </el-table-column>
+        <el-table-column
+          :label="$t('sites.access.bytes')"
+          prop="bytes"
+          width="90"
+          align="right"
+        >
+          <template #default="{ row }">
+            <span class="mono dim">{{ formatBytes(row.bytes) }}</span>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="$t('sites.access.userAgent')"
-        prop="userAgent"
-        min-width="180"
-      >
-        <template #default="{ row }">
-          <el-tooltip
-            v-if="row.userAgent"
-            :content="row.userAgent"
-            placement="top-start"
-            :show-after="300"
-          >
-            <span class="ua-truncated dim">{{ row.userAgent }}</span>
-          </el-tooltip>
-          <span v-else class="dim">—</span>
-        </template>
-      </el-table-column>
-    </el-table>
+        <el-table-column
+          :label="$t('sites.access.userAgent')"
+          prop="userAgent"
+          width="150"
+        >
+          <template #default="{ row }">
+            <el-tooltip
+              v-if="row.userAgent"
+              :content="row.userAgent"
+              placement="top-start"
+              :show-after="300"
+            >
+              <span class="ua-truncated dim">{{ row.userAgent }}</span>
+            </el-tooltip>
+            <span v-else class="dim">—</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
   </div>
 </template>
 
@@ -295,6 +304,12 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
 .logs-table {
   width: 100%;
   font-size: 0.82rem;
@@ -333,7 +348,7 @@ onBeforeUnmount(() => {
 
 .ua-truncated {
   display: block;
-  max-width: 180px;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

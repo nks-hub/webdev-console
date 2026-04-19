@@ -31,6 +31,9 @@ public static class AccessLogInspector
     /// Single parsed entry out of an Apache Combined Log Format line.
     /// Anything that fails to match is dropped silently so a handful of
     /// malformed lines don't poison the entire response.
+    /// Extended with optional XFF / CF-Connecting-IP fields emitted by the
+    /// wdc-combined LogFormat (two trailing quoted fields after User-Agent).
+    /// Both fields are null when parsing classic combined format logs.
     /// </summary>
     public record AccessLogEntry(
         DateTime TimestampUtc,
@@ -41,7 +44,21 @@ public static class AccessLogInspector
         int Status,
         long ResponseBytes,
         string Referer,
-        string UserAgent);
+        string UserAgent,
+        string? XForwardedFor = null,
+        string? CfConnectingIp = null)
+    {
+        /// <summary>
+        /// Returns the most specific real client IP available:
+        /// CF-Connecting-IP (single hop, set by Cloudflare) → first IP in
+        /// X-Forwarded-For (may be a comma-list) → socket RemoteAddr.
+        /// </summary>
+        public string EffectiveClientIp =>
+            !string.IsNullOrWhiteSpace(CfConnectingIp) ? CfConnectingIp.Trim() :
+            !string.IsNullOrWhiteSpace(XForwardedFor)
+                ? XForwardedFor.Split(',')[0].Trim()
+                : RemoteAddr;
+    }
 
     /// <summary>
     /// Inspects the first log file from <paramref name="candidatePaths"/>
@@ -158,11 +175,15 @@ public static class AccessLogInspector
 
     // Combined Log Format:
     //   remote-ip ident user [timestamp] "METHOD path HTTP/1.x" status bytes "referer" "user-agent"
+    // wdc-combined extends with two trailing optional quoted fields:
+    //   "X-Forwarded-For" "CF-Connecting-IP"
     // Tolerant regex — captures the important bits, dashes are mapped
     // to empty strings for referer / user-agent, and a handful of
     // corner cases (no bytes → "-", space in path) are handled.
+    // The two trailing groups are optional so classic combined format logs
+    // continue to parse without error (backward compat).
     private static readonly Regex CombinedLineRegex = new(
-        @"^(?<ip>\S+)\s+\S+\s+\S+\s+\[(?<time>[^\]]+)\]\s+""(?<method>[A-Z]+)\s+(?<path>[^""]*?)\s+(?<proto>HTTP/[\d.]+)""\s+(?<status>\d+)\s+(?<bytes>\d+|-)\s+""(?<referer>[^""]*)""\s+""(?<ua>[^""]*)""",
+        @"^(?<ip>\S+)\s+\S+\s+\S+\s+\[(?<time>[^\]]+)\]\s+""(?<method>[A-Z]+)\s+(?<path>[^""]*?)\s+(?<proto>HTTP/[\d.]+)""\s+(?<status>\d+)\s+(?<bytes>\d+|-)\s+""(?<referer>[^""]*)""\s+""(?<ua>[^""]*)""(?:\s+""(?<xff>[^""]*)""\s+""(?<cfip>[^""]*)"")?",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // Apache's %t format: "[10/Oct/2000:13:55:36 -0700]"
@@ -207,6 +228,9 @@ public static class AccessLogInspector
         int status = 0;
         int.TryParse(m.Groups["status"].Value, out status);
 
+        static string? OptionalField(string raw)
+            => string.IsNullOrEmpty(raw) || raw == "-" ? null : raw;
+
         return new AccessLogEntry(
             TimestampUtc: ts,
             RemoteAddr: m.Groups["ip"].Value,
@@ -216,7 +240,9 @@ public static class AccessLogInspector
             Status: status,
             ResponseBytes: bytes,
             Referer: m.Groups["referer"].Value == "-" ? "" : m.Groups["referer"].Value,
-            UserAgent: m.Groups["ua"].Value == "-" ? "" : m.Groups["ua"].Value);
+            UserAgent: m.Groups["ua"].Value == "-" ? "" : m.Groups["ua"].Value,
+            XForwardedFor: OptionalField(m.Groups["xff"].Value),
+            CfConnectingIp: OptionalField(m.Groups["cfip"].Value));
     }
 
     private static long CountLines(string path, long fileSize, long maxScanBytes)
