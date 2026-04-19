@@ -139,6 +139,19 @@
           "start": "Start",
           "restarted": "{name} restarted",
           "started": "{name} started"
+        },
+        "activity": {
+          "title": "Recent activity",
+          "errors": {
+            "countLabel": "Errors ({count} in 24h)",
+            "none": "No errors in last 24h",
+            "showAll": "Show all 5"
+          },
+          "traffic": {
+            "last24h": "Traffic (24h)",
+            "hits": "{count} requests"
+          },
+          "fullLogs": "Show full logs"
         }
       }
     },

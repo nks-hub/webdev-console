@@ -139,6 +139,19 @@
           "start": "Spustit",
           "restarted": "{name} restartováno",
           "started": "{name} spuštěno"
+        },
+        "activity": {
+          "title": "Nedávná aktivita",
+          "errors": {
+            "countLabel": "Chyby ({count} za 24 h)",
+            "none": "Žádné chyby v posledních 24 h",
+            "showAll": "Zobrazit všech 5"
+          },
+          "traffic": {
+            "last24h": "Provoz (24 h)",
+            "hits": "{count} požadavků"
+          },
+          "fullLogs": "Zobrazit plné logy"
         }
       }
     },

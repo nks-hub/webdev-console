@@ -96,6 +96,47 @@
         </div>
       </div>
 
+      <!-- Recent activity -->
+      <div class="sd-section">
+        <h3 class="sd-section-title">{{ $t('sites.detail.simple.activity.title') }}</h3>
+
+        <!-- Errors block -->
+        <div class="sd-activity-block">
+          <div class="sd-activity-label">
+            {{ $t('sites.detail.simple.activity.errors.countLabel', { count: errorLines.length }) }}
+            <span v-if="errorLines.length > 0" class="sd-err-badge">{{ errorLines.length }}</span>
+          </div>
+          <ul v-if="errorLines.length > 0" class="sd-err-list">
+            <li v-for="(line, idx) in errorLines.slice(0, showAllErrors ? 5 : 3)" :key="idx" class="sd-err-line">
+              <span class="sd-err-ts mono">{{ formatErrorTime(line.timestamp) }}</span>
+              <span class="sd-err-msg">{{ line.message }}</span>
+            </li>
+          </ul>
+          <div v-else class="sd-activity-empty">{{ $t('sites.detail.simple.activity.errors.none') }}</div>
+          <div class="sd-activity-actions">
+            <el-button v-if="errorLines.length > 3 && !showAllErrors" size="small" link @click="showAllErrors = true">
+              {{ $t('sites.detail.simple.activity.errors.showAll') }}
+            </el-button>
+            <el-button size="small" link class="sd-full-logs" @click="openFullLogs">
+              {{ $t('sites.detail.simple.activity.fullLogs') }} →
+            </el-button>
+          </div>
+        </div>
+
+        <!-- Traffic sparkline -->
+        <div class="sd-activity-block">
+          <div class="sd-activity-label">
+            {{ $t('sites.detail.simple.activity.traffic.last24h') }}
+          </div>
+          <div class="sd-traffic-row">
+            <MiniSparkline :values="hourlyHits" :width="200" :height="32" />
+            <span class="sd-traffic-count mono">
+              {{ $t('sites.detail.simple.activity.traffic.hits', { count: totalHits }) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <el-divider />
 
       <!-- Delete -->
@@ -112,6 +153,7 @@
 defineOptions({ name: 'SiteDetailSimple' })
 
 import { computed, h, onMounted, reactive, ref, watch } from 'vue'
+import MiniSparkline from '../common/MiniSparkline.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -144,6 +186,52 @@ const savedTunnel = ref(false)
 
 const startStopLoading = ref(false)
 const restartLoading = reactive<Record<string, boolean>>({})
+
+interface ErrorLine { timestamp: string; message: string }
+interface MetricSample { timestamp: string; requests: number }
+
+const errorLines = ref<ErrorLine[]>([])
+const hourlyHits = ref<number[]>([])
+const showAllErrors = ref(false)
+
+const totalHits = computed(() => hourlyHits.value.reduce((a, b) => a + b, 0))
+
+function formatErrorTime(iso: string): string {
+  try {
+    const d = new Date(iso)
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
+  } catch { return iso.slice(0, 5) }
+}
+
+function openFullLogs() {
+  router.push(`/sites/${encodeURIComponent(props.domain)}/edit?tab=errors`)
+}
+
+async function loadRecentActivity() {
+  if (!site.value) return
+  const domain = encodeURIComponent(props.domain)
+  try {
+    const r = await fetch(`${daemonBase()}/api/sites/${domain}/logs/errors?limit=5`, {
+      headers: sitesStore.authHeaders(),
+    })
+    if (r.ok) {
+      const data = await r.json() as { entries?: Array<{ timestamp: string; message: string }> }
+      errorLines.value = (data.entries ?? []).slice(0, 5)
+    }
+  } catch { /* silent */ }
+  try {
+    const r = await fetch(`${daemonBase()}/api/sites/${domain}/metrics/history?minutes=1440&limit=24`, {
+      headers: sitesStore.authHeaders(),
+    })
+    if (r.ok) {
+      const data = await r.json() as MetricSample[] | { samples?: MetricSample[] }
+      const samples = Array.isArray(data) ? data : (data.samples ?? [])
+      hourlyHits.value = samples.map(s => s.requests ?? 0)
+    }
+  } catch { /* silent */ }
+}
 
 const visibleServices = computed(() => {
   const svcs = daemonStore.services
@@ -320,6 +408,7 @@ onMounted(async () => {
   try {
     await sitesStore.load()
     await loadPhpVersions()
+    await loadRecentActivity()
   } finally {
     loading.value = false
   }
@@ -470,4 +559,22 @@ onMounted(async () => {
   opacity: 0;
   transform: translateY(-4px);
 }
+
+.sd-activity-block { padding: 10px 0; }
+.sd-activity-label { font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.sd-err-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; padding: 0 6px; height: 18px;
+  background: var(--el-color-danger); color: white;
+  border-radius: 9px; font-size: 11px; font-weight: 600;
+}
+.sd-err-list { list-style: none; padding: 0; margin: 0; max-height: 160px; overflow-y: auto; }
+.sd-err-line { display: flex; gap: 8px; padding: 4px 0; font-size: 12px; line-height: 1.4; }
+.sd-err-ts { color: var(--el-text-color-secondary); flex-shrink: 0; }
+.sd-err-msg { color: var(--el-text-color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-activity-empty { color: var(--el-text-color-secondary); font-size: 12px; padding: 4px 0; }
+.sd-activity-actions { display: flex; gap: 12px; margin-top: 6px; }
+.sd-full-logs { margin-left: auto; }
+.sd-traffic-row { display: flex; align-items: center; gap: 12px; }
+.sd-traffic-count { color: var(--el-text-color-secondary); font-size: 12px; }
 </style>
