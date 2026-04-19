@@ -85,6 +85,36 @@
       "submit": "Create Site",
       "hint": "Quick site creation with smart defaults"
     },
+    "detail": {
+      "simple": {
+        "phpVersion": "PHP version",
+        "ssl": "HTTPS (SSL)",
+        "tunnel": "Cloudflare tunnel",
+        "open": "Open in browser",
+        "start": "Start",
+        "stop": "Stop",
+        "delete": "Delete site",
+        "deleteConfirm": "Really delete site {domain}?",
+        "saved": "Saved",
+        "status": {
+          "running": "Running",
+          "stopped": "Stopped"
+        }
+      }
+    },
+    "card": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error",
+      "open": "Open",
+      "start": "Start",
+      "stop": "Stop",
+      "delete": "Delete",
+      "deleteConfirm": "Really delete site {domain}?",
+      "newSite": "+ New site",
+      "welcomeTitle": "Welcome",
+      "welcomeSubtext": "Create your first site."
+    },
     "composer": {
       "tabLabel": "Packages",
       "noProject": "No Composer project detected",
@@ -237,6 +267,12 @@
       "dark": "Dark",
       "light": "Light",
       "system": "System"
+    },
+    "mode": {
+      "label": "App Mode",
+      "simple": "Simple",
+      "advanced": "Advanced",
+      "description": "Advanced mode reveals all services, databases, ports and developer tools."
     }
   },
   "onboarding": {

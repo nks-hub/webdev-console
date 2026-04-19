@@ -35,6 +35,18 @@
       </div>
     </div>
 
+    <!-- Simple mode: hero with single CTA -->
+    <template v-if="uiMode.isSimple">
+      <div class="simple-hero">
+        <el-button
+          type="primary"
+          size="large"
+          @click="$router.push({ path: '/sites', query: { create: '1' } })"
+        >+ Vytvořit nový web</el-button>
+      </div>
+    </template>
+
+    <template v-else>
     <!-- Offline state -->
     <div v-if="!daemonStore.connected" class="offline-banner">
       <el-skeleton :rows="5" animated style="padding: 0 16px;" />
@@ -240,6 +252,7 @@
         </el-timeline>
       </div>
     </template>
+    </template><!-- /v-else advanced -->
 
     <!-- Logs: full-view modal (NOT drawer). Opens large el-dialog with xterm-backed viewer. -->
     <el-dialog
@@ -272,6 +285,7 @@ import { useRouter } from 'vue-router'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
+import { useUiModeStore } from '../../stores/uiMode'
 import { ElMessage, ElNotification } from 'element-plus'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
@@ -283,6 +297,7 @@ const router = useRouter()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
+const uiMode = useUiModeStore()
 
 const startingAll = ref(false)
 const stoppingAll = ref(false)
@@ -976,6 +991,14 @@ function closeConfig() {
   border-radius: var(--wdc-radius-sm);
   max-height: 500px;
   overflow: auto;
+}
+
+/* ─── Simple mode hero ───────────────────────────────────────────────────── */
+.simple-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
 }
 
 /* Recent activity timeline (Phase 4) */

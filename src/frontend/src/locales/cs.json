@@ -85,6 +85,36 @@
       "submit": "Vytvořit web",
       "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami"
     },
+    "detail": {
+      "simple": {
+        "phpVersion": "PHP verze",
+        "ssl": "HTTPS (SSL)",
+        "tunnel": "Cloudflare tunel",
+        "open": "Otevřít v prohlížeči",
+        "start": "Spustit",
+        "stop": "Zastavit",
+        "delete": "Smazat web",
+        "deleteConfirm": "Opravdu smazat web {domain}?",
+        "saved": "Uloženo",
+        "status": {
+          "running": "Běží",
+          "stopped": "Zastaveno"
+        }
+      }
+    },
+    "card": {
+      "running": "Běží",
+      "stopped": "Zastaveno",
+      "error": "Chyba",
+      "open": "Otevřít",
+      "start": "Spustit",
+      "stop": "Zastavit",
+      "delete": "Smazat",
+      "deleteConfirm": "Opravdu smazat web {domain}?",
+      "newSite": "+ Nový web",
+      "welcomeTitle": "Vítejte",
+      "welcomeSubtext": "Vytvořte si svůj první web."
+    },
     "composer": {
       "tabLabel": "Balíčky",
       "noProject": "Nenalezen Composer projekt",
@@ -237,6 +267,12 @@
       "dark": "Tmavý",
       "light": "Světlý",
       "system": "Systémový"
+    },
+    "mode": {
+      "label": "Režim aplikace",
+      "simple": "Jednoduchý",
+      "advanced": "Pokročilý",
+      "description": "Pokročilý režim zobrazí všechny služby, databáze, porty a další nástroje pro vývojáře."
     }
   },
   "onboarding": {

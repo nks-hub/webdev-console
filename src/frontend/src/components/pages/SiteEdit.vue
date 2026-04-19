@@ -1,5 +1,9 @@
 <template>
   <div class="site-edit-page">
+    <!-- Simple mode: tabless single-page view -->
+    <SiteDetailSimple v-if="uiMode.isSimple" :domain="domain" />
+
+    <template v-else>
     <!-- Page header -->
     <div class="page-header">
       <div class="header-left">
@@ -714,6 +718,7 @@
       :initial-path="site?.documentRoot"
       @select="onFolderPick"
     />
+    </template><!-- end v-else advanced -->
   </div>
 </template>
 
@@ -737,6 +742,7 @@ import FolderBrowser from '../shared/FolderBrowser.vue'
 import MetricsChart from '../shared/MetricsChart.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
 import SiteComposer from './SiteComposer.vue'
+import SiteDetailSimple from './SiteDetailSimple.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,

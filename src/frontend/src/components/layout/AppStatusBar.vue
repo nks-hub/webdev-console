@@ -5,9 +5,9 @@
       <span>Daemon</span>
     </span>
 
-    <span class="status-sep" />
+    <span class="status-sep" v-if="uiMode.isAdvanced" />
 
-    <span class="status-item">
+    <span class="status-item" v-if="uiMode.isAdvanced">
       {{ runningCount }}/{{ totalCount }} services running
     </span>
 
@@ -23,7 +23,7 @@
       ☁ Tunnel
     </span>
 
-    <template v-if="daemonStore.connected && totalRam > 0">
+    <template v-if="uiMode.isAdvanced && daemonStore.connected && totalRam > 0">
       <span class="status-sep" />
       <span class="status-item mono">CPU {{ totalCpu.toFixed(1) }}%</span>
       <span class="status-item mono">RAM {{ formatMem(totalRam) }}</span>
@@ -36,8 +36,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useDaemonStore } from '../../stores/daemon'
+import { useUiModeStore } from '../../stores/uiMode'
 
 const daemonStore = useDaemonStore()
+const uiMode = useUiModeStore()
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 
 const services = computed(() => daemonStore.services as any[])

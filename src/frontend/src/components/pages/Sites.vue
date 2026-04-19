@@ -1,5 +1,8 @@
 <template>
   <div class="sites-page">
+    <SitesListSimple v-if="!uiModeStore.isAdvanced" @create="showCreate = true" />
+
+    <template v-if="uiModeStore.isAdvanced">
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">{{ $t('sites.title') }}</h1>
@@ -151,6 +154,7 @@
         :image-size="80"
       />
     </div>
+    </template>
 
     <!-- Site edit is a full-view route at /sites/:domain/edit (no drawer). -->
 
@@ -260,6 +264,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo } from '../../api/types'
 import { fetchDockerComposeStatus, type DockerComposeStatus } from '../../api/daemon'
+import SitesListSimple from './SitesListSimple.vue'
 
 const route = useRoute()
 const router = useRouter()

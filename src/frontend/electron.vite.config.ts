@@ -2,6 +2,9 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 // Tailwind CSS removed — pure CSS design tokens + Element Plus components
 import { resolve } from 'path'
+import { readFileSync } from 'node:fs'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
 
 export default defineConfig({
   main: {
@@ -25,6 +28,9 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src'),
+    define: {
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+    },
     build: {
       // Keep the renderer output alongside main/preload under dist-electron/
       // so main.ts can resolve '../renderer/index.html' relative to its own

@@ -10,7 +10,7 @@
     <div class="page-body">
       <el-tabs v-model="activeTab" class="settings-tabs">
         <!-- Ports tab -->
-        <el-tab-pane :label="$t('settings.ports')" name="ports">
+        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.ports')" name="ports">
           <div class="tab-content">
             <p class="tab-desc">Configure default service ports. Restart services after changing.</p>
             <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
@@ -68,6 +68,15 @@
                   <el-radio-button value="system">{{ $t('settings.theme.system') }}</el-radio-button>
                 </el-radio-group>
               </el-form-item>
+              <el-form-item :label="$t('settings.mode.label')">
+                <el-switch
+                  :model-value="uiModeStore.isAdvanced"
+                  :active-text="$t('settings.mode.advanced')"
+                  :inactive-text="$t('settings.mode.simple')"
+                  @change="(val: boolean) => uiModeStore.setUiMode(val ? 'advanced' : 'simple')"
+                />
+                <div class="hint">{{ $t('settings.mode.description') }}</div>
+              </el-form-item>
               <el-form-item label="Run on startup">
                 <el-switch v-model="runOnStartup" />
               </el-form-item>
@@ -106,7 +115,7 @@
         </el-tab-pane>
 
         <!-- Paths tab -->
-        <el-tab-pane :label="$t('settings.paths')" name="paths">
+        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.paths')" name="paths">
           <div class="tab-content">
             <p class="tab-desc">Override binary paths. Leave blank to use auto-detected defaults.</p>
             <el-form label-position="top" size="small" style="max-width: 500px">
@@ -203,7 +212,7 @@
         </el-tab-pane>
 
         <!-- Databases tab -->
-        <el-tab-pane :label="$t('settings.databases')" name="databases">
+        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.databases')" name="databases">
           <div class="tab-content">
             <p class="tab-desc">MySQL databases managed by NKS WDC.</p>
             <div class="db-list" v-if="databases.length > 0">
@@ -221,7 +230,7 @@
         </el-tab-pane>
 
         <!-- Advanced tab — integration endpoints -->
-        <el-tab-pane :label="$t('settings.advanced')" name="advanced">
+        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.advanced')" name="advanced">
           <div class="tab-content">
             <p class="tab-desc">
               External services the daemon talks to. Leave blank to use built-in defaults.
@@ -270,7 +279,7 @@
         </el-tab-pane>
 
         <!-- Account & Devices tab -->
-        <el-tab-pane :label="$t('settings.account')" name="account">
+        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.account')" name="account">
           <div class="tab-content">
             <!-- Not logged in -->
             <template v-if="!accountToken">
@@ -392,7 +401,7 @@
         </el-tab-pane>
 
         <!-- Sync tab — cloud config sync + export/import -->
-        <el-tab-pane :label="$t('settings.sync')" name="sync">
+        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.sync')" name="sync">
           <div class="tab-content">
             <p class="tab-desc">
               Synchronize your NKS WDC configuration with the cloud catalog
@@ -580,11 +589,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download } from '@element-plus/icons-vue'
 import { useThemeStore, type ThemeMode } from '../../stores/theme'
+import { useUiModeStore } from '../../stores/uiMode'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   type DeviceInfo as CatalogDeviceInfo,
@@ -592,9 +602,18 @@ import {
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
+const uiModeStore = useUiModeStore()
 const { locale } = useI18n()
 
 const activeTab = ref('general')
+
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'account', 'sync'])
+watch(() => uiModeStore.isSimple, (simple) => {
+  if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
+    activeTab.value = 'general'
+  }
+})
+
 const saving = ref(false)
 const databases = ref<string[]>([])
 const newDbName = ref('')

@@ -21,6 +21,7 @@
       </div>
     </div>
 
+    <template v-if="!uiModeStore.isSimple">
     <div class="sidebar-section">
       <div class="section-label">
         <span>{{ $t('nav.webServer') }}</span>
@@ -124,6 +125,7 @@
         </div>
       </template>
     </div>
+    </template><!-- /advanced service sections -->
 
     <div class="sidebar-spacer" />
 
@@ -132,14 +134,14 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
         <span class="nav-label">{{ $t('nav.databases') }}</span>
       </div>
-      <div class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
+      <div v-if="!uiModeStore.isSimple" class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
         <span class="nav-label">{{ $t('nav.ssl') }}</span>
       </div>
       <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
            fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
            Dashboard service toggle and the /plugin/nks.wdc.php panel. -->
-      <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
+      <div v-if="!uiModeStore.isSimple" class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
         <span class="nav-label">{{ $t('nav.binaries') }}</span>
       </div>
