@@ -46,21 +46,13 @@
     <!-- Splash overlay shown until the daemon answers for the first time.
          Distinguishes "backend still booting" from "runtime offline". -->
     <Transition name="splash-fade">
-      <div v-if="!daemonStore.hasEverConnected" class="splash-overlay">
-        <div class="splash-card">
-          <div class="splash-logo">NKS</div>
-          <div class="splash-title">WebDev Console</div>
-          <div class="splash-spinner" aria-hidden="true"></div>
-          <div class="splash-status">Waiting for backend…</div>
-          <div class="splash-hint">{{ splashHint }}</div>
-        </div>
-      </div>
+      <SplashScreen v-if="!daemonStore.hasEverConnected" />
     </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
@@ -68,6 +60,7 @@ import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
 import OnboardingWizard from './components/shared/OnboardingWizard.vue'
+import SplashScreen from './components/shared/SplashScreen.vue'
 import { useDaemonStore } from './stores/daemon'
 import { usePluginsStore } from './stores/plugins'
 import { useSitesStore } from './stores/sites'
@@ -85,18 +78,6 @@ const sitesStore = useSitesStore()
 useThemeStore()
 
 const commandPalette = ref<InstanceType<typeof CommandPalette> | null>(null)
-
-// Splash hint rotates every 2s to reassure the user something is happening
-// during the longest-case boot (daemon compile + plugin init ≈ 8s in dev).
-const splashHints = [
-  'Starting C# daemon…',
-  'Loading plugins…',
-  'Reading config…',
-  'Ready soon…',
-]
-const splashHintIdx = ref(0)
-const splashHint = computed(() => splashHints[splashHintIdx.value % splashHints.length])
-let splashTimer: ReturnType<typeof setInterval> | null = null
 
 function handleKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -135,12 +116,6 @@ onMounted(() => {
     void sitesStore.load()
   })
 
-  // Rotate splash hint so the "Waiting for backend" spinner never feels
-  // frozen. Cleared automatically once hasEverConnected flips to true —
-  // but the timer itself runs for the full session (cheap, 2s tick).
-  splashTimer = setInterval(() => {
-    if (!daemonStore.hasEverConnected) splashHintIdx.value++
-  }, 2000)
 
   window.addEventListener('keydown', handleKeydown)
 })
@@ -148,7 +123,6 @@ onMounted(() => {
 onUnmounted(() => {
   daemonStore.stopPolling()
   unsubscribeConnect?.()
-  if (splashTimer) { clearInterval(splashTimer); splashTimer = null }
   window.removeEventListener('keydown', handleKeydown)
 })
 </script>
@@ -191,71 +165,7 @@ onUnmounted(() => {
   padding: 0 0 18px;
 }
 
-/* ═══ Splash overlay — shown until backend first connects ════════════════ */
-.splash-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at 50% 40%, rgba(86, 194, 255, 0.08), var(--wdc-bg) 60%);
-  backdrop-filter: blur(4px);
-}
-
-.splash-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 44px 64px;
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border-strong);
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
-  min-width: 360px;
-}
-
-.splash-logo {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--wdc-accent);
-  letter-spacing: 0.1em;
-  line-height: 1;
-}
-
-.splash-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  letter-spacing: -0.01em;
-}
-
-.splash-spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid var(--wdc-border);
-  border-top-color: var(--wdc-accent);
-  border-radius: 50%;
-  animation: wdc-spin 0.9s linear infinite;
-  margin: 4px 0;
-}
-
-.splash-status {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--wdc-text-2);
-}
-
-.splash-hint {
-  font-size: 0.78rem;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--wdc-text-3);
-  font-weight: 500;
-  min-height: 1.2em;
-}
-
+/* ═══ Splash fade transition ═════════════════════════════════════════════ */
 .splash-fade-enter-active,
 .splash-fade-leave-active {
   transition: opacity 0.35s ease;

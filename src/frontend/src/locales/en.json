@@ -1,4 +1,15 @@
 {
+  "splash": {
+    "stages": {
+      "starting": "Starting daemon",
+      "database": "Running migrations",
+      "plugins": "Loading plugins",
+      "services": "Starting services",
+      "http": "Initializing HTTP server",
+      "ready": "Ready"
+    },
+    "retry": "Retry"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
