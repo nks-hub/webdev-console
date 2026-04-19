@@ -115,6 +115,21 @@
       "welcomeTitle": "Welcome",
       "welcomeSubtext": "Create your first site."
     },
+    "access": {
+      "title": "Access log",
+      "timestamp": "Time",
+      "ip": "IP",
+      "method": "Method",
+      "path": "Path",
+      "status": "Status",
+      "bytes": "Size",
+      "userAgent": "UA",
+      "empty": "No entries",
+      "lines": "Lines",
+      "since": "Since",
+      "refresh": "Refresh",
+      "autoRefresh": "Auto"
+    },
     "composer": {
       "tabLabel": "Packages",
       "noProject": "No Composer project detected",

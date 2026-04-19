@@ -115,6 +115,21 @@
       "welcomeTitle": "Vítejte",
       "welcomeSubtext": "Vytvořte si svůj první web."
     },
+    "access": {
+      "title": "Přístupy",
+      "timestamp": "Čas",
+      "ip": "IP",
+      "method": "Metoda",
+      "path": "Cesta",
+      "status": "Stav",
+      "bytes": "Velikost",
+      "userAgent": "UA",
+      "empty": "Žádné záznamy",
+      "lines": "Záznamů",
+      "since": "Od",
+      "refresh": "Obnovit",
+      "autoRefresh": "Auto"
+    },
     "composer": {
       "tabLabel": "Balíčky",
       "noProject": "Nenalezen Composer projekt",

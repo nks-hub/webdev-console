@@ -596,6 +596,12 @@
               <code>{{ siteMetrics.accessLog.path }}</code>
             </div>
 
+            <!-- Access log table — advanced mode only -->
+            <div v-if="uiMode.isAdvanced && site" class="access-logs-section">
+              <div class="historical-title" style="margin-bottom: 10px">{{ $t('sites.access.title') }}</div>
+              <SiteAccessLogs :domain="site.domain" />
+            </div>
+
             <!-- Historical data section -->
             <div class="historical-section">
               <div class="historical-header">
@@ -741,6 +747,7 @@ import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import MetricsChart from '../shared/MetricsChart.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
+import SiteAccessLogs from './SiteAccessLogs.vue'
 import SiteComposer from './SiteComposer.vue'
 import SiteDetailSimple from './SiteDetailSimple.vue'
 import {

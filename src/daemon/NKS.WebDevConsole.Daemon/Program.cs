@@ -1363,6 +1363,59 @@ app.MapGet("/api/sites/{domain}/logs/errors", (
     }
 });
 
+// Phase 8.2 access log aggregation — Apache access_log per site.
+// Discovers per-site access logs from every installed Apache version
+// ({domain}-access.log + ssl variant). Returns a parsed list of Combined
+// Log Format entries sorted newest-first. Graceful: missing files return
+// an empty list, never an error.
+app.MapGet("/api/sites/{domain}/logs/access", (
+    string domain,
+    int? lines,
+    DateTimeOffset? since,
+    SiteManager sm,
+    BinaryManager bm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    var limit = Math.Clamp(lines ?? 100, 1, 1000);
+
+    var candidates = new List<string>();
+    foreach (var apache in bm.ListInstalled("apache"))
+    {
+        var logsDir = Path.Combine(apache.InstallPath, "logs");
+        candidates.Add(Path.Combine(logsDir, $"{domain}-access.log"));
+        candidates.Add(Path.Combine(logsDir, $"{domain}-ssl-access.log"));
+    }
+
+    try
+    {
+        var raw = AccessLogInspector.Tail(candidates, limit, 512 * 1024);
+
+        // Tail returns oldest→newest; reverse for newest-first response.
+        var entries = raw
+            .Select(e => new AccessEntry(
+                Timestamp: new DateTimeOffset(e.TimestampUtc, TimeSpan.Zero),
+                RemoteIp: e.RemoteAddr,
+                Method: string.IsNullOrEmpty(e.Method) ? null : e.Method,
+                Path: string.IsNullOrEmpty(e.Path) ? null : e.Path,
+                Protocol: string.IsNullOrEmpty(e.Protocol) ? null : e.Protocol,
+                Status: e.Status,
+                Bytes: e.ResponseBytes,
+                Referer: string.IsNullOrEmpty(e.Referer) ? null : e.Referer,
+                UserAgent: string.IsNullOrEmpty(e.UserAgent) ? null : e.UserAgent))
+            .Where(e => since is null || e.Timestamp >= since)
+            .Reverse()
+            .ToList();
+
+        return Results.Ok(entries);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to read access logs: {ex.Message}");
+    }
+});
+
 // Phase 11 perf monitoring: server-side history read endpoint.
 // Returns time-series samples written by MetricsHistoryService background
 // poller (60s cadence, 7-day retention). Frontend uses this to render
@@ -3890,3 +3943,15 @@ await app.RunAsync();
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
 record ServiceConfigWriteRequest(string Path, string? Content);
 record InstallBinaryRequest(string App, string Version);
+
+/// <summary>API response record for a single parsed Apache access log entry.</summary>
+record AccessEntry(
+    DateTimeOffset Timestamp,
+    string RemoteIp,
+    string? Method,
+    string? Path,
+    string? Protocol,
+    int Status,
+    long Bytes,
+    string? Referer,
+    string? UserAgent);

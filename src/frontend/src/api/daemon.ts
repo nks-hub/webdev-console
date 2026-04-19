@@ -14,6 +14,7 @@ import type {
   HistoricalMetrics,
   ComposerStatus,
   ComposerCommandResult,
+  AccessLogEntry,
 } from './types'
 
 declare global {
@@ -244,6 +245,17 @@ export const getErrorLogs = (
   if (opts?.since) params.set('since', opts.since)
   const qs = params.toString()
   return json(`/api/sites/${encodeURIComponent(domain)}/logs/errors${qs ? '?' + qs : ''}`)
+}
+
+export const getAccessLogs = (
+  domain: string,
+  opts?: { lines?: number; since?: string },
+): Promise<AccessLogEntry[]> => {
+  const params = new URLSearchParams()
+  if (opts?.lines !== undefined) params.set('lines', String(opts.lines))
+  if (opts?.since) params.set('since', opts.since)
+  const qs = params.toString()
+  return json(`/api/sites/${encodeURIComponent(domain)}/logs/access${qs ? '?' + qs : ''}`)
 }
 
 // PHP

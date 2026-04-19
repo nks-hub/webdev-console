@@ -254,3 +254,15 @@ export interface ComposerCommandResult {
   stdout: string
   stderr: string
 }
+
+export interface AccessLogEntry {
+  timestamp: string
+  remoteIp: string
+  method: string | null
+  path: string | null
+  protocol: string | null
+  status: number
+  bytes: number
+  referer: string | null
+  userAgent: string | null
+}
