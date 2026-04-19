@@ -66,7 +66,7 @@
                   composer
                   <el-tag size="small" type="info" effect="plain" class="builtin-tag">Built-in</el-tag>
                 </span>
-                <span class="bin-card-latest mono">{{ composerVersion ? `v${composerVersion}` : 'latest (getcomposer.org)' }}</span>
+                <span class="bin-card-latest mono" :title="composerVersion ? 'v' + composerVersion : 'latest'">{{ composerVersionDisplay }}</span>
               </div>
             </div>
             <div class="bin-card-metrics">
@@ -381,8 +381,8 @@ function versionGreater(a: string, b: string): number {
 
 const moduleCards = computed<ModuleCard[]>(() => {
   const apps = new Set<string>([
-    ...Object.keys(catalog.value),
-    ...installed.value.map(b => b.app),
+    ...Object.keys(catalog.value).filter(a => a.toLowerCase() !== 'composer'),
+    ...installed.value.map(b => b.app).filter(a => a.toLowerCase() !== 'composer'),
   ])
   return Array.from(apps).map(app => {
     const releases = catalog.value[app] ?? []
@@ -563,6 +563,13 @@ async function loadSystemInfo() {
 }
 
 // Composer built-in
+const composerVersionDisplay = computed(() => {
+  const v = composerVersion.value
+  if (!v) return 'latest (getcomposer.org)'
+  if (v.length > 24) return `v${v.slice(0, 10)}…${v.slice(-4)}`
+  return `v${v}`
+})
+
 const composerVersion = ref<string | null>(null)
 const composerPath = ref<string | null>(null)
 const composerInstalling = ref(false)
@@ -775,6 +782,11 @@ onMounted(() => {
   color: var(--wdc-text-3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: inline-block;
 }
 
 .bin-card-metrics {

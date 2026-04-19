@@ -1650,6 +1650,15 @@ static object? ResolveComposerInvoker(IServiceProvider sp, PluginLoader loader)
     return invokerType is null ? null : sp.GetService(invokerType);
 }
 
+static string ResolveComposerRoot(string docroot)
+{
+    if (File.Exists(Path.Combine(docroot, "composer.json"))) return docroot;
+    var parentDir = Path.GetDirectoryName(docroot.TrimEnd('/', '\\'));
+    if (!string.IsNullOrEmpty(parentDir) && File.Exists(Path.Combine(parentDir, "composer.json")))
+        return parentDir;
+    return docroot;
+}
+
 static async Task<(bool ExitCode, int Code, string Stdout, string Stderr)>
     InvokeComposerAsync(object invoker, string method, object[] args)
 {
@@ -1673,7 +1682,21 @@ app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteMana
     if (!Directory.Exists(root))
         return Results.NotFound(new { error = $"Document root for '{domain}' does not exist" });
     var hasJson = File.Exists(Path.Combine(root, "composer.json"));
-    var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+    var composerRoot = root;
+    if (!hasJson)
+    {
+        var parentDir = Path.GetDirectoryName(root.TrimEnd('/', '\\'));
+        if (!string.IsNullOrEmpty(parentDir))
+        {
+            var parentJson = Path.Combine(parentDir, "composer.json");
+            if (File.Exists(parentJson))
+            {
+                hasJson = true;
+                composerRoot = parentDir;
+            }
+        }
+    }
+    var hasLock = File.Exists(Path.Combine(composerRoot, "composer.lock"));
 
     var packages = new List<string>();
     string? phpVersion = null;
@@ -1681,7 +1704,7 @@ app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteMana
     {
         try
         {
-            var composerJson = await File.ReadAllTextAsync(Path.Combine(root, "composer.json"));
+            var composerJson = await File.ReadAllTextAsync(Path.Combine(composerRoot, "composer.json"));
             using var doc = System.Text.Json.JsonDocument.Parse(composerJson);
             if (doc.RootElement.TryGetProperty("require", out var require))
             {
@@ -1719,7 +1742,7 @@ app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteMana
         };
     }
 
-    return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion });
+    return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion, composerRoot });
 });
 
 app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
@@ -1733,11 +1756,12 @@ app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteMa
             detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
 
     var logger = lf.CreateLogger("Composer");
-    logger.LogInformation("composer install for {Domain} in {Root}", domain, site.DocumentRoot);
+    var installRoot = ResolveComposerRoot(site.DocumentRoot);
+    logger.LogInformation("composer install for {Domain} in {Root}", domain, installRoot);
     try
     {
         var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "InstallAsync",
-            [site.DocumentRoot, ct]);
+            [installRoot, ct]);
         logger.LogInformation("composer install exit={Code} for {Domain}", exitCode, domain);
         return Results.Ok(new { exitCode, stdout, stderr });
     }
