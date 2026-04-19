@@ -130,6 +130,7 @@
       "start": "Start",
       "stop": "Stop",
       "delete": "Delete",
+      "more": "More actions",
       "deleteConfirm": "Really delete site {domain}?",
       "newSite": "+ New site",
       "welcomeTitle": "Welcome",

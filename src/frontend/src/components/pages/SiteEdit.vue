@@ -1722,14 +1722,29 @@ onBeforeUnmount(() => {
 }
 
 /* ─── Form overflow guard ─────────────────────────────────────────────── */
-.edit-card-body :deep(.el-form-item__content) {
-  max-width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
-}
 .edit-card-body :deep(.el-form) {
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+}
+.edit-card-body :deep(.el-form-item) {
+  min-width: 0;
+}
+.edit-card-body :deep(.el-form-item__content) {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.edit-card-body :deep(.el-input-group) {
+  display: flex;
+  min-width: 0;
+}
+.edit-card-body :deep(.el-input-group__append) {
+  flex-shrink: 0;
+}
+.edit-card-body :deep(.el-input-group .el-input__wrapper) {
+  flex: 1 1 0%;
+  min-width: 0;
 }
 
 @media (max-width: 900px) {

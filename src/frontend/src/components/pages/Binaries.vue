@@ -13,7 +13,7 @@
           </p>
           <!-- Catalog health pill — reactive to /api/system polled on mount.
                When unreachable the background flips red + hint points users
-               at Settings → Advanced to change the catalog URL. -->
+               at Settings > Advanced to change the catalog URL. -->
           <div
             v-if="catalogStatus"
             class="catalog-health"
@@ -290,7 +290,7 @@ type DetailRow = {
 // shows newest at the top.
 //
 // Previously we naively split on /[.-]/ which turned `2.11.0-beta.1` into
-// `["2", "11", "0", "beta", "1"]` — `parseInt("beta")` returns NaN → the
+// `["2", "11", "0", "beta", "1"]` — `parseInt("beta")` returns NaN > the
 // function fell through to `localeCompare`, so caddy pre-releases were
 // sorted AFTER stable in the detail table (wrong per semver).
 //

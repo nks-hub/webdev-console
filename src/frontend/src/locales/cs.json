@@ -130,6 +130,7 @@
       "start": "Spustit",
       "stop": "Zastavit",
       "delete": "Smazat",
+      "more": "Více akcí",
       "deleteConfirm": "Opravdu smazat web {domain}?",
       "newSite": "+ Nový web",
       "welcomeTitle": "Vítejte",
