@@ -63,7 +63,10 @@
     "memory": "Paměť",
     "uptime": "Doba běhu",
     "services": "Služby",
-    "port": "Port"
+    "port": "Port",
+    "simple": {
+      "subtitle": "Lokální vývojové prostředí pro vaše weby"
+    }
   },
   "sites": {
     "title": "Weby",

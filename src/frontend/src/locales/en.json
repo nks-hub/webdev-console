@@ -63,7 +63,10 @@
     "memory": "Memory",
     "uptime": "Uptime",
     "services": "Services",
-    "port": "Port"
+    "port": "Port",
+    "simple": {
+      "subtitle": "Local dev environment for your sites"
+    }
   },
   "sites": {
     "title": "Sites",

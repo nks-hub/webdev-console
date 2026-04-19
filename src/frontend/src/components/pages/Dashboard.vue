@@ -5,8 +5,7 @@
       <div class="header-title-block">
         <span class="page-title">{{ $t('dashboard.title') }}</span>
         <span class="page-subtitle">
-          v{{ appVersion }} ·
-          {{ daemonStore.connected ? $t('header.connected') : 'Connecting...' }}
+          <template v-if="uiMode.isAdvanced">v{{ appVersion }} · </template>{{ daemonStore.connected ? $t('header.connected') : 'Connecting...' }}
         </span>
       </div>
       <div class="header-actions">
@@ -42,7 +41,7 @@
       <div class="simple-hero">
         <div class="simple-hero-inner">
           <h1 class="simple-hero-heading">Vítejte v NKS WDC</h1>
-          <p class="simple-hero-sub">Lokalni vyvojove prostredi pro vase weby.</p>
+          <p class="simple-hero-sub">{{ $t('dashboard.simple.subtitle') }}</p>
           <el-button
             type="primary"
             size="large"
