@@ -156,50 +156,96 @@
 
     <!-- Create dialog -->
     <el-dialog v-model="showCreate" :title="$t('sites.create')" width="520px">
-      <el-form :model="newSite" label-position="top" size="small">
-        <el-form-item label="Template">
-          <el-select v-model="newSite.template" style="width: 100%" placeholder="Choose a template…" @change="applyTemplate">
-            <el-option label="— No template —" value="" />
-            <el-option label="WordPress (PHP 8.4, SSL)" value="wordpress" />
-            <el-option label="Laravel (PHP 8.4, SSL)" value="laravel" />
-            <el-option label="Nette (PHP 8.4, SSL)" value="nette" />
-            <el-option label="Symfony (PHP 8.4, SSL)" value="symfony" />
-            <el-option label="Next.js (Node proxy, SSL)" value="nextjs" />
-            <el-option label="Node.js (Node proxy)" value="node" />
-            <el-option label="Static HTML" value="static" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Domain" required>
-          <el-input v-model="newSite.domain" placeholder="myapp.loc" />
-        </el-form-item>
-        <el-form-item label="Document Root" required>
-          <el-input v-model="newSite.documentRoot" placeholder="C:\work\htdocs\myapp" />
-        </el-form-item>
-        <el-form-item label="PHP Version">
-          <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
-            <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
-            <el-option label="None" value="none" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Aliases (comma-separated)">
-          <el-input v-model="newSite.aliases" placeholder="www.myapp.loc" />
-        </el-form-item>
-        <el-form-item label="SSL">
-          <el-switch v-model="newSite.sslEnabled" />
-        </el-form-item>
-        <el-form-item label="Create Database">
-          <el-switch v-model="newSite.createDb" />
-          <el-input
-            v-if="newSite.createDb"
-            v-model="newSite.dbName"
-            placeholder="auto: myapp_db"
-            style="margin-top: 8px"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showCreate = false">Cancel</el-button>
-        <el-button type="primary" :loading="creating" @click="createSite">Create Site</el-button>
+
+      <!-- Simple mode form -->
+      <div v-if="uiModeStore.isSimple">
+        <p class="simple-hint">{{ $t('sites.simple.hint') }}</p>
+        <el-form :model="newSite" label-position="top" size="default">
+          <el-form-item :label="$t('sites.domain')" required>
+            <el-input
+              v-model="newSite.domain"
+              placeholder="myapp.loc"
+              autofocus
+            />
+          </el-form-item>
+          <el-form-item :label="$t('sites.documentRoot')" required>
+            <el-input v-model="newSite.documentRoot" placeholder="C:\work\htdocs\myapp" />
+          </el-form-item>
+          <el-form-item :label="$t('sites.phpVersion')">
+            <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
+              <el-option v-for="v in phpVersions" :key="v" :label="`PHP ${v}`" :value="v" />
+              <el-option label="None" value="none" />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('sites.simple.cloudflareTunnel')">
+            <el-switch v-model="newSite.cloudflareTunnel" />
+          </el-form-item>
+          <el-form-item :label="$t('sites.ssl')">
+            <el-switch v-model="newSite.sslEnabled" />
+          </el-form-item>
+          <el-form-item>
+            <el-button
+              type="primary"
+              size="large"
+              style="width: 100%"
+              :loading="creating"
+              @click="createSite"
+            >{{ $t('sites.simple.submit') }}</el-button>
+          </el-form-item>
+        </el-form>
+        <div class="simple-advanced-link">
+          <span @click="uiModeStore.setUiMode('advanced')">{{ $t('uiMode.switchToAdvanced') }}</span>
+        </div>
+      </div>
+
+      <!-- Advanced mode form -->
+      <div v-else>
+        <el-form :model="newSite" label-position="top" size="small">
+          <el-form-item label="Template">
+            <el-select v-model="newSite.template" style="width: 100%" placeholder="Choose a template…" @change="applyTemplate">
+              <el-option label="— No template —" value="" />
+              <el-option label="WordPress (PHP 8.4, SSL)" value="wordpress" />
+              <el-option label="Laravel (PHP 8.4, SSL)" value="laravel" />
+              <el-option label="Nette (PHP 8.4, SSL)" value="nette" />
+              <el-option label="Symfony (PHP 8.4, SSL)" value="symfony" />
+              <el-option label="Next.js (Node proxy, SSL)" value="nextjs" />
+              <el-option label="Node.js (Node proxy)" value="node" />
+              <el-option label="Static HTML" value="static" />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('sites.domain')" required>
+            <el-input v-model="newSite.domain" placeholder="myapp.loc" />
+          </el-form-item>
+          <el-form-item :label="$t('sites.documentRoot')" required>
+            <el-input v-model="newSite.documentRoot" placeholder="C:\work\htdocs\myapp" />
+          </el-form-item>
+          <el-form-item :label="$t('sites.phpVersion')">
+            <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
+              <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
+              <el-option label="None" value="none" />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('sites.aliases')">
+            <el-input v-model="newSite.aliases" placeholder="www.myapp.loc" />
+          </el-form-item>
+          <el-form-item :label="$t('sites.ssl')">
+            <el-switch v-model="newSite.sslEnabled" />
+          </el-form-item>
+          <el-form-item label="Create Database">
+            <el-switch v-model="newSite.createDb" />
+            <el-input
+              v-if="newSite.createDb"
+              v-model="newSite.dbName"
+              placeholder="auto: myapp_db"
+              style="margin-top: 8px"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template v-if="uiModeStore.isAdvanced" #footer>
+        <el-button @click="showCreate = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="creating" @click="createSite">{{ $t('sites.simple.submit') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -211,6 +257,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
+import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo } from '../../api/types'
 import { fetchDockerComposeStatus, type DockerComposeStatus } from '../../api/daemon'
 
@@ -218,6 +265,7 @@ const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
+const uiModeStore = useUiModeStore()
 
 // Sites list shows per-row tunnel links when cloudflare.enabled → but the
 // link only works if the shared cloudflared process is actually running.
@@ -291,6 +339,14 @@ const newSite = reactive({
   createDb: false,
   dbName: '',
   sslEnabled: false,
+  cloudflareTunnel: false,
+})
+
+// Auto-suggest document root when domain is typed in simple mode
+watch(() => newSite.domain, (domain) => {
+  if (uiModeStore.isSimple && domain) {
+    newSite.documentRoot = `C:\\work\\htdocs\\${domain}`
+  }
 })
 
 const TEMPLATES: Record<string, { php: string; ssl: boolean }> = {
@@ -380,12 +436,13 @@ async function createSite() {
   }
   creating.value = true
   try {
-    const payload = {
+    const payload: Partial<SiteInfo> & { cloudflareTunnel?: boolean } = {
       domain: newSite.domain,
       documentRoot: newSite.documentRoot,
       phpVersion: newSite.phpVersion,
       sslEnabled: newSite.sslEnabled,
       aliases: newSite.aliases ? newSite.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
+      ...(newSite.cloudflareTunnel ? { cloudflareTunnel: true } : {}),
     }
     await sitesStore.create(payload)
 
@@ -408,7 +465,7 @@ async function createSite() {
     }
 
     showCreate.value = false
-    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false, createDb: false, dbName: '' })
+    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
   } catch (e: any) {
     ElMessage.error(`Create failed: ${e?.message || e}`)
   } finally {
@@ -751,4 +808,30 @@ function openInBrowser(site: SiteInfo) {
 .history-label { color: var(--el-text-color-regular); }
 
 :global(.cursor-pointer) { cursor: pointer; }
+
+.simple-hint {
+  font-size: 0.82rem;
+  color: var(--wdc-text-3);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.simple-advanced-link {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--wdc-text-3);
+}
+
+.simple-advanced-link span {
+  cursor: pointer;
+  color: var(--wdc-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.simple-advanced-link span:hover {
+  opacity: 0.8;
+}
 </style>

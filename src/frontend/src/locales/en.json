@@ -79,7 +79,17 @@
     "history": "Config History",
     "open": "Open",
     "detect": "Detect",
-    "delete": "Delete"
+    "delete": "Delete",
+    "simple": {
+      "cloudflareTunnel": "Cloudflare Tunnel",
+      "submit": "Create Site",
+      "hint": "Quick site creation with smart defaults"
+    }
+  },
+  "uiMode": {
+    "simple": "Simple",
+    "advanced": "Advanced",
+    "switchToAdvanced": "Need more options? → Advanced mode"
   },
   "databases": {
     "title": "Databases",

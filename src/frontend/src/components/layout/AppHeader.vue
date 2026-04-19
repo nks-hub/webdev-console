@@ -28,6 +28,15 @@
         {{ daemonStore.connected ? t('header.connected') : t('header.offline') }}
       </div>
 
+      <el-switch
+        :model-value="uiModeStore.isAdvanced"
+        :active-text="t('uiMode.advanced')"
+        :inactive-text="t('uiMode.simple')"
+        size="small"
+        class="mode-switch"
+        @change="(val: boolean) => uiModeStore.setUiMode(val ? 'advanced' : 'simple')"
+      />
+
       <el-dropdown trigger="click" @command="onLocaleChange">
         <el-button size="small" text class="lang-btn" :title="t('settings.language')">
           {{ currentLocale.toUpperCase() }}
@@ -58,12 +67,14 @@ import { useI18n } from 'vue-i18n'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
+import { useUiModeStore } from '../../stores/uiMode'
 import { setLocale, type Locale } from '../../i18n'
 
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
+const uiModeStore = useUiModeStore()
 const { t, locale } = useI18n()
 const isDark = computed(() => themeStore.isDark)
 const currentLocale = computed(() => String(locale.value))
@@ -223,5 +234,21 @@ function isActive(path: string) {
 @keyframes glow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+.mode-switch {
+  --el-switch-on-color: var(--wdc-accent);
+  --el-switch-off-color: var(--wdc-surface-2);
+}
+
+.mode-switch :deep(.el-switch__label) {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--wdc-text-3);
+}
+
+.mode-switch :deep(.el-switch__label.is-active) {
+  color: var(--wdc-text);
 }
 </style>

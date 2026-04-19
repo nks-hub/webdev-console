@@ -65,6 +65,12 @@ export interface SiteInfo {
    * removed but the sub-config is kept so re-enabling is one click.
    */
   cloudflare?: CloudflareSiteConfig | null
+  /**
+   * Simple-mode create hint: when true, the daemon should enable basic
+   * Cloudflare Tunnel routing for this site using zone/subdomain defaults.
+   * Only present in create payloads — not returned by GET /api/sites.
+   */
+  cloudflareTunnel?: boolean
 }
 
 export interface PhpVersion {

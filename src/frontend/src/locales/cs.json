@@ -79,7 +79,17 @@
     "history": "Historie konfigurace",
     "open": "Otevřít",
     "detect": "Rozpoznat",
-    "delete": "Smazat"
+    "delete": "Smazat",
+    "simple": {
+      "cloudflareTunnel": "Cloudflare Tunel",
+      "submit": "Vytvořit web",
+      "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami"
+    }
+  },
+  "uiMode": {
+    "simple": "Jednoduchý",
+    "advanced": "Pokročilý",
+    "switchToAdvanced": "Potřebujete více možností? → Pokročilý režim"
   },
   "databases": {
     "title": "Databáze",

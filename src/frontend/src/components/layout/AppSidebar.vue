@@ -152,7 +152,7 @@
         <span class="nav-label">{{ $t('nav.tunnel') }}</span>
         <span v-if="exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
       </div>
-      <div class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
+      <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
         <span class="nav-label">{{ $t('nav.plugins') }}</span>
       </div>
@@ -172,6 +172,7 @@ import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useServicesStore } from '../../stores/services'
+import { useUiModeStore } from '../../stores/uiMode'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -179,6 +180,7 @@ const route = useRoute()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
+const uiModeStore = useUiModeStore()
 
 // Sidebar is always expanded — the collapse toggle was dropped because
 // it added no value (sidebar fits at any reasonable window width) and
