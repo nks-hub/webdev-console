@@ -71,6 +71,24 @@ public sealed class SettingsStore
         }
     }
 
+    /// <summary>
+    /// Like <see cref="MysqlPort"/> but returns false when no explicit <c>ports.mysql</c>
+    /// row exists, so callers can fall back to plugin-DI port discovery (F49b) rather
+    /// than blindly defaulting to 3306.
+    /// </summary>
+    public bool TryReadMysqlPort(out int port)
+    {
+        port = 3306;
+        var raw = GetString("ports", "mysql");
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        if (int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0)
+        {
+            port = parsed;
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Reads a boolean setting. Falsy: "false", "0", "off". Everything else is true.</summary>
     public bool GetBool(string category, string key, bool defaultValue = false)
     {

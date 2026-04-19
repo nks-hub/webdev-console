@@ -1650,6 +1650,35 @@ static object? ResolveComposerInvoker(IServiceProvider sp, PluginLoader loader)
     return invokerType is null ? null : sp.GetService(invokerType);
 }
 
+// F49b: Resolve MySQL port with plugin-DI fallback when SettingsStore row absent.
+// Chain: SettingsStore.TryReadMysqlPort → MySqlModule.Port via reflection → 3306 hardcode.
+static int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, PluginLoader loader)
+{
+    if (settings.TryReadMysqlPort(out var configured) && configured > 0)
+        return configured;
+
+    try
+    {
+        var mysqlPlugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.mysql");
+        if (mysqlPlugin is not null)
+        {
+            var moduleType = mysqlPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.MySQL.MySqlModule");
+            if (moduleType is not null)
+            {
+                var module = sp.GetService(moduleType);
+                if (module is not null)
+                {
+                    var portVal = moduleType.GetProperty("Port")?.GetValue(module);
+                    if (portVal is int p && p > 0) return p;
+                }
+            }
+        }
+    }
+    catch { /* reflection failed — fall through to hardcoded default */ }
+
+    return 3306;
+}
+
 static string ResolveComposerRoot(string docroot)
 {
     if (File.Exists(Path.Combine(docroot, "composer.json"))) return docroot;
@@ -3743,7 +3772,7 @@ static IReadOnlyDictionary<string, string?> MysqlEnvVars()
 }
 
 // Databases — list MySQL databases via mysql CLI
-app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings) =>
+app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
@@ -3755,7 +3784,7 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings) =>
 
     try
     {
-        var listArgs = MysqlBaseArgs(settings.MysqlPort);
+        var listArgs = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
         listArgs.Add("-N");
         listArgs.Add("-e");
         listArgs.Add("SHOW DATABASES");
@@ -3783,7 +3812,7 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings) =>
 });
 
 // Create database
-app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, SettingsStore settings) =>
+app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
     var dbName = body?.GetValueOrDefault("name") ?? "";
@@ -3795,7 +3824,7 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, Settings
         return Results.BadRequest(new { error = "MySQL not installed" });
 
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add("-e");
     args.Add($"CREATE DATABASE IF NOT EXISTS `{dbName}`");
     try
@@ -3816,7 +3845,7 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, Settings
 });
 
 // Drop database
-app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, SettingsStore settings) =>
+app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
@@ -3826,7 +3855,7 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, Set
         return Results.BadRequest(new { error = "MySQL not installed" });
 
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add("-e");
     args.Add($"DROP DATABASE IF EXISTS `{name}`");
     try
@@ -3847,7 +3876,7 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, Set
 });
 
 // Database tables
-app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm, SettingsStore settings) =>
+app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
@@ -3855,7 +3884,7 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm,
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add("-N");
     args.Add("-e");
     args.Add($"SELECT TABLE_NAME, TABLE_ROWS, ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}' ORDER BY TABLE_NAME");
@@ -3885,7 +3914,7 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm,
 });
 
 // Database size
-app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, SettingsStore settings) =>
+app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
@@ -3893,7 +3922,7 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, S
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add("-N");
     args.Add("-e");
     args.Add($"SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}'");
@@ -3915,7 +3944,7 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, S
 });
 
 // Database query execution
-app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, BinaryManager bm, SettingsStore settings) =>
+app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
@@ -3927,7 +3956,7 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add(name);
     args.Add("-e");
     args.Add(sql);
@@ -3963,7 +3992,7 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
 });
 
 // Database export (mysqldump)
-app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm, SettingsStore settings) =>
+app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
@@ -3973,7 +4002,7 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm,
     var mysqldump = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqldump.exe");
     if (!File.Exists(mysqldump))
         return Results.BadRequest(new { error = "mysqldump.exe not found" });
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add(name);
     try
     {
@@ -3993,7 +4022,7 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm,
 });
 
 // Database import (mysql < file)
-app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx, BinaryManager bm, SettingsStore settings) =>
+app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
@@ -4019,7 +4048,7 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
 
     var tmpFile = Path.GetTempFileName();
     await File.WriteAllTextAsync(tmpFile, sql);
-    var args = MysqlBaseArgs(settings.MysqlPort);
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
     args.Add(name);
     try
     {

@@ -139,8 +139,8 @@
                 />
                 <el-popover
                   placement="right"
-                  trigger="click"
-                  :show-after="0"
+                  trigger="hover"
+                  :show-after="400"
                   :hide-after="200"
                   width="360"
                   @show="loadPackageInfo(row.name)"
@@ -149,7 +149,7 @@
                     <span
                       class="pkg-name-link mono"
                       :title="t('sites.composer.openOnPackagist', { name: row.name })"
-                      @click="openPackagist(row.raw)"
+                      @click.stop="openPackagist(row.raw)"
                     >{{ row.name }}</span>
                   </template>
                   <div v-if="pkgInfoLoading[row.name]" class="pkg-info-loading">Načítám…</div>
