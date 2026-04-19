@@ -10,7 +10,7 @@
       </div>
       <div class="header-actions">
         <el-button size="small" @click="openHostsFile" title="Open hosts file">
-          Open Hosts
+          {{ $t('sites.openHosts') }}
         </el-button>
         <el-button size="small" @click="reapplyAll" :loading="reapplying" title="Regenerate all vhosts">
           Reapply All

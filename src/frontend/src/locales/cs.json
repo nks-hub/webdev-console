@@ -41,6 +41,7 @@
     "services": "Služby",
     "overview": "Přehled",
     "sites": "Weby",
+    "editSite": "Upravit web",
     "databases": "Databáze",
     "ssl": "SSL",
     "php": "PHP",
@@ -84,6 +85,7 @@
     "ssl": "SSL",
     "aliases": "Aliasy",
     "create": "Nový web",
+    "openHosts": "Otevřít hosts",
     "openInBrowser": "Otevřít v prohlížeči",
     "saveAndApply": "Uložit a použít",
     "history": {

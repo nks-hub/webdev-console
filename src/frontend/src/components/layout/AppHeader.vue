@@ -69,7 +69,11 @@ const uiMode = useUiModeStore()
 const { t, locale } = useI18n()
 const isDark = computed(() => themeStore.isDark)
 const currentLocale = computed(() => String(locale.value))
-const currentTitle = computed(() => String(route.meta?.title || 'Control Surface'))
+const currentTitle = computed(() => {
+  const key = route.meta?.titleKey as string | undefined
+  if (key) return t(key)
+  return String(route.meta?.title || 'Control Surface')
+})
 function toggleTheme() { themeStore.toggle() }
 function onLocaleChange(next: Locale) { setLocale(next) }
 

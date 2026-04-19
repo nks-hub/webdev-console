@@ -41,6 +41,7 @@
     "services": "Services",
     "overview": "Overview",
     "sites": "Sites",
+    "editSite": "Edit Site",
     "databases": "Databases",
     "ssl": "SSL",
     "php": "PHP",
@@ -84,6 +85,7 @@
     "ssl": "SSL",
     "aliases": "Aliases",
     "create": "New Site",
+    "openHosts": "Open hosts",
     "openInBrowser": "Open in Browser",
     "saveAndApply": "Save & Apply",
     "history": {
