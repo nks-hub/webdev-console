@@ -101,7 +101,11 @@
       "running": "Spouštím composer…",
       "success": "Příkaz dokončen úspěšně",
       "failed": "Příkaz selhal (exit kód {code})",
-      "pluginMissing": "Plugin Composer není načten — nainstaluj ho v sekci Pluginy"
+      "pluginMissing": "Plugin Composer není načten — nainstaluj ho v sekci Pluginy",
+      "frameworkDetected": "Detekován {framework}",
+      "installPrompt": "Spusť composer install pro stažení závislostí",
+      "installNow": "Nainstalovat",
+      "dismiss": "Skrýt"
     }
   },
   "uiMode": {

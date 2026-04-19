@@ -29,6 +29,28 @@
 
     <!-- Main composer panel -->
     <div v-else-if="status" class="composer-panel">
+      <!-- Framework auto-install suggestion banner -->
+      <el-alert
+        v-if="status.installSuggestion && !isBannerDismissed"
+        :title="$t('sites.composer.frameworkDetected', { framework: status.installSuggestion.framework })"
+        type="warning"
+        show-icon
+        :closable="false"
+        class="composer-framework-banner"
+      >
+        <template #default>
+          <p class="banner-description">{{ $t('sites.composer.installPrompt') }}</p>
+          <div class="banner-actions">
+            <el-button type="primary" size="small" :loading="running" @click="runInstall">
+              {{ $t('sites.composer.installNow') }}
+            </el-button>
+            <el-button size="small" @click="dismissBanner">
+              {{ $t('sites.composer.dismiss') }}
+            </el-button>
+          </div>
+        </template>
+      </el-alert>
+
       <!-- Status summary -->
       <el-card class="composer-card" shadow="never">
         <template #header>
@@ -168,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Check, Warning, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -189,6 +211,18 @@ const outputOpen = ref<string[]>(['stdout', 'stderr'])
 
 const showRequireDialog = ref(false)
 const requirePackage = ref('')
+
+const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
+const isBannerDismissed = ref(false)
+
+function loadDismissState(): void {
+  isBannerDismissed.value = localStorage.getItem(DISMISS_KEY.value) === '1'
+}
+
+function dismissBanner(): void {
+  localStorage.setItem(DISMISS_KEY.value, '1')
+  isBannerDismissed.value = true
+}
 
 async function loadStatus(): Promise<void> {
   loading.value = true
@@ -219,6 +253,7 @@ async function runInstall(): Promise<void> {
     outputOpen.value = result.exitCode !== 0 ? ['stdout', 'stderr'] : ['stdout']
     if (result.exitCode === 0) {
       ElMessage.success(t('sites.composer.success'))
+      dismissBanner()
       await loadStatus()
     } else {
       ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
@@ -254,7 +289,10 @@ async function runRequire(): Promise<void> {
   }
 }
 
-onMounted(loadStatus)
+onMounted(() => {
+  loadDismissState()
+  loadStatus()
+})
 </script>
 
 <style scoped>
@@ -364,5 +402,20 @@ onMounted(loadStatus)
 .output-pre--err {
   background: var(--el-color-danger-light-9);
   color: var(--el-color-danger);
+}
+
+.composer-framework-banner {
+  align-items: flex-start;
+}
+
+.banner-description {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
 }
 </style>

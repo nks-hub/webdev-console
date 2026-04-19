@@ -1519,12 +1519,25 @@ app.MapPost("/api/sites", async (HttpContext ctx, SiteManager sm, SiteOrchestrat
         var created = await sm.CreateAsync(site);
         await orchestrator.ApplyAsync(created);
 
-        if (warnings.Count > 0)
+        // Framework auto-detect hint — soft suggestion only, never auto-runs
+        var hints = new List<string>();
+        try
+        {
+            var detectedFramework = sm.DetectFramework(created.DocumentRoot);
+            var composerJsonExists = File.Exists(Path.Combine(created.DocumentRoot, "composer.json"));
+            var composerLockExists = File.Exists(Path.Combine(created.DocumentRoot, "composer.lock"));
+            if (detectedFramework is not null && composerJsonExists && !composerLockExists)
+                hints.Add($"Framework '{detectedFramework}' detected. Run composer install to fetch dependencies.");
+        }
+        catch { /* non-fatal — docroot may not exist yet */ }
+
+        if (warnings.Count > 0 || hints.Count > 0)
         {
             return Results.Created($"/api/sites/{created.Domain}", new
             {
                 site = created,
                 warnings,
+                hints,
             });
         }
         return Results.Created($"/api/sites/{created.Domain}", created);
@@ -1627,7 +1640,28 @@ app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteMana
         }
     }
 
-    return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion });
+    // Detect PHP framework — returns lowercase identifier or null for unknown
+    string? framework = null;
+    try { framework = sm.DetectFramework(root); }
+    catch (Exception ex)
+    {
+        lf.CreateLogger("Composer").LogWarning(ex, "DetectFramework failed for {Domain}", domain);
+    }
+
+    // installSuggestion: present only when a PHP framework is detected,
+    // composer.json exists, and composer.lock is missing (deps never installed)
+    object? installSuggestion = null;
+    if (framework is not null && hasJson && !hasLock)
+    {
+        installSuggestion = new
+        {
+            reason = "framework_detected",
+            framework,
+            action = "composer_install",
+        };
+    }
+
+    return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion });
 });
 
 app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>

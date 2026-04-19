@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Moq;
+using NKS.WebDevConsole.Daemon.Config;
+using NKS.WebDevConsole.Daemon.Sites;
 using NKS.WebDevConsole.Plugin.Composer;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
@@ -152,5 +155,151 @@ public sealed class ComposerEndpointTests
         Assert.NotNull(captured);
         Assert.Contains("require", captured!);
         Assert.Contains(pkg, captured!);
+    }
+}
+
+/// <summary>
+/// Tests for the installSuggestion logic embedded in GET /api/sites/{domain}/composer/status.
+/// Exercises the rules: suggestion present iff framework detected AND hasComposerJson AND !hasLock.
+/// Uses temp directories to replicate the file-system checks the endpoint performs.
+/// </summary>
+public sealed class ComposerStatusInstallSuggestionTests : IDisposable
+{
+    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"wdc-cis-{Guid.NewGuid():N}");
+    private readonly SiteManager _sm;
+
+    public ComposerStatusInstallSuggestionTests()
+    {
+        Directory.CreateDirectory(_tempDir);
+        var sitesDir = Path.Combine(_tempDir, "sites");
+        var generatedDir = Path.Combine(_tempDir, "generated");
+        _sm = new SiteManager(
+            new Mock<ILogger<SiteManager>>().Object,
+            new TemplateEngine(),
+            new AtomicWriter(),
+            sitesDir,
+            generatedDir);
+    }
+
+    public void Dispose() => Directory.Delete(_tempDir, recursive: true);
+
+    private string MakeDir(string name)
+    {
+        var path = Path.Combine(_tempDir, name);
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    // Helper: replicates the installSuggestion logic from Program.cs
+    private static object? BuildInstallSuggestion(string? framework, bool hasJson, bool hasLock)
+    {
+        if (framework is not null && hasJson && !hasLock)
+            return new { reason = "framework_detected", framework, action = "composer_install" };
+        return null;
+    }
+
+    [Fact]
+    public void InstallSuggestion_Present_WhenFrameworkDetectedAndNoLock()
+    {
+        var root = MakeDir("laravel-no-lock");
+        File.WriteAllText(Path.Combine(root, "artisan"), "#!/usr/bin/env php");
+        File.WriteAllText(Path.Combine(root, "composer.json"), """{"require":{"laravel/framework":"^11.0"}}""");
+        // composer.lock intentionally absent
+
+        var framework = _sm.DetectFramework(root);
+        var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+        var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+        var suggestion = BuildInstallSuggestion(framework, hasJson, hasLock);
+
+        Assert.Equal("laravel", framework);
+        Assert.NotNull(suggestion);
+    }
+
+    [Fact]
+    public void InstallSuggestion_Absent_WhenLockFilePresent()
+    {
+        var root = MakeDir("laravel-with-lock");
+        File.WriteAllText(Path.Combine(root, "artisan"), "#!/usr/bin/env php");
+        File.WriteAllText(Path.Combine(root, "composer.json"), """{"require":{"laravel/framework":"^11.0"}}""");
+        File.WriteAllText(Path.Combine(root, "composer.lock"), "{}");
+
+        var framework = _sm.DetectFramework(root);
+        var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+        var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+        var suggestion = BuildInstallSuggestion(framework, hasJson, hasLock);
+
+        Assert.Equal("laravel", framework);
+        Assert.Null(suggestion);
+    }
+
+    [Fact]
+    public void InstallSuggestion_Absent_WhenFrameworkIsNone()
+    {
+        var root = MakeDir("plain-php-no-lock");
+        File.WriteAllText(Path.Combine(root, "index.php"), "<?php echo 'hello';");
+        File.WriteAllText(Path.Combine(root, "composer.json"), """{"require":{"monolog/monolog":"^3.0"}}""");
+        // no framework markers
+
+        var framework = _sm.DetectFramework(root); // null
+        var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+        var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+        var suggestion = BuildInstallSuggestion(framework, hasJson, hasLock);
+
+        Assert.Null(framework);
+        Assert.Null(suggestion);
+    }
+
+    [Fact]
+    public void InstallSuggestion_Absent_WhenNoComposerJson()
+    {
+        var root = MakeDir("laravel-no-composer");
+        File.WriteAllText(Path.Combine(root, "artisan"), "#!/usr/bin/env php");
+        // composer.json absent
+
+        var framework = _sm.DetectFramework(root);
+        var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+        var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+        var suggestion = BuildInstallSuggestion(framework, hasJson, hasLock);
+
+        Assert.Equal("laravel", framework);
+        Assert.Null(suggestion);
+    }
+
+    [Fact]
+    public void InstallSuggestion_Present_ForWordPress_NoLock()
+    {
+        var root = MakeDir("wp-no-lock");
+        File.WriteAllText(Path.Combine(root, "wp-config.php"), "<?php");
+        File.WriteAllText(Path.Combine(root, "composer.json"), """{"require":{"php":"^8.1"}}""");
+
+        var framework = _sm.DetectFramework(root);
+        var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+        var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+        var suggestion = BuildInstallSuggestion(framework, hasJson, hasLock);
+
+        Assert.Equal("wordpress", framework);
+        Assert.NotNull(suggestion);
+    }
+
+    [Fact]
+    public void InstallSuggestion_Present_ForSymfony_NoLock()
+    {
+        var root = MakeDir("symfony-no-lock");
+        File.WriteAllText(Path.Combine(root, "composer.json"),
+            """{"require":{"symfony/framework-bundle":"^7.0"}}""");
+
+        var framework = _sm.DetectFramework(root);
+        var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+        var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+        var suggestion = BuildInstallSuggestion(framework, hasJson, hasLock);
+
+        Assert.Equal("symfony", framework);
+        Assert.NotNull(suggestion);
     }
 }

@@ -101,7 +101,11 @@
       "running": "Running composer…",
       "success": "Command completed successfully",
       "failed": "Command failed (exit code {code})",
-      "pluginMissing": "Composer plugin not loaded — install it from Plugins"
+      "pluginMissing": "Composer plugin not loaded — install it from Plugins",
+      "frameworkDetected": "{framework} detected",
+      "installPrompt": "Run composer install to fetch dependencies",
+      "installNow": "Install now",
+      "dismiss": "Dismiss"
     }
   },
   "uiMode": {

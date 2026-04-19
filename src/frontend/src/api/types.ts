@@ -234,11 +234,19 @@ export interface HistoricalMetrics {
   series: HistoricalMetricSeries[]
 }
 
+export interface ComposerInstallSuggestion {
+  reason: 'framework_detected'
+  framework: string
+  action: 'composer_install'
+}
+
 export interface ComposerStatus {
   hasComposerJson: boolean
   hasLock: boolean
   packages: string[]
   phpVersion: string | null
+  framework: string | null
+  installSuggestion?: ComposerInstallSuggestion
 }
 
 export interface ComposerCommandResult {
