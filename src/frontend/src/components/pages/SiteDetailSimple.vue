@@ -118,7 +118,8 @@
               {{ $t('sites.detail.simple.activity.errors.showAll') }}
             </el-button>
             <el-button size="small" link class="sd-full-logs" @click="openFullLogs">
-              {{ $t('sites.detail.simple.activity.fullLogs') }} →
+              {{ $t('sites.detail.simple.activity.fullLogs') }}
+              <el-icon style="margin-left:4px"><ArrowRight /></el-icon>
             </el-button>
           </div>
         </div>
@@ -156,6 +157,7 @@ import { computed, h, onMounted, reactive, ref, watch } from 'vue'
 import MiniSparkline from '../common/MiniSparkline.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowRight } from '@element-plus/icons-vue'
 
 const WarningIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }), h('line', { x1: '12', y1: '9', x2: '12', y2: '13' }), h('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })]  ) }
 import { useSitesStore } from '../../stores/sites'
