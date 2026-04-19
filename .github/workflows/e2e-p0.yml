@@ -49,14 +49,19 @@ jobs:
       - name: Wait for daemon /healthz
         shell: pwsh
         run: |
-          $deadline = (Get-Date).AddSeconds(60)
+          # Cold Windows runners take longer to JIT the daemon + plugins +
+          # the startup binary-catalog fetch (https://wdc.nks-hub.cz).
+          # 60s was empirically too short; bumped to 180s (observed runs
+          # taking 70-90s before healthz answers on the GitHub Windows
+          # runner, 2026-04-19).
+          $deadline = (Get-Date).AddSeconds(180)
           while ((Get-Date) -lt $deadline) {
             try {
               $res = Invoke-WebRequest -Uri "http://localhost:5146/healthz" -UseBasicParsing -TimeoutSec 2
               if ($res.StatusCode -eq 200) { Write-Host "Daemon ready"; exit 0 }
             } catch { Start-Sleep -Milliseconds 500 }
           }
-          Write-Error "Daemon failed to start within 60s"
+          Write-Error "Daemon failed to start within 180s"
           Get-Content daemon.out.log -Tail 60
           Get-Content daemon.err.log -Tail 60
           exit 1
