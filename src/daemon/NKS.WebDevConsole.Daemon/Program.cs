@@ -197,9 +197,24 @@ app.UseCors();
 // Expose OpenAPI spec at /openapi/v1.json — used by CI TS type generation
 app.MapOpenApi();
 
-// Refresh binary catalog from the catalog API before plugins start so they can use it
+// F51e: Refresh binary catalog fire-and-forget with 15s hard timeout — catalog API
+// being slow/unreachable (Cloudflare outbound stall, DNS latency, upstream down) must
+// NEVER block daemon boot. Plugins gracefully fall back to cached/seed catalog.
 var catalogClient = app.Services.GetRequiredService<CatalogClient>();
-await catalogClient.RefreshAsync();
+_ = Task.Run(async () =>
+{
+    try
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        await catalogClient.RefreshAsync(cts.Token);
+    }
+    catch (Exception ex)
+    {
+        app.Services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("CatalogRefresh")
+            .LogWarning(ex, "Background catalog refresh failed on boot — daemon continues with cached/seed catalog");
+    }
+});
 
 // Phase 2: Start plugins with the fully-built service provider.
 // Wrap per-plugin in try/catch so one failing StartAsync cannot break the daemon — other
