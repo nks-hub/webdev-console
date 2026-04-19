@@ -99,7 +99,7 @@
                 disabled
                 class="bin-open-btn"
               >
-                {{ $t('binaries.composer.installed', { version: composerVersion || 'latest' }) }}
+                {{ $t('binaries.composer.installedShort') }}
               </el-button>
             </div>
           </div>

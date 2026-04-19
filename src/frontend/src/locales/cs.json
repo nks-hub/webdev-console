@@ -233,6 +233,7 @@
       "description": "PHP dependency manager — stáhne nejnovější composer.phar z getcomposer.org do spravovaných binárek.",
       "install": "Nainstalovat",
       "installed": "Nainstalováno ({version})",
+      "installedShort": "Nainstalováno",
       "installing": "Instalace…"
     }
   },

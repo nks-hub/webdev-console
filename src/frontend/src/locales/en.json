@@ -233,6 +233,7 @@
       "description": "PHP dependency manager — downloads the latest composer.phar from getcomposer.org into managed binaries.",
       "install": "Install",
       "installed": "Installed ({version})",
+      "installedShort": "Installed",
       "installing": "Installing…"
     }
   },
