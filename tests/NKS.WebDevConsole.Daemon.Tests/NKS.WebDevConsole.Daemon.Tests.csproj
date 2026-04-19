@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.MariaDB\NKS.WebDevConsole.Plugin.MariaDB.csproj" />
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Node\NKS.WebDevConsole.Plugin.Node.csproj" />
     <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Cloudflare\NKS.WebDevConsole.Plugin.Cloudflare.csproj" />
+    <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Composer\NKS.WebDevConsole.Plugin.Composer.csproj" />
   </ItemGroup>
 
 </Project>
