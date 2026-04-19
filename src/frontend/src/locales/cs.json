@@ -132,6 +132,13 @@
         "status": {
           "running": "Běží",
           "stopped": "Zastaveno"
+        },
+        "services": {
+          "title": "Stav služeb",
+          "restart": "Restartovat",
+          "start": "Spustit",
+          "restarted": "{name} restartováno",
+          "started": "{name} spuštěno"
         }
       }
     },

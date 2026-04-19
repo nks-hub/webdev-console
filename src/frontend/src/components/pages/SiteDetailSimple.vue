@@ -78,6 +78,24 @@
         </div>
       </div>
 
+      <!-- Service status -->
+      <div class="sd-section">
+        <h3 class="sd-section-title">{{ $t('sites.detail.simple.services.title') }}</h3>
+        <div class="sd-service-row" v-for="svc in visibleServices" :key="svc.id">
+          <span class="sd-status-dot" :class="stateClass(svc)" />
+          <span class="sd-service-name">{{ svc.label }}</span>
+          <span class="sd-service-uptime">{{ uptimeLabel(svc) }}</span>
+          <el-button
+            size="small"
+            :loading="restartLoading[svc.id]"
+            :disabled="isTransitioning(svc)"
+            @click="restartService(svc)"
+          >
+            {{ isRunning(svc) ? $t('sites.detail.simple.services.restart') : $t('sites.detail.simple.services.start') }}
+          </el-button>
+        </div>
+      </div>
+
       <el-divider />
 
       <!-- Delete -->
@@ -93,7 +111,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'SiteDetailSimple' })
 
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -125,6 +143,65 @@ const savedSsl = ref(false)
 const savedTunnel = ref(false)
 
 const startStopLoading = ref(false)
+const restartLoading = reactive<Record<string, boolean>>({})
+
+const visibleServices = computed(() => {
+  const svcs = daemonStore.services
+  const out: Array<{ id: string; label: string; state: number | string; startedAt?: string }> = []
+  const add = (id: string, label: string) => {
+    const s = svcs.find((x: any) => x.id === id)
+    if (s) out.push({ id: s.id, label, state: s.state ?? 0, startedAt: s.startedAt })
+  }
+  add('apache', 'Apache')
+  if (site.value?.phpVersion) {
+    const phpSvc = svcs.find((x: any) => x.id === `php-${site.value!.phpVersion}`) ?? svcs.find((x: any) => x.id === 'php')
+    if (phpSvc) out.push({ id: phpSvc.id, label: `PHP ${site.value!.phpVersion}`, state: phpSvc.state ?? 0, startedAt: phpSvc.startedAt })
+  }
+  const mysqlSvc = svcs.find((x: any) => x.id === 'mysql') ?? svcs.find((x: any) => x.id === 'mariadb')
+  if (mysqlSvc) out.push({ id: mysqlSvc.id, label: mysqlSvc.id === 'mysql' ? 'MySQL' : 'MariaDB', state: mysqlSvc.state ?? 0, startedAt: mysqlSvc.startedAt })
+  if (site.value?.cloudflare?.enabled) add('cloudflared', 'Cloudflare Tunnel')
+  return out
+})
+
+function isRunning(svc: { state: number | string }): boolean {
+  return svc.state === 2 || svc.state === 'running'
+}
+function isTransitioning(svc: { state: number | string }): boolean {
+  return svc.state === 1 || svc.state === 3
+}
+function stateClass(svc: { state: number | string }): string {
+  if (isRunning(svc)) return 'dot-running'
+  if (isTransitioning(svc)) return 'dot-transition'
+  return 'dot-stopped'
+}
+function uptimeLabel(svc: { state: number | string; startedAt?: string }): string {
+  if (!isRunning(svc) || !svc.startedAt) return t('common.stopped')
+  const ms = Date.now() - new Date(svc.startedAt).getTime()
+  const min = Math.floor(ms / 60_000)
+  const h = Math.floor(min / 60)
+  const d = Math.floor(h / 24)
+  if (d > 0) return `${d}d ${h % 24}h`
+  if (h > 0) return `${h}h ${min % 60}m`
+  if (min > 0) return `${min}m`
+  return `<1m`
+}
+
+async function restartService(svc: { id: string; label: string; state: number | string }) {
+  restartLoading[svc.id] = true
+  try {
+    if (isRunning(svc)) {
+      await servicesStore.restart(svc.id)
+      ElMessage.success(t('sites.detail.simple.services.restarted', { name: svc.label }))
+    } else {
+      await servicesStore.start(svc.id)
+      ElMessage.success(t('sites.detail.simple.services.started', { name: svc.label }))
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || String(e))
+  } finally {
+    restartLoading[svc.id] = false
+  }
+}
 
 const apacheRunning = computed(() => {
   const svc = daemonStore.services.find((s: any) => s.id === 'apache' || s.id === 'httpd')
@@ -363,6 +440,20 @@ onMounted(async () => {
   justify-content: flex-start;
   padding-top: 8px;
 }
+
+.sd-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--wdc-border); }
+.sd-section-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--wdc-text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.sd-service-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+}
+.sd-service-name { font-size: 14px; font-weight: 500; }
+.sd-service-uptime { color: var(--el-text-color-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.dot-transition { background: var(--el-color-info); animation: dot-pulse 1.2s ease-in-out infinite; }
+@keyframes dot-pulse { 0%,100% { opacity: 0.5 } 50% { opacity: 1 } }
 
 .flash-enter-active {
   transition: opacity 0.2s ease, transform 0.2s ease;

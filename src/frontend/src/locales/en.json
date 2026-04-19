@@ -132,6 +132,13 @@
         "status": {
           "running": "Running",
           "stopped": "Stopped"
+        },
+        "services": {
+          "title": "Service status",
+          "restart": "Restart",
+          "start": "Start",
+          "restarted": "{name} restarted",
+          "started": "{name} started"
         }
       }
     },
