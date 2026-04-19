@@ -88,7 +88,20 @@
     "services": "Služby",
     "port": "Port",
     "simple": {
-      "subtitle": "Lokální vývojové prostředí pro vaše weby"
+      "subtitle": "Lokální vývojové prostředí pro vaše weby",
+      "welcomeTitle": "Vítejte v NKS WDC",
+      "summary": "{sites} webů · {running}/{total} služeb · {hits} hits · {errors} chyb",
+      "tiles": {
+        "sites": "Weby",
+        "services": "Služby",
+        "hits": "Požadavky (24 h)",
+        "errors": "Chyby (24 h)"
+      },
+      "quickActions": {
+        "newSite": "Nový web",
+        "mailpit": "Otevřít Mailpit",
+        "backup": "Zálohování"
+      }
     }
   },
   "sites": {

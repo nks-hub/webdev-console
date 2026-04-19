@@ -88,7 +88,20 @@
     "services": "Services",
     "port": "Port",
     "simple": {
-      "subtitle": "Local dev environment for your sites"
+      "subtitle": "Local dev environment for your sites",
+      "welcomeTitle": "Welcome to NKS WDC",
+      "summary": "{sites} sites · {running}/{total} services · {hits} hits · {errors} errors",
+      "tiles": {
+        "sites": "Sites",
+        "services": "Services",
+        "hits": "Requests (24h)",
+        "errors": "Errors (24h)"
+      },
+      "quickActions": {
+        "newSite": "New site",
+        "mailpit": "Open Mailpit",
+        "backup": "Backup"
+      }
     }
   },
   "sites": {

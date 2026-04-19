@@ -36,18 +36,61 @@
       </div>
     </div>
 
-    <!-- Simple mode: hero with single CTA -->
+    <!-- Simple mode: metric tiles + quick actions -->
     <template v-if="uiMode.isSimple">
-      <div class="simple-hero">
-        <div class="simple-hero-inner">
-          <h1 class="simple-hero-heading">Vítejte v NKS WDC</h1>
-          <p class="simple-hero-sub">{{ $t('dashboard.simple.subtitle') }}</p>
-          <el-button
-            type="primary"
-            size="large"
-            class="simple-hero-btn"
-            @click="$router.push({ path: '/sites', query: { create: '1' } })"
-          >+ Vytvořit nový web</el-button>
+      <div class="simple-dashboard">
+        <div class="simple-hero">
+          <h1 class="hero-title">{{ $t('dashboard.simple.welcomeTitle') }}</h1>
+          <p class="hero-summary">
+            {{ $t('dashboard.simple.summary', {
+              sites: sitesCount,
+              running: runningServices,
+              total: totalServices,
+              hits: totalHits,
+              errors: totalErrors
+            }) }}
+          </p>
+        </div>
+
+        <div class="simple-tiles">
+          <SimpleMetricTile
+            :label="$t('dashboard.simple.tiles.sites')"
+            :value="sitesCount"
+            icon="Link"
+            @click="router.push('/sites')"
+          />
+          <SimpleMetricTile
+            :label="$t('dashboard.simple.tiles.services')"
+            :value="`${runningServices}/${totalServices}`"
+            icon="Monitor"
+            :variant="runningServices < totalServices ? 'warning' : 'success'"
+            @click="router.push('/services')"
+          />
+          <SimpleMetricTile
+            :label="$t('dashboard.simple.tiles.hits')"
+            :value="totalHits"
+            icon="DataLine"
+            @click="router.push('/sites')"
+          />
+          <SimpleMetricTile
+            :label="$t('dashboard.simple.tiles.errors')"
+            :value="totalErrors"
+            icon="WarningFilled"
+            :variant="totalErrors > 0 ? 'danger' : 'default'"
+            @click="router.push('/sites')"
+          />
+        </div>
+
+        <div class="simple-quick-actions">
+          <el-button type="primary" size="large" @click="router.push('/sites?create=1')">
+            + {{ $t('dashboard.simple.quickActions.newSite') }}
+          </el-button>
+          <el-button size="large" @click="openMailpit">
+            {{ $t('dashboard.simple.quickActions.mailpit') }}
+          </el-button>
+          <el-button size="large" @click="router.push('/settings?tab=backup')">
+            {{ $t('dashboard.simple.quickActions.backup') }}
+          </el-button>
         </div>
       </div>
     </template>
@@ -298,6 +341,7 @@ import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
+import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 
 const router = useRouter()
 
@@ -316,6 +360,51 @@ const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => services.value.filter((s: any) => s.state === 2 || s.status === 'running').length)
 const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
 const noneRunning = computed(() => runningCount.value === 0)
+
+// Simple mode metrics
+const sitesCount = computed(() => sitesStore.sites.length)
+const runningServices = computed(() => daemonStore.services.filter((s: any) => s.state === 2).length)
+const totalServices = computed(() => daemonStore.services.length)
+const totalHits = ref(0)
+const totalErrors = ref(0)
+
+function simpleDaemonBase(): string {
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${urlPort}`
+  const p = (window as any).daemonApi?.getPort?.()
+  return `http://localhost:${typeof p === 'number' ? p : 5199}`
+}
+
+async function loadAggregates() {
+  const domains = sitesStore.sites.map((s: any) => s.domain)
+  const results = await Promise.allSettled(domains.map(async (domain: string) => {
+    try {
+      const [metricsR, errorsR] = await Promise.allSettled([
+        fetch(`${simpleDaemonBase()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
+        fetch(`${simpleDaemonBase()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
+      ])
+      let hits = 0, errs = 0
+      if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
+        const data = await metricsR.value.json() as any
+        const samples = Array.isArray(data) ? data : (data.samples ?? [])
+        hits = samples.reduce((sum: number, s: any) => sum + (s.requests ?? s.hits ?? 0), 0)
+      }
+      if (errorsR.status === 'fulfilled' && errorsR.value.ok) {
+        const data = await errorsR.value.json() as any
+        const entries = Array.isArray(data) ? data : (data.entries ?? [])
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000
+        errs = entries.filter((e: any) => {
+          if (!e.timestamp) return true
+          const t = new Date(e.timestamp).getTime()
+          return !isNaN(t) && t > cutoff
+        }).length
+      }
+      return { hits, errs }
+    } catch { return { hits: 0, errs: 0 } }
+  }))
+  totalHits.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.hits : sum, 0)
+  totalErrors.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.errs : sum, 0)
+}
 const totalCpu = computed(() => services.value.reduce((s, x: any) => s + (x.cpuPercent ?? 0), 0))
 const totalRamMB = computed(() => Math.round(services.value.reduce((s, x: any) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
 
@@ -383,11 +472,12 @@ function activityColor(operation: string): 'primary' | 'success' | 'warning' | '
   return 'info'
 }
 
-onMounted(() => {
-  void sitesStore.load()
+onMounted(async () => {
+  await sitesStore.load()
   void loadActivity()
   void loadNodeProcessCount()
   void loadLastBackup()
+  if (uiMode.isSimple) void loadAggregates()
 })
 
 const stateLabels: Record<number, string> = {
@@ -503,7 +593,9 @@ const logsDialog = reactive({
 })
 
 function openMailpit() {
-  window.open('http://localhost:8025', '_blank')
+  const mailpitUrl = 'http://127.0.0.1:8025'
+  if ((window as any).electronAPI?.openExternal) (window as any).electronAPI.openExternal(mailpitUrl)
+  else window.open(mailpitUrl, '_blank')
 }
 
 function openLogs(id: string) {
@@ -1002,41 +1094,44 @@ function closeConfig() {
   overflow: auto;
 }
 
-/* ─── Simple mode hero ───────────────────────────────────────────────────── */
-.simple-hero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 100px);
-}
-
-.simple-hero-inner {
+/* ─── Simple mode dashboard ──────────────────────────────────────────────── */
+.simple-dashboard {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  gap: 24px;
+  padding: 32px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.simple-hero {
   text-align: center;
 }
 
-.simple-hero-heading {
-  font-size: 2.4rem;
-  font-weight: 800;
-  color: var(--wdc-text);
-  letter-spacing: -0.03em;
-  margin: 0;
-}
-
-.simple-hero-sub {
-  font-size: 1rem;
-  color: var(--wdc-text-2);
+.hero-title {
+  font-size: 28px;
+  font-weight: 700;
   margin: 0 0 8px;
 }
 
-.simple-hero-btn {
-  padding: 16px 32px !important;
-  font-size: 1rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.01em;
+.hero-summary {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.simple-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.simple-quick-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding-top: 8px;
 }
 
 /* Recent activity timeline (Phase 4) */
