@@ -27,8 +27,13 @@
 
     <!-- Body -->
     <div class="page-body">
+      <!-- Initial load skeleton -->
+      <div v-if="loading && rows.length === 0" style="padding: 8px 0">
+        <el-skeleton :rows="5" animated />
+      </div>
+
       <!-- Search -->
-      <div class="toolbar">
+      <div v-if="!loading || rows.length > 0" class="toolbar">
         <el-input
           v-model="search"
           :placeholder="$t('hosts.searchPlaceholder')"
@@ -39,7 +44,7 @@
         <span class="entry-count">{{ filteredRows.length }} entries</span>
       </div>
 
-      <el-card shadow="never" class="table-card">
+      <el-card v-if="!loading || rows.length > 0" shadow="never" class="table-card">
         <el-table
           v-if="filteredRows.length > 0"
           :data="filteredRows"

@@ -66,15 +66,16 @@
         <div class="detail-header">
           <h2 class="detail-title">{{ selectedDb }}</h2>
           <div class="detail-actions">
-            <el-button size="small" @click="loadTables(selectedDb)">{{ t('databases.refreshTables') }}</el-button>
-            <el-button size="small" type="success" @click="triggerImport">{{ t('databases.importSql') }}</el-button>
-            <el-button size="small" @click="exportDb">{{ t('databases.exportSql') }}</el-button>
+            <el-button size="small" :loading="tablesLoading" @click="loadTables(selectedDb)">{{ t('databases.refreshTables') }}</el-button>
+            <el-button size="small" type="success" :loading="importing" @click="triggerImport">{{ t('databases.importSql') }}</el-button>
+            <el-button size="small" :loading="exporting" @click="exportDb">{{ t('databases.exportSql') }}</el-button>
             <input ref="importFileRef" type="file" accept=".sql,.gz" style="display:none" @change="handleImportFile" />
           </div>
         </div>
 
         <!-- Tables list -->
-        <div class="tables-section" v-if="currentTables.length > 0">
+        <div v-if="tablesLoading" style="padding: 8px 0"><el-skeleton :rows="3" animated /></div>
+        <div class="tables-section" v-else-if="currentTables.length > 0">
           <div class="section-label">{{ t('databases.tables') }}</div>
           <el-table :data="currentTables" size="small" stripe>
             <el-table-column prop="name" label="Table" min-width="200">
@@ -157,6 +158,10 @@ const queryRunning = ref(false)
 const queryTime = ref<number | null>(null)
 
 const importFileRef = ref<HTMLInputElement>()
+const tablesLoading = ref(false)
+const importing = ref(false)
+const exporting = ref(false)
+const dropping = ref(false)
 const currentTables = computed(() => dbTables[selectedDb.value] ?? [])
 
 function daemonBase(): string {
@@ -210,6 +215,7 @@ async function selectDatabase(db: string) {
 }
 
 async function loadTables(db: string) {
+  tablesLoading.value = true
   try {
     const r = await fetch(`${daemonBase()}/api/databases/${db}/tables`, { headers: authHeaders() })
     if (r.ok) {
@@ -226,7 +232,9 @@ async function loadTables(db: string) {
       const data = await r.json()
       dbSizes[db] = data.size ?? data.totalSize ?? ''
     }
-  } catch { /* optional */ }
+  } catch { /* optional */ } finally {
+    tablesLoading.value = false
+  }
 }
 
 async function createDatabase() {
@@ -257,14 +265,14 @@ async function confirmDrop(db: string) {
       confirmButtonText: 'Drop',
       confirmButtonClass: 'el-button--danger',
     })
+  } catch { return }
+  dropping.value = true
+  try {
     const r = await fetch(`${daemonBase()}/api/databases/${db}`, {
       method: 'DELETE',
       headers: authHeaders(),
     })
     if (!r.ok) {
-      // Only surface an error toast if this wasn't a user-cancel. The
-      // outer try/catch swallows ElMessageBox.confirm rejection which
-      // is normal, but a DELETE HTTP failure deserves a visible error.
       const err = await httpError(r)
       ElMessage.error(`Drop failed: ${err.message}`)
       return
@@ -272,7 +280,11 @@ async function confirmDrop(db: string) {
     ElMessage.success(`Database ${db} dropped`)
     if (selectedDb.value === db) selectedDb.value = ''
     await loadDatabases()
-  } catch { /* cancelled */ }
+  } catch (e: any) {
+    ElMessage.error(`Drop failed: ${e?.message || e}`)
+  } finally {
+    dropping.value = false
+  }
 }
 
 async function executeQuery() {
@@ -313,6 +325,7 @@ async function handleImportFile(e: Event) {
   if (!file || !selectedDb.value) return
   const formData = new FormData()
   formData.append('file', file)
+  importing.value = true
   try {
     ElMessage.info(`Importing ${file.name} into ${selectedDb.value}...`)
     const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/import`, {
@@ -325,12 +338,15 @@ async function handleImportFile(e: Event) {
     await loadTables(selectedDb.value)
   } catch (e: any) {
     ElMessage.error(`Import failed: ${e?.message || e}`)
+  } finally {
+    importing.value = false
+    if (importFileRef.value) importFileRef.value.value = ''
   }
-  if (importFileRef.value) importFileRef.value.value = ''
 }
 
 async function exportDb() {
   if (!selectedDb.value) { ElMessage.warning('Select a database first'); return }
+  exporting.value = true
   try {
     const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/export`, {
       headers: authHeaders(),
@@ -346,6 +362,8 @@ async function exportDb() {
     ElMessage.success(`Exported ${selectedDb.value}.sql`)
   } catch (e: any) {
     ElMessage.error(`Export failed: ${e?.message || e}`)
+  } finally {
+    exporting.value = false
   }
 }
 

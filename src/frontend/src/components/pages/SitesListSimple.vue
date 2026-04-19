@@ -100,8 +100,10 @@
                 <el-dropdown-item command="duplicate">
                   <el-icon><CopyDocument /></el-icon> {{ $t('sites.card.duplicate') }}
                 </el-dropdown-item>
-                <el-dropdown-item command="restart">
-                  <el-icon><RefreshRight /></el-icon> {{ $t('sites.card.restart') }}
+                <el-dropdown-item command="restart" :disabled="restarting">
+                  <el-icon v-if="restarting" class="is-loading"><RefreshRight /></el-icon>
+                  <el-icon v-else><RefreshRight /></el-icon>
+                  {{ $t('sites.card.restart') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="delete" divided class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>
               </el-dropdown-menu>
@@ -131,8 +133,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="duplicateDialog.visible = false">{{ $t('common.cancel') }}</el-button>
-      <el-button type="primary" @click="confirmDuplicate">{{ $t('sites.card.duplicate') }}</el-button>
+      <el-button :disabled="duplicating" @click="duplicateDialog.visible = false">{{ $t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="duplicating" @click="confirmDuplicate">{{ $t('sites.card.duplicate') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -162,6 +164,8 @@ const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 
 const toggling = ref(false)
+const duplicating = ref(false)
+const restarting = ref(false)
 
 const apacheRunning = computed(() =>
   (daemonStore.services as any[]).some(
@@ -274,6 +278,7 @@ function openDuplicateDialog(domain: string) {
 
 async function confirmDuplicate() {
   const { sourceDomain, newDomain, copyFiles } = duplicateDialog.value
+  duplicating.value = true
   try {
     ElMessage.info($t('sites.card.duplicating'))
     await duplicateSite(sourceDomain, newDomain, copyFiles)
@@ -282,6 +287,8 @@ async function confirmDuplicate() {
     await sitesStore.load()
   } catch (e: any) {
     ElMessage.error(e?.message || String(e))
+  } finally {
+    duplicating.value = false
   }
 }
 
@@ -357,12 +364,15 @@ async function handleCommand(cmd: string, site: SiteInfo) {
     } catch {
       return
     }
+    restarting.value = true
     try {
       await stopService('apache')
       await startService('apache')
       ElMessage.success($t('sites.card.restarted'))
     } catch (e: any) {
       ElMessage.error(`Restart failed: ${e?.message || e}`)
+    } finally {
+      restarting.value = false
     }
     return
   }

@@ -52,6 +52,8 @@
           </p>
         </div>
 
+        <div v-if="aggregatesLoading" v-loading="true" style="height: 80px; margin-bottom: 12px;" />
+
         <div class="simple-tiles">
           <SimpleMetricTile
             :label="$t('dashboard.simple.tiles.sites')"
@@ -367,6 +369,7 @@ const runningServices = computed(() => daemonStore.services.filter((s: any) => s
 const totalServices = computed(() => daemonStore.services.length)
 const totalHits = ref(0)
 const totalErrors = ref(0)
+const aggregatesLoading = ref(false)
 
 function simpleDaemonBase(): string {
   const urlPort = new URLSearchParams(window.location.search).get('port')
@@ -376,6 +379,7 @@ function simpleDaemonBase(): string {
 }
 
 async function loadAggregates() {
+  aggregatesLoading.value = true
   const domains = sitesStore.sites.map((s: any) => s.domain)
   const results = await Promise.allSettled(domains.map(async (domain: string) => {
     try {
@@ -404,6 +408,7 @@ async function loadAggregates() {
   }))
   totalHits.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.hits : sum, 0)
   totalErrors.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.errs : sum, 0)
+  aggregatesLoading.value = false
 }
 const totalCpu = computed(() => services.value.reduce((s, x: any) => s + (x.cpuPercent ?? 0), 0))
 const totalRamMB = computed(() => Math.round(services.value.reduce((s, x: any) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
