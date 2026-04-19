@@ -12,13 +12,13 @@
           <span>Back to Sites</span>
         </el-button>
         <div class="title-block">
-          <div class="title-label">Edit Site</div>
+          <div class="title-label">{{ $t('common.edit') }} Site</div>
           <div class="title-name">{{ domain }}</div>
         </div>
       </div>
       <div class="header-actions">
         <el-button size="small" @click="openInBrowser" :disabled="!site">
-          Open in Browser
+          {{ $t('common.open') }}
         </el-button>
         <el-button
           type="primary"
@@ -27,7 +27,7 @@
           :disabled="!dirty"
           @click="save"
         >
-          Save &amp; Apply
+          {{ $t('common.save') }} &amp; {{ $t('common.apply') }}
         </el-button>
       </div>
     </div>
@@ -290,7 +290,7 @@
                         type="danger"
                         @click="stopNodeProcess"
                         :loading="nodeProcessLoading"
-                      >Stop</el-button>
+                      >{{ $t('common.stop') }}</el-button>
                       <el-button
                         v-if="nodeProcessState === 2"
                         size="small"
@@ -555,7 +555,7 @@
           <div class="tab-content">
             <div class="metrics-toolbar">
               <el-button size="small" :loading="metricsLoading" :icon="Refresh" @click="refreshMetrics">
-                Refresh
+                {{ $t('common.refresh') }}
               </el-button>
               <span v-if="metricsLastRefresh" class="hint metrics-timestamp">
                 Last updated {{ metricsAgeDisplay }}
@@ -702,7 +702,7 @@
                 Removes the vhost config and hosts file entry. Document root and databases are not touched.
               </div>
               <el-button type="danger" size="default" @click="confirmDelete">
-                Delete {{ site.domain }}
+                {{ $t('common.delete') }} {{ site.domain }}
               </el-button>
             </div>
           </div>

@@ -39,7 +39,7 @@
             style="width: 220px"
             prefix-icon="Search"
           />
-          <el-button size="small" :loading="loading" @click="refresh">Refresh</el-button>
+          <el-button size="small" :loading="loading" @click="refresh">{{ $t('common.refresh') }}</el-button>
         </div>
       </div>
 
@@ -105,7 +105,7 @@
           </p>
         </div>
         <div class="header-actions">
-          <el-button size="small" :loading="loading" @click="refresh">Refresh</el-button>
+          <el-button size="small" :loading="loading" @click="refresh">{{ $t('common.refresh') }}</el-button>
         </div>
       </div>
 
@@ -158,7 +158,7 @@
               >available</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="220" align="right">
+          <el-table-column :label="$t('common.actions')" width="220" align="right">
             <template #default="{ row }">
               <el-tooltip
                 v-if="!row.installed && nativePlatform && row.platforms.length && !row.platforms.includes(nativePlatform)"

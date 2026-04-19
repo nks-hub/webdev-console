@@ -20,7 +20,7 @@
           :disabled="!daemonStore.connected || !configReady"
           @click="toggleTunnel"
         >
-          {{ serviceRunning ? 'Stop tunnel' : 'Start tunnel' }}
+          {{ serviceRunning ? $t('common.stop') : $t('common.run') }} tunnel
         </el-button>
       </div>
     </div>
@@ -154,7 +154,7 @@
               </el-input>
               <div class="card-actions">
                 <el-button size="small" :loading="savingConfig" @click="saveBinaryPath">
-                  Save path
+                  {{ $t('common.save') }} path
                 </el-button>
               </div>
             </div>
@@ -181,7 +181,7 @@
               </div>
               <div class="card-actions">
                 <el-button size="small" :loading="savingConfig" @click="saveSubdomainTemplate">
-                  Save template
+                  {{ $t('common.save') }} template
                 </el-button>
               </div>
             </div>
@@ -209,7 +209,7 @@
                   :disabled="!configReady"
                   @click="toggleTunnel"
                 >
-                  {{ serviceRunning ? 'Stop' : 'Start' }} cloudflared
+                  {{ serviceRunning ? $t('common.stop') : $t('common.run') }} cloudflared
                 </el-button>
               </div>
             </div>
@@ -334,7 +334,7 @@
                     <el-tag v-else size="small" effect="plain">DNS only</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="Actions" width="100">
+                <el-table-column :label="$t('common.actions')" width="100">
                   <template #default="{ row }">
                     <el-button
                       size="small"
@@ -342,7 +342,7 @@
                       plain
                       @click="deleteDnsRecord(row)"
                     >
-                      Delete
+                      {{ $t('common.delete') }}
                     </el-button>
                   </template>
                 </el-table-column>

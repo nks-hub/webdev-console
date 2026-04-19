@@ -155,7 +155,7 @@
             class="pm-open-btn"
             @click="router.push(`/plugin/${plugin.id}`)"
           >
-            Open panel <el-icon><ArrowRight /></el-icon>
+            {{ $t('common.open') }} panel <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
       </div>

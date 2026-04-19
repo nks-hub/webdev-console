@@ -184,7 +184,7 @@
                     Create Backup
                   </el-button>
                   <el-button size="small" @click="loadBackups" :loading="backupsLoading">
-                    Refresh
+                    {{ $t('common.refresh') }}
                   </el-button>
                 </div>
               </div>
@@ -201,9 +201,9 @@
                     {{ (row.size / 1024 / 1024).toFixed(1) }} MB
                   </template>
                 </el-table-column>
-                <el-table-column label="Actions">
+                <el-table-column :label="$t('common.actions')">
                   <template #default="{ row }">
-                    <el-button size="small" @click="downloadBackupFile(row.path)">Download</el-button>
+                    <el-button size="small" @click="downloadBackupFile(row.path)">{{ $t('common.download') }}</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -245,7 +245,7 @@
                 >
                   <template #append>
                     <el-button :loading="refreshingCatalog" @click="refreshCatalog">
-                      Refresh
+                      {{ $t('common.refresh') }}
                     </el-button>
                   </template>
                 </el-input>
@@ -271,7 +271,7 @@
                   @click="openCatalogAdmin"
                   :disabled="!catalogUrl"
                 >
-                  Open admin UI
+                  {{ $t('common.open') }} admin UI
                 </el-button>
               </el-form-item>
             </el-form>
@@ -320,7 +320,7 @@
                 </header>
                 <div class="settings-card-body">
                   <div class="sync-actions">
-                    <el-button size="small" @click="loadDevicesAccount" :loading="devicesLoading">Refresh devices</el-button>
+                    <el-button size="small" @click="loadDevicesAccount" :loading="devicesLoading">{{ $t('common.refresh') }} devices</el-button>
                     <el-button size="small" type="danger" plain @click="doLogout">Sign out</el-button>
                   </div>
                 </div>
@@ -580,9 +580,9 @@
       <!-- Save button (not shown on About) -->
       <div class="settings-footer" v-if="activeTab !== 'about'">
         <el-button type="primary" size="small" :loading="saving" @click="save">
-          Save Settings
+          {{ $t('common.save') }} {{ $t('common.settings') }}
         </el-button>
-        <el-button size="small" @click="loadSettings">Reset</el-button>
+        <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
       </div>
     </div>
   </div>

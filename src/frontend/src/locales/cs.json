@@ -22,7 +22,14 @@
     "starting": "Spouštění",
     "stopping": "Zastavování",
     "crashed": "Spadlo",
-    "disabled": "Zakázáno"
+    "disabled": "Zakázáno",
+    "open": "Otevřít",
+    "actions": "Akce",
+    "run": "Spustit",
+    "stop": "Zastavit",
+    "download": "Stáhnout",
+    "settings": "Nastavení",
+    "reset": "Reset"
   },
   "header": {
     "connected": "Připojeno",

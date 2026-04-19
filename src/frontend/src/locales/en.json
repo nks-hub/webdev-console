@@ -22,7 +22,14 @@
     "starting": "Starting",
     "stopping": "Stopping",
     "crashed": "Crashed",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "open": "Open",
+    "actions": "Actions",
+    "run": "Run",
+    "stop": "Stop",
+    "download": "Download",
+    "settings": "Settings",
+    "reset": "Reset"
   },
   "header": {
     "connected": "Connected",
