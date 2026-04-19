@@ -128,6 +128,7 @@
         "delete": "Smazat web",
         "deleteConfirm": "Opravdu smazat web {domain}?",
         "saved": "Uloženo",
+        "serverLabel": "Web server",
         "status": {
           "running": "Běží",
           "stopped": "Zastaveno"
@@ -222,7 +223,14 @@
     "outdated": "zastaralé",
     "install": "Instalovat",
     "remove": "Odebrat",
-    "catalog": "Katalog"
+    "catalog": "Katalog",
+    "composer": {
+      "name": "Composer",
+      "description": "PHP dependency manager — stáhne nejnovější composer.phar z getcomposer.org do spravovaných binárek.",
+      "install": "Nainstalovat",
+      "installed": "Nainstalováno ({version})",
+      "installing": "Instalace…"
+    }
   },
   "php": {
     "title": "Verze PHP",

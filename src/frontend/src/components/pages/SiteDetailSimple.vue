@@ -20,9 +20,9 @@
       <!-- Status row -->
       <div class="sd-row sd-status-row">
         <div class="sd-label-group">
-          <span class="sd-label">{{ $t('common.running') }}</span>
+          <span class="sd-label">{{ $t('sites.detail.simple.serverLabel') }}</span>
           <span class="sd-status-dot" :class="apacheRunning ? 'dot-running' : 'dot-stopped'" />
-          <span class="sd-status-text">
+          <span class="sd-status-text" :class="apacheRunning ? 'text-running' : 'text-stopped'">
             {{ apacheRunning ? $t('sites.detail.simple.status.running') : $t('sites.detail.simple.status.stopped') }}
           </span>
         </div>
@@ -298,6 +298,24 @@ onMounted(async () => {
   color: var(--el-text-color-secondary);
   font-size: 14px;
   min-width: 140px;
+}
+
+.sd-status-row .sd-label {
+  min-width: 80px;
+}
+
+.sd-status-row .sd-label-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.text-running {
+  color: var(--el-color-success);
+  font-weight: 500;
+}
+
+.text-stopped {
+  color: var(--el-text-color-regular);
 }
 
 .sd-control-wrap {

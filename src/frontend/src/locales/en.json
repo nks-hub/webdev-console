@@ -128,6 +128,7 @@
         "delete": "Delete site",
         "deleteConfirm": "Really delete site {domain}?",
         "saved": "Saved",
+        "serverLabel": "Web server",
         "status": {
           "running": "Running",
           "stopped": "Stopped"
@@ -222,7 +223,14 @@
     "outdated": "Outdated",
     "install": "Install",
     "remove": "Remove",
-    "catalog": "Catalog"
+    "catalog": "Catalog",
+    "composer": {
+      "name": "Composer",
+      "description": "PHP dependency manager — downloads the latest composer.phar from getcomposer.org into managed binaries.",
+      "install": "Install",
+      "installed": "Installed ({version})",
+      "installing": "Installing…"
+    }
   },
   "php": {
     "title": "PHP Versions",
