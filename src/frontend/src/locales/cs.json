@@ -300,7 +300,16 @@
       "simple": "Jednoduchý",
       "advanced": "Pokročilý",
       "description": "Pokročilý režim zobrazí všechny služby, databáze, porty a další nástroje pro vývojáře."
+    },
+    "general": {
+      "runOnStartup": "Spustit při startu",
+      "autoStartServices": "Automaticky spustit služby",
+      "defaultPhpVersion": "Výchozí verze PHP"
     }
+  },
+  "footer": {
+    "servicesRunning": "služeb běží",
+    "tunnel": "Tunel"
   },
   "onboarding": {
     "title": "Vítej v NKS WebDev Console",

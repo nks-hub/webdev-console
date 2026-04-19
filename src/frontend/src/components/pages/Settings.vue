@@ -77,13 +77,13 @@
                 />
                 <div class="hint">{{ $t('settings.mode.description') }}</div>
               </el-form-item>
-              <el-form-item label="Run on startup">
+              <el-form-item :label="$t('settings.general.runOnStartup')">
                 <el-switch v-model="runOnStartup" />
               </el-form-item>
-              <el-form-item label="Auto-start services">
+              <el-form-item :label="$t('settings.general.autoStartServices')">
                 <el-switch v-model="autoStart" />
               </el-form-item>
-              <el-form-item label="Default PHP version">
+              <el-form-item :label="$t('settings.general.defaultPhpVersion')">
                 <el-select v-model="defaultPhp" style="width: 160px" placeholder="Select">
                   <el-option v-for="v in phpVersions" :key="v" :label="'PHP ' + v" :value="v" />
                 </el-select>

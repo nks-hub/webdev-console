@@ -300,7 +300,16 @@
       "simple": "Simple",
       "advanced": "Advanced",
       "description": "Advanced mode reveals all services, databases, ports and developer tools."
+    },
+    "general": {
+      "runOnStartup": "Run on startup",
+      "autoStartServices": "Auto-start services",
+      "defaultPhpVersion": "Default PHP version"
     }
+  },
+  "footer": {
+    "servicesRunning": "services running",
+    "tunnel": "Tunnel"
   },
   "onboarding": {
     "title": "Welcome to NKS WebDev Console",
