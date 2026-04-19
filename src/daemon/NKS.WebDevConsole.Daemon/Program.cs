@@ -1854,6 +1854,55 @@ app.MapPost("/api/sites/{domain}/composer/remove", async (string domain, HttpCon
     }
 });
 
+app.MapPost("/api/sites/{domain}/composer/init", async (string domain, HttpContext ctx, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(cancellationToken: ct);
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
+    var composerRoot = ResolveComposerRoot(site.DocumentRoot);
+    if (!File.Exists(Path.Combine(composerRoot, "composer.json")))
+        composerRoot = site.DocumentRoot;
+    var name = body?.GetValueOrDefault("name") ?? $"local/{domain.Replace('.', '-')}";
+    var description = body?.GetValueOrDefault("description") ?? "";
+    var type = body?.GetValueOrDefault("type") ?? "project";
+    var stability = body?.GetValueOrDefault("stability") ?? "stable";
+    var args = new List<string> { "init", "--no-interaction", $"--name={name}", $"--type={type}", $"--stability={stability}" };
+    if (!string.IsNullOrWhiteSpace(description)) args.Add($"--description={description}");
+    try
+    {
+        var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync", [composerRoot, args.ToArray(), ct]);
+        return Results.Ok(new { exitCode, stdout, stderr, composerRoot });
+    }
+    catch (Exception ex) { return Results.Problem(title: "composer init failed", detail: ex.Message, statusCode: 500); }
+});
+
+app.MapGet("/api/sites/{domain}/composer/diagnose", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
+    var composerRoot = ResolveComposerRoot(site.DocumentRoot);
+    var logger = lf.CreateLogger("Composer");
+    try
+    {
+        var (_, _, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
+            [composerRoot, new[] { "diagnose", "--no-ansi" }, ct]);
+        var warnings = new List<string>();
+        var errors = new List<string>();
+        foreach (var line in (stdout ?? "").Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("WARNING", StringComparison.OrdinalIgnoreCase)) warnings.Add(trimmed);
+            else if (trimmed.StartsWith("ERROR", StringComparison.OrdinalIgnoreCase)) errors.Add(trimmed);
+        }
+        return Results.Ok(new { warnings, errors });
+    }
+    catch (Exception ex) { return Results.Problem(title: "composer diagnose failed", detail: ex.Message, statusCode: 500); }
+});
+
 app.MapGet("/api/sites/{domain}/composer/outdated", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
 {
     var site = sm.Get(domain);

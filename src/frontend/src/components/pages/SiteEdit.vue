@@ -600,7 +600,9 @@
             <!-- Access log table — advanced mode only -->
             <div v-if="uiMode.isAdvanced && site" class="access-logs-section">
               <div class="historical-title" style="margin-bottom: 10px">{{ $t('sites.access.title') }}</div>
-              <SiteAccessLogs :domain="site.domain" />
+              <div class="table-responsive">
+                <SiteAccessLogs :domain="site.domain" />
+              </div>
             </div>
 
             <!-- Historical data section -->
@@ -710,7 +712,7 @@
         </el-tab-pane>
 
         <!-- ── Packages (Composer) ───────────────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="composer">
+        <el-tab-pane v-if="uiMode.isAdvanced && site?.phpVersion" name="composer">
           <template #label>
             <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('sites.composer.tabLabel') }}</span>
           </template>
@@ -2075,8 +2077,9 @@ onBeforeUnmount(() => {
 }
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 .metrics-chart-wrap {
   margin-top: 18px;
@@ -2088,6 +2091,9 @@ onBeforeUnmount(() => {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
   margin-bottom: 8px;
+}
+.table-responsive {
+  overflow-x: auto;
 }
 .metric-card {
   background: var(--wdc-surface-2);

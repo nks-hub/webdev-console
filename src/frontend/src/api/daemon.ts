@@ -690,6 +690,15 @@ export interface ComposerOutdatedEntry {
 export const composerOutdated = (domain: string): Promise<{ installed: ComposerOutdatedEntry[] }> =>
   json(`/api/sites/${encodeURIComponent(domain)}/composer/outdated`)
 
+export const composerInit = (domain: string, body: Record<string, string>): Promise<{ exitCode: number; stdout: string; stderr: string; composerRoot: string }> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/init`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+export const composerDiagnose = (domain: string): Promise<{ warnings: string[]; errors: string[] }> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/diagnose`)
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.

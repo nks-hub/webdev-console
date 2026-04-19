@@ -206,7 +206,16 @@
       "statusOk": "OK",
       "statusOutdated": "Outdated",
       "statusAbandoned": "Abandoned",
-      "versionSelectPlaceholder": "Version (auto)"
+      "versionSelectPlaceholder": "Version (auto)",
+      "initTitle": "Initialize Composer",
+      "initName": "Package name",
+      "initDescription": "Description (optional)",
+      "initType": "Type",
+      "initStability": "Minimum stability",
+      "checkConflicts": "Check conflicts",
+      "noConflicts": "No conflicts detected",
+      "conflictsTitle": "Conflicts and warnings",
+      "majorJump": "Major version jump — possible breaking changes"
     }
   },
   "uiMode": {

@@ -206,7 +206,16 @@
       "statusOk": "OK",
       "statusOutdated": "Zastaralý",
       "statusAbandoned": "Opuštěný",
-      "versionSelectPlaceholder": "Verze (auto)"
+      "versionSelectPlaceholder": "Verze (auto)",
+      "initTitle": "Inicializovat Composer",
+      "initName": "Název balíčku",
+      "initDescription": "Popis (volitelný)",
+      "initType": "Typ",
+      "initStability": "Minimální stabilita",
+      "checkConflicts": "Zkontrolovat konflikty",
+      "noConflicts": "Žádné konflikty",
+      "conflictsTitle": "Konflikty a varování",
+      "majorJump": "Major version jump — možné breaking changes"
     }
   },
   "uiMode": {

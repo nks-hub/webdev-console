@@ -20,9 +20,9 @@
       <el-empty :description="$t('sites.composer.noProject')">
         <template #extra>
           <p class="composer-empty-hint">{{ $t('sites.composer.initHint') }}</p>
-          <el-tag type="info" class="composer-init-cmd">
-            composer init
-          </el-tag>
+          <el-button type="primary" @click="openInitDialog">
+            {{ $t('sites.composer.initTitle') }}
+          </el-button>
         </template>
       </el-empty>
     </div>
@@ -102,6 +102,13 @@
             @click="showRequireDialog = true"
           >
             {{ $t('sites.composer.require') }}
+          </el-button>
+
+          <el-button
+            :loading="diagnosing"
+            @click="runDiagnose"
+          >
+            {{ $t('sites.composer.checkConflicts') }}
           </el-button>
 
           <el-button
@@ -191,9 +198,16 @@
           </el-table-column>
 
           <!-- Latest version -->
-          <el-table-column :label="$t('sites.composer.colLatest')" width="130">
+          <el-table-column :label="$t('sites.composer.colLatest')" width="150">
             <template #default="{ row }">
               <span class="mono">{{ outdatedMap[row.name]?.latest ?? '—' }}</span>
+              <el-tooltip
+                v-if="outdatedMap[row.name] && isMajorJump(row.constraint, outdatedMap[row.name].latest)"
+                :content="$t('sites.composer.majorJump')"
+                placement="top"
+              >
+                <el-icon class="major-jump-icon"><Warning /></el-icon>
+              </el-tooltip>
             </template>
           </el-table-column>
 
@@ -259,6 +273,65 @@
         </el-collapse>
       </el-card>
     </div>
+
+    <!-- Init composer dialog -->
+    <el-dialog
+      v-model="showInitDialog"
+      :title="$t('sites.composer.initTitle')"
+      width="440px"
+      :close-on-click-modal="!running"
+    >
+      <el-form label-position="top">
+        <el-form-item :label="$t('sites.composer.initName')">
+          <el-input v-model="initForm.name" :disabled="running" />
+        </el-form-item>
+        <el-form-item :label="$t('sites.composer.initDescription')">
+          <el-input v-model="initForm.description" :disabled="running" />
+        </el-form-item>
+        <el-form-item :label="$t('sites.composer.initType')">
+          <el-select v-model="initForm.type" :disabled="running" style="width: 100%">
+            <el-option label="project" value="project" />
+            <el-option label="library" value="library" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="$t('sites.composer.initStability')">
+          <el-select v-model="initForm.stability" :disabled="running" style="width: 100%">
+            <el-option label="stable" value="stable" />
+            <el-option label="dev" value="dev" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showInitDialog = false" :disabled="running">
+          {{ $t('common.cancel') }}
+        </el-button>
+        <el-button type="primary" :loading="running" @click="runInit">
+          {{ $t('sites.composer.initTitle') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Diagnose / conflicts dialog -->
+    <el-dialog
+      v-model="showDiagnoseDialog"
+      :title="$t('sites.composer.conflictsTitle')"
+      width="520px"
+    >
+      <div v-if="diagnoseResult">
+        <div v-if="diagnoseResult.errors.length === 0 && diagnoseResult.warnings.length === 0" class="diagnose-ok">
+          <el-icon color="var(--el-color-success)"><Check /></el-icon>
+          {{ $t('sites.composer.noConflicts') }}
+        </div>
+        <template v-else>
+          <div v-for="e in diagnoseResult.errors" :key="e" class="diagnose-line diagnose-error">
+            <el-icon><Warning /></el-icon> {{ e }}
+          </div>
+          <div v-for="w in diagnoseResult.warnings" :key="w" class="diagnose-line diagnose-warning">
+            <el-icon><Warning /></el-icon> {{ w }}
+          </div>
+        </template>
+      </div>
+    </el-dialog>
 
     <!-- Require package dialog -->
     <el-dialog
@@ -328,7 +401,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Check, Warning, Refresh, WarningFilled, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated } from '../../api/daemon'
+import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated, composerInit, composerDiagnose } from '../../api/daemon'
 import type { ComposerStatus, ComposerCommandResult } from '../../api/types'
 
 const props = defineProps<{ domain: string }>()
@@ -346,6 +419,13 @@ const outputOpen = ref<string[]>(['stdout', 'stderr'])
 const showRequireDialog = ref(false)
 const requirePackage = ref('')
 const removing = ref<string | null>(null)
+
+const showInitDialog = ref(false)
+const initForm = ref({ name: '', description: '', type: 'project', stability: 'stable' })
+
+const diagnosing = ref(false)
+const showDiagnoseDialog = ref(false)
+const diagnoseResult = ref<{ warnings: string[]; errors: string[] } | null>(null)
 
 const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
 const isBannerDismissed = ref(false)
@@ -582,6 +662,55 @@ async function confirmRemove(pkg: string): Promise<void> {
   } finally {
     removing.value = null
   }
+}
+
+function openInitDialog(): void {
+  initForm.value = {
+    name: `local/${props.domain.replace(/\./g, '-')}`,
+    description: '',
+    type: 'project',
+    stability: 'stable',
+  }
+  showInitDialog.value = true
+}
+
+async function runInit(): Promise<void> {
+  running.value = true
+  try {
+    const result = await composerInit(props.domain, { ...initForm.value })
+    lastResult.value = result
+    outputOpen.value = result.exitCode !== 0 ? ['stdout', 'stderr'] : ['stdout']
+    if (result.exitCode === 0) {
+      ElMessage.success(t('sites.composer.success'))
+      showInitDialog.value = false
+      await loadStatus()
+    } else {
+      ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
+    }
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    running.value = false
+  }
+}
+
+async function runDiagnose(): Promise<void> {
+  diagnosing.value = true
+  try {
+    diagnoseResult.value = await composerDiagnose(props.domain)
+    showDiagnoseDialog.value = true
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    diagnosing.value = false
+  }
+}
+
+function isMajorJump(requiredConstraint: string, latest: string | null): boolean {
+  if (!latest) return false
+  const reqMajor = parseInt(requiredConstraint.replace(/[\^~><=]/g, '').split('.')[0], 10)
+  const latestMajor = parseInt(latest.split('.')[0], 10)
+  return Number.isFinite(reqMajor) && Number.isFinite(latestMajor) && latestMajor > reqMajor
 }
 
 onMounted(() => {
@@ -822,5 +951,37 @@ onMounted(() => {
 
 .mono {
   font-family: monospace;
+}
+
+.major-jump-icon {
+  color: var(--el-color-warning);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.diagnose-ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--el-color-success);
+  padding: 8px 0;
+}
+
+.diagnose-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  padding: 4px 0;
+  line-height: 1.4;
+}
+
+.diagnose-error {
+  color: var(--el-color-danger);
+}
+
+.diagnose-warning {
+  color: var(--el-color-warning);
 }
 </style>
