@@ -87,69 +87,7 @@
           </div>
         </div>
 
-        <!-- Package chips -->
-        <div v-if="status.packages.length > 0" class="package-list">
-          <el-popover
-            v-for="pkg in status.packages"
-            :key="pkg"
-            placement="top"
-            trigger="hover"
-            :show-after="500"
-            :hide-after="200"
-            width="360"
-            @show="loadPackageInfo(pkg.split(':')[0])"
-          >
-            <template #reference>
-              <el-tag
-                size="small"
-                effect="plain"
-                :class="['pkg-tag', 'pkg-tag-interactive', outdatedMap[pkg.split(':')[0]] ? 'pkg-outdated' : '']"
-                role="button"
-                tabindex="0"
-                :aria-label="t('sites.composer.openOnPackagist', { name: pkg.split(':')[0] })"
-                :title="outdatedMap[pkg.split(':')[0]] ? t('sites.composer.updateAvailable', { latest: outdatedMap[pkg.split(':')[0]].latest }) : undefined"
-                @click="openPackagist(pkg)"
-                @keydown.enter="openPackagist(pkg)"
-              >
-                {{ pkg }}
-                <span v-if="outdatedMap[pkg.split(':')[0]]" class="pkg-outdated-dot" :title="t('sites.composer.outdatedBadge')" />
-                <el-icon
-                  class="pkg-remove"
-                  :title="t('sites.composer.removeTitle')"
-                  @click.stop="confirmRemove(pkg)"
-                ><Close /></el-icon>
-              </el-tag>
-            </template>
-
-            <div v-if="pkgInfoLoading[pkg.split(':')[0]]" class="pkg-info-loading">Načítám…</div>
-            <div v-else-if="pkgInfoCache[pkg.split(':')[0]]" class="pkg-info">
-              <div class="pkg-info-header mono">{{ pkg.split(':')[0] }}</div>
-              <div v-if="pkgInfoCache[pkg.split(':')[0]].abandoned" class="pkg-abandoned">
-                <el-icon><WarningFilled /></el-icon>
-                {{ abandonedLabel(pkgInfoCache[pkg.split(':')[0]].abandoned) }}
-              </div>
-              <p class="pkg-desc">{{ pkgInfoCache[pkg.split(':')[0]].description }}</p>
-              <div class="pkg-stats mono">
-                <span>⭐ {{ pkgInfoCache[pkg.split(':')[0]].favers }}</span>
-                <span>↓ {{ pkgInfoCache[pkg.split(':')[0]].downloads }}</span>
-              </div>
-              <div v-if="outdatedMap[pkg.split(':')[0]]" class="pkg-update-hint">
-                {{ t('sites.composer.updateAvailable', { latest: outdatedMap[pkg.split(':')[0]].latest }) }}
-              </div>
-              <a
-                v-if="pkgInfoCache[pkg.split(':')[0]].repository"
-                class="pkg-repo-link"
-                href="#"
-                @click.prevent="openExternal(pkgInfoCache[pkg.split(':')[0]].repository)"
-              >{{ t('sites.composer.openRepository') }}</a>
-            </div>
-            <div v-else class="pkg-info-loading">—</div>
-          </el-popover>
-        </div>
-      </el-card>
-
-      <!-- Actions -->
-      <el-card class="composer-card" shadow="never">
+        <!-- Actions bar — directly below status row -->
         <div class="actions-row">
           <el-button
             type="primary"
@@ -174,6 +112,127 @@
             @click="loadStatus"
           />
         </div>
+
+        <!-- Packages table -->
+        <el-table
+          v-if="status.packages.length > 0"
+          :data="tableRows"
+          class="pkg-table"
+          size="small"
+          style="margin-top: 16px"
+        >
+          <!-- Name -->
+          <el-table-column :label="$t('sites.composer.colName')" min-width="260">
+            <template #default="{ row }">
+              <div class="pkg-name-cell">
+                <span
+                  v-if="outdatedMap[row.name]"
+                  class="pkg-outdated-dot"
+                  :title="t('sites.composer.outdatedBadge')"
+                />
+                <el-popover
+                  placement="right"
+                  trigger="click"
+                  :show-after="0"
+                  :hide-after="200"
+                  width="360"
+                  @show="loadPackageInfo(row.name)"
+                >
+                  <template #reference>
+                    <span
+                      class="pkg-name-link mono"
+                      :title="t('sites.composer.openOnPackagist', { name: row.name })"
+                      @click="openPackagist(row.raw)"
+                    >{{ row.name }}</span>
+                  </template>
+                  <div v-if="pkgInfoLoading[row.name]" class="pkg-info-loading">Načítám…</div>
+                  <div v-else-if="pkgInfoCache[row.name]" class="pkg-info">
+                    <div class="pkg-info-header mono">{{ row.name }}</div>
+                    <div v-if="pkgInfoCache[row.name].abandoned" class="pkg-abandoned">
+                      <el-icon><WarningFilled /></el-icon>
+                      {{ abandonedLabel(pkgInfoCache[row.name].abandoned) }}
+                    </div>
+                    <p class="pkg-desc">{{ pkgInfoCache[row.name].description }}</p>
+                    <div class="pkg-stats mono">
+                      <span>⭐ {{ pkgInfoCache[row.name].favers }}</span>
+                      <span>↓ {{ pkgInfoCache[row.name].downloads }}</span>
+                    </div>
+                    <div v-if="outdatedMap[row.name]" class="pkg-update-hint">
+                      {{ t('sites.composer.updateAvailable', { latest: outdatedMap[row.name].latest }) }}
+                    </div>
+                    <a
+                      v-if="pkgInfoCache[row.name].repository"
+                      class="pkg-repo-link"
+                      href="#"
+                      @click.prevent="openExternal(pkgInfoCache[row.name].repository)"
+                    >{{ t('sites.composer.openRepository') }}</a>
+                  </div>
+                  <div v-else class="pkg-info-loading">—</div>
+                </el-popover>
+              </div>
+            </template>
+          </el-table-column>
+
+          <!-- Required constraint -->
+          <el-table-column :label="$t('sites.composer.colRequired')" width="120">
+            <template #default="{ row }">
+              <span class="mono">{{ row.constraint }}</span>
+            </template>
+          </el-table-column>
+
+          <!-- Installed version -->
+          <el-table-column :label="$t('sites.composer.colInstalled')" width="130">
+            <template #default="{ row }">
+              <span
+                class="mono"
+                :class="outdatedMap[row.name] ? 'version-outdated' : ''"
+              >{{ outdatedMap[row.name]?.version ?? '—' }}</span>
+            </template>
+          </el-table-column>
+
+          <!-- Latest version -->
+          <el-table-column :label="$t('sites.composer.colLatest')" width="130">
+            <template #default="{ row }">
+              <span class="mono">{{ outdatedMap[row.name]?.latest ?? '—' }}</span>
+            </template>
+          </el-table-column>
+
+          <!-- Status -->
+          <el-table-column :label="$t('sites.composer.colStatus')" width="120">
+            <template #default="{ row }">
+              <el-tag
+                v-if="pkgInfoCache[row.name]?.abandoned"
+                type="danger"
+                size="small"
+              >{{ $t('sites.composer.statusAbandoned') }}</el-tag>
+              <el-tag
+                v-else-if="outdatedMap[row.name]"
+                type="warning"
+                size="small"
+              >{{ $t('sites.composer.statusOutdated') }}</el-tag>
+              <el-tag
+                v-else
+                type="success"
+                size="small"
+              >{{ $t('sites.composer.statusOk') }}</el-tag>
+            </template>
+          </el-table-column>
+
+          <!-- Actions -->
+          <el-table-column :label="$t('common.actions')" width="100" align="right">
+            <template #default="{ row }">
+              <el-button
+                size="small"
+                :icon="Delete"
+                circle
+                type="danger"
+                plain
+                :title="t('sites.composer.removeTitle')"
+                @click="confirmRemove(row.raw)"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
       </el-card>
 
       <!-- Last command output -->
@@ -205,7 +264,7 @@
     <el-dialog
       v-model="showRequireDialog"
       :title="$t('sites.composer.require')"
-      width="440px"
+      width="480px"
       :close-on-click-modal="!running"
     >
       <el-form @submit.prevent="runRequire">
@@ -218,7 +277,7 @@
             :disabled="running"
             :debounce="300"
             autofocus
-            @select="onSelectSuggestion"
+            @select="onSelectPackage"
             @keyup.enter="runRequire"
           >
             <template #default="{ item }">
@@ -228,6 +287,22 @@
               </div>
             </template>
           </el-autocomplete>
+        </el-form-item>
+        <el-form-item v-if="availableVersions.length" :label="$t('sites.composer.versionSelectPlaceholder')">
+          <el-select
+            v-model="selectedVersion"
+            size="small"
+            :placeholder="$t('sites.composer.versionSelectPlaceholder')"
+            style="width: 200px"
+          >
+            <el-option label="(auto)" value="" />
+            <el-option
+              v-for="v in availableVersions"
+              :key="v"
+              :label="v"
+              :value="v"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
 
@@ -250,7 +325,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Check, Warning, Refresh, Close, WarningFilled } from '@element-plus/icons-vue'
+import { Check, Warning, Refresh, WarningFilled, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated } from '../../api/daemon'
@@ -276,11 +351,33 @@ const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
 const isBannerDismissed = ref(false)
 
 // Outdated map keyed by package name
-const outdatedMap = ref<Record<string, { latest: string; status: string }>>({})
+const outdatedMap = ref<Record<string, { version?: string; latest: string; status: string }>>({})
 
 // Package info cache from packagist.org
 const pkgInfoCache = ref<Record<string, any>>({})
 const pkgInfoLoading = ref<Record<string, boolean>>({})
+
+// Version picker state
+const availableVersions = ref<string[]>([])
+const selectedVersion = ref<string>('')
+
+interface TableRow {
+  raw: string
+  name: string
+  constraint: string
+}
+
+const tableRows = computed<TableRow[]>(() => {
+  if (!status.value) return []
+  return status.value.packages.map(pkg => {
+    const parts = pkg.split(':')
+    return {
+      raw: pkg,
+      name: parts[0],
+      constraint: parts[1] ?? '',
+    }
+  })
+})
 
 function loadDismissState(): void {
   isBannerDismissed.value = localStorage.getItem(DISMISS_KEY.value) === '1'
@@ -294,10 +391,10 @@ function dismissBanner(): void {
 async function loadOutdated(): Promise<void> {
   try {
     const result = await composerOutdated(props.domain)
-    const map: Record<string, { latest: string; status: string }> = {}
+    const map: Record<string, { version?: string; latest: string; status: string }> = {}
     for (const entry of result.installed) {
       if (entry.name && entry.latest) {
-        map[entry.name] = { latest: entry.latest, status: entry.latestStatus ?? '' }
+        map[entry.name] = { version: entry.version, latest: entry.latest, status: entry.latestStatus ?? '' }
       }
     }
     outdatedMap.value = map
@@ -367,8 +464,22 @@ async function searchPackagist(query: string, cb: (items: any[]) => void): Promi
   cb([])
 }
 
-function onSelectSuggestion(item: any): void {
+async function onSelectPackage(item: any): Promise<void> {
   requirePackage.value = item.value
+  availableVersions.value = []
+  selectedVersion.value = ''
+  try {
+    const r = await fetch(`https://packagist.org/packages/${item.value}.json`)
+    if (r.ok) {
+      const d = await r.json()
+      const versions = Object.keys(d.package?.versions || {})
+        .filter(v => !v.startsWith('dev-') && !/-(alpha|beta|rc)\d*$/i.test(v))
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+        .slice(0, 8)
+      availableVersions.value = versions
+      selectedVersion.value = versions[0] ?? ''
+    }
+  } catch { /* silent */ }
 }
 
 function openExternal(url: string): void {
@@ -409,8 +520,12 @@ async function runInstall(): Promise<void> {
 }
 
 async function runRequire(): Promise<void> {
-  const pkg = requirePackage.value.trim()
-  if (!pkg) return
+  const basePkg = requirePackage.value.trim()
+  if (!basePkg) return
+
+  const pkg = selectedVersion.value
+    ? `${basePkg}:^${selectedVersion.value}`
+    : basePkg
 
   running.value = true
   try {
@@ -421,6 +536,8 @@ async function runRequire(): Promise<void> {
       ElMessage.success(t('sites.composer.success'))
       showRequireDialog.value = false
       requirePackage.value = ''
+      availableVersions.value = []
+      selectedVersion.value = ''
       await loadStatus()
     } else {
       ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
@@ -540,68 +657,44 @@ onMounted(() => {
   color: var(--el-text-color-placeholder);
 }
 
-.package-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.pkg-tag {
-  font-family: monospace;
-  font-size: 12px;
-}
-
-.pkg-tag-interactive {
-  cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
-  position: relative;
-  user-select: none;
-}
-
-.pkg-tag-interactive:hover {
-  background: var(--el-color-primary-light-9);
-  transform: translateY(-1px);
-}
-
-.pkg-tag-interactive:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-.pkg-tag-interactive .pkg-remove {
-  opacity: 0;
-  margin-left: 6px;
-  font-size: 11px;
-  cursor: pointer;
-  color: var(--el-color-danger);
-  transition: opacity 0.15s;
-  vertical-align: middle;
-}
-
-.pkg-tag-interactive:hover .pkg-remove {
-  opacity: 1;
-}
-
-.pkg-outdated {
-  border-color: var(--el-color-warning) !important;
-}
-
-.pkg-outdated-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--el-color-warning);
-  margin-left: 4px;
-  vertical-align: middle;
-  flex-shrink: 0;
-}
-
 .actions-row {
   display: flex;
   gap: 8px;
   align-items: center;
+  margin-bottom: 4px;
+}
+
+/* Package table */
+.pkg-table :deep(.el-table__row) {
+  cursor: default;
+}
+
+.pkg-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pkg-outdated-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--el-color-warning);
+  flex-shrink: 0;
+}
+
+.pkg-name-link {
+  cursor: pointer;
+  color: var(--el-color-primary);
+  font-size: 12px;
+}
+
+.pkg-name-link:hover {
+  text-decoration: underline;
+}
+
+.version-outdated {
+  color: var(--el-color-warning);
 }
 
 .output-header {

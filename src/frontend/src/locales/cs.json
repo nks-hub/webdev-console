@@ -169,7 +169,7 @@
       "autoRefresh": "Auto"
     },
     "composer": {
-      "tabLabel": "Balíčky",
+      "tabLabel": "Composer",
       "noProject": "Nenalezen Composer projekt",
       "init": "Inicializovat Composer",
       "initHint": "Spusť composer init ve složce webu pro začátek",
@@ -197,7 +197,16 @@
       "abandoned": "Tento balíček je opuštěn",
       "abandonedReplacedBy": "Opuštěn — nahrazuje {name}",
       "openRepository": "Otevřít repozitář",
-      "outdatedBadge": "Zastaralé"
+      "outdatedBadge": "Zastaralé",
+      "colName": "Název",
+      "colRequired": "Požadováno",
+      "colInstalled": "Nainstalováno",
+      "colLatest": "Nejnovější",
+      "colStatus": "Stav",
+      "statusOk": "OK",
+      "statusOutdated": "Zastaralý",
+      "statusAbandoned": "Opuštěný",
+      "versionSelectPlaceholder": "Verze (auto)"
     }
   },
   "uiMode": {

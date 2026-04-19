@@ -169,7 +169,7 @@
       "autoRefresh": "Auto"
     },
     "composer": {
-      "tabLabel": "Packages",
+      "tabLabel": "Composer",
       "noProject": "No Composer project detected",
       "init": "Initialize Composer",
       "initHint": "Run composer init in your site root to get started",
@@ -197,7 +197,16 @@
       "abandoned": "This package is abandoned",
       "abandonedReplacedBy": "Abandoned — replaced by {name}",
       "openRepository": "Open repository",
-      "outdatedBadge": "Outdated"
+      "outdatedBadge": "Outdated",
+      "colName": "Name",
+      "colRequired": "Required",
+      "colInstalled": "Installed",
+      "colLatest": "Latest",
+      "colStatus": "Status",
+      "statusOk": "OK",
+      "statusOutdated": "Outdated",
+      "statusAbandoned": "Abandoned",
+      "versionSelectPlaceholder": "Version (auto)"
     }
   },
   "uiMode": {
