@@ -59,24 +59,30 @@
         </div>
 
         <div class="card-actions" @click.stop>
-          <el-button size="small" type="primary" @click="openSite(site)">{{ $t('sites.card.open') }}</el-button>
+          <el-button size="small" type="primary" :icon="ExternalLinkIcon" @click="openSite(site)">{{ $t('sites.card.open') }}</el-button>
 
           <el-button
             v-if="apacheRunning"
             size="small"
-            @click="stopApache"
+            circle
+            :icon="StopIcon"
             :loading="toggling"
-          >{{ $t('sites.card.stop') }}</el-button>
+            :title="$t('sites.card.stop')"
+            @click="stopApache"
+          />
           <el-button
             v-else
             size="small"
+            circle
             type="success"
-            @click="startApache"
+            :icon="PlayIcon"
             :loading="toggling"
-          >{{ $t('sites.card.start') }}</el-button>
+            :title="$t('sites.card.start')"
+            @click="startApache"
+          />
 
           <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, site.domain)">
-            <el-button size="small">&#8942;</el-button>
+            <el-button size="small" circle>&#8942;</el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="delete" class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>
@@ -90,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -98,6 +104,10 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { startService, stopService } from '../../api/daemon'
 import type { SiteInfo } from '../../api/types'
+
+const ExternalLinkIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' }), h('polyline', { points: '15 3 21 3 21 9' }), h('line', { x1: '10', y1: '14', x2: '21', y2: '3' })]) }
+const PlayIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'currentColor' }, [h('polygon', { points: '5 3 19 12 5 21 5 3' })]) }
+const StopIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'currentColor' }, [h('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' })]) }
 
 const { t: $t } = useI18n()
 
@@ -207,7 +217,18 @@ async function handleCommand(cmd: string, domain: string) {
 
 .site-card {
   cursor: default;
-  transition: box-shadow 0.15s;
+  border-radius: 12px !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.site-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  transform: scale(1.02);
+}
+
+:deep(.el-card__body) {
+  padding: 20px;
 }
 
 .card-body {
@@ -216,7 +237,7 @@ async function handleCommand(cmd: string, domain: string) {
 }
 
 .card-title {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--wdc-text);
   margin-bottom: 8px;
@@ -237,8 +258,16 @@ async function handleCommand(cmd: string, domain: string) {
   flex-shrink: 0;
 }
 
-.dot-green { background: #22c55e; }
-.dot-red   { background: #ef4444; }
+.dot-green {
+  background: #22c55e;
+  animation: pulse-green 2s ease-in-out infinite;
+}
+.dot-red { background: #ef4444; }
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+  50%       { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+}
 
 .status-text {
   font-size: 0.8rem;

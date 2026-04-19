@@ -40,11 +40,16 @@
     <!-- Simple mode: hero with single CTA -->
     <template v-if="uiMode.isSimple">
       <div class="simple-hero">
-        <el-button
-          type="primary"
-          size="large"
-          @click="$router.push({ path: '/sites', query: { create: '1' } })"
-        >+ Vytvořit nový web</el-button>
+        <div class="simple-hero-inner">
+          <h1 class="simple-hero-heading">Vítejte v NKS WDC</h1>
+          <p class="simple-hero-sub">Lokalni vyvojove prostredi pro vase weby.</p>
+          <el-button
+            type="primary"
+            size="large"
+            class="simple-hero-btn"
+            @click="$router.push({ path: '/sites', query: { create: '1' } })"
+          >+ Vytvořit nový web</el-button>
+        </div>
       </div>
     </template>
 
@@ -1002,7 +1007,36 @@ function closeConfig() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  min-height: calc(100vh - 100px);
+}
+
+.simple-hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.simple-hero-heading {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--wdc-text);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.simple-hero-sub {
+  font-size: 1rem;
+  color: var(--wdc-text-2);
+  margin: 0 0 8px;
+}
+
+.simple-hero-btn {
+  padding: 16px 32px !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
 }
 
 /* Recent activity timeline (Phase 4) */

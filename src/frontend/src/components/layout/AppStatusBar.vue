@@ -1,35 +1,47 @@
 <template>
-  <footer class="status-bar">
-    <span class="status-item">
-      <span class="dot" :class="daemonStore.connected ? 'dot-ok' : 'dot-err'" />
-      <span>Daemon</span>
-    </span>
-
-    <span class="status-sep" v-if="uiMode.isAdvanced" />
-
-    <span class="status-item" v-if="uiMode.isAdvanced">
-      {{ runningCount }}/{{ totalCount }} services running
-    </span>
-
-    <span class="status-item status-alert" v-if="crashedCount > 0">
-      {{ crashedCount }} crashed
-    </span>
-
-    <span
-      v-if="tunnelRunning"
-      class="status-item status-tunnel"
-      title="Cloudflare Tunnel is running — exposed sites are publicly reachable"
-    >
-      ☁ Tunnel
-    </span>
-
-    <template v-if="uiMode.isAdvanced && daemonStore.connected && totalRam > 0">
-      <span class="status-sep" />
-      <span class="status-item mono">CPU {{ totalCpu.toFixed(1) }}%</span>
-      <span class="status-item mono">RAM {{ formatMem(totalRam) }}</span>
+  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }">
+    <!-- Simple mode: centered daemon status only -->
+    <template v-if="uiMode.isSimple">
+      <span class="status-item status-item-center">
+        <span class="dot" :class="daemonStore.connected ? 'dot-ok dot-ok-pulse' : 'dot-err'" />
+        <span>{{ daemonStore.connected ? 'Daemon běží' : 'Daemon offline' }}</span>
+      </span>
+      <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
     </template>
 
-    <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
+    <!-- Advanced mode: full status bar -->
+    <template v-else>
+      <span class="status-item">
+        <span class="dot" :class="daemonStore.connected ? 'dot-ok' : 'dot-err'" />
+        <span>Daemon</span>
+      </span>
+
+      <span class="status-sep" />
+
+      <span class="status-item">
+        {{ runningCount }}/{{ totalCount }} services running
+      </span>
+
+      <span class="status-item status-alert" v-if="crashedCount > 0">
+        {{ crashedCount }} crashed
+      </span>
+
+      <span
+        v-if="tunnelRunning"
+        class="status-item status-tunnel"
+        title="Cloudflare Tunnel is running — exposed sites are publicly reachable"
+      >
+        ☁ Tunnel
+      </span>
+
+      <template v-if="daemonStore.connected && totalRam > 0">
+        <span class="status-sep" />
+        <span class="status-item mono">CPU {{ totalCpu.toFixed(1) }}%</span>
+        <span class="status-item mono">RAM {{ formatMem(totalRam) }}</span>
+      </template>
+
+      <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
+    </template>
   </footer>
 </template>
 
@@ -73,6 +85,16 @@ function formatMem(bytes: number): string {
   flex-shrink: 0;
 }
 
+.status-bar-simple {
+  position: relative;
+}
+
+.status-item-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .status-item {
   display: flex;
   align-items: center;
@@ -97,6 +119,15 @@ function formatMem(bytes: number): string {
 }
 .dot-ok  { background: var(--wdc-status-running); }
 .dot-err { background: var(--wdc-status-error); }
+
+.dot-ok-pulse {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  50%       { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
 
 .mono {
   font-family: 'JetBrains Mono', 'Cascadia Code', monospace;

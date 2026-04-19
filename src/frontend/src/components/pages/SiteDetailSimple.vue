@@ -82,7 +82,7 @@
 
       <!-- Delete -->
       <div class="sd-danger-row">
-        <el-button type="danger" plain size="default" @click="confirmDelete">
+        <el-button type="danger" plain size="default" :icon="WarningIcon" @click="confirmDelete">
           {{ $t('sites.detail.simple.delete') }}
         </el-button>
       </div>
@@ -93,9 +93,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'SiteDetailSimple' })
 
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const WarningIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }), h('line', { x1: '12', y1: '9', x2: '12', y2: '13' }), h('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })]  ) }
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
@@ -249,9 +251,13 @@ onMounted(async () => {
 
 <style scoped>
 .simple-detail {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 16px;
+  max-width: 520px;
+  margin: 32px auto;
+  padding: 28px 32px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
 }
 
 .state-box {
@@ -321,23 +327,38 @@ onMounted(async () => {
 }
 
 .sd-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
+  font-weight: 600;
   color: var(--el-color-success);
+}
+
+.sd-saved::before {
+  content: '✓';
+  font-size: 11px;
 }
 
 .sd-danger-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding-top: 8px;
 }
 
-.flash-enter-active,
+.flash-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
 .flash-leave-active {
-  transition: opacity 0.5s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-.flash-enter-from,
+.flash-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
 .flash-leave-to {
   opacity: 0;
+  transform: translateY(-4px);
 }
 </style>
