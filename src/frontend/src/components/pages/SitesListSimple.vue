@@ -56,6 +56,15 @@
               effect="dark"
             >{{ $t('sites.simple.cloudflareTunnel') }}</el-tag>
           </div>
+
+          <div v-if="activityMap[site.domain]" class="card-activity">
+            <MiniSparkline :values="activityMap[site.domain].hourlyHits" :width="120" :height="24" />
+            <span class="card-hits mono">{{ activityMap[site.domain].totalHits }} hits</span>
+            <span v-if="activityMap[site.domain].errorCount > 0" class="card-errors mono">
+              · {{ activityMap[site.domain].errorCount }} err
+            </span>
+          </div>
+          <div class="card-lasthit">{{ relativeTime(activityMap[site.domain]?.lastHitIso ?? null) }}</div>
         </div>
 
         <div class="card-actions" @click.stop>
@@ -81,11 +90,20 @@
             @click="startApache"
           />
 
-          <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, site.domain)">
+          <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, site)">
             <el-button size="small" circle :aria-label="$t('sites.card.moreActions', { domain: site.domain })"><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="delete" class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>
+                <el-dropdown-item command="reveal">
+                  <el-icon><FolderOpened /></el-icon> {{ $t('sites.card.revealFolder') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="duplicate">
+                  <el-icon><CopyDocument /></el-icon> {{ $t('sites.card.duplicate') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="restart">
+                  <el-icon><RefreshRight /></el-icon> {{ $t('sites.card.restart') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="delete" divided class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -93,18 +111,43 @@
       </el-card>
     </div>
   </div>
+
+  <!-- Duplicate dialog -->
+  <el-dialog
+    v-model="duplicateDialog.visible"
+    :title="$t('sites.card.duplicateTitle')"
+    width="480"
+  >
+    <el-form label-position="top" size="small">
+      <el-form-item :label="$t('sites.card.duplicateNewDomain')">
+        <el-input v-model="duplicateDialog.newDomain" />
+      </el-form-item>
+      <el-form-item :label="$t('sites.card.duplicateCopyFiles')">
+        <el-radio-group v-model="duplicateDialog.copyFiles">
+          <el-radio value="all">{{ $t('sites.card.copyFilesAll') }}</el-radio>
+          <el-radio value="top">{{ $t('sites.card.copyFilesTop') }}</el-radio>
+          <el-radio value="empty">{{ $t('sites.card.copyFilesEmpty') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="duplicateDialog.visible = false">{{ $t('common.cancel') }}</el-button>
+      <el-button type="primary" @click="confirmDuplicate">{{ $t('sites.card.duplicate') }}</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted, h, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { MoreFilled } from '@element-plus/icons-vue'
+import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-plus/icons-vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
-import { startService, stopService } from '../../api/daemon'
+import { startService, stopService, duplicateSite } from '../../api/daemon'
 import type { SiteInfo } from '../../api/types'
+import MiniSparkline from '../common/MiniSparkline.vue'
 
 const ExternalLinkIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' }), h('polyline', { points: '15 3 21 3 21 9' }), h('line', { x1: '10', y1: '14', x2: '21', y2: '3' })]) }
 const PlayIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'currentColor' }, [h('polygon', { points: '5 3 19 12 5 21 5 3' })]) }
@@ -125,6 +168,134 @@ const apacheRunning = computed(() =>
     s => s.id === 'apache' && (s.state === 2 || s.status === 'running')
   )
 )
+
+// ── Activity / sparkline ─────────────────────────────────────────────
+
+interface SiteActivity {
+  hourlyHits: number[]
+  totalHits: number
+  errorCount: number
+  lastHitIso: string | null
+  loadedAt: number
+}
+
+const activityMap = ref<Record<string, SiteActivity>>({})
+
+function daemonBase(): string {
+  const preloadPort = (window as any).daemonApi?.getPort?.()
+  if (typeof preloadPort === 'number' && preloadPort > 0) return `http://localhost:${preloadPort}`
+  const urlPort = new URLSearchParams(window.location.search).get('port')
+  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${parseInt(urlPort, 10)}`
+  return 'http://localhost:5199'
+}
+
+async function loadActivityForSite(domain: string) {
+  const existing = activityMap.value[domain]
+  if (existing && Date.now() - existing.loadedAt < 5 * 60_000) return
+
+  try {
+    const [metricsR, errorsR] = await Promise.allSettled([
+      fetch(`${daemonBase()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
+      fetch(`${daemonBase()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
+    ])
+
+    let hourlyHits: number[] = []
+    let totalHits = 0
+    let lastHitIso: string | null = null
+
+    if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
+      const data = await metricsR.value.json() as any
+      const samples: any[] = Array.isArray(data) ? data : (data.samples ?? [])
+      hourlyHits = samples.map((s: any) => s.requests ?? s.hits ?? s.count ?? 0)
+      totalHits = hourlyHits.reduce((a, b) => a + b, 0)
+      for (let i = samples.length - 1; i >= 0; i--) {
+        const hits = samples[i].requests ?? samples[i].hits ?? 0
+        if (hits > 0) { lastHitIso = samples[i].timestamp ?? null; break }
+      }
+    }
+
+    let errorCount = 0
+    if (errorsR.status === 'fulfilled' && errorsR.value.ok) {
+      const data = await errorsR.value.json() as any
+      const entries: any[] = Array.isArray(data) ? data : (data.entries ?? [])
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000
+      errorCount = entries.filter((e: any) => {
+        if (!e.timestamp) return true
+        const t = new Date(e.timestamp).getTime()
+        return !isNaN(t) && t > cutoff
+      }).length
+    }
+
+    activityMap.value[domain] = { hourlyHits, totalHits, errorCount, lastHitIso, loadedAt: Date.now() }
+  } catch {
+    // silent — empty activity shown
+  }
+}
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return $t('sites.card.neverVisited')
+  const diff = Date.now() - new Date(iso).getTime()
+  if (isNaN(diff)) return $t('sites.card.neverVisited')
+  const min = Math.floor(diff / 60_000)
+  if (min < 1) return $t('sites.card.justNow')
+  if (min < 60) return $t('sites.card.minutesAgo', { n: min })
+  const h = Math.floor(min / 60)
+  if (h < 24) return $t('sites.card.hoursAgo', { n: h })
+  const d = Math.floor(h / 24)
+  return $t('sites.card.daysAgo', { n: d })
+}
+
+watch(() => sitesStore.sites, (list) => {
+  Promise.allSettled(list.map(s => loadActivityForSite(s.domain)))
+}, { immediate: true })
+
+// ── Duplicate dialog ──────────────────────────────────────────────────
+
+const duplicateDialog = ref<{
+  visible: boolean
+  sourceDomain: string
+  newDomain: string
+  copyFiles: 'all' | 'top' | 'empty'
+}>({
+  visible: false,
+  sourceDomain: '',
+  newDomain: '',
+  copyFiles: 'all',
+})
+
+function openDuplicateDialog(domain: string) {
+  duplicateDialog.value = {
+    visible: true,
+    sourceDomain: domain,
+    newDomain: `copy-of-${domain}`,
+    copyFiles: 'all',
+  }
+}
+
+async function confirmDuplicate() {
+  const { sourceDomain, newDomain, copyFiles } = duplicateDialog.value
+  try {
+    ElMessage.info($t('sites.card.duplicating'))
+    await duplicateSite(sourceDomain, newDomain, copyFiles)
+    ElMessage.success($t('sites.card.duplicated', { name: newDomain }))
+    duplicateDialog.value.visible = false
+    await sitesStore.load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || String(e))
+  }
+}
+
+// ── File reveal ───────────────────────────────────────────────────────
+
+function revealInFolder(docroot: string) {
+  if ((window as any).electronAPI?.revealInFolder) {
+    (window as any).electronAPI.revealInFolder(docroot)
+  } else {
+    window.open(`file://${docroot}`)
+  }
+}
+
+// ── Mount / navigation / site actions ────────────────────────────────
 
 onMounted(async () => {
   if (sitesStore.sites.length === 0) {
@@ -165,11 +336,41 @@ async function stopApache() {
   }
 }
 
-async function handleCommand(cmd: string, domain: string) {
+async function handleCommand(cmd: string, site: SiteInfo) {
+  if (cmd === 'reveal') {
+    revealInFolder(site.documentRoot)
+    return
+  }
+
+  if (cmd === 'duplicate') {
+    openDuplicateDialog(site.domain)
+    return
+  }
+
+  if (cmd === 'restart') {
+    try {
+      await ElMessageBox.confirm(
+        $t('sites.card.restartConfirm'),
+        $t('sites.card.restart'),
+        { type: 'warning', confirmButtonText: $t('sites.card.restart') }
+      )
+    } catch {
+      return
+    }
+    try {
+      await stopService('apache')
+      await startService('apache')
+      ElMessage.success($t('sites.card.restarted'))
+    } catch (e: any) {
+      ElMessage.error(`Restart failed: ${e?.message || e}`)
+    }
+    return
+  }
+
   if (cmd === 'delete') {
     try {
       await ElMessageBox.confirm(
-        $t('sites.card.deleteConfirm', { domain }),
+        $t('sites.card.deleteConfirm', { domain: site.domain }),
         $t('sites.card.delete'),
         { type: 'warning', confirmButtonText: $t('sites.card.delete'), confirmButtonClass: 'el-button--danger' }
       )
@@ -177,8 +378,8 @@ async function handleCommand(cmd: string, domain: string) {
       return
     }
     try {
-      await sitesStore.remove(domain)
-      ElMessage.success(`${domain} deleted`)
+      await sitesStore.remove(site.domain)
+      ElMessage.success(`${site.domain} deleted`)
     } catch (e: any) {
       ElMessage.error(`Delete failed: ${e?.message || e}`)
     }
@@ -287,6 +488,34 @@ async function handleCommand(cmd: string, domain: string) {
   color: #fff !important;
   font-weight: 700 !important;
   font-size: 0.68rem !important;
+}
+
+.card-activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  padding: 6px 0;
+}
+
+.card-hits {
+  color: var(--el-text-color-primary);
+  font-weight: 500;
+}
+
+.card-errors {
+  color: var(--el-color-danger);
+}
+
+.card-lasthit {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 8px;
+}
+
+.mono {
+  font-family: var(--el-font-family-mono, monospace);
 }
 
 .card-actions {
