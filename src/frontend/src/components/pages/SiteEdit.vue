@@ -74,6 +74,7 @@
                       <template #append>
                         <el-button
                           class="browse-append-btn"
+                          :aria-label="$t('sites.edit.browseDocRoot')"
                           @click="showFolderBrowser = true"
                         >
                           <el-icon><FolderOpened /></el-icon>

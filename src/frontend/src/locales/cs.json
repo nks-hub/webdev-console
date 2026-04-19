@@ -144,10 +144,14 @@
       "stop": "Zastavit",
       "delete": "Smazat",
       "more": "Více akcí",
+      "moreActions": "Více akcí pro {domain}",
       "deleteConfirm": "Opravdu smazat web {domain}?",
       "newSite": "+ Nový web",
       "welcomeTitle": "Vítejte",
       "welcomeSubtext": "Vytvořte si svůj první web."
+    },
+    "edit": {
+      "browseDocRoot": "Vybrat složku document root"
     },
     "access": {
       "title": "Přístupy",

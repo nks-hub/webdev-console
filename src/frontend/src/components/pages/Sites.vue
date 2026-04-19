@@ -142,7 +142,7 @@
             <div class="site-actions">
               <el-button size="small" type="primary" @click.stop="openInBrowser(row)">{{ $t('sites.open') }}</el-button>
               <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)" @click.stop>
-                <el-button size="small" @click.stop title="More actions">
+                <el-button size="small" @click.stop :aria-label="$t('sites.card.moreActions', { domain: row.domain })">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>

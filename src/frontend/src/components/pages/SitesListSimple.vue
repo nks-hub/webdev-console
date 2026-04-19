@@ -82,7 +82,7 @@
           />
 
           <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, site.domain)">
-            <el-button size="small" circle :aria-label="$t('sites.card.more')"><el-icon><MoreFilled /></el-icon></el-button>
+            <el-button size="small" circle :aria-label="$t('sites.card.moreActions', { domain: site.domain })"><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="delete" class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>

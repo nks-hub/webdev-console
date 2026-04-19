@@ -144,10 +144,14 @@
       "stop": "Stop",
       "delete": "Delete",
       "more": "More actions",
+      "moreActions": "More actions for {domain}",
       "deleteConfirm": "Really delete site {domain}?",
       "newSite": "+ New site",
       "welcomeTitle": "Welcome",
       "welcomeSubtext": "Create your first site."
+    },
+    "edit": {
+      "browseDocRoot": "Select document root folder"
     },
     "access": {
       "title": "Access log",
