@@ -1,5 +1,6 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net } from 'electron'
 import { dirname, join } from 'path'
+import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
@@ -381,14 +382,13 @@ async function createWindow() {
     const qs = params.toString()
     win.loadURL(`${process.env.ELECTRON_RENDERER_URL}${qs ? '?' + qs : ''}`)
   } else {
-    // Production: load the bundled renderer. Electron-vite writes the
-    // Vue SPA to `dist-electron/renderer/` (sibling of this file inside
-    // the packaged app.asar), so the path is `./renderer/index.html`.
-    const indexPath = join(__dirname, 'renderer', 'index.html')
+    // Production: load the bundled renderer via custom app:// protocol
+    // so localStorage gets a stable origin instead of an opaque file:// origin.
     const params = new URLSearchParams()
     if (info?.port) params.set('port', String(info.port))
     if (info?.token) params.set('token', info.token)
-    win.loadFile(indexPath, { query: Object.fromEntries(params) })
+    const qs = params.toString()
+    win.loadURL(`app://nks-wdc/index.html${qs ? '?' + qs : ''}`)
   }
 
   // Remove default menu bar (File/Edit/View/Window/Help)
@@ -722,11 +722,22 @@ app.on('before-quit', () => {
 })
 
 // Enable Chrome DevTools Protocol in dev mode so tooling/tests can read renderer console
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
+])
+
 if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
 
 app.whenReady().then(async () => {
+  protocol.handle('app', (request) => {
+    const url = new URL(request.url)
+    const relPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname
+    const safePath = relPath === '' ? 'index.html' : relPath
+    const fullPath = join(__dirname, 'renderer', safePath)
+    return net.fetch(pathToFileURL(fullPath).toString())
+  })
   // Spawn the catalog API sidecar BEFORE the daemon so the daemon's
   // first RefreshAsync() hits a live endpoint. Best-effort: if it fails
   // the daemon still starts with the built-in fallback catalog.

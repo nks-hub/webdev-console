@@ -37,6 +37,7 @@ export default defineConfig({
     define: {
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
     },
+    base: './',
     build: {
       // Keep the renderer output alongside main/preload under dist-electron/
       // so main.ts can resolve '../renderer/index.html' relative to its own
