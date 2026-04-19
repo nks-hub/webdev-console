@@ -1,15 +1,4 @@
 {
-  "splash": {
-    "stages": {
-      "starting": "Spouštím daemon",
-      "database": "Migrace databáze",
-      "plugins": "Načítání pluginů",
-      "services": "Spouštím služby",
-      "http": "Inicializace HTTP serveru",
-      "ready": "Hotovo"
-    },
-    "retry": "Zkusit znovu"
-  },
   "common": {
     "save": "Uložit",
     "cancel": "Zrušit",

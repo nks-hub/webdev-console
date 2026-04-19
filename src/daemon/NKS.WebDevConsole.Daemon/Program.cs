@@ -19,11 +19,6 @@ NKS.WebDevConsole.Core.Services.DaemonJobObject.EnsureInitialized();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Boot progress tracker — must be the first singleton so all startup phases can report into it.
-var bootProgress = new BootProgressService();
-builder.Services.AddSingleton(bootProgress);
-bootProgress.Report("starting", "Initializing daemon", 5);
-
 // CORS for Electron renderer — the packaged app loads the Vue SPA from
 // a `file://` URL which gives `Origin: null`, and the dev server runs
 // on `http://localhost:5173`. Kestrel binds loopback-only (see the
@@ -103,8 +98,6 @@ builder.Services.AddSingleton<CatalogClient>(sp =>
 builder.Services.AddSingleton<BinaryDownloader>();
 builder.Services.AddSingleton<BinaryManager>();
 
-bootProgress.Report("database", "Running migrations", 15);
-
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
 var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
@@ -115,7 +108,6 @@ if (!Directory.Exists(pluginDir))
     var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
     pluginDir = Path.Combine(repoRoot, "build", "plugins");
 }
-bootProgress.Report("plugins", "Loading plugins...", 30);
 pluginLoader.LoadPlugins(pluginDir);
 
 builder.Services.AddSingleton(pluginLoader);
@@ -125,12 +117,8 @@ builder.Services.AddSingleton(pluginLoader);
 var initContext = PluginContext.ForInitPhase(earlyLoggerFactory);
 var initLogger = earlyLoggerFactory.CreateLogger("PluginInit");
 var failedInitPlugins = new List<string>();
-var pluginList = pluginLoader.Plugins.ToList();
-for (var i = 0; i < pluginList.Count; i++)
+foreach (var p in pluginLoader.Plugins)
 {
-    var p = pluginList[i];
-    var pct = 30 + (int)(30.0 * (i + 1) / Math.Max(pluginList.Count, 1));
-    bootProgress.Report("plugins", $"Loading {p.Instance.Id}", pct);
     try
     {
         p.Instance.Initialize(builder.Services, initContext);
@@ -143,7 +131,6 @@ for (var i = 0; i < pluginList.Count; i++)
 }
 
 // Initialize SQLite database and run migrations
-bootProgress.Report("database", "Applying database migrations", 62);
 var dbPath = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "state.db");
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 var database = new Database(dbPath);
@@ -210,29 +197,13 @@ app.UseCors();
 // Expose OpenAPI spec at /openapi/v1.json — used by CI TS type generation
 app.MapOpenApi();
 
-// Refresh binary catalog from the catalog API — fire-and-forget with timeout so slow
-// or unreachable catalog endpoint cannot block daemon startup indefinitely (F51b regression fix).
-// Plugins that need the catalog can still read cached/seed data; refresh populates in background.
+// Refresh binary catalog from the catalog API before plugins start so they can use it
 var catalogClient = app.Services.GetRequiredService<CatalogClient>();
-_ = Task.Run(async () =>
-{
-    try
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        await catalogClient.RefreshAsync(cts.Token);
-    }
-    catch (Exception ex)
-    {
-        app.Services.GetRequiredService<ILoggerFactory>()
-            .CreateLogger("CatalogRefresh")
-            .LogWarning(ex, "Background catalog refresh failed on boot — daemon continues with cached/seed catalog");
-    }
-});
+await catalogClient.RefreshAsync();
 
 // Phase 2: Start plugins with the fully-built service provider.
 // Wrap per-plugin in try/catch so one failing StartAsync cannot break the daemon — other
 // plugins and the REST API remain available; the failing service will just report Crashed.
-bootProgress.Report("services", "Starting services", 70);
 var pluginContext = new PluginContext(
     app.Services,
     app.Services.GetRequiredService<ILoggerFactory>());
@@ -245,25 +216,9 @@ foreach (var p in pluginLoader.Plugins)
         startLogger.LogWarning("Skipping StartAsync for {Id} (Initialize failed)", p.Instance.Id);
         continue;
     }
-    startLogger.LogInformation("Starting plugin {Id}...", p.Instance.Id);
     try
     {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        var startTask = p.Instance.StartAsync(pluginContext, timeoutCts.Token);
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(22), CancellationToken.None);
-        var completed = await Task.WhenAny(startTask, timeoutTask);
-        if (completed == timeoutTask)
-        {
-            startLogger.LogError("Plugin {Id} StartAsync timed out after 22s — daemon continues without it", p.Instance.Id);
-            timeoutCts.Cancel();
-            continue;
-        }
-        await startTask;
-        startLogger.LogInformation("Plugin {Id} started", p.Instance.Id);
-    }
-    catch (OperationCanceledException)
-    {
-        startLogger.LogError("Plugin {Id} StartAsync cancelled (timeout)", p.Instance.Id);
+        await p.Instance.StartAsync(pluginContext, CancellationToken.None);
     }
     catch (Exception ex)
     {
@@ -275,33 +230,17 @@ foreach (var p in pluginLoader.Plugins)
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
 var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
-bootProgress.Report("http", "Binding HTTP server", 90);
-
 // Write port file AFTER server starts listening (avoids race condition)
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
-    bootProgress.Report("ready", $"Daemon ready on port {port}", 100);
     File.WriteAllText(portFile, $"{port}\n{authToken}");
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 });
 
 // Health endpoint — no auth required (for monitoring + Electron daemon detection)
 app.MapGet("/healthz", () => Results.Ok(new { ok = true, timestamp = DateTime.UtcNow }));
-
-// Boot progress — no auth required so the splash screen can poll during early startup
-app.MapGet("/api/boot/progress", (BootProgressService bp) =>
-    Results.Ok(new
-    {
-        stage = bp.CurrentStage,
-        percent = bp.Percent,
-        lastError = bp.LastError,
-        events = bp.Events.TakeLast(20).Select(e => new
-        {
-            e.Stage, e.Message, e.Timestamp, e.Percent, e.Error
-        })
-    }));
 app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
 {
     _ = Task.Run(() => lifetime.StopApplication());
@@ -313,12 +252,7 @@ app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
 var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);
 app.Use(async (ctx, next) =>
 {
-    // /api/boot/progress is intentionally unauthenticated — the splash screen polls it
-    // before the frontend has the token (the token arrives in the port file which is
-    // written only after Kestrel binds, i.e. at the same moment the endpoint becomes
-    // reachable). Boot progress data contains no sensitive information.
-    if (ctx.Request.Path.StartsWithSegments("/api") &&
-        !ctx.Request.Path.StartsWithSegments("/api/boot/progress"))
+    if (ctx.Request.Path.StartsWithSegments("/api"))
     {
         // Parse Authorization: Bearer <token> — use prefix check instead of Replace() which
         // is fragile (multiple occurrences, whitespace) and doesn't handle case variants.
