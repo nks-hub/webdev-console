@@ -522,7 +522,7 @@
         </el-tab-pane>
 
         <!-- ── History ──────────────────────────── -->
-        <el-tab-pane name="history">
+        <el-tab-pane v-if="uiMode.isAdvanced" name="history">
           <template #label>
             <span class="tab-label"><el-icon><Clock /></el-icon> History ({{ history.length }})</span>
           </template>
@@ -678,7 +678,7 @@
         </el-tab-pane>
 
         <!-- ── Danger ───────────────────────────── -->
-        <el-tab-pane name="danger">
+        <el-tab-pane v-if="uiMode.isAdvanced" name="danger">
           <template #label>
             <span class="tab-label danger-label"><el-icon><WarningFilled /></el-icon> Danger</span>
           </template>
@@ -723,6 +723,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
+import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import MetricsChart from '../shared/MetricsChart.vue'
@@ -747,6 +748,7 @@ const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
+const uiMode = useUiModeStore()
 
 const domain = computed(() => String(route.params.domain || ''))
 
@@ -1489,6 +1491,20 @@ const historicalChartOption = computed(() => {
 })
 
 watch(domain, () => { void load() })
+
+// Simple mode: redirect to 'general' if the active tab is one that is
+// hidden in simple mode (e.g. a user deep-links to #danger or #history).
+const ADVANCED_TABS = ['history', 'danger'] as const
+watch(
+  [() => uiMode.isSimple, activeTab],
+  ([simple, tab]) => {
+    if (simple && ADVANCED_TABS.includes(tab as typeof ADVANCED_TABS[number])) {
+      activeTab.value = 'general'
+    }
+  },
+  { immediate: true },
+)
+
 watch(activeTab, (tab) => {
   if (tab === 'metrics') {
     void refreshMetrics()

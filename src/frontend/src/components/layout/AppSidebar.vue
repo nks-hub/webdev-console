@@ -128,7 +128,7 @@
     <div class="sidebar-spacer" />
 
     <div class="sidebar-bottom">
-      <div class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
+      <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
         <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
         <span class="nav-label">{{ $t('nav.databases') }}</span>
       </div>
@@ -144,6 +144,7 @@
         <span class="nav-label">{{ $t('nav.binaries') }}</span>
       </div>
       <div
+        v-if="uiModeStore.isAdvanced"
         class="nav-item"
         :class="{ active: isActive('/cloudflare'), 'nav-item-tunnel': cloudflareRunning }"
         @click="navigate('/cloudflare')"
