@@ -53,6 +53,24 @@ public sealed class SettingsStore
         }
     }
 
+    /// <summary>
+    /// TCP port on which the WDC-managed mysqld listens. Stored as
+    /// <c>ports.mysql</c> in the settings table (same key the Porty UI tab
+    /// writes). Falls back to 3306 when unset so existing installs are
+    /// unaffected.
+    /// </summary>
+    public int MysqlPort
+    {
+        get
+        {
+            var raw = GetString("ports", "mysql");
+            if (raw is not null && int.TryParse(raw.Trim(), System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out var port) && port > 0)
+                return port;
+            return 3306;
+        }
+    }
+
     /// <summary>Reads a boolean setting. Falsy: "false", "0", "off". Everything else is true.</summary>
     public bool GetBool(string category, string key, bool defaultValue = false)
     {
