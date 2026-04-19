@@ -59,7 +59,7 @@
                 >SSL</el-tag>
               </div>
               <div v-if="row.aliases?.length" class="col-aliases">
-                <span class="alias-dot">↳</span>
+                <span class="alias-dot">+</span>
                 {{ row.aliases.join(', ') }}
               </div>
               <div
@@ -67,7 +67,7 @@
                 class="col-tunnel"
                 :class="{ 'col-tunnel-offline': !cloudflaredRunning }"
               >
-                <span class="tunnel-icon">☁</span>
+                <svg class="tunnel-icon" viewBox="0 0 20 14" fill="currentColor" width="13" height="13" style="vertical-align: middle"><path d="M16 6a4 4 0 0 0-7.74-1.32A3.5 3.5 0 1 0 3.5 11H16a3 3 0 0 0 0-6z"/></svg>
                 <a
                   :href="`https://${row.cloudflare.subdomain}.${row.cloudflare.zoneName}`"
                   target="_blank"
@@ -128,7 +128,7 @@
                 effect="plain"
                 class="cell-tag compose-tag"
                 :title="composeStatus[row.domain]?.composeFile || ''"
-              >🐳 Compose</el-tag>
+              >Compose</el-tag>
               <span
                 v-if="!row.framework && !composeStatus[row.domain]?.hasCompose"
                 class="col-empty"

@@ -159,7 +159,7 @@
   "uiMode": {
     "simple": "Jednoduchý",
     "advanced": "Pokročilý",
-    "switchToAdvanced": "Potřebujete více možností? → Pokročilý režim"
+    "switchToAdvanced": "Potřebujete více možností? Zkuste Pokročilý režim"
   },
   "databases": {
     "title": "Databáze",

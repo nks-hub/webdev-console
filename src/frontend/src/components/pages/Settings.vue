@@ -36,7 +36,7 @@
                 <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
                 <div class="hint">
                   Per-version ports are derived as base + major×10 + minor.
-                  E.g. base 9000 + PHP 8.4 → port 9084.
+                  E.g. base 9000 + PHP 8.4 = port 9084.
                 </div>
               </el-form-item>
             </el-form>
@@ -829,12 +829,12 @@ async function testCatalogReachable() {
     const body = await r.json()
     catalogStatus.value = {
       ok: true,
-      message: `✓ Reachable: ${body.service ?? 'catalog-api'} v${body.version ?? '?'}`,
+      message: `Reachable: ${body.service ?? 'catalog-api'} v${body.version ?? '?'}`,
     }
   } catch (e: any) {
     catalogStatus.value = {
       ok: false,
-      message: `✗ Unreachable: ${e?.message || e}. Is the sidecar running?`,
+      message: `Unreachable: ${e?.message || e}. Is the sidecar running?`,
     }
   } finally {
     testingCatalog.value = false

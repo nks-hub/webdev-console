@@ -61,7 +61,7 @@
                 <el-form :model="site" label-position="top" size="default">
                   <el-form-item label="Domain">
                     <el-input :model-value="site.domain" disabled>
-                      <template #prepend>🌐</template>
+                      <template #prepend><el-icon><Link /></el-icon></template>
                     </el-input>
                   </el-form-item>
                   <el-form-item label="Document Root" required>
@@ -163,7 +163,7 @@
               </header>
               <div class="edit-card-body">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
-                  <el-tag size="small" type="info" effect="plain">🐳 {{ composeInfo.fileName }}</el-tag>
+                  <el-tag size="small" type="info" effect="plain">{{ composeInfo.fileName }}</el-tag>
                   <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
                     Up
                   </el-button>
@@ -204,7 +204,7 @@
                     @click="selectRuntime('static')"
                     type="button"
                   >
-                    <div class="runtime-card-icon runtime-static">⚡</div>
+                    <div class="runtime-card-icon runtime-static">HTML</div>
                     <div class="runtime-card-title">Static</div>
                     <div class="runtime-card-desc">Plain HTML / assets. No language runtime.</div>
                   </button>
@@ -262,7 +262,7 @@
                   <div class="node-process-controls" style="margin-top: 16px">
                     <label class="sub-label">Process</label>
                     <div v-if="!nodePluginAvailable" class="hint" style="margin-top: 4px">
-                      <span style="color: var(--el-color-warning)">⚠</span>
+                      <el-icon style="color: var(--el-color-warning)"><WarningFilled /></el-icon>
                       Node.js plugin not loaded in daemon. Apache will still reverse-proxy
                       to <code>localhost:{{ nodeUpstreamPort }}</code>, but you must start
                       the Node process yourself. Install <code>NKS.WebDevConsole.Plugin.Node</code>
@@ -367,7 +367,7 @@
             <section class="edit-card">
               <header class="edit-card-header">
                 <span class="edit-card-title">Expose via Cloudflare Tunnel</span>
-                <span class="edit-card-hint">Public hostname → this local site</span>
+                <span class="edit-card-hint">Public hostname to this local site</span>
               </header>
               <div class="edit-card-body">
                 <div class="ssl-toggle-row">
@@ -513,7 +513,7 @@
 
                 <div v-if="site.sslEnabled" class="ssl-toggle-row">
                   <div class="ssl-toggle-meta">
-                    <div class="ssl-toggle-title">HTTP → HTTPS redirect</div>
+                    <div class="ssl-toggle-title">HTTP to HTTPS redirect</div>
                     <div class="ssl-toggle-desc">
                       Automatically redirect plain HTTP requests to the HTTPS version.
                     </div>

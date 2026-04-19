@@ -336,7 +336,7 @@ onMounted(async () => {
 }
 
 .sd-saved::before {
-  content: '✓';
+  content: '\2713';
   font-size: 11px;
 }
 

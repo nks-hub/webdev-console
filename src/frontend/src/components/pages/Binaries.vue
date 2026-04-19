@@ -133,7 +133,7 @@
                 :effect="p === nativePlatform ? 'dark' : 'plain'"
                 class="platform-tag mono"
               >
-                <span v-if="p === nativePlatform">★ </span>{{ p }}
+                <span v-if="p === nativePlatform" class="native-marker">* </span>{{ p }}
               </el-tag>
             </template>
           </el-table-column>
@@ -254,7 +254,7 @@ const catalogStatusTitle = computed(() => {
   const when = lastFetch ? new Date(lastFetch).toLocaleString() : 'never'
   return reachable
     ? `Catalog at ${url}\n${cachedCount} releases cached\nLast fetch: ${when}`
-    : `Catalog unreachable\nConfigured URL: ${url}\nLast fetch: ${when}\nConfigure a different URL in Settings → Advanced.`
+    : `Catalog unreachable\nConfigured URL: ${url}\nLast fetch: ${when}\nConfigure a different URL in Settings > Advanced.`
 })
 
 const gridSearch = ref('')

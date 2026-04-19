@@ -31,7 +31,7 @@
         class="status-item status-tunnel"
         title="Cloudflare Tunnel is running — exposed sites are publicly reachable"
       >
-        ☁ Tunnel
+        <svg viewBox="0 0 20 14" fill="currentColor" width="13" height="13" style="vertical-align: middle; margin-right: 3px"><path d="M16 6a4 4 0 0 0-7.74-1.32A3.5 3.5 0 1 0 3.5 11H16a3 3 0 0 0 0-6z"/></svg>Tunnel
       </span>
 
       <template v-if="daemonStore.connected && totalRam > 0">

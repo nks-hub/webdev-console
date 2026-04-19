@@ -159,7 +159,7 @@
   "uiMode": {
     "simple": "Simple",
     "advanced": "Advanced",
-    "switchToAdvanced": "Need more options? → Advanced mode"
+    "switchToAdvanced": "Need more options? Try Advanced mode"
   },
   "databases": {
     "title": "Databases",

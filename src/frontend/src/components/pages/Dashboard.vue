@@ -70,42 +70,42 @@
       <!-- 1. Quick stats strip (top) — at-a-glance counters -->
       <div class="stats-grid">
         <div class="stat-card stat-clickable" @click="$router.push('/sites')">
-          <div class="stat-icon">◱</div>
+          <el-icon class="stat-icon"><Monitor /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ sitesStore.sites.length }}</div>
             <div class="stat-label">Sites</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon stat-icon-running">●</div>
+          <el-icon class="stat-icon stat-icon-running"><VideoPlay /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ runningCount }} / {{ totalCount }}</div>
             <div class="stat-label">Services running</div>
           </div>
         </div>
         <div class="stat-card stat-clickable" @click="$router.push('/settings')">
-          <div class="stat-icon">◐</div>
+          <el-icon class="stat-icon"><Grid /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ daemonStore.status?.plugins ?? 0 }}</div>
             <div class="stat-label">Plugins loaded</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">⏱</div>
+          <el-icon class="stat-icon"><Timer /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ formatUptime(daemonStore.status?.uptime ?? 0) }}</div>
             <div class="stat-label">Daemon uptime</div>
           </div>
         </div>
         <div class="stat-card" v-if="nodeProcessCount >= 0">
-          <div class="stat-icon">{{ nodeProcessCount > 0 ? '🟢' : '⚪' }}</div>
+          <el-icon class="stat-icon" :class="nodeProcessCount > 0 ? 'stat-icon-running' : ''"><ChromeFilled /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ nodeProcessCount }}</div>
             <div class="stat-label">Node.js processes</div>
           </div>
         </div>
         <div class="stat-card" v-if="lastBackupAge">
-          <div class="stat-icon">💾</div>
+          <el-icon class="stat-icon"><Cpu /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ lastBackupAge }}</div>
             <div class="stat-label">Last backup</div>
@@ -288,6 +288,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'

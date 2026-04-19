@@ -49,7 +49,7 @@
               :title="'Close (Esc)'"
               @click="$emit('close')"
             >
-              ✕
+              <el-icon><Close /></el-icon>
             </el-button>
           </div>
         </div>
@@ -108,12 +108,12 @@
                 v-else-if="validation.state === 'passed'"
                 size="small"
                 type="success"
-              >✓ Passed</el-tag>
+              >Passed</el-tag>
               <el-tag
                 v-else-if="validation.state === 'failed'"
                 size="small"
                 type="danger"
-              >✗ {{ validation.error || 'Failed' }}</el-tag>
+              >{{ validation.error || 'Failed' }}</el-tag>
               <div class="csp-val-spacer" />
               <el-button size="small" :disabled="!dirty" @click="revert">Revert</el-button>
               <el-button
@@ -134,6 +134,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Close } from '@element-plus/icons-vue'
 import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
 import MonacoEditor from './MonacoEditor.vue'

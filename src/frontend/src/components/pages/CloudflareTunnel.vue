@@ -43,7 +43,7 @@
     <!-- Status strip -->
     <div class="status-strip">
       <div class="status-card" :class="{ 'status-active': serviceRunning }">
-        <div class="status-icon">{{ serviceRunning ? '●' : '○' }}</div>
+        <el-icon class="status-icon" :class="serviceRunning ? 'icon-running' : 'icon-stopped'"><CircleCheckFilled v-if="serviceRunning" /><CircleClose v-else /></el-icon>
         <div class="status-body">
           <div class="status-title">
             {{ serviceRunning ? 'Tunnel running' : (serviceInfo ? 'Stopped' : 'Unknown') }}
@@ -54,14 +54,14 @@
         </div>
       </div>
       <div class="status-card">
-        <div class="status-icon">🔑</div>
+        <el-icon class="status-icon"><Key /></el-icon>
         <div class="status-body">
           <div class="status-title">{{ tokenState }}</div>
           <div class="status-meta">{{ config.apiToken ? 'API token stored' : 'API token missing' }}</div>
         </div>
       </div>
       <div class="status-card">
-        <div class="status-icon">🌐</div>
+        <el-icon class="status-icon"><Connection /></el-icon>
         <div class="status-body">
           <div class="status-title">{{ config.tunnelName || 'No tunnel selected' }}</div>
           <div class="status-meta mono" v-if="config.tunnelId">{{ config.tunnelId.slice(0, 18) }}…</div>
@@ -69,7 +69,7 @@
         </div>
       </div>
       <div class="status-card">
-        <div class="status-icon">📍</div>
+        <el-icon class="status-icon"><Location /></el-icon>
         <div class="status-body">
           <div class="status-title">{{ zones.length }} zone{{ zones.length === 1 ? '' : 's' }}</div>
           <div class="status-meta">{{ config.defaultZoneId ? 'Default selected' : 'Pick default zone' }}</div>
@@ -120,7 +120,7 @@
                   <span>Auto-setup tunnel</span>
                 </el-button>
                 <span v-if="autoSetupResult" class="save-status ok">
-                  ✓ Account: {{ autoSetupResult.account.name }} · Tunnel: {{ autoSetupResult.tunnel.name }}
+                  <el-icon><CircleCheckFilled /></el-icon> Account: {{ autoSetupResult.account.name }} · Tunnel: {{ autoSetupResult.tunnel.name }}
                 </span>
                 <span v-if="saveStatus && saveStatus.kind === 'err'" class="save-status err">
                   {{ saveStatus.message }}
@@ -176,7 +176,7 @@
                 <code>{stem}</code> = local domain without
                 <code>.loc</code>/<code>.local</code>/<code>.test</code>,
                 <code>{user}</code> = OS username.
-                Example for <code>myapp.loc</code> →
+                Example for <code>myapp.loc</code>:
                 <code>{{ previewTemplate }}</code>
               </div>
               <div class="card-actions">
@@ -196,7 +196,7 @@
               <div class="ssl-toggle-row">
                 <div class="ssl-toggle-meta">
                   <div class="ssl-toggle-title">
-                    {{ serviceRunning ? '✓ Tunnel is running' : 'Tunnel is stopped' }}
+                    {{ serviceRunning ? 'Tunnel is running' : 'Tunnel is stopped' }}
                   </div>
                   <div class="ssl-toggle-desc">
                     Uses the JWT fetched in Step 1 and connects to Cloudflare's edge.
@@ -227,13 +227,13 @@
             <header class="edit-card-header">
               <span class="edit-card-title">Exposed sites</span>
               <span class="edit-card-hint">
-                Sites with Cloudflare Tunnel enabled in SiteEdit → Cloudflare tab
+                Sites with Cloudflare Tunnel enabled in SiteEdit &gt; Cloudflare tab
               </span>
             </header>
             <div class="edit-card-body">
               <div v-if="exposedSites.length === 0" class="hint">
-                No sites are exposed yet. Open a site in the Sites page →
-                Cloudflare tab → toggle "Enable tunnel for this site", pick a zone,
+                No sites are exposed yet. Open a site in the Sites page,
+                Cloudflare tab, toggle "Enable tunnel for this site", pick a zone,
                 enter a subdomain, Save, then click "Sync all sites" below.
               </div>
               <div v-else class="site-expose-list">
@@ -330,7 +330,7 @@
                 </el-table-column>
                 <el-table-column label="Proxied" width="90" align="center">
                   <template #default="{ row }">
-                    <el-tag v-if="row.proxied" size="small" type="warning" effect="dark">🟠</el-tag>
+                    <el-tag v-if="row.proxied" size="small" type="warning" effect="dark">Proxied</el-tag>
                     <el-tag v-else size="small" effect="plain">DNS only</el-tag>
                   </template>
                 </el-table-column>
@@ -410,6 +410,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   Setting, Check, Share, Delete, Right, Postcard, Link,
+  CircleCheckFilled, CircleClose, Key, Connection, Location,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
@@ -573,7 +574,7 @@ async function syncAllSites() {
     const res = await cloudflareSync()
     syncStatus.value = {
       kind: 'ok',
-      message: `✓ Synced ${res.synced} site${res.synced === 1 ? '' : 's'} to Cloudflare`,
+      message: `Synced ${res.synced} site${res.synced === 1 ? '' : 's'} to Cloudflare`,
     }
     ElMessage.success(`Synced ${res.synced} sites`)
   } catch (e: any) {
@@ -588,8 +589,8 @@ async function syncAllSites() {
 const verifying = ref(false)
 const tokenVerdict = ref<'unknown' | 'ok' | 'fail'>('unknown')
 const tokenVerdictLabel = computed(() => {
-  if (tokenVerdict.value === 'ok') return '✓ Token valid'
-  if (tokenVerdict.value === 'fail') return '✗ Token invalid'
+  if (tokenVerdict.value === 'ok') return 'Token valid'
+  if (tokenVerdict.value === 'fail') return 'Token invalid'
   return ''
 })
 const tokenState = computed(() => {
@@ -740,7 +741,7 @@ function addRuleFromSite(site: SiteInfo) {
   } else {
     ingressRules.value.push({ hostname, service })
   }
-  ElMessage.success(`Added rule: ${hostname} → ${service}`)
+  ElMessage.success(`Added rule: ${hostname} -> ${service}`)
 }
 
 async function applyIngress() {

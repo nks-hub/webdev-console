@@ -27,7 +27,7 @@
           @click="execute(cmd)"
           @mouseenter="selectedIndex = i"
         >
-          <span class="cmd-icon">{{ cmd.icon }}</span>
+          <el-icon class="cmd-icon"><component :is="cmd.icon" /></el-icon>
           <div class="cmd-info">
             <span class="cmd-label">{{ cmd.label }}</span>
             <span class="cmd-desc" v-if="cmd.description">{{ cmd.description }}</span>
@@ -43,8 +43,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, type Component } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  Monitor, DataAnalysis, Coin, Lock, Grid, Box, Connection,
+  Setting, Share, Message, Plus, Refresh, VideoPlay, VideoPause,
+  Promotion, CircleClose, Edit, Link,
+} from '@element-plus/icons-vue'
 import { useServicesStore } from '../../stores/services'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
@@ -63,49 +68,49 @@ interface Command {
   id: string
   label: string
   description?: string
-  icon: string
+  icon: Component
   shortcut?: string
   action: () => void
 }
 
 const commands = computed<Command[]>(() => [
-  { id: 'sites', label: 'Go to Sites', icon: '🌐', shortcut: '', action: () => router.push('/sites') },
-  { id: 'dashboard', label: 'Go to Services', icon: '📊', action: () => router.push('/dashboard') },
-  { id: 'databases', label: 'Go to Databases', icon: '🗄️', action: () => router.push('/databases') },
-  { id: 'ssl', label: 'Go to SSL Manager', icon: '🔒', action: () => router.push('/ssl') },
-  { id: 'php', label: 'Go to PHP Manager', icon: '🐘', action: () => router.push('/php') },
-  { id: 'binaries', label: 'Go to Binaries', icon: '📦', action: () => router.push('/binaries') },
-  { id: 'plugins', label: 'Go to Plugins', icon: '🔌', action: () => router.push('/plugins') },
-  { id: 'settings', label: 'Go to Settings', icon: '⚙️', action: () => router.push('/settings') },
-  { id: 'cloudflare', label: 'Go to Cloudflare Tunnel', icon: '☁️', action: () => router.push('/cloudflare') },
-  { id: 'mailpit-ui', label: 'Open Mailpit UI', icon: '📧', action: () => window.open('http://localhost:8025', '_blank') },
-  { id: 'new-site', label: 'Create New Site', icon: '➕', shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
-  { id: 'refresh', label: 'Refresh Data', icon: '🔄', shortcut: 'F5', action: () => daemonStore.poll() },
+  { id: 'sites', label: 'Go to Sites', icon: Monitor, shortcut: '', action: () => router.push('/sites') },
+  { id: 'dashboard', label: 'Go to Services', icon: DataAnalysis, action: () => router.push('/dashboard') },
+  { id: 'databases', label: 'Go to Databases', icon: Coin, action: () => router.push('/databases') },
+  { id: 'ssl', label: 'Go to SSL Manager', icon: Lock, action: () => router.push('/ssl') },
+  { id: 'php', label: 'Go to PHP Manager', icon: Grid, action: () => router.push('/php') },
+  { id: 'binaries', label: 'Go to Binaries', icon: Box, action: () => router.push('/binaries') },
+  { id: 'plugins', label: 'Go to Plugins', icon: Share, action: () => router.push('/plugins') },
+  { id: 'settings', label: 'Go to Settings', icon: Setting, action: () => router.push('/settings') },
+  { id: 'cloudflare', label: 'Go to Cloudflare Tunnel', icon: Connection, action: () => router.push('/cloudflare') },
+  { id: 'mailpit-ui', label: 'Open Mailpit UI', icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
+  { id: 'new-site', label: 'Create New Site', icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
+  { id: 'refresh', label: 'Refresh Data', icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },
   ...daemonStore.services.map((svc: any) => ({
     id: `start-${svc.id}`,
     label: `Start ${svc.displayName || svc.id}`,
     description: svc.state === 2 ? 'Already running' : '',
-    icon: '▶',
+    icon: VideoPlay,
     action: () => { if (svc.state !== 2) servicesStore.start(svc.id) },
   })),
   ...daemonStore.services.map((svc: any) => ({
     id: `stop-${svc.id}`,
     label: `Stop ${svc.displayName || svc.id}`,
     description: svc.state === 0 ? 'Already stopped' : '',
-    icon: '⏹',
+    icon: VideoPause,
     action: () => { if (svc.state === 2) servicesStore.stop(svc.id) },
   })),
-  { id: 'start-all', label: 'Start All Services', icon: '🚀', action: () => {
+  { id: 'start-all', label: 'Start All Services', icon: Promotion, action: () => {
     daemonStore.services.filter((s: any) => s.state === 0).forEach((s: any) => servicesStore.start(s.id))
   }},
-  { id: 'stop-all', label: 'Stop All Services', icon: '🛑', action: () => {
+  { id: 'stop-all', label: 'Stop All Services', icon: CircleClose, action: () => {
     daemonStore.services.filter((s: any) => s.state === 2).forEach((s: any) => servicesStore.stop(s.id))
   }},
   // Dynamic per-site commands — open in browser + edit
   ...sitesStore.sites.map(site => ({
     id: `open-site-${site.domain}`,
     label: `Open ${site.domain}`,
-    icon: '🌐',
+    icon: Link,
     action: () => {
       const proto = site.sslEnabled ? 'https' : 'http'
       const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
@@ -116,7 +121,7 @@ const commands = computed<Command[]>(() => [
   ...sitesStore.sites.map(site => ({
     id: `edit-site-${site.domain}`,
     label: `Edit ${site.domain}`,
-    icon: '✏️',
+    icon: Edit,
     action: () => router.push(`/sites/${site.domain}/edit`),
   })),
 ])
@@ -192,8 +197,10 @@ defineExpose({ open })
 .cmd-icon {
   font-size: 1rem;
   width: 24px;
-  text-align: center;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cmd-info {

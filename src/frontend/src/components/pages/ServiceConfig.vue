@@ -123,16 +123,12 @@
               v-else-if="validation.state === 'passed'"
               size="small"
               type="success"
-            >
-              ✓ Passed
-            </el-tag>
+            >Passed</el-tag>
             <el-tag
               v-else-if="validation.state === 'failed'"
               size="small"
               type="danger"
-            >
-              ✗ {{ validation.error || 'Failed' }}
-            </el-tag>
+            >{{ validation.error || 'Failed' }}</el-tag>
           </div>
           <div class="val-right">
             <el-button size="small" :disabled="!dirty" @click="revert">
