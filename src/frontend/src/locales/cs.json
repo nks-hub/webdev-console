@@ -201,7 +201,16 @@
     "noDatabases": "Žádné uživatelské databáze. Vytvoř první.",
     "emptyTitle": "Žádné uživatelské databáze",
     "emptyHint": "Vytvořte první databázi pro začátek.",
-    "selectFirst": "Nejprve vyber databázi"
+    "selectFirst": "Nejprve vyber databázi",
+    "tablesCount": "{count} tabulek",
+    "refreshTables": "Obnovit tabulky",
+    "importSql": "Import SQL",
+    "exportSql": "Export SQL",
+    "sqlQuery": "SQL dotaz",
+    "sqlPlaceholder": "SELECT * FROM users LIMIT 10;",
+    "newDatabase": "Nová databáze",
+    "nameLabel": "Název databáze",
+    "namePlaceholder": "moje_databaze"
   },
   "binaries": {
     "title": "Binárky",
@@ -305,6 +314,22 @@
       "daemonLooked": "Daemon hledal {paths}. Zkontroluj, že je binárka nainstalovaná přes",
       "daemonLookedBinaries": "Binárky",
       "daemonLookedAnd": "a že služba byla alespoň jednou spuštěná."
+    }
+  },
+  "serviceConfig": {
+    "saveApply": "Uložit a použít",
+    "revert": "Vrátit",
+    "validate": "Ověřit",
+    "status": {
+      "ready": "Připraveno",
+      "validating": "Ověřování…",
+      "passed": "OK",
+      "failed": "Selhalo"
+    },
+    "unsavedConfirm": {
+      "title": "Neuložené změny",
+      "message": "Máte neuložené změny. Přesto znovu načíst?",
+      "reload": "Znovu načíst"
     }
   },
   "settings": {

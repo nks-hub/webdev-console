@@ -201,7 +201,16 @@
     "noDatabases": "No user databases. Create one to get started.",
     "emptyTitle": "No user databases",
     "emptyHint": "Create one to get started.",
-    "selectFirst": "Select a database first"
+    "selectFirst": "Select a database first",
+    "tablesCount": "{count} tables",
+    "refreshTables": "Refresh tables",
+    "importSql": "Import SQL",
+    "exportSql": "Export SQL",
+    "sqlQuery": "SQL query",
+    "sqlPlaceholder": "SELECT * FROM users LIMIT 10;",
+    "newDatabase": "New database",
+    "nameLabel": "Database name",
+    "namePlaceholder": "my_database"
   },
   "binaries": {
     "title": "Binaries",
@@ -305,6 +314,22 @@
       "daemonLooked": "The daemon looked for {paths}. Check that the binary is installed via",
       "daemonLookedBinaries": "Binaries",
       "daemonLookedAnd": "and that the service has been started at least once."
+    }
+  },
+  "serviceConfig": {
+    "saveApply": "Save & Apply",
+    "revert": "Revert",
+    "validate": "Validate",
+    "status": {
+      "ready": "Ready",
+      "validating": "Validating…",
+      "passed": "Passed",
+      "failed": "Failed"
+    },
+    "unsavedConfirm": {
+      "title": "Unsaved changes",
+      "message": "You have unsaved changes. Reload anyway?",
+      "reload": "Reload"
     }
   },
   "settings": {

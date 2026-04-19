@@ -24,7 +24,7 @@
           :disabled="!dirty || !activeFile"
           @click="saveCurrent"
         >
-          Save &amp; Apply
+          {{ t('serviceConfig.saveApply') }}
         </el-button>
       </div>
     </div>
@@ -109,7 +109,7 @@
               size="small"
               type="info"
             >
-              Ready
+              {{ t('serviceConfig.status.ready') }}
             </el-tag>
             <el-tag
               v-else-if="validation.state === 'validating'"
@@ -117,25 +117,25 @@
               type="warning"
               effect="plain"
             >
-              Validating…
+              {{ t('serviceConfig.status.validating') }}
             </el-tag>
             <el-tag
               v-else-if="validation.state === 'passed'"
               size="small"
               type="success"
-            >Passed</el-tag>
+            >{{ t('serviceConfig.status.passed') }}</el-tag>
             <el-tag
               v-else-if="validation.state === 'failed'"
               size="small"
               type="danger"
-            >{{ validation.error || 'Failed' }}</el-tag>
+            >{{ validation.error || t('serviceConfig.status.failed') }}</el-tag>
           </div>
           <div class="val-right">
             <el-button size="small" :disabled="!dirty" @click="revert">
-              Revert
+              {{ t('serviceConfig.revert') }}
             </el-button>
             <el-button size="small" @click="validateOnly" :loading="validation.state === 'validating'">
-              Validate
+              {{ t('serviceConfig.validate') }}
             </el-button>
           </div>
         </div>
@@ -286,9 +286,9 @@ async function reload() {
   if (dirtyFiles.size > 0) {
     try {
       await ElMessageBox.confirm(
-        'You have unsaved changes. Reload anyway?',
-        'Unsaved changes',
-        { type: 'warning', confirmButtonText: 'Reload', cancelButtonText: 'Cancel' }
+        t('serviceConfig.unsavedConfirm.message'),
+        t('serviceConfig.unsavedConfirm.title'),
+        { type: 'warning', confirmButtonText: t('serviceConfig.unsavedConfirm.reload'), cancelButtonText: t('common.cancel') }
       )
     } catch { return }
   }

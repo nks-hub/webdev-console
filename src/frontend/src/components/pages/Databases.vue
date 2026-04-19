@@ -48,7 +48,7 @@
             -->
           </div>
           <div class="db-card-meta" v-if="dbTables[db]">
-            <span class="meta-item">{{ dbTables[db].length }} tables</span>
+            <span class="meta-item">{{ t('databases.tablesCount', { count: dbTables[db].length }) }}</span>
             <span class="meta-item" v-if="dbSizes[db]">{{ dbSizes[db] }}</span>
           </div>
         </div>
@@ -66,16 +66,16 @@
         <div class="detail-header">
           <h2 class="detail-title">{{ selectedDb }}</h2>
           <div class="detail-actions">
-            <el-button size="small" @click="loadTables(selectedDb)">Refresh Tables</el-button>
-            <el-button size="small" type="success" @click="triggerImport">Import SQL</el-button>
-            <el-button size="small" @click="exportDb">Export SQL</el-button>
+            <el-button size="small" @click="loadTables(selectedDb)">{{ t('databases.refreshTables') }}</el-button>
+            <el-button size="small" type="success" @click="triggerImport">{{ t('databases.importSql') }}</el-button>
+            <el-button size="small" @click="exportDb">{{ t('databases.exportSql') }}</el-button>
             <input ref="importFileRef" type="file" accept=".sql,.gz" style="display:none" @change="handleImportFile" />
           </div>
         </div>
 
         <!-- Tables list -->
         <div class="tables-section" v-if="currentTables.length > 0">
-          <div class="section-label">Tables</div>
+          <div class="section-label">{{ t('databases.tables') }}</div>
           <el-table :data="currentTables" size="small" stripe>
             <el-table-column prop="name" label="Table" min-width="200">
               <template #default="{ row }">
@@ -97,17 +97,17 @@
 
         <!-- SQL Query -->
         <div class="query-section">
-          <div class="section-label">SQL Query</div>
+          <div class="section-label">{{ t('databases.sqlQuery') }}</div>
           <el-input
             v-model="sqlQuery"
             type="textarea"
             :rows="3"
-            placeholder="SELECT * FROM users LIMIT 10;"
+            :placeholder="t('databases.sqlPlaceholder')"
             class="query-input"
           />
           <div class="query-actions">
             <el-button type="primary" size="small" @click="executeQuery" :loading="queryRunning" :disabled="!sqlQuery.trim()">
-              Execute
+              {{ t('databases.execute') }}
             </el-button>
             <span class="query-time" v-if="queryTime">{{ queryTime }}ms</span>
           </div>
@@ -119,16 +119,16 @@
     </div>
 
     <!-- Create dialog -->
-    <el-dialog v-model="showCreateDialog" title="New Database" width="400px">
+    <el-dialog v-model="showCreateDialog" :title="t('databases.newDatabase')" width="400px">
       <el-form label-position="top" size="small">
-        <el-form-item label="Database Name" required>
-          <el-input v-model="newDbName" placeholder="my_database" />
+        <el-form-item :label="t('databases.nameLabel')" required>
+          <el-input v-model="newDbName" :placeholder="t('databases.namePlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreateDialog = false">Cancel</el-button>
+        <el-button @click="showCreateDialog = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :loading="creating" @click="createDatabase" :disabled="!newDbName.trim()">
-          Create
+          {{ t('common.create') }}
         </el-button>
       </template>
     </el-dialog>
@@ -137,7 +137,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const { t } = useI18n()
 
 const databases = ref<string[]>([])
 const loading = ref(false)
