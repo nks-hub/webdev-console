@@ -54,7 +54,12 @@
         </div>
       </div>
 
-      <el-empty v-else-if="!loading" description="No user databases. Create one to get started." :image-size="64" />
+      <el-empty v-else-if="!loading" :image-size="64">
+        <template #description>
+          <p>{{ $t('databases.emptyTitle') }}</p>
+          <p class="el-empty__description-hint">{{ $t('databases.emptyHint') }}</p>
+        </template>
+      </el-empty>
 
       <!-- Selected database detail -->
       <div v-if="selectedDb" class="db-detail">

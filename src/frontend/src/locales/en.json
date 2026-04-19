@@ -189,6 +189,8 @@
     "tables": "Tables",
     "noTables": "No tables",
     "noDatabases": "No user databases. Create one to get started.",
+    "emptyTitle": "No user databases",
+    "emptyHint": "Create one to get started.",
     "selectFirst": "Select a database first"
   },
   "binaries": {

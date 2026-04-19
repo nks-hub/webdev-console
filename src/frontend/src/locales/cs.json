@@ -189,6 +189,8 @@
     "tables": "Tabulky",
     "noTables": "Žádné tabulky",
     "noDatabases": "Žádné uživatelské databáze. Vytvoř první.",
+    "emptyTitle": "Žádné uživatelské databáze",
+    "emptyHint": "Vytvořte první databázi pro začátek.",
     "selectFirst": "Nejprve vyber databázi"
   },
   "binaries": {
