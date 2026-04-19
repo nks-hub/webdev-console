@@ -1650,33 +1650,80 @@ static object? ResolveComposerInvoker(IServiceProvider sp, PluginLoader loader)
     return invokerType is null ? null : sp.GetService(invokerType);
 }
 
-// F49b: Resolve MySQL port with plugin-DI fallback when SettingsStore row absent.
-// Chain: SettingsStore.TryReadMysqlPort → MySqlModule.Port via reflection → 3306 hardcode.
-static int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, PluginLoader loader)
+// F49c: port probe cache — set once per daemon boot by ResolveMysqlPortWithFallback.
+int? _cachedMysqlPort = null;
+object _mysqlPortProbeLock = new();
+
+// F49c: Resolve MySQL port with explicit-setting → live-prober → plugin-default
+// fallback chain. Plugin Port default (3306) collides with MAMP on user's machine,
+// so step 2 actively probes a small port sweep with the WDC password: the real
+// WDC mysqld is whichever port authenticates. Cached once per daemon boot.
+int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, PluginLoader loader, BinaryManager bm)
 {
+    // Step 1: explicit user config wins always, no probing.
     if (settings.TryReadMysqlPort(out var configured) && configured > 0)
         return configured;
 
-    try
+    // Step 2: probe cache — avoid repeating the probe on every endpoint hit.
+    if (_cachedMysqlPort is int cached) return cached;
+
+    lock (_mysqlPortProbeLock)
     {
-        var mysqlPlugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.mysql");
-        if (mysqlPlugin is not null)
+        if (_cachedMysqlPort is int doubleChecked) return doubleChecked;
+
+        // Step 3: try port list with WDC root password via mysqladmin ping.
+        var password = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
+        var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+        var mysqladmin = mysql?.Executable is null ? null : Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqladmin.exe");
+        if (!string.IsNullOrEmpty(password) && mysqladmin is not null && File.Exists(mysqladmin))
         {
-            var moduleType = mysqlPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.MySQL.MySqlModule");
-            if (moduleType is not null)
+            var candidatePorts = new[] { 3306, 3307, 3308, 3309 };
+            foreach (var port in candidatePorts)
             {
-                var module = sp.GetService(moduleType);
-                if (module is not null)
+                try
                 {
-                    var portVal = moduleType.GetProperty("Port")?.GetValue(module);
-                    if (portVal is int p && p > 0) return p;
+                    var args = new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "ping" };
+                    var env = new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
+                    var result = CliWrap.Cli.Wrap(mysqladmin)
+                        .WithArguments(args)
+                        .WithEnvironmentVariables(env)
+                        .WithValidation(CliWrap.CommandResultValidation.None)
+                        .ExecuteBufferedAsync()
+                        .ConfigureAwait(false)
+                        .GetAwaiter().GetResult();
+                    if (result.ExitCode == 0 && result.StandardOutput.Contains("mysqld is alive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _cachedMysqlPort = port;
+                        return port;
+                    }
+                }
+                catch { /* skip port, try next */ }
+            }
+        }
+
+        // Step 4: fall back to plugin default (3306) — prober exhausted.
+        try
+        {
+            var mysqlPlugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.mysql");
+            if (mysqlPlugin is not null)
+            {
+                var moduleType = mysqlPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.MySQL.MySqlModule");
+                if (moduleType is not null)
+                {
+                    var module = sp.GetService(moduleType);
+                    if (module is not null)
+                    {
+                        var portVal = moduleType.GetProperty("Port")?.GetValue(module);
+                        if (portVal is int p && p > 0) { _cachedMysqlPort = p; return p; }
+                    }
                 }
             }
         }
-    }
-    catch { /* reflection failed — fall through to hardcoded default */ }
+        catch { }
 
-    return 3306;
+        _cachedMysqlPort = 3306;
+        return 3306;
+    }
 }
 
 static string ResolveComposerRoot(string docroot)
@@ -3784,7 +3831,7 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IS
 
     try
     {
-        var listArgs = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+        var listArgs = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
         listArgs.Add("-N");
         listArgs.Add("-e");
         listArgs.Add("SHOW DATABASES");
@@ -3795,7 +3842,14 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IS
             .ExecuteBufferedAsync();
 
         if (result.ExitCode != 0)
-            return Results.Ok(new { error = result.StandardError.Trim(), databases = Array.Empty<string>() });
+        {
+            var stderr = result.StandardError.Trim();
+            var port = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+            var hint = "";
+            if (stderr.Contains("1045") || stderr.Contains("Access denied"))
+                hint = $"Port {port} has a mysqld process but WDC root password was rejected. Likely external MySQL (MAMP/XAMPP/Windows service) occupies this port. Fix: Services tab → Start WDC MySQL on different port, OR Settings → Porty → change MySQL port.";
+            return Results.Ok(new { error = stderr, hint, attemptedPort = port, databases = Array.Empty<string>() });
+        }
 
         var dbs = result.StandardOutput
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -3824,7 +3878,7 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, Settings
         return Results.BadRequest(new { error = "MySQL not installed" });
 
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-e");
     args.Add($"CREATE DATABASE IF NOT EXISTS `{dbName}`");
     try
@@ -3855,7 +3909,7 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, Set
         return Results.BadRequest(new { error = "MySQL not installed" });
 
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-e");
     args.Add($"DROP DATABASE IF EXISTS `{name}`");
     try
@@ -3884,7 +3938,7 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm,
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-N");
     args.Add("-e");
     args.Add($"SELECT TABLE_NAME, TABLE_ROWS, ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}' ORDER BY TABLE_NAME");
@@ -3922,7 +3976,7 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, S
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-N");
     args.Add("-e");
     args.Add($"SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{name}'");
@@ -3956,7 +4010,7 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
     var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add(name);
     args.Add("-e");
     args.Add(sql);
@@ -4002,7 +4056,7 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm,
     var mysqldump = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqldump.exe");
     if (!File.Exists(mysqldump))
         return Results.BadRequest(new { error = "mysqldump.exe not found" });
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add(name);
     try
     {
@@ -4048,7 +4102,7 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
 
     var tmpFile = Path.GetTempFileName();
     await File.WriteAllTextAsync(tmpFile, sql);
-    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader));
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add(name);
     try
     {
