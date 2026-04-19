@@ -1602,6 +1602,145 @@ app.MapPost("/api/sites", async (HttpContext ctx, SiteManager sm, SiteOrchestrat
     catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
+app.MapPost("/api/sites/{domain}/duplicate", async (
+    string domain,
+    HttpContext ctx,
+    SiteManager sm,
+    SiteOrchestrator orchestrator,
+    ILoggerFactory lf,
+    CancellationToken ct) =>
+{
+    var source = sm.Get(domain);
+    if (source is null)
+        return Results.NotFound(new { error = $"Source site '{domain}' not found" });
+
+    Dictionary<string, string>? body;
+    try
+    {
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(cancellationToken: ct);
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
+
+    var newDomain = body?.GetValueOrDefault("newDomain") ?? "";
+    var copyFiles = body?.GetValueOrDefault("copyFiles") ?? "all";
+
+    try { SiteManager.ValidateDomain(newDomain); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+
+    if (sm.Get(newDomain) is not null)
+        return Results.Conflict(new { error = $"Site '{newDomain}' already exists" });
+
+    if (copyFiles is not ("all" or "top" or "empty"))
+        return Results.BadRequest(new { error = "copyFiles must be 'all', 'top', or 'empty'" });
+
+    var logger = lf.CreateLogger("DuplicateSite");
+    var warnings = new List<string>();
+
+    var sourceRoot = source.DocumentRoot;
+    var parentDir = Path.GetDirectoryName(sourceRoot.TrimEnd(Path.DirectorySeparatorChar));
+    if (parentDir is null)
+        return Results.Problem(title: "Cannot resolve parent of source doc-root", statusCode: 500);
+
+    var newRoot = Path.Combine(parentDir, newDomain);
+
+    if (Directory.Exists(newRoot))
+        return Results.Conflict(new { error = $"Target doc-root already exists: {newRoot}" });
+
+    // Step 1: create directory + copy files
+    try
+    {
+        Directory.CreateDirectory(newRoot);
+        if (copyFiles == "all")
+        {
+            DuplicateSiteCopyRecursive(sourceRoot, newRoot);
+        }
+        else if (copyFiles == "top")
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(sourceRoot))
+            {
+                var name = Path.GetFileName(entry);
+                if (name.StartsWith('.')) continue;
+                if (name is "node_modules" or "vendor") continue;
+                if (Directory.Exists(entry))
+                    DuplicateSiteCopyRecursive(entry, Path.Combine(newRoot, name));
+                else
+                    File.Copy(entry, Path.Combine(newRoot, name));
+            }
+        }
+        // "empty" — directory already created, nothing more to do
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "copyFiles failed for duplicate of {Source} to {New}", domain, newDomain);
+        try { Directory.Delete(newRoot, recursive: true); } catch { /* best-effort rollback */ }
+        return Results.Problem(title: "File copy failed", detail: ex.Message, statusCode: 500);
+    }
+
+    // Step 2: register new site config + apply vhost + reload Apache
+    try
+    {
+        var newSite = new SiteConfig
+        {
+            Domain        = newDomain,
+            DocumentRoot  = newRoot,
+            PhpVersion    = source.PhpVersion,
+            SslEnabled    = source.SslEnabled,
+            HttpPort      = source.HttpPort,
+            HttpsPort     = source.HttpsPort,
+            Framework     = source.Framework,
+            NodeUpstreamPort  = source.NodeUpstreamPort,
+            NodeStartCommand  = source.NodeStartCommand,
+            Aliases       = [],
+            Environment   = new Dictionary<string, string>(source.Environment),
+            PhpSettings   = source.PhpSettings,
+            ApacheSettings = source.ApacheSettings,
+            // Cloudflare: keep enabled flag but clear subdomain so it doesn't collide
+            Cloudflare = source.Cloudflare is null ? null : new SiteCloudflareConfig
+            {
+                Enabled      = source.Cloudflare.Enabled,
+                Subdomain    = "",
+                ZoneId       = source.Cloudflare.ZoneId,
+                ZoneName     = source.Cloudflare.ZoneName,
+                LocalService = source.Cloudflare.LocalService,
+                Protocol     = source.Cloudflare.Protocol,
+            },
+        };
+
+        var created = await sm.CreateAsync(newSite);
+        await orchestrator.ApplyAsync(created);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Site registration failed for duplicate {New}", newDomain);
+        // Rollback: remove TOML + generated vhost (Delete handles both) then doc-root
+        try { sm.Delete(newDomain); } catch { /* ignore — may not have been added yet */ }
+        try { Directory.Delete(newRoot, recursive: true); } catch { /* best-effort */ }
+        return Results.Problem(title: "Site registration failed", detail: ex.Message, statusCode: 500);
+    }
+
+    logger.LogInformation("Duplicated site {Source} → {New} (copyFiles={Mode})", domain, newDomain, copyFiles);
+    return Results.Created($"/api/sites/{newDomain}", new
+    {
+        domain       = newDomain,
+        documentRoot = newRoot,
+        sourceDomain = domain,
+        copyFiles,
+        warnings,
+    });
+});
+
+static void DuplicateSiteCopyRecursive(string source, string target)
+{
+    Directory.CreateDirectory(target);
+    foreach (var file in Directory.GetFiles(source))
+        File.Copy(file, Path.Combine(target, Path.GetFileName(file)));
+    foreach (var dir in Directory.GetDirectories(source))
+        DuplicateSiteCopyRecursive(dir, Path.Combine(target, Path.GetFileName(dir)));
+}
+
 app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     if (sm.Get(domain) is null)

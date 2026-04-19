@@ -699,6 +699,22 @@ export const composerInit = (domain: string, body: Record<string, string>): Prom
 export const composerDiagnose = (domain: string): Promise<{ warnings: string[]; errors: string[] }> =>
   json(`/api/sites/${encodeURIComponent(domain)}/composer/diagnose`)
 
+// ── Site duplication ──────────────────────────────────────────────────
+
+export async function duplicateSite(
+  domain: string,
+  newDomain: string,
+  copyFiles: 'all' | 'top' | 'empty' = 'all',
+): Promise<{ domain: string; documentRoot: string; sourceDomain: string; copyFiles: string; warnings: string[] }> {
+  const r = await fetch(`${base()}/api/sites/${encodeURIComponent(domain)}/duplicate`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ newDomain, copyFiles }),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
+  return r.json()
+}
+
 // ── Hosts file management ─────────────────────────────────────────────
 
 export interface HostEntry {
