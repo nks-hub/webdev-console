@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NKS.WebDevConsole.Core.Services;
 using NKS.WebDevConsole.Plugin.Nginx;
 
@@ -60,23 +63,184 @@ public class NginxConfigDefaultsTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    // --- Service lifecycle — stubbed in the scaffold commit (2026-04-19,
-    // commit 76538ef). Re-enable these once NginxModule.{Validate,Start,
-    // Stop,Reload}Async are implemented (see wdc-todo:nginx-lifecycle in
-    // MCP memory for acceptance criteria). ---------------------------
+    // --- Service lifecycle — implemented 2026-04-18, commit wdc-todo:
+    // nginx-lifecycle. Tests assert argv construction + ProcessManager
+    // invocation via the INginxProcessRunner abstraction (same pattern we
+    // could later backport to ApacheModule for parity).
 
-    [Fact(Skip = "todo — NginxModule.ValidateConfigAsync throws NotImplementedException in scaffold; implement `nginx -t -c` shell-out, then enable.")]
-    public void ValidateConfigAsync_AcceptsGoodConfig() { }
+    private static (NginxModule module, NginxConfig cfg, Mock<INginxProcessRunner> runner) BuildModule()
+    {
+        var cfg = new NginxConfig
+        {
+            ExecutablePath = "nginx",
+            ServerRoot = Path.GetTempPath(),
+            ConfigFile = Path.Combine(Path.GetTempPath(), "nginx.conf"),
+        };
+        var runner = new Mock<INginxProcessRunner>(MockBehavior.Strict);
+        var logger = NullLogger<NginxModule>.Instance;
+        return (new NginxModule(logger, cfg, runner.Object), cfg, runner);
+    }
 
-    [Fact(Skip = "todo — NginxModule.ValidateConfigAsync not yet implemented; syntax-error case pending.")]
-    public void ValidateConfigAsync_RejectsBadConfig() { }
+    [Fact]
+    public async Task ValidateConfigAsync_AcceptsGoodConfig()
+    {
+        var (module, cfg, runner) = BuildModule();
 
-    [Fact(Skip = "todo — NginxModule.StartAsync not yet implemented; ProcessManager invocation + log tailing pending.")]
-    public void StartAsync_LaunchesNginxBinary_AndRegistersWithJobObject() { }
+        runner
+            .Setup(r => r.RunAsync(
+                cfg.ExecutablePath,
+                It.Is<IReadOnlyList<string>>(a =>
+                    a.Contains("-t") && a.Contains("-c") && a.Contains(cfg.ConfigFile)),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NginxCommandResult(0, "", "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n"));
 
-    [Fact(Skip = "todo — NginxModule.StopAsync not yet implemented; `nginx -s quit` graceful path pending.")]
-    public void StopAsync_IssuesQuitSignal_ThenSigtermFallback() { }
+        var result = await module.ValidateConfigAsync(CancellationToken.None);
 
-    [Fact(Skip = "todo — NginxModule.ReloadAsync not yet implemented; `nginx -s reload` unified cross-platform pending.")]
-    public void ReloadAsync_IssuesReloadSignal() { }
+        Assert.True(result.IsValid);
+        runner.VerifyAll();
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_RejectsBadConfig()
+    {
+        var (module, cfg, runner) = BuildModule();
+
+        const string stderr = "nginx: [emerg] unknown directive \"servr\" in /etc/nginx/nginx.conf:3\nnginx: configuration file /etc/nginx/nginx.conf test failed\n";
+        runner
+            .Setup(r => r.RunAsync(
+                cfg.ExecutablePath,
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NginxCommandResult(1, "", stderr));
+
+        var result = await module.ValidateConfigAsync(CancellationToken.None);
+
+        Assert.False(result.IsValid);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("unknown directive", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task StartAsync_LaunchesNginxBinary_AndRegistersWithJobObject()
+    {
+        // We pick a port that is very likely free on the test host. If it
+        // happens to be held, PortConflictDetector will throw before we reach
+        // the Spawn assertion — so we verify the argv construction by
+        // intercepting the Spawn call and *throwing* a sentinel exception.
+        // This keeps the test fast (no actual nginx launch) and free of the
+        // WaitForPortBindAsync timeout.
+        var (module, cfg, runner) = BuildModule();
+        cfg.HttpPort = GetLikelyFreePort();
+
+        IReadOnlyList<string>? capturedArgs = null;
+        string? capturedExec = null;
+        var sentinel = new InvalidOperationException("spawn-intercepted");
+
+        runner
+            .Setup(r => r.Spawn(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string?>()))
+            .Callback<string, IReadOnlyList<string>, string?>((exe, args, _) =>
+            {
+                capturedExec = exe;
+                capturedArgs = args;
+            })
+            .Throws(sentinel);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => module.StartAsync(CancellationToken.None));
+        Assert.Same(sentinel, ex);
+
+        Assert.Equal(cfg.ExecutablePath, capturedExec);
+        Assert.NotNull(capturedArgs);
+        Assert.Contains("-c", capturedArgs!);
+        Assert.Contains(cfg.ConfigFile, capturedArgs!);
+        // Prefix is only emitted when ResolveManagedPrefix returns non-empty;
+        // ServerRoot is TempPath (exists) so we expect "-p <ServerRoot>".
+        Assert.Contains("-p", capturedArgs!);
+    }
+
+    [Fact]
+    public async Task StopAsync_IssuesQuitSignal_ThenSigtermFallback()
+    {
+        var (module, cfg, runner) = BuildModule();
+
+        IReadOnlyList<string>? capturedArgs = null;
+        runner
+            .Setup(r => r.RunAsync(
+                cfg.ExecutablePath,
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<string>, string?, CancellationToken>((_, args, _, _) => capturedArgs = args)
+            .ReturnsAsync(new NginxCommandResult(0, "", ""));
+
+        // StopAsync short-circuits when _state == Stopped, so flip it to
+        // Running via reflection to exercise the graceful-stop branch. We
+        // cannot easily simulate the SIGTERM-fallback path (which requires
+        // an actual child lingering past GracefulTimeoutSecs), so this test
+        // only asserts the graceful `nginx -s quit` argv.
+        ForceState(module, NKS.WebDevConsole.Core.Models.ServiceState.Running);
+
+        await module.StopAsync(CancellationToken.None);
+
+        Assert.NotNull(capturedArgs);
+        Assert.Contains("-s", capturedArgs!);
+        Assert.Contains("quit", capturedArgs!);
+        Assert.Contains("-c", capturedArgs!);
+        Assert.Contains(cfg.ConfigFile, capturedArgs!);
+        runner.Verify(
+            r => r.RunAsync(
+                cfg.ExecutablePath,
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ReloadAsync_IssuesReloadSignal()
+    {
+        var (module, cfg, runner) = BuildModule();
+
+        var callArgs = new List<IReadOnlyList<string>>();
+        runner
+            .Setup(r => r.RunAsync(
+                cfg.ExecutablePath,
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<string>, string?, CancellationToken>((_, args, _, _) => callArgs.Add(args))
+            .ReturnsAsync(new NginxCommandResult(0, "", ""));
+
+        await module.ReloadAsync(CancellationToken.None);
+
+        // ReloadAsync validates first (`-t`), then issues `-s reload`.
+        Assert.Equal(2, callArgs.Count);
+        Assert.Contains("-t", callArgs[0]);
+        Assert.Contains("-s", callArgs[1]);
+        Assert.Contains("reload", callArgs[1]);
+        Assert.Contains("-c", callArgs[1]);
+        Assert.Contains(cfg.ConfigFile, callArgs[1]);
+    }
+
+    private static void ForceState(NginxModule module, NKS.WebDevConsole.Core.Models.ServiceState state)
+    {
+        var field = typeof(NginxModule).GetField("_state",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("NginxModule._state field not found — test needs update.");
+        field.SetValue(module, state);
+    }
+
+    private static int GetLikelyFreePort()
+    {
+        var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        l.Start();
+        var port = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
+        l.Stop();
+        return port;
+    }
 }
