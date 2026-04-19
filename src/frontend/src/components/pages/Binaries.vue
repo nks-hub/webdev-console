@@ -52,21 +52,38 @@
       </div>
 
       <template v-else>
-        <!-- Composer built-in card — not in remote catalog, installed via /api/composer/self-install -->
-        <div v-if="!gridSearch" class="page-body-pad composer-builtin-wrap">
-          <div class="bin-card composer-builtin-card">
+        <div class="bin-grid page-body-pad">
+          <!-- Composer built-in card — first item in grid, same structure as catalog cards -->
+          <div
+            v-if="!gridSearch"
+            class="bin-card bin-card--builtin"
+            :class="{ 'bin-card--has-installed': composerInstalled }"
+          >
             <div class="bin-card-header">
+              <ServiceIcon service="composer" :active="composerInstalled" />
               <div class="bin-card-title">
-                <span class="bin-card-name">{{ $t('binaries.composer.name') }}</span>
-                <el-tag size="small" type="info" effect="plain" class="builtin-tag">Built-in</el-tag>
+                <span class="bin-card-name">
+                  composer
+                  <el-tag size="small" type="info" effect="plain" class="builtin-tag">Built-in</el-tag>
+                </span>
+                <span class="bin-card-latest mono">{{ composerVersion ? `v${composerVersion}` : 'latest (getcomposer.org)' }}</span>
               </div>
             </div>
-            <p class="composer-desc">{{ $t('binaries.composer.description') }}</p>
+            <div class="bin-card-metrics">
+              <div class="metric">
+                <span class="metric-num mono">{{ composerInstalled ? 1 : 0 }}</span>
+                <span class="metric-label">installed</span>
+              </div>
+              <div class="metric">
+                <span class="metric-num mono">1</span>
+                <span class="metric-label">available</span>
+              </div>
+            </div>
             <div class="bin-card-actions">
               <el-button
-                v-if="!composerVersion"
+                v-if="!composerInstalled"
                 size="small"
-                type="success"
+                type="primary"
                 plain
                 :loading="composerInstalling"
                 class="bin-open-btn"
@@ -74,14 +91,19 @@
               >
                 {{ composerInstalling ? $t('binaries.composer.installing') : $t('binaries.composer.install') }}
               </el-button>
-              <el-button v-else size="small" type="success" plain disabled class="bin-open-btn">
-                {{ $t('binaries.composer.installed', { version: composerVersion }) }}
+              <el-button
+                v-else
+                size="small"
+                type="success"
+                plain
+                disabled
+                class="bin-open-btn"
+              >
+                {{ $t('binaries.composer.installed', { version: composerVersion || 'latest' }) }}
               </el-button>
             </div>
           </div>
-        </div>
 
-        <div class="bin-grid page-body-pad">
           <div
             v-for="card in filteredModules"
             :key="card.app"
@@ -542,7 +564,9 @@ async function loadSystemInfo() {
 
 // Composer built-in
 const composerVersion = ref<string | null>(null)
+const composerPath = ref<string | null>(null)
 const composerInstalling = ref(false)
+const composerInstalled = computed(() => !!composerVersion.value || !!composerPath.value)
 
 function daemonBaseUrl(): string {
   const preloadPort = (window as any).daemonApi?.getPort?.()
@@ -565,8 +589,9 @@ async function loadComposerVersion() {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/composer/version`, { headers: composerAuthHeaders() })
     if (r.ok) {
-      const d = await r.json()
-      composerVersion.value = d.version ?? null
+      const d = await r.json() as { version: string | null; path: string | null }
+      composerVersion.value = d.version
+      composerPath.value = d.path
     }
   } catch { /* silent */ }
 }
@@ -580,8 +605,12 @@ async function installComposer() {
       ElMessage.error((body as any).detail || `HTTP ${r.status}`)
       return
     }
+    const body = await r.json().catch(() => ({})) as { path?: string }
+    if (body.path) composerPath.value = body.path
     await loadComposerVersion()
-    ElMessage.success(t('binaries.composer.installed', { version: composerVersion.value || '' }))
+    ElMessage.success(t('binaries.composer.installed', { version: composerVersion.value || 'latest' }))
+  } catch (e: any) {
+    ElMessage.error(e?.message || String(e))
   } finally {
     composerInstalling.value = false
   }
@@ -820,28 +849,16 @@ onMounted(() => {
   color: var(--wdc-text);
 }
 
-.composer-builtin-wrap {
-  padding-bottom: 0;
-}
-
-.composer-builtin-card {
+.bin-card--builtin {
   border-left-color: var(--el-color-info);
   cursor: default;
-  max-width: 320px;
 }
 
-.composer-builtin-card:hover {
-  border-color: var(--el-color-info-light-3);
+.bin-card--builtin:hover {
+  border-left-color: var(--el-color-info);
 }
 
 .builtin-tag {
-  margin-left: 8px;
-}
-
-.composer-desc {
-  font-size: 0.78rem;
-  color: var(--wdc-text-3);
-  margin: 0;
-  line-height: 1.4;
+  margin-left: 6px;
 }
 </style>
