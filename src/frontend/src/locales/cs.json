@@ -192,7 +192,12 @@
       "openOnPackagist": "Otevřít {name} na packagist.org",
       "removeTitle": "Odebrat balíček",
       "removeConfirm": "Opravdu odebrat {name}?",
-      "removed": "{name} odebrán"
+      "removed": "{name} odebrán",
+      "updateAvailable": "Nová verze k dispozici: v{latest}",
+      "abandoned": "Tento balíček je opuštěn",
+      "abandonedReplacedBy": "Opuštěn — nahrazuje {name}",
+      "openRepository": "Otevřít repozitář",
+      "outdatedBadge": "Zastaralé"
     }
   },
   "uiMode": {

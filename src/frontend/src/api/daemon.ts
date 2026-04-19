@@ -680,6 +680,16 @@ export const composerRemove = (domain: string, pkg: string): Promise<ComposerCom
     body: JSON.stringify({ package: pkg }),
   })
 
+export interface ComposerOutdatedEntry {
+  name: string
+  version: string | null
+  latest: string | null
+  latestStatus: string | null
+}
+
+export const composerOutdated = (domain: string): Promise<{ installed: ComposerOutdatedEntry[] }> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/outdated`)
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.

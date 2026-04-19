@@ -89,25 +89,62 @@
 
         <!-- Package chips -->
         <div v-if="status.packages.length > 0" class="package-list">
-          <el-tag
+          <el-popover
             v-for="pkg in status.packages"
             :key="pkg"
-            size="small"
-            effect="plain"
-            class="pkg-tag pkg-tag-interactive"
-            role="button"
-            tabindex="0"
-            :aria-label="t('sites.composer.openOnPackagist', { name: pkg.split(':')[0] })"
-            @click="openPackagist(pkg)"
-            @keydown.enter="openPackagist(pkg)"
+            placement="top"
+            trigger="hover"
+            :show-after="500"
+            :hide-after="200"
+            width="360"
+            @show="loadPackageInfo(pkg.split(':')[0])"
           >
-            {{ pkg }}
-            <el-icon
-              class="pkg-remove"
-              :title="t('sites.composer.removeTitle')"
-              @click.stop="confirmRemove(pkg)"
-            ><Close /></el-icon>
-          </el-tag>
+            <template #reference>
+              <el-tag
+                size="small"
+                effect="plain"
+                :class="['pkg-tag', 'pkg-tag-interactive', outdatedMap[pkg.split(':')[0]] ? 'pkg-outdated' : '']"
+                role="button"
+                tabindex="0"
+                :aria-label="t('sites.composer.openOnPackagist', { name: pkg.split(':')[0] })"
+                :title="outdatedMap[pkg.split(':')[0]] ? t('sites.composer.updateAvailable', { latest: outdatedMap[pkg.split(':')[0]].latest }) : undefined"
+                @click="openPackagist(pkg)"
+                @keydown.enter="openPackagist(pkg)"
+              >
+                {{ pkg }}
+                <span v-if="outdatedMap[pkg.split(':')[0]]" class="pkg-outdated-dot" :title="t('sites.composer.outdatedBadge')" />
+                <el-icon
+                  class="pkg-remove"
+                  :title="t('sites.composer.removeTitle')"
+                  @click.stop="confirmRemove(pkg)"
+                ><Close /></el-icon>
+              </el-tag>
+            </template>
+
+            <div v-if="pkgInfoLoading[pkg.split(':')[0]]" class="pkg-info-loading">Načítám…</div>
+            <div v-else-if="pkgInfoCache[pkg.split(':')[0]]" class="pkg-info">
+              <div class="pkg-info-header mono">{{ pkg.split(':')[0] }}</div>
+              <div v-if="pkgInfoCache[pkg.split(':')[0]].abandoned" class="pkg-abandoned">
+                <el-icon><WarningFilled /></el-icon>
+                {{ abandonedLabel(pkgInfoCache[pkg.split(':')[0]].abandoned) }}
+              </div>
+              <p class="pkg-desc">{{ pkgInfoCache[pkg.split(':')[0]].description }}</p>
+              <div class="pkg-stats mono">
+                <span>⭐ {{ pkgInfoCache[pkg.split(':')[0]].favers }}</span>
+                <span>↓ {{ pkgInfoCache[pkg.split(':')[0]].downloads }}</span>
+              </div>
+              <div v-if="outdatedMap[pkg.split(':')[0]]" class="pkg-update-hint">
+                {{ t('sites.composer.updateAvailable', { latest: outdatedMap[pkg.split(':')[0]].latest }) }}
+              </div>
+              <a
+                v-if="pkgInfoCache[pkg.split(':')[0]].repository"
+                class="pkg-repo-link"
+                href="#"
+                @click.prevent="openExternal(pkgInfoCache[pkg.split(':')[0]].repository)"
+              >{{ t('sites.composer.openRepository') }}</a>
+            </div>
+            <div v-else class="pkg-info-loading">—</div>
+          </el-popover>
         </div>
       </el-card>
 
@@ -173,13 +210,24 @@
     >
       <el-form @submit.prevent="runRequire">
         <el-form-item :label="$t('sites.composer.packageName')">
-          <el-input
+          <el-autocomplete
             v-model="requirePackage"
+            :fetch-suggestions="searchPackagist"
             :placeholder="$t('sites.composer.packageNameHint')"
+            class="pkg-search"
             :disabled="running"
+            :debounce="300"
             autofocus
+            @select="onSelectSuggestion"
             @keyup.enter="runRequire"
-          />
+          >
+            <template #default="{ item }">
+              <div class="suggestion-row">
+                <span class="suggestion-name mono">{{ item.value }}</span>
+                <span class="suggestion-desc">{{ item.description?.slice(0, 60) }}</span>
+              </div>
+            </template>
+          </el-autocomplete>
         </el-form-item>
       </el-form>
 
@@ -202,10 +250,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Check, Warning, Refresh, Close } from '@element-plus/icons-vue'
+import { Check, Warning, Refresh, Close, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { composerStatus, composerInstall, composerRequire, composerRemove } from '../../api/daemon'
+import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated } from '../../api/daemon'
 import type { ComposerStatus, ComposerCommandResult } from '../../api/types'
 
 const props = defineProps<{ domain: string }>()
@@ -227,6 +275,13 @@ const removing = ref<string | null>(null)
 const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
 const isBannerDismissed = ref(false)
 
+// Outdated map keyed by package name
+const outdatedMap = ref<Record<string, { latest: string; status: string }>>({})
+
+// Package info cache from packagist.org
+const pkgInfoCache = ref<Record<string, any>>({})
+const pkgInfoLoading = ref<Record<string, boolean>>({})
+
 function loadDismissState(): void {
   isBannerDismissed.value = localStorage.getItem(DISMISS_KEY.value) === '1'
 }
@@ -236,15 +291,91 @@ function dismissBanner(): void {
   isBannerDismissed.value = true
 }
 
+async function loadOutdated(): Promise<void> {
+  try {
+    const result = await composerOutdated(props.domain)
+    const map: Record<string, { latest: string; status: string }> = {}
+    for (const entry of result.installed) {
+      if (entry.name && entry.latest) {
+        map[entry.name] = { latest: entry.latest, status: entry.latestStatus ?? '' }
+      }
+    }
+    outdatedMap.value = map
+  } catch {
+    // Non-critical — silently ignore
+  }
+}
+
 async function loadStatus(): Promise<void> {
   loading.value = true
   loadError.value = null
   try {
     status.value = await composerStatus(props.domain)
+    await loadOutdated()
   } catch (err: unknown) {
     loadError.value = err instanceof Error ? err.message : String(err)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadPackageInfo(name: string): Promise<void> {
+  if (pkgInfoCache.value[name] !== undefined || pkgInfoLoading.value[name]) return
+  pkgInfoLoading.value[name] = true
+  try {
+    const r = await fetch(`https://packagist.org/packages/${name}.json`)
+    if (r.ok) {
+      const d = await r.json()
+      pkgInfoCache.value[name] = {
+        description: d.package?.description ?? null,
+        abandoned: d.package?.abandoned ?? null,
+        favers: d.package?.favers ?? 0,
+        downloads: d.package?.downloads?.total ?? 0,
+        repository: d.package?.repository ?? null,
+      }
+    } else {
+      pkgInfoCache.value[name] = null
+    }
+  } catch {
+    pkgInfoCache.value[name] = null
+  } finally {
+    pkgInfoLoading.value[name] = false
+  }
+}
+
+function abandonedLabel(v: boolean | string): string {
+  if (v === true) return t('sites.composer.abandoned')
+  if (typeof v === 'string') return t('sites.composer.abandonedReplacedBy', { name: v })
+  return t('sites.composer.abandoned')
+}
+
+async function searchPackagist(query: string, cb: (items: any[]) => void): Promise<void> {
+  if (!query || query.length < 2) { cb([]); return }
+  try {
+    const r = await fetch(`https://packagist.org/search.json?q=${encodeURIComponent(query)}&per_page=10`)
+    if (r.ok) {
+      const d = await r.json()
+      cb((d.results ?? []).map((p: any) => ({
+        value: p.name,
+        description: p.description,
+        downloads: p.downloads,
+        favers: p.favers,
+      })))
+      return
+    }
+  } catch { /* silent */ }
+  cb([])
+}
+
+function onSelectSuggestion(item: any): void {
+  requirePackage.value = item.value
+}
+
+function openExternal(url: string): void {
+  if ((window as any).electronAPI?.openExternal) {
+    ;(window as any).electronAPI.openExternal(url)
+  } else {
+    window.open(url, '_blank')
   }
 }
 
@@ -304,11 +435,7 @@ async function runRequire(): Promise<void> {
 function openPackagist(pkg: string): void {
   const name = pkg.split(':')[0]
   const url = `https://packagist.org/packages/${name}`
-  if ((window as any).electronAPI?.openExternal) {
-    ;(window as any).electronAPI.openExternal(url)
-  } else {
-    window.open(url, '_blank')
-  }
+  openExternal(url)
 }
 
 async function confirmRemove(pkg: string): Promise<void> {
@@ -456,6 +583,21 @@ onMounted(() => {
   opacity: 1;
 }
 
+.pkg-outdated {
+  border-color: var(--el-color-warning) !important;
+}
+
+.pkg-outdated-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--el-color-warning);
+  margin-left: 4px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .actions-row {
   display: flex;
   gap: 8px;
@@ -499,5 +641,93 @@ onMounted(() => {
 .banner-actions {
   display: flex;
   gap: 8px;
+}
+
+/* Package info popover */
+.pkg-info-loading {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  padding: 4px 0;
+}
+
+.pkg-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pkg-info-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  word-break: break-all;
+}
+
+.pkg-abandoned {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--el-color-danger);
+}
+
+.pkg-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  line-height: 1.5;
+}
+
+.pkg-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.pkg-update-hint {
+  font-size: 12px;
+  color: var(--el-color-warning);
+  font-weight: 500;
+}
+
+.pkg-repo-link {
+  font-size: 12px;
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.pkg-repo-link:hover {
+  text-decoration: underline;
+}
+
+/* Autocomplete */
+.pkg-search {
+  width: 100%;
+}
+
+.suggestion-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.suggestion-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.suggestion-desc {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mono {
+  font-family: monospace;
 }
 </style>

@@ -1854,6 +1854,44 @@ app.MapPost("/api/sites/{domain}/composer/remove", async (string domain, HttpCon
     }
 });
 
+app.MapGet("/api/sites/{domain}/composer/outdated", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
+    var composerRoot = ResolveComposerRoot(site.DocumentRoot);
+    var logger = lf.CreateLogger("Composer");
+    try
+    {
+        var (_, exitCode, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
+            [composerRoot, new[] { "outdated", "--direct", "--format=json", "--no-ansi" }, ct]);
+        System.Collections.Generic.List<object> installed = new();
+        if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(stdout);
+                if (doc.RootElement.TryGetProperty("installed", out var arr))
+                {
+                    foreach (var pkg in arr.EnumerateArray())
+                    {
+                        installed.Add(new {
+                            name = pkg.GetProperty("name").GetString(),
+                            version = pkg.TryGetProperty("version", out var v) ? v.GetString() : null,
+                            latest = pkg.TryGetProperty("latest", out var l) ? l.GetString() : null,
+                            latestStatus = pkg.TryGetProperty("latest-status", out var s) ? s.GetString() : null,
+                        });
+                    }
+                }
+            }
+            catch (Exception ex) { logger.LogWarning(ex, "composer outdated parse failed"); }
+        }
+        return Results.Ok(new { installed });
+    }
+    catch (Exception ex) { return Results.Problem(title: "composer outdated failed", detail: ex.Message, statusCode: 500); }
+});
+
 app.MapGet("/api/composer/version", async (IServiceProvider sp, PluginLoader pluginLoader, CancellationToken ct) =>
 {
     var invoker = ResolveComposerInvoker(sp, pluginLoader);

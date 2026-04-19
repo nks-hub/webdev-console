@@ -192,7 +192,12 @@
       "openOnPackagist": "Open {name} on packagist.org",
       "removeTitle": "Remove package",
       "removeConfirm": "Really remove {name}?",
-      "removed": "{name} removed"
+      "removed": "{name} removed",
+      "updateAvailable": "Update available: v{latest}",
+      "abandoned": "This package is abandoned",
+      "abandonedReplacedBy": "Abandoned — replaced by {name}",
+      "openRepository": "Open repository",
+      "outdatedBadge": "Outdated"
     }
   },
   "uiMode": {
