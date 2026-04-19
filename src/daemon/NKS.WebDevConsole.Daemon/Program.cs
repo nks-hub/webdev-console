@@ -1206,6 +1206,79 @@ app.MapGet("/api/sites/{domain}/access-log", (string domain, int? limit, SiteMan
     }
 });
 
+// Phase 8.1 error log aggregation — Apache error_log + PHP-FPM error_log.
+// Discovers per-site and global error logs from every installed Apache version
+// and from the PHP plugin's managed log directory. Returns a unified list of
+// parsed entries (timestamp, severity, source, message) sorted newest-first.
+// Graceful: missing files return an empty list, never an error.
+app.MapGet("/api/sites/{domain}/logs/errors", (
+    string domain,
+    int? lines,
+    DateTimeOffset? since,
+    SiteManager sm,
+    BinaryManager bm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    var limit = Math.Clamp(lines ?? 100, 1, 1000);
+
+    // Build Apache error log candidate list — per every installed Apache version
+    // the vhost template writes {domain}-error.log / {domain}-ssl-error.log.
+    // We also check the global error.log for context (e.g. startup/config errors).
+    var apacheCandidates = new List<string>();
+    foreach (var apache in bm.ListInstalled("apache"))
+    {
+        var logsDir = Path.Combine(apache.InstallPath, "logs");
+        apacheCandidates.Add(Path.Combine(logsDir, $"{domain}-error.log"));
+        apacheCandidates.Add(Path.Combine(logsDir, $"{domain}-ssl-error.log"));
+        apacheCandidates.Add(Path.Combine(logsDir, "error.log"));
+    }
+    // Fallback: WdcPaths.LogsRoot/apache/error.log (daemon's own Apache log dir)
+    apacheCandidates.Add(Path.Combine(WdcPaths.LogsRoot, "apache", "error.log"));
+
+    // Build PHP error log candidate list — per-version FPM global error log
+    // (php{versionTag}-fpm-error.log) and per-version web error log
+    // (php{majorMinor}-errors.log). Scan all available version dirs under
+    // ~/.wdc/logs/php/ rather than hard-coding specific versions.
+    var phpFpmCandidates = new List<string>();
+    var phpWebCandidates = new List<string>();
+    var phpLogDir = Path.Combine(WdcPaths.LogsRoot, "php");
+    if (Directory.Exists(phpLogDir))
+    {
+        foreach (var f in Directory.EnumerateFiles(phpLogDir, "*-fpm-error.log"))
+            phpFpmCandidates.Add(f);
+        foreach (var f in Directory.EnumerateFiles(phpLogDir, "php*-errors.log"))
+            phpWebCandidates.Add(f);
+    }
+
+    try
+    {
+        var entries = ErrorLogInspector.TailMultiple(
+        [
+            (apacheCandidates, "apache-error"),
+            (phpFpmCandidates, "php-fpm-error"),
+            (phpWebCandidates, "php-error"),
+        ],
+        limit,
+        since);
+
+        return Results.Ok(entries.Select(e => new
+        {
+            timestamp = e.Timestamp,
+            severity = e.Severity,
+            source = e.Source,
+            message = e.Message,
+            pid = e.Pid,
+            client = e.Client,
+        }));
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to read error logs: {ex.Message}");
+    }
+});
+
 // Phase 11 perf monitoring: server-side history read endpoint.
 // Returns time-series samples written by MetricsHistoryService background
 // poller (60s cadence, 7-day retention). Frontend uses this to render
