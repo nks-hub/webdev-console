@@ -295,6 +295,8 @@ onMounted(() => { void pluginsStore.loadAll() })
 .pm-page {
   min-height: 100%;
   background: var(--wdc-bg);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .page-header {
@@ -319,20 +321,21 @@ onMounted(() => { void pluginsStore.loadAll() })
 }
 
 .page-body-pad {
-  padding: 0 24px 24px;
+  padding: 16px 24px 24px;
 }
 
 .pm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
+  gap: 12px;
+  justify-content: start;
 }
 
 .pm-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 16px 18px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;

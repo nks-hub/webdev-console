@@ -1,6 +1,6 @@
 {
   "name": "@nks-hub/webdev-console",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "Unified local development environment for Windows, macOS, and Linux — manage Apache/Nginx, PHP versions, MySQL/MariaDB, and SSL from one interface.",
   "author": {
     "name": "NKS Hub",
