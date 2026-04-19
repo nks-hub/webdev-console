@@ -5,7 +5,7 @@
       <div class="header-title-block">
         <span class="page-title">{{ $t('dashboard.title') }}</span>
         <span class="page-subtitle">
-          v{{ daemonStore.status?.version ?? '...' }} ·
+          v{{ appVersion }} ·
           {{ daemonStore.connected ? $t('header.connected') : 'Connecting...' }}
         </span>
       </div>
@@ -15,6 +15,7 @@
           @click="$router.push({ path: '/sites', query: { create: '1' } })"
         >{{ $t('dashboard.newSite') }}</el-button>
         <el-button
+          v-if="uiMode.isAdvanced"
           type="success"
           size="small"
           :loading="startingAll"
@@ -24,6 +25,7 @@
           {{ $t('dashboard.startAll') }}
         </el-button>
         <el-button
+          v-if="uiMode.isAdvanced"
           type="danger"
           size="small"
           :loading="stoppingAll"
@@ -293,6 +295,8 @@ import ServiceIcon from '../shared/ServiceIcon.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 
 const router = useRouter()
+
+const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()

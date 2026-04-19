@@ -58,12 +58,14 @@ import { useI18n } from 'vue-i18n'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
+import { useUiModeStore } from '../../stores/uiMode'
 import { setLocale, type Locale } from '../../i18n'
 
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
+const uiMode = useUiModeStore()
 const { t, locale } = useI18n()
 const isDark = computed(() => themeStore.isDark)
 const currentLocale = computed(() => String(locale.value))
@@ -75,13 +77,18 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 // (toggle + config editor) and via its plugin panel at /plugin/nks.wdc.php.
 // Keeping runtime-specific managers out of the top nav prevents the menu from
 // exploding as we add Node/Go/Python/etc.
-const navItems = computed(() => [
-  { path: '/dashboard', label: t('nav.services') },
-  { path: '/sites', label: t('nav.sites') },
-  { path: '/databases', label: t('nav.databases') },
-  { path: '/ssl', label: t('nav.ssl') },
-  { path: '/settings', label: t('nav.settings') },
-])
+const allNavItems = [
+  { path: '/dashboard', label: () => t('nav.services'), requiresAdvanced: true },
+  { path: '/sites', label: () => t('nav.sites'), requiresAdvanced: false },
+  { path: '/databases', label: () => t('nav.databases'), requiresAdvanced: true },
+  { path: '/ssl', label: () => t('nav.ssl'), requiresAdvanced: true },
+  { path: '/settings', label: () => t('nav.settings'), requiresAdvanced: false },
+]
+const navItems = computed(() =>
+  allNavItems
+    .filter(i => !i.requiresAdvanced || uiMode.isAdvanced)
+    .map(i => ({ path: i.path, label: i.label() }))
+)
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')
