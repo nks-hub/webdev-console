@@ -699,6 +699,37 @@ export const composerInit = (domain: string, body: Record<string, string>): Prom
 export const composerDiagnose = (domain: string): Promise<{ warnings: string[]; errors: string[] }> =>
   json(`/api/sites/${encodeURIComponent(domain)}/composer/diagnose`)
 
+// ── Hosts file management ─────────────────────────────────────────────
+
+export interface HostEntry {
+  enabled: boolean
+  ip: string
+  hostname: string
+  source: 'wdc' | 'custom' | 'external'
+  comment?: string | null
+  lineNumber: number
+}
+
+export interface HostApplyEntry {
+  enabled: boolean
+  ip: string
+  hostname: string
+  source: 'wdc' | 'custom' | 'external'
+  comment?: string | null
+}
+
+export const fetchHosts = (): Promise<HostEntry[]> =>
+  json('/api/hosts')
+
+export const applyHosts = (entries: HostApplyEntry[]): Promise<{ applied: boolean; entryCount: number }> =>
+  json('/api/hosts/apply', { method: 'POST', body: JSON.stringify({ entries }) })
+
+export const backupHosts = (): Promise<{ path: string; timestamp: string }> =>
+  json('/api/hosts/backup', { method: 'POST' })
+
+export const restoreHosts = (pathOrContent: { path?: string; content?: string }): Promise<{ restored: boolean }> =>
+  json('/api/hosts/restore', { method: 'POST', body: JSON.stringify(pathOrContent) })
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.
