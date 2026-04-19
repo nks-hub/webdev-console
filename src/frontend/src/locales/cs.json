@@ -54,7 +54,8 @@
     "cacheMail": "Cache a Mail",
     "tunnel": "Tunel",
     "tools": "Nástroje",
-    "composer": "Composer"
+    "composer": "Composer",
+    "hosts": "Hosts soubor"
   },
   "composer": {
     "title": "Composer",
@@ -240,6 +241,17 @@
     "installSuccess": "{name} nainstalován",
     "installFailed": "Instalace selhala",
     "restartRequired": "Restartuj démona pro načtení nového pluginu."
+  },
+  "hosts": {
+    "title": "Hosts soubor",
+    "subtitle": "Přehled WDC-spravovaných záznamů v systémovém hosts souboru",
+    "reapply": "Znovu aplikovat ze stránek",
+    "openFile": "Otevřít hosts soubor",
+    "emptyTitle": "Žádné spravované záznamy",
+    "ipColumn": "IP adresa",
+    "hostnameColumn": "Hostname",
+    "sourceColumn": "Zdroj (web)",
+    "autoManagedInfo": "WDC automaticky přidává a odebírá záznamy při vytvoření nebo smazání webu."
   },
   "cloudflare": {
     "title": "Cloudflare Tunnel",

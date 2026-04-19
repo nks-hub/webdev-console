@@ -141,6 +141,27 @@
         </span>
         <span class="nav-label">{{ $t('nav.composer') }}</span>
       </div>
+      <div class="nav-item" :class="{ active: isActive('/hosts') }" @click="navigate('/hosts')">
+        <span class="nav-icon-shell"><el-icon :size="18"><Document /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.hosts') }}</span>
+      </div>
+      <div class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
+        <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.ssl') }}</span>
+      </div>
+      <div
+        class="nav-item"
+        :class="{ active: isActive('/cloudflare'), 'nav-item-tunnel': cloudflareRunning }"
+        @click="navigate('/cloudflare')"
+      >
+        <span class="nav-icon-shell"><el-icon :size="18"><Connection /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.tunnel') }}</span>
+        <span v-if="exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
+      </div>
+      <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
+        <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.binaries') }}</span>
+      </div>
     </div>
     </template><!-- /tools section -->
 
@@ -151,27 +172,9 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
         <span class="nav-label">{{ $t('nav.databases') }}</span>
       </div>
-      <div v-if="!uiModeStore.isSimple" class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.ssl') }}</span>
-      </div>
       <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
            fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
            Dashboard service toggle and the /plugin/nks.wdc.php panel. -->
-      <div v-if="!uiModeStore.isSimple" class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.binaries') }}</span>
-      </div>
-      <div
-        v-if="uiModeStore.isAdvanced"
-        class="nav-item"
-        :class="{ active: isActive('/cloudflare'), 'nav-item-tunnel': cloudflareRunning }"
-        @click="navigate('/cloudflare')"
-      >
-        <span class="nav-icon-shell"><el-icon :size="18"><Connection /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.tunnel') }}</span>
-        <span v-if="exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
-      </div>
       <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
         <span class="nav-label">{{ $t('nav.plugins') }}</span>
@@ -187,7 +190,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'

@@ -54,7 +54,8 @@
     "cacheMail": "Cache & Mail",
     "tunnel": "Tunnel",
     "tools": "Tools",
-    "composer": "Composer"
+    "composer": "Composer",
+    "hosts": "Hosts file"
   },
   "composer": {
     "title": "Composer",
@@ -240,6 +241,17 @@
     "installSuccess": "{name} installed",
     "installFailed": "Install failed",
     "restartRequired": "Restart the daemon to load the new plugin."
+  },
+  "hosts": {
+    "title": "Hosts file",
+    "subtitle": "Overview of WDC-managed entries in system hosts file",
+    "reapply": "Re-apply from sites",
+    "openFile": "Open hosts file",
+    "emptyTitle": "No managed entries",
+    "ipColumn": "IP Address",
+    "hostnameColumn": "Hostname",
+    "sourceColumn": "Source (site)",
+    "autoManagedInfo": "WDC automatically adds and removes entries when you create or delete sites."
   },
   "cloudflare": {
     "title": "Cloudflare Tunnel",
