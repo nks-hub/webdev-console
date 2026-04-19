@@ -531,7 +531,7 @@
             <span class="tab-label"><el-icon><Clock /></el-icon> History ({{ history.length }})</span>
           </template>
           <div class="tab-content">
-            <el-empty v-if="history.length === 0" description="No config history yet." :image-size="64" />
+            <el-empty v-if="history.length === 0" :description="$t('sites.history.emptyDescription')" :image-size="64" />
             <div v-else class="history-list">
               <div v-for="(h, i) in history" :key="h.timestamp" class="history-row">
                 <div class="history-when">

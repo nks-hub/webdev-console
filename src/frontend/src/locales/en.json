@@ -79,7 +79,9 @@
     "create": "New Site",
     "openInBrowser": "Open in Browser",
     "saveAndApply": "Save & Apply",
-    "history": "Config History",
+    "history": {
+      "emptyDescription": "No config history yet"
+    },
     "open": "Open",
     "detect": "Detect",
     "delete": "Delete",

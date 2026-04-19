@@ -79,7 +79,9 @@
     "create": "Nový web",
     "openInBrowser": "Otevřít v prohlížeči",
     "saveAndApply": "Uložit a použít",
-    "history": "Historie konfigurace",
+    "history": {
+      "emptyDescription": "Žádná historie konfigurace"
+    },
     "open": "Otevřít",
     "detect": "Rozpoznat",
     "delete": "Smazat",
