@@ -1614,6 +1614,8 @@ app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteMana
     if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
 
     var root = site.DocumentRoot;
+    if (!Directory.Exists(root))
+        return Results.NotFound(new { error = $"Document root for '{domain}' does not exist" });
     var hasJson = File.Exists(Path.Combine(root, "composer.json"));
     var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
 
@@ -1709,6 +1711,10 @@ app.MapPost("/api/sites/{domain}/composer/require", async (string domain, HttpCo
         return Results.BadRequest(new { error = "Body must contain { \"package\": \"vendor/name\" }" });
 
     if (!System.Text.RegularExpressions.Regex.IsMatch(package, @"^[A-Za-z0-9/_.:\-\^~*@]+$"))
+        return Results.BadRequest(new { error = "Invalid package name" });
+
+    // Guard against path traversal sequences even when individual chars are valid
+    if (package.Contains(".."))
         return Results.BadRequest(new { error = "Invalid package name" });
 
     var logger = lf.CreateLogger("Composer");

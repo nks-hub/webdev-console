@@ -1,5 +1,6 @@
 using Moq;
 using NKS.WebDevConsole.Plugin.Composer;
+using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
 
@@ -237,5 +238,169 @@ public sealed class ComposerInvokerTests
         Assert.Equal(config.ExecutablePath, capturedArgs![0]);
 
         runner.VerifyAll();
+    }
+
+    // ── Edge cases ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RequireAsync_WithVersionConstraint_PassesThroughVerbatim()
+    {
+        var (invoker, _, runner) = BuildPharInvoker();
+        const string siteRoot = @"C:\sites\myapp";
+        const string package = "vendor/pkg:^1.0";
+
+        IReadOnlyList<string>? capturedArgs = null;
+
+        runner
+            .Setup(r => r.RunAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                siteRoot,
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<string>, string, CancellationToken>(
+                (_, args, _, _) => capturedArgs = args)
+            .ReturnsAsync(OkResult());
+
+        await invoker.RequireAsync(siteRoot, package);
+
+        Assert.NotNull(capturedArgs);
+        // The package string must appear exactly as passed — no splitting on ':'
+        Assert.Contains(package, capturedArgs!);
+        Assert.Contains("--no-interaction", capturedArgs!);
+
+        runner.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RequireAsync_NoInteractionAlwaysAppended()
+    {
+        // Verify --no-interaction appears after the package arg regardless of
+        // how many other elements are in the argv list.
+        var (invoker, _, runner) = BuildPharInvoker();
+        const string siteRoot = @"C:\sites\myapp";
+        const string package = "nette/application";
+
+        IReadOnlyList<string>? capturedArgs = null;
+
+        runner
+            .Setup(r => r.RunAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                siteRoot,
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<string>, string, CancellationToken>(
+                (_, args, _, _) => capturedArgs = args)
+            .ReturnsAsync(OkResult());
+
+        await invoker.RequireAsync(siteRoot, package);
+
+        Assert.NotNull(capturedArgs);
+        var pkgIdx = capturedArgs!.ToList().IndexOf(package);
+        var niIdx  = capturedArgs!.ToList().IndexOf("--no-interaction");
+        Assert.True(pkgIdx >= 0, "package arg must be present");
+        Assert.True(niIdx > pkgIdx, "--no-interaction must follow the package arg");
+
+        runner.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RunAsync_EmptyArgv_StillAppendsNoInteraction()
+    {
+        var (invoker, _, runner) = BuildPharInvoker();
+        const string siteRoot = @"C:\sites\myapp";
+
+        IReadOnlyList<string>? capturedArgs = null;
+
+        runner
+            .Setup(r => r.RunAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                siteRoot,
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<string>, string, CancellationToken>(
+                (_, args, _, _) => capturedArgs = args)
+            .ReturnsAsync(OkResult());
+
+        await invoker.RunAsync(siteRoot, Array.Empty<string>());
+
+        Assert.NotNull(capturedArgs);
+        Assert.Contains("--no-interaction", capturedArgs!);
+
+        runner.VerifyAll();
+    }
+
+    [Fact]
+    public async Task InstallAsync_WorkingDir_MatchesSiteRoot()
+    {
+        var (invoker, _, runner) = BuildPharInvoker();
+        const string siteRoot = @"C:\sites\myspecificapp";
+
+        string? capturedWorkingDir = null;
+
+        runner
+            .Setup(r => r.RunAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<string>, string, CancellationToken>(
+                (_, _, wd, _) => capturedWorkingDir = wd)
+            .ReturnsAsync(OkResult());
+
+        await invoker.InstallAsync(siteRoot);
+
+        Assert.Equal(siteRoot, capturedWorkingDir);
+
+        runner.VerifyAll();
+    }
+}
+
+/// <summary>
+/// Tests for <see cref="ComposerConfig.ApplyOwnBinaryDefaults"/> binary discovery
+/// and PATH fallback behaviour.
+/// </summary>
+public sealed class ComposerConfigDefaultsTests : IDisposable
+{
+    private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), $"wdc-cfg-{Guid.NewGuid():N}");
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, recursive: true);
+    }
+
+    [Fact]
+    public void ApplyOwnBinaryDefaults_EmptyBinariesDir_FallsBackToPath()
+    {
+        // Create the binaries/composer directory but leave it empty (no version
+        // subdirectories, no composer.phar files).
+        var binariesRoot = Path.Combine(_tempRoot, "binaries", "composer");
+        Directory.CreateDirectory(binariesRoot);
+
+        var cfg = new ComposerConfig { BinariesRoot = binariesRoot };
+        var managed = cfg.ApplyOwnBinaryDefaults();
+
+        Assert.False(managed, "Should return false when no phar is found");
+        Assert.NotNull(cfg.ExecutablePath);
+        // Fallback must be a PATH-resolved shim, not a .phar file
+        Assert.False(cfg.ExecutablePath!.EndsWith(".phar", StringComparison.OrdinalIgnoreCase),
+            "PATH fallback must not be a .phar path");
+        // Must be non-empty (i.e. "composer" or "composer.bat")
+        Assert.NotEmpty(cfg.ExecutablePath!);
+    }
+
+    [Fact]
+    public void ApplyOwnBinaryDefaults_BinariesDirMissing_FallsBackToPath()
+    {
+        // BinariesRoot points to a directory that does not exist at all.
+        var cfg = new ComposerConfig
+        {
+            BinariesRoot = Path.Combine(_tempRoot, "nonexistent", "composer")
+        };
+        var managed = cfg.ApplyOwnBinaryDefaults();
+
+        Assert.False(managed);
+        Assert.NotNull(cfg.ExecutablePath);
+        Assert.False(cfg.ExecutablePath!.EndsWith(".phar", StringComparison.OrdinalIgnoreCase));
     }
 }

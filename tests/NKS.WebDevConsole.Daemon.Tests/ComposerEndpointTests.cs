@@ -1,6 +1,8 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Config;
 using NKS.WebDevConsole.Daemon.Sites;
 using NKS.WebDevConsole.Plugin.Composer;
@@ -301,5 +303,150 @@ public sealed class ComposerStatusInstallSuggestionTests : IDisposable
 
         Assert.Equal("symfony", framework);
         Assert.NotNull(suggestion);
+    }
+}
+
+/// <summary>
+/// Edge-case tests for the Composer endpoint logic: package validation,
+/// malformed JSON tolerance, missing-domain and missing-docroot 404 paths.
+/// All endpoint logic is exercised inline without an HTTP host.
+/// </summary>
+public sealed class ComposerEndpointEdgeCaseTests : IDisposable
+{
+    // Mirrors the regex used in the require endpoint handler in Program.cs
+    private static readonly Regex PackageRegex =
+        new(@"^[A-Za-z0-9/_.:\-\^~*@]+$", RegexOptions.Compiled);
+
+    private static bool IsValidPackage(string package)
+        => PackageRegex.IsMatch(package) && !package.Contains("..");
+
+    private readonly string _tempDir =
+        Path.Combine(Path.GetTempPath(), $"wdc-eec-{Guid.NewGuid():N}");
+
+    private SiteManager BuildSiteManager()
+    {
+        var sitesDir    = Path.Combine(_tempDir, "sites");
+        var generatedDir = Path.Combine(_tempDir, "generated");
+        return new SiteManager(
+            new Mock<ILogger<SiteManager>>().Object,
+            new TemplateEngine(),
+            new AtomicWriter(),
+            sitesDir,
+            generatedDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, recursive: true);
+    }
+
+    // ── Package name validation edge cases ────────────────────────────────────
+
+    [Theory]
+    [InlineData("Symfony/Flex", true)]
+    [InlineData("Cake/Cache", true)]
+    [InlineData("SomeVendor/SomePkg", true)]
+    public void PackageNameRegex_CapitalLetters_Accepted(string package, bool expected)
+    {
+        Assert.Equal(expected, IsValidPackage(package));
+    }
+
+    [Theory]
+    [InlineData("laravel/framework:^11.0", true)]
+    [InlineData("nette/application:~3.2", true)]
+    [InlineData("php-http/client:@stable", true)]
+    public void PackageNameRegex_WithVersionConstraint_Accepted(string package, bool expected)
+    {
+        Assert.Equal(expected, IsValidPackage(package));
+    }
+
+    [Theory]
+    [InlineData("vendor/../etc", false)]
+    [InlineData("vendor/pkg/../../../etc/passwd", false)]
+    [InlineData("a..b/pkg", false)]
+    public void PackageNameRegex_PathTraversalSequences_Rejected(string package, bool expected)
+    {
+        Assert.Equal(expected, IsValidPackage(package));
+    }
+
+    // ── Status endpoint: malformed composer.json graceful degrade ─────────────
+
+    [Fact]
+    public void Status_MalformedComposerJson_GracefulDegrade_ReturnsEmptyPackages()
+    {
+        // Replicate the status endpoint's JSON parsing try/catch:
+        // corrupt JSON must not throw — packages list stays empty and
+        // hasComposerJson is still true.
+        const string corruptJson = "{ this is not valid JSON !!!";
+
+        var packages = new List<string>();
+        string? phpVersion = null;
+        bool parseFailed = false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(corruptJson);
+            if (doc.RootElement.TryGetProperty("require", out var require))
+            {
+                foreach (var pkg in require.EnumerateObject())
+                    if (!pkg.Name.Equals("php", StringComparison.OrdinalIgnoreCase))
+                        packages.Add($"{pkg.Name}:{pkg.Value.GetString() ?? "*"}");
+                if (require.TryGetProperty("php", out var php))
+                    phpVersion = php.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            parseFailed = true;
+        }
+
+        // The endpoint catches the exception and logs it — packages stays empty.
+        Assert.True(parseFailed, "JsonDocument.Parse should throw on corrupt input");
+        Assert.Empty(packages);
+        Assert.Null(phpVersion);
+        // hasComposerJson is determined before parsing — remains true.
+        // This test verifies that the catch block is the correct protection.
+    }
+
+    // ── Missing-domain 404 path ────────────────────────────────────────────────
+
+    [Fact]
+    public void Install_UnknownDomain_SiteManagerReturnsNull()
+    {
+        // The endpoint does: var site = sm.Get(domain); if (site is null) → 404.
+        // Verify SiteManager.Get returns null for a domain that was never created.
+        var sm = BuildSiteManager();
+
+        var result = sm.Get("nonexistent.loc");
+
+        Assert.Null(result);
+    }
+
+    // ── Missing docroot 404 path ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task Status_SiteDocRootMissing_DirectoryExistsReturnsFalse()
+    {
+        // Simulates the race: site config exists but the document root directory
+        // does not. The status endpoint now checks Directory.Exists(root) and
+        // returns 404 when false. This test verifies the SiteManager correctly
+        // stores the (non-existent) root and that Directory.Exists catches it.
+        var sm = BuildSiteManager();
+
+        var missingRoot = Path.Combine(_tempDir, "ghost-docroot");
+        // Deliberately do NOT create missingRoot on disk.
+
+        var site = new SiteConfig
+        {
+            Domain       = "ghost.loc",
+            DocumentRoot = missingRoot,
+        };
+        await sm.CreateAsync(site);
+
+        var loaded = sm.Get("ghost.loc");
+        Assert.NotNull(loaded);
+        Assert.False(Directory.Exists(loaded!.DocumentRoot),
+            "DocumentRoot must not exist — this triggers the 404 guard in the status endpoint");
     }
 }
