@@ -594,6 +594,16 @@
           </div>
         </el-tab-pane>
 
+        <!-- ── Error Logs ───────────────────────── -->
+        <el-tab-pane name="errors">
+          <template #label>
+            <span class="tab-label"><el-icon><WarningFilled /></el-icon> {{ $t('siteEdit.errors') }}</span>
+          </template>
+          <div class="tab-content" style="max-width: 100%">
+            <SiteErrorLogs v-if="site" :domain="site.domain" />
+          </div>
+        </el-tab-pane>
+
         <!-- ── Danger ───────────────────────────── -->
         <el-tab-pane name="danger">
           <template #label>
@@ -643,6 +653,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import type { SiteInfo } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import MetricsChart from '../shared/MetricsChart.vue'
+import SiteErrorLogs from './SiteErrorLogs.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,

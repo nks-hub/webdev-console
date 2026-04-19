@@ -144,7 +144,23 @@
     "runtime": "Runtime",
     "cloudflare": "Cloudflare",
     "metrics": "Metriky",
+    "errors": "Chyby",
     "danger": "Nebezpečné"
+  },
+  "logs": {
+    "errors": {
+      "timestamp": "Čas",
+      "severity": "Závažnost",
+      "source": "Zdroj",
+      "message": "Zpráva",
+      "pid": "PID",
+      "client": "Klient",
+      "autoRefresh": "Auto-obnovení",
+      "lines": "Řádků",
+      "since": "Od",
+      "empty": "Žádné záznamy chyb pro aktuální filtr",
+      "refresh": "Obnovit"
+    }
   },
   "services": {
     "back": "Zpět",

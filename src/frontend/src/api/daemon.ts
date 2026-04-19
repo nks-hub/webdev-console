@@ -10,6 +10,7 @@ import type {
   LogEntry,
   BinaryRelease,
   InstalledBinary,
+  SiteErrorLogEntry,
 } from './types'
 
 declare global {
@@ -219,6 +220,17 @@ export const fetchSiteMetricsHistory = (
   limit: number = 200,
 ): Promise<SiteMetricsHistory> =>
   json(`/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=${minutes}&limit=${limit}`)
+
+export const getErrorLogs = (
+  domain: string,
+  opts?: { lines?: number; since?: string },
+): Promise<SiteErrorLogEntry[]> => {
+  const params = new URLSearchParams()
+  if (opts?.lines !== undefined) params.set('lines', String(opts.lines))
+  if (opts?.since) params.set('since', opts.since)
+  const qs = params.toString()
+  return json(`/api/sites/${encodeURIComponent(domain)}/logs/errors${qs ? '?' + qs : ''}`)
+}
 
 // PHP
 export const fetchPhpVersions = (): Promise<PhpVersion[]> =>

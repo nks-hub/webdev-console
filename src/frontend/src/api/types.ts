@@ -201,3 +201,12 @@ export interface LogEntry {
   message: string
   timestamp: string
 }
+
+export interface SiteErrorLogEntry {
+  timestamp: string
+  severity: string
+  source: string
+  message: string
+  pid: string | null
+  client: string | null
+}

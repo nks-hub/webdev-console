@@ -144,7 +144,23 @@
     "runtime": "Runtime",
     "cloudflare": "Cloudflare",
     "metrics": "Metrics",
+    "errors": "Errors",
     "danger": "Danger"
+  },
+  "logs": {
+    "errors": {
+      "timestamp": "Timestamp",
+      "severity": "Severity",
+      "source": "Source",
+      "message": "Message",
+      "pid": "PID",
+      "client": "Client",
+      "autoRefresh": "Auto-refresh",
+      "lines": "Lines",
+      "since": "Since",
+      "empty": "No error log entries for current filter",
+      "refresh": "Refresh"
+    }
   },
   "services": {
     "back": "Back",
