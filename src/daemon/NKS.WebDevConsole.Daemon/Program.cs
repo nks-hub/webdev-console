@@ -981,10 +981,25 @@ siteManager.LoadAll();
 // On startup, re-apply all sites so vhost configs are regenerated against the
 // current Apache install. (Vhosts live next to the binary, so a fresh install
 // of a different Apache version starts with an empty sites-enabled/.)
+// F51g: per-site ApplyAsync with 25s timeout. One hanging site (slow PHP-FPM spawn,
+// Apache graceful reload waiting, network cert validation) must NEVER block daemon
+// boot indefinitely. Timed-out sites can be manually re-applied after boot via UI.
 var startupOrchestrator = app.Services.GetRequiredService<SiteOrchestrator>();
 foreach (var siteToApply in siteManager.Sites.Values)
 {
-    try { await startupOrchestrator.ApplyAsync(siteToApply); }
+    try
+    {
+        Console.WriteLine($"[startup] re-applying site {siteToApply.Domain}...");
+        var applyTask = startupOrchestrator.ApplyAsync(siteToApply);
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(25));
+        var completed = await Task.WhenAny(applyTask, timeoutTask);
+        if (completed == timeoutTask)
+        {
+            Console.WriteLine($"[startup] site {siteToApply.Domain} re-apply timed out after 25s — skipping, re-apply via UI");
+            continue;
+        }
+        await applyTask;
+    }
     catch (Exception ex)
     {
         Console.WriteLine($"[startup] failed to re-apply site {siteToApply.Domain}: {ex.Message}");
