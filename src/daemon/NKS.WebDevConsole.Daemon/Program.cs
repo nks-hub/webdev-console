@@ -1789,6 +1789,93 @@ app.MapPost("/api/sites/{domain}/composer/require", async (string domain, HttpCo
     }
 });
 
+app.MapGet("/api/composer/version", async (IServiceProvider sp, PluginLoader pluginLoader, CancellationToken ct) =>
+{
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null)
+        return Results.Ok(new { version = (string?)null, path = (string?)null, managed = false });
+
+    string? version = null;
+    string? path = null;
+    bool managed = false;
+
+    try
+    {
+        var tempDir = Path.GetTempPath();
+        var (ok, _, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
+            [tempDir, new[] { "--version" }, ct]);
+        if (ok)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(stdout, @"Composer version ([\d.]+)");
+            if (m.Success) version = m.Groups[1].Value;
+        }
+
+        try
+        {
+            var configField = invoker.GetType().GetField("_config",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var config = configField?.GetValue(invoker);
+            if (config is not null)
+            {
+                path = config.GetType().GetProperty("ExecutablePath")?.GetValue(config) as string;
+                if (path is not null)
+                    managed = path.StartsWith(NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot,
+                        StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch { /* reflection failed — path stays null */ }
+    }
+    catch { /* composer invocation failed — version stays null */ }
+
+    return Results.Ok(new { version, path, managed });
+});
+
+app.MapPost("/api/composer/self-install", async (IHttpClientFactory httpFactory, IServiceProvider sp, PluginLoader pluginLoader, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var logger = lf.CreateLogger("Composer");
+    try
+    {
+        var composerBinRoot = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot, "composer");
+        var versionDir = Path.Combine(composerBinRoot, "latest");
+        Directory.CreateDirectory(versionDir);
+        var pharPath = Path.Combine(versionDir, "composer.phar");
+
+        var http = httpFactory.CreateClient();
+        http.Timeout = TimeSpan.FromSeconds(60);
+        using var resp = await http.GetAsync("https://getcomposer.org/composer.phar", ct);
+        if (!resp.IsSuccessStatusCode)
+            return Results.Problem(title: "Download failed", detail: $"HTTP {(int)resp.StatusCode} from getcomposer.org", statusCode: 502);
+        await using (var fs = File.Create(pharPath))
+            await resp.Content.CopyToAsync(fs, ct);
+
+        // Re-scan binaries so ComposerInvoker picks up the new phar without a daemon restart.
+        var composerPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.composer");
+        if (composerPlugin is not null)
+        {
+            var invokerType = composerPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.Composer.ComposerInvoker");
+            var configType  = composerPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.Composer.ComposerConfig");
+            if (invokerType is not null && configType is not null)
+            {
+                var invoker = sp.GetService(invokerType);
+                if (invoker is not null)
+                {
+                    var configField = invokerType.GetField("_config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var config = configField?.GetValue(invoker);
+                    var applyMethod = configType.GetMethod("ApplyOwnBinaryDefaults");
+                    applyMethod?.Invoke(config, null);
+                }
+            }
+        }
+        logger.LogInformation("composer self-install ok -> {Path}", pharPath);
+        return Results.Ok(new { path = pharPath, version = "latest" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "composer self-install failed");
+        return Results.Problem(title: "self-install failed", detail: ex.Message, statusCode: 500);
+    }
+});
+
 // List config history versions for a site
 app.MapGet("/api/sites/{domain}/history", (string domain, SiteManager sm) =>
 {

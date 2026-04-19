@@ -62,7 +62,10 @@
     "subtitle": "Manage PHP dependencies across all sites",
     "version": "Composer version",
     "sitesWithComposer": "Sites with Composer",
-    "noSites": "No sites have a composer.json"
+    "noSites": "No sites have a composer.json",
+    "notInstalledTitle": "Composer not detected",
+    "notInstalledHint": "Download official composer.phar from getcomposer.org into the managed binaries folder.",
+    "installNow": "Install Composer"
   },
   "sidebar": {
     "servicesOnline": "services online"

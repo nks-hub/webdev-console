@@ -62,7 +62,10 @@
     "subtitle": "Správa PHP závislostí napříč všemi weby",
     "version": "Verze Composeru",
     "sitesWithComposer": "Weby s Composerem",
-    "noSites": "Žádné weby nemají composer.json"
+    "noSites": "Žádné weby nemají composer.json",
+    "notInstalledTitle": "Composer nenalezen",
+    "notInstalledHint": "Stáhněte oficiální composer.phar z getcomposer.org a uložte do spravovaných binárek.",
+    "installNow": "Nainstalovat Composer"
   },
   "sidebar": {
     "servicesOnline": "Služeb online"

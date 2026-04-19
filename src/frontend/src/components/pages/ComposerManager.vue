@@ -28,7 +28,15 @@
             <span class="mono text-muted">{{ composerPath || '—' }}</span>
           </el-descriptions-item>
         </el-descriptions>
-        <el-empty v-else :image-size="48" description="Composer not detected — install via Binaries" />
+        <div v-else class="composer-not-installed">
+          <el-icon :size="40" color="var(--el-color-warning)"><WarningFilled /></el-icon>
+          <h3>{{ t('composer.notInstalledTitle') }}</h3>
+          <p class="text-muted">{{ t('composer.notInstalledHint') }}</p>
+          <el-button type="primary" :loading="installing" @click="selfInstall">
+            {{ t('composer.installNow') }}
+          </el-button>
+          <p v-if="installError" class="install-error">{{ installError }}</p>
+        </div>
       </el-card>
 
       <!-- Section 2: Sites with Composer -->
@@ -108,10 +116,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Check } from '@element-plus/icons-vue'
+import { Check, WarningFilled } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
 import { composerStatus } from '../../api/daemon'
 import type { ComposerStatus } from '../../api/types'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const sitesStore = useSitesStore()
@@ -126,6 +137,8 @@ const loading = ref(false)
 const versionLoading = ref(false)
 const composerVersion = ref<string | null>(null)
 const composerPath = ref<string | null>(null)
+const installing = ref(false)
+const installError = ref<string | null>(null)
 
 const siteRows = ref<SiteComposerRow[]>([])
 const scannedCount = ref(0)
@@ -141,6 +154,26 @@ const scanProgress = computed(() => {
   if (sites.value.length === 0) return 0
   return Math.round((scannedCount.value / sites.value.length) * 100)
 })
+
+async function selfInstall(): Promise<void> {
+  installing.value = true
+  installError.value = null
+  try {
+    const r = await fetch(`${getBase()}/api/composer/self-install`, {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}))
+      throw new Error((body as any).detail || `HTTP ${r.status}`)
+    }
+    await loadComposerVersion()
+  } catch (e: any) {
+    installError.value = e.message ?? String(e)
+  } finally {
+    installing.value = false
+  }
+}
 
 async function loadComposerVersion(): Promise<void> {
   versionLoading.value = true
@@ -316,4 +349,16 @@ onMounted(() => {
   margin-top: 12px;
   padding: 0 4px;
 }
+
+.composer-not-installed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  text-align: center;
+}
+.composer-not-installed h3 { margin: 4px 0 0; font-size: 1rem; font-weight: 600; }
+.composer-not-installed p { margin: 0; max-width: 420px; font-size: 0.85rem; }
+.install-error { color: var(--el-color-danger); }
 </style>
