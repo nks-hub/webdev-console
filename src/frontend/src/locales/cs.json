@@ -29,7 +29,11 @@
     "stop": "Zastavit",
     "download": "Stáhnout",
     "settings": "Nastavení",
-    "reset": "Reset"
+    "reset": "Reset",
+    "login": "Přihlásit se",
+    "logout": "Odhlásit se",
+    "register": "Registrovat",
+    "justNow": "právě teď"
   },
   "header": {
     "connected": "Připojeno",
@@ -469,6 +473,7 @@
       "advanced": "Pokročilé",
       "account": "Účet",
       "sync": "Synchronizace",
+      "update": "Aktualizace",
       "about": "About"
     },
     "language": "Jazyk",
@@ -501,6 +506,18 @@
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "Základ PHP-FPM portu",
       "phpFpmFormula": "Porty jednotlivých verzí se odvozují jako základ + major×10 + minor. Např. základ 9000 + PHP 8.4 = port 9084."
+    },
+    "update": {
+      "current": "Aktuální verze",
+      "latest": "Nejnovější verze",
+      "available": "K dispozici",
+      "upToDate": "Aktuální",
+      "notChecked": "(ještě nezkontrolováno)",
+      "lastChecked": "Naposledy zkontrolováno",
+      "check": "Zkontrolovat aktualizace",
+      "downloadInstall": "Stáhnout a nainstalovat",
+      "downloadStarted": "Stahování zahájeno",
+      "openRelease": "Otevřít na GitHubu"
     }
   },
   "footer": {

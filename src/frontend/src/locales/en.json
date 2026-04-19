@@ -29,7 +29,11 @@
     "stop": "Stop",
     "download": "Download",
     "settings": "Settings",
-    "reset": "Reset"
+    "reset": "Reset",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "register": "Register",
+    "justNow": "just now"
   },
   "header": {
     "connected": "Connected",
@@ -469,6 +473,7 @@
       "advanced": "Advanced",
       "account": "Account",
       "sync": "Sync",
+      "update": "Update",
       "about": "About"
     },
     "language": "Language",
@@ -501,6 +506,18 @@
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "PHP-FPM base port",
       "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084."
+    },
+    "update": {
+      "current": "Current version",
+      "latest": "Latest version",
+      "available": "Available",
+      "upToDate": "Up to date",
+      "notChecked": "(not yet checked)",
+      "lastChecked": "Last checked",
+      "check": "Check for updates",
+      "downloadInstall": "Download and install",
+      "downloadStarted": "Download started",
+      "openRelease": "Open on GitHub"
     }
   },
   "footer": {

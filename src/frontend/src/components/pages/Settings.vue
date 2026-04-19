@@ -276,8 +276,59 @@
         </el-tab-pane>
 
         <!-- Account & Devices tab -->
-        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.account')" name="account">
+        <el-tab-pane :label="$t('settings.tabs.account')" name="account">
           <div class="tab-content">
+            <!-- Simple mode: stripped-down login/logout -->
+            <template v-if="uiModeStore.isSimple">
+              <template v-if="!accountToken">
+                <section class="settings-card">
+                  <header class="settings-card-header">
+                    <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
+                  </header>
+                  <div class="settings-card-body">
+                    <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
+                      <el-form-item label="Email">
+                        <el-input v-model="authEmail" placeholder="you@example.com" />
+                      </el-form-item>
+                      <el-form-item label="Password">
+                        <el-input v-model="authPassword" type="password" show-password />
+                      </el-form-item>
+                      <div class="sync-actions">
+                        <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
+                        <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
+                      </div>
+                      <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
+                        {{ authError }}
+                      </div>
+                    </el-form>
+                  </div>
+                </section>
+              </template>
+              <template v-else>
+                <section class="settings-card">
+                  <header class="settings-card-header">
+                    <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
+                    <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
+                  </header>
+                  <div class="settings-card-body">
+                    <div class="sync-actions">
+                      <el-button size="small" type="primary" :loading="syncing" @click="pushToCloud">
+                        <el-icon><Upload /></el-icon>
+                        <span>Push</span>
+                      </el-button>
+                      <el-button size="small" :loading="pulling" @click="pullFromCloud">
+                        <el-icon><Download /></el-icon>
+                        <span>Pull</span>
+                      </el-button>
+                      <el-button size="small" type="danger" plain @click="doLogout">{{ $t('common.logout') }}</el-button>
+                    </div>
+                  </div>
+                </section>
+              </template>
+            </template>
+
+            <!-- Advanced mode: full account UI -->
+            <template v-else>
             <!-- Not logged in -->
             <template v-if="!accountToken">
               <section class="settings-card">
@@ -322,6 +373,7 @@
                   </div>
                 </div>
               </section>
+
 
               <section class="settings-card">
                 <header class="settings-card-header">
@@ -394,6 +446,62 @@
                 </div>
               </section>
             </template>
+            </template> <!-- end advanced mode account -->
+          </div>
+        </el-tab-pane>
+
+        <!-- Update tab — visible in both Simple and Advanced -->
+        <el-tab-pane :label="$t('settings.tabs.update')" name="update">
+          <div class="tab-content">
+            <el-descriptions :column="1" border size="small">
+              <el-descriptions-item :label="$t('settings.update.current')">
+                <span class="mono">v{{ currentVersion }}</span>
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('settings.update.latest')">
+                <span v-if="updateCheck.loading">{{ $t('common.loading') }}</span>
+                <span v-else-if="updateCheck.latest" class="mono">
+                  v{{ updateCheck.latest }}
+                  <el-tag v-if="updateCheck.hasUpdate" type="warning" size="small" style="margin-left:8px">{{ $t('settings.update.available') }}</el-tag>
+                  <el-tag v-else type="success" size="small" style="margin-left:8px">{{ $t('settings.update.upToDate') }}</el-tag>
+                </span>
+                <span v-else class="text-muted">{{ $t('settings.update.notChecked') }}</span>
+              </el-descriptions-item>
+              <el-descriptions-item v-if="updateCheck.lastCheckedIso" :label="$t('settings.update.lastChecked')">
+                <span class="text-muted">{{ formatRelativeTime(updateCheck.lastCheckedIso) }}</span>
+              </el-descriptions-item>
+            </el-descriptions>
+
+            <div class="update-actions">
+              <el-button size="small" :loading="updateCheck.loading" @click="runUpdateCheck">
+                {{ $t('settings.update.check') }}
+              </el-button>
+              <el-button
+                v-if="updateCheck.hasUpdate"
+                type="primary"
+                size="small"
+                :loading="updateCheck.downloading"
+                @click="downloadAndInstall"
+              >
+                {{ $t('settings.update.downloadInstall') }}
+              </el-button>
+              <el-link
+                v-if="updateCheck.downloadUrl"
+                :href="updateCheck.downloadUrl"
+                target="_blank"
+                type="primary"
+              >
+                {{ $t('settings.update.openRelease') }} →
+              </el-link>
+            </div>
+
+            <el-alert
+              v-if="updateCheck.error"
+              type="error"
+              :closable="false"
+              style="margin-top: 12px"
+            >
+              {{ updateCheck.error }}
+            </el-alert>
           </div>
         </el-tab-pane>
 
@@ -574,8 +682,8 @@
         </el-tab-pane>
       </el-tabs>
 
-      <!-- Save button (not shown on About) -->
-      <div class="settings-footer" v-if="activeTab !== 'about'">
+      <!-- Save button (not shown on About or Update) -->
+      <div class="settings-footer" v-if="activeTab !== 'about' && activeTab !== 'update'">
         <el-button type="primary" size="small" :loading="saving" @click="save">
           {{ $t('common.save') }} {{ $t('common.settings') }}
         </el-button>
@@ -600,11 +708,11 @@ import {
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
 const uiModeStore = useUiModeStore()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const activeTab = ref('general')
 
-const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'account', 'sync'])
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync'])
 watch(() => uiModeStore.isSimple, (simple) => {
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
@@ -1335,6 +1443,80 @@ async function importSettings(event: Event) {
   if (importFileInput.value) importFileInput.value.value = ''
 }
 
+// ── Update check ──────────────────────────────────────────────────────
+const currentVersion = appVersion
+
+const updateCheck = reactive<{
+  loading: boolean
+  downloading: boolean
+  latest: string | null
+  hasUpdate: boolean
+  downloadUrl: string | null
+  lastCheckedIso: string | null
+  error: string | null
+}>({
+  loading: false,
+  downloading: false,
+  latest: null,
+  hasUpdate: false,
+  downloadUrl: null,
+  lastCheckedIso: localStorage.getItem('wdc-last-update-check'),
+  error: null,
+})
+
+async function runUpdateCheck() {
+  updateCheck.loading = true
+  updateCheck.error = null
+  try {
+    const r = await fetch('https://api.github.com/repos/nks-hub/webdev-console/releases/latest')
+    if (!r.ok) throw new Error(`GitHub API ${r.status}`)
+    const data = await r.json() as { tag_name?: string; html_url?: string; assets?: Array<{ browser_download_url: string; name: string }> }
+    const latest = (data.tag_name ?? '').replace(/^v/, '')
+    updateCheck.latest = latest
+    updateCheck.hasUpdate = compareVersions(latest, currentVersion) > 0
+    const setupAsset = (data.assets ?? []).find(a => /setup.*\.exe$/i.test(a.name))
+    updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
+    updateCheck.lastCheckedIso = new Date().toISOString()
+    localStorage.setItem('wdc-last-update-check', updateCheck.lastCheckedIso)
+  } catch (e: any) {
+    updateCheck.error = e?.message || String(e)
+  } finally {
+    updateCheck.loading = false
+  }
+}
+
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map(n => parseInt(n, 10))
+  const pb = b.split('.').map(n => parseInt(n, 10))
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const av = pa[i] ?? 0, bv = pb[i] ?? 0
+    if (av !== bv) return av - bv
+  }
+  return 0
+}
+
+async function downloadAndInstall() {
+  if (!updateCheck.downloadUrl) return
+  updateCheck.downloading = true
+  try {
+    if ((window as any).electronAPI?.openExternal) (window as any).electronAPI.openExternal(updateCheck.downloadUrl)
+    else window.open(updateCheck.downloadUrl, '_blank')
+    ElMessage.info(t('settings.update.downloadStarted'))
+  } finally {
+    updateCheck.downloading = false
+  }
+}
+
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diff / 60_000)
+  if (min < 1) return t('common.justNow') || 'právě teď'
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} h`
+  return `${Math.floor(h / 24)} d`
+}
+
 onMounted(async () => {
   void loadSettings()
   void loadDatabases()
@@ -1595,4 +1777,9 @@ async function save() {
 .device-name-text { cursor: pointer; }
 .device-name-text:hover { text-decoration: underline dashed var(--wdc-text-3); text-underline-offset: 3px; }
 .device-name-input { max-width: 160px; }
+
+/* Update tab */
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; }
+.text-muted { color: var(--wdc-text-3); font-size: 0.82rem; }
+.update-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
 </style>
