@@ -245,9 +245,25 @@ foreach (var p in pluginLoader.Plugins)
         startLogger.LogWarning("Skipping StartAsync for {Id} (Initialize failed)", p.Instance.Id);
         continue;
     }
+    startLogger.LogInformation("Starting plugin {Id}...", p.Instance.Id);
     try
     {
-        await p.Instance.StartAsync(pluginContext, CancellationToken.None);
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var startTask = p.Instance.StartAsync(pluginContext, timeoutCts.Token);
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(22), CancellationToken.None);
+        var completed = await Task.WhenAny(startTask, timeoutTask);
+        if (completed == timeoutTask)
+        {
+            startLogger.LogError("Plugin {Id} StartAsync timed out after 22s — daemon continues without it", p.Instance.Id);
+            timeoutCts.Cancel();
+            continue;
+        }
+        await startTask;
+        startLogger.LogInformation("Plugin {Id} started", p.Instance.Id);
+    }
+    catch (OperationCanceledException)
+    {
+        startLogger.LogError("Plugin {Id} StartAsync cancelled (timeout)", p.Instance.Id);
     }
     catch (Exception ex)
     {
