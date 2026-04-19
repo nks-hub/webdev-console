@@ -674,6 +674,12 @@ export const composerRequire = (domain: string, pkg: string): Promise<ComposerCo
     body: JSON.stringify({ package: pkg }),
   })
 
+export const composerRemove = (domain: string, pkg: string): Promise<ComposerCommandResult> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/remove`, {
+    method: 'POST',
+    body: JSON.stringify({ package: pkg }),
+  })
+
 /**
  * Subscribe to SSE stream from daemon.
  * Returns a cleanup function — call it to close the EventSource.

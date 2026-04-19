@@ -188,7 +188,11 @@
       "frameworkDetected": "Detekován {framework}",
       "installPrompt": "Spusť composer install pro stažení závislostí",
       "installNow": "Nainstalovat",
-      "dismiss": "Skrýt"
+      "dismiss": "Skrýt",
+      "openOnPackagist": "Otevřít {name} na packagist.org",
+      "removeTitle": "Odebrat balíček",
+      "removeConfirm": "Opravdu odebrat {name}?",
+      "removed": "{name} odebrán"
     }
   },
   "uiMode": {

@@ -188,7 +188,11 @@
       "frameworkDetected": "{framework} detected",
       "installPrompt": "Run composer install to fetch dependencies",
       "installNow": "Install now",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "openOnPackagist": "Open {name} on packagist.org",
+      "removeTitle": "Remove package",
+      "removeConfirm": "Really remove {name}?",
+      "removed": "{name} removed"
     }
   },
   "uiMode": {

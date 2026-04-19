@@ -93,9 +93,20 @@
             v-for="pkg in status.packages"
             :key="pkg"
             size="small"
-            class="pkg-tag"
+            effect="plain"
+            class="pkg-tag pkg-tag-interactive"
+            role="button"
+            tabindex="0"
+            :aria-label="t('sites.composer.openOnPackagist', { name: pkg.split(':')[0] })"
+            @click="openPackagist(pkg)"
+            @keydown.enter="openPackagist(pkg)"
           >
             {{ pkg }}
+            <el-icon
+              class="pkg-remove"
+              :title="t('sites.composer.removeTitle')"
+              @click.stop="confirmRemove(pkg)"
+            ><Close /></el-icon>
           </el-tag>
         </div>
       </el-card>
@@ -191,10 +202,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Check, Warning, Refresh } from '@element-plus/icons-vue'
+import { Check, Warning, Refresh, Close } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { composerStatus, composerInstall, composerRequire } from '../../api/daemon'
+import { composerStatus, composerInstall, composerRequire, composerRemove } from '../../api/daemon'
 import type { ComposerStatus, ComposerCommandResult } from '../../api/types'
 
 const props = defineProps<{ domain: string }>()
@@ -211,6 +222,7 @@ const outputOpen = ref<string[]>(['stdout', 'stderr'])
 
 const showRequireDialog = ref(false)
 const requirePackage = ref('')
+const removing = ref<string | null>(null)
 
 const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
 const isBannerDismissed = ref(false)
@@ -286,6 +298,45 @@ async function runRequire(): Promise<void> {
     ElMessage.error(err instanceof Error ? err.message : String(err))
   } finally {
     running.value = false
+  }
+}
+
+function openPackagist(pkg: string): void {
+  const name = pkg.split(':')[0]
+  const url = `https://packagist.org/packages/${name}`
+  if ((window as any).electronAPI?.openExternal) {
+    ;(window as any).electronAPI.openExternal(url)
+  } else {
+    window.open(url, '_blank')
+  }
+}
+
+async function confirmRemove(pkg: string): Promise<void> {
+  const name = pkg.split(':')[0]
+  try {
+    await ElMessageBox.confirm(
+      t('sites.composer.removeConfirm', { name }),
+      t('sites.composer.removeTitle'),
+      { type: 'warning', confirmButtonText: t('common.delete'), confirmButtonClass: 'el-button--danger' }
+    )
+  } catch {
+    return
+  }
+  removing.value = name
+  try {
+    const result = await composerRemove(props.domain, name)
+    lastResult.value = result
+    outputOpen.value = result.exitCode !== 0 ? ['stdout', 'stderr'] : ['stdout']
+    if (result.exitCode === 0) {
+      ElMessage.success(t('sites.composer.removed', { name }))
+      await loadStatus()
+    } else {
+      ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
+    }
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    removing.value = null
   }
 }
 
@@ -372,6 +423,37 @@ onMounted(() => {
 .pkg-tag {
   font-family: monospace;
   font-size: 12px;
+}
+
+.pkg-tag-interactive {
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  position: relative;
+  user-select: none;
+}
+
+.pkg-tag-interactive:hover {
+  background: var(--el-color-primary-light-9);
+  transform: translateY(-1px);
+}
+
+.pkg-tag-interactive:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.pkg-tag-interactive .pkg-remove {
+  opacity: 0;
+  margin-left: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--el-color-danger);
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+
+.pkg-tag-interactive:hover .pkg-remove {
+  opacity: 1;
 }
 
 .actions-row {

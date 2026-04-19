@@ -1813,6 +1813,47 @@ app.MapPost("/api/sites/{domain}/composer/require", async (string domain, HttpCo
     }
 });
 
+app.MapPost("/api/sites/{domain}/composer/remove", async (string domain, HttpContext ctx, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null)
+        return Results.Problem(title: "Composer plugin not loaded",
+            detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
+
+    Dictionary<string, object?>? body;
+    try { body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>(); }
+    catch (System.Text.Json.JsonException ex)
+    { return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" }); }
+
+    if (body is null || !body.TryGetValue("package", out var pkgObj) || pkgObj?.ToString() is not { Length: > 0 } package)
+        return Results.BadRequest(new { error = "Body must contain { \"package\": \"vendor/name\" }" });
+
+    if (!System.Text.RegularExpressions.Regex.IsMatch(package, @"^[A-Za-z0-9/_.\-]+$"))
+        return Results.BadRequest(new { error = "Invalid package name" });
+
+    if (package.Contains(".."))
+        return Results.BadRequest(new { error = "Invalid package name" });
+
+    var composerRoot = ResolveComposerRoot(site.DocumentRoot);
+    var logger = lf.CreateLogger("Composer");
+    logger.LogInformation("composer remove {Package} for {Domain}", package, domain);
+    try
+    {
+        var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync",
+            [composerRoot, new[] { "remove", package }, ct]);
+        logger.LogInformation("composer remove {Package} exit={Code} for {Domain}", package, exitCode, domain);
+        return Results.Ok(new { exitCode, stdout, stderr });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "composer remove {Package} failed for {Domain}", package, domain);
+        return Results.Problem(title: "composer remove failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+    }
+});
+
 app.MapGet("/api/composer/version", async (IServiceProvider sp, PluginLoader pluginLoader, CancellationToken ct) =>
 {
     var invoker = ResolveComposerInvoker(sp, pluginLoader);
