@@ -2683,6 +2683,11 @@ app.MapPost("/api/hosts/restore", async (HttpContext ctx) =>
     if (req is null || (string.IsNullOrWhiteSpace(req.Path) && string.IsNullOrWhiteSpace(req.Content)))
         return Results.BadRequest(new { error = "Provide path or content" });
 
+    // F58: Clamp content size to 10 MiB — defense-in-depth against malicious
+    // or accidental oversized upload. A real hosts file is never more than a
+    // few hundred KiB; anything north of 10 MiB is a bug or abuse.
+    const int MaxHostsBytes = 10 * 1024 * 1024;
+
     var hostsPath = GetHostsPath();
     try
     {
@@ -2691,10 +2696,15 @@ app.MapPost("/api/hosts/restore", async (HttpContext ctx) =>
         {
             if (!File.Exists(req.Path))
                 return Results.NotFound(new { error = $"Backup file not found: {req.Path}" });
+            var fi = new FileInfo(req.Path);
+            if (fi.Length > MaxHostsBytes)
+                return Results.BadRequest(new { error = $"Backup file too large ({fi.Length} bytes, max {MaxHostsBytes})" });
             newContent = await File.ReadAllTextAsync(req.Path);
         }
         else
         {
+            if (req.Content!.Length > MaxHostsBytes)
+                return Results.BadRequest(new { error = $"Content too large ({req.Content.Length} chars, max {MaxHostsBytes})" });
             newContent = req.Content!;
         }
 
