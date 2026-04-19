@@ -12,6 +12,8 @@ import type {
   InstalledBinary,
   SiteErrorLogEntry,
   HistoricalMetrics,
+  ComposerStatus,
+  ComposerCommandResult,
 } from './types'
 
 declare global {
@@ -646,6 +648,19 @@ export const stopNodeSite = (domain: string) =>
 
 export const restartNodeSite = (domain: string) =>
   json<NodeSiteStatus>(`/api/node/sites/${encodeURIComponent(domain)}/restart`, { method: 'POST' })
+
+// Composer
+export const composerStatus = (domain: string): Promise<ComposerStatus> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/status`)
+
+export const composerInstall = (domain: string): Promise<ComposerCommandResult> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/install`, { method: 'POST' })
+
+export const composerRequire = (domain: string, pkg: string): Promise<ComposerCommandResult> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/composer/require`, {
+    method: 'POST',
+    body: JSON.stringify({ package: pkg }),
+  })
 
 /**
  * Subscribe to SSE stream from daemon.

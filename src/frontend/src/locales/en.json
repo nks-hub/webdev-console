@@ -84,6 +84,24 @@
       "cloudflareTunnel": "Cloudflare Tunnel",
       "submit": "Create Site",
       "hint": "Quick site creation with smart defaults"
+    },
+    "composer": {
+      "tabLabel": "Packages",
+      "noProject": "No Composer project detected",
+      "init": "Initialize Composer",
+      "initHint": "Run composer init in your site root to get started",
+      "install": "Run composer install",
+      "require": "Require package",
+      "packageName": "Package name",
+      "packageNameHint": "e.g. nette/application or symfony/console:^6.0",
+      "lockStatus": "Lock file",
+      "packageCount": "{count} packages in require",
+      "lastOutput": "Last command output",
+      "exitCode": "Exit code",
+      "running": "Running composer…",
+      "success": "Command completed successfully",
+      "failed": "Command failed (exit code {code})",
+      "pluginMissing": "Composer plugin not loaded — install it from Plugins"
     }
   },
   "uiMode": {

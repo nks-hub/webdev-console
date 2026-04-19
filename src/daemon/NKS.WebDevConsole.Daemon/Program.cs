@@ -1566,6 +1566,133 @@ app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteO
     return Results.NoContent();
 });
 
+// ── Composer endpoints ────────────────────────────────────────────────────────
+// ComposerPlugin registers ComposerInvoker via IWdcPlugin.Initialize into the
+// shared DI container. Because the plugin DLL is loaded in an isolated
+// AssemblyLoadContext we cannot reference its types at compile time. We look up
+// the type name from the loaded plugin assembly and resolve via sp.GetService(type)
+// to avoid a hard project reference while still using the registered singleton.
+
+static object? ResolveComposerInvoker(IServiceProvider sp, PluginLoader loader)
+{
+    var composerPlugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.composer");
+    if (composerPlugin is null) return null;
+    var invokerType = composerPlugin.Assembly.GetType("NKS.WebDevConsole.Plugin.Composer.ComposerInvoker");
+    return invokerType is null ? null : sp.GetService(invokerType);
+}
+
+static async Task<(bool ExitCode, int Code, string Stdout, string Stderr)>
+    InvokeComposerAsync(object invoker, string method, object[] args)
+{
+    var m = invoker.GetType().GetMethod(method)
+        ?? throw new InvalidOperationException($"Method {method} not found on ComposerInvoker");
+    var task = (Task)m.Invoke(invoker, args)!;
+    await task;
+    var result = task.GetType().GetProperty("Result")!.GetValue(task)!;
+    var exitCode = (int)result.GetType().GetProperty("ExitCode")!.GetValue(result)!;
+    var stdout   = (string)result.GetType().GetProperty("Stdout")!.GetValue(result)!;
+    var stderr   = (string)result.GetType().GetProperty("Stderr")!.GetValue(result)!;
+    return (exitCode == 0, exitCode, stdout, stderr);
+}
+
+app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteManager sm, ILoggerFactory lf) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+
+    var root = site.DocumentRoot;
+    var hasJson = File.Exists(Path.Combine(root, "composer.json"));
+    var hasLock = File.Exists(Path.Combine(root, "composer.lock"));
+
+    var packages = new List<string>();
+    string? phpVersion = null;
+    if (hasJson)
+    {
+        try
+        {
+            var composerJson = await File.ReadAllTextAsync(Path.Combine(root, "composer.json"));
+            using var doc = System.Text.Json.JsonDocument.Parse(composerJson);
+            if (doc.RootElement.TryGetProperty("require", out var require))
+            {
+                foreach (var pkg in require.EnumerateObject())
+                    if (!pkg.Name.Equals("php", StringComparison.OrdinalIgnoreCase))
+                        packages.Add($"{pkg.Name}:{pkg.Value.GetString() ?? "*"}");
+                if (require.TryGetProperty("php", out var phpConstraint))
+                    phpVersion = phpConstraint.GetString();
+            }
+        }
+        catch (Exception ex)
+        {
+            lf.CreateLogger("Composer").LogWarning(ex, "Could not parse composer.json for {Domain}", domain);
+        }
+    }
+
+    return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion });
+});
+
+app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null)
+        return Results.Problem(title: "Composer plugin not loaded",
+            detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
+
+    var logger = lf.CreateLogger("Composer");
+    logger.LogInformation("composer install for {Domain} in {Root}", domain, site.DocumentRoot);
+    try
+    {
+        var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "InstallAsync",
+            [site.DocumentRoot, ct]);
+        logger.LogInformation("composer install exit={Code} for {Domain}", exitCode, domain);
+        return Results.Ok(new { exitCode, stdout, stderr });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "composer install failed for {Domain}", domain);
+        return Results.Problem(title: "composer install failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/sites/{domain}/composer/require", async (string domain, HttpContext ctx, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
+
+    var invoker = ResolveComposerInvoker(sp, pluginLoader);
+    if (invoker is null)
+        return Results.Problem(title: "Composer plugin not loaded",
+            detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
+
+    Dictionary<string, object?>? body;
+    try { body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>(); }
+    catch (System.Text.Json.JsonException ex)
+    { return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" }); }
+
+    if (body is null || !body.TryGetValue("package", out var pkgObj) || pkgObj?.ToString() is not { Length: > 0 } package)
+        return Results.BadRequest(new { error = "Body must contain { \"package\": \"vendor/name\" }" });
+
+    if (!System.Text.RegularExpressions.Regex.IsMatch(package, @"^[A-Za-z0-9/_.:\-\^~*@]+$"))
+        return Results.BadRequest(new { error = "Invalid package name" });
+
+    var logger = lf.CreateLogger("Composer");
+    logger.LogInformation("composer require {Package} for {Domain}", package, domain);
+    try
+    {
+        var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RequireAsync",
+            [site.DocumentRoot, package, ct]);
+        logger.LogInformation("composer require {Package} exit={Code} for {Domain}", package, exitCode, domain);
+        return Results.Ok(new { exitCode, stdout, stderr });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "composer require {Package} failed for {Domain}", package, domain);
+        return Results.Problem(title: "composer require failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+    }
+});
+
 // List config history versions for a site
 app.MapGet("/api/sites/{domain}/history", (string domain, SiteManager sm) =>
 {

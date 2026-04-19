@@ -697,6 +697,14 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <!-- ── Packages (Composer) ───────────────────── -->
+        <el-tab-pane v-if="uiMode.isAdvanced" name="composer">
+          <template #label>
+            <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('sites.composer.tabLabel') }}</span>
+          </template>
+          <SiteComposer v-if="activeTab === 'composer'" :domain="domain" />
+        </el-tab-pane>
       </el-tabs>
     </div>
 
@@ -718,7 +726,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
-  FolderOpened, Check, Search, Link, DataLine, Refresh,
+  FolderOpened, Check, Search, Link, DataLine, Refresh, Grid,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
@@ -728,6 +736,7 @@ import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import MetricsChart from '../shared/MetricsChart.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
+import SiteComposer from './SiteComposer.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,

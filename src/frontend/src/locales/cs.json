@@ -84,6 +84,24 @@
       "cloudflareTunnel": "Cloudflare Tunel",
       "submit": "Vytvořit web",
       "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami"
+    },
+    "composer": {
+      "tabLabel": "Balíčky",
+      "noProject": "Nenalezen Composer projekt",
+      "init": "Inicializovat Composer",
+      "initHint": "Spusť composer init ve složce webu pro začátek",
+      "install": "Spustit composer install",
+      "require": "Přidat balíček",
+      "packageName": "Název balíčku",
+      "packageNameHint": "např. nette/application nebo symfony/console:^6.0",
+      "lockStatus": "Lock soubor",
+      "packageCount": "{count} balíčků v require",
+      "lastOutput": "Výstup posledního příkazu",
+      "exitCode": "Návratový kód",
+      "running": "Spouštím composer…",
+      "success": "Příkaz dokončen úspěšně",
+      "failed": "Příkaz selhal (exit kód {code})",
+      "pluginMissing": "Plugin Composer není načten — nainstaluj ho v sekci Pluginy"
     }
   },
   "uiMode": {

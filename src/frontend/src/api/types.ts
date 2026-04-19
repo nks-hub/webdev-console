@@ -233,3 +233,16 @@ export interface HistoricalMetrics {
   bucketCount: number
   series: HistoricalMetricSeries[]
 }
+
+export interface ComposerStatus {
+  hasComposerJson: boolean
+  hasLock: boolean
+  packages: string[]
+  phpVersion: string | null
+}
+
+export interface ComposerCommandResult {
+  exitCode: number
+  stdout: string
+  stderr: string
+}
