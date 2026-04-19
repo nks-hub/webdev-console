@@ -27,7 +27,7 @@ public static class ErrorLogInspector
     //   [Sun Apr 13 10:00:00.123456 2026] [core:error] [pid 1234] [client 127.0.0.1:54321] AH00124: Request exceeded the limit
     //   [Sun Apr 13 10:00:00.000000 2026] [mpm_winnt:notice] [pid 1234] AH00455: Apache lounge started.
     private static readonly Regex ApacheErrorRegex = new(
-        @"^\[(?<day>\w+)\s+(?<month>\w+)\s+(?<dd>\d+)\s+(?<time>\d{2}:\d{2}:\d{2})(?:\.\d+)?\s+(?<year>\d{4})\]\s+\[(?<module>[^:]+):(?<level>\w+)\]\s+\[pid\s+(?<pid>\d+)\](?:\s+\[client\s+(?<client>[^\]]+)\])?\s+(?<msg>.+)$",
+        @"^\[(?<day>\w+)\s+(?<month>\w+)\s+(?<dd>\d+)\s+(?<time>\d{2}:\d{2}:\d{2})(?:\.\d+)?\s+(?<year>\d{4})\]\s+\[(?<module>[^:\]]+)(?::(?<level>\w+))?\]\s+\[pid\s+(?<pid>\d+)\](?:\s+\[client\s+(?<client>(?:[^\[\]]|\[[^\]]*\])+)\])?\s*(?<msg>.*)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // ── PHP-FPM / PHP error log format ────────────────────────────────────────
@@ -164,9 +164,12 @@ public static class ErrorLogInspector
                 out var ts))
             return null;
 
+        var level = m.Groups["level"];
+        var severity = level.Success && level.Value.Length > 0 ? level.Value : "notice";
+
         return new LogEntry(
             Timestamp: ts,
-            Severity: m.Groups["level"].Value,
+            Severity: severity,
             Source: source,
             Message: m.Groups["msg"].Value.Trim(),
             Pid: m.Groups["pid"].Value,
