@@ -9,10 +9,10 @@
       <div class="header-left">
         <el-button size="small" text @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
-          <span>Back to Sites</span>
+          <span>{{ $t('sites.backToSites') }}</span>
         </el-button>
         <div class="title-block">
-          <div class="title-label">{{ $t('common.edit') }} Site</div>
+          <div class="title-label">{{ $t('sites.editSite') }}</div>
           <div class="title-name">{{ domain }}</div>
         </div>
       </div>
@@ -39,7 +39,7 @@
 
     <!-- Not found -->
     <div v-else-if="!site" class="state-box">
-      <el-empty :description="`Site '${domain}' not found.`" />
+      <el-empty :description="$t('sites.notFound', { domain })" />
     </div>
 
     <!-- Content with tabs -->

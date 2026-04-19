@@ -97,6 +97,9 @@
     "open": "Otevřít",
     "detect": "Rozpoznat",
     "delete": "Smazat",
+    "editSite": "Upravit web",
+    "backToSites": "Zpět na Weby",
+    "notFound": "Web '{domain}' nenalezen",
     "simple": {
       "cloudflareTunnel": "Cloudflare Tunel",
       "submit": "Vytvořit web",

@@ -97,6 +97,9 @@
     "open": "Open",
     "detect": "Detect",
     "delete": "Delete",
+    "editSite": "Edit site",
+    "backToSites": "Back to sites",
+    "notFound": "Site '{domain}' not found",
     "simple": {
       "cloudflareTunnel": "Cloudflare Tunnel",
       "submit": "Create Site",
