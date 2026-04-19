@@ -1797,37 +1797,51 @@ app.MapGet("/api/composer/version", async (IServiceProvider sp, PluginLoader plu
 
     string? version = null;
     string? path = null;
+    string? phpPath = null;
+    string? lastError = null;
     bool managed = false;
+
+    // Read config paths FIRST so we can include them in diagnostics even if the
+    // composer invocation throws (e.g. PHP not on PATH, phar missing).
+    try
+    {
+        var configField = invoker.GetType().GetField("_config",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var config = configField?.GetValue(invoker);
+        if (config is not null)
+        {
+            path = config.GetType().GetProperty("ExecutablePath")?.GetValue(config) as string;
+            phpPath = config.GetType().GetProperty("PhpPath")?.GetValue(config) as string;
+            if (path is not null)
+                managed = path.StartsWith(NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot,
+                    StringComparison.OrdinalIgnoreCase);
+        }
+    }
+    catch (Exception ex) { lastError = $"reflection: {ex.Message}"; }
 
     try
     {
         var tempDir = Path.GetTempPath();
-        var (ok, _, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
-            [tempDir, new[] { "--version" }, ct]);
+        var (ok, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync",
+            [tempDir, new[] { "--version", "--no-ansi" }, ct]);
+        // Strip any residual ANSI escape sequences (some composer builds emit them
+        // even with --no-ansi when run via CliWrap because ConEmu detection still
+        // thinks it's a TTY). Pattern: ESC [ ... m
+        var clean = System.Text.RegularExpressions.Regex.Replace(stdout, @"\u001B\[[0-9;]*[mK]", "");
         if (ok)
         {
-            var m = System.Text.RegularExpressions.Regex.Match(stdout, @"Composer version ([\d.]+)");
+            var m = System.Text.RegularExpressions.Regex.Match(clean, @"Composer(?:\s+version)?\s+(\S+)");
             if (m.Success) version = m.Groups[1].Value;
+            else lastError = $"regex: stdout={clean.Substring(0, Math.Min(clean.Length, 120))}";
         }
-
-        try
+        else
         {
-            var configField = invoker.GetType().GetField("_config",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var config = configField?.GetValue(invoker);
-            if (config is not null)
-            {
-                path = config.GetType().GetProperty("ExecutablePath")?.GetValue(config) as string;
-                if (path is not null)
-                    managed = path.StartsWith(NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot,
-                        StringComparison.OrdinalIgnoreCase);
-            }
+            lastError = $"exit={exitCode} stderr={stderr.Substring(0, Math.Min(stderr.Length, 200))}";
         }
-        catch { /* reflection failed — path stays null */ }
     }
-    catch { /* composer invocation failed — version stays null */ }
+    catch (Exception ex) { lastError = $"invoke: {ex.InnerException?.Message ?? ex.Message}"; }
 
-    return Results.Ok(new { version, path, managed });
+    return Results.Ok(new { version, path, phpPath, managed, lastError });
 });
 
 app.MapPost("/api/composer/self-install", async (IHttpClientFactory httpFactory, IServiceProvider sp, PluginLoader pluginLoader, ILoggerFactory lf, CancellationToken ct) =>
