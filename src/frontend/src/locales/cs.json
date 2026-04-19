@@ -317,6 +317,7 @@
     }
   },
   "serviceConfig": {
+    "openFile": "Otevřít soubor",
     "saveApply": "Uložit a použít",
     "revert": "Vrátit",
     "validate": "Ověřit",

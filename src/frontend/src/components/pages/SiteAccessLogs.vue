@@ -6,6 +6,7 @@
         size="small"
         :loading="loading"
         :icon="Refresh"
+        :aria-label="t('common.refresh')"
         @click="fetchLogs"
       >
         {{ $t('sites.access.refresh') }}

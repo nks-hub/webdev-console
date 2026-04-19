@@ -6,6 +6,7 @@
         size="small"
         :loading="loading"
         :icon="Refresh"
+        :aria-label="t('common.refresh')"
         @click="fetchLogs"
       >
         {{ $t('logs.errors.refresh') }}
@@ -53,8 +54,8 @@
     />
 
     <!-- Log table -->
+    <div v-else class="table-responsive">
     <el-table
-      v-else
       :data="entries"
       size="small"
       stripe
@@ -111,11 +112,23 @@
             <span
               v-if="!expandedRows.has(row._idx)"
               class="message-truncated"
+              role="button"
+              tabindex="0"
               @click="toggleExpand(row._idx)"
+              @keydown.enter="toggleExpand(row._idx)"
+              @keydown.space.prevent="toggleExpand(row._idx)"
             >
               {{ row.message }}
             </span>
-            <span v-else class="message-expanded" @click="toggleExpand(row._idx)">
+            <span
+              v-else
+              class="message-expanded"
+              role="button"
+              tabindex="0"
+              @click="toggleExpand(row._idx)"
+              @keydown.enter="toggleExpand(row._idx)"
+              @keydown.space.prevent="toggleExpand(row._idx)"
+            >
               {{ row.message }}
             </span>
           </div>
@@ -143,6 +156,7 @@
         </template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
 </template>
 
@@ -294,6 +308,11 @@ onBeforeUnmount(() => {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
   white-space: nowrap;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  width: 100%;
 }
 
 .logs-table {

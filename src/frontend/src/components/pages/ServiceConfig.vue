@@ -3,7 +3,7 @@
     <!-- Page header -->
     <div class="config-header">
       <div class="header-left">
-        <el-button size="small" text @click="goBack">
+        <el-button size="small" text :aria-label="t('common.back')" @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
           <span>{{ $t('services.back') }}</span>
         </el-button>
@@ -13,7 +13,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button size="small" :loading="loading" @click="reload">
+        <el-button size="small" :loading="loading" :aria-label="t('common.refresh')" @click="reload">
           <el-icon><Refresh /></el-icon>
           <span>{{ $t('services.reload') }}</span>
         </el-button>
@@ -62,7 +62,7 @@
           :name="file.path"
         >
           <template #label>
-            <span class="tab-label">
+            <span class="tab-label" :aria-label="t('serviceConfig.openFile')">
               <el-icon><Document /></el-icon>
               <span>{{ file.name }}</span>
               <span v-if="dirtyFiles.has(file.path)" class="dirty-dot" />
