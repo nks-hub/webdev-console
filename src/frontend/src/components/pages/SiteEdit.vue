@@ -1734,17 +1734,30 @@ onBeforeUnmount(() => {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .edit-card-body :deep(.el-input-group) {
   display: flex;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
+.edit-card-body :deep(.el-input-group__prepend),
 .edit-card-body :deep(.el-input-group__append) {
   flex-shrink: 0;
+  max-width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 .edit-card-body :deep(.el-input-group .el-input__wrapper) {
   flex: 1 1 0%;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 900px) {
