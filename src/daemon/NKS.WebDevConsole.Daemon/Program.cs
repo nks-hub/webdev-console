@@ -1418,16 +1418,114 @@ app.MapGet("/api/sites/{domain}/metrics/history", (string domain, int? minutes, 
     }
 });
 
-app.MapPost("/api/sites", async (SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
+app.MapPost("/api/sites", async (HttpContext ctx, SiteManager sm, SiteOrchestrator orchestrator, ILoggerFactory lf, IServiceProvider sp) =>
 {
+    var log = lf.CreateLogger("SiteCreate");
+
+    // Parse the body manually so we can extract the Simple-Mode hint
+    // `cloudflareTunnel: true` alongside the standard SiteConfig fields.
+    // Using JsonDocument lets us read both in a single pass without needing a
+    // wrapper DTO that would change the Advanced Mode contract.
+    SiteConfig site;
+    bool cloudflareTunnelHint;
+    try
+    {
+        using var doc = await JsonDocument.ParseAsync(ctx.Request.Body);
+        var root = doc.RootElement;
+
+        // Deserialize the canonical SiteConfig fields — case-insensitive to
+        // match ASP.NET's default Minimal API binding behaviour.
+        var jsonOpts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        site = root.Deserialize<SiteConfig>(jsonOpts) ?? new SiteConfig();
+
+        // Extract the Simple-Mode hint — absent or false → unchanged behaviour.
+        cloudflareTunnelHint = root.TryGetProperty("cloudflareTunnel", out var cfEl)
+            && cfEl.ValueKind == JsonValueKind.True;
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
+
     try { SiteManager.ValidateDomain(site.Domain); }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     if (sm.Get(site.Domain) is not null)
         return Results.Conflict(new { error = $"Site {site.Domain} already exists" });
+
+    // ── Simple Mode: cloudflareTunnel: true ─────────────────────────────
+    // Only auto-populate when the caller did NOT already supply a full
+    // cloudflare object (Advanced Mode wins over the Simple Mode hint).
+    var warnings = new List<string>();
+    if (cloudflareTunnelHint && site.Cloudflare is null)
+    {
+        log.LogInformation(
+            "Simple Mode cloudflareTunnel hint for {Domain} — resolving Cloudflare plugin config",
+            site.Domain);
+
+        // Resolve the live CloudflareConfig from the plugin's DI container via
+        // the same reflection helper used by all other Cloudflare endpoints.
+        var cfCfg = ResolveCloudflareServiceOrNull(sp, "CloudflareConfig");
+        SimpleModeCloudflareHelper.CloudflarePluginContext? pluginCtx = null;
+
+        if (cfCfg is not null)
+        {
+            var cfType = cfCfg.GetType();
+            var defaultZoneId = cfType.GetProperty("DefaultZoneId")?.GetValue(cfCfg) as string;
+            var tunnelId      = cfType.GetProperty("TunnelId")?.GetValue(cfCfg) as string;
+
+            // RenderSubdomain(domain) → stable template-derived subdomain
+            string? renderedSubdomain = null;
+            var renderMethod = cfType.GetMethod("RenderSubdomain");
+            if (renderMethod is not null)
+            {
+                try
+                {
+                    renderedSubdomain = renderMethod.Invoke(cfCfg, new object[] { site.Domain }) as string;
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "RenderSubdomain failed for {Domain}", site.Domain);
+                }
+            }
+
+            pluginCtx = new SimpleModeCloudflareHelper.CloudflarePluginContext
+            {
+                DefaultZoneId    = defaultZoneId,
+                TunnelId         = tunnelId,
+                RenderedSubdomain = renderedSubdomain,
+            };
+        }
+
+        var buildResult = SimpleModeCloudflareHelper.TryBuild(site.Domain, pluginCtx);
+        if (buildResult.Config is not null)
+        {
+            site.Cloudflare = buildResult.Config;
+            log.LogInformation(
+                "Auto-populated Cloudflare config for {Domain}: subdomain={Subdomain}, zoneId={ZoneId}",
+                site.Domain, site.Cloudflare.Subdomain, site.Cloudflare.ZoneId);
+        }
+        else
+        {
+            log.LogWarning(
+                "Cannot auto-provision Cloudflare tunnel for {Domain}: {Warning}. Site will be created without tunnel.",
+                site.Domain, buildResult.Warning);
+            warnings.Add(buildResult.Warning!);
+        }
+    }
+
     try
     {
         var created = await sm.CreateAsync(site);
         await orchestrator.ApplyAsync(created);
+
+        if (warnings.Count > 0)
+        {
+            return Results.Created($"/api/sites/{created.Domain}", new
+            {
+                site = created,
+                warnings,
+            });
+        }
         return Results.Created($"/api/sites/{created.Domain}", created);
     }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
