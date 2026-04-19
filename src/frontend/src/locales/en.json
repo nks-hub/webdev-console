@@ -318,6 +318,17 @@
       "runOnStartup": "Run on startup",
       "autoStartServices": "Auto-start services",
       "defaultPhpVersion": "Default PHP version"
+    },
+    "ports": {
+      "description": "Configure default service ports. Restart services after changing.",
+      "httpPort": "HTTP Port",
+      "httpsPort": "HTTPS Port",
+      "mysqlPort": "MySQL Port",
+      "redisPort": "Redis Port",
+      "mailpitSmtp": "Mailpit SMTP",
+      "mailpitHttp": "Mailpit HTTP",
+      "phpFpmBase": "PHP-FPM base port",
+      "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084."
     }
   },
   "footer": {

@@ -12,32 +12,29 @@
         <!-- Ports tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.ports')" name="ports">
           <div class="tab-content">
-            <p class="tab-desc">Configure default service ports. Restart services after changing.</p>
+            <p class="tab-desc">{{ $t('settings.ports.description') }}</p>
             <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
-              <el-form-item label="HTTP Port">
+              <el-form-item :label="$t('settings.ports.httpPort')">
                 <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="HTTPS Port">
+              <el-form-item :label="$t('settings.ports.httpsPort')">
                 <el-input-number v-model="ports.https" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="MySQL Port">
+              <el-form-item :label="$t('settings.ports.mysqlPort')">
                 <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="Redis Port">
+              <el-form-item :label="$t('settings.ports.redisPort')">
                 <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="Mailpit SMTP">
+              <el-form-item :label="$t('settings.ports.mailpitSmtp')">
                 <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="Mailpit HTTP">
+              <el-form-item :label="$t('settings.ports.mailpitHttp')">
                 <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="PHP-FPM base port">
+              <el-form-item :label="$t('settings.ports.phpFpmBase')">
                 <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
-                <div class="hint">
-                  Per-version ports are derived as base + major×10 + minor.
-                  E.g. base 9000 + PHP 8.4 = port 9084.
-                </div>
+                <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
               </el-form-item>
             </el-form>
           </div>

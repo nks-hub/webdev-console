@@ -318,6 +318,17 @@
       "runOnStartup": "Spustit při startu",
       "autoStartServices": "Automaticky spustit služby",
       "defaultPhpVersion": "Výchozí verze PHP"
+    },
+    "ports": {
+      "description": "Výchozí porty služeb. Po změně restartuj služby.",
+      "httpPort": "HTTP port",
+      "httpsPort": "HTTPS port",
+      "mysqlPort": "MySQL port",
+      "redisPort": "Redis port",
+      "mailpitSmtp": "Mailpit SMTP",
+      "mailpitHttp": "Mailpit HTTP",
+      "phpFpmBase": "Základ PHP-FPM portu",
+      "phpFpmFormula": "Porty jednotlivých verzí se odvozují jako základ + major×10 + minor. Např. základ 9000 + PHP 8.4 = port 9084."
     }
   },
   "footer": {
