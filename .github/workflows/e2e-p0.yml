@@ -78,6 +78,7 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path daemon.pid) {
-            $pid = Get-Content daemon.pid
-            try { Stop-Process -Id $pid -Force } catch { }
+            # $PID is PS7 read-only built-in — use $daemonPid
+            $daemonPid = (Get-Content daemon.pid).Trim()
+            try { Stop-Process -Id $daemonPid -Force } catch { }
           }

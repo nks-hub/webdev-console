@@ -52,7 +52,11 @@ jobs:
                dotnet `
                -ArgumentList 'run','--no-build','--project','src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj','-c','Debug'
           "$($p.Id)" | Out-File daemon.pid
-          # Wait up to 30s for the port file to appear
+          # Wait up to 30s for the port file to appear. The daemon writes
+          # BOTH `%TEMP%/nks-wdc-daemon.port` (Node tmpdir location) AND
+          # `%USERPROFILE%\.wdc\daemon.port` (user-profile location) — we
+          # check the node-tmpdir one first because that's what the
+          # generate-api-types.mjs script reads by default.
           $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
           for ($i = 0; $i -lt 30; $i++) {
             if (Test-Path $portFile) { break }
@@ -62,8 +66,13 @@ jobs:
             Write-Error "Daemon did not write port file within 30s"
             exit 1
           }
-          $port = (Get-Content $portFile -First 1)
+          $port = (Get-Content $portFile -First 1).Trim()
           Write-Host "Daemon running on port $port"
+          # Expose port for subsequent steps so generate-api-types.mjs
+          # doesn't have to rediscover it (node's tmpdir() can land in a
+          # different location than pwsh's $env:TEMP on Windows runners —
+          # observed 2026-04-19 failure in run 24617313250).
+          "DAEMON_PORT=$port" | Out-File $env:GITHUB_ENV -Append
           # Quick healthz sanity check
           try {
             Invoke-WebRequest -Uri "http://localhost:$port/healthz" -UseBasicParsing | Out-Null
@@ -74,15 +83,19 @@ jobs:
 
       - name: Regenerate TypeScript types from OpenAPI
         shell: pwsh
-        run: node scripts/generate-api-types.mjs
+        run: node scripts/generate-api-types.mjs --port=${{ env.DAEMON_PORT }}
 
       - name: Stop daemon
         if: always()
         shell: pwsh
         run: |
+          # NOTE: PowerShell 7 treats `$PID` as a read-only built-in
+          # (current process id); renamed local to $daemonPid to avoid
+          # "Cannot overwrite variable PID because it is read-only or
+          # constant" error observed 2026-04-19 in run 24617313250.
           if (Test-Path daemon.pid) {
-            $pid = Get-Content daemon.pid
-            try { Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue } catch { }
+            $daemonPid = (Get-Content daemon.pid).Trim()
+            try { Stop-Process -Id $daemonPid -Force -ErrorAction SilentlyContinue } catch { }
           }
           Get-Process NKS.WebDevConsole.Daemon -ErrorAction SilentlyContinue | Stop-Process -Force
 
