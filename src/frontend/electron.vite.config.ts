@@ -28,6 +28,12 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src'),
+    server: {
+      // 5173 collides with sibling LiberShare dev on same workstation — use 5190 for wdc
+      port: 5190,
+      strictPort: false,
+      host: '127.0.0.1',
+    },
     define: {
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
     },

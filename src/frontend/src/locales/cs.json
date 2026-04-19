@@ -281,13 +281,16 @@
   "settings": {
     "title": "Nastavení",
     "subtitle": "Konfigurace NKS WDC daemonu a uživatelského rozhraní",
-    "ports": "Porty",
-    "general": "Obecné",
-    "paths": "Cesty",
-    "databases": "Databáze",
-    "advanced": "Pokročilé",
-    "account": "Účet",
-    "sync": "Synchronizace",
+    "tabs": {
+      "general": "Obecné",
+      "ports": "Porty",
+      "paths": "Cesty",
+      "databases": "Databáze",
+      "advanced": "Pokročilé",
+      "account": "Účet",
+      "sync": "Synchronizace",
+      "about": "About"
+    },
     "language": "Jazyk",
     "languageEn": "English",
     "languageCs": "Čeština",
