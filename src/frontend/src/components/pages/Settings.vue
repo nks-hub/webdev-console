@@ -58,14 +58,14 @@
                   <el-option label="Čeština" value="cs" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="Theme">
+              <el-form-item :label="$t('settings.theme.label')">
                 <el-radio-group
                   :model-value="themeStore.mode"
                   @update:model-value="themeStore.setMode($event as ThemeMode)"
                 >
-                  <el-radio-button value="dark">Dark</el-radio-button>
-                  <el-radio-button value="light">Light</el-radio-button>
-                  <el-radio-button value="system">System</el-radio-button>
+                  <el-radio-button value="dark">{{ $t('settings.theme.dark') }}</el-radio-button>
+                  <el-radio-button value="light">{{ $t('settings.theme.light') }}</el-radio-button>
+                  <el-radio-button value="system">{{ $t('settings.theme.system') }}</el-radio-button>
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="Run on startup">

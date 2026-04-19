@@ -118,7 +118,7 @@
       <!-- 3. Services list (main panel) -->
       <div class="services-panel">
         <div class="panel-header">
-          <span class="panel-title">Services</span>
+          <span class="panel-title">{{ $t('dashboard.services') }}</span>
           <span class="panel-count" v-if="services.length > 0">
             <span class="count-running">{{ runningCount }}</span>
             <span class="count-sep">/</span>
@@ -144,7 +144,7 @@
 
           <!-- Port -->
           <div class="svc-port" v-if="getPort(service)">
-            <span class="port-label">Port</span>
+            <span class="port-label">{{ $t('dashboard.port') }}</span>
             <span class="port-value mono">{{ getPort(service) }}</span>
           </div>
 

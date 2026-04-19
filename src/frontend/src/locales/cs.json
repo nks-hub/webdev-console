@@ -32,6 +32,7 @@
   },
   "nav": {
     "services": "Služby",
+    "overview": "Přehled",
     "sites": "Weby",
     "databases": "Databáze",
     "ssl": "SSL",
@@ -60,7 +61,9 @@
     "tunnel": "Tunel",
     "cpuUsage": "Vytížení CPU",
     "memory": "Paměť",
-    "uptime": "Doba běhu"
+    "uptime": "Doba běhu",
+    "services": "Služby",
+    "port": "Port"
   },
   "sites": {
     "title": "Weby",
@@ -73,7 +76,10 @@
     "create": "Nový web",
     "openInBrowser": "Otevřít v prohlížeči",
     "saveAndApply": "Uložit a použít",
-    "history": "Historie konfigurace"
+    "history": "Historie konfigurace",
+    "open": "Otevřít",
+    "detect": "Rozpoznat",
+    "delete": "Smazat"
   },
   "databases": {
     "title": "Databáze",
@@ -140,6 +146,19 @@
     "metrics": "Metriky",
     "danger": "Nebezpečné"
   },
+  "services": {
+    "back": "Zpět",
+    "title": "Konfigurace služby",
+    "reload": "Obnovit",
+    "configlessSummary": "{name} se konfiguruje jinak",
+    "noConfigSummary": "Žádný konfigurační soubor pro {name}",
+    "configless": {
+      "hint": "Nastavení pro tuto službu se předává přes CLI argumenty, per-site TOML konfiguraci nebo proměnné prostředí. Žádné soubory k úpravě tu nejsou.",
+      "daemonLooked": "Daemon hledal {paths}. Zkontroluj, že je binárka nainstalovaná přes",
+      "daemonLookedBinaries": "Binárky",
+      "daemonLookedAnd": "a že služba byla alespoň jednou spuštěná."
+    }
+  },
   "settings": {
     "title": "Nastavení",
     "subtitle": "Konfigurace NKS WDC daemonu a uživatelského rozhraní",
@@ -152,7 +171,13 @@
     "sync": "Synchronizace",
     "language": "Jazyk",
     "languageEn": "English",
-    "languageCs": "Čeština"
+    "languageCs": "Čeština",
+    "theme": {
+      "label": "Motiv",
+      "dark": "Tmavý",
+      "light": "Světlý",
+      "system": "Systémový"
+    }
   },
   "onboarding": {
     "title": "Vítej v NKS WebDev Console",

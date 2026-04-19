@@ -137,9 +137,9 @@
         <el-table-column label="Actions" width="280" fixed="right">
           <template #default="{ row }">
             <div class="site-actions">
-              <el-button size="small" type="primary" @click.stop="openInBrowser(row)">Open</el-button>
-              <el-button size="small" @click.stop="detectFramework(row.domain)" title="Auto-detect framework">Detect</el-button>
-              <el-button size="small" type="danger" plain @click.stop="confirmDelete(row.domain)">Delete</el-button>
+              <el-button size="small" type="primary" @click.stop="openInBrowser(row)">{{ $t('sites.open') }}</el-button>
+              <el-button size="small" @click.stop="detectFramework(row.domain)" title="Auto-detect framework">{{ $t('sites.detect') }}</el-button>
+              <el-button size="small" type="danger" plain @click.stop="confirmDelete(row.domain)">{{ $t('sites.delete') }}</el-button>
             </div>
           </template>
         </el-table-column>

@@ -13,17 +13,17 @@
     <div class="nav-cluster">
       <div class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
         <span class="nav-icon-shell"><el-icon :size="18"><House /></el-icon></span>
-        <span class="nav-label">Overview</span>
+        <span class="nav-label">{{ $t('nav.overview') }}</span>
       </div>
       <div class="nav-item sites-btn" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
         <span class="nav-icon-shell"><el-icon :size="18"><Link /></el-icon></span>
-        <span class="nav-label">Sites</span>
+        <span class="nav-label">{{ $t('nav.sites') }}</span>
       </div>
     </div>
 
     <div class="sidebar-section">
       <div class="section-label">
-        <span>Web Server</span>
+        <span>{{ $t('nav.webServer') }}</span>
         <span class="section-count">{{ webServices.length }}</span>
       </div>
       <template v-for="svc in webServices" :key="svc.id">
@@ -49,7 +49,7 @@
 
     <div class="sidebar-section" v-if="langServices.length">
       <div class="section-label">
-        <span>Languages</span>
+        <span>{{ $t('nav.languages') }}</span>
         <span class="section-count">{{ langServices.length }}</span>
       </div>
       <template v-for="svc in langServices" :key="svc.id">
@@ -75,7 +75,7 @@
 
     <div class="sidebar-section" v-if="dbServices.length">
       <div class="section-label">
-        <span>Database</span>
+        <span>{{ $t('nav.database') }}</span>
         <span class="section-count">{{ dbServices.length }}</span>
       </div>
       <template v-for="svc in dbServices" :key="svc.id">
@@ -101,7 +101,7 @@
 
     <div class="sidebar-section" v-if="cacheServices.length">
       <div class="section-label">
-        <span>Cache &amp; Mail</span>
+        <span>{{ $t('nav.cacheMail') }}</span>
         <span class="section-count">{{ cacheServices.length }}</span>
       </div>
       <template v-for="svc in cacheServices" :key="svc.id">
@@ -130,18 +130,18 @@
     <div class="sidebar-bottom">
       <div class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
         <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
-        <span class="nav-label">Databases</span>
+        <span class="nav-label">{{ $t('nav.databases') }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label">SSL</span>
+        <span class="nav-label">{{ $t('nav.ssl') }}</span>
       </div>
       <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
            fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
            Dashboard service toggle and the /plugin/nks.wdc.php panel. -->
       <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
-        <span class="nav-label">Binaries</span>
+        <span class="nav-label">{{ $t('nav.binaries') }}</span>
       </div>
       <div
         class="nav-item"
@@ -149,16 +149,16 @@
         @click="navigate('/cloudflare')"
       >
         <span class="nav-icon-shell"><el-icon :size="18"><Connection /></el-icon></span>
-        <span class="nav-label">Tunnel</span>
+        <span class="nav-label">{{ $t('nav.tunnel') }}</span>
         <span v-if="exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
-        <span class="nav-label">Plugins</span>
+        <span class="nav-label">{{ $t('nav.plugins') }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
-        <span class="nav-label">Settings</span>
+        <span class="nav-label">{{ $t('nav.settings') }}</span>
       </div>
     </div>
   </nav>

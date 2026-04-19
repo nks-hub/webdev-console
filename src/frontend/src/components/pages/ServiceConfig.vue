@@ -5,17 +5,17 @@
       <div class="header-left">
         <el-button size="small" text @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
-          <span>Back</span>
+          <span>{{ $t('services.back') }}</span>
         </el-button>
         <div class="title-block">
-          <div class="title-label">Service Configuration</div>
+          <div class="title-label">{{ $t('services.title') }}</div>
           <div class="title-name">{{ displayName }}</div>
         </div>
       </div>
       <div class="header-actions">
         <el-button size="small" :loading="loading" @click="reload">
           <el-icon><Refresh /></el-icon>
-          <span>Reload</span>
+          <span>{{ $t('services.reload') }}</span>
         </el-button>
         <el-button
           type="primary"
@@ -39,16 +39,14 @@
       <el-empty :description="emptyStateMessage">
         <template v-if="isConfigless">
           <p class="empty-hint">
-            Nastavení se pro tuto službu předává přes CLI argumenty /
-            per-site TOML konfiguraci / proměnné prostředí. Upravovat
-            jednotlivé soubory tu není co.
+            {{ $t('services.configless.hint') }}
           </p>
         </template>
         <template v-else>
           <p class="empty-hint">
-            Daemon hledal <code>{{ expectedPathsHint }}</code>. Zkontroluj,
-            že je binárka nainstalovaná přes <strong>Binaries</strong> a
-            že služba byla alespoň jednou spuštěná.
+            {{ $t('services.configless.daemonLooked', { paths: expectedPathsHint }) }}
+            <strong>{{ $t('services.configless.daemonLookedBinaries') }}</strong>
+            {{ $t('services.configless.daemonLookedAnd') }}
           </p>
         </template>
       </el-empty>
@@ -152,6 +150,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Refresh, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -159,6 +158,7 @@ import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type Conf
 import { useDaemonStore } from '../../stores/daemon'
 import MonacoEditor from '../shared/MonacoEditor.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const daemonStore = useDaemonStore()
@@ -232,8 +232,8 @@ const isConfigless = computed(() => CONFIGLESS_SERVICES.has(serviceId.value.toLo
 
 const emptyStateMessage = computed(() =>
   isConfigless.value
-    ? `${displayName.value} se konfiguruje jinak`
-    : `Žádný konfigurační soubor pro službu ${displayName.value}`
+    ? t('services.configlessSummary', { name: displayName.value })
+    : t('services.noConfigSummary', { name: displayName.value })
 )
 
 // Shown to the user so they know where WDC looked. Matches the lookup
