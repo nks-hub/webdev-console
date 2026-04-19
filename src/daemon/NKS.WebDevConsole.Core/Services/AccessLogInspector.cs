@@ -172,6 +172,14 @@ public static class AccessLogInspector
         "dd/MMM/yyyy:HH:mm:ss",
     };
 
+    /// <summary>
+    /// Parses a single Combined Log Format (or Common Log Format) line.
+    /// Returns <c>null</c> for lines that do not match the expected format.
+    /// Exposed as public so <see cref="AccessLogAggregator"/> and tests can
+    /// call the parser directly without re-implementing the regex.
+    /// </summary>
+    public static AccessLogEntry? ParseLine(string line) => ParseCombinedLine(line);
+
     private static AccessLogEntry? ParseCombinedLine(string line)
     {
         var m = CombinedLineRegex.Match(line);

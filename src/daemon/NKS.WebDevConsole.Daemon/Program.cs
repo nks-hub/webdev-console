@@ -1145,6 +1145,89 @@ app.MapGet("/api/sites/{domain}/metrics", (string domain, SiteManager sm, Binary
     });
 });
 
+// Phase 7.1: historical access log aggregation.
+// Reads the full set of rotated access log files for a given calendar day and
+// buckets them into granularity-sized time slots (1m / 5m / 15m / 1h).
+// Returns three series — requests, bytes, errors — covering 00:00–23:59 in
+// the daemon's local time zone. All buckets are always present (value 0 when
+// no traffic). If no log files exist for the requested day, all series are
+// returned with zeros.
+//
+// GET /api/sites/{domain}/metrics/historical
+//   ?date=YYYY-MM-DD   (default: today in local time)
+//   &granularity=5m    (1m | 5m | 15m | 1h, default 5m)
+app.MapGet("/api/sites/{domain}/metrics/historical", (
+    string domain,
+    string? date,
+    string? granularity,
+    SiteManager sm,
+    BinaryManager bm) =>
+{
+    var site = sm.Get(domain);
+    if (site is null) return Results.NotFound();
+
+    // Parse date — default to today in local time
+    DateOnly requestedDate;
+    if (date is null)
+    {
+        requestedDate = DateOnly.FromDateTime(DateTime.Now);
+    }
+    else if (!DateOnly.TryParseExact(date, "yyyy-MM-dd",
+             System.Globalization.CultureInfo.InvariantCulture,
+             System.Globalization.DateTimeStyles.None, out requestedDate))
+    {
+        return Results.BadRequest(new { error = "Invalid date format. Expected YYYY-MM-DD." });
+    }
+
+    var gran = AccessLogAggregator.ParseGranularity(granularity ?? "5m");
+    if (gran is null)
+        return Results.BadRequest(new { error = "Invalid granularity. Use 1m, 5m, 15m, or 1h." });
+
+    // Build base log path candidates from every installed Apache version.
+    // AccessLogAggregator.Aggregate will discover rotated siblings alongside
+    // each base path automatically.
+    var basePaths = new List<string>();
+    foreach (var apache in bm.ListInstalled("apache"))
+    {
+        var logsDir = Path.Combine(apache.InstallPath, "logs");
+        if (site.SslEnabled)
+        {
+            basePaths.Add(Path.Combine(logsDir, $"{domain}-ssl-access.log"));
+            basePaths.Add(Path.Combine(logsDir, $"{domain}-access.log"));
+        }
+        else
+        {
+            basePaths.Add(Path.Combine(logsDir, $"{domain}-access.log"));
+            basePaths.Add(Path.Combine(logsDir, $"{domain}-ssl-access.log"));
+        }
+    }
+
+    try
+    {
+        var result = AccessLogAggregator.Aggregate(basePaths, requestedDate, gran.Value);
+
+        return Results.Ok(new
+        {
+            date = result.Date.ToString("yyyy-MM-dd"),
+            granularity = granularity ?? "5m",
+            bucketCount = result.BucketCount,
+            series = result.Series.Select(s => new
+            {
+                name = s.Name,
+                data = s.Data.Select(p => new
+                {
+                    ts = p.Timestamp,
+                    value = p.Value,
+                }),
+            }),
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to aggregate metrics: {ex.Message}");
+    }
+});
+
 // Per-site recent access log tail. Returns the last N parsed entries in
 // Combined Log Format order (oldest → newest). Powers the SiteEdit
 // "Recent visitors" panel: IP, path, status, timestamp, user agent.
