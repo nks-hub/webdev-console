@@ -53,7 +53,15 @@
     "database": "Databáze",
     "cacheMail": "Cache a Mail",
     "tunnel": "Tunel",
-    "tools": "Nástroje"
+    "tools": "Nástroje",
+    "composer": "Composer"
+  },
+  "composer": {
+    "title": "Composer",
+    "subtitle": "Správa PHP závislostí napříč všemi weby",
+    "version": "Verze Composeru",
+    "sitesWithComposer": "Weby s Composerem",
+    "noSites": "Žádné weby nemají composer.json"
   },
   "sidebar": {
     "servicesOnline": "Služeb online"

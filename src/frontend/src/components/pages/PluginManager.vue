@@ -339,18 +339,25 @@ onMounted(() => { void pluginsStore.loadAll() })
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
   border-left-width: 3px;
   border-left-style: solid;
   border-left-color: var(--wdc-border);
 }
 
-.pm-card--enabled { border-left-color: var(--wdc-accent); }
+.pm-card--enabled {
+  border-left-color: var(--wdc-accent);
+  background: linear-gradient(to right, rgba(94,234,212,0.04), transparent 40%), var(--wdc-surface);
+}
 .pm-card--disabled { opacity: 0.55; }
+.pm-card--disabled .pm-name { color: var(--wdc-text-muted); }
+.pm-card--disabled:hover { opacity: 0.75; }
 
 .pm-card:hover {
   border-color: var(--wdc-border-strong);
   background: var(--wdc-surface-2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
 }
 .pm-card--enabled:hover { border-left-color: var(--wdc-accent); }
 
@@ -370,23 +377,32 @@ onMounted(() => { void pluginsStore.loadAll() })
 }
 
 .pm-name {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--wdc-text);
-  letter-spacing: 0.005em;
+  letter-spacing: 0;
 }
 
 .pm-type-tag {
   flex-shrink: 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  padding: 0 6px;
+  height: 18px;
+  line-height: 18px;
+  margin-left: 4px;
 }
 
 .pm-card-desc {
-  font-size: 0.78rem;
-  color: var(--wdc-text-2);
+  font-size: 0.85rem;
+  color: var(--wdc-text-dim);
   line-height: 1.5;
   flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .pm-card-footer {
@@ -401,17 +417,26 @@ onMounted(() => { void pluginsStore.loadAll() })
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 0.75rem;
+  color: var(--wdc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .pm-version {
-  font-size: 0.7rem;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--wdc-text-3);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--wdc-text-muted);
+  background: var(--wdc-surface-3, rgba(255,255,255,0.04));
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .pm-author {
-  font-size: 0.7rem;
-  color: var(--wdc-text-3);
+  font-size: 0.75rem;
+  color: var(--wdc-text-muted);
 }
 
 .pm-perms {
@@ -421,8 +446,11 @@ onMounted(() => { void pluginsStore.loadAll() })
 }
 
 .pm-card-actions {
-  padding-top: 8px;
-  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 12px;
   border-top: 1px solid var(--wdc-border);
 }
 

@@ -127,6 +127,23 @@
     </div>
     </template><!-- /advanced service sections -->
 
+    <template v-if="!uiModeStore.isSimple">
+    <div class="sidebar-section tools-section">
+      <div class="section-label">
+        <span>{{ $t('nav.tools') }}</span>
+      </div>
+      <div class="nav-item" :class="{ active: isActive('/composer') }" @click="navigate('/composer')">
+        <span class="nav-icon-shell tools-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" stroke="currentColor" stroke-width="1.8" fill="none"/>
+            <path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">{{ $t('nav.composer') }}</span>
+      </div>
+    </div>
+    </template><!-- /tools section -->
+
     <div class="sidebar-spacer" />
 
     <div class="sidebar-bottom">

@@ -53,7 +53,15 @@
     "database": "Database",
     "cacheMail": "Cache & Mail",
     "tunnel": "Tunnel",
-    "tools": "Tools"
+    "tools": "Tools",
+    "composer": "Composer"
+  },
+  "composer": {
+    "title": "Composer",
+    "subtitle": "Manage PHP dependencies across all sites",
+    "version": "Composer version",
+    "sitesWithComposer": "Sites with Composer",
+    "noSites": "No sites have a composer.json"
   },
   "sidebar": {
     "servicesOnline": "services online"

@@ -12,6 +12,7 @@ import PhpManager from '../components/pages/PhpManager.vue'
 import ServiceConfig from '../components/pages/ServiceConfig.vue'
 import SiteEdit from '../components/pages/SiteEdit.vue'
 import CloudflareTunnel from '../components/pages/CloudflareTunnel.vue'
+import ComposerManager from '../components/pages/ComposerManager.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
@@ -26,6 +27,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/plugins', component: PluginManager, meta: { title: 'Plugins', titleKey: 'nav.plugins', requiresAdvanced: true } },
   { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin', titleKey: 'nav.plugins', requiresAdvanced: true } },
   { path: '/binaries', component: Binaries, meta: { title: 'Binaries', titleKey: 'nav.binaries', requiresAdvanced: true } },
+  { path: '/composer', component: ComposerManager, meta: { title: 'Composer', titleKey: 'nav.composer', requiresAdvanced: true } },
   { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', requiresAdvanced: true } },
   { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services', requiresAdvanced: true } },
 ]
