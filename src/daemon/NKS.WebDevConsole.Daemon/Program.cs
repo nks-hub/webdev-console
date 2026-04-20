@@ -1856,6 +1856,38 @@ app.MapPost("/api/sites/{domain}/duplicate", async (
     if (Directory.Exists(newRoot))
         return Results.Conflict(new { error = $"Target doc-root already exists: {newRoot}" });
 
+    // F65: Windows MAX_PATH guard. If the source tree contains nested
+    // paths whose relative length plus the new root would exceed 259
+    // chars, the recursive copy will throw PathTooLongException mid-way
+    // and leave a half-populated directory. Cheaper to detect up front
+    // and refuse the duplicate with a friendly error than to roll back
+    // a partial write.
+    if (OperatingSystem.IsWindows() && copyFiles != "empty")
+    {
+        const int MaxTargetPath = 259;
+        var prefixDelta = newRoot.Length - sourceRoot.Length;
+        string? longestSrc = null;
+        try
+        {
+            foreach (var path in Directory.EnumerateFileSystemEntries(sourceRoot, "*", SearchOption.AllDirectories))
+            {
+                if (longestSrc is null || path.Length > longestSrc.Length)
+                    longestSrc = path;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "F65 preflight scan failed for {Source} — continuing without guard", sourceRoot);
+        }
+        if (longestSrc is not null && longestSrc.Length + prefixDelta > MaxTargetPath)
+        {
+            return Results.Problem(
+                title: "Destination path too long",
+                detail: $"Duplicating would create paths >{MaxTargetPath} chars, exceeding the Windows MAX_PATH limit. Use a shorter target domain or enable long-path support in Windows.",
+                statusCode: 409);
+        }
+    }
+
     // Step 1: create directory + copy files
     try
     {
