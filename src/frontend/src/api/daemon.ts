@@ -376,7 +376,7 @@ export const cloudflareAutoSetup = (apiToken: string): Promise<CloudflareAutoSet
     body: JSON.stringify({ apiToken }),
   })
 
-export const cloudflareSync = (): Promise<{ ok: boolean; synced: number; sites: any[] }> =>
+export const cloudflareSync = (): Promise<{ ok: boolean; synced: number; sites: string[] }> =>
   json('/api/cloudflare/sync', { method: 'POST' })
 
 // ─── Catalog API account + device management ──────────────────────────
