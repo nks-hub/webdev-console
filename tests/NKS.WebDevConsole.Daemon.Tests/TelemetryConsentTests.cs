@@ -88,4 +88,24 @@ public class TelemetryConsentTests
             first.Revoke();
         }
     }
+
+    [Fact]
+    public void Save_does_not_leave_tmp_file_behind()
+    {
+        // Regression test for commit c258805: atomic write via temp + rename.
+        var consent = new TelemetryConsent();
+        try
+        {
+            consent.Save(enabled: true, crashReports: true, usageMetrics: false);
+            var tmpPath = Path.Combine(
+                NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot,
+                "telemetry-consent.json.tmp");
+            Assert.False(File.Exists(tmpPath),
+                $"Expected no .tmp leftover after atomic save, but {tmpPath} exists");
+        }
+        finally
+        {
+            consent.Revoke();
+        }
+    }
 }

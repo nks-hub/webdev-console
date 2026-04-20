@@ -119,4 +119,27 @@ public class PhpExtensionOverridesTests : IDisposable
         overrides.ClearOverride("55.55", marker);
         Assert.False(overrides.GetOverrides("55.55").ContainsKey(marker));
     }
+
+    [Fact]
+    public void Save_does_not_leave_tmp_file_behind()
+    {
+        // Regression test for commit c258805: atomic write via temp + rename.
+        // After SetOverride triggers Save(), the .tmp must not remain —
+        // leftovers would race with the next save's File.Move.
+        var overrides = new PhpExtensionOverrides();
+        var marker = "tmpleak_" + Guid.NewGuid().ToString("N")[..8];
+        try
+        {
+            overrides.SetOverride("44.44", marker, true);
+            var tmpPath = Path.Combine(
+                NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot,
+                "php-extensions.json.tmp");
+            Assert.False(File.Exists(tmpPath),
+                $"Expected no .tmp leftover after atomic save, but {tmpPath} exists");
+        }
+        finally
+        {
+            overrides.ClearOverride("44.44", marker);
+        }
+    }
 }
