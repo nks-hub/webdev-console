@@ -1514,9 +1514,8 @@ const SITE_SYNC_FIELDS = new Set([
   'domain', 'phpVersion', 'sslEnabled', 'aliases', 'framework',
   'environment', 'cloudflare', 'nodeUpstreamPort', 'nodeStartCommand',
 ])
-const SITE_LOCAL_FIELDS = new Set([
-  'documentRoot', 'httpPort', 'httpsPort',
-])
+// Note: the inverse set (documentRoot/httpPort/httpsPort) is implicitly
+// excluded by iterating SITE_SYNC_FIELDS only — no need for a second set.
 
 async function pullFromCloud() {
   pulling.value = true
