@@ -183,6 +183,11 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
         <span class="nav-label">{{ $t('nav.settings') }}</span>
       </div>
+      <!-- F89: Help entry — always visible in both Simple + Advanced modes. -->
+      <div class="nav-item" :class="{ active: isActive('/help') }" @click="navigate('/help')">
+        <span class="nav-icon-shell"><el-icon :size="18"><QuestionFilled /></el-icon></span>
+        <span class="nav-label">Help</span>
+      </div>
     </div>
   </nav>
 </template>
@@ -190,7 +195,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, QuestionFilled } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
