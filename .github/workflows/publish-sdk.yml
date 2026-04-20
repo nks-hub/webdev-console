@@ -49,13 +49,28 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Publishing SDK version ${VERSION}"
 
-      - name: Restore
-        run: dotnet restore src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj
+      # Core packs first — SDK depends on Core via ProjectReference, so
+      # the SDK nupkg will carry a dependency entry pointing at the same
+      # PackageVersion. Consumer restore needs both packages available
+      # in whatever feed they're hitting.
+      - name: Restore + build Core
+        run: |
+          dotnet restore src/daemon/NKS.WebDevConsole.Core/NKS.WebDevConsole.Core.csproj
+          dotnet build src/daemon/NKS.WebDevConsole.Core/NKS.WebDevConsole.Core.csproj -c Release --no-restore
 
-      - name: Build
-        run: dotnet build src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj -c Release --no-restore
+      - name: Pack Core
+        run: |
+          dotnet pack src/daemon/NKS.WebDevConsole.Core/NKS.WebDevConsole.Core.csproj \
+            -c Release --no-build \
+            -p:PackageVersion=${{ steps.version.outputs.version }} \
+            -o out/
 
-      - name: Pack
+      - name: Restore + build SDK
+        run: |
+          dotnet restore src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj
+          dotnet build src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj -c Release --no-restore
+
+      - name: Pack SDK
         run: |
           dotnet pack src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj \
             -c Release --no-build \
