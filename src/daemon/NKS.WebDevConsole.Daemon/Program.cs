@@ -393,9 +393,15 @@ app.MapGet("/api/status", () => Results.Ok(new
 
 app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm, CatalogClient cc, SettingsStore settings) =>
 {
-    var modules = sp.GetServices<IServiceModule>();
-    var running = 0; var total = 0;
-    foreach (var m in modules) { total++; var s = await m.GetStatusAsync(CancellationToken.None); if (s.State == ServiceState.Running) running++; }
+    var modules = sp.GetServices<IServiceModule>().ToArray();
+    // Fan out the status probes concurrently — the previous foreach awaited
+    // each module sequentially, so /api/system latency scaled linearly with
+    // plugin count. With 10 built-in plugins that's 10× the slowest probe;
+    // Task.WhenAll brings it back to max() of the per-module times.
+    var statuses = await Task.WhenAll(
+        modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
+    var total = statuses.Length;
+    var running = statuses.Count(s => s.State == ServiceState.Running);
 
     // Normalised OS + arch tags for frontend filtering — the catalog uses
     // lowercase "windows"/"linux"/"macos" and "x64"/"arm64" strings, so we
