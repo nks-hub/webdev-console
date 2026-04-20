@@ -671,7 +671,7 @@ function selectTunnel(t: any) {
 
 // ── Service status (from daemon store) ───────────────────────────────
 const serviceInfo = computed(() =>
-  daemonStore.services.find((s: any) => s.id === 'cloudflare')
+  daemonStore.services.find(s => s.id === 'cloudflare')
 )
 const serviceRunning = computed(() =>
   serviceInfo.value?.state === 2 || serviceInfo.value?.status === 'running'

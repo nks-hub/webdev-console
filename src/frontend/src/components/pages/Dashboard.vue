@@ -360,13 +360,13 @@ const stoppingAll = ref(false)
 
 const services = computed(() => daemonStore.services)
 const totalCount = computed(() => services.value.length)
-const runningCount = computed(() => services.value.filter((s: any) => s.state === 2 || s.status === 'running').length)
+const runningCount = computed(() => services.value.filter(s => s.state === 2 || s.status === 'running').length)
 const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
 const noneRunning = computed(() => runningCount.value === 0)
 
 // Simple mode metrics
 const sitesCount = computed(() => sitesStore.sites.length)
-const runningServices = computed(() => daemonStore.services.filter((s: any) => s.state === 2).length)
+const runningServices = computed(() => daemonStore.services.filter(s => s.state === 2).length)
 const totalServices = computed(() => daemonStore.services.length)
 const totalHits = ref(0)
 const totalErrors = ref(0)
@@ -374,7 +374,7 @@ const aggregatesLoading = ref(false)
 
 async function loadAggregates() {
   aggregatesLoading.value = true
-  const domains = sitesStore.sites.map((s: any) => s.domain)
+  const domains = sitesStore.sites.map(s => s.domain)
   const results = await Promise.allSettled(domains.map(async (domain: string) => {
     try {
       const [metricsR, errorsR] = await Promise.allSettled([
@@ -545,7 +545,7 @@ function formatUptime(uptime: string | number): string {
 
 async function toggleService(id: string, value: boolean | string | number) {
   const on = Boolean(value)
-  const svc = services.value.find((s: any) => s.id === id)
+  const svc = services.value.find(s => s.id === id)
   const name = svc ? (svc.displayName || svc.id) : id
   try {
     if (on) {
@@ -566,8 +566,8 @@ async function startAll() {
   try {
     await Promise.allSettled(
       services.value
-        .filter((s: any) => s.state === 0 || s.status === 'stopped')
-        .map((s: any) => servicesStore.start(s.id))
+        .filter(s => s.state === 0 || s.status === 'stopped')
+        .map(s => servicesStore.start(s.id))
     )
   } finally {
     startingAll.value = false
@@ -579,8 +579,8 @@ async function stopAll() {
   try {
     await Promise.allSettled(
       services.value
-        .filter((s: any) => s.state === 2 || s.status === 'running')
-        .map((s: any) => servicesStore.stop(s.id))
+        .filter(s => s.state === 2 || s.status === 'running')
+        .map(s => servicesStore.stop(s.id))
     )
   } finally {
     stoppingAll.value = false
