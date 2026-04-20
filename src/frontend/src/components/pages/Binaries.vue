@@ -577,7 +577,7 @@ const composerInstalling = ref(false)
 const composerInstalled = computed(() => !!composerVersion.value || !!composerPath.value)
 
 function composerAuthHeaders(): Record<string, string> {
-  const preloadToken = (window as any).daemonApi?.getToken?.() || ''
+  const preloadToken = window.daemonApi?.getToken?.() || ''
   const urlToken = new URLSearchParams(window.location.search).get('token') || ''
   const token = preloadToken || urlToken
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }

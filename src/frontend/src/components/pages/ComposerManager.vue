@@ -194,7 +194,7 @@ async function loadComposerVersion(): Promise<void> {
 }
 
 function getBase(): string {
-  const preloadPort = (window as any).daemonApi?.getPort?.()
+  const preloadPort = window.daemonApi?.getPort?.()
   if (typeof preloadPort === 'number' && preloadPort > 0) {
     return `http://localhost:${preloadPort}`
   }

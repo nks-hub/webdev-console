@@ -374,7 +374,7 @@ const aggregatesLoading = ref(false)
 function simpleDaemonBase(): string {
   const urlPort = new URLSearchParams(window.location.search).get('port')
   if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${urlPort}`
-  const p = (window as any).daemonApi?.getPort?.()
+  const p = window.daemonApi?.getPort?.()
   return `http://localhost:${typeof p === 'number' ? p : 5199}`
 }
 
@@ -457,8 +457,8 @@ const activityLoading = ref(false)
 async function loadActivity() {
   activityLoading.value = true
   try {
-    const port = (window as any).daemonApi?.getPort?.() ?? new URLSearchParams(window.location.search).get('port') ?? '5146'
-    const token = (window as any).daemonApi?.getToken?.() ?? new URLSearchParams(window.location.search).get('token') ?? ''
+    const port = window.daemonApi?.getPort?.() ?? new URLSearchParams(window.location.search).get('port') ?? '5146'
+    const token = window.daemonApi?.getToken?.() ?? new URLSearchParams(window.location.search).get('token') ?? ''
     const r = await fetch(`http://localhost:${port}/api/activity?limit=20`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

@@ -30,7 +30,7 @@ function staticUrlFor(id: string): string | null {
 
 function authToken(): string {
   const params = new URLSearchParams(window.location.search)
-  return params.get('token') || (window as any).daemonApi?.getToken?.() || ''
+  return params.get('token') || window.daemonApi?.getToken?.() || ''
 }
 
 const loadError = ref(false)
