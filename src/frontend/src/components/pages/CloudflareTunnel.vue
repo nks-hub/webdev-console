@@ -616,7 +616,7 @@ async function verifyToken() {
       // Surface the actual rejection reason instead of a generic toast so the
       // user knows whether to regenerate the token, fix scopes, or check quota.
       const errMsg = Array.isArray(res?.errors) && res.errors.length > 0
-        ? res.errors.map((e: any) => e?.message || e?.code || String(e)).join('; ')
+        ? res.errors.map(e => e?.message || e?.code || String(e)).join('; ')
         : 'Token rejected by Cloudflare'
       ElMessage.error(errMsg)
     }
