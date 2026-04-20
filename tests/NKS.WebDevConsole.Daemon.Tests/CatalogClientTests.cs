@@ -278,4 +278,50 @@ public sealed class CatalogClientTests
         Assert.Equal("windows", php.Os);
         Assert.Equal("zip", php.ArchiveType);
     }
+
+    /// <summary>
+    /// Regression: after a successful refresh populates external + fallback,
+    /// a subsequent fetch failure must not collapse the cache back to the
+    /// fallback-only list. Symptom before the fix was the Binaries page
+    /// briefly showing the full external catalog, then "losing" half the
+    /// apps on the next refresh tick as soon as the catalog API hiccupped.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_FailureAfterSuccess_KeepsExternalEntries()
+    {
+        const string body = """
+        {
+          "apps": {
+            "custom-app": {
+              "releases": [
+                { "version": "1.0.0", "majorMinor": "1.0",
+                  "downloads": [
+                    { "url": "https://example/custom-1.0.0-win.zip",
+                      "os": "windows", "arch": "x64",
+                      "archiveType": "zip", "source": "external" }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+        """;
+
+        var returnSuccess = true;
+        var handler = new StubHttpMessageHandler(_ => returnSuccess
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) }
+            : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        var factory = new StubHttpClientFactory(handler);
+        var logger = new Mock<ILogger<CatalogClient>>();
+        var client = new CatalogClient(factory, logger.Object, baseUrlProvider: () => "http://127.0.0.1:9999");
+
+        await client.RefreshAsync();
+        Assert.NotEmpty(client.ForApp("custom-app", os: "windows", arch: "x64"));
+
+        returnSuccess = false;
+        await client.RefreshAsync();
+        // Preserved — the custom-app entry from the previous successful fetch
+        // still resolvable even though the refresh failed.
+        Assert.NotEmpty(client.ForApp("custom-app", os: "windows", arch: "x64"));
+    }
 }

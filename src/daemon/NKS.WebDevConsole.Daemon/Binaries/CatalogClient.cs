@@ -96,6 +96,7 @@ public sealed class CatalogClient
     {
         var flattened = new List<BinaryRelease>();
         var baseUrl = CurrentBaseUrl();
+        var externalOk = false;
         try
         {
             _logger.LogInformation("Fetching binary catalog from {BaseUrl}/api/v1/catalog", baseUrl);
@@ -126,6 +127,7 @@ public sealed class CatalogClient
                 }
             }
 
+            externalOk = true;
             _logger.LogInformation("Catalog refreshed: {Count} releases across {Apps} apps",
                 flattened.Count, doc.Apps?.Count ?? 0);
         }
@@ -146,12 +148,22 @@ public sealed class CatalogClient
             if (!existing) flattened.Add(fb);
         }
 
+        // On fetch failure, preserve the previous external results — a
+        // single transient error used to collapse the Binaries UI back to
+        // the fallback-only list, which made it look like the external
+        // catalog had dropped half its apps. Only overwrite when the
+        // external fetch actually succeeded, or when we had nothing to
+        // preserve yet (first-run bootstrap must show the fallback).
         lock (_cacheLock)
         {
-            _cache = flattened;
-            _lastFetch = DateTime.UtcNow;
+            if (externalOk || _cache.Count == 0)
+            {
+                _cache = flattened;
+                _lastFetch = DateTime.UtcNow;
+                return flattened.Count;
+            }
+            return _cache.Count;
         }
-        return flattened.Count;
     }
 
     /// <summary>
