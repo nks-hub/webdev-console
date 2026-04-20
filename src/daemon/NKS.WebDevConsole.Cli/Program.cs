@@ -3259,7 +3259,7 @@ syncPushCmd.SetAction(async (parseResult, ct) =>
     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     if (!string.IsNullOrEmpty(jwt))
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
-    var resp = await http.PostAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config", body);
+    using var resp = await http.PostAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config", body);
     if (!resp.IsSuccessStatusCode)
     {
         // Surface catalog-api's { detail: "..." } body so users see the
@@ -3309,7 +3309,7 @@ syncPullCmd.SetAction(async (parseResult, ct) =>
     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     if (!string.IsNullOrEmpty(jwt))
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
-    var resp = await http.GetAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config/{deviceId}");
+    using var resp = await http.GetAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config/{deviceId}");
     if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
     {
         AnsiConsole.MarkupLine("[yellow]No cloud snapshot found for this device.[/] Push first.");
