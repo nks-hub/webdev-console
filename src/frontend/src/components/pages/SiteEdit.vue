@@ -1687,9 +1687,21 @@ onBeforeUnmount(() => {
   color: var(--wdc-accent) !important;
   font-weight: 700 !important;
   height: 100% !important;
-  padding: 0 12px !important;
+  padding: 0 14px !important;
   box-shadow: none !important;
   white-space: nowrap;
+  /* Icon + label sit flush; earlier CSS only gave the button 12px side
+     padding + no inner gap, so at the default 13-14px system font the
+     icon collided with the trailing ellipsis and pushed "Browse…" past
+     the el-input-group__append clip. 14px padding + 6px flex gap holds
+     the full label inside every Element Plus theme. */
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-width: fit-content;
+}
+.browse-append-btn > span {
+  display: inline-block;
 }
 .browse-append-btn:hover {
   background: var(--wdc-accent-dim) !important;
