@@ -133,6 +133,9 @@ public sealed class PhpExtensionOverrides
             kvp => kvp.Key,
             kvp => kvp.Value.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase));
         var json = JsonSerializer.Serialize(payload, IndentedJson);
-        File.WriteAllText(StateFilePath, json);
+        // Atomic write: temp + rename survives a daemon crash mid-write.
+        var tmp = StateFilePath + ".tmp";
+        File.WriteAllText(tmp, json);
+        File.Move(tmp, StateFilePath, overwrite: true);
     }
 }

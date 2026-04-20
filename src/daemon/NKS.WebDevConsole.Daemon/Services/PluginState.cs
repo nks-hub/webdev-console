@@ -78,6 +78,12 @@ public sealed class PluginState
         var json = JsonSerializer.Serialize(
             _disabled.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
             IndentedJson);
-        File.WriteAllText(StateFilePath, json);
+        // Atomic write: write-to-temp + rename avoids the window where a
+        // daemon crash between WriteAllText starting and finishing leaves a
+        // truncated state file that breaks all subsequent loads. File.Move
+        // with overwrite:true is atomic on NTFS/ext4 at the filesystem level.
+        var tmp = StateFilePath + ".tmp";
+        File.WriteAllText(tmp, json);
+        File.Move(tmp, StateFilePath, overwrite: true);
     }
 }

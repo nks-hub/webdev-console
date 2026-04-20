@@ -99,9 +99,10 @@ public sealed class TelemetryConsent
                 usageMetrics = UsageMetrics,
                 consentGivenUtc = ConsentGivenUtc?.ToString("O"),
             };
-            File.WriteAllText(
-                ConsentFilePath,
-                JsonSerializer.Serialize(payload, IndentedJson));
+            // Atomic write: temp + rename survives a daemon crash mid-write.
+            var tmp = ConsentFilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(payload, IndentedJson));
+            File.Move(tmp, ConsentFilePath, overwrite: true);
         }
     }
 
