@@ -22,9 +22,10 @@ public class MkcertManager
     public string? MkcertPath => _mkcertPath;
 
     /// <summary>
-    /// Scans NKS WDC managed binaries for mkcert.
+    /// Scans NKS WDC managed binaries for mkcert. Pure filesystem walk —
+    /// wrapped in Task for interface compatibility but does not await.
     /// </summary>
-    public async Task<bool> DetectAsync()
+    public Task<bool> DetectAsync()
     {
         // Priority 1: own binary under ~/.wdc/binaries/mkcert/
         var mkcertRoot = Path.Combine(WdcPaths.BinariesRoot, "mkcert");
@@ -41,14 +42,14 @@ public class MkcertManager
                 {
                     _mkcertPath = candidate;
                     _logger.LogInformation("Found mkcert at {Path}", candidate);
-                    return true;
+                    return Task.FromResult(true);
                 }
             }
         }
 
         _logger.LogWarning(
             "mkcert not found. Install with POST /api/binaries/install {{ \"app\": \"mkcert\", \"version\": \"1.4.4\" }}");
-        return false;
+        return Task.FromResult(false);
     }
 
     /// <summary>

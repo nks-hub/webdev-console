@@ -49,17 +49,15 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
         _config = config ?? new MailpitConfig();
     }
 
-    public async Task InitializeAsync(CancellationToken ct)
+    public Task InitializeAsync(CancellationToken ct)
     {
         DetectMailpitExecutable();
 
         if (!string.IsNullOrEmpty(_config.ExecutablePath) && File.Exists(_config.ExecutablePath))
-        {
             _logger.LogInformation("Using Mailpit: {Path}", _config.ExecutablePath);
-            return;
-        }
-
-        _logger.LogWarning("mailpit executable not found");
+        else
+            _logger.LogWarning("mailpit executable not found");
+        return Task.CompletedTask;
     }
 
     private void DetectMailpitExecutable()
@@ -92,12 +90,12 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: ValidateConfigAsync --
 
-    public async Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
+    public Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
     {
         if (string.IsNullOrEmpty(_config.ExecutablePath) || !File.Exists(_config.ExecutablePath))
-            return new ValidationResult(false, "mailpit executable not found");
+            return Task.FromResult(new ValidationResult(false, "mailpit executable not found"));
 
-        return new ValidationResult(true);
+        return Task.FromResult(new ValidationResult(true));
     }
 
     // -- IServiceModule: StartAsync --
@@ -237,9 +235,10 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: ReloadAsync --
 
-    public async Task ReloadAsync(CancellationToken ct)
+    public Task ReloadAsync(CancellationToken ct)
     {
         _logger.LogInformation("Mailpit does not support live config reload — restart required");
+        return Task.CompletedTask;
     }
 
     // -- IServiceModule: GetStatusAsync --
@@ -258,7 +257,7 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: GetLogsAsync --
 
-    public async Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct)
+    public Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct)
     {
         var result = new List<string>(lines);
         var reader = _logChannel.Reader;
@@ -266,7 +265,7 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
         while (result.Count < lines && reader.TryRead(out var line))
             result.Add(line);
 
-        return result;
+        return Task.FromResult<IReadOnlyList<string>>(result);
     }
 
     // -- Health check: HTTP GET /api/v1/info --
@@ -428,7 +427,7 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
         return false;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         if (_process is not null && !_process.HasExited)
         {
@@ -438,5 +437,6 @@ public sealed class MailpitModule : IServiceModule, IAsyncDisposable
 
         _process?.Dispose();
         _logChannel.Writer.TryComplete();
+        return ValueTask.CompletedTask;
     }
 }
