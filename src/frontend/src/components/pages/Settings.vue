@@ -1204,9 +1204,10 @@ async function refreshCatalog() {
       message: `Refreshed: ${result.count ?? 0} releases · ${result.lastFetch ?? 'now'}`,
     }
     ElMessage.success(`Catalog refreshed: ${result.count ?? 0} releases`)
-  } catch (e: any) {
-    catalogStatus.value = { ok: false, message: `Refresh failed: ${e?.message || e}` }
-    ElMessage.error(`Refresh failed: ${e?.message || e}`)
+  } catch (e) {
+    const msg = errorMessage(e)
+    catalogStatus.value = { ok: false, message: `Refresh failed: ${msg}` }
+    ElMessage.error(`Refresh failed: ${msg}`)
   } finally {
     refreshingCatalog.value = false
   }
@@ -1224,10 +1225,10 @@ async function testCatalogReachable() {
       ok: true,
       message: `Reachable: ${body.service ?? 'catalog-api'} v${body.version ?? '?'}`,
     }
-  } catch (e: any) {
+  } catch (e) {
     catalogStatus.value = {
       ok: false,
-      message: `Unreachable: ${e?.message || e}. Is the sidecar running?`,
+      message: `Unreachable: ${errorMessage(e)}. Is the sidecar running?`,
     }
   } finally {
     testingCatalog.value = false
@@ -1276,8 +1277,8 @@ async function saveDeviceName(row: CatalogDeviceInfo) {
     }
     row.name = newName
     ElMessage.success('Device renamed')
-  } catch (e: any) {
-    ElMessage.error(`Rename failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Rename failed: ${errorMessage(e)}`)
   }
 }
 
