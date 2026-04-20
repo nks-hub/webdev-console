@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
-public class SseService
+public sealed class SseService
 {
     private readonly ConcurrentDictionary<string, SseClient> _clients = new();
     private readonly ILogger<SseService> _logger;

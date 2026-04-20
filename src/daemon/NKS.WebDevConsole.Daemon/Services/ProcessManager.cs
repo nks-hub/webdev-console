@@ -7,7 +7,7 @@ using NKS.WebDevConsole.Core.Models;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
-public class RestartPolicy
+public sealed class RestartPolicy
 {
     public int MaxRestarts { get; init; } = 5;
     public TimeSpan Window { get; init; } = TimeSpan.FromSeconds(60);
@@ -28,7 +28,7 @@ public class RestartPolicy
     }
 }
 
-public class ServiceUnit
+public sealed class ServiceUnit
 {
     public string Id { get; init; } = "";
     public string DisplayName { get; init; } = "";
@@ -46,7 +46,7 @@ public class ServiceUnit
     public bool StopRequested { get; set; }
 }
 
-public class ProcessManager
+public sealed class ProcessManager
 {
     private readonly ILogger<ProcessManager> _logger;
     private readonly SseService _sse;
