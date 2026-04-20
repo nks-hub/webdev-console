@@ -19,7 +19,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.6" />
     <PackageReference Include="Scriban" Version="7.1.0" />
-    <PackageReference Include="Sentry" Version="4.13.0" />
+    <PackageReference Include="Sentry" Version="6.4.0" />
     <PackageReference Include="SharpCompress" Version="0.38.0" />
     <PackageReference Include="Tomlyn" Version="2.3.0" />
   </ItemGroup>
