@@ -25,6 +25,14 @@ NKS.WebDevConsole.Core.Services.DaemonJobObject.EnsureInitialized();
 var daemonStartedUtc = DateTime.UtcNow;
 long DaemonUptimeSeconds() => (long)(DateTime.UtcNow - daemonStartedUtc).TotalSeconds;
 
+// Shared JsonSerializerOptions for body deserialization — JsonSerializer
+// caches type contracts per options instance, so allocating fresh per
+// request fragments that cache. Case-insensitive matches ASP.NET's default
+// Minimal API binding behaviour, so the existing POST/PUT payload shapes
+// (camelCase from the Vue frontend) continue to deserialize to the C#
+// PascalCase DTOs without any wire change.
+var caseInsensitiveJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
 // F92: daemon version read from assembly (InformationalVersion attribute
 // wired up via <InformationalVersion> in the csproj). Previously two
 // /api/* endpoints hardcoded "0.1.0" and never tracked shipped version.
@@ -1699,8 +1707,7 @@ app.MapPost("/api/sites", async (HttpContext ctx, SiteManager sm, SiteOrchestrat
 
         // Deserialize the canonical SiteConfig fields — case-insensitive to
         // match ASP.NET's default Minimal API binding behaviour.
-        var jsonOpts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        site = root.Deserialize<SiteConfig>(jsonOpts) ?? new SiteConfig();
+        site = root.Deserialize<SiteConfig>(caseInsensitiveJson) ?? new SiteConfig();
 
         // Extract the Simple-Mode hint — absent or false → unchanged behaviour.
         cloudflareTunnelHint = root.TryGetProperty("cloudflareTunnel", out var cfEl)
