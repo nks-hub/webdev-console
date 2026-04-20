@@ -828,7 +828,7 @@ export interface ValidationUpdate {
 }
 
 export function subscribeEvents(
-  onService: (data: import('./types').ServiceInfo) => void,
+  onService: (data: ServiceInfo) => void,
   onProgress: (data: ProgressUpdate) => void,
   onMetrics?: (data: MetricsUpdate) => void,
   onLog?: (data: LogEntry) => void,
@@ -865,7 +865,7 @@ export function subscribeEvents(
     })
 
     es.addEventListener('service', (e: MessageEvent) => {
-      try { onService(JSON.parse(e.data) as import('./types').ServiceInfo) } catch { /* ignore */ }
+      try { onService(JSON.parse(e.data) as ServiceInfo) } catch { /* ignore */ }
     })
 
     es.addEventListener('progress', (e: MessageEvent) => {
