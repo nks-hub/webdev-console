@@ -168,7 +168,7 @@ const duplicating = ref(false)
 const restarting = ref(false)
 
 const apacheRunning = computed(() =>
-  (daemonStore.services as any[]).some(
+  daemonStore.services.some(
     s => s.id === 'apache' && (s.state === 2 || s.status === 'running')
   )
 )

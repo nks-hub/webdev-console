@@ -56,15 +56,15 @@ const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 
-const services = computed(() => daemonStore.services as any[])
+const services = computed(() => daemonStore.services)
 const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
 const crashedCount = computed(() => services.value.filter(s => s.state === 4).length)
 const tunnelRunning = computed(() =>
   services.value.some(s => s.id === 'cloudflare' && (s.state === 2 || s.status === 'running'))
 )
-const totalCpu = computed(() => services.value.reduce((sum: number, s: any) => sum + (s.cpuPercent ?? 0), 0))
-const totalRam = computed(() => services.value.reduce((sum: number, s: any) => sum + (s.memoryBytes ?? 0), 0))
+const totalCpu = computed(() => services.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0))
+const totalRam = computed(() => services.value.reduce((sum, s) => sum + (s.memoryBytes ?? 0), 0))
 
 function formatMem(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`

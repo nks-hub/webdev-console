@@ -290,7 +290,7 @@ const uiModeStore = useUiModeStore()
 // badge so users don't click through to a dead URL and see a Cloudflare
 // 521 error page. Computed here so it's reactive to SSE service updates.
 const cloudflaredRunning = computed(() =>
-  (daemonStore.services as any[]).some(s =>
+  daemonStore.services.some(s =>
     s.id === 'cloudflare' && (s.state === 2 || s.status === 'running')
   )
 )
