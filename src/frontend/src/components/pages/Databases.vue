@@ -155,6 +155,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const { t } = useI18n()
 
@@ -219,8 +220,8 @@ async function loadDatabases() {
     }
     databases.value = data.databases ?? []
     loadingLabel.value = `Loaded ${databases.value.length} database${databases.value.length === 1 ? '' : 's'}`
-  } catch (e: any) {
-    error.value = `Failed to load databases: ${e?.message || e}`
+  } catch (e) {
+    error.value = `Failed to load databases: ${errorMessage(e)}`
   } finally {
     loading.value = false
   }
@@ -239,8 +240,8 @@ async function useAltPort() {
     // Give the restarted mysqld a moment to accept connections, then re-probe.
     await new Promise(res => setTimeout(res, 1200))
     await loadDatabases()
-  } catch (e: any) {
-    error.value = `Failed to switch port: ${e?.message || e}`
+  } catch (e) {
+    error.value = `Failed to switch port: ${errorMessage(e)}`
   } finally {
     fixing.value = false
   }
@@ -290,8 +291,8 @@ async function createDatabase() {
     newDbName.value = ''
     showCreateDialog.value = false
     await loadDatabases()
-  } catch (e: any) {
-    ElMessage.error(`Create failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Create failed: ${errorMessage(e)}`)
   } finally {
     creating.value = false
   }
@@ -319,8 +320,8 @@ async function confirmDrop(db: string) {
     ElMessage.success(`Database ${db} dropped`)
     if (selectedDb.value === db) selectedDb.value = ''
     await loadDatabases()
-  } catch (e: any) {
-    ElMessage.error(`Drop failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Drop failed: ${errorMessage(e)}`)
   } finally {
     dropping.value = false
   }
@@ -347,9 +348,9 @@ async function executeQuery() {
       const text = await r.text()
       queryResult.value = `Error: ${text}`
     }
-  } catch (e: any) {
+  } catch (e) {
     queryTime.value = Date.now() - start
-    queryResult.value = `Error: ${e?.message || e}`
+    queryResult.value = `Error: ${errorMessage(e)}`
   } finally {
     queryRunning.value = false
   }
@@ -375,8 +376,8 @@ async function handleImportFile(e: Event) {
     if (!r.ok) throw await httpError(r)
     ElMessage.success(`Imported ${file.name} successfully`)
     await loadTables(selectedDb.value)
-  } catch (e: any) {
-    ElMessage.error(`Import failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Import failed: ${errorMessage(e)}`)
   } finally {
     importing.value = false
     if (importFileRef.value) importFileRef.value.value = ''
@@ -399,8 +400,8 @@ async function exportDb() {
     a.click()
     URL.revokeObjectURL(url)
     ElMessage.success(`Exported ${selectedDb.value}.sql`)
-  } catch (e: any) {
-    ElMessage.error(`Export failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Export failed: ${errorMessage(e)}`)
   } finally {
     exporting.value = false
   }
