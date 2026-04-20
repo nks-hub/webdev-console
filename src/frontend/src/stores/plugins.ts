@@ -115,6 +115,17 @@ export const usePluginsStore = defineStore('plugins', () => {
       const ui = await fetchPluginUi(id).catch(() => null)
       if (ui) uiDefinitions.value.set(id, ui)
     }
+    // Re-pull aggregator so sidebar toolsNavEntries repaints without a
+    // full page reload. Swallows fetch failures so older daemons still
+    // get their per-plugin state updated.
+    try {
+      const nav = await fetchPluginNavEntries()
+      navEntries.value = (nav?.entries ?? []).slice().sort((a, b) => {
+        if (a.category !== b.category) return a.category.localeCompare(b.category)
+        if (a.order !== b.order) return a.order - b.order
+        return a.label.localeCompare(b.label)
+      })
+    } catch { /* already logged in loadAll */ }
   }
 
   function getUi(id: string): PluginUiDefinition | undefined {
