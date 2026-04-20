@@ -98,9 +98,16 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
       const txt = await r.text()
       if (txt) {
         try {
-          const body = JSON.parse(txt)
-          detail = body?.error ?? body?.message ?? body?.detail ?? body?.title ?? ''
-          if (!detail && typeof body === 'string') detail = body
+          const body: unknown = JSON.parse(txt)
+          if (typeof body === 'string') {
+            detail = body
+          } else if (body && typeof body === 'object') {
+            const rec = body as Record<string, unknown>
+            for (const key of ['error', 'message', 'detail', 'title']) {
+              const v = rec[key]
+              if (typeof v === 'string' && v) { detail = v; break }
+            }
+          }
           if (!detail) detail = txt.length < 300 ? txt : ''
         } catch {
           // non-JSON plain-text body
