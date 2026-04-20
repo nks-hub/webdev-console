@@ -969,8 +969,8 @@ async function manualBackup() {
     const result = await createBackup()
     ElMessage.success(`Backup created: ${result.files} files, ${(result.size / 1024 / 1024).toFixed(1)} MB`)
     void loadBackups()
-  } catch (e: any) {
-    ElMessage.error(`Backup failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Backup failed: ${errorMessage(e)}`)
   } finally {
     backupCreating.value = false
   }
@@ -1012,8 +1012,8 @@ async function saveMysqlRootPassword() {
     mysqlRootPassword.value = ''
     mysqlRootExists.value = true
     ElMessage.success('MySQL root password saved (DPAPI-encrypted)')
-  } catch (e: any) {
-    ElMessage.error(`Save failed: ${e?.message ?? e}`)
+  } catch (e) {
+    ElMessage.error(`Save failed: ${errorMessage(e)}`)
   } finally {
     mysqlRootSaving.value = false
   }
@@ -1110,8 +1110,8 @@ async function discoverMamp() {
       const result = await ir.json()
       ElMessage.success(`Imported ${result.count} site(s) from MAMP`)
     }
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${e?.message || e}`)
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${errorMessage(e)}`)
   } finally {
     mampDiscovering.value = false
   }
@@ -1172,9 +1172,10 @@ async function syncPluginsNow() {
     // Re-poll the status endpoint so the "last sync" label reflects the
     // freshly-completed refresh without a tab navigation.
     await loadPluginCatalogStatus()
-  } catch (e: any) {
-    pluginSyncStatus.value = { ok: false, message: String(e?.message ?? e) }
-    ElMessage.error(`Plugin sync failed: ${e?.message ?? e}`)
+  } catch (e) {
+    const msg = errorMessage(e)
+    pluginSyncStatus.value = { ok: false, message: msg }
+    ElMessage.error(`Plugin sync failed: ${msg}`)
   } finally {
     syncingPlugins.value = false
   }
