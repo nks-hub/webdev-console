@@ -1,5 +1,5 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain } from 'electron'
-import { dirname, join } from 'path'
+import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
@@ -817,8 +817,18 @@ app.whenReady().then(async () => {
     const url = new URL(request.url)
     const relPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname
     const safePath = relPath === '' ? 'index.html' : relPath
-    const fullPath = join(__dirname, 'renderer', safePath)
-    return net.fetch(pathToFileURL(fullPath).toString())
+    // F59 defense-in-depth: reject any path that traverses outside the
+    // bundled renderer dir via `..` segments or an absolute root. Renderer
+    // URLs are emitted by our own router today, but a single stray
+    // navigation (third-party embed, typo'd href) would otherwise be
+    // allowed to read arbitrary files off disk through app://.
+    const rendererRoot = join(__dirname, 'renderer')
+    const fullPath = join(rendererRoot, safePath)
+    const resolved = resolve(fullPath)
+    if (!resolved.startsWith(resolve(rendererRoot) + sep) && resolved !== resolve(rendererRoot)) {
+      return new Response('forbidden', { status: 403 })
+    }
+    return net.fetch(pathToFileURL(resolved).toString())
   })
   // Spawn the catalog API sidecar BEFORE the daemon so the daemon's
   // first RefreshAsync() hits a live endpoint. Best-effort: if it fails
