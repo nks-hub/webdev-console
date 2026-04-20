@@ -145,4 +145,40 @@ public sealed class PluginCatalogClientTests
         Assert.Equal(0, count);
         Assert.Empty(client.Cached);
     }
+
+    /// <summary>
+    /// Regression: a transient HTTP failure (non-2xx, timeout, parse error)
+    /// must NOT wipe the previous successful cache. Before the fix,
+    /// RefreshAsync always replaced _cache with whatever `list` happened
+    /// to be, so one failing tick erased the last known-good catalog and
+    /// plugin auto-sync started reporting zero entries mid-session.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_FailureAfterSuccess_PreservesPreviousCache()
+    {
+        const string body = """
+        { "plugins": [
+          { "id": "nks.wdc.apache",
+            "releases": [{ "version": "1.0.0", "downloads": [{ "url": "u", "archive_type": "zip" }] }] }
+        ]}
+        """;
+
+        var returnSuccess = true;
+        var handler = new StubHandler(_ => returnSuccess
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) }
+            : new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("oops") });
+        var factory = new StubFactory(handler);
+        var logger = new Mock<ILogger<PluginCatalogClient>>();
+        var client = new PluginCatalogClient(factory, logger.Object, null);
+
+        var first = await client.RefreshAsync();
+        Assert.Equal(1, first);
+        Assert.Single(client.Cached);
+
+        returnSuccess = false;
+        var second = await client.RefreshAsync();
+        Assert.Equal(1, second);
+        Assert.Single(client.Cached);
+        Assert.Equal("nks.wdc.apache", client.Cached[0].Id);
+    }
 }

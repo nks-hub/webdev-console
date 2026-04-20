@@ -60,7 +60,7 @@ public sealed class PluginCatalogClient
     public async Task<int> RefreshAsync(CancellationToken ct = default)
     {
         var baseUrl = CurrentBaseUrl();
-        var list = new List<PluginCatalogEntry>();
+        List<PluginCatalogEntry>? list = null;
         try
         {
             _logger.LogInformation("Fetching plugin catalog from {Url}/api/v1/plugins/catalog", baseUrl);
@@ -68,19 +68,32 @@ public sealed class PluginCatalogClient
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             var doc = JsonSerializer.Deserialize<PluginCatalogDocument>(json, JsonOpts);
-            if (doc?.Plugins is not null) list.AddRange(doc.Plugins);
+            list = doc?.Plugins is not null
+                ? new List<PluginCatalogEntry>(doc.Plugins)
+                : new List<PluginCatalogEntry>();
             _logger.LogInformation("Plugin catalog refreshed: {Count} plugins", list.Count);
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Plugin catalog fetch failed from {Url}: {Error}", baseUrl, ex.Message);
         }
+
+        // Only mutate the cache on a successful fetch. The previous code
+        // replaced _cache with the empty list + updated _lastFetch even
+        // when the HTTP call threw, so a single transient outage wiped
+        // the last known-good catalog and made LastFetch advance as if
+        // the refresh had succeeded.
+        if (list is null)
+        {
+            lock (_cacheLock) return _cache.Count;
+        }
+
         lock (_cacheLock)
         {
             _cache = list;
             _lastFetch = DateTime.UtcNow;
+            return list.Count;
         }
-        return list.Count;
     }
 
     public PluginCatalogRelease? LatestRelease(string pluginId)
