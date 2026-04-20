@@ -140,6 +140,16 @@ interface CertInfo {
   keyPath: string
   createdUtc: string
   aliases: string[]
+  // F81 enrichment emitted by daemon /api/ssl/certs: parsed X.509 metadata
+  // + orphan/expiring/expired flags. Optional to keep older daemon payloads
+  // working (pre-F81 nodes just render the base fields above).
+  notAfterUtc?: string
+  issuer?: string
+  fingerprint?: string
+  daysToExpiry?: number
+  expiring?: boolean
+  expired?: boolean
+  orphan?: boolean
 }
 
 const certs = ref<CertInfo[]>([])
