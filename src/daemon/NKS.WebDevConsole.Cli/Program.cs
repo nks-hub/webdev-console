@@ -6,6 +6,13 @@ using NKS.WebDevConsole.Cli;
 using NKS.WebDevConsole.Core.Services;
 using Spectre.Console;
 
+// Shared options for all JSON-formatted CLI output. Reusing a single
+// instance matters because JsonSerializer caches reflection metadata per
+// options reference — allocating a fresh `new JsonSerializerOptions` on
+// every `--json` invocation fragments that cache and forces re-discovery of
+// every type's contract.
+var indentedJson = new JsonSerializerOptions { WriteIndented = true };
+
 var jsonOption = new Option<bool>("--json") { Description = "Output raw JSON instead of formatted tables", Recursive = true };
 var versionOption = new Option<bool>("--version", "-v") { Description = "Show CLI version and exit" };
 
@@ -3352,8 +3359,7 @@ syncExportCmd.SetAction(async (parseResult, ct) =>
         settings = filteredSettings,
         sites = filteredSites,
     };
-    var jsonStr = JsonSerializer.Serialize(payload,
-        new JsonSerializerOptions { WriteIndented = true });
+    var jsonStr = JsonSerializer.Serialize(payload, indentedJson);
     // Use CreateDirectory on the parent so users can pass a path that
     // doesn't yet exist (e.g. ./backups/wdc-snapshot.json) without
     // getting DirectoryNotFoundException from File.WriteAllText.
@@ -3473,6 +3479,7 @@ return await rootCommand.Parse(args).InvokeAsync();
 static string CliAssemblyVersion() =>
     typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
+
 static bool EnsureConnected(DaemonClient client)
 {
     if (client.Connect()) return true;
@@ -3480,8 +3487,8 @@ static bool EnsureConnected(DaemonClient client)
     return false;
 }
 
-static void PrintJson(object obj) =>
-    AnsiConsole.WriteLine(JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true }));
+void PrintJson(object obj) =>
+    AnsiConsole.WriteLine(JsonSerializer.Serialize(obj, indentedJson));
 
 static string StateNumToStr(int state) => state switch
 {
