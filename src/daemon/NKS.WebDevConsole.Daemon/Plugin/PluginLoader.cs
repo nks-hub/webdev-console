@@ -142,6 +142,22 @@ public sealed class PluginManifestData
     public string[]? SupportedPlatforms { get; set; }
     public string[]? Capabilities { get; set; }
     public int[]? DefaultPorts { get; set; }
+    // F87: plugin dependency graph. A plugin may declare hard dependencies
+    // (MUST be enabled before this plugin can start) and any-of choices
+    // (at least one of the listed plugins MUST be enabled — e.g. PHP
+    // requires Apache OR Nginx OR Caddy as a web server host).
+    // Optional: missing fields keep current permissive behaviour.
+    public PluginDependencies? Dependencies { get; set; }
+}
+
+public sealed class PluginDependencies
+{
+    /// <summary>Plugin IDs that MUST be enabled before this plugin starts.</summary>
+    public string[]? Hard { get; set; }
+
+    /// <summary>Groups where at least one member MUST be enabled. Each inner
+    /// array is an OR set — any one of its plugin IDs satisfies the group.</summary>
+    public string[][]? AnyOf { get; set; }
 }
 
 public record LoadedPlugin(
@@ -163,6 +179,44 @@ internal static class PluginLoaderInternals
 
     public static bool IsSemVer(string? version) =>
         !string.IsNullOrWhiteSpace(version) && SemVerRegex.IsMatch(version);
+
+    /// <summary>
+    /// F87: evaluate a plugin's dependency manifest against the set of
+    /// currently loaded plugin IDs. Returns empty list when all deps
+    /// satisfied, otherwise a list of human-readable diagnostic strings
+    /// naming each missing hard dep + each unsatisfied any-of group.
+    /// Callers (PluginLoader + /api/plugins enable endpoint) surface
+    /// the list to the user instead of silently failing / hanging.
+    /// </summary>
+    public static IReadOnlyList<string> ValidateDependencies(
+        PluginDependencies? deps,
+        System.Collections.Generic.ISet<string> availablePluginIds)
+    {
+        if (deps is null) return Array.Empty<string>();
+        var missing = new List<string>();
+        foreach (var hard in deps.Hard ?? Array.Empty<string>())
+        {
+            if (string.IsNullOrWhiteSpace(hard)) continue;
+            if (!availablePluginIds.Contains(hard))
+                missing.Add($"required plugin '{hard}' is not available");
+        }
+        foreach (var group in deps.AnyOf ?? Array.Empty<string[]>())
+        {
+            if (group is null || group.Length == 0) continue;
+            var anySatisfied = false;
+            foreach (var candidate in group)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate) && availablePluginIds.Contains(candidate))
+                {
+                    anySatisfied = true;
+                    break;
+                }
+            }
+            if (!anySatisfied)
+                missing.Add($"at least one of [{string.Join(", ", group)}] must be available");
+        }
+        return missing;
+    }
 }
 
 public partial class PluginLoader

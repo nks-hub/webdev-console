@@ -410,10 +410,24 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
 app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
 {
     var modules = sp.GetServices<IServiceModule>();
+    // F87: pre-compute the set of enabled plugin IDs once so every row
+    // can cheaply check its dependencies against the live state.
+    var enabledIds = new HashSet<string>(
+        pluginLoader.Plugins
+            .Where(pl => pluginState.IsEnabled(pl.Instance.Id))
+            .Select(pl => pl.Instance.Id),
+        StringComparer.OrdinalIgnoreCase);
     return Results.Ok(pluginLoader.Plugins.Select(p =>
     {
         var svcId = p.Instance.Id.Split('.').LastOrDefault() ?? "";
         var hasService = modules.Any(m => m.ServiceId.Contains(svcId, StringComparison.OrdinalIgnoreCase));
+
+        // F87: evaluate dependency graph against currently-enabled plugins.
+        // Returns empty when no deps declared or all satisfied. Frontend
+        // can render each diagnostic as a warning banner on the plugin
+        // card so the user knows why a plugin may not start.
+        var depDiagnostics = PluginLoaderInternals.ValidateDependencies(
+            p.Manifest?.Dependencies, enabledIds);
 
         // Resolve description from three ordered sources so every plugin
         // surfaces something meaningful in the Plugins settings page:
@@ -441,6 +455,11 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             license = p.Manifest?.License ?? "MIT",
             capabilities = p.Manifest?.Capabilities ?? Array.Empty<string>(),
             supportedPlatforms = p.Manifest?.SupportedPlatforms ?? Array.Empty<string>(),
+            // F87: dependency graph exposed to UI. dependencies mirrors
+            // the manifest verbatim; missingDependencies is the live
+            // diagnostic against enabledIds (empty = OK).
+            dependencies = p.Manifest?.Dependencies,
+            missingDependencies = depDiagnostics,
         };
     }));
 });
