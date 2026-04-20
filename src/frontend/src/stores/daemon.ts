@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchStatus, fetchServices, subscribeEvents } from '../api/daemon'
-import type { ValidationUpdate } from '../api/daemon'
-import type { StatusResponse, ServiceInfo } from '../api/types'
+import type { StatusResponse, ServiceInfo, ValidationUpdate } from '../api/types'
 
 type OnConnectListener = () => void | Promise<void>
 const onConnectListeners = new Set<OnConnectListener>()

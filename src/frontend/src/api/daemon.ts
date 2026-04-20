@@ -6,6 +6,7 @@ import type {
   PluginManifest,
   PluginUiDefinition,
   ProgressUpdate,
+  ValidationUpdate,
   MetricsUpdate,
   LogEntry,
   BinaryRelease,
@@ -820,13 +821,6 @@ export const restoreHosts = (pathOrContent: { path?: string; content?: string })
  * port/token change, so we must rebuild the URL from current location.search
  * (which Electron main refreshes on window reload) before each reconnect attempt.
  */
-export interface ValidationUpdate {
-  phase: 'started' | 'passed' | 'failed'
-  serviceId: string
-  configPath?: string
-  output?: string
-}
-
 export function subscribeEvents(
   onService: (data: ServiceInfo) => void,
   onProgress: (data: ProgressUpdate) => void,

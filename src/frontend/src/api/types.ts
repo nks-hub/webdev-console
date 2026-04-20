@@ -175,6 +175,17 @@ export interface ValidationState {
   error?: string
 }
 
+/** SSE payload pushed on /api/events when the daemon finishes a config
+ *  validation pass. Consumed by daemonStore.validation and
+ *  ValidationBadge.vue. Distinct from ValidationState (a derived UI
+ *  model) — this is the raw wire format. */
+export interface ValidationUpdate {
+  phase: 'started' | 'passed' | 'failed'
+  serviceId: string
+  configPath?: string
+  output?: string
+}
+
 export interface ProgressUpdate {
   percent: number
   message: string
