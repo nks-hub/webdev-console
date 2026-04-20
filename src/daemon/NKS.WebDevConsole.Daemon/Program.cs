@@ -3107,7 +3107,7 @@ app.MapPost("/api/hosts/apply", async (HttpContext ctx) =>
 
         await File.WriteAllTextAsync(hostsPath, newContent, System.Text.Encoding.ASCII);
 
-        try { System.Diagnostics.Process.Start("ipconfig", "/flushdns")?.WaitForExit(5000); } catch { }
+        try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
         return Results.Ok(new { applied = true, entryCount = req.Entries.Count });
     }
@@ -3192,7 +3192,7 @@ app.MapPost("/api/hosts/restore", async (HttpContext ctx) =>
             File.Copy(hostsPath, $"{hostsPath}.wdc-backup.1", overwrite: true);
 
         await File.WriteAllTextAsync(hostsPath, newContent, System.Text.Encoding.ASCII);
-        try { System.Diagnostics.Process.Start("ipconfig", "/flushdns")?.WaitForExit(5000); } catch { }
+        try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
         return Results.Ok(new { restored = true });
     }

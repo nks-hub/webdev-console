@@ -653,7 +653,11 @@ ipconfig /flushdns | Out-Null
 
         try
         {
-            var proc = System.Diagnostics.Process.Start(psi);
+            // `using` so the elevated PowerShell's OS handle releases
+            // after WaitForExitAsync — previously leaked on every hosts
+            // update (UAC-elevated invocation so the daemon inherits the
+            // child's handle table entry and keeps it alive until GC).
+            using var proc = System.Diagnostics.Process.Start(psi);
             if (proc is not null)
             {
                 await proc.WaitForExitAsync(ct);
