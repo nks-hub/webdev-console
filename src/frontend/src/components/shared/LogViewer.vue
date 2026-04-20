@@ -30,18 +30,12 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
+import { daemonBaseUrl } from '../../api/daemon'
 
 // daemonApi is declared as non-optional in ../../api/daemon.ts; the local
 // redeclaration here used to mark it optional, which produced conflicting
 // `declare global` merges. Dropped — we lean on the central declaration
 // and guard access with optional-chaining where needed.
-
-
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
-  return `http://localhost:${port}`
-}
 
 function daemonToken(): string {
   return window.daemonApi?.getToken?.() || new URLSearchParams(window.location.search).get('token') || ''
@@ -123,7 +117,7 @@ onMounted(async () => {
   // Fetch historical logs from daemon
   if (props.serviceId) {
     try {
-      const baseUrl = daemonBase()
+      const baseUrl = daemonBaseUrl()
       const token = daemonToken()
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
@@ -142,8 +136,8 @@ onMounted(async () => {
   if (props.serviceId) {
     const token = daemonToken()
     const url = token
-      ? `${daemonBase()}/api/events?token=${encodeURIComponent(token)}`
-      : `${daemonBase()}/api/events`
+      ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
+      : `${daemonBaseUrl()}/api/events`
     const es = new EventSource(url)
 
     es.addEventListener('log', (e: MessageEvent) => {

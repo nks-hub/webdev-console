@@ -840,6 +840,7 @@ import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
+  daemonBaseUrl,
   type DeviceInfo as CatalogDeviceInfo,
 } from '../../api/daemon'
 
@@ -988,7 +989,7 @@ const mysqlRootSaving = ref(false)
 
 async function loadMysqlRootStatus() {
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/root-password`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/root-password`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       mysqlRootExists.value = !!data?.exists
@@ -1000,7 +1001,7 @@ async function saveMysqlRootPassword() {
   if (!mysqlRootPassword.value) return
   mysqlRootSaving.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/root-password`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/root-password`, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ password: mysqlRootPassword.value }),
@@ -1019,7 +1020,7 @@ const pluginCatalogStatus = ref<{ catalogCount: number; cachedCount: number; las
 
 async function loadPluginCatalogStatus() {
   try {
-    const r = await fetch(`${daemonBase()}/api/plugins/catalog/status`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/plugins/catalog/status`, { headers: authHeaders() })
     if (r.ok) pluginCatalogStatus.value = await r.json()
   } catch { /* daemon unreachable — leave as null so the hint line hides */ }
 }
@@ -1036,12 +1037,6 @@ const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = window.daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
-  return `http://localhost:${port}`
-}
-
 function authHeaders(): Record<string, string> {
   const urlToken = new URLSearchParams(window.location.search).get('token')
   const token = window.daemonApi?.getToken?.() || urlToken || ''
@@ -1052,7 +1047,7 @@ function authHeaders(): Record<string, string> {
 
 async function loadDatabases() {
   try {
-    const r = await fetch(`${daemonBase()}/api/databases`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/databases`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       databases.value = data.databases ?? []
@@ -1063,7 +1058,7 @@ async function loadDatabases() {
 async function createDatabase() {
   if (!newDbName.value) return
   try {
-    const r = await fetch(`${daemonBase()}/api/databases`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ name: newDbName.value }),
@@ -1077,7 +1072,7 @@ async function createDatabase() {
 
 async function dropDatabase(name: string) {
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success(`Database ${name} dropped`)
     await loadDatabases()
@@ -1087,7 +1082,7 @@ async function dropDatabase(name: string) {
 async function flushDns() {
   flushingDns.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/dns/flush`, { method: 'POST', headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/dns/flush`, { method: 'POST', headers: authHeaders() })
     if (r.ok) ElMessage.success('DNS cache flushed')
     else ElMessage.warning('DNS flush may require admin privileges')
   } catch {
@@ -1103,7 +1098,7 @@ async function flushDns() {
 async function discoverMamp() {
   mampDiscovering.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/sites/discover-mamp`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/sites/discover-mamp`, { headers: authHeaders() })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const data = await r.json()
     if (!data.count || data.count === 0) {
@@ -1116,7 +1111,7 @@ async function discoverMamp() {
       { confirmButtonText: 'Import', cancelButtonText: 'Cancel', type: 'info' },
     )
     if (confirmed) {
-      const ir = await fetch(`${daemonBase()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
+      const ir = await fetch(`${daemonBaseUrl()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
       if (!ir.ok) throw new Error((await ir.text().catch(() => '')) || `HTTP ${ir.status}`)
       const result = await ir.json()
       ElMessage.success(`Imported ${result.count} site(s) from MAMP`)
@@ -1130,7 +1125,7 @@ async function discoverMamp() {
 
 async function loadPhpVersions() {
   try {
-    const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       phpVersions.value = data.map((v: any) => v.majorMinor || v.version)
@@ -1140,7 +1135,7 @@ async function loadPhpVersions() {
 
 async function loadSettings() {
   try {
-    const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
     if (!r.ok) return
     const data = await r.json() as Record<string, string>
     if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
@@ -1171,7 +1166,7 @@ async function syncPluginsNow() {
   syncingPlugins.value = true
   pluginSyncStatus.value = null
   try {
-    const r = await fetch(`${daemonBase()}/api/plugins/catalog/sync`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/plugins/catalog/sync`, {
       method: 'POST',
       headers: authHeaders(),
     })
@@ -1198,12 +1193,12 @@ async function refreshCatalog() {
     // Save URL first so the daemon's CatalogClient picks it up, then
     // trigger a manual refresh so the new source takes effect without
     // restarting the daemon.
-    await fetch(`${daemonBase()}/api/settings`, {
+    await fetch(`${daemonBaseUrl()}/api/settings`, {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify({ 'daemon.catalogUrl': catalogUrl.value || '' }),
     })
-    const r = await fetch(`${daemonBase()}/api/binaries/catalog/refresh`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/binaries/catalog/refresh`, {
       method: 'POST',
       headers: authHeaders(),
     })
@@ -1401,7 +1396,7 @@ const lastSyncDisplay = computed(() => {
 async function loadDeviceId() {
   // Device ID is persisted in daemon settings; generate if missing
   try {
-    const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
     if (!r.ok) return
     const data = await r.json() as Record<string, string>
     if (data['sync.deviceId']) {
@@ -1410,7 +1405,7 @@ async function loadDeviceId() {
       // First run: generate a UUID and persist it
       const id = crypto.randomUUID()
       deviceId.value = id
-      await fetch(`${daemonBase()}/api/settings`, {
+      await fetch(`${daemonBaseUrl()}/api/settings`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({ 'sync.deviceId': id }),
@@ -1439,9 +1434,9 @@ async function buildSyncPayload(): Promise<Record<string, any>> {
   // leaking machine-specific paths and polluting the stored snapshot
   // with values that the pull side would refuse to apply anyway.
   const [settingsRes, sitesRes, systemRes] = await Promise.all([
-    fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() }),
-    fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() }),
-    fetch(`${daemonBase()}/api/system`, { headers: authHeaders() }),
+    fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() }),
+    fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() }),
+    fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() }),
   ])
   const rawSettings = settingsRes.ok ? await settingsRes.json() as Record<string, any> : {}
   const rawSites = sitesRes.ok ? await sitesRes.json() as any[] : []
@@ -1478,7 +1473,7 @@ async function pushToCloud() {
   syncStatus.value = null
   try {
     // Save device name first
-    await fetch(`${daemonBase()}/api/settings`, {
+    await fetch(`${daemonBaseUrl()}/api/settings`, {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify({
@@ -1569,7 +1564,7 @@ async function pullFromCloud() {
     // keys (paths, ports, backup dir) stay untouched so pulling another
     // device's snapshot doesn't overwrite C:\work\htdocs with /home/user.
     if (payload?.settings && typeof payload.settings === 'object') {
-      const localSettings = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+      const localSettings = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
         .then(r => r.ok ? r.json() : {}) as Record<string, string>
 
       const merged: Record<string, string> = {}
@@ -1581,7 +1576,7 @@ async function pullFromCloud() {
       }
 
       if (Object.keys(merged).length > 0) {
-        await fetch(`${daemonBase()}/api/settings`, {
+        await fetch(`${daemonBaseUrl()}/api/settings`, {
           method: 'PUT',
           headers: authHeaders(),
           body: JSON.stringify(merged),
@@ -1594,7 +1589,7 @@ async function pullFromCloud() {
     // New sites: create with sync fields + empty documentRoot (user
     // must set it via SiteEdit before the vhost is generated).
     if (Array.isArray(payload?.sites)) {
-      const localSites = await fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() })
+      const localSites = await fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() })
         .then(r => r.ok ? r.json() : []) as any[]
       const localByDomain = new Map(localSites.map((s: any) => [s.domain, s]))
 
@@ -1610,7 +1605,7 @@ async function pullFromCloud() {
           for (const field of SITE_SYNC_FIELDS) {
             if (field in remoteSite) update[field] = remoteSite[field]
           }
-          await fetch(`${daemonBase()}/api/sites/${domain}`, {
+          await fetch(`${daemonBaseUrl()}/api/sites/${domain}`, {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify(update),
@@ -1628,7 +1623,7 @@ async function pullFromCloud() {
             if (field in remoteSite) newSite[field] = remoteSite[field]
           }
           try {
-            await fetch(`${daemonBase()}/api/sites`, {
+            await fetch(`${daemonBaseUrl()}/api/sites`, {
               method: 'POST',
               headers: authHeaders(),
               body: JSON.stringify(newSite),
@@ -1727,7 +1722,7 @@ async function importSettings(event: Event) {
       if (isSettingSyncable(key)) merged[key] = value
     }
     if (Object.keys(merged).length > 0) {
-      await fetch(`${daemonBase()}/api/settings`, {
+      await fetch(`${daemonBaseUrl()}/api/settings`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(merged),
@@ -1825,12 +1820,12 @@ onMounted(async () => {
   void loadMysqlRootStatus()
   if (accountToken.value) void loadDevicesAccount()
   try {
-    const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
   } catch { /* not connected */ }
   // Load installed binary versions for the About tab
   try {
-    const r = await fetch(`${daemonBase()}/api/binaries/installed`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/binaries/installed`, { headers: authHeaders() })
     if (r.ok) {
       const bins: Array<{ app: string; version: string }> = await r.json()
       const seen = new Set<string>()
@@ -1869,7 +1864,7 @@ async function save() {
       'backup.dir': backupDir.value,
       'backup.scheduleHours': String(backupScheduleHours.value),
     }
-    const r = await fetch(`${daemonBase()}/api/settings`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/settings`, {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify(payload),

@@ -7,6 +7,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { daemonBaseUrl } from '../../api/daemon'
 
 const props = defineProps<{
   service: string
@@ -25,12 +26,6 @@ function staticUrlFor(id: string): string | null {
   const normalized = STATIC_ALIASES[id] || id
   const key = Object.keys(staticIcons).find(k => k.endsWith(`/brand/${normalized}.svg`))
   return key ? (staticIcons[key] as unknown as string) : null
-}
-
-function daemonBase(): string {
-  const params = new URLSearchParams(window.location.search)
-  const port = params.get('port') || (window as any).daemonApi?.getPort?.() || '5199'
-  return `http://localhost:${port}`
 }
 
 function authToken(): string {
@@ -72,7 +67,7 @@ const iconUrl = computed(() => {
   if (knownPlugin) {
     const token = authToken()
     const suffix = token ? `?token=${encodeURIComponent(token)}` : ''
-    return `${daemonBase()}/api/plugins/${shortId}/icon${suffix}`
+    return `${daemonBaseUrl()}/api/plugins/${shortId}/icon${suffix}`
   }
   return staticUrlFor(shortId)
 })
