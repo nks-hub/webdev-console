@@ -339,6 +339,7 @@ import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { ElMessage, ElNotification } from 'element-plus'
+import { daemonBaseUrl } from '../../api/daemon'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
@@ -371,21 +372,14 @@ const totalHits = ref(0)
 const totalErrors = ref(0)
 const aggregatesLoading = ref(false)
 
-function simpleDaemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${urlPort}`
-  const p = window.daemonApi?.getPort?.()
-  return `http://localhost:${typeof p === 'number' ? p : 5199}`
-}
-
 async function loadAggregates() {
   aggregatesLoading.value = true
   const domains = sitesStore.sites.map((s: any) => s.domain)
   const results = await Promise.allSettled(domains.map(async (domain: string) => {
     try {
       const [metricsR, errorsR] = await Promise.allSettled([
-        fetch(`${simpleDaemonBase()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
-        fetch(`${simpleDaemonBase()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
+        fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
+        fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
       ])
       let hits = 0, errs = 0
       if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
