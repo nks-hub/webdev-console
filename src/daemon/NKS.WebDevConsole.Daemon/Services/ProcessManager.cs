@@ -140,6 +140,22 @@ public class ProcessManager
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start {Id}", id);
+            // If Process.Start() succeeded but setup afterwards threw
+            // (BeginOutputReadLine, event wiring, …), the child process
+            // is still alive. DaemonJobObject would eventually reap it
+            // on daemon exit, but leaving it running in the meantime
+            // means a subsequent StartAsync believes the service is
+            // crashed while the OS still sees the executable listening
+            // on the port. Kill it here so the unit.State === OS truth.
+            if (unit.Process is { HasExited: false } proc)
+            {
+                try { proc.Kill(entireProcessTree: true); }
+                catch (Exception killEx)
+                {
+                    _logger.LogWarning(killEx, "Failed to kill orphaned {Id} process after start failure", id);
+                }
+            }
+            unit.Process = null;
             unit.State = ServiceState.Crashed;
             await BroadcastState(unit);
             return false;
