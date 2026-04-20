@@ -665,6 +665,27 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
                     }
                 }
 
+                // F91: project NavEntries (nullable array of NavContribution) across
+                // the plugin ALC boundary using the same reflection idiom as panels.
+                var navProp = def.GetType().GetProperty("NavEntries");
+                var navOut = new List<object>();
+                if (navProp?.GetValue(def) is System.Collections.IEnumerable navEnum)
+                {
+                    foreach (var n in navEnum)
+                    {
+                        if (n is null) continue;
+                        var t = n.GetType();
+                        navOut.Add(new
+                        {
+                            id = t.GetProperty("Id")?.GetValue(n)?.ToString() ?? "",
+                            label = t.GetProperty("Label")?.GetValue(n)?.ToString() ?? "",
+                            icon = t.GetProperty("Icon")?.GetValue(n)?.ToString() ?? "",
+                            route = t.GetProperty("Route")?.GetValue(n)?.ToString() ?? "",
+                            order = t.GetProperty("Order")?.GetValue(n) is int o ? o : 100
+                        });
+                    }
+                }
+
                 // If the plugin gave us an empty panel list, fall through to the default
                 // (it's most likely a plugin scaffolding bug — don't punish the user with
                 // a blank page).
@@ -675,7 +696,8 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
                         pluginId = pidProp?.GetValue(def)?.ToString() ?? id,
                         category = catProp?.GetValue(def)?.ToString() ?? "Services",
                         icon = iconProp?.GetValue(def)?.ToString() ?? "el-icon-setting",
-                        panels = panelsOut
+                        panels = panelsOut,
+                        navEntries = navOut
                     });
                 }
             }
@@ -696,8 +718,62 @@ app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>
         {
             new { type = "service-status-card", props = (object)new { serviceId = id } },
             new { type = "log-viewer", props = (object)new { serviceId = id } }
-        }
+        },
+        navEntries = Array.Empty<object>()
     });
+});
+
+// F91 aggregator — single round-trip for the sidebar. Returns nav entries
+// from every currently-enabled plugin, flattened + sorted by (category,
+// order, label). Disabled plugins contribute nothing. Replaces the need
+// for the frontend to fetch /api/plugins/{id}/ui N times when building
+// the sidebar.
+app.MapGet("/api/plugins/ui", (IServiceProvider sp, PluginState pluginState) =>
+{
+    var result = new List<object>();
+    foreach (var plugin in pluginLoader.Plugins)
+    {
+        if (!pluginState.IsEnabled(plugin.Instance.Id)) continue;
+        try
+        {
+            var uiMethod = plugin.Instance.GetType().GetMethod("GetUiDefinition");
+            var def = uiMethod?.Invoke(plugin.Instance, null);
+            if (def is null) continue;
+
+            var pluginId = def.GetType().GetProperty("PluginId")?.GetValue(def)?.ToString()
+                ?? plugin.Instance.Id;
+            var category = def.GetType().GetProperty("Category")?.GetValue(def)?.ToString()
+                ?? "Services";
+            var fallbackIcon = def.GetType().GetProperty("Icon")?.GetValue(def)?.ToString()
+                ?? "el-icon-setting";
+
+            if (def.GetType().GetProperty("NavEntries")?.GetValue(def)
+                is System.Collections.IEnumerable navEnum)
+            {
+                foreach (var n in navEnum)
+                {
+                    if (n is null) continue;
+                    var t = n.GetType();
+                    result.Add(new
+                    {
+                        pluginId,
+                        category,
+                        id = t.GetProperty("Id")?.GetValue(n)?.ToString() ?? "",
+                        label = t.GetProperty("Label")?.GetValue(n)?.ToString() ?? "",
+                        icon = (t.GetProperty("Icon")?.GetValue(n)?.ToString() is { Length: > 0 } ic)
+                            ? ic : fallbackIcon,
+                        route = t.GetProperty("Route")?.GetValue(n)?.ToString() ?? "",
+                        order = t.GetProperty("Order")?.GetValue(n) is int o ? o : 100
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "F91 nav aggregation failed for plugin {Id}", plugin.Instance.Id);
+        }
+    }
+    return Results.Ok(new { entries = result });
 });
 
 // Plugin install — Phase 7. Downloads a plugin .zip from a marketplace URL, validates,
