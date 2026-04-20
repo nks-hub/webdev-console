@@ -2492,6 +2492,46 @@ app.MapPost("/api/composer/self-install", async (IHttpClientFactory httpFactory,
         await using (var fs = File.Create(pharPath))
             await resp.Content.CopyToAsync(fs, ct);
 
+        // F27: defense-in-depth SHA-256 verification. getcomposer.org publishes
+        // composer.phar.sha256sum alongside the phar; cross-check so a MITM or
+        // compromised mirror can't substitute a trojaned installer even if TLS
+        // is downgraded by a hostile cert. Missing sidecar is logged but NOT
+        // fatal — upstream occasionally lags.
+        try
+        {
+            using var sumResp = await http.GetAsync("https://getcomposer.org/composer.phar.sha256sum", ct);
+            if (sumResp.IsSuccessStatusCode)
+            {
+                var raw = (await sumResp.Content.ReadAsStringAsync(ct)).Trim();
+                // Format: "<hex>  composer.phar" — take the first whitespace-separated token.
+                var expected = raw.Split([' ', '\t', '\n'], 2, StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault() ?? "";
+                if (expected.Length == 64)
+                {
+                    await using var vs = File.OpenRead(pharPath);
+                    var hash = await System.Security.Cryptography.SHA256.HashDataAsync(vs, ct);
+                    var actual = Convert.ToHexString(hash).ToLowerInvariant();
+                    if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { File.Delete(pharPath); } catch { /* ignore */ }
+                        return Results.Problem(
+                            title: "Integrity check failed",
+                            detail: $"composer.phar SHA-256 mismatch: upstream {expected}, downloaded {actual}. Aborted and removed the bad artifact.",
+                            statusCode: 502);
+                    }
+                    logger.LogInformation("composer.phar sha-256 verified against upstream sum");
+                }
+            }
+            else
+            {
+                logger.LogWarning("composer.phar.sha256sum returned {Status} — TLS is the only remaining integrity guarantee", (int)sumResp.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "composer.phar sha-256 verification skipped");
+        }
+
         // Re-scan binaries so ComposerInvoker picks up the new phar without a daemon restart.
         var composerPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.composer");
         if (composerPlugin is not null)
