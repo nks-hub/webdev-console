@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain } from 'electron'
 import { dirname, join } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
@@ -729,6 +729,34 @@ protocol.registerSchemesAsPrivileged([
 if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
+
+// F79 + F72 IPC surface — exposed to the renderer via preload's
+// contextBridge 'electronAPI'. Registered BEFORE whenReady runs handlers
+// so any renderer call that lands while the window is still mounting
+// doesn't miss the handler. Keep the list minimal; each handler is a
+// capability the renderer is explicitly trusted to use.
+ipcMain.handle('open-external', async (_evt, url: string) => {
+  if (typeof url !== 'string') return false
+  // shell.openExternal rejects non-http(s)/file URLs already, but we
+  // belt-and-suspenders block anything not in an allowlist of safe
+  // schemes so a compromised renderer can't launch `calculator://…` or
+  // similar protocol-handler chains.
+  const allowed = /^(https?|mailto|file):/i
+  if (!allowed.test(url)) return false
+  await shell.openExternal(url)
+  return true
+})
+
+ipcMain.handle('show-open-dialog', async (_evt, options: Electron.OpenDialogOptions | undefined) => {
+  const safeOptions: Electron.OpenDialogOptions = {
+    properties: options?.properties ?? ['openDirectory'],
+    title: options?.title,
+    defaultPath: options?.defaultPath,
+    buttonLabel: options?.buttonLabel,
+  }
+  const result = await dialog.showOpenDialog(safeOptions)
+  return { canceled: result.canceled, filePaths: result.filePaths }
+})
 
 app.whenReady().then(async () => {
   protocol.handle('app', (request) => {

@@ -125,24 +125,51 @@
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.paths')" name="paths">
           <div class="tab-content">
             <p class="tab-desc">Override binary paths. Leave blank to use auto-detected defaults.</p>
-            <el-form label-position="top" size="small" style="max-width: 500px">
+            <!-- F79: Browse buttons open the native file/folder dialog via
+                 electronAPI.showOpenDialog. Falls back to manual typing when
+                 running outside Electron (dev browser, etc.). -->
+            <el-form label-position="top" size="small" style="max-width: 560px">
               <el-form-item label="Apache httpd.exe">
-                <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe" />
+                <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
+                  <template #append>
+                    <el-button @click="browsePath('apache', 'file')">Browse</el-button>
+                  </template>
+                </el-input>
               </el-form-item>
               <el-form-item label="MySQL mysqld.exe">
-                <el-input v-model="paths.mysql" placeholder="C:\nks-wdc\binaries\mysql\8.0\bin\mysqld.exe" />
+                <el-input v-model="paths.mysql" placeholder="C:\nks-wdc\binaries\mysql\8.0\bin\mysqld.exe">
+                  <template #append>
+                    <el-button @click="browsePath('mysql', 'file')">Browse</el-button>
+                  </template>
+                </el-input>
               </el-form-item>
               <el-form-item label="PHP executable">
-                <el-input v-model="paths.php" placeholder="C:\nks-wdc\binaries\php\8.4\php.exe" />
+                <el-input v-model="paths.php" placeholder="C:\nks-wdc\binaries\php\8.4\php.exe">
+                  <template #append>
+                    <el-button @click="browsePath('php', 'file')">Browse</el-button>
+                  </template>
+                </el-input>
               </el-form-item>
               <el-form-item label="Redis redis-server.exe">
-                <el-input v-model="paths.redis" placeholder="C:\nks-wdc\binaries\redis\7.2\redis-server.exe" />
+                <el-input v-model="paths.redis" placeholder="C:\nks-wdc\binaries\redis\7.2\redis-server.exe">
+                  <template #append>
+                    <el-button @click="browsePath('redis', 'file')">Browse</el-button>
+                  </template>
+                </el-input>
               </el-form-item>
               <el-form-item label="Sites config directory">
-                <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts" />
+                <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts">
+                  <template #append>
+                    <el-button @click="browsePath('sitesDir', 'folder')">Browse</el-button>
+                  </template>
+                </el-input>
               </el-form-item>
               <el-form-item label="Hosts file">
-                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts" />
+                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts">
+                  <template #append>
+                    <el-button @click="browsePath('hostsFile', 'file')">Browse</el-button>
+                  </template>
+                </el-input>
                 <div class="hint">
                   Path to the system hosts file for local domain resolution.
                   Leave blank for the OS default.
@@ -771,6 +798,27 @@ const defaultPhp = ref('8.4')
 const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
+
+// F79: open native OS file/folder picker + write result into paths[key].
+// Electron-only (wrapped via preload's electronAPI.showOpenDialog). When
+// running outside Electron the button no-ops with a warning toast.
+async function browsePath(key: keyof typeof paths, kind: 'file' | 'folder'): Promise<void> {
+  const api = (window as any).electronAPI
+  if (!api?.showOpenDialog) {
+    ElMessage.warning('Native file dialog is only available in the packaged app')
+    return
+  }
+  const result = await api.showOpenDialog({
+    properties: kind === 'folder' ? ['openDirectory'] : ['openFile'],
+    title: kind === 'folder' ? 'Select directory' : 'Select file',
+    defaultPath: paths[key] || undefined,
+  })
+  if (result?.canceled) return
+  const picked = result?.filePaths?.[0]
+  if (typeof picked === 'string' && picked.length > 0) {
+    paths[key] = picked
+  }
+}
 
 // F85: format daemon uptime seconds into human-friendly string.
 function formatUptime(seconds: number): string {

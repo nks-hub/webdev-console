@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { readFileSync, existsSync, statSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -61,4 +61,21 @@ contextBridge.exposeInMainWorld('daemonApi', {
     refreshFromPortFile()
     return cachedToken
   },
+})
+
+// F72 + F79: explicit electronAPI surface the renderer can call to
+// reach out to the system — every method is a thin pass-through to an
+// ipcMain.handle in main.ts so the renderer never holds the shell /
+// dialog refs directly. Keeping this list tight preserves the
+// least-privilege posture of the sandboxed renderer.
+contextBridge.exposeInMainWorld('electronAPI', {
+  // Open a URL in the user's DEFAULT system browser, bypassing
+  // Electron's new-window handler. Main allowlists the URL scheme.
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
+  // Show a native file/directory picker. Returns { canceled, filePaths }.
+  // Pass { properties: ['openDirectory'] } for folder picker (F79 path
+  // inputs in Settings/Cesty), ['openFile'] for a single file, etc.
+  showOpenDialog: (options?: Electron.OpenDialogOptions) =>
+    ipcRenderer.invoke('show-open-dialog', options),
 })
