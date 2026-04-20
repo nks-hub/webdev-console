@@ -25,6 +25,16 @@ NKS.WebDevConsole.Core.Services.DaemonJobObject.EnsureInitialized();
 var daemonStartedUtc = DateTime.UtcNow;
 long DaemonUptimeSeconds() => (long)(DateTime.UtcNow - daemonStartedUtc).TotalSeconds;
 
+// F92: daemon version read from assembly (InformationalVersion attribute
+// wired up via <InformationalVersion> in the csproj). Previously two
+// /api/* endpoints hardcoded "0.1.0" and never tracked shipped version.
+var daemonVersion =
+    System.Reflection.CustomAttributeExtensions
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+            System.Reflection.Assembly.GetExecutingAssembly())?.InformationalVersion
+    ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+    ?? "unknown";
+
 var builder = WebApplication.CreateBuilder(args);
 
 // CORS for Electron renderer — the packaged app loads the Vue SPA from
@@ -337,7 +347,7 @@ app.Use(async (ctx, next) =>
 app.MapGet("/api/status", () => Results.Ok(new
 {
     status = "running",
-    version = "0.1.0",
+    version = daemonVersion,
     plugins = pluginLoader.Plugins.Count,
     uptime = DaemonUptimeSeconds()
 }));
@@ -367,7 +377,7 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
 
     return Results.Ok(new
     {
-        daemon = new { version = "0.1.0", uptime = DaemonUptimeSeconds(), pid = Environment.ProcessId },
+        daemon = new { version = daemonVersion, uptime = DaemonUptimeSeconds(), pid = Environment.ProcessId },
         services = new { running, total },
         sites = sm.Sites.Count,
         plugins = pluginLoader.Plugins.Count,
