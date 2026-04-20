@@ -4425,11 +4425,20 @@ app.MapPost("/api/ssl/install-ca", async () =>
     if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
     var method = sslPlugin.Instance.GetType().GetMethod("InstallCA");
     if (method == null) return Results.BadRequest(new { ok = false, message = "InstallCA method not found" });
-    var task = (Task<bool>)method.Invoke(sslPlugin.Instance, null)!;
-    var success = await task;
-    return success
-        ? Results.Ok(new { ok = true, message = "CA installed" })
-        : Results.BadRequest(new { ok = false, message = "Failed to install CA" });
+    try
+    {
+        if (method.Invoke(sslPlugin.Instance, null) is not Task<bool> task)
+            return Results.BadRequest(new { ok = false, message = "InstallCA returned unexpected type" });
+        var success = await task;
+        return success
+            ? Results.Ok(new { ok = true, message = "CA installed" })
+            : Results.BadRequest(new { ok = false, message = "Failed to install CA" });
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "InstallCA reflection failed");
+        return Results.BadRequest(new { ok = false, message = $"InstallCA failed: {ex.Message}" });
+    }
 });
 
 app.MapPost("/api/ssl/generate", async (HttpContext ctx) =>
