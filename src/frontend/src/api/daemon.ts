@@ -145,6 +145,17 @@ export interface SystemInfo {
 }
 export const fetchSystem = (): Promise<SystemInfo> => json('/api/system')
 
+// Settings store — flat "category.key" → string map the daemon persists
+// in SQLite. Used by Settings.vue (read + write + sync compare) and by
+// Login.vue (read-only, to pre-fill the catalog URL). Several pages and
+// the sync flow re-fetch the same endpoint; keeping a single helper
+// avoids drift between the raw fetch() call sites.
+export const fetchSettings = (): Promise<Record<string, string>> =>
+  json('/api/settings')
+
+export const saveSettings = (patch: Record<string, string>): Promise<void> =>
+  json('/api/settings', { method: 'PUT', body: JSON.stringify(patch) })
+
 // Services
 export const fetchServices = (): Promise<ServiceInfo[]> =>
   json('/api/services')

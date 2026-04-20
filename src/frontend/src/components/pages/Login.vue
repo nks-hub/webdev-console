@@ -58,7 +58,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { fetchSettings } from '../../api/daemon'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -71,11 +71,8 @@ const catalogUrl = ref('')
 // surface, so browser dev mode works consistently.
 async function loadCatalogUrl() {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
-    if (r.ok) {
-      const data = await r.json()
-      catalogUrl.value = (data?.['daemon.catalogUrl'] as string) || ''
-    }
+    const data = await fetchSettings()
+    catalogUrl.value = data['daemon.catalogUrl'] || ''
   } catch { /* offline — keep default */ }
 }
 
