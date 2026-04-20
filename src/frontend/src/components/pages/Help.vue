@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, type Component } from 'vue'
 import {
   Search, House, Monitor, DataLine, Lock, Connection, Document,
   Setting, Box, Download, DataBoard, InfoFilled, Tools, Histogram,
@@ -48,7 +48,7 @@ import {
 interface HelpSection {
   id: string
   title: string
-  icon: any
+  icon: Component
   body: string
 }
 
