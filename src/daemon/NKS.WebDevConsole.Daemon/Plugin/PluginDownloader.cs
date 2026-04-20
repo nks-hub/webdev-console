@@ -58,9 +58,7 @@ public sealed class PluginDownloader
             if (string.IsNullOrWhiteSpace(release.Version))
                 continue;
 
-            var download = release.Downloads?.FirstOrDefault(d =>
-                !string.IsNullOrWhiteSpace(d.Url) &&
-                (d.ArchiveType?.Equals("zip", StringComparison.OrdinalIgnoreCase) ?? true));
+            var download = SelectZipDownload(release);
             if (download is null || string.IsNullOrWhiteSpace(download.Url))
             {
                 _logger.LogDebug("Plugin {Id} v{Version} has no .zip download — skipping",
@@ -128,6 +126,46 @@ public sealed class PluginDownloader
             try { if (File.Exists(tempFile)) File.Delete(tempFile); }
             catch { /* ignore */ }
         }
+    }
+
+    /// <summary>
+    /// Picks the first `.zip` download entry on a release, treating a
+    /// missing/blank <c>ArchiveType</c> as implicitly zip (the plugins
+    /// catalog currently ships only zip assets so omitted type == zip).
+    /// Returns null if no entry carries a non-empty URL.
+    /// </summary>
+    public static PluginCatalogDownload? SelectZipDownload(PluginCatalogRelease release)
+    {
+        if (release.Downloads is null || release.Downloads.Count == 0) return null;
+        return release.Downloads.FirstOrDefault(d =>
+            !string.IsNullOrWhiteSpace(d.Url) &&
+            (string.IsNullOrWhiteSpace(d.ArchiveType) ||
+             d.ArchiveType.Equals("zip", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>Skip-reason enum returned by <see cref="ClassifyEntry"/>.</summary>
+    public enum EntryClassification
+    {
+        Installable,
+        SkipMissingId,
+        SkipNoReleases,
+        SkipMissingVersion,
+        SkipNoZipDownload,
+    }
+
+    /// <summary>
+    /// Classifies a catalog entry against the same rules SyncLatestAsync
+    /// uses for filtering, without touching disk or network. Exposed so
+    /// tests can assert the skip-reason taxonomy directly.
+    /// </summary>
+    public static EntryClassification ClassifyEntry(PluginCatalogEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.Id)) return EntryClassification.SkipMissingId;
+        if (entry.Releases is null || entry.Releases.Count == 0) return EntryClassification.SkipNoReleases;
+        var release = entry.Releases[0];
+        if (string.IsNullOrWhiteSpace(release.Version)) return EntryClassification.SkipMissingVersion;
+        if (SelectZipDownload(release) is null) return EntryClassification.SkipNoZipDownload;
+        return EntryClassification.Installable;
     }
 
     private static async Task<string> ComputeSha256Async(string path, CancellationToken ct)
