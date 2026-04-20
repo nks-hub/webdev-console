@@ -24,7 +24,15 @@ public sealed class ShutdownCoordinator
     {
         Console.WriteLine("[shutdown] Stopping all services...");
 
-        foreach (var module in modules)
+        // Fan out stops concurrently — each module's StopAsync terminates
+        // its own process and doesn't depend on others' live state (ports
+        // get released on process exit regardless of order). Sequential
+        // shutdown used to make a daemon restart wait N × per-module
+        // stop-timeout in the worst case; with 8 modules and a 15 s cap
+        // that was up to 2 minutes of dead time on an unhealthy tick.
+        // Per-task try/catch preserves the "one bad module doesn't wedge
+        // the rest" guarantee we had in the sequential foreach.
+        var moduleStops = modules.Select(async module =>
         {
             try
             {
@@ -52,9 +60,10 @@ public sealed class ShutdownCoordinator
                 _logger.LogWarning(ex, "Failed to stop service {ServiceId} during shutdown", module.ServiceId);
                 Console.WriteLine($"[shutdown] {module.ServiceId}: {ex.Message}");
             }
-        }
+        });
+        await Task.WhenAll(moduleStops);
 
-        foreach (var plugin in plugins)
+        var pluginStops = plugins.Select(async plugin =>
         {
             try
             {
@@ -74,7 +83,8 @@ public sealed class ShutdownCoordinator
             {
                 _logger.LogWarning(ex, "Failed to stop plugin {PluginId} during shutdown", plugin.Instance.Id);
             }
-        }
+        });
+        await Task.WhenAll(pluginStops);
 
         try { File.Delete(portFile); } catch { }
         Console.WriteLine("[shutdown] Complete");
