@@ -522,17 +522,6 @@ export async function pushConfigToDevice(
   return r.json()
 }
 
-export async function deleteDevice(
-  catalogUrl: string, token: string, deviceId: string,
-): Promise<any> {
-  const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices/${deviceId}`, {
-    method: 'DELETE',
-    headers: jwtHeaders(token),
-  })
-  if (!r.ok) throw new Error(await catalogErrorMessage(r))
-  return r.json()
-}
-
 export const suggestCloudflareSubdomain = (domain: string): Promise<{ suggestion: string; domain: string }> =>
   json(`/api/cloudflare/suggest-subdomain?domain=${encodeURIComponent(domain)}`)
 
