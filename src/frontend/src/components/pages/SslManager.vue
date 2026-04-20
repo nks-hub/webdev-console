@@ -44,11 +44,16 @@
 
       <!-- Cert list -->
       <div v-else-if="certs.length > 0" class="cert-list">
-        <div v-for="cert in certs" :key="cert.domain" class="cert-card">
+        <div v-for="cert in certs" :key="cert.domain" class="cert-card" :class="{ 'cert-expiring': cert.expiring, 'cert-expired': cert.expired, 'cert-orphan': cert.orphan }">
           <div class="cert-main">
             <div class="cert-domain">
               <el-icon class="cert-lock"><Lock /></el-icon>
               <span class="cert-name">{{ cert.domain }}</span>
+              <!-- F81: status badges -->
+              <el-tag v-if="cert.expired" type="danger" size="small" effect="dark" class="cert-badge">Expired</el-tag>
+              <el-tag v-else-if="cert.expiring" type="warning" size="small" effect="dark" class="cert-badge">Expires in {{ cert.daysToExpiry }}d</el-tag>
+              <el-tag v-else-if="cert.daysToExpiry !== null && cert.daysToExpiry !== undefined" type="success" size="small" effect="plain" class="cert-badge">Valid {{ cert.daysToExpiry }}d</el-tag>
+              <el-tag v-if="cert.orphan" type="info" size="small" effect="plain" class="cert-badge" title="No site with this domain currently exists">Orphan</el-tag>
             </div>
             <div class="cert-meta">
               <span class="cert-meta-item" v-if="cert.aliases?.length">
@@ -56,6 +61,15 @@
               </span>
               <span class="cert-meta-item">
                 Created: {{ formatDate(cert.createdUtc) }}
+              </span>
+              <span v-if="cert.notAfterUtc" class="cert-meta-item">
+                Expires: {{ formatDate(cert.notAfterUtc) }}
+              </span>
+              <span v-if="cert.issuer" class="cert-meta-item mono">
+                Issuer: {{ cert.issuer }}
+              </span>
+              <span v-if="cert.fingerprint" class="cert-meta-item mono cert-fingerprint">
+                SHA1: {{ cert.fingerprint }}
               </span>
             </div>
             <div class="cert-paths">
@@ -347,4 +361,12 @@ onMounted(() => {
 }
 
 .cert-actions { flex-shrink: 0; margin-left: 16px; }
+
+/* F81 expiry / orphan state styling. The border hints at severity so a
+   quick glance across many certs highlights what needs attention. */
+.cert-card.cert-expiring { border-left: 3px solid var(--wdc-warning, #f5a623); }
+.cert-card.cert-expired { border-left: 3px solid var(--wdc-danger, #e74c3c); background: rgba(231, 76, 60, 0.04); }
+.cert-card.cert-orphan { opacity: 0.7; }
+.cert-badge { margin-left: 8px; }
+.cert-fingerprint { font-size: 0.7rem; opacity: 0.7; word-break: break-all; }
 </style>

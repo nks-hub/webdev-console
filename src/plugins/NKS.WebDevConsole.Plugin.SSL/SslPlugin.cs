@@ -192,11 +192,17 @@ public sealed class SslPlugin : IWdcPlugin
 
 /// <summary>
 /// Tracked certificate metadata.
+/// NotAfterUtc + Issuer are optional; the daemon /api/ssl/certs handler
+/// populates them lazily by reading the X.509 PEM (F81) so older cert
+/// records created before the field was added keep working.
 /// </summary>
 public record CertInfo(
     string Domain,
     string CertPath,
     string KeyPath,
     DateTime CreatedUtc,
-    string[] Aliases
+    string[] Aliases,
+    DateTime? NotAfterUtc = null,
+    string? Issuer = null,
+    string? Fingerprint = null
 );

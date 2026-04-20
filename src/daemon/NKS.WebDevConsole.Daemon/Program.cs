@@ -4120,29 +4120,86 @@ app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState) =>
 });
 
 // SSL certificates
-app.MapGet("/api/ssl/certs", () =>
+app.MapGet("/api/ssl/certs", (SiteManager sm) =>
 {
     var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
     if (sslPlugin == null) return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
     var method = sslPlugin.Instance.GetType().GetMethod("GetCerts");
-    if (method != null)
+    if (method == null)
+        return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
+
+    var rawResult = method.Invoke(sslPlugin.Instance, null);
+    var certValues = new List<object>();
+    if (rawResult is System.Collections.IEnumerable enumerable)
     {
-        var result = method.Invoke(sslPlugin.Instance, null);
-        if (result is IDictionary<string, object> dict)
-            return Results.Ok(new { certs = dict.Values, mkcertInstalled = true });
-        // IReadOnlyDictionary — enumerate via reflection
-        var values = new List<object>();
-        if (result is System.Collections.IEnumerable enumerable)
-            foreach (var item in enumerable)
-            {
-                var kvp = item.GetType();
-                var valProp = kvp.GetProperty("Value");
-                if (valProp != null) values.Add(valProp.GetValue(item)!);
-                else values.Add(item);
-            }
-        return Results.Ok(new { certs = values, mkcertInstalled = true });
+        foreach (var item in enumerable)
+        {
+            var kvp = item.GetType();
+            var valProp = kvp.GetProperty("Value");
+            certValues.Add(valProp != null ? valProp.GetValue(item)! : item);
+        }
     }
-    return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
+
+    // F81: enrich each CertInfo with live X.509 metadata (NotAfterUtc,
+    // Issuer, Fingerprint) parsed from disk + orphan flag (site with the
+    // cert's domain no longer exists) + expiring flag (<=14 days to
+    // expiry). We build a serialization-friendly dict so we don't need
+    // a shared DTO type across the plugin ALC boundary.
+    var knownDomains = sm.Sites.Values
+        .SelectMany(s => new[] { s.Domain }.Concat(s.Aliases ?? []))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    var enriched = new List<object>();
+    foreach (var cert in certValues)
+    {
+        var t = cert.GetType();
+        string domain = t.GetProperty("Domain")?.GetValue(cert) as string ?? "";
+        string certPath = t.GetProperty("CertPath")?.GetValue(cert) as string ?? "";
+        string keyPath = t.GetProperty("KeyPath")?.GetValue(cert) as string ?? "";
+        DateTime createdUtc = (DateTime)(t.GetProperty("CreatedUtc")?.GetValue(cert) ?? DateTime.UtcNow);
+        var aliases = (t.GetProperty("Aliases")?.GetValue(cert) as string[]) ?? Array.Empty<string>();
+
+        DateTime? notAfterUtc = t.GetProperty("NotAfterUtc")?.GetValue(cert) as DateTime?;
+        string? issuer = t.GetProperty("Issuer")?.GetValue(cert) as string;
+        string? fingerprint = t.GetProperty("Fingerprint")?.GetValue(cert) as string;
+
+        if (notAfterUtc is null && File.Exists(certPath))
+        {
+            try
+            {
+                var x509 = System.Security.Cryptography.X509Certificates.X509CertificateLoader
+                    .LoadCertificateFromFile(certPath);
+                notAfterUtc = x509.NotAfter.ToUniversalTime();
+                issuer = x509.Issuer;
+                fingerprint = x509.Thumbprint;
+            }
+            catch { /* cert unreadable — surface without metadata */ }
+        }
+
+        int? daysToExpiry = notAfterUtc.HasValue
+            ? (int)Math.Floor((notAfterUtc.Value - DateTime.UtcNow).TotalDays)
+            : (int?)null;
+        bool expiring = daysToExpiry.HasValue && daysToExpiry.Value <= 14;
+        bool expired = daysToExpiry.HasValue && daysToExpiry.Value < 0;
+        bool orphan = !knownDomains.Contains(domain);
+
+        enriched.Add(new
+        {
+            domain,
+            certPath,
+            keyPath,
+            createdUtc,
+            aliases,
+            notAfterUtc,
+            issuer,
+            fingerprint,
+            daysToExpiry,
+            expiring,
+            expired,
+            orphan,
+        });
+    }
+    return Results.Ok(new { certs = enriched, mkcertInstalled = true });
 });
 
 app.MapPost("/api/ssl/install-ca", async () =>
