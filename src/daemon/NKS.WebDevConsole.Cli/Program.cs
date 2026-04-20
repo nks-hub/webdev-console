@@ -3344,10 +3344,11 @@ syncExportCmd.SetAction(async (parseResult, ct) =>
     // --json` directly; this command is explicitly for *portable* config.
     var filteredSettings = FilterSyncSettings(settings);
     var filteredSites = FilterSyncSites(sites);
+    var exportVersion = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     var payload = new
     {
         exportedAt = DateTime.UtcNow.ToString("o"),
-        version = "0.1.0",
+        version = exportVersion,
         deviceId = settings.TryGetProperty("sync.deviceId", out var d) ? d.GetString() : "",
         settings = filteredSettings,
         sites = filteredSites,
