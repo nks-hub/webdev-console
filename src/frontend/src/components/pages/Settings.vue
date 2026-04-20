@@ -643,8 +643,14 @@
                 Manages Apache, MySQL, PHP, Redis, Mailpit and SSL certificates for local development.
               </div>
 
+              <!-- F85: Repo sources + docs — make the multi-repo architecture
+                   discoverable from inside the app instead of only inside the
+                   README on GitHub. -->
               <div class="about-links">
-                <a href="https://github.com/nks-hub/webdev-console" target="_blank" class="about-link">GitHub</a>
+                <a href="https://github.com/nks-hub/webdev-console" target="_blank" class="about-link">webdev-console (app)</a>
+                <a href="https://github.com/nks-hub/webdev-console-plugins" target="_blank" class="about-link">plugins</a>
+                <a href="https://github.com/nks-hub/wdc-catalog-api" target="_blank" class="about-link">catalog-api</a>
+                <a href="https://github.com/nks-hub/webdev-console-binaries" target="_blank" class="about-link">binaries</a>
                 <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">Website</a>
               </div>
 
@@ -657,6 +663,21 @@
 
               <div v-if="systemInfo" class="about-system">
                 <div class="about-sys-title">Runtime</div>
+                <!-- F85: daemon uptime + PID surfaced so user can see the
+                     F90 fix reporting sane values (uptime since daemon start,
+                     not system boot). -->
+                <div v-if="systemInfo.daemon?.uptime !== undefined" class="about-sys-row">
+                  <span class="sys-label">Daemon uptime</span>
+                  <span class="sys-value">{{ formatUptime(systemInfo.daemon.uptime) }}</span>
+                </div>
+                <div v-if="systemInfo.daemon?.pid" class="about-sys-row">
+                  <span class="sys-label">Daemon PID</span>
+                  <span class="sys-value mono">{{ systemInfo.daemon.pid }}</span>
+                </div>
+                <div v-if="systemInfo.daemon?.version" class="about-sys-row">
+                  <span class="sys-label">Daemon version</span>
+                  <span class="sys-value mono">{{ systemInfo.daemon.version }}</span>
+                </div>
                 <div class="about-sys-row">
                   <span class="sys-label">Services</span>
                   <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }} running</span>
@@ -750,6 +771,19 @@ const defaultPhp = ref('8.4')
 const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
+
+// F85: format daemon uptime seconds into human-friendly string.
+function formatUptime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '—'
+  const s = Math.floor(seconds)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${s % 60}s`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ${m % 60}m`
+  const d = Math.floor(h / 24)
+  return `${d}d ${h % 24}h`
+}
 
 const paths = reactive({
   apache: '',
