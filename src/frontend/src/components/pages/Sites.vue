@@ -565,7 +565,13 @@ function openInBrowser(site: SiteInfo) {
   const proto = site.sslEnabled ? 'https' : 'http'
   const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
   const portSuffix = (site.sslEnabled && port === 443) || (!site.sslEnabled && port === 80) ? '' : `:${port}`
-  window.open(`${proto}://${site.domain}${portSuffix}`, '_blank')
+  const url = `${proto}://${site.domain}${portSuffix}`
+  // Prefer shell.openExternal via preload so the URL opens in the user's
+  // default system browser instead of a new Electron BrowserWindow — which
+  // is what `window.open(url, '_blank')` would do under Electron.
+  const api = (window as any).electronAPI
+  if (api?.openExternal) api.openExternal(url)
+  else window.open(url, '_blank')
 }
 
 function handleRowAction(cmd: string, row: SiteInfo) {
