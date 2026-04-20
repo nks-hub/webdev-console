@@ -856,8 +856,8 @@ async function ssoLogin() {
   try {
     await authStore.login(url)
     ElMessage.success('Signed in')
-  } catch (err: any) {
-    ElMessage.error(`SSO failed: ${err?.message ?? err}`)
+  } catch (err) {
+    ElMessage.error(`SSO failed: ${errorMessage(err)}`)
   }
 }
 const { locale, t } = useI18n()
