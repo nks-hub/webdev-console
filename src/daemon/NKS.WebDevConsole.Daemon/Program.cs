@@ -929,13 +929,13 @@ app.MapGet("/api/plugins/{id}/icon", (string id) =>
 // Service management endpoints — query real plugin modules
 app.MapGet("/api/services", async (IServiceProvider sp) =>
 {
-    var modules = sp.GetServices<IServiceModule>();
-    var statuses = new List<object>();
-    foreach (var m in modules)
-    {
-        var status = await m.GetStatusAsync(CancellationToken.None);
-        statuses.Add(status);
-    }
+    // Fan out status probes concurrently — same rationale as /api/system
+    // (commit 9cf5d53). This endpoint is hit by every AppSidebar poll (5s
+    // cadence) so the sequential foreach was the per-poll floor for the
+    // whole services pane.
+    var modules = sp.GetServices<IServiceModule>().ToArray();
+    var statuses = await Task.WhenAll(
+        modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
     return Results.Ok(statuses);
 });
 
