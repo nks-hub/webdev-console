@@ -365,6 +365,12 @@ public class ProcessManager
         for (int i = 0; i < maxAttempts; i++)
         {
             var candidate = preferredPort + i + 1;
+            // Stop at the IANA ceiling — TcpListener.ctor throws
+            // ArgumentOutOfRangeException for values > 65535, which
+            // IsPortFree's SocketException-only catch wouldn't swallow.
+            // Hit this when preferredPort is near the top of the range
+            // (e.g. user picks 65530 for an MCP server).
+            if (candidate > 65535) break;
             if (IsPortFree(candidate)) return candidate;
         }
         return 0;
