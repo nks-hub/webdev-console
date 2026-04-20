@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    Repo-wide build defaults for every .csproj under src/daemon. Per-project
+    csproj values win via the standard MSBuild evaluation order, so existing
+    projects keep their explicit settings (Version, Nullable, TFM) while
+    picking up the common policy bits below without duplication.
+
+    `TreatWarningsAsErrors` locks in the zero-warning state this codebase
+    already maintains — today's `dotnet build` prints 0 warnings, so flipping
+    this ON adds no friction but makes any future accidental warning a hard
+    fail instead of silent drift. Matches the convention used by the plugins
+    repo's Directory.Build.props.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
