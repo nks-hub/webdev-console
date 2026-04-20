@@ -15,6 +15,7 @@ import type {
   ComposerStatus,
   ComposerCommandResult,
   AccessLogEntry,
+  ServiceInfo,
 } from './types'
 
 // Window.daemonApi is declared in src/env.d.ts alongside the other
@@ -144,7 +145,7 @@ export interface SystemInfo {
 export const fetchSystem = (): Promise<SystemInfo> => json('/api/system')
 
 // Services
-export const fetchServices = (): Promise<any[]> =>
+export const fetchServices = (): Promise<ServiceInfo[]> =>
   json('/api/services')
 
 export const startService = (id: string) =>
