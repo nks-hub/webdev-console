@@ -1,8 +1,18 @@
 <template>
   <div class="site-composer">
-    <!-- Loading skeleton -->
+    <!-- F75: loading skeleton now announces the current operation so users
+         during multi-second composer calls (install / outdated fetch) know
+         what they're waiting on instead of a silent skeleton. -->
     <div v-if="loading" class="composer-loading">
+      <div class="composer-loading-label">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>{{ currentOperation }}</span>
+      </div>
       <el-skeleton :rows="4" animated />
+    </div>
+    <div v-else-if="running && currentOperation" class="composer-running-banner">
+      <el-icon class="is-loading"><Loading /></el-icon>
+      <span>{{ currentOperation }}</span>
     </div>
 
     <!-- Error loading status -->
@@ -398,7 +408,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Check, Warning, Refresh, WarningFilled, Delete } from '@element-plus/icons-vue'
+import { Check, Warning, Refresh, WarningFilled, Delete, Loading } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated, composerInit, composerDiagnose } from '../../api/daemon'
@@ -412,6 +422,9 @@ const loading = ref(false)
 const loadError = ref<string | null>(null)
 const status = ref<ComposerStatus | null>(null)
 
+// F75: label describing the operation currently in flight — displayed
+// next to the skeleton while loading and in a slim banner while running.
+const currentOperation = ref<string>('')
 const running = ref(false)
 const lastResult = ref<ComposerCommandResult | null>(null)
 const outputOpen = ref<string[]>(['stdout', 'stderr'])
@@ -486,13 +499,16 @@ async function loadOutdated(): Promise<void> {
 async function loadStatus(): Promise<void> {
   loading.value = true
   loadError.value = null
+  currentOperation.value = 'Loading composer status from composer.json…'
   try {
     status.value = await composerStatus(props.domain)
+    currentOperation.value = 'Checking for outdated packages…'
     await loadOutdated()
   } catch (err: unknown) {
     loadError.value = err instanceof Error ? err.message : String(err)
   } finally {
     loading.value = false
+    currentOperation.value = ''
   }
 }
 
@@ -581,6 +597,7 @@ async function runInstall(): Promise<void> {
   }
 
   running.value = true
+  currentOperation.value = 'Running composer install — downloading dependencies…'
   try {
     const result = await composerInstall(props.domain)
     lastResult.value = result
@@ -596,6 +613,7 @@ async function runInstall(): Promise<void> {
     ElMessage.error(err instanceof Error ? err.message : String(err))
   } finally {
     running.value = false
+    currentOperation.value = ''
   }
 }
 
