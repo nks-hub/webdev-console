@@ -530,7 +530,7 @@ function openInBrowser(site: SiteInfo) {
   // Prefer shell.openExternal via preload so the URL opens in the user's
   // default system browser instead of a new Electron BrowserWindow — which
   // is what `window.open(url, '_blank')` would do under Electron.
-  const api = (window as any).electronAPI
+  const api = window.electronAPI
   if (api?.openExternal) api.openExternal(url)
   else window.open(url, '_blank')
 }

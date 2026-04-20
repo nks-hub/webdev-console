@@ -18,4 +18,23 @@ interface ImportMetaEnv {
 // doesn't need a `(window as any)` cast.
 interface Window {
   __APP_VERSION__?: string
+
+  /**
+   * Context-bridge surface exposed by electron/preload.ts. Optional
+   * because the renderer also loads in browser dev mode where the
+   * preload never runs — consumers must guard access. Keep this in
+   * sync with the `exposeInMainWorld('electronAPI', …)` block in
+   * preload.ts.
+   */
+  electronAPI?: {
+    openExternal: (url: string) => Promise<void>
+    showOpenDialog: (options?: {
+      title?: string
+      defaultPath?: string
+      properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'>
+    }) => Promise<{ canceled: boolean; filePaths: string[] }>
+    onSsoCallback: (
+      handler: (payload: { token: string; error: string }) => void,
+    ) => () => void
+  }
 }

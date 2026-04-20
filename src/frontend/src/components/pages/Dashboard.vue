@@ -595,7 +595,7 @@ const logsDialog = reactive({
 
 function openMailpit() {
   const mailpitUrl = 'http://127.0.0.1:8025'
-  if ((window as any).electronAPI?.openExternal) (window as any).electronAPI.openExternal(mailpitUrl)
+  if (window.electronAPI?.openExternal) window.electronAPI.openExternal(mailpitUrl)
   else window.open(mailpitUrl, '_blank')
 }
 

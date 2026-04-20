@@ -578,8 +578,8 @@ async function onSelectPackage(item: any): Promise<void> {
 }
 
 function openExternal(url: string): void {
-  if ((window as any).electronAPI?.openExternal) {
-    ;(window as any).electronAPI.openExternal(url)
+  if (window.electronAPI?.openExternal) {
+    ;window.electronAPI.openExternal(url)
   } else {
     window.open(url, '_blank')
   }

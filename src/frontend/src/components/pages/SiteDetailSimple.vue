@@ -379,8 +379,8 @@ function openInBrowser() {
   const port = s.sslEnabled ? (s.httpsPort || 443) : (s.httpPort || 80)
   const portSuffix = (s.sslEnabled && port === 443) || (!s.sslEnabled && port === 80) ? '' : `:${port}`
   const url = `${proto}://${s.domain}${portSuffix}`
-  if ((window as any).electronAPI?.openExternal) {
-    ;(window as any).electronAPI.openExternal(url)
+  if (window.electronAPI?.openExternal) {
+    ;window.electronAPI.openExternal(url)
   } else {
     window.open(url, '_blank')
   }

@@ -900,7 +900,7 @@ const mampDiscovering = ref(false)
 // Electron-only (wrapped via preload's electronAPI.showOpenDialog). When
 // running outside Electron the button no-ops with a warning toast.
 async function browsePath(key: keyof typeof paths, kind: 'file' | 'folder'): Promise<void> {
-  const api = (window as any).electronAPI
+  const api = window.electronAPI
   if (!api?.showOpenDialog) {
     ElMessage.warning('Native file dialog is only available in the packaged app')
     return
@@ -1784,7 +1784,7 @@ async function downloadAndInstall() {
   if (!updateCheck.downloadUrl) return
   updateCheck.downloading = true
   try {
-    if ((window as any).electronAPI?.openExternal) (window as any).electronAPI.openExternal(updateCheck.downloadUrl)
+    if (window.electronAPI?.openExternal) window.electronAPI.openExternal(updateCheck.downloadUrl)
     else window.open(updateCheck.downloadUrl, '_blank')
     ElMessage.info(t('settings.update.downloadStarted'))
   } finally {
