@@ -28,28 +28,31 @@ public class DaemonClient : IDisposable
 
     public async Task<T?> GetAsync<T>(string path)
     {
-        var response = await _http.GetAsync($"{_baseUrl}{path}");
+        // `using` so the HttpResponseMessage (headers + content stream) is
+        // released immediately instead of waiting for finalization. Matters
+        // for long-running CLI invocations like `wdc watch` that poll.
+        using var response = await _http.GetAsync($"{_baseUrl}{path}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<T>();
     }
 
     public async Task<JsonElement> GetJsonAsync(string path)
     {
-        var response = await _http.GetAsync($"{_baseUrl}{path}");
+        using var response = await _http.GetAsync($"{_baseUrl}{path}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
     public async Task<JsonElement> PostAsync(string path, HttpContent? content = null)
     {
-        var response = await _http.PostAsync($"{_baseUrl}{path}", content);
+        using var response = await _http.PostAsync($"{_baseUrl}{path}", content);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
     public async Task<JsonElement> PutAsync(string path, HttpContent? content = null)
     {
-        var response = await _http.PutAsync($"{_baseUrl}{path}", content ?? new StringContent(""));
+        using var response = await _http.PutAsync($"{_baseUrl}{path}", content ?? new StringContent(""));
         response.EnsureSuccessStatusCode();
         // Match the GET/POST shape: ReadFromJsonAsync<JsonElement> deep-copies
         // the element out of the parser's buffer so callers can outlive it.
