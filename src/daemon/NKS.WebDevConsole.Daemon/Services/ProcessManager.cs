@@ -303,12 +303,20 @@ public class ProcessManager
                     RedirectStandardOutput = true,
                     CreateNoWindow = true
                 };
-                var proc = Process.Start(psi);
+                // `using` so the OS handle releases even if WaitForExit
+                // times out (netstat hung, DLL injection etc.). Previous
+                // code leaked a Process handle per CheckPort invocation —
+                // cheap individually but accumulates during port-sweep
+                // startup probes and again for every SuggestAlternativePort
+                // fallback loop.
+                using var proc = Process.Start(psi);
                 if (proc != null)
                 {
                     var output = proc.StandardOutput.ReadToEnd();
                     proc.WaitForExit(3000);
 
+                    // Dispose the discovered owner process immediately so we
+                    // don't keep its handle alive for the caller's lifetime.
                     foreach (var line in output.Split('\n'))
                     {
                         if (line.Contains($":{port} ") && line.Contains("LISTENING"))
@@ -318,7 +326,7 @@ public class ProcessManager
                             {
                                 try
                                 {
-                                    var ownerProc = Process.GetProcessById(pid);
+                                    using var ownerProc = Process.GetProcessById(pid);
                                     return (false, pid, ownerProc.ProcessName);
                                 }
                                 catch { return (false, pid, null); }
