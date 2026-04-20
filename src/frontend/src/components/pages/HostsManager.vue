@@ -27,10 +27,8 @@
 
     <!-- Body -->
     <div class="page-body">
-      <!-- Initial load skeleton -->
-      <div v-if="loading && rows.length === 0" style="padding: 8px 0">
-        <el-skeleton :rows="5" animated />
-      </div>
+      <!-- Initial load -->
+      <LoadingState v-if="loading && rows.length === 0" label="Parsing system hosts file…" />
 
       <!-- Search -->
       <div v-if="!loading || rows.length > 0" class="toolbar">
@@ -184,6 +182,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'

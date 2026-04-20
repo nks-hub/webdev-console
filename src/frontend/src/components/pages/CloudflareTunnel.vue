@@ -25,9 +25,7 @@
       </div>
     </div>
 
-    <div v-if="initialLoading" style="padding: 24px">
-      <el-skeleton :rows="5" animated />
-    </div>
+    <LoadingState v-if="initialLoading" label="Connecting to Cloudflare API…" />
 
     <template v-else>
     <el-alert
@@ -416,6 +414,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import FolderBrowser from '../shared/FolderBrowser.vue'
+import LoadingState from '../shared/LoadingState.vue'
 import {
   fetchCloudflareConfig, saveCloudflareConfig,
   verifyCloudflareToken, fetchCloudflareZones,

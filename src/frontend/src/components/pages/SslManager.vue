@@ -38,9 +38,7 @@
       />
 
       <!-- Loading -->
-      <div v-if="loading && certs.length === 0" style="padding: 24px">
-        <el-skeleton :rows="3" animated />
-      </div>
+      <LoadingState v-if="loading && certs.length === 0" label="Reading SSL certificates…" />
 
       <!-- Cert list -->
       <div v-else-if="certs.length > 0" class="cert-list">
@@ -132,6 +130,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 
