@@ -1905,66 +1905,107 @@ async function save() {
   gap: 8px;
 }
 
+/* About tab layout v2 — drops the giant bordered box, uses a two-column
+   grid so repos/stack sit next to runtime info instead of stacking with
+   wasted space. At narrow widths the grid collapses to a single column
+   without any fixed max-width clipping. */
 .about-card {
-  max-width: 420px;
-  background: var(--wdc-surface);
-  border: 1px solid var(--el-border-color);
-  border-radius: 12px;
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 28px 36px;
+  padding: 8px 4px;
+}
+@media (max-width: 820px) {
+  .about-card { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+
+/* First column — identity block: logo + version + desc + repos + stack. */
+.about-card > .about-logo,
+.about-card > .about-version,
+.about-card > .about-subtitle,
+.about-card > .about-desc,
+.about-card > .about-links,
+.about-card > .about-stack,
+.about-card > .about-sso {
+  grid-column: 1;
+}
+/* Second column — system runtime block. */
+.about-card > .about-system {
+  grid-column: 2;
+  grid-row: 1 / span 7;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+@media (max-width: 820px) {
+  .about-card > .about-system { grid-column: 1; grid-row: auto; }
 }
 
 .about-logo {
-  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 1.4rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+.about-logo::after {
+  content: attr(data-version);
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', monospace;
+  -webkit-text-fill-color: var(--el-text-color-secondary);
+  color: var(--el-text-color-secondary);
+  font-weight: 500;
+  letter-spacing: 0;
+}
 
 .about-version {
-  font-family: monospace;
-  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
   color: var(--el-text-color-secondary);
+  margin-top: -4px;
 }
 
-.about-subtitle {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.about-desc {
-  font-size: 0.82rem;
-  color: var(--el-text-color-secondary);
-  line-height: 1.6;
-  margin-top: 4px;
-}
+.about-subtitle { font-size: 0.88rem; font-weight: 600; color: var(--el-text-color-primary); }
+.about-desc { font-size: 0.82rem; color: var(--el-text-color-secondary); line-height: 1.55; max-width: 56ch; }
 
 .about-stack {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 5px;
+  margin-top: 2px;
 }
 
-.about-system { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--wdc-border); }
-.about-sys-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--wdc-text-3); margin-bottom: 8px; }
-.about-sys-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
+.about-system { font-size: 0.85rem; }
+.about-sys-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text-3);
+  margin: 0 0 6px;
+}
+.about-sys-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px dashed var(--wdc-border);
+}
+.about-sys-row:last-child { border-bottom: none; }
 .sys-label { color: var(--wdc-text-2); }
-.sys-value { color: var(--wdc-text); font-family: 'JetBrains Mono', monospace; }
+.sys-value { color: var(--wdc-text); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 
-.about-links { display: flex; gap: 12px; margin-top: 12px; }
-.about-link {
-  color: var(--wdc-accent);
-  text-decoration: none;
-  font-size: 0.85rem;
-}
+.about-links { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.about-link { color: var(--wdc-accent); text-decoration: none; font-size: 0.82rem; }
 .about-link:hover { text-decoration: underline; }
+
+.about-sso { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 0; }
+.about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 
 .db-list { margin-bottom: 16px; }
 .db-row {
