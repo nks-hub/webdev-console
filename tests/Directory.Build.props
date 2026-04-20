@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Test projects get the same zero-warning gate as src/daemon/. Keeps
+    Moq/xUnit setup drift from introducing warnings silently — if a new
+    API deprecates something we use in tests, CI hard-fails until we fix
+    it rather than quietly printing a message nobody reads.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
