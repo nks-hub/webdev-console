@@ -91,12 +91,6 @@ export interface DatabaseInfo {
   siteAssociation?: string
 }
 
-export interface CertInfo {
-  domain: string
-  expiresAt: string
-  status: 'valid' | 'expiring' | 'expired'
-}
-
 // Plugin panel schema — what C# plugins return from /api/plugins/{id}/ui
 export type PanelType =
   | 'service-status-card'

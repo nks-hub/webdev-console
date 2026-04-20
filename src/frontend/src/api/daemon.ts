@@ -3,7 +3,6 @@ import type {
   SiteInfo,
   PhpVersion,
   DatabaseInfo,
-  CertInfo,
   PluginManifest,
   ProgressUpdate,
   MetricsUpdate,
@@ -527,10 +526,6 @@ export const suggestCloudflareSubdomain = (domain: string): Promise<{ suggestion
 // Databases
 export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
   json('/api/databases')
-
-// SSL
-export const fetchCerts = (): Promise<CertInfo[]> =>
-  json('/api/ssl/certs')
 
 // Install the local mkcert CA into the system trust store so self-signed
 // site certificates become trusted in browsers + system HTTP clients.
