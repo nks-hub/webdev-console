@@ -274,7 +274,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo } from '../../api/types'
-import { fetchDockerComposeStatus, daemonBaseUrl, type DockerComposeStatus } from '../../api/daemon'
+import { fetchDockerComposeStatus, fetchPhpVersions, daemonBaseUrl, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
@@ -384,11 +384,8 @@ onMounted(async () => {
   await sitesStore.load()
   void refreshComposeStatuses()
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: sitesStore.authHeaders() })
-    if (r.ok) {
-      const versions = await r.json()
-      phpVersions.value = versions.map((v: any) => v.majorMinor || v.version?.split('.').slice(0, 2).join('.') || v.version)
-    }
+    const versions = await fetchPhpVersions()
+    phpVersions.value = versions.map(v => v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version)
   } catch { phpVersions.value = ['8.4', '8.3', '8.2'] }
 })
 

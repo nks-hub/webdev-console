@@ -164,7 +164,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useI18n } from 'vue-i18n'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, fetchPhpVersions } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
@@ -310,11 +310,8 @@ watch(site, (s) => {
 
 async function loadPhpVersions() {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: sitesStore.authHeaders() })
-    if (r.ok) {
-      const versions = await r.json()
-      phpVersions.value = versions.map((v: any) => v.majorMinor || v.version?.split('.').slice(0, 2).join('.') || v.version)
-    }
+    const versions = await fetchPhpVersions()
+    phpVersions.value = versions.map(v => v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version)
   } catch {
     phpVersions.value = ['8.4', '8.3', '8.2']
   }

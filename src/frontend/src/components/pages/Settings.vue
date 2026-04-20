@@ -841,6 +841,7 @@ import { useAuthStore } from '../../stores/auth'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   daemonBaseUrl, daemonAuthHeaders as authHeaders,
+  fetchPhpVersions,
   type DeviceInfo as CatalogDeviceInfo,
   type SystemInfo,
 } from '../../api/daemon'
@@ -1119,11 +1120,8 @@ async function discoverMamp() {
 
 async function loadPhpVersions() {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: authHeaders() })
-    if (r.ok) {
-      const data = await r.json()
-      phpVersions.value = data.map((v: any) => v.majorMinor || v.version)
-    }
+    const data = await fetchPhpVersions()
+    phpVersions.value = data.map(v => v.majorMinor || v.version)
   } catch { /* keep defaults */ }
 }
 
