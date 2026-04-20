@@ -340,6 +340,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { ElMessage, ElNotification } from 'element-plus'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import type { ServiceInfo } from '../../api/types'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
@@ -404,8 +405,8 @@ async function loadAggregates() {
   totalErrors.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.errs : sum, 0)
   aggregatesLoading.value = false
 }
-const totalCpu = computed(() => services.value.reduce((s, x: any) => s + (x.cpuPercent ?? 0), 0))
-const totalRamMB = computed(() => Math.round(services.value.reduce((s, x: any) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
+const totalCpu = computed(() => services.value.reduce((s, x) => s + (x.cpuPercent ?? 0), 0))
+const totalRamMB = computed(() => Math.round(services.value.reduce((s, x) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
 
 // Node.js process count — shown in the stat cards when the plugin is loaded.
 // -1 means "not fetched yet / plugin not available" and hides the card.
@@ -488,15 +489,15 @@ const stateLabels: Record<number, string> = {
 const KNOWN_PORTS: Record<string, number> = {
   apache: 80, mysql: 3306, redis: 6379, mailpit: 8025, php: 9084,
 }
-function getPort(svc: any): number | null {
-  return svc.port || KNOWN_PORTS[svc.id] || null
+function getPort(svc: ServiceInfo & { port?: number }): number | null {
+  return svc.port ?? KNOWN_PORTS[svc.id] ?? null
 }
 
-function statusText(service: any): string {
-  return stateLabels[service.state] ?? service.status ?? 'unknown'
+function statusText(service: ServiceInfo): string {
+  return stateLabels[service.state ?? 0] ?? service.status ?? 'unknown'
 }
 
-function isRunning(service: any): boolean {
+function isRunning(service: ServiceInfo): boolean {
   return service.state === 2 || service.status === 'running'
 }
 
@@ -504,12 +505,12 @@ function isRunning(service: any): boolean {
 // be frozen — pretending the process is already in the target state would
 // let the user queue conflicting commands while the daemon is still in the
 // middle of a graceful start/stop cycle (Apache graceful stop can take 30s).
-function isTransitioning(service: any): boolean {
+function isTransitioning(service: ServiceInfo): boolean {
   return service.state === 1 || service.state === 3
     || service.status === 'starting' || service.status === 'stopping'
 }
 
-function transitionTitle(service: any): string {
+function transitionTitle(service: ServiceInfo): string {
   if (service.state === 1) return `${service.displayName || service.id}: starting…`
   if (service.state === 3) return `${service.displayName || service.id}: stopping…`
   return ''
