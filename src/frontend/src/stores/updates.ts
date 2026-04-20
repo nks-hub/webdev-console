@@ -85,13 +85,18 @@ export const useUpdatesStore = defineStore('updates', () => {
       if (tag) latestVersion.value = tag
       releaseUrl.value = String(data?.html_url ?? '')
       // Pick the Windows setup.exe asset (matching electron-builder output).
-      const winAsset = (data?.assets ?? []).find((a: any) =>
+      // Only fields the find predicate touches are pinned — GitHub's full
+      // release-asset shape has ~15 fields but we just need `name` and
+      // `browser_download_url`.
+      type GhAsset = { name?: string; browser_download_url?: string }
+      const assets = (data?.assets ?? []) as GhAsset[]
+      const winAsset = assets.find(a =>
         typeof a?.name === 'string' && /setup-x64\.exe$/.test(a.name))
       downloadUrl.value = String(winAsset?.browser_download_url ?? '')
       lastCheckedIso.value = new Date().toISOString()
       saveCache()
-    } catch (e: any) {
-      error.value = e?.message || String(e)
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }
