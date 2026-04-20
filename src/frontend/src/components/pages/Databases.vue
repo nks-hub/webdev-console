@@ -154,7 +154,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 
 const { t } = useI18n()
 
@@ -185,13 +185,6 @@ const exporting = ref(false)
 const dropping = ref(false)
 const currentTables = computed(() => dbTables[selectedDb.value] ?? [])
 
-function authHeaders(): Record<string, string> {
-  const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
 
 // Thrown error message extractor for non-2xx fetch responses. Reads the
 // daemon's response body (usually a plain text error or a { error: "..." }

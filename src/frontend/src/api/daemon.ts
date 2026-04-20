@@ -42,7 +42,12 @@ export function daemonBaseUrl(): string {
   return 'http://localhost:5199'
 }
 
-function authHeaders(extra?: HeadersInit): Record<string, string> {
+// Exported alongside daemonBaseUrl so pages can build their own raw
+// fetch() calls without re-implementing the token resolution. Each page
+// previously shipped its own version — some forgot to include
+// Content-Type, some forgot the Bearer token prefix, some used
+// `getToken()` without optional-chaining.
+export function daemonAuthHeaders(extra?: HeadersInit): Record<string, string> {
   // Prefer preload token (live-refreshed from port file), fallback to URL query.
   const preloadToken = window.daemonApi?.getToken?.() || ''
   const urlToken = new URLSearchParams(window.location.search).get('token') || ''
@@ -67,7 +72,7 @@ function authHeaders(extra?: HeadersInit): Record<string, string> {
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${daemonBaseUrl()}${path}`, {
     ...init,
-    headers: authHeaders(init?.headers),
+    headers: daemonAuthHeaders(init?.headers),
   })
   if (!r.ok) {
     // Extract the real error from the response body when available.
@@ -728,7 +733,7 @@ export async function duplicateSite(
 ): Promise<{ domain: string; documentRoot: string; sourceDomain: string; copyFiles: string; warnings: string[] }> {
   const r = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/duplicate`, {
     method: 'POST',
-    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    headers: daemonAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ newDomain, copyFiles }),
   })
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
