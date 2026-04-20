@@ -48,7 +48,7 @@
               <el-form-item label="Language">
                 <el-select
                   :model-value="locale"
-                  @update:model-value="(v: string) => { locale = v; localStorage.setItem('wdc-locale', v) }"
+                  @update:model-value="onLocaleChange"
                   style="width: 160px"
                 >
                   <el-option label="English" value="en" />
@@ -858,6 +858,11 @@ async function ssoLogin() {
   }
 }
 const { locale, t } = useI18n()
+
+function onLocaleChange(v: string) {
+  locale.value = v
+  localStorage.setItem('wdc-locale', v)
+}
 
 const activeTab = ref('general')
 

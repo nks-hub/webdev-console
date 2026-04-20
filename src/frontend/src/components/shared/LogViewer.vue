@@ -31,11 +31,11 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 
-declare global {
-  interface Window {
-    daemonApi?: { getPort: () => number; getToken: () => string }
-  }
-}
+// daemonApi is declared as non-optional in ../../api/daemon.ts; the local
+// redeclaration here used to mark it optional, which produced conflicting
+// `declare global` merges. Dropped — we lean on the central declaration
+// and guard access with optional-chaining where needed.
+
 
 function daemonBase(): string {
   const urlPort = new URLSearchParams(window.location.search).get('port')

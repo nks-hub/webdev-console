@@ -844,7 +844,8 @@ function openDocs() {
   )
 }
 
-function formatUptime(secs: number): string {
+function formatUptime(secs: number | string | undefined): string {
+  if (typeof secs !== 'number') secs = Number(secs) || 0
   if (!secs || secs < 1) return '—'
   const h = Math.floor(secs / 3600)
   const m = Math.floor((secs % 3600) / 60)

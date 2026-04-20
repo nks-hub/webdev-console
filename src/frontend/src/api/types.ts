@@ -13,6 +13,9 @@ export interface ServiceInfo {
   memoryBytes: number
   uptimeSeconds?: number
   uptime?: string | number
+  /** UTC timestamp ISO string marking when the service transitioned to
+   * Running, used by SiteDetailSimple for "Started N ago" labels. */
+  startedAt?: string
   version?: string
 }
 

@@ -47,11 +47,15 @@ function authHeaders(extra?: HeadersInit): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   if (extra) {
-    const entries = extra instanceof Headers
-      ? Array.from(extra.entries())
+    // Normalise HeadersInit shapes to a [string, string][] list. The
+    // Headers DOM iterator is typed as Iterator<[string, string]> in
+    // lib.dom.d.ts but TypeScript's NoImplicitAny on `entries()` over
+    // the iterator confuses tsc without an explicit cast.
+    const entries: [string, string][] = extra instanceof Headers
+      ? Array.from(extra as unknown as Iterable<[string, string]>)
       : Array.isArray(extra)
-        ? extra
-        : Object.entries(extra)
+        ? extra as [string, string][]
+        : Object.entries(extra) as [string, string][]
     for (const [k, v] of entries) headers[k] = v
   }
   return headers

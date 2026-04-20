@@ -486,7 +486,7 @@ async function loadOutdated(): Promise<void> {
     const map: Record<string, { version?: string; latest: string; status: string }> = {}
     for (const entry of result.installed) {
       if (entry.name && entry.latest) {
-        map[entry.name] = { version: entry.version, latest: entry.latest, status: entry.latestStatus ?? '' }
+        map[entry.name] = { version: entry.version ?? undefined, latest: entry.latest, status: entry.latestStatus ?? '' }
       }
     }
     outdatedMap.value = map
