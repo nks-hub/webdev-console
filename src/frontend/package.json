@@ -1,6 +1,6 @@
 {
   "name": "@nks-hub/webdev-console",
-  "version": "0.1.89",
+  "version": "0.1.90",
   "description": "Unified local development environment for Windows, macOS, and Linux — manage Apache/Nginx, PHP versions, MySQL/MariaDB, and SSL from one interface.",
   "author": {
     "name": "NKS Hub",
@@ -20,6 +20,7 @@
     "dist:mac": "npm run stage:daemon:mac && electron-vite build && electron-builder --config electron-builder.yml --mac",
     "dist:linux": "npm run stage:daemon:linux && electron-vite build && electron-builder --config electron-builder.yml --linux",
     "smoke:packaged:win": "node ../../scripts/smoke-packaged-electron.mjs --replace-dev-daemon --exe \"./release/win-unpacked/NKS WebDev Console.exe\"",
+    "smoke:e2e": "node ../../scripts/smoke-e2e.mjs",
     "serve:update-feed:win": "node ../../scripts/serve-electron-update-feed.mjs --dir ./release"
   },
   "devDependencies": {
