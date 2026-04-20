@@ -201,10 +201,16 @@ jobs:
             </packageSources>
           </configuration>
           EOF
-          # Pin plugin csprojs to the CI-packaged version regardless of what
-          # Directory.Build.props says.
-          for proj in NKS.WebDevConsole.Plugin.*/*.csproj; do
-            sed -i 's|\("NKS.WebDevConsole.Plugin.SDK" Version=\)"[^"]*"|\1"0.0.0-ci.${{ github.run_id }}"|' "$proj" || true
+          # Pin the SDK PackageReference to this run's CI-packaged version.
+          # In the plugins repo the version actually lives in
+          # Directory.Build.props (one central PackageReference inherited by
+          # every plugin csproj), not in individual csprojs — so rewriting
+          # just the csprojs leaves the 0.1.82 inherited from the props
+          # file, which the local feed can't resolve. Rewrite both for
+          # safety in case the scheme changes again.
+          for f in Directory.Build.props NKS.WebDevConsole.Plugin.*/*.csproj; do
+            [ -f "$f" ] || continue
+            sed -i 's|\("NKS.WebDevConsole.Plugin.SDK" Version=\)"[^"]*"|\1"0.0.0-ci.${{ github.run_id }}"|' "$f" || true
           done
       - name: Restore + build every plugin
         working-directory: webdev-console-plugins
