@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NKS.WebDevConsole.Daemon.Services;
 
 namespace NKS.WebDevConsole.Daemon.Plugin;
 
@@ -19,15 +20,18 @@ public sealed class PluginCatalogSyncService : BackgroundService
 
     private readonly PluginCatalogClient _catalog;
     private readonly PluginDownloader _downloader;
+    private readonly SettingsStore _settings;
     private readonly ILogger<PluginCatalogSyncService> _logger;
 
     public PluginCatalogSyncService(
         PluginCatalogClient catalog,
         PluginDownloader downloader,
+        SettingsStore settings,
         ILogger<PluginCatalogSyncService> logger)
     {
         _catalog = catalog;
         _downloader = downloader;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -35,7 +39,9 @@ public sealed class PluginCatalogSyncService : BackgroundService
     {
         if (!IsEnabled())
         {
-            _logger.LogDebug("Plugin auto-sync disabled (set NKS_WDC_PLUGIN_AUTOSYNC=1 to enable)");
+            _logger.LogDebug(
+                "Plugin auto-sync disabled (toggle in Settings → Plugins, "
+                + "or set NKS_WDC_PLUGIN_AUTOSYNC=1, to enable)");
             return;
         }
 
@@ -73,8 +79,13 @@ public sealed class PluginCatalogSyncService : BackgroundService
         }
     }
 
-    private static bool IsEnabled()
+    private bool IsEnabled()
     {
+        // SettingsStore row wins so the Settings page can toggle auto-sync
+        // at runtime without a daemon restart. Env var remains as the
+        // legacy escape hatch for CI / headless deployments that don't
+        // want to write a persistent row.
+        if (_settings.PluginAutoSyncEnabled) return true;
         var v = Environment.GetEnvironmentVariable("NKS_WDC_PLUGIN_AUTOSYNC");
         if (string.IsNullOrWhiteSpace(v)) return false;
         return v.Equals("1", StringComparison.Ordinal)

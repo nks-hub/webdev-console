@@ -33,6 +33,17 @@ public sealed class SettingsStore
     public bool AutoStartEnabled => GetBool("daemon", "autoStartEnabled", defaultValue: true);
 
     /// <summary>
+    /// F95: when true, the <c>PluginCatalogSyncService</c> fetches the
+    /// plugin catalog from <see cref="CatalogUrl"/> and downloads any
+    /// missing plugin release artifacts into <c>~/.wdc/plugins/</c> on
+    /// a 6-hour loop. Default false so dev builds running against the
+    /// monorepo's bundled <c>build/plugins/</c> directory don't waste a
+    /// network round-trip. Legacy env var <c>NKS_WDC_PLUGIN_AUTOSYNC</c>
+    /// still works when this row is unset.
+    /// </summary>
+    public bool PluginAutoSyncEnabled => GetBool("plugins", "autoSyncEnabled", defaultValue: false);
+
+    /// <summary>
     /// URL of the cloud catalog + config-sync service that the daemon
     /// pulls binary release metadata from. Editable via the Settings
     /// page in the Electron UI (<c>/api/settings</c>) so users can
