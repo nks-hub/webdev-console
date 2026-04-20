@@ -240,15 +240,15 @@ const visibleServices = computed(() => {
   const svcs = daemonStore.services
   const out: Array<{ id: string; label: string; state: number | string; startedAt?: string }> = []
   const add = (id: string, label: string) => {
-    const s = svcs.find((x: any) => x.id === id)
+    const s = svcs.find(x => x.id === id)
     if (s) out.push({ id: s.id, label, state: s.state ?? 0, startedAt: s.startedAt })
   }
   add('apache', 'Apache')
   if (site.value?.phpVersion) {
-    const phpSvc = svcs.find((x: any) => x.id === `php-${site.value!.phpVersion}`) ?? svcs.find((x: any) => x.id === 'php')
+    const phpSvc = svcs.find(x => x.id === `php-${site.value!.phpVersion}`) ?? svcs.find(x => x.id === 'php')
     if (phpSvc) out.push({ id: phpSvc.id, label: `PHP ${site.value!.phpVersion}`, state: phpSvc.state ?? 0, startedAt: phpSvc.startedAt })
   }
-  const mysqlSvc = svcs.find((x: any) => x.id === 'mysql') ?? svcs.find((x: any) => x.id === 'mariadb')
+  const mysqlSvc = svcs.find(x => x.id === 'mysql') ?? svcs.find(x => x.id === 'mariadb')
   if (mysqlSvc) out.push({ id: mysqlSvc.id, label: mysqlSvc.id === 'mysql' ? 'MySQL' : 'MariaDB', state: mysqlSvc.state ?? 0, startedAt: mysqlSvc.startedAt })
   if (site.value?.cloudflare?.enabled) add('cloudflared', 'Cloudflare Tunnel')
   return out
@@ -295,7 +295,7 @@ async function restartService(svc: { id: string; label: string; state: number | 
 }
 
 const apacheRunning = computed(() => {
-  const svc = daemonStore.services.find((s: any) => s.id === 'apache' || s.id === 'httpd')
+  const svc = daemonStore.services.find(s => s.id === 'apache' || s.id === 'httpd')
   return svc?.state === 2 || svc?.status === 'running'
 })
 
@@ -358,7 +358,7 @@ async function onTunnelChange(v: boolean) {
 }
 
 async function toggleApache() {
-  const svc = daemonStore.services.find((s: any) => s.id === 'apache' || s.id === 'httpd')
+  const svc = daemonStore.services.find(s => s.id === 'apache' || s.id === 'httpd')
   if (!svc) return
   startStopLoading.value = true
   try {

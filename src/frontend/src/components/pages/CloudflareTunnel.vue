@@ -558,7 +558,7 @@ function openTokenPage() {
 
 // ── Per-site exposed sites (from site configs) ───────────────────────
 const exposedSites = computed(() =>
-  sitesStore.sites.filter((s: any) =>
+  sitesStore.sites.filter(s =>
     s.cloudflare?.enabled && s.cloudflare?.subdomain && s.cloudflare?.zoneName
   )
 )
