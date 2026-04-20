@@ -3781,12 +3781,19 @@ app.MapGet("/api/php/versions", () =>
     var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
     if (phpPlugin == null) return Results.NotFound();
     var method = phpPlugin.Instance.GetType().GetMethod("GetInstalledVersions");
-    if (method != null)
+    if (method == null) return Results.Ok(Array.Empty<object>());
+    try
     {
         var versions = method.Invoke(phpPlugin.Instance, null);
-        return Results.Ok(versions);
+        // Null return would serialize as `null`, which the frontend
+        // .map()'s over — normalize to empty array.
+        return Results.Ok(versions ?? (object)Array.Empty<object>());
     }
-    return Results.Ok(Array.Empty<object>());
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "GetInstalledVersions reflection failed on php plugin");
+        return Results.Ok(Array.Empty<object>());
+    }
 });
 
 // PHP extensions for a given version
