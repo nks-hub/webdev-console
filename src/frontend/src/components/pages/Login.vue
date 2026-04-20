@@ -58,15 +58,17 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
+import { daemonBaseUrl } from '../../api/daemon'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const catalogUrl = ref('')
 
-function daemonBase(): string {
-  const port = (window as any).daemonApi?.getPort?.() ?? new URLSearchParams(window.location.search).get('port')
-  return `http://127.0.0.1:${port}`
-}
+// Local inline parsers used to skip the 5199 fallback — when neither
+// preload nor URL param was available, the URL ended up as
+// `http://127.0.0.1:undefined` and the fetch rejected. Switched to the
+// shared daemonBaseUrl() which has the same default as the typed API
+// surface, so browser dev mode works consistently.
 function authHeaders(): Record<string, string> {
   const t = (window as any).daemonApi?.getToken?.() ?? new URLSearchParams(window.location.search).get('token') ?? ''
   return t ? { Authorization: `Bearer ${t}` } : {}
@@ -74,7 +76,7 @@ function authHeaders(): Record<string, string> {
 
 async function loadCatalogUrl() {
   try {
-    const r = await fetch(`${daemonBase()}/api/settings`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       catalogUrl.value = (data?.['daemon.catalogUrl'] as string) || ''

@@ -276,6 +276,7 @@ import {
   fetchSystem,
   installBinary,
   uninstallBinary,
+  daemonBaseUrl,
 } from '../../api/daemon'
 import type { BinaryRelease, InstalledBinary } from '../../api/types'
 import ServiceIcon from '../shared/ServiceIcon.vue'
@@ -574,14 +575,6 @@ const composerVersion = ref<string | null>(null)
 const composerPath = ref<string | null>(null)
 const composerInstalling = ref(false)
 const composerInstalled = computed(() => !!composerVersion.value || !!composerPath.value)
-
-function daemonBaseUrl(): string {
-  const preloadPort = (window as any).daemonApi?.getPort?.()
-  if (typeof preloadPort === 'number' && preloadPort > 0) return `http://localhost:${preloadPort}`
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${parseInt(urlPort, 10)}`
-  return 'http://localhost:5199'
-}
 
 function composerAuthHeaders(): Record<string, string> {
   const preloadToken = (window as any).daemonApi?.getToken?.() || ''
