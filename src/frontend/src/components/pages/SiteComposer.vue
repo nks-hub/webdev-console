@@ -129,7 +129,7 @@
           style="margin-top: 16px"
         >
           <!-- Name -->
-          <el-table-column :label="$t('sites.composer.colName')" min-width="260">
+          <el-table-column :label="$t('sites.composer.colName')" min-width="260" prop="name" sortable>
             <template #default="{ row }">
               <div class="pkg-name-cell">
                 <span
@@ -181,14 +181,14 @@
           </el-table-column>
 
           <!-- Required constraint -->
-          <el-table-column :label="$t('sites.composer.colRequired')" width="120">
+          <el-table-column :label="$t('sites.composer.colRequired')" width="120" prop="required" sortable>
             <template #default="{ row }">
               <span class="mono">{{ row.constraint }}</span>
             </template>
           </el-table-column>
 
           <!-- Installed version -->
-          <el-table-column :label="$t('sites.composer.colInstalled')" width="130">
+          <el-table-column :label="$t('sites.composer.colInstalled')" width="130" prop="installed" sortable>
             <template #default="{ row }">
               <span
                 class="mono"
@@ -198,7 +198,7 @@
           </el-table-column>
 
           <!-- Latest version -->
-          <el-table-column :label="$t('sites.composer.colLatest')" width="150">
+          <el-table-column :label="$t('sites.composer.colLatest')" width="150" prop="latest" sortable>
             <template #default="{ row }">
               <span class="mono">{{ outdatedMap[row.name]?.latest ?? '—' }}</span>
               <el-tooltip
@@ -212,7 +212,7 @@
           </el-table-column>
 
           <!-- Status -->
-          <el-table-column :label="$t('sites.composer.colStatus')" width="120">
+          <el-table-column :label="$t('sites.composer.colStatus')" width="120" prop="status" sortable>
             <template #default="{ row }">
               <el-tag
                 v-if="pkgInfoCache[row.name]?.abandoned"
