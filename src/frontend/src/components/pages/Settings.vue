@@ -1298,8 +1298,8 @@ async function doLogin() {
     authPassword.value = ''
     ElMessage.success(`Signed in as ${result.email}`)
     void loadDevicesAccount()
-  } catch (e: any) {
-    authError.value = e?.message || String(e)
+  } catch (e) {
+    authError.value = errorMessage(e)
   } finally {
     authLoading.value = false
   }
@@ -1316,8 +1316,8 @@ async function doRegister() {
     localStorage.setItem('nks-wdc-catalog-email', result.email)
     authPassword.value = ''
     ElMessage.success(`Account created: ${result.email}`)
-  } catch (e: any) {
-    authError.value = e?.message || String(e)
+  } catch (e) {
+    authError.value = errorMessage(e)
   } finally {
     authLoading.value = false
   }
@@ -1341,8 +1341,8 @@ async function loadDevicesAccount() {
       accountToken.value,
       deviceId.value || undefined,
     )
-  } catch (e: any) {
-    const msg = e?.message || String(e)
+  } catch (e) {
+    const msg = errorMessage(e)
     ElMessage.error(`Load devices failed: ${msg}`)
     // Auto-logout on auth failure — use case-insensitive match and
     // check for common catalog-api auth wording so a 403 / "Not
@@ -1361,8 +1361,8 @@ async function pushMyConfigTo(targetDeviceId: string) {
   try {
     await pushConfigToDevice(getCatalogUrl(), accountToken.value, targetDeviceId, deviceId.value)
     ElMessage.success(`Config pushed to device ${targetDeviceId.slice(0, 8)}…`)
-  } catch (e: any) {
-    ElMessage.error(`Push failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Push failed: ${errorMessage(e)}`)
   } finally {
     pushingTo.value = null
   }
