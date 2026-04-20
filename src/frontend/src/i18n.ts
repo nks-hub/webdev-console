@@ -36,4 +36,3 @@ export function setLocale(locale: Locale) {
   document.documentElement.lang = locale
 }
 
-export const supportedLocales = SUPPORTED_LOCALES
