@@ -17,6 +17,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Major bumps on upload/download-artifact change Node runtime +
+    # hash-mismatch default behaviour. Needs coordinated upgrade with
+    # the release.yml + ci.yml steps that consume the artifacts, so
+    # auto-PRs on majors just churn the inbox. Patch/minor still land.
+    ignore:
+      - dependency-name: actions/upload-artifact
+        update-types: [version-update:semver-major]
+      - dependency-name: actions/download-artifact
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /src/frontend
@@ -40,9 +49,24 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: pinia
         update-types: [version-update:semver-major]
+      # TypeScript 6 + vue-tsc 3 + @vitejs/plugin-vue 6 form a coupled
+      # toolchain upgrade — TS 6 changes project references, vue-tsc 3
+      # requires Vue 3.5 strict mode, plugin-vue 6 requires Vite 6.
+      # Ship as a single sweep ticket, not auto-PRs.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: vue-tsc
+        update-types: [version-update:semver-major]
+      - dependency-name: "@vitejs/plugin-vue"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: nuget
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # coverlet 6→10 skips 4 majors; breaking API changes suspected.
+    # Hold until we audit the migration path manually.
+    ignore:
+      - dependency-name: coverlet.collector
+        update-types: [version-update:semver-major]
