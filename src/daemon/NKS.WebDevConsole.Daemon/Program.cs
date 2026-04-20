@@ -1172,17 +1172,24 @@ _ = Task.Run(async () =>
 });
 
 // Sweep orphan *.tmp files left over from a previous daemon crash or taskkill
-// during an in-progress AtomicWriter.WriteAsync. Only touches files older than
-// 1 hour so we don't clobber an in-flight write from a concurrent tool.
+// during an in-progress atomic write. Covers both AtomicWriter.WriteAsync
+// sites (SitesRoot, GeneratedRoot) and the state-file saves in DataRoot
+// introduced by commit c258805 (PluginState, PhpExtensionOverrides,
+// TelemetryConsent — each writes {name}.json.tmp then renames). Only touches
+// files older than 1 hour so we don't clobber an in-flight write from a
+// concurrent tool.
 try
 {
     var sitesRoot = NKS.WebDevConsole.Core.Services.WdcPaths.SitesRoot;
     var generatedRoot = NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot;
+    var dataRoot = NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot;
     var orphanCount = 0;
     if (Directory.Exists(sitesRoot))
         orphanCount += AtomicWriter.CleanupOrphanTempFiles(sitesRoot);
     if (Directory.Exists(generatedRoot))
         orphanCount += AtomicWriter.CleanupOrphanTempFiles(generatedRoot);
+    if (Directory.Exists(dataRoot))
+        orphanCount += AtomicWriter.CleanupOrphanTempFiles(dataRoot);
     if (orphanCount > 0)
         Console.WriteLine($"[startup] reaped {orphanCount} orphan *.tmp file(s) from prior daemon crash");
 }
