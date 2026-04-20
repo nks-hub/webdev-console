@@ -1,10 +1,17 @@
 /// <reference types="vite/client" />
 
 /**
- * Vite-injected env vars available at `import.meta.env`. Kept in sync with
- * the `define` block in `electron.vite.config.ts` and the build-time
- * substitutions the renderer depends on. Adding entries here lets call
- * sites drop `(import.meta as any).env?.X` casts.
+ * Ambient declarations for renderer-side globals injected by the Electron
+ * main process (electron/main.ts) or the preload script
+ * (electron/preload.ts). Keep this file in sync with those two sources —
+ * each Window.* interface member below must mirror a real
+ * contextBridge.exposeInMainWorld('<name>', …) block. Fields that exist
+ * only in packaged Electron (not in `npm run dev` browser mode) are
+ * marked optional so consumers are forced to guard access.
+ *
+ * ImportMetaEnv is synced against the `define` block in
+ * electron.vite.config.ts — adding a new VITE_ env var means adding
+ * both the define entry and the field here.
  */
 interface ImportMetaEnv {
   /** Package version baked in at build time — surfaced in About + Settings. */
