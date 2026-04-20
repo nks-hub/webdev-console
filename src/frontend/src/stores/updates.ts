@@ -37,8 +37,8 @@ export const useUpdatesStore = defineStore('updates', () => {
     // At runtime the Electron main process injects __APP_VERSION__ global
     // when available, otherwise we fall back to the string embedded by vite
     // at build time via define.APP_VERSION.
-    return (window as any).__APP_VERSION__
-      || (import.meta as any).env?.VITE_APP_VERSION
+    return window.__APP_VERSION__
+      || import.meta.env.VITE_APP_VERSION
       || ''
   }
 
