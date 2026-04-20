@@ -80,11 +80,18 @@ public sealed class WebSocketLogStreamer : IDisposable
 
             // Remove from bag — ConcurrentBag doesn't have Remove, so
             // rebuild without this subscriber. Infrequent (disconnect only).
+            // If the last subscriber for this service just left, drop the
+            // dictionary key entirely instead of keeping an empty bag —
+            // otherwise a service that churns subscribers accumulates
+            // stale entries forever.
             if (_subscribers.TryGetValue(key, out var currentBag))
             {
                 var remaining = new ConcurrentBag<SubscriberChannel>(
                     currentBag.Where(s => s != sub));
-                _subscribers.TryUpdate(key, remaining, currentBag);
+                if (remaining.IsEmpty)
+                    _subscribers.TryRemove(new KeyValuePair<string, ConcurrentBag<SubscriberChannel>>(key, currentBag));
+                else
+                    _subscribers.TryUpdate(key, remaining, currentBag);
             }
 
             if (socket.State == WebSocketState.Open)
