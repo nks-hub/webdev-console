@@ -2676,6 +2676,26 @@ static bool IsHostnameValid(string h)
 }
 
 /// <summary>Parses all lines of the hosts file into structured entries.</summary>
+// F82 helper: detect IP-like tokens so ParseHostsEntries can skip
+// comment headers (`## MAMP PRO hosts`) that would otherwise be
+// parsed as ip="MAMP" hostname="PRO".
+static bool LooksLikeIp(string token)
+{
+    if (string.IsNullOrEmpty(token)) return false;
+    // IPv6 has at least one ':' and no spaces.
+    if (token.Contains(':')) return true;
+    // IPv4 dotted-quad: 4 dot-separated decimal octets 0-255.
+    var octets = token.Split('.');
+    if (octets.Length != 4) return false;
+    foreach (var o in octets)
+    {
+        if (!byte.TryParse(o, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+            return false;
+    }
+    return true;
+}
+
 static List<HostsEntryDto> ParseHostsEntries(string content, HashSet<string> wdcDomains)
 {
     const string beginMarker = "# BEGIN NKS WebDev Console";
@@ -2720,6 +2740,15 @@ static List<HostsEntryDto> ParseHostsEntries(string content, HashSet<string> wdc
         if (parts.Length < 2) continue;
 
         var ip = parts[0];
+        // F82: reject lines whose first token doesn't look like an IP. MAMP /
+        // XAMPP dump section headers like `## MAMP PRO hosts` into the file —
+        // after strip-# + trim the working content becomes `MAMP PRO hosts`
+        // and the old parser happily created an entry with ip="MAMP"
+        // hostname="PRO", which is the "bordel" showing up in the UI table.
+        // Treat such lines as pure comments (skip them). IPv4 dotted-quad OR
+        // any token with a colon (IPv6) is accepted; everything else is junk.
+        if (!LooksLikeIp(ip)) continue;
+
         for (int j = 1; j < parts.Length; j++)
         {
             var hostname = parts[j];
