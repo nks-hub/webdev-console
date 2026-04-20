@@ -9,22 +9,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <!-- F100: NuGet package metadata. Kept in lockstep with daemon
-         csproj Version so `dotnet pack` produces a package that matches
-         the shipped app version. The publish-sdk.yml workflow runs on
-         every `v*` tag push, builds + packs, and pushes to GitHub
-         Packages (nuget.pkg.github.com/nks-hub) via GITHUB_TOKEN — no
-         external nuget.org credentials required.
-
-         Downstream plugin csprojs can then switch from relative
-         ProjectReference to PackageReference:
-           <PackageReference Include="NKS.WebDevConsole.Plugin.SDK" Version="0.1.*" />
-         so the webdev-console-plugins repo builds standalone without
-         needing the monorepo sideloaded for SDK/Core types. -->
+    <!-- NuGet package metadata. PackageVersion is injected by
+         publish-sdk.yml from the v* tag name (`-p:PackageVersion=${tag#v}`)
+         so there's no literal version pinned here — the csproj tracks the
+         package *identity*, not its shipped version. The SDK lands on both
+         nuget.pkg.github.com/nks-hub (via `dotnet nuget push`) and the
+         corresponding GitHub Release as a downloadable asset (via
+         softprops/action-gh-release in the same workflow) so consuming
+         repos can resolve it without cross-repo GH Packages permissions. -->
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>NKS.WebDevConsole.Plugin.SDK</PackageId>
-    <Version>0.1.74</Version>
     <Authors>NKS Hub</Authors>
     <Company>NKS Hub</Company>
     <Description>Plugin SDK for NKS WebDev Console — IWdcPlugin base types, endpoint registration, UI schema builder. Implement IWdcPlugin to ship a new plugin.</Description>
@@ -34,11 +29,6 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>nks;webdev-console;plugin;sdk</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <!-- NKS.WebDevConsole.Core is packed as a transitive dependency
-         entry because plugin authors already receive the Core types via
-         the SDK's public API surface (PluginContext, IServiceModule,
-         PluginUiDefinition, etc.). Emitting the ProjectReference into
-         the nupkg keeps downstream restore hermetic. -->
     <IncludeBuildOutput>true</IncludeBuildOutput>
   </PropertyGroup>
 
