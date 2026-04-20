@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -10,19 +10,17 @@ import { router } from './router/index'
 import { i18n } from './i18n'
 import App from './App.vue'
 
-// Register panel components in the plugin registry
+// Register panel components in the plugin registry. Wrapped in
+// defineAsyncComponent so their heavy deps (echarts for MetricsChart,
+// xterm for LogViewer) get code-split into their own chunks instead of
+// being pulled into the main bundle through this eager import barrel.
 import { registerPanelComponent } from './plugins/PluginRegistry'
-import ServiceCard from './components/shared/ServiceCard.vue'
-import VersionSwitcher from './components/shared/VersionSwitcher.vue'
-import ConfigEditor from './components/shared/ConfigEditor.vue'
-import LogViewer from './components/shared/LogViewer.vue'
-import MetricsChart from './components/shared/MetricsChart.vue'
 
-registerPanelComponent('service-status-card', ServiceCard)
-registerPanelComponent('version-switcher', VersionSwitcher)
-registerPanelComponent('config-editor', ConfigEditor)
-registerPanelComponent('log-viewer', LogViewer)
-registerPanelComponent('metrics-chart', MetricsChart)
+registerPanelComponent('service-status-card', defineAsyncComponent(() => import('./components/shared/ServiceCard.vue')))
+registerPanelComponent('version-switcher', defineAsyncComponent(() => import('./components/shared/VersionSwitcher.vue')))
+registerPanelComponent('config-editor', defineAsyncComponent(() => import('./components/shared/ConfigEditor.vue')))
+registerPanelComponent('log-viewer', defineAsyncComponent(() => import('./components/shared/LogViewer.vue')))
+registerPanelComponent('metrics-chart', defineAsyncComponent(() => import('./components/shared/MetricsChart.vue')))
 
 const app = createApp(App)
 
