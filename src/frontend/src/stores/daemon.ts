@@ -15,6 +15,15 @@ export const useDaemonStore = defineStore('daemon', () => {
   // "boot — backend still starting" (show splash spinner) from "runtime
   // offline" (show inline offline badge). Never flips back to false.
   const hasEverConnected = ref(false)
+  // Boot-phase telemetry consumed by the splash overlay so it can show
+  // WHAT is being waited on instead of a generic "Waiting for backend…"
+  // label. bootStartedAt is wall-clock ms of the first poll attempt,
+  // pollAttempts counts total /api/status calls (successful or not),
+  // consecutiveFailuresPublic mirrors the private counter for UI.
+  const bootStartedAt = ref<number | null>(null)
+  const pollAttempts = ref(0)
+  const consecutiveFailuresPublic = ref(0)
+  const lastErrorKind = ref<'network' | 'auth' | 'server' | 'unknown' | null>(null)
   // Per-service validation state broadcast by the daemon on /api/config/validate
   // so ValidationBadge can show Validating/Passed/Failed without the parent
   // component needing to imperatively call startValidation()/setResult().
@@ -47,6 +56,8 @@ export const useDaemonStore = defineStore('daemon', () => {
   const OFFLINE_THRESHOLD = 3
 
   async function poll() {
+    if (bootStartedAt.value === null) bootStartedAt.value = Date.now()
+    pollAttempts.value++
     try {
       status.value = await fetchStatus()
       services.value = await fetchServices()
@@ -54,6 +65,8 @@ export const useDaemonStore = defineStore('daemon', () => {
       connected.value = true
       retryCount = 0
       consecutiveFailures = 0
+      consecutiveFailuresPublic.value = 0
+      lastErrorKind.value = null
       // Fire onConnect listeners: either on the very first successful poll
       // OR on any transition from offline→online (daemon restart scenario).
       if (!hasEverConnected.value || !wasConnected) {
@@ -72,8 +85,23 @@ export const useDaemonStore = defineStore('daemon', () => {
       ramHistory.value.push(totalRam)
       if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
       if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
-    } catch {
+    } catch (err: any) {
       consecutiveFailures++
+      consecutiveFailuresPublic.value = consecutiveFailures
+      // Classify the failure so the splash overlay can show a specific
+      // label (network refused vs auth vs server error) instead of a
+      // generic spinner. Best-effort — errors from fetch() often only
+      // expose a message string.
+      const msg = String(err?.message ?? err ?? '').toLowerCase()
+      if (msg.includes('failed to fetch') || msg.includes('econnrefused') || msg.includes('network')) {
+        lastErrorKind.value = 'network'
+      } else if (msg.includes('401') || msg.includes('403') || msg.includes('unauthor')) {
+        lastErrorKind.value = 'auth'
+      } else if (msg.includes('500') || msg.includes('502') || msg.includes('503')) {
+        lastErrorKind.value = 'server'
+      } else {
+        lastErrorKind.value = 'unknown'
+      }
       // Only flip to Offline after the retry cascade actually exhausts itself.
       // Until then the badge STAYS in its last state (almost always
       // connected=true) so brief failures don't flash the header.
@@ -150,6 +178,8 @@ export const useDaemonStore = defineStore('daemon', () => {
   return {
     status, services, connected, hasEverConnected, validation,
     runningServices, allRunning, cpuHistory, ramHistory,
+    bootStartedAt, pollAttempts,
+    consecutiveFailures: consecutiveFailuresPublic, lastErrorKind,
     startPolling, stopPolling, poll, onConnect,
   }
 })

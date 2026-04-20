@@ -44,15 +44,22 @@
     <OnboardingWizard />
 
     <!-- Splash overlay shown until the daemon answers for the first time.
-         Distinguishes "backend still booting" from "runtime offline". -->
+         Distinguishes "backend still booting" from "runtime offline".
+         Phase + elapsed-time + error-kind come from daemonStore telemetry
+         (F70) so the status line actually reflects what is happening
+         instead of rotating through canned hints. -->
     <Transition name="splash-fade">
       <div v-if="!daemonStore.hasEverConnected" class="splash-overlay">
         <div class="splash-card">
           <div class="splash-logo">NKS</div>
           <div class="splash-title">WebDev Console</div>
-          <div class="splash-spinner" aria-hidden="true"></div>
-          <div class="splash-status">Waiting for backend…</div>
-          <div class="splash-hint">{{ splashHint }}</div>
+          <div class="splash-spinner" :class="{ 'splash-spinner--warn': splashWarn }" aria-hidden="true"></div>
+          <div class="splash-status">{{ splashStatus }}</div>
+          <div class="splash-hint">
+            <span class="splash-hint-label">{{ splashHint }}</span>
+            <span class="splash-hint-sep">·</span>
+            <span class="splash-hint-elapsed">{{ splashElapsed }}</span>
+          </div>
         </div>
       </div>
     </Transition>
@@ -86,17 +93,54 @@ useThemeStore()
 
 const commandPalette = ref<InstanceType<typeof CommandPalette> | null>(null)
 
-// Splash hint rotates every 2s to reassure the user something is happening
-// during the longest-case boot (daemon compile + plugin init ≈ 8s in dev).
-const splashHints = [
-  'Starting C# daemon…',
-  'Loading plugins…',
-  'Reading config…',
-  'Ready soon…',
-]
-const splashHintIdx = ref(0)
-const splashHint = computed(() => splashHints[splashHintIdx.value % splashHints.length])
+// F70 splash telemetry — derive phase + elapsed time from daemonStore state
+// rather than rotating through canned hints. The elapsed counter ticks once
+// per second so the user can see progress even during quiet poll intervals.
+const nowTs = ref(Date.now())
 let splashTimer: ReturnType<typeof setInterval> | null = null
+
+const splashElapsedSec = computed(() => {
+  const start = daemonStore.bootStartedAt ?? nowTs.value
+  return Math.max(0, Math.floor((nowTs.value - start) / 1000))
+})
+const splashElapsed = computed(() => `${splashElapsedSec.value}s`)
+
+const splashStatus = computed(() => {
+  if (!daemonStore.bootStartedAt) return 'Spouštím frontend…'
+  const fails = daemonStore.consecutiveFailures
+  const kind = daemonStore.lastErrorKind
+  // After the daemon has bound HTTP at least once but shutters down (daemon
+  // restart) we flip back to connecting state. Cover both flows here.
+  if (fails === 0 && daemonStore.pollAttempts === 1) return 'Connecting to backend…'
+  if (kind === 'network') {
+    // Daemon process not listening yet — port file may still be missing
+    // or the socket is not bound. Normal during first few seconds of boot.
+    if (splashElapsedSec.value < 8) return 'Daemon se spouští…'
+    if (splashElapsedSec.value < 20) return 'Daemon startuje pluginy…'
+    return 'Daemon stále odpovídá pomalu…'
+  }
+  if (kind === 'auth') return 'Daemon běží, synchronizuji token…'
+  if (kind === 'server') return 'Daemon hlásí chybu — opakuji…'
+  if (kind === 'unknown' && fails > 0) return 'Čekám na backend…'
+  return 'Connecting to backend…'
+})
+
+const splashHint = computed(() => {
+  const kind = daemonStore.lastErrorKind
+  const n = daemonStore.pollAttempts
+  if (!daemonStore.bootStartedAt) return 'mount fáze'
+  if (kind === 'network') return `pokus ${n} · port file / socket`
+  if (kind === 'auth') return `pokus ${n} · rotace tokenu`
+  if (kind === 'server') return `pokus ${n} · 5xx odpověď`
+  if (n <= 1) return 'první pokus'
+  return `pokus ${n}`
+})
+
+// Over ~15s of network errors we visually escalate the spinner (amber tint)
+// so the user knows something is genuinely taking longer than expected.
+const splashWarn = computed(() =>
+  daemonStore.lastErrorKind !== null && splashElapsedSec.value > 15
+)
 
 function handleKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -135,12 +179,10 @@ onMounted(() => {
     void sitesStore.load()
   })
 
-  // Rotate splash hint so the "Waiting for backend" spinner never feels
-  // frozen. Cleared automatically once hasEverConnected flips to true —
-  // but the timer itself runs for the full session (cheap, 2s tick).
-  splashTimer = setInterval(() => {
-    if (!daemonStore.hasEverConnected) splashHintIdx.value++
-  }, 2000)
+  // F70: tick nowTs every second so the splash elapsed counter and
+  // phase-based status update live even during quiet poll intervals.
+  // Cheap — 1s setInterval, stopped on unmount.
+  splashTimer = setInterval(() => { nowTs.value = Date.now() }, 1000)
 
   window.addEventListener('keydown', handleKeydown)
 })
@@ -233,14 +275,25 @@ onUnmounted(() => {
 }
 
 .splash-spinner {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border: 3px solid var(--wdc-border);
   border-top-color: var(--wdc-accent);
   border-radius: 50%;
-  animation: wdc-spin 0.9s linear infinite;
+  /* F70: slower (1.5s) + ease-in-out so the ring glides instead of racing.
+     Previous 0.9s linear read as "splašený" during multi-second boots. */
+  animation: wdc-spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   margin: 4px 0;
+  transition: border-top-color 0.4s ease;
 }
+
+.splash-spinner--warn {
+  border-top-color: var(--wdc-warning, #f5a623);
+}
+
+.splash-hint-label { color: var(--wdc-text-3); }
+.splash-hint-sep { margin: 0 6px; color: var(--wdc-text-3); opacity: 0.5; }
+.splash-hint-elapsed { color: var(--wdc-text-2); font-variant-numeric: tabular-nums; }
 
 .splash-status {
   font-size: 0.88rem;
