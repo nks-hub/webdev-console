@@ -128,6 +128,7 @@ builder.Services.AddSingleton<PluginCatalogClient>(sp =>
     return new PluginCatalogClient(httpFactory, logger, () => settings.CatalogUrl);
 });
 builder.Services.AddSingleton<PluginDownloader>();
+builder.Services.AddHostedService<PluginCatalogSyncService>();
 
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());

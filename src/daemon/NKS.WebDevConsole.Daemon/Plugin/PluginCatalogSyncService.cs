@@ -1,0 +1,84 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace NKS.WebDevConsole.Daemon.Plugin;
+
+/// <summary>
+/// Background service that refreshes the plugin catalog and syncs any
+/// missing plugin artifacts into the on-disk cache at
+/// <c>~/.wdc/plugins/&lt;id&gt;/&lt;version&gt;/</c> shortly after the daemon
+/// starts, then re-checks every <see cref="RefreshInterval"/>. Opt-in via
+/// the <c>NKS_WDC_PLUGIN_AUTOSYNC</c> environment variable (set to <c>1</c>
+/// / <c>true</c>) so dev environments running a local build of
+/// <c>src/plugins</c> do not unnecessarily hit the catalog API.
+/// </summary>
+public sealed class PluginCatalogSyncService : BackgroundService
+{
+    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromHours(6);
+
+    private readonly PluginCatalogClient _catalog;
+    private readonly PluginDownloader _downloader;
+    private readonly ILogger<PluginCatalogSyncService> _logger;
+
+    public PluginCatalogSyncService(
+        PluginCatalogClient catalog,
+        PluginDownloader downloader,
+        ILogger<PluginCatalogSyncService> logger)
+    {
+        _catalog = catalog;
+        _downloader = downloader;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (!IsEnabled())
+        {
+            _logger.LogDebug("Plugin auto-sync disabled (set NKS_WDC_PLUGIN_AUTOSYNC=1 to enable)");
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(StartupDelay, stoppingToken);
+        }
+        catch (OperationCanceledException) { return; }
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var catalogCount = await _catalog.RefreshAsync(stoppingToken);
+                if (catalogCount > 0)
+                {
+                    var installed = await _downloader.SyncLatestAsync(_catalog.Cached, stoppingToken);
+                    if (installed > 0)
+                        _logger.LogInformation("Plugin auto-sync installed {Count} new plugin(s)", installed);
+                    else
+                        _logger.LogDebug("Plugin auto-sync: catalog has {C} entries, all cached", catalogCount);
+                }
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                // Never let a transient catalog outage crash the daemon — the
+                // next tick will retry. Log at warning so self-hosted users
+                // notice persistent failures in their logs.
+                _logger.LogWarning("Plugin auto-sync tick failed: {Error}", ex.Message);
+            }
+
+            try { await Task.Delay(RefreshInterval, stoppingToken); }
+            catch (OperationCanceledException) { break; }
+        }
+    }
+
+    private static bool IsEnabled()
+    {
+        var v = Environment.GetEnvironmentVariable("NKS_WDC_PLUGIN_AUTOSYNC");
+        if (string.IsNullOrWhiteSpace(v)) return false;
+        return v.Equals("1", StringComparison.Ordinal)
+            || v.Equals("true", StringComparison.OrdinalIgnoreCase)
+            || v.Equals("yes", StringComparison.OrdinalIgnoreCase);
+    }
+}
