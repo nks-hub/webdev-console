@@ -78,4 +78,28 @@ public class PluginStateTests
             first.SetEnabled(marker, true);
         }
     }
+
+    [Fact]
+    public void Save_does_not_leave_tmp_file_behind()
+    {
+        // Regression test for commit c258805: Save() writes to a .tmp file and
+        // renames atomically. After a successful save the .tmp must not exist
+        // — if it did, a future atomic write could race with the rename, and a
+        // reader could in principle observe a half-written state file.
+        var state = new PluginState();
+        var marker = "nks.wdc.test." + Guid.NewGuid().ToString("N")[..8];
+        try
+        {
+            state.SetEnabled(marker, false);
+            var tmpPath = Path.Combine(
+                NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot,
+                "plugin-state.json.tmp");
+            Assert.False(File.Exists(tmpPath),
+                $"Expected no .tmp leftover after atomic save, but {tmpPath} exists");
+        }
+        finally
+        {
+            state.SetEnabled(marker, true);
+        }
+    }
 }
