@@ -222,6 +222,7 @@ import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { ServiceInfo } from '../../api/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -268,7 +269,7 @@ function iconFor(name: string): Component {
 // Sidebar is always expanded — the collapse toggle was dropped because
 // it added no value (sidebar fits at any reasonable window width) and
 // the icon-only mode hid service names that users needed to glance at.
-const services = computed(() => daemonStore.services as any[])
+const services = computed(() => daemonStore.services)
 const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
 
 // Tunnel entry in the bottom nav lights up when cloudflared is running AND
@@ -278,7 +279,7 @@ const cloudflareRunning = computed(() =>
   services.value.some(s => s.id === 'cloudflare' && (s.state === 2 || s.status === 'running'))
 )
 const exposedSiteCount = computed(() =>
-  (sitesStore.sites as any[]).filter(s => s.cloudflare?.enabled).length
+  sitesStore.sites.filter(s => s.cloudflare?.enabled).length
 )
 
 const SHORT_NAMES: Record<string, string> = {
@@ -286,8 +287,8 @@ const SHORT_NAMES: Record<string, string> = {
   'PHP (Multi-version)': 'PHP',
   'Mailpit': 'Mailpit',
 }
-function shortName(svc: any): string {
-  return SHORT_NAMES[svc.displayName] || svc.displayName || svc.id
+function shortName(svc: ServiceInfo): string {
+  return SHORT_NAMES[svc.displayName ?? ''] || svc.displayName || svc.id
 }
 
 const SERVICE_CATEGORIES: Record<string, string> = {
