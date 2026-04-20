@@ -191,6 +191,7 @@ import {
   applyHosts,
   backupHosts,
   restoreHosts,
+  daemonBaseUrl,
   type HostEntry,
   type HostApplyEntry,
 } from '../../api/daemon'
@@ -381,7 +382,7 @@ async function reapply() {
   reapplying.value = true
   try {
     const res = await fetch(
-      `http://localhost:${window.daemonApi?.getPort?.() ?? 5199}/api/sites/reapply-all`,
+      `${daemonBaseUrl()}/api/sites/reapply-all`,
       { method: 'POST', headers: sitesStore.authHeaders() }
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)

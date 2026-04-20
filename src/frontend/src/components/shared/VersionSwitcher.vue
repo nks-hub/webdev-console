@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import ValidationBadge from './ValidationBadge.vue'
+import { daemonBaseUrl } from '../../api/daemon'
 
 interface VersionEntry {
   version: string
@@ -57,8 +58,10 @@ async function requestSwitch(version: string) {
   badge.value?.startValidation()
 
   try {
-    const port = window.daemonApi?.getPort() ?? 50051
-    const res = await fetch(`http://localhost:${port}/api/services/${props.serviceId}/validate-version`, {
+    // Previously hard-coded a stale 50051 fallback (daemon default is
+    // 5199); swapped to the shared resolver so browser dev mode hits
+    // the correct URL even when the preload port file isn't readable.
+    const res = await fetch(`${daemonBaseUrl()}/api/services/${props.serviceId}/validate-version`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ version }),
