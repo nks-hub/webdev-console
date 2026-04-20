@@ -102,14 +102,21 @@ export const useUpdatesStore = defineStore('updates', () => {
     }
   }
 
+  // Handle is retained so startAutoCheck() can be truly idempotent — App.vue
+  // remounts (HMR, route flip) would otherwise stack a new hourly timer on
+  // each call. Previously the comment in App.vue claimed idempotency the
+  // code didn't actually deliver.
+  let autoCheckTimer: ReturnType<typeof setInterval> | null = null
+
   function startAutoCheck(): void {
     loadCached()
     // Fire once immediately so the badge reflects reality from the first
     // render (subject to the cached-within-6h guard inside refresh()).
     void refresh()
+    if (autoCheckTimer !== null) return
     // Re-check every hour; refresh() itself skips the fetch when cached
     // data is still fresh, so this is cheap.
-    setInterval(() => { void refresh() }, 60 * 60 * 1000)
+    autoCheckTimer = setInterval(() => { void refresh() }, 60 * 60 * 1000)
   }
 
   return {
