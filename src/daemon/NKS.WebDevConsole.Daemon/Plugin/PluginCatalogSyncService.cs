@@ -86,24 +86,6 @@ public sealed class PluginCatalogSyncService : BackgroundService
         // legacy escape hatch for CI / headless deployments that don't
         // want to write a persistent row.
         if (_settings.PluginAutoSyncEnabled) return true;
-        return IsTruthyEnv(Environment.GetEnvironmentVariable("NKS_WDC_PLUGIN_AUTOSYNC"));
-    }
-
-    /// <summary>
-    /// Parses a boolean env-var value with the conventions used elsewhere
-    /// in the daemon ("1", "true", "yes", "on" — case-insensitive,
-    /// whitespace tolerant). Previously the inline parser used
-    /// IsNullOrWhiteSpace as the only guard and then did an Ordinal
-    /// compare on the raw value, so NKS_WDC_PLUGIN_AUTOSYNC="1 "
-    /// (with trailing space from shell quoting) silently failed.
-    /// </summary>
-    internal static bool IsTruthyEnv(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-        var v = raw.Trim();
-        return v.Equals("1", StringComparison.Ordinal)
-            || v.Equals("true", StringComparison.OrdinalIgnoreCase)
-            || v.Equals("yes", StringComparison.OrdinalIgnoreCase)
-            || v.Equals("on", StringComparison.OrdinalIgnoreCase);
+        return EnvFlags.IsTruthy(Environment.GetEnvironmentVariable("NKS_WDC_PLUGIN_AUTOSYNC"));
     }
 }

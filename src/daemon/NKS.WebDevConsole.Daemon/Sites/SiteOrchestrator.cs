@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Plugin;
+using NKS.WebDevConsole.Daemon.Services;
 using System.Text;
 
 namespace NKS.WebDevConsole.Daemon.Sites;
@@ -545,7 +546,7 @@ public sealed class SiteOrchestrator
         // harness exercise the full site-creation code path without a human clicking UAC.
         // NEVER set this in a normal interactive session — sites created this way won't
         // resolve via DNS until the user re-runs reapply-all after elevating.
-        if (Environment.GetEnvironmentVariable("NKS_WDC_SKIP_HOSTS_UAC") == "1")
+        if (EnvFlags.IsTruthy(Environment.GetEnvironmentVariable("NKS_WDC_SKIP_HOSTS_UAC")))
         {
             _logger.LogWarning(
                 "NKS_WDC_SKIP_HOSTS_UAC=1 is set — hosts file write skipped for {Count} domain(s). " +
