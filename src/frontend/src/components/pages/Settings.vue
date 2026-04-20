@@ -310,6 +310,12 @@
               </el-form-item>
               <el-form-item label="Plugin auto-sync">
                 <el-switch v-model="pluginAutoSync" />
+                <el-button
+                  size="small"
+                  style="margin-left: 12px"
+                  :loading="syncingPlugins"
+                  @click="syncPluginsNow"
+                >Sync now</el-button>
                 <div class="hint">
                   When enabled the daemon pulls the plugin catalog from the
                   URL above on startup + every 6 hours and downloads any
@@ -318,6 +324,10 @@
                   Leave off for dev builds that use the bundled
                   <code>build/plugins/</code>. Env var
                   <code>NKS_WDC_PLUGIN_AUTOSYNC=1</code> still wins when set.
+                </div>
+                <div v-if="pluginSyncStatus" class="hint">
+                  <span :class="['status-dot', pluginSyncStatus.ok ? 'ok' : 'err']"></span>
+                  {{ pluginSyncStatus.message }}
                 </div>
               </el-form-item>
             </el-form>
@@ -928,6 +938,8 @@ function downloadBackupFile(path: string) {
 // ── Catalog API integration (Advanced tab) ────────────────────────────
 const catalogUrl = ref('')
 const pluginAutoSync = ref(false)
+const syncingPlugins = ref(false)
+const pluginSyncStatus = ref<{ ok: boolean; message: string } | null>(null)
 const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
@@ -1061,6 +1073,27 @@ async function loadSettings() {
     if (data['backup.dir']) backupDir.value = data['backup.dir']
     if (data['backup.scheduleHours']) backupScheduleHours.value = parseInt(data['backup.scheduleHours'])
   } catch { /* daemon not reachable — keep defaults */ }
+}
+
+async function syncPluginsNow() {
+  syncingPlugins.value = true
+  pluginSyncStatus.value = null
+  try {
+    const r = await fetch(`${daemonBase()}/api/plugins/catalog/sync`, {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    const result = await r.json()
+    const msg = `Catalog: ${result.catalogCount ?? 0} plugins · installed this run: ${result.installedThisCall ?? 0}`
+    pluginSyncStatus.value = { ok: true, message: msg }
+    ElMessage.success(msg)
+  } catch (e: any) {
+    pluginSyncStatus.value = { ok: false, message: String(e?.message ?? e) }
+    ElMessage.error(`Plugin sync failed: ${e?.message ?? e}`)
+  } finally {
+    syncingPlugins.value = false
+  }
 }
 
 async function refreshCatalog() {
