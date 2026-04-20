@@ -22,7 +22,18 @@
  * Individual rows are printed so a CI log shows exactly which surface
  * broke.
  */
-import { chromium } from 'playwright'
+// Resolve `playwright` from src/frontend/node_modules even when this file
+// lives at repo-root — npm run smoke:e2e runs with cwd=src/frontend so a
+// bare `import 'playwright'` would walk up from scripts/ and never find
+// the module (node_modules/ is only installed in src/frontend).
+// createRequire bypasses ESM's module-location-based resolver.
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve as pathResolve } from 'node:path'
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const frontendPkg = pathResolve(__dirname, '..', 'src', 'frontend', 'package.json')
+const require = createRequire(frontendPkg)
+const { chromium } = require('playwright')
 
 const CDP_URL = process.env.WDC_CDP_URL ?? 'http://127.0.0.1:9222'
 const results = []

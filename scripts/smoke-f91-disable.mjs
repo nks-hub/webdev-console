@@ -12,7 +12,14 @@
  * "missing after re-enable". Always attempts to re-enable the plugin
  * so running this probe does not leave the daemon in a disabled state.
  */
-import { chromium } from 'playwright'
+// Resolve playwright from src/frontend/node_modules (see smoke-e2e.mjs).
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve as pathResolve } from 'node:path'
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const frontendPkg = pathResolve(__dirname, '..', 'src', 'frontend', 'package.json')
+const require = createRequire(frontendPkg)
+const { chromium } = require('playwright')
 
 const CDP_URL = process.env.WDC_CDP_URL ?? 'http://127.0.0.1:9222'
 const PLUGIN_ID = process.env.WDC_F91_PROBE_PLUGIN ?? 'nks.wdc.composer'
