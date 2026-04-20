@@ -541,13 +541,26 @@ function abandonedLabel(v: boolean | string): string {
   return t('sites.composer.abandoned')
 }
 
-async function searchPackagist(query: string, cb: (items: any[]) => void): Promise<void> {
+interface PackagistSuggestion {
+  value: string
+  description?: string
+  downloads?: number
+  favers?: number
+}
+interface PackagistHit {
+  name: string
+  description?: string
+  downloads?: number
+  favers?: number
+}
+
+async function searchPackagist(query: string, cb: (items: PackagistSuggestion[]) => void): Promise<void> {
   if (!query || query.length < 2) { cb([]); return }
   try {
     const r = await fetch(`https://packagist.org/search.json?q=${encodeURIComponent(query)}&per_page=10`)
     if (r.ok) {
-      const d = await r.json()
-      cb((d.results ?? []).map((p: any) => ({
+      const d: { results?: PackagistHit[] } = await r.json()
+      cb((d.results ?? []).map(p => ({
         value: p.name,
         description: p.description,
         downloads: p.downloads,
@@ -559,7 +572,7 @@ async function searchPackagist(query: string, cb: (items: any[]) => void): Promi
   cb([])
 }
 
-async function onSelectPackage(item: any): Promise<void> {
+async function onSelectPackage(item: PackagistSuggestion): Promise<void> {
   requirePackage.value = item.value
   availableVersions.value = []
   selectedVersion.value = ''

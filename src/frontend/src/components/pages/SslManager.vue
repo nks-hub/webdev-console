@@ -133,7 +133,7 @@ import { ref, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchSites } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 
 interface CertInfo {
@@ -186,11 +186,8 @@ async function loadCerts() {
 
 async function loadSites() {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() })
-    if (r.ok) {
-      const sites = await r.json()
-      availableSites.value = sites.map((s: any) => s.domain)
-    }
+    const sites = await fetchSites()
+    availableSites.value = sites.map(s => s.domain)
   } catch { /* skip */ }
 }
 

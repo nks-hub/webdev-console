@@ -259,9 +259,11 @@ async function loadTables(db: string) {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/databases/${db}/tables`, { headers: authHeaders() })
     if (r.ok) {
-      const data = await r.json()
-      dbTables[db] = (data.tables ?? data ?? []).map((t: any) =>
-        typeof t === 'string' ? { name: t } : t
+      const data: unknown = await r.json()
+      const raw: unknown = (data as { tables?: unknown })?.tables ?? data ?? []
+      const list: unknown[] = Array.isArray(raw) ? raw : []
+      dbTables[db] = list.map(t =>
+        typeof t === 'string' ? { name: t } : (t as { name: string })
       )
     }
   } catch { /* optional */ }
