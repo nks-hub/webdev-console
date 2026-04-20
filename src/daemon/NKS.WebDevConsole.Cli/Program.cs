@@ -14,7 +14,7 @@ rootCommand.SetAction((parseResult, ct) =>
 {
     if (parseResult.GetValue(versionOption))
     {
-        var ver = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+        var ver = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
         Console.WriteLine($"wdc {ver}");
     }
     return Task.CompletedTask;
@@ -685,7 +685,7 @@ var versionCommand = new Command("version", "Show version info");
 versionCommand.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
-    var cliVersion = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+    var cliVersion = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     using var client = new DaemonClient();
     var connected = client.Connect();
     string? daemonVer = null;
