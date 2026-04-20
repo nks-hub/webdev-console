@@ -784,7 +784,8 @@ const redirectHttps = ref(true)
 const aliases = ref<string[]>([])
 const aliasInput = ref('')
 const aliasInputVisible = ref(false)
-const aliasInputRef = ref<any>(null)
+// Same pattern as CommandPalette.inputRef — only focus() is ever called.
+const aliasInputRef = ref<{ focus?: () => void } | null>(null)
 watch(() => site.value?.aliases, (al) => { aliases.value = [...(al ?? [])] }, { immediate: true })
 
 function showAliasInput() {

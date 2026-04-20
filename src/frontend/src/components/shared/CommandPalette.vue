@@ -62,7 +62,12 @@ const sitesStore = useSitesStore()
 const visible = ref(false)
 const query = ref('')
 const selectedIndex = ref(0)
-const inputRef = ref<any>(null)
+// Template ref to the Element Plus <el-input> wrapper. We only call
+// focus() on it, so pinning to a structural shape with that single
+// method captures what the component actually uses without coupling to
+// the full ElInput instance type (which changes across element-plus
+// versions).
+const inputRef = ref<{ focus: () => void } | null>(null)
 
 interface Command {
   id: string
