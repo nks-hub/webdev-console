@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Plugin.SDK;
 
 namespace NKS.WebDevConsole.Plugin.Composer;
 
@@ -18,11 +20,18 @@ namespace NKS.WebDevConsole.Plugin.Composer;
 /// (newest version wins by semver), then falls back to the system <c>composer</c>
 /// shim on PATH if no managed phar is present.
 /// </summary>
-public sealed class ComposerPlugin : IWdcPlugin
+public sealed class ComposerPlugin : IWdcPlugin, IFrontendPanelProvider
 {
     public string Id => "nks.wdc.composer";
     public string DisplayName => "Composer";
     public string Version => "1.0.0";
+
+    public PluginUiDefinition GetUiDefinition() =>
+        new UiSchemaBuilder(Id)
+            .Category("Tools")
+            .Icon("Box")
+            .AddNavEntry("composer", "Composer", "/composer", "Box", order: 30)
+            .Build();
 
     public string Description =>
         "PHP dependency manager — per-site composer.json/lock management, " +

@@ -4,6 +4,8 @@ using System.Security.Principal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Plugin.SDK;
 
 namespace NKS.WebDevConsole.Plugin.Hosts;
 
@@ -11,11 +13,18 @@ namespace NKS.WebDevConsole.Plugin.Hosts;
 /// IWdcPlugin entry point for Windows hosts file management.
 /// Manages entries in a delimited block within the system hosts file.
 /// </summary>
-public sealed class HostsPlugin : IWdcPlugin
+public sealed class HostsPlugin : IWdcPlugin, IFrontendPanelProvider
 {
     public string Id => "nks.wdc.hosts";
     public string DisplayName => "Hosts Manager";
     public string Version => "1.0.0";
+
+    public PluginUiDefinition GetUiDefinition() =>
+        new UiSchemaBuilder(Id)
+            .Category("Tools")
+            .Icon("Files")
+            .AddNavEntry("hosts", "Hosts", "/hosts", "Files", order: 40)
+            .Build();
 
     private HostsManager? _manager;
     private ILogger? _logger;

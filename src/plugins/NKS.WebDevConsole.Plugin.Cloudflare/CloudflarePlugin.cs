@@ -58,7 +58,8 @@ public sealed class CloudflarePlugin : IWdcPlugin, IFrontendPanelProvider
     public PluginUiDefinition GetUiDefinition() =>
         new UiSchemaBuilder(Id)
             .Category("Tools")
-            .Icon("el-icon-link")
+            .Icon("Link")
+            .AddNavEntry("cloudflare", "Cloudflare", "/cloudflare", "Link", order: 60)
             .AddServiceCard("cloudflare")
             .AddLogViewer("cloudflare")
             .AddPanel("cloudflare-tunnel-panel", new()
