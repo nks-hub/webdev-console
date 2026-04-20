@@ -4,6 +4,7 @@ import type {
   PhpVersion,
   DatabaseInfo,
   PluginManifest,
+  PluginUiDefinition,
   ProgressUpdate,
   MetricsUpdate,
   LogEntry,
@@ -595,7 +596,7 @@ export const disablePlugin = (id: string) =>
   json<void>(`/api/plugins/${id}/disable`, { method: 'POST' })
 
 export const fetchPluginUi = (id: string) =>
-  json<import('./types').PluginUiDefinition>(`/api/plugins/${id}/ui`)
+  json<PluginUiDefinition>(`/api/plugins/${id}/ui`)
 
 export interface PluginNavEntry {
   pluginId: string
