@@ -280,6 +280,7 @@ import {
   daemonAuthHeaders as composerAuthHeaders,
 } from '../../api/daemon'
 import type { BinaryRelease, InstalledBinary } from '../../api/types'
+import { errorMessage } from '../../utils/errors'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 
 const { t } = useI18n()
@@ -494,8 +495,8 @@ async function refresh() {
     // the latest snapshot. Runs in parallel with the other two calls
     // above via fire-and-forget — no need to block the UI on it.
     void loadSystemInfo()
-  } catch (e: any) {
-    ElMessage.error(`Failed to load: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Failed to load: ${errorMessage(e)}`)
   } finally {
     loading.value = false
   }
@@ -524,8 +525,8 @@ async function install(app: string, version: string) {
     } else {
       throw new Error(result.message ?? 'Installation failed')
     }
-  } catch (e: any) {
-    const msg = e?.message || String(e)
+  } catch (e) {
+    const msg = errorMessage(e)
     progressError.value = true
     progressMessage.value = `Error: ${msg}`
     ElMessage.error(`Install failed: ${msg}`)
@@ -541,8 +542,8 @@ async function uninstall(app: string, version: string) {
     await uninstallBinary(app, version)
     ElMessage.success(`${app} ${version} removed`)
     await refresh()
-  } catch (e: any) {
-    ElMessage.error(`Remove failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Remove failed: ${errorMessage(e)}`)
   } finally {
     uninstalling.value.delete(key)
   }
@@ -601,8 +602,8 @@ async function installComposer() {
     if (body.path) composerPath.value = body.path
     await loadComposerVersion()
     ElMessage.success(t('binaries.composer.installed', { version: composerVersion.value || 'latest' }))
-  } catch (e: any) {
-    ElMessage.error(e?.message || String(e))
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
   } finally {
     composerInstalling.value = false
   }
