@@ -80,6 +80,11 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: Sentry
         update-types: [version-update:semver-major]
+      # xunit.runner.visualstudio 3.x pairs with xunit v3. We're on
+      # xunit v2 (see Test.Sdk note above) — bumping this alone breaks
+      # `dotnet test` discovery. Ship with the xunit v3 migration sweep.
+      - dependency-name: xunit.runner.visualstudio
+        update-types: [version-update:semver-major]
       # .NET runtime packages (System.*, Microsoft.Extensions.*) jumping
       # major (9→10) implies a TargetFramework move to .NET 10. Ship as
       # a coordinated platform upgrade ticket, not a drive-by bump.
