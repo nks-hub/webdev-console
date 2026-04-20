@@ -2348,7 +2348,7 @@ var sslRevokeArg = new Argument<string>("domain") { Description = "Domain to rev
 var sslRevokeCmd = new Command("revoke", "Revoke (delete) SSL certificate") { sslRevokeArg };
 sslRevokeCmd.SetAction(async (parseResult, ct) =>
 {
-    var domain = parseResult.GetValue(sslRevokeArg);
+    var domain = parseResult.GetValue(sslRevokeArg) ?? "";
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
     try
