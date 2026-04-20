@@ -148,6 +148,7 @@ import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-p
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { startService, stopService, duplicateSite, daemonBaseUrl } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 import type { SiteInfo } from '../../api/types'
 import MiniSparkline from '../common/MiniSparkline.vue'
 
@@ -278,8 +279,8 @@ async function confirmDuplicate() {
     ElMessage.success($t('sites.card.duplicated', { name: newDomain }))
     duplicateDialog.value.visible = false
     await sitesStore.load()
-  } catch (e: any) {
-    ElMessage.error(e?.message || String(e))
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
   } finally {
     duplicating.value = false
   }
@@ -321,8 +322,8 @@ async function startApache() {
   toggling.value = true
   try {
     await startService('apache')
-  } catch (e: any) {
-    ElMessage.error(`Start failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Start failed: ${errorMessage(e)}`)
   } finally {
     toggling.value = false
   }
@@ -332,8 +333,8 @@ async function stopApache() {
   toggling.value = true
   try {
     await stopService('apache')
-  } catch (e: any) {
-    ElMessage.error(`Stop failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Stop failed: ${errorMessage(e)}`)
   } finally {
     toggling.value = false
   }
@@ -365,8 +366,8 @@ async function handleCommand(cmd: string, site: SiteInfo) {
       await stopService('apache')
       await startService('apache')
       ElMessage.success($t('sites.card.restarted'))
-    } catch (e: any) {
-      ElMessage.error(`Restart failed: ${e?.message || e}`)
+    } catch (e) {
+      ElMessage.error(`Restart failed: ${errorMessage(e)}`)
     } finally {
       restarting.value = false
     }
@@ -386,8 +387,8 @@ async function handleCommand(cmd: string, site: SiteInfo) {
     try {
       await sitesStore.remove(site.domain)
       ElMessage.success(`${site.domain} deleted`)
-    } catch (e: any) {
-      ElMessage.error(`Delete failed: ${e?.message || e}`)
+    } catch (e) {
+      ElMessage.error(`Delete failed: ${errorMessage(e)}`)
     }
   }
 }

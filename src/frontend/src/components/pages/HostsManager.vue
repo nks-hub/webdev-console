@@ -195,6 +195,7 @@ import {
   type HostEntry,
   type HostApplyEntry,
 } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const { t } = useI18n()
 const sitesStore = useSitesStore()
@@ -262,8 +263,8 @@ async function load() {
       _removed: false,
       _added: false,
     }))
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? String(e))
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
   } finally {
     loading.value = false
   }
@@ -360,8 +361,8 @@ async function confirmApply() {
     await applyHosts(payload)
     ElMessage.success(t('hosts.applySuccess'))
     await load()
-  } catch (e: any) {
-    const msg: string = e?.message ?? String(e)
+  } catch (e) {
+    const msg: string = errorMessage(e)
     if (msg.includes('administrator') || msg.includes('403')) {
       ElMessage.error(t('hosts.adminRequired'))
     } else {
@@ -388,8 +389,8 @@ async function reapply() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     ElMessage.success(t('hosts.reapplyFromSites'))
     await load()
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? String(e))
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
   } finally {
     reapplying.value = false
   }
@@ -402,8 +403,8 @@ async function doBackup() {
   try {
     const { path } = await backupHosts()
     ElMessage.success(`Backed up to ${path}`)
-  } catch (e: any) {
-    ElMessage.error(e?.message ?? String(e))
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
   } finally {
     backing.value = false
   }
@@ -430,8 +431,8 @@ async function onRestoreFile(evt: Event) {
     await restoreHosts({ content })
     ElMessage.success('Hosts file restored')
     await load()
-  } catch (e: any) {
-    const msg: string = e?.message ?? String(e)
+  } catch (e) {
+    const msg: string = errorMessage(e)
     if (msg.includes('administrator') || msg.includes('403')) {
       ElMessage.error(t('hosts.adminRequired'))
     } else {
