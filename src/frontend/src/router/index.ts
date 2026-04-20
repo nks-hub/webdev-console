@@ -1,21 +1,27 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { useUiModeStore } from '../stores/uiMode'
-import Dashboard from '../components/pages/Dashboard.vue'
-import Sites from '../components/pages/Sites.vue'
-import Settings from '../components/pages/Settings.vue'
-import PluginManager from '../components/pages/PluginManager.vue'
-import PluginPage from '../components/pages/PluginPage.vue'
-import Binaries from '../components/pages/Binaries.vue'
-import Databases from '../components/pages/Databases.vue'
-import SslManager from '../components/pages/SslManager.vue'
-import PhpManager from '../components/pages/PhpManager.vue'
-import ServiceConfig from '../components/pages/ServiceConfig.vue'
-import SiteEdit from '../components/pages/SiteEdit.vue'
-import CloudflareTunnel from '../components/pages/CloudflareTunnel.vue'
-import ComposerManager from '../components/pages/ComposerManager.vue'
-import HostsManager from '../components/pages/HostsManager.vue'
-import Help from '../components/pages/Help.vue'
-import Login from '../components/pages/Login.vue'
+
+// Lazy-loaded so heavy page deps (monaco-editor, echarts, xterm) land in
+// per-route chunks instead of the main bundle. Eagerly importing all 18
+// pages pulled ServiceConfig's MonacoEditor into index.js which alone
+// brought ~5 MB of editor workers + language modes, inflating the main
+// bundle to 12 MB.
+const Dashboard = () => import('../components/pages/Dashboard.vue')
+const Sites = () => import('../components/pages/Sites.vue')
+const Settings = () => import('../components/pages/Settings.vue')
+const PluginManager = () => import('../components/pages/PluginManager.vue')
+const PluginPage = () => import('../components/pages/PluginPage.vue')
+const Binaries = () => import('../components/pages/Binaries.vue')
+const Databases = () => import('../components/pages/Databases.vue')
+const SslManager = () => import('../components/pages/SslManager.vue')
+const PhpManager = () => import('../components/pages/PhpManager.vue')
+const ServiceConfig = () => import('../components/pages/ServiceConfig.vue')
+const SiteEdit = () => import('../components/pages/SiteEdit.vue')
+const CloudflareTunnel = () => import('../components/pages/CloudflareTunnel.vue')
+const ComposerManager = () => import('../components/pages/ComposerManager.vue')
+const HostsManager = () => import('../components/pages/HostsManager.vue')
+const Help = () => import('../components/pages/Help.vue')
+const Login = () => import('../components/pages/Login.vue')
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
