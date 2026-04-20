@@ -89,7 +89,7 @@ jobs:
             --skip-duplicate
 
       - name: Upload nupkg as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: plugin-sdk-${{ steps.version.outputs.version }}
           path: out/*.nupkg

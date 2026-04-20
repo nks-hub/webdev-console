@@ -58,14 +58,14 @@ jobs:
         run: dotnet publish src/daemon/NKS.WebDevConsole.Cli -c Release -r win-x64 --self-contained -o publish/cli
 
       - name: Upload Daemon artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: daemon-win-x64
           path: publish/daemon/
           retention-days: 14
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cli-win-x64
           path: publish/cli/
@@ -106,7 +106,7 @@ jobs:
         run: npm run build
 
       - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-out
           path: src/frontend/dist-electron/
@@ -165,7 +165,7 @@ jobs:
         run: npm run smoke:packaged:win
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installer-win-x64
           path: src/frontend/release/
