@@ -15,6 +15,7 @@ import CloudflareTunnel from '../components/pages/CloudflareTunnel.vue'
 import ComposerManager from '../components/pages/ComposerManager.vue'
 import HostsManager from '../components/pages/HostsManager.vue'
 import Help from '../components/pages/Help.vue'
+import Login from '../components/pages/Login.vue'
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
@@ -34,6 +35,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', requiresAdvanced: true } },
   { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services', requiresAdvanced: true } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
+  { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
 ]
 
 export const router = createRouter({

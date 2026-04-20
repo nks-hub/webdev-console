@@ -241,28 +241,10 @@ async function toggleSso() {
     } catch { /* user cancelled */ }
     return
   }
-  // Pull catalog URL from daemon settings so the flow talks to whatever
-  // catalog-api the user has configured. Default to the public NKS
-  // catalog when unset — matches SettingsStore fallback behaviour.
-  let catalogUrl = 'https://wdc.nks-hub.cz'
-  try {
-    const port = (window as any).daemonApi?.getPort?.()
-    const token = (window as any).daemonApi?.getToken?.()
-    if (port && token) {
-      const r = await fetch(`http://127.0.0.1:${port}/api/settings`,
-        { headers: { Authorization: `Bearer ${token}` } })
-      if (r.ok) {
-        const data = await r.json()
-        if (data?.['daemon.catalogUrl']) catalogUrl = data['daemon.catalogUrl']
-      }
-    }
-  } catch { /* fall back to default */ }
-  try {
-    await authStore.login(catalogUrl)
-    ElMessage.success('Signed in')
-  } catch (err: any) {
-    ElMessage.error(`Sign-in failed: ${err?.message ?? err}`)
-  }
+  // Route to the dedicated login page instead of firing the OIDC flow
+  // inline — gives us a landing surface for provider/catalog info + the
+  // "continue without signing in" escape hatch users asked for.
+  void router.push('/login')
 }
 
 // Plugin-contributed sidebar entries need the /api/plugins/ui round-trip to
