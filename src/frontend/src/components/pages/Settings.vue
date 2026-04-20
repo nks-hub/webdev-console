@@ -1432,19 +1432,19 @@ async function buildSyncPayload(): Promise<Record<string, any>> {
     fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() }),
     fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() }),
   ])
-  const rawSettings = settingsRes.ok ? await settingsRes.json() as Record<string, any> : {}
-  const rawSites = sitesRes.ok ? await sitesRes.json() as any[] : []
+  const rawSettings: Record<string, unknown> = settingsRes.ok ? await settingsRes.json() : {}
+  const rawSites: Array<{ domain: string } & Record<string, unknown>> = sitesRes.ok ? await sitesRes.json() : []
   const system = systemRes.ok ? await systemRes.json() : null
 
   // Filter settings: drop local-only keys (paths, ports, backup.dir)
-  const settings: Record<string, any> = {}
+  const settings: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(rawSettings)) {
     if (isSettingSyncable(key)) settings[key] = value
   }
 
   // Filter sites: keep only SITE_SYNC_FIELDS per site (plus domain as the key)
   const sites = rawSites.map(site => {
-    const filtered: Record<string, any> = { domain: site.domain }
+    const filtered: Record<string, unknown> = { domain: site.domain }
     for (const field of SITE_SYNC_FIELDS) {
       if (field in site) filtered[field] = site[field]
     }

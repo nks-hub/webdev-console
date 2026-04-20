@@ -594,8 +594,8 @@ async function installComposer() {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/composer/self-install`, { method: 'POST', headers: composerAuthHeaders() })
     if (!r.ok) {
-      const body = await r.json().catch(() => ({}))
-      ElMessage.error((body as any).detail || `HTTP ${r.status}`)
+      const body: { detail?: string } = await r.json().catch(() => ({}))
+      ElMessage.error(body.detail || `HTTP ${r.status}`)
       return
     }
     const body = await r.json().catch(() => ({})) as { path?: string }
