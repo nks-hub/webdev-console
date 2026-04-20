@@ -1599,17 +1599,46 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-width: 960px;
+  max-width: min(960px, 100%);
+  box-sizing: border-box;
 }
 
+/* Two-column form — collapses to single column under 800px so labels +
+   inputs don't squash to unreadable widths on narrow windows. */
 .two-col-form {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px 24px;
-  max-width: 880px;
+  max-width: 100%;
 }
 .two-col-form .el-form-item {
   margin-bottom: 0;
+  min-width: 0; /* allow ellipsis instead of overflow */
+}
+
+/* Metrics subtab toolbar + historical chart: wrap instead of horizontal
+   scroll when container narrows. */
+.metrics-toolbar {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.historical-controls {
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+/* SiteEdit page shell: cap total width but let content reflow below
+   1100px. Previously a fixed 1000+ layout meant the window scrollbar
+   appeared on any laptop-size screen. */
+.site-edit-page {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px) {
+  .tab-content { padding: 16px 2px 20px; gap: 14px; }
+  .edit-card-header { flex-wrap: wrap; gap: 6px; padding: 12px 14px; }
 }
 
 .hint {
