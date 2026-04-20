@@ -25,7 +25,7 @@ on:
         required: true
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -74,3 +74,17 @@ jobs:
         with:
           name: plugin-sdk-${{ steps.version.outputs.version }}
           path: out/*.nupkg
+
+      # Attach the .nupkg to the GitHub Release tied to this v* tag so
+      # consuming repos (webdev-console-plugins) can download the SDK
+      # without needing cross-repo GitHub Packages access (task #250:
+      # packages-level UI linking). The release is created by build.yml
+      # in the same tag push; softprops/action-gh-release upserts assets
+      # onto an existing release when one is present.
+      - name: Attach nupkg to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: out/*.nupkg
+          fail_on_unmatched_files: true
