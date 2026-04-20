@@ -14,8 +14,7 @@ rootCommand.SetAction((parseResult, ct) =>
 {
     if (parseResult.GetValue(versionOption))
     {
-        var ver = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-        Console.WriteLine($"wdc {ver}");
+        Console.WriteLine($"wdc {CliAssemblyVersion()}");
     }
     return Task.CompletedTask;
 });
@@ -685,7 +684,7 @@ var versionCommand = new Command("version", "Show version info");
 versionCommand.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
-    var cliVersion = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    var cliVersion = CliAssemblyVersion();
     using var client = new DaemonClient();
     var connected = client.Connect();
     string? daemonVer = null;
@@ -3344,7 +3343,7 @@ syncExportCmd.SetAction(async (parseResult, ct) =>
     // --json` directly; this command is explicitly for *portable* config.
     var filteredSettings = FilterSyncSettings(settings);
     var filteredSites = FilterSyncSites(sites);
-    var exportVersion = typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    var exportVersion = CliAssemblyVersion();
     var payload = new
     {
         exportedAt = DateTime.UtcNow.ToString("o"),
@@ -3466,6 +3465,14 @@ rootCommand.Add(syncCommand);
 return await rootCommand.Parse(args).InvokeAsync();
 
 // --- Helpers ---
+// Centralised reader for the CLI assembly version. Three sites previously
+// duplicated this: --version, `wdc version`, and the schema marker in
+// `wdc config export`. The csproj now sets Version=0.2.0 explicitly (earlier
+// it defaulted to 1.0.0.0), so this returns the real shipped version; the
+// "0.0.0" fallback is a safety net for builds where the attribute is absent.
+static string CliAssemblyVersion() =>
+    typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
 static bool EnsureConnected(DaemonClient client)
 {
     if (client.Connect()) return true;
