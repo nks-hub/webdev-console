@@ -95,16 +95,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchPhpVersions } from '../../api/daemon'
+import type { PhpVersion } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
-
-interface PhpVersion {
-  version: string
-  majorMinor: string
-  path: string
-  isDefault: boolean
-  extensions?: string[]
-}
 
 interface ExtInfo {
   name: string
@@ -126,12 +119,7 @@ async function loadVersions() {
   loading.value = true
   loadError.value = ''
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: authHeaders() })
-    if (r.ok) {
-      versions.value = await r.json()
-    } else {
-      loadError.value = `Failed to load PHP versions: HTTP ${r.status}`
-    }
+    versions.value = await fetchPhpVersions()
   } catch (e) {
     loadError.value = `Cannot connect to daemon: ${errorMessage(e)}`
   } finally { loading.value = false }
