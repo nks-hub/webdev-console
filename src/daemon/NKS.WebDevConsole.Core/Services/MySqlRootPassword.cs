@@ -85,6 +85,39 @@ public static class MySqlRootPassword
     }
 
     /// <summary>
+    /// Persists a caller-supplied password into the DPAPI store, overwriting
+    /// whatever is there. Used when the user's mysqld root password was set
+    /// outside WDC (external MySQL install, imported from MAMP, manually
+    /// changed) and we just need to sync the stored copy so subsequent
+    /// /api/databases calls can authenticate. Does NOT run
+    /// `ALTER USER`; the caller is responsible for aligning mysqld's own
+    /// record of the password with what's stored here.
+    /// </summary>
+    public static void SetPlaintext(string password)
+    {
+        if (string.IsNullOrEmpty(password))
+            throw new ArgumentException("password must be non-empty", nameof(password));
+
+        Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
+        if (OperatingSystem.IsWindows())
+        {
+            var plaintextBytes = Encoding.UTF8.GetBytes(password);
+            var encrypted = ProtectedData.Protect(plaintextBytes, Entropy, DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(StorePath, encrypted);
+        }
+        else
+        {
+            File.WriteAllText(StorePath, password);
+            try
+            {
+                var fi = new FileInfo(StorePath);
+                fi.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            }
+            catch { /* best effort */ }
+        }
+    }
+
+    /// <summary>
     /// Ensures a password exists. If one is already stored, returns it. Otherwise
     /// generates a new one via <see cref="GenerateAndStore"/> and returns it.
     /// Callers should hand the returned password to <c>mysqladmin password</c> or

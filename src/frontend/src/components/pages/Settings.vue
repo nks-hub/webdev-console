@@ -308,6 +308,29 @@
                   {{ $t('common.open') }} admin UI
                 </el-button>
               </el-form-item>
+              <el-form-item label="MySQL root password">
+                <div class="mysql-root-row">
+                  <el-input
+                    v-model="mysqlRootPassword"
+                    type="password"
+                    show-password
+                    :placeholder="mysqlRootExists ? '•••••••• (stored)' : 'Enter root password to sync with mysqld'"
+                    class="mono-input"
+                  />
+                  <el-button
+                    size="small"
+                    :loading="mysqlRootSaving"
+                    :disabled="!mysqlRootPassword"
+                    @click="saveMysqlRootPassword"
+                  >Save</el-button>
+                </div>
+                <div class="hint">
+                  {{ mysqlRootExists ? 'A password is currently stored (encrypted via DPAPI).' : 'No password stored — WDC cannot authenticate to mysqld.' }}
+                  Use this field when your mysqld root password was set outside WDC (external MySQL install, MAMP import, or manual change) — WDC only syncs its stored copy, you still need to run
+                  <code>ALTER USER 'root'@'localhost' IDENTIFIED BY '…'</code>
+                  on the server itself.
+                </div>
+              </el-form-item>
               <el-form-item label="Plugin auto-sync">
                 <el-switch v-model="pluginAutoSync" />
                 <el-button
@@ -954,6 +977,39 @@ const catalogUrl = ref('')
 const pluginAutoSync = ref(false)
 const syncingPlugins = ref(false)
 const pluginSyncStatus = ref<{ ok: boolean; message: string } | null>(null)
+const mysqlRootPassword = ref('')
+const mysqlRootExists = ref(false)
+const mysqlRootSaving = ref(false)
+
+async function loadMysqlRootStatus() {
+  try {
+    const r = await fetch(`${daemonBase()}/api/databases/root-password`, { headers: authHeaders() })
+    if (r.ok) {
+      const data = await r.json()
+      mysqlRootExists.value = !!data?.exists
+    }
+  } catch { /* daemon unreachable — default false */ }
+}
+
+async function saveMysqlRootPassword() {
+  if (!mysqlRootPassword.value) return
+  mysqlRootSaving.value = true
+  try {
+    const r = await fetch(`${daemonBase()}/api/databases/root-password`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'content-type': 'application/json' },
+      body: JSON.stringify({ password: mysqlRootPassword.value }),
+    })
+    if (!r.ok) throw new Error(await r.text().catch(() => `HTTP ${r.status}`))
+    mysqlRootPassword.value = ''
+    mysqlRootExists.value = true
+    ElMessage.success('MySQL root password saved (DPAPI-encrypted)')
+  } catch (e: any) {
+    ElMessage.error(`Save failed: ${e?.message ?? e}`)
+  } finally {
+    mysqlRootSaving.value = false
+  }
+}
 const pluginCatalogStatus = ref<{ catalogCount: number; cachedCount: number; lastFetch: string | null; cacheRoot: string } | null>(null)
 
 async function loadPluginCatalogStatus() {
@@ -1761,6 +1817,7 @@ onMounted(async () => {
   void loadBackups()
   void loadDeviceId()
   void loadPluginCatalogStatus()
+  void loadMysqlRootStatus()
   if (accountToken.value) void loadDevicesAccount()
   try {
     const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })
@@ -2005,6 +2062,17 @@ async function save() {
 .about-link:hover { text-decoration: underline; }
 
 .about-sso { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 0; }
+
+.mysql-root-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+.mysql-root-row .el-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 
 .db-list { margin-bottom: 16px; }

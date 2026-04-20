@@ -4713,6 +4713,30 @@ static int? FindFreeTcpPort(int startPort)
     return null;
 }
 
+// MySQL root password management. GET reports whether a password is stored
+// (without ever returning it). POST accepts a new password + persists into
+// the DPAPI store. The caller is responsible for having run ALTER USER on
+// mysqld itself — this endpoint only syncs WDC's stored copy.
+app.MapGet("/api/databases/root-password", () =>
+    Results.Ok(new { exists = NKS.WebDevConsole.Core.Services.MySqlRootPassword.Exists() }));
+
+app.MapPost("/api/databases/root-password", async (HttpContext ctx) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+    var password = body?.GetValueOrDefault("password") ?? "";
+    if (string.IsNullOrEmpty(password))
+        return Results.BadRequest(new { error = "password is required" });
+    try
+    {
+        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(password);
+        return Results.Ok(new { stored = true });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(title: "failed to persist password", detail: ex.Message, statusCode: 500);
+    }
+});
+
 // Auto-heal flow: when /api/databases returns a 1045 + suggestedPort, the
 // frontend can POST here to flip ports.mysql to the suggested free port and
 // restart the WDC mysqld so the user doesn't have to dig through Settings.
