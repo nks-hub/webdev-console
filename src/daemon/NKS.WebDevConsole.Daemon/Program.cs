@@ -265,12 +265,18 @@ foreach (var p in pluginLoader.Plugins)
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
 var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
-// Write port file AFTER server starts listening (avoids race condition)
+// Write port file AFTER server starts listening (avoids race condition).
+// Uses atomic temp+rename so readers on Windows never see a half-written file
+// or hit EPERM/EBUSY against the daemon's open write handle — this matters for
+// the packaged-runtime smoke step on GitHub Actions Windows runners, which
+// used to flake on `EPERM: open nks-wdc-daemon.port` right after daemon boot.
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
-    File.WriteAllText(portFile, $"{port}\n{authToken}");
+    var tmpFile = portFile + ".tmp";
+    File.WriteAllText(tmpFile, $"{port}\n{authToken}");
+    File.Move(tmpFile, portFile, overwrite: true);
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 });
 

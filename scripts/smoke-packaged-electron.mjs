@@ -31,7 +31,19 @@ function sleep(ms) {
 
 function readPortInfo() {
   if (!existsSync(portFile)) return null
-  const lines = readFileSync(portFile, 'utf-8').split('\n').filter(Boolean)
+  let content
+  try {
+    content = readFileSync(portFile, 'utf-8')
+  } catch (err) {
+    // Daemon may still hold an exclusive write lock on the port file during
+    // startup (Windows). Treat EPERM/EBUSY/EACCES as "not ready yet" so the
+    // waitFor loop keeps retrying instead of aborting.
+    if (err && (err.code === 'EPERM' || err.code === 'EBUSY' || err.code === 'EACCES')) {
+      return null
+    }
+    throw err
+  }
+  const lines = content.split('\n').filter(Boolean)
   if (lines.length < 2) return null
   return { port: Number(lines[0]), token: lines[1].trim() }
 }
