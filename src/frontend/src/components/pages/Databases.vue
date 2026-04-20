@@ -154,6 +154,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { daemonBaseUrl } from '../../api/daemon'
 
 const { t } = useI18n()
 
@@ -184,12 +185,6 @@ const exporting = ref(false)
 const dropping = ref(false)
 const currentTables = computed(() => dbTables[selectedDb.value] ?? [])
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = (window as any).daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
-  return `http://localhost:${port}`
-}
-
 function authHeaders(): Record<string, string> {
   const urlToken = new URLSearchParams(window.location.search).get('token')
   const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
@@ -219,7 +214,7 @@ async function loadDatabases() {
   errorHint.value = ''
   suggestedPort.value = null
   try {
-    const r = await fetch(`${daemonBase()}/api/databases`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/databases`, { headers: authHeaders() })
     if (!r.ok) throw await httpError(r)
     const data = await r.json()
     if (typeof data?.error === 'string' && data.error) {
@@ -242,7 +237,7 @@ async function useAltPort() {
   if (!suggestedPort.value) return
   fixing.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/use-alt-port`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/use-alt-port`, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ port: suggestedPort.value }),
@@ -268,7 +263,7 @@ async function selectDatabase(db: string) {
 async function loadTables(db: string) {
   tablesLoading.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/${db}/tables`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${db}/tables`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       dbTables[db] = (data.tables ?? data ?? []).map((t: any) =>
@@ -278,7 +273,7 @@ async function loadTables(db: string) {
   } catch { /* optional */ }
 
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/${db}/size`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${db}/size`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       dbSizes[db] = data.size ?? data.totalSize ?? ''
@@ -292,7 +287,7 @@ async function createDatabase() {
   if (!newDbName.value.trim()) return
   creating.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/databases`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ name: newDbName.value }),
@@ -319,7 +314,7 @@ async function confirmDrop(db: string) {
   } catch { return }
   dropping.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/${db}`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${db}`, {
       method: 'DELETE',
       headers: authHeaders(),
     })
@@ -346,7 +341,7 @@ async function executeQuery() {
   queryTime.value = null
   const start = Date.now()
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/query`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${selectedDb.value}/query`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ sql: sqlQuery.value }),
@@ -379,7 +374,7 @@ async function handleImportFile(e: Event) {
   importing.value = true
   try {
     ElMessage.info(`Importing ${file.name} into ${selectedDb.value}...`)
-    const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/import`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${selectedDb.value}/import`, {
       method: 'POST',
       headers: { Authorization: authHeaders()['Authorization'] },
       body: formData,
@@ -399,7 +394,7 @@ async function exportDb() {
   if (!selectedDb.value) { ElMessage.warning('Select a database first'); return }
   exporting.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/databases/${selectedDb.value}/export`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/databases/${selectedDb.value}/export`, {
       headers: authHeaders(),
     })
     if (!r.ok) throw await httpError(r)

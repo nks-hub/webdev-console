@@ -133,6 +133,7 @@ import { ref, onMounted, computed } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
+import { daemonBaseUrl } from '../../api/daemon'
 
 interface CertInfo {
   domain: string
@@ -164,12 +165,6 @@ const genDomain = ref('')
 const genAliases = ref('')
 const availableSites = ref<string[]>([])
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = (window as any).daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
-  return `http://localhost:${port}`
-}
-
 function authHeaders(): Record<string, string> {
   const urlToken = new URLSearchParams(window.location.search).get('token')
   const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
@@ -182,7 +177,7 @@ async function loadCerts() {
   loading.value = true
   loadError.value = ''
   try {
-    const r = await fetch(`${daemonBase()}/api/ssl/certs`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       certs.value = data.certs ?? []
@@ -197,7 +192,7 @@ async function loadCerts() {
 
 async function loadSites() {
   try {
-    const r = await fetch(`${daemonBase()}/api/sites`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() })
     if (r.ok) {
       const sites = await r.json()
       availableSites.value = sites.map((s: any) => s.domain)
@@ -208,7 +203,7 @@ async function loadSites() {
 async function installCA() {
   installingCA.value = true
   try {
-    const r = await fetch(`${daemonBase()}/api/ssl/install-ca`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/ssl/install-ca`, {
       method: 'POST',
       headers: authHeaders(),
     })
@@ -229,7 +224,7 @@ async function generateCert() {
     const aliases = genAliases.value
       ? genAliases.value.split(',').map(s => s.trim()).filter(Boolean)
       : []
-    const r = await fetch(`${daemonBase()}/api/ssl/generate`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/ssl/generate`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ domain: genDomain.value, aliases }),
@@ -254,7 +249,7 @@ async function generateCert() {
 async function revokeCert(domain: string) {
   revoking.value.add(domain)
   try {
-    const r = await fetch(`${daemonBase()}/api/ssl/certs/${domain}`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs/${domain}`, {
       method: 'DELETE',
       headers: authHeaders(),
     })

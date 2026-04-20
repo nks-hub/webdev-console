@@ -95,6 +95,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { daemonBaseUrl } from '../../api/daemon'
 
 interface PhpVersion {
   version: string
@@ -119,12 +120,6 @@ const togglingExt = ref<string>('')
 
 const enabledCount = computed(() => extensions.value.filter(e => e.enabled).length)
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = (window as any).daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
-  return `http://localhost:${port}`
-}
-
 function authHeaders(): Record<string, string> {
   const urlToken = new URLSearchParams(window.location.search).get('token')
   const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
@@ -137,7 +132,7 @@ async function loadVersions() {
   loading.value = true
   loadError.value = ''
   try {
-    const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: authHeaders() })
     if (r.ok) {
       versions.value = await r.json()
     } else {
@@ -158,7 +153,7 @@ async function loadConfig(version: string) {
   extensions.value = []
   try {
     // Load php.ini from config endpoint
-    const r = await fetch(`${daemonBase()}/api/services/php/config`, { headers: authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/services/php/config`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
       const file = data.files?.find((f: any) => f.name?.includes(version) || f.path?.includes(version))
@@ -203,7 +198,7 @@ async function toggleExtension(name: string, enabled: boolean) {
   togglingExt.value = name
   try {
     const r = await fetch(
-      `${daemonBase()}/api/php/${encodeURIComponent(majorMinor)}/extensions/${encodeURIComponent(name)}`,
+      `${daemonBaseUrl()}/api/php/${encodeURIComponent(majorMinor)}/extensions/${encodeURIComponent(name)}`,
       {
         method: 'POST',
         headers: authHeaders(),
@@ -231,7 +226,7 @@ async function toggleExtension(name: string, enabled: boolean) {
 
 async function setDefault(version: string) {
   try {
-    const r = await fetch(`${daemonBase()}/api/php/default`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/php/default`, {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify({ version }),
