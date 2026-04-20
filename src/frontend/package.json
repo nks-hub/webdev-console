@@ -21,6 +21,7 @@
     "dist:linux": "npm run stage:daemon:linux && electron-vite build && electron-builder --config electron-builder.yml --linux",
     "smoke:packaged:win": "node ../../scripts/smoke-packaged-electron.mjs --replace-dev-daemon --exe \"./release/win-unpacked/NKS WebDev Console.exe\"",
     "smoke:e2e": "node ../../scripts/smoke-e2e.mjs",
+    "smoke:f91-disable": "node ../../scripts/smoke-f91-disable.mjs",
     "serve:update-feed:win": "node ../../scripts/serve-electron-update-feed.mjs --dir ./release"
   },
   "devDependencies": {
