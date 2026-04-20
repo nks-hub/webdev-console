@@ -308,6 +308,18 @@
                   {{ $t('common.open') }} admin UI
                 </el-button>
               </el-form-item>
+              <el-form-item label="Plugin auto-sync">
+                <el-switch v-model="pluginAutoSync" />
+                <div class="hint">
+                  When enabled the daemon pulls the plugin catalog from the
+                  URL above on startup + every 6 hours and downloads any
+                  missing plugin releases into
+                  <code>~/.wdc/plugins/&lt;id&gt;/&lt;version&gt;/</code>.
+                  Leave off for dev builds that use the bundled
+                  <code>build/plugins/</code>. Env var
+                  <code>NKS_WDC_PLUGIN_AUTOSYNC=1</code> still wins when set.
+                </div>
+              </el-form-item>
             </el-form>
           </div>
         </el-tab-pane>
@@ -915,6 +927,7 @@ function downloadBackupFile(path: string) {
 
 // ── Catalog API integration (Advanced tab) ────────────────────────────
 const catalogUrl = ref('')
+const pluginAutoSync = ref(false)
 const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
@@ -1042,6 +1055,7 @@ async function loadSettings() {
     if (data['paths.hostsFile']) paths.hostsFile = data['paths.hostsFile']
     if (data['ports.phpFpmBase']) phpFpmBasePort.value = parseInt(data['ports.phpFpmBase'])
     if (data['daemon.catalogUrl']) catalogUrl.value = data['daemon.catalogUrl']
+    if (data['plugins.autoSyncEnabled']) pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
     if (data['telemetry.enabled']) telemetryEnabled.value = data['telemetry.enabled'] === 'true'
     if (data['telemetry.crashReports']) telemetryCrashReports.value = data['telemetry.crashReports'] === 'true'
     if (data['backup.dir']) backupDir.value = data['backup.dir']
@@ -1719,6 +1733,7 @@ async function save() {
       'paths.hostsFile': paths.hostsFile,
       'ports.phpFpmBase': String(phpFpmBasePort.value),
       'daemon.catalogUrl': catalogUrl.value,
+      'plugins.autoSyncEnabled': String(pluginAutoSync.value),
       'telemetry.enabled': String(telemetryEnabled.value),
       'telemetry.crashReports': String(telemetryCrashReports.value),
       'backup.dir': backupDir.value,
