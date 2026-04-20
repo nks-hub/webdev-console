@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace NKS.WebDevConsole.Cli;
 
-public class DaemonClient : IDisposable
+public sealed class DaemonClient : IDisposable
 {
     private readonly HttpClient _http;
     private string? _baseUrl;
