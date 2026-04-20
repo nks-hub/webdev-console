@@ -10,6 +10,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege token: we only need to clone + upload artifacts. A
+# default install token has broader write scopes we don't consume,
+# so explicitly narrow to read + the actions scope for upload/download.
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build-daemon:
     name: Build Daemon (.NET)
