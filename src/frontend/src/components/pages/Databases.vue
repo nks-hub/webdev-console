@@ -22,11 +22,24 @@
         @close="error = ''; errorHint = ''"
         show-icon
         style="margin-bottom: 16px"
-      />
+      >
+        <template v-if="suggestedPort" #default>
+          <div style="margin-top: 6px">
+            <el-button
+              type="primary"
+              size="small"
+              :loading="fixing"
+              @click="useAltPort"
+            >Use port {{ suggestedPort }} instead</el-button>
+          </div>
+        </template>
+      </el-alert>
 
-      <!-- Loading state -->
-      <div v-if="loading && databases.length === 0" style="padding: 24px">
-        <el-skeleton :rows="3" animated />
+      <!-- Loading state — plain text + spinner, no fake skeleton rows
+           (the upcoming db list length is unknown). -->
+      <div v-if="loading && databases.length === 0" class="db-loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>{{ loadingLabel }}</span>
       </div>
 
       <!-- Database list -->
@@ -146,6 +159,9 @@ const { t } = useI18n()
 
 const databases = ref<string[]>([])
 const loading = ref(false)
+const loadingLabel = ref('Connecting to MySQL…')
+const suggestedPort = ref<number | null>(null)
+const fixing = ref(false)
 const error = ref('')
 // F80: actionable hint surfaced alongside error when daemon returns
 // MySQL auth/port diagnostics (e.g. MAMP on 3306).
@@ -198,27 +214,47 @@ async function httpError(r: Response): Promise<Error> {
 
 async function loadDatabases() {
   loading.value = true
+  loadingLabel.value = 'Connecting to MySQL…'
   error.value = ''
   errorHint.value = ''
+  suggestedPort.value = null
   try {
     const r = await fetch(`${daemonBase()}/api/databases`, { headers: authHeaders() })
     if (!r.ok) throw await httpError(r)
     const data = await r.json()
-    // F80: daemon returns 200 OK with { error, hint, databases: [] } when
-    // MySQL is reachable but auth fails (e.g. MAMP/XAMPP occupies 3306).
-    // Previously we only looked at `data.databases` so the page silently
-    // showed "no databases" instead of the actionable hint.
     if (typeof data?.error === 'string' && data.error) {
       error.value = data.error
       errorHint.value = data?.hint || ''
+      suggestedPort.value = typeof data?.suggestedPort === 'number' ? data.suggestedPort : null
       databases.value = []
       return
     }
     databases.value = data.databases ?? []
+    loadingLabel.value = `Loaded ${databases.value.length} database${databases.value.length === 1 ? '' : 's'}`
   } catch (e: any) {
     error.value = `Failed to load databases: ${e?.message || e}`
   } finally {
     loading.value = false
+  }
+}
+
+async function useAltPort() {
+  if (!suggestedPort.value) return
+  fixing.value = true
+  try {
+    const r = await fetch(`${daemonBase()}/api/databases/use-alt-port`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'content-type': 'application/json' },
+      body: JSON.stringify({ port: suggestedPort.value }),
+    })
+    if (!r.ok) throw await httpError(r)
+    // Give the restarted mysqld a moment to accept connections, then re-probe.
+    await new Promise(res => setTimeout(res, 1200))
+    await loadDatabases()
+  } catch (e: any) {
+    error.value = `Failed to switch port: ${e?.message || e}`
+  } finally {
+    fixing.value = false
   }
 }
 
@@ -445,6 +481,16 @@ onMounted(() => { void loadDatabases() })
 
 .db-card:hover { border-color: var(--wdc-border-strong); }
 .db-card.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); }
+
+.db-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+}
 
 .db-card-header {
   display: flex;
