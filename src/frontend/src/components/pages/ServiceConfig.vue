@@ -215,7 +215,7 @@ const fileFormat = computed(() => {
 })
 
 const displayName = computed(() => {
-  const svc = daemonStore.services.find((s: any) => s.id === serviceId.value)
+  const svc = daemonStore.services.find(s => s.id === serviceId.value)
   return svc?.displayName || svc?.id || serviceId.value
 })
 

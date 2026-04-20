@@ -1049,11 +1049,11 @@ function onZoneChange(zoneId: string) {
 // The Start/Stop button lives on the /cloudflare page so per-site edits
 // can't accidentally kill other exposed sites.
 const cloudflareRunning = computed(() => {
-  const svc = daemonStore.services.find((s: any) => s.id === 'cloudflare')
+  const svc = daemonStore.services.find(s => s.id === 'cloudflare')
   return svc?.state === 2 || svc?.status === 'running'
 })
 const totalExposedCount = computed(() =>
-  sitesStore.sites.filter((s: any) => s.cloudflare?.enabled).length
+  sitesStore.sites.filter(s => s.cloudflare?.enabled).length
 )
 
 // ── Auto-detect framework ──────────────────────────────────────────────

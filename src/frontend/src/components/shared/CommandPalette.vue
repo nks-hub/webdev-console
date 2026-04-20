@@ -86,14 +86,14 @@ const commands = computed<Command[]>(() => [
   { id: 'mailpit-ui', label: 'Open Mailpit UI', icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
   { id: 'new-site', label: 'Create New Site', icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
   { id: 'refresh', label: 'Refresh Data', icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },
-  ...daemonStore.services.map((svc: any) => ({
+  ...daemonStore.services.map(svc => ({
     id: `start-${svc.id}`,
     label: `Start ${svc.displayName || svc.id}`,
     description: svc.state === 2 ? 'Already running' : '',
     icon: VideoPlay,
     action: () => { if (svc.state !== 2) servicesStore.start(svc.id) },
   })),
-  ...daemonStore.services.map((svc: any) => ({
+  ...daemonStore.services.map(svc => ({
     id: `stop-${svc.id}`,
     label: `Stop ${svc.displayName || svc.id}`,
     description: svc.state === 0 ? 'Already stopped' : '',
