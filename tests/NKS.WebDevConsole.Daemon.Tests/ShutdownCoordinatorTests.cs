@@ -81,6 +81,46 @@ public class ShutdownCoordinatorTests
     }
 
     [Fact]
+    public async Task StopAllAsync_RunsModuleStopsConcurrently()
+    {
+        // Regression for 15e10d7 — sequential foreach-await would make
+        // three modules each taking 500 ms run in ~1.5 s wall time.
+        // Task.WhenAll fans out so the total is bounded by the slowest
+        // (~500 ms). A 900 ms ceiling gives ample slack for CI jitter
+        // while still proving parallel execution.
+        static Mock<IServiceModule> MakeSlow(string id, TimeSpan delay)
+        {
+            var m = new Mock<IServiceModule>();
+            m.SetupGet(x => x.ServiceId).Returns(id);
+            m.Setup(x => x.GetStatusAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ServiceStatus(id, id, ServiceState.Running, 1, 0, 0, null));
+            m.Setup(x => x.StopAsync(It.IsAny<CancellationToken>()))
+                .Returns<CancellationToken>(async ct => await Task.Delay(delay, ct));
+            return m;
+        }
+
+        var modules = new[]
+        {
+            MakeSlow("apache", TimeSpan.FromMilliseconds(500)),
+            MakeSlow("mysql", TimeSpan.FromMilliseconds(500)),
+            MakeSlow("redis", TimeSpan.FromMilliseconds(500)),
+        };
+
+        var sut = new ShutdownCoordinator(_loggerMock.Object);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await sut.StopAllAsync(
+            modules.Select(m => m.Object),
+            [],
+            Path.Combine(Path.GetTempPath(), $"nks-wdc-shutdown-{Guid.NewGuid():N}.port"),
+            CancellationToken.None);
+        sw.Stop();
+
+        Assert.True(sw.ElapsedMilliseconds < 900,
+            $"Parallel shutdown should finish near the slowest module's 500 ms, took {sw.ElapsedMilliseconds} ms");
+        foreach (var m in modules) m.Verify(x => x.StopAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task StopAllAsync_Continues_WhenServiceStopTimesOut()
     {
         var hangingModule = new Mock<IServiceModule>();
