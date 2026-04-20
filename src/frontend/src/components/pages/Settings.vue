@@ -840,7 +840,7 @@ import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
-  daemonBaseUrl,
+  daemonBaseUrl, daemonAuthHeaders as authHeaders,
   type DeviceInfo as CatalogDeviceInfo,
 } from '../../api/daemon'
 
@@ -1036,14 +1036,6 @@ function formatAgo(iso: string): string {
 const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
-
-function authHeaders(): Record<string, string> {
-  const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = window.daemonApi?.getToken?.() || urlToken || ''
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
 
 async function loadDatabases() {
   try {

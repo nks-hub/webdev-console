@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { fetchSites, createSite, deleteSite, updateSite } from '../api/daemon'
+import { fetchSites, createSite, deleteSite, updateSite, daemonAuthHeaders } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
 
 export const useSitesStore = defineStore('sites', () => {
@@ -30,11 +30,11 @@ export const useSitesStore = defineStore('sites', () => {
     sites.value = sites.value.filter(s => s.domain !== domain)
   }
 
-  function authHeaders(): Record<string, string> {
-    const urlToken = new URLSearchParams(window.location.search).get('token')
-    const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
-    return token ? { Authorization: `Bearer ${token}` } : {}
-  }
+  // Delegates to the shared helper so the token resolution stays in one
+  // place. Kept as a store method because 5 call-sites already reference
+  // it via `sitesStore.authHeaders()` — swapping them all would be a
+  // bigger churn than is warranted for this refactor.
+  const authHeaders = daemonAuthHeaders
 
   return { sites, loading, load, create, update, remove, authHeaders }
 })
