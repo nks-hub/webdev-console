@@ -1,5 +1,5 @@
 <template>
-  <header class="app-header" :style="{ WebkitAppRegion: 'drag' } as any">
+  <header class="app-header" style="-webkit-app-region: drag;">
     <div class="header-left" style="-webkit-app-region: no-drag">
       <span class="app-logo" @click="router.push('/sites')">
         <span class="logo-mark">NW</span>
