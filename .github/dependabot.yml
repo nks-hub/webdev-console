@@ -1,0 +1,48 @@
+# Dependabot config for the nks-ws monorepo.
+#
+# Matches the cadence used on catalog-api + plugins repos so all three
+# stay roughly in lockstep when a transitive CVE lands in e.g. Node's
+# supply chain. Weekly is the lowest cadence Dependabot offers short of
+# manual invocation; we don't need bot-driven patches landing daily.
+#
+# Scope:
+#   - github-actions: pins action versions in .github/workflows/*.yml
+#   - npm (frontend): Electron/Vue/Vite stack in src/frontend
+#   - nuget (daemon): .NET 9 dependency graph
+#   - npm (root): scripts/ dev tooling
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /src/frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Ignore major-version bumps on the Electron + packaging stack —
+    # those need coordinated code changes and should be manually
+    # scheduled via a dedicated sweep ticket, not auto-PR'd in the
+    # middle of a sprint.
+    ignore:
+      - dependency-name: electron
+        update-types: [version-update:semver-major]
+      - dependency-name: electron-builder
+        update-types: [version-update:semver-major]
+      - dependency-name: electron-vite
+        update-types: [version-update:semver-major]
+      - dependency-name: vue
+        update-types: [version-update:semver-major]
+      - dependency-name: vue-router
+        update-types: [version-update:semver-major]
+      - dependency-name: pinia
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
