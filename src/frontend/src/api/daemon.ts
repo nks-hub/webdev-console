@@ -592,10 +592,10 @@ export const fetchBinaryCatalog = async (): Promise<Record<string, BinaryRelease
   const flat = await json<BinaryRelease[] | Record<string, BinaryRelease[]>>('/api/binaries/catalog')
   // If the daemon ever starts returning the grouped shape directly, pass it
   // through untouched (arrays have length, objects have keys).
-  if (!Array.isArray(flat)) return flat as Record<string, BinaryRelease[]>
+  if (!Array.isArray(flat)) return flat
   const grouped: Record<string, BinaryRelease[]> = {}
   for (const entry of flat) {
-    const app = (entry as any).app ?? ''
+    const app = entry.app ?? ''
     if (!app) continue
     if (!grouped[app]) grouped[app] = []
     grouped[app].push(entry)
