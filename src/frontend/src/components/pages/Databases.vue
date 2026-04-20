@@ -17,8 +17,9 @@
         v-if="error"
         type="error"
         :title="error"
+        :description="errorHint"
         :closable="true"
-        @close="error = ''"
+        @close="error = ''; errorHint = ''"
         show-icon
         style="margin-bottom: 16px"
       />
@@ -146,6 +147,9 @@ const { t } = useI18n()
 const databases = ref<string[]>([])
 const loading = ref(false)
 const error = ref('')
+// F80: actionable hint surfaced alongside error when daemon returns
+// MySQL auth/port diagnostics (e.g. MAMP on 3306).
+const errorHint = ref('')
 const selectedDb = ref('')
 const dbTables = reactive<Record<string, any[]>>({})
 const dbSizes = reactive<Record<string, string>>({})
@@ -195,10 +199,21 @@ async function httpError(r: Response): Promise<Error> {
 async function loadDatabases() {
   loading.value = true
   error.value = ''
+  errorHint.value = ''
   try {
     const r = await fetch(`${daemonBase()}/api/databases`, { headers: authHeaders() })
     if (!r.ok) throw await httpError(r)
     const data = await r.json()
+    // F80: daemon returns 200 OK with { error, hint, databases: [] } when
+    // MySQL is reachable but auth fails (e.g. MAMP/XAMPP occupies 3306).
+    // Previously we only looked at `data.databases` so the page silently
+    // showed "no databases" instead of the actionable hint.
+    if (typeof data?.error === 'string' && data.error) {
+      error.value = data.error
+      errorHint.value = data?.hint || ''
+      databases.value = []
+      return
+    }
     databases.value = data.databases ?? []
   } catch (e: any) {
     error.value = `Failed to load databases: ${e?.message || e}`
