@@ -731,6 +731,7 @@ import {
   fetchDockerComposeStatus, type DockerComposeStatus,
   composeUp, composeDown, composeRestart, composePs,
   getHistoricalMetrics,
+  daemonBaseUrl,
 } from '../../api/daemon'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -1061,7 +1062,7 @@ async function detectFramework() {
   if (!site.value) return
   detecting.value = true
   try {
-    const res = await fetch(`${daemonBase()}/api/sites/${site.value.domain}/detect-framework`, {
+    const res = await fetch(`${daemonBaseUrl()}/api/sites/${site.value.domain}/detect-framework`, {
       method: 'POST',
       headers: sitesStore.authHeaders(),
     })
@@ -1083,13 +1084,6 @@ async function detectFramework() {
 
 function markDirty() { dirty.value = true }
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${urlPort}`
-  const p = (window as any).daemonApi?.getPort?.()
-  return `http://localhost:${typeof p === 'number' ? p : 5199}`
-}
-
 async function load() {
   loading.value = true
   try {
@@ -1100,7 +1094,7 @@ async function load() {
 
     // php versions
     try {
-      const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: sitesStore.authHeaders() })
+      const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: sitesStore.authHeaders() })
       if (r.ok) {
         const versions = await r.json()
         phpVersions.value = versions.map((v: any) => v.majorMinor || v.version?.split('.').slice(0, 2).join('.') || v.version)
@@ -1109,7 +1103,7 @@ async function load() {
 
     // history
     try {
-      const res = await fetch(`${daemonBase()}/api/sites/${domain.value}/history`, {
+      const res = await fetch(`${daemonBaseUrl()}/api/sites/${domain.value}/history`, {
         headers: sitesStore.authHeaders(),
       })
       if (res.ok) history.value = await res.json() as Array<{ timestamp: string; label?: string }>
@@ -1176,7 +1170,7 @@ async function rollback(timestamp: string) {
     })
   } catch { return }
   try {
-    const res = await fetch(`${daemonBase()}/api/sites/${site.value.domain}/rollback`, {
+    const res = await fetch(`${daemonBaseUrl()}/api/sites/${site.value.domain}/rollback`, {
       method: 'POST',
       headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ timestamp }),

@@ -274,7 +274,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo } from '../../api/types'
-import { fetchDockerComposeStatus, type DockerComposeStatus } from '../../api/daemon'
+import { fetchDockerComposeStatus, daemonBaseUrl, type DockerComposeStatus } from '../../api/daemon'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
 
@@ -300,11 +300,6 @@ const phpVersions = ref<string[]>([])
 // the daemon sees on disk without blocking the site list itself.
 const composeStatus = reactive<Record<string, DockerComposeStatus>>({})
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  const port = (window as any).daemonApi?.getPort() ?? (urlPort ? parseInt(urlPort) : 5199)
-  return `http://localhost:${port}`
-}
 const showCreate = ref(false)
 const creating = ref(false)
 const reapplying = ref(false)
@@ -388,7 +383,7 @@ onMounted(async () => {
   await sitesStore.load()
   void refreshComposeStatuses()
   try {
-    const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: sitesStore.authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: sitesStore.authHeaders() })
     if (r.ok) {
       const versions = await r.json()
       phpVersions.value = versions.map((v: any) => v.majorMinor || v.version?.split('.').slice(0, 2).join('.') || v.version)
@@ -431,7 +426,7 @@ async function createSite() {
     if (newSite.createDb) {
       const dbName = newSite.dbName || newSite.domain.replace(/\./g, '_').replace(/-/g, '_') + '_db'
       try {
-        const dbRes = await fetch(`${daemonBase()}/api/databases`, {
+        const dbRes = await fetch(`${daemonBaseUrl()}/api/databases`, {
           method: 'POST',
           headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: dbName }),
@@ -456,7 +451,7 @@ async function createSite() {
 
 async function detectFramework(domain: string) {
   try {
-    const res = await fetch(`${daemonBase()}/api/sites/${domain}/detect-framework`, {
+    const res = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/detect-framework`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...sitesStore.authHeaders() },
     })
@@ -498,7 +493,7 @@ async function confirmDelete(domain: string) {
 async function reapplyAll() {
   reapplying.value = true
   try {
-    const res = await fetch(`${daemonBase()}/api/sites/reapply-all`, {
+    const res = await fetch(`${daemonBaseUrl()}/api/sites/reapply-all`, {
       method: 'POST',
       headers: sitesStore.authHeaders(),
     })

@@ -164,6 +164,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useI18n } from 'vue-i18n'
+import { daemonBaseUrl } from '../../api/daemon'
 
 const props = defineProps<{ domain: string }>()
 
@@ -215,7 +216,7 @@ async function loadRecentActivity() {
   if (!site.value) return
   const domain = encodeURIComponent(props.domain)
   try {
-    const r = await fetch(`${daemonBase()}/api/sites/${domain}/logs/errors?limit=5`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/logs/errors?limit=5`, {
       headers: sitesStore.authHeaders(),
     })
     if (r.ok) {
@@ -224,7 +225,7 @@ async function loadRecentActivity() {
     }
   } catch { /* silent */ }
   try {
-    const r = await fetch(`${daemonBase()}/api/sites/${domain}/metrics/history?minutes=1440&limit=24`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/metrics/history?minutes=1440&limit=24`, {
       headers: sitesStore.authHeaders(),
     })
     if (r.ok) {
@@ -298,12 +299,6 @@ const apacheRunning = computed(() => {
   return svc?.state === 2 || svc?.status === 'running'
 })
 
-function daemonBase(): string {
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${urlPort}`
-  const p = (window as any).daemonApi?.getPort?.()
-  return `http://localhost:${typeof p === 'number' ? p : 5199}`
-}
 
 watch(site, (s) => {
   if (!s) return
@@ -314,7 +309,7 @@ watch(site, (s) => {
 
 async function loadPhpVersions() {
   try {
-    const r = await fetch(`${daemonBase()}/api/php/versions`, { headers: sitesStore.authHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/php/versions`, { headers: sitesStore.authHeaders() })
     if (r.ok) {
       const versions = await r.json()
       phpVersions.value = versions.map((v: any) => v.majorMinor || v.version?.split('.').slice(0, 2).join('.') || v.version)

@@ -147,7 +147,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-plus/icons-vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
-import { startService, stopService, duplicateSite } from '../../api/daemon'
+import { startService, stopService, duplicateSite, daemonBaseUrl } from '../../api/daemon'
 import type { SiteInfo } from '../../api/types'
 import MiniSparkline from '../common/MiniSparkline.vue'
 
@@ -185,13 +185,6 @@ interface SiteActivity {
 
 const activityMap = ref<Record<string, SiteActivity>>({})
 
-function daemonBase(): string {
-  const preloadPort = (window as any).daemonApi?.getPort?.()
-  if (typeof preloadPort === 'number' && preloadPort > 0) return `http://localhost:${preloadPort}`
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) return `http://localhost:${parseInt(urlPort, 10)}`
-  return 'http://localhost:5199'
-}
 
 async function loadActivityForSite(domain: string) {
   const existing = activityMap.value[domain]
@@ -199,8 +192,8 @@ async function loadActivityForSite(domain: string) {
 
   try {
     const [metricsR, errorsR] = await Promise.allSettled([
-      fetch(`${daemonBase()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
-      fetch(`${daemonBase()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
+      fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
+      fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
     ])
 
     let hourlyHits: number[] = []
