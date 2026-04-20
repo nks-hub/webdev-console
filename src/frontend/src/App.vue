@@ -76,6 +76,7 @@ import AppStatusBar from './components/layout/AppStatusBar.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
 import OnboardingWizard from './components/shared/OnboardingWizard.vue'
 import { useDaemonStore } from './stores/daemon'
+import { useUpdatesStore } from './stores/updates'
 import { usePluginsStore } from './stores/plugins'
 import { useSitesStore } from './stores/sites'
 import { useThemeStore } from './stores/theme'
@@ -83,6 +84,7 @@ import { useThemeStore } from './stores/theme'
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
+const updatesStore = useUpdatesStore()
 const drawerOpen = ref(false)
 
 // Close mobile drawer on route change
@@ -168,6 +170,10 @@ let unsubscribeConnect: (() => void) | null = null
 
 onMounted(() => {
   daemonStore.startPolling()
+  // F96: kick off background update check once per session. Store guards
+  // against flooding the public GitHub API — refresh() honors a 6h cached
+  // window, so the hourly setInterval inside startAutoCheck is idempotent.
+  updatesStore.startAutoCheck()
 
   // Refetch the stores that fed the cold boot once the daemon comes online.
   // Fires on FIRST successful poll and every time the daemon reconnects

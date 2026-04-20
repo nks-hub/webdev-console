@@ -23,6 +23,19 @@
     </nav>
 
     <div class="header-right" style="-webkit-app-region: no-drag">
+      <!-- F96: self-updater badge. Surfaces when a newer release is
+           tagged on nks-hub/webdev-console; clicking routes to
+           Settings → Update tab where the user can download / install. -->
+      <button
+        v-if="updatesStore.hasUpdate"
+        class="update-badge"
+        :title="`Nová verze v${updatesStore.latestVersion} je dostupná`"
+        @click="openUpdateTab"
+      >
+        <span class="update-dot" />
+        <span class="update-label">v{{ updatesStore.latestVersion }}</span>
+      </button>
+
       <div class="conn-pill" :class="daemonStore.connected ? 'conn-ok' : 'conn-err'">
         <span class="conn-dot" />
         {{ daemonStore.connected ? t('header.connected') : t('header.offline') }}
@@ -59,6 +72,7 @@ import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useUpdatesStore } from '../../stores/updates'
 import { setLocale, type Locale } from '../../i18n'
 
 const router = useRouter()
@@ -66,7 +80,13 @@ const route = useRoute()
 const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
 const uiMode = useUiModeStore()
+const updatesStore = useUpdatesStore()
 const { t, locale } = useI18n()
+
+// F96: navigate to the Settings → Update tab when the header badge is clicked.
+function openUpdateTab() {
+  void router.push({ path: '/settings', query: { tab: 'update' } })
+}
 const isDark = computed(() => themeStore.isDark)
 const currentLocale = computed(() => String(locale.value))
 const currentTitle = computed(() => {
@@ -235,5 +255,32 @@ function isActive(path: string) {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* F96 update badge — amber accent so it reads as distinct from the
+   green/red connection pill. Hides when hasUpdate is false. */
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--wdc-warning, #f5a623);
+  background: rgba(245, 166, 35, 0.08);
+  color: var(--wdc-warning, #f5a623);
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.update-badge:hover { background: rgba(245, 166, 35, 0.18); }
+.update-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--wdc-warning, #f5a623);
+  animation: glow 2.2s ease-in-out infinite;
+}
+.update-label { letter-spacing: 0.02em; }
 
 </style>
