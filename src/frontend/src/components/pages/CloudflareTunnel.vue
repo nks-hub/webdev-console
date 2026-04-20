@@ -629,7 +629,13 @@ async function verifyToken() {
 }
 
 // ── Zones ────────────────────────────────────────────────────────────
-const zones = ref<any[]>([])
+// Minimal Cloudflare zone shape — we only display id/name, upstream
+// response has many more fields we don't bind.
+interface CfZone {
+  id: string
+  name: string
+}
+const zones = ref<CfZone[]>([])
 const loadingZones = ref(false)
 
 async function loadZones() {
@@ -649,7 +655,12 @@ const activeZone = computed(() =>
 )
 
 // ── Tunnels ──────────────────────────────────────────────────────────
-const tunnels = ref<any[]>([])
+// Cloudflare tunnels list entry — only id/name are read from the UI.
+interface CfTunnel {
+  id: string
+  name: string
+}
+const tunnels = ref<CfTunnel[]>([])
 const loadingTunnels = ref(false)
 
 async function loadTunnels() {
@@ -664,7 +675,7 @@ async function loadTunnels() {
   }
 }
 
-function selectTunnel(t: any) {
+function selectTunnel(t: CfTunnel) {
   config.tunnelId = t.id
   config.tunnelName = t.name
 }
