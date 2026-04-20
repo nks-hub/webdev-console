@@ -9,8 +9,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import * as EPIcons from '@element-plus/icons-vue'
+
+// Element Plus icons are re-exported as a namespace object whose keys
+// are icon names. TypeScript treats namespace imports as a closed
+// `{ foo: …, bar: … }` type — dynamic lookup by arbitrary string needs
+// a Record widening. Using `Record<string, Component>` instead of `any`
+// preserves the return type so callers still see the correct Component
+// at the call site.
+const ICONS = EPIcons as unknown as Record<string, Component>
 
 const props = withDefaults(defineProps<{
   label: string
@@ -26,7 +34,7 @@ defineEmits<{ (e: 'click'): void }>()
 
 const iconComponent = computed(() => {
   if (!props.icon) return null
-  return (EPIcons as any)[props.icon] ?? null
+  return ICONS[props.icon] ?? null
 })
 </script>
 
