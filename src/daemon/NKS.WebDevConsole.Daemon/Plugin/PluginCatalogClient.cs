@@ -64,7 +64,7 @@ public sealed class PluginCatalogClient
         try
         {
             _logger.LogInformation("Fetching plugin catalog from {Url}/api/v1/plugins/catalog", baseUrl);
-            var resp = await _http.GetAsync($"{baseUrl}/api/v1/plugins/catalog", ct);
+            using var resp = await _http.GetAsync($"{baseUrl}/api/v1/plugins/catalog", ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             var doc = JsonSerializer.Deserialize<PluginCatalogDocument>(json, JsonOpts);

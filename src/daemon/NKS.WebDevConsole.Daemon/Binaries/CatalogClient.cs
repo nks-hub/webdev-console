@@ -100,7 +100,7 @@ public sealed class CatalogClient
         try
         {
             _logger.LogInformation("Fetching binary catalog from {BaseUrl}/api/v1/catalog", baseUrl);
-            var resp = await _http.GetAsync($"{baseUrl}/api/v1/catalog", ct);
+            using var resp = await _http.GetAsync($"{baseUrl}/api/v1/catalog", ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             var doc = JsonSerializer.Deserialize<CatalogDocument>(json, JsonOpts)
