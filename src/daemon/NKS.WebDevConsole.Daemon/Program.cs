@@ -1946,6 +1946,24 @@ int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, Pl
     }
 }
 
+/// <summary>
+/// F77: resolve the per-site PHP binary path so composer.phar runs under
+/// the interpreter version the site has actually declared. Returns null
+/// when the site has no phpVersion pinned — the invoker then falls back
+/// to ComposerConfig.PhpPath (the plugin's global scan-first winner).
+///
+/// Layout: ~/.wdc/binaries/php/&lt;version&gt;/php.exe (matches F33
+/// discovery path in ComposerConfig.ApplyOwnBinaryDefaults).
+/// </summary>
+static string? ResolveSitePhpBinary(NKS.WebDevConsole.Core.Models.SiteConfig site)
+{
+    if (string.IsNullOrWhiteSpace(site.PhpVersion)) return null;
+    var binariesRoot = NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot;
+    var candidate = Path.Combine(binariesRoot, "php", site.PhpVersion,
+        OperatingSystem.IsWindows() ? "php.exe" : "php");
+    return File.Exists(candidate) ? candidate : null;
+}
+
 static string ResolveComposerRoot(string docroot)
 {
     if (File.Exists(Path.Combine(docroot, "composer.json"))) return docroot;
@@ -2056,8 +2074,9 @@ app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteMa
     logger.LogInformation("composer install for {Domain} in {Root}", domain, installRoot);
     try
     {
+        var phpOverride = ResolveSitePhpBinary(site);
         var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "InstallAsync",
-            [installRoot, ct]);
+            [installRoot, phpOverride, ct]);
         logger.LogInformation("composer install exit={Code} for {Domain}", exitCode, domain);
         return Results.Ok(new { exitCode, stdout, stderr });
     }
@@ -2097,8 +2116,9 @@ app.MapPost("/api/sites/{domain}/composer/require", async (string domain, HttpCo
     logger.LogInformation("composer require {Package} for {Domain}", package, domain);
     try
     {
+        var phpOverride = ResolveSitePhpBinary(site);
         var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RequireAsync",
-            [site.DocumentRoot, package, ct]);
+            [site.DocumentRoot, package, phpOverride, ct]);
         logger.LogInformation("composer require {Package} exit={Code} for {Domain}", package, exitCode, domain);
         return Results.Ok(new { exitCode, stdout, stderr });
     }
@@ -2138,8 +2158,9 @@ app.MapPost("/api/sites/{domain}/composer/remove", async (string domain, HttpCon
     logger.LogInformation("composer remove {Package} for {Domain}", package, domain);
     try
     {
+        var phpOverride = ResolveSitePhpBinary(site);
         var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync",
-            [composerRoot, new[] { "remove", package }, ct]);
+            [composerRoot, new[] { "remove", package }, phpOverride, ct]);
         logger.LogInformation("composer remove {Package} exit={Code} for {Domain}", package, exitCode, domain);
         return Results.Ok(new { exitCode, stdout, stderr });
     }
@@ -2168,7 +2189,8 @@ app.MapPost("/api/sites/{domain}/composer/init", async (string domain, HttpConte
     if (!string.IsNullOrWhiteSpace(description)) args.Add($"--description={description}");
     try
     {
-        var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync", [composerRoot, args.ToArray(), ct]);
+        var phpOverride = ResolveSitePhpBinary(site);
+        var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync", [composerRoot, args.ToArray(), phpOverride, ct]);
         return Results.Ok(new { exitCode, stdout, stderr, composerRoot });
     }
     catch (Exception ex) { return Results.Problem(title: "composer init failed", detail: ex.Message, statusCode: 500); }
@@ -2184,8 +2206,9 @@ app.MapGet("/api/sites/{domain}/composer/diagnose", async (string domain, SiteMa
     var logger = lf.CreateLogger("Composer");
     try
     {
+        var phpOverride = ResolveSitePhpBinary(site);
         var (_, _, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
-            [composerRoot, new[] { "diagnose", "--no-ansi" }, ct]);
+            [composerRoot, new[] { "diagnose", "--no-ansi" }, phpOverride, ct]);
         var warnings = new List<string>();
         var errors = new List<string>();
         foreach (var line in (stdout ?? "").Split('\n'))
@@ -2209,8 +2232,9 @@ app.MapGet("/api/sites/{domain}/composer/outdated", async (string domain, SiteMa
     var logger = lf.CreateLogger("Composer");
     try
     {
+        var phpOverride = ResolveSitePhpBinary(site);
         var (_, exitCode, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
-            [composerRoot, new[] { "outdated", "--direct", "--format=json", "--no-ansi" }, ct]);
+            [composerRoot, new[] { "outdated", "--direct", "--format=json", "--no-ansi" }, phpOverride, ct]);
         System.Collections.Generic.List<object> installed = new();
         if (!string.IsNullOrWhiteSpace(stdout))
         {
@@ -2271,7 +2295,7 @@ app.MapGet("/api/composer/version", async (IServiceProvider sp, PluginLoader plu
     {
         var tempDir = Path.GetTempPath();
         var (ok, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync",
-            [tempDir, new[] { "--version", "--no-ansi" }, ct]);
+            [tempDir, new[] { "--version", "--no-ansi" }, (string?)null, ct]);
         // Strip any residual ANSI escape sequences (some composer builds emit them
         // even with --no-ansi when run via CliWrap because ConEmu detection still
         // thinks it's a TTY). Pattern: ESC [ ... m
