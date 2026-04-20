@@ -80,3 +80,8 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: Sentry
         update-types: [version-update:semver-major]
+      # .NET runtime packages (System.*, Microsoft.Extensions.*) jumping
+      # major (9→10) implies a TargetFramework move to .NET 10. Ship as
+      # a coordinated platform upgrade ticket, not a drive-by bump.
+      - dependency-name: System.Security.Cryptography.ProtectedData
+        update-types: [version-update:semver-major]
