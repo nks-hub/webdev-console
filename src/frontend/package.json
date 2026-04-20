@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "type-check": "vue-tsc --noEmit",
     "preview": "electron-vite preview",
     "stage:plugins": "node ../../scripts/stage-plugins.mjs",
     "stage:daemon:win": "dotnet publish ../daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r win-x64 --self-contained -o resources/daemon && npm run stage:plugins",

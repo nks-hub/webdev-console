@@ -86,6 +86,10 @@ jobs:
         working-directory: src/frontend
         run: npm ci
 
+      - name: Type check (vue-tsc)
+        working-directory: src/frontend
+        run: npm run type-check
+
       - name: Build
         working-directory: src/frontend
         run: npm run build
