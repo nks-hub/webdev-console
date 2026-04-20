@@ -2,7 +2,6 @@ import type {
   StatusResponse,
   SiteInfo,
   PhpVersion,
-  DatabaseInfo,
   PluginManifest,
   PluginUiDefinition,
   ProgressUpdate,
@@ -506,10 +505,6 @@ export async function pushConfigToDevice(
 export const suggestCloudflareSubdomain = (domain: string): Promise<{ suggestion: string; domain: string }> =>
   json(`/api/cloudflare/suggest-subdomain?domain=${encodeURIComponent(domain)}`)
 
-// Databases
-export const fetchDatabases = (): Promise<DatabaseInfo[]> =>
-  json('/api/databases')
-
 // Install the local mkcert CA into the system trust store so self-signed
 // site certificates become trusted in browsers + system HTTP clients.
 // Used by both SslManager.vue (as an explicit action) and OnboardingWizard
@@ -612,9 +607,6 @@ export const fetchBinaryCatalog = async (): Promise<Record<string, BinaryRelease
   return grouped
 }
 
-export const fetchBinaryCatalogForApp = (app: string): Promise<BinaryRelease[]> =>
-  json(`/api/binaries/catalog/${app}`)
-
 export const fetchInstalledBinaries = async (): Promise<InstalledBinary[]> => {
   // Daemon uses `installPath` + `executable` in its DTO while the frontend
   // type exposes `path`. Normalise at the API boundary so Binaries.vue can
@@ -637,10 +629,6 @@ export const installBinary = (app: string, version: string) =>
 
 export const uninstallBinary = (app: string, version: string) =>
   json<{ ok: boolean }>(`/api/binaries/${app}/${version}`, { method: 'DELETE' })
-
-// Service logs
-export const fetchServiceLogs = (id: string, lines = 200): Promise<string[]> =>
-  json(`/api/services/${id}/logs?lines=${lines}`)
 
 // Service config
 export interface ConfigFile {

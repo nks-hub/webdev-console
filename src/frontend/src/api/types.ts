@@ -85,12 +85,6 @@ export interface PhpVersion {
   activeSiteCount?: number
 }
 
-export interface DatabaseInfo {
-  name: string
-  sizeBytes: number
-  siteAssociation?: string
-}
-
 // Plugin panel schema — what C# plugins return from /api/plugins/{id}/ui
 export type PanelType =
   | 'service-status-card'
