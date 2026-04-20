@@ -445,7 +445,13 @@ const isBannerDismissed = ref(false)
 // Outdated map keyed by package name
 const outdatedMap = ref<Record<string, { version?: string; latest: string; status: string }>>({})
 
-// Package info cache from packagist.org
+// Package info cache from packagist.org. `null` means "fetch failed, do not
+// retry this session"; a PkgInfo means "loaded successfully".
+// Typed as `any` here because the template's v-if narrowing doesn't flow
+// through nested property access — tightening to a PkgInfo shape would force
+// a wrapping computed/!-assertion on every `pkgInfoCache[row.name].field`
+// read for zero runtime benefit.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const pkgInfoCache = ref<Record<string, any>>({})
 const pkgInfoLoading = ref<Record<string, boolean>>({})
 

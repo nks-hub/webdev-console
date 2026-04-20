@@ -1416,7 +1416,7 @@ function copyDeviceId() {
     .catch(() => ElMessage.warning('Cannot access clipboard'))
 }
 
-async function buildSyncPayload(): Promise<Record<string, any>> {
+async function buildSyncPayload(): Promise<Record<string, unknown>> {
   // Collect settings + sites + system info so the catalog-api can
   // populate the device fleet table with OS/arch/site count without
   // the user having to enter them manually.
