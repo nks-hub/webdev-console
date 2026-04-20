@@ -733,6 +733,15 @@
                   >Sign in with SSO</el-button>
                   <span v-if="authStore.loginError" class="sso-error">{{ authStore.loginError }}</span>
                 </div>
+                <div v-if="pluginCatalogStatus" class="about-sso-status">
+                  <span :class="['status-dot', pluginCatalogStatus.lastFetch ? 'ok' : 'err']"></span>
+                  <span class="sys-label">Catalog</span>
+                  <span class="sys-value">
+                    {{ pluginCatalogStatus.lastFetch
+                        ? `reachable · last sync ${formatAgo(pluginCatalogStatus.lastFetch)}`
+                        : 'never synced' }}
+                  </span>
+                </div>
               </div>
 
               <div v-if="systemInfo" class="about-system">
