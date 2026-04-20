@@ -13,12 +13,13 @@ name: Release Security Scan
 #   - workflow_dispatch for manual re-scan
 
 on:
+  # workflow_run doesn't honour a tag filter; the ref check happens at
+  # the job level below. Removing the branches clause stops the "skipped"
+  # rows in the Actions history on tag pushes.
   workflow_run:
     workflows: ["Build & Release"]
     types:
       - completed
-    branches:
-      - 'v*'
   workflow_dispatch:
     inputs:
       run_id:
@@ -32,7 +33,10 @@ permissions:
 
 jobs:
   scan:
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || (github.event.workflow_run.conclusion == 'success'
+              && startsWith(github.event.workflow_run.head_branch, 'v')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 

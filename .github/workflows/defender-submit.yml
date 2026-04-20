@@ -11,12 +11,14 @@ name: Defender Submission
 #   MSDEFENDER_TOKEN  — Bearer token captured from an interactive login
 
 on:
+  # workflow_run doesn't support a tag filter; the ref check happens at
+  # the job level below. Branches filter was deleted because "v0.1.xx"
+  # tag pushes don't populate `event.branches`, causing every run to
+  # skip silently — producing a sea of "skipped" rows in the Actions UI.
   workflow_run:
     workflows: ["Build & Release"]
     types:
       - completed
-    branches:
-      - 'v*'
   workflow_dispatch:
     inputs:
       run_id:
@@ -30,7 +32,10 @@ permissions:
 
 jobs:
   submit:
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || (github.event.workflow_run.conclusion == 'success'
+              && startsWith(github.event.workflow_run.head_branch, 'v')) }}
     runs-on: windows-2022
 
     steps:
