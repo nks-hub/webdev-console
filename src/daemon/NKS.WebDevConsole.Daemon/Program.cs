@@ -4666,9 +4666,16 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IS
             var stderr = result.StandardError.Trim();
             var port = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
             var hint = "";
+            int? suggestedPort = null;
             if (stderr.Contains("1045") || stderr.Contains("Access denied"))
-                hint = $"Port {port} has a mysqld process but WDC root password was rejected. Likely external MySQL (MAMP/XAMPP/Windows service) occupies this port. Fix: Services tab → Start WDC MySQL on different port, OR Settings → Porty → change MySQL port.";
-            return Results.Ok(new { error = stderr, hint, attemptedPort = port, databases = Array.Empty<string>() });
+            {
+                hint = $"Port {port} has a mysqld process but WDC root password was rejected. Likely external MySQL (MAMP/XAMPP/Windows service) occupies this port.";
+                // Pick the first free TCP port above the current one — the
+                // frontend renders this as a one-click "Use port N" button
+                // that POSTs /api/databases/use-alt-port.
+                suggestedPort = FindFreeTcpPort(port + 1);
+            }
+            return Results.Ok(new { error = stderr, hint, attemptedPort = port, suggestedPort, databases = Array.Empty<string>() });
         }
 
         var dbs = result.StandardOutput
@@ -4683,6 +4690,54 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IS
     {
         return Results.Ok(new { error = ex.Message, databases = Array.Empty<string>() });
     }
+});
+
+/// <summary>
+/// Finds the first free TCP port ≥ <paramref name="startPort"/> by binding
+/// a TcpListener on each candidate until one succeeds. Caps the scan at
+/// 64 attempts so a fully-occupied port range doesn't hang the request.
+/// </summary>
+static int? FindFreeTcpPort(int startPort)
+{
+    for (int p = Math.Max(1024, startPort); p < startPort + 64 && p <= 65535; p++)
+    {
+        try
+        {
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, p);
+            listener.Start();
+            listener.Stop();
+            return p;
+        }
+        catch { /* bound — try next */ }
+    }
+    return null;
+}
+
+// Auto-heal flow: when /api/databases returns a 1045 + suggestedPort, the
+// frontend can POST here to flip ports.mysql to the suggested free port and
+// restart the WDC mysqld so the user doesn't have to dig through Settings.
+app.MapPost("/api/databases/use-alt-port", async (
+    HttpContext ctx,
+    SettingsStore settings,
+    PluginLoader loader,
+    CancellationToken ct) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, int>>();
+    var newPort = body?.GetValueOrDefault("port") ?? 0;
+    if (newPort < 1024 || newPort > 65535)
+        return Results.BadRequest(new { error = "port out of range" });
+
+    settings.Set("ports", "mysql", newPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+    // Kick the MySQL / MariaDB plugin to restart on the new port. Lookup is
+    // lenient — some installs only carry one of the two.
+    var mysql = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.mysql" || p.Instance.Id == "nks.wdc.mariadb");
+    if (mysql?.Instance is IServiceModule svc)
+    {
+        try { await svc.StopAsync(ct); } catch { /* already stopped is fine */ }
+        try { await svc.StartAsync(ct); } catch { /* surface via next /api/databases probe */ }
+    }
+    return Results.Ok(new { port = newPort, restarted = mysql is not null });
 });
 
 // Create database

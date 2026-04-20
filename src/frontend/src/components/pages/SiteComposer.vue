@@ -8,7 +8,6 @@
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>{{ currentOperation }}</span>
       </div>
-      <el-skeleton :rows="4" animated />
     </div>
     <div v-else-if="running && currentOperation" class="composer-running-banner">
       <el-icon class="is-loading"><Loading /></el-icon>
@@ -743,7 +742,18 @@ onMounted(() => {
 }
 
 .composer-loading {
-  padding: 24px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--el-text-color-secondary);
+}
+.composer-loading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.composer-loading-label .el-icon {
+  font-size: 16px;
 }
 
 .composer-alert {

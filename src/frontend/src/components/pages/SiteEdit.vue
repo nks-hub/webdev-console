@@ -644,6 +644,10 @@
                 />
               </div>
             </div>
+
+            <!-- Recent parsed access-log entries. Restored here after the
+                 F74 chart-first reorder accidentally dropped the table. -->
+            <SiteAccessLogs v-if="site" :domain="site.domain" class="access-log-section" />
           </div>
         </el-tab-pane>
 
