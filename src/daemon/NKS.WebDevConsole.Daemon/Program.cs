@@ -17,6 +17,14 @@ using NKS.WebDevConsole.Core.Services;
 // gets killed when the daemon exits (no orphaned httpd/mysqld/php-cgi processes).
 NKS.WebDevConsole.Core.Services.DaemonJobObject.EnsureInitialized();
 
+// F90: capture daemon process start timestamp ONCE so /api/status and
+// /api/system can report uptime since daemon boot — previously both
+// endpoints used Environment.TickCount64 which counts since SYSTEM boot
+// and reported e.g. 765664s (~212h) on a machine that had been up for
+// days even though the daemon had just started seconds ago.
+var daemonStartedUtc = DateTime.UtcNow;
+long DaemonUptimeSeconds() => (long)(DateTime.UtcNow - daemonStartedUtc).TotalSeconds;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // CORS for Electron renderer — the packaged app loads the Vue SPA from
@@ -331,7 +339,7 @@ app.MapGet("/api/status", () => Results.Ok(new
     status = "running",
     version = "0.1.0",
     plugins = pluginLoader.Plugins.Count,
-    uptime = Environment.TickCount64 / 1000
+    uptime = DaemonUptimeSeconds()
 }));
 
 app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm, CatalogClient cc, SettingsStore settings) =>
@@ -359,7 +367,7 @@ app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteMana
 
     return Results.Ok(new
     {
-        daemon = new { version = "0.1.0", uptime = Environment.TickCount64 / 1000, pid = Environment.ProcessId },
+        daemon = new { version = "0.1.0", uptime = DaemonUptimeSeconds(), pid = Environment.ProcessId },
         services = new { running, total },
         sites = sm.Sites.Count,
         plugins = pluginLoader.Plugins.Count,
