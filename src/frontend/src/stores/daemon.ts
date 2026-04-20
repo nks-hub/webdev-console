@@ -79,20 +79,20 @@ export const useDaemonStore = defineStore('daemon', () => {
       if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
 
       // Track aggregate metrics
-      const totalCpu = services.value.reduce((sum, s: any) => sum + (s.cpuPercent ?? 0), 0)
-      const totalRam = services.value.reduce((sum, s: any) => sum + (s.memoryBytes ?? 0), 0) / 1024 / 1024
+      const totalCpu = services.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0)
+      const totalRam = services.value.reduce((sum, s) => sum + (s.memoryBytes ?? 0), 0) / 1024 / 1024
       cpuHistory.value.push(totalCpu)
       ramHistory.value.push(totalRam)
       if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
       if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
-    } catch (err: any) {
+    } catch (err) {
       consecutiveFailures++
       consecutiveFailuresPublic.value = consecutiveFailures
       // Classify the failure so the splash overlay can show a specific
       // label (network refused vs auth vs server error) instead of a
       // generic spinner. Best-effort — errors from fetch() often only
       // expose a message string.
-      const msg = String(err?.message ?? err ?? '').toLowerCase()
+      const msg = String(err instanceof Error ? err.message : err ?? '').toLowerCase()
       if (msg.includes('failed to fetch') || msg.includes('econnrefused') || msg.includes('network')) {
         lastErrorKind.value = 'network'
       } else if (msg.includes('401') || msg.includes('403') || msg.includes('unauthor')) {
