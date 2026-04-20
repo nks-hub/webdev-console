@@ -23,6 +23,12 @@ on:
 permissions:
   contents: read
 
+# Cancel in-flight runs on the same PR/branch — a rapid push sequence
+# shouldn't queue up N redundant runs, only the newest commit matters.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: windows-2022
