@@ -329,6 +329,11 @@
                   <span :class="['status-dot', pluginSyncStatus.ok ? 'ok' : 'err']"></span>
                   {{ pluginSyncStatus.message }}
                 </div>
+                <div v-if="pluginCatalogStatus" class="hint">
+                  Catalog: {{ pluginCatalogStatus.catalogCount }} plugin{{ pluginCatalogStatus.catalogCount === 1 ? '' : 's' }} ·
+                  cached: {{ pluginCatalogStatus.cachedCount }} ·
+                  last sync: {{ pluginCatalogStatus.lastFetch ? formatAgo(pluginCatalogStatus.lastFetch) : 'never' }}
+                </div>
               </el-form-item>
             </el-form>
           </div>
@@ -940,6 +945,23 @@ const catalogUrl = ref('')
 const pluginAutoSync = ref(false)
 const syncingPlugins = ref(false)
 const pluginSyncStatus = ref<{ ok: boolean; message: string } | null>(null)
+const pluginCatalogStatus = ref<{ catalogCount: number; cachedCount: number; lastFetch: string | null; cacheRoot: string } | null>(null)
+
+async function loadPluginCatalogStatus() {
+  try {
+    const r = await fetch(`${daemonBase()}/api/plugins/catalog/status`, { headers: authHeaders() })
+    if (r.ok) pluginCatalogStatus.value = await r.json()
+  } catch { /* daemon unreachable — leave as null so the hint line hides */ }
+}
+
+function formatAgo(iso: string): string {
+  const then = new Date(iso).getTime()
+  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000))
+  if (diffSec < 60) return `${diffSec}s ago`
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
+  return `${Math.floor(diffSec / 86400)}d ago`
+}
 const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
@@ -1088,6 +1110,9 @@ async function syncPluginsNow() {
     const msg = `Catalog: ${result.catalogCount ?? 0} plugins · installed this run: ${result.installedThisCall ?? 0}`
     pluginSyncStatus.value = { ok: true, message: msg }
     ElMessage.success(msg)
+    // Re-poll the status endpoint so the "last sync" label reflects the
+    // freshly-completed refresh without a tab navigation.
+    await loadPluginCatalogStatus()
   } catch (e: any) {
     pluginSyncStatus.value = { ok: false, message: String(e?.message ?? e) }
     ElMessage.error(`Plugin sync failed: ${e?.message ?? e}`)
@@ -1726,6 +1751,7 @@ onMounted(async () => {
   void loadPhpVersions()
   void loadBackups()
   void loadDeviceId()
+  void loadPluginCatalogStatus()
   if (accountToken.value) void loadDevicesAccount()
   try {
     const r = await fetch(`${daemonBase()}/api/system`, { headers: authHeaders() })

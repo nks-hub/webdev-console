@@ -4994,6 +4994,29 @@ app.MapPost("/api/plugins/catalog/sync", async (
     });
 });
 
+// F95 telemetry — summarises plugin catalog + cache health for the Settings
+// page. Poll target: lastFetch (UTC, null if catalog has never been
+// refreshed), catalogCount (live), cachedCount (plugins materialised on
+// disk via SyncLatestAsync), cacheRoot (so a user can grep the folder by
+// hand when something looks off).
+app.MapGet("/api/plugins/catalog/status", (PluginCatalogClient pc) =>
+{
+    var cacheRoot = PluginDownloader.CacheRoot();
+    var cachedCount = 0;
+    try
+    {
+        foreach (var _ in PluginDownloader.EnumerateLatestVersionDirs()) cachedCount++;
+    }
+    catch { /* root may not exist yet — treat as zero-cached */ }
+    return Results.Ok(new
+    {
+        catalogCount = pc.Cached.Count,
+        cachedCount,
+        lastFetch = pc.LastFetch == DateTime.MinValue ? (DateTime?)null : pc.LastFetch,
+        cacheRoot,
+    });
+});
+
 app.MapGet("/api/binaries/installed", (BinaryManager bm) =>
     Results.Ok(bm.ListInstalled()));
 
