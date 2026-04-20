@@ -51,10 +51,12 @@ public class HealthMonitor : BackgroundService
                 continue;
             }
 
-            // Per-module try/catch so one failing plugin doesn't stop metrics for the others
-            foreach (var module in modules)
+            // Fan out the status probes concurrently — one slow plugin no
+            // longer extends the tick for the rest of the 10+ built-ins.
+            // Per-module try/catch stays inside the Select lambda so a
+            // faulting module doesn't poison Task.WhenAll.
+            var probes = modules.Select(async module =>
             {
-                if (ct.IsCancellationRequested) break;
                 try
                 {
                     var status = await module.GetStatusAsync(ct);
@@ -69,15 +71,13 @@ public class HealthMonitor : BackgroundService
                         });
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                catch (OperationCanceledException) { /* tick cancelled */ }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Health check failed for module {ServiceId}", module.ServiceId);
                 }
-            }
+            });
+            await Task.WhenAll(probes);
 
             try { await Task.Delay(5000, ct); }
             catch (OperationCanceledException) { break; }
