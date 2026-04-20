@@ -181,9 +181,15 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
-      - name: Pack local SDK
+      - name: Pack local SDK + Core
         working-directory: nks-ws
         run: |
+          # Plugin.SDK PackageReferences Core, so the plugins' restore
+          # needs both in the local feed — otherwise NU1101 on Core even
+          # when SDK is present.
+          dotnet pack src/daemon/NKS.WebDevConsole.Core/NKS.WebDevConsole.Core.csproj \
+            -c Release -p:PackageVersion=0.0.0-ci.${{ github.run_id }} \
+            -o "$GITHUB_WORKSPACE/.local-nuget"
           dotnet pack src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj \
             -c Release -p:PackageVersion=0.0.0-ci.${{ github.run_id }} \
             -o "$GITHUB_WORKSPACE/.local-nuget"
