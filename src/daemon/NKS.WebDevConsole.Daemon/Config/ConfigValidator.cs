@@ -123,10 +123,14 @@ public sealed class ConfigValidator
             // --check-system / --test-memory exit quickly after parsing the config.
             // We parse-only by redirecting the actual listen port to 0 (no bind) via
             // a throwaway override on the command line.
+            // CTS is `using` so the internal Timer callback is released when we
+            // fall through to the catch — previously `new CancellationTokenSource(TimeSpan)`
+            // leaked the Timer handle per redis.conf validation call.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             var result = await Cli.Wrap(redisServerPath)
                 .WithArguments([confPath, "--port", "0", "--daemonize", "no", "--bind", "127.0.0.1"])
                 .WithValidation(CommandResultValidation.None)
-                .ExecuteBufferedAsync(new CancellationTokenSource(TimeSpan.FromSeconds(2)).Token);
+                .ExecuteBufferedAsync(cts.Token);
 
             var output = result.StandardError + result.StandardOutput;
             var isValid = !output.Contains("FATAL CONFIG FILE ERROR", StringComparison.OrdinalIgnoreCase)
