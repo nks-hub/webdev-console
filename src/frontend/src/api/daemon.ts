@@ -69,6 +69,21 @@ export function daemonAuthHeaders(extra?: HeadersInit): Record<string, string> {
   return headers
 }
 
+/**
+ * Raw token lookup — preload value first, then URL query fallback.
+ * Exported for call-sites that need the token as a URL query parameter
+ * (EventSource doesn't accept Authorization headers, image <img> src
+ * needs ?token=… in the URL). For fetch() calls prefer
+ * daemonAuthHeaders which builds the Authorization header directly.
+ */
+export function daemonToken(): string {
+  return (
+    window.daemonApi?.getToken?.()
+    || new URLSearchParams(window.location.search).get('token')
+    || ''
+  )
+}
+
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${daemonBaseUrl()}${path}`, {
     ...init,

@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, daemonToken } from '../../api/daemon'
 
 const props = defineProps<{
   service: string
@@ -26,11 +26,6 @@ function staticUrlFor(id: string): string | null {
   const normalized = STATIC_ALIASES[id] || id
   const key = Object.keys(staticIcons).find(k => k.endsWith(`/brand/${normalized}.svg`))
   return key ? (staticIcons[key] as unknown as string) : null
-}
-
-function authToken(): string {
-  const params = new URLSearchParams(window.location.search)
-  return params.get('token') || window.daemonApi?.getToken?.() || ''
 }
 
 const loadError = ref(false)
@@ -65,7 +60,7 @@ const iconUrl = computed(() => {
   // Without this every brand icon 401s and the sidebar fills up with "N".
   const knownPlugin = ['apache', 'caddy', 'php', 'mysql', 'redis', 'mailpit'].includes(shortId)
   if (knownPlugin) {
-    const token = authToken()
+    const token = daemonToken()
     const suffix = token ? `?token=${encodeURIComponent(token)}` : ''
     return `${daemonBaseUrl()}/api/plugins/${shortId}/icon${suffix}`
   }

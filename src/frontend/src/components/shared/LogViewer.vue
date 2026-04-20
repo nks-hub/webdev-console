@@ -30,16 +30,12 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, daemonToken } from '../../api/daemon'
 
 // daemonApi is declared as non-optional in ../../api/daemon.ts; the local
 // redeclaration here used to mark it optional, which produced conflicting
 // `declare global` merges. Dropped — we lean on the central declaration
 // and guard access with optional-chaining where needed.
-
-function daemonToken(): string {
-  return window.daemonApi?.getToken?.() || new URLSearchParams(window.location.search).get('token') || ''
-}
 
 const props = defineProps<{ serviceId?: string }>()
 const terminalRef = ref<HTMLElement>()

@@ -277,6 +277,7 @@ import {
   installBinary,
   uninstallBinary,
   daemonBaseUrl,
+  daemonAuthHeaders as composerAuthHeaders,
 } from '../../api/daemon'
 import type { BinaryRelease, InstalledBinary } from '../../api/types'
 import ServiceIcon from '../shared/ServiceIcon.vue'
@@ -575,15 +576,6 @@ const composerVersion = ref<string | null>(null)
 const composerPath = ref<string | null>(null)
 const composerInstalling = ref(false)
 const composerInstalled = computed(() => !!composerVersion.value || !!composerPath.value)
-
-function composerAuthHeaders(): Record<string, string> {
-  const preloadToken = window.daemonApi?.getToken?.() || ''
-  const urlToken = new URLSearchParams(window.location.search).get('token') || ''
-  const token = preloadToken || urlToken
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
 
 async function loadComposerVersion() {
   try {
