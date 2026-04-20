@@ -428,10 +428,7 @@ export async function catalogRegister(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  if (!r.ok) {
-    const body = await r.json().catch(() => ({}))
-    throw new Error(body?.detail || `HTTP ${r.status}`)
-  }
+  if (!r.ok) throw new Error(await catalogErrorMessage(r))
   return r.json()
 }
 
@@ -443,10 +440,7 @@ export async function catalogLogin(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  if (!r.ok) {
-    const body = await r.json().catch(() => ({}))
-    throw new Error(body?.detail || `HTTP ${r.status}`)
-  }
+  if (!r.ok) throw new Error(await catalogErrorMessage(r))
   return r.json()
 }
 
