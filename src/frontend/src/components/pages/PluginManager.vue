@@ -175,6 +175,7 @@ import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { usePluginsStore } from '../../stores/plugins'
 import ServiceIcon from '../shared/ServiceIcon.vue'
+import { errorMessage } from '../../utils/errors'
 import {
   fetchMarketplace,
   installPluginFromMarketplace,
@@ -203,9 +204,9 @@ async function reloadMarketplace() {
     marketplace.plugins = data.plugins
     marketplace.count = data.count
     marketplace.error = data.error
-  } catch (e: any) {
+  } catch (e) {
     marketplace.reachable = false
-    marketplace.error = e?.message || String(e)
+    marketplace.error = errorMessage(e)
     marketplace.plugins = []
   } finally {
     loadingMarketplace.value = false
@@ -247,10 +248,10 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
     // Mark as installed locally so the button hides on next render
     mp.installed = true
     void reloadMarketplace()
-  } catch (e: any) {
+  } catch (e) {
     ElNotification({
       title: 'Install failed',
-      message: e?.message || String(e) || 'Unknown error',
+      message: errorMessage(e) || 'Unknown error',
       type: 'error',
       duration: 0,
     })
@@ -278,8 +279,8 @@ async function toggle(id: string) {
   toggling.value.add(id)
   try {
     await pluginsStore.toggleEnable(id)
-  } catch (e: any) {
-    ElMessage.error(`Plugin toggle failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Plugin toggle failed: ${errorMessage(e)}`)
   } finally {
     toggling.value.delete(id)
   }

@@ -165,6 +165,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useI18n } from 'vue-i18n'
 import { daemonBaseUrl } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
 
@@ -287,8 +288,8 @@ async function restartService(svc: { id: string; label: string; state: number | 
       await servicesStore.start(svc.id)
       ElMessage.success(t('sites.detail.simple.services.started', { name: svc.label }))
     }
-  } catch (e: any) {
-    ElMessage.error(e?.message || String(e))
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
   } finally {
     restartLoading[svc.id] = false
   }
@@ -329,8 +330,8 @@ async function onPhpChange(v: string) {
   try {
     await sitesStore.update(props.domain, { ...site.value, phpVersion: v })
     flashSaved(savedPhp)
-  } catch (e: any) {
-    ElMessage.error(`Update failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
   }
 }
 
@@ -339,8 +340,8 @@ async function onSslChange(v: boolean) {
   try {
     await sitesStore.update(props.domain, { ...site.value, sslEnabled: v })
     flashSaved(savedSsl)
-  } catch (e: any) {
-    ElMessage.error(`Update failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
     sslEnabled.value = !v
   }
 }
@@ -351,8 +352,8 @@ async function onTunnelChange(v: boolean) {
   try {
     await sitesStore.update(props.domain, { ...site.value, cloudflare: { ...existing, enabled: v } })
     flashSaved(savedTunnel)
-  } catch (e: any) {
-    ElMessage.error(`Update failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
     tunnelEnabled.value = !v
   }
 }

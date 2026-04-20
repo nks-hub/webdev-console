@@ -275,6 +275,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import type { SiteInfo } from '../../api/types'
 import { fetchDockerComposeStatus, daemonBaseUrl, type DockerComposeStatus } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
 
@@ -442,8 +443,8 @@ async function createSite() {
 
     showCreate.value = false
     Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
-  } catch (e: any) {
-    ElMessage.error(`Create failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Create failed: ${errorMessage(e)}`)
   } finally {
     creating.value = false
   }
@@ -466,8 +467,8 @@ async function detectFramework(domain: string) {
       ElMessage.info('No framework detected')
     }
     await sitesStore.load()
-  } catch (e: any) {
-    ElMessage.error(`Detection failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Detection failed: ${errorMessage(e)}`)
   }
 }
 
@@ -485,8 +486,8 @@ async function confirmDelete(domain: string) {
   try {
     await sitesStore.remove(domain)
     ElMessage.success('Site deleted')
-  } catch (e: any) {
-    ElMessage.error(`Delete failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Delete failed: ${errorMessage(e)}`)
   }
 }
 
@@ -509,8 +510,8 @@ async function reapplyAll() {
     } else {
       ElMessage.error(`Failed: HTTP ${res.status}`)
     }
-  } catch (e: any) {
-    ElMessage.error(`Reapply failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Reapply failed: ${errorMessage(e)}`)
   } finally {
     reapplying.value = false
   }
