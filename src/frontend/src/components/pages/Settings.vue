@@ -1415,12 +1415,11 @@ async function buildSyncPayload(): Promise<Record<string, unknown>> {
   // like 8081, documentRoot) would get uploaded to the shared catalog,
   // leaking machine-specific paths and polluting the stored snapshot
   // with values that the pull side would refuse to apply anyway.
-  const [settingsRes, sitesRes, systemRes] = await Promise.all([
-    fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() }),
+  const [rawSettings, sitesRes, systemRes] = await Promise.all([
+    fetchSettings().catch(() => ({} as Record<string, string>)),
     fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() }),
     fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() }),
   ])
-  const rawSettings: Record<string, unknown> = settingsRes.ok ? await settingsRes.json() : {}
   const rawSites: Array<{ domain: string } & Record<string, unknown>> = sitesRes.ok ? await sitesRes.json() : []
   const system = systemRes.ok ? await systemRes.json() : null
 
@@ -1694,11 +1693,7 @@ async function importSettings(event: Event) {
       if (isSettingSyncable(key)) merged[key] = value
     }
     if (Object.keys(merged).length > 0) {
-      await fetch(`${daemonBaseUrl()}/api/settings`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(merged),
-      })
+      await saveSettings(merged)
     }
     ElMessage.success(`Imported ${Object.keys(merged).length} sync settings from ${file.name}`)
     await loadSettings()
@@ -1836,12 +1831,9 @@ async function save() {
       'backup.dir': backupDir.value,
       'backup.scheduleHours': String(backupScheduleHours.value),
     }
-    const r = await fetch(`${daemonBaseUrl()}/api/settings`, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(payload),
-    })
-    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    // saveSettings throws on non-ok with the daemon's error message extracted,
+    // giving better feedback than the previous raw-HTTP-status fallback.
+    await saveSettings(payload)
     ElMessage.success('Settings saved')
   } catch (e) {
     ElMessage.error(`Failed to save: ${errorMessage(e)}`)
