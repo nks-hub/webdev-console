@@ -25,7 +25,7 @@ export const usePluginsStore = defineStore('plugins', () => {
           const ui = await fetchPluginUi(p.id)
           if (ui) {
             uiDefinitions.value.set(p.id, ui)
-            if (!p.ui) (p as any).ui = ui
+            if (!p.ui) p.ui = ui
           }
         } catch { /* plugin may not have UI */ }
       }
