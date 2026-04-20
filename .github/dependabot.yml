@@ -26,6 +26,10 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: actions/download-artifact
         update-types: [version-update:semver-major]
+      # v5 switches to Node 24 runtime. Group with the artifact majors
+      # above — ship as one Node-24 runner sweep ticket.
+      - dependency-name: actions/cache
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /src/frontend
