@@ -5038,7 +5038,12 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
     }
     else
     {
-        sql = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
+        // `leaveOpen: true` because ASP.NET owns the request body stream;
+        // StreamReader's default Dispose closes the underlying stream,
+        // which would fight the hosting layer. The `using` still releases
+        // the reader's ~1 KB read buffer immediately.
+        using var reader = new StreamReader(ctx.Request.Body, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: -1, leaveOpen: true);
+        sql = await reader.ReadToEndAsync();
     }
 
     var tmpFile = Path.GetTempFileName();
