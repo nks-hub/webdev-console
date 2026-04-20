@@ -10,35 +10,22 @@ export const useServicesStore = defineStore('services', () => {
     return busy.value.has(id)
   }
 
-  async function start(id: string) {
+  // Wrap an action with the busy-id tracking + daemon re-poll that all
+  // three lifecycle calls need. Previously start/stop/restart were three
+  // copies of the same try/finally.
+  async function runAction(id: string, action: (id: string) => Promise<unknown>) {
     busy.value.add(id)
     try {
-      await startService(id)
+      await action(id)
     } finally {
       busy.value.delete(id)
       await useDaemonStore().poll()
     }
   }
 
-  async function stop(id: string) {
-    busy.value.add(id)
-    try {
-      await stopService(id)
-    } finally {
-      busy.value.delete(id)
-      await useDaemonStore().poll()
-    }
-  }
-
-  async function restart(id: string) {
-    busy.value.add(id)
-    try {
-      await restartService(id)
-    } finally {
-      busy.value.delete(id)
-      await useDaemonStore().poll()
-    }
-  }
+  const start = (id: string) => runAction(id, startService)
+  const stop = (id: string) => runAction(id, stopService)
+  const restart = (id: string) => runAction(id, restartService)
 
   return { busy, isBusy, start, stop, restart }
 })
