@@ -327,7 +327,7 @@ function openService(id: string) {
   void router.push(`/service/${id}/config`)
 }
 
-async function toggleSvc(svc: any) {
+async function toggleSvc(svc: ServiceInfo) {
   const name = svc.displayName || svc.id
   try {
     if (svc.state === 2) {
@@ -337,8 +337,8 @@ async function toggleSvc(svc: any) {
       await servicesStore.start(svc.id)
       ElMessage.success(`${name} started`)
     }
-  } catch (err: any) {
-    ElMessage.error(`${name}: ${err.message}`)
+  } catch (err) {
+    ElMessage.error(`${name}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 </script>
