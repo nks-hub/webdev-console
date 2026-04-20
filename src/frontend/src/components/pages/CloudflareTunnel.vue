@@ -721,8 +721,8 @@ async function loadIngress() {
     const res = await fetchCloudflareTunnelConfig(config.tunnelId)
     const cfg = res?.result?.config?.ingress ?? []
     ingressRules.value = cfg
-      .filter((r: any) => r.hostname) // strip catch-all 404 rule
-      .map((r: any) => ({ hostname: r.hostname, service: r.service }))
+      .filter(r => typeof r.hostname === 'string' && r.hostname.length > 0) // strip catch-all 404 rule
+      .map(r => ({ hostname: r.hostname ?? '', service: r.service ?? '' }))
   } catch (e: any) {
     ElMessage.error(`Load ingress failed: ${e?.message || e}`)
   } finally {

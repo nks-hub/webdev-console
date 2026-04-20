@@ -348,17 +348,32 @@ export const deleteCloudflareDns = (zoneId: string, recordId: string): Promise<a
 export const fetchCloudflareTunnels = (): Promise<any> =>
   json('/api/cloudflare/tunnels')
 
-export const fetchCloudflareTunnelConfig = (tunnelId: string): Promise<any> =>
-  json(`/api/cloudflare/tunnels/${tunnelId}/configuration`)
-
 export interface CfIngressRule {
   hostname: string
   service: string
 }
+
+/**
+ * Cloudflare v4 response envelope, trimmed to the fields we bind.
+ * The full upstream shape has `success`, `errors`, `messages`, etc., but
+ * pinning just `result.config.ingress` captures what the ingress tab
+ * reads off the endpoint.
+ */
+export interface CfTunnelConfigResponse {
+  result?: {
+    config?: {
+      ingress?: Array<Partial<CfIngressRule>>
+    }
+  }
+}
+
+export const fetchCloudflareTunnelConfig = (tunnelId: string): Promise<CfTunnelConfigResponse> =>
+  json(`/api/cloudflare/tunnels/${tunnelId}/configuration`)
+
 export const updateCloudflareTunnelIngress = (
   tunnelId: string,
   rules: CfIngressRule[],
-): Promise<any> =>
+): Promise<{ ok: boolean }> =>
   json(`/api/cloudflare/tunnels/${tunnelId}/configuration`, {
     method: 'PUT',
     body: JSON.stringify({ rules }),
