@@ -1499,8 +1499,8 @@ async function pushToCloud() {
     lastSyncTime.value = new Date().toISOString()
     syncStatus.value = { ok: true, message: 'Pushed successfully' }
     ElMessage.success('Configuration pushed to cloud')
-  } catch (e: any) {
-    const msg = e?.message || String(e)
+  } catch (e) {
+    const msg = errorMessage(e)
     syncStatus.value = { ok: false, message: `Push failed: ${msg}` }
     ElMessage.error(`Push failed: ${msg}`)
   } finally {
@@ -1637,8 +1637,8 @@ async function pullFromCloud() {
     syncStatus.value = { ok: true, message: `Pulled from cloud (${data.updated_at ?? 'unknown'})` }
     ElMessage.success('Configuration synced from cloud')
     await loadSettings()
-  } catch (e: any) {
-    const msg = e?.message || String(e)
+  } catch (e) {
+    const msg = errorMessage(e)
     syncStatus.value = { ok: false, message: `Pull failed: ${msg}` }
     ElMessage.error(`Pull failed: ${msg}`)
   } finally {
@@ -1663,8 +1663,8 @@ async function checkCloudExists() {
         ? `Cloud snapshot exists (updated ${data.updated_at ?? 'unknown'})`
         : 'No cloud snapshot for this device',
     }
-  } catch (e: any) {
-    syncStatus.value = { ok: false, message: `Check failed: ${e?.message || e}` }
+  } catch (e) {
+    syncStatus.value = { ok: false, message: `Check failed: ${errorMessage(e)}` }
   } finally {
     checkingCloud.value = false
   }
@@ -1681,8 +1681,8 @@ async function exportSettings() {
     a.click()
     URL.revokeObjectURL(url)
     ElMessage.success('Settings exported')
-  } catch (e: any) {
-    ElMessage.error(`Export failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Export failed: ${errorMessage(e)}`)
   }
 }
 
@@ -1726,8 +1726,8 @@ async function importSettings(event: Event) {
     }
     ElMessage.success(`Imported ${Object.keys(merged).length} sync settings from ${file.name}`)
     await loadSettings()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(`Import failed: ${e?.message || e}`)
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(`Import failed: ${errorMessage(e)}`)
   }
   if (importFileInput.value) importFileInput.value.value = ''
 }
@@ -1767,8 +1767,8 @@ async function runUpdateCheck() {
     updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
     updateCheck.lastCheckedIso = new Date().toISOString()
     localStorage.setItem('wdc-last-update-check', updateCheck.lastCheckedIso)
-  } catch (e: any) {
-    updateCheck.error = e?.message || String(e)
+  } catch (e) {
+    updateCheck.error = errorMessage(e)
   } finally {
     updateCheck.loading = false
   }
@@ -1867,8 +1867,8 @@ async function save() {
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success('Settings saved')
-  } catch (e: any) {
-    ElMessage.error(`Failed to save: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Failed to save: ${errorMessage(e)}`)
   } finally {
     saving.value = false
   }
