@@ -201,10 +201,13 @@ async function loadActivityForSite(domain: string) {
     let totalHits = 0
     let lastHitIso: string | null = null
 
+    type MetricSample = { requests?: number; hits?: number; count?: number; timestamp?: string }
     if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
-      const data = await metricsR.value.json() as any
-      const samples: any[] = Array.isArray(data) ? data : (data.samples ?? [])
-      hourlyHits = samples.map((s: any) => s.requests ?? s.hits ?? s.count ?? 0)
+      const data: unknown = await metricsR.value.json()
+      const samples: MetricSample[] = Array.isArray(data)
+        ? data
+        : ((data as { samples?: MetricSample[] })?.samples ?? [])
+      hourlyHits = samples.map(s => s.requests ?? s.hits ?? s.count ?? 0)
       totalHits = hourlyHits.reduce((a, b) => a + b, 0)
       for (let i = samples.length - 1; i >= 0; i--) {
         const hits = samples[i].requests ?? samples[i].hits ?? 0
@@ -214,10 +217,12 @@ async function loadActivityForSite(domain: string) {
 
     let errorCount = 0
     if (errorsR.status === 'fulfilled' && errorsR.value.ok) {
-      const data = await errorsR.value.json() as any
-      const entries: any[] = Array.isArray(data) ? data : (data.entries ?? [])
+      const data: unknown = await errorsR.value.json()
+      const entries: Array<{ timestamp?: string }> = Array.isArray(data)
+        ? data
+        : ((data as { entries?: Array<{ timestamp?: string }> })?.entries ?? [])
       const cutoff = Date.now() - 24 * 60 * 60 * 1000
-      errorCount = entries.filter((e: any) => {
+      errorCount = entries.filter(e => {
         if (!e.timestamp) return true
         const t = new Date(e.timestamp).getTime()
         return !isNaN(t) && t > cutoff

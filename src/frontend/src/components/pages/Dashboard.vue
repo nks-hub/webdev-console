@@ -384,15 +384,19 @@ async function loadAggregates() {
       ])
       let hits = 0, errs = 0
       if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
-        const data = await metricsR.value.json() as any
-        const samples = Array.isArray(data) ? data : (data.samples ?? [])
-        hits = samples.reduce((sum: number, s: any) => sum + (s.requests ?? s.hits ?? 0), 0)
+        const data: unknown = await metricsR.value.json()
+        const samples: Array<{ requests?: number; hits?: number }> = Array.isArray(data)
+          ? data
+          : ((data as { samples?: Array<{ requests?: number; hits?: number }> })?.samples ?? [])
+        hits = samples.reduce((sum, s) => sum + (s.requests ?? s.hits ?? 0), 0)
       }
       if (errorsR.status === 'fulfilled' && errorsR.value.ok) {
-        const data = await errorsR.value.json() as any
-        const entries = Array.isArray(data) ? data : (data.entries ?? [])
+        const data: unknown = await errorsR.value.json()
+        const entries: Array<{ timestamp?: string }> = Array.isArray(data)
+          ? data
+          : ((data as { entries?: Array<{ timestamp?: string }> })?.entries ?? [])
         const cutoff = Date.now() - 24 * 60 * 60 * 1000
-        errs = entries.filter((e: any) => {
+        errs = entries.filter(e => {
           if (!e.timestamp) return true
           const t = new Date(e.timestamp).getTime()
           return !isNaN(t) && t > cutoff
