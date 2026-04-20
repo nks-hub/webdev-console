@@ -277,7 +277,7 @@ import {
   installBinary,
   uninstallBinary,
   daemonBaseUrl,
-  daemonAuthHeaders as composerAuthHeaders,
+  daemonAuthHeaders as authHeaders,
 } from '../../api/daemon'
 import type { BinaryRelease, InstalledBinary } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
@@ -580,7 +580,7 @@ const composerInstalled = computed(() => !!composerVersion.value || !!composerPa
 
 async function loadComposerVersion() {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/composer/version`, { headers: composerAuthHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/composer/version`, { headers: authHeaders() })
     if (r.ok) {
       const d = await r.json() as { version: string | null; path: string | null }
       composerVersion.value = d.version
@@ -592,7 +592,7 @@ async function loadComposerVersion() {
 async function installComposer() {
   composerInstalling.value = true
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/composer/self-install`, { method: 'POST', headers: composerAuthHeaders() })
+    const r = await fetch(`${daemonBaseUrl()}/api/composer/self-install`, { method: 'POST', headers: authHeaders() })
     if (!r.ok) {
       const body: { detail?: string } = await r.json().catch(() => ({}))
       ElMessage.error(body.detail || `HTTP ${r.status}`)
