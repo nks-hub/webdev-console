@@ -62,11 +62,15 @@ public class DaemonClient : IDisposable
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
-    public async Task<HttpResponseMessage> DeleteAsync(string path)
+    public async Task DeleteAsync(string path)
     {
-        var response = await _http.DeleteAsync($"{_baseUrl}{path}");
+        // Callers consistently discard the response (e.g. `await client.DeleteAsync(path)`
+        // without capturing), so returning HttpResponseMessage leaked
+        // the handle on every delete. Swallow the response internally
+        // once we've confirmed success — if a future caller needs the
+        // body, add a sibling helper rather than reintroducing the leak.
+        using var response = await _http.DeleteAsync($"{_baseUrl}{path}");
         response.EnsureSuccessStatusCode();
-        return response;
     }
 
     public bool IsConnected => _baseUrl != null;
