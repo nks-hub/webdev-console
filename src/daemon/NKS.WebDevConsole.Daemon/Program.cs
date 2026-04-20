@@ -2114,7 +2114,7 @@ static string ResolveComposerRoot(string docroot)
 }
 
 static async Task<(bool ExitCode, int Code, string Stdout, string Stderr)>
-    InvokeComposerAsync(object invoker, string method, object[] args)
+    InvokeComposerAsync(object invoker, string method, object?[] args)
 {
     var m = invoker.GetType().GetMethod(method)
         ?? throw new InvalidOperationException($"Method {method} not found on ComposerInvoker");
