@@ -134,6 +134,7 @@ import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 interface CertInfo {
   domain: string
@@ -178,8 +179,8 @@ async function loadCerts() {
     } else {
       loadError.value = `Failed to load certificates: HTTP ${r.status}`
     }
-  } catch (e: any) {
-    loadError.value = `Cannot connect to daemon: ${e?.message || e}`
+  } catch (e) {
+    loadError.value = `Cannot connect to daemon: ${errorMessage(e)}`
   } finally { loading.value = false }
 }
 
@@ -203,8 +204,8 @@ async function installCA() {
     const data = await r.json()
     if (data.ok) ElMessage.success('CA installed successfully')
     else ElMessage.error(data.message || 'CA install failed')
-  } catch (e: any) {
-    ElMessage.error(`CA install failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`CA install failed: ${errorMessage(e)}`)
   } finally {
     installingCA.value = false
   }
@@ -232,8 +233,8 @@ async function generateCert() {
     } else {
       ElMessage.error(data.message || 'Generation failed')
     }
-  } catch (e: any) {
-    ElMessage.error(`Generation failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Generation failed: ${errorMessage(e)}`)
   } finally {
     generating.value = false
   }
@@ -253,8 +254,8 @@ async function revokeCert(domain: string) {
     } else {
       ElMessage.error(data.message || 'Revoke failed')
     }
-  } catch (e: any) {
-    ElMessage.error(`Revoke failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Revoke failed: ${errorMessage(e)}`)
   } finally {
     revoking.value.delete(domain)
   }

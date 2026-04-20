@@ -167,6 +167,7 @@ import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { getErrorLogs } from '../../api/daemon'
 import type { SiteErrorLogEntry } from '../../api/types'
+import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
 
@@ -204,8 +205,8 @@ async function fetchLogs(): Promise<void> {
     })
     entries.value = raw.map((e, i) => ({ ...e, _idx: i }))
     expandedRows.value.clear()
-  } catch (e: any) {
-    ElMessage.error(`${t('logs.errors.refresh')}: ${e?.message ?? String(e)}`)
+  } catch (e) {
+    ElMessage.error(`${t('logs.errors.refresh')}: ${errorMessage(e)}`)
   } finally {
     loading.value = false
   }

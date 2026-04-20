@@ -186,6 +186,7 @@ import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { getAccessLogs } from '../../api/daemon'
 import type { AccessLogEntry } from '../../api/types'
+import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
 
@@ -221,8 +222,8 @@ async function fetchLogs(): Promise<void> {
       lines: selectedLines.value,
       since: sinceIso.value,
     })
-  } catch (e: any) {
-    ElMessage.error(`${t('sites.access.refresh')}: ${e?.message ?? String(e)}`)
+  } catch (e) {
+    ElMessage.error(`${t('sites.access.refresh')}: ${errorMessage(e)}`)
   } finally {
     loading.value = false
   }

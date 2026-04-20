@@ -96,6 +96,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 interface PhpVersion {
   version: string
@@ -131,8 +132,8 @@ async function loadVersions() {
     } else {
       loadError.value = `Failed to load PHP versions: HTTP ${r.status}`
     }
-  } catch (e: any) {
-    loadError.value = `Cannot connect to daemon: ${e?.message || e}`
+  } catch (e) {
+    loadError.value = `Cannot connect to daemon: ${errorMessage(e)}`
   } finally { loading.value = false }
 }
 
@@ -210,8 +211,8 @@ async function toggleExtension(name: string, enabled: boolean) {
     ElMessage.success(`${name} ${enabled ? 'enabled' : 'disabled'} — PHP restarted`)
     // Reload config after a brief pause so the ini content matches the new state.
     setTimeout(() => { void loadConfig(selectedVersion.value) }, 400)
-  } catch (e: any) {
-    ElMessage.error(`Toggle failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Toggle failed: ${errorMessage(e)}`)
   } finally {
     togglingExt.value = ''
   }
@@ -234,8 +235,8 @@ async function setDefault(version: string) {
       const text = await r.text().catch(() => r.statusText)
       ElMessage.error(`Failed to set default: ${text || `HTTP ${r.status}`}`)
     }
-  } catch (e: any) {
-    ElMessage.error(`Cannot set default: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Cannot set default: ${errorMessage(e)}`)
   }
 }
 
