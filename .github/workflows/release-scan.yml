@@ -52,7 +52,7 @@ jobs:
 
       - name: Download Build & Release artifacts
         if: env.skip_scan != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./artifacts
           run-id: ${{ github.event.workflow_run.id || inputs.run_id }}

@@ -131,7 +131,7 @@ jobs:
           node-version: '20'
 
       - name: Download daemon artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: daemon-win-x64
           path: src/frontend/resources/daemon
