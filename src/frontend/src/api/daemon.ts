@@ -23,7 +23,10 @@ declare global {
   }
 }
 
-function base(): string {
+// Exported so pages hitting ad-hoc daemon endpoints via raw fetch() (10+
+// pages used to ship their own slightly-different copy of this) share
+// the exact same port/token resolution logic as the typed API surface.
+export function daemonBaseUrl(): string {
   // Priority: (1) preload getPort() because it RE-READS the port file on every
   // call and survives daemon restarts (new token/port are picked up live),
   // (2) URL query param as fallback for browser/dev mode where preload doesn't exist.
@@ -62,7 +65,7 @@ function authHeaders(extra?: HeadersInit): Record<string, string> {
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${base()}${path}`, {
+  const r = await fetch(`${daemonBaseUrl()}${path}`, {
     ...init,
     headers: authHeaders(init?.headers),
   })
@@ -188,7 +191,7 @@ export const downloadBackup = (path?: string) => {
   if (path) params.set('path', path)
   if (token) params.set('token', token)
   const qs = params.toString()
-  window.open(`${base()}/api/backup/download${qs ? '?' + qs : ''}`, '_blank')
+  window.open(`${daemonBaseUrl()}/api/backup/download${qs ? '?' + qs : ''}`, '_blank')
 }
 
 // Per-site metrics — Phase 11 performance monitoring foothold
@@ -723,7 +726,7 @@ export async function duplicateSite(
   newDomain: string,
   copyFiles: 'all' | 'top' | 'empty' = 'all',
 ): Promise<{ domain: string; documentRoot: string; sourceDomain: string; copyFiles: string; warnings: string[] }> {
-  const r = await fetch(`${base()}/api/sites/${encodeURIComponent(domain)}/duplicate`, {
+  const r = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/duplicate`, {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ newDomain, copyFiles }),
@@ -798,8 +801,8 @@ export function subscribeEvents(
     const urlToken = new URLSearchParams(window.location.search).get('token') || ''
     const token = preloadToken || urlToken
     return token
-      ? `${base()}/api/events?token=${encodeURIComponent(token)}`
-      : `${base()}/api/events`
+      ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
+      : `${daemonBaseUrl()}/api/events`
   }
 
   function connect() {
