@@ -128,9 +128,16 @@ jobs:
 
       - name: Build Electron installer
         working-directory: src/frontend
-        run: npx electron-builder --config electron-builder.yml --win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # CI builds on every push just verify the packaged installer builds and
+        # passes the smoke step — they must NEVER touch GitHub releases. Real
+        # release publishing is owned by .github/workflows/build.yml on tag
+        # push (softprops/action-gh-release). `--publish never` short-circuits
+        # electron-builder's auto-publish path and GH_TOKEN is intentionally
+        # omitted so the builder has no credentials to race the tag job.
+        # Previously this step tried to upload assets to the existing v0.1.61
+        # release and hit 403 "Resource not accessible by integration" because
+        # the push-triggered GITHUB_TOKEN has no releases: write scope.
+        run: npx electron-builder --config electron-builder.yml --win --publish never
 
       - name: Verify release artifacts
         run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target win
