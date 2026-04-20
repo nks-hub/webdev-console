@@ -19,14 +19,25 @@ jobs:
             target: win
             daemon_rid: win-x64
             npm_script: dist
+            upload_glob: |
+              src/frontend/release/*.exe
+              src/frontend/release/*.blockmap
+              src/frontend/release/latest.yml
           - os: macos-14
             target: mac
             daemon_rid: osx-arm64
             npm_script: dist:mac
+            upload_glob: |
+              src/frontend/release/*.dmg
+              src/frontend/release/*.zip
+              src/frontend/release/latest-mac.yml
           - os: ubuntu-24.04
             target: linux
             daemon_rid: linux-x64
             npm_script: dist:linux
+            upload_glob: |
+              src/frontend/release/*.AppImage
+              src/frontend/release/latest-linux.yml
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -90,6 +101,12 @@ jobs:
           name: release-${{ matrix.target }}
           path: src/frontend/release/**
 
+      # Upload release assets per-platform. Each matrix job publishes only
+      # the extensions it actually produces so the "Pattern does not match
+      # any files" log noise goes away. generate_release_notes is gated
+      # to the Windows job (first in the matrix) so the 3 parallel jobs
+      # don't race each other on the same API call — which produced
+      # HttpError: Server Error on the v0.2.0 tag push.
       - name: Publish to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
@@ -97,13 +114,7 @@ jobs:
           fail_on_unmatched_files: false
           draft: false
           prerelease: false
-          generate_release_notes: true
-          files: |
-            src/frontend/release/*.exe
-            src/frontend/release/*.dmg
-            src/frontend/release/*.zip
-            src/frontend/release/*.AppImage
-            src/frontend/release/*.blockmap
-            src/frontend/release/latest*.yml
+          generate_release_notes: ${{ matrix.target == 'win' }}
+          files: ${{ matrix.upload_glob }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
