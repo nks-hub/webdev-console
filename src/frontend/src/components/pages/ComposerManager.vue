@@ -119,7 +119,7 @@ import { useRouter } from 'vue-router'
 import { Check, WarningFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
-import { composerStatus } from '../../api/daemon'
+import { composerStatus, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import type { ComposerStatus } from '../../api/types'
 
 const { t } = useI18n()
@@ -203,15 +203,6 @@ function getBase(): string {
     return `http://localhost:${parseInt(urlPort, 10)}`
   }
   return 'http://localhost:5199'
-}
-
-function authHeaders(): Record<string, string> {
-  const preloadToken = (window as any).daemonApi?.getToken?.() || ''
-  const urlToken = new URLSearchParams(window.location.search).get('token') || ''
-  const token = preloadToken || urlToken
-  const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) h['Authorization'] = `Bearer ${token}`
-  return h
 }
 
 async function scanSites(): Promise<void> {

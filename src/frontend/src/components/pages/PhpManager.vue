@@ -95,7 +95,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 
 interface PhpVersion {
   version: string
@@ -120,13 +120,6 @@ const togglingExt = ref<string>('')
 
 const enabledCount = computed(() => extensions.value.filter(e => e.enabled).length)
 
-function authHeaders(): Record<string, string> {
-  const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
 
 async function loadVersions() {
   loading.value = true

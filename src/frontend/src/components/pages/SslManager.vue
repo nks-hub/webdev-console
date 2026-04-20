@@ -133,7 +133,7 @@ import { ref, onMounted, computed } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 
 interface CertInfo {
   domain: string
@@ -165,13 +165,6 @@ const genDomain = ref('')
 const genAliases = ref('')
 const availableSites = ref<string[]>([])
 
-function authHeaders(): Record<string, string> {
-  const urlToken = new URLSearchParams(window.location.search).get('token')
-  const token = (window as any).daemonApi?.getToken?.() || urlToken || ''
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
 
 async function loadCerts() {
   loading.value = true
