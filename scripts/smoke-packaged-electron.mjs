@@ -30,15 +30,19 @@ function sleep(ms) {
 }
 
 function readPortInfo() {
-  if (!existsSync(portFile)) return null
+  // Intentionally DO NOT pre-check existsSync — the daemon writes the port
+  // file atomically via tmp+rename (F67) which briefly deletes the target
+  // before creating it, so existsSync can race against File.Move and
+  // readFileSync ends up with ENOENT one tick later. Treat every transient
+  // filesystem error during boot the same way: "not ready yet, retry".
+  // Real unrecoverable errors still surface because the outer waitFor
+  // loop has its own timeoutMs budget.
   let content
   try {
     content = readFileSync(portFile, 'utf-8')
   } catch (err) {
-    // Daemon may still hold an exclusive write lock on the port file during
-    // startup (Windows). Treat EPERM/EBUSY/EACCES as "not ready yet" so the
-    // waitFor loop keeps retrying instead of aborting.
-    if (err && (err.code === 'EPERM' || err.code === 'EBUSY' || err.code === 'EACCES')) {
+    const code = err && err.code
+    if (code === 'ENOENT' || code === 'EPERM' || code === 'EBUSY' || code === 'EACCES') {
       return null
     }
     throw err
