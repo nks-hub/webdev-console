@@ -185,6 +185,27 @@
         <span class="nav-icon-shell"><el-icon :size="18"><QuestionFilled /></el-icon></span>
         <span class="nav-label">Help</span>
       </div>
+      <!-- F83: top-level sign-in entry point so users don't have to
+           drill into Settings → About to discover the SSO flow. When
+           already signed in the item shows the avatar mark + a "Sign out"
+           action; when signed out a single click kicks off the deep-link
+           flow against the catalog URL stored in SettingsStore. -->
+      <div
+        class="nav-item nav-item-sso"
+        :class="{ signedin: authStore.isAuthenticated }"
+        :title="authStore.isAuthenticated ? 'Signed in — click to sign out' : 'Sign in with SSO'"
+        @click="toggleSso"
+      >
+        <span class="nav-icon-shell">
+          <el-icon :size="18">
+            <component :is="authStore.isAuthenticated ? UserFilled : User" />
+          </el-icon>
+        </span>
+        <span class="nav-label">
+          {{ authStore.isAuthenticated ? 'Signed in' : 'Sign in' }}
+        </span>
+        <span v-if="authStore.loginPending" class="sso-spinner" />
+      </div>
     </div>
   </nav>
 </template>
@@ -192,14 +213,15 @@
 <script setup lang="ts">
 import { computed, onMounted, markRaw, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useServicesStore } from '../../stores/services'
 import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
-import { ElMessage } from 'element-plus'
+import { useAuthStore } from '../../stores/auth'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
@@ -208,6 +230,40 @@ const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiModeStore = useUiModeStore()
 const pluginsStore = usePluginsStore()
+const authStore = useAuthStore()
+
+async function toggleSso() {
+  if (authStore.isAuthenticated) {
+    try {
+      await ElMessageBox.confirm('Sign out of the catalog?', 'Sign out', { type: 'warning' })
+      authStore.logout()
+      ElMessage.success('Signed out')
+    } catch { /* user cancelled */ }
+    return
+  }
+  // Pull catalog URL from daemon settings so the flow talks to whatever
+  // catalog-api the user has configured. Default to the public NKS
+  // catalog when unset — matches SettingsStore fallback behaviour.
+  let catalogUrl = 'https://wdc.nks-hub.cz'
+  try {
+    const port = (window as any).daemonApi?.getPort?.()
+    const token = (window as any).daemonApi?.getToken?.()
+    if (port && token) {
+      const r = await fetch(`http://127.0.0.1:${port}/api/settings`,
+        { headers: { Authorization: `Bearer ${token}` } })
+      if (r.ok) {
+        const data = await r.json()
+        if (data?.['daemon.catalogUrl']) catalogUrl = data['daemon.catalogUrl']
+      }
+    }
+  } catch { /* fall back to default */ }
+  try {
+    await authStore.login(catalogUrl)
+    ElMessage.success('Signed in')
+  } catch (err: any) {
+    ElMessage.error(`Sign-in failed: ${err?.message ?? err}`)
+  }
+}
 
 // Plugin-contributed sidebar entries need the /api/plugins/ui round-trip to
 // populate before the Tools section can render. pluginsStore.loadAll is also
@@ -515,6 +571,21 @@ async function toggleSvc(svc: any) {
   background: rgba(243, 128, 32, 0.12);
   border-left-color: #f38020;
 }
+
+/* F83 SSO entry — subtle accent when signed in so the state is
+   legible without crowding the bottom-nav visual weight. */
+.nav-item-sso.signedin .nav-icon-shell { color: #16a34a; }
+.nav-item-sso.signedin { border-left-color: #16a34a; }
+.sso-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: sso-spin 0.7s linear infinite;
+}
+@keyframes sso-spin { to { transform: rotate(360deg); } }
 
 .nav-label {
   flex: 1;
