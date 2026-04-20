@@ -34,6 +34,13 @@ public class PluginLoadContext : AssemblyLoadContext
 
 public partial class PluginLoader
 {
+    // Shared across every plugin.json read — JsonSerializer caches type
+    // contracts per options reference, so a fresh one per plugin fragments
+    // the cache. Case-insensitive matches the leniency the daemon's other
+    // body deserializers already apply.
+    private static readonly JsonSerializerOptions ManifestJson =
+        new() { PropertyNameCaseInsensitive = true };
+
     private readonly ILogger<PluginLoader> _logger;
     private readonly List<LoadedPlugin> _plugins = [];
 
@@ -250,8 +257,7 @@ public partial class PluginLoader
                 var full = Path.GetFullPath(path);
                 if (!File.Exists(full)) continue;
                 var json = File.ReadAllText(full);
-                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                return JsonSerializer.Deserialize<PluginManifestData>(json, opts);
+                return JsonSerializer.Deserialize<PluginManifestData>(json, ManifestJson);
             }
             catch (Exception ex)
             {
