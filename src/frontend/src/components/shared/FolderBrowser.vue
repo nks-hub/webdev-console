@@ -82,6 +82,7 @@ import { Folder, Document, Back, HomeFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { browseFolder } from '../../api/daemon'
 import type { FsBrowseResponse, FsEntry } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{
   modelValue: boolean
@@ -108,8 +109,8 @@ async function navigate(path?: string) {
     current.value = res
     pathInput.value = res.path
     selectedPath.value = ''
-  } catch (e: any) {
-    ElMessage.error(`Cannot open path: ${e?.message ?? e}`)
+  } catch (e) {
+    ElMessage.error(`Cannot open path: ${errorMessage(e)}`)
   } finally {
     loading.value = false
   }

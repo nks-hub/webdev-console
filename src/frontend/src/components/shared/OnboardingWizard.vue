@@ -118,6 +118,7 @@ import {
   installSslCa,
   type OnboardingState,
 } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -139,7 +140,7 @@ const DEFAULT_VERSIONS: Record<string, string> = {
 async function refreshState() {
   try {
     state.value = await fetchOnboardingState()
-  } catch (e: any) {
+  } catch (e) {
     console.warn('[onboarding] state fetch failed', e)
     state.value = null
   }
@@ -153,8 +154,8 @@ async function doInstall(app: string) {
     await installBinary(app, version)
     ElMessage.success(`${app} ${version} installed`)
     await refreshState()
-  } catch (e: any) {
-    ElMessage.error(`${app}: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`${app}: ${errorMessage(e)}`)
   } finally {
     installing.value.delete(app)
   }
@@ -171,8 +172,8 @@ async function installCa() {
     await installSslCa()
     ElMessage.success('Local CA trusted')
     await refreshState()
-  } catch (e: any) {
-    ElMessage.error(`mkcert CA install failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`mkcert CA install failed: ${errorMessage(e)}`)
   } finally {
     installingCa.value = false
   }
@@ -182,8 +183,8 @@ async function finish() {
   try {
     await completeOnboarding()
     visible.value = false
-  } catch (e: any) {
-    ElMessage.error(`Failed to complete: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Failed to complete: ${errorMessage(e)}`)
   }
 }
 
