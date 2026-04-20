@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchPlugins, fetchPluginUi, enablePlugin, disablePlugin } from '../api/daemon'
+import { fetchPlugins, fetchPluginUi, fetchPluginNavEntries, enablePlugin, disablePlugin, type PluginNavEntry } from '../api/daemon'
 import type { PluginManifest, PluginUiDefinition } from '../api/types'
 import { useDaemonStore } from './daemon'
 
@@ -32,6 +32,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 export const usePluginsStore = defineStore('plugins', () => {
   const manifests = ref<PluginManifest[]>([])
   const uiDefinitions = ref<Map<string, PluginUiDefinition>>(new Map())
+  const navEntries = ref<PluginNavEntry[]>([])
   const loading = ref(false)
 
   const enabledPlugins = computed(() => manifests.value.filter(p => p.enabled))
@@ -83,6 +84,18 @@ export const usePluginsStore = defineStore('plugins', () => {
           }
         } catch { /* plugin may not have UI */ }
       }
+      // F91: pull aggregated nav contributions in a single round-trip so the
+      // sidebar can render without any hardcoded plugin names. Failures are
+      // swallowed — the sidebar falls back gracefully if the daemon predates
+      // the /api/plugins/ui endpoint.
+      try {
+        const nav = await fetchPluginNavEntries()
+        navEntries.value = (nav?.entries ?? []).slice().sort((a, b) => {
+          if (a.category !== b.category) return a.category.localeCompare(b.category)
+          if (a.order !== b.order) return a.order - b.order
+          return a.label.localeCompare(b.label)
+        })
+      } catch { /* older daemon, sidebar will render without plugin-contributed entries */ }
     } catch (err) {
       console.error('[plugins] loadAll failed:', err)
     } finally {
@@ -108,5 +121,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     return uiDefinitions.value.get(id)
   }
 
-  return { manifests, uiDefinitions, loading, enabledPlugins, sidebarCategories, loadAll, toggleEnable, getUi }
+  const toolsNavEntries = computed(() => navEntries.value.filter(e => e.category === 'Tools'))
+
+  return { manifests, uiDefinitions, navEntries, toolsNavEntries, loading, enabledPlugins, sidebarCategories, loadAll, toggleEnable, getUi }
 })

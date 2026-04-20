@@ -546,6 +546,19 @@ export const disablePlugin = (id: string) =>
 export const fetchPluginUi = (id: string) =>
   json<import('./types').PluginUiDefinition>(`/api/plugins/${id}/ui`)
 
+export interface PluginNavEntry {
+  pluginId: string
+  category: string
+  id: string
+  label: string
+  icon: string
+  route: string
+  order: number
+}
+
+export const fetchPluginNavEntries = () =>
+  json<{ entries: PluginNavEntry[] }>('/api/plugins/ui')
+
 // Binaries
 // Daemon returns a FLAT BinaryRelease[] (each entry has .app) rather than the
 // Record<app, BinaryRelease[]> the frontend used to assume. Group on the client

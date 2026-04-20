@@ -132,31 +132,28 @@
       <div class="section-label">
         <span>{{ $t('nav.tools') }}</span>
       </div>
-      <div class="nav-item" :class="{ active: isActive('/composer') }" @click="navigate('/composer')">
-        <span class="nav-icon-shell tools-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" stroke="currentColor" stroke-width="1.8" fill="none"/>
-            <path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-        </span>
-        <span class="nav-label">{{ $t('nav.composer') }}</span>
-      </div>
-      <div class="nav-item" :class="{ active: isActive('/hosts') }" @click="navigate('/hosts')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Document /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.hosts') }}</span>
-      </div>
-      <div class="nav-item" :class="{ active: isActive('/ssl') }" @click="navigate('/ssl')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.ssl') }}</span>
-      </div>
+      <!-- F91 phase 3: plugin-contributed nav entries. Order is driven by
+           each plugin's manifest (UiSchemaBuilder.AddNavEntry order field)
+           so the sidebar rearranges itself when plugins are enabled /
+           disabled without hardcoded composer/hosts/ssl/cloudflare paths. -->
       <div
+        v-for="entry in pluginsStore.toolsNavEntries"
+        :key="entry.pluginId + ':' + entry.id"
         class="nav-item"
-        :class="{ active: isActive('/cloudflare'), 'nav-item-tunnel': cloudflareRunning }"
-        @click="navigate('/cloudflare')"
+        :class="{
+          active: isActive(entry.route),
+          'nav-item-tunnel': entry.pluginId === 'nks.wdc.cloudflare' && cloudflareRunning,
+        }"
+        @click="navigate(entry.route)"
       >
-        <span class="nav-icon-shell"><el-icon :size="18"><Connection /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.tunnel') }}</span>
-        <span v-if="exposedSiteCount > 0" class="nav-badge mono">{{ exposedSiteCount }}</span>
+        <span class="nav-icon-shell">
+          <el-icon :size="18"><component :is="iconFor(entry.icon)" /></el-icon>
+        </span>
+        <span class="nav-label">{{ entry.label }}</span>
+        <span
+          v-if="entry.pluginId === 'nks.wdc.cloudflare' && exposedSiteCount > 0"
+          class="nav-badge mono"
+        >{{ exposedSiteCount }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
@@ -193,14 +190,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, markRaw, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, QuestionFilled } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useServicesStore } from '../../stores/services'
 import { useUiModeStore } from '../../stores/uiMode'
+import { usePluginsStore } from '../../stores/plugins'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -209,6 +207,25 @@ const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiModeStore = useUiModeStore()
+const pluginsStore = usePluginsStore()
+
+// Plugin-contributed sidebar entries need the /api/plugins/ui round-trip to
+// populate before the Tools section can render. pluginsStore.loadAll is also
+// called elsewhere (Plugins page), so the sidebar is idempotent: if the
+// store is already warm this returns immediately.
+onMounted(() => {
+  if (pluginsStore.manifests.length === 0) void pluginsStore.loadAll()
+})
+
+// Map the icon name (Element Plus component identifier) shipped in each
+// plugin's NavContribution to the actual runtime component. Falls back to
+// Box so a plugin shipping an unknown icon name still renders a sidebar row.
+const ICON_REGISTRY: Record<string, Component> = markRaw({
+  Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled,
+})
+function iconFor(name: string): Component {
+  return ICON_REGISTRY[name] ?? Box
+}
 
 // Sidebar is always expanded — the collapse toggle was dropped because
 // it added no value (sidebar fits at any reasonable window width) and
