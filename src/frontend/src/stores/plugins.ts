@@ -11,6 +11,24 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const enabledPlugins = computed(() => manifests.value.filter(p => p.enabled))
 
+  // Shared sort comparator: group by category (alpha), then by explicit
+  // order field, then by label as tiebreaker. Used by both loadAll and
+  // toggleEnable so the sidebar stays deterministic after plugin toggles.
+  function sortNavEntries(entries: readonly PluginNavEntry[]): PluginNavEntry[] {
+    return entries.slice().sort((a, b) => {
+      if (a.category !== b.category) return a.category.localeCompare(b.category)
+      if (a.order !== b.order) return a.order - b.order
+      return a.label.localeCompare(b.label)
+    })
+  }
+
+  async function refreshNavEntries(): Promise<void> {
+    try {
+      const nav = await fetchPluginNavEntries()
+      navEntries.value = sortNavEntries(nav?.entries ?? [])
+    } catch { /* older daemon, sidebar will render without plugin-contributed entries */ }
+  }
+
   async function loadAll() {
     loading.value = true
     try {
@@ -30,17 +48,8 @@ export const usePluginsStore = defineStore('plugins', () => {
         } catch { /* plugin may not have UI */ }
       }
       // F91: pull aggregated nav contributions in a single round-trip so the
-      // sidebar can render without any hardcoded plugin names. Failures are
-      // swallowed — the sidebar falls back gracefully if the daemon predates
-      // the /api/plugins/ui endpoint.
-      try {
-        const nav = await fetchPluginNavEntries()
-        navEntries.value = (nav?.entries ?? []).slice().sort((a, b) => {
-          if (a.category !== b.category) return a.category.localeCompare(b.category)
-          if (a.order !== b.order) return a.order - b.order
-          return a.label.localeCompare(b.label)
-        })
-      } catch { /* older daemon, sidebar will render without plugin-contributed entries */ }
+      // sidebar can render without any hardcoded plugin names.
+      await refreshNavEntries()
     } catch (err) {
       console.error('[plugins] loadAll failed:', err)
     } finally {
@@ -60,17 +69,8 @@ export const usePluginsStore = defineStore('plugins', () => {
       const ui = await fetchPluginUi(id).catch(() => null)
       if (ui) uiDefinitions.value.set(id, ui)
     }
-    // Re-pull aggregator so sidebar toolsNavEntries repaints without a
-    // full page reload. Swallows fetch failures so older daemons still
-    // get their per-plugin state updated.
-    try {
-      const nav = await fetchPluginNavEntries()
-      navEntries.value = (nav?.entries ?? []).slice().sort((a, b) => {
-        if (a.category !== b.category) return a.category.localeCompare(b.category)
-        if (a.order !== b.order) return a.order - b.order
-        return a.label.localeCompare(b.label)
-      })
-    } catch { /* already logged in loadAll */ }
+    // Re-pull aggregator so sidebar toolsNavEntries repaints without a full page reload.
+    await refreshNavEntries()
   }
 
   function getUi(id: string): PluginUiDefinition | undefined {
