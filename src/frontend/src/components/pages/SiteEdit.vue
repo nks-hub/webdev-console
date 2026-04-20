@@ -732,6 +732,7 @@ import {
   getHistoricalMetrics,
   daemonBaseUrl,
 } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -771,9 +772,10 @@ async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
     const result = await fn(site.value.domain)
     composeOutput.value = result.output || (result.ok ? 'Done' : 'Failed')
     if (!result.ok) ElMessage.warning(`Compose ${action} returned non-zero exit code`)
-  } catch (e: any) {
-    composeOutput.value = e?.message || String(e)
-    ElMessage.error(`Compose ${action} failed: ${e?.message || e}`)
+  } catch (e) {
+    const msg = errorMessage(e)
+    composeOutput.value = msg
+    ElMessage.error(`Compose ${action} failed: ${msg}`)
   } finally {
     composeLoading.value = false
   }
@@ -859,8 +861,8 @@ async function startNodeProcess() {
     const result = await startNodeSite(site.value.domain)
     nodeProcessState.value = result.state
     nodeProcessPid.value = result.pid
-  } catch (e: any) {
-    ElMessage.error(`Failed to start Node: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Failed to start Node: ${errorMessage(e)}`)
   } finally {
     nodeProcessLoading.value = false
   }
@@ -873,8 +875,8 @@ async function stopNodeProcess() {
     await stopNodeSite(site.value.domain)
     nodeProcessState.value = 0
     nodeProcessPid.value = null
-  } catch (e: any) {
-    ElMessage.error(`Failed to stop Node: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Failed to stop Node: ${errorMessage(e)}`)
   } finally {
     nodeProcessLoading.value = false
   }
@@ -887,8 +889,8 @@ async function restartNodeProcess() {
     const result = await restartNodeSite(site.value.domain)
     nodeProcessState.value = result.state
     nodeProcessPid.value = result.pid
-  } catch (e: any) {
-    ElMessage.error(`Failed to restart Node: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Failed to restart Node: ${errorMessage(e)}`)
   } finally {
     nodeProcessLoading.value = false
   }
@@ -957,8 +959,8 @@ async function loadCfZones() {
   try {
     const res = await fetchCloudflareZones()
     cfZones.value = res?.result ?? []
-  } catch (e: any) {
-    ElMessage.error(`Cannot load Cloudflare zones: ${e?.message || e}. Open the Cloudflare Tunnel page first to configure the API token.`)
+  } catch (e) {
+    ElMessage.error(`Cannot load Cloudflare zones: ${errorMessage(e)}. Open the Cloudflare Tunnel page first to configure the API token.`)
   } finally {
     loadingCfZones.value = false
   }
@@ -1077,8 +1079,8 @@ async function detectFramework() {
     } else {
       ElMessage.info('No framework detected')
     }
-  } catch (e: any) {
-    ElMessage.error(`Detection failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Detection failed: ${errorMessage(e)}`)
   } finally {
     detecting.value = false
   }
@@ -1156,8 +1158,8 @@ async function save() {
     if (selectedRuntime.value === 'node') {
       void refreshNodeStatus()
     }
-  } catch (e: any) {
-    ElMessage.error(`Update failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
   } finally {
     saving.value = false
   }
@@ -1180,8 +1182,8 @@ async function rollback(timestamp: string) {
     if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
     ElMessage.success('Config restored')
     await load()
-  } catch (e: any) {
-    ElMessage.error(`Restore failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Restore failed: ${errorMessage(e)}`)
   }
 }
 
@@ -1371,8 +1373,8 @@ async function loadHistoricalMetrics() {
       date: historicalDate.value,
       granularity: historicalGranularity.value,
     })
-  } catch (e: any) {
-    ElMessage.error(`Historical metrics failed: ${e?.message || e}`)
+  } catch (e) {
+    ElMessage.error(`Historical metrics failed: ${errorMessage(e)}`)
     historicalData.value = null
   } finally {
     historicalLoading.value = false
