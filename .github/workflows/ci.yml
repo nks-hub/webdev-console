@@ -14,6 +14,9 @@ jobs:
   build-daemon:
     name: Build Daemon (.NET)
     runs-on: windows-latest
+    # Build+test+publish typically ~4m; 25m catches a hang (e.g. NuGet
+    # restore DNS timeout, runaway xunit test) well before GH's default 6h.
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -64,6 +67,7 @@ jobs:
   build-frontend:
     name: Build Frontend (Electron)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -106,6 +110,9 @@ jobs:
     runs-on: windows-latest
     needs: [build-daemon, build-frontend]
     if: github.event_name == 'push'
+    # electron-builder + smoke typically ~6m; 25m allows for a slow npm ci
+    # or an occasional nsis packer stall on hosted runners.
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -170,6 +177,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-daemon
     continue-on-error: true
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
