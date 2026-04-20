@@ -7,7 +7,7 @@ PHP, MySQL/MariaDB, SSL, mail catching, Redis, Node, Cloudflare tunnels and DNS
 for `.local` / `.test` domains. Replacement for MAMP PRO, XAMPP, WampServer,
 Laragon and similar tools.
 
-> **Status:** v0.1.0 — actively developed. Most features are working; some
+> **Status:** v0.2.0 — actively developed. Most features are working; some
 > Phase 11 items (Nginx plugin, PostgreSQL plugin, RBAC, Docker Compose support)
 > are still on the roadmap.
 
@@ -174,7 +174,7 @@ request.
 PORT=$(sed -n 1p $TMPDIR/nks-wdc-daemon.port)
 TOKEN=$(sed -n 2p $TMPDIR/nks-wdc-daemon.port)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:$PORT/api/status
-# → {"status":"running","version":"0.1.0","plugins":10,"uptime":215437}
+# → {"status":"running","version":"0.2.0","plugins":10,"uptime":215437}
 ```
 
 OpenAPI is exposed at `/openapi/v1.json` (Microsoft.AspNetCore.OpenApi).
