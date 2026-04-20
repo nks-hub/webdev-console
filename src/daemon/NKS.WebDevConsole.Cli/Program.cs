@@ -850,7 +850,7 @@ importDbCmd.SetAction(async (parseResult, ct) =>
         UseShellExecute = false,
         CreateNoWindow = true
     };
-    var proc = System.Diagnostics.Process.Start(psi);
+    using var proc = System.Diagnostics.Process.Start(psi);
     if (proc != null)
     {
         var errTask = proc.StandardError.ReadToEndAsync();
@@ -897,7 +897,7 @@ exportDbCmd.SetAction(async (parseResult, ct) =>
         UseShellExecute = false,
         CreateNoWindow = true
     };
-    var proc = System.Diagnostics.Process.Start(psi);
+    using var proc = System.Diagnostics.Process.Start(psi);
     if (proc != null)
     {
         var sqlTask = proc.StandardOutput.ReadToEndAsync();
@@ -946,7 +946,7 @@ tablesCmd.SetAction(async (parseResult, ct) =>
         UseShellExecute = false,
         CreateNoWindow = true
     };
-    var proc = System.Diagnostics.Process.Start(psi);
+    using var proc = System.Diagnostics.Process.Start(psi);
     if (proc == null) return;
     var outputTask = proc.StandardOutput.ReadToEndAsync();
     var errTask = proc.StandardError.ReadToEndAsync();
@@ -1005,7 +1005,7 @@ queryCmd.SetAction(async (parseResult, ct) =>
         RedirectStandardOutput = true, RedirectStandardError = true,
         UseShellExecute = false, CreateNoWindow = true
     };
-    var proc = System.Diagnostics.Process.Start(psi);
+    using var proc = System.Diagnostics.Process.Start(psi);
     if (proc == null) return;
     var output = await proc.StandardOutput.ReadToEndAsync();
     var err = await proc.StandardError.ReadToEndAsync();
@@ -1042,7 +1042,7 @@ sizeCmd.SetAction(async (parseResult, ct) =>
         RedirectStandardOutput = true, RedirectStandardError = true,
         UseShellExecute = false, CreateNoWindow = true
     };
-    var proc = System.Diagnostics.Process.Start(psi);
+    using var proc = System.Diagnostics.Process.Start(psi);
     if (proc == null) return;
     var outputTask = proc.StandardOutput.ReadToEndAsync();
     var errTask = proc.StandardError.ReadToEndAsync();
