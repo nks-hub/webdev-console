@@ -1,0 +1,76 @@
+name: Publish Plugin SDK
+
+# F100: pack + push NKS.WebDevConsole.Plugin.SDK to GitHub Packages on
+# every `v*` tag pushed to main. Uses the built-in GITHUB_TOKEN so no
+# external nuget.org account / API key is required.
+#
+# Consumer plugins (webdev-console-plugins repo) can then switch their
+# csprojs from relative ProjectReference to PackageReference:
+#
+#   <PackageReference Include="NKS.WebDevConsole.Plugin.SDK" Version="0.1.*" />
+#
+# after adding the github packages source:
+#
+#   dotnet nuget add source https://nuget.pkg.github.com/nks-hub/index.json \
+#     --name nks-hub --username <user> --password <gh-token>
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v0.1.74)'
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          # Strip leading "v" if present so the nupkg ends up as
+          # NKS.WebDevConsole.Plugin.SDK.<semver>.nupkg
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Publishing SDK version ${VERSION}"
+
+      - name: Restore
+        run: dotnet restore src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj
+
+      - name: Build
+        run: dotnet build src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj -c Release --no-restore
+
+      - name: Pack
+        run: |
+          dotnet pack src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj \
+            -c Release --no-build \
+            -p:PackageVersion=${{ steps.version.outputs.version }} \
+            -o out/
+
+      - name: Push to GitHub Packages
+        run: |
+          dotnet nuget push "out/*.nupkg" \
+            --source "https://nuget.pkg.github.com/nks-hub/index.json" \
+            --api-key ${{ secrets.GITHUB_TOKEN }} \
+            --skip-duplicate
+
+      - name: Upload nupkg as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-sdk-${{ steps.version.outputs.version }}
+          path: out/*.nupkg

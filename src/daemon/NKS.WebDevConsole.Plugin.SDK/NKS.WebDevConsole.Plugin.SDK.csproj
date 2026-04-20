@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\NKS.WebDevConsole.Core\NKS.WebDevConsole.Core.csproj" />
@@ -8,6 +8,42 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- F100: NuGet package metadata. Kept in lockstep with daemon
+         csproj Version so `dotnet pack` produces a package that matches
+         the shipped app version. The publish-sdk.yml workflow runs on
+         every `v*` tag push, builds + packs, and pushes to GitHub
+         Packages (nuget.pkg.github.com/nks-hub) via GITHUB_TOKEN — no
+         external nuget.org credentials required.
+
+         Downstream plugin csprojs can then switch from relative
+         ProjectReference to PackageReference:
+           <PackageReference Include="NKS.WebDevConsole.Plugin.SDK" Version="0.1.*" />
+         so the webdev-console-plugins repo builds standalone without
+         needing the monorepo sideloaded for SDK/Core types. -->
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>NKS.WebDevConsole.Plugin.SDK</PackageId>
+    <Version>0.1.74</Version>
+    <Authors>NKS Hub</Authors>
+    <Company>NKS Hub</Company>
+    <Description>Plugin SDK for NKS WebDev Console — IWdcPlugin base types, endpoint registration, UI schema builder. Implement IWdcPlugin to ship a new plugin.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/nks-hub/webdev-console-plugins</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nks-hub/webdev-console</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>nks;webdev-console;plugin;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- NKS.WebDevConsole.Core is packed as a transitive dependency
+         entry because plugin authors already receive the Core types via
+         the SDK's public API surface (PluginContext, IServiceModule,
+         PluginUiDefinition, etc.). Emitting the ProjectReference into
+         the nupkg keeps downstream restore hermetic. -->
+    <IncludeBuildOutput>true</IncludeBuildOutput>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
