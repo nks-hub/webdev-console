@@ -36,5 +36,7 @@ interface Window {
     onSsoCallback: (
       handler: (payload: { token: string; error: string }) => void,
     ) => () => void
+    /** Reveal file/directory in the native file manager. */
+    revealInFolder: (targetPath: string) => Promise<boolean>
   }
 }

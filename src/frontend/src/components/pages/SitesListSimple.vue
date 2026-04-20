@@ -288,9 +288,12 @@ async function confirmDuplicate() {
 // ── File reveal ───────────────────────────────────────────────────────
 
 function revealInFolder(docroot: string) {
-  if ((window as any).electronAPI?.revealInFolder) {
-    (window as any).electronAPI.revealInFolder(docroot)
+  if (window.electronAPI?.revealInFolder) {
+    window.electronAPI.revealInFolder(docroot)
   } else {
+    // Browser dev fallback — packaged Electron always has the preload
+    // surface, so this only fires when the renderer is loaded outside
+    // an Electron BrowserWindow (e.g. `vite dev` in Chrome).
     window.open(`file://${docroot}`)
   }
 }

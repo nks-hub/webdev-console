@@ -79,6 +79,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showOpenDialog: (options?: Electron.OpenDialogOptions) =>
     ipcRenderer.invoke('show-open-dialog', options),
 
+  // Reveal a path in the native file manager (Explorer / Finder). Used
+  // by the sites list "Show in folder" action — previously the renderer
+  // called this method without preload exposing it, so the fallback
+  // `window.open('file://…')` ran and silently failed under Electron's
+  // sandboxed renderer. Returns true on success, false on rejection.
+  revealInFolder: (targetPath: string) =>
+    ipcRenderer.invoke('reveal-in-folder', targetPath),
+
   // F83 SSO — subscribe to `wdc://auth-callback?token=...` deep-link
   // events forwarded from main. Handler receives { token, error }.
   // Returns an unsubscribe function so components can wire this up in

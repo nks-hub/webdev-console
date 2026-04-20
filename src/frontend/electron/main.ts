@@ -812,6 +812,22 @@ ipcMain.handle('show-open-dialog', async (_evt, options: Electron.OpenDialogOpti
   return { canceled: result.canceled, filePaths: result.filePaths }
 })
 
+// Reveal a file or directory in the user's native file manager (Explorer
+// / Finder / Nautilus). Renderer calls this to open the "Show in folder"
+// action from the sites list. Previously the renderer checked for
+// `electronAPI.revealInFolder` which was never exposed, so the else
+// branch `window.open('file://…')` always ran — which silently fails in
+// packaged Electron because of the sandboxed renderer's file: policy.
+ipcMain.handle('reveal-in-folder', async (_evt, targetPath: string) => {
+  if (typeof targetPath !== 'string' || targetPath.length === 0) return false
+  try {
+    shell.showItemInFolder(targetPath)
+    return true
+  } catch {
+    return false
+  }
+})
+
 app.whenReady().then(async () => {
   protocol.handle('app', (request) => {
     const url = new URL(request.url)
