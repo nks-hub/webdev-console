@@ -323,13 +323,28 @@ export const fetchCloudflareConfig = (): Promise<CloudflareConfig> =>
 export const saveCloudflareConfig = (cfg: Partial<CloudflareConfig>): Promise<CloudflareConfig> =>
   json('/api/cloudflare/config', { method: 'PUT', body: JSON.stringify(cfg) })
 
-export const verifyCloudflareToken = (): Promise<any> =>
+/**
+ * Cloudflare API v4 response envelope. The daemon proxies CF responses
+ * through `/api/cloudflare/*` preserving this shape. Generic over the
+ * payload so each endpoint can pin `result` to its own subtype instead
+ * of stringly-typed `any` returns.
+ */
+export interface CfResponse<T> {
+  success: boolean
+  result?: T
+  errors?: Array<{ code?: number; message?: string }>
+  messages?: Array<{ code?: number; message?: string }>
+}
+
+export const verifyCloudflareToken = (): Promise<CfResponse<unknown>> =>
   json('/api/cloudflare/verify')
 
-export const fetchCloudflareZones = (): Promise<any> =>
+export const fetchCloudflareZones = (): Promise<CfResponse<Array<{ id: string; name: string }>>> =>
   json('/api/cloudflare/zones')
 
-export const fetchCloudflareDns = (zoneId: string): Promise<any> =>
+export const fetchCloudflareDns = (
+  zoneId: string,
+): Promise<CfResponse<Array<{ id: string; type: string; name: string; content: string; proxied: boolean }>>> =>
   json(`/api/cloudflare/zones/${zoneId}/dns`)
 
 export interface CfDnsRecordCreate {
@@ -339,13 +354,13 @@ export interface CfDnsRecordCreate {
   proxied?: boolean
   ttl?: number
 }
-export const createCloudflareDns = (zoneId: string, body: CfDnsRecordCreate): Promise<any> =>
+export const createCloudflareDns = (zoneId: string, body: CfDnsRecordCreate): Promise<CfResponse<{ id: string }>> =>
   json(`/api/cloudflare/zones/${zoneId}/dns`, { method: 'POST', body: JSON.stringify(body) })
 
-export const deleteCloudflareDns = (zoneId: string, recordId: string): Promise<any> =>
+export const deleteCloudflareDns = (zoneId: string, recordId: string): Promise<CfResponse<{ id?: string }>> =>
   json(`/api/cloudflare/zones/${zoneId}/dns/${recordId}`, { method: 'DELETE' })
 
-export const fetchCloudflareTunnels = (): Promise<any> =>
+export const fetchCloudflareTunnels = (): Promise<CfResponse<Array<{ id: string; name: string }>>> =>
   json('/api/cloudflare/tunnels')
 
 export interface CfIngressRule {
