@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
-import './assets/tailwind.css'
+import './assets/tokens.css'
 import * as ElementPlusIcons from '@element-plus/icons-vue'
 
 import { router } from './router/index'
