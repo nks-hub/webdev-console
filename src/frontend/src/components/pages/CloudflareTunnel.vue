@@ -758,8 +758,19 @@ async function applyIngress() {
 }
 
 // ── DNS records ──────────────────────────────────────────────────────
+// Minimal shape of the Cloudflare /zones/:id/dns_records entries the
+// table template reads. The upstream response has many more fields
+// (ttl, meta, locked, created_on, …) but pinning just the ones we
+// actually render catches typos without typing the whole v4 schema.
+interface CfDnsRecord {
+  id: string
+  type: string
+  name: string
+  content: string
+  proxied: boolean
+}
 const selectedDnsZoneId = ref<string>('')
-const dnsRecords = ref<any[]>([])
+const dnsRecords = ref<CfDnsRecord[]>([])
 const loadingDns = ref(false)
 const creatingDns = ref(false)
 const newDns = reactive<{ type: string; name: string; content: string; proxied: boolean }>({
@@ -811,7 +822,7 @@ async function createDnsRecord() {
   }
 }
 
-async function deleteDnsRecord(row: any) {
+async function deleteDnsRecord(row: CfDnsRecord) {
   try {
     await ElMessageBox.confirm(
       `Delete ${row.type} record "${row.name}"?`,
