@@ -78,4 +78,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // inputs in Settings/Cesty), ['openFile'] for a single file, etc.
   showOpenDialog: (options?: Electron.OpenDialogOptions) =>
     ipcRenderer.invoke('show-open-dialog', options),
+
+  // F83 SSO — subscribe to `wdc://auth-callback?token=...` deep-link
+  // events forwarded from main. Handler receives { token, error }.
+  // Returns an unsubscribe function so components can wire this up in
+  // onMounted and release the listener in onBeforeUnmount.
+  onSsoCallback: (handler: (payload: { token: string; error: string }) => void) => {
+    const listener = (_evt: unknown, payload: { token: string; error: string }) => handler(payload)
+    ipcRenderer.on('sso-callback', listener)
+    return () => ipcRenderer.removeListener('sso-callback', listener)
+  },
 })

@@ -726,6 +726,60 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
 ])
 
+// F83 SSO — register `wdc://` as the deep-link scheme used by catalog-api
+// to hand a session token back to the desktop app after the OIDC
+// redirect dance completes. `setAsDefaultProtocolClient` is idempotent
+// on Windows (just writes registry on first call) and a no-op on Linux
+// when the app is not yet installed via the desktop file. We also claim
+// single-instance so a second `wdc://...` launch forwards the URL to
+// the already-running window instead of opening a ghost process.
+const gotSingleInstance = app.requestSingleInstanceLock()
+if (!gotSingleInstance) {
+  app.quit()
+} else {
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient('wdc', process.execPath, [process.argv[1]])
+    }
+  } else {
+    app.setAsDefaultProtocolClient('wdc')
+  }
+}
+
+/** Extracts a `wdc://auth-callback?token=...` URL from command-line args
+ * (Windows second-instance) or a macOS 'open-url' event payload, and
+ * forwards it to the renderer as a structured IPC event. Empty/unknown
+ * inputs are ignored — we never trust the payload beyond shape. */
+function forwardSsoCallback(rawUrl: string) {
+  try {
+    const u = new URL(rawUrl)
+    if (u.protocol !== 'wdc:') return
+    if (u.hostname !== 'auth-callback' && u.pathname !== '//auth-callback') return
+    const token = u.searchParams.get('token') ?? ''
+    const error = u.searchParams.get('error') ?? ''
+    if (!win) return
+    win.webContents.send('sso-callback', { token, error })
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  } catch { /* malformed URL — ignore, never crash the app */ }
+}
+
+app.on('second-instance', (_evt, argv) => {
+  const deepLink = argv.find(a => a.startsWith('wdc://'))
+  if (deepLink) forwardSsoCallback(deepLink)
+  if (win) {
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  }
+})
+
+// macOS delivers custom-scheme launches via 'open-url'; Windows/Linux
+// use process argv and second-instance. Both feed the same forwarder.
+app.on('open-url', (evt, url) => {
+  evt.preventDefault()
+  forwardSsoCallback(url)
+})
+
 if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
