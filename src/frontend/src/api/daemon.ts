@@ -872,11 +872,16 @@ export function subscribeEvents(
   function scheduleReconnect() {
     if (closed) return
     if (reconnectTimer !== null) return
+    // Add ±20% jitter so multiple renderer windows reconnecting after a
+    // daemon restart don't all hit /api/events at the exact same moment.
+    // Without jitter an exponential-backoff herd can keep retriggering
+    // thundering reconnects on every failed probe.
+    const jitter = backoffMs * (0.8 + Math.random() * 0.4)
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null
       backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF)
       connect()
-    }, backoffMs)
+    }, jitter)
   }
 
   connect()
