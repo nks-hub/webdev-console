@@ -844,6 +844,7 @@ import {
   type DeviceInfo as CatalogDeviceInfo,
   type SystemInfo,
 } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
@@ -1060,7 +1061,7 @@ async function createDatabase() {
     ElMessage.success(`Database ${newDbName.value} created`)
     newDbName.value = ''
     await loadDatabases()
-  } catch (e: any) { ElMessage.error(`Create failed: ${e?.message || e}`) }
+  } catch (e) { ElMessage.error(`Create failed: ${errorMessage(e)}`) }
 }
 
 async function dropDatabase(name: string) {
@@ -1069,7 +1070,7 @@ async function dropDatabase(name: string) {
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     ElMessage.success(`Database ${name} dropped`)
     await loadDatabases()
-  } catch (e: any) { ElMessage.error(`Drop failed: ${e?.message || e}`) }
+  } catch (e) { ElMessage.error(`Drop failed: ${errorMessage(e)}`) }
 }
 
 async function flushDns() {
