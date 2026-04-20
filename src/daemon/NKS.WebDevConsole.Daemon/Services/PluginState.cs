@@ -18,6 +18,10 @@ public sealed class PluginState
     private static readonly string StateFilePath = Path.Combine(
         WdcPaths.DataRoot, "plugin-state.json");
 
+    // Shared across all Save() calls — JsonSerializer caches type contracts
+    // per options instance, so one-per-write fragments the cache.
+    private static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
+
     private readonly object _lock = new();
     private readonly HashSet<string> _disabled = new(StringComparer.OrdinalIgnoreCase);
 
@@ -73,7 +77,7 @@ public sealed class PluginState
         Directory.CreateDirectory(Path.GetDirectoryName(StateFilePath)!);
         var json = JsonSerializer.Serialize(
             _disabled.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
-            new JsonSerializerOptions { WriteIndented = true });
+            IndentedJson);
         File.WriteAllText(StateFilePath, json);
     }
 }

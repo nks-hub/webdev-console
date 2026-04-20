@@ -24,6 +24,12 @@ public sealed class PhpExtensionOverrides
     private static readonly string StateFilePath = Path.Combine(
         WdcPaths.DataRoot, "php-extensions.json");
 
+    // Reuse one JsonSerializerOptions instance across all Save() calls — the
+    // serializer caches type-contracts per options reference, so a fresh one
+    // per write fragments that cache and re-reflects the payload shape every
+    // time the user toggles an extension switch.
+    private static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
+
     private readonly object _lock = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, bool>> _state = new();
 
@@ -126,7 +132,7 @@ public sealed class PhpExtensionOverrides
         var payload = _state.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase));
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(payload, IndentedJson);
         File.WriteAllText(StateFilePath, json);
     }
 }

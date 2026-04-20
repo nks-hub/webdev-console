@@ -33,6 +33,9 @@ public sealed class TelemetryConsent
     private static readonly string ConsentFilePath = Path.Combine(
         WdcPaths.DataRoot, "telemetry-consent.json");
 
+    // Shared across all Save() calls — see PluginState for the cache rationale.
+    private static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
+
     private static readonly object _lock = new();
 
     public bool Enabled { get; private set; }
@@ -98,7 +101,7 @@ public sealed class TelemetryConsent
             };
             File.WriteAllText(
                 ConsentFilePath,
-                JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                JsonSerializer.Serialize(payload, IndentedJson));
         }
     }
 
