@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NKS.WebDevConsole.Daemon.Sites;
 
-public class SiteManager
+public sealed class SiteManager
 {
     private readonly ILogger<SiteManager> _logger;
     private readonly TemplateEngine _templateEngine;

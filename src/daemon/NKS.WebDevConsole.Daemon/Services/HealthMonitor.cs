@@ -5,7 +5,7 @@ using NKS.WebDevConsole.Core.Models;
 
 namespace NKS.WebDevConsole.Daemon.Services;
 
-public class HealthMonitor : BackgroundService
+public sealed class HealthMonitor : BackgroundService
 {
     private readonly IServiceProvider _sp;
     private readonly SseService _sse;

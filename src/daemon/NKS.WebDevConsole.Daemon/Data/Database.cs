@@ -16,7 +16,7 @@ namespace NKS.WebDevConsole.Daemon.Data;
 /// Dapper's always-parameterised query API — no string-concatenation
 /// queries exist in the codebase.
 /// </summary>
-public class Database
+public sealed class Database
 {
     private readonly string _connectionString;
 

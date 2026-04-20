@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NKS.WebDevConsole.Daemon.Data;
 
-public class MigrationRunner
+public sealed class MigrationRunner
 {
     private readonly ILogger<MigrationRunner> _logger;
 

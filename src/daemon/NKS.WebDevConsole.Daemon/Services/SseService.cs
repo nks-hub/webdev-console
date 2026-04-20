@@ -100,7 +100,7 @@ public sealed class SseService
     public int ClientCount => _clients.Count;
 }
 
-public class SseClient : IDisposable
+public sealed class SseClient : IDisposable
 {
     public string Id { get; }
     public HttpResponse Response { get; }
