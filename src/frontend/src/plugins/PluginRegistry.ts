@@ -39,6 +39,3 @@ export async function loadPluginBundle(pluginId: string, bundleUrl: string): Pro
   }
 }
 
-export function getBundleComponents(pluginId: string): Record<string, Component> {
-  return bundleRegistry.get(pluginId) ?? {}
-}
