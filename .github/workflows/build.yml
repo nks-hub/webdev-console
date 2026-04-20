@@ -39,6 +39,9 @@ jobs:
               src/frontend/release/*.AppImage
               src/frontend/release/latest-linux.yml
     runs-on: ${{ matrix.os }}
+    # Full release build (daemon publish + frontend bundle + installer pack)
+    # runs ~10m per matrix leg; 40m covers worst-case macOS-slow + NSIS packer.
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v6

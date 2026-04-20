@@ -37,6 +37,10 @@ jobs:
           || (github.event.workflow_run.conclusion == 'success'
               && startsWith(github.event.workflow_run.head_branch, 'v')) }}
     runs-on: windows-2022
+    # Defender submission is a single API call + small artifact upload,
+    # typically ~2m. 10m catches a Defender-API outage without burning
+    # billable minutes.
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v6

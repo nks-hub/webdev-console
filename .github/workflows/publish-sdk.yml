@@ -31,6 +31,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # SDK pack + release asset upload normally completes in ~1m; 10m is
+    # an ample safety margin for a flaky NuGet/GitHub API.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
 
