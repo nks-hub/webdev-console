@@ -101,8 +101,9 @@
 import { computed, ref } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { useServicesStore } from '../../stores/services'
+import type { ServiceInfo } from '../../api/types'
 
-const props = defineProps<{ service: any }>()
+const props = defineProps<{ service: ServiceInfo }>()
 const servicesStore = useServicesStore()
 const pendingAction = ref<'start' | 'stop' | 'restart' | null>(null)
 
@@ -111,7 +112,10 @@ const busy = computed(() => servicesStore.isBusy(props.service.id))
 const stateLabels: Record<number, string> = {
   0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled',
 }
-const statusText = computed(() => stateLabels[props.service.state] ?? props.service.status ?? 'unknown')
+const statusText = computed(() => {
+  const st = props.service.state
+  return (st != null ? stateLabels[st] : undefined) ?? props.service.status ?? 'unknown'
+})
 const isRunning = computed(() => props.service.state === 2)
 const isStopped = computed(() => props.service.state === 0 || props.service.state === 5)
 

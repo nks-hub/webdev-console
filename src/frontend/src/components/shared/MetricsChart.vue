@@ -38,8 +38,8 @@ const chartOption = computed(() => {
       backgroundColor: '#1c1e2a',
       borderColor: 'rgba(255,255,255,0.12)',
       textStyle: { color: '#eceef6', fontSize: 11 },
-      formatter: (params: any) => {
-        const val = params?.[0]?.value
+      formatter: (params: unknown) => {
+        const val = (params as Array<{ value?: unknown }>)?.[0]?.value
         return val != null ? `${Number(val).toFixed(1)}` : ''
       },
     },

@@ -106,10 +106,10 @@ const commands = computed<Command[]>(() => [
     action: () => { if (svc.state === 2) servicesStore.stop(svc.id) },
   })),
   { id: 'start-all', label: 'Start All Services', icon: Promotion, action: () => {
-    daemonStore.services.filter((s: any) => s.state === 0).forEach((s: any) => servicesStore.start(s.id))
+    daemonStore.services.filter(s => s.state === 0).forEach(s => servicesStore.start(s.id))
   }},
   { id: 'stop-all', label: 'Stop All Services', icon: CircleClose, action: () => {
-    daemonStore.services.filter((s: any) => s.state === 2).forEach((s: any) => servicesStore.stop(s.id))
+    daemonStore.services.filter(s => s.state === 2).forEach(s => servicesStore.stop(s.id))
   }},
   // Dynamic per-site commands — open in browser + edit
   ...sitesStore.sites.map(site => ({
