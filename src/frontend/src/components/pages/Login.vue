@@ -84,8 +84,8 @@ async function doLogin() {
     await authStore.login(catalogUrl.value || 'https://wdc.nks-hub.cz')
     ElMessage.success('Signed in')
     goHome()
-  } catch (err: any) {
-    ElMessage.error(`Sign-in failed: ${err?.message ?? err}`)
+  } catch (err) {
+    ElMessage.error(`Sign-in failed: ${err instanceof Error ? err.message : err}`)
   }
 }
 

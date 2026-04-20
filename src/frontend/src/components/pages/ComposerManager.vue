@@ -164,12 +164,12 @@ async function selfInstall(): Promise<void> {
       headers: authHeaders(),
     })
     if (!r.ok) {
-      const body = await r.json().catch(() => ({}))
-      throw new Error((body as any).detail || `HTTP ${r.status}`)
+      const body = await r.json().catch(() => ({})) as { detail?: string }
+      throw new Error(body.detail || `HTTP ${r.status}`)
     }
     await loadComposerVersion()
-  } catch (e: any) {
-    installError.value = e.message ?? String(e)
+  } catch (e) {
+    installError.value = e instanceof Error ? e.message : String(e)
   } finally {
     installing.value = false
   }
