@@ -115,7 +115,12 @@ export const useDaemonStore = defineStore('daemon', () => {
       // up to 5s even though the new token was already in the port file.
       if (retryCount < 5 && !fastRetryTimer) {
         retryCount++
-        const delay = Math.min(300 * retryCount, 1500)
+        // Base delay scales linearly; ±20% jitter so multiple renderer
+        // windows don't synchronise their fast-retry probes on the same
+        // instant after a daemon restart (same rationale as subscribeEvents
+        // jitter added in e4efb49).
+        const base = Math.min(300 * retryCount, 1500)
+        const delay = base * (0.8 + Math.random() * 0.4)
         fastRetryTimer = setTimeout(() => {
           fastRetryTimer = null
           void poll()
