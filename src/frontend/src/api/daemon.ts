@@ -486,7 +486,7 @@ export async function fetchDevices(
 
 export async function pushConfigToDevice(
   catalogUrl: string, token: string, targetDeviceId: string, sourceDeviceId: string,
-): Promise<any> {
+): Promise<unknown> {
   const r = await fetch(`${catalogBase(catalogUrl)}/api/v1/devices/${targetDeviceId}/push-config`, {
     method: 'POST',
     headers: jwtHeaders(token),
