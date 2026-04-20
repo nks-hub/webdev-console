@@ -17,11 +17,9 @@ import type {
   AccessLogEntry,
 } from './types'
 
-declare global {
-  interface Window {
-    daemonApi: { getPort: () => number; getToken: () => string }
-  }
-}
+// Window.daemonApi is declared in src/env.d.ts alongside the other
+// preload surfaces (electronAPI, __APP_VERSION__). Moved there so files
+// that don't import from this module still see the global type.
 
 // Exported so pages hitting ad-hoc daemon endpoints via raw fetch() (10+
 // pages used to ship their own slightly-different copy of this) share

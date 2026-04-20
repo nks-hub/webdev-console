@@ -20,6 +20,15 @@ interface Window {
   __APP_VERSION__?: string
 
   /**
+   * Port + token lookup exposed by electron/preload.ts so the renderer
+   * can talk to the .NET daemon whose port is written to a rotating
+   * file on disk. Declared here (not in api/daemon.ts) so pages can
+   * access `window.daemonApi?.getPort()` without importing from the
+   * API module just to pull in the type.
+   */
+  daemonApi: { getPort: () => number; getToken: () => string }
+
+  /**
    * Context-bridge surface exposed by electron/preload.ts. Optional
    * because the renderer also loads in browser dev mode where the
    * preload never runs — consumers must guard access. Keep this in
