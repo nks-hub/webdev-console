@@ -56,6 +56,30 @@ nks-ws/
 └── .github/workflows/             # CI matrix — Windows, macOS, Linux
 ```
 
+### Related repositories
+
+NKS WebDev Console ships as four co-operating repositories. Pushes to this
+repo's `v*` tag fan out to the other three via workflows.
+
+| Repo | Purpose | Triggered how |
+|------|---------|---------------|
+| [`nks-hub/webdev-console-plugins`](https://github.com/nks-hub/webdev-console-plugins) | Extracted plugin csprojs (13 plugins) | consumes SDK `.nupkg` published here on every `v*` tag; own `auto-release.yml` cuts per-plugin releases when `plugin.json.version` bumps |
+| [`nks-hub/wdc-catalog-api`](https://github.com/nks-hub/wdc-catalog-api) | FastAPI backend (binaries + plugins catalog, SSO, admin UI) | daemon pulls `/api/v1/plugins/catalog` + `/api/v1/catalog` at runtime (F95 auto-sync) |
+| [`nks-hub/webdev-console-binaries`](https://github.com/nks-hub/webdev-console-binaries) | Versioned runtime binaries (PHP, Apache, Nginx, Caddy, Mailpit, cloudflared) | mirrored into catalog-api; daemon `BinaryManager` installs from these releases |
+
+### Release train
+
+A single `v0.x.y` tag push to this repo fires in parallel:
+
+1. **Build & Release** (`build.yml`) — Windows/macOS/Linux installers + GH
+   Release + `latest.yml` for the auto-updater.
+2. **Publish Plugin SDK** (`publish-sdk.yml`) — packs `NKS.WebDevConsole.Plugin.SDK`
+   with `PackageVersion=<tag>`, pushes to `nuget.pkg.github.com/nks-hub`, and
+   attaches the same `.nupkg` to the GH Release as an asset so cross-repo
+   consumers can fetch it without a PAT.
+3. **Defender Submission** + **Release Security Scan** — Windows SmartScreen
+   false-positive queue + VirusTotal pre-release scan, wired via `workflow_run`.
+
 ## Building from source
 
 The only supported install method right now is building from source. There is
