@@ -5,15 +5,16 @@ Base library for building plugins that extend [NKS WebDev Console](https://githu
 ## Install
 
 ```xml
-<PackageReference Include="NKS.WebDevConsole.Plugin.SDK" Version="0.1.*" />
+<PackageReference Include="NKS.WebDevConsole.Plugin.SDK" Version="0.2.*" />
 ```
 
-Published to GitHub Packages at `nuget.pkg.github.com/nks-hub`.
-Configure a nuget source once:
-
-```cmd
-dotnet nuget add source https://nuget.pkg.github.com/nks-hub/index.json --name nks-hub --username <gh-user> --password <gh-token>
-```
+The `.nupkg` is attached to each GitHub Release of the monorepo (under
+`github.com/nks-hub/webdev-console/releases`). A GitHub Packages feed is *not*
+used — fetching is via release asset download to avoid anonymous 403s on
+cross-org package reads. Plugin CI pipelines in
+[webdev-console-plugins](https://github.com/nks-hub/webdev-console-plugins)
+download the nupkg into a local feed before `dotnet restore`. See that repo's
+`CONTRIBUTING.md` for the `NUGET_GH_*` env contract used by local dev.
 
 ## Writing a plugin
 
