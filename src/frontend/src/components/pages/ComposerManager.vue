@@ -119,7 +119,7 @@ import { useRouter } from 'vue-router'
 import { Check, WarningFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
-import { composerStatus, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { composerStatus, daemonAuthHeaders as authHeaders, daemonBaseUrl } from '../../api/daemon'
 import type { ComposerStatus } from '../../api/types'
 
 const { t } = useI18n()
@@ -159,7 +159,7 @@ async function selfInstall(): Promise<void> {
   installing.value = true
   installError.value = null
   try {
-    const r = await fetch(`${getBase()}/api/composer/self-install`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/composer/self-install`, {
       method: 'POST',
       headers: authHeaders(),
     })
@@ -178,7 +178,7 @@ async function selfInstall(): Promise<void> {
 async function loadComposerVersion(): Promise<void> {
   versionLoading.value = true
   try {
-    const res = await fetch(`${getBase()}/api/composer/version`, {
+    const res = await fetch(`${daemonBaseUrl()}/api/composer/version`, {
       headers: authHeaders(),
     })
     if (res.ok) {
@@ -191,18 +191,6 @@ async function loadComposerVersion(): Promise<void> {
   } finally {
     versionLoading.value = false
   }
-}
-
-function getBase(): string {
-  const preloadPort = window.daemonApi?.getPort?.()
-  if (typeof preloadPort === 'number' && preloadPort > 0) {
-    return `http://localhost:${preloadPort}`
-  }
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) {
-    return `http://localhost:${parseInt(urlPort, 10)}`
-  }
-  return 'http://localhost:5199'
 }
 
 async function scanSites(): Promise<void> {

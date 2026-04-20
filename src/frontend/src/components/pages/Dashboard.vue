@@ -339,7 +339,7 @@ import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { ElMessage, ElNotification } from 'element-plus'
-import { daemonBaseUrl } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
@@ -451,10 +451,12 @@ const activityLoading = ref(false)
 async function loadActivity() {
   activityLoading.value = true
   try {
-    const port = window.daemonApi?.getPort?.() ?? new URLSearchParams(window.location.search).get('port') ?? '5146'
-    const token = window.daemonApi?.getToken?.() ?? new URLSearchParams(window.location.search).get('token') ?? ''
-    const r = await fetch(`http://localhost:${port}/api/activity?limit=20`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    // Previously this rolled its own port/token resolver with a stale
+    // 5146 fallback (correct default is 5199) and accepted getPort()==0
+    // through `??`. Delegating to daemonBaseUrl/daemonAuthHeaders keeps
+    // the whole frontend on one resolution path.
+    const r = await fetch(`${daemonBaseUrl()}/api/activity?limit=20`, {
+      headers: authHeaders(),
     })
     if (!r.ok) return
     const data = await r.json()
