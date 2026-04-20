@@ -175,15 +175,6 @@ export interface InstalledBinary {
   isDefault?: boolean
 }
 
-export interface BinaryCatalog {
-  [app: string]: BinaryRelease[]
-}
-
-export interface ServiceLog {
-  lines: string[]
-  serviceId: string
-}
-
 export interface ValidationState {
   phase: 'idle' | 'validating' | 'passed' | 'failed'
   message: string
