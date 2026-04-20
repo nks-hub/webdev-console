@@ -121,11 +121,11 @@ public sealed class NodeModule : IServiceModule, IAsyncDisposable
 
     // ── IServiceModule: aggregate operations ──────────────────────────
 
-    public async Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
+    public Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
     {
         if (_nodeExecutable is null)
-            return new ValidationResult(false, "Node.js executable not found. Install via Binaries page or add to PATH.");
-        return new ValidationResult(true);
+            return Task.FromResult(new ValidationResult(false, "Node.js executable not found. Install via Binaries page or add to PATH."));
+        return Task.FromResult(new ValidationResult(true));
     }
 
     /// <summary>
@@ -186,13 +186,13 @@ public sealed class NodeModule : IServiceModule, IAsyncDisposable
         return Task.FromResult(new ServiceStatus("node", displayName, state, anyPid, totalCpu, totalMem, maxUptime));
     }
 
-    public async Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct)
+    public Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct)
     {
         var result = new List<string>(lines);
         var reader = _logChannel.Reader;
         while (result.Count < lines && reader.TryRead(out var line))
             result.Add(line);
-        return result;
+        return Task.FromResult<IReadOnlyList<string>>(result);
     }
 
     // ── Per-site process management ───────────────────────────────────
@@ -559,7 +559,7 @@ public sealed class NodeModule : IServiceModule, IAsyncDisposable
         return false;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         foreach (var proc in _processes.Values)
         {
@@ -572,6 +572,7 @@ public sealed class NodeModule : IServiceModule, IAsyncDisposable
         }
         _processes.Clear();
         _logChannel.Writer.TryComplete();
+        return ValueTask.CompletedTask;
     }
 }
 

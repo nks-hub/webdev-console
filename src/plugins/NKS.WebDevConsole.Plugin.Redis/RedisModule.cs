@@ -54,17 +54,15 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
         _config = config ?? new RedisConfig();
     }
 
-    public async Task InitializeAsync(CancellationToken ct)
+    public Task InitializeAsync(CancellationToken ct)
     {
         DetectRedisExecutable();
 
         if (!string.IsNullOrEmpty(_config.ExecutablePath) && File.Exists(_config.ExecutablePath))
-        {
             _logger.LogInformation("Using Redis: {Path}", _config.ExecutablePath);
-            return;
-        }
-
-        _logger.LogWarning("redis-server executable not found");
+        else
+            _logger.LogWarning("redis-server executable not found");
+        return Task.CompletedTask;
     }
 
     private void DetectRedisExecutable()
@@ -110,15 +108,15 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: ValidateConfigAsync --
 
-    public async Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
+    public Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
     {
         if (string.IsNullOrEmpty(_config.ExecutablePath) || !File.Exists(_config.ExecutablePath))
-            return new ValidationResult(false, "redis-server executable not found");
+            return Task.FromResult(new ValidationResult(false, "redis-server executable not found"));
 
         if (!string.IsNullOrEmpty(_config.DataDir) && !Directory.Exists(_config.DataDir))
-            return new ValidationResult(false, $"Data directory not found: {_config.DataDir}");
+            return Task.FromResult(new ValidationResult(false, $"Data directory not found: {_config.DataDir}"));
 
-        return new ValidationResult(true);
+        return Task.FromResult(new ValidationResult(true));
     }
 
     // -- IServiceModule: StartAsync --
@@ -266,9 +264,10 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: ReloadAsync --
 
-    public async Task ReloadAsync(CancellationToken ct)
+    public Task ReloadAsync(CancellationToken ct)
     {
         _logger.LogInformation("Redis does not support live config reload via this module — restart required");
+        return Task.CompletedTask;
     }
 
     // -- IServiceModule: GetStatusAsync --
@@ -287,7 +286,7 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: GetLogsAsync --
 
-    public async Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct)
+    public Task<IReadOnlyList<string>> GetLogsAsync(int lines, CancellationToken ct)
     {
         var result = new List<string>(lines);
         var reader = _logChannel.Reader;
@@ -295,7 +294,7 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
         while (result.Count < lines && reader.TryRead(out var line))
             result.Add(line);
 
-        return result;
+        return Task.FromResult<IReadOnlyList<string>>(result);
     }
 
     // -- Health check: TCP PING/PONG --
@@ -482,7 +481,7 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
         return false;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         if (_process is not null && !_process.HasExited)
         {
@@ -492,5 +491,6 @@ public sealed class RedisModule : IServiceModule, IAsyncDisposable
 
         _process?.Dispose();
         _logChannel.Writer.TryComplete();
+        return ValueTask.CompletedTask;
     }
 }

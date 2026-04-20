@@ -450,7 +450,7 @@ public sealed class PhpModule : IServiceModule, IAsyncDisposable
         return process;
     }
 
-    private async Task<string> RenderFpmConfAsync(PhpInstallation php, CancellationToken ct)
+    private Task<string> RenderFpmConfAsync(PhpInstallation php, CancellationToken ct)
     {
         Directory.CreateDirectory(Path.Combine(_config.ConfigBaseDirectory, php.MajorMinor));
 
@@ -479,7 +479,7 @@ public sealed class PhpModule : IServiceModule, IAsyncDisposable
 
         var ctx = new TemplateContext();
         ctx.PushGlobal(scriptObj);
-        return _fpmTemplate.Render(ctx);
+        return Task.FromResult(_fpmTemplate.Render(ctx));
     }
 
     private static Template LoadFpmTemplate()

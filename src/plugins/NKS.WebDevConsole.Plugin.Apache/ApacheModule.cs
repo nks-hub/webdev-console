@@ -806,7 +806,7 @@ public sealed class ApacheModule : IServiceModule, IAsyncDisposable
         return Path.Combine(_config.ServerRoot, _config.ConfigFile);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         StopLogFileWatchers();
 
@@ -818,6 +818,7 @@ public sealed class ApacheModule : IServiceModule, IAsyncDisposable
 
         _process?.Dispose();
         _watcherCts?.Dispose();
+        return ValueTask.CompletedTask;
     }
 }
 

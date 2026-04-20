@@ -235,18 +235,18 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: ValidateConfigAsync --
 
-    public async Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
+    public Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
     {
         if (string.IsNullOrEmpty(_config.ExecutablePath) || !File.Exists(_config.ExecutablePath))
-            return new ValidationResult(false, "mysqld executable not found");
+            return Task.FromResult(new ValidationResult(false, "mysqld executable not found"));
 
         if (!string.IsNullOrEmpty(_config.ConfigFile) && !File.Exists(_config.ConfigFile))
-            return new ValidationResult(false, $"Config file not found: {_config.ConfigFile}");
+            return Task.FromResult(new ValidationResult(false, $"Config file not found: {_config.ConfigFile}"));
 
         if (!string.IsNullOrEmpty(_config.DataDir) && !Directory.Exists(_config.DataDir))
-            return new ValidationResult(false, $"Data directory not found: {_config.DataDir}");
+            return Task.FromResult(new ValidationResult(false, $"Data directory not found: {_config.DataDir}"));
 
-        return new ValidationResult(true);
+        return Task.FromResult(new ValidationResult(true));
     }
 
     // -- IServiceModule: StartAsync --
@@ -825,7 +825,7 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
         return false;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         StopLogFileWatcher();
 
@@ -837,5 +837,6 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
 
         _process?.Dispose();
         _watcherCts?.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

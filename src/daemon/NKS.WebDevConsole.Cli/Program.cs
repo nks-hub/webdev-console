@@ -428,8 +428,8 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
     var tpl = tplName is not null && siteTemplates.TryGetValue(tplName, out var t) ? t : default;
     var tplApplied = tplName is not null && siteTemplates.ContainsKey(tplName);
 
-    var domain = parseResult.GetValue(domainOpt) ?? AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):");
-    var docRoot = parseResult.GetValue(docrootOpt) ?? AnsiConsole.Ask<string>("Document root:");
+    string domain = parseResult.GetValue(domainOpt) ?? AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):") ?? "";
+    string docRoot = parseResult.GetValue(docrootOpt) ?? AnsiConsole.Ask<string>("Document root:") ?? "";
     var php = parseResult.GetValue(phpOpt) ?? (tplApplied ? tpl.php : "8.4");
     var ssl = parseResult.GetValue(sslOpt) || (tplApplied && tpl.ssl)
               || (!json && !tplApplied && domain == null && AnsiConsole.Confirm("Enable SSL?", false));
@@ -461,8 +461,8 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
         var content = JsonContent.Create(payload);
         var result = await client.PostAsync("/api/sites", content);
         if (json) { PrintJson(result); return; }
-        var msg = tplApplied ? $"[green]Site created:[/] {Markup.Escape(domain)} [dim](template: {tplName})[/]"
-                             : $"[green]Site created:[/] {Markup.Escape(domain)}";
+        var msg = tplApplied ? $"[green]Site created:[/] {Markup.Escape(domain ?? "")} [dim](template: {tplName})[/]"
+                             : $"[green]Site created:[/] {Markup.Escape(domain ?? "")}";
         AnsiConsole.MarkupLine(msg);
     }
     catch (HttpRequestException ex)
