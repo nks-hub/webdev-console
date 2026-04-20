@@ -51,7 +51,12 @@ public class DaemonClient : IDisposable
     {
         var response = await _http.PutAsync($"{_baseUrl}{path}", content ?? new StringContent(""));
         response.EnsureSuccessStatusCode();
-        return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync()).ContinueWith(t => t.Result.RootElement);
+        // Match the GET/POST shape: ReadFromJsonAsync<JsonElement> deep-copies
+        // the element out of the parser's buffer so callers can outlive it.
+        // The previous `JsonDocument.ParseAsync(...).ContinueWith(t => t.Result.RootElement)`
+        // returned an element that still referenced the now-disposed parser
+        // buffer — use-after-free hazard on any caller that held the element.
+        return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
     public async Task<HttpResponseMessage> DeleteAsync(string path)
