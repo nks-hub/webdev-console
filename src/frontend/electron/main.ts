@@ -475,7 +475,10 @@ async function updateTray() {
   let iconColor: 'green' | 'red' | 'yellow' | 'gray' = 'gray'
   if (daemonConnected) {
     try {
-      const services = await daemonGet<any[]>('/api/services')
+      // Minimal shape: tray only needs `state` to tint its icon. Full
+      // ServiceInfo isn't imported here because electron/main.ts is the
+      // backend side of the bridge and wants zero coupling to the src/api.
+      const services = await daemonGet<Array<{ state: number }>>('/api/services')
       const crashed = services.filter(s => s.state === 4).length
       const running = services.filter(s => s.state === 2).length
       if (crashed > 0) iconColor = 'red'
