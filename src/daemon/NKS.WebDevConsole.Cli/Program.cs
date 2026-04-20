@@ -1357,7 +1357,7 @@ outdatedCmd.SetAction(async (parseResult, ct) =>
         if (catalog.TryGetProperty(app, out var releases) && releases.GetArrayLength() > 0)
         {
             var latestVer = releases[0].GetProperty("version").GetString() ?? "";
-            if (latestVer != ver && NKS.WebDevConsole.Core.Services.SemverVersionComparer.CompareAscending(latestVer, ver) > 0)
+            if (latestVer != ver && SemverVersionComparer.CompareAscending(latestVer, ver) > 0)
                 outdated.Add((app, ver, latestVer));
         }
     }

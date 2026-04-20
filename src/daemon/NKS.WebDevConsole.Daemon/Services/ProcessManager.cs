@@ -340,13 +340,32 @@ public class ProcessManager
         }
     }
 
+    /// <summary>
+    /// Fast "can this port be bound right now?" probe — doesn't identify
+    /// the owner on a conflict, unlike <see cref="CheckPort"/>. Used by
+    /// fallback-port scans where we just want the first free candidate.
+    /// Avoids spawning netstat for every occupied attempt, which the full
+    /// CheckPort does to populate OwnerPid/OwnerName fields the caller
+    /// here doesn't consume.
+    /// </summary>
+    private static bool IsPortFree(int port)
+    {
+        try
+        {
+            using var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch (SocketException) { return false; }
+    }
+
     public int SuggestAlternativePort(int preferredPort, int maxAttempts = 10)
     {
         for (int i = 0; i < maxAttempts; i++)
         {
             var candidate = preferredPort + i + 1;
-            var (available, _, _) = CheckPort(candidate);
-            if (available) return candidate;
+            if (IsPortFree(candidate)) return candidate;
         }
         return 0;
     }
