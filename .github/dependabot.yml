@@ -70,7 +70,13 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     # coverlet 6→10 skips 4 majors; breaking API changes suspected.
-    # Hold until we audit the migration path manually.
+    # Hold until we audit the migration path manually. Microsoft.NET.Test.Sdk
+    # 17→18 changes host-process spawning; coupled with coverlet, ship as
+    # one test-toolchain sweep. Sentry 4→6 is a breaking SDK migration.
     ignore:
       - dependency-name: coverlet.collector
+        update-types: [version-update:semver-major]
+      - dependency-name: Microsoft.NET.Test.Sdk
+        update-types: [version-update:semver-major]
+      - dependency-name: Sentry
         update-types: [version-update:semver-major]
