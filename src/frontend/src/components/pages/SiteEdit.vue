@@ -930,7 +930,9 @@ const cloudflareZoneId = ref('')
 const cloudflareZoneName = ref('')
 const cloudflareLocalService = ref('localhost:80')
 const cloudflareProtocol = ref<'http' | 'https'>('http')
-const cfZones = ref<any[]>([])
+// Same minimal shape as CloudflareTunnel's CfZone — kept inline to avoid
+// coupling page files together for a 2-field type.
+const cfZones = ref<{ id: string; name: string }[]>([])
 const loadingCfZones = ref(false)
 const cfSubdomainTemplate = ref('{stem}-dev')
 

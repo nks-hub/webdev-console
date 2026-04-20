@@ -842,6 +842,7 @@ import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   daemonBaseUrl, daemonAuthHeaders as authHeaders,
   type DeviceInfo as CatalogDeviceInfo,
+  type SystemInfo,
 } from '../../api/daemon'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
@@ -877,7 +878,7 @@ watch(() => uiModeStore.isSimple, (simple) => {
 const saving = ref(false)
 const databases = ref<string[]>([])
 const newDbName = ref('')
-const systemInfo = ref<any>(null)
+const systemInfo = ref<SystemInfo | null>(null)
 const installedVersions = ref<Array<{ app: string; version: string }>>([])
 
 const ports = reactive({
