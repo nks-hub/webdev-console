@@ -224,7 +224,7 @@ logsCommand.SetAction(async (parseResult, ct) =>
                 var msg = System.Text.Encoding.UTF8.GetString(buf, 0, result2.Count);
                 try
                 {
-                    var parsed = System.Text.Json.JsonDocument.Parse(msg);
+                    using var parsed = System.Text.Json.JsonDocument.Parse(msg);
                     var line = parsed.RootElement.GetProperty("line").GetString() ?? "";
                     Console.WriteLine(line);
                 }
