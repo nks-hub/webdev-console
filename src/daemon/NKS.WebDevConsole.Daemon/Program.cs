@@ -3802,15 +3802,21 @@ app.MapGet("/api/php/{version}/extensions", async (string version) =>
     var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
     if (phpPlugin == null) return Results.NotFound();
     var method = phpPlugin.Instance.GetType().GetMethod("GetExtensionsForVersion");
-    if (method != null)
+    if (method == null) return Results.Ok(Array.Empty<object>());
+    try
     {
-        var task = method.Invoke(phpPlugin.Instance, new object[] { version }) as Task;
-        if (task != null)
+        if (method.Invoke(phpPlugin.Instance, new object[] { version }) is Task task)
         {
             await task;
             var resultProp = task.GetType().GetProperty("Result");
-            return Results.Ok(resultProp?.GetValue(task));
+            var value = resultProp?.GetValue(task);
+            // Normalize null → [] so the frontend's `.map` never throws.
+            return Results.Ok(value ?? (object)Array.Empty<object>());
         }
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "GetExtensionsForVersion reflection failed on php plugin for {Version}", version);
     }
     return Results.Ok(Array.Empty<object>());
 });
