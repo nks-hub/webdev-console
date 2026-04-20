@@ -48,10 +48,8 @@ export function daemonBaseUrl(): string {
 // Content-Type, some forgot the Bearer token prefix, some used
 // `getToken()` without optional-chaining.
 export function daemonAuthHeaders(extra?: HeadersInit): Record<string, string> {
-  // Prefer preload token (live-refreshed from port file), fallback to URL query.
-  const preloadToken = window.daemonApi?.getToken?.() || ''
-  const urlToken = new URLSearchParams(window.location.search).get('token') || ''
-  const token = preloadToken || urlToken
+  // daemonToken() handles the preload-first / query fallback — same logic.
+  const token = daemonToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   if (extra) {
