@@ -1095,13 +1095,13 @@ async function discoverMamp() {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/sites/discover-mamp`, { headers: authHeaders() })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    const data = await r.json()
+    const data: { count?: number; sites?: Array<{ domain?: string; Domain?: string }> } = await r.json()
     if (!data.count || data.count === 0) {
       ElMessage.info('No MAMP PRO sites found on this machine')
       return
     }
     const confirmed = await ElMessageBox.confirm(
-      `Found ${data.count} MAMP site(s): ${data.sites.map((s: any) => s.domain || s.Domain).join(', ')}. Import them?`,
+      `Found ${data.count} MAMP site(s): ${(data.sites ?? []).map(s => s.domain || s.Domain).join(', ')}. Import them?`,
       'MAMP Migration',
       { confirmButtonText: 'Import', cancelButtonText: 'Cancel', type: 'info' },
     )
@@ -1583,19 +1583,20 @@ async function pullFromCloud() {
     // New sites: create with sync fields + empty documentRoot (user
     // must set it via SiteEdit before the vhost is generated).
     if (Array.isArray(payload?.sites)) {
-      const localSites = await fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() })
-        .then(r => r.ok ? r.json() : []) as any[]
-      const localByDomain = new Map(localSites.map((s: any) => [s.domain, s]))
+      type SyncableSite = { domain: string; [k: string]: unknown }
+      const localSites: SyncableSite[] = await fetch(`${daemonBaseUrl()}/api/sites`, { headers: authHeaders() })
+        .then(r => r.ok ? r.json() : [])
+      const localByDomain = new Map<string, SyncableSite>(localSites.map(s => [s.domain, s]))
 
       let newSiteCount = 0
-      for (const remoteSite of payload.sites) {
+      for (const remoteSite of payload.sites as SyncableSite[]) {
         const domain = remoteSite.domain
         if (!domain) continue
         const local = localByDomain.get(domain)
 
         if (local) {
           // Existing site: merge sync fields only
-          const update: any = { ...local }
+          const update: Record<string, unknown> = { ...local }
           for (const field of SITE_SYNC_FIELDS) {
             if (field in remoteSite) update[field] = remoteSite[field]
           }
@@ -1612,7 +1613,7 @@ async function pullFromCloud() {
           const placeholder = navigator.platform?.startsWith('Win')
             ? `C:\\pending-sync\\${domain}`
             : `/tmp/pending-sync/${domain}`
-          const newSite: any = { domain, documentRoot: placeholder }
+          const newSite: Record<string, unknown> = { domain, documentRoot: placeholder }
           for (const field of SITE_SYNC_FIELDS) {
             if (field in remoteSite) newSite[field] = remoteSite[field]
           }

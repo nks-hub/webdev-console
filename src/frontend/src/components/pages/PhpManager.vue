@@ -149,8 +149,8 @@ async function loadConfig(version: string) {
     // Load php.ini from config endpoint
     const r = await fetch(`${daemonBaseUrl()}/api/services/php/config`, { headers: authHeaders() })
     if (r.ok) {
-      const data = await r.json()
-      const file = data.files?.find((f: any) => f.name?.includes(version) || f.path?.includes(version))
+      const data: { files?: Array<{ name?: string; path?: string; content: string }> } = await r.json()
+      const file = data.files?.find(f => f.name?.includes(version) || f.path?.includes(version))
       if (file) {
         selectedConfig.value = file.content
         // Parse extensions from php.ini
