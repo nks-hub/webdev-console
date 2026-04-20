@@ -841,7 +841,7 @@ import { useAuthStore } from '../../stores/auth'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   daemonBaseUrl, daemonAuthHeaders as authHeaders,
-  fetchPhpVersions,
+  fetchPhpVersions, fetchSettings, saveSettings,
   type DeviceInfo as CatalogDeviceInfo,
   type SystemInfo,
 } from '../../api/daemon'
@@ -1127,9 +1127,7 @@ async function loadPhpVersions() {
 
 async function loadSettings() {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
-    if (!r.ok) return
-    const data = await r.json() as Record<string, string>
+    const data = await fetchSettings()
     if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
     if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
@@ -1390,20 +1388,14 @@ const lastSyncDisplay = computed(() => {
 async function loadDeviceId() {
   // Device ID is persisted in daemon settings; generate if missing
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
-    if (!r.ok) return
-    const data = await r.json() as Record<string, string>
+    const data = await fetchSettings()
     if (data['sync.deviceId']) {
       deviceId.value = data['sync.deviceId']
     } else {
       // First run: generate a UUID and persist it
       const id = crypto.randomUUID()
       deviceId.value = id
-      await fetch(`${daemonBaseUrl()}/api/settings`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ 'sync.deviceId': id }),
-      })
+      await saveSettings({ 'sync.deviceId': id })
     }
     if (data['sync.deviceName']) deviceName.value = data['sync.deviceName']
     if (data['sync.lastSyncTime']) lastSyncTime.value = data['sync.lastSyncTime']
