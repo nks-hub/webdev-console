@@ -144,6 +144,19 @@ public class ProcessManagerTests
     }
 
     [Fact]
+    public void SuggestAlternativePort_ReturnsZero_WhenPreferredIsAtCeiling()
+    {
+        // Regression for a354658: TcpListener.ctor throws
+        // ArgumentOutOfRangeException for port > 65535, and IsPortFree's
+        // catch filter only covers SocketException. Without the ceiling
+        // clamp this call used to bubble that exception; now it should
+        // cleanly return 0 ("no free candidate found").
+        var suggested = _pm.SuggestAlternativePort(65535);
+
+        Assert.Equal(0, suggested);
+    }
+
+    [Fact]
     public void SuggestAlternativePort_SkipsOccupiedPorts()
     {
         // Occupy a port, then ask for alternative starting from port-1
