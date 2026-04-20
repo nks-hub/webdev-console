@@ -58,9 +58,9 @@
                   title="HTTPS enabled"
                 >SSL</el-tag>
               </div>
-              <div v-if="row.aliases?.length" class="col-aliases">
-                <span class="alias-dot">+</span>
-                {{ row.aliases.join(', ') }}
+              <div v-if="row.aliases?.length" class="col-aliases" :title="row.aliases.join(', ')">
+                <span class="alias-dot">+{{ row.aliases.length }}</span>
+                <span class="alias-preview">{{ row.aliases[0] }}<template v-if="row.aliases.length > 1">, …</template></span>
               </div>
               <div
                 v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain"
@@ -688,12 +688,33 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .col-aliases {
   font-size: 0.76rem;
   color: var(--wdc-text-2);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-family: 'JetBrains Mono', monospace;
+  /* F71: don't let the alias list grow the row vertically when there are
+     many aliases — truncate to a single line and show the full list via
+     the title tooltip on hover. The +N counter next to the first alias
+     tells the user how many there are. */
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.alias-dot { color: var(--wdc-text-3); }
+.alias-dot {
+  color: var(--wdc-accent);
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.alias-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .col-tunnel {
   display: flex;

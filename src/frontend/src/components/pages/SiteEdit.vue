@@ -566,44 +566,11 @@
               <span v-if="metricsLoading">Loading metrics...</span>
               <span v-else>No access log data found for this site. Start Apache with the generated vhost and make some requests.</span>
             </div>
-            <div v-else class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-value">{{ formatNumber(siteMetrics.accessLog?.requestCount ?? 0) }}</div>
-                <div class="metric-label">Total Requests</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-value">{{ formatSize(siteMetrics.accessLog?.sizeBytes ?? 0) }}</div>
-                <div class="metric-label">Access Log Size</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-value">{{ formatAge(siteMetrics.accessLog?.lastWriteUtc) }}</div>
-                <div class="metric-label">Last Request</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-value">{{ currentRequestRate }}</div>
-                <div class="metric-label">Requests / min</div>
-              </div>
-            </div>
-            <!-- Phase 11 perf monitoring: request-rate timeseries sparkline.
-                 Fills from client-side ring buffer populated by refreshMetrics()
-                 every 5s while the Metrics tab is active. Each data point is
-                 (new_count - old_count) * 60 / delta_seconds to normalize to
-                 requests-per-minute regardless of the actual poll interval. -->
-            <div v-if="requestRateHistory.length > 1" class="metrics-chart-wrap">
-              <div class="metrics-chart-label">Request rate (last {{ requestRateHistory.length * 5 }}s)</div>
-              <MetricsChart :data="requestRateHistory" :height="80" color="#6366f1" />
-            </div>
-            <div v-if="siteMetrics?.accessLog" class="hint" style="margin-top: 12px">
-              <code>{{ siteMetrics.accessLog.path }}</code>
-            </div>
 
-            <!-- Access log table — advanced mode only -->
-            <div v-if="uiMode.isAdvanced && site" class="access-logs-section">
-              <div class="historical-title" style="margin-bottom: 10px">{{ $t('sites.access.title') }}</div>
-              <div class="table-responsive">
-                <SiteAccessLogs :domain="site.domain" />
-              </div>
-            </div>
+            <!-- F74 layout: historical chart FIRST (dominant visual), then
+                 compact KPI cards + request-rate sparkline as a summary strip,
+                 then the access log detail table at the bottom. Previous
+                 order (cards → sparkline → table → chart) buried the chart. -->
 
             <!-- Historical data section -->
             <div class="historical-section">
