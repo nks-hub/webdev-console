@@ -116,6 +116,19 @@ builder.Services.AddSingleton<CatalogClient>(sp =>
 builder.Services.AddSingleton<BinaryDownloader>();
 builder.Services.AddSingleton<BinaryManager>();
 
+// F95 plugin catalog client — same Settings-driven base URL resolution as
+// the binaries catalog, so a self-hosted catalog-api serves both.
+builder.Services.AddHttpClient("plugin-catalog");
+builder.Services.AddHttpClient("plugin-downloader");
+builder.Services.AddSingleton<PluginCatalogClient>(sp =>
+{
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var logger = sp.GetRequiredService<ILogger<PluginCatalogClient>>();
+    var settings = sp.GetRequiredService<SettingsStore>();
+    return new PluginCatalogClient(httpFactory, logger, () => settings.CatalogUrl);
+});
+builder.Services.AddSingleton<PluginDownloader>();
+
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
 var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
@@ -127,6 +140,23 @@ if (!Directory.Exists(pluginDir))
     pluginDir = Path.Combine(repoRoot, "build", "plugins");
 }
 pluginLoader.LoadPlugins(pluginDir);
+
+// F95 phase 1: when no local plugin build is found, fall back to the
+// on-disk cache populated from the catalog-api release artifacts at
+// ~/.wdc/plugins/<id>/<version>/. This is the production path once F99
+// removes src/plugins/ from the monorepo — end-users get plugins via the
+// catalog download flow, developers still use build/plugins locally.
+// Remote fetch itself is deferred to a background service post-Build so
+// pre-build phase stays fast + offline-tolerant; here we only load what
+// is already on disk.
+var hasLocalPlugins = pluginLoader.Plugins.Count > 0;
+if (!hasLocalPlugins)
+{
+    foreach (var cacheDir in PluginDownloader.EnumerateLatestVersionDirs())
+    {
+        pluginLoader.LoadPlugins(cacheDir);
+    }
+}
 
 builder.Services.AddSingleton(pluginLoader);
 
@@ -4803,6 +4833,34 @@ app.MapPost("/api/binaries/catalog/refresh", async (CatalogClient cc, Cancellati
 {
     var count = await cc.RefreshAsync(ct);
     return Results.Ok(new { count, lastFetch = cc.LastFetch });
+});
+
+// F95 plugin catalog surface — parallels the binaries catalog so the
+// frontend marketplace view + the daemon startup sync both pull from a
+// single source of truth (catalog-api's /api/v1/plugins/catalog).
+app.MapGet("/api/plugins/catalog", (PluginCatalogClient pc) =>
+    Results.Ok(new { count = pc.Cached.Count, lastFetch = pc.LastFetch, plugins = pc.Cached }));
+
+app.MapPost("/api/plugins/catalog/refresh", async (PluginCatalogClient pc, CancellationToken ct) =>
+{
+    var count = await pc.RefreshAsync(ct);
+    return Results.Ok(new { count, lastFetch = pc.LastFetch });
+});
+
+app.MapPost("/api/plugins/catalog/sync", async (
+    PluginCatalogClient pc,
+    PluginDownloader pd,
+    CancellationToken ct) =>
+{
+    // Ensure cache is warm — sync against a stale list would miss new releases.
+    await pc.RefreshAsync(ct);
+    var installed = await pd.SyncLatestAsync(pc.Cached, ct);
+    return Results.Ok(new
+    {
+        catalogCount = pc.Cached.Count,
+        installedThisCall = installed,
+        cacheRoot = PluginDownloader.CacheRoot()
+    });
 });
 
 app.MapGet("/api/binaries/installed", (BinaryManager bm) =>
