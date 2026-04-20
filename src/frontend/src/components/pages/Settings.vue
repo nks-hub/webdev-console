@@ -846,6 +846,7 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { compareSemver } from '../../utils/semver'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
@@ -1732,7 +1733,7 @@ async function runUpdateCheck() {
     const data = await r.json() as { tag_name?: string; html_url?: string; assets?: Array<{ browser_download_url: string; name: string }> }
     const latest = (data.tag_name ?? '').replace(/^v/, '')
     updateCheck.latest = latest
-    updateCheck.hasUpdate = compareVersions(latest, currentVersion) > 0
+    updateCheck.hasUpdate = compareSemver(latest, currentVersion) > 0
     const setupAsset = (data.assets ?? []).find(a => /setup.*\.exe$/i.test(a.name))
     updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
     updateCheck.lastCheckedIso = new Date().toISOString()
@@ -1742,16 +1743,6 @@ async function runUpdateCheck() {
   } finally {
     updateCheck.loading = false
   }
-}
-
-function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(n => parseInt(n, 10))
-  const pb = b.split('.').map(n => parseInt(n, 10))
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const av = pa[i] ?? 0, bv = pb[i] ?? 0
-    if (av !== bv) return av - bv
-  }
-  return 0
 }
 
 async function downloadAndInstall() {
