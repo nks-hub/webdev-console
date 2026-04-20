@@ -688,6 +688,26 @@
                 <el-tag size="small" effect="plain">.NET 9</el-tag>
               </div>
 
+              <!-- F83: SSO sign-in — catalog-api OIDC flow returned to the
+                   desktop app via the wdc:// deep-link. Token lives in
+                   useAuthStore + localStorage. Catalog URL is read from the
+                   same Settings field used for the binaries catalog. -->
+              <div class="about-sso">
+                <div v-if="authStore.isAuthenticated" class="about-sso-signed">
+                  <span class="sys-label">Signed in to catalog</span>
+                  <el-button size="small" @click="authStore.logout()">Sign out</el-button>
+                </div>
+                <div v-else class="about-sso-signedout">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    :loading="authStore.loginPending"
+                    @click="ssoLogin"
+                  >Sign in with SSO</el-button>
+                  <span v-if="authStore.loginError" class="sso-error">{{ authStore.loginError }}</span>
+                </div>
+              </div>
+
               <div v-if="systemInfo" class="about-system">
                 <div class="about-sys-title">Runtime</div>
                 <!-- F85: daemon uptime + PID surfaced so user can see the
@@ -758,6 +778,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download } from '@element-plus/icons-vue'
 import { useThemeStore, type ThemeMode } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useAuthStore } from '../../stores/auth'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   type DeviceInfo as CatalogDeviceInfo,
@@ -766,6 +787,17 @@ import {
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
 const themeStore = useThemeStore()
 const uiModeStore = useUiModeStore()
+const authStore = useAuthStore()
+
+async function ssoLogin() {
+  const url = catalogUrl.value || 'https://wdc.nks-hub.cz'
+  try {
+    await authStore.login(url)
+    ElMessage.success('Signed in')
+  } catch (err: any) {
+    ElMessage.error(`SSO failed: ${err?.message ?? err}`)
+  }
+}
 const { locale, t } = useI18n()
 
 const activeTab = ref('general')
