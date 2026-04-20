@@ -4404,7 +4404,11 @@ app.MapGet("/api/ssl/certs", (SiteManager sm) =>
         {
             try
             {
-                var x509 = System.Security.Cryptography.X509Certificates.X509CertificateLoader
+                // X509Certificate2 is IDisposable — the loader returns one
+                // with a CAPI/ncrypt handle attached. Without `using` the
+                // handle was kept alive until GC, which on Windows retains
+                // a kernel certificate context per SSL list call.
+                using var x509 = System.Security.Cryptography.X509Certificates.X509CertificateLoader
                     .LoadCertificateFromFile(certPath);
                 notAfterUtc = x509.NotAfter.ToUniversalTime();
                 issuer = x509.Issuer;
