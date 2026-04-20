@@ -140,13 +140,18 @@
         <el-table-column :label="$t('common.actions')" width="160" fixed="right">
           <template #default="{ row }">
             <div class="site-actions">
-              <el-button size="small" type="primary" @click.stop="openInBrowser(row)">{{ $t('sites.open') }}</el-button>
+              <!-- F86: Edit is now the primary row action — opening the
+                   browser is rarely the user's goal when scanning the list,
+                   usually they want to configure the site. Open URL moves
+                   into the overflow menu with Detect/Delete. -->
+              <el-button size="small" type="primary" @click.stop="editSite(row)">{{ $t('common.edit') }}</el-button>
               <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)" @click.stop>
                 <el-button size="small" @click.stop :aria-label="$t('sites.card.moreActions', { domain: row.domain })">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
+                    <el-dropdown-item command="open">{{ $t('sites.open') }}</el-dropdown-item>
                     <el-dropdown-item command="detect">{{ $t('sites.detect') }}</el-dropdown-item>
                     <el-dropdown-item command="delete" class="danger-item">{{ $t('sites.delete') }}</el-dropdown-item>
                   </el-dropdown-menu>
@@ -574,8 +579,13 @@ function openInBrowser(site: SiteInfo) {
   else window.open(url, '_blank')
 }
 
+function editSite(site: SiteInfo) {
+  void router.push(`/sites/${encodeURIComponent(site.domain)}/edit`)
+}
+
 function handleRowAction(cmd: string, row: SiteInfo) {
-  if (cmd === 'detect') void detectFramework(row.domain)
+  if (cmd === 'open') openInBrowser(row)
+  else if (cmd === 'detect') void detectFramework(row.domain)
   else if (cmd === 'delete') void confirmDelete(row.domain)
 }
 
