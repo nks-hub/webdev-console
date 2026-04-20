@@ -152,3 +152,62 @@ jobs:
           name: installer-win-x64
           path: src/frontend/release/
           retention-days: 30
+
+  # Cross-repo validation: clone nks-hub/webdev-console-plugins as a
+  # sibling checkout, pack the LOCAL SDK csproj (this branch, not the
+  # last published tag) into .local-nuget, rewrite nuget.config to pull
+  # the SDK from that folder, and build every plugin. Catches drift
+  # between SDK surface changes in this repo and the plugin csprojs
+  # consuming them, without waiting for a new v* tag + publish-sdk
+  # workflow. Non-blocking (continue-on-error) so a plugins-repo glitch
+  # doesn't red-line the monorepo pipeline.
+  cross-repo-plugins:
+    name: Cross-repo plugin build
+    runs-on: ubuntu-latest
+    needs: build-daemon
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: nks-ws
+      - uses: actions/checkout@v6
+        with:
+          repository: nks-hub/webdev-console-plugins
+          path: webdev-console-plugins
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+      - name: Pack local SDK
+        working-directory: nks-ws
+        run: |
+          dotnet pack src/daemon/NKS.WebDevConsole.Plugin.SDK/NKS.WebDevConsole.Plugin.SDK.csproj \
+            -c Release -p:PackageVersion=0.0.0-ci.${{ github.run_id }} \
+            -o "$GITHUB_WORKSPACE/.local-nuget"
+          ls -la "$GITHUB_WORKSPACE/.local-nuget"
+      - name: Point plugins repo at local feed
+        working-directory: webdev-console-plugins
+        run: |
+          cat > nuget.config <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+              <add key="local-sdk" value="$GITHUB_WORKSPACE/.local-nuget" />
+            </packageSources>
+          </configuration>
+          EOF
+          # Pin plugin csprojs to the CI-packaged version regardless of what
+          # Directory.Build.props says.
+          for proj in NKS.WebDevConsole.Plugin.*/*.csproj; do
+            sed -i 's|\("NKS.WebDevConsole.Plugin.SDK" Version=\)"[^"]*"|\1"0.0.0-ci.${{ github.run_id }}"|' "$proj" || true
+          done
+      - name: Restore + build every plugin
+        working-directory: webdev-console-plugins
+        run: |
+          set -e
+          for proj in NKS.WebDevConsole.Plugin.*/*.csproj; do
+            echo "::group::build $proj"
+            dotnet build "$proj" -c Release
+            echo "::endgroup::"
+          done
