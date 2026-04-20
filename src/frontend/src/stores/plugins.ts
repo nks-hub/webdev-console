@@ -37,8 +37,12 @@ export const usePluginsStore = defineStore('plugins', () => {
         ...p,
         permissions: p.permissions ?? { network: true, process: true, gui: true },
       }))
-      // Load UI definitions for enabled plugins
-      for (const p of manifests.value.filter(x => x.enabled)) {
+      // Load UI definitions for enabled plugins. Fan out with Promise.all so
+      // the 10+ HTTP round-trips run in parallel instead of sequentially —
+      // previously turned a fast /api/plugins/{id}/ui probe into N× the
+      // slowest probe's latency on initial render.
+      const enabled = manifests.value.filter(x => x.enabled)
+      await Promise.all(enabled.map(async p => {
         try {
           const ui = await fetchPluginUi(p.id)
           if (ui) {
@@ -46,7 +50,7 @@ export const usePluginsStore = defineStore('plugins', () => {
             if (!p.ui) p.ui = ui
           }
         } catch { /* plugin may not have UI */ }
-      }
+      }))
       // F91: pull aggregated nav contributions in a single round-trip so the
       // sidebar can render without any hardcoded plugin names.
       await refreshNavEntries()
