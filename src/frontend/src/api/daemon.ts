@@ -239,30 +239,6 @@ export interface SiteMetrics {
 export const fetchSiteMetrics = (domain: string): Promise<SiteMetrics> =>
   json(`/api/sites/${encodeURIComponent(domain)}/metrics`)
 
-// Phase 11 server-side historical metrics — backed by MetricsHistoryService
-// background poller (60s cadence, 7-day retention). Returns time-series
-// samples with a pre-computed `requestsPerMin` delta-from-previous so the
-// frontend can render hour/day/week windows beyond the 5-minute client-side
-// ring buffer in SiteEdit Metrics tab.
-export interface SiteMetricsHistorySample {
-  sampledAt: string         // ISO-8601 UTC
-  requestCount: number      // cumulative line count at sample time
-  sizeBytes: number         // cumulative log size at sample time
-  lastWriteUtc: string | null
-  requestsPerMin: number    // computed delta-from-previous, normalized to per-minute
-}
-export interface SiteMetricsHistory {
-  domain: string
-  minutes: number           // window size echoed back from server
-  samples: SiteMetricsHistorySample[]
-}
-export const fetchSiteMetricsHistory = (
-  domain: string,
-  minutes: number = 60,
-  limit: number = 200,
-): Promise<SiteMetricsHistory> =>
-  json(`/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=${minutes}&limit=${limit}`)
-
 export const getHistoricalMetrics = (
   domain: string,
   opts?: { date?: string; granularity?: string },
