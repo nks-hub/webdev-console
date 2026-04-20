@@ -90,6 +90,16 @@
                   Flush DNS Cache
                 </el-button>
               </el-form-item>
+              <!-- F73: Migrate MAMP moved here from Sites toolbar. It's a
+                   one-off import operation that belongs in settings, not in
+                   the day-to-day Sites page where the toolbar button was
+                   cluttering the primary site workflow. -->
+              <el-form-item label="MAMP PRO import">
+                <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" title="Import sites from MAMP PRO">
+                  Migrate MAMP
+                </el-button>
+                <div class="hint">Scan for MAMP PRO installation on this machine and import its vhosts as WDC sites.</div>
+              </el-form-item>
 
               <el-divider />
 
@@ -739,6 +749,7 @@ const autoStart = ref(true)
 const defaultPhp = ref('8.4')
 const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
 const flushingDns = ref(false)
+const mampDiscovering = ref(false)
 
 const paths = reactive({
   apache: '',
@@ -852,6 +863,37 @@ async function flushDns() {
     ElMessage.warning('DNS flush endpoint not available')
   } finally {
     flushingDns.value = false
+  }
+}
+
+// F73: MAMP PRO discovery + import relocated from Sites toolbar to Settings
+// General tab. Two-step flow: discover-mamp enumerates candidate vhosts on
+// disk, then migrate-mamp imports them as WDC sites after user confirmation.
+async function discoverMamp() {
+  mampDiscovering.value = true
+  try {
+    const r = await fetch(`${daemonBase()}/api/sites/discover-mamp`, { headers: authHeaders() })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    const data = await r.json()
+    if (!data.count || data.count === 0) {
+      ElMessage.info('No MAMP PRO sites found on this machine')
+      return
+    }
+    const confirmed = await ElMessageBox.confirm(
+      `Found ${data.count} MAMP site(s): ${data.sites.map((s: any) => s.domain || s.Domain).join(', ')}. Import them?`,
+      'MAMP Migration',
+      { confirmButtonText: 'Import', cancelButtonText: 'Cancel', type: 'info' },
+    )
+    if (confirmed) {
+      const ir = await fetch(`${daemonBase()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
+      if (!ir.ok) throw new Error((await ir.text().catch(() => '')) || `HTTP ${ir.status}`)
+      const result = await ir.json()
+      ElMessage.success(`Imported ${result.count} site(s) from MAMP`)
+    }
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${e?.message || e}`)
+  } finally {
+    mampDiscovering.value = false
   }
 }
 
