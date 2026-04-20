@@ -21,18 +21,6 @@ import { ref, computed } from 'vue'
  */
 const TOKEN_KEY = 'nks-wdc-sso-token'
 
-interface ElectronSsoApi {
-  onSsoCallback?: (
-    handler: (payload: { token: string; error: string }) => void
-  ) => () => void
-  openExternal?: (url: string) => Promise<boolean>
-}
-
-function electronApi(): ElectronSsoApi | null {
-  const w = window as unknown as { electronAPI?: ElectronSsoApi }
-  return w.electronAPI ?? null
-}
-
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>(localStorage.getItem(TOKEN_KEY) ?? '')
   const loginError = ref<string>('')
@@ -57,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
    * environment is not Electron or the IdP reports an error.
    */
   async function login(catalogUrl: string): Promise<string> {
-    const api = electronApi()
+    const api = window.electronAPI
     if (!api?.onSsoCallback || !api.openExternal) {
       const err = 'SSO requires the desktop app (electronAPI unavailable)'
       loginError.value = err

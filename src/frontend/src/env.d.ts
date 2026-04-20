@@ -27,7 +27,8 @@ interface Window {
    * preload.ts.
    */
   electronAPI?: {
-    openExternal: (url: string) => Promise<void>
+    /** Returns true if the URL was allowlisted + opened, false on rejection. */
+    openExternal: (url: string) => Promise<boolean>
     showOpenDialog: (options?: {
       title?: string
       defaultPath?: string
