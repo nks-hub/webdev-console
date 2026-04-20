@@ -1184,11 +1184,7 @@ async function refreshCatalog() {
     // Save URL first so the daemon's CatalogClient picks it up, then
     // trigger a manual refresh so the new source takes effect without
     // restarting the daemon.
-    await fetch(`${daemonBaseUrl()}/api/settings`, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify({ 'daemon.catalogUrl': catalogUrl.value || '' }),
-    })
+    await saveSettings({ 'daemon.catalogUrl': catalogUrl.value || '' })
     const r = await fetch(`${daemonBaseUrl()}/api/binaries/catalog/refresh`, {
       method: 'POST',
       headers: authHeaders(),
@@ -1459,13 +1455,9 @@ async function pushToCloud() {
   syncStatus.value = null
   try {
     // Save device name first
-    await fetch(`${daemonBaseUrl()}/api/settings`, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify({
-        'sync.deviceName': deviceName.value,
-        'sync.lastSyncTime': new Date().toISOString(),
-      }),
+    await saveSettings({
+      'sync.deviceName': deviceName.value,
+      'sync.lastSyncTime': new Date().toISOString(),
     })
 
     const payload = await buildSyncPayload()
@@ -1550,9 +1542,6 @@ async function pullFromCloud() {
     // keys (paths, ports, backup dir) stay untouched so pulling another
     // device's snapshot doesn't overwrite C:\work\htdocs with /home/user.
     if (payload?.settings && typeof payload.settings === 'object') {
-      const localSettings = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: authHeaders() })
-        .then(r => r.ok ? r.json() : {}) as Record<string, string>
-
       const merged: Record<string, string> = {}
       for (const [key, value] of Object.entries(payload.settings as Record<string, string>)) {
         if (isSettingSyncable(key)) {
@@ -1562,11 +1551,7 @@ async function pullFromCloud() {
       }
 
       if (Object.keys(merged).length > 0) {
-        await fetch(`${daemonBaseUrl()}/api/settings`, {
-          method: 'PUT',
-          headers: authHeaders(),
-          body: JSON.stringify(merged),
-        })
+        await saveSettings(merged)
       }
     }
 
