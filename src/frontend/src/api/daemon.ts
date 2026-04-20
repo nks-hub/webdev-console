@@ -217,7 +217,7 @@ export const createBackup = () =>
   json<{ path: string; files: number; size: number }>('/api/backup', { method: 'POST' })
 
 export const downloadBackup = (path?: string) => {
-  const token = window.daemonApi?.getToken?.() || new URLSearchParams(window.location.search).get('token') || ''
+  const token = daemonToken()
   const params = new URLSearchParams()
   if (path) params.set('path', path)
   if (token) params.set('token', token)
@@ -811,10 +811,9 @@ export function subscribeEvents(
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   function buildUrl(): string {
-    // Prefer preload (live-refreshes port file) over URL query (frozen)
-    const preloadToken = window.daemonApi?.getToken?.() || ''
-    const urlToken = new URLSearchParams(window.location.search).get('token') || ''
-    const token = preloadToken || urlToken
+    // daemonToken() handles the preload-first / query-string fallback order,
+    // matching the original inline logic here + 9 other call sites.
+    const token = daemonToken()
     return token
       ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
       : `${daemonBaseUrl()}/api/events`
