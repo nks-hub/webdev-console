@@ -349,6 +349,7 @@
     "builtIn": "Built-in",
     "installedTag": "Installed",
     "sourceUnavailable": "Source unavailable",
+    "restore": "Restore",
     "marketplaceCount": "{count} in marketplace",
     "copyUrl": "Copy URL",
     "openPanel": "Open Panel",

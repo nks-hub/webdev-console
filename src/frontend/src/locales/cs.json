@@ -349,6 +349,7 @@
     "builtIn": "Vestavěný",
     "installedTag": "Nainstalováno",
     "sourceUnavailable": "Zdroj není dostupný",
+    "restore": "Obnovit",
     "marketplaceCount": "{count} v marketplacu",
     "copyUrl": "Kopírovat URL",
     "openPanel": "Otevřít panel",

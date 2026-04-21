@@ -1185,6 +1185,88 @@ app.MapDelete("/api/plugins/{id}", (string id, PluginState pluginState) =>
     });
 });
 
+// F91.12: restore a previously uninstalled built-in plugin. Removes the
+// id from the uninstall blacklist so the next daemon boot loads it —
+// but only IF the DLL is still on disk. For built-in plugins that were
+// purged (locked DLL deleted on restart), the user has to rebuild the
+// solution first (dev) or reinstall from catalog (prod). We detect the
+// situation and tell the UI instead of silently failing.
+app.MapPost("/api/plugins/restore/{id}", (string id, PluginState pluginState) =>
+{
+    if (!System.Text.RegularExpressions.Regex.IsMatch(id, @"^[a-zA-Z0-9._\-]{1,128}$"))
+        return Results.BadRequest(new { error = "Invalid plugin id" });
+
+    // Check whether any DLL still matches the plugin id (either via
+    // plugin.json in a subfolder or NKS.WebDevConsole.Plugin.*.dll flat).
+    bool dllPresent = false;
+    try
+    {
+        var pluginsRoot = Path.GetFullPath(pluginDir);
+        if (Directory.Exists(pluginsRoot))
+        {
+            // Subfolder layout
+            var idDir = Path.Combine(pluginsRoot, id);
+            if (Directory.Exists(idDir) &&
+                Directory.EnumerateFiles(idDir, "*.dll", SearchOption.AllDirectories).Any())
+            {
+                dllPresent = true;
+            }
+            // Flat layout — match by assembly name suffix (e.g. NKS.WebDevConsole.Plugin.Caddy.dll)
+            if (!dllPresent)
+            {
+                var shortName = id.Split('.').LastOrDefault() ?? id;
+                foreach (var dll in Directory.EnumerateFiles(pluginsRoot, "NKS.WebDevConsole.Plugin.*.dll"))
+                {
+                    if (Path.GetFileNameWithoutExtension(dll).EndsWith("." + shortName,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        dllPresent = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    catch { /* any IO glitch — fall through to "needs rebuild" branch */ }
+
+    pluginState.ClearUninstalled(id);
+
+    if (!dllPresent)
+    {
+        return Results.Ok(new
+        {
+            restored = false,
+            id,
+            restartRequired = false,
+            rebuildRequired = true,
+            message = "Plugin DLL není na disku. V dev módu spusť `dotnet build`, "
+                    + "pak klikni Obnovit znovu. V produkci stáhni plugin z katalogu.",
+        });
+    }
+
+    // Fire restart so the loader re-scans with the cleared blacklist.
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(300);
+        try
+        {
+            var pf = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
+            if (File.Exists(pf)) File.Delete(pf);
+        }
+        catch { }
+        Environment.Exit(99);
+    });
+
+    return Results.Ok(new
+    {
+        restored = true,
+        id,
+        restartRequired = true,
+        rebuildRequired = false,
+        message = "Plugin obnoven. Restartuji daemon…",
+    });
+});
+
 // Plugin brand icon: streams embedded SVG resource from plugin DLL
 app.MapGet("/api/plugins/{id}/icon", (string id) =>
 {

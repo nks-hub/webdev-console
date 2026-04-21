@@ -92,7 +92,19 @@
                  Before the fix, builtIn plugins with null downloadUrl
                  showed no button at all and users thought marketplace was
                  broken. -->
-            <div v-if="mp.builtIn" class="pm-mp-actions">
+            <!-- F91.12: built-in + installed → Vestavěný; built-in + uninstalled
+                 → Obnovit (reset blacklist + restart daemon, or prompt rebuild
+                 when DLL is already gone). -->
+            <div v-if="mp.builtIn && mp.installed" class="pm-mp-actions">
+              <el-tag size="small" type="info" effect="plain">{{ $t('plugins.builtIn') }}</el-tag>
+            </div>
+            <div v-else-if="mp.builtIn && !mp.installed" class="pm-mp-actions">
+              <el-button
+                size="small"
+                type="primary"
+                :loading="restoring.has(mp.id)"
+                @click="doRestore(mp.id)"
+              >{{ $t('plugins.restore') }}</el-button>
               <el-tag size="small" type="info" effect="plain">{{ $t('plugins.builtIn') }}</el-tag>
             </div>
             <div v-else-if="!mp.installed" class="pm-mp-actions">
@@ -220,6 +232,8 @@ import {
   installPluginFromMarketplace,
   uninstallPlugin,
   restartDaemon,
+  restorePlugin,
+  waitForDaemon,
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
@@ -231,6 +245,8 @@ const toggling = ref<Set<string>>(new Set())
 // F91.4: tracks in-flight uninstall calls so the button spins while the
 // backend removes files + we reload the manifest list.
 const uninstalling = ref<Set<string>>(new Set())
+// F91.12: tracks in-flight restore calls for the marketplace "Obnovit" button.
+const restoring = ref<Set<string>>(new Set())
 const activeTab = ref<'installed' | 'marketplace'>('installed')
 const loadingMarketplace = ref(false)
 const marketplace = reactive<MarketplaceResponse>({
@@ -334,6 +350,41 @@ async function toggle(id: string) {
 // flags restartRequired because the DLL cannot unload from the running
 // AssemblyLoadContext — we pass that note to the user via notification
 // instead of silently succeeding.
+// F91.12: put a previously-uninstalled built-in plugin back into rotation.
+// Backend clears blacklist; if DLL is still on disk → restart daemon; if
+// DLL was purged → prompt user to rebuild. We wait for respawn with
+// waitForDaemon, then refresh both lists.
+async function doRestore(id: string) {
+  restoring.value.add(id)
+  try {
+    const res = await restorePlugin(id)
+    if (res.rebuildRequired) {
+      ElNotification.warning({
+        title: 'Plugin potřebuje rebuild',
+        message: res.message,
+        duration: 8000,
+      })
+      return
+    }
+    if (res.restartRequired) {
+      ElNotification.info({
+        title: 'Obnovuji plugin',
+        message: res.message,
+        duration: 3000,
+      })
+      const ready = await waitForDaemon(15000)
+      if (!ready) ElMessage.warning('Daemon se po restartu neozývá — zkus Ctrl+R')
+      await pluginsStore.loadAll()
+      await reloadMarketplace()
+      ElMessage.success(`Plugin ${id} obnoven`)
+    }
+  } catch (e) {
+    ElMessage.error(`Obnovení selhalo: ${errorMessage(e)}`)
+  } finally {
+    restoring.value.delete(id)
+  }
+}
+
 async function confirmUninstall(id: string, name: string) {
   try {
     await ElMessageBox.confirm(
@@ -355,9 +406,13 @@ async function confirmUninstall(id: string, name: string) {
         duration: 4000,
       })
       try { await restartDaemon() } catch { /* daemon already closing the socket */ }
-      // Give the daemon ~3s to respawn before reloading plugin list. The
-      // fetch will auto-retry once the new port file lands.
-      await new Promise(r => setTimeout(r, 3500))
+      // F91.12: poll /healthz until the respawned daemon answers.
+      // Replaces a flat 3.5s sleep that sometimes reloaded stale data
+      // when the new daemon took longer to boot.
+      const ready = await waitForDaemon(15000)
+      if (!ready) {
+        ElMessage.warning('Daemon se po restartu neozývá do 15 s — zkus Ctrl+R')
+      }
       await pluginsStore.loadAll()
       ElMessage.success('Plugin odinstalován a daemon restartován')
     } else {

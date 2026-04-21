@@ -648,6 +648,36 @@ export const uninstallPlugin = (id: string) =>
 export const restartDaemon = () =>
   json<void>('/api/admin/restart', { method: 'POST' })
 
+// F91.12: restore an uninstalled built-in plugin. Removes it from the
+// uninstall blacklist and restarts the daemon. Returns rebuildRequired=true
+// when the DLL has been purged from disk — caller must tell the user to
+// rebuild the solution before retrying.
+export const restorePlugin = (id: string) =>
+  json<{
+    restored: boolean
+    id: string
+    restartRequired: boolean
+    rebuildRequired: boolean
+    message: string
+  }>(`/api/plugins/restore/${id}`, { method: 'POST' })
+
+/**
+ * F91.12: poll the daemon `/healthz` endpoint until it responds 200, or
+ * until the timeout expires. Used after a restart so the UI waits for the
+ * new daemon to be ready before loading fresh state.
+ */
+export async function waitForDaemon(timeoutMs = 15000): Promise<boolean> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const r = await fetch(`${daemonBaseUrl()}/healthz`)
+      if (r.ok) return true
+    } catch { /* ECONNREFUSED while daemon is booting — keep polling */ }
+    await new Promise(res => setTimeout(res, 400))
+  }
+  return false
+}
+
 export const fetchPluginUi = (id: string) =>
   json<PluginUiDefinition>(`/api/plugins/${id}/ui`)
 
