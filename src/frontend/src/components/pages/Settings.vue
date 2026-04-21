@@ -400,32 +400,13 @@
               </div>
             </section>
 
+            <!-- F91.13: password login form removed — SSO is the only
+                 supported entry point. Simple + Advanced mode share the
+                 SSO card above; the old /api/v1/auth/login local flow
+                 was redundant and confused users who expected SSO-only. -->
             <!-- Simple mode: stripped-down login/logout -->
             <template v-if="uiModeStore.isSimple">
-              <template v-if="!accountToken">
-                <section class="settings-card">
-                  <header class="settings-card-header">
-                    <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
-                  </header>
-                  <div class="settings-card-body">
-                    <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                      <el-form-item label="Email">
-                        <el-input v-model="authEmail" placeholder="you@example.com" />
-                      </el-form-item>
-                      <el-form-item label="Password">
-                        <el-input v-model="authPassword" type="password" show-password />
-                      </el-form-item>
-                      <div class="sync-actions">
-                        <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
-                        <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
-                      </div>
-                      <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
-                        {{ authError }}
-                      </div>
-                    </el-form>
-                  </div>
-                </section>
-              </template>
+              <template v-if="false"></template>
               <template v-else>
                 <section class="settings-card">
                   <header class="settings-card-header">
@@ -451,35 +432,10 @@
 
             <!-- Advanced mode: full account UI -->
             <template v-else>
-            <!-- Not logged in -->
-            <template v-if="!accountToken">
-              <section class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">Sign in to NKS WDC Cloud</span>
-                </header>
-                <div class="settings-card-body">
-                  <p class="tab-desc">
-                    Sign in to sync settings across devices, manage your fleet,
-                    and push configs between machines.
-                  </p>
-                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item label="Email">
-                      <el-input v-model="authEmail" placeholder="you@example.com" />
-                    </el-form-item>
-                    <el-form-item label="Password">
-                      <el-input v-model="authPassword" type="password" show-password />
-                    </el-form-item>
-                    <div class="sync-actions">
-                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">Sign in</el-button>
-                      <el-button size="small" :loading="authLoading" @click="doRegister">Register</el-button>
-                    </div>
-                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
-                      {{ authError }}
-                    </div>
-                  </el-form>
-                </div>
-              </section>
-            </template>
+            <!-- F91.13: not-logged-in password form removed — SSO is the
+                 single sign-in entry point. Only the "logged in" device UI
+                 below survives, and it now hangs off the SSO session. -->
+            <template v-if="false"></template>
 
             <!-- Logged in -->
             <template v-else>

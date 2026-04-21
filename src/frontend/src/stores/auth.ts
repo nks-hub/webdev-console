@@ -121,8 +121,18 @@ export const useAuthStore = defineStore('auth', () => {
       const me = await catalogMe(catalogUrl, token.value)
       setProfile(me)
     } catch (err) {
-      // Network hiccup or unauthenticated — keep whatever we had.
-      console.debug('[auth] /me unavailable, falling back to JWT:', err)
+      // F91.13: an HTTP 401 means the token is stale — JWT expired, catalog
+      // restarted with a new signing key, or the Account was deleted. Clear
+      // the token so the UI stops showing "Signed in" when the session is
+      // actually dead. Other errors (network, 5xx) keep the cached profile.
+      const msg = err instanceof Error ? err.message : String(err)
+      if (/\b401\b|unauthori/i.test(msg)) {
+        console.warn('[auth] token rejected by catalog — clearing:', msg)
+        setToken('')
+        setProfile(null)
+      } else {
+        console.debug('[auth] /me unavailable, falling back to JWT:', err)
+      }
     }
   }
 
