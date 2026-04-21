@@ -771,20 +771,42 @@ if (!gotSingleInstance) {
  * forwards it to the renderer as a structured IPC event. Empty/unknown
  * inputs are ignored — we never trust the payload beyond shape. */
 function forwardSsoCallback(rawUrl: string) {
+  // F91.14: trace what the OS handed us. The user reports "token missing"
+  // after Authentik login — without this log we can't tell whether the
+  // redirect URL itself was empty, our URL parse dropped the query, or the
+  // window wasn't ready yet. Full URL logged (token length only, value
+  // elided to keep logs safe).
+  console.log('[sso] forwardSsoCallback rawUrl:', rawUrl)
   try {
     const u = new URL(rawUrl)
-    if (u.protocol !== 'wdc:') return
-    if (u.hostname !== 'auth-callback' && u.pathname !== '//auth-callback') return
+    console.log('[sso] parsed: protocol=%s hostname=%s pathname=%s search=%s',
+      u.protocol, u.hostname, u.pathname, u.search)
+    if (u.protocol !== 'wdc:') {
+      console.warn('[sso] protocol mismatch — ignoring')
+      return
+    }
+    if (u.hostname !== 'auth-callback' && u.pathname !== '//auth-callback') {
+      console.warn('[sso] host/path mismatch — ignoring')
+      return
+    }
     const token = u.searchParams.get('token') ?? ''
     const error = u.searchParams.get('error') ?? ''
-    if (!win) return
+    console.log('[sso] extracted token.length=%d error=%s hasWindow=%s',
+      token.length, error || '—', Boolean(win))
+    if (!win) {
+      console.warn('[sso] no main window yet — dropping payload')
+      return
+    }
     win.webContents.send('sso-callback', { token, error })
     if (win.isMinimized()) win.restore()
     win.focus()
-  } catch { /* malformed URL — ignore, never crash the app */ }
+  } catch (e) {
+    console.warn('[sso] URL parse failed:', e instanceof Error ? e.message : String(e))
+  }
 }
 
 app.on('second-instance', (_evt, argv) => {
+  console.log('[sso] second-instance argv:', argv)
   const deepLink = argv.find(a => a.startsWith('wdc://'))
   if (deepLink) forwardSsoCallback(deepLink)
   if (win) {
