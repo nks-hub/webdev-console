@@ -79,6 +79,8 @@ import { useUpdatesStore } from './stores/updates'
 import { usePluginsStore } from './stores/plugins'
 import { useSitesStore } from './stores/sites'
 import { useThemeStore } from './stores/theme'
+import { useAuthStore } from './stores/auth'
+import { fetchSettings } from './api/daemon'
 
 const router = useRouter()
 const route = useRoute()
@@ -90,7 +92,24 @@ const drawerOpen = ref(false)
 watch(() => route.path, () => { drawerOpen.value = false })
 const pluginsStore = usePluginsStore()
 const sitesStore = useSitesStore()
+const authStore = useAuthStore()
 useThemeStore()
+
+// F91.11: pull the authoritative SSO profile the moment the daemon is
+// reachable. Without this the "Signed in as {email}" label only appeared
+// after the user navigated to Settings → Account (because the refresh
+// call lived in that page's script setup). We read `daemon.catalogUrl`
+// from the same settings snapshot Settings.vue uses — one source of truth.
+async function hydrateSsoProfile() {
+  if (!authStore.isAuthenticated) return
+  let catalogUrl = 'https://wdc.nks-hub.cz'
+  try {
+    const s = await fetchSettings() as Record<string, unknown>
+    const configured = s['daemon.catalogUrl']
+    if (typeof configured === 'string' && configured) catalogUrl = configured
+  } catch { /* daemon flaky — fallback URL is fine */ }
+  await authStore.refreshProfile(catalogUrl)
+}
 
 const commandPalette = ref<InstanceType<typeof CommandPalette> | null>(null)
 
@@ -182,6 +201,11 @@ onMounted(() => {
   unsubscribeConnect = daemonStore.onConnect(() => {
     void pluginsStore.loadAll()
     void sitesStore.load()
+    // F91.11: fetch catalog profile as soon as daemon is reachable (it
+    // holds the `daemon.catalogUrl` setting). Previous code only did this
+    // inside Settings.vue script-setup, so the "Signed in as {email}"
+    // label never appeared until the user visited the Account tab.
+    void hydrateSsoProfile()
   })
 
   // F70: tick nowTs every second so the splash elapsed counter and
