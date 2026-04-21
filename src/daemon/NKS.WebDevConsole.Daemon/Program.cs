@@ -124,6 +124,9 @@ builder.Services.AddSingleton<CatalogClient>(sp =>
 builder.Services.AddSingleton<BinaryDownloader>();
 builder.Services.AddSingleton<BinaryManager>();
 
+// Sync proxy — forwards /api/sync/* to catalog-api with Bearer forwarding.
+builder.Services.AddHttpClient("sync-proxy");
+
 // F95 plugin catalog client — same Settings-driven base URL resolution as
 // the binaries catalog, so a self-hosted catalog-api serves both.
 builder.Services.AddHttpClient("plugin-catalog");
@@ -5132,6 +5135,131 @@ app.MapGet("/api/catalogs/status", (SettingsStore settings) =>
         binary = Status("binary"),
         config = Status("config"),
     });
+});
+
+// Cloud config sync proxy — forwards to catalog-api with Bearer injection.
+// The daemon auth middleware (above) already validated the daemon token that
+// the frontend passed in Authorization. The catalog JWT travels in the
+// X-Catalog-Token header so the two tokens don't collide.
+app.MapPost("/api/sync/pull", async (HttpContext ctx, IHttpClientFactory httpFactory, SettingsStore settings, ILogger<Program> logger) =>
+{
+    Dictionary<string, object?>? body;
+    try { body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>(); }
+    catch { body = null; }
+
+    var deviceId = body?
+        .FirstOrDefault(kv => kv.Key.Equals("device_id", StringComparison.OrdinalIgnoreCase)).Value?.ToString()
+        ?? ctx.Request.Query["device_id"].FirstOrDefault();
+
+    if (string.IsNullOrWhiteSpace(deviceId))
+        return Results.BadRequest(new { error = "device_id required" });
+
+    var catalogToken = ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault();
+    var baseUrl = settings.CatalogUrl.TrimEnd('/');
+
+    using var client = httpFactory.CreateClient("sync-proxy");
+    using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/sync/config/{Uri.EscapeDataString(deviceId)}");
+    if (!string.IsNullOrEmpty(catalogToken))
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {catalogToken}");
+
+    try
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using var resp = await client.SendAsync(req, cts.Token);
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return Results.NotFound(new { error = "no snapshot for device" });
+
+        var json = await resp.Content.ReadAsStringAsync(cts.Token);
+        return Results.Content(json, "application/json", System.Text.Encoding.UTF8, (int)resp.StatusCode);
+    }
+    catch (OperationCanceledException) when (!ctx.RequestAborted.IsCancellationRequested)
+    {
+        logger.LogWarning("sync/pull timed out for device {DeviceId} on {Url}", deviceId, baseUrl);
+        return Results.Json(new { error = "catalog-api timeout" }, statusCode: 504);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "sync/pull proxy error for device {DeviceId}", deviceId);
+        return Results.Json(new { error = ex.Message }, statusCode: 502);
+    }
+});
+
+app.MapPost("/api/sync/push", async (HttpContext ctx, IHttpClientFactory httpFactory, SettingsStore settings, ILogger<Program> logger) =>
+{
+    var catalogToken = ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault();
+    var baseUrl = settings.CatalogUrl.TrimEnd('/');
+
+    string rawBody;
+    try
+    {
+        using var reader = new System.IO.StreamReader(ctx.Request.Body);
+        rawBody = await reader.ReadToEndAsync(ctx.RequestAborted);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to read body: {ex.Message}" });
+    }
+
+    using var client = httpFactory.CreateClient("sync-proxy");
+    using var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/v1/sync/config");
+    req.Content = new StringContent(rawBody, System.Text.Encoding.UTF8, "application/json");
+    if (!string.IsNullOrEmpty(catalogToken))
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {catalogToken}");
+
+    try
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using var resp = await client.SendAsync(req, cts.Token);
+        var json = await resp.Content.ReadAsStringAsync(cts.Token);
+        return Results.Content(json, "application/json", System.Text.Encoding.UTF8, (int)resp.StatusCode);
+    }
+    catch (OperationCanceledException) when (!ctx.RequestAborted.IsCancellationRequested)
+    {
+        logger.LogWarning("sync/push timed out on {Url}", baseUrl);
+        return Results.Json(new { error = "catalog-api timeout" }, statusCode: 504);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "sync/push proxy error");
+        return Results.Json(new { error = ex.Message }, statusCode: 502);
+    }
+});
+
+app.MapGet("/api/sync/exists", async (HttpContext ctx, IHttpClientFactory httpFactory, SettingsStore settings, ILogger<Program> logger) =>
+{
+    var deviceId = ctx.Request.Query["device_id"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(deviceId))
+        return Results.BadRequest(new { error = "device_id required" });
+
+    var catalogToken = ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault();
+    var baseUrl = settings.CatalogUrl.TrimEnd('/');
+
+    using var client = httpFactory.CreateClient("sync-proxy");
+    using var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v1/sync/config/{Uri.EscapeDataString(deviceId)}/exists");
+    if (!string.IsNullOrEmpty(catalogToken))
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {catalogToken}");
+
+    try
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using var resp = await client.SendAsync(req, cts.Token);
+        var json = await resp.Content.ReadAsStringAsync(cts.Token);
+        return Results.Content(json, "application/json", System.Text.Encoding.UTF8, (int)resp.StatusCode);
+    }
+    catch (OperationCanceledException) when (!ctx.RequestAborted.IsCancellationRequested)
+    {
+        logger.LogWarning("sync/exists timed out for device {DeviceId} on {Url}", deviceId, baseUrl);
+        return Results.Json(new { error = "catalog-api timeout" }, statusCode: 504);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "sync/exists proxy error for device {DeviceId}", deviceId);
+        return Results.Json(new { error = ex.Message }, statusCode: 502);
+    }
 });
 
 // Settings CRUD

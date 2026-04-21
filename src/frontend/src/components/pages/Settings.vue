@@ -13,6 +13,41 @@
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.ports')" name="ports">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.ports.description') }}</p>
+
+            <!-- Task 15: plugin-owned ports. Pulled from GET /api/plugins/ports
+                 (IPortMetadata DI registrations per task 25). Only active
+                 plugins show up — inactive ones are hidden so the user
+                 doesn't see rows for services that aren't running. -->
+            <div v-if="pluginPorts.length > 0" class="settings-card" style="margin-bottom: 16px">
+              <header class="settings-card-header">
+                <span class="settings-card-title">Plugin ports</span>
+                <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ pluginPorts.length }} active</span>
+              </header>
+              <div class="settings-card-body">
+                <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
+                  <el-form-item
+                    v-for="p in pluginPorts"
+                    :key="p.pluginId + ':' + p.key"
+                    :label="p.label"
+                  >
+                    <el-input-number
+                      :model-value="p.currentPort"
+                      :min="1"
+                      :max="65535"
+                      style="width: 100%"
+                      disabled
+                    />
+                    <div class="hint">
+                      <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
+                    </div>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+
+            <!-- Legacy hardcoded ports form — will migrate to IPortMetadata
+                 one plugin at a time. For now coexists so users can still
+                 edit the values that haven't been wired to plugins yet. -->
             <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
               <el-form-item :label="$t('settings.ports.httpPort')">
                 <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
@@ -549,16 +584,29 @@
                         </span>
                       </template>
                     </el-table-column>
-                    <el-table-column label="" width="110" align="right">
+                    <el-table-column label="" width="200" align="right">
                       <template #default="{ row }">
-                        <el-button
-                          v-if="!row.is_current"
-                          size="small"
-                          type="primary"
-                          plain
-                          @click="pushMyConfigTo(row.device_id)"
-                          :loading="pushingTo === row.device_id"
-                        >Push here</el-button>
+                        <div style="display: flex; gap: 6px; justify-content: flex-end">
+                          <el-button
+                            v-if="!row.is_current"
+                            size="small"
+                            type="primary"
+                            plain
+                            @click="pushMyConfigTo(row.device_id)"
+                            :loading="pushingTo === row.device_id"
+                          >Push here</el-button>
+                          <!-- Task 07: unlink flow. Confirm before DELETE
+                               since removing a device from the account
+                               invalidates its tokens and forces re-login. -->
+                          <el-button
+                            v-if="!row.is_current"
+                            size="small"
+                            type="danger"
+                            plain
+                            @click="unlinkDevice(row)"
+                            :loading="unlinkingDevice === row.device_id"
+                          >Unlink</el-button>
+                        </div>
                       </template>
                     </el-table-column>
                   </el-table>
@@ -612,6 +660,43 @@
                 {{ $t('settings.update.openRelease') }} →
               </el-link>
             </div>
+
+            <!-- Task 06: download progress bar. Shown while
+                 electron-updater is downloading the new bundle (IPC
+                 message sets progressPercent). -->
+            <div v-if="updateCheck.progressPercent !== null" class="update-progress">
+              <el-progress
+                :percentage="updateCheck.progressPercent"
+                :status="updateCheck.progressPercent >= 100 ? 'success' : undefined"
+                :stroke-width="10"
+              />
+              <div class="update-progress-meta">
+                <span>{{ updateCheck.progressPercent >= 100 ? 'Installing…' : 'Downloading…' }}</span>
+                <span v-if="updateCheck.progressBytes" class="mono">{{ updateCheck.progressBytes }}</span>
+              </div>
+            </div>
+
+            <!-- Task 06: changelog markdown — GitHub release body rendered
+                 as a conservative subset (headings, lists, inline code).
+                 Full release viewable via the "View on GitHub" link. -->
+            <section v-if="updateCheck.releaseNotes" class="settings-card" style="margin-top: 12px">
+              <header class="settings-card-header">
+                <span class="settings-card-title">
+                  {{ $t('settings.update.releaseNotesTitle') }} v{{ updateCheck.latest }}
+                </span>
+                <el-link
+                  v-if="updateCheck.releaseUrl"
+                  :href="updateCheck.releaseUrl"
+                  target="_blank"
+                  type="primary"
+                  style="font-size: 0.78rem"
+                >
+                  {{ $t('settings.update.viewOnGithub') }} →
+                </el-link>
+              </header>
+              <!-- eslint-disable-next-line vue/no-v-html — renderReleaseNotes escapes input first -->
+              <div class="release-notes settings-card-body" v-html="renderReleaseNotes(updateCheck.releaseNotes)" />
+            </section>
 
             <el-alert
               v-if="updateCheck.error"
@@ -707,6 +792,55 @@
               </div>
             </section>
 
+            <!-- Task 03: Cloud snapshots — recent snapshot list from
+                 catalog-api /sync/snapshots with restore/delete actions.
+                 Snapshots are auto-created by the cloud BEFORE each push
+                 overwrites a device config (see catalog-api task 34). -->
+            <section v-if="accountToken" class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-title">Snapshots</span>
+                <el-button size="small" :loading="snapshotsLoading" @click="loadSnapshots">
+                  {{ $t('common.refresh') }}
+                </el-button>
+              </header>
+              <div class="settings-card-body">
+                <p class="tab-desc" style="margin-bottom: 10px">
+                  Revert to a previous configuration. Cloud keeps the last
+                  10 snapshots per device — older ones are pruned automatically.
+                </p>
+                <el-table v-if="snapshots.length > 0" :data="snapshots" size="small" stripe>
+                  <el-table-column label="When" min-width="180">
+                    <template #default="{ row }">
+                      {{ formatDate(row.created_at) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="Device" min-width="140">
+                    <template #default="{ row }">
+                      <span class="mono">{{ row.device_id.slice(0, 12) }}…</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="Size" width="100">
+                    <template #default="{ row }">
+                      <span class="mono">{{ Math.round(row.size_bytes / 1024) }} KB</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="" width="180" align="right">
+                    <template #default="{ row }">
+                      <div style="display: flex; gap: 6px; justify-content: flex-end">
+                        <el-button size="small" plain @click="restoreSnapshot(row)" :loading="snapshotAction === row.id">
+                          Restore
+                        </el-button>
+                        <el-button size="small" type="danger" plain @click="deleteSnapshot(row)" :loading="snapshotAction === row.id">
+                          {{ $t('common.delete') }}
+                        </el-button>
+                      </div>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <el-empty v-else :description="snapshotsLoading ? $t('common.loading') : 'No snapshots yet — push to cloud first'" :image-size="48" />
+              </div>
+            </section>
+
             <!-- File export / import -->
             <section class="settings-card">
               <header class="settings-card-header">
@@ -780,6 +914,18 @@
                       ? $t('settings.sso.catalogReachable', { ago: formatAgo(pluginCatalogStatus.lastFetch) })
                       : $t('settings.sso.catalogNeverSynced') }}
                 </span>
+                <!-- Task 02: when catalog has never synced, surface the
+                     "Sync now" action inline so the user doesn't have to
+                     navigate to the Plugins tab to understand why. -->
+                <el-button
+                  v-if="!pluginCatalogStatus.lastFetch"
+                  size="small"
+                  type="primary"
+                  plain
+                  :loading="refreshingCatalog"
+                  style="margin-left: 8px"
+                  @click="refreshCatalogNow"
+                >{{ $t('settings.advanced.refreshCatalog') }}</el-button>
               </div>
 
               <div v-if="systemInfo" class="about-system">
@@ -886,9 +1032,14 @@ async function ssoLogin() {
 
 // F91.9: if the user already had a token on page load, also fetch the
 // profile so a reload doesn't lose the "Signed in as" display.
-if (authStore.isAuthenticated && !authStore.profile) {
-  void authStore.refreshProfile(catalogUrl.value || 'https://wdc.nks-hub.cz')
-}
+// NOTE: catalogUrl is declared further down in this same setup block —
+// we can't reference its .value at script-top. Defer to a microtask
+// so the ref is initialized by the time we read it.
+queueMicrotask(() => {
+  if (authStore.isAuthenticated && !authStore.profile) {
+    void authStore.refreshProfile(catalogUrl.value || 'https://wdc.nks-hub.cz')
+  }
+})
 const { locale, t } = useI18n()
 
 function onLocaleChange(v: string) {
@@ -1048,6 +1199,121 @@ async function saveMysqlRootPassword() {
   }
 }
 const pluginCatalogStatus = ref<{ catalogCount: number; cachedCount: number; lastFetch: string | null; cacheRoot: string } | null>(null)
+
+// Task 15: plugin-declared ports (IPortMetadata DI registrations).
+// Populated from GET /api/plugins/ports. Only contains active plugins.
+const pluginPorts = ref<Array<{
+  key: string
+  label: string
+  pluginId: string
+  defaultPort: number
+  currentPort: number
+  isActive: boolean
+}>>([])
+
+// Task 03: snapshots state + actions.
+function formatDate(s: string | number | null | undefined): string {
+  if (!s) return '—'
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? String(s) : d.toLocaleString()
+}
+
+interface SyncSnapshot {
+  id: number
+  device_id: string
+  created_at: string
+  size_bytes: number
+}
+const snapshots = ref<SyncSnapshot[]>([])
+const snapshotsLoading = ref(false)
+const snapshotAction = ref<number | null>(null)
+
+async function loadSnapshots() {
+  if (!accountToken.value) { snapshots.value = []; return }
+  snapshotsLoading.value = true
+  try {
+    const url = getCatalogUrl()
+    const r = await fetch(`${url}/api/v1/sync/snapshots`, {
+      headers: { Authorization: `Bearer ${accountToken.value}` },
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    const data = await r.json() as { snapshots: SyncSnapshot[] }
+    snapshots.value = data.snapshots ?? []
+  } catch (e) {
+    ElMessage.error(`Failed to load snapshots: ${errorMessage(e)}`)
+  } finally {
+    snapshotsLoading.value = false
+  }
+}
+
+async function restoreSnapshot(row: SyncSnapshot) {
+  try {
+    await ElMessageBox.confirm(
+      `Restore settings from snapshot taken ${formatDate(row.created_at)}? Local changes that haven't been pushed will be overwritten.`,
+      'Restore snapshot',
+      { type: 'warning', confirmButtonText: 'Restore', cancelButtonText: 'Cancel' },
+    )
+  } catch { return /* cancelled */ }
+  snapshotAction.value = row.id
+  try {
+    const url = getCatalogUrl()
+    const r = await fetch(`${url}/api/v1/sync/snapshots/${row.id}/restore`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accountToken.value}` },
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    const data = await r.json()
+    // Route the payload through the same merge logic as pullFromCloud —
+    // saveSettings + reload.
+    if (data?.payload?.settings) {
+      await saveSettings(data.payload.settings as Record<string, string>)
+      await loadSettings()
+    }
+    ElMessage.success('Snapshot restored')
+  } catch (e) {
+    ElMessage.error(`Restore failed: ${errorMessage(e)}`)
+  } finally {
+    snapshotAction.value = null
+  }
+}
+
+async function deleteSnapshot(row: SyncSnapshot) {
+  try {
+    await ElMessageBox.confirm(
+      `Delete this snapshot? This cannot be undone.`,
+      'Delete snapshot',
+      { type: 'warning', confirmButtonText: 'Delete', cancelButtonText: 'Cancel' },
+    )
+  } catch { return }
+  snapshotAction.value = row.id
+  try {
+    const url = getCatalogUrl()
+    const r = await fetch(`${url}/api/v1/sync/snapshots/${row.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accountToken.value}` },
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    snapshots.value = snapshots.value.filter(s => s.id !== row.id)
+    ElMessage.success('Snapshot deleted')
+  } catch (e) {
+    ElMessage.error(`Delete failed: ${errorMessage(e)}`)
+  } finally {
+    snapshotAction.value = null
+  }
+}
+
+async function loadPluginPorts() {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/plugins/ports`, { headers: authHeaders() })
+    if (!r.ok) return
+    const data = await r.json() as Array<{
+      key: string; label: string; pluginId: string
+      defaultPort: number; currentPort: number; isActive: boolean
+    }>
+    // Filter inactive — per user decision (variant B in interview).
+    pluginPorts.value = data.filter(p => p.isActive)
+  } catch { /* no-op, section just doesn't render */ }
+}
 
 async function loadPluginCatalogStatus() {
   try {
@@ -1233,6 +1499,19 @@ async function refreshCatalog() {
   }
 }
 
+// Task 02: inline CTA on About tab — hits both binary + plugin catalog
+// so a single click fixes "nesynchronizováno" regardless of which one
+// is actually stale. Reuses the two existing per-catalog refreshers.
+async function refreshCatalogNow() {
+  refreshingCatalog.value = true
+  try {
+    await Promise.allSettled([refreshCatalog(), syncPluginsNow()])
+    await loadPluginCatalogStatus()
+  } finally {
+    refreshingCatalog.value = false
+  }
+}
+
 async function testCatalogReachable() {
   testingCatalog.value = true
   catalogStatus.value = null
@@ -1286,7 +1565,39 @@ const authError = ref('')
 const accountDevices = ref<CatalogDeviceInfo[]>([])
 const devicesLoading = ref(false)
 const pushingTo = ref<string | null>(null)
+// Task 07: track which device is currently being unlinked so its button
+// stays spinning without blocking the rest of the table.
+const unlinkingDevice = ref<string | null>(null)
 const editingDeviceName = ref<string | null>(null)
+
+async function unlinkDevice(row: CatalogDeviceInfo) {
+  try {
+    await ElMessageBox.confirm(
+      `Unlink ${row.name || row.device_id.slice(0, 12)} from your account? That device will need to sign in again to sync.`,
+      'Unlink device',
+      { type: 'warning', confirmButtonText: 'Unlink', cancelButtonText: 'Cancel' },
+    )
+  } catch { return /* user cancelled */ }
+
+  unlinkingDevice.value = row.device_id
+  try {
+    const url = getCatalogUrl()
+    const r = await fetch(`${url}/api/v1/devices/${row.device_id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accountToken.value}` },
+    })
+    if (!r.ok) {
+      const body = await r.json().catch(() => null) as { detail?: string } | null
+      throw new Error(body?.detail || `HTTP ${r.status}`)
+    }
+    ElMessage.success('Device unlinked')
+    await loadDevicesAccount()
+  } catch (e) {
+    ElMessage.error(`Unlink failed: ${errorMessage(e)}`)
+  } finally {
+    unlinkingDevice.value = null
+  }
+}
 const editingDeviceValue = ref('')
 
 function startEditDeviceName(row: CatalogDeviceInfo) {
@@ -1505,23 +1816,19 @@ async function pushToCloud() {
     })
 
     const payload = await buildSyncPayload()
-    const url = getCatalogUrl()
-    const pushHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (accountToken.value) pushHeaders['Authorization'] = `Bearer ${accountToken.value}`
-    const r = await fetch(`${url}/api/v1/sync/config`, {
+    // Task 33: route through daemon proxy so catalog JWT stays server-side
+    // and CORS is no longer a concern. Daemon adds its own 30s timeout.
+    const proxyHeaders = authHeaders()
+    if (accountToken.value) proxyHeaders['X-Catalog-Token'] = accountToken.value
+    const r = await fetch(`${daemonBaseUrl()}/api/sync/push`, {
       method: 'POST',
-      headers: pushHeaders,
+      headers: proxyHeaders,
       body: JSON.stringify({ device_id: deviceId.value, payload }),
     })
     if (!r.ok) {
-      // Surface catalog-api's error body so users see "device_id must be
-      // 3–64 chars…" etc instead of a bare HTTP status, which is useless
-      // when debugging sync failures against a remote catalog.
       const text = await r.text().catch(() => r.statusText)
       throw new Error(text || `HTTP ${r.status}`)
     }
-    // Store ISO so loadDeviceId can re-parse it on next mount — lastSyncDisplay
-    // handles the locale-aware rendering.
     lastSyncTime.value = new Date().toISOString()
     syncStatus.value = { ok: true, message: 'Pushed successfully' }
     ElMessage.success('Configuration pushed to cloud')
@@ -1566,13 +1873,15 @@ async function pullFromCloud() {
   pulling.value = true
   syncStatus.value = null
   try {
-    const url = (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
-    // F91.17: sync GET endpoints require the same JWT as the POST;
-    // the original code shipped no Authorization header and relied on
-    // the catalog being open — which broke when the rollout closed it.
-    const pullHeaders: Record<string, string> = {}
-    if (accountToken.value) pullHeaders['Authorization'] = `Bearer ${accountToken.value}`
-    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}`, { headers: pullHeaders })
+    // Task 33: route through daemon proxy — removes CORS dependency, daemon
+    // forwards Bearer token from X-Catalog-Token and enforces 30s timeout.
+    const pullHeaders = authHeaders()
+    if (accountToken.value) pullHeaders['X-Catalog-Token'] = accountToken.value
+    const r = await fetch(`${daemonBaseUrl()}/api/sync/pull`, {
+      method: 'POST',
+      headers: pullHeaders,
+      body: JSON.stringify({ device_id: deviceId.value }),
+    })
     if (!r.ok) {
       if (r.status === 404) {
         syncStatus.value = { ok: false, message: 'No cloud snapshot found for this device' }
@@ -1674,10 +1983,13 @@ async function checkCloudExists() {
   checkingCloud.value = true
   syncStatus.value = null
   try {
-    const url = (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
-    const existsHeaders: Record<string, string> = {}
-    if (accountToken.value) existsHeaders['Authorization'] = `Bearer ${accountToken.value}`
-    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}/exists`, { headers: existsHeaders })
+    // Task 33: route through daemon proxy.
+    const existsHeaders = authHeaders()
+    if (accountToken.value) existsHeaders['X-Catalog-Token'] = accountToken.value
+    const r = await fetch(
+      `${daemonBaseUrl()}/api/sync/exists?device_id=${encodeURIComponent(deviceId.value)}`,
+      { headers: existsHeaders },
+    )
     if (!r.ok) {
       const text = await r.text().catch(() => r.statusText)
       throw new Error(text || `HTTP ${r.status}`)
@@ -1765,6 +2077,14 @@ const updateCheck = reactive<{
   downloadUrl: string | null
   lastCheckedIso: string | null
   error: string | null
+  // Task 06: release-notes markdown body from GitHub for inline
+  // display so the user sees "what changes before clicking install.
+  releaseNotes: string | null
+  releaseUrl: string | null
+  // Task 06: download progress (from electron-updater download-progress
+  // IPC). 0–100 when actively downloading, null otherwise.
+  progressPercent: number | null
+  progressBytes: string | null
 }>({
   loading: false,
   downloading: false,
@@ -1773,6 +2093,10 @@ const updateCheck = reactive<{
   downloadUrl: null,
   lastCheckedIso: localStorage.getItem('wdc-last-update-check'),
   error: null,
+  releaseNotes: null,
+  releaseUrl: null,
+  progressPercent: null,
+  progressBytes: null,
 })
 
 async function runUpdateCheck() {
@@ -1781,12 +2105,19 @@ async function runUpdateCheck() {
   try {
     const r = await fetch('https://api.github.com/repos/nks-hub/webdev-console/releases/latest')
     if (!r.ok) throw new Error(`GitHub API ${r.status}`)
-    const data = await r.json() as { tag_name?: string; html_url?: string; assets?: Array<{ browser_download_url: string; name: string }> }
+    const data = await r.json() as {
+      tag_name?: string
+      html_url?: string
+      body?: string
+      assets?: Array<{ browser_download_url: string; name: string }>
+    }
     const latest = (data.tag_name ?? '').replace(/^v/, '')
     updateCheck.latest = latest
     updateCheck.hasUpdate = compareSemver(latest, currentVersion) > 0
     const setupAsset = (data.assets ?? []).find(a => /setup.*\.exe$/i.test(a.name))
     updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
+    updateCheck.releaseNotes = data.body ?? null
+    updateCheck.releaseUrl = data.html_url ?? null
     updateCheck.lastCheckedIso = new Date().toISOString()
     localStorage.setItem('wdc-last-update-check', updateCheck.lastCheckedIso)
   } catch (e) {
@@ -1794,6 +2125,29 @@ async function runUpdateCheck() {
   } finally {
     updateCheck.loading = false
   }
+}
+
+// Task 06: minimal safe markdown-to-HTML for GitHub release notes.
+// Intentionally conservative — only handles headings, bold/italic, code
+// spans, and bullet lists. Anything fancier should link out via the
+// "View on GitHub" action. Escapes HTML first to avoid XSS from arbitrary
+// release body text.
+function renderReleaseNotes(md: string): string {
+  if (!md) return ''
+  const esc = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return esc
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')
+    .replace(/\n\n/g, '<br/><br/>')
 }
 
 async function downloadAndInstall() {
@@ -1825,7 +2179,9 @@ onMounted(async () => {
   void loadBackups()
   void loadDeviceId()
   void loadPluginCatalogStatus()
+  void loadPluginPorts()
   void loadMysqlRootStatus()
+  void loadSnapshots()
   if (accountToken.value) void loadDevicesAccount()
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() })
