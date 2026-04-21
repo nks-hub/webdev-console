@@ -160,6 +160,11 @@ export const useAuthStore = defineStore('auth', () => {
 
     return await new Promise<string>((resolve, reject) => {
       const unsub = api.onSsoCallback!(payload => {
+        // F91.14: trace what the renderer actually sees. If token.length
+        // is non-zero but the UI still renders "not signed in", the bug
+        // is somewhere between here and the displayName computed.
+        console.log('[auth] sso-callback payload received — token.length=%d error=%s',
+          payload?.token?.length ?? 0, payload?.error || '—')
         try {
           if (payload.error) {
             loginError.value = payload.error
@@ -172,6 +177,8 @@ export const useAuthStore = defineStore('auth', () => {
             return
           }
           setToken(payload.token)
+          console.log('[auth] token stored; identity.email=%s displayName=%s',
+            identity.value?.email ?? '', displayName.value ?? '')
           resolve(payload.token)
         } finally {
           loginPending.value = false

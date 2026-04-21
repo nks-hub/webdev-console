@@ -190,10 +190,17 @@
            already signed in the item shows the avatar mark + a "Sign out"
            action; when signed out a single click kicks off the deep-link
            flow against the catalog URL stored in SettingsStore. -->
+      <!-- F91.14: surface the real SSO identity in the sidebar so the
+           user sees "Signed in as lury@lury.cz" at a glance, not just a
+           generic "Signed in". Falls back to "Signed in" when the JWT
+           decode and /auth/me both produced nothing (unlikely, but
+           keeps the layout stable). -->
       <div
         class="nav-item nav-item-sso"
         :class="{ signedin: authStore.isAuthenticated }"
-        :title="authStore.isAuthenticated ? 'Signed in — click to sign out' : 'Sign in with SSO'"
+        :title="authStore.isAuthenticated
+          ? `Signed in as ${authStore.displayName || '(unknown)'} — click to sign out`
+          : 'Sign in with SSO'"
         @click="toggleSso"
       >
         <span class="nav-icon-shell">
@@ -201,8 +208,14 @@
             <component :is="authStore.isAuthenticated ? UserFilled : User" />
           </el-icon>
         </span>
-        <span class="nav-label">
-          {{ authStore.isAuthenticated ? 'Signed in' : 'Sign in' }}
+        <span class="nav-label nav-label-sso">
+          <template v-if="authStore.isAuthenticated">
+            <span class="sso-caption">Signed in</span>
+            <span class="sso-email mono" :title="authStore.displayName || ''">
+              {{ authStore.displayName || '…' }}
+            </span>
+          </template>
+          <template v-else>Sign in</template>
         </span>
         <span v-if="authStore.loginPending" class="sso-spinner" />
       </div>
@@ -561,6 +574,28 @@ async function toggleSvc(svc: ServiceInfo) {
    legible without crowding the bottom-nav visual weight. */
 .nav-item-sso.signedin .nav-icon-shell { color: #16a34a; }
 .nav-item-sso.signedin { border-left-color: #16a34a; }
+.nav-label-sso {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  overflow: hidden;
+  min-width: 0;
+}
+.nav-label-sso .sso-caption {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text-3);
+}
+.nav-label-sso .sso-email {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--wdc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sso-spinner {
   display: inline-block;
   width: 10px;
