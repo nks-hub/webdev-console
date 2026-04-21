@@ -4974,6 +4974,27 @@ app.MapPost("/api/dns/flush", async () =>
     }
 });
 
+// Task 36: catalog sync status — exposes persisted lastSyncAt / ok /
+// error so Settings > About can display "Last synced 2 min ago" instead
+// of "nesynchronizováno". Values populated by PluginCatalogSyncService
+// after every refresh tick; future catalogs (binary, config) slot into
+// the same shape.
+app.MapGet("/api/catalogs/status", (SettingsStore settings) =>
+{
+    object Status(string prefix) => new
+    {
+        lastSyncAt = settings.GetString("catalog", $"{prefix}.lastSyncAt"),
+        ok = settings.GetString("catalog", $"{prefix}.lastSyncOk") != "false",
+        error = settings.GetString("catalog", $"{prefix}.lastError") ?? "",
+    };
+    return Results.Ok(new
+    {
+        plugin = Status("plugin"),
+        binary = Status("binary"),
+        config = Status("config"),
+    });
+});
+
 // Settings CRUD
 app.MapGet("/api/settings", async (Database db) =>
 {
@@ -5202,6 +5223,326 @@ app.MapPost("/api/databases/root-password", async (HttpContext ctx) =>
     catch (Exception ex)
     {
         return Results.Problem(title: "failed to persist password", detail: ex.Message, statusCode: 500);
+    }
+});
+
+// POST /api/plugins/mysql/change-password
+// Verifies currentPwd matches the stored root password, then executes ALTER USER
+// for all root@* accounts, persists the new password, and verifies connectivity.
+app.MapPost("/api/plugins/mysql/change-password", async (
+    HttpContext ctx,
+    BinaryManager bm,
+    SettingsStore settings,
+    IServiceProvider sp,
+    ILoggerFactory lf) =>
+{
+    var log = lf.CreateLogger("MySqlChangePassword");
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var currentPwd = body?.GetValueOrDefault("currentPwd") ?? body?.GetValueOrDefault("currentpwd") ?? "";
+    var newPwd = body?.GetValueOrDefault("newPwd") ?? body?.GetValueOrDefault("newpwd") ?? "";
+
+    var validationError = MySqlPasswordHelper.ValidatePassword(newPwd);
+    if (validationError is not null)
+        return Results.BadRequest(new { success = false, error = validationError });
+
+    // Verify currentPwd matches stored password.
+    var stored = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
+    if (stored is null)
+        return Results.BadRequest(new { success = false, error = "No stored root password found. Use reset-password instead." });
+    if (currentPwd != stored)
+        return Results.BadRequest(new { success = false, error = "currentPwd does not match the stored root password." });
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "MySQL not installed" });
+
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysql.Executable);
+    if (mysqlCli is null)
+        return Results.BadRequest(new { success = false, error = "mysql CLI not found next to mysqld" });
+
+    var port = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+    var initFile = "";
+    try
+    {
+        log.LogInformation("change-password: writing ALTER USER init-file for port {Port}", port);
+        var sql = MySqlPasswordHelper.BuildAlterUserSql(newPwd);
+        initFile = MySqlPasswordHelper.WriteTempInitFile(sql);
+
+        var changeArgs = new List<string>
+        {
+            "-h", "127.0.0.1",
+            "-P", port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-u", "root",
+            "--init-command", $"source {initFile}"
+        };
+
+        log.LogInformation("change-password: executing ALTER USER via mysql CLI");
+        var changeResult = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(changeArgs)
+            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = currentPwd })
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        if (changeResult.ExitCode != 0)
+        {
+            log.LogWarning("change-password: ALTER USER failed (exit {Code}): {Err}",
+                changeResult.ExitCode, changeResult.StandardError.Trim());
+            return Results.BadRequest(new
+            {
+                success = false,
+                error = $"ALTER USER failed: {changeResult.StandardError.Trim()}"
+            });
+        }
+
+        log.LogInformation("change-password: ALTER USER succeeded, persisting new password");
+        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(newPwd);
+
+        // Verify connectivity with new password.
+        log.LogInformation("change-password: verifying new password via SELECT 1");
+        var verifyArgs = new List<string>
+        {
+            "-h", "127.0.0.1",
+            "-P", port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-u", "root",
+            "-N", "-e", "SELECT 1"
+        };
+        var verifyResult = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(verifyArgs)
+            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        var verified = verifyResult.ExitCode == 0;
+        log.LogInformation("change-password: verification {Result}", verified ? "OK" : "FAILED");
+        return Results.Ok(new { success = true, verified });
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "change-password: unexpected error");
+        return Results.Problem(title: "change-password failed", detail: ex.Message, statusCode: 500);
+    }
+    finally
+    {
+        if (!string.IsNullOrEmpty(initFile))
+            try { File.Delete(initFile); } catch { /* best effort */ }
+    }
+});
+
+// POST /api/plugins/mysql/reset-password
+// DANGER: resets root password without knowing the current one.
+// Stops mysqld, spawns a skip-grant-tables instance, runs ALTER USER, then
+// restarts the normal mysqld.
+app.MapPost("/api/plugins/mysql/reset-password", async (
+    HttpContext ctx,
+    BinaryManager bm,
+    SettingsStore settings,
+    IServiceProvider sp,
+    ILoggerFactory lf) =>
+{
+    var log = lf.CreateLogger("MySqlResetPassword");
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var newPwd = body?.GetValueOrDefault("newPwd") ?? body?.GetValueOrDefault("newpwd") ?? "";
+
+    var validationError = MySqlPasswordHelper.ValidatePassword(newPwd);
+    if (validationError is not null)
+        return Results.BadRequest(new { success = false, error = validationError });
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "MySQL not installed" });
+
+    var mysqldPath = mysql.Executable;
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysqldPath);
+    var mysqladmin = MySqlPasswordHelper.ResolveMysqladmin(mysqldPath);
+    if (mysqlCli is null)
+        return Results.BadRequest(new { success = false, error = "mysql CLI not found next to mysqld" });
+
+    var port = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+    var steps = new List<string>();
+    var initFile = "";
+    System.Diagnostics.Process? safeProcess = null;
+    var tmpPidFile = Path.Combine(Path.GetTempPath(), $"wdc-mysql-reset-{Guid.NewGuid():N}.pid");
+    var tmpSocket = OperatingSystem.IsWindows() ? "" : "/tmp/wdc-mysql-reset.sock";
+
+    // Find the MySQL IServiceModule so we can stop/start the managed service.
+    var mysqlModule = sp.GetServices<IServiceModule>()
+        .FirstOrDefault(m => m.ServiceId.Equals("mysql", StringComparison.OrdinalIgnoreCase));
+
+    try
+    {
+        // Step 1: stop the normal mysqld.
+        steps.Add("Stopping managed mysqld");
+        log.LogInformation("reset-password: stopping managed mysqld");
+        if (mysqlModule is not null)
+        {
+            try { await mysqlModule.StopAsync(CancellationToken.None); }
+            catch (Exception ex) { log.LogWarning(ex, "reset-password: StopAsync threw (continuing)"); }
+        }
+        steps.Add("mysqld stopped");
+
+        // Step 2: spawn skip-grant-tables mysqld on a temporary port (3307 avoids conflict).
+        steps.Add("Spawning skip-grant-tables mysqld");
+        log.LogInformation("reset-password: spawning skip-grant-tables mysqld");
+        var skipPort = 3307;
+        var dataDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "mysql");
+
+        var safeArgs = OperatingSystem.IsWindows()
+            ? $"--skip-grant-tables --skip-networking=OFF --port={skipPort} " +
+              $"--datadir=\"{dataDir}\" --pid-file=\"{tmpPidFile}\" --console"
+            : $"--skip-grant-tables --skip-networking=OFF --port={skipPort} " +
+              $"--datadir=\"{dataDir}\" --pid-file=\"{tmpPidFile}\" " +
+              $"--socket=\"{tmpSocket}\" --console";
+
+        var safePsi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = mysqldPath,
+            Arguments = safeArgs,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        safeProcess = System.Diagnostics.Process.Start(safePsi)
+            ?? throw new InvalidOperationException("Failed to start skip-grant-tables mysqld");
+
+        steps.Add($"skip-grant-tables mysqld PID={safeProcess.Id}");
+
+        // Step 3: wait for the skip-grant-tables mysqld to accept connections.
+        steps.Add($"Waiting for skip-grant-tables mysqld on port {skipPort}");
+        log.LogInformation("reset-password: waiting for skip-grant-tables mysqld on port {Port}", skipPort);
+        var ready = await MySqlPasswordHelper.WaitForTcpPortAsync(skipPort, TimeSpan.FromSeconds(30), CancellationToken.None);
+        if (!ready)
+            throw new TimeoutException($"skip-grant-tables mysqld did not bind port {skipPort} within 30s");
+        steps.Add("skip-grant-tables mysqld ready");
+
+        // Step 4: execute ALTER USER via init-file.
+        steps.Add("Executing ALTER USER");
+        log.LogInformation("reset-password: executing ALTER USER via mysql CLI on port {Port}", skipPort);
+        var sql = MySqlPasswordHelper.BuildAlterUserSql(newPwd);
+        initFile = MySqlPasswordHelper.WriteTempInitFile(sql);
+
+        // With --skip-grant-tables, FLUSH PRIVILEGES at the start re-enables grant checking
+        // so ALTER USER works correctly.
+        var alterArgs = new List<string>
+        {
+            "-h", "127.0.0.1",
+            "-P", skipPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-u", "root",
+            "--connect-timeout=10",
+            "-e", $"source {initFile}"
+        };
+        var alterResult = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(alterArgs)
+            .WithEnvironmentVariables(new Dictionary<string, string?>())
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        if (alterResult.ExitCode != 0)
+            throw new InvalidOperationException($"ALTER USER failed (exit {alterResult.ExitCode}): {alterResult.StandardError.Trim()}");
+        steps.Add("ALTER USER executed");
+
+        // Step 5: shut down the skip-grant-tables mysqld.
+        steps.Add("Shutting down skip-grant-tables mysqld");
+        log.LogInformation("reset-password: shutting down skip-grant-tables mysqld");
+        if (mysqladmin is not null && File.Exists(mysqladmin))
+        {
+            try
+            {
+                await CliWrap.Cli.Wrap(mysqladmin)
+                    .WithArguments(new[] { "-h", "127.0.0.1", "-P", skipPort.ToString(), "-u", "root", "shutdown" })
+                    .WithEnvironmentVariables(new Dictionary<string, string?>())
+                    .WithValidation(CliWrap.CommandResultValidation.None)
+                    .ExecuteAsync();
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "reset-password: mysqladmin shutdown failed, killing process");
+            }
+        }
+        if (safeProcess is not null && !safeProcess.HasExited)
+        {
+            safeProcess.Kill(entireProcessTree: true);
+            await safeProcess.WaitForExitAsync();
+        }
+        steps.Add("skip-grant-tables mysqld stopped");
+
+        // Step 6: persist new password.
+        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(newPwd);
+        steps.Add("Password persisted to DPAPI store");
+
+        // Step 7: start normal mysqld.
+        steps.Add("Starting normal mysqld");
+        log.LogInformation("reset-password: starting normal mysqld");
+        if (mysqlModule is not null)
+        {
+            try { await mysqlModule.StartAsync(CancellationToken.None); }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "reset-password: StartAsync threw");
+                steps.Add($"Warning: normal mysqld start error: {ex.Message}");
+            }
+        }
+        steps.Add("Normal mysqld started");
+
+        // Step 8: verify new password.
+        steps.Add("Verifying new password");
+        log.LogInformation("reset-password: verifying new password on port {Port}", port);
+        var verifyArgs = new List<string>
+        {
+            "-h", "127.0.0.1",
+            "-P", port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-u", "root",
+            "-N", "-e", "SELECT 1"
+        };
+        var verifyResult = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(verifyArgs)
+            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        var verified = verifyResult.ExitCode == 0;
+        steps.Add(verified ? "Verification OK" : $"Verification FAILED: {verifyResult.StandardError.Trim()}");
+        log.LogInformation("reset-password: verification {Result}", verified ? "OK" : "FAILED");
+
+        return Results.Ok(new { success = true, verified, steps });
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "reset-password: failed at step: {LastStep}", steps.LastOrDefault() ?? "unknown");
+        steps.Add($"ERROR: {ex.Message}");
+
+        // Always try to restart normal mysqld on failure.
+        if (mysqlModule is not null)
+        {
+            try
+            {
+                log.LogInformation("reset-password: attempting normal mysqld restart after error");
+                await mysqlModule.StartAsync(CancellationToken.None);
+                steps.Add("Normal mysqld restarted after error");
+            }
+            catch (Exception restartEx)
+            {
+                log.LogWarning(restartEx, "reset-password: restart after error also failed");
+                steps.Add($"Restart after error failed: {restartEx.Message}");
+            }
+        }
+
+        return Results.Problem(
+            title: "reset-password failed",
+            detail: ex.Message,
+            statusCode: 500,
+            extensions: new Dictionary<string, object?> { ["steps"] = steps });
+    }
+    finally
+    {
+        if (!string.IsNullOrEmpty(initFile))
+            try { File.Delete(initFile); } catch { /* best effort */ }
+        try { File.Delete(tmpPidFile); } catch { /* best effort */ }
+        if (!OperatingSystem.IsWindows() && !string.IsNullOrEmpty(tmpSocket))
+            try { File.Delete(tmpSocket); } catch { /* best effort */ }
+        if (safeProcess is not null && !safeProcess.HasExited)
+            try { safeProcess.Kill(entireProcessTree: true); } catch { /* best effort */ }
+        safeProcess?.Dispose();
     }
 });
 
