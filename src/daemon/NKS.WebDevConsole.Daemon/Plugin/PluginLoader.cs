@@ -51,7 +51,32 @@ public partial class PluginLoader
         _logger = logger;
     }
 
-    public void LoadPlugins(string pluginsDirectory)
+    /// <summary>
+    /// F91.9: delete a plugin's DLL + its sibling artifacts (pdb, deps.json,
+    /// runtimeconfig.json, xml doc). Best-effort — any still-locked file is
+    /// skipped and logged. Called at load time for blacklisted plugins so
+    /// the DLL doesn't linger across reboots.
+    /// </summary>
+    private void TryPurgePluginFiles(string dllPath)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(dllPath);
+            var baseName = Path.GetFileNameWithoutExtension(dllPath);
+            if (dir is null || string.IsNullOrEmpty(baseName)) return;
+            foreach (var f in Directory.EnumerateFiles(dir, baseName + ".*"))
+            {
+                try { File.Delete(f); }
+                catch (Exception ex) { _logger.LogDebug("Could not delete {File}: {Msg}", f, ex.Message); }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Purge failed for {Dll}", dllPath);
+        }
+    }
+
+    public void LoadPlugins(string pluginsDirectory, NKS.WebDevConsole.Daemon.Services.PluginState? pluginState = null)
     {
         if (!Directory.Exists(pluginsDirectory))
         {
@@ -68,6 +93,21 @@ public partial class PluginLoader
         {
             var pluginName = Path.GetFileNameWithoutExtension(dllPath);
             _logger.LogDebug("Loading {Plugin}...", pluginName);
+
+            // F91.9: peek at plugin.json BEFORE touching the DLL. If the
+            // declared id is on the uninstalled blacklist, skip the load
+            // entirely and purge lingering files (File.Delete succeeds now
+            // that no ALC holds them).
+            var preManifest = TryLoadManifest(Path.GetDirectoryName(dllPath)!, pluginName);
+            var preId = preManifest?.Id;
+            if (pluginState is not null && !string.IsNullOrWhiteSpace(preId)
+                && pluginState.IsUninstalled(preId))
+            {
+                _logger.LogInformation("Plugin {Id} is uninstalled — skipping load and purging files", preId);
+                TryPurgePluginFiles(dllPath);
+                pluginState.ClearUninstalled(preId);
+                continue;
+            }
 
             try
             {
@@ -89,7 +129,7 @@ public partial class PluginLoader
                 // without requiring every plugin to override the IWdcPlugin
                 // Description property. The plugin.json stays authoritative
                 // for metadata — code just owns behavior.
-                var manifest = TryLoadManifest(Path.GetDirectoryName(dllPath)!, pluginName);
+                var manifest = preManifest ?? TryLoadManifest(Path.GetDirectoryName(dllPath)!, pluginName);
 
                 foreach (var type in pluginTypes)
                 {
@@ -101,6 +141,16 @@ public partial class PluginLoader
                         if (string.IsNullOrWhiteSpace(plugin.Id))
                         {
                             _logger.LogWarning("Plugin {Type} has empty Id — skipping", type.Name);
+                            continue;
+                        }
+                        // F91.9 safety net: if plugin.json was missing, the
+                        // blacklist check above was skipped. Re-evaluate with
+                        // the runtime-declared id now that we have it.
+                        if (pluginState is not null && pluginState.IsUninstalled(plugin.Id))
+                        {
+                            _logger.LogInformation("Plugin {Id} is uninstalled (discovered via code) — skipping", plugin.Id);
+                            // We can't purge right now because the DLL is loaded in `context`.
+                            // Leave the id in the blacklist so the next boot cleans it up.
                             continue;
                         }
                         // SemVer check on the plugin's declared version. Non-fatal:

@@ -148,7 +148,12 @@ if (!Directory.Exists(pluginDir))
     var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
     pluginDir = Path.Combine(repoRoot, "build", "plugins");
 }
-pluginLoader.LoadPlugins(pluginDir);
+// F91.9: share a single PluginState instance across load-time blacklist
+// checks and the HTTP handlers below. Constructing it before LoadPlugins
+// ensures the uninstalled-plugins.json is consulted BEFORE any DLL lock
+// would prevent the purge step.
+var pluginStateForLoad = new NKS.WebDevConsole.Daemon.Services.PluginState();
+pluginLoader.LoadPlugins(pluginDir, pluginStateForLoad);
 
 // F95 phase 1: when no local plugin build is found, fall back to the
 // on-disk cache populated from the catalog-api release artifacts at
@@ -163,7 +168,7 @@ if (!hasLocalPlugins)
 {
     foreach (var cacheDir in PluginDownloader.EnumerateLatestVersionDirs())
     {
-        pluginLoader.LoadPlugins(cacheDir);
+        pluginLoader.LoadPlugins(cacheDir, pluginStateForLoad);
     }
 }
 
@@ -1158,6 +1163,13 @@ app.MapDelete("/api/plugins/{id}", (string id, PluginState pluginState) =>
     {
         try { Directory.Delete(targetDesc, recursive: true); } catch { /* leftover locked files */ }
     }
+
+    // F91.9: record the uninstall on disk so the next daemon boot skips
+    // loading this plugin AND purges any leftover locked files that we
+    // couldn't delete here. Without this the plugin gets reloaded on
+    // restart because the DLL survived on disk, and it reappears in the
+    // UI as if nothing happened.
+    pluginState.MarkUninstalled(id);
 
     return Results.Ok(new
     {

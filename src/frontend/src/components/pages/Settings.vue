@@ -875,10 +875,22 @@ async function ssoLogin() {
   const url = catalogUrl.value || 'https://wdc.nks-hub.cz'
   try {
     await authStore.login(url)
-    ElMessage.success('Signed in')
+    // F91.9: immediately pull the authoritative profile so the UI can
+    // switch from "Signed in" to "Signed in as x@y.cz" without waiting
+    // for the user to navigate away and back.
+    await authStore.refreshProfile(url)
+    ElMessage.success(authStore.displayName
+      ? `Signed in as ${authStore.displayName}`
+      : 'Signed in')
   } catch (err) {
     ElMessage.error(`SSO failed: ${errorMessage(err)}`)
   }
+}
+
+// F91.9: if the user already had a token on page load, also fetch the
+// profile so a reload doesn't lose the "Signed in as" display.
+if (authStore.isAuthenticated && !authStore.profile) {
+  void authStore.refreshProfile(catalogUrl.value || 'https://wdc.nks-hub.cz')
 }
 const { locale, t } = useI18n()
 

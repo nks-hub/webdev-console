@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { catalogMe, type CatalogMeResponse } from '../api/daemon'
 
 /**
  * F83 SSO store. Holds the catalog-api session token obtained via the
@@ -57,10 +58,24 @@ function decodeJwtClaims(jwt: string): SsoIdentity | null {
   } catch { return null }
 }
 
+// F91.9: persist the catalog-fetched profile so a page reload can show
+// "Signed in as …" before the network round-trip completes.
+const PROFILE_KEY = 'nks-wdc-sso-profile'
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>(localStorage.getItem(TOKEN_KEY) ?? '')
   const loginError = ref<string>('')
   const loginPending = ref(false)
+  // F91.9: authoritative profile fetched from catalog /api/v1/auth/me.
+  // Falls back to JWT claim decode when the catalog is unreachable.
+  const profile = ref<CatalogMeResponse | null>(
+    (() => {
+      try {
+        const raw = localStorage.getItem(PROFILE_KEY)
+        return raw ? JSON.parse(raw) as CatalogMeResponse : null
+      } catch { return null }
+    })()
+  )
 
   const isAuthenticated = computed(() => token.value.length > 0)
 
@@ -69,12 +84,13 @@ export const useAuthStore = defineStore('auth', () => {
   const identity = computed<SsoIdentity | null>(() =>
     token.value ? decodeJwtClaims(token.value) : null
   )
-  // F91.8: displayName is what the UI puts after "Signed in as". We prefer
-  // email (most recognisable), then any name-ish claim, then sub. Sub is
-  // always a string per JWT spec so we will always return something when
-  // there IS a token — the UI never renders the "no identity" fallback
-  // path unless the token literally has zero claims.
+  // F91.9: displayName prefers the catalog-authoritative profile.email /
+  // name over JWT claims — the catalog always has the richer data because
+  // it inherits from its own SSO session, while the JWT in WDC's hands may
+  // only carry sub + exp.
   const displayName = computed(() => {
+    const p = profile.value
+    if (p) return p.email || p.name || p.username || p.id || ''
     const i = identity.value
     if (!i) return ''
     return i.email || i.name || i.sub || ''
@@ -86,8 +102,33 @@ export const useAuthStore = defineStore('auth', () => {
     else localStorage.removeItem(TOKEN_KEY)
   }
 
+  function setProfile(p: CatalogMeResponse | null) {
+    profile.value = p
+    if (p) localStorage.setItem(PROFILE_KEY, JSON.stringify(p))
+    else localStorage.removeItem(PROFILE_KEY)
+  }
+
+  /**
+   * F91.9: pull authoritative profile from the catalog using the stored
+   * token. Called right after SSO completes AND on-demand from the
+   * Settings page whenever the user views the Account tab. Silently
+   * falls back to JWT claims when the catalog is offline — worst case
+   * the UI shows JWT sub instead of the email.
+   */
+  async function refreshProfile(catalogUrl: string): Promise<void> {
+    if (!token.value) { setProfile(null); return }
+    try {
+      const me = await catalogMe(catalogUrl, token.value)
+      setProfile(me)
+    } catch (err) {
+      // Network hiccup or unauthenticated — keep whatever we had.
+      console.debug('[auth] /me unavailable, falling back to JWT:', err)
+    }
+  }
+
   function logout() {
     setToken('')
+    setProfile(null)
     loginError.value = ''
   }
 
@@ -145,6 +186,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token, loginError, loginPending, isAuthenticated, identity, displayName,
-    login, logout, setToken, authHeader,
+    profile,
+    login, logout, setToken, setProfile, refreshProfile, authHeader,
   }
 })

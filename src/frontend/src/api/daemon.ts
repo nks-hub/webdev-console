@@ -420,6 +420,47 @@ export interface CatalogTokenResponse {
   email: string
 }
 
+/**
+ * F91.9: authoritative identity lookup. The catalog-api answered the SSO
+ * flow and knows exactly who's behind the token — it in turn inherits
+ * that identity from its own NKS SSO session. We ask it back over
+ * /api/v1/auth/me (with a couple of common fallbacks for older builds)
+ * rather than decoding the JWT ourselves, because the token's claim set
+ * may be minimal and the catalog's user profile is richer (display name,
+ * org roles, avatar, etc.).
+ */
+export interface CatalogMeResponse {
+  id?: string
+  email?: string
+  name?: string
+  username?: string
+  avatar_url?: string
+  roles?: string[]
+  // Keep extra fields — profile shape can grow without breaking callers.
+  [k: string]: unknown
+}
+
+export async function catalogMe(
+  catalogUrl: string, token: string,
+): Promise<CatalogMeResponse> {
+  const base = catalogBase(catalogUrl)
+  // Try the canonical path first, fall back to older shapes. Any 2xx wins.
+  const candidates = ['/api/v1/auth/me', '/api/v1/me', '/api/v1/user/me']
+  let lastError = ''
+  for (const path of candidates) {
+    try {
+      const r = await fetch(`${base}${path}`, { headers: jwtHeaders(token) })
+      if (r.ok) return await r.json() as CatalogMeResponse
+      if (r.status === 404) { lastError = `404 ${path}`; continue }
+      throw new Error(await catalogErrorMessage(r))
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e)
+      if (path === candidates[candidates.length - 1]) throw new Error(lastError)
+    }
+  }
+  throw new Error(lastError || 'catalog /me unavailable')
+}
+
 export async function catalogRegister(
   catalogUrl: string, email: string, password: string,
 ): Promise<CatalogTokenResponse> {

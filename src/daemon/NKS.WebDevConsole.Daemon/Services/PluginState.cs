@@ -17,6 +17,13 @@ public sealed class PluginState
 {
     private static readonly string StateFilePath = Path.Combine(
         WdcPaths.DataRoot, "plugin-state.json");
+    // F91.9: persistent "please don't load this plugin again" list.
+    // Uninstall writes here because File.Delete on a loaded DLL is a no-op
+    // on Windows (ALC holds the handle). Next daemon boot honours the list
+    // by skipping Activator.CreateInstance AND retrying the file delete
+    // now that the lock is gone. See PluginLoader.LoadPlugins.
+    private static readonly string UninstalledFilePath = Path.Combine(
+        WdcPaths.DataRoot, "uninstalled-plugins.json");
 
     // Shared across all Save() calls — JsonSerializer caches type contracts
     // per options instance, so one-per-write fragments the cache.
@@ -24,6 +31,7 @@ public sealed class PluginState
 
     private readonly object _lock = new();
     private readonly HashSet<string> _disabled = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _uninstalled = new(StringComparer.OrdinalIgnoreCase);
 
     public PluginState()
     {
@@ -35,20 +43,55 @@ public sealed class PluginState
         lock (_lock)
         {
             _disabled.Clear();
-            if (!File.Exists(StateFilePath)) return;
-            try
+            _uninstalled.Clear();
+            if (File.Exists(StateFilePath))
             {
-                var json = File.ReadAllText(StateFilePath);
-                var ids = JsonSerializer.Deserialize<string[]>(json);
-                if (ids != null)
+                try
                 {
-                    foreach (var id in ids) _disabled.Add(id);
+                    var ids = JsonSerializer.Deserialize<string[]>(File.ReadAllText(StateFilePath));
+                    if (ids != null) foreach (var id in ids) _disabled.Add(id);
                 }
+                catch { /* corrupted → empty */ }
             }
-            catch
+            if (File.Exists(UninstalledFilePath))
             {
-                // Corrupted file — treat as empty, safest default.
+                try
+                {
+                    var ids = JsonSerializer.Deserialize<string[]>(File.ReadAllText(UninstalledFilePath));
+                    if (ids != null) foreach (var id in ids) _uninstalled.Add(id);
+                }
+                catch { /* corrupted → empty */ }
             }
+        }
+    }
+
+    /// <summary>F91.9: checked by PluginLoader before activating each DLL.</summary>
+    public bool IsUninstalled(string pluginId)
+    {
+        lock (_lock) return _uninstalled.Contains(pluginId);
+    }
+
+    /// <summary>
+    /// F91.9: mark plugin as uninstalled. PluginLoader skips it on next
+    /// boot AND deletes any lingering files. Called from DELETE
+    /// /api/plugins/{id} because File.Delete can't remove a loaded DLL on
+    /// Windows — the blacklist ensures the plugin stays gone across restart.
+    /// </summary>
+    public void MarkUninstalled(string pluginId)
+    {
+        lock (_lock)
+        {
+            _uninstalled.Add(pluginId);
+            SaveUninstalled();
+        }
+    }
+
+    /// <summary>F91.9: called by PluginLoader after successfully purging the DLL, so the id doesn't stay in the blacklist forever.</summary>
+    public void ClearUninstalled(string pluginId)
+    {
+        lock (_lock)
+        {
+            if (_uninstalled.Remove(pluginId)) SaveUninstalled();
         }
     }
 
@@ -85,5 +128,16 @@ public sealed class PluginState
         var tmp = StateFilePath + ".tmp";
         File.WriteAllText(tmp, json);
         File.Move(tmp, StateFilePath, overwrite: true);
+    }
+
+    private void SaveUninstalled()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(UninstalledFilePath)!);
+        var json = JsonSerializer.Serialize(
+            _uninstalled.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
+            IndentedJson);
+        var tmp = UninstalledFilePath + ".tmp";
+        File.WriteAllText(tmp, json);
+        File.Move(tmp, UninstalledFilePath, overwrite: true);
     }
 }
