@@ -1261,8 +1261,24 @@ function openCatalogAdmin() {
 }
 
 // ── Account & Devices tab ─────────────────────────────────────────────
-const accountToken = ref(localStorage.getItem('nks-wdc-catalog-jwt') || '')
-const accountEmail = ref(localStorage.getItem('nks-wdc-catalog-email') || '')
+// F91.15b: single source of truth = authStore.token. Cloud Sync (Push/
+// Pull to catalog) used to read a separate `nks-wdc-catalog-jwt` set by
+// the password login form, while SSO wrote its token to
+// `nks-wdc-sso-token`. Signing in via SSO left accountToken empty so
+// Push/Pull failed with 401 even though Sidebar showed "Signed in".
+// Both login paths now feed authStore.setToken(); Push/Pull reads from
+// the same store. The old `nks-wdc-catalog-jwt` key is migrated on load
+// so users who signed in via password before this fix aren't logged out.
+const _legacyJwt = localStorage.getItem('nks-wdc-catalog-jwt') || ''
+if (_legacyJwt && !authStore.token) {
+  authStore.setToken(_legacyJwt)
+  localStorage.removeItem('nks-wdc-catalog-jwt')
+}
+const accountToken = computed({
+  get: () => authStore.token,
+  set: (v: string) => { authStore.setToken(v) },
+})
+const accountEmail = computed(() => authStore.displayName || localStorage.getItem('nks-wdc-catalog-email') || '')
 const authEmail = ref('')
 const authPassword = ref('')
 const authLoading = ref(false)
@@ -1311,10 +1327,11 @@ async function doLogin() {
   authError.value = ''
   try {
     const result = await catalogLogin(getCatalogUrl(), authEmail.value, authPassword.value)
-    accountToken.value = result.token
-    accountEmail.value = result.email
-    localStorage.setItem('nks-wdc-catalog-jwt', result.token)
+    // F91.15b: single token store — writes go straight through authStore
+    // so the sidebar + /sync endpoints all see the same session.
+    authStore.setToken(result.token)
     localStorage.setItem('nks-wdc-catalog-email', result.email)
+    await authStore.refreshProfile(getCatalogUrl())
     authPassword.value = ''
     ElMessage.success(`Signed in as ${result.email}`)
     void loadDevicesAccount()
@@ -1330,10 +1347,9 @@ async function doRegister() {
   authError.value = ''
   try {
     const result = await catalogRegister(getCatalogUrl(), authEmail.value, authPassword.value)
-    accountToken.value = result.token
-    accountEmail.value = result.email
-    localStorage.setItem('nks-wdc-catalog-jwt', result.token)
+    authStore.setToken(result.token)
     localStorage.setItem('nks-wdc-catalog-email', result.email)
+    await authStore.refreshProfile(getCatalogUrl())
     authPassword.value = ''
     ElMessage.success(`Account created: ${result.email}`)
   } catch (e) {
@@ -1344,11 +1360,12 @@ async function doRegister() {
 }
 
 function doLogout() {
-  accountToken.value = ''
-  accountEmail.value = ''
-  accountDevices.value = []
+  // F91.15b: single-source logout — authStore.logout() clears token +
+  // profile; legacy localStorage keys are best-effort swept too.
+  authStore.logout()
   localStorage.removeItem('nks-wdc-catalog-jwt')
   localStorage.removeItem('nks-wdc-catalog-email')
+  accountDevices.value = []
   ElMessage.success('Signed out')
 }
 
