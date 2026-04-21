@@ -71,8 +71,29 @@
         </div>
       </div>
 
+      <!-- Task 26: plugin-delivered custom UI bundle. When the plugin's
+           manifest declares { pageBundleUrl }, lazy-load it (UMD/ESM)
+           and mount as the primary page body. Schema-driven panels then
+           serve as a fallback when no bundle is declared. -->
+      <div v-if="pluginPageComponent" class="plugin-page-body">
+        <component
+          :is="pluginPageComponent"
+          :plugin-id="id"
+          :manifest="manifest"
+        />
+      </div>
+      <div v-else-if="pluginPageError" class="plugin-page-body">
+        <el-alert
+          type="warning"
+          :title="`Plugin UI bundle failed to load: ${pluginPageError}`"
+          :description="'Falling back to schema-driven panels.'"
+          :closable="false"
+          show-icon
+        />
+        <SchemaRenderer v-if="uiDef" :plugin-id="id" :definition="uiDef" />
+      </div>
       <!-- Schema-driven UI panels (service card, config editor, log viewer, etc.) -->
-      <div v-if="uiDef" class="plugin-page-body">
+      <div v-else-if="uiDef" class="plugin-page-body">
         <SchemaRenderer :plugin-id="id" :definition="uiDef" />
       </div>
       <div v-else class="plugin-page-body-empty">
@@ -86,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch, markRaw, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
 import SchemaRenderer from '../../plugins/SchemaRenderer.vue'
@@ -98,18 +119,65 @@ const pluginsStore = usePluginsStore()
 const loading = ref(false)
 const loadError = ref('')
 
+// Task 26: lazy-loaded plugin page bundle (UMD/ESM). Non-null when the
+// plugin's manifest declares pageBundleUrl AND the bundle resolved
+// successfully. shallowRef to avoid Vue reactively walking the entire
+// component tree (components are immutable).
+const pluginPageComponent = shallowRef<Component | null>(null)
+const pluginPageError = ref<string | null>(null)
+
+async function loadPluginBundle(url: string) {
+  pluginPageError.value = null
+  pluginPageComponent.value = null
+  try {
+    // Resolve relative paths against the plugin's own directory. A
+    // plugin.json with "./ui/foo.umd.js" will be served by the daemon
+    // under /plugins/<id>/ui/foo.umd.js — we normalize here so future
+    // plugins don't have to hard-code absolute URLs.
+    const resolved = url.startsWith('./') || url.startsWith('../')
+      ? `/plugins/${props.id}/${url.replace(/^\.?\/+/, '')}`
+      : url
+    // @vite-ignore — dynamic import by runtime URL is intentional here.
+    const mod = await import(/* @vite-ignore */ resolved)
+    const exported = (mod.default || mod[props.id] || mod) as Component
+    pluginPageComponent.value = markRaw(exported)
+  } catch (e) {
+    pluginPageError.value = e instanceof Error ? e.message : String(e)
+    pluginPageComponent.value = null
+  }
+}
+
 // Plugins with dedicated full-page routes (not schema-driven) redirect
 // away from the generic PluginPage to their custom page so users don't
 // see a half-rendered SchemaRenderer fallback. Add new entries as
 // dedicated pages are built for other plugins.
 const PLUGIN_CUSTOM_ROUTES: Record<string, string> = {
   'nks.wdc.cloudflare': '/cloudflare',
+  'nks.wdc.apache': '/plugins/apache',
+  'nks.wdc.php': '/plugins/php-custom',
+  'nks.wdc.mysql': '/plugins/mysql',
+  'nks.wdc.mailpit': '/plugins/mailpit',
+  'nks.wdc.redis': '/plugins/redis',
 }
 
 const manifest = computed(() =>
   pluginsStore.manifests.find(p => p.id === props.id)
 )
 const uiDef = computed(() => pluginsStore.getUi(props.id))
+
+// Task 26: watch manifest for pageBundleUrl and lazy-load when it shows up.
+// Using watch rather than onMounted-only so plugin reloads (hot-swap
+// during dev, or catalog refresh) can swap in the bundle without a full
+// page refresh.
+watch(
+  manifest,
+  (m) => {
+    const url = (m as { pageBundleUrl?: string } | undefined)?.pageBundleUrl
+    if (url) void loadPluginBundle(url)
+    else { pluginPageComponent.value = null; pluginPageError.value = null }
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   // Redirect to custom page if this plugin has one
