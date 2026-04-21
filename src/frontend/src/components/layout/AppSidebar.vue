@@ -291,18 +291,20 @@ function shortName(svc: ServiceInfo): string {
   return SHORT_NAMES[svc.displayName ?? ''] || svc.displayName || svc.id
 }
 
-const SERVICE_CATEGORIES: Record<string, string> = {
-  apache: 'web', nginx: 'web', caddy: 'web',
-  php: 'lang',
-  mysql: 'db', mariadb: 'db', postgresql: 'db', mongodb: 'db',
-  redis: 'cache', memcached: 'cache', mailpit: 'cache',
+// F91.3: sidebar categories are driven by the plugin store, not a hardcoded
+// table. Each plugin calls UiSchemaBuilder.SetServiceCategory(category, id),
+// which registers a `service-row:{category}:{id}` surface. Disabling the
+// plugin drops that surface, so the row vanishes. Cloudflare no longer
+// appears here because its plugin declares only Tools surfaces.
+function servicesInCategory(category: string) {
+  const allowed = pluginsStore.serviceIdsInCategory(category)
+  return services.value.filter(s => allowed.has(s.id))
 }
 
-const webServices = computed(() => services.value.filter(s => SERVICE_CATEGORIES[s.id] === 'web'))
-const langServices = computed(() => services.value.filter(s => SERVICE_CATEGORIES[s.id] === 'lang'))
-const dbServices = computed(() => services.value.filter(s => SERVICE_CATEGORIES[s.id] === 'db'))
-const cacheServices = computed(() => services.value.filter(s =>
-  SERVICE_CATEGORIES[s.id] === 'cache' || !SERVICE_CATEGORIES[s.id]))
+const webServices = computed(() => servicesInCategory('web'))
+const langServices = computed(() => servicesInCategory('lang'))
+const dbServices = computed(() => servicesInCategory('db'))
+const cacheServices = computed(() => servicesInCategory('cache'))
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')

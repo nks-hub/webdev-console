@@ -147,11 +147,29 @@ export const usePluginsStore = defineStore('plugins', () => {
     return ownedSurfaces.value.has(`nav:${route}`)
   }
 
+  /**
+   * F91.3: resolve the set of service IDs an *enabled* plugin contributes
+   * to a given sidebar service section. The plugin declared both
+   * `service-section:{category}` AND `service-row:{category}:{serviceId}`
+   * via UiSchemaBuilder.SetServiceCategory — we pick out the row surfaces
+   * that match the category prefix. The returned set is reactive, so the
+   * sidebar re-filters automatically when plugins toggle on/off.
+   */
+  function serviceIdsInCategory(category: string): ReadonlySet<string> {
+    const prefix = `service-row:${category}:`
+    const ids = new Set<string>()
+    for (const key of activeSurfaces.value) {
+      if (key.startsWith(prefix)) ids.add(key.slice(prefix.length))
+    }
+    return ids
+  }
+
   return {
     manifests, uiDefinitions, navEntries, toolsNavEntries,
     loading, navEntriesLoaded, enabledPlugins,
     ownedSurfaces, activeSurfaces,
     loadAll, toggleEnable, getUi,
     isUiVisible, isRouteVisible, isPluginOwnedRoute,
+    serviceIdsInCategory,
   }
 })

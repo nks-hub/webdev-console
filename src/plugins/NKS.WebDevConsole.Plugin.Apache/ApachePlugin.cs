@@ -45,6 +45,7 @@ public sealed class ApachePlugin : IWdcPlugin, IFrontendPanelProvider
         new UiSchemaBuilder(Id)
             .Category("Web Servers")
             .Icon("el-icon-connection")
+            .SetServiceCategory("web", "apache")
             .AddServiceCard("apache")
             .AddConfigEditor("apache")
             .AddLogViewer("apache")

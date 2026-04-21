@@ -77,6 +77,22 @@ public class UiSchemaBuilder
     /// <summary>F91.2 sugar — plugin owns a site-card badge/overlay (per-site).</summary>
     public UiSchemaBuilder AddSiteBadge(string badgeId) => AddUiSurface($"sites-badge:{badgeId}");
 
+    /// <summary>
+    /// F91.3: plugin declares which sidebar service section it belongs to
+    /// (<c>web</c>, <c>lang</c>, <c>db</c>, <c>cache</c>, <c>tools</c>, <c>mail</c>).
+    /// Emits both the membership surface <c>service-section:{category}</c>
+    /// AND the row-identity surface <c>service-row:{serviceId}</c> so the
+    /// sidebar knows "enabled plugin X owns a row under section Y with
+    /// service id Z", replacing the previous hardcoded SERVICE_CATEGORIES
+    /// map. Disabling the plugin drops both surfaces → row vanishes.
+    /// </summary>
+    public UiSchemaBuilder SetServiceCategory(string category, string serviceId)
+    {
+        AddUiSurface($"service-section:{category}");
+        AddUiSurface($"service-row:{category}:{serviceId}");
+        return this;
+    }
+
     public PluginUiDefinition Build()
     {
         // Auto-derive "nav:{Route}" surfaces from declared nav entries so a

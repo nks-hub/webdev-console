@@ -42,6 +42,7 @@ public sealed class MailpitPlugin : IWdcPlugin, IFrontendPanelProvider
         new UiSchemaBuilder(Id)
             .Category("Mail")
             .Icon("el-icon-message")
+            .SetServiceCategory("cache", "mailpit")
             .AddServiceCard("mailpit")
             .AddLogViewer("mailpit")
             .AddMetricsChart("mailpit")
