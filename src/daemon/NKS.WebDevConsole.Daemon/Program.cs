@@ -1033,35 +1033,75 @@ app.MapDelete("/api/plugins/{id}", (string id, PluginState pluginState) =>
         return Results.BadRequest(new { error = "has-dependents", id, dependents });
     }
 
-    // Locate the plugin directory under pluginDir. We accept either the
-    // full id folder (as written by /install) or a name match of the DLL,
-    // falling back gracefully so partial installs can still be cleaned up.
-    string? targetDir = null;
+    // F91.7: collect all files belonging to this plugin. Two layouts are
+    // supported side-by-side:
+    //   A) per-plugin subfolder (what /install writes):
+    //        {pluginDir}/{id}/*
+    //   B) flat build output (what the solution emits + user typically ships):
+    //        {pluginDir}/{AssemblyName}.dll + .pdb + .deps.json + .runtimeconfig.json
+    // Layout B is detected via the already-loaded Assembly.Location, which
+    // is the authoritative source of where the DLL came from, and we
+    // gather its sibling artifacts by stripping extensions.
+    var targetsToDelete = new List<string>();
+    string? targetDesc = null;
     try
     {
         var pluginsRoot = Path.GetFullPath(pluginDir);
-        var candidate = Path.GetFullPath(Path.Combine(pluginsRoot, id));
-        if (candidate.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase)
-            && Directory.Exists(candidate))
+
+        // A) dedicated folder
+        var candidateDir = Path.GetFullPath(Path.Combine(pluginsRoot, id));
+        if (candidateDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase)
+            && Directory.Exists(candidateDir))
         {
-            targetDir = candidate;
+            targetsToDelete.AddRange(Directory.EnumerateFiles(candidateDir, "*", SearchOption.AllDirectories));
+            targetDesc = candidateDir;
         }
-        else
+
+        // A.bis) plugin.json-based folder lookup
+        if (targetsToDelete.Count == 0)
         {
-            // Fallback: search siblings of the plugin DLL location for any
-            // folder whose plugin.json declares our id.
             foreach (var dir in Directory.EnumerateDirectories(pluginsRoot))
             {
                 var manifest = Path.Combine(dir, "plugin.json");
                 if (!File.Exists(manifest)) continue;
-                var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(manifest));
-                if (doc.RootElement.TryGetProperty("id", out var idProp)
-                    && string.Equals(idProp.GetString(), id, StringComparison.OrdinalIgnoreCase))
+                try
                 {
-                    targetDir = dir;
-                    break;
+                    var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(manifest));
+                    if (doc.RootElement.TryGetProperty("id", out var idProp)
+                        && string.Equals(idProp.GetString(), id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetsToDelete.AddRange(Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories));
+                        targetDesc = dir;
+                        break;
+                    }
+                }
+                catch { /* malformed manifest — skip */ }
+            }
+        }
+
+        // B) flat layout — use the loaded assembly's location to find DLL
+        // + siblings (pdb, deps.json, runtimeconfig.json, xml doc). Guard
+        // against symlinks / location outside pluginsRoot so we never delete
+        // unrelated files sitting somewhere else on disk.
+        if (targetsToDelete.Count == 0)
+        {
+            try
+            {
+                var asmPath = plugin.Assembly.Location;
+                if (!string.IsNullOrEmpty(asmPath) && File.Exists(asmPath))
+                {
+                    var asmFull = Path.GetFullPath(asmPath);
+                    if (asmFull.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var baseName = Path.GetFileNameWithoutExtension(asmPath);
+                        var dir = Path.GetDirectoryName(asmFull)!;
+                        foreach (var f in Directory.EnumerateFiles(dir, baseName + ".*"))
+                            targetsToDelete.Add(f);
+                        targetDesc = asmFull;
+                    }
                 }
             }
+            catch { /* some assemblies lack Location (in-memory loads) */ }
         }
     }
     catch (Exception ex)
@@ -1069,40 +1109,40 @@ app.MapDelete("/api/plugins/{id}", (string id, PluginState pluginState) =>
         return Results.Problem($"Uninstall lookup failed: {ex.Message}");
     }
 
-    if (targetDir is null)
+    if (targetsToDelete.Count == 0)
     {
         return Results.Ok(new
         {
             uninstalled = false,
             id,
             restartRequired = true,
-            message = "Plugin directory not found on disk; DLL stays loaded until daemon restart.",
+            message = "Plugin files not found on disk; DLL stays loaded until daemon restart.",
         });
     }
 
-    try
+    int deleted = 0, locked = 0;
+    foreach (var file in targetsToDelete)
     {
-        // Best-effort: delete files individually so locked DLLs don't break
-        // the whole operation. The metadata (plugin.json, resources) always
-        // goes — the DLL gets scheduled for delete on restart if locked.
-        foreach (var file in Directory.EnumerateFiles(targetDir, "*", SearchOption.AllDirectories))
-        {
-            try { File.Delete(file); } catch { /* locked DLL — handled on restart */ }
-        }
-        try { Directory.Delete(targetDir, recursive: true); } catch { /* leftovers if files were locked */ }
+        try { File.Delete(file); deleted++; }
+        catch { locked++; }
     }
-    catch (Exception ex)
+    // Try removing an empty folder if we were operating on layout A
+    if (targetDesc is not null && Directory.Exists(targetDesc))
     {
-        return Results.Problem($"Uninstall failed: {ex.Message}");
+        try { Directory.Delete(targetDesc, recursive: true); } catch { /* leftover locked files */ }
     }
 
     return Results.Ok(new
     {
         uninstalled = true,
         id,
-        path = targetDir,
-        restartRequired = true,
-        message = "Plugin files removed. Restart the daemon to finish unloading the DLL.",
+        path = targetDesc,
+        deletedFiles = deleted,
+        lockedFiles = locked,
+        restartRequired = locked > 0 || plugin.Assembly.Location is { Length: > 0 },
+        message = locked == 0
+            ? $"Plugin files removed ({deleted} file(s))."
+            : $"Removed {deleted} file(s); {locked} were locked by the running daemon — restart to fully unload.",
     });
 });
 
