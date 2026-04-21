@@ -1567,7 +1567,12 @@ async function pullFromCloud() {
   syncStatus.value = null
   try {
     const url = (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
-    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}`)
+    // F91.17: sync GET endpoints require the same JWT as the POST;
+    // the original code shipped no Authorization header and relied on
+    // the catalog being open — which broke when the rollout closed it.
+    const pullHeaders: Record<string, string> = {}
+    if (accountToken.value) pullHeaders['Authorization'] = `Bearer ${accountToken.value}`
+    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}`, { headers: pullHeaders })
     if (!r.ok) {
       if (r.status === 404) {
         syncStatus.value = { ok: false, message: 'No cloud snapshot found for this device' }
@@ -1670,7 +1675,9 @@ async function checkCloudExists() {
   syncStatus.value = null
   try {
     const url = (catalogUrl.value || 'https://wdc.nks-hub.cz').replace(/\/$/, '')
-    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}/exists`)
+    const existsHeaders: Record<string, string> = {}
+    if (accountToken.value) existsHeaders['Authorization'] = `Bearer ${accountToken.value}`
+    const r = await fetch(`${url}/api/v1/sync/config/${deviceId.value}/exists`, { headers: existsHeaders })
     if (!r.ok) {
       const text = await r.text().catch(() => r.statusText)
       throw new Error(text || `HTTP ${r.status}`)
