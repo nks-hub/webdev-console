@@ -592,9 +592,20 @@ export const disablePlugin = (id: string) =>
 // F91.4: removes the plugin files on disk. Requires the plugin be
 // disabled first and no enabled plugin to declare a hard dependency on it.
 export const uninstallPlugin = (id: string) =>
-  json<{ uninstalled: boolean; id: string; restartRequired: boolean; message?: string }>(
-    `/api/plugins/${id}`, { method: 'DELETE' }
-  )
+  json<{
+    uninstalled: boolean
+    id: string
+    restartRequired: boolean
+    message?: string
+    deletedFiles?: number
+    lockedFiles?: number
+  }>(`/api/plugins/${id}`, { method: 'DELETE' })
+
+// F91.7: graceful daemon restart. Daemon exits with code 99, Electron
+// main respawns. Returns a Promise that resolves when the new daemon
+// answers on the port file; callers can wait to know when reload is safe.
+export const restartDaemon = () =>
+  json<void>('/api/admin/restart', { method: 'POST' })
 
 export const fetchPluginUi = (id: string) =>
   json<PluginUiDefinition>(`/api/plugins/${id}/ui`)

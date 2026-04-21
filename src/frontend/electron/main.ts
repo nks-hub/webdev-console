@@ -292,6 +292,15 @@ async function spawnDaemon() {
     daemonConnected = false
     daemon = null
     updateTray()
+    // F91.7: exit code 99 = "restart me" contract from the daemon's
+    // /api/admin/restart endpoint. Don't respawn while the whole app is
+    // quitting — we'd keep the process alive past Electron's own exit.
+    if (code === 99 && !isQuitting) {
+      console.log('[daemon] restart requested (exit 99) — respawning…')
+      // Short delay to let the port file disappear so the new daemon can
+      // claim a fresh one cleanly.
+      setTimeout(() => { void spawnDaemon() }, 400)
+    }
   })
 
   // Poll until port file appears

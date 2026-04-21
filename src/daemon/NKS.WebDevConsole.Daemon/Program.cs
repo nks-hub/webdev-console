@@ -345,6 +345,21 @@ app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
     return Results.Accepted();
 });
 
+// F91.7: graceful restart — daemon exits with code 99, which Electron's
+// main process treats as "respawn me". Used after uninstall to fully
+// unload locked plugin DLLs without forcing the user to kill the app.
+app.MapPost("/api/admin/restart", (IHostApplicationLifetime lifetime) =>
+{
+    _ = Task.Run(async () =>
+    {
+        // Short delay so the HTTP response completes before shutdown.
+        await Task.Delay(200);
+        Environment.ExitCode = 99;
+        lifetime.StopApplication();
+    });
+    return Results.Accepted();
+});
+
 // Auth middleware for /api/* requests.
 // SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
 var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);

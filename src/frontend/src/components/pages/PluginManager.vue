@@ -84,7 +84,18 @@
               <span v-if="mp.author" class="pm-author">by {{ mp.author }}</span>
               <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
             </div>
-            <div v-if="!mp.installed" class="pm-mp-actions">
+            <!-- F91.7: surface why there's no install action.
+                 - installed + builtIn → "Built-in, cannot uninstall"
+                 - installed + downloadUrl → allow reinstall/update
+                 - !installed + downloadUrl → Install
+                 - !installed + !downloadUrl → "Source unavailable"
+                 Before the fix, builtIn plugins with null downloadUrl
+                 showed no button at all and users thought marketplace was
+                 broken. -->
+            <div v-if="mp.builtIn" class="pm-mp-actions">
+              <el-tag size="small" type="info" effect="plain">{{ $t('plugins.builtIn') }}</el-tag>
+            </div>
+            <div v-else-if="!mp.installed" class="pm-mp-actions">
               <el-button
                 size="small"
                 type="primary"
@@ -92,16 +103,28 @@
                 :disabled="!mp.downloadUrl"
                 @click="installFromMarketplace(mp)"
               >
-                Install
+                {{ $t('plugins.install') }}
               </el-button>
               <el-button
+                v-if="mp.downloadUrl"
                 size="small"
                 text
-                :disabled="!mp.downloadUrl"
                 @click="copyDownloadUrl(mp.downloadUrl)"
               >
-                Copy URL
+                {{ $t('plugins.copyUrl') }}
               </el-button>
+              <el-tag v-else size="small" type="warning" effect="plain">{{ $t('plugins.sourceUnavailable') }}</el-tag>
+            </div>
+            <div v-else class="pm-mp-actions">
+              <el-button
+                v-if="mp.downloadUrl"
+                size="small"
+                :loading="installing.has(mp.id)"
+                @click="installFromMarketplace(mp)"
+              >
+                {{ $t('plugins.reinstall') }}
+              </el-button>
+              <el-tag v-else size="small" type="success" effect="plain">{{ $t('plugins.installedTag') }}</el-tag>
             </div>
           </div>
         </div>
@@ -196,6 +219,7 @@ import {
   fetchMarketplace,
   installPluginFromMarketplace,
   uninstallPlugin,
+  restartDaemon,
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
@@ -322,16 +346,24 @@ async function confirmUninstall(id: string, name: string) {
   uninstalling.value.add(id)
   try {
     const res = await uninstallPlugin(id)
-    if (res.restartRequired) {
-      ElNotification.warning({
+    // F91.7: auto-restart when locked files linger — Electron respawns
+    // daemon on exit code 99 so the user doesn't have to do anything.
+    if (res.restartRequired && (res.lockedFiles ?? 0) > 0) {
+      ElNotification.info({
         title: 'Odinstalováno',
-        message: res.message || 'Plugin smazán. Pro plné odpojení DLL restartuj daemon.',
-        duration: 6000,
+        message: `${res.message ?? 'Plugin smazán.'} Restartuji daemon…`,
+        duration: 4000,
       })
+      try { await restartDaemon() } catch { /* daemon already closing the socket */ }
+      // Give the daemon ~3s to respawn before reloading plugin list. The
+      // fetch will auto-retry once the new port file lands.
+      await new Promise(r => setTimeout(r, 3500))
+      await pluginsStore.loadAll()
+      ElMessage.success('Plugin odinstalován a daemon restartován')
     } else {
       ElMessage.success('Plugin odinstalován')
+      await pluginsStore.loadAll()
     }
-    await pluginsStore.loadAll()
   } catch (e) {
     ElMessage.error(`Odinstalace selhala: ${errorMessage(e)}`)
   } finally {
