@@ -41,6 +41,22 @@
     "darkMode": "Dark mode",
     "lightMode": "Light mode"
   },
+  "login": {
+    "subtitle": "Local development console",
+    "description": "Sign in to your NKS WDC catalog account to enable plugin auto-sync, SSO-gated admin actions, and per-device identity. You can use the app without signing in — the button below stays available at any time from the sidebar.",
+    "signInSso": "Sign in with SSO",
+    "signOut": "Sign out",
+    "continue": "Continue to app",
+    "continueWithout": "Continue without signing in →",
+    "signedInHint": "You are signed in to the catalog.",
+    "catalogUrl": "Catalog URL",
+    "or": "or",
+    "email": "Email",
+    "password": "Password",
+    "success": "Signed in",
+    "registered": "Account created",
+    "failed": "Sign-in failed"
+  },
   "nav": {
     "services": "Services",
     "overview": "Overview",
@@ -542,12 +558,127 @@
       "check": "Check for updates",
       "downloadInstall": "Download and install",
       "downloadStarted": "Download started",
-      "openRelease": "Open on GitHub"
+      "openRelease": "Open on GitHub",
+      "releaseNotesTitle": "Release notes",
+      "viewOnGithub": "View on GitHub"
     }
   },
   "footer": {
     "servicesRunning": "services running",
     "tunnel": "Tunnel"
+  },
+  "help": {
+    "title": "Help",
+    "searchPlaceholder": "Search help…",
+    "startGettingStarted": "Getting Started",
+    "comingSoonVideo": "Video coming soon",
+    "noResults": "No help sections match \"{q}\".",
+    "breadcrumbRoot": "Help",
+    "groups": {
+      "gettingStarted": "Getting Started",
+      "sites": "Sites",
+      "services": "Services",
+      "advanced": "Advanced",
+      "settings": "Settings"
+    },
+    "topics": {
+      "overview": {
+        "title": "Overview",
+        "body": "<p>NKS WebDev Console is a local development environment manager for Windows, macOS and Linux. It replaces MAMP / XAMPP / Laragon with a unified interface for Apache, Nginx, PHP, MySQL, MariaDB, Redis, Mailpit, Composer, SSL (mkcert) and Cloudflare Tunnels.</p><p>Everything runs as a local daemon process; the Electron app is just the control surface. You can switch UI modes between <strong>Simple</strong> (one-page sites) and <strong>Advanced</strong> (full per-service management) in the header.</p><h3 id='arch'>Architecture</h3><ul><li><a href='https://github.com/nks-hub/webdev-console' target='_blank'>webdev-console</a> — this app (Electron + Vue 3 + .NET 9 daemon)</li><li><a href='https://github.com/nks-hub/webdev-console-plugins' target='_blank'>webdev-console-plugins</a> — service plugins</li><li><a href='https://github.com/nks-hub/wdc-catalog-api' target='_blank'>wdc-catalog-api</a> — binary + plugin catalog backend</li></ul>"
+      },
+      "firstSite": {
+        "title": "Create your first site",
+        "body": "<p>Click <strong>Sites</strong> in the sidebar, then <strong>+ New Site</strong>. Enter a local domain (e.g. <code>myapp.loc</code>) and choose a document root folder. WDC registers the domain in the hosts file automatically.</p><h3 id='simple'>Simple Mode</h3><p>Minimal form: domain + document root + PHP version + optional HTTPS + optional Cloudflare Tunnel. Advanced features stay hidden.</p><h3 id='advanced'>Advanced Mode</h3><p>Table view with full 9-tab site configuration: General, Runtime, Cloudflare, SSL, Composer, Metrics, Errors, History, Danger.</p>"
+      },
+      "sitesSimple": {
+        "title": "Sites — Simple Mode",
+        "body": "<p>Simple mode shows a card for each site with start/stop, open-in-browser and quick settings. Create a site with the <strong>+ New Site</strong> button.</p><h3 id='setup'>Setup</h3><p>Domain + document root (auto-suggested from <code>C:\\work\\sites\\&lt;domain&gt;</code>), PHP version picker, Cloudflare Tunnel toggle, SSL toggle.</p>"
+      },
+      "sitesAdvanced": {
+        "title": "Sites — Advanced Mode",
+        "body": "<p>Table view. Primary row action is <strong>Edit</strong> (opens SiteEdit with full 9-tab configuration); Open-in-browser, Detect framework, Delete live in the row overflow menu.</p><h3 id='tabs'>SiteEdit tabs</h3><ul><li><strong>General</strong> — domain, aliases, document root, PHP version</li><li><strong>Runtime</strong> — PHP-FPM pool tuning, environment variables</li><li><strong>Cloudflare</strong> — per-site tunnel config</li><li><strong>SSL</strong> — per-site cert switch + path overrides</li><li><strong>Composer</strong> — package manager</li><li><strong>Metrics</strong> — request rate, historical traffic chart</li><li><strong>Errors</strong> — aggregated Apache + PHP-FPM error tail</li><li><strong>History</strong> — config rollback points</li><li><strong>Danger</strong> — rename domain / delete</li></ul>"
+      },
+      "databases": {
+        "title": "Databases",
+        "body": "<p>Manage MySQL / MariaDB databases at <code>/databases</code>. List, create, drop; run ad-hoc SQL queries; import / export SQL dumps.</p><h3 id='troubleshoot'>Troubleshooting</h3><p>If the page shows <strong>\"ERROR 1045 Access denied\"</strong> the WDC-managed MySQL port (3306 by default) is occupied by MAMP / XAMPP. Fix: Settings → Ports → change MySQL port, or stop the external service.</p>"
+      },
+      "ssl": {
+        "title": "SSL certificates",
+        "body": "<p><code>/ssl</code> manages locally-trusted TLS certs via mkcert.</p><h3 id='setup'>Setup</h3><ul><li><strong>Install CA</strong> — mkcert root into the system trust store. Runs once per machine.</li><li><strong>Generate</strong> — issue a cert for a domain + optional aliases.</li></ul><h3 id='status'>Cert status</h3><p>Each cert card shows expiry countdown (badge turns amber &le; 14 days), issuer DN, SHA1 fingerprint. Orphan certs (no matching site) are dimmed with an <em>Orphan</em> badge.</p>"
+      },
+      "composer": {
+        "title": "Composer",
+        "body": "<p>Per-site Composer management lives on SiteEdit → Composer tab and globally on <code>/composer</code>.</p><ul><li>Auto-discovers <code>composer.phar</code> under <code>~/.wdc/binaries/composer/</code>.</li><li>Install / Require / Remove / Diagnose / Outdated run through the plugin invoker (no shell interpolation).</li><li>Hover a package name to see Packagist metadata popover.</li></ul>"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "body": "<p><code>/cloudflare</code> exposes WDC sites to a public URL via Cloudflare Tunnel — no firewall port opening needed.</p><h3 id='setup'>Setup</h3><p>Paste your Cloudflare API token + pick a zone. Per-site: enable the Tunnel switch on SiteEdit → Cloudflare.</p><p><strong>Note:</strong> <code>cloudflared</code> is a single process routing ALL tunneled sites. Restarting it affects the entire tunnel fleet.</p>"
+      },
+      "hosts": {
+        "title": "Hosts file",
+        "body": "<p><code>/hosts</code> is a safer editor for the system hosts file. WDC-managed entries live inside a <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code> marker block — anything outside is preserved verbatim.</p><h3 id='safety'>Safety</h3><p>Requires administrator privileges on Windows. Apply creates a timestamped <code>.bak</code> backup before each write.</p>"
+      },
+      "plugins": {
+        "title": "Plugins",
+        "body": "<p>WDC is plugin-driven. The daemon loads <code>IWdcPlugin</code> assemblies from the plugin dir (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…). Each plugin is independently versioned.</p><p>Writing a plugin: see <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> and the <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>WRITING-A-PLUGIN walkthrough</a>.</p>"
+      },
+      "mcp": {
+        "title": "MCP dev API",
+        "body": "<p>WDC ships an MCP (Model Context Protocol) server so AI dev tools (Claude Code, Cursor, etc.) can automate site creation and management.</p><h3 id='tools'>Available tools</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>The MCP server runs as a separate service in the daemon process. Point your MCP-compatible tool at the nks-wdc transport.</p>"
+      },
+      "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code> — open Command Palette</li><li><code>F5</code> — refresh daemon state</li><li><code>Ctrl+N</code> — new site</li><li><code>Ctrl+1..7</code> — jump to Dashboard / Sites / Databases / SSL / PHP / Binaries / Settings</li></ul>"
+      },
+      "settings": {
+        "title": "Settings",
+        "body": "<p><code>/settings</code> covers:</p><ul><li><strong>General</strong> — language, theme, UI mode, run on startup, auto-start services, default PHP version, telemetry.</li><li><strong>Ports</strong> — override ports for each managed service.</li><li><strong>Paths</strong> — override binary paths + hosts file path.</li><li><strong>Databases</strong> — default MySQL admin credentials.</li><li><strong>Advanced</strong> — plugin toggles, service auto-restart, catalog URL override.</li><li><strong>Account</strong> — optional sync to wdc-catalog-api.</li><li><strong>Update</strong> — check for new WDC releases.</li><li><strong>About</strong> — version, sources, runtime info.</li></ul>"
+      },
+      "binaries": {
+        "title": "Binaries",
+        "body": "<p><code>/binaries</code> manages runtime binaries (Apache, Nginx, PHP, MySQL, MariaDB, Redis, Caddy, Mailpit, cloudflared, mkcert, Node, Composer). Each is downloaded on-demand from GitHub releases matching your OS + arch. SHA-256 is verified before unpacking.</p><h3 id='upgrade'>Upgrading</h3><p>Upgrade in-place keeps older versions on disk as a rollback target.</p>"
+      },
+      "metrics": {
+        "title": "Metrics + logs",
+        "body": "<p>Each site has per-request metrics from the Apache access log and aggregated error logs from Apache + PHP-FPM + PHP-web. See SiteEdit → Metrics + Errors.</p><h3 id='dashboard'>Dashboard</h3><p>Aggregates across all running services: CPU, RAM, request-per-minute sparkline, error count badge. Click a tile to drill down.</p>"
+      }
+    },
+    "wizard": {
+      "title": "Getting Started",
+      "subtitle": "Learn the key features of NKS WebDev Console in 5 quick steps.",
+      "step": "Step {current} of {total}",
+      "next": "Next",
+      "back": "Back",
+      "finish": "Done",
+      "skip": "Skip",
+      "steps": {
+        "site": {
+          "title": "Create your first site",
+          "desc": "Go to <strong>Sites</strong> in the sidebar and click <strong>+ New Site</strong>. Enter a local domain like <code>myapp.loc</code> and pick a document root. WDC registers the domain in the hosts file automatically.",
+          "tip": "Tip: use <kbd>Ctrl+N</kbd> to open the new-site form instantly from anywhere."
+        },
+        "ssl": {
+          "title": "Enable HTTPS",
+          "desc": "Open your site in <strong>SiteEdit → SSL</strong> tab (or toggle SSL directly in Simple mode). First-time: install the local CA once via <strong>SSL → Install CA</strong> so the browser trusts your certs.",
+          "tip": "Tip: the SSL badge on each cert card turns amber when it expires in ≤ 14 days."
+        },
+        "browser": {
+          "title": "Open site in browser",
+          "desc": "Click the <strong>Open in browser</strong> button on any site card or from SiteEdit. It uses <code>shell.openExternal</code> so your OS default browser opens — not an Electron window.",
+          "tip": "Tip: the site must be running (green status) for the URL to resolve."
+        },
+        "database": {
+          "title": "Manage databases",
+          "desc": "Navigate to <strong>Databases</strong> in the sidebar to create databases, run SQL queries, or import/export dumps. Per-site Composer dependencies also show up in <strong>SiteEdit → Composer</strong>.",
+          "tip": "Tip: if MySQL shows \"Access denied\", check Settings → Ports for a port conflict."
+        },
+        "cli": {
+          "title": "Use the CLI",
+          "desc": "WDC ships a <code>wdc</code> CLI for scripting and AI tool integration via MCP. Common commands:",
+          "tip": "Tip: integrate with Claude Code via the MCP server — see Help → MCP dev API."
+        }
+      }
+    }
   },
   "onboarding": {
     "title": "Welcome to NKS WebDev Console",

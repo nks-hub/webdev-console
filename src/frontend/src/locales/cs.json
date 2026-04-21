@@ -41,6 +41,22 @@
     "darkMode": "Tmavý režim",
     "lightMode": "Světlý režim"
   },
+  "login": {
+    "subtitle": "Místní vývojová konzole",
+    "description": "Přihlaste se ke svému NKS WDC katalogovému účtu pro automatickou synchronizaci pluginů, SSO-chráněné akce a identitu zařízení. Aplikaci můžete používat i bez přihlášení — tlačítko zůstane v sidebaru kdykoliv k dispozici.",
+    "signInSso": "Přihlásit přes SSO",
+    "signOut": "Odhlásit",
+    "continue": "Pokračovat do aplikace",
+    "continueWithout": "Pokračovat bez přihlášení →",
+    "signedInHint": "Jste přihlášeni ke katalogu.",
+    "catalogUrl": "URL katalogu",
+    "or": "nebo",
+    "email": "E-mail",
+    "password": "Heslo",
+    "success": "Přihlášeno",
+    "registered": "Účet vytvořen",
+    "failed": "Přihlášení selhalo"
+  },
   "nav": {
     "services": "Služby",
     "overview": "Přehled",
@@ -542,12 +558,127 @@
       "check": "Zkontrolovat aktualizace",
       "downloadInstall": "Stáhnout a nainstalovat",
       "downloadStarted": "Stahování zahájeno",
-      "openRelease": "Otevřít na GitHubu"
+      "openRelease": "Otevřít na GitHubu",
+      "releaseNotesTitle": "Poznámky k vydání",
+      "viewOnGithub": "Zobrazit na GitHubu"
     }
   },
   "footer": {
     "servicesRunning": "služeb běží",
     "tunnel": "Tunel"
+  },
+  "help": {
+    "title": "Nápověda",
+    "searchPlaceholder": "Hledat v nápovědě…",
+    "startGettingStarted": "Rychlý start",
+    "comingSoonVideo": "Video brzy k dispozici",
+    "noResults": "Žádné sekce neodpovídají \"{q}\".",
+    "breadcrumbRoot": "Nápověda",
+    "groups": {
+      "gettingStarted": "Rychlý start",
+      "sites": "Weby",
+      "services": "Služby",
+      "advanced": "Pokročilé",
+      "settings": "Nastavení"
+    },
+    "topics": {
+      "overview": {
+        "title": "Přehled",
+        "body": "<p>NKS WebDev Console je správce lokálního vývojového prostředí pro Windows, macOS a Linux. Nahrazuje MAMP / XAMPP / Laragon jednotným rozhraním pro Apache, Nginx, PHP, MySQL, MariaDB, Redis, Mailpit, Composer, SSL (mkcert) a Cloudflare Tunnely.</p><p>Vše běží jako lokální daemon; Electron app je jen ovládací panel. Přepínání UI mezi <strong>Jednoduchým</strong> a <strong>Pokročilým</strong> režimem je v záhlaví aplikace.</p><h3 id='arch'>Architektura</h3><ul><li><a href='https://github.com/nks-hub/webdev-console' target='_blank'>webdev-console</a> — tato aplikace (Electron + Vue 3 + .NET 9 daemon)</li><li><a href='https://github.com/nks-hub/webdev-console-plugins' target='_blank'>webdev-console-plugins</a> — service pluginy</li><li><a href='https://github.com/nks-hub/wdc-catalog-api' target='_blank'>wdc-catalog-api</a> — backend katalogu binárek a pluginů</li></ul>"
+      },
+      "firstSite": {
+        "title": "Vytvoř první web",
+        "body": "<p>Klikni na <strong>Weby</strong> v sidebaru a pak na <strong>+ Nový web</strong>. Zadej lokální doménu (např. <code>mojeapp.loc</code>) a vyber složku dokumentového kořene. WDC automaticky zaregistruje doménu v hosts souboru.</p><h3 id='simple'>Jednoduchý režim</h3><p>Minimální formulář: doména + document root + PHP verze + volitelné HTTPS + volitelný Cloudflare Tunnel.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulkový pohled s 9 záložkami konfigurace webu: Obecné, Runtime, Cloudflare, SSL, Composer, Metriky, Chyby, Historie, Nebezpečné.</p>"
+      },
+      "sitesSimple": {
+        "title": "Weby — Jednoduchý režim",
+        "body": "<p>Jednoduchý režim zobrazuje kartu pro každý web se spuštěním/zastavením, otevřením v prohlížeči a rychlým nastavením. Web vytvoříš tlačítkem <strong>+ Nový web</strong>.</p><h3 id='setup'>Nastavení</h3><p>Doména + document root (automaticky navrhováno z <code>C:\\work\\sites\\&lt;doména&gt;</code>), výběr PHP verze, přepínač Cloudflare Tunnel, přepínač SSL.</p>"
+      },
+      "sitesAdvanced": {
+        "title": "Weby — Pokročilý režim",
+        "body": "<p>Tabulkový pohled. Primární akce řádku je <strong>Upravit</strong> (otevře SiteEdit s 9 záložkami); Otevřít v prohlížeči, Detekovat framework, Smazat jsou v overflow menu.</p><h3 id='tabs'>Záložky SiteEdit</h3><ul><li><strong>Obecné</strong> — doména, aliasy, document root, PHP verze</li><li><strong>Runtime</strong> — ladění PHP-FPM poolu, proměnné prostředí</li><li><strong>Cloudflare</strong> — konfigurace tunelu pro web</li><li><strong>SSL</strong> — přepínač certifikátu + přepsání cest</li><li><strong>Composer</strong> — správce balíčků</li><li><strong>Metriky</strong> — přenosová rychlost, historický graf provozu</li><li><strong>Chyby</strong> — souhrn chyb Apache + PHP-FPM</li><li><strong>Historie</strong> — zálohovací body konfigurace</li><li><strong>Nebezpečné</strong> — přejmenování domény / smazání</li></ul>"
+      },
+      "databases": {
+        "title": "Databáze",
+        "body": "<p>Správa MySQL / MariaDB databází na <code>/databases</code>. Zobrazení, vytváření, mazání; ad-hoc SQL dotazy; import / export SQL dumpů.</p><h3 id='troubleshoot'>Řešení problémů</h3><p>Pokud stránka zobrazí <strong>\"ERROR 1045 Access denied\"</strong>, port MySQL (výchozí 3306) je obsazený MAMP / XAMPP. Řešení: Nastavení → Porty → změň port MySQL, nebo zastav externí službu.</p>"
+      },
+      "ssl": {
+        "title": "SSL certifikáty",
+        "body": "<p><code>/ssl</code> spravuje lokálně důvěryhodné TLS certifikáty přes mkcert.</p><h3 id='setup'>Nastavení</h3><ul><li><strong>Instalace CA</strong> — mkcert root do systémového úložiště. Provede se jednou na zařízení.</li><li><strong>Generovat</strong> — vydá certifikát pro doménu + volitelné aliasy.</li></ul><h3 id='status'>Stav certifikátu</h3><p>Každá karta certifikátu zobrazuje odpočet do vypršení (odznak zežloutí &le; 14 dní), DN vystavitele, SHA1 otisk. Osiřelé certifikáty (bez odpovídajícího webu) jsou ztlumeny s odznakem <em>Osiřelý</em>.</p>"
+      },
+      "composer": {
+        "title": "Composer",
+        "body": "<p>Správa Composeru pro konkrétní web je na záložce SiteEdit → Composer a globálně na <code>/composer</code>.</p><ul><li>Automaticky hledá <code>composer.phar</code> v <code>~/.wdc/binaries/composer/</code>.</li><li>Instalace / Require / Remove / Diagnose / Outdated fungují přes invoker pluginu (bez shell interpolace).</li><li>Najetí na název balíčku zobrazí popover s metadaty z Packagist.</li></ul>"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "body": "<p><code>/cloudflare</code> zpřístupňuje WDC weby na veřejné URL přes Cloudflare Tunnel — bez otevírání portů ve firewallu.</p><h3 id='setup'>Nastavení</h3><p>Vlož svůj Cloudflare API token + vyber zónu. Pro konkrétní web: zapni Tunnel na SiteEdit → Cloudflare.</p><p><strong>Poznámka:</strong> <code>cloudflared</code> je jeden proces obsluhující VŠECHNY tunelované weby. Jeho restart ovlivní celou flotilu tunelů.</p>"
+      },
+      "hosts": {
+        "title": "Hosts soubor",
+        "body": "<p><code>/hosts</code> je bezpečnější editor systémového hosts souboru. WDC záznamy jsou uvnitř bloku <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code> — vše mimo je zachováno.</p><h3 id='safety'>Bezpečnost</h3><p>Vyžaduje administrátorská práva ve Windows. Před každým zápisem se vytvoří záloha <code>.bak</code> se časovým razítkem.</p>"
+      },
+      "plugins": {
+        "title": "Pluginy",
+        "body": "<p>WDC je plugin-driven. Daemon načítá <code>IWdcPlugin</code> assemblies ze složky pluginů (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…). Každý plugin je verzován samostatně.</p><p>Psaní pluginu: viz <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> a <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>WRITING-A-PLUGIN průvodce</a>.</p>"
+      },
+      "mcp": {
+        "title": "MCP dev API",
+        "body": "<p>WDC obsahuje MCP (Model Context Protocol) server, aby AI nástroje (Claude Code, Cursor atd.) mohly automatizovat vytváření a správu webů.</p><h3 id='tools'>Dostupné nástroje</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>MCP server běží jako oddělená služba v procesu daemonu. Nasměruj svůj MCP-kompatibilní nástroj na nks-wdc transport.</p>"
+      },
+      "shortcuts": {
+        "title": "Klávesové zkratky",
+        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code> — otevřít Command Palette</li><li><code>F5</code> — obnovit stav daemonu</li><li><code>Ctrl+N</code> — nový web</li><li><code>Ctrl+1..7</code> — přejít na Dashboard / Weby / Databáze / SSL / PHP / Binárky / Nastavení</li></ul>"
+      },
+      "settings": {
+        "title": "Nastavení",
+        "body": "<p><code>/settings</code> zahrnuje:</p><ul><li><strong>Obecné</strong> — jazyk, motiv, režim UI, spuštění při startu, automatické spuštění služeb, výchozí PHP verze, telemetrie.</li><li><strong>Porty</strong> — přepsání portů pro každou spravovanou službu.</li><li><strong>Cesty</strong> — přepsání cest k binárce + cesta k hosts souboru.</li><li><strong>Databáze</strong> — výchozí přihlašovací údaje MySQL admina.</li><li><strong>Pokročilé</strong> — přepínače pluginů, automatický restart služby, přepsání URL katalogu.</li><li><strong>Účet</strong> — volitelná synchronizace s wdc-catalog-api.</li><li><strong>Aktualizace</strong> — kontrola nových vydání WDC.</li><li><strong>O aplikaci</strong> — verze, zdroje, info o runtime.</li></ul>"
+      },
+      "binaries": {
+        "title": "Binárky",
+        "body": "<p><code>/binaries</code> spravuje runtime binárky (Apache, Nginx, PHP, MySQL, MariaDB, Redis, Caddy, Mailpit, cloudflared, mkcert, Node, Composer). Každá se stahuje na vyžádání z GitHub releases pro tvůj OS + arch. SHA-256 se ověří před rozbalením.</p><h3 id='upgrade'>Aktualizace</h3><p>Upgrade ponechává starší verze na disku jako zálohu pro vrácení zpět.</p>"
+      },
+      "metrics": {
+        "title": "Metriky + logy",
+        "body": "<p>Každý web má per-request metriky z Apache access logu a souhrnné error logy z Apache + PHP-FPM + PHP-web. Viz SiteEdit → Metriky + Chyby.</p><h3 id='dashboard'>Dashboard</h3><p>Agreguje přes všechny běžící služby: CPU, RAM, sparkline požadavků za minutu, odznak počtu chyb. Kliknutím na dlaždici se dostaneš na detail.</p>"
+      }
+    },
+    "wizard": {
+      "title": "Rychlý start",
+      "subtitle": "Naučte se klíčové funkce NKS WebDev Console v 5 krocích.",
+      "step": "Krok {current} z {total}",
+      "next": "Další",
+      "back": "Zpět",
+      "finish": "Hotovo",
+      "skip": "Přeskočit",
+      "steps": {
+        "site": {
+          "title": "Vytvoř první web",
+          "desc": "Jdi do <strong>Webů</strong> v sidebaru a klikni na <strong>+ Nový web</strong>. Zadej lokální doménu jako <code>mojeapp.loc</code> a vyber document root. WDC automaticky zaregistruje doménu v hosts souboru.",
+          "tip": "Tip: použij <kbd>Ctrl+N</kbd> pro okamžité otevření formuláře nového webu odkudkoli."
+        },
+        "ssl": {
+          "title": "Zapni HTTPS",
+          "desc": "Otevři web v <strong>SiteEdit → záložka SSL</strong> (nebo přepni SSL přímo v Jednoduchém režimu). Poprvé: nainstaluj lokální CA přes <strong>SSL → Instalace CA</strong>, aby prohlížeč certifikátům důvěřoval.",
+          "tip": "Tip: odznak SSL na kartě certifikátu zežloutí, když do vypršení zbývá ≤ 14 dní."
+        },
+        "browser": {
+          "title": "Otevři web v prohlížeči",
+          "desc": "Klikni na tlačítko <strong>Otevřít v prohlížeči</strong> na kartě webu nebo ze SiteEdit. Používá <code>shell.openExternal</code>, takže se otevře výchozí prohlížeč OS — ne okno Electronu.",
+          "tip": "Tip: web musí běžet (zelený stav), aby se URL přeložila."
+        },
+        "database": {
+          "title": "Spravuj databáze",
+          "desc": "Přejdi na <strong>Databáze</strong> v sidebaru pro vytváření databází, spouštění SQL dotazů nebo import/export dumpů. Závislosti Composeru pro konkrétní web jsou na <strong>SiteEdit → Composer</strong>.",
+          "tip": "Tip: pokud MySQL zobrazí \"Access denied\", zkontroluj Nastavení → Porty pro kolizi portů."
+        },
+        "cli": {
+          "title": "Použij CLI",
+          "desc": "WDC obsahuje CLI <code>wdc</code> pro skriptování a integraci AI nástrojů přes MCP. Časté příkazy:",
+          "tip": "Tip: integruj s Claude Code přes MCP server — viz Nápověda → MCP dev API."
+        }
+      }
+    }
   },
   "onboarding": {
     "title": "Vítej v NKS WebDev Console",
