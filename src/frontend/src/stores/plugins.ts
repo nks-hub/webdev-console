@@ -164,12 +164,50 @@ export const usePluginsStore = defineStore('plugins', () => {
     return ids
   }
 
+  /**
+   * F91.3: the full set of service IDs currently exposed by ANY enabled
+   * plugin, across all categories. Callers (Dashboard tiles, counters,
+   * "start all" targets) use this to filter daemonStore.services so a
+   * disabled plugin's service never shows up, even if the daemon still
+   * lists it in /api/services. Fail-open before manifests load.
+   */
+  const activeServiceIds = computed<ReadonlySet<string>>(() => {
+    const ids = new Set<string>()
+    for (const key of activeSurfaces.value) {
+      if (!key.startsWith('service-row:')) continue
+      const idx = key.indexOf(':', 'service-row:'.length)
+      if (idx < 0) continue
+      ids.add(key.slice(idx + 1))
+    }
+    return ids
+  })
+
+  // True when the given service row is contributed by any enabled plugin.
+  // Before manifest load → fail-open so initial render isn't blank.
+  function isServiceVisible(serviceId: string): boolean {
+    if (!manifestsLoaded.value) return true
+    // If no plugin claims this service id via SetServiceCategory, leave it
+    // visible — keeps backward-compat with services that predate F91.3.
+    let anyPluginClaimsIt = false
+    for (const m of manifests.value) {
+      for (const key of m.uiSurfaces ?? []) {
+        if (key.startsWith(`service-row:`) && key.endsWith(`:${serviceId}`)) {
+          anyPluginClaimsIt = true
+          break
+        }
+      }
+      if (anyPluginClaimsIt) break
+    }
+    if (!anyPluginClaimsIt) return true
+    return activeServiceIds.value.has(serviceId)
+  }
+
   return {
     manifests, uiDefinitions, navEntries, toolsNavEntries,
     loading, navEntriesLoaded, enabledPlugins,
-    ownedSurfaces, activeSurfaces,
+    ownedSurfaces, activeSurfaces, activeServiceIds,
     loadAll, toggleEnable, getUi,
     isUiVisible, isRouteVisible, isPluginOwnedRoute,
-    serviceIdsInCategory,
+    serviceIdsInCategory, isServiceVisible,
   }
 })

@@ -342,6 +342,8 @@
     "installed": "Nainstalované",
     "marketplace": "Marketplace",
     "installedCount": "{count} nainstalováno",
+    "enabledRatio": "{enabled} zapnuto z {total} nainstalovaných",
+    "uninstall": "Odinstalovat",
     "marketplaceCount": "{count} v marketplacu",
     "copyUrl": "Kopírovat URL",
     "openPanel": "Otevřít panel",
@@ -475,6 +477,18 @@
       "sync": "Synchronizace",
       "update": "Aktualizace",
       "about": "About"
+    },
+    "sso": {
+      "title": "Přihlášení přes SSO",
+      "signIn": "Přihlásit přes SSO",
+      "signOut": "Odhlásit",
+      "signedIn": "Přihlášen",
+      "signedInAt": "Přihlášen ke katalogu na {url}.",
+      "configuredCatalog": "nakonfigurovaném katalogu",
+      "description": "SSO probíhá přes OIDC flow katalogu a token se vrací zpět do WDC přes wdc:// deep-link — WDC samo neukládá heslo. Používá URL katalogu z Nastavení → Obecné.",
+      "catalog": "Katalog",
+      "catalogReachable": "dostupný · poslední synchronizace {ago}",
+      "catalogNeverSynced": "dosud nesynchronizováno"
     },
     "language": "Jazyk",
     "languageEn": "English",

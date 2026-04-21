@@ -566,6 +566,13 @@ export const enablePlugin = (id: string) =>
 export const disablePlugin = (id: string) =>
   json<void>(`/api/plugins/${id}/disable`, { method: 'POST' })
 
+// F91.4: removes the plugin files on disk. Requires the plugin be
+// disabled first and no enabled plugin to declare a hard dependency on it.
+export const uninstallPlugin = (id: string) =>
+  json<{ uninstalled: boolean; id: string; restartRequired: boolean; message?: string }>(
+    `/api/plugins/${id}`, { method: 'DELETE' }
+  )
+
 export const fetchPluginUi = (id: string) =>
   json<PluginUiDefinition>(`/api/plugins/${id}/ui`)
 

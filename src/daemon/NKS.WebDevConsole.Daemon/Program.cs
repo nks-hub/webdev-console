@@ -946,6 +946,122 @@ app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory h
     }
 });
 
+// F91.4: uninstall a plugin. Must be disabled first (enabled plugins would
+// have their DLL locked by the running ALC). Also refuses when another
+// enabled plugin still depends on this one. Removes the plugin directory
+// on disk — DLL stays loaded in the current process (AssemblyLoadContext
+// doesn't unload while referenced), so the response flags restartRequired
+// and the UI surfaces that note so users know to restart.
+app.MapDelete("/api/plugins/{id}", (string id, PluginState pluginState) =>
+{
+    // Path safety: same [a-z0-9.-]+ rule as install so the computed plugin
+    // directory can't escape the plugins root.
+    if (!System.Text.RegularExpressions.Regex.IsMatch(id, @"^[a-zA-Z0-9._\-]{1,128}$"))
+        return Results.BadRequest(new { error = "Invalid plugin id" });
+
+    var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
+    if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+
+    if (pluginState.IsEnabled(id))
+    {
+        return Results.BadRequest(new
+        {
+            error = "plugin-is-enabled",
+            id,
+            message = "Disable the plugin before uninstalling.",
+        });
+    }
+
+    // Refuse if any enabled plugin would lose a dependency. Uses the same
+    // traversal as /disable so the UX is consistent.
+    var dependents = new List<string>();
+    foreach (var other in pluginLoader.Plugins)
+    {
+        if (other.Instance.Id == id) continue;
+        if (!pluginState.IsEnabled(other.Instance.Id)) continue;
+        var deps = other.Manifest?.Dependencies;
+        if (deps is null) continue;
+        var hardHit = deps.Hard?.Any(h => string.Equals(h, id, StringComparison.OrdinalIgnoreCase)) == true;
+        if (hardHit) dependents.Add(other.Instance.Id);
+    }
+    if (dependents.Count > 0)
+    {
+        return Results.BadRequest(new { error = "has-dependents", id, dependents });
+    }
+
+    // Locate the plugin directory under pluginDir. We accept either the
+    // full id folder (as written by /install) or a name match of the DLL,
+    // falling back gracefully so partial installs can still be cleaned up.
+    string? targetDir = null;
+    try
+    {
+        var pluginsRoot = Path.GetFullPath(pluginDir);
+        var candidate = Path.GetFullPath(Path.Combine(pluginsRoot, id));
+        if (candidate.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase)
+            && Directory.Exists(candidate))
+        {
+            targetDir = candidate;
+        }
+        else
+        {
+            // Fallback: search siblings of the plugin DLL location for any
+            // folder whose plugin.json declares our id.
+            foreach (var dir in Directory.EnumerateDirectories(pluginsRoot))
+            {
+                var manifest = Path.Combine(dir, "plugin.json");
+                if (!File.Exists(manifest)) continue;
+                var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(manifest));
+                if (doc.RootElement.TryGetProperty("id", out var idProp)
+                    && string.Equals(idProp.GetString(), id, StringComparison.OrdinalIgnoreCase))
+                {
+                    targetDir = dir;
+                    break;
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Uninstall lookup failed: {ex.Message}");
+    }
+
+    if (targetDir is null)
+    {
+        return Results.Ok(new
+        {
+            uninstalled = false,
+            id,
+            restartRequired = true,
+            message = "Plugin directory not found on disk; DLL stays loaded until daemon restart.",
+        });
+    }
+
+    try
+    {
+        // Best-effort: delete files individually so locked DLLs don't break
+        // the whole operation. The metadata (plugin.json, resources) always
+        // goes — the DLL gets scheduled for delete on restart if locked.
+        foreach (var file in Directory.EnumerateFiles(targetDir, "*", SearchOption.AllDirectories))
+        {
+            try { File.Delete(file); } catch { /* locked DLL — handled on restart */ }
+        }
+        try { Directory.Delete(targetDir, recursive: true); } catch { /* leftovers if files were locked */ }
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Uninstall failed: {ex.Message}");
+    }
+
+    return Results.Ok(new
+    {
+        uninstalled = true,
+        id,
+        path = targetDir,
+        restartRequired = true,
+        message = "Plugin files removed. Restart the daemon to finish unloading the DLL.",
+    });
+});
+
 // Plugin brand icon: streams embedded SVG resource from plugin DLL
 app.MapGet("/api/plugins/{id}/icon", (string id) =>
 {

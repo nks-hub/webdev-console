@@ -364,7 +364,12 @@ const pluginsStore = usePluginsStore()
 const startingAll = ref(false)
 const stoppingAll = ref(false)
 
-const services = computed(() => daemonStore.services)
+// F91.3: hide services belonging to disabled plugins from every Dashboard
+// tile / counter / quick-action. isServiceVisible fails open until plugin
+// manifests load so the initial render isn't empty.
+const services = computed(() =>
+  daemonStore.services.filter(s => pluginsStore.isServiceVisible(s.id))
+)
 const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => services.value.filter(s => s.state === 2 || s.status === 'running').length)
 const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
@@ -372,8 +377,8 @@ const noneRunning = computed(() => runningCount.value === 0)
 
 // Simple mode metrics
 const sitesCount = computed(() => sitesStore.sites.length)
-const runningServices = computed(() => daemonStore.services.filter(s => s.state === 2).length)
-const totalServices = computed(() => daemonStore.services.length)
+const runningServices = computed(() => services.value.filter(s => s.state === 2).length)
+const totalServices = computed(() => services.value.length)
 const totalHits = ref(0)
 const totalErrors = ref(0)
 const aggregatesLoading = ref(false)

@@ -4,7 +4,9 @@
       <div>
         <h1 class="page-title">{{ $t('plugins.title') }}</h1>
         <p class="page-subtitle">
-          {{ $t('plugins.installedCount', { count: pluginsStore.manifests.length }) }}
+          <!-- F91.3: show enabled/total split so "13 installed" doesn't
+               hide the fact that only N are actually active. -->
+          {{ $t('plugins.enabledRatio', { enabled: pluginsStore.enabledPlugins.length, total: pluginsStore.manifests.length }) }}
           <span v-if="marketplace.reachable">· {{ $t('plugins.marketplaceCount', { count: marketplace.plugins.length }) }}</span>
         </p>
       </div>
@@ -158,6 +160,20 @@
             {{ $t('common.open') }} panel <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
+        <!-- F91.4: uninstall option — only exposed when the plugin is
+             disabled (backend enforces the same rule). Danger styling so
+             it reads as a destructive action, not a safe toggle. -->
+        <div class="pm-card-actions" v-if="!plugin.enabled">
+          <el-button
+            size="small"
+            type="danger"
+            plain
+            :loading="uninstalling.has(plugin.id)"
+            @click="confirmUninstall(plugin.id, plugin.name)"
+          >
+            {{ $t('plugins.uninstall') }}
+          </el-button>
+        </div>
       </div>
 
       <!-- Empty state -->
@@ -179,6 +195,7 @@ import { errorMessage } from '../../utils/errors'
 import {
   fetchMarketplace,
   installPluginFromMarketplace,
+  uninstallPlugin,
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
@@ -187,6 +204,9 @@ const router = useRouter()
 const pluginsStore = usePluginsStore()
 const search = ref('')
 const toggling = ref<Set<string>>(new Set())
+// F91.4: tracks in-flight uninstall calls so the button spins while the
+// backend removes files + we reload the manifest list.
+const uninstalling = ref<Set<string>>(new Set())
 const activeTab = ref<'installed' | 'marketplace'>('installed')
 const loadingMarketplace = ref(false)
 const marketplace = reactive<MarketplaceResponse>({
@@ -283,6 +303,39 @@ async function toggle(id: string) {
     ElMessage.error(`Plugin toggle failed: ${errorMessage(e)}`)
   } finally {
     toggling.value.delete(id)
+  }
+}
+
+// F91.4: destructive confirm → DELETE /api/plugins/{id}. Daemon always
+// flags restartRequired because the DLL cannot unload from the running
+// AssemblyLoadContext — we pass that note to the user via notification
+// instead of silently succeeding.
+async function confirmUninstall(id: string, name: string) {
+  try {
+    await ElMessageBox.confirm(
+      `Opravdu odinstalovat „${name}"? Soubory pluginu budou smazány.`,
+      'Odinstalovat plugin',
+      { type: 'warning', confirmButtonText: 'Odinstalovat', cancelButtonText: 'Zrušit' }
+    )
+  } catch { return /* user cancelled */ }
+
+  uninstalling.value.add(id)
+  try {
+    const res = await uninstallPlugin(id)
+    if (res.restartRequired) {
+      ElNotification.warning({
+        title: 'Odinstalováno',
+        message: res.message || 'Plugin smazán. Pro plné odpojení DLL restartuj daemon.',
+        duration: 6000,
+      })
+    } else {
+      ElMessage.success('Plugin odinstalován')
+    }
+    await pluginsStore.loadAll()
+  } catch (e) {
+    ElMessage.error(`Odinstalace selhala: ${errorMessage(e)}`)
+  } finally {
+    uninstalling.value.delete(id)
   }
 }
 

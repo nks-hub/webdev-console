@@ -365,6 +365,38 @@
         <!-- Account & Devices tab -->
         <el-tab-pane :label="$t('settings.tabs.account')" name="account">
           <div class="tab-content">
+            <!-- F91.4: SSO (catalog-api OIDC) moved from About → Account
+                 because signing in belongs with account management, not
+                 with "what version is this" metadata. Shown in both
+                 simple + advanced modes so simple users can still sign
+                 in to their catalog identity. -->
+            <section class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-title">{{ $t('settings.sso.title') }}</span>
+                <span v-if="authStore.isAuthenticated" style="font-size: 0.78rem; color: var(--wdc-status-running);">{{ $t('settings.sso.signedIn') }}</span>
+              </header>
+              <div class="settings-card-body">
+                <div v-if="authStore.isAuthenticated" class="sync-actions">
+                  <span class="tab-desc" style="margin: 0;">
+                    {{ $t('settings.sso.signedInAt', { url: $t('settings.sso.configuredCatalog') }) }}
+                  </span>
+                  <el-button size="small" @click="authStore.logout()">{{ $t('settings.sso.signOut') }}</el-button>
+                </div>
+                <div v-else class="sync-actions" style="flex-direction: column; align-items: flex-start;">
+                  <p class="tab-desc">{{ $t('settings.sso.description') }}</p>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <el-button
+                      size="small"
+                      type="primary"
+                      :loading="authStore.loginPending"
+                      @click="ssoLogin"
+                    >{{ $t('settings.sso.signIn') }}</el-button>
+                    <span v-if="authStore.loginError" class="sso-error" style="color: var(--wdc-status-error); font-size: 0.78rem;">{{ authStore.loginError }}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <!-- Simple mode: stripped-down login/logout -->
             <template v-if="uiModeStore.isSimple">
               <template v-if="!accountToken">
@@ -738,33 +770,16 @@
                 <el-tag size="small" effect="plain">.NET 9</el-tag>
               </div>
 
-              <!-- F83: SSO sign-in — catalog-api OIDC flow returned to the
-                   desktop app via the wdc:// deep-link. Token lives in
-                   useAuthStore + localStorage. Catalog URL is read from the
-                   same Settings field used for the binaries catalog. -->
-              <div class="about-sso">
-                <div v-if="authStore.isAuthenticated" class="about-sso-signed">
-                  <span class="sys-label">Signed in to catalog</span>
-                  <el-button size="small" @click="authStore.logout()">Sign out</el-button>
-                </div>
-                <div v-else class="about-sso-signedout">
-                  <el-button
-                    size="small"
-                    type="primary"
-                    :loading="authStore.loginPending"
-                    @click="ssoLogin"
-                  >Sign in with SSO</el-button>
-                  <span v-if="authStore.loginError" class="sso-error">{{ authStore.loginError }}</span>
-                </div>
-                <div v-if="pluginCatalogStatus" class="about-sso-status">
-                  <span :class="['status-dot', pluginCatalogStatus.lastFetch ? 'ok' : 'err']"></span>
-                  <span class="sys-label">Catalog</span>
-                  <span class="sys-value">
-                    {{ pluginCatalogStatus.lastFetch
-                        ? `reachable · last sync ${formatAgo(pluginCatalogStatus.lastFetch)}`
-                        : 'never synced' }}
-                  </span>
-                </div>
+              <!-- F91.4: SSO login moved to Account tab (was here pre-F91.4).
+                   Catalog status row stays — it's runtime info, not auth. -->
+              <div v-if="pluginCatalogStatus" class="about-sso-status">
+                <span :class="['status-dot', pluginCatalogStatus.lastFetch ? 'ok' : 'err']"></span>
+                <span class="sys-label">{{ $t('settings.sso.catalog') }}</span>
+                <span class="sys-value">
+                  {{ pluginCatalogStatus.lastFetch
+                      ? $t('settings.sso.catalogReachable', { ago: formatAgo(pluginCatalogStatus.lastFetch) })
+                      : $t('settings.sso.catalogNeverSynced') }}
+                </span>
               </div>
 
               <div v-if="systemInfo" class="about-system">

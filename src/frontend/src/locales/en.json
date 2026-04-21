@@ -342,6 +342,8 @@
     "installed": "Installed",
     "marketplace": "Marketplace",
     "installedCount": "{count} installed",
+    "enabledRatio": "{enabled} enabled of {total} installed",
+    "uninstall": "Uninstall",
     "marketplaceCount": "{count} in marketplace",
     "copyUrl": "Copy URL",
     "openPanel": "Open Panel",
@@ -475,6 +477,18 @@
       "sync": "Sync",
       "update": "Update",
       "about": "About"
+    },
+    "sso": {
+      "title": "Sign in with SSO",
+      "signIn": "Sign in with SSO",
+      "signOut": "Sign out",
+      "signedIn": "Signed in",
+      "signedInAt": "Signed in to the catalog at {url}.",
+      "configuredCatalog": "configured catalog",
+      "description": "SSO routes through the catalog OIDC flow and returns the token via wdc:// deep-link — no password entry inside WDC. Uses the catalog URL configured in Settings → General.",
+      "catalog": "Catalog",
+      "catalogReachable": "reachable · last sync {ago}",
+      "catalogNeverSynced": "never synced"
     },
     "language": "Language",
     "languageEn": "English",
