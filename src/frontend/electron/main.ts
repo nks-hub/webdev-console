@@ -741,8 +741,16 @@ if (!gotSingleInstance) {
   app.quit()
 } else {
   if (process.defaultApp) {
+    // F91.5: dev-mode Electron is invoked as `electron.exe <app-path> …`,
+    // where <app-path> is frequently `.` (relative to the spawning CWD).
+    // When Windows' protocol handler later launches electron.exe from
+    // system32, that relative `.` resolves to `C:\Windows\system32` and
+    // we crash with "Cannot find module 'C:\Windows\system32'". Passing
+    // path.resolve() freezes an absolute path into the registry entry so
+    // the handler launch always finds our main.js regardless of CWD.
     if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient('wdc', process.execPath, [process.argv[1]])
+      const appPath = resolve(process.argv[1])
+      app.setAsDefaultProtocolClient('wdc', process.execPath, [appPath])
     }
   } else {
     app.setAsDefaultProtocolClient('wdc')

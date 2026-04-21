@@ -462,7 +462,30 @@ export interface DeviceInfo {
 async function catalogErrorMessage(r: Response): Promise<string> {
   const body = await r.json().catch(() => null)
   if (body && typeof body === 'object' && 'detail' in body && body.detail) {
-    return String(body.detail)
+    // FastAPI's HTTP 422 ships `detail` as an ARRAY of validation objects —
+    // `{loc, msg, type, input, url}[]`. Naively calling String() on that
+    // yields the infamous "[object Object],[object Object]" because Array
+    // #toString delegates to each element's toString. We flatten each item
+    // to its `msg` (or JSON-stringify as a last resort) so the UI surfaces
+    // a readable error like "value is not a valid email address".
+    const d: unknown = (body as Record<string, unknown>).detail
+    if (Array.isArray(d)) {
+      return d.map(item => {
+        if (item && typeof item === 'object') {
+          const rec = item as Record<string, unknown>
+          if (typeof rec.msg === 'string') {
+            const loc = Array.isArray(rec.loc) ? rec.loc.join('.') : null
+            return loc ? `${loc}: ${rec.msg}` : rec.msg
+          }
+          try { return JSON.stringify(item) } catch { return String(item) }
+        }
+        return String(item)
+      }).join('; ') || `HTTP ${r.status}`
+    }
+    if (typeof d === 'string') return d
+    if (d && typeof d === 'object') {
+      try { return JSON.stringify(d) } catch { /* fall through */ }
+    }
   }
   const text = await r.text().catch(() => '')
   return text || `HTTP ${r.status}`
