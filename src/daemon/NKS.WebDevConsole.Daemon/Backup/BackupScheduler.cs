@@ -25,6 +25,11 @@ public sealed class BackupScheduler : IDisposable
     private Timer? _timer;
     private int _running;
 
+    /// <summary>
+    /// Default schedule: 24 hours (changed from 0/off so new installs get
+    /// automatic daily backups without manual configuration).
+    /// </summary>
+    private const int DefaultScheduleHours = 24;
     private const int DefaultRetainCount = 10;
     private const int MinRetainCount = 1;
     private const int MaxRetainCount = 100;
@@ -54,13 +59,13 @@ public sealed class BackupScheduler : IDisposable
         if (Interlocked.Exchange(ref _running, 1) != 0) return;
         try
         {
-            var hours = _settings.GetString("backup", "scheduleHours");
-            var scheduleHours = 0;
-            if (!string.IsNullOrWhiteSpace(hours) && int.TryParse(hours, out var parsed) && parsed > 0)
-                scheduleHours = parsed;
+            var hoursRaw = _settings.GetString("backup", "scheduleHours");
+            var scheduleHours = DefaultScheduleHours;
+            if (!string.IsNullOrWhiteSpace(hoursRaw) && int.TryParse(hoursRaw, out var parsedHours))
+                scheduleHours = parsedHours;
 
             if (scheduleHours == 0)
-                return; // disabled
+                return; // disabled (explicit 0 means off)
 
             // Check if enough time has passed since the last backup
             var backups = _backupManager.ListBackups();
@@ -72,10 +77,11 @@ public sealed class BackupScheduler : IDisposable
                     return; // not due yet
             }
 
-            _logger.LogInformation("Scheduled backup triggered (every {Hours}h)", scheduleHours);
-            var result = _backupManager.CreateBackup();
-            _logger.LogInformation("Scheduled backup created: {Path} ({Files} files, {Size} bytes)",
-                result.Path, result.FileCount, result.SizeBytes);
+            var flags = ReadContentFlags();
+            _logger.LogInformation("Scheduled backup triggered (every {Hours}h, flags={Flags})", scheduleHours, flags);
+            var result = _backupManager.CreateBackup(flags: flags);
+            _logger.LogInformation("Scheduled backup created: {Path} ({Files} files, {Size} bytes, flags={Flags})",
+                result.Path, result.FileCount, result.SizeBytes, result.Flags);
 
             // Prune: keep only the most recent N where N = backup.retainCount
             // (clamped to [MinRetainCount, MaxRetainCount]) or the default when
@@ -111,6 +117,21 @@ public sealed class BackupScheduler : IDisposable
         {
             Interlocked.Exchange(ref _running, 0);
         }
+    }
+
+    /// <summary>
+    /// Reads per-category content flags from settings. Each flag maps to
+    /// <c>backup.content.{name}</c> bool. Unset → default (see <see cref="BackupContentFlags.Default"/>).
+    /// </summary>
+    private BackupContentFlags ReadContentFlags()
+    {
+        var flags = BackupContentFlags.None;
+        if (_settings.GetBool("backup", "content.vhosts", defaultValue: true))      flags |= BackupContentFlags.Vhosts;
+        if (_settings.GetBool("backup", "content.pluginConfigs", defaultValue: true)) flags |= BackupContentFlags.PluginConfigs;
+        if (_settings.GetBool("backup", "content.ssl", defaultValue: true))          flags |= BackupContentFlags.Ssl;
+        if (_settings.GetBool("backup", "content.databases", defaultValue: false))   flags |= BackupContentFlags.Databases;
+        if (_settings.GetBool("backup", "content.docroots", defaultValue: false))    flags |= BackupContentFlags.Docroots;
+        return flags == BackupContentFlags.None ? BackupContentFlags.Default : flags;
     }
 
     public void Dispose()

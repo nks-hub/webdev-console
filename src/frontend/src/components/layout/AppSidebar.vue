@@ -176,6 +176,10 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
         <span class="nav-label">{{ $t('nav.plugins') }}</span>
       </div>
+      <div class="nav-item" :class="{ active: isActive('/backups') }" @click="navigate('/backups')">
+        <span class="nav-icon-shell"><el-icon :size="18"><Files /></el-icon></span>
+        <span class="nav-label">Zálohy</span>
+      </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
         <span class="nav-label">{{ $t('nav.settings') }}</span>

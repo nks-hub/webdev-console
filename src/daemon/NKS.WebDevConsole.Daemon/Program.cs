@@ -3165,24 +3165,76 @@ app.MapPost("/api/onboarding/complete", () =>
     return Results.Ok(new { completed = true });
 });
 
-// Backup / restore — Phase 7 plan item.
-// Creates a zip of ~/.wdc/sites + ~/.wdc/data/state.db + ~/.wdc/ssl/sites + ~/.wdc/caddy.
-// Restore is atomic with an automatic pre-restore safety backup.
+// ── Backup helper functions ───────────────────────────────────────────────
+
+BackupContentFlags ReadContentFlagsFromSettings(SettingsStore s)
+{
+    var flags = BackupContentFlags.None;
+    if (s.GetBool("backup", "content.vhosts",      defaultValue: true))  flags |= BackupContentFlags.Vhosts;
+    if (s.GetBool("backup", "content.pluginConfigs",defaultValue: true))  flags |= BackupContentFlags.PluginConfigs;
+    if (s.GetBool("backup", "content.ssl",          defaultValue: true))  flags |= BackupContentFlags.Ssl;
+    if (s.GetBool("backup", "content.databases",    defaultValue: false)) flags |= BackupContentFlags.Databases;
+    if (s.GetBool("backup", "content.docroots",     defaultValue: false)) flags |= BackupContentFlags.Docroots;
+    return flags == BackupContentFlags.None ? BackupContentFlags.Default : flags;
+}
+
+BackupContentFlags ParseContentFlagsFromDict(Dictionary<string, bool> dict)
+{
+    var flags = BackupContentFlags.None;
+    if (dict.GetValueOrDefault("vhosts",       true))  flags |= BackupContentFlags.Vhosts;
+    if (dict.GetValueOrDefault("pluginConfigs", true))  flags |= BackupContentFlags.PluginConfigs;
+    if (dict.GetValueOrDefault("ssl",           true))  flags |= BackupContentFlags.Ssl;
+    if (dict.GetValueOrDefault("databases",     false)) flags |= BackupContentFlags.Databases;
+    if (dict.GetValueOrDefault("docroots",      false)) flags |= BackupContentFlags.Docroots;
+    return flags == BackupContentFlags.None ? BackupContentFlags.Default : flags;
+}
+
+// Backup / restore — tasks 14/22/35.
+// Content-flag-aware backup: vhosts, SSL, plugin-configs default ON;
+// databases and docroots are opt-in.
 app.MapGet("/api/backup/list", (BackupManager bm) =>
 {
     var list = bm.ListBackups()
-        .Select(b => new { path = b.Path, size = b.Size, createdUtc = b.Created })
+        .Select(b => new { path = b.Path, size = b.Size, createdUtc = b.Created, contentFlags = b.ContentFlags.ToString() })
         .ToList();
     return Results.Ok(new { count = list.Count, backups = list });
 });
 
-app.MapPost("/api/backup", (BackupManager bm, HttpContext ctx) =>
+app.MapGet("/api/backup/stats", (BackupManager bm) =>
+{
+    var backups = bm.ListBackups();
+    var totalSize = backups.Sum(b => b.Size);
+    var lastCreated = backups.Count > 0 ? backups[0].Created : (DateTime?)null;
+    return Results.Ok(new { count = backups.Count, totalSize, lastCreatedUtc = lastCreated });
+});
+
+app.MapPost("/api/backup", async (BackupManager bm, SettingsStore settings, HttpContext ctx) =>
 {
     try
     {
         var outPath = ctx.Request.Query["out"].FirstOrDefault();
-        var (path, files, size) = bm.CreateBackup(outPath);
-        return Results.Ok(new { path, files, size });
+        BackupContentFlags flags = BackupContentFlags.Default;
+
+        // Body may contain explicit contentFlags override
+        if (ctx.Request.ContentLength > 0 && ctx.Request.ContentType?.Contains("json") == true)
+        {
+            try
+            {
+                var body = await ctx.Request.ReadFromJsonAsync<BackupRequestBody>(caseInsensitiveJson);
+                if (body?.ContentFlags is not null)
+                    flags = ParseContentFlagsFromDict(body.ContentFlags);
+                else
+                    flags = ReadContentFlagsFromSettings(settings);
+            }
+            catch { flags = ReadContentFlagsFromSettings(settings); }
+        }
+        else
+        {
+            flags = ReadContentFlagsFromSettings(settings);
+        }
+
+        var (path, files, size, resultFlags) = bm.CreateBackup(outPath, flags);
+        return Results.Ok(new { path, files, size, contentFlags = resultFlags.ToString() });
     }
     catch (Exception ex)
     {
@@ -3190,13 +3242,25 @@ app.MapPost("/api/backup", (BackupManager bm, HttpContext ctx) =>
     }
 });
 
+app.MapDelete("/api/backup/{id}", (BackupManager bm, string id) =>
+{
+    var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
+    var resolved = Path.GetFullPath(Path.Combine(backupRoot, id));
+    if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "Path escapes backup root" });
+    if (!File.Exists(resolved)) return Results.NotFound(new { error = "Backup not found" });
+    try { File.Delete(resolved); return Results.Ok(new { deleted = id }); }
+    catch (Exception ex) { return Results.Problem($"Delete failed: {ex.Message}"); }
+});
+
 app.MapGet("/api/backup/download", (BackupManager bm, string? path) =>
 {
     string target;
     if (string.IsNullOrEmpty(path))
     {
-        var latest = bm.ListBackups().FirstOrDefault();
-        if (latest.Path is null) return Results.NotFound(new { error = "No backups available" });
+        var backupsList = bm.ListBackups();
+        if (backupsList.Count == 0) return Results.NotFound(new { error = "No backups available" });
+        var latest = backupsList[0];
         target = latest.Path;
     }
     else
@@ -3244,12 +3308,24 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
     }
     catch (System.Text.Json.JsonException ex)
     {
-        // Malformed JSON in the body — distinct from server-side restore
-        // failure. Return 400 so the frontend can show a parse error
-        // instead of "Restore failed" which would suggest a server bug.
         return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
     }
     catch (FileNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
+    catch (Exception ex) { return Results.Problem($"Restore failed: {ex.Message}"); }
+});
+
+app.MapPost("/api/backup/{id}/restore", (BackupManager bm, string id) =>
+{
+    var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
+    var resolved = Path.GetFullPath(Path.Combine(backupRoot, id));
+    if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "Path escapes backup root" });
+    if (!File.Exists(resolved)) return Results.NotFound(new { error = "Backup not found" });
+    try
+    {
+        var (restored, safety) = bm.RestoreBackup(resolved);
+        return Results.Ok(new { restored, safetyBackup = safety, archive = id });
+    }
     catch (Exception ex) { return Results.Problem($"Restore failed: {ex.Message}"); }
 });
 
@@ -4706,7 +4782,7 @@ app.MapPost("/api/uninstall", async (HttpContext ctx, BackupManager backupManage
     {
         try
         {
-            var (path, _, _) = backupManager.CreateBackup();
+            var (path, _, _, _) = backupManager.CreateBackup();
             safetyBackupPath = path;
         }
         catch (Exception ex)
@@ -6121,6 +6197,8 @@ record HostsEntryDto(
 record HostsApplyRequest(List<HostsApplyEntry> Entries);
 record HostsApplyEntry(bool Enabled, string Ip, string Hostname, string Source, string? Comment);
 record HostsRestoreRequest(string? Path, string? Content);
+
+record BackupRequestBody(Dictionary<string, bool>? ContentFlags);
 
 /// <summary>API response record for a single parsed Apache access log entry.</summary>
 record AccessEntry(
