@@ -630,6 +630,17 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             // disabled plugins the list is still returned so the shell can
             // decide "this slot has potential content, it's just off now".
             contributions = ExtractContributions(p.Instance),
+            // Task 25b: optional UMD/ESM bundle URL for custom plugin pages.
+            // Null when the plugin ships no custom UI.
+            pageBundleUrl = p.Manifest?.PageBundleUrl,
+            // Task 25b: static port defaults from plugin.json (secondary data
+            // path — runtime DI IPortMetadata registrations are primary).
+            manifestPorts = p.Manifest?.Ports?.Select(mp => new
+            {
+                key = mp.Key,
+                label = mp.Label,
+                defaultPort = mp.Default,
+            }) ?? [],
         };
     }));
 });
@@ -758,6 +769,24 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
             error = $"Remote marketplace unreachable ({ex.Message}) — showing built-in catalogue"
         });
     }
+});
+
+// GET /api/plugins/ports — returns all IPortMetadata registrations from every loaded plugin.
+// Plugins that do not register any IPortMetadata simply contribute nothing to the list.
+// Returns an empty array [] when no plugin has opted in (safe for frontend to poll).
+app.MapGet("/api/plugins/ports", (IServiceProvider sp) =>
+{
+    var ports = sp.GetServices<NKS.WebDevConsole.Core.Interfaces.IPortMetadata>();
+    var dtos = ports.Select(p => new
+    {
+        key = p.Key,
+        label = p.Label,
+        pluginId = p.PluginId,
+        defaultPort = p.DefaultPort,
+        currentPort = p.CurrentPort,
+        isActive = p.IsActive,
+    });
+    return Results.Ok(dtos);
 });
 
 app.MapGet("/api/plugins/{id}/ui", (string id, IServiceProvider sp) =>

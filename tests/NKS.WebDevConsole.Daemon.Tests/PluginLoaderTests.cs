@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NKS.WebDevConsole.Daemon.Plugin;
@@ -122,5 +123,110 @@ public class PluginLoaderTests
         Assert.True(PluginLoaderInternals.IsSemVer("9999.0.0"));
         Assert.True(PluginLoaderInternals.IsSemVer("1.9999.0"));
         Assert.True(PluginLoaderInternals.IsSemVer("1.0.9999"));
+    }
+
+    // ── Task 25b: PluginManifestData new fields ────────────────────────────
+
+    private static readonly JsonSerializerOptions ManifestOptions =
+        new() { PropertyNameCaseInsensitive = true };
+
+    [Fact]
+    public void PluginManifestData_PageBundleUrl_ParsedFromJson()
+    {
+        const string json = """
+            {
+              "id": "nks.wdc.apache",
+              "pageBundleUrl": "./ui/apache.umd.js"
+            }
+            """;
+
+        var manifest = JsonSerializer.Deserialize<PluginManifestData>(json, ManifestOptions);
+
+        Assert.NotNull(manifest);
+        Assert.Equal("./ui/apache.umd.js", manifest.PageBundleUrl);
+    }
+
+    [Fact]
+    public void PluginManifestData_PageBundleUrl_NullWhenAbsent()
+    {
+        const string json = """{ "id": "nks.wdc.apache" }""";
+
+        var manifest = JsonSerializer.Deserialize<PluginManifestData>(json, ManifestOptions);
+
+        Assert.NotNull(manifest);
+        Assert.Null(manifest.PageBundleUrl);
+    }
+
+    [Fact]
+    public void PluginManifestData_Ports_ParsedFromJson()
+    {
+        const string json = """
+            {
+              "id": "nks.wdc.apache",
+              "ports": [
+                { "key": "http",  "label": "HTTP",  "default": 80  },
+                { "key": "https", "label": "HTTPS", "default": 443 }
+              ]
+            }
+            """;
+
+        var manifest = JsonSerializer.Deserialize<PluginManifestData>(json, ManifestOptions);
+
+        Assert.NotNull(manifest);
+        Assert.NotNull(manifest.Ports);
+        Assert.Equal(2, manifest.Ports.Length);
+
+        var http = manifest.Ports[0];
+        Assert.Equal("http", http.Key);
+        Assert.Equal("HTTP", http.Label);
+        Assert.Equal(80, http.Default);
+
+        var https = manifest.Ports[1];
+        Assert.Equal("https", https.Key);
+        Assert.Equal("HTTPS", https.Label);
+        Assert.Equal(443, https.Default);
+    }
+
+    [Fact]
+    public void PluginManifestData_Ports_NullWhenAbsent()
+    {
+        const string json = """{ "id": "nks.wdc.apache" }""";
+
+        var manifest = JsonSerializer.Deserialize<PluginManifestData>(json, ManifestOptions);
+
+        Assert.NotNull(manifest);
+        Assert.Null(manifest.Ports);
+    }
+
+    [Fact]
+    public void PluginManifestData_Ports_EmptyArrayWhenEmptyJson()
+    {
+        const string json = """{ "id": "nks.wdc.apache", "ports": [] }""";
+
+        var manifest = JsonSerializer.Deserialize<PluginManifestData>(json, ManifestOptions);
+
+        Assert.NotNull(manifest);
+        Assert.NotNull(manifest.Ports);
+        Assert.Empty(manifest.Ports);
+    }
+
+    [Fact]
+    public void PluginManifestData_AllNewFields_ToleratesExistingManifestWithout()
+    {
+        // Legacy manifests that predate task 25b must still deserialize cleanly.
+        const string json = """
+            {
+              "id": "nks.wdc.mysql",
+              "displayName": "MySQL",
+              "version": "1.0.0",
+              "defaultPorts": [3306]
+            }
+            """;
+
+        var manifest = JsonSerializer.Deserialize<PluginManifestData>(json, ManifestOptions);
+
+        Assert.NotNull(manifest);
+        Assert.Null(manifest.PageBundleUrl);
+        Assert.Null(manifest.Ports);
     }
 }

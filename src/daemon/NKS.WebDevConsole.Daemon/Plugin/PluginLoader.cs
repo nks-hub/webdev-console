@@ -205,6 +205,24 @@ public sealed class PluginManifestData
     // requires Apache OR Nginx OR Caddy as a web server host).
     // Optional: missing fields keep current permissive behaviour.
     public PluginDependencies? Dependencies { get; set; }
+    // Task 25b: optional URL to a UMD/ESM bundle the frontend lazy-loads
+    // when the user navigates to this plugin's custom page. Null when the
+    // plugin ships no custom UI (standard schema-rendered settings only).
+    public string? PageBundleUrl { get; set; }
+    // Task 25b: static port defaults declared in plugin.json. Secondary data
+    // path — runtime DI registrations (IPortMetadata) are primary. Loader
+    // parses and exposes without validation beyond shape.
+    public ManifestPortEntry[]? Ports { get; set; }
+}
+
+/// <summary>
+/// Single entry in the <c>ports</c> array of plugin.json.
+/// </summary>
+public sealed class ManifestPortEntry
+{
+    public string? Key { get; set; }
+    public string? Label { get; set; }
+    public int Default { get; set; }
 }
 
 public sealed class PluginDependencies

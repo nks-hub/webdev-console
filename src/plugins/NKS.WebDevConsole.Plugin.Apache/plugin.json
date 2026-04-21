@@ -16,5 +16,10 @@
   "capabilities": [
     "start", "stop", "reload", "validate-config",
     "vhost-generation", "log-streaming", "health-check", "metrics"
+  ],
+  "pageBundleUrl": "./ui/apache.umd.js",
+  "ports": [
+    { "key": "http",  "label": "HTTP",  "default": 80 },
+    { "key": "https", "label": "HTTPS", "default": 443 }
   ]
 }
