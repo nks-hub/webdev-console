@@ -30,10 +30,20 @@ public sealed class SiteOrchestrator
 
     /// <summary>
     /// Applies a site config: generate Apache vhost, ensure PHP is running, reload Apache.
+    /// When <see cref="SiteConfig.Enabled"/> is false, removes all active vhosts for the
+    /// site instead of generating new ones, then reloads the web server. SSL cert and
+    /// php.ini writing still run (no harm, they are not routed to).
     /// </summary>
     public async Task ApplyAsync(SiteConfig site, CancellationToken ct = default)
     {
         _logger.LogInformation("Orchestrating site {Domain}...", site.Domain);
+
+        if (!site.Enabled)
+        {
+            await RemoveVhostsForDisabledSiteAsync(site.Domain, ct);
+            _logger.LogInformation("Site {Domain} is disabled — vhosts removed", site.Domain);
+            return;
+        }
 
         // 0. Auto-detect PHP version from .php-version file in docroot
         // (Herd/Valet zero-config model). Only overrides when the user
@@ -388,6 +398,48 @@ public sealed class SiteOrchestrator
         await ingressTask;
 
         _logger.LogInformation("Cloudflare sync complete: {Count} rule(s) pushed", enabledSites.Count);
+    }
+
+    /// <summary>
+    /// Removes generated vhosts for a disabled site across all registered httpd modules
+    /// (Apache, Nginx) and reloads each running web server so the config takes effect.
+    /// Does NOT delete the TOML file — the site remains in the sites list.
+    /// </summary>
+    private async Task RemoveVhostsForDisabledSiteAsync(string domain, CancellationToken ct)
+    {
+        var modules = _sp.GetServices<IServiceModule>().ToList();
+
+        var httpdIds = new[] { "apache", "nginx" };
+        foreach (var id in httpdIds)
+        {
+            var mod = modules.FirstOrDefault(m =>
+                m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase));
+            if (mod is null) continue;
+
+            try
+            {
+                await InvokeAsync(mod, "RemoveVhostAsync", new object[] { domain, ct });
+            }
+            catch (MissingMethodException)
+            {
+                _logger.LogDebug("{Module} has no RemoveVhostAsync — skipping vhost removal", id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to remove vhost for disabled site {Domain} ({Module})", domain, id);
+            }
+
+            try
+            {
+                var status = await mod.GetStatusAsync(ct);
+                if (status.State == ServiceState.Running)
+                    await mod.ReloadAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to reload {Module} after disabling {Domain}", id, domain);
+            }
+        }
     }
 
     /// <summary>

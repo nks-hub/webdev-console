@@ -2367,6 +2367,40 @@ app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteMan
     catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
+// PATCH /api/sites/{domain}/enabled — body: { "enabled": true|false }
+// Soft-enables or soft-disables a site without deleting it. The TOML stays on
+// disk so the site remains visible in the UI. When disabled, all active vhosts
+// are removed and the web server is reloaded so the site stops being served.
+app.MapMethods("/api/sites/{domain}/enabled", ["PATCH"], async (string domain, HttpContext ctx, SiteManager sm, SiteOrchestrator orchestrator) =>
+{
+    var site = sm.Get(domain);
+    if (site is null)
+        return Results.NotFound();
+
+    bool? enabled = null;
+    try
+    {
+        var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        if (body is not null && body.TryGetValue("enabled", out var val)
+            && (val.ValueKind == JsonValueKind.True || val.ValueKind == JsonValueKind.False))
+            enabled = val.GetBoolean();
+    }
+    catch { /* fall through to 400 */ }
+
+    if (enabled is null)
+        return Results.BadRequest(new { error = "Body must be {\"enabled\": true|false}" });
+
+    site.Enabled = enabled.Value;
+    try
+    {
+        var updated = await sm.UpdateAsync(site);
+        await orchestrator.ApplyAsync(updated);
+        return Results.Ok(updated);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
 app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     try
