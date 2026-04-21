@@ -360,7 +360,10 @@
         </el-tab-pane>
 
         <!-- ── Cloudflare Tunnel ────────────────── -->
-        <el-tab-pane name="cloudflare">
+        <!-- F91: tab hidden when the Cloudflare plugin is disabled so the
+             site editor doesn't offer tunnel settings for a feature the
+             user has turned off. -->
+        <el-tab-pane v-if="pluginsStore.isRouteVisible('/cloudflare')" name="cloudflare">
           <template #label>
             <span class="tab-label"><el-icon><Link /></el-icon> {{ $t('siteEdit.cloudflare') }}</span>
           </template>
@@ -491,7 +494,8 @@
         </el-tab-pane>
 
         <!-- ── SSL ──────────────────────────────── -->
-        <el-tab-pane name="ssl">
+        <!-- F91: hidden when the SSL plugin is disabled. -->
+        <el-tab-pane v-if="pluginsStore.isRouteVisible('/ssl')" name="ssl">
           <template #label>
             <span class="tab-label"><el-icon><Lock /></el-icon> SSL</span>
           </template>
@@ -683,7 +687,8 @@
         </el-tab-pane>
 
         <!-- ── Packages (Composer) ───────────────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced && site?.phpVersion" name="composer">
+        <!-- F91: composer tab additionally requires the Composer plugin. -->
+        <el-tab-pane v-if="uiMode.isAdvanced && site?.phpVersion && pluginsStore.isRouteVisible('/composer')" name="composer">
           <template #label>
             <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('sites.composer.tabLabel') }}</span>
           </template>
@@ -717,6 +722,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
+import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
@@ -747,6 +753,7 @@ const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
+const pluginsStore = usePluginsStore()
 
 const domain = computed(() => String(route.params.domain || ''))
 

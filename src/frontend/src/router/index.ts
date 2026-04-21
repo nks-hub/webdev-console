@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { useUiModeStore } from '../stores/uiMode'
+import { usePluginsStore } from '../stores/plugins'
 
 // Lazy-loaded so heavy page deps (monaco-editor, echarts, xterm) land in
 // per-route chunks instead of the main bundle. Eagerly importing all 18
@@ -52,6 +53,13 @@ export const router = createRouter({
 router.beforeEach((to) => {
   const uiMode = useUiModeStore()
   if (to.meta.requiresAdvanced && uiMode.isSimple) {
+    return { path: '/sites' }
+  }
+  // F91: block deep-links to plugin-owned routes whose plugin is disabled.
+  // isRouteVisible fails open before the first /api/plugins/ui fetch so the
+  // initial navigation on app launch is never blocked by a pending request.
+  const plugins = usePluginsStore()
+  if (plugins.isPluginOwnedRoute(to.path) && !plugins.isRouteVisible(to.path)) {
     return { path: '/sites' }
   }
 })

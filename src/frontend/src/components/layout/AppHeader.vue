@@ -73,6 +73,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useUpdatesStore } from '../../stores/updates'
+import { usePluginsStore } from '../../stores/plugins'
 import { setLocale, type Locale } from '../../i18n'
 
 const router = useRouter()
@@ -81,6 +82,7 @@ const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
 const uiMode = useUiModeStore()
 const updatesStore = useUpdatesStore()
+const pluginsStore = usePluginsStore()
 const { t, locale } = useI18n()
 
 // F96: navigate to the Settings → Update tab when the header badge is clicked.
@@ -101,6 +103,11 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 // (toggle + config editor) and via its plugin panel at /plugin/nks.wdc.php.
 // Keeping runtime-specific managers out of the top nav prevents the menu from
 // exploding as we add Node/Go/Python/etc.
+// F91: /ssl is plugin-owned (nks.wdc.ssl). If the SSL plugin is disabled the
+// tab disappears — the shared pluginsStore.isRouteVisible check hides any
+// plugin-owned route whose plugin is currently off, so we never render a
+// broken nav link. Non-plugin core routes (/dashboard, /sites, /databases,
+// /settings) always bypass the check.
 const allNavItems = [
   { path: '/dashboard', label: () => t('nav.services'), requiresAdvanced: true },
   { path: '/sites', label: () => t('nav.sites'), requiresAdvanced: false },
@@ -111,6 +118,7 @@ const allNavItems = [
 const navItems = computed(() =>
   allNavItems
     .filter(i => !i.requiresAdvanced || uiMode.isAdvanced)
+    .filter(i => pluginsStore.isRouteVisible(i.path))
     .map(i => ({ path: i.path, label: i.label() }))
 )
 

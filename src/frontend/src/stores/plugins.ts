@@ -8,6 +8,10 @@ export const usePluginsStore = defineStore('plugins', () => {
   const uiDefinitions = ref<Map<string, PluginUiDefinition>>(new Map())
   const navEntries = ref<PluginNavEntry[]>([])
   const loading = ref(false)
+  // F91: tracks whether /api/plugins/ui has returned at least once. Used by
+  // isRouteVisible to "fail open" until we actually know which plugins are
+  // enabled — otherwise the header /ssl tab flashes off on first mount.
+  const navEntriesLoaded = ref(false)
 
   const enabledPlugins = computed(() => manifests.value.filter(p => p.enabled))
 
@@ -26,6 +30,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     try {
       const nav = await fetchPluginNavEntries()
       navEntries.value = sortNavEntries(nav?.entries ?? [])
+      navEntriesLoaded.value = true
     } catch { /* older daemon, sidebar will render without plugin-contributed entries */ }
   }
 
@@ -83,5 +88,43 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const toolsNavEntries = computed(() => navEntries.value.filter(e => e.category === 'Tools'))
 
-  return { manifests, uiDefinitions, navEntries, toolsNavEntries, loading, enabledPlugins, loadAll, toggleEnable, getUi }
+  // F91: routes that are "plugin-owned" — i.e., shipped by a plugin rather
+  // than the core shell. Keeping the list static lets the header / router
+  // decide "this route belongs to a plugin, is the plugin currently on?"
+  // without each caller hardcoding plugin ids. Add a line here when a new
+  // plugin ships a nav route.
+  const PLUGIN_OWNED_ROUTES: ReadonlySet<string> = new Set([
+    '/ssl', '/composer', '/hosts', '/cloudflare',
+  ])
+
+  // Routes currently contributed by enabled plugins (reactive). Derived from
+  // navEntries which is already filtered server-side to enabled plugins, so
+  // this set empties the moment the user toggles a plugin off.
+  const activePluginRoutes = computed<ReadonlySet<string>>(() => {
+    const s = new Set<string>()
+    for (const e of navEntries.value) s.add(e.route)
+    return s
+  })
+
+  function isPluginOwnedRoute(route: string): boolean {
+    return PLUGIN_OWNED_ROUTES.has(route)
+  }
+
+  // Returns true when the route is either non-plugin (always allowed) or is
+  // owned by a currently-enabled plugin. Callers use this to decide whether
+  // to render a nav item / allow a router navigation. Before the first
+  // /api/plugins/ui round-trip we fail open so the UI doesn't flash items
+  // off and back on during the initial load.
+  function isRouteVisible(route: string): boolean {
+    if (!PLUGIN_OWNED_ROUTES.has(route)) return true
+    if (!navEntriesLoaded.value) return true
+    return activePluginRoutes.value.has(route)
+  }
+
+  return {
+    manifests, uiDefinitions, navEntries, toolsNavEntries,
+    loading, navEntriesLoaded, enabledPlugins, activePluginRoutes,
+    loadAll, toggleEnable, getUi,
+    isPluginOwnedRoute, isRouteVisible,
+  }
 })
