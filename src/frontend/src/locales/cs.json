@@ -484,6 +484,10 @@
       "update": "Aktualizace",
       "about": "About"
     },
+    "account": {
+      "passwordTitle": "Přihlášení e-mailem a heslem",
+      "passwordAlt": "Alternativa k SSO — přihlášení e-mailem a heslem registrovaným přímo v katalogu NKS WDC Cloud."
+    },
     "sso": {
       "title": "Přihlášení přes SSO",
       "signIn": "Přihlásit přes SSO",

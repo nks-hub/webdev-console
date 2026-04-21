@@ -400,13 +400,37 @@
               </div>
             </section>
 
-            <!-- F91.13: password login form removed — SSO is the only
-                 supported entry point. Simple + Advanced mode share the
-                 SSO card above; the old /api/v1/auth/login local flow
-                 was redundant and confused users who expected SSO-only. -->
-            <!-- Simple mode: stripped-down login/logout -->
-            <template v-if="uiModeStore.isSimple && accountToken">
-              <section class="settings-card">
+            <!-- F91.15: password login restored alongside SSO. The two
+                 paths write to the same authStore (token + displayName),
+                 just through different entry points — SSO card above
+                 opens Authentik, password form here hits
+                 /api/v1/auth/login directly. "Unified login" = one
+                 Account tab hosting both, not one removed. -->
+            <template v-if="uiModeStore.isSimple">
+              <section v-if="!accountToken" class="settings-card">
+                <header class="settings-card-header">
+                  <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
+                </header>
+                <div class="settings-card-body">
+                  <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
+                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
+                    <el-form-item label="Email">
+                      <el-input v-model="authEmail" placeholder="you@example.com" />
+                    </el-form-item>
+                    <el-form-item label="Password">
+                      <el-input v-model="authPassword" type="password" show-password />
+                    </el-form-item>
+                    <div class="sync-actions">
+                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
+                      <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
+                    </div>
+                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
+                      {{ authError }}
+                    </div>
+                  </el-form>
+                </div>
+              </section>
+              <section v-else class="settings-card">
                 <header class="settings-card-header">
                   <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
                   <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
@@ -427,11 +451,35 @@
               </section>
             </template>
 
-            <!-- Advanced mode: full account UI. Renders only when
-                 `accountToken` is set — the SSO card above handles
-                 sign-in, so this block is pure "already signed in" view. -->
-            <template v-if="!uiModeStore.isSimple && accountToken">
-              <section class="settings-card">
+            <!-- Advanced mode: full account UI. Shows password form when
+                 not signed in, device management + push/pull when signed
+                 in. SSO card above is the other entry point; both write
+                 the same authStore so switching between them is seamless. -->
+            <template v-if="!uiModeStore.isSimple">
+              <section v-if="!accountToken" class="settings-card">
+                <header class="settings-card-header">
+                  <span class="settings-card-title">{{ $t('settings.account.passwordTitle') }}</span>
+                </header>
+                <div class="settings-card-body">
+                  <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
+                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
+                    <el-form-item label="Email">
+                      <el-input v-model="authEmail" placeholder="you@example.com" />
+                    </el-form-item>
+                    <el-form-item label="Password">
+                      <el-input v-model="authPassword" type="password" show-password />
+                    </el-form-item>
+                    <div class="sync-actions">
+                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
+                      <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
+                    </div>
+                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
+                      {{ authError }}
+                    </div>
+                  </el-form>
+                </div>
+              </section>
+              <section v-else class="settings-card">
                 <header class="settings-card-header">
                   <span class="settings-card-title">Account</span>
                   <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
@@ -445,7 +493,9 @@
               </section>
 
 
-              <section class="settings-card">
+              <!-- F91.15: devices list only when signed in — same gate
+                   as the Account summary above. -->
+              <section v-if="accountToken" class="settings-card">
                 <header class="settings-card-header">
                   <span class="settings-card-title">My Devices</span>
                   <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ accountDevices.length }} registered</span>
