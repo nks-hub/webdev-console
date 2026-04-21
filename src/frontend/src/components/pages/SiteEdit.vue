@@ -1609,11 +1609,53 @@ onBeforeUnmount(() => {
   margin-top: 8px;
 }
 
+/* F91.8: full-width, responsive tab bar. Each tab claims equal horizontal
+   space with flex:1 so the header fills the whole row instead of hugging
+   the left edge. The :deep() selector is required because the actual
+   <el-tabs__*> elements live outside scoped-CSS reach.
+   Scrollable fallback kicks in under 640px so narrow windows don't wrap
+   into a 5-line tab header — horizontal scroll is the lesser evil. */
+.site-tabs :deep(.el-tabs__header) { margin-bottom: 0; }
+.site-tabs :deep(.el-tabs__nav-wrap) { width: 100%; padding: 0 4px; }
+.site-tabs :deep(.el-tabs__nav-wrap::after) { background: var(--wdc-border); }
+.site-tabs :deep(.el-tabs__nav) {
+  display: flex;
+  width: 100%;
+  float: none; /* override Element Plus default float layout */
+}
+.site-tabs :deep(.el-tabs__active-bar) { /* keep the indicator aligned under full-width items */
+  bottom: 0;
+}
+.site-tabs :deep(.el-tabs__item) {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 6px;
+  text-align: center;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .site-tabs :deep(.el-tabs__nav-wrap) { overflow-x: auto; }
+  .site-tabs :deep(.el-tabs__nav) {
+    width: max-content;
+    min-width: 100%;
+  }
+  .site-tabs :deep(.el-tabs__item) {
+    flex: 0 0 auto;
+    padding: 0 14px;
+  }
+}
+
 .tab-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .tab-label.danger-label {
   color: var(--wdc-status-error);
@@ -1624,7 +1666,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-width: min(960px, 100%);
+  max-width: 100%; /* F91.8: tab content fills container — no 960px cap */
   box-sizing: border-box;
 }
 

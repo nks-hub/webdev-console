@@ -44,9 +44,13 @@ function decodeJwtClaims(jwt: string): SsoIdentity | null {
     const claims = JSON.parse(json) as Record<string, unknown>
     const s = (k: string) => typeof claims[k] === 'string' ? (claims[k] as string) : undefined
     const n = (k: string) => typeof claims[k] === 'number' ? (claims[k] as number) : undefined
+    // F91.8: widen the fallback chain — different IdPs use different claim
+    // keys (email / mail / upn / unique_name) and some only ship a short
+    // username (preferred_username / nickname / username). Sub is always
+    // present by JWT spec so it's our last-resort display value.
     return {
-      email: s('email'),
-      name: s('name') ?? s('preferred_username'),
+      email: s('email') ?? s('mail') ?? s('upn') ?? s('unique_name'),
+      name: s('name') ?? s('preferred_username') ?? s('nickname') ?? s('username') ?? s('given_name'),
       sub: s('sub'),
       exp: n('exp'),
     }
@@ -65,9 +69,16 @@ export const useAuthStore = defineStore('auth', () => {
   const identity = computed<SsoIdentity | null>(() =>
     token.value ? decodeJwtClaims(token.value) : null
   )
-  const displayName = computed(() =>
-    identity.value?.email ?? identity.value?.name ?? identity.value?.sub ?? ''
-  )
+  // F91.8: displayName is what the UI puts after "Signed in as". We prefer
+  // email (most recognisable), then any name-ish claim, then sub. Sub is
+  // always a string per JWT spec so we will always return something when
+  // there IS a token — the UI never renders the "no identity" fallback
+  // path unless the token literally has zero claims.
+  const displayName = computed(() => {
+    const i = identity.value
+    if (!i) return ''
+    return i.email || i.name || i.sub || ''
+  })
 
   function setToken(newToken: string) {
     token.value = newToken

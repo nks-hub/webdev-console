@@ -345,17 +345,29 @@ app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
     return Results.Accepted();
 });
 
-// F91.7: graceful restart — daemon exits with code 99, which Electron's
-// main process treats as "respawn me". Used after uninstall to fully
-// unload locked plugin DLLs without forcing the user to kill the app.
-app.MapPost("/api/admin/restart", (IHostApplicationLifetime lifetime) =>
+// F91.7/F91.8: graceful restart — daemon exits with code 99, which
+// Electron's main process treats as "respawn me". Used after uninstall to
+// fully unload locked plugin DLLs without forcing the user to kill the app.
+// Uses Environment.Exit(99) rather than ExitCode + StopApplication because
+// Program.cs does not `return 99` from Main — after graceful shutdown the
+// process exits with code 0 and Electron never sees the restart signal.
+app.MapPost("/api/admin/restart", () =>
 {
     _ = Task.Run(async () =>
     {
-        // Short delay so the HTTP response completes before shutdown.
-        await Task.Delay(200);
-        Environment.ExitCode = 99;
-        lifetime.StopApplication();
+        // Delay so the HTTP 202 response flushes + port file unlock path
+        // completes before we slam the process. 300ms is empirically safe
+        // on both Windows (locked file handles) and Linux.
+        await Task.Delay(300);
+        // Best-effort port file cleanup so the respawned daemon doesn't
+        // reuse a stale port/token combo while it is still booting.
+        try
+        {
+            var pf = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
+            if (File.Exists(pf)) File.Delete(pf);
+        }
+        catch { /* Electron will just see stale file briefly — harmless */ }
+        Environment.Exit(99);
     });
     return Results.Accepted();
 });
