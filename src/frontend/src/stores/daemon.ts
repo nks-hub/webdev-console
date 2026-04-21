@@ -179,11 +179,28 @@ export const useDaemonStore = defineStore('daemon', () => {
     return () => { onConnectListeners.delete(listener) }
   }
 
+  // F91.14: explicit "daemon is rebooting itself" flag. Set to true when
+  // the UI initiates a daemon restart (plugin uninstall, plugin restore,
+  // etc.), cleared when the daemon answers /healthz again. App.vue uses
+  // it to show the full-screen splash across the restart window instead
+  // of two racing toast notifications.
+  const isReloading = ref(false)
+  const reloadReason = ref<string>('')
+  function beginReload(reason: string) {
+    isReloading.value = true
+    reloadReason.value = reason
+  }
+  function endReload() {
+    isReloading.value = false
+    reloadReason.value = ''
+  }
+
   return {
     status, services, connected, hasEverConnected, validation,
     runningServices, allRunning, cpuHistory, ramHistory,
     bootStartedAt, pollAttempts,
     consecutiveFailures: consecutiveFailuresPublic, lastErrorKind,
+    isReloading, reloadReason, beginReload, endReload,
     startPolling, stopPolling, poll, onConnect,
   }
 })

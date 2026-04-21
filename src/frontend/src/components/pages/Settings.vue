@@ -405,40 +405,32 @@
                  SSO card above; the old /api/v1/auth/login local flow
                  was redundant and confused users who expected SSO-only. -->
             <!-- Simple mode: stripped-down login/logout -->
-            <template v-if="uiModeStore.isSimple">
-              <template v-if="false"></template>
-              <template v-else>
-                <section class="settings-card">
-                  <header class="settings-card-header">
-                    <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
-                    <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
-                  </header>
-                  <div class="settings-card-body">
-                    <div class="sync-actions">
-                      <el-button size="small" type="primary" :loading="syncing" @click="pushToCloud">
-                        <el-icon><Upload /></el-icon>
-                        <span>Push</span>
-                      </el-button>
-                      <el-button size="small" :loading="pulling" @click="pullFromCloud">
-                        <el-icon><Download /></el-icon>
-                        <span>Pull</span>
-                      </el-button>
-                      <el-button size="small" type="danger" plain @click="doLogout">{{ $t('common.logout') }}</el-button>
-                    </div>
+            <template v-if="uiModeStore.isSimple && accountToken">
+              <section class="settings-card">
+                <header class="settings-card-header">
+                  <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
+                  <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
+                </header>
+                <div class="settings-card-body">
+                  <div class="sync-actions">
+                    <el-button size="small" type="primary" :loading="syncing" @click="pushToCloud">
+                      <el-icon><Upload /></el-icon>
+                      <span>Push</span>
+                    </el-button>
+                    <el-button size="small" :loading="pulling" @click="pullFromCloud">
+                      <el-icon><Download /></el-icon>
+                      <span>Pull</span>
+                    </el-button>
+                    <el-button size="small" type="danger" plain @click="doLogout">{{ $t('common.logout') }}</el-button>
                   </div>
-                </section>
-              </template>
+                </div>
+              </section>
             </template>
 
-            <!-- Advanced mode: full account UI -->
-            <template v-else>
-            <!-- F91.13: not-logged-in password form removed — SSO is the
-                 single sign-in entry point. Only the "logged in" device UI
-                 below survives, and it now hangs off the SSO session. -->
-            <template v-if="false"></template>
-
-            <!-- Logged in -->
-            <template v-else>
+            <!-- Advanced mode: full account UI. Renders only when
+                 `accountToken` is set — the SSO card above handles
+                 sign-in, so this block is pure "already signed in" view. -->
+            <template v-if="!uiModeStore.isSimple && accountToken">
               <section class="settings-card">
                 <header class="settings-card-header">
                   <span class="settings-card-title">Account</span>
@@ -524,7 +516,6 @@
                 </div>
               </section>
             </template>
-            </template> <!-- end advanced mode account -->
           </div>
         </el-tab-pane>
 
