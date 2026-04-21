@@ -360,10 +360,10 @@
         </el-tab-pane>
 
         <!-- ── Cloudflare Tunnel ────────────────── -->
-        <!-- F91: tab hidden when the Cloudflare plugin is disabled so the
-             site editor doesn't offer tunnel settings for a feature the
-             user has turned off. -->
-        <el-tab-pane v-if="pluginsStore.isRouteVisible('/cloudflare')" name="cloudflare">
+        <!-- F91.2: tab owned by the Cloudflare plugin (AddSiteTab("cloudflare")).
+             Disabling the plugin drops its "site-tab:cloudflare" surface so
+             this v-if evaluates false and the tab disappears entirely. -->
+        <el-tab-pane v-if="pluginsStore.isUiVisible('site-tab:cloudflare')" name="cloudflare">
           <template #label>
             <span class="tab-label"><el-icon><Link /></el-icon> {{ $t('siteEdit.cloudflare') }}</span>
           </template>
@@ -494,8 +494,8 @@
         </el-tab-pane>
 
         <!-- ── SSL ──────────────────────────────── -->
-        <!-- F91: hidden when the SSL plugin is disabled. -->
-        <el-tab-pane v-if="pluginsStore.isRouteVisible('/ssl')" name="ssl">
+        <!-- F91.2: owned by the SSL plugin (AddSiteTab("ssl")). -->
+        <el-tab-pane v-if="pluginsStore.isUiVisible('site-tab:ssl')" name="ssl">
           <template #label>
             <span class="tab-label"><el-icon><Lock /></el-icon> SSL</span>
           </template>
@@ -687,8 +687,8 @@
         </el-tab-pane>
 
         <!-- ── Packages (Composer) ───────────────────── -->
-        <!-- F91: composer tab additionally requires the Composer plugin. -->
-        <el-tab-pane v-if="uiMode.isAdvanced && site?.phpVersion && pluginsStore.isRouteVisible('/composer')" name="composer">
+        <!-- F91.2: owned by the Composer plugin (AddSiteTab("composer")). -->
+        <el-tab-pane v-if="uiMode.isAdvanced && site?.phpVersion && pluginsStore.isUiVisible('site-tab:composer')" name="composer">
           <template #label>
             <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('sites.composer.tabLabel') }}</span>
           </template>

@@ -60,6 +60,12 @@ public sealed class CloudflarePlugin : IWdcPlugin, IFrontendPanelProvider
             .Category("Tools")
             .Icon("Link")
             .AddNavEntry("cloudflare", "Cloudflare", "/cloudflare", "Link", order: 60)
+            // F91.2: plugin owns the per-site "Cloudflare Tunnel" tab and the
+            // "exposed via tunnel" badge on the Sites list. Both vanish when
+            // the plugin is disabled.
+            .AddSiteTab("cloudflare")
+            .AddSiteBadge("cloudflare-tunnel")
+            .AddDashboardCard("cloudflare-tunnel-status")
             .AddServiceCard("cloudflare")
             .AddLogViewer("cloudflare")
             .AddPanel("cloudflare-tunnel-panel", new()

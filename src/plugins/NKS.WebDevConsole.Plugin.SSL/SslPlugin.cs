@@ -22,6 +22,9 @@ public sealed class SslPlugin : IWdcPlugin, IFrontendPanelProvider
             .Category("Tools")
             .Icon("Lock")
             .AddNavEntry("ssl", "SSL", "/ssl", "Lock", order: 50)
+            // F91.2: SiteEdit "SSL" tab is owned by this plugin — disabling
+            // the plugin hides the tab alongside the sidebar/header items.
+            .AddSiteTab("ssl")
             .Build();
 
     private MkcertManager? _mkcert;

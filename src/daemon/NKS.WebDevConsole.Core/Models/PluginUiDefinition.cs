@@ -21,7 +21,13 @@ public record PluginUiDefinition(
     string Category,
     string Icon,
     PanelDef[] Panels,
-    NavContribution[]? NavEntries = null);
+    NavContribution[]? NavEntries = null,
+    // F91.2: explicit list of UI surfaces this plugin owns. Each string is a
+    // namespaced key like "site-tab:ssl", "dashboard-card:tunnel-status",
+    // "header-tab:/ssl". The frontend hides any surface whose owning plugin
+    // is disabled. Nav entries are auto-added as "nav:{Route}" by the
+    // aggregator so plugins don't have to declare them twice.
+    string[]? UiSurfaces = null);
 
 public record PanelDef(string Type, Dictionary<string, object> Props);
 

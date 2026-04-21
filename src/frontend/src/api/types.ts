@@ -135,6 +135,14 @@ export interface PluginManifest {
     gui?: boolean
   }
   ui?: PluginUiDefinition
+  /**
+   * F91.2: generic UI surfaces owned by this plugin. Each entry is a
+   * namespaced key — e.g. `"nav:/ssl"`, `"site-tab:cloudflare"`,
+   * `"dashboard-card:tunnel-status"`. The shell hides every surface whose
+   * owning plugin is disabled, so a plugin can remove its complete UI
+   * footprint by toggling off with no frontend code change.
+   */
+  uiSurfaces?: string[]
 }
 
 export interface BinaryRelease {

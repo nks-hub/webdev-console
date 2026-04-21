@@ -88,43 +88,70 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const toolsNavEntries = computed(() => navEntries.value.filter(e => e.category === 'Tools'))
 
-  // F91: routes that are "plugin-owned" — i.e., shipped by a plugin rather
-  // than the core shell. Keeping the list static lets the header / router
-  // decide "this route belongs to a plugin, is the plugin currently on?"
-  // without each caller hardcoding plugin ids. Add a line here when a new
-  // plugin ships a nav route.
-  const PLUGIN_OWNED_ROUTES: ReadonlySet<string> = new Set([
-    '/ssl', '/composer', '/hosts', '/cloudflare',
-  ])
+  // F91.2: generic "UI surface" system. A surface is any piece of UI that a
+  // plugin can own — sidebar/header nav, SiteEdit tab, dashboard card,
+  // sites-list badge, etc. Surface keys are namespaced strings the plugin
+  // itself declares via UiSchemaBuilder, e.g. `nav:/ssl`, `site-tab:ssl`,
+  // `dashboard-card:tunnel-status`. The shell queries isUiVisible(key) to
+  // decide whether to render the surface, so disabling a plugin removes
+  // everything it contributed without any hardcoded per-surface table.
 
-  // Routes currently contributed by enabled plugins (reactive). Derived from
-  // navEntries which is already filtered server-side to enabled plugins, so
-  // this set empties the moment the user toggles a plugin off.
-  const activePluginRoutes = computed<ReadonlySet<string>>(() => {
+  // Union of every surface declared across ALL manifests (enabled or not) —
+  // "is this surface plugin-owned by anyone?".
+  const ownedSurfaces = computed<ReadonlySet<string>>(() => {
     const s = new Set<string>()
-    for (const e of navEntries.value) s.add(e.route)
+    for (const m of manifests.value) {
+      for (const key of m.uiSurfaces ?? []) s.add(key)
+    }
     return s
   })
 
-  function isPluginOwnedRoute(route: string): boolean {
-    return PLUGIN_OWNED_ROUTES.has(route)
+  // Union of surfaces declared by currently-ENABLED plugins — "is any
+  // enabled plugin currently contributing this surface?".
+  const activeSurfaces = computed<ReadonlySet<string>>(() => {
+    const s = new Set<string>()
+    for (const m of manifests.value) {
+      if (!m.enabled) continue
+      for (const key of m.uiSurfaces ?? []) s.add(key)
+    }
+    return s
+  })
+
+  // True when manifests have been fetched at least once. Used by isUiVisible
+  // to fail open before the first /api/plugins round-trip so the UI doesn't
+  // flash plugin items off and back on during initial boot.
+  const manifestsLoaded = computed(() => manifests.value.length > 0)
+
+  /**
+   * F91.2: generic visibility check for any UI surface.
+   *  - If the surface is not owned by any plugin → always visible (non-plugin UI).
+   *  - If it is plugin-owned → visible only when at least one *enabled* plugin claims it.
+   *  - Before manifests are loaded → fail open to avoid flicker.
+   *
+   * Callers pass the namespaced key directly: `isUiVisible('site-tab:ssl')`,
+   * `isUiVisible('nav:/composer')`, `isUiVisible('dashboard-card:tunnel')`.
+   */
+  function isUiVisible(surfaceKey: string): boolean {
+    if (!manifestsLoaded.value) return true
+    if (!ownedSurfaces.value.has(surfaceKey)) return true
+    return activeSurfaces.value.has(surfaceKey)
   }
 
-  // Returns true when the route is either non-plugin (always allowed) or is
-  // owned by a currently-enabled plugin. Callers use this to decide whether
-  // to render a nav item / allow a router navigation. Before the first
-  // /api/plugins/ui round-trip we fail open so the UI doesn't flash items
-  // off and back on during the initial load.
+  // Convenience: same check but for nav routes (auto-namespaces to `nav:…`).
+  // Kept as its own function so the router guard reads naturally.
   function isRouteVisible(route: string): boolean {
-    if (!PLUGIN_OWNED_ROUTES.has(route)) return true
-    if (!navEntriesLoaded.value) return true
-    return activePluginRoutes.value.has(route)
+    return isUiVisible(`nav:${route}`)
+  }
+
+  function isPluginOwnedRoute(route: string): boolean {
+    return ownedSurfaces.value.has(`nav:${route}`)
   }
 
   return {
     manifests, uiDefinitions, navEntries, toolsNavEntries,
-    loading, navEntriesLoaded, enabledPlugins, activePluginRoutes,
+    loading, navEntriesLoaded, enabledPlugins,
+    ownedSurfaces, activeSurfaces,
     loadAll, toggleEnable, getUi,
-    isPluginOwnedRoute, isRouteVisible,
+    isUiVisible, isRouteVisible, isPluginOwnedRoute,
   }
 })

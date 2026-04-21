@@ -267,12 +267,15 @@
       </div>
 
       <!-- 4. Quick actions bar (shortcuts) -->
+      <!-- F91.2: plugin-owned shortcuts (SSL, Cloudflare) drop out when the
+           corresponding plugin is disabled so the dashboard never advertises
+           a destination the user has turned off. -->
       <div class="quick-actions">
         <el-button size="small" @click="openMailpit">{{ $t('dashboard.openMailpit') }}</el-button>
-        <el-button size="small" @click="$router.push('/ssl')">{{ $t('dashboard.sslManager') }}</el-button>
+        <el-button v-if="pluginsStore.isUiVisible('nav:/ssl')" size="small" @click="$router.push('/ssl')">{{ $t('dashboard.sslManager') }}</el-button>
         <el-button size="small" @click="$router.push('/databases')">{{ $t('nav.databases') }}</el-button>
         <el-button size="small" @click="$router.push('/binaries')">{{ $t('dashboard.binaries') }}</el-button>
-        <el-button size="small" @click="$router.push('/cloudflare')">{{ $t('dashboard.tunnel') }}</el-button>
+        <el-button v-if="pluginsStore.isUiVisible('nav:/cloudflare')" size="small" @click="$router.push('/cloudflare')">{{ $t('dashboard.tunnel') }}</el-button>
       </div>
 
       <!-- Recent activity — Phase 4 plan item. Reads config_history via
@@ -338,6 +341,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
+import { usePluginsStore } from '../../stores/plugins'
 import { ElMessage, ElNotification } from 'element-plus'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import type { ServiceInfo } from '../../api/types'
@@ -355,6 +359,7 @@ const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiMode = useUiModeStore()
+const pluginsStore = usePluginsStore()
 
 const startingAll = ref(false)
 const stoppingAll = ref(false)

@@ -60,7 +60,7 @@
                 <span class="alias-preview">{{ row.aliases[0] }}<template v-if="row.aliases.length > 1">, …</template></span>
               </div>
               <div
-                v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain"
+                v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain && pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')"
                 class="col-tunnel"
                 :class="{ 'col-tunnel-offline': !cloudflaredRunning }"
               >
@@ -192,10 +192,11 @@
               <el-option label="None" value="none" />
             </el-select>
           </el-form-item>
-          <el-form-item :label="$t('sites.simple.cloudflareTunnel')">
+          <!-- F91.2: new-site toggles hidden when their plugin is disabled. -->
+          <el-form-item v-if="pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')" :label="$t('sites.simple.cloudflareTunnel')">
             <el-switch v-model="newSite.cloudflareTunnel" />
           </el-form-item>
-          <el-form-item :label="$t('sites.ssl')">
+          <el-form-item v-if="pluginsStore.isUiVisible('site-tab:ssl')" :label="$t('sites.ssl')">
             <el-switch v-model="newSite.sslEnabled" />
           </el-form-item>
           <el-form-item>
@@ -273,6 +274,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
+import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo } from '../../api/types'
 import { fetchDockerComposeStatus, fetchPhpVersions, daemonBaseUrl, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
@@ -284,6 +286,7 @@ const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 const uiModeStore = useUiModeStore()
+const pluginsStore = usePluginsStore()
 
 // Sites list shows per-row tunnel links when cloudflare.enabled → but the
 // link only works if the shared cloudflared process is actually running.

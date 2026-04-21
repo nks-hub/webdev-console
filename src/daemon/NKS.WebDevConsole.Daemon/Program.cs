@@ -462,6 +462,49 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             .Where(pl => pluginState.IsEnabled(pl.Instance.Id))
             .Select(pl => pl.Instance.Id),
         StringComparer.OrdinalIgnoreCase);
+
+    // F91.2: extract the generic UI surfaces the plugin declares via
+    // UiSchemaBuilder (nav:{route}, site-tab:{id}, dashboard-card:{id}, …)
+    // using the same cross-ALC reflection idiom as /api/plugins/ui.
+    // Returned for EVERY plugin (enabled or not) so the frontend can do
+    // "is surface X owned by any plugin, and is that plugin currently on?"
+    static string[] ExtractUiSurfaces(object instance)
+    {
+        try
+        {
+            var uiMethod = instance.GetType().GetMethod("GetUiDefinition");
+            var def = uiMethod?.Invoke(instance, null);
+            if (def is null) return Array.Empty<string>();
+            var surfaces = new List<string>();
+            if (def.GetType().GetProperty("UiSurfaces")?.GetValue(def)
+                is System.Collections.IEnumerable sEnum)
+            {
+                foreach (var s in sEnum)
+                {
+                    if (s is null) continue;
+                    var key = s.ToString();
+                    if (!string.IsNullOrWhiteSpace(key)) surfaces.Add(key);
+                }
+            }
+            // Fallback / compat: if UiSurfaces was left null but NavEntries
+            // exist, still project "nav:{Route}" so older plugins keep
+            // working without touching their code.
+            if (surfaces.Count == 0 &&
+                def.GetType().GetProperty("NavEntries")?.GetValue(def)
+                    is System.Collections.IEnumerable navEnum)
+            {
+                foreach (var n in navEnum)
+                {
+                    if (n is null) continue;
+                    var route = n.GetType().GetProperty("Route")?.GetValue(n)?.ToString();
+                    if (!string.IsNullOrWhiteSpace(route)) surfaces.Add($"nav:{route}");
+                }
+            }
+            return surfaces.ToArray();
+        }
+        catch { return Array.Empty<string>(); }
+    }
+
     return Results.Ok(pluginLoader.Plugins.Select(p =>
     {
         var svcId = p.Instance.Id.Split('.').LastOrDefault() ?? "";
@@ -505,6 +548,12 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             // diagnostic against enabledIds (empty = OK).
             dependencies = p.Manifest?.Dependencies,
             missingDependencies = depDiagnostics,
+            // F91.2: ALL UI surfaces owned by this plugin (nav entries,
+            // site-edit tabs, dashboard cards, …). Always present even when
+            // the plugin is disabled so the frontend can decide "this
+            // surface is plugin-owned by X, is X currently on?" without any
+            // hardcoded per-surface table.
+            uiSurfaces = ExtractUiSurfaces(p.Instance),
         };
     }));
 });
@@ -4344,6 +4393,29 @@ app.MapPost("/api/plugins/{id}/enable", (string id, PluginState pluginState) =>
 {
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
     if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    // F91.2: enforce dependency graph on enable. Build the set of currently-
+    // enabled plugins (excluding this one, since we're about to toggle it)
+    // and refuse the enable if any hard or any-of dep is unsatisfied. Keeps
+    // users from putting the system into a state where e.g. PHP is enabled
+    // but no web-server plugin is running to host PHP-FPM. The dependency
+    // diagnostics surface in the response so the UI can show "can't enable
+    // PHP: at least one of [apache, nginx, caddy] must be enabled".
+    var enabledIds = new HashSet<string>(
+        pluginLoader.Plugins
+            .Where(pl => pluginState.IsEnabled(pl.Instance.Id))
+            .Select(pl => pl.Instance.Id),
+        StringComparer.OrdinalIgnoreCase);
+    var missing = PluginLoaderInternals.ValidateDependencies(
+        plugin.Manifest?.Dependencies, enabledIds);
+    if (missing.Count > 0)
+    {
+        return Results.BadRequest(new
+        {
+            error = "dependencies-not-satisfied",
+            id,
+            missingDependencies = missing,
+        });
+    }
     pluginState.SetEnabled(id, true);
     return Results.Ok(new { id, enabled = true });
 });
@@ -4352,6 +4424,35 @@ app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState) =>
 {
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
     if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    // F91.2: refuse disable when another enabled plugin would lose a
+    // satisfied dependency. E.g. Composer hard-depends on PHP — disabling
+    // PHP while Composer is on would orphan Composer. List the dependents
+    // so the UI can guide the user to disable them first.
+    var dependents = new List<string>();
+    foreach (var other in pluginLoader.Plugins)
+    {
+        if (other.Instance.Id == id) continue;
+        if (!pluginState.IsEnabled(other.Instance.Id)) continue;
+        var deps = other.Manifest?.Dependencies;
+        if (deps is null) continue;
+        var hardHit = deps.Hard?.Any(h => string.Equals(h, id, StringComparison.OrdinalIgnoreCase)) == true;
+        var anyOfHit = deps.AnyOf?.Any(group =>
+            group?.Any(g => string.Equals(g, id, StringComparison.OrdinalIgnoreCase)) == true
+            // AnyOf only breaks when NO other candidate from the group is enabled.
+            && !group.Any(g =>
+                !string.Equals(g, id, StringComparison.OrdinalIgnoreCase)
+                && pluginState.IsEnabled(g))) == true;
+        if (hardHit || anyOfHit) dependents.Add(other.Instance.Id);
+    }
+    if (dependents.Count > 0)
+    {
+        return Results.BadRequest(new
+        {
+            error = "has-dependents",
+            id,
+            dependents,
+        });
+    }
     pluginState.SetEnabled(id, false);
     return Results.Ok(new { id, enabled = false });
 });
