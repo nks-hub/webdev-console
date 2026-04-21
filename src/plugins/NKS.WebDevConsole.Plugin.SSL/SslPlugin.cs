@@ -22,9 +22,23 @@ public sealed class SslPlugin : IWdcPlugin, IFrontendPanelProvider
             .Category("Tools")
             .Icon("Lock")
             .AddNavEntry("ssl", "SSL", "/ssl", "Lock", order: 50)
-            // F91.2: SiteEdit "SSL" tab is owned by this plugin — disabling
-            // the plugin hides the tab alongside the sidebar/header items.
+            // F91.2: legacy surface flag (kept for backward-compat).
             .AddSiteTab("ssl")
+            // F91.6: plugin CONTRIBUTES the actual SiteEdit tab component,
+            // not just "owns" a placeholder. <PluginSlot name="site-edit-tabs">
+            // renders SslSiteTab.vue with these props + page context.
+            .ContributeSiteEditTab("ssl-site-tab", new()
+            {
+                ["name"] = "ssl",
+                ["label"] = "SSL",
+            }, order: 50)
+            // F91.6: Dashboard quick-action button to navigate to /ssl.
+            .ContributeQuickAction("nav-link-button", new()
+            {
+                ["label"] = "SSL",
+                ["route"] = "/ssl",
+                ["icon"] = "Lock",
+            }, order: 20)
             .Build();
 
     private MkcertManager? _mkcert;

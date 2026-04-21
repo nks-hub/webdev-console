@@ -376,9 +376,12 @@
                 <span v-if="authStore.isAuthenticated" style="font-size: 0.78rem; color: var(--wdc-status-running);">{{ $t('settings.sso.signedIn') }}</span>
               </header>
               <div class="settings-card-body">
-                <div v-if="authStore.isAuthenticated" class="sync-actions">
+                <div v-if="authStore.isAuthenticated" class="sync-actions" style="flex-direction: column; align-items: flex-start; gap: 6px;">
                   <span class="tab-desc" style="margin: 0;">
-                    {{ $t('settings.sso.signedInAt', { url: $t('settings.sso.configuredCatalog') }) }}
+                    <!-- F91.6: surface SSO identity (email/name/sub from JWT claims). -->
+                    {{ authStore.displayName
+                        ? $t('settings.sso.signedInAs', { who: authStore.displayName })
+                        : $t('settings.sso.signedInAt', { url: $t('settings.sso.configuredCatalog') }) }}
                   </span>
                   <el-button size="small" @click="authStore.logout()">{{ $t('settings.sso.signOut') }}</el-button>
                 </div>

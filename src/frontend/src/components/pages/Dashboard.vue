@@ -128,11 +128,12 @@
             <div class="stat-label">Services running</div>
           </div>
         </div>
-        <div class="stat-card stat-clickable" @click="$router.push('/settings')">
+        <!-- F91.6: show enabled/total so disabling plugins reflects here. -->
+        <div class="stat-card stat-clickable" @click="$router.push('/plugins')">
           <el-icon class="stat-icon"><Grid /></el-icon>
           <div class="stat-content">
-            <div class="stat-value mono">{{ daemonStore.status?.plugins ?? 0 }}</div>
-            <div class="stat-label">Plugins loaded</div>
+            <div class="stat-value mono">{{ pluginsStore.enabledPlugins.length }} / {{ pluginsStore.manifests.length || (daemonStore.status?.plugins ?? 0) }}</div>
+            <div class="stat-label">Plugins enabled</div>
           </div>
         </div>
         <div class="stat-card">
@@ -142,7 +143,8 @@
             <div class="stat-label">Daemon uptime</div>
           </div>
         </div>
-        <div class="stat-card" v-if="nodeProcessCount >= 0">
+        <!-- F91.6: gated by Node plugin state — zmizí okamžitě po vypnutí. -->
+        <div class="stat-card" v-if="nodeProcessCount >= 0 && pluginsStore.isServiceVisible('node')">
           <el-icon class="stat-icon" :class="nodeProcessCount > 0 ? 'stat-icon-running' : ''"><ChromeFilled /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ nodeProcessCount }}</div>
@@ -266,16 +268,15 @@
         </div>
       </div>
 
-      <!-- 4. Quick actions bar (shortcuts) -->
-      <!-- F91.2: plugin-owned shortcuts (SSL, Cloudflare) drop out when the
-           corresponding plugin is disabled so the dashboard never advertises
-           a destination the user has turned off. -->
+      <!-- 4. Quick actions bar.
+           F91.6: plugin-contributed buttons come through <PluginSlot>.
+           Only the built-in "Open Mailpit" + Databases + Binaries stay
+           hardcoded (they don't belong to one specific plugin). -->
       <div class="quick-actions">
         <el-button size="small" @click="openMailpit">{{ $t('dashboard.openMailpit') }}</el-button>
-        <el-button v-if="pluginsStore.isUiVisible('nav:/ssl')" size="small" @click="$router.push('/ssl')">{{ $t('dashboard.sslManager') }}</el-button>
         <el-button size="small" @click="$router.push('/databases')">{{ $t('nav.databases') }}</el-button>
         <el-button size="small" @click="$router.push('/binaries')">{{ $t('dashboard.binaries') }}</el-button>
-        <el-button v-if="pluginsStore.isUiVisible('nav:/cloudflare')" size="small" @click="$router.push('/cloudflare')">{{ $t('dashboard.tunnel') }}</el-button>
+        <PluginSlot name="dashboard-quick-actions" :context="{ size: 'small' }" />
       </div>
 
       <!-- Recent activity — Phase 4 plan item. Reads config_history via
@@ -350,6 +351,7 @@ import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
+import PluginSlot from '../shared/PluginSlot.vue'
 
 const router = useRouter()
 

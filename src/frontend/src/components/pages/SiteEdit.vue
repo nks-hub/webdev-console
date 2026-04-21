@@ -359,11 +359,20 @@
           </div>
         </el-tab-pane>
 
-        <!-- ── Cloudflare Tunnel ────────────────── -->
-        <!-- F91.2: tab owned by the Cloudflare plugin (AddSiteTab("cloudflare")).
-             Disabling the plugin drops its "site-tab:cloudflare" surface so
-             this v-if evaluates false and the tab disappears entirely. -->
-        <el-tab-pane v-if="pluginsStore.isUiVisible('site-tab:cloudflare')" name="cloudflare">
+        <!-- F91.6: plugin-contributed tabs (SSL, Cloudflare, Composer, …).
+             Each plugin's UiContribution(slot="site-edit-tabs") renders as
+             its own <el-tab-pane> with label/content the plugin supplies.
+             Disabling a plugin removes its contribution → tab vanishes. -->
+        <PluginSlot
+          name="site-edit-tabs"
+          :context="{ domain, site, redirectHttps }"
+          @update:site="onPluginSiteUpdate"
+          @update:redirectHttps="(v: boolean) => redirectHttps = v"
+          @dirty="markDirty"
+        />
+
+        <!-- ── Cloudflare Tunnel (legacy hardcoded pane — kept for back-compat) -->
+        <el-tab-pane v-if="false && pluginsStore.isUiVisible('site-tab:cloudflare')" name="cloudflare-legacy">
           <template #label>
             <span class="tab-label"><el-icon><Link /></el-icon> {{ $t('siteEdit.cloudflare') }}</span>
           </template>
@@ -495,7 +504,8 @@
 
         <!-- ── SSL ──────────────────────────────── -->
         <!-- F91.2: owned by the SSL plugin (AddSiteTab("ssl")). -->
-        <el-tab-pane v-if="pluginsStore.isUiVisible('site-tab:ssl')" name="ssl">
+        <!-- F91.6: legacy hardcoded SSL tab replaced by plugin contribution (SslSiteTab.vue). -->
+        <el-tab-pane v-if="false && pluginsStore.isUiVisible('site-tab:ssl')" name="ssl-legacy">
           <template #label>
             <span class="tab-label"><el-icon><Lock /></el-icon> SSL</span>
           </template>
@@ -688,7 +698,8 @@
 
         <!-- ── Packages (Composer) ───────────────────── -->
         <!-- F91.2: owned by the Composer plugin (AddSiteTab("composer")). -->
-        <el-tab-pane v-if="uiMode.isAdvanced && site?.phpVersion && pluginsStore.isUiVisible('site-tab:composer')" name="composer">
+        <!-- F91.6: legacy Composer tab replaced by plugin contribution. -->
+        <el-tab-pane v-if="false && uiMode.isAdvanced && site?.phpVersion && pluginsStore.isUiVisible('site-tab:composer')" name="composer-legacy">
           <template #label>
             <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('sites.composer.tabLabel') }}</span>
           </template>
@@ -729,6 +740,7 @@ import SiteErrorLogs from './SiteErrorLogs.vue'
 import SiteAccessLogs from './SiteAccessLogs.vue'
 import SiteComposer from './SiteComposer.vue'
 import SiteDetailSimple from './SiteDetailSimple.vue'
+import PluginSlot from '../shared/PluginSlot.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
@@ -1095,6 +1107,16 @@ async function detectFramework() {
 }
 
 function markDirty() { dirty.value = true }
+
+// F91.6: plugin-contributed tabs (SSL, Cloudflare) emit `update:site` when
+// they edit a subset of the site record (e.g. sslEnabled, cloudflare.*).
+// We merge the incoming partial into our reactive `site.value` so the save
+// path + the rest of the UI observe the change immediately.
+function onPluginSiteUpdate(updated: SiteInfo) {
+  if (!site.value) return
+  site.value = { ...site.value, ...updated }
+  markDirty()
+}
 
 async function load() {
   loading.value = true

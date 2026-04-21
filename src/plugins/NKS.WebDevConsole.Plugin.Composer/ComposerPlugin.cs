@@ -31,8 +31,13 @@ public sealed class ComposerPlugin : IWdcPlugin, IFrontendPanelProvider
             .Category("Tools")
             .Icon("Box")
             .AddNavEntry("composer", "Composer", "/composer", "Box", order: 30)
-            // F91.2: SiteEdit "Packages" tab is owned by the Composer plugin.
             .AddSiteTab("composer")
+            // F91.6: plugin contributes the SiteEdit "Packages" tab directly.
+            .ContributeSiteEditTab("composer-site-tab", new()
+            {
+                ["name"] = "composer",
+                ["label"] = "Packages",
+            }, order: 60)
             .Build();
 
     public string Description =>

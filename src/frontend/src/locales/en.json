@@ -484,6 +484,7 @@
       "signOut": "Sign out",
       "signedIn": "Signed in",
       "signedInAt": "Signed in to the catalog at {url}.",
+      "signedInAs": "Signed in as {who}",
       "configuredCatalog": "configured catalog",
       "description": "SSO routes through the catalog OIDC flow and returns the token via wdc:// deep-link — no password entry inside WDC. Uses the catalog URL configured in Settings → General.",
       "catalog": "Catalog",

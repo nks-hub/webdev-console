@@ -27,7 +27,13 @@ public record PluginUiDefinition(
     // "header-tab:/ssl". The frontend hides any surface whose owning plugin
     // is disabled. Nav entries are auto-added as "nav:{Route}" by the
     // aggregator so plugins don't have to declare them twice.
-    string[]? UiSurfaces = null);
+    string[]? UiSurfaces = null,
+    // F91.6: dynamic UI contributions — the plugin declares "render THIS
+    // component in THAT slot with these props" and the shell's <PluginSlot>
+    // renderer picks them up. Lets plugins own UI sections without the
+    // frontend hardcoding any plugin id: new plugin = new contribution,
+    // zero frontend template changes. See <see cref="UiContribution"/>.
+    UiContribution[]? Contributions = null);
 
 public record PanelDef(string Type, Dictionary<string, object> Props);
 
@@ -48,4 +54,25 @@ public record NavContribution(
     string Label,
     string Icon,
     string Route,
+    int Order = 100);
+
+/// <summary>
+/// F91.6: plugin-contributed UI fragment rendered into a named slot in the
+/// frontend shell. Known slot names: <c>site-edit-tabs</c>,
+/// <c>dashboard-tiles</c>, <c>dashboard-quick-actions</c>,
+/// <c>sites-row-badges</c>. Frontend maintains a componentType → Vue
+/// component registry; unknown types render as a plain placeholder so a
+/// misconfigured plugin never crashes the shell.
+/// </summary>
+/// <param name="Slot">Target slot name (e.g. <c>site-edit-tabs</c>).</param>
+/// <param name="ComponentType">Registry key resolved in frontend's
+/// PLUGIN_COMPONENTS map.</param>
+/// <param name="Props">Serialisable props passed to the component. Values
+/// must be JSON-friendly (strings, numbers, bools, nested dicts).</param>
+/// <param name="Order">Sort key inside the slot; lower numbers render
+/// first. Default 100.</param>
+public record UiContribution(
+    string Slot,
+    string ComponentType,
+    Dictionary<string, object> Props,
     int Order = 100);

@@ -143,6 +143,18 @@ export interface PluginManifest {
    * footprint by toggling off with no frontend code change.
    */
   uiSurfaces?: string[]
+  /**
+   * F91.6: dynamic UI contributions — plugin asks the shell to render
+   * componentType inside slot with props. Consumed by <PluginSlot>.
+   */
+  contributions?: PluginContribution[]
+}
+
+export interface PluginContribution {
+  slot: string
+  componentType: string
+  props: Record<string, unknown>
+  order: number
 }
 
 export interface BinaryRelease {

@@ -463,6 +463,45 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             .Select(pl => pl.Instance.Id),
         StringComparer.OrdinalIgnoreCase);
 
+    // F91.6: extract plugin-contributed UI fragments (<PluginSlot> inputs).
+    // Same cross-ALC reflection pattern as everything else in this file.
+    static object[] ExtractContributions(object instance)
+    {
+        try
+        {
+            var uiMethod = instance.GetType().GetMethod("GetUiDefinition");
+            var def = uiMethod?.Invoke(instance, null);
+            if (def is null) return Array.Empty<object>();
+            if (def.GetType().GetProperty("Contributions")?.GetValue(def)
+                is not System.Collections.IEnumerable contribEnum) return Array.Empty<object>();
+            var list = new List<object>();
+            foreach (var c in contribEnum)
+            {
+                if (c is null) continue;
+                var t = c.GetType();
+                // Props is a Dictionary<string,object> across the ALC boundary —
+                // flatten to a plain dict so System.Text.Json emits it as a JSON
+                // object instead of opaque type metadata.
+                var propsRaw = t.GetProperty("Props")?.GetValue(c);
+                var propsDict = new Dictionary<string, object?>();
+                if (propsRaw is System.Collections.IDictionary d)
+                {
+                    foreach (System.Collections.DictionaryEntry e in d)
+                        propsDict[e.Key?.ToString() ?? ""] = e.Value;
+                }
+                list.Add(new
+                {
+                    slot = t.GetProperty("Slot")?.GetValue(c)?.ToString() ?? "",
+                    componentType = t.GetProperty("ComponentType")?.GetValue(c)?.ToString() ?? "",
+                    props = propsDict,
+                    order = t.GetProperty("Order")?.GetValue(c) is int o ? o : 100,
+                });
+            }
+            return list.ToArray();
+        }
+        catch { return Array.Empty<object>(); }
+    }
+
     // F91.2: extract the generic UI surfaces the plugin declares via
     // UiSchemaBuilder (nav:{route}, site-tab:{id}, dashboard-card:{id}, …)
     // using the same cross-ALC reflection idiom as /api/plugins/ui.
@@ -554,6 +593,11 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             // surface is plugin-owned by X, is X currently on?" without any
             // hardcoded per-surface table.
             uiSurfaces = ExtractUiSurfaces(p.Instance),
+            // F91.6: dynamic UI contributions rendered by <PluginSlot>.
+            // Enabled plugins' contributions drive the actual render; for
+            // disabled plugins the list is still returned so the shell can
+            // decide "this slot has potential content, it's just off now".
+            contributions = ExtractContributions(p.Instance),
         };
     }));
 });

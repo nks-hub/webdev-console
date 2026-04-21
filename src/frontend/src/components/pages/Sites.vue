@@ -59,22 +59,11 @@
                 <span class="alias-dot">+{{ row.aliases.length }}</span>
                 <span class="alias-preview">{{ row.aliases[0] }}<template v-if="row.aliases.length > 1">, …</template></span>
               </div>
-              <div
-                v-if="row.cloudflare?.enabled && row.cloudflare?.subdomain && pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')"
-                class="col-tunnel"
-                :class="{ 'col-tunnel-offline': !cloudflaredRunning }"
-              >
-                <svg class="tunnel-icon" viewBox="0 0 20 14" fill="currentColor" width="13" height="13" style="vertical-align: middle"><path d="M16 6a4 4 0 0 0-7.74-1.32A3.5 3.5 0 1 0 3.5 11H16a3 3 0 0 0 0-6z"/></svg>
-                <a
-                  :href="`https://${row.cloudflare.subdomain}.${row.cloudflare.zoneName}`"
-                  target="_blank"
-                  @click.stop
-                  :title="cloudflaredRunning
-                    ? 'Open public URL in browser'
-                    : 'Tunnel service is stopped — this URL will not respond until you start cloudflared'"
-                >{{ row.cloudflare.subdomain }}.{{ row.cloudflare.zoneName }}</a>
-                <span v-if="!cloudflaredRunning" class="tunnel-badge-offline">offline</span>
-              </div>
+              <!-- F91.6: plugin-contributed per-row badges.
+                   Cloudflare plugin registers CloudflareTunnelBadge here via
+                   ContributeSitesBadge(). Disabling the plugin removes its
+                   contribution → badge disappears without a template change. -->
+              <PluginSlot name="sites-row-badges" :context="{ site: row }" />
             </div>
           </template>
         </el-table-column>
@@ -280,6 +269,7 @@ import { fetchDockerComposeStatus, fetchPhpVersions, daemonBaseUrl, type DockerC
 import { errorMessage } from '../../utils/errors'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
+import PluginSlot from '../shared/PluginSlot.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -484,6 +484,7 @@
       "signOut": "Odhlásit",
       "signedIn": "Přihlášen",
       "signedInAt": "Přihlášen ke katalogu na {url}.",
+      "signedInAs": "Přihlášen jako {who}",
       "configuredCatalog": "nakonfigurovaném katalogu",
       "description": "SSO probíhá přes OIDC flow katalogu a token se vrací zpět do WDC přes wdc:// deep-link — WDC samo neukládá heslo. Používá URL katalogu z Nastavení → Obecné.",
       "catalog": "Katalog",

@@ -13,6 +13,10 @@ public class UiSchemaBuilder
     // auto-derived "nav:{Route}" entries in Build() so every nav route
     // also shows up as an ownable surface without duplicate declarations.
     private readonly List<string> _surfaces = [];
+    // F91.6: plugin-contributed UI fragments rendered into named slots by
+    // the frontend's <PluginSlot> component. Replaces hardcoded v-if +
+    // component references in the Vue shell.
+    private readonly List<UiContribution> _contributions = [];
 
     public UiSchemaBuilder(string pluginId)
     {
@@ -93,6 +97,40 @@ public class UiSchemaBuilder
         return this;
     }
 
+    /// <summary>
+    /// F91.6: generic contribution — plugin asks the shell to render
+    /// <paramref name="componentType"/> inside slot <paramref name="slot"/>
+    /// with <paramref name="props"/>. Use the typed helpers below for
+    /// well-known slots to get IntelliSense + avoid typos.
+    /// </summary>
+    public UiSchemaBuilder Contribute(string slot, string componentType,
+        Dictionary<string, object>? props = null, int order = 100)
+    {
+        if (!string.IsNullOrWhiteSpace(slot) && !string.IsNullOrWhiteSpace(componentType))
+            _contributions.Add(new UiContribution(slot, componentType, props ?? [], order));
+        return this;
+    }
+
+    /// <summary>F91.6: contribute a tab to the per-site editor (SiteEdit.vue). Props must include <c>name</c> + <c>label</c>.</summary>
+    public UiSchemaBuilder ContributeSiteEditTab(string componentType,
+        Dictionary<string, object> props, int order = 100)
+        => Contribute("site-edit-tabs", componentType, props, order);
+
+    /// <summary>F91.6: contribute a stat tile to the Dashboard overview.</summary>
+    public UiSchemaBuilder ContributeDashboardTile(string componentType,
+        Dictionary<string, object> props, int order = 100)
+        => Contribute("dashboard-tiles", componentType, props, order);
+
+    /// <summary>F91.6: contribute a button to the Dashboard quick-actions bar.</summary>
+    public UiSchemaBuilder ContributeQuickAction(string componentType,
+        Dictionary<string, object> props, int order = 100)
+        => Contribute("dashboard-quick-actions", componentType, props, order);
+
+    /// <summary>F91.6: contribute a per-site badge/chip rendered in the Sites list row.</summary>
+    public UiSchemaBuilder ContributeSitesBadge(string componentType,
+        Dictionary<string, object> props, int order = 100)
+        => Contribute("sites-row-badges", componentType, props, order);
+
     public PluginUiDefinition Build()
     {
         // Auto-derive "nav:{Route}" surfaces from declared nav entries so a
@@ -106,6 +144,7 @@ public class UiSchemaBuilder
         }
         return new(_pluginId, _category, _icon, _panels.ToArray(),
             _nav.Count == 0 ? null : _nav.ToArray(),
-            surfaces.Count == 0 ? null : surfaces.ToArray());
+            surfaces.Count == 0 ? null : surfaces.ToArray(),
+            _contributions.Count == 0 ? null : _contributions.ToArray());
     }
 }

@@ -21,12 +21,53 @@ import { ref, computed } from 'vue'
  */
 const TOKEN_KEY = 'nks-wdc-sso-token'
 
+/**
+ * F91.6: best-effort JWT claim decode. JWTs are `header.payload.signature`
+ * base64url-encoded, and the payload is plain JSON. We don't verify the
+ * signature here — the daemon/catalog do that on every API call. This
+ * decode exists purely so the UI can display who is signed in. Any parse
+ * failure returns null and the UI falls back to the generic "Signed in".
+ */
+export interface SsoIdentity {
+  email?: string
+  name?: string
+  sub?: string
+  exp?: number
+}
+function decodeJwtClaims(jwt: string): SsoIdentity | null {
+  try {
+    const parts = jwt.split('.')
+    if (parts.length < 2) return null
+    const pad = parts[1].length % 4 === 0 ? '' : '='.repeat(4 - (parts[1].length % 4))
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/') + pad
+    const json = atob(b64)
+    const claims = JSON.parse(json) as Record<string, unknown>
+    const s = (k: string) => typeof claims[k] === 'string' ? (claims[k] as string) : undefined
+    const n = (k: string) => typeof claims[k] === 'number' ? (claims[k] as number) : undefined
+    return {
+      email: s('email'),
+      name: s('name') ?? s('preferred_username'),
+      sub: s('sub'),
+      exp: n('exp'),
+    }
+  } catch { return null }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>(localStorage.getItem(TOKEN_KEY) ?? '')
   const loginError = ref<string>('')
   const loginPending = ref(false)
 
   const isAuthenticated = computed(() => token.value.length > 0)
+
+  // F91.6: identity derived from JWT claims. Reactive on token change so
+  // the UI re-renders "Signed in as …" the moment login completes.
+  const identity = computed<SsoIdentity | null>(() =>
+    token.value ? decodeJwtClaims(token.value) : null
+  )
+  const displayName = computed(() =>
+    identity.value?.email ?? identity.value?.name ?? identity.value?.sub ?? ''
+  )
 
   function setToken(newToken: string) {
     token.value = newToken
@@ -91,5 +132,8 @@ export const useAuthStore = defineStore('auth', () => {
     return token.value ? { Authorization: `Bearer ${token.value}` } : {}
   }
 
-  return { token, loginError, loginPending, isAuthenticated, login, logout, setToken, authHeader }
+  return {
+    token, loginError, loginPending, isAuthenticated, identity, displayName,
+    login, logout, setToken, authHeader,
+  }
 })

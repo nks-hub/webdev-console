@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchPlugins, fetchPluginUi, fetchPluginNavEntries, enablePlugin, disablePlugin, type PluginNavEntry } from '../api/daemon'
-import type { PluginManifest, PluginUiDefinition } from '../api/types'
+import type { PluginManifest, PluginUiDefinition, PluginContribution } from '../api/types'
 
 export const usePluginsStore = defineStore('plugins', () => {
   const manifests = ref<PluginManifest[]>([])
@@ -182,6 +182,23 @@ export const usePluginsStore = defineStore('plugins', () => {
     return ids
   })
 
+  /**
+   * F91.6: return all UI contributions targeted at a specific slot, from
+   * enabled plugins only. Ordered by plugin-declared `order` (ascending),
+   * pluginId as tiebreaker for determinism. Consumed by <PluginSlot>.
+   */
+  function contributionsForSlot(slot: string): Array<PluginContribution & { pluginId: string }> {
+    const out: Array<PluginContribution & { pluginId: string }> = []
+    for (const m of manifests.value) {
+      if (!m.enabled) continue
+      for (const c of m.contributions ?? []) {
+        if (c.slot === slot) out.push({ ...c, pluginId: m.id })
+      }
+    }
+    out.sort((a, b) => a.order !== b.order ? a.order - b.order : a.pluginId.localeCompare(b.pluginId))
+    return out
+  }
+
   // True when the given service row is contributed by any enabled plugin.
   // Before manifest load → fail-open so initial render isn't blank.
   function isServiceVisible(serviceId: string): boolean {
@@ -209,5 +226,6 @@ export const usePluginsStore = defineStore('plugins', () => {
     loadAll, toggleEnable, getUi,
     isUiVisible, isRouteVisible, isPluginOwnedRoute,
     serviceIdsInCategory, isServiceVisible,
+    contributionsForSlot,
   }
 })
