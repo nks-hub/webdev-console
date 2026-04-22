@@ -573,7 +573,27 @@ async function updateTray() {
   tray.setContextMenu(menu)
 }
 
+// Task 16: tray icon now uses pre-rendered NKS logo + state-color corner
+// dot (green/red/yellow/gray). The old procedural colored-circle fallback
+// is kept as an in-process failsafe if the asset files can't be located
+// (e.g. custom build layouts).
 function createTrayIcon(color: 'green' | 'red' | 'yellow' | 'gray'): Electron.NativeImage {
+  // Resolve icon path — dev runs from src/frontend/electron, packaged
+  // app places build/ under resources/. We try both so the same binary
+  // works in both modes.
+  const candidates = [
+    join(__dirname, '..', 'build', `icon-tray-${color}.png`),
+    join(__dirname, '..', '..', 'build', `icon-tray-${color}.png`),
+    join(process.resourcesPath || '', 'build', `icon-tray-${color}.png`),
+  ]
+  for (const p of candidates) {
+    try {
+      const img = nativeImage.createFromPath(p)
+      if (!img.isEmpty()) return img
+    } catch { /* try next */ }
+  }
+  // Procedural fallback — original behavior, used when asset files
+  // aren't found on disk (e.g. headless test harness).
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
   const colors: Record<string, [number, number, number]> = {
