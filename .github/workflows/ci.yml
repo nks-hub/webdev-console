@@ -158,11 +158,12 @@ jobs:
         # Previously this step tried to upload assets to the existing v0.1.61
         # release and hit 403 "Resource not accessible by integration" because
         # the push-triggered GITHUB_TOKEN has no releases: write scope.
-        # CLI override -c.win.requestedExecutionLevel=asInvoker drops
+        # CLI override --config.win.requestedExecutionLevel=asInvoker drops
         # the UAC manifest just for this smoke build so headless runners
         # can launch the packaged app. Release workflow (build.yml) omits
         # the override → shipped installers keep requireAdministrator.
-        run: npx electron-builder --config electron-builder.yml --win --publish never -c.win.requestedExecutionLevel=asInvoker
+        # (Short -c form doesn't parse nested keys — needs --config.<path>.)
+        run: npx electron-builder --config electron-builder.yml --win --publish never --config.win.requestedExecutionLevel=asInvoker
 
       - name: Verify release artifacts
         run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target win
