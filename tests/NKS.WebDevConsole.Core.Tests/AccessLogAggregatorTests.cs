@@ -195,6 +195,12 @@ public sealed class AccessLogAggregatorTests : IDisposable
             MakeLine(new DateTime(2026, 4, 19, 14, 0, 0, DateTimeKind.Utc)),
         ]);
 
+        // DiscoverRotatedFiles filters siblings by last-write-time falling within
+        // TestDate ± 1 day. Freshly-written temp files have mtime = now, so stamp
+        // them to TestDate explicitly to keep the test time-independent.
+        File.SetLastWriteTimeUtc(rotatedPath, TestDate.ToDateTime(new TimeOnly(8, 0), DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(basePath, TestDate.ToDateTime(new TimeOnly(14, 0), DateTimeKind.Utc));
+
         var result = Aggregate(basePath);
 
         long totalRequests = result.Series.First(s => s.Name == "requests").Data.Sum(p => p.Value);
