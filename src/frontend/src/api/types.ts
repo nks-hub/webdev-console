@@ -35,16 +35,18 @@ export interface StatusResponse {
 export interface CloudflareSiteConfig {
   /** True when the site is actively routed through the tunnel. */
   enabled: boolean
-  /** Public subdomain label, e.g. "blog" for blog.nks-dev.cz. */
-  subdomain: string
+  /** Public subdomain label, e.g. "blog" for blog.nks-dev.cz. Optional
+   *  while the user is mid-setup — an empty/undefined value means
+   *  "tunnel enabled but not yet routed". */
+  subdomain?: string
   /** Cloudflare zone ID from /api/cloudflare/zones. */
-  zoneId: string
+  zoneId?: string
   /** Zone apex cached for display (e.g. "nks-dev.cz"). */
-  zoneName: string
+  zoneName?: string
   /** Local service URL fragment, e.g. "localhost:80". */
-  localService: string
+  localService?: string
   /** HTTP protocol for the local service: "http" or "https". */
-  protocol: 'http' | 'https'
+  protocol?: 'http' | 'https'
 }
 
 export interface SiteInfo {
@@ -55,6 +57,10 @@ export interface SiteInfo {
   httpPort: number
   httpsPort: number
   aliases: string[]
+  /** Task 31: soft enable/disable. When false, httpd vhosts are removed
+   *  on apply; the TOML config stays on disk. Default true for backward
+   *  compat with pre-31 sites that don't serialize the field. */
+  enabled?: boolean
   framework?: string
   environment?: Record<string, string>
   /** When non-zero, Apache reverse-proxies to http://localhost:{port} instead of serving DocumentRoot. */

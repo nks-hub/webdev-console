@@ -90,7 +90,29 @@
             @click="startApache"
           />
 
-          <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, site)">
+          <!-- Task 01: enable/disable toggle. Rests next to the three-dots
+               menu so the user gets one-click on/off without the menu. -->
+          <el-tooltip
+            :content="site.enabled === false ? 'Site disabled — vhost removed, config preserved' : 'Site enabled'"
+            placement="top"
+          >
+            <el-switch
+              :model-value="site.enabled !== false"
+              :loading="togglingEnabled === site.domain"
+              size="small"
+              @change="toggleSiteEnabled(site, $event)"
+            />
+          </el-tooltip>
+
+          <!-- Task 01: teleported=true + preventOverflow popper options so
+               the dropdown never clips at viewport edges (previously the
+               menu opened off-screen on narrow viewports / mobile). -->
+          <el-dropdown
+            trigger="click"
+            :teleported="true"
+            :popper-options="{ modifiers: [{ name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } }] }"
+            @command="(cmd: string) => handleCommand(cmd, site)"
+          >
             <el-button size="small" circle :aria-label="$t('sites.card.moreActions', { domain: site.domain })"><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -147,7 +169,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-plus/icons-vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
-import { startService, stopService, duplicateSite, daemonBaseUrl } from '../../api/daemon'
+import { startService, stopService, duplicateSite, daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import type { SiteInfo } from '../../api/types'
 import MiniSparkline from '../common/MiniSparkline.vue'
@@ -167,6 +189,28 @@ const daemonStore = useDaemonStore()
 const toggling = ref(false)
 const duplicating = ref(false)
 const restarting = ref(false)
+// Task 01: per-row enable/disable toggle — track which domain is
+// currently switching so the other rows' switches stay interactive.
+const togglingEnabled = ref<string | null>(null)
+
+async function toggleSiteEnabled(site: { domain: string; enabled?: boolean }, value: boolean | string | number) {
+  const enabled = value === true
+  togglingEnabled.value = site.domain
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(site.domain)}/enabled`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    ElMessage.success(enabled ? `Site ${site.domain} enabled` : `Site ${site.domain} disabled`)
+    await sitesStore.load()
+  } catch (e) {
+    ElMessage.error(`Toggle failed: ${e instanceof Error ? e.message : e}`)
+  } finally {
+    togglingEnabled.value = null
+  }
+}
 
 const apacheRunning = computed(() =>
   daemonStore.services.some(

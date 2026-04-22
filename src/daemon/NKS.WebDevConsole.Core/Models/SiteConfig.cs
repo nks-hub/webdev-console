@@ -8,6 +8,18 @@ public class SiteConfig
     public bool SslEnabled { get; set; }
     public int HttpPort { get; set; } = 80;
     public int HttpsPort { get; set; } = 443;
+
+    /// <summary>
+    /// Task 31: soft enable/disable flag. When false, the site's TOML
+    /// config stays on disk but all httpd generators (Apache, Nginx,
+    /// Caddy) write their vhost as <c>{domain}.conf.disabled</c>
+    /// (comment-wrapped) instead of the active <c>{domain}.conf</c>.
+    /// This is cross-platform — no symlinks needed (Windows NTFS
+    /// symlinks require Developer Mode). Default true for backward
+    /// compat: existing sites that don't have the field serialized
+    /// stay enabled when loaded.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
     public string[] Aliases { get; set; } = [];
     public string? Framework { get; set; }
     public Dictionary<string, string> Environment { get; set; } = new();

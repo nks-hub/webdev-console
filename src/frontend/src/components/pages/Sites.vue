@@ -123,6 +123,21 @@
           </template>
         </el-table-column>
 
+        <!-- Task 01: enable/disable toggle column (advanced table view).
+             Symmetric with the simple-mode list; backed by PATCH
+             /api/sites/{domain}/enabled. -->
+        <el-table-column label="Povoleno" width="100" align="center">
+          <template #default="{ row }">
+            <el-switch
+              :model-value="row.enabled !== false"
+              :loading="togglingEnabled === row.domain"
+              size="small"
+              @change="(v: boolean | string | number) => toggleSiteEnabled(row, v)"
+              @click.stop
+            />
+          </template>
+        </el-table-column>
+
         <el-table-column :label="$t('common.actions')" width="160" fixed="right">
           <template #default="{ row }">
             <div class="site-actions">
@@ -131,7 +146,16 @@
                    usually they want to configure the site. Open URL moves
                    into the overflow menu with Detect/Delete. -->
               <el-button size="small" type="primary" @click.stop="editSite(row)">{{ $t('common.edit') }}</el-button>
-              <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)" @click.stop>
+              <!-- Task 01: teleported + preventOverflow popper so the
+                   dropdown never clips at the right edge of the table
+                   (fixed="right" column was pushing it off-screen). -->
+              <el-dropdown
+                trigger="click"
+                :teleported="true"
+                :popper-options="{ modifiers: [{ name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } }] }"
+                @command="(cmd: string) => handleRowAction(cmd, row)"
+                @click.stop
+              >
                 <el-button size="small" @click.stop :aria-label="$t('sites.card.moreActions', { domain: row.domain })">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -265,7 +289,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo } from '../../api/types'
-import { fetchDockerComposeStatus, fetchPhpVersions, daemonBaseUrl, type DockerComposeStatus } from '../../api/daemon'
+import { fetchDockerComposeStatus, fetchPhpVersions, daemonBaseUrl, daemonAuthHeaders as authHeaders, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
@@ -277,6 +301,27 @@ const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 const uiModeStore = useUiModeStore()
 const pluginsStore = usePluginsStore()
+
+// Task 01: per-row enable/disable toggle state.
+const togglingEnabled = ref<string | null>(null)
+async function toggleSiteEnabled(site: { domain: string; enabled?: boolean }, value: boolean | string | number) {
+  const enabled = value === true
+  togglingEnabled.value = site.domain
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(site.domain)}/enabled`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    ElMessage.success(enabled ? `Site ${site.domain} enabled` : `Site ${site.domain} disabled`)
+    await sitesStore.load()
+  } catch (e) {
+    ElMessage.error(`Toggle failed: ${e instanceof Error ? e.message : e}`)
+  } finally {
+    togglingEnabled.value = null
+  }
+}
 
 // Sites list shows per-row tunnel links when cloudflare.enabled → but the
 // link only works if the shared cloudflared process is actually running.
