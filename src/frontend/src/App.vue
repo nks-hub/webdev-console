@@ -259,7 +259,9 @@ onUnmounted(() => {
   overflow-x: hidden;
   background: transparent;
   scroll-behavior: smooth;
-  padding: 0 0 18px;
+  /* 24px top — breathing room between AppHeader nav and page content.
+     User feedback: previous padding-top 0 felt cramped. */
+  padding: 24px 0 18px;
 }
 
 /* ═══ Splash overlay — shown until backend first connects ════════════════ */

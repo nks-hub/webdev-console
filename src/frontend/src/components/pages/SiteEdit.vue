@@ -377,6 +377,15 @@
             <span class="tab-label"><el-icon><Clock /></el-icon> History ({{ history.length }})</span>
           </template>
           <div class="tab-content">
+            <div class="history-banner">
+              <el-icon><InfoFilled /></el-icon>
+              <span>
+                Rollback points capture this site's vhost + plugin config
+                before every save. Restore a previous version if a recent
+                change broke something — only config files are reverted,
+                the site's document root is left alone.
+              </span>
+            </div>
             <el-empty v-if="history.length === 0" :description="$t('sites.history.emptyDescription')" :image-size="64" />
             <div v-else class="history-list">
               <div v-for="(h, i) in history" :key="h.timestamp" class="history-row">
@@ -384,7 +393,11 @@
                   <el-icon><Clock /></el-icon>
                   <span>{{ formatDate(h.timestamp) }}</span>
                 </div>
-                <div class="history-label">{{ h.label ?? `Version ${history.length - i}` }}</div>
+                <div class="history-label">
+                  <span class="version-badge">v{{ history.length - i }}</span>
+                  <span v-if="h.label">{{ h.label }}</span>
+                  <span v-else class="version-hint">config snapshot</span>
+                </div>
                 <el-button size="small" text type="primary" @click="rollback(h.timestamp)">
                   Restore
                 </el-button>
@@ -506,12 +519,62 @@
           </div>
         </el-tab-pane>
 
+        <!-- ── Per-site Backup (task 29) ─────────── -->
+        <el-tab-pane v-if="uiMode.isAdvanced" name="backup">
+          <template #label>
+            <span class="tab-label"><el-icon><FolderOpened /></el-icon> Backup</span>
+          </template>
+          <div class="tab-content">
+            <div class="history-banner">
+              <el-icon><InfoFilled /></el-icon>
+              <span>
+                Per-site backup snapshots (vhost + optional docroot). Backed
+                by the global Backups tab (Zálohy) — filtered to only show
+                snapshots that contain this site's files. Global backup
+                schedule + content selection lives in
+                <el-link type="primary" @click="$router.push('/backups')">Backups</el-link>.
+              </span>
+            </div>
+            <el-empty
+              description="Backup list surfaces here after the Backups top-level tab ships (task 14)"
+              :image-size="64"
+            />
+          </div>
+        </el-tab-pane>
+
         <!-- ── Danger ───────────────────────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="danger">
           <template #label>
             <span class="tab-label danger-label"><el-icon><WarningFilled /></el-icon> Danger</span>
           </template>
           <div class="tab-content">
+            <!-- Task 28: rename-domain section. Backend endpoint not
+                 wired yet — disabled with tooltip explaining the reason
+                 until PATCH /api/sites/{domain}/rename is implemented. -->
+            <div class="danger-box" style="margin-bottom: 16px">
+              <div class="danger-title">
+                <el-icon><Setting /></el-icon>
+                Rename domain
+              </div>
+              <div class="danger-desc">
+                Changes the site's primary domain. Updates vhost, hosts
+                file, SSL cert paths, and Cloudflare tunnel route. Coming
+                in a future release.
+              </div>
+              <el-input
+                v-model="renameNewDomain"
+                :placeholder="site.domain"
+                size="default"
+                style="max-width: 320px; margin-bottom: 8px"
+                disabled
+              />
+              <el-tooltip content="Backend PATCH /api/sites/{domain}/rename not yet implemented" placement="top">
+                <el-button type="warning" size="default" disabled>
+                  Rename to {{ renameNewDomain || '...' }}
+                </el-button>
+              </el-tooltip>
+            </div>
+
             <div class="danger-box">
               <div class="danger-title">
                 <el-icon><WarningFilled /></el-icon>
@@ -549,6 +612,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
   FolderOpened, Check, Search, Link, DataLine, Refresh, Grid,
+  InfoFilled,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
@@ -597,6 +661,9 @@ const dirty = ref(false)
 const activeTab = ref('general')
 const phpVersions = ref<string[]>([])
 const history = ref<Array<{ timestamp: string; label?: string }>>([])
+// Task 28: Danger-tab rename input. Kept reactive so a future rename
+// backend can wire up immediately without a template change.
+const renameNewDomain = ref('')
 const composeInfo = ref<DockerComposeStatus | null>(null)
 const composeLoading = ref(false)
 const composeOutput = ref('')
@@ -1164,8 +1231,26 @@ function goBack() {
   router.push('/sites')
 }
 
-function formatDate(s: string): string {
-  try { return new Date(s).toLocaleString() } catch { return s }
+function formatDate(s: string | number | undefined | null): string {
+  // Task 18: robust timestamp parsing — daemon returns history timestamps
+  // as either ISO-8601 strings, numeric unix seconds, or numeric unix
+  // milliseconds. Previous `new Date(s).toLocaleString()` produced
+  // "Invalid Date" whenever the value arrived as a number or as a
+  // space-separated "YYYY-MM-DD HH:mm:ss" (Safari rejects the latter).
+  if (s === null || s === undefined || s === '') return '—'
+  let d: Date
+  if (typeof s === 'number') {
+    // Heuristic: unix seconds if under year-3000 threshold, else ms
+    d = new Date(s < 1e12 ? s * 1000 : s)
+  } else {
+    // Replace space with 'T' to make ISO-ish strings parse everywhere
+    const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)
+      ? s.replace(' ', 'T')
+      : s
+    d = new Date(normalized)
+  }
+  if (Number.isNaN(d.getTime())) return String(s)
+  return d.toLocaleString()
 }
 
 // Reactive display of "Last updated Xs ago" — depends on metricsTick so Vue
@@ -1936,11 +2021,29 @@ onBeforeUnmount(() => {
   line-height: 1.4;
 }
 
+.history-banner {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.history-banner .el-icon {
+  color: var(--wdc-accent);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
 .history-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 720px;
+  /* Task 18: full-width (was max-width 720px). */
 }
 .history-row {
   display: grid;
@@ -1962,6 +2065,23 @@ onBeforeUnmount(() => {
 .history-label {
   font-size: 0.85rem;
   color: var(--wdc-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.version-badge {
+  background: var(--wdc-accent);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.version-hint {
+  color: var(--wdc-text-3);
+  font-style: italic;
+  font-size: 0.78rem;
 }
 
 /* ─── Metrics cards ──────────────────────────────────────────────────── */

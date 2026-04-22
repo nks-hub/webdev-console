@@ -32,11 +32,13 @@ public sealed class ComposerPlugin : IWdcPlugin, IFrontendPanelProvider
             .Icon("Box")
             .AddNavEntry("composer", "Composer", "/composer", "Box", order: 30)
             .AddSiteTab("composer")
-            // F91.6: plugin contributes the SiteEdit "Packages" tab directly.
+            // F91.6: plugin contributes the SiteEdit tab directly.
+            // Label "Composer packages" (was "Packages") — clarifies that
+            // these are composer.json deps tied to the site's PHP runtime.
             .ContributeSiteEditTab("composer-site-tab", new()
             {
                 ["name"] = "composer",
-                ["label"] = "Packages",
+                ["label"] = "Composer packages",
             }, order: 60)
             .Build();
 

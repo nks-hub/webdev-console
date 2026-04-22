@@ -341,7 +341,10 @@ onBeforeUnmount(() => {
 
 .path-truncated {
   display: block;
-  max-width: 220px;
+  /* Responsive width — scales with available column space via 100%,
+     clamped between 200px (small screens) and 900px (wide). Fixed
+     220px previously clipped full URL paths on wide monitors too. */
+  max-width: clamp(200px, 100%, 900px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

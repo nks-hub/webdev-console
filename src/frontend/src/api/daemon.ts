@@ -583,6 +583,11 @@ export interface MarketplacePlugin {
   author: string
   license: string
   installed: boolean
+  /** F91.12: true when the plugin was bundled with the daemon (vs.
+   *  downloaded from the marketplace). Built-in plugins can be
+   *  uninstalled (blacklisted) but never removed from disk, so the UI
+   *  shows a "Restore" button instead of "Install" when builtIn. */
+  builtIn?: boolean
 }
 export interface MarketplaceResponse {
   source: string

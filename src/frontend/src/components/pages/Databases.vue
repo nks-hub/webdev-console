@@ -23,14 +23,33 @@
         show-icon
         style="margin-bottom: 16px"
       >
-        <template v-if="suggestedPort" #default>
-          <div style="margin-top: 6px">
+        <template #default>
+          <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
             <el-button
+              v-if="suggestedPort"
               type="primary"
               size="small"
               :loading="fixing"
               @click="useAltPort"
             >Use port {{ suggestedPort }} instead</el-button>
+            <!-- Task 09: when MySQL rejects our credentials (ERROR 1045),
+                 offer a direct link to the root-password reset flow in
+                 the Plugin.MySQL page. Shown for any auth-style error. -->
+            <el-button
+              v-if="isAuthError"
+              size="small"
+              @click="goResetPassword"
+            >
+              <el-icon><Key /></el-icon>
+              <span style="margin-left: 4px">Reset root password</span>
+            </el-button>
+            <el-tooltip
+              v-if="suggestedPort"
+              :content="'MySQL on port ' + defaultPort + ' appears busy (often a system MySQL or MAMP). WDC can use port ' + suggestedPort + ' instead without affecting the other server.'"
+              placement="top"
+            >
+              <el-icon style="color: var(--wdc-text-3); cursor: help"><QuestionFilled /></el-icon>
+            </el-tooltip>
           </div>
         </template>
       </el-alert>
@@ -152,12 +171,27 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Key, QuestionFilled } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 
 const { t } = useI18n()
+const router = useRouter()
+
+// Task 09: detect auth-style errors so the template can offer a CTA
+// that jumps to the root-password reset flow in the Plugin.MySQL page.
+const isAuthError = computed(() => {
+  const e = (error.value + ' ' + errorHint.value).toLowerCase()
+  return /access denied|error\s*1045|authentication|wrong password/.test(e)
+})
+const defaultPort = ref(3306)
+
+function goResetPassword() {
+  void router.push({ path: '/plugins/nks.wdc.mysql', query: { tab: 'root-password' } })
+}
 
 const databases = ref<string[]>([])
 const loading = ref(false)

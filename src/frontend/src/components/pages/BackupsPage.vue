@@ -340,9 +340,13 @@ async function runBackupNow() {
 }
 
 function openBackupFolder() {
-  window.electronAPI?.openPath?.(
-    `${(window as any).__WDC_ROOT__ ?? '~'}/.wdc/backups`
-  )
+  // electronAPI doesn't expose openPath (local file), only openExternal
+  // (URLs). Use file:// URL which Electron's openExternal happily opens
+  // via the OS default handler (Explorer on Win, Finder on macOS).
+  const root = (window as unknown as { __WDC_ROOT__?: string }).__WDC_ROOT__
+  const path = `${root ?? ''}/.wdc/backups`
+  const url = `file://${path.replace(/\\/g, '/')}`
+  window.electronAPI?.openExternal?.(url)
 }
 
 function downloadBackup(path: string) {
