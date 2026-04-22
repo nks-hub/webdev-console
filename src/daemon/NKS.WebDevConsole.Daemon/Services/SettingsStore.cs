@@ -57,11 +57,29 @@ public sealed class SettingsStore
         get
         {
             var stored = GetString("daemon", "catalogUrl");
-            if (!string.IsNullOrWhiteSpace(stored)) return stored;
+            // Migration: pre-v0.2.3 installs auto-pointed at the local
+            // catalog-api sidecar (127.0.0.1:8765) because Electron spawned
+            // it and wrote the URL via env. The sidecar was removed in
+            // v0.2.3 — treat any loopback entry as stale and fall through
+            // to the public default so Binaries pages stop showing an
+            // empty 3-release fixture to end users.
+            if (!string.IsNullOrWhiteSpace(stored) && !IsLoopbackCatalogUrl(stored))
+                return stored;
             var env = Environment.GetEnvironmentVariable("NKS_WDC_CATALOG_URL");
-            if (!string.IsNullOrWhiteSpace(env)) return env;
+            if (!string.IsNullOrWhiteSpace(env) && !IsLoopbackCatalogUrl(env))
+                return env;
             return "https://wdc.nks-hub.cz";
         }
+    }
+
+    private static bool IsLoopbackCatalogUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        var lower = url.Trim().ToLowerInvariant();
+        return lower.Contains("127.0.0.1:8765")
+            || lower.Contains("localhost:8765")
+            || lower.Contains("://127.0.0.1/")
+            || lower.Contains("://localhost/");
     }
 
     /// <summary>

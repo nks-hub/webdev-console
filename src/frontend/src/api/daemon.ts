@@ -738,6 +738,24 @@ export const installBinary = (app: string, version: string) =>
     body: JSON.stringify({ app, version }),
   })
 
+export interface LatestBinary {
+  app: string
+  version: string
+  os: string
+  arch: string
+  url: string
+}
+
+/**
+ * Ask the daemon for the latest release of {app} that's compatible with
+ * the current OS+arch. Used by the onboarding wizard so we never hardcode
+ * a version that doesn't exist on the user's platform. Returns null when
+ * the catalog has no compatible binary (e.g. MySQL on macOS before the
+ * catalog gains macOS arm64 builds).
+ */
+export const fetchLatestBinary = (app: string) =>
+  json<LatestBinary>(`/api/binaries/catalog/${encodeURIComponent(app)}/latest`)
+
 export const uninstallBinary = (app: string, version: string) =>
   json<{ ok: boolean }>(`/api/binaries/${app}/${version}`, { method: 'DELETE' })
 

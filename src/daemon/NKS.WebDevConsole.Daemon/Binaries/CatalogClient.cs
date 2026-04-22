@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -85,6 +86,29 @@ public sealed class CatalogClient
     {
         get { lock (_cacheLock) return _cache.ToList(); }
     }
+
+    /// <summary>
+    /// Current daemon OS in the lowercase string the catalog uses
+    /// ("windows", "macos", "linux"). Matches <see cref="BinaryRelease.Os"/>.
+    /// </summary>
+    public static string CurrentOs()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "windows";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "macos";
+        return "linux";
+    }
+
+    /// <summary>
+    /// Current daemon architecture in the catalog's lowercase string
+    /// ("x64", "arm64"). Matches <see cref="BinaryRelease.Arch"/>.
+    /// </summary>
+    public static string CurrentArch()
+        => RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+            _ => "x64",
+        };
 
     public DateTime LastFetch
     {

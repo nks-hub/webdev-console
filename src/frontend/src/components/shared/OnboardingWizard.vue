@@ -115,6 +115,7 @@ import {
   fetchOnboardingState,
   completeOnboarding,
   installBinary,
+  fetchLatestBinary,
   installSslCa,
   type OnboardingState,
 } from '../../api/daemon'
@@ -129,14 +130,6 @@ const state = ref<OnboardingState | null>(null)
 const installing = ref<Set<string>>(new Set())
 const installingCa = ref(false)
 
-// Default versions the wizard requests; the daemon catalog resolves exact artifacts.
-const DEFAULT_VERSIONS: Record<string, string> = {
-  apache: '2.4.62',
-  php: '8.3.13',
-  mysql: '8.4.3',
-  mkcert: '1.4.4',
-}
-
 async function refreshState() {
   try {
     state.value = await fetchOnboardingState()
@@ -147,17 +140,34 @@ async function refreshState() {
 }
 
 async function doInstall(app: string) {
-  const version = DEFAULT_VERSIONS[app]
-  if (!version) return
   installing.value.add(app)
   try {
-    await installBinary(app, version)
-    ElMessage.success(`${app} ${version} installed`)
+    // Ask the daemon for the latest compatible version on the current
+    // OS/arch instead of hardcoding. Removes the class of bugs where a
+    // pinned version doesn't exist on the user's platform (e.g. apache
+    // 2.4.62 was Windows-only so macOS users always hit 404).
+    const latest = await resolveLatest(app)
+    if (!latest) {
+      ElMessage.warning(`${app}: no binary available for this platform`)
+      return
+    }
+    await installBinary(app, latest)
+    ElMessage.success(`${app} ${latest} installed`)
     await refreshState()
   } catch (e) {
     ElMessage.error(`${app}: ${errorMessage(e)}`)
   } finally {
     installing.value.delete(app)
+  }
+}
+
+async function resolveLatest(app: string): Promise<string | null> {
+  try {
+    const res = await fetchLatestBinary(app)
+    return res?.version ?? null
+  } catch (e) {
+    console.warn(`[onboarding] latest ${app} lookup failed`, e)
+    return null
   }
 }
 

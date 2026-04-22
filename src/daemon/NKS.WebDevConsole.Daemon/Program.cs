@@ -6120,6 +6120,42 @@ app.MapGet("/api/binaries/catalog", (CatalogClient cc) =>
 app.MapGet("/api/binaries/catalog/{app}", (string app, CatalogClient cc) =>
     Results.Ok(cc.ForApp(app)));
 
+// Latest release for {app} on the current daemon's OS/arch. Powers the
+// onboarding wizard — lets the UI request "apache latest" without
+// hardcoding a version that may not exist on the user's platform
+// (e.g. macOS/arm64 has apache 2.4.66 only; Windows has many).
+// Query params allow overriding OS/arch for cross-platform tooling.
+app.MapGet("/api/binaries/catalog/{app}/latest", (string app, string? os, string? arch, CatalogClient cc) =>
+{
+    var targetOs = (os ?? CatalogClient.CurrentOs()).ToLowerInvariant();
+    var targetArch = (arch ?? CatalogClient.CurrentArch()).ToLowerInvariant();
+    var candidates = cc.ForApp(app)
+        .Where(r =>
+            string.Equals(r.Os, targetOs, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.Arch, targetArch, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    if (candidates.Count == 0)
+        return Results.NotFound(new { error = $"No {app} release available for {targetOs}/{targetArch}" });
+    // Sort by semver-ish Version descending (stable: empty segments treated as 0)
+    candidates.Sort((a, b) =>
+    {
+        int Compare(string va, string vb)
+        {
+            var pa = va.Split('.'); var pb = vb.Split('.');
+            for (int i = 0; i < Math.Max(pa.Length, pb.Length); i++)
+            {
+                int.TryParse(i < pa.Length ? pa[i] : "0", out var na);
+                int.TryParse(i < pb.Length ? pb[i] : "0", out var nb);
+                if (na != nb) return nb.CompareTo(na);
+            }
+            return 0;
+        }
+        return Compare(a.Version, b.Version);
+    });
+    var latest = candidates[0];
+    return Results.Ok(new { app = latest.App, version = latest.Version, os = latest.Os, arch = latest.Arch, url = latest.Url });
+});
+
 app.MapPost("/api/binaries/catalog/refresh", async (CatalogClient cc, CancellationToken ct) =>
 {
     var count = await cc.RefreshAsync(ct);
