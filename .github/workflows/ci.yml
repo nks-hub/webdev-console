@@ -52,7 +52,10 @@ jobs:
         run: dotnet test WebDevConsole.sln -c Release --verbosity normal
 
       - name: Publish Daemon
-        run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon -c Release -r win-x64 --self-contained -o publish/daemon
+        # CiBuild=true swaps app.manifest (requireAdministrator) for
+        # app.ci.manifest (asInvoker). Release workflow (build.yml) omits
+        # this flag so shipped installers keep the UAC-at-launch model.
+        run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon -c Release -r win-x64 --self-contained -o publish/daemon -p:CiBuild=true
 
       - name: Publish CLI
         run: dotnet publish src/daemon/NKS.WebDevConsole.Cli -c Release -r win-x64 --self-contained -o publish/cli
@@ -155,21 +158,18 @@ jobs:
         # Previously this step tried to upload assets to the existing v0.1.61
         # release and hit 403 "Resource not accessible by integration" because
         # the push-triggered GITHUB_TOKEN has no releases: write scope.
-        run: npx electron-builder --config electron-builder.yml --win --publish never
+        # CLI override -c.win.requestedExecutionLevel=asInvoker drops
+        # the UAC manifest just for this smoke build so headless runners
+        # can launch the packaged app. Release workflow (build.yml) omits
+        # the override → shipped installers keep requireAdministrator.
+        run: npx electron-builder --config electron-builder.yml --win --publish never -c.win.requestedExecutionLevel=asInvoker
 
       - name: Verify release artifacts
         run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target win
 
-      # Skipped: daemon app.manifest requires administrator elevation so
-      # the daemon process can edit the Windows hosts file without per-op
-      # UAC prompts. GitHub Actions `windows-latest` runners cannot grant
-      # a UAC elevation (headless — no one can click the dialog), so the
-      # packaged app bootstrap times out. Real smoke coverage happens on
-      # developer machines before release; the installer artifact itself
-      # is still built and uploaded below, which catches packaging bugs.
-      # - name: Smoke packaged Electron runtime
-      #   working-directory: src/frontend
-      #   run: npm run smoke:packaged:win
+      - name: Smoke packaged Electron runtime
+        working-directory: src/frontend
+        run: npm run smoke:packaged:win
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
