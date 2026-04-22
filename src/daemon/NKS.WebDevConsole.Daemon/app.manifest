@@ -5,17 +5,19 @@
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
         <!--
-          Daemon writes to the Windows hosts file and manages local services
-          (Apache, MySQL, etc.) that require admin rights. Without this
-          manifest the daemon spawns a new PowerShell+UAC prompt for every
-          vhost change. With requireAdministrator the OS asks once at
-          launch; every subsequent hosts-file write, cert install, and
-          service-start inherits elevation.
+          asInvoker: daemon runs with the parent process's token. When the
+          user launches Electron normally, daemon is non-admin and hosts
+          writes go through the PowerShell -Verb RunAs path (per-op UAC).
+          When the user right-clicks → "Run as administrator", the token
+          propagates and the in-process fast-path in SiteOrchestrator
+          (IsCurrentProcessElevated) kicks in — no UAC spawn per vhost.
 
-          On Windows 8+ this is the canonical way to mark a console/service
-          binary as "must run elevated". Non-Windows builds ignore it.
+          Previously this was "requireAdministrator", but that broke the
+          packaged-Electron smoke test on GitHub Actions (headless runner
+          cannot dismiss the UAC prompt, daemon bootstrap times out).
+          asInvoker preserves the elevation opt-in without blocking CI.
         -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
       </requestedPrivileges>
     </security>
   </trustInfo>

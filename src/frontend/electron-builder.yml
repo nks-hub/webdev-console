@@ -25,11 +25,12 @@ win:
       arch:
         - x64
   icon: build/icon.ico
-  # App needs admin privileges to write hosts file + manage services.
-  # Without this each hosts-file change spawns its own UAC prompt. With
-  # requireAdministrator the OS prompts once at launch and every child
-  # process (daemon, cloudflared, mysql, apache) inherits elevation.
-  requestedExecutionLevel: requireAdministrator
+  # asInvoker — app runs with the user's token. User opts in to
+  # elevation via right-click → "Run as administrator" when they
+  # want the daemon's fast-path (no per-op UAC). requireAdministrator
+  # was rejected: headless CI cannot dismiss the UAC dialog, which
+  # blocks the packaged-Electron smoke test.
+  requestedExecutionLevel: asInvoker
 
 nsis:
   oneClick: false
