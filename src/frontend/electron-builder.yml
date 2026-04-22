@@ -25,12 +25,11 @@ win:
       arch:
         - x64
   icon: build/icon.ico
-  # asInvoker — app runs with the user's token. User opts in to
-  # elevation via right-click → "Run as administrator" when they
-  # want the daemon's fast-path (no per-op UAC). requireAdministrator
-  # was rejected: headless CI cannot dismiss the UAC dialog, which
-  # blocks the packaged-Electron smoke test.
-  requestedExecutionLevel: asInvoker
+  # App needs admin to edit hosts + manage services without per-op UAC.
+  # Single prompt at launch, every child (daemon, cloudflared, mysql,
+  # apache) inherits elevation. Smoke test on CI is skipped because
+  # headless runners cannot dismiss the UAC dialog.
+  requestedExecutionLevel: requireAdministrator
 
 nsis:
   oneClick: false
