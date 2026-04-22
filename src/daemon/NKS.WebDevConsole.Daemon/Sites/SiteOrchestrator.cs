@@ -613,6 +613,25 @@ public sealed class SiteOrchestrator
             return;
         }
 
+        // FAST PATH: if the daemon is already running elevated (app manifest
+        // or admin shell), write the hosts file directly. Skips the
+        // PowerShell-Verb-RunAs ceremony, eliminating one UAC prompt per
+        // site during startup auto-reapply. Without this the daemon would
+        // spam N UAC prompts for N sites even when already admin.
+        if (IsCurrentProcessElevated())
+        {
+            _logger.LogInformation("Daemon is elevated — writing hosts file directly (no UAC spawn)");
+            try
+            {
+                await WriteHostsFileDirectAsync(hostsPath, allDomains, ct);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Direct hosts write failed despite elevation — falling back to PowerShell");
+            }
+        }
+
         // Build PowerShell command that writes managed block with elevation
         var entries = string.Join("\\n", allDomains.Select(d => $"127.0.0.1\\t{d}"));
         var psScript = $@"
@@ -770,6 +789,32 @@ ipconfig /flushdns | Out-Null
         await FlushDnsCacheAsync(ct);
 
         _logger.LogInformation("Hosts file updated directly at {HostsPath} with {Count} domains", hostsPath, allDomains.Count);
+    }
+
+    /// <summary>
+    /// True when the daemon process is running elevated (admin on Windows,
+    /// root on Unix). Used to skip the PowerShell-Verb-RunAs ceremony for
+    /// hosts-file writes when we already have the rights.
+    /// </summary>
+    private static bool IsCurrentProcessElevated()
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+#pragma warning disable CA1416 // WindowsIdentity only on Windows — we just checked.
+                using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                var principal = new System.Security.Principal.WindowsPrincipal(identity);
+                return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+#pragma warning restore CA1416
+            }
+            // On Unix, check getuid() == 0
+            return Environment.UserName == "root";
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     internal static string RewriteManagedHostsContent(string content, IReadOnlyCollection<string> allDomains)

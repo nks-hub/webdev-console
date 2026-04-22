@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity version="1.0.0.0" name="NKS.WebDevConsole.Daemon"/>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!--
+          Daemon writes to the Windows hosts file and manages local services
+          (Apache, MySQL, etc.) that require admin rights. Without this
+          manifest the daemon spawns a new PowerShell+UAC prompt for every
+          vhost change. With requireAdministrator the OS asks once at
+          launch; every subsequent hosts-file write, cert install, and
+          service-start inherits elevation.
+
+          On Windows 8+ this is the canonical way to mark a console/service
+          binary as "must run elevated". Non-Windows builds ignore it.
+        -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/> <!-- Win10 -->
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/> <!-- Win11 -->
+    </application>
+  </compatibility>
+</assembly>

@@ -25,6 +25,11 @@ win:
       arch:
         - x64
   icon: build/icon.ico
+  # App needs admin privileges to write hosts file + manage services.
+  # Without this each hosts-file change spawns its own UAC prompt. With
+  # requireAdministrator the OS prompts once at launch and every child
+  # process (daemon, cloudflared, mysql, apache) inherits elevation.
+  requestedExecutionLevel: requireAdministrator
 
 nsis:
   oneClick: false
