@@ -64,6 +64,13 @@ public sealed class PluginCatalogSyncService : BackgroundService
                     else
                         _logger.LogDebug("Plugin auto-sync: catalog has {C} entries, all cached", catalogCount);
                 }
+
+                // Task 36: record lastSyncAt so Settings > About can display
+                // "Last synced: <relative>" instead of an indefinite
+                // "nesynchronizováno" after the first successful refresh.
+                _settings.Set("catalog", "plugin.lastSyncAt", DateTime.UtcNow.ToString("o"));
+                _settings.Set("catalog", "plugin.lastSyncOk", "true");
+                _settings.Set("catalog", "plugin.lastError", "");
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
@@ -72,6 +79,9 @@ public sealed class PluginCatalogSyncService : BackgroundService
                 // next tick will retry. Log at warning so self-hosted users
                 // notice persistent failures in their logs.
                 _logger.LogWarning("Plugin auto-sync tick failed: {Error}", ex.Message);
+                _settings.Set("catalog", "plugin.lastSyncAt", DateTime.UtcNow.ToString("o"));
+                _settings.Set("catalog", "plugin.lastSyncOk", "false");
+                _settings.Set("catalog", "plugin.lastError", ex.Message);
             }
 
             try { await Task.Delay(RefreshInterval, stoppingToken); }

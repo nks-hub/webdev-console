@@ -63,7 +63,11 @@ public class BackupAndCrashRecoveryTests : IDisposable
         Assert.True(result.FileCount >= 4); // manifest + 3 data files
         using var zip = ZipFile.OpenRead(outZip);
         Assert.Contains(zip.Entries, e => e.FullName == "manifest.json");
-        Assert.Contains(zip.Entries, e => e.FullName == "sites/demo.loc.toml");
+        // Task 14 refactor: site TOMLs now live under vhosts/sites/… in
+        // the archive (previously plain sites/). The actual bytes are
+        // identical, only the zip-internal layout changed to make the
+        // per-content-flag restore path cleaner.
+        Assert.Contains(zip.Entries, e => e.FullName == "vhosts/sites/demo.loc.toml");
         Assert.Contains(zip.Entries, e => e.FullName == "data/state.db");
         Assert.Contains(zip.Entries, e => e.FullName == "ssl/sites/demo.loc/cert.pem");
     }
