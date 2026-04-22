@@ -49,6 +49,9 @@
           <div class="status-meta" v-if="serviceInfo">
             PID {{ serviceInfo.pid ?? '—' }} · uptime {{ formatUptime(serviceInfo.uptime) }}
           </div>
+          <div class="status-meta" v-else-if="configReady">
+            Service info unavailable — check daemon connection
+          </div>
         </div>
       </div>
       <div class="status-card">
@@ -886,8 +889,21 @@ onMounted(async () => {
       selectedDnsZoneId.value = config.defaultZoneId
       void loadDns()
     }
+    // Task 37: auto-verify stored token on mount so "Token stored (not
+    // verified)" doesn't linger. Silent background probe — failures stay
+    // visible via tokenVerdict badge, user can re-verify manually.
+    void autoVerifyToken()
   }
 })
+
+async function autoVerifyToken() {
+  try {
+    const res = await verifyCloudflareToken()
+    tokenVerdict.value = res?.success ? 'ok' : 'fail'
+  } catch {
+    tokenVerdict.value = 'fail'
+  }
+}
 </script>
 
 <style scoped>
@@ -968,7 +984,9 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 1100px;
+  /* F91.18 / task 37: removed max-width: 1100px — Cloudflare page is a
+     first-class top-level view that should use the full content-area
+     width, matching Services/Sites/Databases pages. */
 }
 
 .edit-card {
