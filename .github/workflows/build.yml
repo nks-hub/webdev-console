@@ -79,6 +79,12 @@ jobs:
         run: npm run ${{ matrix.npm_script }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # stage-plugins.mjs reads GITHUB_TOKEN to auth GitHub API calls
+          # when fetching plugin release zips. Unauthenticated is 60/hr per
+          # IP — macOS runners share NAT and burn through that fast, which
+          # caused v0.2.5's DMG to ship without any plugins. 5000/hr when
+          # authenticated covers it.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Skip auto-publish from electron-builder; we publish via softprops/action-gh-release below.
           EP_PRE_RELEASE: 'false'
           # Disable code-signing on CI runners — they don't have a Developer ID

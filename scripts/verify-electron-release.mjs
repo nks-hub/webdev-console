@@ -76,6 +76,16 @@ function main() {
     throw new Error(`Unknown target '${target}'`)
   }
 
+  // Guard against the v0.2.5 regression: macOS runner hit GitHub API rate
+  // limit, stage-plugins silently exit(0)'d, and the DMG shipped with zero
+  // bundled plugins. Every unpacked layout must have plugin DLLs inside
+  // the daemon's plugins/ folder.
+  const pluginDllRe = /[\\/]daemon[\\/]plugins[\\/]NKS\.WebDevConsole\.Plugin\.[A-Za-z]+\.dll$/
+  const pluginDlls = files.filter((file) => pluginDllRe.test(file))
+  assert(pluginDlls.length >= 5,
+    `Expected ≥5 plugin DLLs inside daemon/plugins/, found ${pluginDlls.length}. ` +
+    `This means stage-plugins.mjs didn't stage any plugins — the packaged app will be broken.`)
+
   const totalBytes = files.reduce((sum, file) => sum + statSync(file).size, 0)
   console.log(`[verify-electron-release] OK target=${target} files=${files.length} bytes=${totalBytes}`)
 }

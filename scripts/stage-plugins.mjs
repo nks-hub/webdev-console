@@ -145,6 +145,17 @@ if (!sourceUsed) {
   console.warn('[stage-plugins] Runtime fallback: daemon will download from catalog-api into ~/.wdc/plugins on first run.')
   console.warn(`[stage-plugins] Tried: ${siblingRoot} (sibling clone)`)
   console.warn(`[stage-plugins] Tried: ${PLUGINS_REPO} GitHub Releases`)
+  // On CI, fail loudly: v0.2.5's macOS DMG shipped without any plugins
+  // because the GitHub API call was rate-limited and this block silently
+  // exit(0)'d. Users hit an empty app. The runtime catalog fallback works
+  // in principle but leaves users with a broken install until they manually
+  // install every plugin from the marketplace — not shippable. CI sets
+  // `CI=true` by default, so this gate activates only on CI runs; local
+  // devs without plugin sources keep the soft-fail behaviour.
+  if (process.env.CI === 'true' && process.env.WDC_SKIP_PLUGIN_DOWNLOAD !== '1') {
+    console.error('[stage-plugins] CI=true and no plugins were staged — refusing to ship a broken bundle.')
+    process.exit(1)
+  }
   process.exit(0)
 }
 
