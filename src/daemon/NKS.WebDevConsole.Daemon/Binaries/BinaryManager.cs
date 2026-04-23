@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Core.Services;
 
@@ -25,13 +26,25 @@ public sealed class BinaryManager
     private readonly BinaryDownloader _downloader;
     private readonly CatalogClient _catalog;
     private readonly ILogger<BinaryManager> _logger;
+    private readonly IBinaryInstalledEventBus? _eventBus;
     private readonly string _root;
 
+    // Back-compat constructor keeps older call sites (e.g. tests that
+    // new-up a BinaryManager directly) working without plumbing the bus
+    // through. Production DI always binds the three-arg overload.
     public BinaryManager(BinaryDownloader downloader, CatalogClient catalog, ILogger<BinaryManager> logger)
+        : this(downloader, catalog, logger, eventBus: null) { }
+
+    public BinaryManager(
+        BinaryDownloader downloader,
+        CatalogClient catalog,
+        ILogger<BinaryManager> logger,
+        IBinaryInstalledEventBus? eventBus)
     {
         _downloader = downloader;
         _catalog = catalog;
         _logger = logger;
+        _eventBus = eventBus;
         _root = WdcPaths.BinariesRoot;
         Directory.CreateDirectory(_root);
     }
@@ -191,6 +204,17 @@ public sealed class BinaryManager
 
         // Post-install steps for specific apps
         await PostInstallAsync(app, version, installPath, cacheDir, ct);
+
+        // Notify subscribed plugin modules (Apache/MySQL/MariaDB/PHP/Redis)
+        // so they can re-run their detection pass now that the binary exists
+        // on disk. Replaces the lazy-init snippet each plugin used to have
+        // inside StartAsync (task #9). Fire-and-forget — the bus dispatches
+        // handlers on a background thread so /api/binaries/install still
+        // returns promptly.
+        _eventBus?.Publish(new BinaryInstalledEvent(
+            App: app.ToLowerInvariant(),
+            Version: version,
+            InstallPath: installPath));
 
         return ToInstalled(app, version, installPath);
     }
