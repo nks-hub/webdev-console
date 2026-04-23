@@ -33,7 +33,10 @@
       <div class="status-card">
         <el-icon class="status-icon"><Connection /></el-icon>
         <div class="status-body">
-          <div class="status-title">{{ $t('apache.ports') }}: 80 / 443</div>
+          <div class="status-title" v-if="serviceRunning">
+            <a class="local-url" :href="localUrl" @click.prevent="openLocalUrl">{{ localUrl }}</a>
+          </div>
+          <div class="status-title" v-else>{{ $t('apache.ports') }}: {{ httpPort }} / {{ httpsPort }}</div>
           <div class="status-meta">{{ serviceInfo?.version || $t('apache.versionUnknown') }}</div>
         </div>
       </div>
@@ -65,8 +68,11 @@
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('apache.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="HTTP">:80</el-descriptions-item>
-                <el-descriptions-item label="HTTPS">:443</el-descriptions-item>
+                <el-descriptions-item label="HTTP">
+                  <a v-if="serviceRunning" class="local-url" :href="localUrl" @click.prevent="openLocalUrl">{{ localUrl }}</a>
+                  <span v-else>:{{ httpPort }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="HTTPS">:{{ httpsPort }}</el-descriptions-item>
                 <el-descriptions-item :label="$t('apache.vhostsActive')">{{ sitesStore.sites.length }}</el-descriptions-item>
                 <el-descriptions-item :label="$t('apache.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
               </el-descriptions>
@@ -196,7 +202,7 @@ import { CircleCheckFilled, CircleClose, Connection, Monitor, Share, Setting, Do
 import { ElMessage } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
-import { startService, stopService } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, stopService } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 
@@ -213,9 +219,44 @@ const tuning = reactive({ mpm: 'event', maxRequestWorkers: 150, keepAlive: true,
 const serviceInfo = computed(() => daemonStore.services.find(s => s.id === 'apache'))
 const serviceRunning = computed(() => serviceInfo.value?.state === 2 || serviceInfo.value?.status === 'running')
 
+// Task 13: surface the live HTTP URL. On macOS/Linux Apache defaults to :8080
+// (unprivileged) so plain `http://localhost/` gets nothing; show the resolved
+// port pulled from /api/plugins/ports so users click the right URL first time.
+const httpPort = ref<number>(isWindowsDefault() ? 80 : 8080)
+const httpsPort = ref<number>(isWindowsDefault() ? 443 : 8443)
+const localUrl = computed(() => {
+  const p = httpPort.value
+  return p === 80 ? 'http://localhost/' : `http://localhost:${p}/`
+})
+
+function isWindowsDefault(): boolean {
+  // Best-effort UA sniff; real value is overwritten by loadPorts() below.
+  return typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent || '')
+}
+
+function openLocalUrl() {
+  const url = localUrl.value
+  const api = (window as unknown as { electronAPI?: { openExternal?: (u: string) => void } }).electronAPI
+  if (api?.openExternal) api.openExternal(url)
+  else window.open(url, '_blank')
+}
+
+async function loadPorts() {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/plugins/ports`, { headers: authHeaders() })
+    if (!r.ok) return
+    const data = await r.json() as Array<{ key: string; currentPort: number; defaultPort: number }>
+    const http = data.find(p => p.key === 'apache.http')
+    const https = data.find(p => p.key === 'apache.https')
+    if (http) httpPort.value = http.currentPort || http.defaultPort || httpPort.value
+    if (https) httpsPort.value = https.currentPort || https.defaultPort || httpsPort.value
+  } catch { /* fall back to platform default */ }
+}
+
 async function refresh() {
   refreshing.value = true
   try {
+    await loadPorts()
     if (sitesStore.sites.length === 0) await sitesStore.load()
   } finally {
     refreshing.value = false
@@ -243,6 +284,7 @@ function formatUptime(secs: number | string | undefined): string {
 }
 
 onMounted(async () => {
+  void loadPorts()
   if (sitesStore.sites.length === 0) void sitesStore.load()
 })
 </script>
@@ -272,4 +314,6 @@ onMounted(async () => {
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
 .hint-inline { margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3); }
 .mono { font-family: 'JetBrains Mono', monospace; }
+.local-url { color: var(--wdc-accent, #3b82f6); text-decoration: none; font-family: 'JetBrains Mono', monospace; cursor: pointer; }
+.local-url:hover { text-decoration: underline; }
 </style>
