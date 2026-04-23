@@ -66,7 +66,10 @@ mac:
   # we don't do yet — no app-specific password configured). They're also
   # harmless without notarization, and turning them on now means a later
   # flip to `notarize: true` only needs two more secrets, no code change.
-  identity: "Developer ID Application: Jakub Cerny (DG3SLRLF7A)"
+  # electron-builder expects the name WITHOUT the "Developer ID
+  # Application:" prefix — it picks the cert type automatically from
+  # the signing mode.
+  identity: "Jakub Cerny (DG3SLRLF7A)"
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
