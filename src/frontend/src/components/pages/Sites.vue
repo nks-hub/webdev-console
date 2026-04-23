@@ -197,7 +197,11 @@
             />
           </el-form-item>
           <el-form-item :label="$t('sites.documentRoot')" required>
-            <el-input v-model="newSite.documentRoot" placeholder="C:\work\htdocs\myapp" />
+            <el-input v-model="newSite.documentRoot" :placeholder="docRootPlaceholder">
+              <template #append>
+                <el-button @click="pickDocumentRoot">…</el-button>
+              </template>
+            </el-input>
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
             <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
@@ -246,7 +250,11 @@
             <el-input v-model="newSite.domain" placeholder="myapp.loc" />
           </el-form-item>
           <el-form-item :label="$t('sites.documentRoot')" required>
-            <el-input v-model="newSite.documentRoot" placeholder="C:\work\htdocs\myapp" />
+            <el-input v-model="newSite.documentRoot" :placeholder="docRootPlaceholder">
+              <template #append>
+                <el-button @click="pickDocumentRoot">…</el-button>
+              </template>
+            </el-input>
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
             <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
@@ -289,7 +297,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo } from '../../api/types'
-import { fetchDockerComposeStatus, fetchPhpVersions, daemonBaseUrl, daemonAuthHeaders as authHeaders, type DockerComposeStatus } from '../../api/daemon'
+import { fetchDockerComposeStatus, fetchPhpVersions, fetchSystem, daemonBaseUrl, daemonAuthHeaders as authHeaders, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
@@ -334,6 +342,41 @@ const cloudflaredRunning = computed(() =>
   )
 )
 const phpVersions = ref<string[]>([])
+// Native-looking Document Root placeholder. Windows keeps the legacy
+// C:\work\htdocs\<app> hint; macOS/Linux get a path rooted at the user's
+// home dir so the placeholder itself isn't misleading on those OSes.
+const docRootPlaceholder = ref<string>('C:\\work\\htdocs\\myapp')
+async function resolveDocRootPlaceholder() {
+  try {
+    const sys = await fetchSystem()
+    if (sys.os.tag === 'macos' || sys.os.tag === 'linux') {
+      const home = sys.os.platform?.match(/Users\/([^/]+)/)?.[1]
+        ?? sys.os.platform?.match(/home\/([^/]+)/)?.[1]
+      docRootPlaceholder.value = home ? `/Users/${home}/Sites/myapp` : '/Sites/myapp'
+      if (sys.os.tag === 'linux') {
+        docRootPlaceholder.value = home ? `/home/${home}/Sites/myapp` : '/srv/www/myapp'
+      }
+    }
+  } catch { /* keep Windows default — harmless fallback */ }
+}
+
+// Native folder picker — renderer calls into Electron main (allowlisted
+// via preload `showOpenDialog`). When Electron isn't present (browser
+// preview during dev) the button is a no-op and the user types the path.
+async function pickDocumentRoot(): Promise<void> {
+  const api = (window as unknown as { electronAPI?: { showOpenDialog: (o: unknown) => Promise<{ canceled: boolean; filePaths: string[] }> } }).electronAPI
+  if (!api?.showOpenDialog) {
+    ElMessage.info('Folder picker only available in the desktop app')
+    return
+  }
+  const result = await api.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Select document root',
+  })
+  if (!result.canceled && result.filePaths[0]) {
+    newSite.documentRoot = result.filePaths[0]
+  }
+}
 // Docker Compose detection map: domain -> status. Lazy-populated after
 // sites load so the Compose badge in the Framework column reflects what
 // the daemon sees on disk without blocking the site list itself.
@@ -421,10 +464,11 @@ async function refreshComposeStatuses() {
 onMounted(async () => {
   await sitesStore.load()
   void refreshComposeStatuses()
+  void resolveDocRootPlaceholder()
   try {
     const versions = await fetchPhpVersions()
     phpVersions.value = versions.map(v => v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version)
-  } catch { phpVersions.value = ['8.4', '8.3', '8.2'] }
+  } catch { phpVersions.value = [] }
 })
 
 // Re-scan compose status whenever the set of sites OR any site's

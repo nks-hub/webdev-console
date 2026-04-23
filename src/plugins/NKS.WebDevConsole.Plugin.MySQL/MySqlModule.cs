@@ -235,18 +235,18 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
 
     // -- IServiceModule: ValidateConfigAsync --
 
-    public Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
+    public async Task<ValidationResult> ValidateConfigAsync(CancellationToken ct)
     {
         if (string.IsNullOrEmpty(_config.ExecutablePath) || !File.Exists(_config.ExecutablePath))
-            return Task.FromResult(new ValidationResult(false, "mysqld executable not found"));
+            return new ValidationResult(false, "mysqld executable not found");
 
         if (!string.IsNullOrEmpty(_config.ConfigFile) && !File.Exists(_config.ConfigFile))
-            return Task.FromResult(new ValidationResult(false, $"Config file not found: {_config.ConfigFile}"));
+            return new ValidationResult(false, $"Config file not found: {_config.ConfigFile}");
 
         if (!string.IsNullOrEmpty(_config.DataDir) && !Directory.Exists(_config.DataDir))
-            return Task.FromResult(new ValidationResult(false, $"Data directory not found: {_config.DataDir}"));
+            return new ValidationResult(false, $"Data directory not found: {_config.DataDir}");
 
-        return Task.FromResult(new ValidationResult(true));
+        return new ValidationResult(true);
     }
 
     // -- IServiceModule: StartAsync --
@@ -265,6 +265,14 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
         // CaddyModule/ApacheModule in this commit.
         try
         {
+            // Daemon booted before the user's wizard install, so InitializeAsync's
+            // binary probe returned false and ExecutablePath is null. Retry
+            // detection at Start-time now that ~/.wdc/binaries/mysql has been
+            // populated — mirrors the ApacheModule lazy-init fix.
+            if (string.IsNullOrEmpty(_config.ExecutablePath) && Directory.Exists(_config.BinariesRoot))
+            {
+                await InitializeAsync(ct);
+            }
             if (string.IsNullOrEmpty(_config.ExecutablePath))
                 throw new InvalidOperationException("MySQL executable not found.");
 
@@ -825,7 +833,7 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
         return false;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         StopLogFileWatcher();
 
@@ -837,6 +845,5 @@ public sealed class MySqlModule : IServiceModule, IAsyncDisposable
 
         _process?.Dispose();
         _watcherCts?.Dispose();
-        return ValueTask.CompletedTask;
     }
 }
