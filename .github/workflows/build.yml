@@ -87,13 +87,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Skip auto-publish from electron-builder; we publish via softprops/action-gh-release below.
           EP_PRE_RELEASE: 'false'
-          # Disable code-signing on CI runners — they don't have a Developer ID
-          # certificate, and electron-builder's auto-discovery would otherwise
-          # try to sign with whatever it finds in the runner's keychain.
-          # NOTE: do NOT set CSC_LINK='' or APPLE_ID='' — empty strings get
-          # path.resolve()d against CWD by app-builder-lib, producing
-          # "<cwd> not a file" failures. Leave them unset.
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # macOS code-signing: Developer ID Application cert (Jakub Cerny,
+          # Team DG3SLRLF7A) issued 2026-04-23, expires 2031-04-24. CSC_LINK
+          # is a base64-encoded .p12 set via `gh secret set`; electron-builder
+          # decodes + installs into a temp keychain on the mac runner.
+          # Windows/Linux legs see the secrets too but ignore them (no mac
+          # identity match). Notarization NOT enabled yet — needs
+          # APPLE_APP_SPECIFIC_PASSWORD from appleid.apple.com; today's
+          # signing is enough to unlock Touch ID in osascript admin dialogs.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Verify release artifacts
         run: node scripts/verify-electron-release.mjs --dir src/frontend/release --target ${{ matrix.target }}

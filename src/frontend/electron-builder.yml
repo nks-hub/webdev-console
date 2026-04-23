@@ -52,6 +52,25 @@ mac:
         - arm64
   icon: build/icon.icns
   category: public.app-category.developer-tools
+  # Developer ID Application cert issued 2026-04-23 (HG7R6MG785, expires
+  # 2031-04-24). Signing is what makes osascript's `with administrator
+  # privileges` dialog offer Touch ID — unsigned apps get the legacy
+  # password-only dialog.
+  #
+  # identity must match a keychain item exactly. electron-builder looks
+  # it up by substring, so "Developer ID Application: Jakub Cerny" is
+  # enough; we include the team ID so we don't accidentally pick a
+  # future cert with the same common name.
+  #
+  # hardenedRuntime + entitlements are required for notarization (which
+  # we don't do yet — no app-specific password configured). They're also
+  # harmless without notarization, and turning them on now means a later
+  # flip to `notarize: true` only needs two more secrets, no code change.
+  identity: "Developer ID Application: Jakub Cerny (DG3SLRLF7A)"
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
 
 linux:
   target:
