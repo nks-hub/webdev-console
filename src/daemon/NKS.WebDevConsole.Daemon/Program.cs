@@ -212,22 +212,36 @@ migrationRunner.Run(database.ConnectionString);
 
 // Port probing: 5000 is ASP.NET's default but macOS Sequoia's AirPlay
 // Receiver (ControlCenter) squats on it with SO_REUSEADDR so the daemon
-// can't bind. Try 5000–5019 and use whichever is free. Electron reads
-// the actual port from the tmp port file so it reconnects correctly.
+// can't bind cleanly. We need BOTH loopback families free — Electron's
+// frontend connects to `localhost:PORT` which resolves to `::1` first on
+// macOS, and if AirTunes owns `::1:5000` the client gets 403 Forbidden
+// from AirTunes while our Kestrel listens happily on 127.0.0.1:5000.
+// Probe IPv4 + IPv6 and only pick a port where both are free.
 int chosenPort = 5000;
 for (int p = 5000; p < 5020; p++)
 {
+    if (!IsLoopbackPortFree(System.Net.IPAddress.Loopback, p)) continue;
+    if (!IsLoopbackPortFree(System.Net.IPAddress.IPv6Loopback, p)) continue;
+    chosenPort = p;
+    break;
+}
+static bool IsLoopbackPortFree(System.Net.IPAddress addr, int port)
+{
     try
     {
-        using var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, p);
+        using var probe = new System.Net.Sockets.TcpListener(addr, port);
         probe.Start();
         probe.Stop();
-        chosenPort = p;
-        break;
+        return true;
     }
-    catch (System.Net.Sockets.SocketException) { /* try next */ }
+    catch (System.Net.Sockets.SocketException)
+    {
+        return false;
+    }
 }
-builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}");
+// Bind to BOTH families so `localhost` (→ ::1) and `127.0.0.1` both hit
+// the daemon. Kestrel accepts multiple --urls values.
+builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}", $"http://[::1]:{chosenPort}");
 
 var app = builder.Build();
 app.UseWebSockets();
