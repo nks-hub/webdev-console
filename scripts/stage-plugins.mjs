@@ -6,37 +6,46 @@
  * <repo>/src/frontend/resources/daemon/plugins so the daemon (running
  * from the packaged app at runtime) finds them next to its own exe.
  *
- * F99 preparation: src/plugins/ will eventually be removed from this
- * monorepo in favour of nks-hub/webdev-console-plugins as the source
- * of truth. This script now searches multiple locations in priority
- * order so it keeps working during the migration:
+ * The plugin source used to live under <repo>/src/plugins/ (F99). It has
+ * since moved to nks-hub/webdev-console-plugins as the source of truth;
+ * built DLLs are published per-plugin on that repo's GitHub Releases as
+ * `<plugin-id>-v<version>` tags with a `<ProjectName>.zip` asset each.
  *
- *   1. <repo>/build/plugins                          — current layout
- *      (monorepo dotnet build output, written by each plugin's
- *      Directory.Build.props OutputPath)
- *   2. <repo>/../webdev-console-plugins/NKS.WebDevConsole.Plugin.*\
- *        /bin/Release/net9.0                         — sibling checkout
- *      of the extracted plugins repo; active when the dev has cloned
- *      nks-hub/webdev-console-plugins alongside nks-ws and run
- *      `dotnet build -c Release` in there.
- *   3. empty (no plugins staged) — daemon F95 runtime fallback will
+ * Resolution order, first hit wins:
+ *
+ *   1. <repo>/../webdev-console-plugins/NKS.WebDevConsole.Plugin.*/bin/Release/net9.0
+ *      — sibling checkout of the plugins repo with a local
+ *      `dotnet build -c Release`. This is the dev workflow: clone the
+ *      plugins repo next to nks-ws, hack on it, build, run nks-ws's
+ *      dist:mac/win/linux and the edits ride along.
+ *
+ *   2. GitHub Releases of nks-hub/webdev-console-plugins — the latest
+ *      release of each plugin ID is downloaded and extracted. Used by
+ *      CI (nks-ws/.github/workflows/build.yml) and by contributors who
+ *      don't have the plugins repo cloned. Runs the first time on any
+ *      fresh checkout. Skipped when WDC_SKIP_PLUGIN_DOWNLOAD=1 is set.
+ *
+ *   3. Empty (no plugins staged) — daemon's F95 runtime fallback will
  *      download from catalog-api into ~/.wdc/plugins on first run.
  *
- * Runs AFTER `dotnet publish` in the `stage:daemon:<os>` npm scripts.
- * Safe to re-run: target dir is wiped first so removed plugins don't
- * linger.
+ * The target dir is wiped first so a removed plugin doesn't linger in
+ * the packaged bundle. Safe to re-run.
  */
-import { existsSync, mkdirSync, readdirSync, copyFileSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, copyFileSync, rmSync, statSync, createWriteStream, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { pipeline } from 'node:stream/promises'
+import { Readable } from 'node:stream'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(__dirname, '..')
 
 const destDir = join(repoRoot, 'src', 'frontend', 'resources', 'daemon', 'plugins')
+const PLUGINS_REPO = 'nks-hub/webdev-console-plugins'
 
 if (existsSync(destDir)) {
-  // Wipe so a removed plugin doesn't stay in the packaged bundle.
   rmSync(destDir, { recursive: true, force: true })
 }
 mkdirSync(destDir, { recursive: true })
@@ -47,15 +56,11 @@ function copyRecursive(from, to) {
     const src = join(from, name)
     const dst = join(to, name)
     const s = statSync(src)
-    if (s.isDirectory()) {
-      copyRecursive(src, dst)
-    } else {
-      copyFileSync(src, dst)
-    }
+    if (s.isDirectory()) copyRecursive(src, dst)
+    else copyFileSync(src, dst)
   }
 }
 
-/** Collect plugin DLL file-names that actually appear in a candidate dir. */
 function listPluginDlls(dir) {
   if (!existsSync(dir)) return []
   try {
@@ -68,37 +73,98 @@ function listPluginDlls(dir) {
 
 let sourceUsed = null
 
-// Source 1: monorepo dotnet build output (current default).
-const monorepoBuildDir = join(repoRoot, 'build', 'plugins')
-if (listPluginDlls(monorepoBuildDir).length > 0) {
-  copyRecursive(monorepoBuildDir, destDir)
-  sourceUsed = monorepoBuildDir
+// Source 1: sibling checkout of webdev-console-plugins repo.
+const siblingRoot = resolve(repoRoot, '..', 'webdev-console-plugins')
+if (existsSync(siblingRoot)) {
+  const pluginProjectDirs = readdirSync(siblingRoot)
+    .filter(n => n.startsWith('NKS.WebDevConsole.Plugin.'))
+    .map(n => join(siblingRoot, n, 'bin', 'Release', 'net9.0'))
+    .filter(p => listPluginDlls(p).length > 0)
+  if (pluginProjectDirs.length > 0) {
+    for (const p of pluginProjectDirs) copyRecursive(p, destDir)
+    sourceUsed = siblingRoot
+  }
 }
 
-// Source 2: sibling checkout of webdev-console-plugins repo. Walk each
-// plugin project's Release output and copy the whole folder — matches
-// what `dotnet build` on the plugins sln would have emitted for each.
-if (!sourceUsed) {
-  const siblingRoot = resolve(repoRoot, '..', 'webdev-console-plugins')
-  if (existsSync(siblingRoot)) {
-    const pluginProjectDirs = readdirSync(siblingRoot)
-      .filter(n => n.startsWith('NKS.WebDevConsole.Plugin.'))
-      .map(n => join(siblingRoot, n, 'bin', 'Release', 'net9.0'))
-      .filter(p => listPluginDlls(p).length > 0)
-    if (pluginProjectDirs.length > 0) {
-      for (const p of pluginProjectDirs) copyRecursive(p, destDir)
-      sourceUsed = siblingRoot
+// Source 2: download from GitHub releases.
+// Skippable via WDC_SKIP_PLUGIN_DOWNLOAD so CI can run without network,
+// or when the builder has already staged plugins by other means.
+if (!sourceUsed && process.env.WDC_SKIP_PLUGIN_DOWNLOAD !== '1') {
+  try {
+    const releases = await fetchGithubJson(`/repos/${PLUGINS_REPO}/releases?per_page=100`)
+    if (!Array.isArray(releases) || releases.length === 0) {
+      throw new Error(`no releases on ${PLUGINS_REPO}`)
     }
+    // Group by plugin ID (tag prefix before -v<ver>), keep only the
+    // release whose `created_at` is newest per plugin.
+    const newestPerPlugin = new Map()
+    for (const rel of releases) {
+      const tag = rel.tag_name ?? ''
+      const m = tag.match(/^(nks\.wdc\.[a-z]+)-v(.+)$/)
+      if (!m) continue
+      const [, pluginId, version] = m
+      const prev = newestPerPlugin.get(pluginId)
+      if (!prev || new Date(rel.created_at) > new Date(prev.created_at)) {
+        newestPerPlugin.set(pluginId, { ...rel, pluginId, version })
+      }
+    }
+    if (newestPerPlugin.size === 0) {
+      throw new Error(`no <plugin-id>-v<ver> tags in ${PLUGINS_REPO}`)
+    }
+    for (const [pluginId, rel] of newestPerPlugin) {
+      const asset = (rel.assets ?? []).find(a => a.name.endsWith('.zip'))
+      if (!asset) {
+        console.warn(`[stage-plugins] ${pluginId} ${rel.version}: no .zip asset, skipping`)
+        continue
+      }
+      const zipPath = join(tmpdir(), `${pluginId}-${rel.version}.zip`)
+      await downloadToFile(asset.browser_download_url, zipPath)
+      execSync(`unzip -o -q "${zipPath}" -d "${destDir}"`)
+      console.log(`[stage-plugins] fetched ${pluginId} ${rel.version} from release`)
+    }
+    sourceUsed = `${PLUGINS_REPO} GitHub Releases`
+  } catch (err) {
+    console.warn(`[stage-plugins] release download failed: ${err.message}`)
   }
 }
 
 if (!sourceUsed) {
   console.warn('[stage-plugins] No plugin build output found — packaged daemon will ship with zero bundled plugins.')
   console.warn('[stage-plugins] Runtime fallback: daemon will download from catalog-api into ~/.wdc/plugins on first run.')
-  console.warn('[stage-plugins] Tried: ' + monorepoBuildDir)
-  console.warn('[stage-plugins] Tried: ' + resolve(repoRoot, '..', 'webdev-console-plugins'))
+  console.warn(`[stage-plugins] Tried: ${siblingRoot} (sibling clone)`)
+  console.warn(`[stage-plugins] Tried: ${PLUGINS_REPO} GitHub Releases`)
   process.exit(0)
 }
 
 const count = listPluginDlls(destDir).length
 console.log(`[stage-plugins] Copied ${count} plugin DLL(s) from ${sourceUsed} → ${destDir}`)
+
+// ─── helpers ───────────────────────────────────────────────────────────
+
+async function fetchGithubJson(path) {
+  const url = `https://api.github.com${path}`
+  const headers = {
+    'Accept': 'application/vnd.github+json',
+    'User-Agent': 'nks-wdc-stage-plugins',
+    'X-GitHub-Api-Version': '2022-11-28',
+  }
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+  }
+  const res = await fetch(url, { headers })
+  if (!res.ok) throw new Error(`GitHub ${res.status}: ${await res.text().catch(() => '?')}`)
+  return res.json()
+}
+
+async function downloadToFile(url, dest) {
+  const headers = {
+    'Accept': 'application/octet-stream',
+    'User-Agent': 'nks-wdc-stage-plugins',
+  }
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+  }
+  const res = await fetch(url, { headers, redirect: 'follow' })
+  if (!res.ok) throw new Error(`download ${res.status}: ${url}`)
+  await pipeline(Readable.fromWeb(res.body), createWriteStream(dest))
+}
