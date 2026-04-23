@@ -47,8 +47,41 @@ public sealed class ServiceConfigManager
                          .Where(d => !Path.GetFileName(d).StartsWith('.'))
                          .OrderByDescending(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
             {
-                var iniPath = Path.Combine(versionDir, "php.ini");
-                await AddIfExistsAsync(files, $"php.ini ({Path.GetFileName(versionDir)})", iniPath);
+                // PhpIniManager writes the file next to the executable
+                // (<version>/bin/php.ini on FHS source builds,
+                // <version>/php.ini on Windows flat extracts). Check
+                // both — whichever exists wins. Falls back to the
+                // profile-based copy under ~/.wdc/data/php/<mm>/php.ini
+                // so the user at least sees *a* config even if neither
+                // binary-side copy has landed yet.
+                foreach (var iniPath in new[]
+                {
+                    Path.Combine(versionDir, "bin", "php.ini"),
+                    Path.Combine(versionDir, "php.ini"),
+                })
+                {
+                    if (File.Exists(iniPath))
+                    {
+                        await AddIfExistsAsync(files, $"php.ini ({Path.GetFileName(versionDir)})", iniPath);
+                        break;
+                    }
+                }
+            }
+
+            // Expose profile-based php.ini variants too — these are the
+            // files PhpIniManager rewrites when the user saves profile
+            // changes and are the authoritative copy for FPM workers.
+            var profileRoot = Path.Combine(_wdcRoot, "data", "php");
+            if (Directory.Exists(profileRoot))
+            {
+                foreach (var mmDir in Directory.GetDirectories(profileRoot))
+                {
+                    foreach (var name in new[] { "php.ini", "php-cli.ini" })
+                    {
+                        var p = Path.Combine(mmDir, name);
+                        await AddIfExistsAsync(files, $"{name} ({Path.GetFileName(mmDir)} profile)", p);
+                    }
+                }
             }
 
             return files;
