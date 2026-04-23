@@ -237,13 +237,12 @@
           <el-form-item label="Template">
             <el-select v-model="newSite.template" style="width: 100%" placeholder="Choose a template…" @change="applyTemplate">
               <el-option label="— No template —" value="" />
-              <el-option label="WordPress (PHP 8.4, SSL)" value="wordpress" />
-              <el-option label="Laravel (PHP 8.4, SSL)" value="laravel" />
-              <el-option label="Nette (PHP 8.4, SSL)" value="nette" />
-              <el-option label="Symfony (PHP 8.4, SSL)" value="symfony" />
-              <el-option label="Next.js (Node proxy, SSL)" value="nextjs" />
-              <el-option label="Node.js (Node proxy)" value="node" />
-              <el-option label="Static HTML" value="static" />
+              <el-option
+                v-for="tpl in siteTemplates"
+                :key="tpl.id"
+                :label="tpl.label"
+                :value="tpl.id"
+              />
             </el-select>
           </el-form-item>
           <el-form-item :label="$t('sites.domain')" required>
@@ -302,6 +301,26 @@ import { errorMessage } from '../../utils/errors'
 import { MoreFilled } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
+import siteTemplatesConfig from '../../config/site-templates.json'
+
+// Template list for the New Site dialog (advanced mode). Sourced from
+// src/config/site-templates.json so product can add/tweak presets without
+// touching this component. `fields` is spread into `newSite` on pick, so
+// any field on the reactive object (phpVersion, sslEnabled, and future
+// additions like `extensions`) can be templated without code changes here.
+interface SiteTemplate {
+  id: string
+  label: string
+  fields: Partial<{
+    phpVersion: string
+    sslEnabled: boolean
+    aliases: string
+    createDb: boolean
+    cloudflareTunnel: boolean
+  }> & Record<string, unknown>
+  notes?: string
+}
+const siteTemplates: SiteTemplate[] = (siteTemplatesConfig.templates || []) as SiteTemplate[]
 
 const route = useRoute()
 const router = useRouter()
@@ -407,21 +426,14 @@ watch(() => newSite.domain, (domain) => {
   }
 })
 
-const TEMPLATES: Record<string, { php: string; ssl: boolean }> = {
-  wordpress: { php: '8.4', ssl: true },
-  laravel:   { php: '8.4', ssl: true },
-  nette:     { php: '8.4', ssl: true },
-  symfony:   { php: '8.4', ssl: true },
-  nextjs:    { php: 'none', ssl: true },
-  node:      { php: 'none', ssl: false },
-  static:    { php: 'none', ssl: false },
-}
-
 function applyTemplate(tplName: string) {
-  const tpl = TEMPLATES[tplName]
-  if (!tpl) return
-  newSite.phpVersion = tpl.php
-  newSite.sslEnabled = tpl.ssl
+  if (!tplName) return
+  const tpl = siteTemplates.find(t => t.id === tplName)
+  if (!tpl || !tpl.fields) return
+  // Spread template field overrides into the reactive form state. Only
+  // keys present in `fields` are touched — fields the user already filled
+  // in (domain, documentRoot) are preserved.
+  Object.assign(newSite, tpl.fields)
 }
 
 const filteredSites = computed(() => {

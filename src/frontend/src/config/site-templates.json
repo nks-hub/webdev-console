@@ -1,0 +1,47 @@
+{
+  "$schema": "./site-templates.schema.json",
+  "description": "Templates offered in the New Site dialog (Sites.vue advanced mode). Each entry's `fields` object is spread into the newSite reactive object when the user picks a template. Keep IDs stable — they're referenced by saved drafts and user documentation.",
+  "templates": [
+    {
+      "id": "wordpress",
+      "label": "WordPress (PHP 8.4, SSL)",
+      "fields": { "phpVersion": "8.4", "sslEnabled": true },
+      "notes": "Classic LAMP-style site; SSL on so login cookies are secure."
+    },
+    {
+      "id": "laravel",
+      "label": "Laravel (PHP 8.4, SSL)",
+      "fields": { "phpVersion": "8.4", "sslEnabled": true },
+      "notes": "Document root should point at the /public directory."
+    },
+    {
+      "id": "nette",
+      "label": "Nette (PHP 8.4, SSL)",
+      "fields": { "phpVersion": "8.4", "sslEnabled": true },
+      "notes": "Document root should point at the /www directory."
+    },
+    {
+      "id": "symfony",
+      "label": "Symfony (PHP 8.4, SSL)",
+      "fields": { "phpVersion": "8.4", "sslEnabled": true },
+      "notes": "Document root should point at the /public directory."
+    },
+    {
+      "id": "nextjs",
+      "label": "Next.js (Node proxy, SSL)",
+      "fields": { "phpVersion": "none", "sslEnabled": true },
+      "notes": "Node upstream port must be configured after creation."
+    },
+    {
+      "id": "node",
+      "label": "Node.js (Node proxy)",
+      "fields": { "phpVersion": "none", "sslEnabled": false },
+      "notes": "Node upstream port must be configured after creation."
+    },
+    {
+      "id": "static",
+      "label": "Static HTML",
+      "fields": { "phpVersion": "none", "sslEnabled": false }
+    }
+  ]
+}
