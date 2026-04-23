@@ -147,6 +147,19 @@ jobs:
         working-directory: src/frontend
         run: npm run build
 
+      # Pull prebuilt plugin DLLs from nks-hub/webdev-console-plugins
+      # releases before packaging. Plugin sources left this monorepo
+      # when src/plugins was removed; stage-plugins.mjs is the only
+      # path that gets DLLs into resources/daemon/plugins on a CI
+      # runner that has no sibling plugins-repo checkout. GITHUB_TOKEN
+      # is passed so the anonymous-rate-limit on unauth'd release API
+      # calls doesn't trip a packed matrix of concurrent runs.
+      - name: Stage plugin DLLs from plugins repo releases
+        working-directory: src/frontend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ../../scripts/stage-plugins.mjs
+
       - name: Build Electron installer
         working-directory: src/frontend
         # CI builds on every push just verify the packaged installer builds and

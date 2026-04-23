@@ -73,10 +73,12 @@ function listPluginDlls(dir) {
 
 let sourceUsed = null
 
-// Source 0: monorepo dotnet build output (legacy, still useful when a
-// contributor works on the vendored src/plugins copy). This path wins
-// over GH releases so local edits survive the stage step without
-// needing the plugins repo cloned alongside.
+// Source 0: monorepo dotnet build output. Kept as an escape hatch in
+// case a developer or CI job drops plugin DLLs here manually, but no
+// longer produced by the monorepo build — src/plugins/ was removed in
+// favour of the nks-hub/webdev-console-plugins repo. Expected to be
+// empty on normal checkouts. Runs first so if you DO want to override
+// the sibling/GH-release sources, dropping DLLs here still wins.
 const monorepoBuildDir = join(repoRoot, 'build', 'plugins')
 if (listPluginDlls(monorepoBuildDir).length > 0) {
   copyRecursive(monorepoBuildDir, destDir)

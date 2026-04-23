@@ -383,9 +383,13 @@ public sealed class SiteManager
         {
             Path.Combine(AppContext.BaseDirectory, "Templates", "vhost.conf.scriban"),
             Path.Combine(AppContext.BaseDirectory, "plugins", "Templates", "vhost.conf.scriban"),
-            // Dev: walk up to repo root and check plugin templates
+            // Dev: walk up to the monorepo root and try the sibling
+            // plugins-repo checkout. Plugins moved to
+            // nks-hub/webdev-console-plugins; developers typically
+            // clone it next to nks-ws and dotnet-build the Apache
+            // plugin locally, which drops templates alongside the DLL.
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..",
-                "src", "plugins", "NKS.WebDevConsole.Plugin.Apache", "Templates", "vhost.conf.scriban"))
+                "..", "webdev-console-plugins", "NKS.WebDevConsole.Plugin.Apache", "Templates", "vhost.conf.scriban"))
         };
 
         return candidates.FirstOrDefault(File.Exists);

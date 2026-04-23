@@ -1,8 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <OutputPath>$(MSBuildThisFileDirectory)..\..\build\plugins\</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <EnableDynamicLoading>true</EnableDynamicLoading>
-  </PropertyGroup>
-</Project>

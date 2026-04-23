@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\daemon\NKS.WebDevConsole.Core\NKS.WebDevConsole.Core.csproj" />
     <ProjectReference Include="..\..\src\daemon\NKS.WebDevConsole.Plugin.SDK\NKS.WebDevConsole.Plugin.SDK.csproj" />
-    <ProjectReference Include="..\..\src\plugins\NKS.WebDevConsole.Plugin.Hosts\NKS.WebDevConsole.Plugin.Hosts.csproj" />
   </ItemGroup>
 
 </Project>

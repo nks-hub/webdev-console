@@ -10,8 +10,9 @@ namespace NKS.WebDevConsole.Daemon.Plugin;
 /// <c>~/.wdc/plugins/&lt;id&gt;/&lt;version&gt;/</c> shortly after the daemon
 /// starts, then re-checks every <see cref="RefreshInterval"/>. Opt-in via
 /// the <c>NKS_WDC_PLUGIN_AUTOSYNC</c> environment variable (set to <c>1</c>
-/// / <c>true</c>) so dev environments running a local build of
-/// <c>src/plugins</c> do not unnecessarily hit the catalog API.
+/// / <c>true</c>) so dev environments running a local build of the
+/// sibling <c>webdev-console-plugins</c> repo do not unnecessarily hit
+/// the catalog API.
 /// </summary>
 public sealed class PluginCatalogSyncService : BackgroundService
 {

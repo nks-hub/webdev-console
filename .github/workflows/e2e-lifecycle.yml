@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - 'src/daemon/**'
-      - 'src/plugins/**'
       - 'scripts/e2e-runner.mjs'
       - 'scripts/e2e-isolated-lifecycle.mjs'
       - 'scripts/e2e/**'

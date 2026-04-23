@@ -299,23 +299,25 @@ public partial class PluginLoader
     private static bool IsSemVer(string? version) => PluginLoaderInternals.IsSemVer(version);
 
     /// <summary>
-    /// Attempts to locate and parse <c>plugin.json</c> for a plugin DLL. We
-    /// look in two spots: (1) next to the DLL itself (the normal build
-    /// output layout) and (2) two levels up under <c>src/plugins/{name}/</c>
-    /// which is where the repo keeps the source manifest so dev mode picks
-    /// it up even before the first Release build copies it. Failures are
-    /// swallowed — a missing/corrupt manifest must never prevent the plugin
-    /// from loading.
+    /// Attempts to locate and parse <c>plugin.json</c> for a plugin DLL. The
+    /// normal path is next to the DLL itself (the plugin project's build
+    /// output / stage-plugins drop). We also try the sibling
+    /// <c>webdev-console-plugins</c> checkout a few levels up so a
+    /// monorepo-local dev run picks up a freshly-edited manifest before
+    /// the sibling plugin is even built. Failures are swallowed — a
+    /// missing/corrupt manifest must never prevent the plugin from
+    /// loading.
     /// </summary>
     private PluginManifestData? TryLoadManifest(string dllDir, string assemblyName)
     {
         string[] candidates =
         [
             Path.Combine(dllDir, "plugin.json"),
-            // From build/plugins/*.dll walk back to src/plugins/{name}/plugin.json
-            Path.Combine(dllDir, "..", "..", "src", "plugins", assemblyName, "plugin.json"),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-                "src", "plugins", assemblyName, "plugin.json"),
+            // Sibling plugins-repo checkout: <repo>/../webdev-console-plugins/{name}/plugin.json
+            Path.Combine(dllDir, "..", "..", "..", "..", "..", "..",
+                "webdev-console-plugins", assemblyName, "plugin.json"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..",
+                "webdev-console-plugins", assemblyName, "plugin.json"),
         ];
 
         foreach (var path in candidates)
