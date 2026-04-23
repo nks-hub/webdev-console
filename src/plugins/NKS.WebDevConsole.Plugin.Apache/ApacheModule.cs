@@ -414,6 +414,18 @@ public sealed class ApacheModule : IServiceModule, IAsyncDisposable
             _state = ServiceState.Starting;
         }
 
+        // If the daemon booted before the user installed Apache (wizard flow),
+        // InitializeAsync's early-return left _config.ServerRoot/ExecutablePath
+        // blank and ResolveConfigPath() falls through to "conf/httpd.conf"
+        // relative — which httpd then joins against its baked-in ServerRoot
+        // (/usr on macOS brew builds), producing "/usr/conf/httpd.conf: No
+        // such file". Re-run detection lazily so a post-install Start picks
+        // up the freshly extracted binary + generates the real httpd.conf.
+        if (string.IsNullOrEmpty(_config.ExecutablePath) && Directory.Exists(_config.BinariesRoot))
+        {
+            await InitializeAsync(ct);
+        }
+
         // Ensure any early throw (config validation, process.Start failure, port
         // bind timeout) leaves the state recoverable. Without this wrapper,
         // _state stays at Starting forever and the Dashboard toggle gets stuck
