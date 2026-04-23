@@ -805,6 +805,7 @@
     "installApache": "Install Apache",
     "installPhp": "Install PHP",
     "installMysql": "Install MySQL",
+    "pickVersion": "Version",
     "installMkcert": "Install mkcert",
     "installMkcertCa": "Trust local CA",
     "installed": "Installed",

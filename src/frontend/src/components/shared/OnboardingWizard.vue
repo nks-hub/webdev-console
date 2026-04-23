@@ -31,9 +31,26 @@
           <div class="ob-row">
             <span class="ob-label">PHP</span>
             <el-tag v-if="state?.prerequisites.phpInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
-            <el-button v-else size="small" :loading="installing.has('php')" @click="doInstall('php')">
-              {{ t('onboarding.installPhp') }}
-            </el-button>
+            <template v-else>
+              <el-select
+                v-model="phpVersionChoice"
+                size="small"
+                class="ob-version-select"
+                :placeholder="t('onboarding.pickVersion')"
+                :loading="loadingVersions"
+                :disabled="installing.has('php')"
+              >
+                <el-option
+                  v-for="v in phpVersions"
+                  :key="v"
+                  :label="v"
+                  :value="v"
+                />
+              </el-select>
+              <el-button size="small" :loading="installing.has('php')" @click="doInstall('php', phpVersionChoice)">
+                {{ t('onboarding.installPhp') }}
+              </el-button>
+            </template>
           </div>
           <div class="ob-row">
             <span class="ob-label">MySQL</span>
@@ -116,10 +133,13 @@ import {
   completeOnboarding,
   installBinary,
   fetchLatestBinary,
+  fetchBinaryCatalog,
+  fetchSystem,
   installSslCa,
   type OnboardingState,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { compareSemver } from '../../utils/semver'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -129,6 +149,9 @@ const activeStep = ref(0)
 const state = ref<OnboardingState | null>(null)
 const installing = ref<Set<string>>(new Set())
 const installingCa = ref(false)
+const phpVersions = ref<string[]>([])
+const phpVersionChoice = ref<string>('')
+const loadingVersions = ref(false)
 
 async function refreshState() {
   try {
@@ -139,25 +162,51 @@ async function refreshState() {
   }
 }
 
-async function doInstall(app: string) {
+async function doInstall(app: string, explicitVersion?: string) {
   installing.value.add(app)
   try {
-    // Ask the daemon for the latest compatible version on the current
-    // OS/arch instead of hardcoding. Removes the class of bugs where a
-    // pinned version doesn't exist on the user's platform (e.g. apache
-    // 2.4.62 was Windows-only so macOS users always hit 404).
-    const latest = await resolveLatest(app)
-    if (!latest) {
+    // Prefer a user-picked version (PHP selector), fall back to "latest
+    // compatible on this OS/arch" which the daemon resolves. Never hardcode
+    // — apache 2.4.62 was Windows-only so a pinned macOS version 404'd.
+    const version = explicitVersion?.trim() || await resolveLatest(app)
+    if (!version) {
       ElMessage.warning(`${app}: no binary available for this platform`)
       return
     }
-    await installBinary(app, latest)
-    ElMessage.success(`${app} ${latest} installed`)
+    await installBinary(app, version)
+    ElMessage.success(`${app} ${version} installed`)
     await refreshState()
   } catch (e) {
     ElMessage.error(`${app}: ${errorMessage(e)}`)
   } finally {
     installing.value.delete(app)
+  }
+}
+
+async function loadPhpVersions() {
+  loadingVersions.value = true
+  try {
+    const [catalog, system] = await Promise.all([
+      fetchBinaryCatalog(),
+      fetchSystem(),
+    ])
+    const osTag = system.os.tag
+    const archTag = system.os.arch
+    const releases = catalog.php ?? []
+    // Unique versions compatible with current OS/arch, newest first.
+    const versions = Array.from(new Set(
+      releases
+        .filter(r => r.os === osTag && r.arch === archTag)
+        .map(r => r.version)
+    )).sort((a, b) => compareSemver(b, a))
+    phpVersions.value = versions
+    if (versions.length > 0 && !phpVersionChoice.value) {
+      phpVersionChoice.value = versions[0]
+    }
+  } catch (e) {
+    console.warn('[onboarding] php version load failed', e)
+  } finally {
+    loadingVersions.value = false
   }
 }
 
@@ -214,6 +263,7 @@ onMounted(async () => {
   // Only auto-open if the daemon reports the wizard hasn't been completed yet.
   if (state.value && !state.value.completed) {
     visible.value = true
+    void loadPhpVersions()
   }
 })
 
@@ -222,6 +272,7 @@ defineExpose({
     await refreshState()
     visible.value = true
     activeStep.value = 0
+    void loadPhpVersions()
   },
 })
 </script>
@@ -270,6 +321,11 @@ defineExpose({
   font-size: 0.88rem;
   font-weight: 500;
   color: var(--wdc-text);
+}
+.ob-row :deep(.ob-version-select) {
+  width: 140px;
+  margin-left: auto;
+  margin-right: 8px;
 }
 .ob-footer {
   display: flex;

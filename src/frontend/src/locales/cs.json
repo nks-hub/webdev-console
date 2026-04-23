@@ -805,6 +805,7 @@
     "installApache": "Instalovat Apache",
     "installPhp": "Instalovat PHP",
     "installMysql": "Instalovat MySQL",
+    "pickVersion": "Verze",
     "installMkcert": "Instalovat mkcert",
     "installMkcertCa": "Důvěřovat lokální CA",
     "installed": "Nainstalováno",

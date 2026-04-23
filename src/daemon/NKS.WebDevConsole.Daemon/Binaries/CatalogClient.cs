@@ -232,13 +232,14 @@ public sealed class CatalogClient
             UserAgent: null);
     }
 
-    public IEnumerable<BinaryRelease> ForApp(string app, string os = "windows", string arch = "x64")
+    public IEnumerable<BinaryRelease> ForApp(string app, string? os = null, string? arch = null)
     {
         lock (_cacheLock)
         {
             return _cache.Where(r =>
                 r.App.Equals(app, StringComparison.OrdinalIgnoreCase) &&
-                r.Os == os && r.Arch == arch).ToList();
+                (os is null || r.Os == os) &&
+                (arch is null || r.Arch == arch)).ToList();
         }
     }
 
