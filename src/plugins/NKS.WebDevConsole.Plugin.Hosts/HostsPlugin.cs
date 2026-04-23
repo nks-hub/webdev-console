@@ -95,7 +95,14 @@ public sealed class HostsPlugin : IWdcPlugin, IFrontendPanelProvider
         }
         catch (UnauthorizedAccessException)
         {
-            _logger?.LogWarning("Cannot write hosts file — elevation required. Content prepared but not written.");
+            if (!await TryWriteWithElevationAsync(updated))
+            {
+                _logger?.LogWarning("Cannot write hosts file — elevation required. Content prepared but not written.");
+            }
+            else
+            {
+                _logger?.LogInformation("Added {Domain} to hosts file (via elevation)", domain);
+            }
         }
 
         return updated;
@@ -135,7 +142,14 @@ public sealed class HostsPlugin : IWdcPlugin, IFrontendPanelProvider
         }
         catch (UnauthorizedAccessException)
         {
-            _logger?.LogWarning("Cannot write hosts file — elevation required. Content prepared but not written.");
+            if (!await TryWriteWithElevationAsync(updated))
+            {
+                _logger?.LogWarning("Cannot write hosts file — elevation required. Content prepared but not written.");
+            }
+            else
+            {
+                _logger?.LogInformation("Removed {Domain} from hosts file (via elevation)", domain);
+            }
         }
 
         return updated;
@@ -157,6 +171,70 @@ public sealed class HostsPlugin : IWdcPlugin, IFrontendPanelProvider
         using var identity = WindowsIdentity.GetCurrent();
         var principal = new WindowsPrincipal(identity);
         return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    /// <summary>
+    /// Best-effort write of the hosts file via an OS-native elevation
+    /// prompt. macOS uses osascript's `with administrator privileges`
+    /// (TouchID/password dialog); Linux falls back to pkexec when the
+    /// user is at a desktop session. Windows doesn't need this — the
+    /// app.manifest already ships requireAdministrator and the direct
+    /// File.Write would have succeeded. Returns true on success, false
+    /// on cancel/timeout/platform-not-supported.
+    /// </summary>
+    private async Task<bool> TryWriteWithElevationAsync(string content)
+    {
+        if (_manager is null) return false;
+        try
+        {
+            var tmp = Path.Combine(Path.GetTempPath(), $"nks-wdc-hosts.{Guid.NewGuid():N}");
+            await File.WriteAllTextAsync(tmp, content);
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    var script = $"do shell script \"/bin/cp '{tmp}' '{_manager.HostsPath}'\" with prompt \"NKS WebDev Console needs permission to update /etc/hosts.\" with administrator privileges";
+                    var psi = new ProcessStartInfo("osascript", $"-e \"{script.Replace("\"", "\\\"")}\"")
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardError = true,
+                        RedirectStandardOutput = true,
+                    };
+                    using var p = Process.Start(psi);
+                    if (p is null) return false;
+                    await p.WaitForExitAsync();
+                    if (p.ExitCode != 0)
+                    {
+                        _logger?.LogWarning("osascript elevation declined or failed: {Err}",
+                            (await p.StandardError.ReadToEndAsync()).Trim());
+                        return false;
+                    }
+                    return true;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    // pkexec present on most desktop distros; falls back to a
+                    // clean error when run headlessly (no DISPLAY) — caller
+                    // then shows the dry-run warning.
+                    var psi = new ProcessStartInfo("pkexec", $"/bin/cp {tmp} {_manager.HostsPath}")
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardError = true,
+                    };
+                    using var p = Process.Start(psi);
+                    if (p is null) return false;
+                    await p.WaitForExitAsync();
+                    return p.ExitCode == 0;
+                }
+                return false;
+            }
+            finally { try { File.Delete(tmp); } catch { } }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning("Hosts elevation helper failed: {Message}", ex.Message);
+            return false;
+        }
     }
 
 }

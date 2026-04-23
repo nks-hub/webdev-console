@@ -516,15 +516,17 @@ async function install(app: string, version: string) {
     const result = await installBinary(app, version)
     progressPercent.value = 90
 
-    if (result.ok) {
-      progressPercent.value = 100
-      progressDone.value = true
-      progressMessage.value = `${app} ${version} installed successfully`
-      ElMessage.success(`${app} ${version} installed`)
-      await refresh()
-    } else {
-      throw new Error(result.message ?? 'Installation failed')
-    }
+    // Daemon returns 2xx with the InstalledBinary DTO on success — there
+    // is no `ok` field. Failures come back as 4xx/5xx and are already
+    // thrown by the shared `json` helper with the daemon's `detail`
+    // message attached. The previous `if (result.ok)` check treated
+    // every successful response as a failure because ok is undefined,
+    // masking the real error with "Installation failed".
+    progressPercent.value = 100
+    progressDone.value = true
+    progressMessage.value = `${app} ${version} installed successfully`
+    ElMessage.success(`${app} ${version} installed`)
+    await refresh()
   } catch (e) {
     const msg = errorMessage(e)
     progressError.value = true
