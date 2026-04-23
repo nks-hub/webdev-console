@@ -13,7 +13,7 @@
  *
  * Resolution order, first hit wins:
  *
- *   1. <repo>/../webdev-console-plugins/NKS.WebDevConsole.Plugin.*/bin/Release/net9.0
+ *   1. <repo>/../webdev-console-plugins/NKS.WebDevConsole.Plugin.<X>/bin/Release/net9.0
  *      — sibling checkout of the plugins repo with a local
  *      `dotnet build -c Release`. This is the dev workflow: clone the
  *      plugins repo next to nks-ws, hack on it, build, run nks-ws's
@@ -73,9 +73,19 @@ function listPluginDlls(dir) {
 
 let sourceUsed = null
 
+// Source 0: monorepo dotnet build output (legacy, still useful when a
+// contributor works on the vendored src/plugins copy). This path wins
+// over GH releases so local edits survive the stage step without
+// needing the plugins repo cloned alongside.
+const monorepoBuildDir = join(repoRoot, 'build', 'plugins')
+if (listPluginDlls(monorepoBuildDir).length > 0) {
+  copyRecursive(monorepoBuildDir, destDir)
+  sourceUsed = monorepoBuildDir
+}
+
 // Source 1: sibling checkout of webdev-console-plugins repo.
 const siblingRoot = resolve(repoRoot, '..', 'webdev-console-plugins')
-if (existsSync(siblingRoot)) {
+if (!sourceUsed && existsSync(siblingRoot)) {
   const pluginProjectDirs = readdirSync(siblingRoot)
     .filter(n => n.startsWith('NKS.WebDevConsole.Plugin.'))
     .map(n => join(siblingRoot, n, 'bin', 'Release', 'net9.0'))
