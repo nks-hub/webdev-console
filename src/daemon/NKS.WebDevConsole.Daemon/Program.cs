@@ -5368,8 +5368,39 @@ app.MapGet("/api/settings", async (Database db) =>
 
 app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
 {
-    var settings = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
-    if (settings == null) return Results.BadRequest();
+    // Frontend sends mixed-type JSON — booleans for toggles, numbers for
+    // timeouts, strings for URLs. Hard-typing to Dictionary<string,string>
+    // rejected any non-string value with a 500 (JsonException: "could not
+    // be converted to string"). Read as JsonElement and stringify here so
+    // the storage layer stays TEXT-only (simple schema) but the API is
+    // permissive.
+    Dictionary<string, JsonElement>? raw;
+    try
+    {
+        raw = await ctx.Request.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
+    }
+    if (raw == null) return Results.BadRequest();
+
+    var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var (k, v) in raw)
+    {
+        settings[k] = v.ValueKind switch
+        {
+            JsonValueKind.String => v.GetString() ?? "",
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => "",
+            JsonValueKind.Number => v.GetRawText(),
+            // Objects/arrays → store as JSON string. The read side can parse
+            // it back. This keeps richer types usable without a schema change.
+            _ => v.GetRawText(),
+        };
+    }
+
     using var conn = db.CreateConnection();
     conn.Open();
     // Wrap the batch in a transaction so a sync-pull that touches many
