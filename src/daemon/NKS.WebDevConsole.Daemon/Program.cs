@@ -3206,14 +3206,20 @@ app.MapPost("/api/onboarding/complete", async (SiteManager siteManager, SiteOrch
         }
         if (!siteManager.Sites.Keys.Any(d => string.Equals(d, "localhost", StringComparison.OrdinalIgnoreCase)))
         {
-            await siteOrch.ApplyAsync(new NKS.WebDevConsole.Core.Models.SiteConfig
+            // CreateAsync persists the vhost TOML + registers the site in the
+            // SiteManager dictionary. ApplyAsync alone would generate the Apache
+            // vhost file but leave SiteManager unaware of the site, so on next
+            // daemon restart the site would vanish. This is the same order the
+            // /api/sites POST handler uses.
+            var created = await siteManager.CreateAsync(new NKS.WebDevConsole.Core.Models.SiteConfig
             {
                 Domain = "localhost",
                 DocumentRoot = docRoot,
                 PhpVersion = "8.5",
                 SslEnabled = false,
                 Enabled = true,
-            }, CancellationToken.None);
+            });
+            await siteOrch.ApplyAsync(created, CancellationToken.None);
         }
     }
     catch (Exception ex)
