@@ -814,6 +814,10 @@
     "next": "Další",
     "back": "Zpět",
     "finish": "Dokončit",
-    "createFirstSite": "Vytvořit první web"
+    "createFirstSite": "Vytvořit první web",
+    "createSampleSite": "Vytvořit ukázkový web localhost",
+    "sampleSiteOk": "Ukázkový web localhost byl vytvořen",
+    "sampleSiteWarn": "Ukázkový web možná nebyl vytvořen — zkontroluj stránku Weby",
+    "dontShowAgain": "Příště nezobrazovat"
   }
 }

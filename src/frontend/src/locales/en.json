@@ -814,6 +814,10 @@
     "next": "Next",
     "back": "Back",
     "finish": "Finish",
-    "createFirstSite": "Create first site"
+    "createFirstSite": "Create first site",
+    "createSampleSite": "Create sample localhost site",
+    "sampleSiteOk": "Sample localhost site created",
+    "sampleSiteWarn": "Sample site may not have been created — check Sites page",
+    "dontShowAgain": "Don't show again"
   }
 }
