@@ -74,12 +74,15 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  # Notarize via App Store Connect API key (no app-specific password
-  # needed — notarytool accepts .p8 directly). electron-builder pulls
-  # APPLE_API_KEY (path) + APPLE_API_KEY_ID + APPLE_API_ISSUER from env;
-  # build.yml writes the key file from APPLE_API_KEY_B64 secret before
-  # running dist:mac.
-  notarize: true
+  # Notarization disabled for now — Apple notary backend was saturated
+  # during v0.2.15/v0.2.16 attempts (notarytool --wait hung 60+ min on
+  # each run, both cancelled at job timeout). Signing alone is what
+  # unlocks Touch ID in osascript admin dialogs, which was the main
+  # goal. Notarization (Gatekeeper bypass on other Macs) is a
+  # nice-to-have we can flip back on when Apple's queue recovers.
+  # Flip to `notarize: true` when ready; secrets APPLE_API_KEY_ID +
+  # APPLE_API_ISSUER + APPLE_API_KEY_B64 are already set in the repo.
+  notarize: false
 
 linux:
   target:
