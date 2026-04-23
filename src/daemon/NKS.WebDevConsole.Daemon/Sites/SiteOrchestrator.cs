@@ -213,18 +213,20 @@ public sealed class SiteOrchestrator
             }
         }
 
-        // 4. Hosts file — add domain + aliases to system hosts (requires elevation on Windows)
+        // 4. Hosts file — add domain + aliases to system hosts (requires elevation on Windows/macOS/Linux)
         try
         {
             var domains = new List<string> { site.Domain };
             if (site.Aliases is { Length: > 0 })
                 domains.AddRange(site.Aliases);
 
+            _logger.LogInformation("[hosts] site apply requesting {Count} entries for {Domain}: {List}",
+                domains.Count, site.Domain, string.Join(", ", domains));
             await UpdateHostsFileAsync(domains, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Hosts file update failed for {Domain} (may need admin elevation): {Error}",
+            _logger.LogWarning("[hosts] site apply failed for {Domain} (may need admin elevation): {Error}",
                 site.Domain, ex.Message);
         }
 
@@ -584,7 +586,7 @@ public sealed class SiteOrchestrator
             var existing = await File.ReadAllTextAsync(hostsPath, ct);
             if (AllDomainsAlreadyMapped(existing, allDomains))
             {
-                _logger.LogInformation("Hosts file already contains all {Count} managed domains — skipping UAC elevation", allDomains.Count);
+                _logger.LogInformation("[hosts] already contains all {Count} managed domains — skipping elevation", allDomains.Count);
                 return;
             }
         }
@@ -609,7 +611,29 @@ public sealed class SiteOrchestrator
 
         if (!OperatingSystem.IsWindows())
         {
-            await WriteHostsFileDirectAsync(hostsPath, allDomains, ct);
+            // macOS/Linux: try direct write first (works when daemon runs as root or
+            // /etc/hosts is unexpectedly world-writable). If blocked, escalate via
+            // osascript (macOS) or pkexec (Linux) so the user gets a single native
+            // TouchID / password prompt per site-save.
+            try
+            {
+                await WriteHostsFileDirectAsync(hostsPath, allDomains, ct);
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                _logger.LogInformation("[hosts] direct write to {Path} denied — requesting elevation prompt for /etc/hosts write", hostsPath);
+            }
+            catch (IOException ex) when (IsPermissionDenied(ex))
+            {
+                _logger.LogInformation("[hosts] direct write to {Path} failed with permission error — requesting elevation prompt", hostsPath);
+            }
+
+            var ok = await WriteHostsFileWithElevationAsync(hostsPath, allDomains, ct);
+            if (ok)
+                _logger.LogInformation("[hosts] wrote {Count} entries via elevation: {List}", allDomains.Count, string.Join(", ", allDomains));
+            else
+                _logger.LogWarning("[hosts] elevation declined or failed — hosts file NOT updated. Sites will not resolve until the user runs NKS WDC with sudo or re-approves the prompt.");
             return;
         }
 
@@ -788,7 +812,142 @@ ipconfig /flushdns | Out-Null
         await File.WriteAllTextAsync(hostsPath, newContent, Encoding.ASCII, ct);
         await FlushDnsCacheAsync(ct);
 
-        _logger.LogInformation("Hosts file updated directly at {HostsPath} with {Count} domains", hostsPath, allDomains.Count);
+        _logger.LogInformation("[hosts] wrote {Count} entries directly to {Path}: {List}",
+            allDomains.Count, hostsPath, string.Join(", ", allDomains));
+    }
+
+    /// <summary>
+    /// Writes the hosts file via a native elevation prompt on macOS (osascript's
+    /// <c>with administrator privileges</c> TouchID/password dialog) or Linux
+    /// (pkexec on desktop sessions). Uses <see cref="ProcessStartInfo.ArgumentList"/>
+    /// so tmp/dest paths are passed as discrete args and never interpolated into
+    /// a shell string — avoids the double-quote-escaping fragility that bit the
+    /// previous plugin helper. Returns true when the user approved and the copy
+    /// succeeded, false on cancel/failure.
+    /// </summary>
+    private async Task<bool> WriteHostsFileWithElevationAsync(string hostsPath, HashSet<string> allDomains, CancellationToken ct)
+    {
+        string tmp = Path.Combine(Path.GetTempPath(), $"nks-wdc-hosts.{Guid.NewGuid():N}");
+        try
+        {
+            string existing;
+            try { existing = await File.ReadAllTextAsync(hostsPath, ct); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("[hosts] cannot read existing hosts file {Path}: {Err}", hostsPath, ex.Message);
+                return false;
+            }
+
+            string newContent;
+            try { newContent = RewriteManagedHostsContent(existing, allDomains); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[hosts] refusing to write — safety check on managed-block rewrite failed");
+                return false;
+            }
+
+            await File.WriteAllTextAsync(tmp, newContent, Encoding.ASCII, ct);
+
+            if (OperatingSystem.IsMacOS())
+            {
+                // osascript -e 'do shell script "/bin/cp <tmp> <dest>" with prompt "..." with administrator privileges'
+                // We build the AppleScript once in managed code (with the real paths quoted via
+                // AppleScript's own 'quoted form of') and pass it as a SINGLE -e argument. Using
+                // ArgumentList means .NET emits one argv entry per item — no shell involved, no
+                // round of double-quote escaping, no risk of embedded spaces/quotes in the tmp
+                // path mangling the command.
+                var script =
+                    "do shell script \"/bin/cp \" & quoted form of \"" + EscapeForAppleScriptString(tmp) + "\" & \" \" & " +
+                    "quoted form of \"" + EscapeForAppleScriptString(hostsPath) + "\" " +
+                    "with prompt \"NKS WebDev Console needs permission to update " + EscapeForAppleScriptString(hostsPath) + ".\" " +
+                    "with administrator privileges";
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/usr/bin/osascript",
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                };
+                psi.ArgumentList.Add("-e");
+                psi.ArgumentList.Add(script);
+
+                _logger.LogInformation("[hosts] spawning osascript for TouchID/password prompt (tmp={Tmp})", tmp);
+                using var p = System.Diagnostics.Process.Start(psi);
+                if (p is null)
+                {
+                    _logger.LogWarning("[hosts] failed to spawn /usr/bin/osascript");
+                    return false;
+                }
+
+                await p.WaitForExitAsync(ct);
+                if (p.ExitCode != 0)
+                {
+                    var err = (await p.StandardError.ReadToEndAsync(ct)).Trim();
+                    // exit 1 + "User canceled." is the TouchID-cancel / password-dismiss path.
+                    if (err.Contains("User canceled", StringComparison.OrdinalIgnoreCase)
+                        || err.Contains("(-128)", StringComparison.Ordinal))
+                        _logger.LogWarning("[hosts] user cancelled the elevation prompt: {Err}", err);
+                    else
+                        _logger.LogWarning("[hosts] osascript elevation failed (exit={Code}): {Err}", p.ExitCode, err);
+                    return false;
+                }
+
+                await FlushDnsCacheAsync(ct);
+                return true;
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "pkexec",
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                };
+                psi.ArgumentList.Add("/bin/cp");
+                psi.ArgumentList.Add(tmp);
+                psi.ArgumentList.Add(hostsPath);
+
+                _logger.LogInformation("[hosts] spawning pkexec for desktop elevation (tmp={Tmp})", tmp);
+                using var p = System.Diagnostics.Process.Start(psi);
+                if (p is null) return false;
+                await p.WaitForExitAsync(ct);
+                if (p.ExitCode != 0)
+                {
+                    var err = (await p.StandardError.ReadToEndAsync(ct)).Trim();
+                    _logger.LogWarning("[hosts] pkexec elevation failed (exit={Code}): {Err}", p.ExitCode, err);
+                    return false;
+                }
+                await FlushDnsCacheAsync(ct);
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[hosts] elevation helper failed unexpectedly");
+            return false;
+        }
+        finally
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { /* best effort */ }
+        }
+    }
+
+    private static string EscapeForAppleScriptString(string value)
+    {
+        // AppleScript strings use backslash escapes for " and \ only.
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    private static bool IsPermissionDenied(IOException ex)
+    {
+        var m = ex.Message ?? string.Empty;
+        return m.Contains("Permission denied", StringComparison.OrdinalIgnoreCase)
+            || m.Contains("Access is denied", StringComparison.OrdinalIgnoreCase)
+            || m.Contains("operation not permitted", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
