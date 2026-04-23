@@ -110,6 +110,25 @@ public sealed class BinaryDownloader
                 : guessedName;
             var dest = Path.Combine(destinationDir, canonical);
             await Task.Run(() => File.Copy(archivePath, dest, overwrite: true), ct);
+            // Bare-binary downloads arrive from GitHub as 0644 — no executable
+            // bit. Without this the `chmod +x` step every user would otherwise
+            // need to do manually, mkcert / cloudflared etc. fail with
+            // EACCES the first time the plugin tries to run them. Tar/zip
+            // extractors already honour in-archive mode bits; this path had
+            // nothing to copy the bit from, so set it explicitly.
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    var current = File.GetUnixFileMode(dest);
+                    File.SetUnixFileMode(dest,
+                        current | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Could not set executable bit on {Path}", dest);
+                }
+            }
             return destinationDir;
         }
 

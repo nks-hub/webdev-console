@@ -210,6 +210,25 @@ builder.Services.AddSingleton(database);
 var migrationRunner = new MigrationRunner(earlyLoggerFactory.CreateLogger<MigrationRunner>());
 migrationRunner.Run(database.ConnectionString);
 
+// Port probing: 5000 is ASP.NET's default but macOS Sequoia's AirPlay
+// Receiver (ControlCenter) squats on it with SO_REUSEADDR so the daemon
+// can't bind. Try 5000–5019 and use whichever is free. Electron reads
+// the actual port from the tmp port file so it reconnects correctly.
+int chosenPort = 5000;
+for (int p = 5000; p < 5020; p++)
+{
+    try
+    {
+        using var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, p);
+        probe.Start();
+        probe.Stop();
+        chosenPort = p;
+        break;
+    }
+    catch (System.Net.Sockets.SocketException) { /* try next */ }
+}
+builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}");
+
 var app = builder.Build();
 app.UseWebSockets();
 app.UseCors();
