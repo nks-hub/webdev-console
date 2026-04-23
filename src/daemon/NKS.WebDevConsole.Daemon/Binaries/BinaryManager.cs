@@ -305,37 +305,73 @@ public sealed class BinaryManager
     /// <summary>Best-effort resolution of the primary executable for each known app.</summary>
     private static string? ResolveExecutable(string app, string installDir)
     {
-        var (subdir, exe) = app.ToLowerInvariant() switch
+        // Binary layout is Windows-rooted (.exe names, bin/ subdir for some).
+        // On macOS/Linux the same tools ship the same bin/ layout but without
+        // the .exe suffix. Strip it at runtime so ListInstalled().Executable
+        // is non-null on Unix — /api/databases, the services UI, and the
+        // uninstall flow all consume it and treated null as "not installed".
+        // Some apps use different executable names per platform. MariaDB 12+
+        // renamed `mysqld` → `mariadbd`; mkcert ships a name-stamped binary
+        // (`mkcert-v1.4.4-darwin-arm64`). We keep the Windows name in the
+        // primary position and list alternatives in `alt`; the probe below
+        // tries them in order and accepts the first File.Exists hit.
+        var (subdir, exeWin, alt) = app.ToLowerInvariant() switch
         {
-            "apache" => ("bin", "httpd.exe"),
-            "php" => ("", "php.exe"),
-            "mysql" => ("bin", "mysqld.exe"),
-            "mariadb" => ("bin", "mysqld.exe"),
-            "nginx" => ("", "nginx.exe"),
-            "redis" => ("", "redis-server.exe"),
-            "postgresql" => ("bin", "postgres.exe"),
-            "mongodb" => ("bin", "mongod.exe"),
-            "memcached" => ("", "memcached.exe"),
-            "mailpit" => ("", "mailpit.exe"),
-            "caddy" => ("", "caddy.exe"),
-            "cloudflared" => ("", "cloudflared.exe"),
-            _ => ("", "")
+            "apache" => ("bin", "httpd.exe", new[] { "httpd" }),
+            "php" => ("", "php.exe", new[] { "php" }),
+            "mysql" => ("bin", "mysqld.exe", new[] { "mysqld" }),
+            // MariaDB 12+ renames mysqld → mariadbd but keeps mysqld as a
+            // backward-compat symlink on some distros, not on nks-hub's build.
+            "mariadb" => ("bin", "mysqld.exe", new[] { "mariadbd", "mysqld" }),
+            "nginx" => ("", "nginx.exe", new[] { "nginx" }),
+            "redis" => ("", "redis-server.exe", new[] { "redis-server" }),
+            "postgresql" => ("bin", "postgres.exe", new[] { "postgres" }),
+            "mongodb" => ("bin", "mongod.exe", new[] { "mongod" }),
+            "memcached" => ("", "memcached.exe", new[] { "memcached" }),
+            "mailpit" => ("", "mailpit.exe", new[] { "mailpit" }),
+            "caddy" => ("", "caddy.exe", new[] { "caddy" }),
+            "cloudflared" => ("", "cloudflared.exe", new[] { "cloudflared" }),
+            // mkcert ships as a bare file named mkcert-v<ver>-<os>-<arch>;
+            // we don't know the exact suffix so we glob at probe time.
+            "mkcert" => ("", "mkcert.exe", new[] { "mkcert" }),
+            _ => ("", "", Array.Empty<string>())
         };
 
-        if (string.IsNullOrEmpty(exe)) return null;
-        var path = Path.Combine(installDir, subdir, exe);
-        if (File.Exists(path)) return path;
+        if (string.IsNullOrEmpty(exeWin)) return null;
+        // Try Windows .exe, stripped Unix name, then each platform-specific
+        // alternative. On a given platform only one will exist, so the
+        // File.Exists probes are cheap. For mkcert: if the canonical name
+        // is absent, fall through to the mkcert-v*-darwin-arm64 glob below.
+        var exeUnix = System.IO.Path.GetFileNameWithoutExtension(exeWin);
+        var candidates = new List<string> { exeWin, exeUnix };
+        candidates.AddRange(alt);
 
-        // Some apps use a top-level subdirectory we couldn't flatten (e.g. nginx-1.29.8/nginx.exe)
-        // — best-effort search 1 level deep.
-        if (Directory.Exists(installDir))
+        // mkcert special case — glob the suffixed-binary pattern.
+        if (string.Equals(app, "mkcert", StringComparison.OrdinalIgnoreCase) &&
+            Directory.Exists(installDir))
         {
-            foreach (var sub in Directory.GetDirectories(installDir))
+            foreach (var f in Directory.EnumerateFiles(installDir, "mkcert-v*"))
             {
-                var alt = Path.Combine(sub, subdir, exe);
-                if (File.Exists(alt)) return alt;
-                var alt2 = Path.Combine(sub, exe);
-                if (File.Exists(alt2)) return alt2;
+                if (File.Exists(f)) return f;
+            }
+        }
+
+        foreach (var exe in candidates)
+        {
+            var path = Path.Combine(installDir, subdir, exe);
+            if (File.Exists(path)) return path;
+
+            // Some apps use a top-level subdirectory we couldn't flatten
+            // (e.g. nginx-1.29.8/nginx.exe) — best-effort search 1 level deep.
+            if (Directory.Exists(installDir))
+            {
+                foreach (var sub in Directory.GetDirectories(installDir))
+                {
+                    var nested = Path.Combine(sub, subdir, exe);
+                    if (File.Exists(nested)) return nested;
+                    var nestedTop = Path.Combine(sub, exe);
+                    if (File.Exists(nestedTop)) return nestedTop;
+                }
             }
         }
 

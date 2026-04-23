@@ -2529,7 +2529,7 @@ int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, Pl
         // Step 3: try port list with WDC root password via mysqladmin ping.
         var password = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
         var mysql = bm.ListInstalled("mysql").FirstOrDefault();
-        var mysqladmin = mysql?.Executable is null ? null : Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqladmin.exe");
+        var mysqladmin = mysql?.Executable is null ? null : Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysqladmin.exe" : "mysqladmin");
         if (!string.IsNullOrEmpty(password) && mysqladmin is not null && File.Exists(mysqladmin))
         {
             var candidatePorts = new[] { 3306, 3307, 3308, 3309 };
@@ -5495,9 +5495,11 @@ app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IS
     if (mysql?.Executable is null)
         return Results.Ok(new { error = "MySQL not installed", databases = Array.Empty<string>() });
 
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    // mysqld lives next to the `mysql` client; name differs by OS.
+    var cliName = OperatingSystem.IsWindows() ? "mysql.exe" : "mysql";
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, cliName);
     if (!File.Exists(mysqlCli))
-        return Results.Ok(new { error = "mysql.exe not found", databases = Array.Empty<string>() });
+        return Results.Ok(new { error = $"{cliName} not found", databases = Array.Empty<string>() });
 
     try
     {
@@ -5946,7 +5948,7 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, Settings
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
 
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
     var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-e");
     args.Add($"CREATE DATABASE IF NOT EXISTS `{dbName}`");
@@ -5977,7 +5979,7 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, Set
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
 
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
     var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-e");
     args.Add($"DROP DATABASE IF EXISTS `{name}`");
@@ -6006,7 +6008,7 @@ app.MapGet("/api/databases/{name}/tables", async (string name, BinaryManager bm,
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
     var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-N");
     args.Add("-e");
@@ -6044,7 +6046,7 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, S
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
     var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add("-N");
     args.Add("-e");
@@ -6078,7 +6080,7 @@ app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, 
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
     var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
     args.Add(name);
     args.Add("-e");
@@ -6122,7 +6124,7 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm,
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
-    var mysqldump = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysqldump.exe");
+    var mysqldump = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysqldump.exe" : "mysqldump");
     if (!File.Exists(mysqldump))
         return Results.BadRequest(new { error = "mysqldump.exe not found" });
     var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
@@ -6152,7 +6154,7 @@ app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx,
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });
-    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, "mysql.exe");
+    var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
 
     // Read uploaded SQL file or raw body
     string sql;
