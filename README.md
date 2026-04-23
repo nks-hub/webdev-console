@@ -7,7 +7,7 @@ PHP, MySQL/MariaDB, SSL, mail catching, Redis, Node, Cloudflare tunnels and DNS
 for `.local` / `.test` domains. Replacement for MAMP PRO, XAMPP, WampServer,
 Laragon and similar tools.
 
-> **Status:** v0.2.0 — actively developed. Most features are working; some
+> **Status:** v0.2.3 — actively developed. Most features are working; some
 > Phase 11 items (Nginx plugin, PostgreSQL plugin, RBAC, Docker Compose support)
 > are still on the roadmap.
 
@@ -267,7 +267,7 @@ Tagged builds are uploaded as a GitHub Release via
 To cut a release:
 
 ```bash
-git tag v0.2.0
+git tag v0.2.3
 git push --tags
 # → GitHub Actions builds all three platforms, uploads to Releases
 ```
