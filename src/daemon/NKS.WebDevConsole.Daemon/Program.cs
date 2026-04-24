@@ -625,14 +625,18 @@ app.MapPost("/api/admin/restart", () =>
 // POST /api/admin/reset?scope=settings|factory — destructive reset.
 //   scope=settings → wipes only the `settings` table (ports, paths, catalog
 //     URL, autoStart flags, sync tokens). Sites/databases/binaries are kept.
-//   scope=factory  → also truncates `sites`, `databases`, `plugins` tables
-//     so the app comes up as a fresh install. Does NOT delete
-//     ~/.wdc/binaries or ~/.wdc/sites filesystem contents — user can still
-//     restore sites manually from disk if needed. Binary caches stay so a
-//     reinstall isn't forced to re-download ~1GB of Apache/PHP/MySQL.
-// After truncation the daemon exits with code 99 (restart signal) so
-// Electron respawns a fresh process with an empty DB.
-app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, string? scope) =>
+//   scope=factory  → TRUE factory reset. Stops every service (Apache, MySQL,
+//     MariaDB, PHP-FPM, Redis, …), signals Electron that WDC_DATA_DIR and
+//     the renderer's Electron userData (localStorage with accountToken,
+//     cookies, caches) must be wiped before the next spawn. Daemon exits
+//     with special code 98 — Electron's daemon.on('exit') handler
+//     recognises 98 as "wipe ~/.wdc/ then respawn". On next boot the
+//     app comes up exactly like a fresh install: no sites, no databases,
+//     no binaries, no signed-in account. Previous scope=factory kept
+//     ~/.wdc/binaries/ (1 GB Apache/PHP/MySQL) + ~/.wdc/data/{mysql,mariadb}/
+//     which was a UX footgun — user clicked "Factory reset" and saw their
+//     data / credentials / installed PHP versions still there.
+app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, SiteManager siteManager, SiteOrchestrator orchestrator, string? scope) =>
 {
     // Scope is mandatory — missing param used to default to "settings" and
     // that was a footgun (blank curl call silently wiped the DB). Force the
@@ -643,36 +647,83 @@ app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, string? sco
     if (effectiveScope != "settings" && effectiveScope != "factory")
         return Results.BadRequest(new { error = "scope must be 'settings' or 'factory'" });
 
+    var resetLogger = ctx.RequestServices.GetRequiredService<ILogger<Program>>();
+
+    if (effectiveScope == "factory")
+    {
+        // Delete every site from SiteManager FIRST (wipes TOML files on
+        // disk) so the following UpdateHostsBlockAsync call collects an
+        // empty domain set and actually clears the /etc/hosts managed
+        // block. Before this ordering fix the hosts call collected the
+        // still-loaded sites from SiteManager and kept the block intact.
+        var domainsToDelete = siteManager.Sites.Keys.ToList();
+        foreach (var d in domainsToDelete)
+        {
+            try { siteManager.Delete(d); }
+            catch (Exception ex) { resetLogger.LogWarning(ex, "[factory-reset] site {Domain} delete failed", d); }
+        }
+
+        // Strip the managed /etc/hosts block BEFORE stopping services —
+        // this needs elevation (osascript admin / pkexec / UAC) and the
+        // dialog is easier to reason about while the UI is still live.
+        // Without this, a user's `/etc/hosts` keeps `127.0.0.1 myapp.loc`
+        // entries pointing at a server that no longer exists after reset.
+        try
+        {
+            await orchestrator.UpdateHostsBlockAsync(Array.Empty<string>(), ctx.RequestAborted);
+            resetLogger.LogInformation("[factory-reset] /etc/hosts managed block cleared");
+        }
+        catch (Exception ex)
+        {
+            resetLogger.LogWarning(ex, "[factory-reset] hosts block cleanup failed — user may need to manually remove the # BEGIN NKS WebDev Console block");
+        }
+
+        // Stop every service module BEFORE we nuke the data dir — otherwise
+        // mariadbd / mysqld / httpd / redis-server keep open file handles
+        // inside ~/.wdc/data/, causing either undeletable files on macOS/
+        // Linux or partial wipe leaving corrupted pid/lock files that poison
+        // the next boot. 5 s cooperative cancellation per module — any that
+        // hang past that get orphaned and will be SIGKILLed when daemon
+        // exits.
+        var modules = ctx.RequestServices.GetServices<IServiceModule>().ToArray();
+        foreach (var mod in modules)
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await mod.StopAsync(cts.Token);
+                resetLogger.LogInformation("[factory-reset] {Service} stopped", mod.ServiceId);
+            }
+            catch (Exception ex)
+            {
+                resetLogger.LogWarning(ex, "[factory-reset] {Service} stop failed — continuing", mod.ServiceId);
+            }
+        }
+    }
+
     try
     {
         using var conn = db.CreateConnection();
         conn.Open();
         using var tx = conn.BeginTransaction();
-        // Always wipe settings — it's the smaller of the two scopes and
-        // factory includes it. Also wipes config_history audit rows the
-        // settings table triggers would otherwise leave dangling.
         await conn.ExecuteAsync("DELETE FROM settings", transaction: tx);
         await conn.ExecuteAsync("DELETE FROM config_history WHERE entity_type = 'setting'", transaction: tx);
-        if (effectiveScope == "factory")
-        {
-            // Don't drop tables — just truncate rows. Schema stays intact so
-            // migrations don't re-run on the respawned daemon.
-            foreach (var t in new[] { "sites", "databases", "plugins", "services",
-                                      "metrics_history", "certificates", "php_versions" })
-            {
-                try { await conn.ExecuteAsync($"DELETE FROM {t}", transaction: tx); }
-                catch { /* Table may not exist on older schemas — best-effort. */ }
-            }
-        }
         tx.Commit();
+        conn.Close();  // Release SQLite handle so the file can be unlinked below.
     }
     catch (Exception ex)
     {
         return Results.Problem($"Reset failed: {ex.Message}");
     }
 
-    // Restart via exit-99 so Electron respawns with the empty DB. Same
-    // path the existing /api/admin/restart uses.
+    // For scope=factory we rely on Electron to rm -rf ~/.wdc/ after the
+    // daemon exits with code 98. The daemon can't delete its OWN running
+    // directory reliably (Mach-O binary mmapped on macOS, OS file locks
+    // on Windows), so we signal the parent and let Electron do the nuke
+    // between daemon invocations. See src/frontend/electron/main.ts
+    // `daemon.on('exit', code => ...)` — code 98 branch.
+    var exitCode = effectiveScope == "factory" ? 98 : 99;
+
     _ = Task.Run(async () =>
     {
         await Task.Delay(300);
@@ -682,9 +733,9 @@ app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, string? sco
             if (File.Exists(pf)) File.Delete(pf);
         }
         catch { }
-        Environment.Exit(99);
+        Environment.Exit(exitCode);
     });
-    return Results.Ok(new { scope = effectiveScope, restarting = true });
+    return Results.Ok(new { scope = effectiveScope, restarting = true, exitCode });
 });
 
 // Auth middleware for /api/* requests.

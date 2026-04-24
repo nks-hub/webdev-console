@@ -96,4 +96,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('sso-callback', listener)
     return () => ipcRenderer.removeListener('sso-callback', listener)
   },
+
+  // Hard-reload the renderer from the main process. `window.location.reload()`
+  // is unreliable in Electron apps served from the `app://` scheme —
+  // sometimes it keeps the existing Pinia store instances alive + bypasses
+  // router cleanup. Going through webContents.reloadIgnoringCache() forces
+  // a fresh page load that wipes every in-memory state. Used after a
+  // factory / settings reset so the UI actually reflects the empty DB.
+  restartRenderer: () => ipcRenderer.invoke('restart-renderer'),
 })

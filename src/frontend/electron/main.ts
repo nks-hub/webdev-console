@@ -2,8 +2,8 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, n
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs'
-import { tmpdir } from 'os'
+import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync } from 'fs'
+import { tmpdir, homedir } from 'os'
 import http from 'http'
 import * as Sentry from '@sentry/electron/main'
 
@@ -325,6 +325,20 @@ async function spawnDaemon() {
       // Short delay to let the port file disappear so the new daemon can
       // claim a fresh one cleanly.
       setTimeout(() => { void spawnDaemon() }, 400)
+    }
+    // Exit 98 = TRUE factory reset. Daemon has stopped all services and
+    // wiped the DB before exiting. Electron must now nuke every piece of
+    // persistent state — ~/.wdc/, Electron userData (localStorage token,
+    // cookies, caches), macOS plist, PHP shim symlinks — before spawning
+    // a fresh daemon. The daemon can't do this itself because it can't
+    // delete its own running binary + its open SQLite handle. Cross-
+    // platform: paths resolved via os.homedir() + app.getPath('userData')
+    // so the same codepath works on Win/macOS/Linux.
+    if (code === 98 && !isQuitting) {
+      console.log('[daemon] FACTORY RESET signal (exit 98) — wiping all state')
+      void performFactoryWipe().finally(() => {
+        setTimeout(() => { void spawnDaemon() }, 500)
+      })
     }
   })
 
@@ -796,6 +810,164 @@ app.on('before-quit', async (event) => {
  * tray-Quit only called `daemon?.kill()` which did nothing on an adopted
  * daemon, leaving a .NET process running after the user explicitly quit.
  */
+/**
+ * True factory reset — wipe every piece of WDC state the user accumulated.
+ * Runs between a daemon exit(98) and the next spawnDaemon(). Cross-platform:
+ * the same function resolves the right paths on Win/macOS/Linux via
+ * os.homedir() + app.getPath('userData'). What we nuke, and why:
+ *
+ * 1. **~/.wdc/** (daemon data root — same path on all three OSes unless the
+ *    user set WDC_DATA_DIR) — state.db, sites/, binaries/, ssl/, logs/,
+ *    generated/, plugins/, backups/, cloudflare/. Without this the daemon
+ *    re-reads site TOMLs on next boot and "factory reset did nothing".
+ *
+ * 2. **Electron userData** (`app.getPath('userData')`) — Local Storage
+ *    levelDB where authStore stashes `nks-wdc-sso-token` (user reported
+ *    "stayed logged in" after reset). Also Cookies, Cache, Preferences,
+ *    Session Storage, window-state.json. Crashpad dir is preserved so
+ *    diagnostics survive the wipe.
+ *
+ * 3. **macOS plist** `~/Library/Preferences/com.nks-hub.webdev-console.plist`
+ *    — Sparkle auto-update state, SUUpdateGroupIdentifier, window frames.
+ *    Windows / Linux don't have an equivalent outside Electron userData
+ *    which #2 already handles.
+ *
+ * 4. **PHP CLI shim symlinks** in `~/.local/bin/php<MM>` (macOS+Linux) —
+ *    we created these; they point into the app bundle and would dangle
+ *    after uninstall. Only delete ones whose `realpath` lands inside our
+ *    managed shim dir so we don't clobber user-owned `php85` symlinks.
+ *
+ * 5. **Temp port file** — `$TMPDIR/nks-wdc-daemon.port` so the next spawn
+ *    doesn't briefly reuse stale port + auth.
+ *
+ * We deliberately DO NOT touch:
+ *   • mkcert's root CA (~/Library/Application Support/mkcert, etc.) — it's
+ *     shared with other dev tools and re-installing it requires admin.
+ *   • Windows/macOS Keychain entries — we don't write any from the daemon.
+ *     (catalog SSO token is only in Electron userData, #2.)
+ */
+async function performFactoryWipe() {
+  function safeRm(path: string, label: string) {
+    try {
+      if (existsSync(path)) {
+        rmSync(path, { recursive: true, force: true })
+        console.log(`[factory-reset] wiped ${label}: ${path}`)
+      }
+    } catch (err) {
+      console.warn(`[factory-reset] could not wipe ${label}:`, err)
+    }
+  }
+
+  // 1. Daemon data root — WDC_DATA_DIR takes precedence (portable mode),
+  //    else default ~/.wdc which works the same on Win/macOS/Linux.
+  const wdcRoot = process.env.WDC_DATA_DIR || join(homedir(), '.wdc')
+  safeRm(wdcRoot, 'daemon data root')
+
+  // 2. Electron userData — wipe the whole dir so the `@nks-hub/` parent
+  //    wrapper also goes (user complained "v application support je stale
+  //    @nks-hub"). We nuke the parent one level up, which gets @nks-hub/
+  //    AND any sibling WDC-related trees Electron might have created.
+  //    Crashpad sat under userData/ before — Electron auto-recreates it
+  //    on next launch, so preserving it across a factory reset isn't
+  //    worth keeping a partial artifact lying around.
+  try {
+    const userData = app.getPath('userData')           // .../Application Support/@nks-hub/webdev-console
+    safeRm(userData, 'Electron userData')
+    // Also nuke the @nks-hub parent wrapper if it's now empty so the user
+    // doesn't see a stray `@nks-hub/` folder in Application Support. We
+    // resolve the parent dynamically — on macOS it's the @org wrapper;
+    // on Win/Linux the userData path convention has no such wrapper so
+    // the unlink becomes a harmless no-op.
+    const parent = join(userData, '..')
+    try {
+      if (existsSync(parent) && readdirSync(parent).length === 0) {
+        safeRm(parent, 'Electron userData parent (@nks-hub)')
+      }
+    } catch { /* harmless */ }
+  } catch (err) {
+    console.warn('[factory-reset] userData wipe failed:', err)
+  }
+
+  // 3. Platform-specific prefs & caches.
+  if (process.platform === 'darwin') {
+    const bundleId = 'com.nks-hub.webdev-console'
+    const lib = join(homedir(), 'Library')
+    safeRm(join(lib, 'Preferences', `${bundleId}.plist`),                 'macOS plist (Preferences)')
+    safeRm(join(lib, 'Caches', bundleId),                                 'macOS Caches')
+    safeRm(join(lib, 'WebKit', bundleId),                                 'macOS WebKit data')
+    safeRm(join(lib, 'Saved Application State', `${bundleId}.savedState`),'macOS Saved Application State')
+    safeRm(join(lib, 'HTTPStorages', `${bundleId}.binarycookies`),        'macOS HTTPStorages cookies')
+    // ByHost per-machine plists (UUID-prefixed) — enumerate + delete any
+    // that match our bundle id.
+    try {
+      const byHost = join(lib, 'Preferences', 'ByHost')
+      if (existsSync(byHost)) {
+        for (const name of readdirSync(byHost)) {
+          if (name.startsWith(bundleId)) {
+            safeRm(join(byHost, name), `macOS ByHost/${name}`)
+          }
+        }
+      }
+    } catch { /* harmless */ }
+    // Defaults domain (in case something slipped past the plist delete
+    // — `defaults delete` clears the in-memory registered copy too).
+    try {
+      const { spawnSync } = require('child_process') as typeof import('child_process')
+      spawnSync('defaults', ['delete', bundleId], { stdio: 'ignore' })
+      console.log(`[factory-reset] defaults domain ${bundleId} cleared`)
+    } catch { /* harmless */ }
+  } else if (process.platform === 'linux') {
+    // Linux Electron userData is under ~/.config/@nks-hub/webdev-console,
+    // already covered by step 2. Additionally clean the cache dir Electron
+    // writes at ~/.cache/@nks-hub/webdev-console/.
+    const xdgCache = process.env.XDG_CACHE_HOME || join(homedir(), '.cache')
+    safeRm(join(xdgCache, '@nks-hub', 'webdev-console'), 'Linux XDG cache')
+    safeRm(join(xdgCache, '@nks-hub'),                   'Linux XDG cache parent')
+  }
+  // Windows: Electron's userData already covers %APPDATA%\@nks-hub\webdev-console.
+  // %LOCALAPPDATA% also has a copy for cache/GPU data — wipe that too.
+  else if (process.platform === 'win32') {
+    const local = process.env.LOCALAPPDATA
+    if (local) {
+      safeRm(join(local, '@nks-hub', 'webdev-console'), 'Windows LocalAppData')
+      safeRm(join(local, '@nks-hub'),                   'Windows LocalAppData parent')
+    }
+  }
+
+  // 4. PHP CLI shim symlinks from our managed shim dir (~/.local/bin on Unix).
+  if (process.platform !== 'win32') {
+    const localBin = join(homedir(), '.local', 'bin')
+    if (existsSync(localBin)) {
+      for (const name of readdirSync(localBin)) {
+        if (!/^php\d+$/.test(name)) continue
+        const linkPath = join(localBin, name)
+        try {
+          const st = lstatSync(linkPath)
+          if (!st.isSymbolicLink()) continue
+          const target = readlinkSync(linkPath)
+          // Only remove symlinks we made — target must reference our app
+          // bundle or the dev-build daemon/bin path. Don't clobber an
+          // unrelated user-owned phpXX alias.
+          if (target.includes('NKS WebDev Console') || target.includes('NKS.WebDevConsole') || target.includes('/.wdc/')) {
+            unlinkSync(linkPath)
+            console.log(`[factory-reset] removed shim symlink: ${linkPath}`)
+          }
+        } catch { /* not readable — skip */ }
+      }
+    }
+  }
+
+  // 5. Temp port file.
+  try { if (existsSync(PORT_FILE)) unlinkSync(PORT_FILE) } catch { /* harmless */ }
+
+  // Tell the renderer its session is done — blank it so the user sees a
+  // fresh boot, not lingering Pinia state pointing at the dead daemon.
+  try {
+    const w = BrowserWindow.getAllWindows()[0]
+    if (w) w.webContents.reloadIgnoringCache()
+  } catch { /* window may have already closed */ }
+}
+
 async function shutdownDaemon() {
   try { await daemonPost('/api/admin/shutdown') } catch { /* already dead or unreachable */ }
   try { daemon?.kill() } catch { /* already dead */ }
@@ -940,6 +1112,28 @@ ipcMain.handle('reveal-in-folder', async (_evt, targetPath: string) => {
     shell.showItemInFolder(targetPath)
     return true
   } catch {
+    return false
+  }
+})
+
+// Hard-reload the renderer from the main process. `window.location.reload()`
+// called inside the renderer under the `app://` scheme was leaving Pinia
+// stores intact — users clicked Factory Reset, daemon wiped the DB, toast
+// flashed, but the UI kept the stale sites/settings/etc. webContents
+// reload bypasses the cached module state and gives the component tree
+// a fresh boot, which is what the user expects from a "reset + restart"
+// action.
+ipcMain.handle('restart-renderer', async (_evt) => {
+  try {
+    const w = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+    if (!w) return false
+    // reloadIgnoringCache so the asar-packed index.html + bundled JS
+    // definitely re-evaluates (shouldn't ever be cached from a local
+    // protocol, but guarantees a fresh module graph just in case).
+    w.webContents.reloadIgnoringCache()
+    return true
+  } catch (err) {
+    console.error('[restart-renderer] failed:', err)
     return false
   }
 })

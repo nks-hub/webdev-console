@@ -55,5 +55,10 @@ interface Window {
     ) => () => void
     /** Reveal file/directory in the native file manager. */
     revealInFolder: (targetPath: string) => Promise<boolean>
+    /** Main-process hard reload of the renderer (webContents.reloadIgnoringCache).
+     * Use this after destructive DB operations instead of
+     * `window.location.reload()` — the renderer-initiated reload under the
+     * `app://` scheme can keep Pinia stores alive, leaving stale view state. */
+    restartRenderer: () => Promise<boolean>
   }
 }

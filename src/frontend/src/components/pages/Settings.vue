@@ -1217,6 +1217,37 @@ function downloadBackupFile(path: string) {
 const resettingSettings = ref(false)
 const resettingFactory = ref(false)
 
+// Shared reset runner: POST the scope, surface HTTP/JSON errors clearly,
+// then force a full window reload once the daemon-respawn has had time to
+// pick a fresh port. Without the reload the user stays on a stale view —
+// sites list still shows cached rows, toast flashes briefly, "vůbec nic
+// neudělalo" impression. 3.5 s is the upper bound of our observed
+// exit-99 → port-file → `/healthz` bounce window.
+async function doReset(scope: 'settings' | 'factory', label: string): Promise<boolean> {
+  const url = `${daemonBaseUrl()}/api/admin/reset?scope=${scope}`
+  const r = await fetch(url, { method: 'POST', headers: authHeaders() })
+  if (!r.ok) {
+    const body = await r.text().catch(() => '')
+    throw new Error(`HTTP ${r.status} — ${body || 'daemon returned no body'}`)
+  }
+  ElMessage.success({
+    message: `${label} hotov. Daemon se restartuje a aplikace se znovu načte…`,
+    duration: 3500,
+  })
+  // Give the daemon time to exit-99 → Electron respawn → port file → /healthz,
+  // then ask the main process to force-reload the renderer. Main-side
+  // reloadIgnoringCache bypasses cases where `window.location.reload()` in
+  // the `app://` scheme kept Pinia state alive and the UI stayed stale
+  // (user reported "sees same sites after reset" even with Ctrl+R).
+  await new Promise(resolve => setTimeout(resolve, 3500))
+  if (window.electronAPI?.restartRenderer) {
+    await window.electronAPI.restartRenderer()
+  } else {
+    window.location.reload()
+  }
+  return true
+}
+
 async function confirmResetSettings() {
   try {
     await ElMessageBox.confirm(
@@ -1228,13 +1259,7 @@ async function confirmResetSettings() {
   } catch { return }
   resettingSettings.value = true
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/admin/reset?scope=settings`, {
-      method: 'POST', headers: authHeaders(),
-    })
-    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
-    ElMessage.success('Nastavení smazáno. Daemon se restartuje…')
-    // Daemon exits with code 99 → Electron main respawns. Token in
-    // localStorage survives but will be stale until next login.
+    await doReset('settings', 'Reset nastavení')
   } catch (e) {
     ElMessage.error(`Reset selhal: ${errorMessage(e)}`)
   } finally {
@@ -1254,11 +1279,7 @@ async function confirmFactoryReset() {
   } catch { return }
   resettingFactory.value = true
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/admin/reset?scope=factory`, {
-      method: 'POST', headers: authHeaders(),
-    })
-    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
-    ElMessage.success('Factory reset proveden. Daemon se restartuje…')
+    await doReset('factory', 'Tovární reset')
   } catch (e) {
     ElMessage.error(`Reset selhal: ${errorMessage(e)}`)
   } finally {

@@ -774,7 +774,18 @@ ipconfig /flushdns | Out-Null
     /// </summary>
     private static bool AllDomainsAlreadyMapped(string hostsContent, HashSet<string> requiredDomains)
     {
-        if (requiredDomains.Count == 0) return true;
+        if (requiredDomains.Count == 0)
+        {
+            // Clear-the-block request: return true (skip write) only when
+            // the managed block is *already* gone. If the block is still
+            // present with stale entries, we MUST proceed to the elevated
+            // write to strip them. Previously `Count == 0` always early-
+            // exited, so factory reset never actually removed the managed
+            // block from /etc/hosts — user saw `# BEGIN NKS WebDev…`
+            // plus their old site domains still mapped to 127.0.0.1 after
+            // what was supposed to be a full reset.
+            return !hostsContent.Contains(HostsBlockBegin);
+        }
 
         var mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rawLine in hostsContent.Split('\n'))
