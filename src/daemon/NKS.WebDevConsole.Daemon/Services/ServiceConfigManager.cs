@@ -87,20 +87,25 @@ public sealed class ServiceConfigManager
             return files;
         }
 
-        if (serviceId.Equals("mysql", StringComparison.OrdinalIgnoreCase))
+        // MySQL and MariaDB each keep their own `data/<engine>/my.ini`
+        // plus optional binary-adjacent `my.ini`/`my.cnf`. Historically the
+        // two shared the same path because MariaDB is a drop-in MySQL
+        // replacement, but with the v1.0.6 MySQL plugin defaulting to port
+        // 3307 (MariaDB stays on 3306) they run side-by-side with DIFFERENT
+        // configs, so each needs its own engine-specific directory.
+        if (serviceId.Equals("mysql", StringComparison.OrdinalIgnoreCase)
+            || serviceId.Equals("mariadb", StringComparison.OrdinalIgnoreCase))
         {
-            // WDC-provisioned MySQL keeps its my.ini either under the data dir
-            // (when initialised with an explicit --defaults-file) or next to
-            // the binary (classic MySQL layout). Look at both so the editor
-            // always finds it, whichever flavour was installed.
+            var engineDir = serviceId.ToLowerInvariant();
             var candidates = new List<string>
             {
-                Path.Combine(_wdcRoot, "data", "mysql", "my.ini"),
+                Path.Combine(_wdcRoot, "data", engineDir, "my.ini"),
+                Path.Combine(_wdcRoot, "data", engineDir, "my.cnf"),
             };
-            var mysqlBinRoot = Path.Combine(_wdcRoot, "binaries", "mysql");
-            if (Directory.Exists(mysqlBinRoot))
+            var binRoot = Path.Combine(_wdcRoot, "binaries", engineDir);
+            if (Directory.Exists(binRoot))
             {
-                foreach (var versionDir in Directory.GetDirectories(mysqlBinRoot)
+                foreach (var versionDir in Directory.GetDirectories(binRoot)
                              .OrderByDescending(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
                 {
                     candidates.Add(Path.Combine(versionDir, "my.ini"));
@@ -247,15 +252,20 @@ public sealed class ServiceConfigManager
             yield break;
         }
 
-        if (serviceId.Equals("mysql", StringComparison.OrdinalIgnoreCase))
+        if (serviceId.Equals("mysql", StringComparison.OrdinalIgnoreCase)
+            || serviceId.Equals("mariadb", StringComparison.OrdinalIgnoreCase))
         {
-            var dataMyIni = Path.Combine(_wdcRoot, "data", "mysql", "my.ini");
+            var engineDir = serviceId.ToLowerInvariant();
+            var dataMyIni = Path.Combine(_wdcRoot, "data", engineDir, "my.ini");
             if (File.Exists(dataMyIni))
                 yield return Path.GetFullPath(dataMyIni);
-            var mysqlBinRoot = Path.Combine(_wdcRoot, "binaries", "mysql");
-            if (Directory.Exists(mysqlBinRoot))
+            var dataMyCnf = Path.Combine(_wdcRoot, "data", engineDir, "my.cnf");
+            if (File.Exists(dataMyCnf))
+                yield return Path.GetFullPath(dataMyCnf);
+            var binRoot = Path.Combine(_wdcRoot, "binaries", engineDir);
+            if (Directory.Exists(binRoot))
             {
-                foreach (var versionDir in Directory.GetDirectories(mysqlBinRoot))
+                foreach (var versionDir in Directory.GetDirectories(binRoot))
                 {
                     foreach (var name in new[] { "my.ini", "my.cnf" })
                     {
@@ -318,7 +328,11 @@ public sealed class ServiceConfigManager
         serviceId.ToLowerInvariant() switch
         {
             "httpd" => "apache",
-            "mariadb" => "mysql",
+            // NOTE: mariadb was previously aliased to mysql here because the
+            // two shared the same my.ini. Removed when the MySQL plugin
+            // started defaulting to port 3307 — each now keeps a separate
+            // data/<engine>/my.ini, so aliasing made /api/services/mariadb/
+            // config return MySQL's config in the UI.
             _ => serviceId,
         };
 }
