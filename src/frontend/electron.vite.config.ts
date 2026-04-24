@@ -21,7 +21,14 @@ export default defineConfig({
     // handles this via app.asar.unpacked, but our hot-swap install
     // flow doesn't run through electron-builder.
     plugins: [externalizeDepsPlugin({
-      exclude: ['@sentry/electron', '@sentry/core', '@sentry/utils', '@sentry/types', '@sentry/node'],
+      // Every dep in this list gets bundled INTO dist-electron/main.js
+      // instead of staying as a node_require('<pkg>'). Our packaged app
+      // ships as an asar blob without node_modules (hot-swap install
+      // flow skips electron-builder's app.asar.unpacked mechanism), so
+      // an externalized dep throws `Cannot find module` at first load.
+      // @sentry/* — exception reporting; electron-log — file logs with
+      // rotation.
+      exclude: ['@sentry/electron', '@sentry/core', '@sentry/utils', '@sentry/types', '@sentry/node', 'electron-log'],
     })],
     build: {
       outDir: 'dist-electron',

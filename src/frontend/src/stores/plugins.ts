@@ -69,14 +69,23 @@ export const usePluginsStore = defineStore('plugins', () => {
   async function toggleEnable(id: string) {
     const plugin = manifests.value.find(p => p.id === id)
     if (!plugin) return
+    const nextEnabled = !plugin.enabled
     if (plugin.enabled) {
       await disablePlugin(id)
-      plugin.enabled = false
     } else {
       await enablePlugin(id)
-      plugin.enabled = true
       const ui = await fetchPluginUi(id).catch(() => null)
       if (ui) uiDefinitions.value.set(id, ui)
+    }
+    // Replace the array item instead of mutating `plugin.enabled` in place.
+    // Objects inside `ref<T[]>()` aren't deeply reactive, so `plugin.enabled = X`
+    // changed the data but never invalidated `<el-switch :model-value="plugin.enabled">`
+    // — users reported "klikl jsem enable, toast přišel, ale přepínač se nepřepl".
+    // Splicing a new object forces the array's tracker to invalidate, every
+    // binding that reads plugin.enabled re-renders.
+    const idx = manifests.value.findIndex(p => p.id === id)
+    if (idx >= 0) {
+      manifests.value.splice(idx, 1, { ...manifests.value[idx], enabled: nextEnabled })
     }
     // Re-pull aggregator so sidebar toolsNavEntries repaints without a full page reload.
     await refreshNavEntries()

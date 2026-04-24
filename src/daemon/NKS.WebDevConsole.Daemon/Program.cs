@@ -155,8 +155,38 @@ builder.Services.AddHostedService<PluginCatalogSyncService>();
 // deviceId aren't set, so it's a no-op for users who never sign in.
 builder.Services.AddHostedService<CatalogHeartbeatService>();
 
+// File logging — persists daemon stdout to ~/.wdc/logs/daemon/daemon-<date>.log.
+// Default Microsoft.Extensions.Logging only has the Console provider
+// (stdout), which disappears when Electron launches the daemon via
+// child_process.spawn() from a GUI (no terminal attached). Users
+// reported "žádné logy" after a crash; before this every LogError
+// was going only to Sentry (for warn+ levels) and stdout (void).
+// NReco.Logging.File rotates daily + size-caps at 10 MB so ~/.wdc/logs/
+// doesn't grow unbounded. Production logs capture the same Information+
+// stream the Console provider sees; stdout remains so `open /Applications/…`
+// from a terminal still prints.
+var daemonLogDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.LogsRoot, "daemon");
+try { Directory.CreateDirectory(daemonLogDir); } catch { /* logged in the log, ironically */ }
+// NReco.Logging.File takes a literal path — we substitute the date at
+// startup (no placeholder engine inside the provider). Rotation below
+// rolls by size within the same date-stamped file; a daemon restart the
+// next day naturally opens a new daemon-YYYY-MM-DD.log file.
+var daemonLogPath = Path.Combine(daemonLogDir, $"daemon-{DateTime.Now:yyyy-MM-dd}.log");
+NReco.Logging.File.FileLoggerExtensions.AddFile(builder.Logging, daemonLogPath, fileLoggerOpts =>
+{
+    fileLoggerOpts.Append = true;
+    fileLoggerOpts.FileSizeLimitBytes = 10 * 1024 * 1024;   // 10 MB per file
+    fileLoggerOpts.MaxRollingFiles = 7;                       // keep a week of rolled files
+    fileLoggerOpts.FormatLogEntry = msg =>
+        $"{DateTime.Now:HH:mm:ss.fff} {msg.LogLevel,-11} {msg.LogName} {msg.Message} {msg.Exception?.ToString() ?? ""}".Trim();
+});
+
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
-var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
+var earlyLoggerFactory = LoggerFactory.Create(b =>
+{
+    b.AddConsole();
+    NReco.Logging.File.FileLoggerExtensions.AddFile(b, daemonLogPath, fileOpts => { fileOpts.Append = true; fileOpts.FileSizeLimitBytes = 10 * 1024 * 1024; fileOpts.MaxRollingFiles = 7; });
+});
 var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
 // Production: plugins/ next to daemon binary. Dev: build/plugins/ at repo root.
 var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");

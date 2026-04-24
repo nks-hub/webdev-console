@@ -6,6 +6,63 @@ import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSyn
 import { tmpdir, homedir } from 'os'
 import http from 'http'
 import * as Sentry from '@sentry/electron/main'
+import log from 'electron-log/main'
+
+// Wire `console.log`/`console.warn`/`console.error` (and daemon stdout,
+// which we currently forward via `console.log('[daemon]', ...)` below)
+// into a rotating file under ~/.wdc/logs/electron/main.log — same tree
+// as the daemon's own logs so factory reset wipes both in one shot.
+// Before this, every `console.log` from main + the relayed `[daemon]`
+// output disappeared the moment Electron was launched from Finder /
+// tray — Sentry only captures exceptions + warn+ breadcrumbs, not the
+// routine stdout that users need to debug "I saw X in the tray and
+// then nothing happened". electron-log.initialize() hooks `console.*`
+// and also exposes an explicit `log.info/warn/error` API.
+log.initialize()
+log.transports.file.level = 'info'
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}'
+// Route Electron logs into ~/.wdc/logs/electron/ so every log the app
+// writes (daemon and main) sits under the same tree. Factory reset
+// wipes ~/.wdc/ and logs go with it. Without this electron-log
+// defaults to ~/Library/Logs/@nks-hub/webdev-console/ which survives
+// factory reset and makes the log location inconsistent with the
+// daemon side.
+const wdcLogsDir = join(process.env.WDC_DATA_DIR || join(homedir(), '.wdc'), 'logs', 'electron')
+try {
+  require('fs').mkdirSync(wdcLogsDir, { recursive: true })
+  log.transports.file.resolvePathFn = () => join(wdcLogsDir, 'main.log')
+} catch { /* fall back to default path */ }
+// Rotation + retention:
+//   • 5 MB per file; when main.log crosses that, electron-log renames it
+//     to main.old.log (keep the previous one) and starts a fresh main.log.
+//   • archiveLogFn customised to keep the last 5 rotations instead of
+//     the default 1 — gives users ~25 MB of recent history when
+//     debugging without blowing up disk on long-running installs.
+log.transports.file.maxSize = 5 * 1024 * 1024
+log.transports.file.archiveLogFn = (oldLogFile) => {
+  try {
+    // electron-log v5 passes a LogFile object (v4 passed a string).
+    // Normalize to the underlying path string either way.
+    const oldLogPath = typeof oldLogFile === 'string' ? oldLogFile : (oldLogFile as { path: string }).path
+    const base = oldLogPath.replace(/\.log$/, '')
+    const fs = require('fs') as typeof import('fs')
+    // Shift existing .old-N.log files up by one and drop the oldest.
+    for (let i = 5; i >= 1; i--) {
+      const from = i === 1 ? `${base}.old.log` : `${base}.old-${i - 1}.log`
+      const to = `${base}.old-${i}.log`
+      try { if (fs.existsSync(from)) {
+        if (i === 5 && fs.existsSync(to)) fs.unlinkSync(to)   // drop oldest
+        fs.renameSync(from, to)
+      } } catch { /* ignore — next rotation tidies up */ }
+    }
+    fs.renameSync(oldLogPath, `${base}.old.log`)
+  } catch (err) {
+    // Fall back to electron-log's default archiver (single .old.log) so
+    // logging itself doesn't crash on rotation failure.
+    console.warn('[log-rotate] custom archiver failed:', err)
+  }
+}
+Object.assign(console, log.functions) // forwards console.log/warn/error/info/debug
 
 // Sentry crash reporting — resolution order:
 //   1. Runtime env SENTRY_DSN / NKS_WDC_SENTRY_DSN (self-hosters, dev)
@@ -517,7 +574,14 @@ async function buildServiceSubmenu(): Promise<Electron.MenuItemConstructorOption
 }
 
 async function updateTray() {
-  if (!tray) return
+  // Guard against calls during teardown. Previously factory-reset +
+  // webContents.reloadIgnoringCache() sequence could schedule an async
+  // updateTray (after /api/services await) that resolved after the
+  // Tray had already been destroyed → "TypeError: Object has been
+  // destroyed" on `tray.setImage(...)`. isDestroyed() is false for a
+  // freshly-created tray that isn't yet showing; we only short-circuit
+  // when the native object is genuinely gone.
+  if (!tray || tray.isDestroyed()) return
 
   // Dynamic icon color based on state
   let iconColor: 'green' | 'red' | 'yellow' | 'gray' = 'gray'

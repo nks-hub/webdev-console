@@ -38,7 +38,15 @@ export function daemonBaseUrl(): string {
   if (urlPort && /^\d+$/.test(urlPort)) {
     return `http://localhost:${parseInt(urlPort, 10)}`
   }
-  return 'http://localhost:5199'
+  // Fallback port. Matches the daemon's port-range base (Program.cs
+  // PORT_BASE = 17280) so any early fetch before the port file lands
+  // has a realistic chance of succeeding. Was `5199` historically — a
+  // stale default from the pre-port-probing daemon config; every fetch
+  // hitting it after daemon moved to 17280 lit Sentry FRONT-D ("Failed
+  // to fetch localhost:5199"). If the fallback itself is unreachable
+  // the fetch error becomes actionable ("daemon not running") instead
+  // of silently chasing a dead port.
+  return 'http://localhost:17280'
 }
 
 // Exported alongside daemonBaseUrl so pages can build their own raw
