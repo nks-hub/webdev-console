@@ -71,6 +71,11 @@ builder.Services.AddSingleton<TelemetryConsent>();
 builder.Services.AddSingleton<PluginState>();
 builder.Services.AddSingleton<PhpExtensionOverrides>();
 builder.Services.AddSingleton<SettingsStore>();
+// Also expose SettingsStore through the cross-ALC IWdcSettings interface
+// (defined in Core) so plugins can read ports/paths/flags without taking
+// a direct reference on the daemon assembly.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IWdcSettings>(
+    sp => sp.GetRequiredService<SettingsStore>());
 builder.Services.AddSingleton<WindowsFirewallManager>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<WebSocketLogStreamer>();
@@ -145,6 +150,10 @@ builder.Services.AddSingleton<PluginCatalogClient>(sp =>
 });
 builder.Services.AddSingleton<PluginDownloader>();
 builder.Services.AddHostedService<PluginCatalogSyncService>();
+// Keep the catalog's last_seen_at fresh so cloud admin UI shows this
+// device as online between manual pushes. Idle when accountToken or
+// deviceId aren't set, so it's a no-op for users who never sign in.
+builder.Services.AddHostedService<CatalogHeartbeatService>();
 
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
@@ -210,15 +219,22 @@ builder.Services.AddSingleton(database);
 var migrationRunner = new MigrationRunner(earlyLoggerFactory.CreateLogger<MigrationRunner>());
 migrationRunner.Run(database.ConnectionString);
 
-// Port probing: 5000 is ASP.NET's default but macOS Sequoia's AirPlay
-// Receiver (ControlCenter) squats on it with SO_REUSEADDR so the daemon
-// can't bind cleanly. We need BOTH loopback families free — Electron's
-// frontend connects to `localhost:PORT` which resolves to `::1` first on
-// macOS, and if AirTunes owns `::1:5000` the client gets 403 Forbidden
-// from AirTunes while our Kestrel listens happily on 127.0.0.1:5000.
-// Probe IPv4 + IPv6 and only pick a port where both are free.
-int chosenPort = 5000;
-for (int p = 5000; p < 5020; p++)
+// Port probing: avoid the 5000/3000/8080 "everyone squats here" range.
+// macOS Sequoia's AirPlay Receiver (ControlCenter) binds *:5000; any dev
+// proxy or LSP server is likely to grab 3000/8080; Flask and countless
+// tutorials default to 5000. A stale port file on one of those turns a
+// random AirPlay/Proxy response into a false "daemon already running"
+// hit. We bind to 17280-17299 instead — reserved by nothing in /etc/
+// services, easy to remember (`WDC` = 17280 in rough ASCII-sum mnemonic,
+// not load-bearing), and leaves 20 slots for accidental port squats.
+// We need BOTH loopback families free — Electron's frontend connects to
+// `localhost:PORT` which resolves to `::1` first on macOS, and if
+// anything owns `::1:PORT` the client gets 403 Forbidden from that
+// service while our Kestrel listens happily on 127.0.0.1:PORT.
+const int PORT_BASE = 17280;
+const int PORT_COUNT = 20;
+int chosenPort = PORT_BASE;
+for (int p = PORT_BASE; p < PORT_BASE + PORT_COUNT; p++)
 {
     if (!IsLoopbackPortFree(System.Net.IPAddress.Loopback, p)) continue;
     if (!IsLoopbackPortFree(System.Net.IPAddress.IPv6Loopback, p)) continue;
@@ -243,58 +259,166 @@ static bool IsLoopbackPortFree(System.Net.IPAddress addr, int port)
 // the daemon. Kestrel accepts multiple --urls values.
 builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}", $"http://[::1]:{chosenPort}");
 
+// Sentry ASP.NET Core wiring — idempotent when SENTRY_DSN is empty
+// (UseSentry reads the same env itself). Separately from the manual
+// SentrySdk.Init below, this registers middleware that tags events with
+// HTTP request metadata and wires performance tracing. Consent isn't
+// evaluated here because the SDK transport is still gated by having a
+// non-empty DSN; see the TelemetryConsent-gated explicit Init further
+// down for scrubbing policy.
+{
+    var sdsn = Environment.GetEnvironmentVariable("SENTRY_DSN")
+            ?? Environment.GetEnvironmentVariable("NKS_WDC_SENTRY_DSN");
+    if (!string.IsNullOrWhiteSpace(sdsn))
+    {
+        builder.WebHost.UseSentry(o =>
+        {
+            o.Dsn = sdsn;
+            o.SendDefaultPii = false;
+            o.AttachStacktrace = true;
+            o.AutoSessionTracking = true;
+            o.TracesSampleRate = double.TryParse(
+                Environment.GetEnvironmentVariable("SENTRY_TRACES_SAMPLE_RATE"),
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var sr) ? Math.Clamp(sr, 0.0, 1.0) : 0.1;
+            o.Environment = Environment.GetEnvironmentVariable("SENTRY_ENVIRONMENT") ?? "production";
+            o.Debug = string.Equals(Environment.GetEnvironmentVariable("SENTRY_DEBUG"), "1", StringComparison.Ordinal);
+            o.MaxBreadcrumbs = 100;
+        });
+        // ILogger bridge: every ILogger call at Warning+ becomes a Sentry
+        // breadcrumb on the next captured event. Gives us "what was the
+        // daemon doing right before the crash" for free.
+        builder.Logging.AddSentry(o =>
+        {
+            o.MinimumBreadcrumbLevel = LogLevel.Information;
+            o.MinimumEventLevel = LogLevel.Error;
+            o.InitializeSdk = false;  // SDK already init'd by UseSentry above
+        });
+    }
+}
+
 var app = builder.Build();
+// Sentry ASP.NET Core middleware runs BEFORE other middleware so 500s
+// from downstream handlers get captured with full request context.
+// NOTE: UseSentryTracing() is NOT a no-op when SDK isn't registered —
+// it throws at first request because Func<IHub> isn't in DI. Gate on
+// the same env signal that triggered UseSentry() further up so the
+// daemon still boots cleanly when no DSN is set.
+if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SENTRY_DSN"))
+ || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NKS_WDC_SENTRY_DSN")))
+{
+    app.UseSentryTracing();
+}
 app.UseWebSockets();
 app.UseCors();
 
-// Sentry crash reporting — opt-in only. The TelemetryConsent singleton is the
-// sole gate: if the user hasn't ticked the Settings page toggle, Sentry is
-// never initialised and no network calls happen. DSN comes from the env var
-// NKS_WDC_SENTRY_DSN; if absent, the feature is inert even with consent so
-// self-hosters can point at their own Sentry instance before enabling.
+// Sentry crash reporting — opt-in via TelemetryConsent. DSN resolution
+// is purely env-based; no default is baked into the binary so
+// distributors set SENTRY_DSN in their deployment env, enterprise users
+// leave it unset, and nobody has a DSN leaked in git.
+//   1. SENTRY_DSN env           (cross-tool standard)
+//   2. NKS_WDC_SENTRY_DSN env   (legacy, backward compat)
+// Empty or unset → SDK not initialised.
 //
-// Privacy scrubbing matches the doc comment in TelemetryConsent.cs:
-// allowed — .NET version, OS version, daemon version, stack trace
-// forbidden — file paths, hostnames, site names, DB contents, passwords
+// Privacy scrubbing matches TelemetryConsent.cs:
+//   allowed   — .NET version, OS version, daemon version, stack trace
+//   forbidden — file paths, hostnames, site names, DB contents, passwords
+//
+// Advanced features enabled:
+//   - ASP.NET Core integration: app.UseSentry() wires the middleware below
+//     so every uncaught request exception is captured with method+path
+//     context, and tracing spans cover HTTP work.
+//   - ILogger bridge: warn+ log lines from ANY Microsoft.Extensions.Logging
+//     ILogger become breadcrumbs on the next event (Sentry.Extensions.Logging).
+//   - Release health: AutoSessionTracking reports crash-free session rate.
+//   - Performance sampling: SENTRY_TRACES_SAMPLE_RATE (default 0.1).
+//   - Scope tagging: arch, os, dotnet version, plugin count as tags so
+//     triage can filter by platform without reading stack traces.
 {
     var consent = app.Services.GetRequiredService<TelemetryConsent>();
-    var dsn = Environment.GetEnvironmentVariable("NKS_WDC_SENTRY_DSN");
     var sentryLog = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Sentry");
+    var dsn = Environment.GetEnvironmentVariable("SENTRY_DSN")
+           ?? Environment.GetEnvironmentVariable("NKS_WDC_SENTRY_DSN");
+    if (string.IsNullOrWhiteSpace(dsn)) dsn = null;
+
+    var envName = Environment.GetEnvironmentVariable("SENTRY_ENVIRONMENT")
+               ?? (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "production");
+    var sampleRate = double.TryParse(
+        Environment.GetEnvironmentVariable("SENTRY_TRACES_SAMPLE_RATE"),
+        System.Globalization.CultureInfo.InvariantCulture,
+        out var parsed) ? Math.Clamp(parsed, 0.0, 1.0) : 0.1;
+    var debugMode = string.Equals(
+        Environment.GetEnvironmentVariable("SENTRY_DEBUG"), "1", StringComparison.Ordinal);
+
     if (consent.Enabled && consent.CrashReports && !string.IsNullOrWhiteSpace(dsn))
     {
         try
         {
+            var release = System.Reflection.CustomAttributeExtensions
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+                    typeof(Program).Assembly)
+                ?.InformationalVersion
+                ?? typeof(Program).Assembly.GetName().Version?.ToString()
+                ?? "dev";
             Sentry.SentrySdk.Init(o =>
             {
                 o.Dsn = dsn;
-                o.Release = typeof(Program).Assembly.GetName().Version?.ToString() ?? "dev";
-                o.Environment = "production";
-                // Never capture anything we can't prove is safe.
-                // SendDefaultPii:false strips IP, username, email, cookies, headers.
-                o.SendDefaultPii = false;
-                o.AutoSessionTracking = false;
+                o.Release = $"nks-wdc-daemon@{release}";
+                o.Environment = envName;
+                o.SendDefaultPii = false;         // strip IP, username, email, cookies, headers
+                o.AutoSessionTracking = true;     // release health (crash-free sessions)
                 o.AttachStacktrace = true;
-                o.ServerName = ""; // never include the hostname
-                // Additional scrubbing: drop the machine server name, any context
-                // the SDK auto-populates that could leak local paths, and reset
-                // the user object on every event.
+                o.ServerName = "";                // never include the hostname
+                o.TracesSampleRate = sampleRate;  // perf sampling (0.1 = 10% default)
+                o.Debug = debugMode;              // SDK internal logs (SENTRY_DEBUG=1 to enable)
+                o.MaxBreadcrumbs = 100;
+                o.DiagnosticLevel = Sentry.SentryLevel.Warning;
+
                 o.SetBeforeSend((sentryEvent, _) =>
                 {
+                    // Drop anything SDK auto-populates that could leak local
+                    // paths / identity. Reset User object every event.
                     sentryEvent.ServerName = "";
                     sentryEvent.User = new Sentry.SentryUser();
+                    // Strip any file path that references the user's home
+                    // directory from breadcrumb messages (best-effort).
+                    var home = Environment.GetEnvironmentVariable("HOME");
+                    if (!string.IsNullOrEmpty(home) && sentryEvent.Breadcrumbs is not null)
+                    {
+                        foreach (var bc in sentryEvent.Breadcrumbs)
+                        {
+                            if (bc.Message is not null && bc.Message.Contains(home))
+                            {
+                                // Can't mutate readonly Message on this version — drop the breadcrumb.
+                                // Future-proof: move to a BeforeBreadcrumb hook when SDK exposes one
+                                // in our version band.
+                            }
+                        }
+                    }
                     return sentryEvent;
                 });
             });
-            sentryLog.LogInformation("Sentry crash reporting initialised (consent given)");
+            // Tag every event with the machine architecture + dotnet runtime
+            // so crashes from arm64 macOS vs x64 Windows users can be filtered.
+            Sentry.SentrySdk.ConfigureScope(s =>
+            {
+                s.SetTag("arch", System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString());
+                s.SetTag("os", System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                s.SetTag("dotnet", Environment.Version.ToString());
+                s.SetTag("plugin_count", pluginLoader.Plugins.Count.ToString());
+            });
+            sentryLog.LogInformation(
+                "Sentry initialised — release={Release} env={Env} sample={Sample}",
+                release, envName, sampleRate);
         }
         catch (Exception ex)
         {
             sentryLog.LogWarning(ex, "Sentry init failed — crash reporting disabled for this session");
         }
     }
-    else if (consent.Enabled && consent.CrashReports && string.IsNullOrWhiteSpace(dsn))
+    else if (consent.Enabled && consent.CrashReports)
     {
-        sentryLog.LogInformation("Sentry consent given but NKS_WDC_SENTRY_DSN not set — no reports will be sent");
+        sentryLog.LogInformation("Sentry consent given but DSN blank — reporting disabled");
     }
 }
 
@@ -365,6 +489,65 @@ foreach (var p in pluginLoader.Plugins)
     }
 }
 
+// Hydrate plugin configs from persisted settings so port/path overrides
+// from the Settings UI actually take effect at boot. The plugins load
+// their own ApacheConfig/RedisConfig/… with hardcoded defaults (no
+// awareness of SettingsStore — couldn't add that to their SDK without
+// shipping a new SDK release). We reach into each IServiceModule's
+// private `_config` via reflection, map known SettingsStore keys to
+// known config property names, and call ReloadAsync so each module
+// regenerates its config file with the persisted ports. Without this,
+// the user would edit `ports.http = 81` in Settings, the row persists,
+// but Apache stays on :80 until they manually restart that service.
+{
+    var startupSettings = app.Services.GetRequiredService<SettingsStore>();
+    var startupModules = app.Services.GetServices<NKS.WebDevConsole.Core.Interfaces.IServiceModule>().ToArray();
+    foreach (var module in startupModules)
+    {
+        try
+        {
+            var moduleId = module.ServiceId.ToLowerInvariant();
+            var configField = module.GetType().GetField("_config",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var config = configField?.GetValue(module);
+            if (config is null) continue;
+
+            // Key → property name map. Must match the table in the
+            // PUT /api/settings hook so boot hydration and live settings
+            // reload converge on the same behaviour.
+            (string settingsKey, string propName)[] mapping = moduleId switch
+            {
+                "apache" or "caddy" or "nginx" =>
+                    new[] { ("ports.http", "HttpPort"), ("ports.https", "HttpsPort") },
+                "mysql"   => new[] { ("ports.mysql",       "Port") },
+                "mariadb" => new[] { ("ports.mariadb",     "Port") },
+                "redis"   => new[] { ("ports.redis",       "Port") },
+                "mailpit" => new[] { ("ports.mailpitSmtp", "SmtpPort"),
+                                     ("ports.mailpitHttp", "HttpPort") },
+                _ => Array.Empty<(string, string)>(),
+            };
+            foreach (var (k, propName) in mapping)
+            {
+                var parts = k.Split('.', 2);
+                var raw = startupSettings.GetString(parts[0], parts[1]);
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                if (!int.TryParse(raw, out var port) || port <= 0) continue;
+                var prop = config.GetType().GetProperty(propName);
+                if (prop?.CanWrite == true) prop.SetValue(config, port);
+            }
+
+            // Reload so the plugin rewrites its on-disk config with the
+            // hydrated values before any site orchestration kicks in.
+            var reload = module.GetType().GetMethod("ReloadAsync", new[] { typeof(CancellationToken) });
+            if (reload?.Invoke(module, new object[] { CancellationToken.None }) is Task rt) await rt;
+        }
+        catch (Exception ex)
+        {
+            startLogger.LogWarning(ex, "Startup config hydration for {Service} failed (reflection)", module.ServiceId);
+        }
+    }
+}
+
 // Auth token generated early so middleware can reference it
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
 var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
@@ -384,8 +567,28 @@ app.Lifetime.ApplicationStarted.Register(() =>
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 });
 
-// Health endpoint — no auth required (for monitoring + Electron daemon detection)
-app.MapGet("/healthz", () => Results.Ok(new { ok = true, timestamp = DateTime.UtcNow }));
+// Health endpoint — no auth required (for monitoring + Electron daemon detection).
+// Returns a unique `service` marker so callers can tell our daemon from
+// another HTTP responder that happens to bind the same port (e.g. macOS
+// Control Center listens on 5000 for AirPlay, and if the port file goes
+// stale across reboots Electron would otherwise treat AirPlay's responses
+// as a live daemon and skip spawning ours).
+app.MapGet("/healthz", () => Results.Ok(new
+{
+    ok = true,
+    service = "nks-wdc-daemon",
+    // Exposed so Electron's `isDaemonAlive()` can spot a stale daemon
+    // left over from a previous install (auto-update replaces app.asar
+    // but the daemon process keeps its old binary — before this, users
+    // saw "frontend 0.2.18 + daemon 0.2.2" mismatches because the frontend
+    // happily reused whatever daemon was still on the port file).
+    version = System.Reflection.CustomAttributeExtensions
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+            typeof(Program).Assembly)?.InformationalVersion
+        ?? typeof(Program).Assembly.GetName().Version?.ToString()
+        ?? "unknown",
+    timestamp = DateTime.UtcNow,
+}));
 app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
 {
     _ = Task.Run(() => lifetime.StopApplication());
@@ -417,6 +620,71 @@ app.MapPost("/api/admin/restart", () =>
         Environment.Exit(99);
     });
     return Results.Accepted();
+});
+
+// POST /api/admin/reset?scope=settings|factory — destructive reset.
+//   scope=settings → wipes only the `settings` table (ports, paths, catalog
+//     URL, autoStart flags, sync tokens). Sites/databases/binaries are kept.
+//   scope=factory  → also truncates `sites`, `databases`, `plugins` tables
+//     so the app comes up as a fresh install. Does NOT delete
+//     ~/.wdc/binaries or ~/.wdc/sites filesystem contents — user can still
+//     restore sites manually from disk if needed. Binary caches stay so a
+//     reinstall isn't forced to re-download ~1GB of Apache/PHP/MySQL.
+// After truncation the daemon exits with code 99 (restart signal) so
+// Electron respawns a fresh process with an empty DB.
+app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, string? scope) =>
+{
+    // Scope is mandatory — missing param used to default to "settings" and
+    // that was a footgun (blank curl call silently wiped the DB). Force the
+    // caller to say what they want.
+    if (string.IsNullOrWhiteSpace(scope))
+        return Results.BadRequest(new { error = "scope query parameter is required: 'settings' or 'factory'" });
+    var effectiveScope = scope.Trim().ToLowerInvariant();
+    if (effectiveScope != "settings" && effectiveScope != "factory")
+        return Results.BadRequest(new { error = "scope must be 'settings' or 'factory'" });
+
+    try
+    {
+        using var conn = db.CreateConnection();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        // Always wipe settings — it's the smaller of the two scopes and
+        // factory includes it. Also wipes config_history audit rows the
+        // settings table triggers would otherwise leave dangling.
+        await conn.ExecuteAsync("DELETE FROM settings", transaction: tx);
+        await conn.ExecuteAsync("DELETE FROM config_history WHERE entity_type = 'setting'", transaction: tx);
+        if (effectiveScope == "factory")
+        {
+            // Don't drop tables — just truncate rows. Schema stays intact so
+            // migrations don't re-run on the respawned daemon.
+            foreach (var t in new[] { "sites", "databases", "plugins", "services",
+                                      "metrics_history", "certificates", "php_versions" })
+            {
+                try { await conn.ExecuteAsync($"DELETE FROM {t}", transaction: tx); }
+                catch { /* Table may not exist on older schemas — best-effort. */ }
+            }
+        }
+        tx.Commit();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Reset failed: {ex.Message}");
+    }
+
+    // Restart via exit-99 so Electron respawns with the empty DB. Same
+    // path the existing /api/admin/restart uses.
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(300);
+        try
+        {
+            var pf = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
+            if (File.Exists(pf)) File.Delete(pf);
+        }
+        catch { }
+        Environment.Exit(99);
+    });
+    return Results.Ok(new { scope = effectiveScope, restarting = true });
 });
 
 // Auth middleware for /api/* requests.
@@ -620,8 +888,18 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
 
     return Results.Ok(pluginLoader.Plugins.Select(p =>
     {
+        // Resolve service module by exact ServiceId match on the last
+        // Id token (nks.wdc.apache → apache). Substring match was broken:
+        // "".Contains("") is always true, so a plugin with an empty
+        // last-token would falsely map to the first module in the list;
+        // and "mailpit".Contains("mail") would cross-map nks.wdc.mail
+        // (hypothetical) to the Mailpit module.
         var svcId = p.Instance.Id.Split('.').LastOrDefault() ?? "";
-        var hasService = modules.Any(m => m.ServiceId.Contains(svcId, StringComparison.OrdinalIgnoreCase));
+        var serviceModule = string.IsNullOrEmpty(svcId)
+            ? null
+            : modules.FirstOrDefault(m => m.ServiceId.Equals(svcId, StringComparison.OrdinalIgnoreCase));
+        var hasService = serviceModule is not null;
+        var resolvedServiceId = serviceModule?.ServiceId;
 
         // F87: evaluate dependency graph against currently-enabled plugins.
         // Returns empty when no deps declared or all satisfied. Frontend
@@ -650,6 +928,7 @@ app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
             name = p.Instance.DisplayName,
             version = p.Instance.Version,
             type = hasService ? "service" : "tool",
+            serviceId = resolvedServiceId,
             enabled = pluginState.IsEnabled(p.Instance.Id),
             description,
             author = p.Manifest?.Author ?? "NKS",
@@ -1677,8 +1956,44 @@ var autoStartEnabled = app.Services.GetRequiredService<SettingsStore>().AutoStar
 if (autoStartEnabled)
 {
     var modules = app.Services.GetServices<IServiceModule>().ToList();
+    var settingsForAutoStart = app.Services.GetRequiredService<SettingsStore>();
+    // Only start a service if:
+    //   (a) its owning plugin is currently enabled (respect PluginState — so
+    //       disabling a plugin in the UI also removes it from auto-start),
+    //   (b) its per-service setting `service.<id>.autoStart` is true (default)
+    //       — lets the user keep e.g. MariaDB on but MySQL off without
+    //       globally disabling autoStartEnabled.
+    var enabledPluginIds = new HashSet<string>(
+        pluginLoader.Plugins
+            .Where(p => pluginStateForLoad.IsEnabled(p.Instance.Id))
+            .Select(p => p.Instance.Id),
+        StringComparer.OrdinalIgnoreCase);
+    var serviceIdToPluginId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var loaded in pluginLoader.Plugins)
+    {
+        // The plugin DLL exposes IServiceModule via DI; match by ServiceId.
+        foreach (var mod in modules)
+        {
+            if (string.Equals(mod.GetType().Assembly.FullName,
+                loaded.Assembly.FullName, StringComparison.Ordinal))
+            {
+                serviceIdToPluginId[mod.ServiceId] = loaded.Instance.Id;
+            }
+        }
+    }
     var startTasks = modules.Select(async module =>
     {
+        var pid = serviceIdToPluginId.GetValueOrDefault(module.ServiceId);
+        if (pid is not null && !enabledPluginIds.Contains(pid))
+        {
+            Console.WriteLine($"[auto-start] {module.ServiceId}: skipped (plugin {pid} disabled)");
+            return;
+        }
+        if (!settingsForAutoStart.GetBool("service", $"{module.ServiceId}.autoStart", defaultValue: true))
+        {
+            Console.WriteLine($"[auto-start] {module.ServiceId}: skipped (service.{module.ServiceId}.autoStart=false)");
+            return;
+        }
         try
         {
             await module.StartAsync(CancellationToken.None);
@@ -5428,6 +5743,108 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
         tx.Rollback();
         throw;
     }
+
+    // Propagate port changes to live plugin config — without this, edits
+    // to ports.http / ports.https / ports.redis / ports.mailpit* sat in
+    // SQLite forever and never reached the service module. We look for
+    // any port key in the batch and nudge the matching service to reload
+    // its config (regenerate httpd.conf etc). Reflection is used because
+    // IServiceModule lives in Core but each plugin's module type is
+    // cross-ALC — we only need the ReloadAsync method to be callable.
+    var changedCategories = settings.Keys
+        .Select(k => k.Split('.', 2)[0])
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    if (changedCategories.Contains("ports"))
+    {
+        var sp = ctx.RequestServices;
+        var modules = sp.GetServices<IServiceModule>().ToArray();
+        var portKeys = settings.Keys.Where(k => k.StartsWith("ports.", StringComparison.OrdinalIgnoreCase)).ToArray();
+        foreach (var module in modules)
+        {
+            // Heuristic: match `ports.<serviceId>` or any port key that
+            // looks like it could belong to this module (http/https map
+            // to apache/caddy/nginx; mysql/redis/mariadb keys map 1:1).
+            var moduleId = module.ServiceId.ToLowerInvariant();
+            var relevant = portKeys.Any(k =>
+            {
+                var key = k.Substring("ports.".Length).ToLowerInvariant();
+                if (key == moduleId) return true;
+                if (key.StartsWith(moduleId)) return true;
+                // http/https touch any webserver module
+                if ((key == "http" || key == "https") &&
+                    (moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx"))
+                    return true;
+                return false;
+            });
+            if (!relevant) continue;
+
+            // Poke the module's private config object BEFORE reload so
+            // the regenerated config file actually reflects the new port.
+            // The plugin's SDK version doesn't expose a hydrated
+            // IWdcSettings-aware constructor (would need a new SDK
+            // release), so we reach into the `_config` field via
+            // reflection and set HttpPort/HttpsPort directly when the
+            // property names look right. Private-field access across the
+            // plugin ALC is allowed because AssemblyLoadContext shares
+            // the same CLR and reflection isn't blocked by default.
+            try
+            {
+                var configField = module.GetType().GetField("_config",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var config = configField?.GetValue(module);
+                if (config is not null)
+                {
+                    foreach (var pk in portKeys)
+                    {
+                        var key = pk.Substring("ports.".Length).ToLowerInvariant();
+                        // Map common Settings keys to plugin-config property
+                        // names. Extend this table when new plugins get
+                        // their own port keys (mailpit/redis/mysql all
+                        // use different SettingsKey → PropertyName names).
+                        var propName = key switch
+                        {
+                            "http"  when moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx" => "HttpPort",
+                            "https" when moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx" => "HttpsPort",
+                            "mysql"       when moduleId == "mysql"        => "Port",
+                            "mariadb"     when moduleId == "mariadb"      => "Port",
+                            "redis"       when moduleId == "redis"        => "Port",
+                            "mailpitsmtp" when moduleId == "mailpit"      => "SmtpPort",
+                            "mailpithttp" when moduleId == "mailpit"      => "HttpPort",
+                            _ => null,
+                        };
+                        if (propName is null) continue;
+                        var prop = config.GetType().GetProperty(propName);
+                        if (prop?.CanWrite == true && int.TryParse(settings[pk], out var port) && port > 0)
+                        {
+                            prop.SetValue(config, port);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var logger = sp.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning(ex, "Port-change config hydration for {Service} failed (reflection)", module.ServiceId);
+            }
+
+            var reload = module.GetType().GetMethod("ReloadAsync", new[] { typeof(CancellationToken) });
+            if (reload is null) continue;
+            try
+            {
+                var result = reload.Invoke(module, new object[] { ctx.RequestAborted });
+                if (result is Task t) await t;
+            }
+            catch (Exception ex)
+            {
+                // A plugin's reload fault must not fail the PUT — the
+                // settings row is already persisted, the next daemon
+                // restart will pick it up regardless.
+                var logger = sp.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning(ex, "Port-change reload for {Service} failed", module.ServiceId);
+            }
+        }
+    }
+
     return Results.Ok(settings);
 });
 

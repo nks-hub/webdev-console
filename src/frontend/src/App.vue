@@ -186,8 +186,26 @@ function handleKeydown(e: KeyboardEvent) {
 
 let unsubscribeConnect: (() => void) | null = null
 
+// Mirror accountToken from localStorage → daemon SettingsStore on app
+// boot so CatalogHeartbeatService can read it on its first tick. Before
+// this, the mirror only happened when the user opened Settings.vue, so
+// users who launched the app and stayed on Dashboard never pushed to
+// the catalog and appeared "offline" in the cloud admin UI.
+async function mirrorAuthTokenToDaemon() {
+  if (!authStore.token) return
+  try {
+    const { saveSettings } = await import('./api/daemon')
+    const email = authStore.profile?.email || authStore.identity?.email || ''
+    await saveSettings({
+      'sync.accountToken': authStore.token,
+      ...(email ? { 'sync.accountEmail': email } : {}),
+    })
+  } catch { /* daemon still warming up — next poll/tick will retry */ }
+}
+
 onMounted(() => {
   daemonStore.startPolling()
+  void mirrorAuthTokenToDaemon()
   // F96: kick off background update check once per session. Store guards
   // against flooding the public GitHub API — refresh() honors a 6h cached
   // window, so the hourly setInterval inside startAutoCheck is idempotent.
@@ -201,6 +219,9 @@ onMounted(() => {
   unsubscribeConnect = daemonStore.onConnect(() => {
     void pluginsStore.loadAll()
     void sitesStore.load()
+    // Retry token mirror on every daemon (re)connect — covers the case
+    // where the daemon was still starting when we fired in onMounted.
+    void mirrorAuthTokenToDaemon()
     // F91.11: fetch catalog profile as soon as daemon is reachable (it
     // holds the `daemon.catalogUrl` setting). Previous code only did this
     // inside Settings.vue script-setup, so the "Signed in as {email}"

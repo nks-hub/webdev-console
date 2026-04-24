@@ -85,10 +85,21 @@ export interface SiteInfo {
 export interface PhpVersion {
   version: string
   majorMinor?: string
-  path: string
-  isDefault: boolean
+  path?: string
+  isDefault?: boolean
+  /** Flag from /api/php/versions marking the version returned by the
+   *  daemon's active-version resolution (PhpVersionManager). Distinct from
+   *  isDefault — that's a user-configured preference, `isActive` is the
+   *  runtime-selected one. */
+  isActive?: boolean
   extensionCount?: number
   activeSiteCount?: number
+  /** Paths exposed by daemon for informational display. */
+  phpExePath?: string
+  phpCgiPath?: string
+  directory?: string
+  extensions?: string[]
+  fcgiPort?: number
 }
 
 // Plugin panel schema — what C# plugins return from /api/plugins/{id}/ui
@@ -120,6 +131,11 @@ export interface PluginManifest {
   name: string
   version: string
   type: 'service' | 'tool'
+  /** Backend-resolved service ID (apache, mariadb, …) for plugins that
+   * register an IServiceModule. Null for non-service plugins. Used by
+   * the UI to key per-service settings (e.g. autoStart) without any
+   * hardcoded id→service mapping in the frontend. */
+  serviceId?: string | null
   enabled: boolean
   description?: string
   author?: string

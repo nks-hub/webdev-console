@@ -5,6 +5,7 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './assets/tokens.css'
 import * as ElementPlusIcons from '@element-plus/icons-vue'
+import * as Sentry from '@sentry/electron/renderer'
 
 import { router } from './router/index'
 import { i18n } from './i18n'
@@ -34,9 +35,58 @@ app.use(ElementPlus)
 app.use(router)
 app.use(i18n)
 
-// Global error handler — prevents white screen on component errors
+// Sentry renderer init — the main process already sets up the transport +
+// DSN via @sentry/electron/main; renderer init picks that up automatically
+// through IPC. Extra config here limits itself to Vue-aware integrations
+// (component name + propsType on errors) and router navigation
+// breadcrumbs. No DSN repeat — it's embedded in the shared scope from
+// main. Consent-gating is also centralised in main (it won't call
+// Sentry.init() there if SENTRY_DSN env is empty, and without that init
+// this renderer integration stays inert).
+// Renderer has no process.env — VITE_SENTRY_DSN is baked in at build time
+// from the GitHub Secret via electron.vite.config.ts `define`. The main
+// process's @sentry/electron already initialised the transport, so the
+// renderer init just needs to wire Vue integration — it shares scope via
+// IPC. Skipping when no DSN keeps `Sentry.captureException` a no-op.
+const VITE_SENTRY_DSN = (import.meta.env.VITE_SENTRY_DSN as string | undefined) || ''
+try {
+  // @sentry/electron/renderer re-exports from @sentry/browser which does
+  // NOT ship vueIntegration — that one lives in @sentry/vue and we don't
+  // pull it in to keep the renderer bundle lean. Vue component errors
+  // are already funnelled via app.config.errorHandler below, so we only
+  // need the base init to wire up the IPC scope + breadcrumbs.
+  Sentry.init({
+    ...(VITE_SENTRY_DSN ? { dsn: VITE_SENTRY_DSN } : {}),
+  })
+  // Tag every event with the active route so crash triage knows which
+  // page the user was on when it blew up.
+  router.afterEach((to) => {
+    Sentry.setTag('route', to.name?.toString() || to.path)
+    Sentry.addBreadcrumb({ category: 'navigation', message: `→ ${to.fullPath}`, level: 'info' })
+  })
+} catch (err) {
+  // A broken Sentry init must never take down the UI.
+  console.warn('[Sentry] renderer init skipped:', err)
+}
+
+// Global error handler — prevents white screen on component errors.
+// Also funnels to Sentry (wrapped so a Sentry failure doesn't rethrow).
 app.config.errorHandler = (err, instance, info) => {
   console.error('[Vue Error]', info, err)
+  try {
+    Sentry.withScope((scope) => {
+      scope.setContext('vue', { lifecycleHook: info, componentName: instance?.$?.type?.name ?? '(anonymous)' })
+      Sentry.captureException(err)
+    })
+  } catch {
+    /* Sentry unavailable — error already logged to console above */
+  }
 }
+
+// Unhandled promise rejections — Vue.errorHandler doesn't catch these,
+// but Sentry does if we wire the window event.
+window.addEventListener('unhandledrejection', (e) => {
+  try { Sentry.captureException(e.reason) } catch { /* no-op */ }
+})
 
 app.mount('#app')

@@ -1,47 +1,54 @@
 {
   "$schema": "./site-templates.schema.json",
-  "description": "Templates offered in the New Site dialog (Sites.vue advanced mode). Each entry's `fields` object is spread into the newSite reactive object when the user picks a template. Keep IDs stable — they're referenced by saved drafts and user documentation.",
+  "description": "Templates offered in the New Site dialog (Sites.vue advanced mode). Each entry's `fields` object is spread into the newSite reactive object when the user picks a template. Templates deliberately do NOT hardcode a phpVersion — the wizard's auto-picked active PHP (via loadPhpVersions) wins, so pressing a template doesn't wipe a version that works for this user's installed binaries. SSL is on by default for PHP templates because login cookies / CSRF tokens should always be HTTPS. Keep IDs stable — they're referenced by saved drafts and user documentation.",
   "templates": [
     {
+      "id": "php-generic",
+      "label": "PHP (generic)",
+      "fields": { "sslEnabled": true },
+      "notes": "Vanilla PHP site — document root points at the folder with your index.php / front controller."
+    },
+    {
       "id": "wordpress",
-      "label": "WordPress (PHP 8.4, SSL)",
-      "fields": { "phpVersion": "8.4", "sslEnabled": true },
-      "notes": "Classic LAMP-style site; SSL on so login cookies are secure."
+      "label": "WordPress",
+      "fields": { "sslEnabled": true },
+      "notes": "Classic LAMP stack. SSL is on so wp-login cookies + admin POSTs are protected."
     },
     {
       "id": "laravel",
-      "label": "Laravel (PHP 8.4, SSL)",
-      "fields": { "phpVersion": "8.4", "sslEnabled": true },
+      "label": "Laravel",
+      "fields": { "sslEnabled": true },
+      "notes": "Document root should point at the app's /public directory."
+    },
+    {
+      "id": "symfony",
+      "label": "Symfony",
+      "fields": { "sslEnabled": true },
       "notes": "Document root should point at the /public directory."
     },
     {
       "id": "nette",
-      "label": "Nette (PHP 8.4, SSL)",
-      "fields": { "phpVersion": "8.4", "sslEnabled": true },
+      "label": "Nette",
+      "fields": { "sslEnabled": true },
       "notes": "Document root should point at the /www directory."
     },
     {
-      "id": "symfony",
-      "label": "Symfony (PHP 8.4, SSL)",
-      "fields": { "phpVersion": "8.4", "sslEnabled": true },
-      "notes": "Document root should point at the /public directory."
-    },
-    {
       "id": "nextjs",
-      "label": "Next.js (Node proxy, SSL)",
+      "label": "Next.js (Node proxy)",
       "fields": { "phpVersion": "none", "sslEnabled": true },
-      "notes": "Node upstream port must be configured after creation."
+      "notes": "Node upstream port must be configured after site creation."
     },
     {
-      "id": "node",
-      "label": "Node.js (Node proxy)",
-      "fields": { "phpVersion": "none", "sslEnabled": false },
-      "notes": "Node upstream port must be configured after creation."
+      "id": "node-generic",
+      "label": "Node.js (generic proxy)",
+      "fields": { "phpVersion": "none", "sslEnabled": true },
+      "notes": "Any Node/Bun/Deno app — set the upstream port after creation."
     },
     {
       "id": "static",
       "label": "Static HTML",
-      "fields": { "phpVersion": "none", "sslEnabled": false }
+      "fields": { "phpVersion": "none", "sslEnabled": true },
+      "notes": "No runtime. Apache serves files from the docroot directly."
     }
   ]
 }

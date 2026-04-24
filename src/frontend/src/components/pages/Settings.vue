@@ -112,9 +112,9 @@
               <el-form-item :label="$t('settings.general.runOnStartup')">
                 <el-switch v-model="runOnStartup" />
               </el-form-item>
-              <el-form-item :label="$t('settings.general.autoStartServices')">
-                <el-switch v-model="autoStart" />
-              </el-form-item>
+              <!-- Auto-start je per-plugin nastavení — najdeš ho na kartě
+                   jednotlivého pluginu v Plugin Manageru. Žádné duplicitní
+                   ovládání tady, aby nebyl zmatek „kde to vlastně zapnu“. -->
               <el-form-item :label="$t('settings.general.defaultPhpVersion')">
                 <el-select v-model="defaultPhp" style="width: 160px" placeholder="Select">
                   <el-option v-for="v in phpVersions" :key="v" :label="'PHP ' + v" :value="v" />
@@ -394,6 +394,57 @@
                 </div>
               </el-form-item>
             </el-form>
+
+            <!-- Danger zone — destructive reset operations. Kept at the
+                 bottom so accidental scroll-past doesn't hit it first, and
+                 every button requires an explicit confirm before doing
+                 anything. Scope tiers:
+                 • Settings reset → wipes only the `settings` table (ports,
+                   paths, catalog URL, autostart flags, sync tokens). Sites,
+                   databases, installed binaries, plugins, SSL certs are
+                   preserved.
+                 • Full factory reset → also wipes sites/databases via
+                   manager delete calls. Does NOT touch ~/.wdc/binaries so a
+                   full re-download isn't forced.
+                 Nuclear option (delete ~/.wdc entirely) stays CLI-only. -->
+            <div class="danger-zone">
+              <h3 class="danger-title">Danger zone</h3>
+              <p class="danger-desc">
+                Nevratné operace. WDC se po resetu restartuje a znovu otevře
+                uvítacího průvodce. Pokud jsi přihlášený ke katalogu, session
+                token se smaže a budeš se muset přihlásit znovu.
+              </p>
+              <div class="danger-row">
+                <div class="danger-info">
+                  <strong>Reset nastavení</strong>
+                  <span class="hint">
+                    Smaže tabulku <code>settings</code> (porty, cesty, catalogUrl,
+                    autoStart přepínače, sync.accountToken). Weby, databáze,
+                    stažené binárky a pluginy zůstanou.
+                  </span>
+                </div>
+                <el-button
+                  type="warning"
+                  :loading="resettingSettings"
+                  @click="confirmResetSettings"
+                >Reset nastavení</el-button>
+              </div>
+              <div class="danger-row">
+                <div class="danger-info">
+                  <strong>Kompletní tovární reset</strong>
+                  <span class="hint">
+                    Reset nastavení + smazání všech webů, databází a
+                    pluginových stavů. Binárky pod <code>~/.wdc/binaries/</code>
+                    zachovává, aby se nemuselo znovu stahovat Apache/PHP/MySQL.
+                  </span>
+                </div>
+                <el-button
+                  type="danger"
+                  :loading="resettingFactory"
+                  @click="confirmFactoryReset"
+                >Tovární reset</el-button>
+              </div>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -1072,7 +1123,9 @@ const ports = reactive({
 })
 
 const runOnStartup = ref(false)
-const autoStart = ref(true)
+// Auto-start is now per-plugin only — toggle lives on each plugin card in
+// Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
+// way, so the settings key format hasn't changed — just the UI surface.
 const defaultPhp = ref('8.4')
 const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
 const flushingDns = ref(false)
@@ -1158,6 +1211,59 @@ async function manualBackup() {
 
 function downloadBackupFile(path: string) {
   downloadBackup(path)
+}
+
+// ── Danger-zone reset operations ──────────────────────────────────────
+const resettingSettings = ref(false)
+const resettingFactory = ref(false)
+
+async function confirmResetSettings() {
+  try {
+    await ElMessageBox.confirm(
+      'Opravdu smazat tabulku `settings`? Weby, databáze a binárky zůstanou. ' +
+      'WDC se po operaci restartuje a uvítací průvodce proběhne znovu.',
+      'Reset nastavení',
+      { type: 'warning', confirmButtonText: 'Smazat a restartovat', cancelButtonText: 'Zrušit' },
+    )
+  } catch { return }
+  resettingSettings.value = true
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/admin/reset?scope=settings`, {
+      method: 'POST', headers: authHeaders(),
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
+    ElMessage.success('Nastavení smazáno. Daemon se restartuje…')
+    // Daemon exits with code 99 → Electron main respawns. Token in
+    // localStorage survives but will be stale until next login.
+  } catch (e) {
+    ElMessage.error(`Reset selhal: ${errorMessage(e)}`)
+  } finally {
+    resettingSettings.value = false
+  }
+}
+
+async function confirmFactoryReset() {
+  try {
+    await ElMessageBox.confirm(
+      'SMAZAT VŠECHNO? To zahrnuje všechny weby, databáze i vazby pluginů. ' +
+      'Binárky (~/.wdc/binaries/) zůstanou, aby se znovu nestahovalo Apache/PHP/MySQL. ' +
+      'Tato operace je NEVRATNÁ.',
+      'Tovární reset',
+      { type: 'error', confirmButtonText: 'Ano, smazat všechno', cancelButtonText: 'Zrušit', distinguishCancelAndClose: true },
+    )
+  } catch { return }
+  resettingFactory.value = true
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/admin/reset?scope=factory`, {
+      method: 'POST', headers: authHeaders(),
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
+    ElMessage.success('Factory reset proveden. Daemon se restartuje…')
+  } catch (e) {
+    ElMessage.error(`Reset selhal: ${errorMessage(e)}`)
+  } finally {
+    resettingFactory.value = false
+  }
 }
 
 // ── Catalog API integration (Advanced tab) ────────────────────────────
@@ -1429,7 +1535,6 @@ async function loadSettings() {
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
     if (data['ports.mailpitHttp']) ports.mailpitHttp = parseInt(data['ports.mailpitHttp'])
     if (data['general.runOnStartup']) runOnStartup.value = data['general.runOnStartup'] === 'true'
-    if (data['general.autoStart'])    autoStart.value = data['general.autoStart'] === 'true'
     if (data['paths.apache'])    paths.apache = data['paths.apache']
     if (data['paths.mysql'])     paths.mysql = data['paths.mysql']
     if (data['paths.php'])       paths.php = data['paths.php']
@@ -1642,14 +1747,64 @@ async function doLogin() {
     // so the sidebar + /sync endpoints all see the same session.
     authStore.setToken(result.token)
     localStorage.setItem('nks-wdc-catalog-email', result.email)
+    // Mirror the token into daemon SettingsStore so the background
+    // CatalogHeartbeatService (C#) can keep last_seen_at fresh between
+    // manual pushes — without this, daemon's GetString("sync","accountToken")
+    // returns null and the heartbeat loop is a no-op even though the
+    // renderer is authenticated.
+    await saveSettings({
+      'sync.accountToken': result.token,
+      'sync.accountEmail': result.email,
+    })
     await authStore.refreshProfile(getCatalogUrl())
     authPassword.value = ''
     ElMessage.success(`Signed in as ${result.email}`)
+
+    // Auto-register this device in the catalog: catalog-api creates a
+    // DeviceConfig row lazily on the first /sync/push, so without this
+    // the freshly-logged-in user sees an empty devices table until they
+    // manually click "Push". Fire-and-forget — any error surfaces in the
+    // devices table reload below rather than blocking login UI.
+    void autoRegisterDeviceAfterLogin()
+
     void loadDevicesAccount()
   } catch (e) {
     authError.value = errorMessage(e)
   } finally {
     authLoading.value = false
+  }
+}
+
+// Silent version of pushToCloud used right after login so the first
+// devices list render isn't empty. Same endpoint + payload shape, but
+// no ElMessage toast on success (the login toast is enough) and errors
+// are only logged — we don't want a failed first-push to look like
+// login itself failed.
+async function autoRegisterDeviceAfterLogin() {
+  if (!accountToken.value) return
+  try {
+    // Make sure we have a persisted deviceId before pushing. Fresh
+    // installs generate + save one here so the server-side row keys
+    // correctly.
+    if (!deviceId.value) await loadDeviceId()
+    if (!deviceId.value) return
+
+    const payload = await buildSyncPayload()
+    const proxyHeaders = authHeaders()
+    proxyHeaders['X-Catalog-Token'] = accountToken.value
+    const r = await fetch(`${daemonBaseUrl()}/api/sync/push`, {
+      method: 'POST',
+      headers: proxyHeaders,
+      body: JSON.stringify({ device_id: deviceId.value, payload }),
+    })
+    if (r.ok) {
+      lastSyncTime.value = new Date().toISOString()
+      await saveSettings({ 'sync.lastSyncTime': lastSyncTime.value })
+    }
+    // Non-ok is silent by design — next manual push / heartbeat will
+    // retry and surface the error with proper context.
+  } catch {
+    /* network/daemon hiccup — silent, heartbeat loop retries */
   }
 }
 
@@ -1670,13 +1825,19 @@ async function doRegister() {
   }
 }
 
-function doLogout() {
+async function doLogout() {
   // F91.15b: single-source logout — authStore.logout() clears token +
   // profile; legacy localStorage keys are best-effort swept too.
   authStore.logout()
   localStorage.removeItem('nks-wdc-catalog-jwt')
   localStorage.removeItem('nks-wdc-catalog-email')
   accountDevices.value = []
+  // Clear the daemon-side mirror so CatalogHeartbeatService stops
+  // pinging the catalog with a now-invalid token. saveSettings with an
+  // empty string is treated as "unset" by the daemon's GetString guard.
+  try {
+    await saveSettings({ 'sync.accountToken': '', 'sync.accountEmail': '' })
+  } catch { /* daemon unreachable, heartbeat will just retry 401 once */ }
   ElMessage.success('Signed out')
 }
 
@@ -2182,7 +2343,23 @@ onMounted(async () => {
   void loadPluginPorts()
   void loadMysqlRootStatus()
   void loadSnapshots()
-  if (accountToken.value) void loadDevicesAccount()
+  if (accountToken.value) {
+    void loadDevicesAccount()
+    // Mirror the renderer's accountToken into daemon SettingsStore so
+    // CatalogHeartbeatService can see it. Needed for sessions where the
+    // token was set in a previous Electron run (stored in localStorage)
+    // and the daemon was restarted since — its SettingsStore never saw
+    // the login. Silent fail — if daemon is unreachable we'll retry on
+    // next Settings page mount.
+    void (async () => {
+      try {
+        await saveSettings({ 'sync.accountToken': accountToken.value })
+        // Kick off an immediate device push so the cloud admin UI shows
+        // this device as online without waiting for the 60 s heartbeat.
+        void autoRegisterDeviceAfterLogin()
+      } catch { /* no-op */ }
+    })()
+  }
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
@@ -2213,7 +2390,6 @@ async function save() {
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),
-      'general.autoStart':    String(autoStart.value),
       'paths.apache':   paths.apache,
       'paths.mysql':    paths.mysql,
       'paths.php':      paths.php,
@@ -2295,6 +2471,50 @@ async function save() {
   font-size: 0.76rem;
   color: var(--wdc-text-3);
   line-height: 1.5;
+}
+.danger-zone {
+  margin-top: 32px;
+  padding: 18px 20px;
+  background: color-mix(in srgb, var(--el-color-danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--el-color-danger) 30%, transparent);
+  border-radius: 8px;
+  max-width: 720px;
+}
+.danger-title {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--el-color-danger);
+}
+.danger-desc {
+  margin: 0 0 18px 0;
+  font-size: 0.82rem;
+  color: var(--wdc-text-3);
+}
+.danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--el-color-danger) 20%, transparent);
+}
+.danger-row .danger-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.danger-row strong {
+  font-size: 0.88rem;
+  color: var(--wdc-text-1);
+  font-weight: 600;
+}
+.danger-row .hint {
+  font-size: 0.76rem;
+  color: var(--wdc-text-3);
+  line-height: 1.4;
+  max-width: 440px;
 }
 .hint code {
   font-family: 'JetBrains Mono', monospace;

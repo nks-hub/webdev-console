@@ -18,6 +18,9 @@
         </el-button>
       </div>
     </div>
+    <div class="page-autostart-row">
+      <PluginAutostartSwitch plugin-id="nks.wdc.mysql" />
+    </div>
 
     <div class="status-strip">
       <div class="status-card" :class="{ 'status-active': serviceRunning }">
@@ -240,6 +243,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, stopService } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
+import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
 defineOptions({ name: 'MySqlPluginPage' })
 
@@ -351,6 +355,7 @@ onMounted(() => { /* services already loaded by daemon store poll */ })
 <style scoped>
 .cf-page { min-height: 100%; background: var(--wdc-bg); padding: 0; }
 .page-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid var(--wdc-border); }
+.page-autostart-row { padding: 10px 24px 0; max-width: 720px; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title { font-size: 1.25rem; font-weight: 800; color: var(--wdc-text); margin: 0; }
 .page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }

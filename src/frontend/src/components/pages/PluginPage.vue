@@ -69,6 +69,7 @@
             <span class="meta-val">{{ manifest.supportedPlatforms.join(', ') }}</span>
           </span>
         </div>
+        <PluginAutostartSwitch :plugin="manifest" />
       </div>
 
       <!-- Task 26: plugin-delivered custom UI bundle. When the plugin's
@@ -111,6 +112,7 @@ import { computed, onMounted, ref, shallowRef, watch, markRaw, type Component } 
 import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
 import SchemaRenderer from '../../plugins/SchemaRenderer.vue'
+import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
 const props = defineProps<{ id: string }>()
 

@@ -308,13 +308,14 @@
                   <div class="php-version-grid">
                     <button
                       v-for="v in phpVersions"
-                      :key="v"
+                      :key="v.value"
                       type="button"
                       class="php-version-btn"
-                      :class="{ active: site.phpVersion === v }"
-                      @click="setPhpVersion(v)"
+                      :class="{ active: site.phpVersion === v.value, 'php-active': v.isActive }"
+                      :title="v.isActive ? `${v.label} — runtime-active` : v.label"
+                      @click="setPhpVersion(v.value)"
                     >
-                      {{ v }}
+                      {{ v.label }}
                     </button>
                     <div v-if="phpVersions.length === 0" class="hint">
                       No PHP versions installed. Open the Binaries page to install one.
@@ -659,7 +660,11 @@ const loading = ref(false)
 const saving = ref(false)
 const dirty = ref(false)
 const activeTab = ref('general')
-const phpVersions = ref<string[]>([])
+// Same per-version option shape as Sites.vue wizard — keeps the detail
+// page and the wizard aligned. `value` is the backend-persisted
+// majorMinor; `label` shows the full patch + active flag.
+interface PhpVersionOption { value: string; label: string; isActive: boolean }
+const phpVersions = ref<PhpVersionOption[]>([])
 const history = ref<Array<{ timestamp: string; label?: string }>>([])
 // Task 28: Danger-tab rename input. Kept reactive so a future rename
 // backend can wire up immediately without a template change.
@@ -810,7 +815,13 @@ function selectRuntime(rt: 'static' | 'php' | 'node') {
     site.value.phpVersion = 'none'
     site.value.nodeUpstreamPort = 0
   } else if (rt === 'php') {
-    site.value.phpVersion = phpVersions.value[0] ?? '8.4'
+    // Fall back to empty rather than a fabricated '8.4' — the dropdown's
+    // empty-state hint ("no PHP installed — go to Binaries") should
+    // then guide the user instead of silently storing a broken value.
+    site.value.phpVersion =
+      phpVersions.value.find(p => p.isActive)?.value
+      ?? phpVersions.value[0]?.value
+      ?? ''
     site.value.nodeUpstreamPort = 0
   } else if (rt === 'node') {
     site.value.phpVersion = 'none'
@@ -1014,11 +1025,23 @@ async function load() {
     site.value = found ? { ...found, aliases: [...(found.aliases ?? [])] } : null
     dirty.value = false
 
-    // php versions
+    // PHP versions — authoritative list from daemon. Leave the array
+    // empty on failure so the template's "no versions installed" hint
+    // renders instead of lying about versions the user doesn't actually
+    // have. The old fallback ['8.4','8.3','8.2'] hid the bug where the
+    // daemon lost the PHP plugin state at boot — now the user sees the
+    // real empty state and knows to install via the Binaries page.
     try {
       const versions = await fetchPhpVersions()
-      phpVersions.value = versions.map(v => v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version)
-    } catch { phpVersions.value = ['8.4', '8.3', '8.2'] }
+      phpVersions.value = versions.map(v => {
+        const mm = v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version
+        return {
+          value: mm,
+          label: `PHP ${v.version}${v.isActive ? ' (active)' : ''}`,
+          isActive: !!v.isActive,
+        }
+      })
+    } catch { phpVersions.value = [] }
 
     // history
     try {

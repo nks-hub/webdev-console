@@ -2,9 +2,72 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, n
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs'
 import { tmpdir } from 'os'
 import http from 'http'
+import * as Sentry from '@sentry/electron/main'
+
+// Sentry crash reporting — resolution order:
+//   1. Runtime env SENTRY_DSN / NKS_WDC_SENTRY_DSN (self-hosters, dev)
+//   2. Build-time default from GitHub Secret SENTRY_DSN_FRONTEND baked
+//      in via Vite's define config (process.env.SENTRY_DSN_DEFAULT)
+// No DSN literal in git. Empty at every layer = SDK not initialised.
+const sentryDsn = (
+  process.env.SENTRY_DSN
+  || process.env.NKS_WDC_SENTRY_DSN
+  || process.env.SENTRY_DSN_DEFAULT  // Vite-injected CI secret fallback
+  || ''
+).trim()
+// Backend DSN is passed to the daemon child process so the .NET app
+// doesn't need its own env config.
+const daemonSentryDsn = (
+  process.env.SENTRY_DSN_BACKEND
+  || process.env.SENTRY_DSN_BACKEND_DEFAULT
+  || ''
+).trim()
+const sentryEnvironment = (
+  process.env.SENTRY_ENVIRONMENT
+  || process.env.SENTRY_ENVIRONMENT_DEFAULT
+  || (app.isPackaged ? 'production' : 'development')
+)
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    // Release tag populated from CFBundleShortVersionString (macOS) /
+    // FileVersion (Windows) — same source as the status bar version.
+    release: `nks-wdc-electron@${app.getVersion()}`,
+    environment: sentryEnvironment,
+    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+    debug: process.env.SENTRY_DEBUG === '1',
+    maxBreadcrumbs: 100,
+    // Strip anything identifying. Runtime env can still override per-call
+    // via Sentry.setUser if the user explicitly opts in.
+    beforeSend(event) {
+      if (event.user) event.user = { id: undefined, email: undefined, username: undefined, ip_address: undefined }
+      if (event.server_name) event.server_name = ''
+      return event
+    },
+    // Electron-specific extras: bundle native crash reports (minidump)
+    // when the main process is killed by the OS, and preload renderer
+    // crash handler via IPC so uncaught renderer errors reach us even
+    // when devtools are closed.
+    integrations: (defaultIntegrations) => defaultIntegrations,
+    // Breadcrumb on every app lifecycle event for triage context.
+    initialScope: {
+      tags: {
+        platform: process.platform,
+        arch: process.arch,
+        electron: process.versions.electron,
+        node: process.versions.node,
+      },
+    },
+  })
+  // Breadcrumb on window lifecycle so crashes tell us whether the user
+  // had the app focused, backgrounded, or was about to quit.
+  app.on('ready', () => Sentry.addBreadcrumb({ category: 'app', message: 'ready', level: 'info' }))
+  app.on('before-quit', () => Sentry.addBreadcrumb({ category: 'app', message: 'before-quit', level: 'info' }))
+  app.on('window-all-closed', () => Sentry.addBreadcrumb({ category: 'app', message: 'window-all-closed', level: 'info' }))
+}
 
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -133,16 +196,61 @@ async function isDaemonAlive(): Promise<boolean> {
   const info = readPortFile()
   if (!info) return false
   try {
-    // /api/status requires auth — the mere fact that we get a response (even 401) means the daemon is up
-    await new Promise<void>((resolve, reject) => {
+    // Must match the `service` marker in our /healthz response. Before
+    // this check we treated *any* HTTP 200 as "daemon up" — which meant
+    // a stale port file pointing at e.g. macOS Control Center's AirPlay
+    // receiver (port 5000) made us skip spawning the real daemon, leaving
+    // the app with no backend for its entire lifetime. We verify the
+    // marker and treat a mismatch as "port file is stale, spawn a new
+    // daemon and let it pick a fresh port".
+    const body = await new Promise<string>((resolve, reject) => {
       const req = http.get(`http://localhost:${info.port}/healthz`, (res) => {
-        res.on('data', () => {})
-        res.on('end', () => resolve())
+        let buf = ''
+        res.on('data', (chunk: Buffer) => { buf += chunk.toString() })
+        res.on('end', () => resolve(buf))
       })
       req.on('error', reject)
       req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')) })
     })
-    return true
+    try {
+      const parsed = JSON.parse(body) as { service?: string; ok?: boolean; version?: string }
+      if (parsed.service !== 'nks-wdc-daemon' || parsed.ok !== true) {
+        console.warn('[daemon] /healthz signature mismatch, treating port file as stale:', body.slice(0, 120))
+        return false
+      }
+      // Version skew check — auto-updated frontends used to attach to a
+      // leftover older daemon process and show "frontend 0.2.18 + daemon
+      // 0.2.2" mismatches in Settings > About. The daemon's binary can't
+      // be hot-swapped while it's running, so the only correctness-preserving
+      // option is to kill it and spawn the one bundled with this app.
+      const appVersion = app.getVersion()
+      const daemonVersion = (parsed.version || '').split('+')[0].trim()
+      if (daemonVersion && daemonVersion !== appVersion) {
+        console.warn(`[daemon] version skew — app=${appVersion} daemon=${daemonVersion} — stopping stale daemon`)
+        try {
+          await new Promise<void>((resolve) => {
+            const req = http.request(
+              `http://localhost:${info.port}/api/admin/shutdown`,
+              {
+                method: 'POST',
+                headers: info.token ? { Authorization: `Bearer ${info.token}` } : {},
+              },
+              (res) => { res.on('data', () => {}); res.on('end', () => resolve()) },
+            )
+            req.on('error', () => resolve())
+            req.setTimeout(2000, () => { req.destroy(); resolve() })
+            req.end()
+          })
+          // Give the old daemon a moment to release the port file
+          await new Promise(r => setTimeout(r, 1500))
+        } catch { /* fall through — the spawn loop will pick a new port anyway */ }
+        return false
+      }
+      return true
+    } catch {
+      console.warn('[daemon] /healthz returned non-JSON, treating port file as stale:', body.slice(0, 120))
+      return false
+    }
   } catch {
     return false
   }
@@ -167,6 +275,16 @@ async function spawnDaemon() {
   // must never auto-point at a local 127.0.0.1 dev catalog.
   const daemonEnv: NodeJS.ProcessEnv = { ...process.env }
   if (portableWdcDir) daemonEnv.WDC_DATA_DIR = portableWdcDir
+  // Forward the backend Sentry DSN to the daemon. Runtime SENTRY_DSN from
+  // user env always wins; only set the fallback from the Vite-baked CI
+  // secret when nothing else is present. Backend gets its own DSN because
+  // it's a separate Sentry project from the Electron one (27 vs 28).
+  if (!daemonEnv.SENTRY_DSN && daemonSentryDsn) {
+    daemonEnv.SENTRY_DSN = daemonSentryDsn
+  }
+  if (!daemonEnv.SENTRY_ENVIRONMENT) {
+    daemonEnv.SENTRY_ENVIRONMENT = sentryEnvironment
+  }
 
   if (isDev) {
     const projectDir = findDaemonProject()
@@ -470,9 +588,9 @@ async function updateTray() {
     { type: 'separator' },
     {
       label: 'Quit',
-      click: () => {
+      click: async () => {
         isQuitting = true
-        daemon?.kill()
+        await shutdownDaemon()
         app.quit()
       }
     }
@@ -649,9 +767,45 @@ async function setupAutoUpdater() {
   }
 }
 
-app.on('before-quit', () => {
-  isQuitting = true
+app.on('before-quit', async (event) => {
+  if (!isQuitting) {
+    // First quit trigger — pause the default quit so we can gracefully
+    // stop the daemon process first, then re-emit quit. Without this,
+    // macOS Cmd+Q from the menu bar would leave an orphan .NET process
+    // that'd still hold ports + files; next launch would attach to it
+    // and inherit its state instead of starting clean.
+    isQuitting = true
+    event.preventDefault()
+    await shutdownDaemon()
+    app.quit()
+  }
 })
+
+/**
+ * Stop the daemon regardless of whether we spawned it or adopted an
+ * existing one via isDaemonAlive.
+ *
+ *  - HTTP shutdown reaches adopted daemons too (we only have `daemon` as
+ *    a child_process handle when WE spawned it; for reused daemons it's
+ *    null and `daemon?.kill()` would no-op).
+ *  - The child_process.kill() afterwards catches cases where the HTTP
+ *    call returned fast but the process is still finishing its own exit
+ *    sequence — belt and suspenders.
+ *
+ * User requirement: "when quit from tray, kill backend". Before this the
+ * tray-Quit only called `daemon?.kill()` which did nothing on an adopted
+ * daemon, leaving a .NET process running after the user explicitly quit.
+ */
+async function shutdownDaemon() {
+  try { await daemonPost('/api/admin/shutdown') } catch { /* already dead or unreachable */ }
+  try { daemon?.kill() } catch { /* already dead */ }
+  daemon = null
+  // Best-effort port file cleanup so the next app launch sees a clean
+  // slate instead of having to wait for its own isDaemonAlive probe.
+  try {
+    if (existsSync(PORT_FILE)) unlinkSync(PORT_FILE)
+  } catch { /* harmless */ }
+}
 
 // Enable Chrome DevTools Protocol in dev mode so tooling/tests can read renderer console
 protocol.registerSchemesAsPrivileged([

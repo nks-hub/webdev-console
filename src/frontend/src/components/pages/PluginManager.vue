@@ -181,6 +181,12 @@
           </div>
         </div>
 
+        <!-- Per-plugin autostart toggle. The <PluginAutostartSwitch> guard
+             (type==='service' && serviceId) handles the non-service cases
+             so we don't need to double-gate here. Compact variant keeps
+             the card's vertical rhythm consistent with the other rows. -->
+        <PluginAutostartSwitch :plugin="plugin" compact />
+
         <!-- Open plugin page button if has UI. Must be a full-width solid
              button for readable contrast — the old text-primary variant
              rendered as low-contrast blue-on-blue on the flat surface. -->
@@ -237,6 +243,7 @@ import {
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
+import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
 const router = useRouter()
 const pluginsStore = usePluginsStore()
@@ -426,7 +433,9 @@ async function confirmUninstall(id: string, name: string) {
   }
 }
 
-onMounted(() => { void pluginsStore.loadAll() })
+onMounted(() => {
+  void pluginsStore.loadAll()
+})
 </script>
 
 <style scoped>

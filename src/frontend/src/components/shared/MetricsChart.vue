@@ -29,7 +29,12 @@ const chartHeight = computed(() => props.height ?? 80)
 
 const chartOption = computed(() => {
   const color = props.color ?? '#6366f1'
-  const dataArr = props.data.length > 0 ? [...props.data] : [0]
+  // Guard: caller may pass undefined before the first metrics payload
+  // lands (async load). Previously `.length` on undefined threw and
+  // poisoned the computed, which Vue surfaced as a page-wide render
+  // error + Sentry FRONT-4 / FRONT-8.
+  const series = props.data ?? []
+  const dataArr = series.length > 0 ? [...series] : [0]
 
   return {
     animation: false,

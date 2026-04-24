@@ -1,4 +1,5 @@
 using Dapper;
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Daemon.Data;
 
 namespace NKS.WebDevConsole.Daemon.Services;
@@ -17,13 +18,32 @@ namespace NKS.WebDevConsole.Daemon.Services;
 ///   - <c>autoStartEnabled</c> (bool, default true) — start all services on
 ///     daemon boot. Consulted once at <c>Program.cs</c> bootstrap.
 /// </summary>
-public sealed class SettingsStore
+public sealed class SettingsStore : IWdcSettings
 {
     private readonly Database _database;
 
     public SettingsStore(Database database)
     {
         _database = database;
+    }
+
+    /// <summary>
+    /// <see cref="IWdcSettings.GetInt"/> implementation — parses whatever the
+    /// settings row holds as an int. Invalid or missing rows yield the
+    /// caller-supplied default so plugins don't have to repeat the
+    /// try-parse dance on every read. Shares the same table as every other
+    /// GetString/GetBool read, so `PUT /api/settings` updates are visible
+    /// on the next call.
+    /// </summary>
+    public int GetInt(string category, string key, int defaultValue = 0)
+    {
+        var raw = GetString(category, key);
+        if (string.IsNullOrWhiteSpace(raw)) return defaultValue;
+        return int.TryParse(
+            raw.Trim(),
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var parsed) ? parsed : defaultValue;
     }
 
     /// <summary>

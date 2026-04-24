@@ -6,15 +6,37 @@ import { readFileSync } from 'node:fs'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
 
+// Sentry DSNs flow from GitHub Secrets → GHA env → Vite define. Empty
+// string at build time = no Sentry in shipped artifact; runtime env
+// (SENTRY_DSN) still wins so self-hosters can always override.
+const sentryDsnFrontend = process.env.SENTRY_DSN_FRONTEND || process.env.SENTRY_DSN || ''
+const sentryDsnBackend = process.env.SENTRY_DSN_BACKEND || ''
+const sentryEnv = process.env.SENTRY_ENVIRONMENT || 'production'
+
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // Externalize everything except @sentry/electron which must be
+    // bundled into the main.js since we pack without node_modules
+    // (asar-only layout) for local installs. electron-builder normally
+    // handles this via app.asar.unpacked, but our hot-swap install
+    // flow doesn't run through electron-builder.
+    plugins: [externalizeDepsPlugin({
+      exclude: ['@sentry/electron', '@sentry/core', '@sentry/utils', '@sentry/types', '@sentry/node'],
+    })],
     build: {
       outDir: 'dist-electron',
       rollupOptions: {
         input: resolve(__dirname, 'electron/main.ts')
       }
-    }
+    },
+    // Main process reads Sentry DSN from process.env at runtime — this
+    // define substitutes the build-time secret into the bundle as a
+    // fallback when the env var isn't set by the user's shell.
+    define: {
+      'process.env.SENTRY_DSN_DEFAULT': JSON.stringify(sentryDsnFrontend),
+      'process.env.SENTRY_DSN_BACKEND_DEFAULT': JSON.stringify(sentryDsnBackend),
+      'process.env.SENTRY_ENVIRONMENT_DEFAULT': JSON.stringify(sentryEnv),
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
@@ -36,6 +58,8 @@ export default defineConfig({
     },
     define: {
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+      'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(sentryDsnFrontend),
+      'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(sentryEnv),
     },
     base: './',
     build: {

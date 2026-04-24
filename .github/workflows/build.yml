@@ -69,6 +69,11 @@ jobs:
         shell: bash
 
       - name: Build daemon
+        # SENTRY_DSN env flows into the published binary's runtime env via
+        # electron-builder's extraResources bundle; no DSN literal is
+        # written into the C#. Daemon reads SENTRY_DSN at start-up.
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_BACKEND }}
         run: dotnet publish src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r ${{ matrix.daemon_rid }} --self-contained -o src/frontend/resources/daemon
 
       - name: Build solution (plugins + tests)
@@ -93,6 +98,15 @@ jobs:
         working-directory: src/frontend
         run: npm run ${{ matrix.npm_script }}
         env:
+          # Sentry DSNs are set from GitHub Secrets (never in git). Vite
+          # inlines these at build time via import.meta.env — the daemon
+          # reads its own from SENTRY_DSN at launch (Electron passes it
+          # through to spawn()'s env). Leaving a secret blank disables
+          # Sentry for that surface without a code change.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_FRONTEND }}
+          SENTRY_DSN_FRONTEND: ${{ secrets.SENTRY_DSN_FRONTEND }}
+          SENTRY_DSN_BACKEND: ${{ secrets.SENTRY_DSN_BACKEND }}
+          SENTRY_ENVIRONMENT: production
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # stage-plugins.mjs reads GITHUB_TOKEN to auth GitHub API calls
           # when fetching plugin release zips. Unauthenticated is 60/hr per

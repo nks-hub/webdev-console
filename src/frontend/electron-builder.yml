@@ -13,6 +13,15 @@ files:
 extraResources:
   - from: resources/daemon
     to: daemon
+  # Ship the tray PNGs (and their @2x Retina companions) so the tray
+  # loader in electron/main.ts can read them from
+  # process.resourcesPath/build/. Without this they stay in buildResources
+  # only and the packaged app falls back to the blurry procedural 16×16
+  # dot — which is what the user sees as "background noise" on Retina.
+  - from: build
+    to: build
+    filter:
+      - "icon-tray-*.png"
 
 artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 

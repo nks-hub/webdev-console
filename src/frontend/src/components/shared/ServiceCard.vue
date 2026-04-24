@@ -1,5 +1,13 @@
 <template>
-  <div class="svc-card" :class="[`svc-${statusText}`]">
+  <!-- Guard the ENTIRE card on props.service existing. Vue re-renders
+       pass undefined through the prop when parent list mutates between
+       reactive ticks (service removed + array re-keyed). Without this
+       root v-if, the template walks `service.displayName` on undefined
+       and throws — Sentry FRONT-B (and the FRONT-2/5/7 family). Root
+       gate is cheaper than peppering optional chaining across every
+       binding, and it matches the "no service = nothing to render"
+       semantics the user sees. -->
+  <div v-if="service" class="svc-card" :class="[`svc-${statusText}`]">
     <!-- Header -->
     <div class="svc-header">
       <div class="svc-name-row">
@@ -107,17 +115,22 @@ const props = defineProps<{ service: ServiceInfo }>()
 const servicesStore = useServicesStore()
 const pendingAction = ref<'start' | 'stop' | 'restart' | null>(null)
 
-const busy = computed(() => servicesStore.isBusy(props.service.id))
+const busy = computed(() => props.service ? servicesStore.isBusy(props.service.id) : false)
 
 const stateLabels: Record<number, string> = {
   0: 'stopped', 1: 'starting', 2: 'running', 3: 'stopping', 4: 'crashed', 5: 'disabled',
 }
+// All computeds optional-chain `props.service` because Vue may flush a
+// parent re-render with `:service="undefined"` in the window where the
+// services store just removed a row and the v-for list re-keys. Without
+// the guards Sentry caught FRONT-2/5/7 "Cannot read properties of
+// undefined (reading 'state'/'displayName')".
 const statusText = computed(() => {
-  const st = props.service.state
-  return (st != null ? stateLabels[st] : undefined) ?? props.service.status ?? 'unknown'
+  const st = props.service?.state
+  return (st != null ? stateLabels[st] : undefined) ?? props.service?.status ?? 'unknown'
 })
-const isRunning = computed(() => props.service.state === 2)
-const isStopped = computed(() => props.service.state === 0 || props.service.state === 5)
+const isRunning = computed(() => props.service?.state === 2)
+const isStopped = computed(() => props.service?.state === 0 || props.service?.state === 5)
 
 const tagType = computed((): '' | 'success' | 'warning' | 'danger' | 'info' => {
   const map: Record<string, '' | 'success' | 'warning' | 'danger' | 'info'> = {
@@ -127,25 +140,31 @@ const tagType = computed((): '' | 'success' | 'warning' | 'danger' | 'info' => {
   return map[statusText.value] ?? 'info'
 })
 
-const cpuPercent = computed(() => Math.min(props.service.cpuPercent ?? 0, 100))
+const cpuPercent = computed(() => Math.min(props.service?.cpuPercent ?? 0, 100))
 const cpuText = computed(() => `${cpuPercent.value.toFixed(1)}%`)
 const cpuBarWidth = computed(() => `${cpuPercent.value}%`)
 
 // RAM bar: cap display at 500 MB for visual scale
 const RAM_MAX = 500 * 1024 * 1024
 const ramBarWidth = computed(() => {
-  const pct = Math.min((props.service.memoryBytes ?? 0) / RAM_MAX, 1) * 100
+  const pct = Math.min((props.service?.memoryBytes ?? 0) / RAM_MAX, 1) * 100
   return `${pct}%`
 })
 
 async function act(action: 'start' | 'stop' | 'restart') {
+  // Snapshot the service ref at click time so a concurrent re-render
+  // that replaces the prop mid-action doesn't null-deref the follow-up
+  // success/error toast. Sentry FRONT-5/B both originated from this
+  // path: user clicks, store mutates services[], Vue passes undefined.
+  const svc = props.service
+  if (!svc) return
   pendingAction.value = action
   try {
-    await servicesStore[action](props.service.id)
-    const svcName = props.service.displayName || props.service.id
+    await servicesStore[action](svc.id)
+    const svcName = svc.displayName || svc.id
     ElMessage.success(`${svcName}: ${action} succeeded`)
   } catch (err: unknown) {
-    const svcName = props.service.displayName || props.service.id
+    const svcName = svc.displayName || svc.id
     const message = err instanceof Error ? err.message : String(err)
     ElNotification({
       title: `${svcName} — ${action} failed`,

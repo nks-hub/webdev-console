@@ -39,13 +39,22 @@
         @row-click="selectSite"
         class="sites-table"
         row-class-name="cursor-pointer"
+        table-layout="auto"
       >
-        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="220">
+        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="200">
           <template #default="{ row }">
             <div class="cell-domain">
               <div class="cell-domain-row">
                 <span class="col-domain">{{ row.domain }}</span>
-                <span class="cell-port">:{{ row.httpPort || 80 }}</span>
+                <!-- Port badge. SSL-enabled sites advertise both :80→:443
+                     (HTTP redirects, HTTPS serves), so show both ports so
+                     the user isn't misled into thinking SSL didn't get
+                     wired up. SSL-off sites stay on :80 alone. -->
+                <span class="cell-port">{{
+                  row.sslEnabled
+                    ? `:${row.httpPort || 80}/:${row.httpsPort || 443}`
+                    : `:${row.httpPort || 80}`
+                }}</span>
                 <el-tag
                   v-if="row.sslEnabled"
                   size="small"
@@ -68,13 +77,13 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Document Root" min-width="260">
+        <el-table-column label="Document Root" min-width="220" class-name="col-docroot-cell">
           <template #default="{ row }">
-            <span class="col-mono">{{ row.documentRoot }}</span>
+            <span class="col-mono" :title="row.documentRoot">{{ row.documentRoot }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column :label="$t('sites.phpVersion')" width="140">
+        <el-table-column :label="$t('sites.phpVersion')" width="110">
           <template #default="{ row }">
             <el-tag
               v-if="row.nodeUpstreamPort && row.nodeUpstreamPort > 0"
@@ -87,7 +96,8 @@
               size="small"
               effect="dark"
               class="runtime-tag runtime-php"
-            >PHP {{ row.phpVersion }}</el-tag>
+              :title="phpFullLabel(row.phpVersion)"
+            >{{ phpFullLabel(row.phpVersion) }}</el-tag>
             <el-tag
               v-else
               size="small"
@@ -97,7 +107,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column :label="$t('sites.framework')" width="180">
+        <el-table-column :label="$t('sites.framework')" width="130" class-name="col-framework-cell">
           <template #default="{ row }">
             <div class="framework-cell">
               <el-tag
@@ -123,28 +133,24 @@
           </template>
         </el-table-column>
 
-        <!-- Task 01: enable/disable toggle column (advanced table view).
-             Symmetric with the simple-mode list; backed by PATCH
-             /api/sites/{domain}/enabled. -->
-        <el-table-column label="Povoleno" width="100" align="center">
-          <template #default="{ row }">
-            <el-switch
-              :model-value="row.enabled !== false"
-              :loading="togglingEnabled === row.domain"
-              size="small"
-              @change="(v: boolean | string | number) => toggleSiteEnabled(row, v)"
-              @click.stop
-            />
-          </template>
-        </el-table-column>
-
-        <el-table-column :label="$t('common.actions')" width="160" fixed="right">
+        <!-- Akce column: enable toggle + Edit + overflow menu merged into
+             one column so the fixed-right sticky doesn't overlap
+             neighbouring cells when the viewport narrows. Previously the
+             'Povoleno' switch lived in its own 100px column which pushed
+             the total fixed width past 1060px and broke layout below
+             ~1100px viewport. -->
+        <el-table-column :label="$t('common.actions')" width="180" fixed="right">
           <template #default="{ row }">
             <div class="site-actions">
-              <!-- F86: Edit is now the primary row action — opening the
-                   browser is rarely the user's goal when scanning the list,
-                   usually they want to configure the site. Open URL moves
-                   into the overflow menu with Detect/Delete. -->
+              <el-switch
+                :model-value="row.enabled !== false"
+                :loading="togglingEnabled === row.domain"
+                size="small"
+                inline-prompt
+                :title="row.enabled !== false ? 'Povoleno' : 'Zakázáno'"
+                @change="(v: boolean | string | number) => toggleSiteEnabled(row, v)"
+                @click.stop
+              />
               <el-button size="small" type="primary" @click.stop="editSite(row)">{{ $t('common.edit') }}</el-button>
               <!-- Task 01: teleported + preventOverflow popper so the
                    dropdown never clips at the right edge of the table
@@ -205,7 +211,7 @@
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
             <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
-              <el-option v-for="v in phpVersions" :key="v" :label="`PHP ${v}`" :value="v" />
+              <el-option v-for="v in phpVersions" :key="v.value" :label="v.label" :value="v.value" />
               <el-option label="None" value="none" />
             </el-select>
           </el-form-item>
@@ -257,7 +263,7 @@
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
             <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
-              <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
+              <el-option v-for="v in phpVersions" :key="v.value" :label="v.label" :value="v.value" />
               <el-option label="None" value="none" />
             </el-select>
           </el-form-item>
@@ -360,7 +366,24 @@ const cloudflaredRunning = computed(() =>
     s.id === 'cloudflare' && (s.state === 2 || s.status === 'running')
   )
 )
-const phpVersions = ref<string[]>([])
+// Per-version dropdown entry. `value` is the majorMinor (what the backend
+// writes to sites.toml + uses for Apache vhost per-version paths); `label`
+// shows the full X.Y.Z version + an "active" hint so the user knows which
+// one is the current runtime, not just which dot-directories exist under
+// ~/.wdc/binaries/php/.
+interface PhpVersionOption { value: string; label: string; isActive: boolean }
+const phpVersions = ref<PhpVersionOption[]>([])
+
+// Map the stored majorMinor (e.g. "8.5") back to the full version label
+// ("PHP 8.5.5") for table display so users see the exact installed patch
+// and not just the major.minor bucket. Falls back to "PHP X.Y" when we
+// have no match (e.g. site points at a version that's no longer
+// installed, like the user's bad-php.loc with "7.0.0" — no 7.0 installed
+// so we just render what the row already holds).
+function phpFullLabel(stored: string): string {
+  const match = phpVersions.value.find(p => p.value === stored)
+  return match ? match.label : `PHP ${stored}`
+}
 // Native-looking Document Root placeholder. Windows keeps the legacy
 // C:\work\htdocs\<app> hint; macOS/Linux get a path rooted at the user's
 // home dir so the placeholder itself isn't misleading on those OSes.
@@ -411,11 +434,19 @@ const newSite = reactive({
   template: '',
   domain: '',
   documentRoot: '',
-  phpVersion: '8.4',
+  // Left empty intentionally — `loadPhpVersions()` in onMounted picks the
+  // first installed version (preferring the active one) as the default.
+  // Previously hardcoded to '8.4' which produced an empty-looking dropdown
+  // on fresh installs whose only version was e.g. 8.5 or 8.3 — el-select
+  // binds v-model to a non-existent option and renders blank.
+  phpVersion: '',
   aliases: '',
   createDb: false,
   dbName: '',
-  sslEnabled: false,
+  // SSL on by default so users opting out is the conscious choice — fresh
+  // installs with no cert will have Apache skip the SSL vhost block until
+  // mkcert actually issues one (handled by SiteOrchestrator on create).
+  sslEnabled: true,
   cloudflareTunnel: false,
 })
 
@@ -473,14 +504,45 @@ async function refreshComposeStatuses() {
   await Promise.all(tasks)
 }
 
+async function loadPhpVersions() {
+  try {
+    const versions = await fetchPhpVersions()
+    phpVersions.value = versions.map(v => {
+      const mm = v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version
+      return {
+        value: mm,
+        // "PHP 8.5.5 (active)" vs "PHP 8.3.25" — shows the exact patch
+        // version so users know which one they'd actually run.
+        label: `PHP ${v.version}${v.isActive ? ' (active)' : ''}`,
+        isActive: !!v.isActive,
+      }
+    })
+    // Pick the active version if the wizard's phpVersion field is empty
+    // or currently references a version that isn't installed (e.g. stale
+    // '8.4' default on a fresh install with only 8.5).
+    if (phpVersions.value.length > 0) {
+      const active = phpVersions.value.find(p => p.isActive)
+      const preferred = (active ?? phpVersions.value[0]).value
+      const present = phpVersions.value.some(p => p.value === newSite.phpVersion)
+      if (!newSite.phpVersion || !present) {
+        newSite.phpVersion = preferred
+      }
+    }
+  } catch { phpVersions.value = [] }
+}
+
 onMounted(async () => {
   await sitesStore.load()
   void refreshComposeStatuses()
   void resolveDocRootPlaceholder()
-  try {
-    const versions = await fetchPhpVersions()
-    phpVersions.value = versions.map(v => v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version)
-  } catch { phpVersions.value = [] }
+  await loadPhpVersions()
+})
+
+// Refresh PHP versions every time the create dialog opens — the user may
+// have installed a new binary via the Binaries page between app launches,
+// and forcing them to reload the Sites page to see it would surprise them.
+watch(showCreate, (open) => {
+  if (open) void loadPhpVersions()
 })
 
 // Re-scan compose status whenever the set of sites OR any site's
@@ -512,7 +574,22 @@ async function createSite() {
       aliases: newSite.aliases ? newSite.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
       ...(newSite.cloudflareTunnel ? { cloudflareTunnel: true } : {}),
     }
-    await sitesStore.create(payload)
+    const created = await sitesStore.create(payload)
+
+    // Surface silent SSL failure — if the user asked for HTTPS but the
+    // daemon's mkcert step didn't produce a cert (binary missing, CA
+    // not installed, permission denied), SiteOrchestrator just logs a
+    // warning and returns the site with sslEnabled=false. Previously
+    // users saw "Site created" and had no clue why https://… wasn't
+    // working. We compare the request vs response and toast a warning
+    // with guidance on how to recover.
+    if (newSite.sslEnabled && created && created.sslEnabled === false) {
+      ElMessage.warning({
+        message: 'Site vytvořen, ale SSL certifikát nebyl vystaven. Nainstaluj mkcert + CA v Binaries → SSL.',
+        duration: 8000,
+        showClose: true,
+      })
+    }
 
     // Auto-create database if requested
     if (newSite.createDb) {
@@ -533,7 +610,11 @@ async function createSite() {
     }
 
     showCreate.value = false
-    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: '8.4', aliases: '', sslEnabled: false, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
+    // Reset form. phpVersion picks the active/first installed version
+    // again (set once by loadPhpVersions on dialog open) instead of a
+    // hardcoded literal that may not exist on this machine.
+    const defaultPhp = phpVersions.value.find(p => p.isActive)?.value ?? phpVersions.value[0]?.value ?? ''
+    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
   } catch (e) {
     ElMessage.error(`Create failed: ${errorMessage(e)}`)
   } finally {
@@ -820,6 +901,56 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   font-size: 0.82rem;
   font-family: 'JetBrains Mono', monospace;
   color: var(--wdc-text-2);
+  /* Single-line truncate for long docroots (no more 2-line wrap that
+     breaks row height on narrow viewports). Full path stays in the
+     native tooltip via :title on the span. */
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Force docroot cell to respect overflow so flex parent doesn't stretch */
+.sites-table :deep(.col-docroot-cell) {
+  overflow: hidden;
+}
+.sites-table :deep(.col-docroot-cell .cell) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Framework column is the easiest to drop when the viewport gets
+   tight — the tag is nice-to-have, everything critical is in
+   Domain/PHP/Actions. Hide under 1100 px so the remaining four
+   columns breathe. */
+@media (max-width: 1100px) {
+  .sites-table :deep(.col-framework-cell) {
+    display: none;
+  }
+}
+/* Below 900 px, also drop the PHP version column — most users on
+   laptop screens have a single PHP installed so the tag is redundant
+   with docroot + framework. */
+@media (max-width: 900px) {
+  .sites-table :deep(.col-framework-cell),
+  .sites-table :deep(th.el-table__cell):nth-child(3),
+  .sites-table :deep(td.el-table__cell):nth-child(3) {
+    display: none;
+  }
+}
+
+/* Row actions: keep switch + edit + overflow on one line, prevent
+   wrapping into 2 rows which collides with the fixed-right column
+   border. */
+.site-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .col-empty {
