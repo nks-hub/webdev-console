@@ -177,6 +177,14 @@ builder.Services.AddHostedService<CatalogHeartbeatService>();
 // lose the persisted log file until they fix the underlying cause.
 // Windows CI smoke was timing out because a sink exception at boot
 // blocked the Kestrel startup path before the port file got written.
+// Drop Kestrel + ASP.NET Core Information request logs from the file
+// sink: every HTTP request would otherwise write 6-8 lines to disk
+// (Request starting, CORS, endpoint dispatch, status code, body type,
+// Request finished). That's cheap on macOS but hit Windows CI smoke
+// hard enough to time out bootstrap at 60s. Warnings/Errors from the
+// framework are still captured for real incidents.
+builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Information); // keep "Now listening on:" banner
 var daemonLogDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.LogsRoot, "daemon");
 string? daemonLogPath = null;
 try
@@ -198,22 +206,15 @@ catch (Exception ex)
     daemonLogPath = null;
 }
 
-// Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
-var earlyLoggerFactory = LoggerFactory.Create(b =>
-{
-    b.AddConsole();
-    if (daemonLogPath is not null)
-    {
-        try
-        {
-            NReco.Logging.File.FileLoggerExtensions.AddFile(b, daemonLogPath, fileOpts => { fileOpts.Append = true; fileOpts.FileSizeLimitBytes = 10 * 1024 * 1024; fileOpts.MaxRollingFiles = 7; });
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[daemon] early file logging disabled: {ex.Message}");
-        }
-    }
-});
+// Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build.
+// Console-only on purpose: this factory runs before Kestrel boots, so
+// attaching the NReco file sink here was adding synchronous file-open
+// overhead on the critical startup path. Windows CI smoke was failing
+// with "Timed out waiting for packaged app daemon bootstrap after
+// 60000ms" at 33ff05a — the main file-sink below is enough, early
+// plugin-load logs still land on console/stderr if something goes
+// wrong.
+var earlyLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
 var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
 // Production: plugins/ next to daemon binary. Dev: build/plugins/ at repo root.
 var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
