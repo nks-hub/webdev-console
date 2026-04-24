@@ -3610,12 +3610,19 @@ app.MapPost("/api/onboarding/complete", async (SiteManager siteManager, SiteOrch
             // vhost file but leave SiteManager unaware of the site, so on next
             // daemon restart the site would vanish. This is the same order the
             // /api/sites POST handler uses.
+            // PhpVersion empty lets ApacheModule pick the daemon's active
+            // version at orchestration time instead of pinning to a
+            // possibly-not-installed "8.5". SslEnabled: true so the seed
+            // site exposes https://localhost/ out of the gate — mkcert
+            // issues the cert during ApplyAsync, the vhost config gets
+            // both :80 and :443 blocks, and the user can click the first
+            // link they see and have a working HTTPS loopback.
             var created = await siteManager.CreateAsync(new NKS.WebDevConsole.Core.Models.SiteConfig
             {
                 Domain = "localhost",
                 DocumentRoot = docRoot,
-                PhpVersion = "8.5",
-                SslEnabled = false,
+                PhpVersion = "",
+                SslEnabled = true,
                 Enabled = true,
             });
             await siteOrch.ApplyAsync(created, CancellationToken.None);

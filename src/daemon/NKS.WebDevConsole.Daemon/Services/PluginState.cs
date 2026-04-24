@@ -29,6 +29,24 @@ public sealed class PluginState
     // per options instance, so one-per-write fragments the cache.
     private static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
 
+    /// <summary>
+    /// Plugins that ship enabled in the install but start DISABLED on a
+    /// fresh machine (or after factory reset). These are either alternatives
+    /// to the primary stack (Caddy / Nginx are alt web servers, MariaDB is
+    /// an alt RDBMS to MySQL) or runtimes most WDC users don't immediately
+    /// need (Node.js). Users can enable them from Plugin Manager anytime;
+    /// their explicit toggle persists. Keeping them enabled-by-default
+    /// meant "Start All" tried to bring up 3 web servers on port 80 simul-
+    /// taneously on every fresh install — obvious failure.
+    /// </summary>
+    private static readonly string[] DefaultDisabledPluginIds =
+    {
+        "nks.wdc.caddy",
+        "nks.wdc.nginx",
+        "nks.wdc.mariadb",
+        "nks.wdc.node",
+    };
+
     private readonly object _lock = new();
     private readonly HashSet<string> _disabled = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _uninstalled = new(StringComparer.OrdinalIgnoreCase);
@@ -52,6 +70,16 @@ public sealed class PluginState
                     if (ids != null) foreach (var id in ids) _disabled.Add(id);
                 }
                 catch { /* corrupted → empty */ }
+            }
+            else
+            {
+                // First run (or post-factory-reset) — seed the default-
+                // disabled set so fresh installs don't try to run three
+                // web servers at once. Persist the seed so subsequent
+                // boots don't re-trigger this branch on every start.
+                foreach (var id in DefaultDisabledPluginIds) _disabled.Add(id);
+                try { Save(); }
+                catch { /* best-effort; IsEnabled still reflects the in-memory seed */ }
             }
             if (File.Exists(UninstalledFilePath))
             {

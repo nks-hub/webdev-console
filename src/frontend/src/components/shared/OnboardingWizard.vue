@@ -151,6 +151,9 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { compareSemver } from '../../utils/semver'
+import { useSitesStore } from '../../stores/sites'
+
+const sitesStore = useSitesStore()
 
 const { t } = useI18n()
 const router = useRouter()
@@ -297,6 +300,13 @@ async function finish() {
   finishing.value = true
   try {
     await markCompleted()
+    // The `/api/onboarding/complete` endpoint seeds a `localhost` site as a
+    // side-effect. sitesStore keeps a reactive cache — if we don't refresh
+    // it the Sites page shows an empty list until the user manually
+    // navigates away and back. Load() is idempotent + fast, so firing it
+    // unconditionally on wizard close is cheaper than tracking "did we
+    // actually seed" state.
+    try { await sitesStore.load() } catch { /* harmless — Sites page re-fetches on mount too */ }
     visible.value = false
   } finally {
     finishing.value = false
@@ -310,6 +320,7 @@ async function skip() {
   // transient daemon error and left the server flag missing, which is how
   // the wizard re-appeared on every launch.
   await markCompleted()
+  try { await sitesStore.load() } catch { /* same rationale as finish() */ }
   visible.value = false
 }
 
