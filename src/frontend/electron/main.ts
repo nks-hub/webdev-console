@@ -7,6 +7,16 @@ import { tmpdir, homedir } from 'os'
 import http from 'http'
 import * as Sentry from '@sentry/electron/main'
 import log from 'electron-log/main'
+// Static import of electron-updater so vite/rollup bundles the actual
+// updater classes (MacUpdater, NsisUpdater, AppImageUpdater, …) into
+// dist-electron/main.js. Previously loaded via `await import(...)` on
+// demand, which the vite externalize plugin treated as external and
+// left unresolved — packaged asar then threw ERR_MODULE_NOT_FOUND on
+// every update probe and users never saw an update notification.
+// Using a lazy getter (Proxy) keeps the graceful-degradation behaviour:
+// the guarded call sites that check whether updater exists still work
+// because the import itself is always available now.
+import { autoUpdater as electronAutoUpdater } from 'electron-updater'
 
 // Wire `console.log`/`console.warn`/`console.error` (and daemon stdout,
 // which we currently forward via `console.log('[daemon]', ...)` below)
@@ -621,7 +631,7 @@ async function updateTray() {
             if (updateDownloaded) {
               isQuitting = true
               try {
-                const { autoUpdater } = await import('electron-updater')
+                const autoUpdater = electronAutoUpdater
                 autoUpdater.quitAndInstall(false, true)
               } catch (error) {
                 const message = error instanceof Error ? error.message : String(error)
@@ -747,7 +757,7 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
   updateTray()
 
   try {
-    const { autoUpdater } = await import('electron-updater')
+    const autoUpdater = electronAutoUpdater
     const result = await autoUpdater.checkForUpdates()
     if (!result?.updateInfo?.version) {
       updaterStatus = 'No update available'
@@ -784,7 +794,7 @@ async function setupAutoUpdater() {
   }
 
   try {
-    const { autoUpdater } = await import('electron-updater')
+    const autoUpdater = electronAutoUpdater
     const feedOverride = getUpdateFeedOverride()
     if (feedOverride) {
       autoUpdater.setFeedURL({ provider: 'generic', url: feedOverride })

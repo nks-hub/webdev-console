@@ -27,8 +27,11 @@ export default defineConfig({
       // flow skips electron-builder's app.asar.unpacked mechanism), so
       // an externalized dep throws `Cannot find module` at first load.
       // @sentry/* — exception reporting; electron-log — file logs with
-      // rotation.
-      exclude: ['@sentry/electron', '@sentry/core', '@sentry/utils', '@sentry/types', '@sentry/node', 'electron-log'],
+      // rotation; electron-updater — auto-updater (was ERR_MODULE_NOT_FOUND
+      // on every packaged launch → users stuck on first installed DMG
+      // because `await import('electron-updater')` couldn't resolve
+      // inside the asar-only layout).
+      exclude: ['@sentry/electron', '@sentry/core', '@sentry/utils', '@sentry/types', '@sentry/node', 'electron-log', 'electron-updater'],
     })],
     build: {
       outDir: 'dist-electron',
