@@ -345,7 +345,7 @@ async function spawnDaemon() {
 
   if (isDev) {
     const projectDir = findDaemonProject()
-    console.log('[daemon] starting from:', projectDir)
+    log.info('[daemon] spawn (dev): dotnet run --project', projectDir)
     daemon = spawn('dotnet', ['run', '--project', projectDir], {
       stdio: 'pipe',
       detached: false,
@@ -356,9 +356,10 @@ async function spawnDaemon() {
     if (!existsSync(daemonExe)) {
       throw new Error(`Packaged daemon executable not found: ${daemonExe}`)
     }
-
+    log.info('[daemon] spawn (packaged):', daemonExe)
     daemon = spawn(daemonExe, [], { stdio: 'pipe', detached: false, env: daemonEnv })
   }
+  log.info(`[daemon] spawned pid=${daemon.pid}`)
 
   daemon.stdout?.on('data', (d) => {
     try { console.log('[daemon]', d.toString().trim()) } catch {}
@@ -460,6 +461,7 @@ function saveWindowState(state: WindowState): void {
 }
 
 async function createWindow() {
+  log.info('[window] creating main BrowserWindow')
   const saved = loadWindowState()
   win = new BrowserWindow({
     width: saved.width,
@@ -722,11 +724,14 @@ function createTrayIcon(color: 'green' | 'red' | 'yellow' | 'gray'): Electron.Na
 function createTray() {
   const icon = createTrayIcon(daemonConnected ? 'green' : 'gray')
   tray = new Tray(icon)
+  log.info('[tray] created (daemonConnected=' + daemonConnected + ')')
   updateTray()
   tray.on('click', () => {
     if (win?.isVisible()) {
+      log.info('[tray] click → hide window')
       win.hide()
     } else {
+      log.info('[tray] click → show window')
       win?.show()
       win?.focus()
     }
@@ -1187,6 +1192,25 @@ ipcMain.handle('reveal-in-folder', async (_evt, targetPath: string) => {
 // reload bypasses the cached module state and gives the component tree
 // a fresh boot, which is what the user expects from a "reset + restart"
 // action.
+// Renderer → main log bridge. The renderer has its own electron-log
+// instance writing to ~/.wdc/logs/electron/renderer.log, but for
+// "user emailed screenshot of a Vue error" flows we want every
+// frontend-side log line in the SAME main.log timeline too. Renderer
+// posts `{ level, args }` via this channel; we fan it into the main
+// logger at the matching level. Dropped messages fail-closed (return
+// false) so the renderer doesn't block on unresponsive main.
+ipcMain.handle('renderer-log', (_evt, payload: { level?: string; args?: unknown[] }) => {
+  try {
+    const level = (payload?.level ?? 'info').toLowerCase()
+    const args = Array.isArray(payload?.args) ? payload.args : []
+    const fn = (log as unknown as Record<string, (...a: unknown[]) => void>)[level] ?? log.info
+    fn('[renderer]', ...args)
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('restart-renderer', async (_evt) => {
   try {
     const w = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -1203,6 +1227,20 @@ ipcMain.handle('restart-renderer', async (_evt) => {
 })
 
 app.whenReady().then(async () => {
+  // Banner: one line with every state a support ticket asks for.
+  // Landing at INFO level so it's always in main.log regardless of
+  // level filtering — makes "which version did they run" + "where
+  // does its logs live" answerable without further back-and-forth.
+  log.info(
+    `[startup] version=${app.getVersion()} ` +
+    `electron=${process.versions.electron} ` +
+    `chrome=${process.versions.chrome} ` +
+    `node=${process.versions.node} ` +
+    `os=${process.platform}/${process.arch} ` +
+    `packaged=${app.isPackaged} ` +
+    `portable=${isPortable} ` +
+    `logDir=${wdcLogsDir}`
+  )
   protocol.handle('app', (request) => {
     const url = new URL(request.url)
     const relPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname

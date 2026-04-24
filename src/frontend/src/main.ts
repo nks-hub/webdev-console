@@ -69,6 +69,25 @@ try {
   console.warn('[Sentry] renderer init skipped:', err)
 }
 
+// Renderer → main log bridge. preload.ts exposes `rendererLog` via
+// contextBridge; we fan every console.warn/error + Vue error +
+// unhandled rejection through it so the same events also land in
+// ~/.wdc/logs/electron/main.log (support can read one file instead of
+// chasing DevTools output that's gone after a reload). Local console
+// output stays untouched.
+type RendererLogFn = (level: 'info' | 'warn' | 'error' | 'debug', args: unknown[]) => Promise<boolean>
+const rendererLog: RendererLogFn | undefined =
+  (window as unknown as { electronAPI?: { rendererLog?: RendererLogFn } }).electronAPI?.rendererLog
+function bridge(level: 'info' | 'warn' | 'error' | 'debug', ...args: unknown[]) {
+  try { rendererLog?.(level, args) } catch { /* bridge unavailable — ignore */ }
+}
+if (rendererLog) {
+  const origWarn = console.warn.bind(console)
+  const origError = console.error.bind(console)
+  console.warn = (...a: unknown[]) => { bridge('warn', ...a); origWarn(...a) }
+  console.error = (...a: unknown[]) => { bridge('error', ...a); origError(...a) }
+}
+
 // Global error handler — prevents white screen on component errors.
 // Also funnels to Sentry (wrapped so a Sentry failure doesn't rethrow).
 app.config.errorHandler = (err, instance, info) => {
@@ -86,6 +105,7 @@ app.config.errorHandler = (err, instance, info) => {
 // Unhandled promise rejections — Vue.errorHandler doesn't catch these,
 // but Sentry does if we wire the window event.
 window.addEventListener('unhandledrejection', (e) => {
+  bridge('error', '[unhandledrejection]', e.reason)
   try { Sentry.captureException(e.reason) } catch { /* no-op */ }
 })
 

@@ -595,6 +595,30 @@ app.Lifetime.ApplicationStarted.Register(() =>
     File.WriteAllText(tmpFile, $"{port}\n{authToken}");
     File.Move(tmpFile, portFile, overwrite: true);
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
+
+    // Banner: one structured line with every piece of state someone
+    // triaging a support ticket asks for — daemon version, bound port,
+    // runtime OS/arch, plugin inventory and enabled count, auth-token
+    // length (not value), data-root path. Written at Information level
+    // so it always lands in daemon-YYYY-MM-DD.log regardless of filter.
+    var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    var asmVersion = System.Reflection.CustomAttributeExtensions
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+            typeof(Program).Assembly)?.InformationalVersion
+        ?? typeof(Program).Assembly.GetName().Version?.ToString()
+        ?? "unknown";
+    var enabledCount = pluginLoader.Plugins.Count(p =>
+        app.Services.GetRequiredService<PluginState>().IsEnabled(p.Instance.Id));
+    startupLogger.LogInformation(
+        "Daemon started: version={Version} port={Port} os={OS} arch={Arch} plugins={PluginCount} enabled={EnabledCount} dataRoot={DataRoot} tokenLen={TokenLen}",
+        asmVersion,
+        port,
+        System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture,
+        pluginLoader.Plugins.Count,
+        enabledCount,
+        NKS.WebDevConsole.Core.Services.WdcPaths.Root,
+        authToken.Length);
 });
 
 // Health endpoint — no auth required (for monitoring + Electron daemon detection).
@@ -5349,10 +5373,15 @@ app.MapPost("/api/uninstall", async (HttpContext ctx, BackupManager backupManage
 // Plugin enable/disable — persists to ~/.wdc/data/plugin-state.json via PluginState.
 // Plugins remain loaded either way; disabled plugins are hidden from the UI service
 // list and skipped by Start All.
-app.MapPost("/api/plugins/{id}/enable", (string id, PluginState pluginState) =>
+app.MapPost("/api/plugins/{id}/enable", (string id, PluginState pluginState, ILoggerFactory lf) =>
 {
+    var pluginLogger = lf.CreateLogger("PluginToggle");
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
-    if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    if (plugin == null)
+    {
+        pluginLogger.LogWarning("Enable refused: plugin {PluginId} not loaded", id);
+        return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    }
     // F91.2: enforce dependency graph on enable. Build the set of currently-
     // enabled plugins (excluding this one, since we're about to toggle it)
     // and refuse the enable if any hard or any-of dep is unsatisfied. Keeps
@@ -5369,6 +5398,7 @@ app.MapPost("/api/plugins/{id}/enable", (string id, PluginState pluginState) =>
         plugin.Manifest?.Dependencies, enabledIds);
     if (missing.Count > 0)
     {
+        pluginLogger.LogWarning("Enable refused for {PluginId}: missing deps [{Missing}]", id, string.Join(",", missing));
         return Results.BadRequest(new
         {
             error = "dependencies-not-satisfied",
@@ -5377,13 +5407,19 @@ app.MapPost("/api/plugins/{id}/enable", (string id, PluginState pluginState) =>
         });
     }
     pluginState.SetEnabled(id, true);
+    pluginLogger.LogInformation("Plugin {PluginId} enabled", id);
     return Results.Ok(new { id, enabled = true });
 });
 
-app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState) =>
+app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState, ILoggerFactory lf) =>
 {
+    var pluginLogger = lf.CreateLogger("PluginToggle");
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
-    if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    if (plugin == null)
+    {
+        pluginLogger.LogWarning("Disable refused: plugin {PluginId} not loaded", id);
+        return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
+    }
     // F91.2: refuse disable when another enabled plugin would lose a
     // satisfied dependency. E.g. Composer hard-depends on PHP — disabling
     // PHP while Composer is on would orphan Composer. List the dependents
@@ -5406,6 +5442,7 @@ app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState) =>
     }
     if (dependents.Count > 0)
     {
+        pluginLogger.LogWarning("Disable refused for {PluginId}: active dependents [{Dependents}]", id, string.Join(",", dependents));
         return Results.BadRequest(new
         {
             error = "has-dependents",
@@ -5414,6 +5451,7 @@ app.MapPost("/api/plugins/{id}/disable", (string id, PluginState pluginState) =>
         });
     }
     pluginState.SetEnabled(id, false);
+    pluginLogger.LogInformation("Plugin {PluginId} disabled", id);
     return Results.Ok(new { id, enabled = false });
 });
 
@@ -6954,6 +6992,8 @@ app.MapGet("/api/events", async (HttpContext ctx, SseService sse) =>
 // Graceful shutdown — stop all services + cleanup
 app.Lifetime.ApplicationStopping.Register(() =>
 {
+    var shutdownLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Shutdown");
+    shutdownLogger.LogInformation("Shutdown requested — stopping services and cleaning port file");
     app.Services.GetRequiredService<ShutdownCoordinator>()
         .StopAllAsync(
             app.Services.GetServices<IServiceModule>(),
@@ -6962,6 +7002,7 @@ app.Lifetime.ApplicationStopping.Register(() =>
             CancellationToken.None)
         .GetAwaiter()
         .GetResult();
+    shutdownLogger.LogInformation("Shutdown complete");
 });
 
 // Route uncaught exceptions through Sentry (no-op if SDK wasn't initialised).

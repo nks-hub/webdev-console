@@ -104,4 +104,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // a fresh page load that wipes every in-memory state. Used after a
   // factory / settings reset so the UI actually reflects the empty DB.
   restartRenderer: () => ipcRenderer.invoke('restart-renderer'),
+
+  // Forward a renderer-side log line into electron-log's main sink so
+  // every Vue console.error / unhandledrejection / fetch failure lands
+  // in ~/.wdc/logs/electron/main.log alongside main-process events.
+  // Keeps the timeline in one file for support/debug instead of
+  // scattered across DevTools consoles that disappear on reload.
+  rendererLog: (level: 'info' | 'warn' | 'error' | 'debug', args: unknown[]) =>
+    ipcRenderer.invoke('renderer-log', { level, args }),
 })
