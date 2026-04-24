@@ -165,27 +165,54 @@ builder.Services.AddHostedService<CatalogHeartbeatService>();
 // doesn't grow unbounded. Production logs capture the same Information+
 // stream the Console provider sees; stdout remains so `open /Applications/…`
 // from a terminal still prints.
-var daemonLogDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.LogsRoot, "daemon");
-try { Directory.CreateDirectory(daemonLogDir); } catch { /* logged in the log, ironically */ }
 // NReco.Logging.File takes a literal path — we substitute the date at
 // startup (no placeholder engine inside the provider). Rotation below
 // rolls by size within the same date-stamped file; a daemon restart the
 // next day naturally opens a new daemon-YYYY-MM-DD.log file.
-var daemonLogPath = Path.Combine(daemonLogDir, $"daemon-{DateTime.Now:yyyy-MM-dd}.log");
-NReco.Logging.File.FileLoggerExtensions.AddFile(builder.Logging, daemonLogPath, fileLoggerOpts =>
+//
+// Whole sink setup is wrapped in try/catch: a broken log path (permission
+// issue, unwritable partition, Windows CI sandbox quirk) must not stop
+// the daemon from starting. Any failure falls back to console-only
+// logging — the daemon still services every API endpoint, users just
+// lose the persisted log file until they fix the underlying cause.
+// Windows CI smoke was timing out because a sink exception at boot
+// blocked the Kestrel startup path before the port file got written.
+var daemonLogDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.LogsRoot, "daemon");
+string? daemonLogPath = null;
+try
 {
-    fileLoggerOpts.Append = true;
-    fileLoggerOpts.FileSizeLimitBytes = 10 * 1024 * 1024;   // 10 MB per file
-    fileLoggerOpts.MaxRollingFiles = 7;                       // keep a week of rolled files
-    fileLoggerOpts.FormatLogEntry = msg =>
-        $"{DateTime.Now:HH:mm:ss.fff} {msg.LogLevel,-11} {msg.LogName} {msg.Message} {msg.Exception?.ToString() ?? ""}".Trim();
-});
+    Directory.CreateDirectory(daemonLogDir);
+    daemonLogPath = Path.Combine(daemonLogDir, $"daemon-{DateTime.Now:yyyy-MM-dd}.log");
+    NReco.Logging.File.FileLoggerExtensions.AddFile(builder.Logging, daemonLogPath, fileLoggerOpts =>
+    {
+        fileLoggerOpts.Append = true;
+        fileLoggerOpts.FileSizeLimitBytes = 10 * 1024 * 1024;   // 10 MB per file
+        fileLoggerOpts.MaxRollingFiles = 7;                       // keep a week of rolled files
+        fileLoggerOpts.FormatLogEntry = msg =>
+            $"{DateTime.Now:HH:mm:ss.fff} {msg.LogLevel,-11} {msg.LogName} {msg.Message} {msg.Exception?.ToString() ?? ""}".Trim();
+    });
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"[daemon] file logging disabled: {ex.Message}");
+    daemonLogPath = null;
+}
 
 // Phase 1: Load plugin assemblies and call Initialize (registers DI services) BEFORE Build
 var earlyLoggerFactory = LoggerFactory.Create(b =>
 {
     b.AddConsole();
-    NReco.Logging.File.FileLoggerExtensions.AddFile(b, daemonLogPath, fileOpts => { fileOpts.Append = true; fileOpts.FileSizeLimitBytes = 10 * 1024 * 1024; fileOpts.MaxRollingFiles = 7; });
+    if (daemonLogPath is not null)
+    {
+        try
+        {
+            NReco.Logging.File.FileLoggerExtensions.AddFile(b, daemonLogPath, fileOpts => { fileOpts.Append = true; fileOpts.FileSizeLimitBytes = 10 * 1024 * 1024; fileOpts.MaxRollingFiles = 7; });
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[daemon] early file logging disabled: {ex.Message}");
+        }
+    }
 });
 var pluginLoader = new PluginLoader(earlyLoggerFactory.CreateLogger<PluginLoader>());
 // Production: plugins/ next to daemon binary. Dev: build/plugins/ at repo root.
