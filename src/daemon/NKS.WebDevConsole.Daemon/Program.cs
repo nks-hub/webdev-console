@@ -532,11 +532,21 @@ foreach (var p in pluginLoader.Plugins)
 {
     var startupSettings = app.Services.GetRequiredService<SettingsStore>();
     var startupModules = app.Services.GetServices<NKS.WebDevConsole.Core.Interfaces.IServiceModule>().ToArray();
+    var hydrationPluginState = app.Services.GetRequiredService<PluginState>();
     foreach (var module in startupModules)
     {
         try
         {
             var moduleId = module.ServiceId.ToLowerInvariant();
+            // Disabled plugins: don't hydrate. Port overrides only matter
+            // for services about to run; hitting ReloadAsync on a
+            // disabled mysql/nginx/… is what surfaced "nginx binary not
+            // found" and "mysqladmin Access denied" warnings at every
+            // boot, even though the user never enabled those plugins.
+            // Plugin-module IDs map 1:1 to `nks.wdc.{moduleId}` plugin
+            // IDs today, so the IsEnabled check uses that canonical form.
+            var pluginCanonicalId = $"nks.wdc.{moduleId}";
+            if (!hydrationPluginState.IsEnabled(pluginCanonicalId)) continue;
             var configField = module.GetType().GetField("_config",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             var config = configField?.GetValue(module);
