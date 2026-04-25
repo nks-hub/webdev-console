@@ -73,6 +73,14 @@ try {
   // need the base init to wire up the IPC scope + breadcrumbs.
   Sentry.init({
     ...(VITE_SENTRY_DSN ? { dsn: VITE_SENTRY_DSN } : {}),
+    // Tag every renderer event with the same environment label as the
+    // main process Sentry init (production for packaged builds, otherwise
+    // development). Lets Sentry filter dashboards by deployment without
+    // operators having to remember the URL/release-tag heuristic. Vite's
+    // `import.meta.env.PROD` is true for `vite build` output, false for
+    // `vite dev` — exactly the discriminator we want.
+    environment: import.meta.env.PROD ? 'production' : 'development',
+    release: typeof window.__APP_VERSION__ === 'string' ? `nks-wdc-electron@${window.__APP_VERSION__}` : undefined,
     // Drop benign daemon-disconnect noise. `Failed to fetch` from the
     // shared json() helper in api/daemon.ts fires every time the daemon
     // is restarting (factory reset, SSO callback racing the port file,

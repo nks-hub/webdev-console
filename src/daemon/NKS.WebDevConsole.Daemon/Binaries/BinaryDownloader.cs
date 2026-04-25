@@ -72,9 +72,45 @@ public sealed class BinaryDownloader
             }
         }
 
+        // Integrity check BEFORE publishing the archive under its final
+        // name — otherwise a poisoned upstream CDN/mirror could swap the
+        // binary underneath us and BinaryManager would cheerfully extract
+        // and execute a backdoored mysqld/php-cgi/httpd. When the catalog
+        // entry carries an Sha256 we MUST match it; if it doesn't, log a
+        // WARN so support bundles surface the gap and the maintainer can
+        // backfill the entry (current static catalog has many unhashed
+        // legacy rows — once those are populated this should hard-fail
+        // on missing Sha256 too, mirroring the plugin downloader).
+        if (!string.IsNullOrWhiteSpace(release.Sha256))
+        {
+            var actual = await ComputeSha256Async(tempPath, ct);
+            if (!actual.Equals(release.Sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                try { File.Delete(tempPath); } catch { /* best-effort cleanup */ }
+                throw new InvalidOperationException(
+                    $"SHA256 mismatch for {release.App} {release.Version}: " +
+                    $"expected {release.Sha256}, got {actual}. Refusing to install.");
+            }
+            _logger.LogInformation("SHA256 verified for {App} {Version}", release.App, release.Version);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "No SHA256 in catalog for {App} {Version} — install proceeds without integrity check",
+                release.App, release.Version);
+        }
+
         File.Move(tempPath, archivePath, overwrite: true);
         _logger.LogInformation("Downloaded {App} {Version} ({Size} bytes)", release.App, release.Version, new FileInfo(archivePath).Length);
         return archivePath;
+    }
+
+    private static async Task<string> ComputeSha256Async(string path, CancellationToken ct)
+    {
+        using var stream = File.OpenRead(path);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var hash = await sha.ComputeHashAsync(stream, ct);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     public async Task<string> ExtractAsync(

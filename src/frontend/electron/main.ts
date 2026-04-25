@@ -1265,10 +1265,45 @@ ipcMain.handle('reveal-in-folder', async (_evt, targetPath: string) => {
 // posts `{ level, args }` via this channel; we fan it into the main
 // logger at the matching level. Dropped messages fail-closed (return
 // false) so the renderer doesn't block on unresponsive main.
+// Cap on the serialized payload size — renderer XSS could otherwise dump
+// the entire localStorage (including the daemon JWT) into main.log via a
+// single rendererLog() call. 4 KiB is enough for a normal stack trace +
+// a few breadcrumb objects but cuts off attacker dumps long before any
+// useful credential material lands on disk.
+const RENDERER_LOG_MAX_BYTES = 4096
+// Substrings whose presence in a log argument signals likely credential
+// material. Matched against each argument's JSON-stringified form; if a
+// match hits we drop that argument entirely and replace with a redaction
+// marker so the surrounding context still lands in the log.
+const RENDERER_LOG_REDACT_PATTERNS = [
+  /authorization\s*[:=]/i,
+  /\btoken\s*[=:]/i,
+  /bearer\s+[A-Za-z0-9._\-+/=]{16,}/i,
+  /\bjwt\b/i,
+  /password\s*[:=]/i,
+]
+
+function safeRendererLogArg(arg: unknown): unknown {
+  let serialized: string
+  try {
+    serialized = typeof arg === 'string' ? arg : JSON.stringify(arg)
+  } catch {
+    return '[unserializable]'
+  }
+  if (serialized.length > RENDERER_LOG_MAX_BYTES) {
+    return `${serialized.slice(0, RENDERER_LOG_MAX_BYTES)}…[truncated ${serialized.length - RENDERER_LOG_MAX_BYTES}B]`
+  }
+  for (const pat of RENDERER_LOG_REDACT_PATTERNS) {
+    if (pat.test(serialized)) return '[redacted: contained credential-like pattern]'
+  }
+  return arg
+}
+
 ipcMain.handle('renderer-log', (_evt, payload: { level?: string; args?: unknown[] }) => {
   try {
     const level = (payload?.level ?? 'info').toLowerCase()
-    const args = Array.isArray(payload?.args) ? payload.args : []
+    const rawArgs = Array.isArray(payload?.args) ? payload.args : []
+    const args = rawArgs.map(safeRendererLogArg)
     const fn = (log as unknown as Record<string, (...a: unknown[]) => void>)[level] ?? log.info
     fn('[renderer]', ...args)
     return true

@@ -12,7 +12,13 @@ public sealed record BinaryRelease(
     string Arch,        // "x64", "arm64"
     string ArchiveType, // "zip", "tar.gz", "tar.xz"
     string Source,      // "apachelounge", "php.net", "dev.mysql.com" — for attribution
-    string? UserAgent = null  // some sites (apachelounge) require browser UA
+    string? UserAgent = null,  // some sites (apachelounge) require browser UA
+    // Lowercase hex SHA-256 of the archive bytes. Optional today (the
+    // static catalog ships entries without hashes) but the BinaryDownloader
+    // verifies whenever a value is present, so populating this field on
+    // an existing entry retroactively hardens the download against MITM
+    // / cache-poisoning of the upstream CDN. New entries SHOULD include it.
+    string? Sha256 = null
 );
 
 /// <summary>
