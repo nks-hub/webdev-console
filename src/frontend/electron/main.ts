@@ -1102,22 +1102,35 @@ if (!gotSingleInstance) {
  * forwards it to the renderer as a structured IPC event. Empty/unknown
  * inputs are ignored — we never trust the payload beyond shape. */
 function forwardSsoCallback(rawUrl: string) {
-  // F91.14: trace what the OS handed us. The user reports "token missing"
-  // after Authentik login — without this log we can't tell whether the
-  // redirect URL itself was empty, our URL parse dropped the query, or the
-  // window wasn't ready yet. Full URL logged (token length only, value
-  // elided to keep logs safe).
-  console.log('[sso] forwardSsoCallback rawUrl:', rawUrl)
+  // F91.14: trace what the OS handed us — but NEVER log the URL search
+  // string or rawUrl (token sits in plaintext in `?token=...`). Earlier
+  // versions logged `rawUrl` and `u.search` directly into
+  // ~/.wdc/logs/electron/main.log; on a multi-user box or a shipped log
+  // bundle that token leaks for the JWT's full TTL. Log only structural
+  // metadata (protocol/host/path/length) so support can still triage
+  // "callback was malformed" vs "token missing" without exposing creds.
+  console.log('[sso] forwardSsoCallback received deep-link (length=%d)', rawUrl.length)
   try {
     const u = new URL(rawUrl)
-    console.log('[sso] parsed: protocol=%s hostname=%s pathname=%s search=%s',
-      u.protocol, u.hostname, u.pathname, u.search)
+    console.log('[sso] parsed: protocol=%s hostname=%s pathname=%s hasQuery=%s',
+      u.protocol, u.hostname, u.pathname, u.search.length > 0)
     if (u.protocol !== 'wdc:') {
       console.warn('[sso] protocol mismatch — ignoring')
       return
     }
-    if (u.hostname !== 'auth-callback' && u.pathname !== '//auth-callback') {
-      console.warn('[sso] host/path mismatch — ignoring')
+    // STRICT match on BOTH hostname AND a normalized empty/root path.
+    // Earlier `host !== X || path !== Y` (de-Morganed: `host !== X && path !== Y`)
+    // was an OR-guard — `wdc://attacker//auth-callback?token=...` parses to
+    // hostname='attacker' (FAIL first) and pathname='//auth-callback' (PASS
+    // second), so the OR pulled it through. Demonstrated exploit forwarded
+    // an attacker-chosen JWT to the renderer (session-fixation: victim's
+    // localStorage gets attacker's token, victim's config-sync uploads land
+    // on attacker's catalog account).
+    const normalizedHost = u.hostname.toLowerCase()
+    const normalizedPath = u.pathname === '' ? '/' : u.pathname
+    if (normalizedHost !== 'auth-callback' || normalizedPath !== '/') {
+      console.warn('[sso] host/path mismatch — ignoring (host=%s path=%s)',
+        normalizedHost, normalizedPath)
       return
     }
     const token = u.searchParams.get('token') ?? ''
@@ -1137,8 +1150,12 @@ function forwardSsoCallback(rawUrl: string) {
 }
 
 app.on('second-instance', (_evt, argv) => {
-  console.log('[sso] second-instance argv:', argv)
+  // Don't log argv directly — on Windows the OS appends the full
+  // `wdc://auth-callback?token=...` URL as an argv element, which means
+  // the bare token would land in main.log. Log only argv length + flag
+  // whether a wdc:// element was present.
   const deepLink = argv.find(a => a.startsWith('wdc://'))
+  console.log('[sso] second-instance argv (len=%d, wdc=%s)', argv.length, Boolean(deepLink))
   if (deepLink) forwardSsoCallback(deepLink)
   if (win) {
     if (win.isMinimized()) win.restore()
@@ -1164,11 +1181,15 @@ if (!app.isPackaged) {
 // capability the renderer is explicitly trusted to use.
 ipcMain.handle('open-external', async (_evt, url: string) => {
   if (typeof url !== 'string') return false
-  // shell.openExternal rejects non-http(s)/file URLs already, but we
-  // belt-and-suspenders block anything not in an allowlist of safe
-  // schemes so a compromised renderer can't launch `calculator://…` or
-  // similar protocol-handler chains.
-  const allowed = /^(https?|mailto|file):/i
+  // Allowlist scheme to safe ones only. `file:` is explicitly EXCLUDED
+  // here even though shell.openExternal accepts it: on Windows
+  // shell.openExternal('file:///C:/Windows/System32/calc.exe') hands the
+  // path to ShellExecute which honours .exe/.lnk/.url/.bat/.scr/.msi
+  // associations and launches the binary with no prompt. UNC paths like
+  // file://attacker.tld/share/payload.lnk also work. A renderer XSS that
+  // reaches this IPC channel would otherwise have one-call RCE.
+  // For "open in folder" use the dedicated revealInFolder handler.
+  const allowed = /^(https?|mailto):/i
   if (!allowed.test(url)) return false
   await shell.openExternal(url)
   return true

@@ -846,7 +846,25 @@ app.Use(async (ctx, next) =>
         {
             provided = authHeader.Substring(7).Trim();
         }
-        provided ??= ctx.Request.Query["token"].FirstOrDefault();
+        // SSE/WebSocket fallback: browser EventSource/WebSocket APIs cannot set
+        // Authorization headers, so token-via-query is allowed *only* on
+        // those streaming endpoints. Plain /api/* requests must use the header
+        // — a query-string fallback there leaked the bearer into Kestrel
+        // access logs and any log-shipping pipeline (Sentry breadcrumb,
+        // file sink) for the token's full TTL.
+        if (provided is null)
+        {
+            var path = ctx.Request.Path.Value ?? string.Empty;
+            var streamingPath = path.StartsWith("/api/events", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/api/ws", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/api/backup/download", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/api/plugins/", StringComparison.OrdinalIgnoreCase)
+                && path.EndsWith("/icon", StringComparison.OrdinalIgnoreCase);
+            if (streamingPath)
+            {
+                provided = ctx.Request.Query["token"].FirstOrDefault();
+            }
+        }
 
         bool ok = false;
         if (!string.IsNullOrEmpty(provided))
