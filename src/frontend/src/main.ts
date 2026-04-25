@@ -57,6 +57,27 @@ try {
   // need the base init to wire up the IPC scope + breadcrumbs.
   Sentry.init({
     ...(VITE_SENTRY_DSN ? { dsn: VITE_SENTRY_DSN } : {}),
+    // Drop benign daemon-disconnect noise. `Failed to fetch` from the
+    // shared json() helper in api/daemon.ts fires every time the daemon
+    // is restarting (factory reset, SSO callback racing the port file,
+    // graceful shutdown on quit). It surfaces in the UI as the existing
+    // toast/log line; Sentry agreggates each restart cycle into a
+    // separate issue (one per port number that happened to be in flight)
+    // and buries real bugs. Anything more interesting than a transient
+    // network error keeps flowing through.
+    beforeSend(event, hint) {
+      const err = hint?.originalException
+      const msg = err instanceof Error ? err.message : (typeof err === 'string' ? err : '')
+      if (typeof msg === 'string' && msg.startsWith('Failed to fetch')) {
+        const frames = event.exception?.values?.[0]?.stacktrace?.frames ?? []
+        const fromDaemonHelper = frames.some(f =>
+          (f.function === 'json' || f.function === 'fetch')
+          && (f.filename ?? '').includes('daemon')
+        )
+        if (fromDaemonHelper) return null
+      }
+      return event
+    },
   })
   // Tag every event with the active route so crash triage knows which
   // page the user was on when it blew up.

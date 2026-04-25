@@ -1072,7 +1072,13 @@ protocol.registerSchemesAsPrivileged([
 // the already-running window instead of opening a ghost process.
 const gotSingleInstance = app.requestSingleInstanceLock()
 if (!gotSingleInstance) {
-  app.quit()
+  // app.quit() is asynchronous — emits before-quit and waits for the
+  // app lifecycle, which leaves time for app.whenReady() handlers below
+  // to fire (spawning a redundant daemon, creating a duplicate window,
+  // and clobbering the original daemon's port file). app.exit(0) bails
+  // out synchronously so the second-instance event in the original
+  // process is the only thing the OS-level wdc:// launch triggers.
+  app.exit(0)
 } else {
   if (process.defaultApp) {
     // F91.5: dev-mode Electron is invoked as `electron.exe <app-path> …`,

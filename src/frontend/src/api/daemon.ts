@@ -26,19 +26,26 @@ import type {
 // pages used to ship their own slightly-different copy of this) share
 // the exact same port/token resolution logic as the typed API surface.
 export function daemonBaseUrl(): string {
-  // Priority: (1) preload getPort() because it RE-READS the port file on every
-  // call and survives daemon restarts (new token/port are picked up live),
-  // (2) URL query param as fallback for browser/dev mode where preload doesn't exist.
-  // Preload returns 0 if the file doesn't exist yet — treat 0 as "no value".
+  // Priority: (1) preload getPort() — re-reads the port file on every call,
+  // so daemon restarts (new port/token) are picked up live, and (2) URL query
+  // param ONLY as a browser/dev fallback where preload isn't injected.
+  // The URL param is intentionally NOT used in packaged Electron: the renderer
+  // URL is frozen at window.loadURL time, so after a daemon restart it keeps
+  // pointing at the old port and every fetch fails until the user reloads.
+  // The preload value, by contrast, refreshes from disk on each call.
   const preloadPort = window.daemonApi?.getPort?.()
   if (typeof preloadPort === 'number' && preloadPort > 0) {
     return `http://localhost:${preloadPort}`
   }
-  const urlPort = new URLSearchParams(window.location.search).get('port')
-  if (urlPort && /^\d+$/.test(urlPort)) {
-    return `http://localhost:${parseInt(urlPort, 10)}`
+  // Browser/dev fallback only — packaged renderer always has window.daemonApi
+  // (preload runs before the page loads, so getPort()>0 for any live daemon).
+  if (!window.daemonApi) {
+    const urlPort = new URLSearchParams(window.location.search).get('port')
+    if (urlPort && /^\d+$/.test(urlPort)) {
+      return `http://localhost:${parseInt(urlPort, 10)}`
+    }
   }
-  // Fallback port. Matches the daemon's port-range base (Program.cs
+  // Final fallback. Matches the daemon's port-range base (Program.cs
   // PORT_BASE = 17280) so any early fetch before the port file lands
   // has a realistic chance of succeeding. Was `5199` historically — a
   // stale default from the pre-port-probing daemon config; every fetch
@@ -82,11 +89,16 @@ export function daemonAuthHeaders(extra?: HeadersInit): Record<string, string> {
  * daemonAuthHeaders which builds the Authorization header directly.
  */
 export function daemonToken(): string {
-  return (
-    window.daemonApi?.getToken?.()
-    || new URLSearchParams(window.location.search).get('token')
-    || ''
-  )
+  // Same logic as daemonBaseUrl: preload value first (re-reads the port file
+  // so a daemon restart's new token is picked up live), URL query string only
+  // when preload is absent (browser/dev). In packaged Electron the URL token
+  // goes stale across daemon restarts and any fetch using it 401s.
+  const preloadToken = window.daemonApi?.getToken?.()
+  if (preloadToken) return preloadToken
+  if (!window.daemonApi) {
+    return new URLSearchParams(window.location.search).get('token') || ''
+  }
+  return ''
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
