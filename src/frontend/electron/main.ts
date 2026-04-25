@@ -512,6 +512,35 @@ async function createWindow() {
   win.setMenuBarVisibility(false)
   win.setAutoHideMenuBar(true)
 
+  // Hard-deny `window.open` and target=_blank links — the renderer never
+  // legitimately opens new BrowserWindows. Anything that asks goes through
+  // the explicit electronAPI.openExternal IPC (allowlisted to https/mailto)
+  // instead. Without this an XSS in the renderer could spawn a child window
+  // pointing at an attacker URL with the same preload bridge attached.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+  // Lock the renderer to its own origin. The legitimate URL is either
+  // app://nks-wdc/index.html (packaged) or the dev server (ELECTRON_RENDERER_URL).
+  // Any will-navigate event to anything else — http(s) redirects from a
+  // fetched page, javascript: links, file://, attacker domains via XSS — is
+  // cancelled. The renderer keeps using router.push for in-app navigation
+  // (no will-navigate fires for hash/HTML5 history changes).
+  const allowedOrigins = new Set<string>(['app://nks-wdc'])
+  if (process.env.ELECTRON_RENDERER_URL) {
+    try { allowedOrigins.add(new URL(process.env.ELECTRON_RENDERER_URL).origin) } catch { /* ignore */ }
+  }
+  win.webContents.on('will-navigate', (evt, url) => {
+    try {
+      const target = new URL(url)
+      if (!allowedOrigins.has(target.origin)) {
+        console.warn('[security] blocked will-navigate to', target.origin)
+        evt.preventDefault()
+      }
+    } catch {
+      evt.preventDefault()
+    }
+  })
+
   win.once('ready-to-show', () => win?.show())
 
   // Minimize to tray on close instead of quitting

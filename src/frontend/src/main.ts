@@ -49,6 +49,22 @@ app.use(i18n)
 // renderer init just needs to wire Vue integration — it shares scope via
 // IPC. Skipping when no DSN keeps `Sentry.captureException` a no-op.
 const VITE_SENTRY_DSN = (import.meta.env.VITE_SENTRY_DSN as string | undefined) || ''
+
+// URL helper used by beforeSend below. Drops the entire query string so
+// `?port=17280&token=abc...` never reaches Sentry. Falls back to the
+// original input when the URL parser rejects it (relative paths, etc).
+function stripQuery(raw: string): string {
+  try {
+    const u = new URL(raw, 'http://placeholder.invalid')
+    u.search = ''
+    return u.protocol === 'http:' && u.hostname === 'placeholder.invalid'
+      ? u.pathname
+      : u.toString()
+  } catch {
+    return raw.split('?')[0]
+  }
+}
+
 try {
   // @sentry/electron/renderer re-exports from @sentry/browser which does
   // NOT ship vueIntegration — that one lives in @sentry/vue and we don't
@@ -65,6 +81,14 @@ try {
     // separate issue (one per port number that happened to be in flight)
     // and buries real bugs. Anything more interesting than a transient
     // network error keeps flowing through.
+    //
+    // ALSO scrub PII/credentials from breadcrumbs and request context.
+    // The renderer URL frequently embeds `?port=...&token=<bearer>` —
+    // earlier the entire URL flowed into Sentry, so any captured event
+    // had the live daemon token in `event.request.url`, in navigation
+    // breadcrumbs, in Vue route fullPath tags, etc. Mirror the main-
+    // process scrub: drop user identity, strip query strings from URLs,
+    // remove Authorization headers.
     beforeSend(event, hint) {
       const err = hint?.originalException
       const msg = err instanceof Error ? err.message : (typeof err === 'string' ? err : '')
@@ -75,6 +99,32 @@ try {
           && (f.filename ?? '').includes('daemon')
         )
         if (fromDaemonHelper) return null
+      }
+      // Identity wipe — packaged renderer never opts users in to PII
+      if (event.user) {
+        event.user = { id: undefined, email: undefined, username: undefined, ip_address: undefined }
+      }
+      // Strip query string from request URL (token + port live there)
+      if (event.request?.url) {
+        event.request.url = stripQuery(event.request.url)
+      }
+      // Drop Authorization header if Sentry's default integration captured it
+      if (event.request?.headers && typeof event.request.headers === 'object') {
+        const h = event.request.headers as Record<string, string>
+        delete h.Authorization
+        delete h.authorization
+      }
+      // Sanitize breadcrumbs — fetch/XHR/navigation breadcrumbs all carry URLs
+      if (Array.isArray(event.breadcrumbs)) {
+        for (const b of event.breadcrumbs) {
+          if (b.data && typeof b.data === 'object') {
+            const d = b.data as Record<string, unknown>
+            for (const key of ['url', 'to', 'from']) {
+              const val = d[key]
+              if (typeof val === 'string') d[key] = stripQuery(val)
+            }
+          }
+        }
       }
       return event
     },

@@ -109,13 +109,23 @@ public sealed class PluginDownloader
                 await resp.Content.CopyToAsync(fs, ct);
             }
 
-            if (!string.IsNullOrWhiteSpace(expectedSha256))
+            // SHA256 is now MANDATORY. Earlier this branch ran only when the
+            // catalog supplied a hash — entries without sha256 (an oversight
+            // upstream, or a malicious catalog mirror that strips the field)
+            // were extracted and loaded as a CLR plugin assembly with full
+            // user privileges. Refuse to install anything we can't verify so
+            // a MITM/cache-poisoning attack on wdc.nks-hub.cz cannot smuggle
+            // arbitrary code into the daemon process.
+            if (string.IsNullOrWhiteSpace(expectedSha256))
             {
-                var actual = await ComputeSha256Async(tempFile, ct);
-                if (!actual.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException(
-                        $"SHA256 mismatch: expected {expectedSha256}, got {actual}");
+                throw new InvalidOperationException(
+                    $"Plugin download from {url} has no SHA256 in catalog metadata — refusing install. " +
+                    "Update the catalog entry with a sha256 field or contact the plugin author.");
             }
+            var actual = await ComputeSha256Async(tempFile, ct);
+            if (!actual.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"SHA256 mismatch: expected {expectedSha256}, got {actual}");
 
             // Extract into the version directory. ExtractToDirectory with
             // overwriteFiles: true so a partial re-install completes cleanly.

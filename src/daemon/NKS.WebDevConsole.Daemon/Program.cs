@@ -630,7 +630,32 @@ app.Lifetime.ApplicationStarted.Register(() =>
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
     var tmpFile = portFile + ".tmp";
-    File.WriteAllText(tmpFile, $"{port}\n{authToken}");
+    var portFileContent = $"{port}\n{authToken}";
+    if (OperatingSystem.IsWindows())
+    {
+        // %TEMP% on Windows resolves to a per-user directory whose ACL
+        // already restricts read access to the owning user, so the default
+        // File.WriteAllText behaviour is fine here.
+        File.WriteAllText(tmpFile, portFileContent);
+    }
+    else
+    {
+        // On Linux/macOS the default umask (022) leaves the port file at
+        // 0644 inside world-readable /tmp. Any local user could then `cat`
+        // the bearer token and impersonate the daemon owner against every
+        // /api/* endpoint (sites, hosts, certs, mysql admin). Force 0600
+        // explicitly so only the WDC user ever sees the token.
+        var opts = new FileStreamOptions
+        {
+            Mode = FileMode.Create,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
+        };
+        using var stream = new FileStream(tmpFile, opts);
+        using var writer = new StreamWriter(stream);
+        writer.Write(portFileContent);
+    }
     File.Move(tmpFile, portFile, overwrite: true);
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 
