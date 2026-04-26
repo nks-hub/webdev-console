@@ -130,16 +130,20 @@ SNAP_BLOG=$(api GET /api/nks.wdc.deploy/sites/blog.loc/snapshots)
 step "GET snapshots blog.loc returns envelope" "$SNAP_BLOG" '"count":'
 
 # ============================================================================
-echo ""; echo "${YEL}=== G. dummy deploy fire on blog.loc ===${END}"
+echo ""; echo "${YEL}=== G. dummy deploy fire on blog.loc (no intent — direct GUI flow) ===${END}"
 # ============================================================================
 DEPLOY_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
 DEPLOY_ID=$(echo "$DEPLOY_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 step "POST deploy returns deployId"          "$DEPLOY_RESP" '"deployId":"'
-step "dummy backend marked completed"        "$DEPLOY_RESP" '"status":"completed"'
+step "dummy backend starts queued (async)"   "$DEPLOY_RESP" '"status":"queued"'
 
 GET_DEPLOY=$(api GET /api/nks.wdc.deploy/sites/blog.loc/deploys/$DEPLOY_ID)
 step "GET single deploy retrieves it"        "$GET_DEPLOY" "\"deployId\":\"$DEPLOY_ID\""
-step "single deploy has Done finalPhase"     "$GET_DEPLOY" '"finalPhase":"Done"'
+
+# Wait for async state machine (~600ms total) + slack
+sleep 2
+DONE_DEPLOY=$(api GET /api/nks.wdc.deploy/sites/blog.loc/deploys/$DEPLOY_ID)
+step "after 2s, deploy state-machine finished" "$DONE_DEPLOY" '"finalPhase":"Done"'
 
 # Verify it shows up in history now
 HIST_AFTER=$(api GET /api/nks.wdc.deploy/sites/blog.loc/history)
@@ -155,7 +159,44 @@ SHOP_HIST=$(api GET /api/nks.wdc.deploy/sites/shop.loc/history)
 step "shop.loc history shows new deploy" "$SHOP_HIST" "\"deployId\":\"$SHOP_ID\""
 
 # ============================================================================
-echo ""; echo "${YEL}=== I. deploy.enabled gate ===${END}"
+echo ""; echo "${YEL}=== I. intent-gated deploy (full chain: mint → confirm → fire-with-token) ===${END}"
+# ============================================================================
+# AI mints intent
+INTENT_GATED=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":120}')
+GATED_ID=$(echo "$INTENT_GATED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+GATED_TOKEN=$(echo "$INTENT_GATED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+step "intent-gated: mint OK" "$INTENT_GATED" '"intentToken":"'
+
+# Try fire deploy WITHOUT operator approval — should fail with pending_confirmation
+PEND=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "fire without approval → 425 pending_confirmation" "$PEND" 'pending_confirmation.*425'
+
+# Operator approves (banner click)
+api POST /api/mcp/intents/$GATED_ID/confirm >/dev/null
+
+# AI fires deploy WITH token — should accept
+FIRED=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "fire with approved token → 202" "$FIRED" '"status":"queued".*202'
+GATED_DEPLOY_ID=$(echo "$FIRED" | python3 -c "import sys; t=sys.stdin.read(); import re; m=re.search(r'\"deployId\":\"([a-f0-9-]+)\"',t); print(m.group(1) if m else '')")
+
+# Wait for state machine to finish (~600ms total + slack)
+sleep 2
+DONE=$(api GET /api/nks.wdc.deploy/sites/blog.loc/deploys/$GATED_DEPLOY_ID)
+step "background state-machine reached Done" "$DONE" '"finalPhase":"Done"'
+step "intent-gated deploy triggered_by recorded" "$DONE" '"deployId":"'
+
+# Re-using same intent should fail (single-use enforced by validator)
+REPLAY=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "intent replay rejected (already_used)" "$REPLAY" 'already_used'
+
+# ============================================================================
+echo ""; echo "${YEL}=== J. deploy.enabled gate ===${END}"
 # ============================================================================
 api PUT /api/settings -d '{"deploy.enabled":"false"}' >/dev/null
 GATED=$(curl -s -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$BASE/api/nks.wdc.deploy/sites/blog.loc/history")

@@ -1544,41 +1544,97 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     });
 });
 
-// Stub deploy mint — Phase 7.5 dummy backend that just records a row in
-// status='completed' so the GUI flow can be exercised end-to-end. Real
-// backend (NksDeploy plugin) replaces this when it ships and inserts
-// running rows + drives status progression.
+// Phase 7.5 dummy backend with realistic state-machine + optional MCP
+// intent gate. POST body:
+//   { "host": "...", "branch": "...", "intentToken": "<id>.<nonce>.<sig>" }
+// If intentToken is provided, validator runs first (kind='deploy' enforced).
+// On success, a background task drives status: queued→running→awaiting_soak
+// →completed and broadcasts deploy events on each transition. Returns
+// immediately with 202 + deployId so the GUI can subscribe to SSE.
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     string domain,
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
     var root = doc.RootElement;
     var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "production" : "production";
+    var branch = root.TryGetProperty("branch", out var bEl) ? bEl.GetString() : null;
+    var intentToken = root.TryGetProperty("intentToken", out var tEl) ? tEl.GetString() : null;
+    var triggeredBy = string.IsNullOrEmpty(intentToken) ? "gui" : "mcp";
+
+    // Optional MCP gate. When token provided, must be valid + confirmed
+    // (or the caller passes X-Allow-Unconfirmed for CI). Plugin-extensible
+    // via the kinds registry — if mcp.strict_kinds is on, only registered
+    // kinds pass.
+    if (!string.IsNullOrEmpty(intentToken))
+    {
+        var allowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            intentToken, "deploy", domain, host, allowUnconfirmed, ct);
+        if (!verdict.Ok)
+        {
+            return Results.Json(
+                new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+        }
+    }
+
     var deployId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
-    var row = new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
-        Id:            deployId,
-        Domain:        domain,
-        Host:          host,
-        ReleaseId:     now.ToString("yyyyMMdd_HHmmss"),
-        Branch:        root.TryGetProperty("branch", out var bEl) ? bEl.GetString() : null,
-        CommitSha:     null,
-        Status:        "completed",     // dummy — real backend would write 'queued'+drive states
-        IsPastPonr:    true,
-        StartedAt:     now,
-        CompletedAt:   now,
-        ExitCode:      0,
-        ErrorMessage:  null,
-        DurationMs:    50,
-        TriggeredBy:   "gui",
-        BackendId:     "dummy",
-        CreatedAt:     now,
-        UpdatedAt:     now);
-    await runs.InsertAsync(row, ct);
-    return Results.Ok(new { deployId, status = "completed", note = "dummy backend — Phase 7.5 stub" });
+    await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
+        Id: deployId, Domain: domain, Host: host,
+        ReleaseId: now.ToString("yyyyMMdd_HHmmss"),
+        Branch: branch, CommitSha: null,
+        Status: "queued", IsPastPonr: false,
+        StartedAt: now, CompletedAt: null,
+        ExitCode: null, ErrorMessage: null, DurationMs: null,
+        TriggeredBy: triggeredBy, BackendId: "dummy",
+        CreatedAt: now, UpdatedAt: now), ct);
+
+    await eventsBus.BroadcastAsync("deploy:started",
+        new { deployId, domain, host, triggeredBy });
+
+    // Background state-machine: queued → running → awaiting_soak → completed.
+    // Each transition broadcasts an SSE event the drawer can render in
+    // real time. Total wall-clock: ~600ms — fast enough for E2E loops
+    // but visible to humans. Real backend would have steps minutes long.
+    _ = Task.Run(async () =>
+    {
+        try
+        {
+            await Task.Delay(150);
+            await runs.UpdateStatusAsync(deployId, "running", default);
+            await eventsBus.BroadcastAsync("deploy:phase",
+                new { deployId, phase = "Building", message = "Building release artifact" });
+
+            await Task.Delay(150);
+            await runs.MarkPastPonrAsync(deployId, default);
+            await eventsBus.BroadcastAsync("deploy:phase",
+                new { deployId, phase = "AwaitingSoak", message = "Symlink switched, awaiting health checks" });
+            await runs.UpdateStatusAsync(deployId, "awaiting_soak", default);
+
+            await Task.Delay(150);
+            await runs.MarkCompletedAsync(deployId, success: true, exitCode: 0,
+                errorMessage: null, durationMs: 450, default);
+            await eventsBus.BroadcastAsync("deploy:complete",
+                new { deployId, success = true, durationMs = 450 });
+        }
+        catch (Exception ex)
+        {
+            try { await runs.MarkCompletedAsync(deployId, success: false, -1, ex.Message, 0, default); } catch { }
+            try { await eventsBus.BroadcastAsync("deploy:complete",
+                new { deployId, success = false, error = ex.Message }); } catch { }
+        }
+    });
+
+    return Results.Accepted($"/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
+        new { deployId, status = "queued", note = "dummy backend — async state progression" });
 });
 
 // nksdeploy phase strings → frontend DeployPhase enum mapping.
