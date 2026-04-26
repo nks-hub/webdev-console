@@ -159,7 +159,9 @@
       "reversible": "Reversible",
       "destructive": "Destructive"
     },
-    "toastLoadFailed": "Could not load kinds: {error}"
+    "toastLoadFailed": "Could not load kinds: {error}",
+    "filterPlaceholder": "Search id or label…",
+    "pluginFilterPlaceholder": "Plugin filter"
   },
   "composer": {
     "title": "Composer",

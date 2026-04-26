@@ -159,7 +159,9 @@
       "reversible": "Vratné",
       "destructive": "Destruktivní"
     },
-    "toastLoadFailed": "Nepodařilo se načíst druhy: {error}"
+    "toastLoadFailed": "Nepodařilo se načíst druhy: {error}",
+    "filterPlaceholder": "Hledat ID nebo popis…",
+    "pluginFilterPlaceholder": "Filtr pluginu"
   },
   "composer": {
     "title": "Composer",

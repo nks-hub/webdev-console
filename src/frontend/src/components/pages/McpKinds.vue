@@ -9,6 +9,35 @@
 
     <p class="muted">{{ t('mcpKinds.description') }}</p>
 
+    <!-- Phase 7.5+++ — summary chips and filter toolbar. Mirrors the
+         McpIntents stateCounts pattern: at-a-glance counts by danger
+         level + per-plugin count, and a free-text filter that narrows
+         the table client-side. -->
+    <div v-if="kinds.length > 0" class="kinds-summary" role="group">
+      <el-tag v-for="d in dangerCounts" :key="d.level"
+        :type="d.level === 'destructive' ? 'danger' : 'warning'" effect="plain" size="small">
+        {{ t('mcpKinds.danger.' + d.level) }}: {{ d.count }}
+      </el-tag>
+      <span class="separator" />
+      <el-tag v-for="p in pluginCounts" :key="p.pluginId"
+        :type="p.pluginId === 'core' ? 'info' : 'success'" effect="plain" size="small">
+        {{ p.pluginId }}: {{ p.count }}
+      </el-tag>
+    </div>
+
+    <div v-if="kinds.length > 0" class="filter-toolbar">
+      <el-input
+        v-model="search"
+        :placeholder="t('mcpKinds.filterPlaceholder')"
+        clearable size="small" class="search-input"
+      />
+      <el-select v-model="pluginFilter" clearable size="small"
+        :placeholder="t('mcpKinds.pluginFilterPlaceholder')" class="plugin-select">
+        <el-option v-for="p in pluginCounts" :key="p.pluginId"
+          :label="p.pluginId" :value="p.pluginId" />
+      </el-select>
+    </div>
+
     <el-alert
       v-if="!loading && kinds.length === 0"
       :title="t('mcpKinds.empty')"
@@ -17,7 +46,7 @@
       :closable="false"
     />
 
-    <el-table v-else :data="kinds" stripe size="small" class="kinds-table">
+    <el-table v-else :data="filteredKinds" stripe size="small" class="kinds-table">
       <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="180">
         <template #default="{ row }">
           <code class="mono">{{ row.id }}</code>
@@ -47,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -56,6 +85,40 @@ import { listMcpKinds, type McpKindRow } from '../../api/daemon'
 const { t } = useI18n()
 const loading = ref(false)
 const kinds = ref<McpKindRow[]>([])
+
+const search = ref('')
+const pluginFilter = ref<string | null>(null)
+
+const filteredKinds = computed<McpKindRow[]>(() => {
+  const q = search.value.trim().toLowerCase()
+  return kinds.value.filter((k) => {
+    if (pluginFilter.value && k.pluginId !== pluginFilter.value) return false
+    if (q && !k.id.toLowerCase().includes(q) && !k.label.toLowerCase().includes(q)) return false
+    return true
+  })
+})
+
+const dangerCounts = computed(() => {
+  const map = new Map<string, number>()
+  for (const k of kinds.value) map.set(k.danger, (map.get(k.danger) ?? 0) + 1)
+  // Stable order: destructive first (more visible), then reversible.
+  return ['destructive', 'reversible']
+    .filter((d) => map.has(d))
+    .map((level) => ({ level, count: map.get(level) ?? 0 }))
+})
+
+const pluginCounts = computed(() => {
+  const map = new Map<string, number>()
+  for (const k of kinds.value) map.set(k.pluginId, (map.get(k.pluginId) ?? 0) + 1)
+  // 'core' first; rest alphabetical so plugin order is predictable.
+  const entries = Array.from(map.entries())
+    .sort((a, b) => {
+      if (a[0] === 'core') return -1
+      if (b[0] === 'core') return 1
+      return a[0].localeCompare(b[0])
+    })
+  return entries.map(([pluginId, count]) => ({ pluginId, count }))
+})
 
 onMounted(refresh)
 
@@ -79,4 +142,16 @@ async function refresh(): Promise<void> {
 .muted { color: var(--el-text-color-secondary); }
 .kinds-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
+.kinds-summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+}
+.kinds-summary .separator {
+  width: 1px; height: 16px;
+  background: var(--el-border-color); margin: 0 4px;
+}
+.filter-toolbar {
+  display: flex; gap: 8px; align-items: center;
+}
+.filter-toolbar .search-input { max-width: 280px; }
+.filter-toolbar .plugin-select { width: 180px; }
 </style>
