@@ -48,6 +48,25 @@
             <!-- Legacy hardcoded ports form — will migrate to IPortMetadata
                  one plugin at a time. For now coexists so users can still
                  edit the values that haven't been wired to plugins yet. -->
+            <!-- Phase 6.21 — explain what changing the webserver port
+                 actually does, since the consequence isn't obvious from
+                 the form alone. The daemon now bulk-regenerates every
+                 site's vhost on Apache port change (Phase 6.20a) AND
+                 self-heals stale ports on boot (Phase 6.20b), but the
+                 user still sees a brief window where the webserver
+                 reloads and existing browser connections drop. -->
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 12px; max-width: 400px"
+            >
+              <template #title>Changing HTTP/HTTPS port reloads the webserver</template>
+              Every per-site vhost is regenerated to use the new port and
+              Apache (or nginx/caddy) is reloaded. In-flight browser
+              connections drop briefly. Check that the new port isn't
+              already used by another service before saving.
+            </el-alert>
             <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
               <el-form-item :label="$t('settings.ports.httpPort')">
                 <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
