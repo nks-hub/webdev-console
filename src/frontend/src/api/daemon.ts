@@ -156,6 +156,32 @@ export interface ConfirmIntentResponse {
 export const confirmIntent = (intentId: string): Promise<ConfirmIntentResponse> =>
   json(`/api/mcp/intents/${encodeURIComponent(intentId)}/confirm`, { method: 'POST' })
 
+/**
+ * Phase 6.11b — admin inventory of all MCP-signed intents (read-only).
+ * Returns newest-first up to `limit` (server caps at 500). Each entry
+ * carries a derived `state` field: consumed | expired | pending_confirmation | ready.
+ */
+export interface IntentInventoryEntry {
+  intentId: string
+  domain: string
+  host: string
+  releaseId: string | null
+  kind: 'deploy' | 'rollback' | 'cancel' | 'restore'
+  expiresAt: string
+  usedAt: string | null
+  confirmedAt: string | null
+  createdAt: string
+  state: 'consumed' | 'expired' | 'pending_confirmation' | 'ready'
+}
+
+export interface IntentInventoryResponse {
+  count: number
+  entries: IntentInventoryEntry[]
+}
+
+export const fetchIntentInventory = (limit = 100): Promise<IntentInventoryResponse> =>
+  json(`/api/mcp/intents?limit=${limit}`)
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }

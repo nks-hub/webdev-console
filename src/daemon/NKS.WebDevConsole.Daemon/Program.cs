@@ -1075,6 +1075,50 @@ app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
     return Results.Ok(new { intentId, confirmedAt = now });
 });
 
+// Phase 6.11b — admin inventory of all signed intents. Read-only, no
+// destructive side effects — hands back the full deploy_intents row
+// list (newest first) so a wdc operator can audit what AI/CI clients
+// have minted recently. Bearer-auth on /api/* is sufficient gate.
+app.MapGet("/api/mcp/intents", async (
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    int limit = 100) =>
+{
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync();
+    var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn,
+        "SELECT id, domain, host, release_id, kind, expires_at, used_at, " +
+        "confirmed_at, created_at " +
+        "FROM deploy_intents ORDER BY created_at DESC LIMIT @Limit",
+        new { Limit = Math.Clamp(limit, 1, 500) });
+    var entries = rows.Select(r => new
+    {
+        intentId = (string)r.id,
+        domain = (string)r.domain,
+        host = (string)r.host,
+        releaseId = (string?)r.release_id,
+        kind = (string)r.kind,
+        expiresAt = (string)r.expires_at,
+        usedAt = (string?)r.used_at,
+        confirmedAt = (string?)r.confirmed_at,
+        createdAt = (string)r.created_at,
+        // Derived state for UI rendering convenience.
+        state = ComputeIntentState(
+            (string?)r.used_at,
+            (string?)r.confirmed_at,
+            (string)r.expires_at),
+    }).ToList();
+    return Results.Ok(new { count = entries.Count, entries });
+});
+
+static string ComputeIntentState(string? usedAt, string? confirmedAt, string expiresAtRaw)
+{
+    if (!string.IsNullOrEmpty(usedAt)) return "consumed";
+    if (DateTimeOffset.TryParse(expiresAtRaw, out var exp) && exp < DateTimeOffset.UtcNow)
+        return "expired";
+    if (string.IsNullOrEmpty(confirmedAt)) return "pending_confirmation";
+    return "ready";
+}
+
 // Auth middleware for /api/* requests.
 // SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
 var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);
