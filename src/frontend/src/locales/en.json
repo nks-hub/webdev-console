@@ -549,6 +549,79 @@
     "history": "History",
     "backup": "Backup"
   },
+  "deploySettings": {
+    "tabs": {
+      "hosts": "Hosts",
+      "snapshots": "DB Snapshot",
+      "hooks": "Hooks",
+      "notifications": "Notifications",
+      "advanced": "Advanced"
+    },
+    "common": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "remove": "Remove",
+      "add": "Add",
+      "saving": "Saving…",
+      "savedToast": "Saved",
+      "saveFailed": "Save failed: {error}",
+      "loadFailed": "Could not load deploy settings: {error}"
+    },
+    "hosts": {
+      "title": "Deploy hosts",
+      "addHost": "Add host",
+      "saveHosts": "Save hosts",
+      "empty": "No hosts configured yet — click \"Add host\" to set up production / staging / etc.",
+      "col": {
+        "name": "Name",
+        "sshTarget": "SSH user@host",
+        "remotePath": "Remote path",
+        "branch": "Branch",
+        "autoDeploy": "Auto-deploy",
+        "actions": "Actions"
+      },
+      "tagComposer": "composer",
+      "tagSkip": "skip",
+      "ariaEditHost": "Edit host {name}",
+      "ariaRemoveHost": "Remove host {name}",
+      "ariaComposerEnabled": "Composer install enabled",
+      "ariaComposerDisabled": "Composer install disabled"
+    },
+    "hostDialog": {
+      "addTitle": "Add deploy host",
+      "editTitle": "Edit host",
+      "name": "Name (slug)",
+      "namePlaceholder": "production",
+      "nameHelp": "Unique identifier used in CLI and deploy logs. Cannot be changed after creation.",
+      "sshHost": "SSH host",
+      "sshHostPlaceholder": "192.168.1.10",
+      "sshUser": "SSH user",
+      "sshUserPlaceholder": "deploy",
+      "port": "Port",
+      "remotePath": "Remote path",
+      "remotePathPlaceholder": "/var/www/myapp",
+      "branch": "Branch",
+      "branchPlaceholder": "main",
+      "phpPath": "PHP binary path (optional)",
+      "phpPathPlaceholder": "/usr/bin/php8.3",
+      "healthUrl": "Health check URL (optional)",
+      "healthUrlPlaceholder": "https://example.com/health",
+      "soakSeconds": "Soak seconds",
+      "composerInstall": "Composer install",
+      "runMigrations": "Run migrations"
+    },
+    "snapshot": {
+      "title": "Pre-deploy DB snapshot",
+      "enabled": "Snapshot DB before each deploy",
+      "enabledHint": "A database dump is created before the atomic symlink switch so you can restore if a migration fails.",
+      "retentionDays": "Retention days",
+      "snapshotsTitle": "Recent DB snapshots",
+      "restoreTitle": "Restore this snapshot (overwrites live data)",
+      "colCreated": "Created",
+      "colSize": "Size"
+    }
+  },
   "deploy": {
     "loading": "Loading deploy state…",
     "subTabs": {

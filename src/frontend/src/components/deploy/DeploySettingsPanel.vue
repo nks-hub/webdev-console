@@ -3,68 +3,68 @@
     <el-tabs v-model="activeSection" tab-position="left" class="settings-tabs">
 
       <!-- ── A: Hosts ──────────────────────────────────────────── -->
-      <el-tab-pane name="hosts" label="Hosts">
+      <el-tab-pane name="hosts" :label="t('deploySettings.tabs.hosts')">
         <div class="section-body">
           <div class="section-header">
-            <h3 class="section-title">Deploy Hosts</h3>
+            <h3 class="section-title">{{ t('deploySettings.hosts.title') }}</h3>
             <el-button type="primary" size="small" @click="openAddHostModal">
-              Add host
+              {{ t('deploySettings.hosts.addHost') }}
             </el-button>
           </div>
 
           <el-table
             :data="settings.hosts"
             size="default"
-            aria-label="Deploy hosts"
+            :aria-label="t('deploySettings.hosts.title')"
             class="hosts-table"
-            empty-text="No hosts configured yet"
+            :empty-text="t('deploySettings.hosts.empty')"
           >
-            <el-table-column label="Name" prop="name" min-width="120">
+            <el-table-column :label="t('deploySettings.hosts.col.name')" prop="name" min-width="120">
               <template #default="{ row }">
                 <span class="mono">{{ row.name }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="SSH user@host" min-width="180">
+            <el-table-column :label="t('deploySettings.hosts.col.sshTarget')" min-width="180">
               <template #default="{ row }">
                 <span class="mono">{{ row.sshUser }}@{{ row.sshHost }}:{{ row.sshPort }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="Remote path" prop="remotePath" min-width="160">
+            <el-table-column :label="t('deploySettings.hosts.col.remotePath')" prop="remotePath" min-width="160">
               <template #default="{ row }">
                 <span class="mono">{{ row.remotePath }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="Branch" prop="branch" width="100" />
-            <el-table-column label="Auto-deploy" width="110" align="center">
+            <el-table-column :label="t('deploySettings.hosts.col.branch')" prop="branch" width="100" />
+            <el-table-column :label="t('deploySettings.hosts.col.autoDeploy')" width="110" align="center">
               <template #default="{ row }">
                 <el-tag
                   :type="row.composerInstall ? 'success' : 'info'"
                   size="small"
                   effect="plain"
-                  :aria-label="row.composerInstall ? 'Composer install enabled' : 'Composer install disabled'"
+                  :aria-label="row.composerInstall ? t('deploySettings.hosts.ariaComposerEnabled') : t('deploySettings.hosts.ariaComposerDisabled')"
                 >
-                  {{ row.composerInstall ? 'composer' : 'skip' }}
+                  {{ row.composerInstall ? t('deploySettings.hosts.tagComposer') : t('deploySettings.hosts.tagSkip') }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="Actions" width="120" align="right">
+            <el-table-column :label="t('deploySettings.hosts.col.actions')" width="120" align="right">
               <template #default="{ row }">
                 <el-button
                   size="small"
                   text
-                  :aria-label="`Edit host ${row.name}`"
+                  :aria-label="t('deploySettings.hosts.ariaEditHost', { name: row.name })"
                   @click="openEditHostModal(row)"
                 >
-                  Edit
+                  {{ t('deploySettings.common.edit') }}
                 </el-button>
                 <el-button
                   size="small"
                   text
                   type="danger"
-                  :aria-label="`Remove host ${row.name}`"
+                  :aria-label="t('deploySettings.hosts.ariaRemoveHost', { name: row.name })"
                   @click="removeHost(row.name)"
                 >
-                  Remove
+                  {{ t('deploySettings.common.remove') }}
                 </el-button>
               </template>
             </el-table-column>
@@ -72,7 +72,7 @@
 
           <div class="section-footer">
             <el-button type="primary" :loading="saving" @click="saveSettings">
-              Save hosts
+              {{ t('deploySettings.hosts.saveHosts') }}
             </el-button>
           </div>
         </div>
@@ -544,7 +544,7 @@
     <!-- ── Add / Edit Host Modal ──────────────────────────────── -->
     <el-dialog
       v-model="hostModalOpen"
-      :title="editingHost ? 'Edit host' : 'Add deploy host'"
+      :title="editingHost ? t('deploySettings.hostDialog.editTitle') : t('deploySettings.hostDialog.addTitle')"
       width="580px"
       :close-on-click-modal="false"
       destroy-on-close
@@ -556,40 +556,40 @@
         :rules="hostRules"
         label-position="top"
         size="default"
-        aria-label="Deploy host form"
+        :aria-label="t('deploySettings.hostDialog.addTitle')"
       >
-        <el-form-item label="Name (slug)" prop="name" required>
+        <el-form-item :label="t('deploySettings.hostDialog.name')" prop="name" required>
           <el-input
             id="host-name"
             v-model="hostForm.name"
-            placeholder="production"
+            :placeholder="t('deploySettings.hostDialog.namePlaceholder')"
             :disabled="!!editingHost"
             aria-required="true"
             aria-describedby="host-name-help"
           />
           <div id="host-name-help" class="field-hint">
-            Unique identifier used in CLI and deploy logs. Cannot be changed after creation.
+            {{ t('deploySettings.hostDialog.nameHelp') }}
           </div>
         </el-form-item>
 
         <div class="form-row">
-          <el-form-item label="SSH host" prop="sshHost" required style="flex: 1">
+          <el-form-item :label="t('deploySettings.hostDialog.sshHost')" prop="sshHost" required style="flex: 1">
             <el-input
               id="host-ssh-host"
               v-model="hostForm.sshHost"
-              placeholder="192.168.1.10"
+              :placeholder="t('deploySettings.hostDialog.sshHostPlaceholder')"
               aria-required="true"
             />
           </el-form-item>
-          <el-form-item label="SSH user" prop="sshUser" required style="width: 140px">
+          <el-form-item :label="t('deploySettings.hostDialog.sshUser')" prop="sshUser" required style="width: 140px">
             <el-input
               id="host-ssh-user"
               v-model="hostForm.sshUser"
-              placeholder="deploy"
+              :placeholder="t('deploySettings.hostDialog.sshUserPlaceholder')"
               aria-required="true"
             />
           </el-form-item>
-          <el-form-item label="Port" prop="sshPort" required style="width: 90px">
+          <el-form-item :label="t('deploySettings.hostDialog.port')" prop="sshPort" required style="width: 90px">
             <el-input-number
               id="host-ssh-port"
               v-model="hostForm.sshPort"
@@ -602,42 +602,32 @@
           </el-form-item>
         </div>
 
-        <el-form-item label="Remote path" prop="remotePath" required>
+        <el-form-item :label="t('deploySettings.hostDialog.remotePath')" prop="remotePath" required>
           <el-input
             id="host-remote-path"
             v-model="hostForm.remotePath"
-            placeholder="/var/www/myapp"
+            :placeholder="t('deploySettings.hostDialog.remotePathPlaceholder')"
             aria-required="true"
           />
         </el-form-item>
 
-        <el-form-item label="Branch" prop="branch" required>
+        <el-form-item :label="t('deploySettings.hostDialog.branch')" prop="branch" required>
           <el-input
             id="host-branch"
             v-model="hostForm.branch"
-            placeholder="main"
+            :placeholder="t('deploySettings.hostDialog.branchPlaceholder')"
             aria-required="true"
           />
         </el-form-item>
 
         <div class="form-row">
-          <el-form-item label="Composer install" style="flex: 1">
-            <el-switch
-              id="host-composer"
-              v-model="hostForm.composerInstall"
-              active-text="Yes"
-              inactive-text="No"
-            />
+          <el-form-item :label="t('deploySettings.hostDialog.composerInstall')" style="flex: 1">
+            <el-switch id="host-composer" v-model="hostForm.composerInstall" />
           </el-form-item>
-          <el-form-item label="Run migrations" style="flex: 1">
-            <el-switch
-              id="host-migrations"
-              v-model="hostForm.runMigrations"
-              active-text="Yes"
-              inactive-text="No"
-            />
+          <el-form-item :label="t('deploySettings.hostDialog.runMigrations')" style="flex: 1">
+            <el-switch id="host-migrations" v-model="hostForm.runMigrations" />
           </el-form-item>
-          <el-form-item label="Soak seconds" style="width: 140px">
+          <el-form-item :label="t('deploySettings.hostDialog.soakSeconds')" style="width: 140px">
             <el-input-number
               id="host-soak"
               v-model="hostForm.soakSeconds"
@@ -649,29 +639,29 @@
           </el-form-item>
         </div>
 
-        <el-form-item label="PHP binary path (optional)">
+        <el-form-item :label="t('deploySettings.hostDialog.phpPath')">
           <el-input
             id="host-php"
             v-model="hostForm.phpBinaryPath"
-            placeholder="/usr/bin/php8.3"
+            :placeholder="t('deploySettings.hostDialog.phpPathPlaceholder')"
             clearable
           />
         </el-form-item>
 
-        <el-form-item label="Health check URL (optional)">
+        <el-form-item :label="t('deploySettings.hostDialog.healthUrl')">
           <el-input
             id="host-health"
             v-model="hostForm.healthCheckUrl"
-            placeholder="https://example.com/healthz"
+            :placeholder="t('deploySettings.hostDialog.healthUrlPlaceholder')"
             clearable
           />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="hostModalOpen = false">Cancel</el-button>
+        <el-button @click="hostModalOpen = false">{{ t('deploySettings.common.cancel') }}</el-button>
         <el-button type="primary" @click="submitHostForm">
-          {{ editingHost ? 'Update host' : 'Add host' }}
+          {{ editingHost ? t('deploySettings.common.edit') : t('deploySettings.hosts.addHost') }}
         </el-button>
       </template>
     </el-dialog>
@@ -680,6 +670,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
@@ -693,6 +684,7 @@ import {
 } from '../../api/deploy'
 import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings } from '../../api/deploy'
 
+const { t } = useI18n()
 const props = defineProps<{ domain: string }>()
 
 const store = useDeploySettingsStore()

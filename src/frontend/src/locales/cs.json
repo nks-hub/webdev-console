@@ -77,7 +77,7 @@
     "composer": "Composer",
     "hosts": "Hosts soubor",
     "mcpIntents": "MCP Intents",
-    "mcpGrants": "MCP důvěry"
+    "mcpGrants": "MCP oprávnění"
   },
   "composer": {
     "title": "Composer",
@@ -549,6 +549,79 @@
     "history": "Historie",
     "backup": "Záloha"
   },
+  "deploySettings": {
+    "tabs": {
+      "hosts": "Hosti",
+      "snapshots": "DB Snapshot",
+      "hooks": "Hooks",
+      "notifications": "Notifikace",
+      "advanced": "Pokročilé"
+    },
+    "common": {
+      "save": "Uložit",
+      "cancel": "Zrušit",
+      "edit": "Upravit",
+      "remove": "Odebrat",
+      "add": "Přidat",
+      "saving": "Ukládám…",
+      "savedToast": "Uloženo",
+      "saveFailed": "Uložení selhalo: {error}",
+      "loadFailed": "Nepodařilo se načíst nastavení deploye: {error}"
+    },
+    "hosts": {
+      "title": "Deploy hosti",
+      "addHost": "Přidat hosta",
+      "saveHosts": "Uložit hosty",
+      "empty": "Zatím nejsou nakonfigurovaní žádní hosti — klikněte na „Přidat hosta“ pro nastavení produkce / stagingu / atd.",
+      "col": {
+        "name": "Název",
+        "sshTarget": "SSH user@host",
+        "remotePath": "Vzdálená cesta",
+        "branch": "Větev",
+        "autoDeploy": "Auto-deploy",
+        "actions": "Akce"
+      },
+      "tagComposer": "composer",
+      "tagSkip": "přeskočit",
+      "ariaEditHost": "Upravit hosta {name}",
+      "ariaRemoveHost": "Odebrat hosta {name}",
+      "ariaComposerEnabled": "Composer install zapnut",
+      "ariaComposerDisabled": "Composer install vypnut"
+    },
+    "hostDialog": {
+      "addTitle": "Přidat deploy hosta",
+      "editTitle": "Upravit hosta",
+      "name": "Název (slug)",
+      "namePlaceholder": "production",
+      "nameHelp": "Unikátní identifikátor používaný v CLI a deploy logu. Po vytvoření už nelze změnit.",
+      "sshHost": "SSH host",
+      "sshHostPlaceholder": "192.168.1.10",
+      "sshUser": "SSH user",
+      "sshUserPlaceholder": "deploy",
+      "port": "Port",
+      "remotePath": "Vzdálená cesta",
+      "remotePathPlaceholder": "/var/www/myapp",
+      "branch": "Větev",
+      "branchPlaceholder": "main",
+      "phpPath": "Cesta k PHP binárce (volitelné)",
+      "phpPathPlaceholder": "/usr/bin/php8.3",
+      "healthUrl": "URL pro health check (volitelné)",
+      "healthUrlPlaceholder": "https://example.com/health",
+      "soakSeconds": "Soak (sekundy)",
+      "composerInstall": "Spustit composer install",
+      "runMigrations": "Spustit migrace"
+    },
+    "snapshot": {
+      "title": "DB snapshot před deployem",
+      "enabled": "Vytvořit snapshot DB před každým deployem",
+      "enabledHint": "Před atomickým přepnutím symlinku se vytvoří dump databáze, aby šlo obnovit při selhání migrace.",
+      "retentionDays": "Retence (dny)",
+      "snapshotsTitle": "Poslední DB snapshoty",
+      "restoreTitle": "Obnovit tento snapshot (přepíše živá data)",
+      "colCreated": "Vytvořeno",
+      "colSize": "Velikost"
+    }
+  },
   "deploy": {
     "loading": "Načítám stav deploye…",
     "subTabs": {
@@ -722,15 +795,15 @@
     }
   },
   "mcpGrants": {
-    "title": "MCP důvěry",
-    "description": "Trvalá pravidla důvěry, která daemon zkontroluje DŘÍVE než se zeptá GUI banneru. Shoda automaticky schválí intent. Přežijí restart daemonu.",
+    "title": "MCP oprávnění",
+    "description": "Trvalá oprávnění, která daemon zkontroluje DŘÍVE než se zeptá GUI banneru. Shoda automaticky schválí intent. Přežijí restart daemonu.",
     "refresh": "Obnovit",
-    "newGrant": "Nová důvěra",
+    "newGrant": "Nové oprávnění",
     "revoke": "Odvolat",
-    "permanent": "Trvalá",
+    "permanent": "Trvalé",
     "empty": {
-      "title": "Žádná aktivní důvěra",
-      "description": "Schvalte v banneru tlačítkem „Důvěřovat 30 min“ nebo „Vždy důvěřovat“ — nebo použijte „Nová důvěra“ výše pro detailní nastavení."
+      "title": "Žádná aktivní oprávnění",
+      "description": "Schvalte v banneru tlačítkem „Důvěřovat 30 min“ nebo „Vždy důvěřovat“ — nebo použijte „Nové oprávnění“ výše pro detailní nastavení."
     },
     "col": {
       "scope": "Rozsah",
@@ -743,7 +816,7 @@
       "actions": "Akce"
     },
     "dialog": {
-      "title": "Nová důvěra",
+      "title": "Nové oprávnění",
       "scopeType": "Typ rozsahu",
       "scopeValue": "Hodnota rozsahu",
       "scopeValueRequired": "Hodnota rozsahu je pro tento typ povinná.",
@@ -752,18 +825,18 @@
       "expiry": "Platnost",
       "expiryPermanent": "Trvalá",
       "note": "Poznámka",
-      "notePlaceholder": "Proč tato důvěra existuje (volitelné)",
+      "notePlaceholder": "Proč toto oprávnění existuje (volitelné)",
       "create": "Vytvořit"
     },
     "confirmRevoke": {
-      "title": "Odvolat důvěru?",
+      "title": "Odvolat oprávnění?",
       "message": "Budoucí shodné požadavky budou opět vyžadovat potvrzení v GUI. Záznam zůstane v databázi (audit), ale bude označen jako odvolaný."
     },
-    "toastLoadFailed": "Nepodařilo se načíst důvěry: {error}",
-    "toastCreated": "Důvěra vytvořena",
-    "toastCreateFailed": "Nepodařilo se vytvořit důvěru: {error}",
-    "toastRevoked": "Důvěra odvolána",
-    "toastRevokeFailed": "Nepodařilo se odvolat důvěru: {error}"
+    "toastLoadFailed": "Nepodařilo se načíst oprávnění: {error}",
+    "toastCreated": "Oprávnění vytvořeno",
+    "toastCreateFailed": "Nepodařilo se vytvořit oprávnění: {error}",
+    "toastRevoked": "Oprávnění odvoláno",
+    "toastRevokeFailed": "Nepodařilo se odvolat oprávnění: {error}"
   },
   "mcp": {
     "banner": {
@@ -787,9 +860,9 @@
       "toastExpired": "Intent {id} vypršel před schválením — banner uzavřen",
       "trust30Min": "Důvěřovat 30 min",
       "alwaysTrust": "Vždy důvěřovat",
-      "toastTrustedFor": "Důvěra na {minutes} min uložena — další shodné požadavky banner přeskočí",
-      "toastAlwaysTrusted": "Trvalá důvěra uložena — další shodné požadavky banner přeskočí",
-      "toastGrantFailed": "Nepodařilo se uložit důvěru: {error}"
+      "toastTrustedFor": "Oprávnění na {minutes} min uloženo — další shodné požadavky banner přeskočí",
+      "toastAlwaysTrusted": "Trvalé oprávnění uloženo — další shodné požadavky banner přeskočí",
+      "toastGrantFailed": "Nepodařilo se uložit oprávnění: {error}"
     }
   },
   "footer": {
