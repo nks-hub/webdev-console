@@ -110,6 +110,9 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroa
 builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator,
     NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>();
+// Garbage-collects deploy_intents rows: 7-day retention for consumed
+// intents (audit tail), 1-day for unused expired ones. See class docs.
+builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.IntentSweeperService>();
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
 builder.Services.AddSingleton<SitePhpIniWriter>();
