@@ -80,6 +80,61 @@
     "mcpGrants": "MCP oprávnění",
     "mcp": "MCP"
   },
+  "mcpIntents": {
+    "title": "Inventář MCP intentů",
+    "refresh": "Obnovit",
+    "description": "Audit log HMAC-podepsaných intent tokenů, které AI / CI klienti vydali přes Model Context Protocol. Každý intent autorizuje jednu destruktivní operaci (deploy / rollback / cancel / restore) na konkrétní dvojici (doména, host). Spotřebované intenty zůstávají 7 dní jako audit historie; nepoužité expirované se po dni smažou.",
+    "stateSummaryAria": "Souhrn stavů intentů",
+    "domainBreakdownAria": "Rozpis intentů podle domény",
+    "domainBreakdownTitle": "Rozpis podle domén:",
+    "filter": {
+      "groupAria": "Filtrovat intenty",
+      "allStates": "Všechny stavy",
+      "stateAria": "Filtr podle stavu",
+      "allKinds": "Všechny druhy",
+      "kindAria": "Filtr podle druhu",
+      "search": "Hledat doménu nebo hosta…",
+      "searchAria": "Hledat podle domény nebo hosta",
+      "showing": "Zobrazeno {visible} z {total}"
+    },
+    "emptyNoIntents": "Žádné MCP intenty nezaznamenány — daemon zatím neviděl žádnou AI-podepsanou destruktivní operaci.",
+    "emptyNoMatch": "Žádné intenty neodpovídají filtrům",
+    "emptyTable": "Žádné intenty",
+    "bulk": {
+      "toolbarAria": "Hromadné akce s intenty",
+      "selected": "Vybráno: {n}",
+      "revokeSelected": "Odvolat vybrané ({n})",
+      "clearSelection": "Zrušit výběr",
+      "confirmTitle": "Hromadné odvolání MCP intentů",
+      "confirmMessage": "Odvolat {n} intent(ů)? Každý bude označen used_at na daemonu, takže AI klient pokoušející se ho použít dostane already_used.\n\nCíle: {targets}",
+      "confirmMore": " a dalších {n}…",
+      "confirmRevokeBtn": "Odvolat vše",
+      "cancel": "Zrušit",
+      "toastOk": "Odvoláno {n} intent(ů)",
+      "toastPartial": "Odvoláno {ok}, selhalo {failed}"
+    },
+    "col": {
+      "created": "Vytvořeno",
+      "domain": "Doména",
+      "host": "Host",
+      "kind": "Druh",
+      "state": "Stav",
+      "expires": "Vyprší",
+      "intentId": "ID intentu"
+    },
+    "revoke": "Odvolat",
+    "revokeAria": "Odvolat tento intent (označit jako použitý bez spuštění)",
+    "single": {
+      "confirmTitle": "Odvolat MCP intent",
+      "confirmMessage": "Odvolat intent {id}? ({kind} na {domain} → {host}) AI klient pokoušející se ho použít dostane already_used.",
+      "confirmRevokeBtn": "Odvolat",
+      "cancel": "Zrušit",
+      "toastRevoked": "Intent odvolán",
+      "toastRevokeFailed": "Odvolání selhalo: {error}",
+      "toastIdCopied": "ID intentu zkopírováno",
+      "toastCopyFail": "Kopírování selhalo — schránka odepřena"
+    }
+  },
   "mcpHub": {
     "title": "Model Context Protocol",
     "description": "Audit log každého podepsaného AI požadavku (Intents) plus trvalá pravidla, která předem schvalují další požadavky (Oprávnění).",

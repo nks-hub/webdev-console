@@ -1,22 +1,16 @@
 <template>
   <div class="page mcp-intents-page">
     <div class="page-header">
-      <h2>MCP Intent Inventory</h2>
+      <h2>{{ t('mcpIntents.title') }}</h2>
       <el-button :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon> Refresh
+        <el-icon><Refresh /></el-icon> {{ t('mcpIntents.refresh') }}
       </el-button>
     </div>
 
-    <p class="muted">
-      Audit trail of HMAC-signed intent tokens minted by AI / CI clients
-      via the Model Context Protocol. Each intent authorises a single
-      destructive operation (deploy / rollback / cancel / restore) on a
-      specific (domain, host) pair. Used intents stay around for 7 days
-      as audit history; expired-unused intents are swept after 1 day.
-    </p>
+    <p class="muted">{{ t('mcpIntents.description') }}</p>
 
     <!-- State summary chips -->
-    <div class="state-summary" role="group" aria-label="Intent state summary">
+    <div class="state-summary" role="group" :aria-label="t('mcpIntents.stateSummaryAria')">
       <el-tag v-for="s in stateCounts" :key="s.state" :type="stateTagType(s.state)" effect="plain">
         {{ s.state }}: {{ s.count }}
       </el-tag>
@@ -29,9 +23,9 @@
       v-if="domainStats.length > 1"
       class="domain-stats"
       role="group"
-      aria-label="Intent breakdown by domain"
+      :aria-label="t('mcpIntents.domainBreakdownAria')"
     >
-      <div class="domain-stats-title">Per-domain breakdown:</div>
+      <div class="domain-stats-title">{{ t('mcpIntents.domainBreakdownTitle') }}</div>
       <div class="domain-stats-grid">
         <div v-for="d in domainStats" :key="d.domain" class="domain-stats-cell">
           <code class="mono domain-name" :title="d.domain">{{ d.domain }}</code>
@@ -54,14 +48,14 @@
     <!-- Phase 6.13b — filter toolbar. State + kind selects + free-text
          domain search. Filters apply client-side over the loaded list
          (cap 200) — no server round-trip needed. -->
-    <div class="filter-toolbar" role="search" aria-label="Filter intents">
+    <div class="filter-toolbar" role="search" :aria-label="t('mcpIntents.filter.groupAria')">
       <el-select
         v-model="stateFilter"
-        placeholder="All states"
+        :placeholder="t('mcpIntents.filter.allStates')"
         clearable
         size="small"
         style="width: 180px"
-        aria-label="Filter by state"
+        :aria-label="t('mcpIntents.filter.stateAria')"
       >
         <el-option label="ready" value="ready" />
         <el-option label="pending_confirmation" value="pending_confirmation" />
@@ -70,11 +64,11 @@
       </el-select>
       <el-select
         v-model="kindFilter"
-        placeholder="All kinds"
+        :placeholder="t('mcpIntents.filter.allKinds')"
         clearable
         size="small"
         style="width: 140px"
-        aria-label="Filter by kind"
+        :aria-label="t('mcpIntents.filter.kindAria')"
       >
         <el-option label="deploy" value="deploy" />
         <el-option label="rollback" value="rollback" />
@@ -83,28 +77,28 @@
       </el-select>
       <el-input
         v-model="domainFilter"
-        placeholder="Search domain or host…"
+        :placeholder="t('mcpIntents.filter.search')"
         size="small"
         clearable
         style="max-width: 260px"
-        aria-label="Search by domain or host"
+        :aria-label="t('mcpIntents.filter.searchAria')"
       >
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
       <span v-if="filteredEntries.length !== entries.length" class="muted filter-count">
-        Showing {{ filteredEntries.length }} of {{ entries.length }}
+        {{ t('mcpIntents.filter.showing', { visible: filteredEntries.length, total: entries.length }) }}
       </span>
     </div>
 
     <el-empty
       v-if="!entries.length && !loading"
-      description="No MCP intents recorded — the daemon hasn't seen any AI-signed destructive ops yet."
+      :description="t('mcpIntents.emptyNoIntents')"
     />
 
     <el-empty
       v-else-if="!filteredEntries.length"
       :image-size="60"
-      description="No intents match the current filters"
+      :description="t('mcpIntents.emptyNoMatch')"
     />
 
     <template v-else>
@@ -112,17 +106,17 @@
            revokable row is selected. Sits inside the table render path
            so the empty-state v-if/v-else-if chain above stays intact. -->
       <div v-if="selectedRevokable.length > 0" class="bulk-toolbar" role="toolbar"
-           aria-label="Bulk intent actions">
-        <span class="muted">{{ selectedRevokable.length }} selected:</span>
+           :aria-label="t('mcpIntents.bulk.toolbarAria')">
+        <span class="muted">{{ t('mcpIntents.bulk.selected', { n: selectedRevokable.length }) }}</span>
         <el-button
           type="danger"
           size="small"
           :loading="bulkRevoking"
           @click="onBulkRevoke"
         >
-          Revoke selected ({{ selectedRevokable.length }})
+          {{ t('mcpIntents.bulk.revokeSelected', { n: selectedRevokable.length }) }}
         </el-button>
-        <el-button size="small" @click="clearSelection">Clear selection</el-button>
+        <el-button size="small" @click="clearSelection">{{ t('mcpIntents.bulk.clearSelection') }}</el-button>
       </div>
 
       <el-table
@@ -130,22 +124,22 @@
         :data="filteredEntries"
         stripe
         size="small"
-        :empty-text="'No intents'"
+        :empty-text="t('mcpIntents.emptyTable')"
         class="intent-table"
         @selection-change="onSelectionChange"
       >
         <!-- Selection column. el-table's `type=selection` + `selectable`
              prop disables the checkbox for non-revokable rows. -->
         <el-table-column type="selection" width="40" :selectable="rowSelectable" />
-      <el-table-column label="Created" width="170">
+      <el-table-column :label="t('mcpIntents.col.created')" width="170">
         <template #default="{ row }">
           <span class="mono">{{ formatDate(row.createdAt) }}</span>
         </template>
       </el-table-column>
 
-      <el-table-column prop="domain" label="Domain" min-width="140" />
-      <el-table-column prop="host" label="Host" width="120" />
-      <el-table-column prop="kind" label="Kind" width="100">
+      <el-table-column prop="domain" :label="t('mcpIntents.col.domain')" min-width="140" />
+      <el-table-column prop="host" :label="t('mcpIntents.col.host')" width="120" />
+      <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" width="100">
         <template #default="{ row }">
           <el-tag :type="kindTagType(row.kind)" size="small" effect="plain">
             {{ row.kind }}
@@ -153,7 +147,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="State" width="170">
+      <el-table-column :label="t('mcpIntents.col.state')" width="170">
         <template #default="{ row }">
           <el-tag :type="stateTagType(row.state)" size="small" effect="plain">
             <el-icon class="state-icon" aria-hidden="true">
@@ -164,7 +158,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="Expires" width="170">
+      <el-table-column :label="t('mcpIntents.col.expires')" width="170">
         <template #default="{ row }">
           <span class="mono" :class="{ expired: row.state === 'expired' }">
             {{ formatRelative(row.expiresAt) }}
@@ -172,7 +166,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="Intent ID" width="130">
+      <el-table-column :label="t('mcpIntents.col.intentId')" width="130">
         <template #default="{ row }">
           <code
             class="mono intent-id"
@@ -193,10 +187,10 @@
             type="danger"
             :loading="revokingId === row.intentId"
             :disabled="revokingId !== null && revokingId !== row.intentId"
-            aria-label="Revoke this intent (mark as used without firing)"
+            :aria-label="t('mcpIntents.revokeAria')"
             @click="onRevoke(row)"
           >
-            Revoke
+            {{ t('mcpIntents.revoke') }}
           </el-button>
         </template>
       </el-table-column>
@@ -207,6 +201,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Refresh,
   CircleCheck,
@@ -216,6 +211,8 @@ import {
   Search,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const { t } = useI18n()
 import {
   fetchIntentInventory,
   revokeIntent,
@@ -258,13 +255,16 @@ async function onBulkRevoke(): Promise<void> {
   const targets = selectedRevokable.value
   if (targets.length === 0 || bulkRevoking.value) return
   try {
+    const targetsHead = targets.slice(0, 5).map((r) => `${r.kind} on ${r.domain}`).join(', ')
+    const moreSuffix = targets.length > 5 ? t('mcpIntents.bulk.confirmMore', { n: targets.length - 5 }) : ''
     await ElMessageBox.confirm(
-      `Revoke ${targets.length} intent(s)? Each will be marked used_at on the daemon ` +
-        `so any AI client trying to fire them gets already_used.\n\n` +
-        `Targets: ${targets.slice(0, 5).map((r) => `${r.kind} on ${r.domain}`).join(', ')}` +
-        (targets.length > 5 ? ` and ${targets.length - 5} more…` : ''),
-      'Bulk revoke MCP intents',
-      { type: 'warning', confirmButtonText: 'Revoke all', cancelButtonText: 'Cancel' },
+      t('mcpIntents.bulk.confirmMessage', { n: targets.length, targets: targetsHead + moreSuffix }),
+      t('mcpIntents.bulk.confirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('mcpIntents.bulk.confirmRevokeBtn'),
+        cancelButtonText: t('mcpIntents.bulk.cancel'),
+      },
     )
   } catch { return }
 
@@ -274,9 +274,9 @@ async function onBulkRevoke(): Promise<void> {
   // Serial revoke — daemon writes are cheap and serial keeps the
   // failure surface deterministic (operator sees "5 ok, 2 failed"
   // rather than racing parallel POSTs).
-  for (const t of targets) {
+  for (const target of targets) {
     try {
-      await revokeIntent(t.intentId)
+      await revokeIntent(target.intentId)
       ok++
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -289,9 +289,9 @@ async function onBulkRevoke(): Promise<void> {
   bulkRevoking.value = false
   clearSelection()
   if (failed === 0) {
-    ElMessage.success(`Revoked ${ok} intent(s)`)
+    ElMessage.success(t('mcpIntents.bulk.toastOk', { n: ok }))
   } else {
-    ElMessage.warning(`Revoked ${ok}, ${failed} failed`)
+    ElMessage.warning(t('mcpIntents.bulk.toastPartial', { ok, failed }))
   }
   await refresh()
 }
@@ -406,22 +406,29 @@ async function onRevoke(row: IntentInventoryEntry): Promise<void> {
   if (revokingId.value !== null) return
   try {
     await ElMessageBox.confirm(
-      `Revoke intent ${row.intentId.slice(0, 8)}? ` +
-        `(${row.kind} on ${row.domain} → ${row.host}) ` +
-        `Any AI client trying to fire this token will get already_used.`,
-      'Revoke MCP intent',
-      { type: 'warning', confirmButtonText: 'Revoke', cancelButtonText: 'Cancel' },
+      t('mcpIntents.single.confirmMessage', {
+        id: row.intentId.slice(0, 8),
+        kind: row.kind,
+        domain: row.domain,
+        host: row.host,
+      }),
+      t('mcpIntents.single.confirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('mcpIntents.single.confirmRevokeBtn'),
+        cancelButtonText: t('mcpIntents.single.cancel'),
+      },
     )
   } catch { return }
 
   revokingId.value = row.intentId
   try {
     await revokeIntent(row.intentId)
-    ElMessage.success('Intent revoked')
+    ElMessage.success(t('mcpIntents.single.toastRevoked'))
     await refresh()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Revoke failed: ${msg}`)
+    ElMessage.error(t('mcpIntents.single.toastRevokeFailed', { error: msg }))
   } finally {
     revokingId.value = null
   }
@@ -430,9 +437,9 @@ async function onRevoke(row: IntentInventoryEntry): Promise<void> {
 async function copyId(id: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(id)
-    ElMessage.success('Intent ID copied')
+    ElMessage.success(t('mcpIntents.single.toastIdCopied'))
   } catch {
-    ElMessage.warning('Copy failed — clipboard access denied')
+    ElMessage.warning(t('mcpIntents.single.toastCopyFail'))
   }
 }
 

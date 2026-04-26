@@ -80,6 +80,61 @@
     "mcpGrants": "MCP Grants",
     "mcp": "MCP"
   },
+  "mcpIntents": {
+    "title": "MCP Intent Inventory",
+    "refresh": "Refresh",
+    "description": "Audit trail of HMAC-signed intent tokens minted by AI / CI clients via the Model Context Protocol. Each intent authorises a single destructive operation (deploy / rollback / cancel / restore) on a specific (domain, host) pair. Used intents stay around for 7 days as audit history; expired-unused intents are swept after 1 day.",
+    "stateSummaryAria": "Intent state summary",
+    "domainBreakdownAria": "Intent breakdown by domain",
+    "domainBreakdownTitle": "Per-domain breakdown:",
+    "filter": {
+      "groupAria": "Filter intents",
+      "allStates": "All states",
+      "stateAria": "Filter by state",
+      "allKinds": "All kinds",
+      "kindAria": "Filter by kind",
+      "search": "Search domain or host…",
+      "searchAria": "Search by domain or host",
+      "showing": "Showing {visible} of {total}"
+    },
+    "emptyNoIntents": "No MCP intents recorded — the daemon hasn't seen any AI-signed destructive ops yet.",
+    "emptyNoMatch": "No intents match the current filters",
+    "emptyTable": "No intents",
+    "bulk": {
+      "toolbarAria": "Bulk intent actions",
+      "selected": "{n} selected:",
+      "revokeSelected": "Revoke selected ({n})",
+      "clearSelection": "Clear selection",
+      "confirmTitle": "Bulk revoke MCP intents",
+      "confirmMessage": "Revoke {n} intent(s)? Each will be marked used_at on the daemon so any AI client trying to fire them gets already_used.\n\nTargets: {targets}",
+      "confirmMore": " and {n} more…",
+      "confirmRevokeBtn": "Revoke all",
+      "cancel": "Cancel",
+      "toastOk": "Revoked {n} intent(s)",
+      "toastPartial": "Revoked {ok}, {failed} failed"
+    },
+    "col": {
+      "created": "Created",
+      "domain": "Domain",
+      "host": "Host",
+      "kind": "Kind",
+      "state": "State",
+      "expires": "Expires",
+      "intentId": "Intent ID"
+    },
+    "revoke": "Revoke",
+    "revokeAria": "Revoke this intent (mark as used without firing)",
+    "single": {
+      "confirmTitle": "Revoke MCP intent",
+      "confirmMessage": "Revoke intent {id}? ({kind} on {domain} → {host}) Any AI client trying to fire this token will get already_used.",
+      "confirmRevokeBtn": "Revoke",
+      "cancel": "Cancel",
+      "toastRevoked": "Intent revoked",
+      "toastRevokeFailed": "Revoke failed: {error}",
+      "toastIdCopied": "Intent ID copied",
+      "toastCopyFail": "Copy failed — clipboard access denied"
+    }
+  },
   "mcpHub": {
     "title": "Model Context Protocol",
     "description": "Audit trail of every signed AI request (Intents) plus persistent trust rules that pre-approve future requests (Grants).",
