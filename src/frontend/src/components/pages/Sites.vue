@@ -23,7 +23,7 @@
     <div class="search-bar">
       <el-input
         v-model="search"
-        placeholder="Filter by domain or docroot..."
+        :placeholder="$t('sites.filterPlaceholder')"
         clearable
         size="small"
         style="max-width: 320px"
@@ -77,7 +77,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Document Root" min-width="220" class-name="col-docroot-cell">
+        <el-table-column :label="$t('sites.documentRoot')" min-width="220" class-name="col-docroot-cell">
           <template #default="{ row }">
             <span class="col-mono" :title="row.documentRoot">{{ row.documentRoot }}</span>
           </template>
@@ -210,9 +210,9 @@
             </el-input>
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
-            <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
+            <el-select v-model="newSite.phpVersion" style="width: 100%" :placeholder="$t('sites.phpVersionPlaceholder')">
               <el-option v-for="v in phpVersions" :key="v.value" :label="v.label" :value="v.value" />
-              <el-option label="None" value="none" />
+              <el-option :label="$t('sites.phpNone')" value="none" />
             </el-select>
           </el-form-item>
           <!-- F91.2: new-site toggles hidden when their plugin is disabled. -->
@@ -240,9 +240,9 @@
       <!-- Advanced mode form -->
       <div v-else>
         <el-form :model="newSite" label-position="top" size="small">
-          <el-form-item label="Template">
-            <el-select v-model="newSite.template" style="width: 100%" placeholder="Choose a template…" @change="applyTemplate">
-              <el-option label="— No template —" value="" />
+          <el-form-item :label="$t('sites.template')">
+            <el-select v-model="newSite.template" style="width: 100%" :placeholder="$t('sites.templatePlaceholder')" @change="applyTemplate">
+              <el-option :label="$t('sites.templateNone')" value="" />
               <el-option
                 v-for="tpl in siteTemplates"
                 :key="tpl.id"
@@ -262,9 +262,9 @@
             </el-input>
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
-            <el-select v-model="newSite.phpVersion" style="width: 100%" placeholder="Select PHP version">
+            <el-select v-model="newSite.phpVersion" style="width: 100%" :placeholder="$t('sites.phpVersionPlaceholder')">
               <el-option v-for="v in phpVersions" :key="v.value" :label="v.label" :value="v.value" />
-              <el-option label="None" value="none" />
+              <el-option :label="$t('sites.phpNone')" value="none" />
             </el-select>
           </el-form-item>
           <el-form-item :label="$t('sites.aliases')">
@@ -273,12 +273,12 @@
           <el-form-item :label="$t('sites.ssl')">
             <el-switch v-model="newSite.sslEnabled" />
           </el-form-item>
-          <el-form-item label="Create Database">
+          <el-form-item :label="$t('sites.createDatabase')">
             <el-switch v-model="newSite.createDb" />
             <el-input
               v-if="newSite.createDb"
               v-model="newSite.dbName"
-              placeholder="auto: myapp_db"
+              :placeholder="$t('sites.createDatabasePlaceholder')"
               style="margin-top: 8px"
             />
           </el-form-item>
