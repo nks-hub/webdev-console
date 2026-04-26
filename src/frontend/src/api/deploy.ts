@@ -163,6 +163,9 @@ export interface DeployHookConfig {
   type: 'shell' | 'http' | 'php'
   command: string
   timeoutSeconds: number
+  // Phase 7.5+++ — per-hook on/off toggle. Optional + treated as TRUE
+  // when undefined so existing configs stay enabled without migration.
+  enabled?: boolean
 }
 
 export interface DeploySnapshotConfig {

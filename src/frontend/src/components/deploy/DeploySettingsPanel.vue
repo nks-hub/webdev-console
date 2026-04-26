@@ -212,7 +212,18 @@
             v-for="(hook, idx) in settings.hooks"
             :key="idx"
             class="hook-row"
+            :class="{ 'hook-disabled': hook.enabled === false }"
           >
+            <!-- Phase 7.5+++ — per-hook on/off switch. Disabled hooks
+                 stay in the config (no accidental delete) but the
+                 deploy backend should skip them. Backwards-compat:
+                 undefined treated as enabled. -->
+            <el-switch
+              :model-value="hook.enabled !== false"
+              size="small"
+              :aria-label="t('deploySettings.hooks.enabledAria', { n: idx + 1 })"
+              @update:model-value="(v: any) => { hook.enabled = !!v }"
+            />
             <div class="hook-order-btns">
               <el-button
                 size="small"
@@ -889,7 +900,10 @@ async function removeHost(name: string): Promise<void> {
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
 function defaultHook(): DeployHookConfig {
-  return { event: 'post_switch', type: 'shell', command: '', timeoutSeconds: 30 }
+  // Phase 7.5+++ — explicitly enabled by default (matches the
+  // `?? true` fallback we apply when reading legacy configs without
+  // the field).
+  return { event: 'post_switch', type: 'shell', command: '', timeoutSeconds: 30, enabled: true }
 }
 
 function addHook(): void {
@@ -1124,6 +1138,16 @@ defineExpose({ saveSettings })
   padding: 12px;
   border: 1px solid var(--el-border-color);
   border-radius: 6px;
+  transition: opacity 0.15s ease;
+}
+/* Phase 7.5+++ — visually de-emphasize disabled hooks but keep them
+   readable so operators can see WHAT they disabled. */
+.hook-row.hook-disabled {
+  opacity: 0.55;
+  background: var(--el-fill-color-lighter);
+}
+.hook-row.hook-disabled .hook-form {
+  filter: grayscale(0.5);
 }
 
 .hook-order-btns {

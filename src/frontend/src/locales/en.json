@@ -787,6 +787,7 @@
       "removeAria": "Remove hook {n}",
       "remove": "Remove",
       "save": "Save hooks",
+      "enabledAria": "Enable/disable hook {n} (disabled hooks stay in config but never run)",
       "event": "Event",
       "type": "Type",
       "url": "URL",
