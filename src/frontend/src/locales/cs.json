@@ -751,6 +751,60 @@
     "placeholders": {
       "preflightRerun": "Opětovné spuštění preflightu přijde v dalším commitu",
       "configPersistence": "Persistence konfigurace přijde v dalším commitu"
+    },
+    "history": {
+      "title": "Historie deployů",
+      "refresh": "Obnovit",
+      "successRateAria": "Úspěšnost deployů podle hosta",
+      "noDeploys": "Zatím žádné deploye",
+      "noHistory": "Žádná historie",
+      "col": {
+        "when": "Kdy",
+        "host": "Host",
+        "branch": "Větev",
+        "commit": "Commit",
+        "phase": "Fáze",
+        "actions": "Akce"
+      },
+      "rollback": "Vrátit"
+    },
+    "confirmModal": {
+      "title": "Potvrzení deploye",
+      "alertTitle": "Chystáte se deploynout na {domain} → {host}",
+      "alertBody": "Tímto publikujete nejnovější commit. Nejprve běží pre-deploy testy; po přepnutí symlinku už deploy nelze zrušit — pouze vrátit (rollback).",
+      "typeHostLabel": "Pro potvrzení napište název hosta",
+      "typeHostSuffix": ":",
+      "mismatch": "Neshoduje se — napište přesně „{host}“.",
+      "snapshotLabel": "Vytvořit snapshot databáze před deployem",
+      "snapshotHint": "Vytvoří gzipped dump databáze do ~/.wdc/backups/pre-deploy/ před spuštěním deploye. Selhání snapshotu deploy zruší (fail-fast). Lze obnovit ze seznamu snapshotů v záložce Nastavení.",
+      "deployNow": "Deploynout",
+      "countdown": "{seconds} s — pusťte pro přerušení",
+      "cancel": "Zrušit"
+    },
+    "commandCenter": {
+      "noHosts": "Žádní deploy hosti nejsou nakonfigurovaní",
+      "groupToolbarAria": "Skupinový deploy na více hostů",
+      "selectAllAria": "Vybrat všechny hosty pro skupinový deploy",
+      "selectAllLabel": "Vyberte hosty pro skupinový deploy",
+      "selectedCount": "Vybráno: {n}",
+      "deployGroupBtn": "Deploy {n} hostů jako skupina",
+      "groupConfirmTitle": "Potvrdit skupinový deploy",
+      "groupConfirmMessage": "Deploynout {domain} na {n} hostů atomicky?\n\nHosti: {hosts}\n\nPokud kterýkoli host selže po přepnutí symlinku, všechny commitnuté hosty se automaticky vrátí.",
+      "groupConfirmBtn": "Deploynout jako skupina",
+      "cancel": "Zrušit",
+      "groupNeedTwo": "Vyberte alespoň 2 hosty pro skupinový deploy",
+      "groupStarted": "Skupinový deploy spuštěn — viz záložka Skupiny (id: {id})",
+      "groupFailed": "Skupinový deploy se nepodařilo spustit",
+      "rollbackConfirmTitle": "Potvrdit rollback",
+      "rollbackHostMessage": "Vrátit {domain} → {host} na předchozí release?",
+      "rollbackHistoryMessage": "Vrátit na release z {when}?",
+      "rollbackBtn": "Ano, vrátit",
+      "noPreviousDeploy": "Není co vracet",
+      "rollbackDispatched": "Rollback spuštěn",
+      "rollbackFailed": "Rollback selhal",
+      "deployStarted": "Deploy spuštěn — sledujte drawer",
+      "deployStartedSnap": "Deploy spuštěn (se snapshotem databáze) — sledujte drawer",
+      "deployFailed": "Deploy se nepodařilo spustit"
     }
   },
   "metrics": {

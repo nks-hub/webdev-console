@@ -751,6 +751,60 @@
     "placeholders": {
       "preflightRerun": "Preflight re-run coming in next commit",
       "configPersistence": "Config persistence wiring coming in next commit"
+    },
+    "history": {
+      "title": "Deploy history",
+      "refresh": "Refresh",
+      "successRateAria": "Per-host deploy success rate",
+      "noDeploys": "No deploys recorded yet",
+      "noHistory": "No history",
+      "col": {
+        "when": "When",
+        "host": "Host",
+        "branch": "Branch",
+        "commit": "Commit",
+        "phase": "Phase",
+        "actions": "Actions"
+      },
+      "rollback": "Rollback"
+    },
+    "confirmModal": {
+      "title": "Confirm deploy",
+      "alertTitle": "You are about to deploy to {domain} → {host}",
+      "alertBody": "This will publish your latest commit. Pre-deploy tests run first; after the symlink switch the deploy cannot be cancelled — only rolled back.",
+      "typeHostLabel": "Type the host name",
+      "typeHostSuffix": "to confirm:",
+      "mismatch": "Doesn't match — type \"{host}\" exactly.",
+      "snapshotLabel": "Snapshot database before deploy",
+      "snapshotHint": "Creates a gzipped DB dump at ~/.wdc/backups/pre-deploy/ before the deploy starts. Snapshot failure aborts the deploy (fail-fast). Restorable via the snapshot list in the Settings tab.",
+      "deployNow": "Deploy now",
+      "countdown": "{seconds}s — release to abort",
+      "cancel": "Cancel"
+    },
+    "commandCenter": {
+      "noHosts": "No deploy hosts configured",
+      "groupToolbarAria": "Multi-host group deploy",
+      "selectAllAria": "Select all hosts for group deploy",
+      "selectAllLabel": "Select hosts to deploy as group",
+      "selectedCount": "{n} selected",
+      "deployGroupBtn": "Deploy {n} hosts as group",
+      "groupConfirmTitle": "Confirm group deploy",
+      "groupConfirmMessage": "Deploy {domain} to {n} hosts atomically?\n\nHosts: {hosts}\n\nIf any host fails after the symlink switch, all committed hosts will be rolled back automatically.",
+      "groupConfirmBtn": "Deploy as group",
+      "cancel": "Cancel",
+      "groupNeedTwo": "Select at least 2 hosts for a group deploy",
+      "groupStarted": "Group deploy started — see Groups tab (id: {id})",
+      "groupFailed": "Group deploy failed to start",
+      "rollbackConfirmTitle": "Confirm rollback",
+      "rollbackHostMessage": "Roll back {domain} → {host} to the previous release?",
+      "rollbackHistoryMessage": "Roll back to release from {when}?",
+      "rollbackBtn": "Yes, rollback",
+      "noPreviousDeploy": "No deploy to rollback",
+      "rollbackDispatched": "Rollback dispatched",
+      "rollbackFailed": "Rollback failed",
+      "deployStarted": "Deploy started — watch the drawer",
+      "deployStartedSnap": "Deploy started (with pre-deploy snapshot) — watch the drawer",
+      "deployFailed": "Deploy failed to start"
     }
   },
   "metrics": {

@@ -1,23 +1,23 @@
 <template>
   <div class="cmd-center">
     <div v-if="hosts.length === 0" class="cmd-empty">
-      <el-empty description="No deploy hosts configured" />
+      <el-empty :description="t('deploy.commandCenter.noHosts')" />
     </div>
     <template v-else>
       <!-- Group multi-select toolbar — only renders when 2+ hosts exist
            since a single-host site can't be a group target. -->
       <div v-if="hosts.length >= 2" class="cmd-group-toolbar" role="toolbar"
-           aria-label="Multi-host group deploy">
+           :aria-label="t('deploy.commandCenter.groupToolbarAria')">
         <el-checkbox
           :model-value="allSelected"
           :indeterminate="someSelected && !allSelected"
-          aria-label="Select all hosts for group deploy"
+          :aria-label="t('deploy.commandCenter.selectAllAria')"
           @update:model-value="(v: any) => onToggleAll(!!v)"
         >
-          Select hosts to deploy as group
+          {{ t('deploy.commandCenter.selectAllLabel') }}
         </el-checkbox>
         <span v-if="selectedHosts.size > 0" class="cmd-group-count muted">
-          {{ selectedHosts.size }} selected
+          {{ t('deploy.commandCenter.selectedCount', { n: selectedHosts.size }) }}
         </span>
         <el-button
           v-if="selectedHosts.size >= 2"
@@ -25,7 +25,7 @@
           size="small"
           @click="onDeployGroup"
         >
-          Deploy {{ selectedHosts.size }} hosts as group
+          {{ t('deploy.commandCenter.deployGroupBtn', { n: selectedHosts.size }) }}
         </el-button>
       </div>
 
@@ -62,8 +62,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
+
+const { t } = useI18n()
 import HostCard from './HostCard.vue'
 import DiffSummary, { type DeployDiff } from './DiffSummary.vue'
 import PreflightChecklist, { type PreflightCheck } from './PreflightChecklist.vue'
@@ -111,24 +114,28 @@ function onToggleAll(value: boolean): void {
 async function onDeployGroup(): Promise<void> {
   const hosts = Array.from(selectedHosts.value)
   if (hosts.length < 2) {
-    ElMessage.warning('Select at least 2 hosts for a group deploy')
+    ElMessage.warning(t('deploy.commandCenter.groupNeedTwo'))
     return
   }
   try {
     await ElMessageBox.confirm(
-      `Deploy ${props.domain} to ${hosts.length} hosts atomically?\n\n` +
-        `Hosts: ${hosts.join(', ')}\n\n` +
-        `If any host fails after the symlink switch, all committed hosts will be rolled back automatically.`,
-      'Confirm group deploy',
-      { type: 'warning', confirmButtonText: 'Deploy as group', cancelButtonText: 'Cancel' },
+      t('deploy.commandCenter.groupConfirmMessage', {
+        domain: props.domain, n: hosts.length, hosts: hosts.join(', '),
+      }),
+      t('deploy.commandCenter.groupConfirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('deploy.commandCenter.groupConfirmBtn'),
+        cancelButtonText: t('deploy.commandCenter.cancel'),
+      },
     )
   } catch { return }
   try {
     const groupId = await deployStore.startGroupDeploy(props.domain, hosts)
-    ElMessage.success(`Group deploy started — see Groups tab (id: ${groupId.slice(0, 8)})`)
+    ElMessage.success(t('deploy.commandCenter.groupStarted', { id: groupId.slice(0, 8) }))
     selectedHosts.value = new Set()
   } catch (e) {
-    ElMessage.error((e as Error).message || 'Group deploy failed to start')
+    ElMessage.error((e as Error).message || t('deploy.commandCenter.groupFailed'))
   }
 }
 
@@ -172,37 +179,41 @@ function onDeploy(host: string): void {
 async function onRollback(host: string): Promise<void> {
   const last = lastDeployByHost.value.get(host)
   if (!last) {
-    ElMessage.warning('No deploy to rollback')
+    ElMessage.warning(t('deploy.commandCenter.noPreviousDeploy'))
     return
   }
   try {
     await ElMessageBox.confirm(
-      `Roll back ${props.domain} → ${host} to the previous release?`,
-      'Confirm rollback',
-      { type: 'warning', confirmButtonText: 'Yes, rollback', cancelButtonText: 'Cancel' },
+      t('deploy.commandCenter.rollbackHostMessage', { domain: props.domain, host }),
+      t('deploy.commandCenter.rollbackConfirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('deploy.commandCenter.rollbackBtn'),
+        cancelButtonText: t('deploy.commandCenter.cancel'),
+      },
     )
   } catch { return }
   try {
     await deployStore.rollback(props.domain, last.deployId)
-    ElMessage.success('Rollback dispatched')
+    ElMessage.success(t('deploy.commandCenter.rollbackDispatched'))
   } catch (e) {
-    ElMessage.error((e as Error).message || 'Rollback failed')
+    ElMessage.error((e as Error).message || t('deploy.commandCenter.rollbackFailed'))
   }
 }
 
 async function onHistoryRollback(entry: DeployHistoryEntryDto): Promise<void> {
   try {
     await ElMessageBox.confirm(
-      `Roll back to release from ${new Date(entry.startedAt).toLocaleString()}?`,
-      'Confirm rollback',
+      t('deploy.commandCenter.rollbackHistoryMessage', { when: new Date(entry.startedAt).toLocaleString() }),
+      t('deploy.commandCenter.rollbackConfirmTitle'),
       { type: 'warning' },
     )
   } catch { return }
   try {
     await deployStore.rollback(props.domain, entry.deployId)
-    ElMessage.success('Rollback dispatched')
+    ElMessage.success(t('deploy.commandCenter.rollbackDispatched'))
   } catch (e) {
-    ElMessage.error((e as Error).message || 'Rollback failed')
+    ElMessage.error((e as Error).message || t('deploy.commandCenter.rollbackFailed'))
   }
 }
 
@@ -211,13 +222,11 @@ async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
     await deployStore.startDeploy(props.domain, confirmHost.value, {
       snapshot: opts.snapshot ? { include: true, retentionDays: 30 } : undefined,
     })
-    ElMessage.success(
-      opts.snapshot
-        ? 'Deploy started (with pre-deploy snapshot) — watch the drawer'
-        : 'Deploy started — watch the drawer',
-    )
+    ElMessage.success(opts.snapshot
+      ? t('deploy.commandCenter.deployStartedSnap')
+      : t('deploy.commandCenter.deployStarted'))
   } catch (e) {
-    ElMessage.error((e as Error).message || 'Deploy failed to start')
+    ElMessage.error((e as Error).message || t('deploy.commandCenter.deployFailed'))
   }
 }
 </script>

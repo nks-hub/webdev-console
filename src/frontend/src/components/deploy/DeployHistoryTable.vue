@@ -1,9 +1,9 @@
 <template>
   <div class="history">
     <h4 class="history-title">
-      Deploy history
+      {{ t('deploy.history.title') }}
       <el-button v-if="entries.length" link size="small" @click="$emit('refresh')">
-        <el-icon><Refresh /></el-icon> Refresh
+        <el-icon><Refresh /></el-icon> {{ t('deploy.history.refresh') }}
       </el-button>
     </h4>
 
@@ -14,7 +14,7 @@
       v-if="hostSummaries.length > 1"
       class="history-summary"
       role="group"
-      aria-label="Per-host deploy success rate"
+      :aria-label="t('deploy.history.successRateAria')"
     >
       <el-tag
         v-for="s in hostSummaries"
@@ -30,32 +30,32 @@
       </el-tag>
     </div>
 
-    <el-empty v-if="!entries.length" :image-size="80" description="No deploys recorded yet" />
-    <el-table v-else :data="entries" stripe size="small" :empty-text="'No history'">
-      <el-table-column prop="startedAt" label="When" width="170">
+    <el-empty v-if="!entries.length" :image-size="80" :description="t('deploy.history.noDeploys')" />
+    <el-table v-else :data="entries" stripe size="small" :empty-text="t('deploy.history.noHistory')">
+      <el-table-column prop="startedAt" :label="t('deploy.history.col.when')" width="170">
         <template #default="{ row }">
           <span class="mono">{{ formatDate(row.startedAt) }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="host" label="Host" width="120" />
-      <el-table-column prop="branch" label="Branch" width="120" />
-      <el-table-column prop="commitSha" label="Commit" width="100">
+      <el-table-column prop="host" :label="t('deploy.history.col.host')" width="120" />
+      <el-table-column prop="branch" :label="t('deploy.history.col.branch')" width="120" />
+      <el-table-column prop="commitSha" :label="t('deploy.history.col.commit')" width="100">
         <template #default="{ row }">
           <code v-if="row.commitSha" class="mono">{{ row.commitSha.slice(0, 7) }}</code>
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
-      <el-table-column prop="finalPhase" label="Phase">
+      <el-table-column prop="finalPhase" :label="t('deploy.history.col.phase')">
         <template #default="{ row }">
           <el-tag :type="phaseTagType(row.finalPhase)" size="small" effect="plain">
             {{ row.finalPhase }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" width="160" align="right">
+      <el-table-column :label="t('deploy.history.col.actions')" width="160" align="right">
         <template #default="{ row }">
           <el-button size="small" link @click="$emit('rollback', row)">
-            <el-icon><RefreshLeft /></el-icon> Rollback
+            <el-icon><RefreshLeft /></el-icon> {{ t('deploy.history.rollback') }}
           </el-button>
         </template>
       </el-table-column>
@@ -65,8 +65,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Refresh, RefreshLeft } from '@element-plus/icons-vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
+
+const { t } = useI18n()
 
 const props = defineProps<{ entries: DeployHistoryEntryDto[] }>()
 defineEmits<{ refresh: []; rollback: [entry: DeployHistoryEntryDto] }>()

@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="Confirm deploy"
+    :title="t('deploy.confirmModal.title')"
     :close-on-press-escape="true"
     :close-on-click-modal="false"
     width="540px"
@@ -12,13 +12,13 @@
         type="warning"
         :closable="false"
         show-icon
-        :title="`You are about to deploy to ${domain} → ${host}`"
-        description="This will publish your latest commit. Pre-deploy tests run first; after the symlink switch the deploy cannot be cancelled — only rolled back."
+        :title="t('deploy.confirmModal.alertTitle', { domain, host })"
+        :description="t('deploy.confirmModal.alertBody')"
       />
 
       <div class="confirm-section">
         <label :for="inputId" class="confirm-label">
-          Type the host name <strong>{{ host }}</strong> to confirm:
+          {{ t('deploy.confirmModal.typeHostLabel') }} <strong>{{ host }}</strong> {{ t('deploy.confirmModal.typeHostSuffix') }}
         </label>
         <el-input
           :id="inputId"
@@ -30,7 +30,7 @@
           @keydown.enter="tryStartCountdown"
         />
         <small v-if="typed && !match" class="confirm-mismatch">
-          Doesn't match — type "{{ host }}" exactly.
+          {{ t('deploy.confirmModal.mismatch', { host }) }}
         </small>
       </div>
 
@@ -43,12 +43,10 @@
           v-model="snapshotOptIn"
           :aria-describedby="snapshotHintId"
         >
-          Snapshot database before deploy
+          {{ t('deploy.confirmModal.snapshotLabel') }}
         </el-checkbox>
         <small :id="snapshotHintId" class="confirm-hint">
-          Creates a gzipped DB dump at <code>~/.wdc/backups/pre-deploy/</code>
-          before the deploy starts. Snapshot failure aborts the deploy
-          (fail-fast). Restorable via the snapshot list in the Settings tab.
+          {{ t('deploy.confirmModal.snapshotHint') }}
         </small>
       </div>
 
@@ -57,15 +55,15 @@
            runs; user can cancel by clicking again or pressing Esc. Keyboard
            reachable, no sustained input required. -->
       <div class="confirm-actions">
-        <el-button @click="onCancel">Cancel</el-button>
+        <el-button @click="onCancel">{{ t('deploy.confirmModal.cancel') }}</el-button>
         <el-button
           type="danger"
           :disabled="!match || isDeploying"
           @click="onActivate"
           :aria-pressed="countdownActive"
         >
-          <span v-if="!countdownActive">Deploy now</span>
-          <span v-else>{{ countdownRemaining }}s — release to abort</span>
+          <span v-if="!countdownActive">{{ t('deploy.confirmModal.deployNow') }}</span>
+          <span v-else>{{ t('deploy.confirmModal.countdown', { seconds: countdownRemaining }) }}</span>
         </el-button>
       </div>
     </div>
@@ -74,7 +72,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ElInput } from 'element-plus'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
