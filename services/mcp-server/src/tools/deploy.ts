@@ -425,6 +425,109 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
         )
       },
     )
+
+    // ── Phase 6.1 — atomic multi-host group fan-out ─────────────────────
+
+    server.registerTool(
+      'wdc_deploy_group_start',
+      {
+        title: 'Deploy a site to MULTIPLE hosts atomically (DESTRUCTIVE)',
+        description:
+          'Start a deploy group fan-out: one site, N hosts, all-or-nothing semantics. ' +
+          'Hosts are deployed in parallel; if any host fails BEFORE its symlink switch the ' +
+          'group fails clean (no rollback needed). If any host fails AFTER PONR, every ' +
+          'committed host is rolled back so the cluster never sees a partial release.\n\n' +
+          'GATING: Same as wdc_deploy_site (intentToken with kind=deploy + host="*group*", or ' +
+          'MCP_DEPLOY_AUTO_APPROVE=true). One intent authorises the whole fan-out — do NOT ' +
+          'mint per-host intents for the same group.\n\n' +
+          'Args:\n' +
+          '  domain: Site domain.\n' +
+          '  hosts: Array of host names from deploy.neon (deduplicated server-side).\n' +
+          '  branch: Optional branch override applied to every host.\n' +
+          '  intentToken: Pre-signed intent (Mode C / CI mode).\n' +
+          '  idempotencyKey: UUIDv4 for retry dedup; per-host keys derived as "{key}::{host}".',
+        inputSchema: {
+          domain: DomainSchema,
+          hosts: z.array(HostSchema).min(1).max(20).describe('Target host names (1-20).'),
+          branch: z.string().max(255).optional().describe('Optional git branch applied to all hosts.'),
+          intentToken: IntentTokenSchema,
+          idempotencyKey: IdempotencyKeySchema,
+        },
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+      },
+      async ({ domain, hosts, branch, intentToken, idempotencyKey }) => {
+        const guard = destructiveGuard(intentToken)
+        if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
+        const headers = destructiveHeaders(intentToken)
+        return safe(() =>
+          daemonClient.post(
+            `${PREFIX}/sites/${encodeURIComponent(domain)}/groups`,
+            {
+              hosts,
+              idempotencyKey: idempotencyKey ?? randomUuid(),
+              options: branch ? { branch } : {},
+            },
+            headers,
+          ),
+        )
+      },
+    )
+
+    server.registerTool(
+      'wdc_deploy_group_rollback',
+      {
+        title: 'Roll back EVERY host in a deploy group (DESTRUCTIVE)',
+        description:
+          'Cascade-rollback all hosts in a group. Hosts that never crossed PONR are no-ops. ' +
+          'If any per-host rollback fails the group lands in partial_failure — operator must ' +
+          'inspect per-host deploy_runs rows for next steps.\n\n' +
+          'GATING: same intent rules as wdc_deploy_group_start, kind=rollback.',
+        inputSchema: {
+          domain: DomainSchema,
+          groupId: z.string().min(1).max(64).describe('UUID of a deploy_groups row.'),
+          intentToken: IntentTokenSchema,
+        },
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+      },
+      async ({ domain, groupId, intentToken }) => {
+        const guard = destructiveGuard(intentToken)
+        if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
+        const headers = destructiveHeaders(intentToken)
+        return safe(() =>
+          daemonClient.post(
+            `${PREFIX}/sites/${encodeURIComponent(domain)}/groups/${encodeURIComponent(groupId)}/rollback`,
+            {},
+            headers,
+          ),
+        )
+      },
+    )
+  }
+
+  // wdc_deploy_group_status is read-only and lives in the read scope so the
+  // AI can poll group progress without holding any destructive scope.
+  if (canRead) {
+    server.registerTool(
+      'wdc_deploy_group_status',
+      {
+        title: 'Get deploy group status',
+        description:
+          'Snapshot of a multi-host deploy group: phase, per-host deployIds, completion ' +
+          'timestamp. Phase enum: initializing, preflight, deploying, awaiting_all_soak, ' +
+          'all_succeeded, partial_failure, rolling_back_all, rolled_back, group_failed.',
+        inputSchema: {
+          domain: DomainSchema,
+          groupId: z.string().min(1).max(64),
+        },
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      },
+      async ({ domain, groupId }) =>
+        safe(() =>
+          daemonClient.get(
+            `${PREFIX}/sites/${encodeURIComponent(domain)}/groups/${encodeURIComponent(groupId)}`,
+          ),
+        ),
+    )
   }
 }
 
