@@ -7100,6 +7100,12 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
     e.SetObserved();
 };
 
+// Wire plugin-declared endpoints (under /api/{pluginId}/...). Auth middleware
+// already covers /api/* so no RequireAuthorization needed here. Idempotent —
+// plugins that don't override RegisterEndpoints contribute zero endpoints.
+try { pluginLoader.WireEndpoints(app); }
+catch (Exception ex) { app.Logger.LogError(ex, "Plugin endpoint wiring failed"); }
+
 await app.RunAsync();
 
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);

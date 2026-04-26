@@ -46,6 +46,39 @@ public partial class PluginLoader
 
     public IReadOnlyList<LoadedPlugin> Plugins => _plugins;
 
+    /// <summary>
+    /// Calls IWdcPlugin.RegisterEndpoints on every loaded plugin and wires the
+    /// returned endpoints into the host routing pipeline under /api/{pluginId}/.
+    /// Existing Bearer auth middleware (matching /api/* prefix) covers them
+    /// without per-endpoint .RequireAuthorization() calls. Idempotent — safe
+    /// to call once after app.Build() and before app.RunAsync(). Plugins that
+    /// throw during RegisterEndpoints are logged and skipped; one bad plugin
+    /// never blocks the others.
+    /// </summary>
+    public void WireEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder app)
+    {
+        foreach (var loaded in _plugins)
+        {
+            var pluginId = loaded.Manifest?.Id ?? loaded.Instance.Id;
+            try
+            {
+                var reg = new NKS.WebDevConsole.Core.Interfaces.EndpointRegistration(pluginId);
+                loaded.Instance.RegisterEndpoints(reg);
+                foreach (var ep in reg.Endpoints)
+                {
+                    app.MapMethods(ep.Path, [ep.Method], ep.Handler)
+                       .WithName($"{pluginId}:{ep.Method}:{ep.Path}");
+                }
+                if (reg.Endpoints.Count > 0)
+                    _logger.LogInformation("Plugin {Id} registered {Count} endpoint(s)", pluginId, reg.Endpoints.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Plugin {Id} RegisterEndpoints failed; skipping", pluginId);
+            }
+        }
+    }
+
     public PluginLoader(ILogger<PluginLoader> logger)
     {
         _logger = logger;
