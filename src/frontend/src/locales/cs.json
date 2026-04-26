@@ -1179,7 +1179,10 @@
       "inuse": "Aktivně použité",
       "deadweight": "Deadweight",
       "deadweightHint": "Deadweight = nikdy nepoužité oprávnění starší než {days} dní (kandidát na revoke).",
-      "emptyForFilter": "Žádná oprávnění neodpovídají tomuto filtru."
+      "emptyForFilter": "Žádná oprávnění neodpovídají tomuto filtru.",
+      "revokeAllDeadweight": "Odvolat všechna deadweight ({n})",
+      "revokeAllDeadweightTitle": "Odvolat všechna deadweight oprávnění?",
+      "revokeAllDeadweightConfirm": "Odvolat {n} oprávnění, která existují déle než {days} dní a nikdy se nezmatchovala? Záznamy zůstanou v auditu, ale budou označené jako odvolané."
     },
     "dialog": {
       "title": "Nové oprávnění",

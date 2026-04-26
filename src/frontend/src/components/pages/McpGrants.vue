@@ -36,6 +36,18 @@
       <span v-if="deadweightCount > 0" class="muted hint">
         {{ t('mcpGrants.usage.deadweightHint', { days: DEADWEIGHT_AGE_DAYS }) }}
       </span>
+      <!-- One-click bulk revoke for the deadweight bucket. Surfaces only
+           when the filter is on Deadweight AND there's something to act
+           on, so it reads as a contextual action rather than a global
+           danger button. -->
+      <el-button
+        v-if="usageFilter === 'deadweight' && deadweightCount > 0"
+        type="danger" size="small" plain
+        :loading="revokingDeadweight"
+        @click="onRevokeAllDeadweight"
+      >
+        {{ t('mcpGrants.usage.revokeAllDeadweight', { n: deadweightCount }) }}
+      </el-button>
     </div>
 
     <el-alert
@@ -229,6 +241,46 @@ const filteredGrants = computed<McpGrantRow[]>(() => {
     default: return grants.value
   }
 })
+
+const revokingDeadweight = ref(false)
+
+async function onRevokeAllDeadweight(): Promise<void> {
+  if (revokingDeadweight.value) return
+  const targets = grants.value.filter(isDeadweight)
+  if (targets.length === 0) return
+  try {
+    await ElMessageBox.confirm(
+      t('mcpGrants.usage.revokeAllDeadweightConfirm', {
+        n: targets.length, days: DEADWEIGHT_AGE_DAYS,
+      }),
+      t('mcpGrants.usage.revokeAllDeadweightTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('mcpGrants.bulk.confirmRevokeBtn'),
+        cancelButtonText: t('common.cancel'),
+      },
+    )
+  } catch { return }
+
+  revokingDeadweight.value = true
+  let ok = 0; let failed = 0
+  // Serial — matches the bulk-revoke pattern. Daemon DELETEs are
+  // cheap; serial keeps the failure surface deterministic.
+  for (const target of targets) {
+    try {
+      await revokeMcpGrant(target.id)
+      ok++
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (msg.includes('not_found') || msg.includes('already')) ok++
+      else failed++
+    }
+  }
+  revokingDeadweight.value = false
+  if (failed === 0) ElMessage.success(t('mcpGrants.bulk.toastOk', { n: ok }))
+  else ElMessage.warning(t('mcpGrants.bulk.toastPartial', { ok, failed }))
+  await refresh()
+}
 
 const createDialogOpen = ref(false)
 const creating = ref(false)

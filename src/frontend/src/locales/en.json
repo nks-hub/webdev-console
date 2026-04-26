@@ -1179,7 +1179,10 @@
       "inuse": "In use",
       "deadweight": "Deadweight",
       "deadweightHint": "Deadweight = never-used grants older than {days} days (revoke candidates).",
-      "emptyForFilter": "No grants match this filter."
+      "emptyForFilter": "No grants match this filter.",
+      "revokeAllDeadweight": "Revoke all deadweight ({n})",
+      "revokeAllDeadweightTitle": "Revoke all deadweight grants?",
+      "revokeAllDeadweightConfirm": "Revoke {n} grants that have existed for more than {days} days and never matched anything? Rows stay in the audit trail but are marked revoked."
     },
     "dialog": {
       "title": "New trust grant",
