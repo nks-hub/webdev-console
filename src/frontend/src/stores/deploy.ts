@@ -1,0 +1,187 @@
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import {
+  startDeploy as apiStartDeploy,
+  getDeployStatus,
+  getDeployHistory,
+  rollbackDeploy as apiRollback,
+  cancelDeploy as apiCancel,
+  type DeployEventDto,
+  type DeployHistoryEntryDto,
+  type DeployResultDto,
+} from '../api/deploy'
+
+/**
+ * Pinia store for the NksDeploy plugin's UI state. Composition API per the
+ * project convention (see src/frontend/src/stores/sites.ts). The state is
+ * keyed by deployId so the persistent right-side `<DeployRunDrawer>` can
+ * follow a run across route changes — `activeRun` is whichever run the user
+ * most recently triggered or selected, or null when nothing is in flight.
+ *
+ * SSE wiring: external code (App.vue or a startup composable) calls
+ * subscribeEventsMap with `'deploy:event': (e) => deployStore.handleSseEvent(e)`
+ * so events from EVERY active deploy flow into one place. The store routes
+ * events to the right run by `deployId`.
+ */
+export const useDeployStore = defineStore('deploy', () => {
+  /** All known runs the renderer has seen (in-flight + recently completed). */
+  const runs = ref<Map<string, DeployRunState>>(new Map())
+
+  /** Currently visible run in the deploy drawer. Null = drawer closed. */
+  const activeRunId = ref<string | null>(null)
+
+  /** Per-domain history cache so the history page re-renders without refetching. */
+  const historyByDomain = ref<Map<string, DeployHistoryEntryDto[]>>(new Map())
+
+  const activeRun = computed<DeployRunState | null>(() =>
+    activeRunId.value ? runs.value.get(activeRunId.value) ?? null : null)
+
+  const isDrawerOpen = computed(() => activeRunId.value !== null)
+
+  async function startDeploy(domain: string, host: string, backendOptions?: Record<string, unknown>): Promise<string | null> {
+    const resp = await apiStartDeploy(domain, host, { backendOptions })
+    if (resp.deployId) {
+      // Seed an empty run row so the drawer can render immediately even
+      // before the first SSE event lands.
+      runs.value.set(resp.deployId, {
+        deployId: resp.deployId,
+        domain,
+        host,
+        startedAt: new Date().toISOString(),
+        events: [],
+        latestPhase: 'Queued',
+        latestStep: '',
+        latestMessage: '',
+        isPastPonr: false,
+        isTerminal: false,
+        success: null,
+      })
+      activeRunId.value = resp.deployId
+    }
+    return resp.deployId
+  }
+
+  /**
+   * SSE handler. Fed by App.vue's subscribeEventsMap call:
+   *   subscribeEventsMap({ 'deploy:event': (d) => deployStore.handleSseEvent(d as DeployEventDto) })
+   */
+  function handleSseEvent(evt: DeployEventDto): void {
+    let run = runs.value.get(evt.deployId)
+    if (!run) {
+      // First we hear of this deploy — likely triggered from MCP, CLI, or
+      // another renderer window. Synthesize a row so the drawer can
+      // surface it.
+      run = {
+        deployId: evt.deployId,
+        domain: '?',
+        host: '?',
+        startedAt: evt.timestamp,
+        events: [],
+        latestPhase: evt.phase,
+        latestStep: evt.step,
+        latestMessage: evt.message,
+        isPastPonr: evt.isPastPonr,
+        isTerminal: evt.isTerminal,
+        success: null,
+      }
+      runs.value.set(evt.deployId, run)
+    }
+    run.events.push(evt)
+    run.latestPhase = evt.phase
+    run.latestStep = evt.step
+    run.latestMessage = evt.message
+    if (evt.isPastPonr) run.isPastPonr = true
+    if (evt.isTerminal) {
+      run.isTerminal = true
+      run.success = evt.phase === 'Done'
+      run.completedAt = evt.timestamp
+    }
+    // Reactivity nudge: ref<Map> updates need a manual re-assign for Vue
+    // to pick up nested mutations on the keyed object.
+    runs.value = new Map(runs.value)
+  }
+
+  async function refreshStatus(domain: string, deployId: string): Promise<DeployResultDto> {
+    const r = await getDeployStatus(domain, deployId)
+    const existing = runs.value.get(deployId)
+    if (existing) {
+      existing.success = r.success
+      existing.completedAt = r.completedAt ?? undefined
+      existing.latestPhase = r.finalPhase
+      runs.value = new Map(runs.value)
+    }
+    return r
+  }
+
+  async function refreshHistory(domain: string, limit = 50): Promise<DeployHistoryEntryDto[]> {
+    const r = await getDeployHistory(domain, limit)
+    historyByDomain.value.set(domain, r.entries)
+    historyByDomain.value = new Map(historyByDomain.value)
+    return r.entries
+  }
+
+  async function rollback(domain: string, deployId: string): Promise<void> {
+    await apiRollback(domain, deployId)
+    // Mark the source run as rolled-back locally; the new rollback run will
+    // surface via SSE as a separate deployId.
+    const r = runs.value.get(deployId)
+    if (r) {
+      r.latestPhase = 'RolledBack'
+      runs.value = new Map(runs.value)
+    }
+  }
+
+  async function cancel(domain: string, deployId: string): Promise<void> {
+    await apiCancel(domain, deployId)
+    // Don't optimistically mutate — the daemon emits a Cancelled SSE event
+    // that handleSseEvent will pick up. The 409 path (past PONR) bubbles
+    // through as a thrown Error which the caller (DeployConfirmModal etc.)
+    // surfaces to the user.
+  }
+
+  function openDrawerFor(deployId: string): void {
+    if (runs.value.has(deployId)) {
+      activeRunId.value = deployId
+    }
+  }
+
+  function closeDrawer(): void {
+    activeRunId.value = null
+  }
+
+  return {
+    runs,
+    activeRun,
+    activeRunId,
+    isDrawerOpen,
+    historyByDomain,
+    startDeploy,
+    handleSseEvent,
+    refreshStatus,
+    refreshHistory,
+    rollback,
+    cancel,
+    openDrawerFor,
+    closeDrawer,
+  }
+})
+
+/**
+ * Per-deploy state held in the Pinia store. Mirrors the server-side
+ * deploy_runs row plus the rolling list of SSE events for the StepWaterfall
+ * component.
+ */
+export interface DeployRunState {
+  deployId: string
+  domain: string
+  host: string
+  startedAt: string
+  completedAt?: string
+  events: DeployEventDto[]
+  latestPhase: string
+  latestStep: string
+  latestMessage: string
+  isPastPonr: boolean
+  isTerminal: boolean
+  success: boolean | null
+}
