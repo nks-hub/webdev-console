@@ -55,7 +55,13 @@ public sealed record DeployGroupRequest(
     IReadOnlyList<string> Hosts,
     string IdempotencyKey,
     string TriggeredBy,
-    JsonElement BackendOptions);
+    JsonElement BackendOptions,
+    /// <summary>
+    /// Phase 6.2 — when non-null and Include=true, EVERY host in the group
+    /// snapshots its DB before deploying. Coordinator passes this through
+    /// to each per-host <see cref="DeployRequest.Snapshot"/>.
+    /// </summary>
+    DeploySnapshotOptions? Snapshot = null);
 
 /// <summary>
 /// Wire envelope for SSE channel <c>deploy:group-event</c>. Per-host events

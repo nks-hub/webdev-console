@@ -105,6 +105,10 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepos
 // Core (shared assembly), implementation in Daemon talks to migration 009.
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository,
     NKS.WebDevConsole.Daemon.Deploy.DeployGroupsRepository>();
+// Phase 6.2 — pre-deploy DB snapshotter. SQLite is fully implemented;
+// MySQL/PG are scaffold stubs pending Phase 6.3 credential resolution.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IPreDeploySnapshotter,
+    NKS.WebDevConsole.Daemon.Deploy.PreDeploySnapshotter>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster,
     NKS.WebDevConsole.Daemon.Deploy.SseDeployEventBroadcaster>();
 // MCP intent signer + validator. The signer holds the long-lived HMAC key

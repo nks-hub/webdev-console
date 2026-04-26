@@ -56,6 +56,17 @@ public interface IDeployRunsRepository
     Task<IReadOnlyList<DeployRunRow>> ListForDomainAsync(string domain, int limit, CancellationToken ct);
 
     /// <summary>
+    /// Phase 6.2 — record a successful pre-deploy snapshot on the run row.
+    /// Migration 010 adds the two columns this writes (path + size).
+    /// Idempotent: writes overwrite any prior values for the same run.
+    /// </summary>
+    Task UpdatePreDeployBackupAsync(
+        string deployId,
+        string path,
+        long sizeBytes,
+        CancellationToken ct);
+
+    /// <summary>
     /// Rows still marked 'running' / 'awaiting_soak' / 'rolling_back'. Daemon
     /// queries this on startup for stale-run recovery — anything still here
     /// after a daemon restart had its supervising subprocess killed and needs
@@ -86,4 +97,7 @@ public sealed record DeployRunRow(
     string TriggeredBy,
     string BackendId,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    /// <summary>Phase 6.2 — populated when a pre-deploy snapshot ran.</summary>
+    string? PreDeployBackupPath = null,
+    long? PreDeployBackupSizeBytes = null);

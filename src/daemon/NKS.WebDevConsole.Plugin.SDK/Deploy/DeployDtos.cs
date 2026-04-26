@@ -39,7 +39,23 @@ public sealed record DeployRequest(
     string Host,
     string IdempotencyKey,
     string TriggeredBy,
-    JsonElement BackendOptions);
+    JsonElement BackendOptions,
+    /// <summary>
+    /// Phase 6.2 — opt-in pre-deploy DB snapshot. When non-null and
+    /// <see cref="DeploySnapshotOptions.Include"/> is true, the backend
+    /// dumps the site's database BEFORE spawning the deploy. Snapshot
+    /// failure is fatal — the deploy never starts.
+    /// </summary>
+    DeploySnapshotOptions? Snapshot = null);
+
+/// <summary>
+/// Pre-deploy database snapshot configuration. Defaults are conservative
+/// — opt-in only, 30-day retention so an old prod restore is still
+/// possible after a few weeks.
+/// </summary>
+public sealed record DeploySnapshotOptions(
+    bool Include,
+    int? RetentionDays = 30);
 
 /// <summary>
 /// One progress event emitted via <see cref="IProgress{T}"/> during a

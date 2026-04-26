@@ -136,6 +136,27 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
         return rows.Select(r => r.ToRecord()).ToList();
     }
 
+    public async Task UpdatePreDeployBackupAsync(
+        string deployId,
+        string path,
+        long sizeBytes,
+        CancellationToken ct)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(
+            "UPDATE deploy_runs SET pre_deploy_backup_path = @Path, " +
+            "pre_deploy_backup_size_bytes = @Size, updated_at = @UpdatedAt " +
+            "WHERE id = @Id",
+            new
+            {
+                Id = deployId,
+                Path = path,
+                Size = sizeBytes,
+                UpdatedAt = DateTimeOffset.UtcNow.ToString("o"),
+            });
+    }
+
     private const string BaseSelect =
         "SELECT id AS Id, domain AS Domain, host AS Host, release_id AS ReleaseId, " +
         "branch AS Branch, commit_sha AS CommitSha, status AS Status, " +
@@ -143,7 +164,9 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
         "completed_at AS CompletedAtRaw, exit_code AS ExitCode, " +
         "error_message AS ErrorMessage, duration_ms AS DurationMs, " +
         "triggered_by AS TriggeredBy, backend_id AS BackendId, " +
-        "created_at AS CreatedAtRaw, updated_at AS UpdatedAtRaw " +
+        "created_at AS CreatedAtRaw, updated_at AS UpdatedAtRaw, " +
+        "pre_deploy_backup_path AS PreDeployBackupPath, " +
+        "pre_deploy_backup_size_bytes AS PreDeployBackupSizeBytes " +
         "FROM deploy_runs";
 
     /// <summary>
@@ -170,6 +193,8 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
         public string BackendId { get; set; } = "nks-deploy";
         public string CreatedAtRaw { get; set; } = "";
         public string UpdatedAtRaw { get; set; } = "";
+        public string? PreDeployBackupPath { get; set; }
+        public long? PreDeployBackupSizeBytes { get; set; }
 
         public DeployRunRow ToRecord() => new(
             Id,
@@ -188,6 +213,8 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
             TriggeredBy,
             BackendId,
             DateTimeOffset.Parse(CreatedAtRaw),
-            DateTimeOffset.Parse(UpdatedAtRaw));
+            DateTimeOffset.Parse(UpdatedAtRaw),
+            PreDeployBackupPath,
+            PreDeployBackupSizeBytes);
     }
 }

@@ -12,6 +12,9 @@ namespace NKS.WebDevConsole.Daemon.Tests;
 /// </summary>
 public sealed class DeployRunsRepositoryTests
 {
+    // Mirrors migrations 006 + 009 (group_id col) + 010 (pre-deploy backup
+    // cols) as a single inline DDL — the repo's BaseSelect now references
+    // every column added by 010 so the test fixture must keep up.
     private const string MigrationSql = """
         CREATE TABLE IF NOT EXISTS deploy_runs (
             id              TEXT NOT NULL PRIMARY KEY,
@@ -31,6 +34,9 @@ public sealed class DeployRunsRepositoryTests
             backend_id      TEXT NOT NULL DEFAULT 'nks-deploy',
             created_at      TEXT NOT NULL,
             updated_at      TEXT NOT NULL,
+            group_id        TEXT,
+            pre_deploy_backup_path        TEXT,
+            pre_deploy_backup_size_bytes  INTEGER,
             CHECK (status IN (
                 'queued', 'running', 'awaiting_soak', 'completed',
                 'failed', 'cancelled', 'rolling_back', 'rolled_back'
