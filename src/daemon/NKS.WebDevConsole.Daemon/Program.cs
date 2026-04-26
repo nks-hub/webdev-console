@@ -1126,7 +1126,8 @@ static bool IsDeployEnabled(HttpContext ctx) =>
 app.MapPost("/api/mcp/intents", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
-    NKS.WebDevConsole.Daemon.Mcp.IntentSigner signer) =>
+    NKS.WebDevConsole.Daemon.Mcp.IntentSigner signer,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
@@ -1185,6 +1186,16 @@ app.MapPost("/api/mcp/intents", async (
             ExpiresAt = expiresAt.ToString("o"),
             Signature = signature,
         });
+
+    // Phase 7.5+++ — broadcast intent lifecycle so the admin McpIntents
+    // table refreshes without F5 when AI/CI mints a new token. Best-effort
+    // (no subscribers = no-op); never block the response on SSE I/O.
+    try
+    {
+        await eventsBus.BroadcastAsync("mcp:intent-changed",
+            new { change = "created", intentId, domain, host, kind });
+    }
+    catch { /* SSE failure is non-fatal */ }
 
     return Results.Ok(new
     {
@@ -1270,7 +1281,8 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
 app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
     string intentId,
     HttpContext ctx,
-    NKS.WebDevConsole.Daemon.Data.Database db) =>
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     if (string.IsNullOrWhiteSpace(intentId))
@@ -1294,6 +1306,12 @@ app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
     {
         return Results.Conflict(new { error = "already_confirmed", intentId });
     }
+    try
+    {
+        await eventsBus.BroadcastAsync("mcp:intent-changed",
+            new { change = "confirmed", intentId, confirmedAt = now });
+    }
+    catch { /* SSE failure is non-fatal */ }
     return Results.Ok(new { intentId, confirmedAt = now });
 });
 
@@ -1304,7 +1322,8 @@ app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
 app.MapPost("/api/mcp/intents/{intentId}/revoke", async (
     string intentId,
     HttpContext ctx,
-    NKS.WebDevConsole.Daemon.Data.Database db) =>
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     if (string.IsNullOrWhiteSpace(intentId))
@@ -1326,6 +1345,12 @@ app.MapPost("/api/mcp/intents/{intentId}/revoke", async (
     {
         return Results.Conflict(new { error = "already_used", intentId });
     }
+    try
+    {
+        await eventsBus.BroadcastAsync("mcp:intent-changed",
+            new { change = "revoked", intentId, revokedAt = now });
+    }
+    catch { /* SSE failure is non-fatal */ }
     return Results.Ok(new { intentId, revokedAt = now });
 });
 

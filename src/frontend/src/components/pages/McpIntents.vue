@@ -206,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Refresh,
@@ -222,6 +222,7 @@ const { t } = useI18n()
 import {
   fetchIntentInventory,
   revokeIntent,
+  subscribeEventsMap,
   type IntentInventoryEntry,
 } from '../../api/daemon'
 
@@ -449,7 +450,23 @@ async function copyId(id: string): Promise<void> {
   }
 }
 
-onMounted(() => refresh())
+// Phase 7.5+++ — subscribe to mcp:intent-changed (lifecycle: created/
+// confirmed/revoked) AND mcp:confirm-request (banner trigger). Both
+// invalidate the inventory so the table never lags behind reality.
+// Single shared EventSource via subscribeEventsMap multiplex.
+let unsubscribeIntentSse: (() => void) | null = null
+
+onMounted(() => {
+  refresh()
+  unsubscribeIntentSse = subscribeEventsMap({
+    'mcp:intent-changed': () => { void refresh() },
+    'mcp:confirm-request': () => { void refresh() },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribeIntentSse) { unsubscribeIntentSse(); unsubscribeIntentSse = null }
+})
 </script>
 
 <style scoped>

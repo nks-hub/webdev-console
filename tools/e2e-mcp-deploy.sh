@@ -769,6 +769,52 @@ step "SSE captured the revoked event" "$DUMP" '"change":"revoked"'
 step "SSE created event carries our grant id" "$DUMP" "\"id\":\"$W_ID\""
 
 # ============================================================================
+echo ""; echo "${YEL}=== X. SSE intent lifecycle (created / confirmed / revoked) ===${END}"
+# ============================================================================
+# McpIntents page subscribes to mcp:intent-changed AND mcp:confirm-request
+# so the table refreshes without F5 when AI/CI mints/confirms/revokes a
+# token from any source. Verify all three change events fire.
+X_SSE_LOG="/c/temp/.e2e-intent-sse.log"
+rm -f "$X_SSE_LOG"
+( curl -s --max-time 5 -H "Authorization: Bearer $TOKEN" -H "Accept: text/event-stream" \
+    "$BASE/api/events?topics=mcp:intent-changed" > "$X_SSE_LOG" 2>&1 ) &
+X_SSE_PID=$!
+sleep 1
+
+# Mint a fresh intent
+python3 - <<EOF > /c/temp/.e2e-x-intent.json
+import json
+print(json.dumps({
+    "domain": "blog.loc", "host": "production",
+    "kind": "deploy", "expiresIn": 120
+}))
+EOF
+X_INT=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-x-intent.json "$BASE/api/mcp/intents")
+X_ID=$(echo "$X_INT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+step "intent created (for SSE test)" "$X_INT" '"intentId":"'
+
+# Confirm it (operator approval path)
+api POST /api/mcp/intents/$X_ID/confirm >/dev/null
+
+# Mint another to revoke (revoke needs unused token, confirmed != used)
+X_INT2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-x-intent.json "$BASE/api/mcp/intents")
+X_ID2=$(echo "$X_INT2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+api POST /api/mcp/intents/$X_ID2/revoke >/dev/null
+
+# Drain SSE
+sleep 3
+wait $X_SSE_PID 2>/dev/null
+
+X_DUMP=$(cat "$X_SSE_LOG")
+step "SSE feed captured intent-changed event" "$X_DUMP" 'event: mcp:intent-changed'
+step "SSE captured the created event"  "$X_DUMP" '"change":"created"'
+step "SSE captured the confirmed event" "$X_DUMP" '"change":"confirmed"'
+step "SSE captured the revoked event"  "$X_DUMP" '"change":"revoked"'
+step "SSE created event carries our intent id" "$X_DUMP" "\"intentId\":\"$X_ID\""
+
+# ============================================================================
 echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
 # ============================================================================
 # Subscribe to SSE BEFORE firing the deploy so we capture every event.
