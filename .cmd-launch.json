@@ -1,1 +1,0 @@
-{"command":"Start-Process -FilePath 'C:\\work\\sources\\nks-ws\\src\\frontend\\release\\NKS WebDev Console-0.2.25-portable-x64.exe'; Start-Sleep -Seconds 3; (Get-Process | Where-Object { $_.ProcessName -match 'NKS WebDev' } | Measure-Object).Count","timeoutSeconds":30}
