@@ -109,12 +109,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus } from '@element-plus/icons-vue'
 import {
-  listMcpGrants, createMcpGrant, revokeMcpGrant,
+  listMcpGrants, createMcpGrant, revokeMcpGrant, subscribeEventsMap,
   type McpGrantRow, type McpGrantScopeType,
 } from '../../api/daemon'
 
@@ -149,7 +149,22 @@ const scopeValuePlaceholder = computed(() => {
   }
 })
 
-onMounted(refresh)
+// Phase 7.5+++ — subscribe to mcp:grant-changed SSE so the table
+// auto-refreshes when ANY caller (banner button, admin dialog, MCP
+// CLI, another open tab) creates or revokes a grant. Cleanup on
+// unmount keeps EventSource count bounded.
+let unsubscribeGrantSse: (() => void) | null = null
+
+onMounted(() => {
+  refresh()
+  unsubscribeGrantSse = subscribeEventsMap({
+    'mcp:grant-changed': () => { void refresh() },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribeGrantSse) { unsubscribeGrantSse(); unsubscribeGrantSse = null }
+})
 
 async function refresh(): Promise<void> {
   loading.value = true
