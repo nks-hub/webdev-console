@@ -147,6 +147,7 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentVal
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
 // intents (audit tail), 1-day for unused expired ones. See class docs.
 builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.IntentSweeperService>();
+builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.GrantSweeperService>();
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
 builder.Services.AddSingleton<SitePhpIniWriter>();
