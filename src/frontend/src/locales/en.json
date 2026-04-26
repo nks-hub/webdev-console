@@ -540,7 +540,39 @@
     "cloudflare": "Cloudflare",
     "metrics": "Metrics",
     "errors": "Errors",
-    "danger": "Danger"
+    "danger": "Danger",
+    "deploy": "Deploy",
+    "ssl": "SSL",
+    "composerPackages": "Composer packages",
+    "history": "History",
+    "backup": "Backup"
+  },
+  "deploy": {
+    "loading": "Loading deploy state…",
+    "subTabs": {
+      "deploy": "Deploy",
+      "groups": "Groups",
+      "settings": "Settings"
+    },
+    "empty": {
+      "title": "Deploy {domain}",
+      "description": "Configure deploy targets so you can publish releases from here without leaving wdc. We'll generate a {neon} in your project root (committable to git) plus a gitignored {localNeon} for secrets.",
+      "bullets": {
+        "zeroDowntime": "Zero-downtime atomic symlink switch",
+        "autoRollback": "Auto-rollback on health-check failure",
+        "multiHost": "Multi-host (production / staging) with per-host config"
+      },
+      "startWizard": "Start setup wizard",
+      "importExisting": "Import existing deploy.neon",
+      "timeEstimate": "First-time setup takes about 3 minutes."
+    },
+    "errors": {
+      "loadFailed": "Could not load deploy state: {error}"
+    },
+    "placeholders": {
+      "preflightRerun": "Preflight re-run coming in next commit",
+      "configPersistence": "Config persistence wiring coming in next commit"
+    }
   },
   "metrics": {
     "historical": {

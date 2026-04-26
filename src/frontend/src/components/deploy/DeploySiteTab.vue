@@ -3,31 +3,33 @@
     <!-- Loading state -->
     <div v-if="loading" class="site-tab-loading">
       <el-icon class="is-loading"><Loading /></el-icon>
-      <span>Loading deploy state…</span>
+      <span>{{ t('deploy.loading') }}</span>
     </div>
 
     <!-- Empty state — no deploy.neon yet. Dual CTA so power users with an
          existing config aren't forced through the wizard. -->
     <div v-else-if="!hasConfig && !wizardOpen" class="site-tab-empty">
-      <h3>Deploy {{ domain }}</h3>
-      <p class="muted">
-        Configure deploy targets so you can publish releases from here without
-        leaving wdc. We'll generate a <code class="mono">deploy.neon</code> in
-        your project root (committable to git) plus a gitignored
-        <code class="mono">deploy.local.neon</code> for secrets.
-      </p>
+      <h3>{{ t('deploy.empty.title', { domain }) }}</h3>
+      <i18n-t keypath="deploy.empty.description" tag="p" class="muted">
+        <template #neon><code class="mono">deploy.neon</code></template>
+        <template #localNeon><code class="mono">deploy.local.neon</code></template>
+      </i18n-t>
       <ul class="site-tab-points">
-        <li>Zero-downtime atomic symlink switch</li>
-        <li>Auto-rollback on health-check failure</li>
-        <li>Multi-host (production / staging) with per-host config</li>
+        <li>{{ t('deploy.empty.bullets.zeroDowntime') }}</li>
+        <li>{{ t('deploy.empty.bullets.autoRollback') }}</li>
+        <li>{{ t('deploy.empty.bullets.multiHost') }}</li>
       </ul>
       <div class="site-tab-actions">
-        <el-button type="primary" size="large" @click="wizardOpen = true">Start setup wizard</el-button>
-        <el-button size="large" plain @click="$emit('import-config')">Import existing deploy.neon</el-button>
+        <el-button type="primary" size="large" @click="wizardOpen = true">
+          {{ t('deploy.empty.startWizard') }}
+        </el-button>
+        <el-button size="large" plain @click="$emit('import-config')">
+          {{ t('deploy.empty.importExisting') }}
+        </el-button>
       </div>
       <p class="site-tab-foot">
         <el-icon><InfoFilled /></el-icon>
-        First-time setup takes about 3 minutes.
+        {{ t('deploy.empty.timeEstimate') }}
       </p>
     </div>
 
@@ -44,7 +46,7 @@
       v-model="activeTab"
       class="deploy-sub-tabs"
     >
-      <el-tab-pane name="deploy" label="Deploy">
+      <el-tab-pane name="deploy" :label="t('deploy.subTabs.deploy')">
         <DeployCommandCenter
           :domain="domain"
           :hosts="hosts"
@@ -57,11 +59,11 @@
         />
       </el-tab-pane>
 
-      <el-tab-pane name="groups" label="Groups">
+      <el-tab-pane name="groups" :label="t('deploy.subTabs.groups')">
         <DeployGroupHistoryTable :domain="domain" />
       </el-tab-pane>
 
-      <el-tab-pane name="settings" label="Settings">
+      <el-tab-pane name="settings" :label="t('deploy.subTabs.settings')">
         <DeploySettingsPanel :domain="domain" />
       </el-tab-pane>
     </el-tabs>
@@ -70,9 +72,12 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { InfoFilled, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
+
+const { t } = useI18n()
 import DeploySetupWizard from './DeploySetupWizard.vue'
 import DeployCommandCenter from './DeployCommandCenter.vue'
 import DeploySettingsPanel from './DeploySettingsPanel.vue'
@@ -117,7 +122,16 @@ async function refreshAll(): Promise<void> {
     hosts.value = Array.from(new Set(entries.map(e => e.host)))
     hasConfig.value = entries.length > 0 || hosts.value.length > 0
   } catch (e) {
-    ElMessage.warning(`Could not load deploy state: ${(e as Error).message}`)
+    // 404 = "no deploy.neon yet" — that's the empty-state path, NOT an error
+    // worth toasting. Same when the entire deploy subsystem is disabled
+    // (Phase 7.1a `deploy.enabled=false` → middleware 404s plugin routes).
+    // Both cases land in the empty-state UI which has its own CTA.
+    const msg = (e as Error).message
+    if (msg.includes('HTTP 404') || msg.includes('deploy_disabled')) {
+      hasConfig.value = false
+    } else {
+      ElMessage.warning(t('deploy.errors.loadFailed', { error: msg }))
+    }
   } finally {
     loading.value = false
   }
@@ -128,12 +142,12 @@ async function refreshHistory(): Promise<void> {
 }
 
 function rerunPreflight(): void {
-  ElMessage.info('Preflight re-run coming in next commit')
+  ElMessage.info(t('deploy.placeholders.preflightRerun'))
 }
 
 function onWizardDone(_form: unknown): void {
   wizardOpen.value = false
-  ElMessage.info('Config persistence wiring coming in next commit')
+  ElMessage.info(t('deploy.placeholders.configPersistence'))
   void refreshAll()
 }
 </script>

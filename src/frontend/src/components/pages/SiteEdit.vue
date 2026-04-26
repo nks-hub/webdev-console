@@ -368,7 +368,7 @@
              contribution to keep its placement deterministic. -->
         <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy">
           <template #label>
-            <span class="tab-label"><el-icon><Upload /></el-icon> Deploy</span>
+            <span class="tab-label"><el-icon><Upload /></el-icon> {{ $t('siteEdit.deploy') }}</span>
           </template>
           <div class="tab-content">
             <DeploySiteTab :domain="domain" />
@@ -390,7 +390,7 @@
         <!-- ── History ──────────────────────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="history">
           <template #label>
-            <span class="tab-label"><el-icon><Clock /></el-icon> History ({{ history.length }})</span>
+            <span class="tab-label"><el-icon><Clock /></el-icon> {{ $t('siteEdit.history') }} ({{ history.length }})</span>
           </template>
           <div class="tab-content">
             <div class="history-banner">
@@ -538,7 +538,7 @@
         <!-- ── Per-site Backup (task 29) ─────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="backup">
           <template #label>
-            <span class="tab-label"><el-icon><FolderOpened /></el-icon> Backup</span>
+            <span class="tab-label"><el-icon><FolderOpened /></el-icon> {{ $t('siteEdit.backup') }}</span>
           </template>
           <div class="tab-content">
             <div class="history-banner">

@@ -540,7 +540,39 @@
     "cloudflare": "Cloudflare",
     "metrics": "Metriky",
     "errors": "Chyby",
-    "danger": "Nebezpečné"
+    "danger": "Nebezpečné",
+    "deploy": "Deploy",
+    "ssl": "SSL",
+    "composerPackages": "Composer balíčky",
+    "history": "Historie",
+    "backup": "Záloha"
+  },
+  "deploy": {
+    "loading": "Načítám stav deploye…",
+    "subTabs": {
+      "deploy": "Deploy",
+      "groups": "Skupiny",
+      "settings": "Nastavení"
+    },
+    "empty": {
+      "title": "Deploy {domain}",
+      "description": "Nakonfigurujte cíle pro deploy, abyste mohli publikovat release přímo z WDC. Vygenerujeme {neon} v rootu projektu (lze commitnout do gitu) a gitignored {localNeon} pro tajné údaje.",
+      "bullets": {
+        "zeroDowntime": "Atomický přepínač symlinků bez výpadku",
+        "autoRollback": "Auto-rollback při selhání health-checku",
+        "multiHost": "Více cílů (produkce / staging) s konfigurací pro každý host"
+      },
+      "startWizard": "Spustit průvodce nastavením",
+      "importExisting": "Importovat existující deploy.neon",
+      "timeEstimate": "První nastavení trvá přibližně 3 minuty."
+    },
+    "errors": {
+      "loadFailed": "Nepodařilo se načíst stav deploye: {error}"
+    },
+    "placeholders": {
+      "preflightRerun": "Opětovné spuštění preflightu přijde v dalším commitu",
+      "configPersistence": "Persistence konfigurace přijde v dalším commitu"
+    }
   },
   "metrics": {
     "historical": {

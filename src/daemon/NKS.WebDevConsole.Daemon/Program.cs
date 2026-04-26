@@ -120,6 +120,11 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroa
 // signed intent rows. Both are singletons so the key is loaded exactly once
 // and so concurrent intent issuance shares one keyed-hash instance.
 builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>();
+// Phase 7.3 — persistent grants table (mcp_session_grants). Registered
+// BEFORE the validator because the validator depends on it for the
+// pre-confirmation grant lookup.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository,
+    NKS.WebDevConsole.Daemon.Mcp.McpSessionGrantsRepository>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator,
     NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>();
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
