@@ -425,7 +425,15 @@
     "revoke": "Odvolat",
     "noCerts": "Žádné SSL certifikáty. Vygeneruj jeden pro své weby.",
     "mkcertReady": "mkcert připraven",
-    "mkcertMissing": "mkcert nenalezen"
+    "mkcertMissing": "mkcert nenalezen",
+    "dialog": {
+      "domain": "Doména",
+      "domainPlaceholder": "Vyberte nebo napište doménu",
+      "aliases": "Aliasy (oddělené čárkou)",
+      "aliasesPlaceholder": "www.myapp.loc, api.myapp.loc",
+      "cancel": "Zrušit",
+      "generateBtn": "Vygenerovat"
+    }
   },
   "plugins": {
     "title": "Pluginy",

@@ -425,7 +425,15 @@
     "revoke": "Revoke",
     "noCerts": "No SSL certificates. Generate one for your sites.",
     "mkcertReady": "mkcert ready",
-    "mkcertMissing": "mkcert not found"
+    "mkcertMissing": "mkcert not found",
+    "dialog": {
+      "domain": "Domain",
+      "domainPlaceholder": "Select or type domain",
+      "aliases": "Aliases (comma-separated)",
+      "aliasesPlaceholder": "www.myapp.loc, api.myapp.loc",
+      "cancel": "Cancel",
+      "generateBtn": "Generate"
+    }
   },
   "plugins": {
     "title": "Plugins",

@@ -59,12 +59,12 @@
               </header>
               <div class="edit-card-body">
                 <el-form :model="site" label-position="top" size="default">
-                  <el-form-item label="Domain">
+                  <el-form-item :label="$t('sites.domain')">
                     <el-input :model-value="site.domain" disabled>
                       <template #prepend><el-icon><Link /></el-icon></template>
                     </el-input>
                   </el-form-item>
-                  <el-form-item label="Document Root" required>
+                  <el-form-item :label="$t('sites.documentRoot')" required>
                     <el-input
                       v-model="site.documentRoot"
                       placeholder="C:\work\htdocs\myapp"
