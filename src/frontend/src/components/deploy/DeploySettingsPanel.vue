@@ -194,21 +194,18 @@
       </el-tab-pane>
 
       <!-- ── C: Hooks ──────────────────────────────────────────── -->
-      <el-tab-pane name="hooks" label="Hooks">
+      <el-tab-pane name="hooks" :label="t('deploySettings.tabs.hooks')">
         <div class="section-body">
           <div class="section-header">
-            <h3 class="section-title">Lifecycle Hooks</h3>
+            <h3 class="section-title">{{ t('deploySettings.hooks.title') }}</h3>
             <el-button type="primary" size="small" @click="addHook">
-              Add hook
+              {{ t('deploySettings.hooks.addHook') }}
             </el-button>
           </div>
-          <p class="muted">
-            Hooks run at defined lifecycle events. Use up/down arrows to change
-            execution order within the same event.
-          </p>
+          <p class="muted">{{ t('deploySettings.hooks.intro') }}</p>
 
           <div v-if="settings.hooks.length === 0" class="empty-state">
-            No hooks configured.
+            {{ t('deploySettings.hooks.empty') }}
           </div>
 
           <div
@@ -221,7 +218,7 @@
                 size="small"
                 text
                 :disabled="idx === 0"
-                :aria-label="`Move hook ${idx + 1} up`"
+                :aria-label="t('deploySettings.hooks.moveUp', { n: idx + 1 })"
                 @click="moveHook(idx, -1)"
               >
                 &#8593;
@@ -230,7 +227,7 @@
                 size="small"
                 text
                 :disabled="idx === settings.hooks.length - 1"
-                :aria-label="`Move hook ${idx + 1} down`"
+                :aria-label="t('deploySettings.hooks.moveDown', { n: idx + 1 })"
                 @click="moveHook(idx, 1)"
               >
                 &#8595;
@@ -242,11 +239,11 @@
               label-position="top"
               size="small"
               class="hook-form"
-              :aria-label="`Hook ${idx + 1}`"
+              :aria-label="t('deploySettings.hooks.ariaForm', { n: idx + 1 })"
             >
               <el-form-item required>
                 <template #label>
-                  <label :for="`hook-event-${idx}`">Event</label>
+                  <label :for="`hook-event-${idx}`">{{ t('deploySettings.hooks.event') }}</label>
                 </template>
                 <el-select
                   :id="`hook-event-${idx}`"
@@ -265,7 +262,7 @@
 
               <el-form-item required>
                 <template #label>
-                  <label :for="`hook-type-${idx}`">Type</label>
+                  <label :for="`hook-type-${idx}`">{{ t('deploySettings.hooks.type') }}</label>
                 </template>
                 <el-select
                   :id="`hook-type-${idx}`"
@@ -282,7 +279,7 @@
               <el-form-item required style="flex: 1">
                 <template #label>
                   <label :for="`hook-cmd-${idx}`">
-                    {{ hook.type === 'http' ? 'URL' : 'Command / script' }}
+                    {{ hook.type === 'http' ? t('deploySettings.hooks.url') : t('deploySettings.hooks.command') }}
                   </label>
                 </template>
                 <el-input
@@ -295,7 +292,7 @@
 
               <el-form-item>
                 <template #label>
-                  <label :for="`hook-timeout-${idx}`">Timeout (s)</label>
+                  <label :for="`hook-timeout-${idx}`">{{ t('deploySettings.hooks.timeout') }}</label>
                 </template>
                 <el-input-number
                   :id="`hook-timeout-${idx}`"
@@ -312,26 +309,26 @@
               size="small"
               text
               type="danger"
-              :aria-label="`Remove hook ${idx + 1}`"
+              :aria-label="t('deploySettings.hooks.removeAria', { n: idx + 1 })"
               class="hook-remove"
               @click="removeHook(idx)"
             >
-              Remove
+              {{ t('deploySettings.hooks.remove') }}
             </el-button>
           </div>
 
           <div class="section-footer">
             <el-button type="primary" :loading="saving" @click="saveSettings">
-              Save hooks
+              {{ t('deploySettings.hooks.save') }}
             </el-button>
           </div>
         </div>
       </el-tab-pane>
 
       <!-- ── D: Notifications ──────────────────────────────────── -->
-      <el-tab-pane name="notifications" label="Notifications">
+      <el-tab-pane name="notifications" :label="t('deploySettings.tabs.notifications')">
         <div class="section-body">
-          <h3 class="section-title">Notifications</h3>
+          <h3 class="section-title">{{ t('deploySettings.notifications.title') }}</h3>
 
           <el-form
             :model="settings.notifications"
@@ -341,7 +338,7 @@
           >
             <el-form-item>
               <template #label>
-                <label :for="ids.slackWebhook">Slack webhook URL</label>
+                <label :for="ids.slackWebhook">{{ t('deploySettings.notifications.slackWebhook') }}</label>
               </template>
               <el-input
                 :id="ids.slackWebhook"
@@ -353,7 +350,7 @@
 
             <el-form-item>
               <template #label>
-                <span>Email recipients</span>
+                <span>{{ t('deploySettings.notifications.emailRecipients') }}</span>
               </template>
               <div class="chip-input-wrap">
                 <el-tag
@@ -361,7 +358,7 @@
                   :key="i"
                   closable
                   class="email-chip"
-                  :aria-label="`Recipient: ${email}`"
+                  :aria-label="t('deploySettings.notifications.emailAriaChip', { email })"
                   @close="removeEmailRecipient(i)"
                 >
                   {{ email }}
@@ -370,9 +367,9 @@
                   :id="ids.emailInput"
                   v-model="emailInputValue"
                   size="small"
-                  placeholder="Add email and press Enter"
+                  :placeholder="t('deploySettings.notifications.emailPlaceholder')"
                   class="chip-input"
-                  aria-label="Add email recipient"
+                  :aria-label="t('deploySettings.notifications.emailAriaAdd')"
                   @keydown.enter.prevent="addEmailRecipient"
                   @keydown.tab.prevent="addEmailRecipient"
                   @blur="addEmailRecipient"
@@ -382,32 +379,32 @@
 
             <el-form-item>
               <template #label>
-                <span id="notify-on-label">Notify on</span>
+                <span id="notify-on-label">{{ t('deploySettings.notifications.notifyOn') }}</span>
               </template>
               <el-checkbox-group
                 v-model="settings.notifications.notifyOn"
                 aria-labelledby="notify-on-label"
               >
-                <el-checkbox value="success">Success</el-checkbox>
-                <el-checkbox value="failure">Failure</el-checkbox>
-                <el-checkbox value="awaiting_soak">Awaiting soak</el-checkbox>
-                <el-checkbox value="cancelled">Cancelled</el-checkbox>
+                <el-checkbox value="success">{{ t('deploySettings.notifications.stateSuccess') }}</el-checkbox>
+                <el-checkbox value="failure">{{ t('deploySettings.notifications.stateFailure') }}</el-checkbox>
+                <el-checkbox value="awaiting_soak">{{ t('deploySettings.notifications.stateAwaitingSoak') }}</el-checkbox>
+                <el-checkbox value="cancelled">{{ t('deploySettings.notifications.stateCancelled') }}</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
           </el-form>
 
           <div class="section-footer">
             <el-button type="primary" :loading="saving" @click="saveSettings">
-              Save notifications
+              {{ t('deploySettings.notifications.save') }}
             </el-button>
           </div>
         </div>
       </el-tab-pane>
 
       <!-- ── E: Advanced ───────────────────────────────────────── -->
-      <el-tab-pane name="advanced" label="Advanced">
+      <el-tab-pane name="advanced" :label="t('deploySettings.tabs.advanced')">
         <div class="section-body">
-          <h3 class="section-title">Advanced Settings</h3>
+          <h3 class="section-title">{{ t('deploySettings.advanced.title') }}</h3>
 
           <el-form
             :model="settings.advanced"
@@ -417,7 +414,7 @@
           >
             <el-form-item required>
               <template #label>
-                <label :for="ids.keepReleases">Keep N releases on remote</label>
+                <label :for="ids.keepReleases">{{ t('deploySettings.advanced.keepReleases') }}</label>
               </template>
               <el-input-number
                 :id="ids.keepReleases"
@@ -428,14 +425,12 @@
                 aria-required="true"
                 style="width: 140px"
               />
-              <div class="field-hint">
-                Older releases are pruned after each successful deploy.
-              </div>
+              <div class="field-hint">{{ t('deploySettings.advanced.keepReleasesHint') }}</div>
             </el-form-item>
 
             <el-form-item required>
               <template #label>
-                <label :for="ids.lockTimeout">Lock timeout (seconds)</label>
+                <label :for="ids.lockTimeout">{{ t('deploySettings.advanced.lockTimeout') }}</label>
               </template>
               <el-input-number
                 :id="ids.lockTimeout"
@@ -446,26 +441,24 @@
                 aria-required="true"
                 style="width: 140px"
               />
-              <div class="field-hint">
-                A deploy lock older than this is considered stale and auto-cleared.
-              </div>
+              <div class="field-hint">{{ t('deploySettings.advanced.lockTimeoutHint') }}</div>
             </el-form-item>
 
             <el-form-item>
               <template #label>
-                <label :for="ids.allowConcurrent">Allow concurrent deploys to different hosts</label>
+                <label :for="ids.allowConcurrent">{{ t('deploySettings.advanced.allowConcurrent') }}</label>
               </template>
               <el-switch
                 :id="ids.allowConcurrent"
                 v-model="settings.advanced.allowConcurrentHosts"
-                active-text="Allowed"
-                inactive-text="Serialised"
+                :active-text="t('deploySettings.advanced.switchAllowed')"
+                :inactive-text="t('deploySettings.advanced.switchSerialised')"
               />
             </el-form-item>
 
             <el-form-item>
               <template #label>
-                <span>Custom environment variables</span>
+                <span>{{ t('deploySettings.advanced.envVars') }}</span>
               </template>
               <div class="env-vars-wrap">
                 <div
@@ -475,26 +468,26 @@
                 >
                   <el-input
                     :value="key"
-                    placeholder="KEY"
+                    :placeholder="t('deploySettings.advanced.envKey')"
                     class="env-key"
-                    :aria-label="`Env var key: ${key}`"
+                    :aria-label="t('deploySettings.advanced.envKeyAria', { key })"
                     readonly
                   />
                   <span class="env-sep">=</span>
                   <el-input
                     v-model="settings.advanced.envVars[key]"
-                    placeholder="value"
+                    :placeholder="t('deploySettings.advanced.envValue')"
                     class="env-val"
-                    :aria-label="`Env var value for ${key}`"
+                    :aria-label="t('deploySettings.advanced.envValAria', { key })"
                   />
                   <el-button
                     size="small"
                     text
                     type="danger"
-                    :aria-label="`Remove env var ${key}`"
+                    :aria-label="t('deploySettings.advanced.envRemoveAria', { key })"
                     @click="removeEnvVar(key)"
                   >
-                    Remove
+                    {{ t('deploySettings.advanced.envRemove') }}
                   </el-button>
                 </div>
 
@@ -502,18 +495,18 @@
                   <el-input
                     :id="ids.envKey"
                     v-model="newEnvKey"
-                    placeholder="KEY"
+                    :placeholder="t('deploySettings.advanced.envKey')"
                     class="env-key"
-                    aria-label="New env var key"
+                    :aria-label="t('deploySettings.advanced.envKeyAriaNew')"
                     @keydown.enter.prevent="addEnvVar"
                   />
                   <span class="env-sep">=</span>
                   <el-input
                     :id="ids.envVal"
                     v-model="newEnvVal"
-                    placeholder="value"
+                    :placeholder="t('deploySettings.advanced.envValue')"
                     class="env-val"
-                    aria-label="New env var value"
+                    :aria-label="t('deploySettings.advanced.envValAriaNew')"
                     @keydown.enter.prevent="addEnvVar"
                   />
                   <el-button
@@ -521,7 +514,7 @@
                     :disabled="!newEnvKey.trim()"
                     @click="addEnvVar"
                   >
-                    Add
+                    {{ t('deploySettings.advanced.envAdd') }}
                   </el-button>
                 </div>
               </div>
@@ -530,7 +523,7 @@
 
           <div class="section-footer">
             <el-button type="primary" :loading="saving" @click="saveSettings">
-              Save advanced settings
+              {{ t('deploySettings.advanced.save') }}
             </el-button>
           </div>
         </div>
