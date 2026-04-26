@@ -23,7 +23,27 @@
       :closable="false"
     />
 
-    <el-table v-else :data="grants" stripe size="small" class="grants-table">
+    <!-- Phase 7.5+++ — bulk revoke toolbar. Mirrors McpIntents pattern:
+         hidden when nothing selected; shows count + clear + revoke. -->
+    <div v-if="selectedGrants.length > 0" class="bulk-toolbar">
+      <span class="muted">{{ t('mcpGrants.bulk.selected', { n: selectedGrants.length }) }}</span>
+      <el-button size="small" @click="clearSelection">{{ t('mcpGrants.bulk.clear') }}</el-button>
+      <el-button
+        type="danger" size="small" plain
+        :loading="bulkRevoking"
+        @click="onBulkRevoke"
+      >
+        {{ t('mcpGrants.bulk.revokeBtn', { n: selectedGrants.length }) }}
+      </el-button>
+    </div>
+
+    <el-table
+      v-if="grants.length > 0"
+      ref="tableRef"
+      :data="grants" stripe size="small" class="grants-table"
+      @selection-change="onSelectionChange"
+    >
+      <el-table-column type="selection" width="40" />
       <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="100">
         <template #default="{ row }">
           <el-tag :type="scopeTagType(row.scopeType)" size="small">{{ row.scopeType }}</el-tag>
@@ -122,6 +142,13 @@ const { t } = useI18n()
 const loading = ref(false)
 const grants = ref<McpGrantRow[]>([])
 
+// Phase 7.5+++ — bulk-revoke selection state. Mirrors McpIntents:
+// el-table emits selection-change with FULL set; we mirror it as a
+// reactive ref so the toolbar count + revoke button derive cleanly.
+const selectedGrants = ref<McpGrantRow[]>([])
+const bulkRevoking = ref(false)
+const tableRef = ref<unknown>(null)
+
 const createDialogOpen = ref(false)
 const creating = ref(false)
 const form = ref<{
@@ -176,6 +203,63 @@ async function refresh(): Promise<void> {
   } finally {
     loading.value = false
   }
+}
+
+function onSelectionChange(rows: McpGrantRow[]): void {
+  selectedGrants.value = rows
+}
+
+function clearSelection(): void {
+  // Reach into the el-table instance to clear its checkbox state.
+  // Element Plus exposes clearSelection() on the table ref.
+  const tbl = tableRef.value as { clearSelection?: () => void } | null
+  tbl?.clearSelection?.()
+  selectedGrants.value = []
+}
+
+async function onBulkRevoke(): Promise<void> {
+  const targets = selectedGrants.value.slice()
+  if (targets.length === 0 || bulkRevoking.value) return
+  try {
+    const head = targets.slice(0, 5)
+      .map((r) => `${r.kindPattern}@${r.targetPattern}`)
+      .join(', ')
+    const moreSuffix = targets.length > 5
+      ? t('mcpGrants.bulk.confirmMore', { n: targets.length - 5 })
+      : ''
+    await ElMessageBox.confirm(
+      t('mcpGrants.bulk.confirmMessage', { n: targets.length, targets: head + moreSuffix }),
+      t('mcpGrants.bulk.confirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('mcpGrants.bulk.confirmRevokeBtn'),
+        cancelButtonText: t('common.cancel'),
+      },
+    )
+  } catch { return }
+
+  bulkRevoking.value = true
+  let ok = 0
+  let failed = 0
+  // Serial revoke — daemon writes are cheap and serial keeps the
+  // failure surface deterministic (operator sees "5 ok, 2 failed"
+  // rather than racing parallel DELETEs).
+  for (const target of targets) {
+    try {
+      await revokeMcpGrant(target.id)
+      ok++
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      // 404 not_found / already_revoked is benign: end state reached.
+      if (msg.includes('not_found') || msg.includes('already')) ok++
+      else failed++
+    }
+  }
+  bulkRevoking.value = false
+  clearSelection()
+  if (failed === 0) ElMessage.success(t('mcpGrants.bulk.toastOk', { n: ok }))
+  else ElMessage.warning(t('mcpGrants.bulk.toastPartial', { ok, failed }))
+  await refresh()
 }
 
 async function revoke(id: string): Promise<void> {
@@ -263,4 +347,10 @@ function formatDate(iso: string): string {
 .muted { color: var(--el-text-color-secondary); }
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
+.bulk-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px; margin-top: 4px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+}
 </style>

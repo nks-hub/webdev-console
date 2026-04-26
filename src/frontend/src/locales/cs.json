@@ -1183,7 +1183,18 @@
     "toastCreated": "Oprávnění vytvořeno",
     "toastCreateFailed": "Nepodařilo se vytvořit oprávnění: {error}",
     "toastRevoked": "Oprávnění odvoláno",
-    "toastRevokeFailed": "Nepodařilo se odvolat oprávnění: {error}"
+    "toastRevokeFailed": "Nepodařilo se odvolat oprávnění: {error}",
+    "bulk": {
+      "selected": "Vybráno: {n}",
+      "clear": "Zrušit výběr",
+      "revokeBtn": "Odvolat vybrané ({n})",
+      "confirmTitle": "Odvolat vybraná oprávnění?",
+      "confirmMessage": "Odvolat {n} oprávnění: {targets}? Tato akce nemůže být vrácena, ale záznamy zůstanou v auditu.",
+      "confirmMore": " a dalších {n}",
+      "confirmRevokeBtn": "Odvolat",
+      "toastOk": "Odvoláno {n} oprávnění",
+      "toastPartial": "Odvoláno: {ok}, selhalo: {failed}"
+    }
   },
   "mcp": {
     "banner": {

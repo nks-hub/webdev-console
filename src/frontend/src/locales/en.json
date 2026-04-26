@@ -1183,7 +1183,18 @@
     "toastCreated": "Grant created",
     "toastCreateFailed": "Could not create grant: {error}",
     "toastRevoked": "Grant revoked",
-    "toastRevokeFailed": "Could not revoke grant: {error}"
+    "toastRevokeFailed": "Could not revoke grant: {error}",
+    "bulk": {
+      "selected": "Selected: {n}",
+      "clear": "Clear selection",
+      "revokeBtn": "Revoke selected ({n})",
+      "confirmTitle": "Revoke selected grants?",
+      "confirmMessage": "Revoke {n} grants: {targets}? This cannot be undone, but rows stay in the audit trail.",
+      "confirmMore": " and {n} more",
+      "confirmRevokeBtn": "Revoke",
+      "toastOk": "Revoked {n} grants",
+      "toastPartial": "Revoked: {ok}, failed: {failed}"
+    }
   },
   "mcp": {
     "banner": {
