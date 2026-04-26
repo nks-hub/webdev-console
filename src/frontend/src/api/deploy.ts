@@ -130,3 +130,116 @@ export function cancelDeploy(domain: string, deployId: string): Promise<{ deploy
     { method: 'DELETE' },
   )
 }
+
+// ─── Deploy Settings types ────────────────────────────────────────────────────
+
+export interface DeployHostConfig {
+  name: string
+  sshHost: string
+  sshUser: string
+  sshPort: number
+  remotePath: string
+  branch: string
+  phpBinaryPath?: string
+  composerInstall: boolean
+  runMigrations: boolean
+  soakSeconds: number
+  healthCheckUrl?: string
+}
+
+export interface DeployHookConfig {
+  event: 'pre_deploy' | 'post_fetch' | 'pre_switch' | 'post_switch' | 'on_failure' | 'on_rollback'
+  type: 'shell' | 'http' | 'php'
+  command: string
+  timeoutSeconds: number
+}
+
+export interface DeploySnapshotConfig {
+  enabled: boolean
+  retentionDays: number
+}
+
+export interface DeployNotificationsConfig {
+  slackWebhook?: string
+  emailRecipients: string[]
+  notifyOn: string[]
+}
+
+export interface DeployAdvancedConfig {
+  keepReleases: number
+  lockTimeoutSeconds: number
+  allowConcurrentHosts: boolean
+  envVars: Record<string, string>
+}
+
+export interface DeploySettings {
+  hosts: DeployHostConfig[]
+  snapshot: DeploySnapshotConfig
+  hooks: DeployHookConfig[]
+  notifications: DeployNotificationsConfig
+  advanced: DeployAdvancedConfig
+}
+
+export interface DeploySnapshotEntry {
+  id: string
+  createdAt: string
+  sizeBytes: number
+  path: string
+}
+
+export function defaultDeploySettings(): DeploySettings {
+  return {
+    hosts: [],
+    snapshot: { enabled: false, retentionDays: 30 },
+    hooks: [],
+    notifications: { slackWebhook: undefined, emailRecipients: [], notifyOn: ['success', 'failure'] },
+    advanced: {
+      keepReleases: 5,
+      lockTimeoutSeconds: 600,
+      allowConcurrentHosts: true,
+      envVars: {},
+    },
+  }
+}
+
+/**
+ * GET /api/nks.wdc.deploy/sites/{domain}/settings
+ * Returns 404 until Phase 6.3 backend lands — falls back to defaults so the
+ * UI is always renderable.
+ */
+export async function fetchDeploySettings(domain: string): Promise<DeploySettings> {
+  try {
+    return await request<DeploySettings>(
+      `${PREFIX}/sites/${encodeURIComponent(domain)}/settings`,
+    )
+  } catch {
+    return defaultDeploySettings()
+  }
+}
+
+/**
+ * PUT /api/nks.wdc.deploy/sites/{domain}/settings
+ * Will 404 until Phase 6.3. Caller checks the thrown error and surfaces a
+ * "persistence pending" toast — store catches and re-throws with a friendly
+ * message.
+ */
+export async function saveDeploySettings(domain: string, settings: DeploySettings): Promise<void> {
+  await request<void>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/settings`,
+    { method: 'PUT', body: JSON.stringify(settings) },
+  )
+}
+
+/**
+ * GET /api/nks.wdc.deploy/sites/{domain}/snapshots
+ * Returns an empty list when the endpoint does not exist yet.
+ */
+export async function fetchDeploySnapshots(domain: string): Promise<DeploySnapshotEntry[]> {
+  try {
+    return await request<DeploySnapshotEntry[]>(
+      `${PREFIX}/sites/${encodeURIComponent(domain)}/snapshots`,
+    )
+  } catch {
+    return []
+  }
+}
