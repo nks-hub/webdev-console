@@ -752,6 +752,13 @@
       "preflightRerun": "Preflight re-run coming in next commit",
       "configPersistence": "Config persistence wiring coming in next commit"
     },
+    "health": {
+      "ok": "OK",
+      "slow": "Slow",
+      "down": "Down",
+      "unknown": "Unknown",
+      "ariaLabel": "Health: {label}"
+    },
     "diff": {
       "title": "Changes since last deploy",
       "noNewCommits": "No new commits since last deploy",
@@ -764,6 +771,69 @@
       "title": "Pre-deploy checks",
       "rerun": "Re-run",
       "rerunning": "Re-running…"
+    },
+    "waterfall": {
+      "ponrLabel": "POINT OF NO RETURN — symlink will switch · cancel disabled · only rollback after this",
+      "stepAria": "{label}: {state}"
+    },
+    "drawer": {
+      "title": "Deploy",
+      "noActive": "No active deploy",
+      "closeAria": "Close drawer",
+      "groupLink": "Part of multi-host group",
+      "viewGroup": "View related group →",
+      "rawOutput": "Raw output",
+      "cancel": "Cancel",
+      "cancelDisabled": "Cancel disabled (past PONR)",
+      "cancelDisabledTitle": "Cannot cancel after point of no return — use rollback",
+      "retry": "Retry",
+      "noDeploy": "No deploy in flight",
+      "completedSuccess": "Completed successfully",
+      "failed": "Failed: {message}",
+      "phaseInline": "{phase} — {step} {message}",
+      "cancelConfirmTitle": "Cancel deploy",
+      "cancelConfirmMessage": "Cancel deploy of {domain}?",
+      "cancelYes": "Yes, cancel",
+      "cancelKeep": "Keep running",
+      "cancelToast": "Cancellation requested",
+      "cancelFailed": "Cancel failed"
+    },
+    "groupHistory": {
+      "title": "Deploy group history",
+      "successRate": "{ok}/{total} groups succeeded",
+      "refresh": "Refresh",
+      "noGroups": "No multi-host deploy groups recorded yet",
+      "noHistory": "No history",
+      "perHost": "Per-host deploys",
+      "noPerHost": "No per-host data recorded yet",
+      "col": {
+        "host": "Host",
+        "deployId": "Deploy ID",
+        "when": "When",
+        "hosts": "Hosts",
+        "phase": "Phase",
+        "by": "By",
+        "duration": "Duration"
+      },
+      "running": "running",
+      "open": "Open",
+      "openAria": "Open this per-host deploy in the drawer",
+      "rollback": "Rollback",
+      "rollbackAria": "Cascade rollback every committed host in this group",
+      "replay": "Replay",
+      "replayAria": "Re-run this group with the same hosts list",
+      "errorLabel": "Error:",
+      "phaseAria": "Phase {phase}",
+      "hostsCount": "{n} host | {n} hosts"
+    },
+    "rawOutput": {
+      "modeAria": "Output mode",
+      "tabText": "Text (a11y)",
+      "tabAnsi": "ANSI",
+      "copy": "Copy",
+      "logAria": "Deploy log (text)",
+      "copySuccess": "Copied to clipboard",
+      "copyFail": "Copy failed — clipboard access denied"
     },
     "hostCard": {
       "selectAria": "Include {host} in group deploy",

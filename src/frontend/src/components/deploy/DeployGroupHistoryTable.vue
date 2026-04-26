@@ -1,26 +1,26 @@
 <template>
   <div class="group-history">
     <div class="group-history-header">
-      <h4 class="group-history-title">Deploy group history</h4>
+      <h4 class="group-history-title">{{ t('deploy.groupHistory.title') }}</h4>
       <!-- Phase 6.18a — group success-rate at a glance. all_succeeded /
            total of terminal groups (excludes in-flight from denominator
            since they haven't decided yet). Hidden when no terminal
            groups exist. -->
       <div v-if="successRate !== null" class="group-success-rate" role="status">
         <el-tag :type="rateTagType(successRate)" size="small" effect="plain">
-          {{ successCount }}/{{ terminalCount }} groups succeeded
+          {{ t('deploy.groupHistory.successRate', { ok: successCount, total: terminalCount }) }}
           <span class="rate-pct">({{ Math.round(successRate * 100) }}%)</span>
         </el-tag>
       </div>
       <el-button link size="small" :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon> Refresh
+        <el-icon><Refresh /></el-icon> {{ t('deploy.groupHistory.refresh') }}
       </el-button>
     </div>
 
     <el-empty
       v-if="!entries.length && !loading"
       :image-size="80"
-      description="No multi-host deploy groups recorded yet"
+      :description="t('deploy.groupHistory.noGroups')"
     />
 
     <el-table
@@ -28,7 +28,7 @@
       :data="entries"
       stripe
       size="small"
-      :empty-text="'No history'"
+      :empty-text="t('deploy.groupHistory.noHistory')"
       row-key="id"
       :expand-row-keys="expandedKeys"
       @expand-change="onExpandChange"
@@ -37,14 +37,14 @@
       <el-table-column type="expand">
         <template #default="{ row }">
           <div class="group-children">
-            <div class="group-children-title">Per-host deploys</div>
+            <div class="group-children-title">{{ t('deploy.groupHistory.perHost') }}</div>
             <el-table
               :data="hostRows(row)"
               size="small"
-              :empty-text="'No per-host data recorded yet'"
+              :empty-text="t('deploy.groupHistory.noPerHost')"
             >
-              <el-table-column prop="host" label="Host" width="160" />
-              <el-table-column prop="deployId" label="Deploy ID">
+              <el-table-column prop="host" :label="t('deploy.groupHistory.col.host')" width="160" />
+              <el-table-column prop="deployId" :label="t('deploy.groupHistory.col.deployId')">
                 <template #default="{ row: hr }">
                   <code v-if="hr.deployId" class="mono">{{ hr.deployId.slice(0, 8) }}…</code>
                   <span v-else class="muted">—</span>
@@ -58,43 +58,43 @@
                     link
                     type="primary"
                     :loading="openingDeployId === hr.deployId"
-                    aria-label="Open this per-host deploy in the drawer"
+                    :aria-label="t('deploy.groupHistory.openAria')"
                     @click="onOpenHostRun(hr.host, hr.deployId)"
                   >
-                    Open
+                    {{ t('deploy.groupHistory.open') }}
                   </el-button>
                 </template>
               </el-table-column>
             </el-table>
             <p v-if="row.errorMessage" class="group-error" role="status">
-              <strong>Error:</strong> {{ row.errorMessage }}
+              <strong>{{ t('deploy.groupHistory.errorLabel') }}</strong> {{ row.errorMessage }}
             </p>
           </div>
         </template>
       </el-table-column>
 
-      <el-table-column prop="startedAt" label="When" width="170">
+      <el-table-column prop="startedAt" :label="t('deploy.groupHistory.col.when')" width="170">
         <template #default="{ row }">
           <span class="mono">{{ formatDate(row.startedAt) }}</span>
         </template>
       </el-table-column>
 
-      <el-table-column prop="hosts" label="Hosts" min-width="180">
+      <el-table-column prop="hosts" :label="t('deploy.groupHistory.col.hosts')" min-width="180">
         <template #default="{ row }">
           <span class="hosts-summary">
-            {{ row.hosts.length }} host{{ row.hosts.length === 1 ? '' : 's' }}:
+            {{ t('deploy.groupHistory.hostsCount', row.hosts.length, { n: row.hosts.length }) }}:
             <code class="mono">{{ row.hosts.join(', ') }}</code>
           </span>
         </template>
       </el-table-column>
 
-      <el-table-column prop="phase" label="Phase" width="180">
+      <el-table-column prop="phase" :label="t('deploy.groupHistory.col.phase')" width="180">
         <template #default="{ row }">
           <el-tag
             :type="phaseTagType(row.phase)"
             size="small"
             effect="plain"
-            :aria-label="`Phase ${row.phase}`"
+            :aria-label="t('deploy.groupHistory.phaseAria', { phase: row.phase })"
           >
             <el-icon class="phase-icon" aria-hidden="true">
               <component :is="phaseIcon(row.phase)" />
@@ -104,16 +104,16 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="triggeredBy" label="By" width="80">
+      <el-table-column prop="triggeredBy" :label="t('deploy.groupHistory.col.by')" width="80">
         <template #default="{ row }">
           <el-tag size="small" effect="plain" type="info">{{ row.triggeredBy }}</el-tag>
         </template>
       </el-table-column>
 
-      <el-table-column label="Duration" width="110">
+      <el-table-column :label="t('deploy.groupHistory.col.duration')" width="110">
         <template #default="{ row }">
           <span v-if="row.completedAt" class="mono">{{ formatDuration(row) }}</span>
-          <span v-else class="muted">running</span>
+          <span v-else class="muted">{{ t('deploy.groupHistory.running') }}</span>
         </template>
       </el-table-column>
 
@@ -126,10 +126,10 @@
             type="warning"
             :loading="rollingBackId === row.id"
             :disabled="(rollingBackId !== null && rollingBackId !== row.id) || replayingId !== null"
-            aria-label="Cascade rollback every committed host in this group"
+            :aria-label="t('deploy.groupHistory.rollbackAria')"
             @click="onRollbackGroup(row)"
           >
-            <el-icon><RefreshRight /></el-icon> Rollback
+            <el-icon><RefreshRight /></el-icon> {{ t('deploy.groupHistory.rollback') }}
           </el-button>
           <el-button
             v-if="canReplay(row)"
@@ -138,10 +138,10 @@
             type="primary"
             :loading="replayingId === row.id"
             :disabled="(replayingId !== null && replayingId !== row.id) || rollingBackId !== null"
-            aria-label="Re-run this group with the same hosts list"
+            :aria-label="t('deploy.groupHistory.replayAria')"
             @click="onReplayGroup(row)"
           >
-            <el-icon><Refresh /></el-icon> Replay
+            <el-icon><Refresh /></el-icon> {{ t('deploy.groupHistory.replay') }}
           </el-button>
         </template>
       </el-table-column>
@@ -151,6 +151,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Refresh,
   CircleCheck,
@@ -159,6 +160,8 @@ import {
   Loading,
   RefreshRight,
 } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 import {
   fetchDeployGroups,
   rollbackDeployGroup,

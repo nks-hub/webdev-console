@@ -1,12 +1,12 @@
 <template>
   <div class="raw-output">
     <div class="raw-output-toolbar">
-      <el-radio-group v-model="mode" size="small" :aria-label="$t ? $t('deploy.rawOutput.mode') : 'Output mode'">
-        <el-radio-button label="text">Text (a11y)</el-radio-button>
-        <el-radio-button label="ansi">ANSI</el-radio-button>
+      <el-radio-group v-model="mode" size="small" :aria-label="t('deploy.rawOutput.modeAria')">
+        <el-radio-button label="text">{{ t('deploy.rawOutput.tabText') }}</el-radio-button>
+        <el-radio-button label="ansi">{{ t('deploy.rawOutput.tabAnsi') }}</el-radio-button>
       </el-radio-group>
       <el-button size="small" link @click="copyAll">
-        <el-icon><CopyDocument /></el-icon> Copy
+        <el-icon><CopyDocument /></el-icon> {{ t('deploy.rawOutput.copy') }}
       </el-button>
     </div>
 
@@ -20,7 +20,7 @@
       class="raw-output-text mono"
       role="log"
       aria-live="polite"
-      aria-label="Deploy log (text)"
+      :aria-label="t('deploy.rawOutput.logAria')"
       tabindex="0"
     >{{ stripped }}</pre>
 
@@ -35,8 +35,11 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CopyDocument } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   /** Raw stdout/stderr lines, oldest first. */
@@ -79,9 +82,9 @@ watch(() => props.lines.length, async () => {
 async function copyAll(): Promise<void> {
   try {
     await navigator.clipboard.writeText(mode.value === 'text' ? stripped.value : joined.value)
-    ElMessage.success('Copied to clipboard')
+    ElMessage.success(t('deploy.rawOutput.copySuccess'))
   } catch {
-    ElMessage.warning('Copy failed — clipboard access denied')
+    ElMessage.warning(t('deploy.rawOutput.copyFail'))
   }
 }
 </script>

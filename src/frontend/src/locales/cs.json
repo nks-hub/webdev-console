@@ -752,6 +752,13 @@
       "preflightRerun": "Opětovné spuštění preflightu přijde v dalším commitu",
       "configPersistence": "Persistence konfigurace přijde v dalším commitu"
     },
+    "health": {
+      "ok": "OK",
+      "slow": "Pomalé",
+      "down": "Mimo provoz",
+      "unknown": "Neznámý",
+      "ariaLabel": "Stav: {label}"
+    },
     "diff": {
       "title": "Změny od posledního deploye",
       "noNewCommits": "Žádné nové commity od posledního deploye",
@@ -764,6 +771,69 @@
       "title": "Pre-deploy kontroly",
       "rerun": "Spustit znovu",
       "rerunning": "Spouštím…"
+    },
+    "waterfall": {
+      "ponrLabel": "BOD ZE KTERÉHO NENÍ NÁVRATU — symlink se přepne · cancel zakázán · po tomto už jen rollback",
+      "stepAria": "{label}: {state}"
+    },
+    "drawer": {
+      "title": "Deploy",
+      "noActive": "Žádný aktivní deploy",
+      "closeAria": "Zavřít drawer",
+      "groupLink": "Součást skupinového deploye",
+      "viewGroup": "Zobrazit skupinu →",
+      "rawOutput": "Surový výstup",
+      "cancel": "Zrušit",
+      "cancelDisabled": "Cancel zakázán (po PONR)",
+      "cancelDisabledTitle": "Nelze zrušit po bodu, ze kterého není návratu — použijte rollback",
+      "retry": "Zkusit znovu",
+      "noDeploy": "Žádný probíhající deploy",
+      "completedSuccess": "Úspěšně dokončeno",
+      "failed": "Selhalo: {message}",
+      "phaseInline": "{phase} — {step} {message}",
+      "cancelConfirmTitle": "Zrušit deploy",
+      "cancelConfirmMessage": "Zrušit deploy {domain}?",
+      "cancelYes": "Ano, zrušit",
+      "cancelKeep": "Nechat běžet",
+      "cancelToast": "Cancel požadavek odeslán",
+      "cancelFailed": "Cancel selhal"
+    },
+    "groupHistory": {
+      "title": "Historie deploy skupin",
+      "successRate": "{ok}/{total} skupin úspěšných",
+      "refresh": "Obnovit",
+      "noGroups": "Zatím žádné skupinové deploye",
+      "noHistory": "Žádná historie",
+      "perHost": "Deploye podle hosta",
+      "noPerHost": "Zatím žádná data podle hosta",
+      "col": {
+        "host": "Host",
+        "deployId": "Deploy ID",
+        "when": "Kdy",
+        "hosts": "Hosti",
+        "phase": "Fáze",
+        "by": "Spustil",
+        "duration": "Doba"
+      },
+      "running": "běží",
+      "open": "Otevřít",
+      "openAria": "Otevřít tento per-host deploy v draweru",
+      "rollback": "Vrátit",
+      "rollbackAria": "Kaskádově vrátit každého commitnutého hosta v této skupině",
+      "replay": "Spustit znovu",
+      "replayAria": "Spustit tuto skupinu znovu se stejným seznamem hostů",
+      "errorLabel": "Chyba:",
+      "phaseAria": "Fáze {phase}",
+      "hostsCount": "{n} host | {n} hosti | {n} hostů"
+    },
+    "rawOutput": {
+      "modeAria": "Režim výstupu",
+      "tabText": "Text (a11y)",
+      "tabAnsi": "ANSI",
+      "copy": "Kopírovat",
+      "logAria": "Deploy log (text)",
+      "copySuccess": "Zkopírováno do schránky",
+      "copyFail": "Kopírování selhalo — schránka odepřena"
     },
     "hostCard": {
       "selectAria": "Zahrnout {host} do skupinového deploye",

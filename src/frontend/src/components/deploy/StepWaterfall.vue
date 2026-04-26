@@ -15,7 +15,7 @@
       >
         <el-icon><WarningFilled /></el-icon>
         <span class="ponr-label mono">
-          POINT OF NO RETURN — symlink will switch · cancel disabled · only rollback after this
+          {{ t('deploy.waterfall.ponrLabel') }}
         </span>
       </div>
 
@@ -23,7 +23,7 @@
         :class="['step', `step--${step.state}`, { 'step--current': idx === currentIdx }]"
         role="listitem"
       >
-        <span class="step-icon" :aria-label="`${step.label}: ${step.state}`">
+        <span class="step-icon" :aria-label="t('deploy.waterfall.stepAria', { label: step.label, state: step.state })">
           <el-icon v-if="step.state === 'running'" class="is-loading"><Loading /></el-icon>
           <el-icon v-else-if="step.state === 'done'"><Check /></el-icon>
           <el-icon v-else-if="step.state === 'failed'"><CloseBold /></el-icon>
@@ -40,7 +40,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Check, CloseBold, Loading, Minus, WarningFilled } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 
 export interface WaterfallStep {
   label: string

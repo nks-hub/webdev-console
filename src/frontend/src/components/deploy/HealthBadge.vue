@@ -18,9 +18,12 @@
  * label and icon glyph also encode state.
  */
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CircleCheck, CircleClose, Loading, QuestionFilled } from '@element-plus/icons-vue'
 
 type HealthState = 'healthy' | 'degraded' | 'down' | 'unknown'
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   state: HealthState
@@ -42,13 +45,13 @@ const icon = computed(() => {
 })
 
 const label = computed(() => props.label || ({
-  healthy: 'OK',
-  degraded: 'Slow',
-  down: 'Down',
-  unknown: 'Unknown',
+  healthy: t('deploy.health.ok'),
+  degraded: t('deploy.health.slow'),
+  down: t('deploy.health.down'),
+  unknown: t('deploy.health.unknown'),
 } as const)[props.state])
 
-const ariaLabel = computed(() => `Health: ${label.value}`)
+const ariaLabel = computed(() => t('deploy.health.ariaLabel', { label: label.value }))
 
 // Pulse controller — fires for ~600ms whenever `state` transitions, then
 // settles to a static dot.

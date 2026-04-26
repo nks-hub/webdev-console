@@ -14,16 +14,16 @@
       <div class="drawer-head">
         <div>
           <h3 class="drawer-title">
-            Deploy
+            {{ t('deploy.drawer.title') }}
             <small v-if="run">{{ run.domain }} → {{ run.host }}</small>
           </h3>
           <div class="drawer-subline mono" aria-live="polite">
-            {{ run ? statusLine : 'No active deploy' }}
+            {{ run ? statusLine : t('deploy.drawer.noActive') }}
           </div>
         </div>
         <div class="drawer-actions">
           <HealthBadge v-if="run" :state="healthState" />
-          <el-button text @click="deployStore.closeDrawer()" :aria-label="'Close drawer'">
+          <el-button text @click="deployStore.closeDrawer()" :aria-label="t('deploy.drawer.closeAria')">
             <el-icon><Close /></el-icon>
           </el-button>
         </div>
@@ -44,11 +44,11 @@
         class="drawer-group-link"
       >
         <template #title>
-          Part of multi-host group
+          {{ t('deploy.drawer.groupLink') }}
           <code class="mono">{{ run.groupId.slice(0, 8) }}…</code>
         </template>
         <el-button link type="primary" size="small" @click="goToGroups">
-          View related group →
+          {{ t('deploy.drawer.viewGroup') }}
         </el-button>
       </el-alert>
 
@@ -60,7 +60,7 @@
       />
 
       <el-collapse class="drawer-collapse">
-        <el-collapse-item title="Raw output">
+        <el-collapse-item :title="t('deploy.drawer.rawOutput')">
           <RawOutputPane :lines="rawLines" />
         </el-collapse-item>
       </el-collapse>
@@ -72,24 +72,24 @@
           plain
           @click="onCancel"
         >
-          Cancel
+          {{ t('deploy.drawer.cancel') }}
         </el-button>
         <el-button
           v-if="run.isPastPonr && !run.isTerminal"
           type="danger"
           plain
           disabled
-          :title="'Cannot cancel after point of no return — use rollback'"
+          :title="t('deploy.drawer.cancelDisabledTitle')"
         >
-          Cancel disabled (past PONR)
+          {{ t('deploy.drawer.cancelDisabled') }}
         </el-button>
         <el-button v-if="run.isTerminal && run.success === false" type="primary" @click="$emit('retry', run)">
-          Retry
+          {{ t('deploy.drawer.retry') }}
         </el-button>
       </div>
     </div>
     <div v-else class="drawer-empty">
-      <el-empty description="No deploy in flight" />
+      <el-empty :description="t('deploy.drawer.noDeploy')" />
     </div>
   </el-drawer>
 </template>
@@ -102,11 +102,13 @@
  * focus NOT trapped (drawer state mirrors aria-live updates).
  */
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Close } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
 
+const { t } = useI18n()
 const router = useRouter()
 import StepWaterfall, { type WaterfallStep } from './StepWaterfall.vue'
 import RawOutputPane from './RawOutputPane.vue'
@@ -195,9 +197,15 @@ const rawLines = computed(() =>
 const statusLine = computed(() => {
   if (!run.value) return ''
   if (run.value.isTerminal) {
-    return run.value.success ? 'Completed successfully' : `Failed: ${run.value.latestMessage}`
+    return run.value.success
+      ? t('deploy.drawer.completedSuccess')
+      : t('deploy.drawer.failed', { message: run.value.latestMessage })
   }
-  return `${run.value.latestPhase} — ${run.value.latestStep} ${run.value.latestMessage}`
+  return t('deploy.drawer.phaseInline', {
+    phase: run.value.latestPhase,
+    step: run.value.latestStep,
+    message: run.value.latestMessage,
+  })
 })
 
 const healthState = computed<'healthy' | 'degraded' | 'down' | 'unknown'>(() => {
@@ -226,17 +234,21 @@ async function onCancel(): Promise<void> {
   if (!run.value) return
   try {
     await ElMessageBox.confirm(
-      `Cancel deploy of ${run.value.domain}?`,
-      'Cancel deploy',
-      { type: 'warning', confirmButtonText: 'Yes, cancel', cancelButtonText: 'Keep running' },
+      t('deploy.drawer.cancelConfirmMessage', { domain: run.value.domain }),
+      t('deploy.drawer.cancelConfirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('deploy.drawer.cancelYes'),
+        cancelButtonText: t('deploy.drawer.cancelKeep'),
+      },
     )
   } catch { return }
 
   try {
     await deployStore.cancel(run.value.domain, run.value.deployId)
-    ElMessage.success('Cancellation requested')
+    ElMessage.success(t('deploy.drawer.cancelToast'))
   } catch (e) {
-    ElMessage.error((e as Error).message || 'Cancel failed')
+    ElMessage.error((e as Error).message || t('deploy.drawer.cancelFailed'))
   }
 }
 </script>
