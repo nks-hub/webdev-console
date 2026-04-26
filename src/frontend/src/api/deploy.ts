@@ -101,18 +101,26 @@ export function startDeploy(
     backendOptions?: Record<string, unknown>
     /** Phase 6.12c — Pre-deploy DB snapshot config (DeploySnapshotOptions). */
     snapshot?: { include: boolean; retentionDays?: number }
+    /** Phase 7.5+++ — explicit local-loopback paths override settings. */
+    localPaths?: { source: string; target: string }
+    /** Phase 7.5+++ — specific branch override (defaults to host setting). */
+    branch?: string
   },
 ): Promise<StartDeployResponseDto> {
+  // Daemon endpoint is /sites/{domain}/deploy — host travels in the body.
+  // The 6.x-era /sites/{domain}/hosts/{host}/deploy URL was removed when
+  // the real LocalDeployBackend landed; calling that 404'd silently.
+  const body: Record<string, unknown> = {
+    host,
+    idempotencyKey: options?.idempotencyKey ?? crypto.randomUUID(),
+    options: options?.backendOptions ?? {},
+  }
+  if (options?.snapshot !== undefined) body.snapshot = options.snapshot
+  if (options?.branch) body.branch = options.branch
+  if (options?.localPaths) body.localPaths = options.localPaths
   return request<StartDeployResponseDto>(
-    `${PREFIX}/sites/${encodeURIComponent(domain)}/hosts/${encodeURIComponent(host)}/deploy`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        idempotencyKey: options?.idempotencyKey ?? crypto.randomUUID(),
-        options: options?.backendOptions ?? {},
-        snapshot: options?.snapshot,
-      }),
-    },
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/deploy`,
+    { method: 'POST', body: JSON.stringify(body) },
   )
 }
 
@@ -156,6 +164,11 @@ export interface DeployHostConfig {
   runMigrations: boolean
   soakSeconds: number
   healthCheckUrl?: string
+  // Phase 7.5+++ — local-loopback backend paths. When set, the GUI
+  // deploy button doesn't have to send `localPaths` in the body — the
+  // daemon falls back to these stored values for that host.
+  localSourcePath?: string
+  localTargetPath?: string
 }
 
 export interface DeployHookConfig {

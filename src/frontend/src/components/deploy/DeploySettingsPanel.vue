@@ -47,6 +47,24 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <!-- Phase 7.5+++ — surface localPaths configuration without
+                 requiring the operator to open the host edit dialog.
+                 A configured host (both source+target) shows a check
+                 with the target path on hover; missing shows muted dash. -->
+            <el-table-column :label="t('deploySettings.hosts.col.localPaths')" width="110" align="center">
+              <template #default="{ row }">
+                <el-tooltip
+                  v-if="row.localSourcePath && row.localTargetPath"
+                  :content="`${row.localSourcePath} → ${row.localTargetPath}`"
+                  placement="top"
+                >
+                  <el-tag type="success" size="small" effect="plain">
+                    {{ t('deploySettings.hosts.tagLocalPathsSet') }}
+                  </el-tag>
+                </el-tooltip>
+                <span v-else class="muted">—</span>
+              </template>
+            </el-table-column>
             <el-table-column :label="t('deploySettings.hosts.col.actions')" width="120" align="right">
               <template #default="{ row }">
                 <el-button
@@ -685,6 +703,32 @@
             clearable
           />
         </el-form-item>
+
+        <!-- Phase 7.5+++ — local-loopback paths. When set, the GUI
+             deploy button can dispatch without supplying localPaths
+             in the body — the daemon falls back to these. -->
+        <el-divider content-position="left">
+          {{ t('deploySettings.hostDialog.localPathsTitle') }}
+        </el-divider>
+        <div class="field-hint" style="margin-top: -8px; margin-bottom: 8px">
+          {{ t('deploySettings.hostDialog.localPathsHelp') }}
+        </div>
+        <el-form-item :label="t('deploySettings.hostDialog.localSourcePath')">
+          <el-input
+            id="host-local-source"
+            v-model="hostForm.localSourcePath"
+            :placeholder="t('deploySettings.hostDialog.localSourcePathPlaceholder')"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item :label="t('deploySettings.hostDialog.localTargetPath')">
+          <el-input
+            id="host-local-target"
+            v-model="hostForm.localTargetPath"
+            :placeholder="t('deploySettings.hostDialog.localTargetPathPlaceholder')"
+            clearable
+          />
+        </el-form-item>
       </el-form>
 
       <!-- Phase 7.5+++ — TCP probe button. Surfaces inline status next
@@ -857,6 +901,8 @@ function emptyHostForm(): DeployHostConfig {
     runMigrations: true,
     soakSeconds: 30,
     healthCheckUrl: '',
+    localSourcePath: '',
+    localTargetPath: '',
   }
 }
 
@@ -909,6 +955,8 @@ async function submitHostForm(): Promise<void> {
   }
   if (hostForm.phpBinaryPath) payload.phpBinaryPath = hostForm.phpBinaryPath
   if (hostForm.healthCheckUrl) payload.healthCheckUrl = hostForm.healthCheckUrl
+  if (hostForm.localSourcePath) payload.localSourcePath = hostForm.localSourcePath
+  if (hostForm.localTargetPath) payload.localTargetPath = hostForm.localTargetPath
 
   if (editingHost.value) {
     store.updateHost(props.domain, editingHost.value, payload)

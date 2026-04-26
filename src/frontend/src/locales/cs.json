@@ -698,10 +698,12 @@
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
         "autoDeploy": "Auto-deploy",
+        "localPaths": "Lokální cesty",
         "actions": "Akce"
       },
       "tagComposer": "composer",
       "tagSkip": "přeskočit",
+      "tagLocalPathsSet": "nastaveno",
       "ariaEditHost": "Upravit hosta {name}",
       "ariaRemoveHost": "Odebrat hosta {name}",
       "ariaComposerEnabled": "Composer install zapnut",
@@ -731,7 +733,13 @@
       "runMigrations": "Spustit migrace",
       "testConnection": "Otestovat připojení",
       "testConnectionOk": "TCP probe prošel ({ms} ms)",
-      "testConnectionRequestFailed": "Probe neúspěšný: {error}"
+      "testConnectionRequestFailed": "Probe neúspěšný: {error}",
+      "localPathsTitle": "Lokální cesty (local-loopback backend)",
+      "localPathsHelp": "Když jsou nastavené, tlačítko Deploy v GUI je použije automaticky. Slouží k deployi bez vzdáleného SSH (pro lokální testy a fixture weby).",
+      "localSourcePath": "Lokální zdrojová cesta",
+      "localSourcePathPlaceholder": "C:/work/sites/blog.loc",
+      "localTargetPath": "Lokální cílová cesta",
+      "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc"
     },
     "wizard": {
       "step1Title": "Detaily hosta",

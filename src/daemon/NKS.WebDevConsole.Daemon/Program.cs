@@ -2437,9 +2437,13 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     var intentToken = root.TryGetProperty("intentToken", out var tEl) ? tEl.GetString() : null;
     var triggeredBy = string.IsNullOrEmpty(intentToken) ? "gui" : "mcp";
 
-    // Phase 7.5+++ — `localPaths: {source, target}` is REQUIRED. Real
-    // local-loopback backend only — no dummy state machine. Without
-    // valid paths the deploy endpoint refuses with 400.
+    // Phase 7.5+++ — `localPaths: {source, target}` resolved in priority:
+    //   1) Body wins (ad-hoc / E2E override).
+    //   2) Fallback to per-host settings on disk so the GUI can dispatch
+    //      a deploy with just `host` once the operator has configured
+    //      localSourcePath/localTargetPath in the host edit dialog.
+    // Real local-loopback backend only — no dummy state machine.
+    // Without resolvable paths the deploy endpoint refuses with 400.
     string? localSource = null;
     string? localTarget = null;
     if (root.TryGetProperty("localPaths", out var lpEl) && lpEl.ValueKind == System.Text.Json.JsonValueKind.Object)
@@ -2449,10 +2453,40 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     }
     if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
     {
+        // Look up settings JSON to find the host's stored localPaths.
+        // File-per-site shape mirrors what the frontend's DeploySettingsPanel writes.
+        try
+        {
+            var settingsPath = DeploySettingsPath(domain);
+            if (File.Exists(settingsPath))
+            {
+                using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+                if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                    && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var hEl2 in hostsEl.EnumerateArray())
+                    {
+                        if (!hEl2.TryGetProperty("name", out var nEl)) continue;
+                        if (!string.Equals(nEl.GetString(), host, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.IsNullOrEmpty(localSource)
+                            && hEl2.TryGetProperty("localSourcePath", out var lsEl))
+                            localSource = lsEl.GetString();
+                        if (string.IsNullOrEmpty(localTarget)
+                            && hEl2.TryGetProperty("localTargetPath", out var ltEl))
+                            localTarget = ltEl.GetString();
+                        break;
+                    }
+                }
+            }
+        }
+        catch { /* swallow — fall through to 400 below if still empty */ }
+    }
+    if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
+    {
         return Results.BadRequest(new
         {
             error = "localPaths_required",
-            detail = "Body must include localPaths: {source: '...', target: '...'} for the local deploy backend.",
+            detail = "Provide localPaths: {source, target} in body, or configure localSourcePath + localTargetPath on the host in deploy settings.",
         });
     }
 

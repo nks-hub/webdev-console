@@ -698,10 +698,12 @@
         "remotePath": "Remote path",
         "branch": "Branch",
         "autoDeploy": "Auto-deploy",
+        "localPaths": "Local paths",
         "actions": "Actions"
       },
       "tagComposer": "composer",
       "tagSkip": "skip",
+      "tagLocalPathsSet": "set",
       "ariaEditHost": "Edit host {name}",
       "ariaRemoveHost": "Remove host {name}",
       "ariaComposerEnabled": "Composer install enabled",
@@ -731,7 +733,13 @@
       "runMigrations": "Run migrations",
       "testConnection": "Test connection",
       "testConnectionOk": "TCP probe succeeded ({ms} ms)",
-      "testConnectionRequestFailed": "Probe failed: {error}"
+      "testConnectionRequestFailed": "Probe failed: {error}",
+      "localPathsTitle": "Local paths (local-loopback backend)",
+      "localPathsHelp": "When set, the GUI Deploy button uses these automatically. Used for deploying without remote SSH (local tests and fixture sites).",
+      "localSourcePath": "Local source path",
+      "localSourcePathPlaceholder": "C:/work/sites/blog.loc",
+      "localTargetPath": "Local target path",
+      "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc"
     },
     "wizard": {
       "step1Title": "Host details",
