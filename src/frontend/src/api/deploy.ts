@@ -243,3 +243,69 @@ export async function fetchDeploySnapshots(domain: string): Promise<DeploySnapsh
     return []
   }
 }
+
+/**
+ * Phase 6.4 — request an MCP intent token from the daemon. Used by the
+ * restore flow because the daemon's restore endpoint requires intent
+ * gating (kind=restore + host=*restore*) even when called from the GUI.
+ *
+ * The GUI is trusted (bearer-auth on /api/*), so we mint an intent
+ * with `confirm-request` + auto-approve via the GUI confirm modal flow.
+ * Returns the raw token string for the X-Intent-Token header.
+ */
+export interface IntentTokenResponse {
+  intentId: string
+  intentToken: string
+  expiresAt: string
+}
+
+export async function createDeployIntent(
+  domain: string,
+  host: string,
+  kind: 'deploy' | 'rollback' | 'cancel' | 'restore',
+): Promise<IntentTokenResponse> {
+  return request<IntentTokenResponse>('/api/mcp/intents', {
+    method: 'POST',
+    body: JSON.stringify({ domain, host, kind, expiresIn: 120 }),
+  })
+}
+
+/**
+ * Stamp confirmed_at on an intent so destructive endpoints accept it
+ * without the X-Allow-Unconfirmed header. The GUI is the trusted
+ * confirmation surface — we approve immediately after minting.
+ */
+export async function confirmDeployIntent(intentId: string): Promise<void> {
+  await request<void>(`/api/mcp/intents/${encodeURIComponent(intentId)}/confirm`, {
+    method: 'POST',
+  })
+}
+
+export interface RestoreSnapshotResult {
+  deployId: string
+  domain: string
+  mode: 'sqlite' | 'mysql' | 'pgsql'
+  bytesProcessed: number
+  durationMs: number
+}
+
+/**
+ * POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore.
+ * Caller must mint+confirm an intent first; this helper attaches the
+ * X-Intent-Token header. Body always includes `confirm: true` per the
+ * daemon's two-gate destructive contract.
+ */
+export async function restoreSnapshot(
+  domain: string,
+  deployId: string,
+  intentToken: string,
+): Promise<RestoreSnapshotResult> {
+  return request<RestoreSnapshotResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/snapshots/${encodeURIComponent(deployId)}/restore`,
+    {
+      method: 'POST',
+      headers: { 'X-Intent-Token': intentToken },
+      body: JSON.stringify({ confirm: true }),
+    },
+  )
+}

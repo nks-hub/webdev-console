@@ -153,13 +153,16 @@
                   {{ formatBytes(row.sizeBytes) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="100" align="right">
-                <template #default>
+              <el-table-column label="Actions" width="120" align="right">
+                <template #default="{ row }">
                   <el-button
                     size="small"
                     text
-                    aria-label="Restore snapshot (coming in Phase 6.3)"
-                    @click="onRestoreSnapshot"
+                    type="danger"
+                    :loading="restoringId === row.id"
+                    :disabled="restoringId !== null && restoringId !== row.id"
+                    aria-label="Restore this snapshot (overwrites live data)"
+                    @click="onRestoreSnapshot(row)"
                   >
                     Restore
                   </el-button>
@@ -663,7 +666,13 @@ import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
-import { fetchDeploySnapshots, defaultDeploySettings } from '../../api/deploy'
+import {
+  fetchDeploySnapshots,
+  defaultDeploySettings,
+  createDeployIntent,
+  confirmDeployIntent,
+  restoreSnapshot,
+} from '../../api/deploy'
 import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings } from '../../api/deploy'
 
 const props = defineProps<{ domain: string }>()
@@ -675,6 +684,10 @@ const activeSection = ref('hosts')
 // Deep-reactive local copy that we mutate freely; saved explicitly.
 const settings = reactive<DeploySettings>(defaultDeploySettings())
 const snapshots = ref<DeploySnapshotEntry[]>([])
+// In-flight restore deployId — disables the OTHER snapshots' Restore
+// buttons while one is running so the user can't double-fire the
+// destructive flow against a different row mid-restore.
+const restoringId = ref<string | null>(null)
 
 // Stable IDs for label/input associations (WCAG 1.3.1)
 const ids = {
@@ -876,8 +889,58 @@ function removeEnvVar(key: string): void {
 
 // ── Snapshots ─────────────────────────────────────────────────────────────────
 
-function onRestoreSnapshot(): void {
-  ElMessage.info('Snapshot restore coming in Phase 6.3')
+/**
+ * Phase 6.4 — operator-driven snapshot restore. Confirm via type-to-match
+ * dialog (mirrors the destructive-deploy modal pattern), mint+confirm an
+ * intent token, POST to the daemon's restore endpoint with the X-Intent-Token
+ * header. Refreshes the snapshot list afterwards in case the safety .bak
+ * created by the SQLite restore mode shows up as a new entry.
+ */
+async function onRestoreSnapshot(snapshot: DeploySnapshotEntry): Promise<void> {
+  if (restoringId.value !== null) return
+  // Type-to-confirm so a stray click can't fire the destructive flow.
+  // The deployId short-form is enough to cross-reference with the
+  // archive path the daemon shows in error messages.
+  const shortId = snapshot.id.slice(0, 8)
+  try {
+    await ElMessageBox.prompt(
+      `Type "${shortId}" to confirm restore. This will OVERWRITE the live database for ${props.domain} ` +
+        `with the snapshot taken at ${formatDate(snapshot.createdAt)}. ` +
+        `SQLite restores create a .bak safety copy; SQL restores do NOT — make sure you have a separate backup.`,
+      'Restore database snapshot',
+      {
+        confirmButtonText: 'Restore',
+        confirmButtonClass: 'el-button--danger',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+        inputPattern: new RegExp(`^${shortId}$`),
+        inputErrorMessage: `Type exactly "${shortId}" to enable Restore`,
+      },
+    )
+  } catch {
+    return // user cancelled
+  }
+
+  restoringId.value = snapshot.id
+  try {
+    // Restore intent uses the synthetic host marker matching the daemon's
+    // CheckIntentAsync — see NksDeployRoutes.PostSnapshotRestore.
+    const intent = await createDeployIntent(props.domain, '*restore*', 'restore')
+    await confirmDeployIntent(intent.intentId)
+    const result = await restoreSnapshot(props.domain, snapshot.id, intent.intentToken)
+    ElMessage.success(
+      `Restore ok (${result.mode}, ${formatBytes(result.bytesProcessed)} in ${result.durationMs} ms)`,
+    )
+    // Refresh — SQLite restore creates a new .bak that may show up if
+    // the daemon ever lists those, and the user wants visual feedback
+    // that the restore landed.
+    snapshots.value = await fetchDeploySnapshots(props.domain)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(`Restore failed: ${msg}`)
+  } finally {
+    restoringId.value = null
+  }
 }
 
 // ── Formatters ────────────────────────────────────────────────────────────────
