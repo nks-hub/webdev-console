@@ -1212,10 +1212,12 @@
       "target": "Cíl",
       "grantedAt": "Uděleno",
       "expires": "Vyprší",
+      "cooldown": "Cooldown",
       "matchCount": "Použito",
       "note": "Poznámka",
       "actions": "Akce"
     },
+    "cooldownActiveTooltip": "Toto oprávnění je v cooldownu — další matche budou padat do banneru, dokud cooldown neuplyne.",
     "matches": {
       "none": "nikdy",
       "justNow": "právě teď",

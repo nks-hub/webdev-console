@@ -172,6 +172,19 @@
           <el-tag v-else type="warning" size="small">{{ t('mcpGrants.permanent') }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column v-if="hasAnyCooldown" prop="minCooldownSeconds"
+        :label="t('mcpGrants.col.cooldown')" width="130" sortable>
+        <template #default="{ row }">
+          <span v-if="(row.minCooldownSeconds ?? 0) === 0" class="muted">—</span>
+          <template v-else>
+            <code class="mono">{{ formatCooldown(row.minCooldownSeconds) }}</code>
+            <span v-if="cooldownActiveSec(row) > 0" class="cooldown-badge"
+              :title="t('mcpGrants.cooldownActiveTooltip')">
+              ⏸ {{ formatCooldown(cooldownActiveSec(row)) }}
+            </span>
+          </template>
+        </template>
+      </el-table-column>
       <el-table-column prop="matchCount" :label="t('mcpGrants.col.matchCount')" width="140" sortable>
         <template #default="{ row }">
           <el-tag v-if="isDeadweight(row)" type="warning" size="small" effect="dark"
@@ -791,6 +804,32 @@ function formatExpiresIn(iso: string): string {
   if (s < 3600) return t('mcpGrants.expiresIn.minutes', { n: Math.floor(s / 60) })
   return t('mcpGrants.expiresIn.hours', { n: Math.floor(s / 3600) })
 }
+
+// Phase 7.5+++ — cooldown column visibility + value formatters. The
+// column auto-hides when zero grants have a cooldown configured so
+// single-AI installs don't see clutter. Active cooldown countdown
+// reads `lastMatchedAt + cooldown - now` per row.
+const hasAnyCooldown = computed(() =>
+  grants.value.some((g) => (g.minCooldownSeconds ?? 0) > 0))
+
+function formatCooldown(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds))
+  if (s < 60) return `${s} s`
+  if (s < 3600) return `${Math.floor(s / 60)} min`
+  if (s < 86400) return `${Math.floor(s / 3600)} h`
+  return `${Math.floor(s / 86400)} d`
+}
+
+function cooldownActiveSec(g: McpGrantRow): number {
+  const cd = g.minCooldownSeconds ?? 0
+  if (cd <= 0 || !g.lastMatchedAt) return 0
+  try {
+    const last = new Date(g.lastMatchedAt).getTime()
+    if (!Number.isFinite(last)) return 0
+    const remainMs = (last + cd * 1000) - Date.now()
+    return remainMs > 0 ? Math.ceil(remainMs / 1000) : 0
+  } catch { return 0 }
+}
 </script>
 
 <style scoped>
@@ -825,6 +864,16 @@ function formatExpiresIn(iso: string): string {
   border: 1px solid var(--el-color-warning-light-5);
   border-radius: 3px;
   color: var(--el-color-warning-dark-2);
+}
+.cooldown-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  background: var(--el-color-info-light-9);
+  border: 1px solid var(--el-color-info-light-5);
+  border-radius: 3px;
+  color: var(--el-color-info-dark-2);
 }
 .test-match-result {
   margin-top: 12px; padding: 8px 12px; border-radius: 4px;

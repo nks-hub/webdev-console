@@ -1212,10 +1212,12 @@
       "target": "Target",
       "grantedAt": "Granted at",
       "expires": "Expires",
+      "cooldown": "Cooldown",
       "matchCount": "Matched",
       "note": "Note",
       "actions": "Actions"
     },
+    "cooldownActiveTooltip": "This grant is in cooldown — subsequent matches fall back to the banner until the cooldown elapses.",
     "matches": {
       "none": "never",
       "justNow": "just now",
