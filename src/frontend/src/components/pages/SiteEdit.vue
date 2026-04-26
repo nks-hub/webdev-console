@@ -360,6 +360,21 @@
           </div>
         </el-tab-pane>
 
+        <!-- ── Deploy ──────────────────────────────
+             Inserted BEFORE <PluginSlot> for stable ordering (per v2 audit
+             ui-ux fix #2). The Deploy tab is a 1st-class wdc capability via
+             the NksDeploy plugin (registered through IDeployBackend); the
+             tab itself ships with the app rather than being a plugin
+             contribution to keep its placement deterministic. -->
+        <el-tab-pane v-if="uiMode.isAdvanced" name="deploy">
+          <template #label>
+            <span class="tab-label"><el-icon><Upload /></el-icon> Deploy</span>
+          </template>
+          <div class="tab-content">
+            <DeploySiteTab :domain="domain" />
+          </div>
+        </el-tab-pane>
+
         <!-- F91.6: plugin-contributed tabs (SSL, Cloudflare, Composer, …).
              Each plugin's UiContribution(slot="site-edit-tabs") renders as
              its own <el-tab-pane> with label/content the plugin supplies.
@@ -613,8 +628,9 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
   FolderOpened, Check, Search, Link, DataLine, Refresh, Grid,
-  InfoFilled,
+  InfoFilled, Upload,
 } from '@element-plus/icons-vue'
+import DeploySiteTab from '../deploy/DeploySiteTab.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'

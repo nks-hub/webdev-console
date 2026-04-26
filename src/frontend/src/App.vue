@@ -43,6 +43,13 @@
     <CommandPalette ref="commandPalette" />
     <OnboardingWizard />
 
+    <!-- Persistent right-side deploy drawer. Mounted at the app shell so a
+         long-running deploy survives navigation between sites — clicking
+         away to the Sites list keeps the drawer visible. Bound to the
+         deploy store's activeRun: the drawer auto-opens when a deploy
+         starts and the user can close it manually. -->
+    <DeployRunDrawer />
+
     <!-- Splash overlay shown until the daemon answers for the first time.
          Distinguishes "backend still booting" from "runtime offline".
          Phase + elapsed-time + error-kind come from daemonStore telemetry
@@ -74,13 +81,16 @@ import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
 import OnboardingWizard from './components/shared/OnboardingWizard.vue'
+import DeployRunDrawer from './components/deploy/DeployRunDrawer.vue'
 import { useDaemonStore } from './stores/daemon'
 import { useUpdatesStore } from './stores/updates'
 import { usePluginsStore } from './stores/plugins'
 import { useSitesStore } from './stores/sites'
 import { useThemeStore } from './stores/theme'
 import { useAuthStore } from './stores/auth'
-import { fetchSettings } from './api/daemon'
+import { useDeployStore } from './stores/deploy'
+import { fetchSettings, subscribeEventsMap } from './api/daemon'
+import type { DeployEventDto } from './api/deploy'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,7 +103,23 @@ watch(() => route.path, () => { drawerOpen.value = false })
 const pluginsStore = usePluginsStore()
 const sitesStore = useSitesStore()
 const authStore = useAuthStore()
+const deployStore = useDeployStore()
 useThemeStore()
+
+// Single SSE subscription that fans the daemon's "deploy:event" channel
+// into the deploy store. Reuses the multiplex refactor (subscribeEventsMap)
+// added earlier on this branch — adding new event types here is the
+// supported extension point for future plugin-emitted events.
+let unsubscribeDeploy: (() => void) | null = null
+function startDeploySse(): void {
+  if (unsubscribeDeploy) return
+  unsubscribeDeploy = subscribeEventsMap({
+    'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
+  })
+}
+function stopDeploySse(): void {
+  if (unsubscribeDeploy) { unsubscribeDeploy(); unsubscribeDeploy = null }
+}
 
 // F91.11: pull the authoritative SSO profile the moment the daemon is
 // reachable. Without this the "Signed in as {email}" label only appeared
@@ -234,12 +260,17 @@ onMounted(() => {
   // Cheap — 1s setInterval, stopped on unmount.
   splashTimer = setInterval(() => { nowTs.value = Date.now() }, 1000)
 
+  // Subscribe to deploy SSE channel — single subscription for the whole app
+  // life, drives the persistent <DeployRunDrawer>.
+  startDeploySse()
+
   window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   daemonStore.stopPolling()
   unsubscribeConnect?.()
+  stopDeploySse()
   if (splashTimer) { clearInterval(splashTimer); splashTimer = null }
   window.removeEventListener('keydown', handleKeydown)
 })
