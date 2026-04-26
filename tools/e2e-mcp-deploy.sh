@@ -395,6 +395,57 @@ step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pe
 [ -n "$INTENT_X_ID" ] && api POST /api/mcp/intents/$INTENT_X_ID/revoke >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== V. rollback / cancel / groups stubs ===${END}"
+# ============================================================================
+# Frontend api/deploy.ts has rollbackDeploy, cancelDeploy, fetchDeployGroups,
+# startDeployGroup, rollbackDeployGroup. All previously 404'd. Now stubbed.
+
+# Setup: create a queued deploy that we'll cancel before it completes.
+# State machine takes ~600ms so cancel must beat the timer.
+TO_CANCEL=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+TC_ID=$(echo "$TO_CANCEL" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+# Cancel immediately (within first 150ms before status='running' transition)
+CANCEL_RESP=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/$TC_ID")
+# Note: race may make cancel fail if state machine already past PONR. Either
+# 'cancelled' status or 'past_point_of_no_return' is acceptable.
+step "cancel returns either cancelled or PONR error" "$CANCEL_RESP" '("status":"cancelled"|"past_point_of_no_return")'
+
+# Setup: deploy → wait → rollback
+SETUP_DEPLOY=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+SD_ID=$(echo "$SETUP_DEPLOY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+sleep 2
+RB_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploys/$SD_ID/rollback)
+step "rollback returns sourceDeployId + status=rolled_back" "$RB_RESP" "\"sourceDeployId\":\"$SD_ID\".*\"status\":\"rolled_back\""
+# Source row should now show finalPhase=RolledBack
+SRC_AFTER=$(api GET /api/nks.wdc.deploy/sites/blog.loc/deploys/$SD_ID)
+step "source deploy now reports RolledBack phase" "$SRC_AFTER" '"finalPhase":"RolledBack"'
+
+# Rollback non-existent
+RB_404=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/no-such/rollback")
+step "rollback non-existent → 404" "$RB_404" 'deploy_not_found.*404'
+
+# Groups list (empty stub)
+GRP_LIST=$(api GET /api/nks.wdc.deploy/sites/blog.loc/groups)
+step "groups list returns count + entries envelope" "$GRP_LIST" '"count":0.*"entries":\[\]'
+
+# Group start with too few hosts → 400
+GRP_BAD=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"hosts":["production"],"options":{}}' "$BASE/api/nks.wdc.deploy/sites/blog.loc/groups")
+step "group start with 1 host rejected (need ≥2)" "$GRP_BAD" 'groups_require_2_or_more_hosts.*400'
+
+# Group start with 3 hosts succeeds
+GRP_OK=$(api POST /api/nks.wdc.deploy/sites/blog.loc/groups -d '{"hosts":["production","staging","canary"],"options":{}}')
+GRP_ID=$(echo "$GRP_OK" | python3 -c "import sys,json; print(json.load(sys.stdin).get('groupId',''))")
+step "group start with 3 hosts returns groupId" "$GRP_OK" '"hostCount":3'
+step "group start returns idempotencyKey" "$GRP_OK" '"idempotencyKey":"'
+
+# Cascade rollback
+GRP_RB=$(api POST /api/nks.wdc.deploy/sites/blog.loc/groups/$GRP_ID/rollback -d '{}')
+step "group cascade rollback returns rolled_back" "$GRP_RB" '"status":"rolled_back"'
+
+# ============================================================================
 echo ""; echo "${YEL}=== U. on-demand snapshot-now (DeploySettingsPanel button) ===${END}"
 # ============================================================================
 SN_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/snapshot-now -d '{}')

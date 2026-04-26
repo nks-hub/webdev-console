@@ -1642,6 +1642,102 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     });
 });
 
+// Phase 7.5+ — rollback a deploy. POST /sites/{domain}/deploys/{deployId}/rollback.
+// Dummy backend: insert a fresh row with status='completed', backend_id='dummy-rollback',
+// triggered_by='gui', linking to source via release_id naming.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback", async (
+    string domain, string deployId,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    CancellationToken ct) =>
+{
+    var source = await runs.GetByIdAsync(deployId, ct);
+    if (source is null || !string.Equals(source.Domain, domain, StringComparison.OrdinalIgnoreCase))
+        return Results.NotFound(new { error = "deploy_not_found", deployId });
+
+    var rollbackId = Guid.NewGuid().ToString("D");
+    var now = DateTimeOffset.UtcNow;
+    await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
+        Id: rollbackId, Domain: domain, Host: source.Host,
+        ReleaseId: now.ToString("yyyyMMdd_HHmmss") + "-rollback-of-" + deployId[..8],
+        Branch: source.Branch, CommitSha: source.CommitSha,
+        Status: "completed", IsPastPonr: true,
+        StartedAt: now, CompletedAt: now,
+        ExitCode: 0, ErrorMessage: null, DurationMs: 50,
+        TriggeredBy: "gui", BackendId: "dummy-rollback",
+        CreatedAt: now, UpdatedAt: now), ct);
+    // Mark the source as rolled-back so the UI tag flips.
+    await runs.UpdateStatusAsync(deployId, "rolled_back", ct);
+
+    await eventsBus.BroadcastAsync("deploy:complete", new
+    {
+        deployId = rollbackId, success = true, sourceDeployId = deployId, kind = "rollback"
+    });
+    return Results.Ok(new { sourceDeployId = deployId, status = "rolled_back" });
+});
+
+// DELETE /sites/{domain}/deploys/{deployId} — cancel an in-flight deploy.
+// Dummy: only allows cancel when status is queued/running and not past PONR.
+app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
+    string domain, string deployId,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    CancellationToken ct) =>
+{
+    var row = await runs.GetByIdAsync(deployId, ct);
+    if (row is null || !string.Equals(row.Domain, domain, StringComparison.OrdinalIgnoreCase))
+        return Results.NotFound(new { error = "deploy_not_found", deployId });
+    if (row.IsPastPonr)
+        return Results.Conflict(new { error = "past_point_of_no_return", detail = "Use rollback instead" });
+    if (row.Status is "completed" or "failed" or "cancelled" or "rolled_back")
+        return Results.Conflict(new { error = "deploy_already_terminal", currentStatus = row.Status });
+
+    await runs.MarkCompletedAsync(deployId, success: false, exitCode: -1,
+        errorMessage: "cancelled by operator", durationMs: 0, ct);
+    await runs.UpdateStatusAsync(deployId, "cancelled", ct);
+    await eventsBus.BroadcastAsync("deploy:complete",
+        new { deployId, success = false, error = "cancelled" });
+    return Results.Ok(new { deployId, status = "cancelled" });
+});
+
+// GET /sites/{domain}/groups — list multi-host deploy groups for site.
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", (string domain, int? limit) =>
+{
+    // Stub: empty list. Real backend would query deploy_groups table.
+    return Results.Ok(new
+    {
+        domain, count = 0,
+        entries = Array.Empty<object>(),
+    });
+});
+
+// POST /sites/{domain}/groups — start a multi-host deploy group.
+// Stub: returns a fake groupId + idempotencyKey + hostCount echoed back.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
+    string domain, HttpContext ctx, CancellationToken ct) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    var hosts = root.TryGetProperty("hosts", out var hEl) && hEl.ValueKind == System.Text.Json.JsonValueKind.Array
+        ? hEl.EnumerateArray().Select(h => h.GetString() ?? "").Where(s => s.Length > 0).ToList()
+        : new List<string>();
+    if (hosts.Count < 2)
+        return Results.BadRequest(new { error = "groups_require_2_or_more_hosts", got = hosts.Count });
+    var groupId = Guid.NewGuid().ToString("D");
+    return Results.Ok(new
+    {
+        groupId,
+        idempotencyKey = Guid.NewGuid().ToString("D"),
+        hostCount = hosts.Count,
+        note = "dummy backend — Phase 7.5+ stub (no actual fan-out)",
+    });
+});
+
+// POST /sites/{domain}/groups/{groupId}/rollback — cascade rollback every committed host.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback",
+    (string domain, string groupId) =>
+        Results.Ok(new { groupId, status = "rolled_back", note = "dummy stub" }));
+
 // Phase 7.5+ — on-demand snapshot WITHOUT a deploy. Frontend's
 // "Snapshot database now" button in DeploySettingsPanel hits this.
 // Real backend would actually run pg_dump / mysqldump; the dummy
