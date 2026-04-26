@@ -46,6 +46,45 @@ api() {
     curl -s -X "$method" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@" "$BASE$path"
 }
 
+# Phase 7.5+++ — REAL deploy: helper builds the localPaths body. Real
+# git repos at C:\work\sites\{blog.loc,shop.loc} get copied into release
+# dirs under C:\work\deploy-targets\{blog.loc,shop.loc}\releases\<id>.
+# Extra fields (host, branch, snapshot, intentToken) are merged in.
+# Usage: deploy_body blog.loc '{"host":"production"}'
+deploy_body() {
+    local domain="$1"; local extra="${2:-{\}}"
+    DEPLOY_DOMAIN="$domain" DEPLOY_EXTRA="$extra" python3 -c "
+import json, os
+extra = json.loads(os.environ['DEPLOY_EXTRA'])
+domain = os.environ['DEPLOY_DOMAIN']
+body = {**extra, 'localPaths': {
+    'source': r'C:\\work\\sites\\' + domain,
+    'target': r'C:\\work\\deploy-targets\\' + domain,
+}}
+print(json.dumps(body))
+"
+}
+fire_deploy() {
+    local domain="$1"; local extra="${2:-{\}}"
+    deploy_body "$domain" "$extra" > /c/temp/.deploy-body-$$.json
+    api POST "/api/nks.wdc.deploy/sites/$domain/deploy" --data-binary @/c/temp/.deploy-body-$$.json
+}
+# Variant that captures HTTP code (curl -w "%{http_code}") and supports
+# extra headers (e.g. -H 'X-Mcp-Session-Id: agent-X'). Pass extra
+# header arguments via 3rd arg as a single string; eval'd by curl.
+fire_deploy_w_code() {
+    local domain="$1"; local extra="${2:-{\}}"; local extra_headers="${3:-}"
+    deploy_body "$domain" "$extra" > /c/temp/.deploy-body-$$.json
+    eval "curl -s -w '%{http_code}' -X POST -H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json' $extra_headers --data-binary @/c/temp/.deploy-body-$$.json '$BASE/api/nks.wdc.deploy/sites/$domain/deploy'"
+}
+# Bash fragments to splice into hand-built JSON `-d` bodies for the
+# inline curl deploy calls. Single-quoted so backslashes are literal:
+# JSON sees "C:\\work\\..." (2 backslashes) → decodes to "C:\work\..."
+# When interpolated via ${LP_BLOG} inside a "..." bash string, bash
+# does NO further escape processing on the variable's content.
+LP_BLOG=',"localPaths":{"source":"C:\\work\\sites\\blog.loc","target":"C:\\work\\deploy-targets\\blog.loc"}'
+LP_SHOP=',"localPaths":{"source":"C:\\work\\sites\\shop.loc","target":"C:\\work\\deploy-targets\\shop.loc"}'
+
 # ============================================================================
 echo ""; echo "${YEL}=== A. preconditions ===${END}"
 # ============================================================================
@@ -145,7 +184,7 @@ step "GET snapshots blog.loc returns envelope" "$SNAP_BLOG" '"count":'
 # ============================================================================
 echo ""; echo "${YEL}=== G. dummy deploy fire on blog.loc (no intent — direct GUI flow) ===${END}"
 # ============================================================================
-DEPLOY_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+DEPLOY_RESP=$(fire_deploy blog.loc '{"host":"production","branch":"main"}')
 DEPLOY_ID=$(echo "$DEPLOY_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 step "POST deploy returns deployId"          "$DEPLOY_RESP" '"deployId":"'
 step "dummy backend starts queued (async)"   "$DEPLOY_RESP" '"status":"queued"'
@@ -165,7 +204,7 @@ step "deploy appears in blog.loc history" "$HIST_AFTER" "\"deployId\":\"$DEPLOY_
 # ============================================================================
 echo ""; echo "${YEL}=== H. dummy deploy fire on shop.loc ===${END}"
 # ============================================================================
-SHOP_DEPLOY=$(api POST /api/nks.wdc.deploy/sites/shop.loc/deploy -d '{"host":"staging","branch":"develop"}')
+SHOP_DEPLOY=$(fire_deploy shop.loc '{"host":"staging","branch":"develop"}')
 SHOP_ID=$(echo "$SHOP_DEPLOY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 step "shop.loc deploy returns deployId" "$SHOP_DEPLOY" '"deployId":"'
 SHOP_HIST=$(api GET /api/nks.wdc.deploy/sites/shop.loc/history)
@@ -182,7 +221,7 @@ step "intent-gated: mint OK" "$INTENT_GATED" '"intentToken":"'
 
 # Try fire deploy WITHOUT operator approval — should fail with pending_confirmation
 PEND=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "fire without approval → 425 pending_confirmation" "$PEND" 'pending_confirmation.*425'
 
@@ -191,7 +230,7 @@ api POST /api/mcp/intents/$GATED_ID/confirm >/dev/null
 
 # AI fires deploy WITH token — should accept
 FIRED=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "fire with approved token → 202" "$FIRED" '"status":"queued".*202'
 GATED_DEPLOY_ID=$(echo "$FIRED" | python3 -c "import sys; t=sys.stdin.read(); import re; m=re.search(r'\"deployId\":\"([a-f0-9-]+)\"',t); print(m.group(1) if m else '')")
@@ -204,7 +243,7 @@ step "intent-gated deploy triggered_by recorded" "$DONE" '"deployId":"'
 
 # Re-using same intent should fail (single-use enforced by validator)
 REPLAY=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "intent replay rejected (already_used)" "$REPLAY" 'already_used'
 
@@ -248,7 +287,7 @@ step "AI mints intent (with session header)" "$INTENT_AUTO" '"intentToken":"'
 # session header so the validator can see the caller identity.
 AUTO_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: $SESSION_ID" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$AUTO_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$AUTO_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "deploy fires without operator click (grant auto-confirms)" "$AUTO_FIRE" '"status":"queued".*202'
 
@@ -266,7 +305,7 @@ INTENT_OTHER=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Typ
 OTHER_TOKEN=$(echo "$INTENT_OTHER" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
 OTHER_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: different-ai-session" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$OTHER_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$OTHER_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "different session → grant doesn't apply → 425" "$OTHER_FIRE" 'pending_confirmation.*425'
 
@@ -389,7 +428,7 @@ INTENT_X_ID=$(echo "$INTENT_X" | python3 -c "import sys,json; print(json.load(sy
 
 X_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: $EXPIRED_SESSION" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_X_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_X_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pending_confirmation.*425'
 
@@ -405,7 +444,7 @@ echo ""; echo "${YEL}=== V. rollback / cancel / groups stubs ===${END}"
 
 # Setup: create a queued deploy that we'll cancel before it completes.
 # State machine takes ~600ms so cancel must beat the timer.
-TO_CANCEL=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+TO_CANCEL=$(fire_deploy blog.loc '{"host":"production","branch":"main"}')
 TC_ID=$(echo "$TO_CANCEL" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 # Cancel immediately (within first 150ms before status='running' transition)
 CANCEL_RESP=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
@@ -415,7 +454,7 @@ CANCEL_RESP=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
 step "cancel returns either cancelled or PONR error" "$CANCEL_RESP" '("status":"cancelled"|"past_point_of_no_return")'
 
 # Setup: deploy → wait → rollback
-SETUP_DEPLOY=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+SETUP_DEPLOY=$(fire_deploy blog.loc '{"host":"production","branch":"main"}')
 SD_ID=$(echo "$SETUP_DEPLOY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 sleep 2
 RB_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploys/$SD_ID/rollback)
@@ -494,7 +533,7 @@ echo ""; echo "${YEL}=== T. restore destructive op (kind=restore) ===${END}"
 # so a deploy token can't accidentally fire a restore.
 
 # 1. Create a snapshot via dummy deploy with snapshot:true
-SNAP_DEPLOY=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main","snapshot":true}')
+SNAP_DEPLOY=$(fire_deploy blog.loc '{"host":"production","branch":"main","snapshot":true}')
 SNAP_DEPLOY_ID=$(echo "$SNAP_DEPLOY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 step "snapshot-bearing deploy fired" "$SNAP_DEPLOY" '"deployId":"'
 sleep 1
@@ -544,7 +583,7 @@ step "deploy token can't fire restore (kind_mismatch)" "$RT_WRONG_KIND" 'kind_mi
 api POST /api/mcp/intents/$DR_ID/revoke >/dev/null
 
 # 8. Frontend route alias: /sites/{domain}/snapshots/{id}/restore + X-Intent-Token header
-SNAP_DEPLOY_2=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main","snapshot":true}')
+SNAP_DEPLOY_2=$(fire_deploy blog.loc '{"host":"production","branch":"main","snapshot":true}')
 SNAP_DEPLOY_2_ID=$(echo "$SNAP_DEPLOY_2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 sleep 1
 RESTORE_INTENT_2=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"restore","expiresIn":120}')
@@ -578,19 +617,19 @@ step "victim intent minted + confirmed" "$S_INTENT" '"intentToken":"'
 # Token format: {id}.{nonce}.{sig} — twiddle one char of sig
 TAMPERED_SIG=$(python3 -c "t='$S_TOKEN'; parts=t.split('.'); sig=parts[2]; flip='X' if sig[-1] != 'X' else 'Y'; parts[2]=sig[:-1]+flip; print('.'.join(parts))")
 T1=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$TAMPERED_SIG\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$TAMPERED_SIG\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "tampered signature → signature_mismatch" "$T1" 'signature_mismatch.*403'
 
 # Attack 2: domain mismatch — token for blog.loc fired against shop.loc
 T2=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$S_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$S_TOKEN\"}${LP_SHOP}" \
     "$BASE/api/nks.wdc.deploy/sites/shop.loc/deploy")
 step "domain mismatch (blog token on shop URL) → 403" "$T2" 'domain_mismatch.*403'
 
 # Attack 3: host mismatch — original was production, fire on staging
 T3=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"staging\",\"intentToken\":\"$S_TOKEN\"}" \
+    -d "{\"host\":\"staging\",\"intentToken\":\"$S_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "host mismatch (production token on staging) → 403" "$T3" 'host_mismatch.*403'
 
@@ -616,7 +655,7 @@ WK_TOKEN=$(echo "$WRONG_KIND_INTENT" | python3 -c "import sys,json; print(json.l
 WK_ID=$(echo "$WRONG_KIND_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
 api POST /api/mcp/intents/$WK_ID/confirm >/dev/null
 T6=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$WK_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$WK_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "wrong-kind token (rollback fired as deploy) → 403 kind_mismatch" "$T6" 'kind_mismatch.*403'
 
@@ -665,7 +704,7 @@ INTENT_R_ID=$(echo "$INTENT_R" | python3 -c "import sys,json; print(json.load(sy
 
 R_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: $REVOKED_SESSION" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_R_TOKEN\"}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_R_TOKEN\"}${LP_BLOG}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "revoked-grant session → fire still 425 pending_confirmation" "$R_FIRE" 'pending_confirmation.*425'
 
@@ -694,7 +733,7 @@ RESULTS_DIR=/c/temp/.e2e-race-out
 rm -rf "$RESULTS_DIR" && mkdir -p "$RESULTS_DIR"
 for i in 1 2 3 4 5; do
     (curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-        -d "{\"host\":\"production\",\"intentToken\":\"$RACE_TOKEN\"}" \
+        -d "{\"host\":\"production\",\"intentToken\":\"$RACE_TOKEN\"}${LP_BLOG}" \
         "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > "$RESULTS_DIR/r$i.json" 2>&1) &
 done
 wait
@@ -713,7 +752,7 @@ echo ""; echo "${YEL}=== O. snapshot list wired to real data ===${END}"
 # ============================================================================
 # Fire a deploy WITH snapshot:true → backend stamps PreDeployBackupPath
 # on the row → /snapshots projects it into a DeploySnapshotEntry.
-SNAP_FIRE=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main","snapshot":true}')
+SNAP_FIRE=$(fire_deploy blog.loc '{"host":"production","branch":"main","snapshot":true}')
 SNAP_DEPLOY_ID=$(echo "$SNAP_FIRE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 step "deploy with snapshot:true fired" "$SNAP_FIRE" '"deployId":"'
 
@@ -725,7 +764,7 @@ step "snapshot has sizeBytes > 0"              "$SNAPSHOTS" '"sizeBytes":[1-9][0
 step "snapshot has path under ~/.wdc/backups"  "$SNAPSHOTS" '"path":"~/\.wdc/backups/pre-deploy/blog\.loc/'
 
 # Deploy WITHOUT snapshot:true → stays out of the snapshots projection
-NOSNAP_FIRE=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production"}')
+NOSNAP_FIRE=$(fire_deploy blog.loc '{"host":"production"}')
 NOSNAP_ID=$(echo "$NOSNAP_FIRE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 SNAPSHOTS2=$(api GET /api/nks.wdc.deploy/sites/blog.loc/snapshots)
 # The new deploy id should NOT appear in snapshots (no PreDeployBackupPath set)
@@ -937,7 +976,7 @@ SSE_PID=$!
 sleep 1   # let subscriber attach
 
 # Fire a fresh deploy
-SSE_FIRE=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+SSE_FIRE=$(fire_deploy blog.loc '{"host":"production","branch":"main"}')
 SSE_DEPLOY_ID=$(echo "$SSE_FIRE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
 step "SSE-tracked deploy fired" "$SSE_FIRE" '"deployId":"'
 
