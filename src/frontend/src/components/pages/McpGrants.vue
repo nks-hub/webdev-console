@@ -295,6 +295,12 @@
             <el-radio value="24h">24 h</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item :label="t('mcpGrants.dialog.cooldown')">
+          <el-input-number v-model="form.minCooldownSeconds"
+            :min="0" :max="86400" controls-position="right" style="width: 130px" />
+          <span class="hint" style="margin-left: 8px">{{ t('mcpGrants.dialog.cooldownSuffix') }}</span>
+          <div class="hint" style="margin-top: 4px">{{ t('mcpGrants.dialog.cooldownHint') }}</div>
+        </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.note')">
           <el-input v-model="form.note" type="textarea" :rows="2" :placeholder="t('mcpGrants.dialog.notePlaceholder')" />
         </el-form-item>
@@ -539,6 +545,7 @@ const form = ref<{
   targetPattern: string
   expiryMode: 'permanent' | '30m' | '2h' | '24h'
   note: string
+  minCooldownSeconds: number
 }>({
   scopeType: 'session',
   scopeValue: '',
@@ -546,6 +553,7 @@ const form = ref<{
   targetPattern: '*',
   expiryMode: '30m',
   note: '',
+  minCooldownSeconds: 0,
 })
 
 const scopeValuePlaceholder = computed(() => {
@@ -704,6 +712,7 @@ async function submitCreate(): Promise<void> {
       expiresAt,
       grantedBy: 'gui-admin',
       note: form.value.note || undefined,
+      minCooldownSeconds: form.value.minCooldownSeconds || undefined,
     })
     ElMessage.success(t('mcpGrants.toastCreated'))
     createDialogOpen.value = false

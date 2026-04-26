@@ -1263,6 +1263,9 @@
       "targetPatternPlaceholder": "* | blog.loc | …",
       "expiry": "Platnost",
       "expiryPermanent": "Trvalá",
+      "cooldown": "Cooldown po matchi",
+      "cooldownSuffix": "sekund",
+      "cooldownHint": "Po každém matchi je oprávnění dormantní N sekund (rate-limit). 0 = bez cooldownu. Užitečné pro CI smyčky aby AI nedělala flood.",
       "note": "Poznámka",
       "notePlaceholder": "Proč toto oprávnění existuje (volitelné)",
       "create": "Vytvořit"

@@ -1543,7 +1543,9 @@ app.MapPost("/api/mcp/grants", async (
         ExpiresAt: body.ExpiresAt,
         GrantedBy: string.IsNullOrEmpty(body.GrantedBy) ? "gui" : body.GrantedBy,
         RevokedAt: null,
-        Note: body.Note);
+        Note: body.Note,
+        // Phase 7.5+++ — optional rate limit. Math.Max in repo clamps negatives.
+        MinCooldownSeconds: body.MinCooldownSeconds ?? 0);
 
     var id = await grants.InsertAsync(row, ct);
     // Phase 7.5+++ — broadcast lifecycle event so any open McpHub Grants
@@ -8822,7 +8824,8 @@ record GrantCreateBody(
     string? TargetPattern,
     string? ExpiresAt,
     string? GrantedBy,
-    string? Note);
+    string? Note,
+    int? MinCooldownSeconds);
 
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
 record ServiceConfigWriteRequest(string Path, string? Content);

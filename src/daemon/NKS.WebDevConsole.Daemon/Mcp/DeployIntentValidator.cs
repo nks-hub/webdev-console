@@ -158,6 +158,22 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
                     row.Kind,
                     row.Domain,
                     ct);
+                // Phase 7.5+++ — cooldown check. If the grant has a positive
+                // min_cooldown_seconds AND last_matched_at + cooldown is in
+                // the future, treat the grant as a non-match → falls back to
+                // GUI banner. Real safety knob for AI rate-limiting.
+                if (grant is not null && grant.MinCooldownSeconds > 0
+                    && !string.IsNullOrEmpty(grant.LastMatchedAt))
+                {
+                    if (DateTimeOffset.TryParse(grant.LastMatchedAt, out var lastMatched))
+                    {
+                        var cooldownUntil = lastMatched.AddSeconds(grant.MinCooldownSeconds);
+                        if (cooldownUntil > DateTimeOffset.UtcNow)
+                        {
+                            grant = null; // skip — cooldown active
+                        }
+                    }
+                }
                 grantedAuto = grant is not null;
                 // Phase 7.5+++ — bump match telemetry so operators can spot
                 // dead vs heavily-used grants. Best-effort; never blocks

@@ -31,7 +31,8 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "kind_pattern AS KindPattern, target_pattern AS TargetPattern, " +
             "granted_at AS GrantedAt, expires_at AS ExpiresAt, granted_by AS GrantedBy, " +
             "revoked_at AS RevokedAt, note AS Note, " +
-            "match_count AS MatchCount, last_matched_at AS LastMatchedAt " +
+            "match_count AS MatchCount, last_matched_at AS LastMatchedAt, " +
+            "min_cooldown_seconds AS MinCooldownSeconds " +
             "FROM mcp_session_grants " +
             "WHERE revoked_at IS NULL " +
             "  AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) " +
@@ -49,7 +50,8 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "kind_pattern AS KindPattern, target_pattern AS TargetPattern, " +
             "granted_at AS GrantedAt, expires_at AS ExpiresAt, granted_by AS GrantedBy, " +
             "revoked_at AS RevokedAt, note AS Note, " +
-            "match_count AS MatchCount, last_matched_at AS LastMatchedAt " +
+            "match_count AS MatchCount, last_matched_at AS LastMatchedAt, " +
+            "min_cooldown_seconds AS MinCooldownSeconds " +
             "FROM mcp_session_grants " +
             "ORDER BY granted_at DESC");
         return rows.Select(ToRecord).ToList();
@@ -63,9 +65,9 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
         await conn.ExecuteAsync(
             "INSERT INTO mcp_session_grants " +
             "(id, scope_type, scope_value, kind_pattern, target_pattern, " +
-            " granted_at, expires_at, granted_by, note) " +
+            " granted_at, expires_at, granted_by, note, min_cooldown_seconds) " +
             "VALUES (@Id, @ScopeType, @ScopeValue, @KindPattern, @TargetPattern, " +
-            " @GrantedAt, @ExpiresAt, @GrantedBy, @Note)",
+            " @GrantedAt, @ExpiresAt, @GrantedBy, @Note, @MinCooldownSeconds)",
             new
             {
                 Id = id,
@@ -79,6 +81,7 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
                 row.ExpiresAt,
                 row.GrantedBy,
                 row.Note,
+                MinCooldownSeconds = Math.Max(0, row.MinCooldownSeconds),
             });
         return id;
     }
@@ -132,7 +135,8 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "kind_pattern AS KindPattern, target_pattern AS TargetPattern, " +
             "granted_at AS GrantedAt, expires_at AS ExpiresAt, granted_by AS GrantedBy, " +
             "revoked_at AS RevokedAt, note AS Note, " +
-            "match_count AS MatchCount, last_matched_at AS LastMatchedAt " +
+            "match_count AS MatchCount, last_matched_at AS LastMatchedAt, " +
+            "min_cooldown_seconds AS MinCooldownSeconds " +
             "FROM mcp_session_grants " +
             "WHERE revoked_at IS NULL " +
             "  AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) " +
@@ -172,7 +176,7 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
     private static McpSessionGrantRow ToRecord(RawRow r) => new(
         r.Id, r.ScopeType, r.ScopeValue, r.KindPattern, r.TargetPattern,
         r.GrantedAt, r.ExpiresAt, r.GrantedBy, r.RevokedAt, r.Note,
-        r.MatchCount, r.LastMatchedAt);
+        r.MatchCount, r.LastMatchedAt, r.MinCooldownSeconds);
 
     /// <summary>Internal Dapper row.</summary>
     private sealed class RawRow
@@ -189,5 +193,6 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
         public string? Note { get; set; }
         public int MatchCount { get; set; }
         public string? LastMatchedAt { get; set; }
+        public int MinCooldownSeconds { get; set; }
     }
 }

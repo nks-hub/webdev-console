@@ -242,6 +242,9 @@ export interface McpGrantRow {
   // means the grant has never auto-confirmed an intent.
   matchCount?: number
   lastMatchedAt?: string | null
+  // Phase 7.5+++ — rate limit. 0 = no cooldown (default behaviour).
+  // After a match, validator skips this grant for N seconds.
+  minCooldownSeconds?: number
 }
 
 export interface McpGrantCreateBody {
@@ -252,6 +255,8 @@ export interface McpGrantCreateBody {
   expiresAt?: string | null
   grantedBy?: string
   note?: string
+  // Phase 7.5+++ — optional rate limit. 0 = no cooldown.
+  minCooldownSeconds?: number
 }
 
 export const listMcpGrants = (

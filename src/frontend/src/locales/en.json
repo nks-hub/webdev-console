@@ -1263,6 +1263,9 @@
       "targetPatternPlaceholder": "* | blog.loc | …",
       "expiry": "Expiry",
       "expiryPermanent": "Permanent",
+      "cooldown": "Cooldown after match",
+      "cooldownSuffix": "seconds",
+      "cooldownHint": "After each match this grant is dormant for N seconds (rate-limit). 0 = no cooldown. Useful for CI loops to keep AI from flooding destructive ops.",
       "note": "Note",
       "notePlaceholder": "Why this grant exists (free-form, optional)",
       "create": "Create grant"

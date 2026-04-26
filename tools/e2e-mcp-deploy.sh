@@ -956,6 +956,62 @@ step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:comple
 step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
 
 # ============================================================================
+echo ""; echo "${YEL}=== FF. grant cooldown — rate-limited auto-approval ===${END}"
+# ============================================================================
+# Create an always-grant with a 5s cooldown, fire 2 deploys back-to-back via
+# MCP intent path. First should auto-confirm (matches grant), second should
+# fall back to pending_confirmation (cooldown active).
+python3 - <<EOF > /c/temp/.e2e-ff-grant.json
+import json
+print(json.dumps({
+    "scopeType": "always", "scopeValue": None,
+    "kindPattern": "deploy", "targetPattern": "shop.loc",
+    "expiresAt": None, "minCooldownSeconds": 5,
+    "note": "FF cooldown E2E"
+}))
+EOF
+FF_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ff-grant.json "$BASE/api/mcp/grants")
+FF_ID=$(echo "$FF_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "cooldown grant created"     "$FF_GR" '"status":"created"'
+
+# Verify grant list returns minCooldownSeconds
+FF_LIST=$(api GET /api/mcp/grants)
+step "grant list exposes minCooldownSeconds" "$FF_LIST" "\"id\":\"$FF_ID\".*\"minCooldownSeconds\":5"
+
+# Mint intent #1 + fire — should auto-confirm
+python3 - <<EOF > /c/temp/.e2e-ff-int.json
+import json
+print(json.dumps({"domain":"shop.loc","host":"production","kind":"deploy","expiresIn":120}))
+EOF
+FF_INT1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ff-int.json "$BASE/api/mcp/intents")
+FF_TOK1=$(echo "$FF_INT1" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+export FF_TOK1
+python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['FF_TOK1']}))" > /c/temp/.e2e-ff-deploy1.json
+FF_FIRE1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "X-Mcp-Session-Id: ff-cooldown-test" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ff-deploy1.json \
+    "$BASE/api/nks.wdc.deploy/sites/shop.loc/deploy")
+step "first deploy auto-confirmed via grant" "$FF_FIRE1" '"deployId":"'
+
+# Mint intent #2 immediately + fire — cooldown should kick in (425 pending_confirmation)
+sleep 1
+FF_INT2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ff-int.json "$BASE/api/mcp/intents")
+FF_TOK2=$(echo "$FF_INT2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+export FF_TOK2
+python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['FF_TOK2']}))" > /c/temp/.e2e-ff-deploy2.json
+FF_FIRE2=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "X-Mcp-Session-Id: ff-cooldown-test" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ff-deploy2.json \
+    "$BASE/api/nks.wdc.deploy/sites/shop.loc/deploy")
+step "second deploy blocked by cooldown (425)" "$FF_FIRE2" 'pending_confirmation.*425'
+
+# Cleanup
+api DELETE /api/mcp/grants/$FF_ID >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== EE. grants bulk import (round-trip with export) ===${END}"
 # ============================================================================
 # Build a 2-row envelope, POST to /import, verify imported=2 + skipped=0

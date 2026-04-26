@@ -55,7 +55,10 @@ public sealed class GrantSweeperTests : IDisposable
             " expires_at TEXT," +
             " revoked_at TEXT," +
             " granted_by TEXT," +
-            " note TEXT" +
+            " note TEXT," +
+            " match_count INTEGER NOT NULL DEFAULT 0," +
+            " last_matched_at TEXT," +
+            " min_cooldown_seconds INTEGER NOT NULL DEFAULT 0" +
             ")");
     }
 

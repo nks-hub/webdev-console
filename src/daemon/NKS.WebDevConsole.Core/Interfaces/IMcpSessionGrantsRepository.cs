@@ -96,4 +96,6 @@ public sealed record McpSessionGrantRow(
     // Phase 7.5+++ — telemetry. Both default to "never matched" so existing
     // consumers (tests, plugin SDK) compile without forced ctor changes.
     int MatchCount = 0,
-    string? LastMatchedAt = null);
+    string? LastMatchedAt = null,
+    // Phase 7.5+++ — rate limit (0 = no cooldown, current behavior).
+    int MinCooldownSeconds = 0);
