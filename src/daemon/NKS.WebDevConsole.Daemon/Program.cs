@@ -1642,6 +1642,42 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     });
 });
 
+// Phase 7.5+ — on-demand snapshot WITHOUT a deploy. Frontend's
+// "Snapshot database now" button in DeploySettingsPanel hits this.
+// Real backend would actually run pg_dump / mysqldump; the dummy
+// records a synthetic deploy_runs row tagged backend_id='manual-snapshot'
+// so it surfaces in the snapshot list (which projects rows with
+// non-null pre_deploy_backup_path) without needing an actual deploy.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
+    string domain,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
+{
+    var snapshotId = Guid.NewGuid().ToString("D");
+    var now = DateTimeOffset.UtcNow;
+    var fakePath = $"~/.wdc/backups/manual/{domain}/{snapshotId}.sql.gz";
+    long fakeSize = 1024 * 512; // 512 KB stub
+
+    await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
+        Id: snapshotId, Domain: domain, Host: "manual",
+        ReleaseId: now.ToString("yyyyMMdd_HHmmss") + "-manual",
+        Branch: null, CommitSha: null,
+        Status: "completed", IsPastPonr: false,
+        StartedAt: now, CompletedAt: now,
+        ExitCode: 0, ErrorMessage: null, DurationMs: 100,
+        TriggeredBy: "gui", BackendId: "manual-snapshot",
+        CreatedAt: now, UpdatedAt: now), ct);
+    await runs.UpdatePreDeployBackupAsync(snapshotId, fakePath, fakeSize, ct);
+
+    return Results.Ok(new
+    {
+        snapshotId, domain,
+        path = fakePath,
+        sizeBytes = fakeSize,
+        durationMs = 100L,
+    });
+});
+
 // Phase 7.5+ — restore a previous snapshot. The kind on the intent token
 // MUST be 'restore' (validator enforces) which the registry tags as
 // Destructive — banner uses the typed-host-name confirmation flow.

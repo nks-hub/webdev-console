@@ -18,6 +18,16 @@ RED=$'\033[31m'; GRN=$'\033[32m'; YEL=$'\033[33m'; END=$'\033[0m'
 TOKEN=$(powershell -Command "(Get-Content \$env:TEMP\nks-wdc-daemon.port)[1]" 2>/dev/null | tr -d '\r')
 BASE="http://localhost:17280"
 
+# Detect sqlite client + WDC db path early so any section can use them.
+SQLITE_BIN=""
+for cand in "$(which sqlite3 2>/dev/null)" \
+            "$HOME/.wdc/binaries/sqlite/sqlite3.exe" \
+            /c/Android/platform-tools/sqlite3.exe \
+            /c/Android/platform-tools/sqlite3; do
+    if [ -n "$cand" ] && [ -x "$cand" ]; then SQLITE_BIN="$cand"; break; fi
+done
+WDC_DB="$HOME/.wdc/data/state.db"
+
 step() {
     local name="$1"; local got="$2"; local want="$3"
     if echo "$got" | grep -qE "$want"; then
@@ -383,6 +393,26 @@ step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pe
 # Cleanup
 [ -n "$SHORT_ID" ] && api DELETE /api/mcp/grants/$SHORT_ID >/dev/null 2>&1
 [ -n "$INTENT_X_ID" ] && api POST /api/mcp/intents/$INTENT_X_ID/revoke >/dev/null
+
+# ============================================================================
+echo ""; echo "${YEL}=== U. on-demand snapshot-now (DeploySettingsPanel button) ===${END}"
+# ============================================================================
+SN_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/snapshot-now -d '{}')
+SN_ID=$(echo "$SN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('snapshotId',''))")
+step "snapshot-now returns snapshotId" "$SN_RESP" '"snapshotId":"'
+step "snapshot-now returns path under ~/.wdc/backups/manual" "$SN_RESP" '"path":"~/.wdc/backups/manual/blog.loc/'
+step "snapshot-now returns sizeBytes > 0" "$SN_RESP" '"sizeBytes":[1-9][0-9]*'
+
+# It must appear in the snapshot list immediately
+SN_LIST=$(api GET /api/nks.wdc.deploy/sites/blog.loc/snapshots)
+step "manual snapshot visible in /snapshots" "$SN_LIST" "\"id\":\"$SN_ID\""
+
+# And the run row carries backend_id='manual-snapshot' (queryable via deploy_runs SQL).
+# We assert via sqlite if available.
+if [ -n "$SQLITE_BIN" ] && [ -f "$WDC_DB" ]; then
+    BACKEND=$("$SQLITE_BIN" "$WDC_DB" "SELECT backend_id FROM deploy_runs WHERE id='$SN_ID'")
+    step "DB row backend_id='manual-snapshot'" "$BACKEND" '^manual-snapshot$'
+fi
 
 # ============================================================================
 echo ""; echo "${YEL}=== T. restore destructive op (kind=restore) ===${END}"
