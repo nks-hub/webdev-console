@@ -126,6 +126,13 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>();
 // pre-confirmation grant lookup.
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository,
     NKS.WebDevConsole.Daemon.Mcp.McpSessionGrantsRepository>();
+// Phase 7.4b — registry of destructive operation kinds plugins can mint
+// MCP intents for. Singleton because plugin OnLoad hooks contribute to
+// it and the GUI snapshots it. Seeded with the legacy core kinds
+// (deploy/rollback/cancel/restore) so existing flows keep working
+// before any plugin registers.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds,
+    NKS.WebDevConsole.Daemon.Mcp.DestructiveOperationKindsRegistry>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator,
     NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>();
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
@@ -1336,6 +1343,26 @@ static string ComputeIntentState(string? usedAt, string? confirmedAt, string exp
     if (string.IsNullOrEmpty(confirmedAt)) return "pending_confirmation";
     return "ready";
 }
+
+// Phase 7.4b — discover destructive op kinds plugins have registered.
+// MCP clients call this to know what kinds they can include in
+// /api/mcp/intents requests; the GUI shows it on the MCP Hub page so
+// operators see "what AI can do here". Read-only; bearer auth on /api/*
+// is sufficient gate.
+app.MapGet("/api/mcp/kinds", (
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kinds) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    var list = kinds.List().Select(k => new
+    {
+        id = k.Id,
+        label = k.Label,
+        pluginId = k.PluginId,
+        danger = k.Danger.ToString().ToLowerInvariant(),
+    }).ToList();
+    return Results.Ok(new { count = list.Count, entries = list });
+});
 
 // ============================================================================
 // Phase 7.3 — MCP grants CRUD. The grants table powers persistent trust:
