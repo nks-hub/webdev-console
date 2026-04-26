@@ -98,7 +98,12 @@ const open = computed(() => deployStore.isDrawerOpen)
 
 // Convert the rolling event list into a 16-row waterfall. Each known nksdeploy
 // step maps to one row; unmapped events stay logged in the raw pane only.
+// Ordering matches the deploy lifecycle so the waterfall reads top-down.
+// pre_deploy_backup runs FIRST when Snapshot.Include=true (Phase 6.2),
+// before any code touches the remote — keeping it at the top makes the
+// snapshot/code/health phases visually distinct.
 const KNOWN_STEPS: { key: string; label: string }[] = [
+  { key: 'pre_deploy_backup', label: 'pre-deploy DB snapshot' },
   { key: 'git_pull', label: 'git pull' },
   { key: 'composer_install', label: 'composer install' },
   { key: 'npm_build', label: 'npm/vite build' },
@@ -114,7 +119,6 @@ const KNOWN_STEPS: { key: string; label: string }[] = [
   { key: 'opcache_clear', label: 'opcache clear' },
   { key: 'health_check', label: 'health check' },
   { key: 'cleanup_releases', label: 'cleanup releases' },
-  { key: 'database_snapshot', label: 'db snapshot' },
 ]
 
 const ponrIdx = computed(() => KNOWN_STEPS.findIndex(s => s.key === 'symlink_switch'))
@@ -126,10 +130,22 @@ const stepStates = computed<Map<string, WaterfallStep['state']>>(() => {
     const k = ev.step.replace(/[:\-/]/g, '_')
     if (ev.step === 'deploy_complete') continue
     // Step lifecycle inferred from message + final terminal phase.
-    if (ev.message.includes('completed') || ev.message.includes('OK')) m.set(k, 'done')
-    else if (ev.message.includes('skipped')) m.set(k, 'skipped')
-    else if (ev.message.includes('failed') || ev.message.includes('error')) m.set(k, 'failed')
-    else m.set(k, 'running')
+    // Order matters: failed/error MUST be checked BEFORE done, because a
+    // failure message may also contain "completed" or "ok" as part of the
+    // larger context (e.g. "step completed with errors").
+    const msg = ev.message.toLowerCase()
+    if (msg.includes('failed') || msg.includes('error') || msg.includes('refused')) {
+      m.set(k, 'failed')
+    } else if (msg.includes('skipped')) {
+      m.set(k, 'skipped')
+    } else if (
+      msg.includes('completed') || msg.includes(' ok') || msg.startsWith('ok') ||
+      msg.includes('snapshot ok') || msg.includes('done')
+    ) {
+      m.set(k, 'done')
+    } else {
+      m.set(k, 'running')
+    }
   }
   return m
 })
