@@ -1230,6 +1230,9 @@
       "revokeAllDeadweightTitle": "Odvolat všechna deadweight oprávnění?",
       "revokeAllDeadweightConfirm": "Odvolat {n} oprávnění, která existují déle než {days} dní a nikdy se nezmatchovala? Záznamy zůstanou v auditu, ale budou označené jako odvolané."
     },
+    "scopeFilter": {
+      "placeholder": "Filtr typu rozsahu"
+    },
     "dialog": {
       "title": "Nové oprávnění",
       "scopeType": "Typ rozsahu",

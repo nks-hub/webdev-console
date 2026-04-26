@@ -1230,6 +1230,9 @@
       "revokeAllDeadweightTitle": "Revoke all deadweight grants?",
       "revokeAllDeadweightConfirm": "Revoke {n} grants that have existed for more than {days} days and never matched anything? Rows stay in the audit trail but are marked revoked."
     },
+    "scopeFilter": {
+      "placeholder": "Scope type filter"
+    },
     "dialog": {
       "title": "New trust grant",
       "scopeType": "Scope type",

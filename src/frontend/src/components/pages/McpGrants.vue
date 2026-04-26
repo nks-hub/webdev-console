@@ -36,6 +36,21 @@
           {{ t('mcpGrants.usage.deadweight') }} ({{ deadweightCount }})
         </el-radio-button>
       </el-radio-group>
+      <!-- Phase 7.5+++ — scope_type narrowing. Hidden when only one
+           scope type is present (common single-AI installs). Counts
+           computed from current grants list so they reflect reality. -->
+      <el-select
+        v-if="scopeTypeOptions.length > 1"
+        v-model="scopeTypeFilter"
+        clearable size="small"
+        :placeholder="t('mcpGrants.scopeFilter.placeholder')"
+        class="scope-filter"
+      >
+        <el-option v-for="opt in scopeTypeOptions" :key="opt.value"
+          :value="opt.value">
+          <span>{{ opt.value }} <span class="muted">({{ opt.count }})</span></span>
+        </el-option>
+      </el-select>
       <span v-if="deadweightCount > 0" class="muted hint">
         {{ t('mcpGrants.usage.deadweightHint', { days: DEADWEIGHT_AGE_DAYS }) }}
       </span>
@@ -342,11 +357,30 @@ const inUseCount = computed(() =>
 const deadweightCount = computed(() =>
   grants.value.filter(isDeadweight).length)
 
+// Phase 7.5+++ — scope_type filter (combines with usage tri-state).
+const scopeTypeFilter = ref<string | null>(null)
+
+const scopeTypeOptions = computed(() => {
+  const counts = new Map<string, number>()
+  for (const g of grants.value) {
+    counts.set(g.scopeType, (counts.get(g.scopeType) ?? 0) + 1)
+  }
+  // Stable order matching the Create dialog: session, api_key, instance, always.
+  const order = ['session', 'api_key', 'instance', 'always']
+  return order
+    .filter((s) => counts.has(s))
+    .map((value) => ({ value, count: counts.get(value) ?? 0 }))
+})
+
 const filteredGrants = computed<McpGrantRow[]>(() => {
+  let rows = grants.value
+  if (scopeTypeFilter.value) {
+    rows = rows.filter((g) => g.scopeType === scopeTypeFilter.value)
+  }
   switch (usageFilter.value) {
-    case 'inuse': return grants.value.filter((g) => (g.matchCount ?? 0) > 0)
-    case 'deadweight': return grants.value.filter(isDeadweight)
-    default: return grants.value
+    case 'inuse': return rows.filter((g) => (g.matchCount ?? 0) > 0)
+    case 'deadweight': return rows.filter(isDeadweight)
+    default: return rows
   }
 })
 
@@ -698,4 +732,5 @@ function formatExpiresIn(iso: string): string {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
 }
 .usage-toolbar .hint { font-size: 12px; }
+.scope-filter { width: 180px; }
 </style>
