@@ -619,7 +619,18 @@
       "snapshotsTitle": "Recent DB snapshots",
       "restoreTitle": "Restore this snapshot (overwrites live data)",
       "colCreated": "Created",
-      "colSize": "Size"
+      "colSize": "Size",
+      "switchEnabled": "Enabled",
+      "switchDisabled": "Disabled",
+      "detectionTitle": "SQLite detection: Coming in Phase 6.3",
+      "detectionBody": "MySQL / PostgreSQL support and automatic SQLite path detection will be surfaced here once the backend snapshot service is wired.",
+      "onDemandTitle": "On-demand snapshot",
+      "onDemandHint": "Take a database snapshot now without firing a deploy. Useful before manual schema migrations or ad-hoc DB operations.",
+      "snapshotNow": "Snapshot database now",
+      "recentTitle": "Recent snapshots",
+      "noneYet": "No snapshots recorded yet.",
+      "restore": "Restore",
+      "saveSettings": "Save snapshot settings"
     }
   },
   "deploy": {

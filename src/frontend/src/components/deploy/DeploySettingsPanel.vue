@@ -79,9 +79,9 @@
       </el-tab-pane>
 
       <!-- ── B: Snapshots ──────────────────────────────────────── -->
-      <el-tab-pane name="snapshots" label="DB Snapshot">
+      <el-tab-pane name="snapshots" :label="t('deploySettings.tabs.snapshots')">
         <div class="section-body">
-          <h3 class="section-title">Pre-deploy DB Snapshot</h3>
+          <h3 class="section-title">{{ t('deploySettings.snapshot.title') }}</h3>
 
           <el-form
             :model="settings.snapshot"
@@ -91,24 +91,23 @@
           >
             <el-form-item>
               <template #label>
-                <label :for="ids.snapshotEnabled">Snapshot DB before each deploy</label>
+                <label :for="ids.snapshotEnabled">{{ t('deploySettings.snapshot.enabled') }}</label>
               </template>
               <el-switch
                 :id="ids.snapshotEnabled"
                 v-model="settings.snapshot.enabled"
-                active-text="Enabled"
-                inactive-text="Disabled"
+                :active-text="t('deploySettings.snapshot.switchEnabled')"
+                :inactive-text="t('deploySettings.snapshot.switchDisabled')"
                 aria-describedby="snapshot-help"
               />
               <div id="snapshot-help" class="field-hint">
-                A database dump is created before the atomic symlink switch so you
-                can restore if a migration fails.
+                {{ t('deploySettings.snapshot.enabledHint') }}
               </div>
             </el-form-item>
 
             <el-form-item v-if="settings.snapshot.enabled">
               <template #label>
-                <label :for="ids.retentionDays">Retention days</label>
+                <label :for="ids.retentionDays">{{ t('deploySettings.snapshot.retentionDays') }}</label>
               </template>
               <el-input-number
                 :id="ids.retentionDays"
@@ -130,18 +129,16 @@
             class="snapshot-notice"
           >
             <template #title>
-              SQLite detection: Coming in Phase 6.3
+              {{ t('deploySettings.snapshot.detectionTitle') }}
             </template>
-            MySQL / PostgreSQL support and automatic SQLite path detection will be
-            surfaced here once the backend snapshot service is wired.
+            {{ t('deploySettings.snapshot.detectionBody') }}
           </el-alert>
 
           <!-- On-demand snapshot trigger -->
           <div class="subsection">
-            <div class="subsection-header">On-demand snapshot</div>
+            <div class="subsection-header">{{ t('deploySettings.snapshot.onDemandTitle') }}</div>
             <p class="muted">
-              Take a database snapshot now without firing a deploy. Useful
-              before manual schema migrations or ad-hoc DB operations.
+              {{ t('deploySettings.snapshot.onDemandHint') }}
             </p>
             <el-button
               type="primary"
@@ -149,28 +146,28 @@
               :disabled="restoringId !== null"
               @click="onSnapshotNow"
             >
-              Snapshot database now
+              {{ t('deploySettings.snapshot.snapshotNow') }}
             </el-button>
           </div>
 
           <!-- Recent snapshots -->
           <div class="subsection">
-            <div class="subsection-header">Recent snapshots</div>
+            <div class="subsection-header">{{ t('deploySettings.snapshot.recentTitle') }}</div>
             <div v-if="snapshots.length === 0" class="muted">
-              No snapshots recorded yet.
+              {{ t('deploySettings.snapshot.noneYet') }}
             </div>
-            <el-table v-else :data="snapshots" size="small" aria-label="Recent DB snapshots">
-              <el-table-column label="Created" min-width="160">
+            <el-table v-else :data="snapshots" size="small" :aria-label="t('deploySettings.snapshot.snapshotsTitle')">
+              <el-table-column :label="t('deploySettings.snapshot.colCreated')" min-width="160">
                 <template #default="{ row }">
                   {{ formatDate(row.createdAt) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Size" width="100">
+              <el-table-column :label="t('deploySettings.snapshot.colSize')" width="100">
                 <template #default="{ row }">
                   {{ formatBytes(row.sizeBytes) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="120" align="right">
+              <el-table-column :label="t('deploySettings.hosts.col.actions')" width="120" align="right">
                 <template #default="{ row }">
                   <el-button
                     size="small"
@@ -178,10 +175,10 @@
                     type="danger"
                     :loading="restoringId === row.id"
                     :disabled="(restoringId !== null && restoringId !== row.id) || snapshotting"
-                    aria-label="Restore this snapshot (overwrites live data)"
+                    :aria-label="t('deploySettings.snapshot.restoreTitle')"
                     @click="onRestoreSnapshot(row)"
                   >
-                    Restore
+                    {{ t('deploySettings.snapshot.restore') }}
                   </el-button>
                 </template>
               </el-table-column>
@@ -190,7 +187,7 @@
 
           <div class="section-footer">
             <el-button type="primary" :loading="saving" @click="saveSettings">
-              Save snapshot settings
+              {{ t('deploySettings.snapshot.saveSettings') }}
             </el-button>
           </div>
         </div>

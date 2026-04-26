@@ -619,7 +619,18 @@
       "snapshotsTitle": "Poslední DB snapshoty",
       "restoreTitle": "Obnovit tento snapshot (přepíše živá data)",
       "colCreated": "Vytvořeno",
-      "colSize": "Velikost"
+      "colSize": "Velikost",
+      "switchEnabled": "Zapnuto",
+      "switchDisabled": "Vypnuto",
+      "detectionTitle": "Detekce SQLite: připraveno ve fázi 6.3",
+      "detectionBody": "Podpora MySQL / PostgreSQL a automatická detekce cesty k SQLite se zde zobrazí, jakmile bude napojená backend snapshot služba.",
+      "onDemandTitle": "Snapshot na vyžádání",
+      "onDemandHint": "Vytvořit snapshot databáze hned bez spuštění deploye. Vhodné před ručními schema migracemi nebo ad-hoc operacemi na DB.",
+      "snapshotNow": "Vytvořit snapshot databáze",
+      "recentTitle": "Poslední snapshoty",
+      "noneYet": "Zatím nebyl uložen žádný snapshot.",
+      "restore": "Obnovit",
+      "saveSettings": "Uložit nastavení snapshotů"
     }
   },
   "deploy": {
