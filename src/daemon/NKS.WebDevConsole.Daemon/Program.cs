@@ -1188,6 +1188,7 @@ app.MapPost("/api/mcp/intents", async (
 app.MapPost("/api/mcp/intents/confirm-request", async (
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster,
+    NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
     NKS.WebDevConsole.Daemon.Data.Database db) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
@@ -1224,11 +1225,32 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
     }
     catch { /* best-effort; banner still renders without metadata */ }
 
+    // Phase 7.4c — enrich the SSE event with the human label + danger
+    // level the kind was registered with. The banner surfaces these so
+    // the operator sees "Restore database backup" instead of bare
+    // "restore", and gets visual escalation (red border + typed-host
+    // confirm) for kinds tagged Destructive. Falls back to the bare
+    // kind id when the registry doesn't know it (post-uninstall race
+    // or core-only bootstrap before any plugin contributed).
+    string? kindLabel = null;
+    string? kindDanger = null;
+    string? kindPluginId = null;
+    if (!string.IsNullOrEmpty(kind))
+    {
+        var registered = kindsRegistry.Get(kind);
+        if (registered is not null)
+        {
+            kindLabel = registered.Label;
+            kindDanger = registered.Danger.ToString().ToLowerInvariant();
+            kindPluginId = registered.PluginId;
+        }
+    }
+
     // Best-effort: the SSE bus is the GUI's notification channel. Failure
     // to broadcast (no subscribers, etc.) is not fatal — the AI can still
     // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
     await broadcaster.BroadcastAsync("mcp:confirm-request",
-        new { intentId, prompt, expiresAt, kind, domain, host });
+        new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host });
     return Results.Accepted();
 });
 

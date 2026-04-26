@@ -17,6 +17,7 @@
       v-for="(item, index) in store.list"
       :key="item.intentId"
       class="mcp-confirm-banner"
+      :class="{ 'mcp-confirm-banner--destructive': item.kindDanger === 'destructive' }"
       role="alert"
     >
       <div class="mcp-confirm-icon" aria-hidden="true">
@@ -25,7 +26,7 @@
       <div class="mcp-confirm-body">
         <div class="mcp-confirm-title">
           <i18n-t v-if="item.kind" keypath="mcp.banner.kindRequest" tag="span">
-            <template #kind><strong>{{ item.kind }}</strong></template>
+            <template #kind><strong>{{ item.kindLabel || item.kind }}</strong></template>
           </i18n-t>
           <span v-else>{{ t('mcp.banner.genericRequest') }}</span>
           <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span">
@@ -352,6 +353,14 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   /* Use a non-color signal too — WCAG 1.4.1 Use of Color */
+}
+/* Phase 7.4c — destructive kinds get a danger-colored border + heavier
+   left rule. The icon is already a Warning glyph so screen readers still
+   announce "warning"; only the visual treatment escalates here. */
+.mcp-confirm-banner--destructive {
+  background: var(--el-color-danger-light-9, #fef0f0);
+  border-color: var(--el-color-danger, #f56c6c);
+  border-left-width: 6px;
 }
 
 .mcp-confirm-icon {

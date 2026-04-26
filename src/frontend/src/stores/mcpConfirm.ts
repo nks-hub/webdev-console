@@ -27,8 +27,27 @@ export interface PendingConfirm {
    * an expired intent would surface a 403 from the validator anyway.
    */
   expiresAt?: string
-  /** Phase 6.14b — verb (deploy/rollback/cancel/restore) for the banner action label. */
-  kind?: 'deploy' | 'rollback' | 'cancel' | 'restore'
+  /**
+   * Phase 6.14b — wire-format kind id (deploy/rollback/cancel/restore
+   * or any plugin-registered id like "nksbackup:restore").
+   * Phase 7.4a opened this from a hardcoded enum to an open string.
+   */
+  kind?: string
+  /**
+   * Phase 7.4c — human-readable label registered for this kind in
+   * IDestructiveOperationKinds. Banner prefers this over the raw id.
+   * Null when the kind isn't (or is no longer) in the registry —
+   * banner falls back to the id.
+   */
+  kindLabel?: string
+  /**
+   * Phase 7.4c — danger level the kind was registered with
+   * ('reversible' | 'destructive'). Banner uses this to escalate
+   * visual treatment for destructive ops.
+   */
+  kindDanger?: 'reversible' | 'destructive'
+  /** Phase 7.4c — which plugin owns the kind ('core' for legacy seeded). */
+  kindPluginId?: string
   /** Phase 6.14b — target domain for clarity in the banner. */
   domain?: string
   /** Phase 6.14b — target host (or synthetic group/restore markers). */
@@ -48,7 +67,10 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
     intentId: string
     prompt?: string
     expiresAt?: string
-    kind?: 'deploy' | 'rollback' | 'cancel' | 'restore'
+    kind?: string
+    kindLabel?: string
+    kindDanger?: 'reversible' | 'destructive'
+    kindPluginId?: string
     domain?: string
     host?: string
   }): void {
@@ -61,6 +83,9 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
       receivedAt: Date.now(),
       expiresAt: payload.expiresAt,
       kind: payload.kind,
+      kindLabel: payload.kindLabel,
+      kindDanger: payload.kindDanger,
+      kindPluginId: payload.kindPluginId,
       domain: payload.domain,
       host: payload.host,
     })
