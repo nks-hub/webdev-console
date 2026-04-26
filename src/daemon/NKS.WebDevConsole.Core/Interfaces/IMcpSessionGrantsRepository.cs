@@ -1,0 +1,76 @@
+namespace NKS.WebDevConsole.Core.Interfaces;
+
+/// <summary>
+/// Phase 7.3 — read/write surface over the <c>mcp_session_grants</c> table.
+/// A grant is "I trust caller X to perform kind Y against target Z for the
+/// next N minutes (or forever)". The intent validator consults this repo
+/// BEFORE returning <c>pending_confirmation</c>; a matching active grant
+/// pre-stamps <c>confirmed_at</c> and the intent proceeds without the GUI
+/// banner. Grants are persisted across daemon restarts (SQLite) — that's
+/// the entire point versus the existing per-call <c>X-Allow-Unconfirmed</c>
+/// header, which has to be re-asserted on every request.
+///
+/// Cross-ALC safe: the row record uses primitive types only; no plugin
+/// type leaks across the boundary.
+/// </summary>
+public interface IMcpSessionGrantsRepository
+{
+    /// <summary>
+    /// List all currently-active grants (revoked_at IS NULL AND expires_at
+    /// is either NULL or in the future), newest first. Used by the GUI
+    /// "MCP Grants" page and the validator's pre-check.
+    /// </summary>
+    Task<IReadOnlyList<McpSessionGrantRow>> ListActiveAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Insert a new grant. The row gets a UUID v4 PK if <paramref name="id"/>
+    /// is null; the caller can pass an explicit id (e.g. when restoring from
+    /// backup) but normal flows leave it null.
+    /// </summary>
+    Task<string> InsertAsync(McpSessionGrantRow row, CancellationToken ct);
+
+    /// <summary>
+    /// Soft-revoke (stamps <c>revoked_at</c> = UTC now). Returns true if a
+    /// row was updated, false if the id was unknown or already revoked.
+    /// </summary>
+    Task<bool> RevokeAsync(string id, CancellationToken ct);
+
+    /// <summary>
+    /// Find the FIRST active grant that matches the calling context.
+    /// Match rules:
+    /// <list type="bullet">
+    ///   <item>scope_type='always' AND no scope_value → matches any caller</item>
+    ///   <item>scope_type='session' AND scope_value=<paramref name="sessionId"/></item>
+    ///   <item>scope_type='instance' AND scope_value=<paramref name="instanceId"/></item>
+    ///   <item>scope_type='api_key' AND scope_value=<paramref name="apiKeyId"/></item>
+    /// </list>
+    /// AND kind_pattern is '*' OR equals <paramref name="kind"/>
+    /// AND target_pattern is '*' OR equals <paramref name="target"/>
+    /// AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at &gt; now).
+    /// Returns null when no grant matches (validator falls back to GUI flow).
+    /// </summary>
+    Task<McpSessionGrantRow?> FindMatchingActiveAsync(
+        string? sessionId,
+        string? instanceId,
+        string? apiKeyId,
+        string kind,
+        string target,
+        CancellationToken ct);
+}
+
+/// <summary>
+/// One row of <c>mcp_session_grants</c>. Primitive-typed for cross-ALC
+/// safety. Timestamps are ISO-8601 UTC strings (matches the SQLite text
+/// representation used elsewhere in the schema).
+/// </summary>
+public sealed record McpSessionGrantRow(
+    string? Id,
+    string ScopeType,
+    string? ScopeValue,
+    string KindPattern,
+    string TargetPattern,
+    string GrantedAt,
+    string? ExpiresAt,
+    string GrantedBy,
+    string? RevokedAt,
+    string? Note);

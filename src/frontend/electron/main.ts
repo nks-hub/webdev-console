@@ -355,8 +355,15 @@ async function spawnDaemon() {
 
   if (isDev) {
     const projectDir = findDaemonProject()
-    log.info('[daemon] spawn (dev): dotnet run --project', projectDir)
-    daemon = spawn('dotnet', ['run', '--project', projectDir], {
+    // Dev mode: pass CiBuild=true so the daemon builds with app.ci.manifest
+    // (asInvoker, no requireAdministrator). Without this, `dotnet run`
+    // fails on Windows with "Požadovaná operace vyžaduje zvýšená oprávnění"
+    // because the prod manifest forces UAC and a non-elevated parent
+    // (`npm run dev`) can't satisfy that. Side effect: dev daemon cannot
+    // edit hosts/Apache, but UI iteration doesn't need that.
+    const dotnetArgs = ['run', '--project', projectDir, '-p:CiBuild=true']
+    log.info('[daemon] spawn (dev): dotnet', dotnetArgs.join(' '))
+    daemon = spawn('dotnet', dotnetArgs, {
       stdio: 'pipe',
       detached: false,
       env: daemonEnv,
