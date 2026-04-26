@@ -196,6 +196,93 @@ REPLAY=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H 
 step "intent replay rejected (already_used)" "$REPLAY" 'already_used'
 
 # ============================================================================
+echo ""; echo "${YEL}=== K. grant auto-confirms intent (NO operator click needed) ===${END}"
+# ============================================================================
+# This is the killer flow: AI presents X-Mcp-Session-Id header; operator
+# previously created a session-scoped grant for that id+kind+target;
+# subsequent intent fires immediately, banner never pops.
+
+SESSION_ID="ai-claude-$(date +%s)"
+
+# Operator pre-creates the grant (would normally be banner click "Trust 30 min")
+python3 - <<EOF > /c/temp/.e2e-autograntbody.json
+import json
+print(json.dumps({
+    "scopeType": "session",
+    "scopeValue": "$SESSION_ID",
+    "kindPattern": "deploy",
+    "targetPattern": "blog.loc",
+    "expiresAt": None,
+    "note": "E2E auto-confirm test",
+}))
+EOF
+GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-autograntbody.json "$BASE/api/mcp/grants")
+GR_ID=$(echo "$GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "operator pre-creates session grant" "$GR" '"status":"created"'
+
+# AI mints intent — note we send X-Mcp-Session-Id so the validator's
+# grant pre-check sees the caller identity.
+INTENT_AUTO=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $SESSION_ID" \
+    -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":120}' \
+    "$BASE/api/mcp/intents")
+AUTO_TOKEN=$(echo "$INTENT_AUTO" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+step "AI mints intent (with session header)" "$INTENT_AUTO" '"intentToken":"'
+
+# AI fires deploy WITHOUT manual confirm — grant pre-check should auto-stamp
+# confirmed_at and the deploy queues immediately. NOTE: still send the same
+# session header so the validator can see the caller identity.
+AUTO_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $SESSION_ID" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$AUTO_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "deploy fires without operator click (grant auto-confirms)" "$AUTO_FIRE" '"status":"queued".*202'
+
+# Wait for state machine
+sleep 2
+AUTO_DEPLOY_ID=$(echo "$AUTO_FIRE" | python3 -c "import sys; t=sys.stdin.read(); import re; m=re.search(r'\"deployId\":\"([a-f0-9-]+)\"',t); print(m.group(1) if m else '')")
+AUTO_DONE=$(api GET /api/nks.wdc.deploy/sites/blog.loc/deploys/$AUTO_DEPLOY_ID)
+step "auto-confirmed deploy completes" "$AUTO_DONE" '"finalPhase":"Done"'
+
+# Different session id → grant doesn't match → still needs confirm
+INTENT_OTHER=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: different-ai-session" \
+    -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":60}' \
+    "$BASE/api/mcp/intents")
+OTHER_TOKEN=$(echo "$INTENT_OTHER" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+OTHER_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: different-ai-session" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$OTHER_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "different session → grant doesn't apply → 425" "$OTHER_FIRE" 'pending_confirmation.*425'
+
+# Cleanup
+[ -n "$GR_ID" ] && api DELETE /api/mcp/grants/$GR_ID >/dev/null
+OTHER_ID=$(echo "$INTENT_OTHER" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+[ -n "$OTHER_ID" ] && api POST /api/mcp/intents/$OTHER_ID/revoke >/dev/null
+
+# ============================================================================
+echo ""; echo "${YEL}=== L. always-trust grant (no caller id needed) ===${END}"
+# ============================================================================
+# Operator gives "Always trust ANY caller for restore on shop.loc"
+ALWAYS_RESP=$(api POST /api/mcp/grants -d '{"scopeType":"always","scopeValue":null,"kindPattern":"restore","targetPattern":"shop.loc","note":"E2E always-trust"}')
+ALWAYS_ID=$(echo "$ALWAYS_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "always-trust grant created" "$ALWAYS_RESP" '"status":"created"'
+
+# Anonymous caller mints + fires restore on shop.loc — no session id at all.
+INTENT_ANON=$(api POST /api/mcp/intents -d '{"domain":"shop.loc","host":"production","kind":"restore","expiresIn":60}')
+ANON_TOKEN=$(echo "$INTENT_ANON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+ANON_ID=$(echo "$INTENT_ANON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+# We can't easily test always-grant via deploy POST because the deploy endpoint
+# only accepts kind='deploy'. But the validator pre-check is exercised by
+# unit tests + the fact that the lookup runs without identity headers when
+# scope='always'. Just verify the grant matches on list and revoke cleanly.
+step "always grant visible on list" "$(api GET /api/mcp/grants)" "\"id\":\"$ALWAYS_ID\""
+step "always grant revoke OK" "$(api DELETE /api/mcp/grants/$ALWAYS_ID)" '"status":"revoked"'
+[ -n "$ANON_ID" ] && api POST /api/mcp/intents/$ANON_ID/revoke >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== J. deploy.enabled gate ===${END}"
 # ============================================================================
 api PUT /api/settings -d '{"deploy.enabled":"false"}' >/dev/null
