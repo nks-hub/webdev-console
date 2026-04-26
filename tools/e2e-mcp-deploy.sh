@@ -827,6 +827,63 @@ SWEEP_RESP=$(api POST /api/mcp/grants/sweep-now)
 step "sweep-now returns 200 with deleted count" "$SWEEP_RESP" '"deleted":[0-9]'
 
 # ============================================================================
+echo ""; echo "${YEL}=== Z. grant match telemetry (match_count + last_matched_at) ===${END}"
+# ============================================================================
+# Migration 014 added two columns. Verify:
+#   1. listMcpGrants response carries them (defaults: 0 + null)
+#   2. After auto-confirm via grant, match_count bumps to 1
+#
+# We use scope_type=always so the validator picks the grant for any
+# caller. After firing one auto-confirmed deploy, the grant row should
+# show matchCount=1 and lastMatchedAt set.
+python3 - <<EOF > /c/temp/.e2e-z-grant.json
+import json
+print(json.dumps({
+    "scopeType": "always", "scopeValue": None,
+    "kindPattern": "deploy", "targetPattern": "blog.loc",
+    "expiresAt": None, "note": "telemetry test"
+}))
+EOF
+Z_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-z-grant.json "$BASE/api/mcp/grants")
+Z_ID=$(echo "$Z_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "telemetry test grant created" "$Z_GR" '"status":"created"'
+
+# Inspect default columns on a freshly-minted grant.
+Z_LIST_BEFORE=$(api GET /api/mcp/grants)
+step "fresh grant has matchCount=0 default" "$Z_LIST_BEFORE" "\"id\":\"$Z_ID\".*\"matchCount\":0"
+
+# Mint + auto-fire a deploy; the always-grant should auto-confirm it
+# and bump the telemetry counter.
+python3 - <<EOF > /c/temp/.e2e-z-intent.json
+import json
+print(json.dumps({"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":120}))
+EOF
+Z_INT=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-z-intent.json "$BASE/api/mcp/intents")
+Z_INT_TOKEN=$(echo "$Z_INT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+# Fire the deploy with the intent token in the BODY (daemon reads
+# intentToken from JSON body, not from a header). Caller identity
+# header lets the always-grant pre-check fire (HasAnyIdentity).
+export Z_INT_TOKEN
+python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['Z_INT_TOKEN']}))" > /c/temp/.e2e-z-deploy.json
+Z_FIRE=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "X-Mcp-Session-Id: e2e-z-test" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-z-deploy.json \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "deploy auto-confirmed via always-grant" "$Z_FIRE" '"deployId":"'
+
+# Give the validator's RecordMatchAsync a beat to commit (best-effort path).
+sleep 1
+Z_LIST_AFTER=$(api GET /api/mcp/grants)
+# matchCount should now be ≥1 (test grant matched once).
+step "grant matchCount bumped to ≥1 after match" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"matchCount\":[1-9]"
+step "grant lastMatchedAt populated" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"lastMatchedAt\":\"20"
+
+# Cleanup the telemetry test grant
+api DELETE /api/mcp/grants/$Z_ID >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
 # ============================================================================
 # Subscribe to SSE BEFORE firing the deploy so we capture every event.

@@ -77,6 +77,19 @@
           <el-tag v-else type="warning" size="small">{{ t('mcpGrants.permanent') }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="matchCount" :label="t('mcpGrants.col.matchCount')" width="120" sortable>
+        <template #default="{ row }">
+          <el-tag v-if="(row.matchCount ?? 0) === 0" type="info" size="small" effect="plain">
+            {{ t('mcpGrants.matches.none') }}
+          </el-tag>
+          <span v-else>
+            <strong>{{ row.matchCount }}</strong>
+            <span v-if="row.lastMatchedAt" class="muted last-match">
+              · {{ formatRelative(row.lastMatchedAt) }}
+            </span>
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column prop="note" :label="t('mcpGrants.col.note')" min-width="200">
         <template #default="{ row }"><span class="muted">{{ row.note || '—' }}</span></template>
       </el-table-column>
@@ -364,6 +377,20 @@ function truncate(s: string | null, n: number): string {
 function formatDate(iso: string): string {
   try { return new Date(iso).toLocaleString() } catch { return iso }
 }
+
+// Phase 7.5+++ — humanise lastMatchedAt for the inline "· 5m ago" annotation
+// on the match column. Cheap relative-time without a date library.
+function formatRelative(iso: string): string {
+  try {
+    const dt = new Date(iso).getTime()
+    if (!Number.isFinite(dt)) return ''
+    const deltaSec = Math.max(0, Math.round((Date.now() - dt) / 1000))
+    if (deltaSec < 60) return t('mcpGrants.matches.justNow')
+    if (deltaSec < 3600) return t('mcpGrants.matches.minutesAgo', { n: Math.floor(deltaSec / 60) })
+    if (deltaSec < 86400) return t('mcpGrants.matches.hoursAgo', { n: Math.floor(deltaSec / 3600) })
+    return t('mcpGrants.matches.daysAgo', { n: Math.floor(deltaSec / 86400) })
+  } catch { return '' }
+}
 </script>
 
 <style scoped>
@@ -374,6 +401,7 @@ function formatDate(iso: string): string {
 .muted { color: var(--el-text-color-secondary); }
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
+.last-match { margin-left: 4px; font-size: 11px; }
 .bulk-toolbar {
   display: flex; align-items: center; gap: 12px;
   padding: 8px 12px; margin-top: 4px;

@@ -158,6 +158,13 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
                     row.Domain,
                     ct);
                 grantedAuto = grant is not null;
+                // Phase 7.5+++ — bump match telemetry so operators can spot
+                // dead vs heavily-used grants. Best-effort; never blocks
+                // the auth path (RecordMatchAsync swallows DB errors).
+                if (grant is not null && !string.IsNullOrEmpty(grant.Id))
+                {
+                    await _grants.RecordMatchAsync(grant.Id, ct);
+                }
             }
 
             if (!allowUnconfirmed && !grantedAuto)

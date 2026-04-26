@@ -226,6 +226,10 @@ export interface McpGrantRow {
   grantedBy: string
   revokedAt: string | null
   note: string | null
+  // Phase 7.5+++ — match telemetry. matchCount=0 + lastMatchedAt=null
+  // means the grant has never auto-confirmed an intent.
+  matchCount?: number
+  lastMatchedAt?: string | null
 }
 
 export interface McpGrantCreateBody {

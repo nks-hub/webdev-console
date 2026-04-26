@@ -56,6 +56,17 @@ public interface IMcpSessionGrantsRepository
         string kind,
         string target,
         CancellationToken ct);
+
+    /// <summary>
+    /// Phase 7.5+++ — bump <c>match_count</c> and <c>last_matched_at</c>
+    /// for the given grant id. Called by <c>DeployIntentValidator</c>
+    /// when a <see cref="FindMatchingActiveAsync"/> hit auto-confirms an
+    /// intent. Idempotent in the sense that two concurrent validators
+    /// matching the same grant just produce two increments (the column
+    /// is +1, not "set to N"). Best-effort: telemetry write failure is
+    /// never allowed to break the auth path.
+    /// </summary>
+    Task RecordMatchAsync(string id, CancellationToken ct);
 }
 
 /// <summary>
@@ -73,4 +84,8 @@ public sealed record McpSessionGrantRow(
     string? ExpiresAt,
     string GrantedBy,
     string? RevokedAt,
-    string? Note);
+    string? Note,
+    // Phase 7.5+++ — telemetry. Both default to "never matched" so existing
+    // consumers (tests, plugin SDK) compile without forced ctor changes.
+    int MatchCount = 0,
+    string? LastMatchedAt = null);

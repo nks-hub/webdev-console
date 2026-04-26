@@ -1161,8 +1161,16 @@
       "target": "Cíl",
       "grantedAt": "Uděleno",
       "expires": "Vyprší",
+      "matchCount": "Použito",
       "note": "Poznámka",
       "actions": "Akce"
+    },
+    "matches": {
+      "none": "nikdy",
+      "justNow": "právě teď",
+      "minutesAgo": "před {n} m",
+      "hoursAgo": "před {n} h",
+      "daysAgo": "před {n} d"
     },
     "dialog": {
       "title": "Nové oprávnění",

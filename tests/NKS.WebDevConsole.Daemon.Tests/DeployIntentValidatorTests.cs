@@ -114,6 +114,7 @@ public sealed class DeployIntentValidatorTests
             string? sessionId, string? instanceId, string? apiKeyId,
             string kind, string target, CancellationToken ct) =>
             Task.FromResult<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?>(null);
+        public Task RecordMatchAsync(string id, CancellationToken ct) => Task.CompletedTask;
     }
 
     // --- Allow path ---
@@ -530,6 +531,7 @@ public sealed class DeployIntentValidatorTests
     private sealed class StubGrantsRepo : NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository
     {
         private string? _sessionId; private string? _kind; private string? _target;
+        public int RecordedMatches { get; private set; }
         public void MatchOn(string sessionId, string kind, string target)
         { _sessionId = sessionId; _kind = kind; _target = target; }
 
@@ -552,6 +554,11 @@ public sealed class DeployIntentValidatorTests
                         RevokedAt: null, Note: null));
             }
             return Task.FromResult<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?>(null);
+        }
+        public Task RecordMatchAsync(string id, CancellationToken ct)
+        {
+            RecordedMatches++;
+            return Task.CompletedTask;
         }
     }
 

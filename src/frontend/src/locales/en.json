@@ -1161,8 +1161,16 @@
       "target": "Target",
       "grantedAt": "Granted at",
       "expires": "Expires",
+      "matchCount": "Matched",
       "note": "Note",
       "actions": "Actions"
+    },
+    "matches": {
+      "none": "never",
+      "justNow": "just now",
+      "minutesAgo": "{n}m ago",
+      "hoursAgo": "{n}h ago",
+      "daysAgo": "{n}d ago"
     },
     "dialog": {
       "title": "New trust grant",

@@ -30,7 +30,8 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "SELECT id AS Id, scope_type AS ScopeType, scope_value AS ScopeValue, " +
             "kind_pattern AS KindPattern, target_pattern AS TargetPattern, " +
             "granted_at AS GrantedAt, expires_at AS ExpiresAt, granted_by AS GrantedBy, " +
-            "revoked_at AS RevokedAt, note AS Note " +
+            "revoked_at AS RevokedAt, note AS Note, " +
+            "match_count AS MatchCount, last_matched_at AS LastMatchedAt " +
             "FROM mcp_session_grants " +
             "WHERE revoked_at IS NULL " +
             "  AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) " +
@@ -114,7 +115,8 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "SELECT id AS Id, scope_type AS ScopeType, scope_value AS ScopeValue, " +
             "kind_pattern AS KindPattern, target_pattern AS TargetPattern, " +
             "granted_at AS GrantedAt, expires_at AS ExpiresAt, granted_by AS GrantedBy, " +
-            "revoked_at AS RevokedAt, note AS Note " +
+            "revoked_at AS RevokedAt, note AS Note, " +
+            "match_count AS MatchCount, last_matched_at AS LastMatchedAt " +
             "FROM mcp_session_grants " +
             "WHERE revoked_at IS NULL " +
             "  AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) " +
@@ -129,9 +131,32 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
         return raw is null ? null : ToRecord(raw);
     }
 
+    public async Task RecordMatchAsync(string id, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        try
+        {
+            using var conn = _db.CreateConnection();
+            await conn.OpenAsync(ct);
+            await conn.ExecuteAsync(
+                "UPDATE mcp_session_grants SET " +
+                "  match_count = match_count + 1, " +
+                "  last_matched_at = @Now " +
+                "WHERE id = @Id",
+                new { Id = id, Now = DateTimeOffset.UtcNow.ToString("o") });
+        }
+        catch
+        {
+            // Telemetry must NEVER break the auth path. The auto-confirm
+            // already happened upstream; failure here just means the
+            // counter doesn't tick. Next match retries.
+        }
+    }
+
     private static McpSessionGrantRow ToRecord(RawRow r) => new(
         r.Id, r.ScopeType, r.ScopeValue, r.KindPattern, r.TargetPattern,
-        r.GrantedAt, r.ExpiresAt, r.GrantedBy, r.RevokedAt, r.Note);
+        r.GrantedAt, r.ExpiresAt, r.GrantedBy, r.RevokedAt, r.Note,
+        r.MatchCount, r.LastMatchedAt);
 
     /// <summary>Internal Dapper row.</summary>
     private sealed class RawRow
@@ -146,5 +171,7 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
         public string GrantedBy { get; set; } = "gui";
         public string? RevokedAt { get; set; }
         public string? Note { get; set; }
+        public int MatchCount { get; set; }
+        public string? LastMatchedAt { get; set; }
     }
 }
