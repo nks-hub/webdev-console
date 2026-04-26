@@ -136,7 +136,24 @@
             surfaced here once the backend snapshot service is wired.
           </el-alert>
 
-          <!-- Recent snapshots stub -->
+          <!-- On-demand snapshot trigger -->
+          <div class="subsection">
+            <div class="subsection-header">On-demand snapshot</div>
+            <p class="muted">
+              Take a database snapshot now without firing a deploy. Useful
+              before manual schema migrations or ad-hoc DB operations.
+            </p>
+            <el-button
+              type="primary"
+              :loading="snapshotting"
+              :disabled="restoringId !== null"
+              @click="onSnapshotNow"
+            >
+              Snapshot database now
+            </el-button>
+          </div>
+
+          <!-- Recent snapshots -->
           <div class="subsection">
             <div class="subsection-header">Recent snapshots</div>
             <div v-if="snapshots.length === 0" class="muted">
@@ -160,7 +177,7 @@
                     text
                     type="danger"
                     :loading="restoringId === row.id"
-                    :disabled="restoringId !== null && restoringId !== row.id"
+                    :disabled="(restoringId !== null && restoringId !== row.id) || snapshotting"
                     aria-label="Restore this snapshot (overwrites live data)"
                     @click="onRestoreSnapshot(row)"
                   >
@@ -672,6 +689,7 @@ import {
   createDeployIntent,
   confirmDeployIntent,
   restoreSnapshot,
+  snapshotNow,
 } from '../../api/deploy'
 import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings } from '../../api/deploy'
 
@@ -688,6 +706,9 @@ const snapshots = ref<DeploySnapshotEntry[]>([])
 // buttons while one is running so the user can't double-fire the
 // destructive flow against a different row mid-restore.
 const restoringId = ref<string | null>(null)
+// In-flight on-demand snapshot — locks the button + the Restore actions
+// so a snapshot-now and a restore can't race for the same site's DB.
+const snapshotting = ref(false)
 
 // Stable IDs for label/input associations (WCAG 1.3.1)
 const ids = {
@@ -888,6 +909,28 @@ function removeEnvVar(key: string): void {
 }
 
 // ── Snapshots ─────────────────────────────────────────────────────────────────
+
+/**
+ * Phase 6.6 — fire an on-demand snapshot. No type-to-confirm because
+ * snapshot is non-destructive (READS the live DB; no DB writes). Refreshes
+ * the snapshot list so the new entry appears immediately.
+ */
+async function onSnapshotNow(): Promise<void> {
+  if (snapshotting.value) return
+  snapshotting.value = true
+  try {
+    const result = await snapshotNow(props.domain)
+    ElMessage.success(
+      `Snapshot ok (${formatBytes(result.sizeBytes)} in ${result.durationMs} ms)`,
+    )
+    snapshots.value = await fetchDeploySnapshots(props.domain)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(`Snapshot failed: ${msg}`)
+  } finally {
+    snapshotting.value = false
+  }
+}
 
 /**
  * Phase 6.4 — operator-driven snapshot restore. Confirm via type-to-match

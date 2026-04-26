@@ -290,6 +290,27 @@ export interface RestoreSnapshotResult {
 }
 
 /**
+ * Phase 6.6 — on-demand DB snapshot WITHOUT a deploy. Useful before
+ * manual schema migrations or ad-hoc DB ops. Creates a synthetic
+ * deploy_runs row tagged backend_id=manual-snapshot so the result
+ * shows up in the per-site snapshot inventory.
+ */
+export interface SnapshotNowResult {
+  snapshotId: string
+  domain: string
+  path: string
+  sizeBytes: number
+  durationMs: number
+}
+
+export async function snapshotNow(domain: string): Promise<SnapshotNowResult> {
+  return request<SnapshotNowResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/snapshot-now`,
+    { method: 'POST' },
+  )
+}
+
+/**
  * POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore.
  * Caller must mint+confirm an intent first; this helper attaches the
  * X-Intent-Token header. Body always includes `confirm: true` per the
