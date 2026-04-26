@@ -101,6 +101,10 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.ISiteRegistry>(
     sp => sp.GetRequiredService<SiteManager>());
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository,
     NKS.WebDevConsole.Daemon.Deploy.DeployRunsRepository>();
+// Phase 6.1 — atomic multi-host group repo. Cross-ALC interface lives in
+// Core (shared assembly), implementation in Daemon talks to migration 009.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository,
+    NKS.WebDevConsole.Daemon.Deploy.DeployGroupsRepository>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster,
     NKS.WebDevConsole.Daemon.Deploy.SseDeployEventBroadcaster>();
 // MCP intent signer + validator. The signer holds the long-lived HMAC key
