@@ -39,6 +39,22 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
         return rows.Select(ToRecord).ToList();
     }
 
+    public async Task<IReadOnlyList<McpSessionGrantRow>> ListAllAsync(CancellationToken ct)
+    {
+        // Phase 7.5+++ — same projection, no WHERE clause. Audit view.
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var rows = await conn.QueryAsync<RawRow>(
+            "SELECT id AS Id, scope_type AS ScopeType, scope_value AS ScopeValue, " +
+            "kind_pattern AS KindPattern, target_pattern AS TargetPattern, " +
+            "granted_at AS GrantedAt, expires_at AS ExpiresAt, granted_by AS GrantedBy, " +
+            "revoked_at AS RevokedAt, note AS Note, " +
+            "match_count AS MatchCount, last_matched_at AS LastMatchedAt " +
+            "FROM mcp_session_grants " +
+            "ORDER BY granted_at DESC");
+        return rows.Select(ToRecord).ToList();
+    }
+
     public async Task<string> InsertAsync(McpSessionGrantRow row, CancellationToken ct)
     {
         var id = string.IsNullOrEmpty(row.Id) ? Guid.NewGuid().ToString("D") : row.Id;

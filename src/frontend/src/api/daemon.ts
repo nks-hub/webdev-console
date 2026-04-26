@@ -254,8 +254,15 @@ export interface McpGrantCreateBody {
   note?: string
 }
 
-export const listMcpGrants = (): Promise<{ count: number; entries: McpGrantRow[] }> =>
-  json('/api/mcp/grants')
+export const listMcpGrants = (
+  includeRevoked = false,
+): Promise<{ count: number; entries: McpGrantRow[] }> => {
+  // Phase 7.5+++ — opt-in audit view that includes soft-revoked +
+  // expired rows. Default false preserves McpHub badge semantics
+  // (counts only currently-active grants).
+  const qs = includeRevoked ? '?includeRevoked=true' : ''
+  return json(`/api/mcp/grants${qs}`)
+}
 
 // ----------------------------------------------------------------------------
 // Phase 7.4b — registered destructive op kinds (deploy/restore/+ plugin-defined).

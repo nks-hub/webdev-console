@@ -1233,6 +1233,7 @@
     "scopeFilter": {
       "placeholder": "Filtr typu rozsahu"
     },
+    "includeRevokedLabel": "Zobrazit i odvolaná (audit)",
     "dialog": {
       "title": "Nové oprávnění",
       "scopeType": "Typ rozsahu",

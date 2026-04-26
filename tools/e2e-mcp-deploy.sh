@@ -953,6 +953,35 @@ step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:comple
 step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
 
 # ============================================================================
+echo ""; echo "${YEL}=== DD. grants ?includeRevoked audit view ===${END}"
+# ============================================================================
+# Default GET hides revoked rows. Create + revoke a grant, then verify:
+#   1. Default fetch does NOT contain the revoked grant id.
+#   2. ?includeRevoked=true DOES contain it (with non-null revokedAt).
+python3 - <<EOF > /c/temp/.e2e-dd-grant.json
+import json
+print(json.dumps({
+    "scopeType": "session", "scopeValue": "audit-test-client",
+    "kindPattern": "deploy", "targetPattern": "blog.loc",
+    "expiresAt": None, "note": "audit view E2E"
+}))
+EOF
+DD_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-dd-grant.json "$BASE/api/mcp/grants")
+DD_ID=$(echo "$DD_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+api DELETE /api/mcp/grants/$DD_ID >/dev/null
+
+# Default: revoked grant absent
+DD_DEFAULT=$(api GET /api/mcp/grants)
+DD_HIT=$(echo "$DD_DEFAULT" | grep -c "$DD_ID" || true)
+step "default GET hides revoked grant"   "$DD_HIT" '^0$'
+
+# Audit: revoked grant present with revokedAt set
+DD_AUDIT=$(api GET /api/mcp/grants?includeRevoked=true)
+step "?includeRevoked=true returns revoked" "$DD_AUDIT" "\"id\":\"$DD_ID\""
+step "audit row carries revokedAt timestamp" "$DD_AUDIT" "\"id\":\"$DD_ID\".*\"revokedAt\":\"20"
+
+# ============================================================================
 echo ""; echo "${YEL}=== CC. grants test-match dry-run endpoint ===${END}"
 # ============================================================================
 # Operator can ask "would this caller+kind+target match an active grant?"

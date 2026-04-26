@@ -54,6 +54,16 @@
       <span v-if="deadweightCount > 0" class="muted hint">
         {{ t('mcpGrants.usage.deadweightHint', { days: DEADWEIGHT_AGE_DAYS }) }}
       </span>
+      <!-- Phase 7.5+++ — audit view toggle. Off by default; on flips
+           the fetch to ?includeRevoked=true so operators see the full
+           historical set including soft-revoked rows. -->
+      <el-checkbox
+        v-model="includeRevoked"
+        size="small"
+        @change="onIncludeRevokedChange"
+      >
+        {{ t('mcpGrants.includeRevokedLabel') }}
+      </el-checkbox>
       <!-- One-click bulk revoke for the deadweight bucket. Surfaces only
            when the filter is on Deadweight AND there's something to act
            on, so it reads as a contextual action rather than a global
@@ -103,6 +113,7 @@
       v-if="filteredGrants.length > 0"
       ref="tableRef"
       :data="filteredGrants" stripe size="small" class="grants-table"
+      :row-class-name="rowClassName"
       @selection-change="onSelectionChange"
     >
       <el-table-column type="selection" width="40" />
@@ -308,6 +319,11 @@ const tableRef = ref<unknown>(null)
 // Phase 7.5+++ — manual sweep trigger ("clean now" button).
 const sweeping = ref(false)
 
+// Phase 7.5+++ — audit view: when on, fetches with ?includeRevoked=true
+// so soft-revoked rows appear too (visually muted in the table).
+const includeRevoked = ref(false)
+function onIncludeRevokedChange(): void { void refresh() }
+
 // Phase 7.5+++ — dry-run test-match dialog state.
 const testMatchDialogOpen = ref(false)
 const testingMatch = ref(false)
@@ -343,6 +359,12 @@ async function onRunTestMatch(): Promise<void> {
 const DEADWEIGHT_AGE_DAYS = 7
 type UsageFilter = 'all' | 'inuse' | 'deadweight'
 const usageFilter = ref<UsageFilter>('all')
+
+// Phase 7.5+++ — row-class helper for the el-table. Greys out revoked
+// rows in audit view so they're clearly historical, not active.
+function rowClassName({ row }: { row: McpGrantRow }): string {
+  return row.revokedAt ? 'grant-row-revoked' : ''
+}
 
 function isDeadweight(g: McpGrantRow): boolean {
   if ((g.matchCount ?? 0) > 0) return false
@@ -471,7 +493,8 @@ onBeforeUnmount(() => {
 async function refresh(): Promise<void> {
   loading.value = true
   try {
-    const r = await listMcpGrants()
+    // Phase 7.5+++ — pass includeRevoked so audit view sees full set.
+    const r = await listMcpGrants(includeRevoked.value)
     grants.value = r.entries
   } catch (e) {
     ElMessage.error(t('mcpGrants.toastLoadFailed', { error: (e as Error).message }))
@@ -733,4 +756,15 @@ function formatExpiresIn(iso: string): string {
 }
 .usage-toolbar .hint { font-size: 12px; }
 .scope-filter { width: 180px; }
+/* Phase 7.5+++ — revoked rows visually de-emphasized in audit view. */
+.grants-table :deep(.grant-row-revoked) {
+  opacity: 0.5;
+  background: var(--el-fill-color-lighter);
+  text-decoration: line-through;
+  text-decoration-color: var(--el-color-danger);
+}
+.grants-table :deep(.grant-row-revoked) code,
+.grants-table :deep(.grant-row-revoked) .el-tag {
+  text-decoration: none; /* don't strike through pills */
+}
 </style>

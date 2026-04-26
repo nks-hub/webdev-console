@@ -1233,6 +1233,7 @@
     "scopeFilter": {
       "placeholder": "Scope type filter"
     },
+    "includeRevokedLabel": "Show revoked (audit view)",
     "dialog": {
       "title": "New trust grant",
       "scopeType": "Scope type",

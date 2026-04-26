@@ -23,6 +23,14 @@ public interface IMcpSessionGrantsRepository
     Task<IReadOnlyList<McpSessionGrantRow>> ListActiveAsync(CancellationToken ct);
 
     /// <summary>
+    /// Phase 7.5+++ — list EVERY grant row including revoked + expired,
+    /// newest first. Forensic / audit use case ("show me which trust
+    /// rules were active 30 days ago"). The validator path NEVER calls
+    /// this — only operator UIs that explicitly opt into the full view.
+    /// </summary>
+    Task<IReadOnlyList<McpSessionGrantRow>> ListAllAsync(CancellationToken ct);
+
+    /// <summary>
     /// Insert a new grant. The row gets a UUID v4 PK if <paramref name="id"/>
     /// is null; the caller can pass an explicit id (e.g. when restoring from
     /// backup) but normal flows leave it null.

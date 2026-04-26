@@ -108,6 +108,8 @@ public sealed class DeployIntentValidatorTests
     {
         public Task<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>> ListActiveAsync(CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>>(Array.Empty<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>());
+        public Task<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>> ListAllAsync(CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>>(Array.Empty<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>());
         public Task<string> InsertAsync(NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow row, CancellationToken ct) =>
             Task.FromResult(Guid.NewGuid().ToString("D"));
         public Task<bool> RevokeAsync(string id, CancellationToken ct) => Task.FromResult(false);
@@ -537,6 +539,8 @@ public sealed class DeployIntentValidatorTests
         { _sessionId = sessionId; _kind = kind; _target = target; }
 
         public Task<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>> ListActiveAsync(CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>>(Array.Empty<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>());
+        public Task<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>> ListAllAsync(CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>>(Array.Empty<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>());
         public Task<string> InsertAsync(NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow row, CancellationToken ct) =>
             Task.FromResult("");

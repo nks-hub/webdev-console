@@ -1458,10 +1458,16 @@ app.MapGet("/api/mcp/kinds", (
 app.MapGet("/api/mcp/grants", async (
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
-    CancellationToken ct) =>
+    CancellationToken ct,
+    bool? includeRevoked = null) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
-    var rows = await grants.ListActiveAsync(ct);
+    // Phase 7.5+++ — opt-in audit view. Nullable + default null so the
+    // minimal-API binder treats the param as truly optional (a non-
+    // nullable `bool` would 400 when the query string is empty).
+    var rows = includeRevoked == true
+        ? await grants.ListAllAsync(ct)
+        : await grants.ListActiveAsync(ct);
     return Results.Ok(new { count = rows.Count, entries = rows });
 });
 
