@@ -283,6 +283,38 @@ step "always grant revoke OK" "$(api DELETE /api/mcp/grants/$ALWAYS_ID)" '"statu
 [ -n "$ANON_ID" ] && api POST /api/mcp/intents/$ANON_ID/revoke >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
+# ============================================================================
+# Subscribe to SSE BEFORE firing the deploy so we capture every event.
+# Each transition broadcasts: deploy:started, deploy:phase x2, deploy:complete.
+SSE_LOG="/c/temp/.e2e-sse.log"
+rm -f "$SSE_LOG"
+( curl -s --max-time 4 -H "Authorization: Bearer $TOKEN" -H "Accept: text/event-stream" \
+    "$BASE/api/events?topics=deploy:started,deploy:phase,deploy:complete" \
+    > "$SSE_LOG" 2>&1 ) &
+SSE_PID=$!
+sleep 1   # let subscriber attach
+
+# Fire a fresh deploy
+SSE_FIRE=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main"}')
+SSE_DEPLOY_ID=$(echo "$SSE_FIRE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+step "SSE-tracked deploy fired" "$SSE_FIRE" '"deployId":"'
+
+# Wait for state machine + SSE drain
+sleep 3
+wait $SSE_PID 2>/dev/null
+
+# SSE wire format puts event-name + data on separate lines, so we match
+# them independently rather than requiring single-line regex.
+SSE_DUMP=$(cat $SSE_LOG)
+step "SSE feed captured deploy:started"      "$SSE_DUMP" 'event: deploy:started'
+step "SSE deploy:started carries our deployId" "$SSE_DUMP" "$SSE_DEPLOY_ID"
+step "SSE feed captured deploy:phase Building" "$SSE_DUMP" '"phase":"Building"'
+step "SSE feed captured deploy:phase AwaitingSoak" "$SSE_DUMP" '"phase":"AwaitingSoak"'
+step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:complete'
+step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
+
+# ============================================================================
 echo ""; echo "${YEL}=== J. deploy.enabled gate ===${END}"
 # ============================================================================
 api PUT /api/settings -d '{"deploy.enabled":"false"}' >/dev/null
