@@ -22,6 +22,35 @@
       </el-tag>
     </div>
 
+    <!-- Phase 6.16b — per-domain breakdown. Helps spot which sites are
+         minting the most AI activity. Only renders when 2+ domains
+         present (single-domain inventories already get summary chips). -->
+    <div
+      v-if="domainStats.length > 1"
+      class="domain-stats"
+      role="group"
+      aria-label="Intent breakdown by domain"
+    >
+      <div class="domain-stats-title">Per-domain breakdown:</div>
+      <div class="domain-stats-grid">
+        <div v-for="d in domainStats" :key="d.domain" class="domain-stats-cell">
+          <code class="mono domain-name" :title="d.domain">{{ d.domain }}</code>
+          <div class="domain-stats-counts">
+            <el-tag
+              v-for="(count, state) in d.byState"
+              :key="state"
+              :type="stateTagType(state)"
+              size="small"
+              effect="plain"
+              class="domain-stats-chip"
+            >
+              {{ state }}: {{ count }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Phase 6.13b — filter toolbar. State + kind selects + free-text
          domain search. Filters apply client-side over the loaded list
          (cap 200) — no server round-trip needed. -->
@@ -216,6 +245,35 @@ const stateCounts = computed(() => {
     .map((state) => ({ state, count: counts.get(state) ?? 0 }))
 })
 
+interface DomainStats {
+  domain: string
+  total: number
+  byState: Record<string, number>
+}
+
+/**
+ * Phase 6.16b — group entries by domain and per-state count. Sorted by
+ * total descending so the most-active domain leads (usually production).
+ * Computed off `entries` (not filteredEntries) so the breakdown shows
+ * the FULL distribution regardless of active filters — gives the
+ * operator a sense of where activity is coming from before they
+ * narrow with filters.
+ */
+const domainStats = computed<DomainStats[]>(() => {
+  const byDomain = new Map<string, DomainStats>()
+  for (const e of entries.value) {
+    const cur = byDomain.get(e.domain) ?? {
+      domain: e.domain,
+      total: 0,
+      byState: {} as Record<string, number>,
+    }
+    cur.total++
+    cur.byState[e.state] = (cur.byState[e.state] ?? 0) + 1
+    byDomain.set(e.domain, cur)
+  }
+  return Array.from(byDomain.values()).sort((a, b) => b.total - a.total)
+})
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString()
 }
@@ -313,6 +371,47 @@ onMounted(() => refresh())
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+.domain-stats {
+  padding: 10px 12px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+}
+.domain-stats-title {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.domain-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.domain-stats-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--el-bg-color);
+  border-radius: 3px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+.domain-name {
+  font-weight: 600;
+  font-size: 12px;
+  word-break: break-all;
+}
+.domain-stats-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.domain-stats-chip {
+  font-variant-numeric: tabular-nums;
 }
 .filter-toolbar {
   display: flex;
