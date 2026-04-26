@@ -697,6 +697,66 @@ app.Lifetime.ApplicationStarted.Register(() =>
         authToken.Length);
 });
 
+// ---------------------------------------------------------------------------
+// Stale-deploy recovery (Phase 5 hardening item #1).
+//
+// If the daemon was killed mid-deploy (machine reboot, OOM, manual kill) the
+// supervising subprocess died with us — but the deploy_runs row is still
+// status=running/awaiting_soak/rolling_back. Without this sweep:
+//   - the GUI's history page would show a permanent "running" badge
+//   - new deploys against the same site would think a deploy is in-flight
+//   - the in-process per-(domain,host) lock check would deadlock on entry
+//
+// We mark each stale row failed with a stable error_message="daemon_restart"
+// and exit_code=null so callers can tell process death apart from a real
+// non-zero exit. Fire-and-forget — a slow recovery must NOT block daemon
+// boot or delay Kestrel binding.
+// ---------------------------------------------------------------------------
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = Task.Run(async () =>
+    {
+        var recoveryLogger = app.Services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("StaleDeployRecovery");
+        try
+        {
+            var runs = app.Services.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository>();
+            var stale = await runs.ListInFlightAsync(CancellationToken.None);
+            if (stale.Count == 0) return;
+            recoveryLogger.LogWarning(
+                "Found {Count} stale deploy run(s) from a previous daemon session; marking failed",
+                stale.Count);
+            foreach (var row in stale)
+            {
+                try
+                {
+                    await runs.MarkCompletedAsync(
+                        row.Id,
+                        success: false,
+                        exitCode: null,
+                        errorMessage: "daemon_restart",
+                        durationMs: (long)(DateTimeOffset.UtcNow - row.StartedAt).TotalMilliseconds,
+                        ct: CancellationToken.None);
+                    recoveryLogger.LogInformation(
+                        "Recovered stale deploy {DeployId} (domain={Domain} host={Host} status={Status})",
+                        row.Id, row.Domain, row.Host, row.Status);
+                }
+                catch (Exception innerEx)
+                {
+                    // Per-row failure must not abort the sweep — the next
+                    // boot will retry the survivors.
+                    recoveryLogger.LogError(innerEx,
+                        "Failed to recover stale deploy {DeployId}", row.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            recoveryLogger.LogError(ex, "Stale-deploy recovery sweep failed");
+        }
+    });
+});
+
 // Health endpoint — no auth required (for monitoring + Electron daemon detection).
 // Returns a unique `service` marker so callers can tell our daemon from
 // another HTTP responder that happens to bind the same port (e.g. macOS
