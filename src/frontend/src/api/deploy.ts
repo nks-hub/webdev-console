@@ -356,6 +356,33 @@ export async function fetchDeployGroups(
   }
 }
 
+export interface StartGroupResult {
+  groupId: string
+  idempotencyKey: string
+  hostCount: number
+}
+
+/**
+ * Phase 6.10 — kick off a multi-host atomic deploy group from the GUI.
+ * Posts to the plugin's POST /sites/{domain}/groups endpoint. Intent
+ * gating is bypassed for GUI-originated requests (the bearer-auth on
+ * /api/* + the trusted GUI surface are sufficient — the AI/MCP path
+ * is what needs the X-Intent-Token gate).
+ */
+export async function startDeployGroup(
+  domain: string,
+  hosts: string[],
+  options?: Record<string, unknown>,
+): Promise<StartGroupResult> {
+  return request<StartGroupResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/groups`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ hosts, options: options ?? {} }),
+    },
+  )
+}
+
 /**
  * POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore.
  * Caller must mint+confirm an intent first; this helper attaches the

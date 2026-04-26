@@ -3,6 +3,13 @@
     <template #header>
       <div class="host-card-head">
         <div class="host-card-title">
+          <el-checkbox
+            v-if="selectable"
+            :model-value="selected"
+            :aria-label="`Include ${host} in group deploy`"
+            @update:model-value="(v: any) => $emit('toggle-select', !!v)"
+            @click.stop
+          />
           <span class="host-card-name">{{ host }}</span>
           <el-tag v-if="isProduction" type="danger" size="small" effect="plain">PROD</el-tag>
         </div>
@@ -47,11 +54,16 @@ import type { DeployHistoryEntryDto } from '../../api/deploy'
 const props = defineProps<{
   host: string
   lastDeploy?: DeployHistoryEntryDto | null
+  /** Phase 6.10 — show a checkbox for multi-select group deploy. */
+  selectable?: boolean
+  /** Phase 6.10 — current selection state (controlled by parent). */
+  selected?: boolean
 }>()
 
 defineEmits<{
   deploy: []
   rollback: []
+  'toggle-select': [value: boolean]
 }>()
 
 const isProduction = computed(() =>

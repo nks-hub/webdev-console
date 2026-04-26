@@ -6,6 +6,7 @@ import {
   getDeployHistory,
   rollbackDeploy as apiRollback,
   cancelDeploy as apiCancel,
+  startDeployGroup as apiStartGroup,
   type DeployEventDto,
   type DeployHistoryEntryDto,
   type DeployResultDto,
@@ -139,6 +140,16 @@ export const useDeployStore = defineStore('deploy', () => {
     // surfaces to the user.
   }
 
+  /**
+   * Phase 6.10 — fan out a deploy across N hosts of the same site.
+   * Returns the groupId so the caller can navigate to the Groups
+   * sub-tab and watch progress live via the SSE-driven history table.
+   */
+  async function startGroupDeploy(domain: string, hosts: string[]): Promise<string> {
+    const result = await apiStartGroup(domain, hosts)
+    return result.groupId
+  }
+
   function openDrawerFor(deployId: string): void {
     if (runs.value.has(deployId)) {
       activeRunId.value = deployId
@@ -206,6 +217,7 @@ export const useDeployStore = defineStore('deploy', () => {
     cancel,
     openDrawerFor,
     loadAndOpenHistorical,
+    startGroupDeploy,
     closeDrawer,
   }
 })
