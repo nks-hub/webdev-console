@@ -180,6 +180,18 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Files /></el-icon></span>
         <span class="nav-label">Zálohy</span>
       </div>
+      <!-- Phase 6.11b — admin audit view of all signed MCP intents.
+           Advanced-only because it surfaces low-level token machinery
+           that's irrelevant to operators who never invoke an AI agent. -->
+      <div
+        v-if="uiModeStore.isAdvanced"
+        class="nav-item"
+        :class="{ active: isActive('/mcp/intents') }"
+        @click="navigate('/mcp/intents')"
+      >
+        <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
+        <span class="nav-label">MCP Intents</span>
+      </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
         <span class="nav-label">{{ $t('nav.settings') }}</span>

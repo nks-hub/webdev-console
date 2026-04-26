@@ -81,6 +81,23 @@
           </code>
         </template>
       </el-table-column>
+
+      <el-table-column label="" width="100" align="right">
+        <template #default="{ row }">
+          <el-button
+            v-if="row.state === 'ready' || row.state === 'pending_confirmation'"
+            size="small"
+            link
+            type="danger"
+            :loading="revokingId === row.intentId"
+            :disabled="revokingId !== null && revokingId !== row.intentId"
+            aria-label="Revoke this intent (mark as used without firing)"
+            @click="onRevoke(row)"
+          >
+            Revoke
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 </template>
@@ -94,14 +111,16 @@ import {
   CircleClose,
   Loading,
 } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchIntentInventory,
+  revokeIntent,
   type IntentInventoryEntry,
 } from '../../api/daemon'
 
 const entries = ref<IntentInventoryEntry[]>([])
 const loading = ref(false)
+const revokingId = ref<string | null>(null)
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -161,6 +180,31 @@ function kindTagType(kind: string): 'danger' | 'warning' | 'info' {
   if (kind === 'restore' || kind === 'rollback') return 'warning'
   if (kind === 'deploy') return 'danger'
   return 'info' // cancel
+}
+
+async function onRevoke(row: IntentInventoryEntry): Promise<void> {
+  if (revokingId.value !== null) return
+  try {
+    await ElMessageBox.confirm(
+      `Revoke intent ${row.intentId.slice(0, 8)}? ` +
+        `(${row.kind} on ${row.domain} → ${row.host}) ` +
+        `Any AI client trying to fire this token will get already_used.`,
+      'Revoke MCP intent',
+      { type: 'warning', confirmButtonText: 'Revoke', cancelButtonText: 'Cancel' },
+    )
+  } catch { return }
+
+  revokingId.value = row.intentId
+  try {
+    await revokeIntent(row.intentId)
+    ElMessage.success('Intent revoked')
+    await refresh()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(`Revoke failed: ${msg}`)
+  } finally {
+    revokingId.value = null
+  }
 }
 
 async function copyId(id: string): Promise<void> {

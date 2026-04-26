@@ -54,7 +54,7 @@
       v-model="confirmModalOpen"
       :domain="domain"
       :host="confirmHost"
-      @confirmed="confirmDeploy"
+      @confirmed="confirmDeploy($event)"
     />
   </div>
 </template>
@@ -181,10 +181,16 @@ async function onHistoryRollback(entry: DeployHistoryEntryDto): Promise<void> {
   }
 }
 
-async function confirmDeploy(): Promise<void> {
+async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
   try {
-    await deployStore.startDeploy(props.domain, confirmHost.value)
-    ElMessage.success(`Deploy started — watch the drawer`)
+    await deployStore.startDeploy(props.domain, confirmHost.value, {
+      snapshot: opts.snapshot ? { include: true, retentionDays: 30 } : undefined,
+    })
+    ElMessage.success(
+      opts.snapshot
+        ? 'Deploy started (with pre-deploy snapshot) — watch the drawer'
+        : 'Deploy started — watch the drawer',
+    )
   } catch (e) {
     ElMessage.error((e as Error).message || 'Deploy failed to start')
   }

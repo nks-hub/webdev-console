@@ -91,7 +91,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export function startDeploy(
   domain: string,
   host: string,
-  options?: { idempotencyKey?: string; backendOptions?: Record<string, unknown> },
+  options?: {
+    idempotencyKey?: string
+    backendOptions?: Record<string, unknown>
+    /** Phase 6.12c — Pre-deploy DB snapshot config (DeploySnapshotOptions). */
+    snapshot?: { include: boolean; retentionDays?: number }
+  },
 ): Promise<StartDeployResponseDto> {
   return request<StartDeployResponseDto>(
     `${PREFIX}/sites/${encodeURIComponent(domain)}/hosts/${encodeURIComponent(host)}/deploy`,
@@ -100,6 +105,7 @@ export function startDeploy(
       body: JSON.stringify({
         idempotencyKey: options?.idempotencyKey ?? crypto.randomUUID(),
         options: options?.backendOptions ?? {},
+        snapshot: options?.snapshot,
       }),
     },
   )

@@ -39,8 +39,22 @@ export const useDeployStore = defineStore('deploy', () => {
 
   const isDrawerOpen = computed(() => activeRunId.value !== null)
 
-  async function startDeploy(domain: string, host: string, backendOptions?: Record<string, unknown>): Promise<string | null> {
-    const resp = await apiStartDeploy(domain, host, { backendOptions })
+  async function startDeploy(
+    domain: string,
+    host: string,
+    options?: {
+      backendOptions?: Record<string, unknown>
+      /** Phase 6.12c — pre-deploy snapshot opt-in. */
+      snapshot?: { include: boolean; retentionDays?: number }
+    },
+  ): Promise<string | null> {
+    // Backwards-compat: callers passing `Record<string, unknown>` directly
+    // (legacy 2-arg form) still work — we treat that as backendOptions.
+    const opts = options ?? {}
+    const resp = await apiStartDeploy(domain, host, {
+      backendOptions: opts.backendOptions,
+      snapshot: opts.snapshot,
+    })
     if (resp.deployId) {
       // Seed an empty run row so the drawer can render immediately even
       // before the first SSE event lands.

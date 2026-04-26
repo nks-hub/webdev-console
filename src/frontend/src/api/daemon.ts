@@ -182,6 +182,20 @@ export interface IntentInventoryResponse {
 export const fetchIntentInventory = (limit = 100): Promise<IntentInventoryResponse> =>
   json(`/api/mcp/intents?limit=${limit}`)
 
+export interface RevokeIntentResponse {
+  intentId: string
+  revokedAt: string
+}
+
+/**
+ * Phase 6.12b — neuter an intent before an AI client fires it. Marks
+ * used_at server-side without actually consuming, so the intent moves
+ * to the consumed state and any subsequent ValidateAndConsumeAsync
+ * returns already_used.
+ */
+export const revokeIntent = (intentId: string): Promise<RevokeIntentResponse> =>
+  json(`/api/mcp/intents/${encodeURIComponent(intentId)}/revoke`, { method: 'POST' })
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }

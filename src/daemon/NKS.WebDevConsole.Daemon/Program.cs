@@ -1075,6 +1075,36 @@ app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
     return Results.Ok(new { intentId, confirmedAt = now });
 });
 
+// Phase 6.12b — operator-driven intent revoke. Marks used_at without
+// actually consuming, so a leaked or unwanted token can be neutered
+// before an AI client tries to fire it. Idempotent — second call
+// returns 409 already_used.
+app.MapPost("/api/mcp/intents/{intentId}/revoke", async (
+    string intentId,
+    NKS.WebDevConsole.Daemon.Data.Database db) =>
+{
+    if (string.IsNullOrWhiteSpace(intentId))
+    {
+        return Results.BadRequest(new { error = "intentId is required" });
+    }
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync();
+    var exists = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<int?>(conn,
+        "SELECT 1 FROM deploy_intents WHERE id = @Id",
+        new { Id = intentId });
+    if (exists is null) return Results.NotFound(new { error = "intent_not_found", intentId });
+
+    var now = DateTimeOffset.UtcNow.ToString("o");
+    var rows = await Dapper.SqlMapper.ExecuteAsync(conn,
+        "UPDATE deploy_intents SET used_at = @Now WHERE id = @Id AND used_at IS NULL",
+        new { Id = intentId, Now = now });
+    if (rows == 0)
+    {
+        return Results.Conflict(new { error = "already_used", intentId });
+    }
+    return Results.Ok(new { intentId, revokedAt = now });
+});
+
 // Phase 6.11b — admin inventory of all signed intents. Read-only, no
 // destructive side effects — hands back the full deploy_intents row
 // list (newest first) so a wdc operator can audit what AI/CI clients
