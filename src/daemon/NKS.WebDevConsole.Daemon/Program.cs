@@ -1645,6 +1645,69 @@ app.MapPost("/api/mcp/grants/sweep-now", async (
 // ============================================================================
 
 // History — list deploy runs for a domain. Used by DeployHistoryTable
+// Phase 7.5+++ — TCP probe to verify the SSH host is reachable from
+// the daemon's network position BEFORE the operator saves a host
+// config that turns out to be unreachable. This is a network-only
+// check (no actual SSH handshake) — auth/keys still get exercised
+// during the first real deploy.
+//
+// Body: { "host": "deploy.example.com", "port": 22 }
+// Returns 200 with { ok, latencyMs, error?, code? } — never 5xx so
+// the frontend can render the result inline regardless of probe outcome.
+app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
+    HttpContext ctx,
+    CancellationToken ct) =>
+{
+    if (!IsDeployEnabled(ctx)) return Results.NotFound(new { error = "deploy_disabled" });
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() : null;
+    var port = root.TryGetProperty("port", out var pEl) && pEl.TryGetInt32(out var p) ? p : 22;
+
+    if (string.IsNullOrWhiteSpace(host))
+        return Results.BadRequest(new { error = "host is required" });
+    if (port < 1 || port > 65535)
+        return Results.BadRequest(new { error = "port must be in [1, 65535]" });
+
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    using var probe = new System.Net.Sockets.TcpClient();
+    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+    cts.CancelAfter(TimeSpan.FromSeconds(5));
+    try
+    {
+        await probe.ConnectAsync(host!, port, cts.Token);
+        sw.Stop();
+        return Results.Ok(new { ok = true, latencyMs = sw.ElapsedMilliseconds });
+    }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested && !ct.IsCancellationRequested)
+    {
+        sw.Stop();
+        return Results.Ok(new
+        {
+            ok = false, code = "timeout",
+            error = $"TCP probe to {host}:{port} timed out after 5s",
+        });
+    }
+    catch (System.Net.Sockets.SocketException ex)
+    {
+        sw.Stop();
+        return Results.Ok(new
+        {
+            ok = false, code = "socket_error",
+            error = $"{host}:{port} unreachable: {ex.Message}",
+        });
+    }
+    catch (Exception ex)
+    {
+        sw.Stop();
+        return Results.Ok(new
+        {
+            ok = false, code = "unexpected",
+            error = $"Probe failed: {ex.Message}",
+        });
+    }
+});
+
 // + DeploySiteTab's hasConfig probe (returns 404→empty when zero rows
 // would be returned, so frontend keeps showing the wizard CTA).
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (

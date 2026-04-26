@@ -719,7 +719,10 @@
       "healthUrlPlaceholder": "https://example.com/health",
       "soakSeconds": "Soak (sekundy)",
       "composerInstall": "Spustit composer install",
-      "runMigrations": "Spustit migrace"
+      "runMigrations": "Spustit migrace",
+      "testConnection": "Otestovat připojení",
+      "testConnectionOk": "TCP probe prošel ({ms} ms)",
+      "testConnectionRequestFailed": "Probe neúspěšný: {error}"
     },
     "wizard": {
       "step1Title": "Detaily hosta",

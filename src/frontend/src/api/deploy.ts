@@ -419,6 +419,35 @@ export async function startDeployGroup(
 }
 
 /**
+ * Phase 7.5+++ — POST /api/nks.wdc.deploy/test-host-connection.
+ * Pure TCP probe (5s timeout) to verify the SSH host is reachable
+ * from the daemon's network position. Used by DeploySettingsPanel's
+ * host edit dialog so operators get fast feedback before saving a
+ * config that turns out to be unroutable. Always returns 200; the
+ * `ok` flag in the body indicates success/failure.
+ */
+export interface TestHostConnectionResult {
+  ok: boolean
+  latencyMs?: number
+  error?: string
+  /** Stable enum: "timeout" | "socket_error" | "unexpected" */
+  code?: string
+}
+
+export async function testHostConnection(
+  host: string,
+  port: number,
+): Promise<TestHostConnectionResult> {
+  return request<TestHostConnectionResult>(
+    `${PREFIX}/test-host-connection`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ host, port }),
+    },
+  )
+}
+
+/**
  * POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore.
  * Caller must mint+confirm an intent first; this helper attaches the
  * X-Intent-Token header. Body always includes `confirm: true` per the

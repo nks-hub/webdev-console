@@ -648,6 +648,30 @@
         </el-form-item>
       </el-form>
 
+      <!-- Phase 7.5+++ — TCP probe button. Surfaces inline status next
+           to the action so operators see the result without leaving
+           the dialog. Disabled while no host is set or while in flight. -->
+      <div v-if="hostForm.sshHost" class="test-conn-row">
+        <el-button
+          size="small" plain
+          :loading="testingConnection"
+          :disabled="!hostForm.sshHost || !hostForm.sshPort"
+          @click="onTestConnection"
+        >
+          {{ t('deploySettings.hostDialog.testConnection') }}
+        </el-button>
+        <span v-if="testConnectionResult" class="test-conn-result"
+              :class="{ ok: testConnectionResult.ok, fail: !testConnectionResult.ok }">
+          <el-icon v-if="testConnectionResult.ok"><CircleCheck /></el-icon>
+          <el-icon v-else><CircleClose /></el-icon>
+          <span v-if="testConnectionResult.ok">
+            {{ t('deploySettings.hostDialog.testConnectionOk',
+                 { ms: testConnectionResult.latencyMs }) }}
+          </span>
+          <span v-else>{{ testConnectionResult.error }}</span>
+        </span>
+      </div>
+
       <template #footer>
         <el-button @click="hostModalOpen = false">{{ t('deploySettings.common.cancel') }}</el-button>
         <el-button type="primary" @click="submitHostForm">
@@ -664,6 +688,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
+import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import {
   fetchDeploySnapshots,
   defaultDeploySettings,
@@ -671,8 +696,9 @@ import {
   confirmDeployIntent,
   restoreSnapshot,
   snapshotNow,
+  testHostConnection,
 } from '../../api/deploy'
-import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings } from '../../api/deploy'
+import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings, TestHostConnectionResult } from '../../api/deploy'
 
 const { t } = useI18n()
 const props = defineProps<{ domain: string }>()
@@ -735,6 +761,33 @@ const hostModalOpen = ref(false)
 const editingHost = ref<string | null>(null)
 const hostFormRef = ref<FormInstance>()
 
+// Phase 7.5+++ — TCP probe button state. Result is null until the
+// operator clicks Test, then sticks until they change a field that
+// invalidates it (handled via watch below) or close the dialog.
+const testingConnection = ref(false)
+const testConnectionResult = ref<TestHostConnectionResult | null>(null)
+
+async function onTestConnection(): Promise<void> {
+  if (testingConnection.value) return
+  testingConnection.value = true
+  testConnectionResult.value = null
+  try {
+    testConnectionResult.value = await testHostConnection(
+      hostForm.sshHost.trim(),
+      hostForm.sshPort,
+    )
+  } catch (e) {
+    testConnectionResult.value = {
+      ok: false,
+      error: t('deploySettings.hostDialog.testConnectionRequestFailed', {
+        error: (e as Error).message,
+      }),
+    }
+  } finally {
+    testingConnection.value = false
+  }
+}
+
 function emptyHostForm(): DeployHostConfig {
   return {
     name: '',
@@ -778,6 +831,9 @@ function openEditHostModal(host: DeployHostConfig): void {
 
 function onHostModalOpen(): void {
   hostFormRef.value?.clearValidate()
+  // Reset the TCP probe result every time the dialog opens — a probe
+  // result from the last add/edit should NOT carry over to the next.
+  testConnectionResult.value = null
 }
 
 async function submitHostForm(): Promise<void> {
@@ -1167,4 +1223,17 @@ defineExpose({ saveSettings })
 .form-row :deep(.el-form-item) {
   margin-bottom: 0;
 }
+
+/* Phase 7.5+++ — TCP probe row in host edit dialog. */
+.test-conn-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 8px; padding: 8px 12px;
+  background: var(--el-fill-color-light); border-radius: 4px;
+}
+.test-conn-result {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px;
+}
+.test-conn-result.ok { color: var(--el-color-success); }
+.test-conn-result.fail { color: var(--el-color-danger); }
 </style>

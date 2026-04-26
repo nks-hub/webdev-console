@@ -937,6 +937,27 @@ step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:comple
 step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
 
 # ============================================================================
+echo ""; echo "${YEL}=== AA. test-host-connection TCP probe ===${END}"
+# ============================================================================
+# Pure network probe — no actual SSH handshake. Test against:
+#   1. localhost:17280 (the daemon itself; should always return ok=true since
+#      we know the daemon is up to receive our request)
+#   2. localhost:1 (port 1 should be unbound → socket_error or refused)
+#   3. invalid-input (missing host) → 400
+TCP_OK=$(api POST /api/nks.wdc.deploy/test-host-connection -d '{"host":"127.0.0.1","port":17280}')
+step "probe to bound port returns ok=true"   "$TCP_OK" '"ok":true'
+step "probe to bound port reports latencyMs" "$TCP_OK" '"latencyMs":[0-9]'
+
+TCP_FAIL=$(api POST /api/nks.wdc.deploy/test-host-connection -d '{"host":"127.0.0.1","port":1}')
+step "probe to closed port returns ok=false" "$TCP_FAIL" '"ok":false'
+step "probe to closed port has error code"   "$TCP_FAIL" '"code":"'
+
+TCP_BAD=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" -d '{}' \
+    "$BASE/api/nks.wdc.deploy/test-host-connection")
+step "probe with no host returns 400"        "$TCP_BAD" '400'
+
+# ============================================================================
 echo ""; echo "${YEL}=== J. deploy.enabled gate ===${END}"
 # ============================================================================
 api PUT /api/settings -d '{"deploy.enabled":"false"}' >/dev/null

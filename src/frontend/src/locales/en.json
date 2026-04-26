@@ -719,7 +719,10 @@
       "healthUrlPlaceholder": "https://example.com/health",
       "soakSeconds": "Soak seconds",
       "composerInstall": "Composer install",
-      "runMigrations": "Run migrations"
+      "runMigrations": "Run migrations",
+      "testConnection": "Test connection",
+      "testConnectionOk": "TCP probe succeeded ({ms} ms)",
+      "testConnectionRequestFailed": "Probe failed: {error}"
     },
     "wizard": {
       "step1Title": "Host details",
