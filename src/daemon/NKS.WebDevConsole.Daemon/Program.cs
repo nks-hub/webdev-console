@@ -2451,9 +2451,27 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         if (lpEl.TryGetProperty("source", out var srcEl)) localSource = srcEl.GetString();
         if (lpEl.TryGetProperty("target", out var tgtEl)) localTarget = tgtEl.GetString();
     }
-    if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
+
+    // Phase 7.5+++ nksdeploy compat — also resolve shared dirs/files +
+    // keepReleases retention from settings so the LocalDeployBackend
+    // can apply them. Body can override via `localOptions: {...}`.
+    List<string>? optSharedDirs = null;
+    List<string>? optSharedFiles = null;
+    int? optKeepReleases = null;
+    if (root.TryGetProperty("localOptions", out var loEl) && loEl.ValueKind == System.Text.Json.JsonValueKind.Object)
     {
-        // Look up settings JSON to find the host's stored localPaths.
+        if (loEl.TryGetProperty("sharedDirs", out var sdEl) && sdEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            optSharedDirs = sdEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+        if (loEl.TryGetProperty("sharedFiles", out var sfEl) && sfEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            optSharedFiles = sfEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+        if (loEl.TryGetProperty("keepReleases", out var krEl) && krEl.TryGetInt32(out var krVal))
+            optKeepReleases = krVal;
+    }
+
+    if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget)
+        || optSharedDirs is null || optSharedFiles is null || optKeepReleases is null)
+    {
+        // Look up settings JSON to fill in any missing values.
         // File-per-site shape mirrors what the frontend's DeploySettingsPanel writes.
         try
         {
@@ -2461,7 +2479,8 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             if (File.Exists(settingsPath))
             {
                 using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
-                if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                var rootEl = sdoc.RootElement;
+                if (rootEl.TryGetProperty("hosts", out var hostsEl)
                     && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
                 {
                     foreach (var hEl2 in hostsEl.EnumerateArray())
@@ -2474,12 +2493,24 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
                         if (string.IsNullOrEmpty(localTarget)
                             && hEl2.TryGetProperty("localTargetPath", out var ltEl))
                             localTarget = ltEl.GetString();
+                        if (optSharedDirs is null && hEl2.TryGetProperty("sharedDirs", out var hsdEl)
+                            && hsdEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            optSharedDirs = hsdEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+                        if (optSharedFiles is null && hEl2.TryGetProperty("sharedFiles", out var hsfEl)
+                            && hsfEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            optSharedFiles = hsfEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
                         break;
                     }
                 }
+                // Site-wide retention from advanced.keepReleases when not host-overridden.
+                if (optKeepReleases is null
+                    && rootEl.TryGetProperty("advanced", out var advEl)
+                    && advEl.TryGetProperty("keepReleases", out var krsEl)
+                    && krsEl.TryGetInt32(out var krsVal))
+                    optKeepReleases = krsVal;
             }
         }
-        catch { /* swallow — fall through to 400 below if still empty */ }
+        catch { /* swallow — fall through to 400 below if paths still empty */ }
     }
     if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
     {
@@ -2538,7 +2569,11 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     // REAL local-loopback deploy. Background fire-and-forget — HTTP returns
     // 202 immediately, the backend writes status updates and SSE events as
     // it progresses through copy + symlink phases.
-    _ = Task.Run(() => localBackend.RunAsync(deployId, releaseId, localSource!, localTarget!));
+    var deployOptions = new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.Options(
+        SharedDirs: optSharedDirs,
+        SharedFiles: optSharedFiles,
+        KeepReleases: optKeepReleases);
+    _ = Task.Run(() => localBackend.RunAsync(deployId, releaseId, localSource!, localTarget!, deployOptions));
     return Results.Accepted($"/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
         new { deployId, status = "queued", note = "local backend — copying files" });
 });
