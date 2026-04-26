@@ -931,20 +931,17 @@ export const restoreHosts = (pathOrContent: { path?: string; content?: string })
   json('/api/hosts/restore', { method: 'POST', body: JSON.stringify(pathOrContent) })
 
 /**
- * Subscribe to SSE stream from daemon.
- * Returns a cleanup function — call it to close the EventSource.
+ * Map-shaped SSE subscription. Pass any number of named event handlers as
+ * key/value entries — added so `deploy:event` and other plugin-contributed
+ * SSE channels can attach without growing the named-parameter overload of
+ * <see cref="subscribeEvents"/> (per v2 audit fix #4: "subscribeEvents
+ * refactor to Map"). The 5 named-param overload below stays as a thin
+ * wrapper so existing callers keep compiling unchanged.
  *
- * Implements its own reconnect with exponential backoff because the built-in
- * EventSource reconnect uses the frozen initial URL. On daemon restart the
- * port/token change, so we must rebuild the URL from current location.search
- * (which Electron main refreshes on window reload) before each reconnect attempt.
+ * Returns a cleanup function — call it to close the EventSource.
  */
-export function subscribeEvents(
-  onService: (data: ServiceInfo) => void,
-  onProgress: (data: ProgressUpdate) => void,
-  onMetrics?: (data: MetricsUpdate) => void,
-  onLog?: (data: LogEntry) => void,
-  onValidation?: (data: ValidationUpdate) => void,
+export function subscribeEventsMap(
+  handlers: Record<string, (data: unknown) => void>,
 ): () => void {
   let es: EventSource | null = null
   let closed = false
@@ -975,25 +972,15 @@ export function subscribeEvents(
       backoffMs = 1000
     })
 
-    es.addEventListener('service', (e: MessageEvent) => {
-      try { onService(JSON.parse(e.data) as ServiceInfo) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('progress', (e: MessageEvent) => {
-      try { onProgress(JSON.parse(e.data) as ProgressUpdate) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('metrics', (e: MessageEvent) => {
-      try { onMetrics?.(JSON.parse(e.data) as MetricsUpdate) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('log', (e: MessageEvent) => {
-      try { onLog?.(JSON.parse(e.data) as LogEntry) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('validation', (e: MessageEvent) => {
-      try { onValidation?.(JSON.parse(e.data) as ValidationUpdate) } catch { /* ignore */ }
-    })
+    // Iterate the handler map so every registered event type wires into the
+    // single shared connection. Reusing the same EventSource for plugin
+    // events (e.g. deploy:event) avoids the previous 3-EventSource problem
+    // identified in the v2 audit.
+    for (const [eventName, handler] of Object.entries(handlers)) {
+      es.addEventListener(eventName, (e: MessageEvent) => {
+        try { handler(JSON.parse(e.data)) } catch { /* ignore malformed payload */ }
+      })
+    }
 
     es.onerror = () => {
       // EventSource would auto-reconnect with stale URL — we close and rebuild
@@ -1034,4 +1021,27 @@ export function subscribeEvents(
       es = null
     }
   }
+}
+
+/**
+ * Backwards-compatible 5-handler overload of <see cref="subscribeEventsMap"/>.
+ * Existing call sites (Sites view, ServiceCard, LogViewer, etc.) continue
+ * to use this signature; new plugins (deploy, future) attach via the Map
+ * variant. Implementation just builds a handler map and delegates.
+ */
+export function subscribeEvents(
+  onService: (data: ServiceInfo) => void,
+  onProgress: (data: ProgressUpdate) => void,
+  onMetrics?: (data: MetricsUpdate) => void,
+  onLog?: (data: LogEntry) => void,
+  onValidation?: (data: ValidationUpdate) => void,
+): () => void {
+  const handlers: Record<string, (data: unknown) => void> = {
+    service: (d) => onService(d as ServiceInfo),
+    progress: (d) => onProgress(d as ProgressUpdate),
+  }
+  if (onMetrics) handlers.metrics = (d) => onMetrics(d as MetricsUpdate)
+  if (onLog) handlers.log = (d) => onLog(d as LogEntry)
+  if (onValidation) handlers.validation = (d) => onValidation(d as ValidationUpdate)
+  return subscribeEventsMap(handlers)
 }
