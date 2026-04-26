@@ -59,6 +59,10 @@
         />
       </el-tab-pane>
 
+      <el-tab-pane name="releases" :label="t('deploy.subTabs.releases')">
+        <DeployReleasesTable :entries="history" @refresh="refreshHistory" />
+      </el-tab-pane>
+
       <el-tab-pane name="groups" :label="t('deploy.subTabs.groups')">
         <DeployGroupHistoryTable :domain="domain" />
       </el-tab-pane>
@@ -82,6 +86,7 @@ import DeploySetupWizard from './DeploySetupWizard.vue'
 import DeployCommandCenter from './DeployCommandCenter.vue'
 import DeploySettingsPanel from './DeploySettingsPanel.vue'
 import DeployGroupHistoryTable from './DeployGroupHistoryTable.vue'
+import DeployReleasesTable from './DeployReleasesTable.vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
 import type { DeployDiff } from './DiffSummary.vue'
 import type { PreflightCheck } from './PreflightChecklist.vue'

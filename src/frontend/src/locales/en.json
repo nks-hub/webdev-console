@@ -860,8 +860,27 @@
     "loading": "Loading deploy state…",
     "subTabs": {
       "deploy": "Deploy",
+      "releases": "Releases",
       "groups": "Groups",
       "settings": "Settings"
+    },
+    "releases": {
+      "title": "Releases",
+      "summary": "{releases} releases · {deploys} deploys total",
+      "refresh": "Refresh",
+      "empty": "No releases deployed yet.",
+      "col": {
+        "releaseId": "Release ID",
+        "firstSeen": "First deployed",
+        "hosts": "Hosts",
+        "deploys": "Deploys",
+        "successRate": "Success rate",
+        "host": "Host",
+        "startedAt": "Started",
+        "duration": "Duration",
+        "phase": "Phase",
+        "triggeredBy": "Source"
+      }
     },
     "empty": {
       "title": "Deploy {domain}",

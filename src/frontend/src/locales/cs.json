@@ -860,8 +860,27 @@
     "loading": "Načítám stav deploye…",
     "subTabs": {
       "deploy": "Deploy",
+      "releases": "Release",
       "groups": "Skupiny",
       "settings": "Nastavení"
+    },
+    "releases": {
+      "title": "Release",
+      "summary": "{releases} release · {deploys} deployů celkem",
+      "refresh": "Obnovit",
+      "empty": "Zatím žádný release nebyl nasazený.",
+      "col": {
+        "releaseId": "Release ID",
+        "firstSeen": "Poprvé nasazeno",
+        "hosts": "Hosti",
+        "deploys": "Deployů",
+        "successRate": "Úspěšnost",
+        "host": "Host",
+        "startedAt": "Začátek",
+        "duration": "Trvání",
+        "phase": "Fáze",
+        "triggeredBy": "Zdroj"
+      }
     },
     "empty": {
       "title": "Deploy {domain}",
