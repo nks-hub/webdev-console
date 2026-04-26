@@ -22,4 +22,12 @@ public interface IWdcPlugin
     void Initialize(IServiceCollection services, IPluginContext context);
     Task StartAsync(IPluginContext context, CancellationToken ct);
     Task StopAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Registers HTTP endpoints under /api/{pluginId}/. Called once after
+    /// app.Build() and before app.RunAsync() by PluginLoader.WireEndpoints.
+    /// Default no-op preserves backward compatibility with plugins that
+    /// hand-wire their routes elsewhere.
+    /// </summary>
+    void RegisterEndpoints(EndpointRegistration registration) { }
 }
