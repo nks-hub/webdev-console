@@ -1013,6 +1013,18 @@
       "ageHours": "před {n} h",
       "ageDays": "před {n} d"
     },
+    "statusBanner": {
+      "aria": "Přehled stavu deployů pro tento web",
+      "totalDeploys": "Deployů celkem",
+      "successRate": "Úspěšnost",
+      "hosts": "Hostů",
+      "lastDeploy": "Poslední deploy",
+      "justNow": "právě teď",
+      "minutesAgo": "před {n} m",
+      "hoursAgo": "před {n} h",
+      "daysAgo": "před {n} d",
+      "triggeredByLabel": "Zdroje:"
+    },
     "commandCenter": {
       "noHosts": "Žádní deploy hosti nejsou nakonfigurovaní",
       "groupToolbarAria": "Skupinový deploy na více hostů",

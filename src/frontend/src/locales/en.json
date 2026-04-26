@@ -1013,6 +1013,18 @@
       "ageHours": "{n}h ago",
       "ageDays": "{n}d ago"
     },
+    "statusBanner": {
+      "aria": "Deploy status overview for this site",
+      "totalDeploys": "Deploys total",
+      "successRate": "Success rate",
+      "hosts": "Hosts",
+      "lastDeploy": "Last deploy",
+      "justNow": "just now",
+      "minutesAgo": "{n}m ago",
+      "hoursAgo": "{n}h ago",
+      "daysAgo": "{n}d ago",
+      "triggeredByLabel": "Sources:"
+    },
     "commandCenter": {
       "noHosts": "No deploy hosts configured",
       "groupToolbarAria": "Multi-host group deploy",

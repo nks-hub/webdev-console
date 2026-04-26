@@ -1,5 +1,9 @@
 <template>
   <div class="cmd-center">
+    <!-- Phase 7.5+++ — top-of-tab status banner: aggregate counts,
+         success rate, last-deploy age, per-host strip. Auto-hidden when
+         no history. -->
+    <DeployStatusBanner :entries="history" />
     <div v-if="hosts.length === 0" class="cmd-empty">
       <el-empty :description="t('deploy.commandCenter.noHosts')" />
     </div>
@@ -73,6 +77,7 @@ import DiffSummary, { type DeployDiff } from './DiffSummary.vue'
 import PreflightChecklist, { type PreflightCheck } from './PreflightChecklist.vue'
 import DeployHistoryTable from './DeployHistoryTable.vue'
 import DeployConfirmModal from './DeployConfirmModal.vue'
+import DeployStatusBanner from './DeployStatusBanner.vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
 
 const props = defineProps<{
