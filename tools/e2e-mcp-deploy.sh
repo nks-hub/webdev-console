@@ -331,6 +331,60 @@ if [ -f "$HOME/.wdc/data/deploy-settings/${DOM}.json" ]; then
 fi
 
 # ============================================================================
+echo ""; echo "${YEL}=== P. grant expiry — expired grants never auto-confirm ===${END}"
+# ============================================================================
+# Security-critical: ListActiveAsync + FindMatchingActiveAsync MUST filter
+# rows where expires_at < now. An expired grant that auto-confirmed an
+# intent would defeat the entire trust-window concept.
+
+EXPIRED_SESSION="ai-expiry-$(date +%s)"
+# Build grant body with expires_at 2 seconds in the future
+EXPIRED_AT=$(date -u -d "+2 seconds" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -v+2S +"%Y-%m-%dT%H:%M:%SZ")
+python3 - <<EOF > /c/temp/.e2e-shortgrant.json
+import json
+print(json.dumps({
+    "scopeType": "session", "scopeValue": "$EXPIRED_SESSION",
+    "kindPattern": "deploy", "targetPattern": "blog.loc",
+    "expiresAt": "$EXPIRED_AT", "note": "E2E expiry test (2s)"
+}))
+EOF
+SHORT_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-shortgrant.json "$BASE/api/mcp/grants")
+SHORT_ID=$(echo "$SHORT_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "short-lived grant (2s expiry) created" "$SHORT_GR" '"status":"created"'
+
+# Immediately, the grant is still active and visible on list
+LIST_FRESH=$(api GET /api/mcp/grants)
+step "fresh grant visible on /api/mcp/grants" "$LIST_FRESH" "\"id\":\"$SHORT_ID\""
+
+# Sleep past expiry + slack
+sleep 4
+
+# After expiry, it must be filtered out of the active list
+LIST_EXPIRED=$(api GET /api/mcp/grants)
+HAS_EXPIRED=$(echo "$LIST_EXPIRED" | grep -c "$SHORT_ID" || true)
+step "expired grant filtered from active list" "$HAS_EXPIRED" '^0$'
+
+# An intent fired with the same session header must still hit pending_confirmation
+# (not auto-confirmed by the expired grant)
+INTENT_X=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $EXPIRED_SESSION" \
+    -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":60}' \
+    "$BASE/api/mcp/intents")
+INTENT_X_TOKEN=$(echo "$INTENT_X" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+INTENT_X_ID=$(echo "$INTENT_X" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+
+X_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $EXPIRED_SESSION" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_X_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pending_confirmation.*425'
+
+# Cleanup
+[ -n "$SHORT_ID" ] && api DELETE /api/mcp/grants/$SHORT_ID >/dev/null 2>&1
+[ -n "$INTENT_X_ID" ] && api POST /api/mcp/intents/$INTENT_X_ID/revoke >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== O. snapshot list wired to real data ===${END}"
 # ============================================================================
 # Fire a deploy WITH snapshot:true → backend stamps PreDeployBackupPath
