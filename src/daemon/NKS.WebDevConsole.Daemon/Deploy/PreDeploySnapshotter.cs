@@ -100,11 +100,33 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
                 envConn.Type, envConn.Database, domain);
         }
 
+        // Phase 6.4 — pg_dump path. Same shape as mysqldump but uses the
+        // PGPASSWORD env var (pg_dump's only safe non-argv password
+        // channel — equivalent of mysqldump's defaults-extra-file).
+        if (envConn is not null && envConn.Type is "pgsql")
+        {
+            var pgDump = TryFindPgDump();
+            if (pgDump is not null)
+            {
+                _logger.LogInformation(
+                    "Pre-deploy snapshot: pg_dump {Db}@{Host}:{Port} (envFile={EnvFile}, deploy {DeployId})",
+                    envConn.Database, envConn.Host, envConn.Port, envConn.DiscoveredAt, deployId);
+                await DumpPgAsync(pgDump, envConn, outPath, ct);
+                sw.Stop();
+                var size = new FileInfo(outPath).Length;
+                return new PreDeploySnapshotResult(outPath, size, sw.Elapsed);
+            }
+            _logger.LogWarning(
+                "Pre-deploy snapshot: .env identifies pgsql db {Db} for {Domain}, but pg_dump binary " +
+                "not found in WdcPaths.BinariesRoot or PATH — falling back to scaffold stub.",
+                envConn.Database, domain);
+        }
+
         // Last resort — SCAFFOLD metadata file. Either no .env was found,
-        // it had no DB_* keys, the type is unsupported (postgres impl is
-        // Phase 6.4), or the dump tool is missing. Always succeeds so the
-        // deploy_runs row gets a populated path; restore against this
-        // archive will surface a clear error.
+        // it had no DB_* keys, the type is unsupported, or the dump tool
+        // is missing. Always succeeds so the deploy_runs row gets a
+        // populated path; restore against this archive will surface a
+        // clear error.
         await WriteScaffoldAsync(outPath, domain, deployId, envConn, ct);
         sw.Stop();
         var scaffoldSize = new FileInfo(outPath).Length;
@@ -275,6 +297,77 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
         await using var outFs = File.Create(dst);
         await using var gz = new GZipStream(outFs, CompressionLevel.SmallestSize);
         await input.CopyToAsync(gz, ct);
+    }
+
+    /// <summary>
+    /// Locate pg_dump. Same probe order as mysqldump — managed install at
+    /// <c>{BinariesRoot}/postgres/{any-version}/bin/pg_dump</c>, then PATH.
+    /// </summary>
+    private static string? TryFindPgDump()
+    {
+        var ext = OperatingSystem.IsWindows() ? ".exe" : "";
+        // Managed install — pick the first version directory that has pg_dump.
+        foreach (var rootName in new[] { "postgres", "postgresql" })
+        {
+            var managedRoot = Path.Combine(WdcPaths.BinariesRoot, rootName);
+            if (!Directory.Exists(managedRoot)) continue;
+            foreach (var versionDir in Directory.EnumerateDirectories(managedRoot))
+            {
+                var candidate = Path.Combine(versionDir, "bin", "pg_dump" + ext);
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+        // PATH fallback.
+        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var pathSep = OperatingSystem.IsWindows() ? ';' : ':';
+        foreach (var dir in pathEnv.Split(pathSep, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = Path.Combine(dir.Trim(), "pg_dump" + ext);
+            if (File.Exists(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Run pg_dump against the resolved connection, gzipping stdout.
+    /// Password is passed through PGPASSWORD env var rather than -W (which
+    /// is interactive) or argv (which leaks via ps). pg_dump's
+    /// <c>--no-owner --no-privileges</c> keep the dump portable across
+    /// hosts that have different role names.
+    /// </summary>
+    private async Task DumpPgAsync(
+        string pgDump,
+        EnvFileDatabaseResolver.DatabaseConnection conn,
+        string outPath,
+        CancellationToken ct)
+    {
+        await using var outFs = File.Create(outPath);
+        await using var gz = new GZipStream(outFs, CompressionLevel.SmallestSize);
+        var cmd = Cli.Wrap(pgDump)
+            .WithArguments(new[]
+            {
+                $"--host={conn.Host}",
+                $"--port={conn.Port}",
+                $"--username={conn.User}",
+                "--no-password",       // never prompt; rely on PGPASSWORD
+                "--no-owner",
+                "--no-privileges",
+                "--clean",             // emit DROP before CREATE for restore
+                "--if-exists",         // idempotent restore against existing schema
+                conn.Database,
+            })
+            .WithStandardOutputPipe(PipeTarget.ToStream(gz))
+            .WithValidation(CommandResultValidation.None);
+        if (!string.IsNullOrEmpty(conn.Password))
+        {
+            cmd = cmd.WithEnvironmentVariables(env => env.Set("PGPASSWORD", conn.Password));
+        }
+        var result = await cmd.ExecuteBufferedAsync(ct);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"pg_dump exit {result.ExitCode}: {result.StandardError.Trim()}");
+        }
     }
 
     private static async Task WriteScaffoldAsync(

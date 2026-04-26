@@ -504,6 +504,43 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
     )
   }
 
+  // ── Phase 6.4 — operator-driven snapshot restore (DESTRUCTIVE) ───────
+
+  if (canAdmin && !opts.readonly) {
+    server.registerTool(
+      'wdc_deploy_restore_snapshot',
+      {
+        title: 'Restore a pre-deploy DB snapshot (DESTRUCTIVE — overwrites live data)',
+        description:
+          'Restore the database snapshot recorded on a deploy_runs row over the live ' +
+          'database. SQLite restores create a .bak safety copy; SQL restores have no net.\n\n' +
+          'GATING: Requires intent token with kind="restore" and host="*restore*". ' +
+          'Body must include confirm:true — the daemon refuses without it. Restore is ' +
+          'NEVER auto-triggered on rollback per design (rollback rewinds code, restore ' +
+          'overwrites data — different reversibility profiles).\n\n' +
+          'Args:\n  domain: Site domain.\n  deployId: UUID of the deploy whose snapshot to restore.',
+        inputSchema: {
+          domain: DomainSchema,
+          deployId: DeployIdSchema,
+          intentToken: IntentTokenSchema,
+        },
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+      },
+      async ({ domain, deployId, intentToken }) => {
+        const guard = destructiveGuard(intentToken)
+        if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
+        const headers = destructiveHeaders(intentToken)
+        return safe(() =>
+          daemonClient.post(
+            `${PREFIX}/sites/${encodeURIComponent(domain)}/snapshots/${encodeURIComponent(deployId)}/restore`,
+            { confirm: true },
+            headers,
+          ),
+        )
+      },
+    )
+  }
+
   // wdc_deploy_group_status is read-only and lives in the read scope so the
   // AI can poll group progress without holding any destructive scope.
   if (canRead) {

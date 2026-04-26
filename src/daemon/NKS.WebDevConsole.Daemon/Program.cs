@@ -105,10 +105,14 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepos
 // Core (shared assembly), implementation in Daemon talks to migration 009.
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository,
     NKS.WebDevConsole.Daemon.Deploy.DeployGroupsRepository>();
-// Phase 6.2 — pre-deploy DB snapshotter. SQLite is fully implemented;
-// MySQL/PG are scaffold stubs pending Phase 6.3 credential resolution.
+// Phase 6.2 + 6.3 — pre-deploy DB snapshotter. SQLite, MySQL, MariaDB
+// fully implemented; pg_dump added in Phase 6.4. Falls back to scaffold
+// stub when no .env discovery succeeds or dump tool missing.
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IPreDeploySnapshotter,
     NKS.WebDevConsole.Daemon.Deploy.PreDeploySnapshotter>();
+// Phase 6.4 — operator-driven snapshot restore (NEVER auto on rollback).
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.ISnapshotRestorer,
+    NKS.WebDevConsole.Daemon.Deploy.SnapshotRestorer>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster,
     NKS.WebDevConsole.Daemon.Deploy.SseDeployEventBroadcaster>();
 // MCP intent signer + validator. The signer holds the long-lived HMAC key
@@ -978,9 +982,9 @@ app.MapPost("/api/mcp/intents", async (
     {
         return Results.BadRequest(new { error = "domain, host, kind are required" });
     }
-    if (kind is not ("deploy" or "rollback" or "cancel"))
+    if (kind is not ("deploy" or "rollback" or "cancel" or "restore"))
     {
-        return Results.BadRequest(new { error = "kind must be deploy|rollback|cancel" });
+        return Results.BadRequest(new { error = "kind must be deploy|rollback|cancel|restore" });
     }
     // Clamp the expiry window. Long-lived signed intents defeat the point
     // of single-use tokens — 1h ceiling matches the MCP server's CCR
