@@ -1432,17 +1432,44 @@ static string ComputeIntentState(string? usedAt, string? confirmedAt, string exp
 // /api/mcp/intents requests; the GUI shows it on the MCP Hub page so
 // operators see "what AI can do here". Read-only; bearer auth on /api/*
 // is sufficient gate.
-app.MapGet("/api/mcp/kinds", (
+app.MapGet("/api/mcp/kinds", async (
     HttpContext ctx,
-    NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kinds) =>
+    NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kinds,
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    CancellationToken ct) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    // Phase 7.5+++ — usage telemetry per kind. Single GROUP BY query
+    // tells operators which destructive ops AI is actually exercising
+    // (deploy: 47, restore: 3, rollback: 0). Tolerates missing table
+    // for fresh-DB compat.
+    var usageByKind = new Dictionary<string, int>(StringComparer.Ordinal);
+    try
+    {
+        using var conn = db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var rows = await Dapper.SqlMapper.QueryAsync<(string Kind, int Count)>(conn,
+            "SELECT kind AS Kind, COUNT(*) AS Count FROM deploy_intents GROUP BY kind");
+        foreach (var (kind, count) in rows)
+        {
+            usageByKind[kind] = count;
+        }
+    }
+    catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 1)
+    {
+        // Table doesn't exist (fresh DB before migration 006). All counts 0.
+    }
+
     var list = kinds.List().Select(k => new
     {
         id = k.Id,
         label = k.Label,
         pluginId = k.PluginId,
         danger = k.Danger.ToString().ToLowerInvariant(),
+        // Phase 7.5+++ — lifetime intent count for this kind. Includes
+        // consumed + revoked + expired + still-pending; operators care
+        // about historical use, not just live state.
+        intentCount = usageByKind.TryGetValue(k.Id, out var c) ? c : 0,
     }).ToList();
     return Results.Ok(new { count = list.Count, entries = list });
 });

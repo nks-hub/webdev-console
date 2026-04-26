@@ -63,6 +63,9 @@ KINDS=$(api GET /api/mcp/kinds)
 step "kinds endpoint returns 4 core kinds" "$KINDS" '"count":4'
 step "deploy kind has reversible danger" "$KINDS" '"id":"deploy".*"danger":"reversible"'
 step "restore kind has destructive danger" "$KINDS" '"id":"restore".*"danger":"destructive"'
+# Phase 7.5+++ — usage telemetry per kind. After many sections that
+# mint deploy intents, the deploy row should report intentCount > 0.
+step "kinds endpoint exposes intentCount field" "$KINDS" '"intentCount":[0-9]'
 
 # ============================================================================
 echo ""; echo "${YEL}=== C. grants CRUD ===${END}"

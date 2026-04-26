@@ -273,6 +273,9 @@ export interface McpKindRow {
   label: string
   pluginId: string
   danger: 'reversible' | 'destructive'
+  // Phase 7.5+++ — lifetime intent count for this kind (all states).
+  // Optional for backward compat with daemons that don't expose it yet.
+  intentCount?: number
 }
 
 export const listMcpKinds = (): Promise<{ count: number; entries: McpKindRow[] }> =>

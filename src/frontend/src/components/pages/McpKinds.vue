@@ -71,6 +71,12 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="intentCount" :label="t('mcpKinds.col.intentCount')" width="120" sortable>
+        <template #default="{ row }">
+          <strong v-if="(row.intentCount ?? 0) > 0">{{ row.intentCount }}</strong>
+          <span v-else class="muted">{{ t('mcpKinds.unused') }}</span>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 </template>
