@@ -106,6 +106,23 @@
           <span v-else class="muted">running</span>
         </template>
       </el-table-column>
+
+      <el-table-column label="" width="100" align="right">
+        <template #default="{ row }">
+          <el-button
+            v-if="canRollback(row)"
+            size="small"
+            link
+            type="warning"
+            :loading="rollingBackId === row.id"
+            :disabled="rollingBackId !== null && rollingBackId !== row.id"
+            aria-label="Cascade rollback every committed host in this group"
+            @click="onRollbackGroup(row)"
+          >
+            <el-icon><RefreshRight /></el-icon> Rollback
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 </template>
@@ -122,11 +139,12 @@ import {
 } from '@element-plus/icons-vue'
 import {
   fetchDeployGroups,
+  rollbackDeployGroup,
   type DeployGroupEntry,
   type DeployGroupPhase,
 } from '../../api/deploy'
 import { subscribeEventsMap } from '../../api/daemon'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
 
 interface Props {
@@ -144,6 +162,7 @@ const entries = ref<DeployGroupEntry[]>([])
 const loading = ref(false)
 const expandedKeys = ref<string[]>([])
 const openingDeployId = ref<string | null>(null)
+const rollingBackId = ref<string | null>(null)
 const deployStore = useDeployStore()
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -173,6 +192,55 @@ function scheduleRefresh(): void {
 
 function onExpandChange(row: DeployGroupEntry, expanded: DeployGroupEntry[]): void {
   expandedKeys.value = expanded.map((r) => r.id)
+}
+
+/**
+ * Phase 6.13a — group rollback eligibility. We allow rollback whenever
+ * the group has at least one committed per-host deploy (i.e. some host
+ * crossed PONR and produced a release that could be rewound). Terminal
+ * states still get the button so operators can roll back a "succeeded"
+ * group if a downstream issue is discovered later.
+ *
+ * Excluded states: initializing/preflight/deploying — fan-out hasn't
+ * completed yet, rollback would race the in-flight deploys. Also
+ * `rolled_back` (already done) and `group_failed` (no commits to undo).
+ */
+function canRollback(row: DeployGroupEntry): boolean {
+  if (row.phase === 'initializing' || row.phase === 'preflight' ||
+      row.phase === 'deploying' || row.phase === 'rolling_back_all' ||
+      row.phase === 'rolled_back' || row.phase === 'group_failed') {
+    return false
+  }
+  return Object.keys(row.hostDeployIds ?? {}).length > 0
+}
+
+async function onRollbackGroup(row: DeployGroupEntry): Promise<void> {
+  if (rollingBackId.value !== null) return
+  const hostCount = Object.keys(row.hostDeployIds ?? {}).length
+  try {
+    await ElMessageBox.confirm(
+      `Cascade-rollback every committed host in this group?\n\n` +
+        `Hosts to roll back: ${hostCount}\n` +
+        `Group: ${row.id.slice(0, 8)}…\n\n` +
+        `Rollback rewinds the release symlink only — pre-deploy DB ` +
+        `snapshots are NOT auto-restored (operator-driven via Settings tab).`,
+      'Confirm group rollback',
+      { type: 'warning', confirmButtonText: 'Roll back group', cancelButtonText: 'Cancel' },
+    )
+  } catch { return }
+
+  rollingBackId.value = row.id
+  try {
+    await rollbackDeployGroup(props.domain, row.id)
+    ElMessage.success(`Group rollback dispatched (${hostCount} hosts)`)
+    // Refresh to reflect rolling_back_all → rolled_back/partial_failure
+    await refresh()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(`Group rollback failed: ${msg}`)
+  } finally {
+    rollingBackId.value = null
+  }
 }
 
 async function onOpenHostRun(host: string, deployId: string): Promise<void> {

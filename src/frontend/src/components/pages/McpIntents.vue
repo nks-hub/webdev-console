@@ -22,14 +22,65 @@
       </el-tag>
     </div>
 
+    <!-- Phase 6.13b — filter toolbar. State + kind selects + free-text
+         domain search. Filters apply client-side over the loaded list
+         (cap 200) — no server round-trip needed. -->
+    <div class="filter-toolbar" role="search" aria-label="Filter intents">
+      <el-select
+        v-model="stateFilter"
+        placeholder="All states"
+        clearable
+        size="small"
+        style="width: 180px"
+        aria-label="Filter by state"
+      >
+        <el-option label="ready" value="ready" />
+        <el-option label="pending_confirmation" value="pending_confirmation" />
+        <el-option label="consumed" value="consumed" />
+        <el-option label="expired" value="expired" />
+      </el-select>
+      <el-select
+        v-model="kindFilter"
+        placeholder="All kinds"
+        clearable
+        size="small"
+        style="width: 140px"
+        aria-label="Filter by kind"
+      >
+        <el-option label="deploy" value="deploy" />
+        <el-option label="rollback" value="rollback" />
+        <el-option label="cancel" value="cancel" />
+        <el-option label="restore" value="restore" />
+      </el-select>
+      <el-input
+        v-model="domainFilter"
+        placeholder="Search domain or host…"
+        size="small"
+        clearable
+        style="max-width: 260px"
+        aria-label="Search by domain or host"
+      >
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
+      <span v-if="filteredEntries.length !== entries.length" class="muted filter-count">
+        Showing {{ filteredEntries.length }} of {{ entries.length }}
+      </span>
+    </div>
+
     <el-empty
       v-if="!entries.length && !loading"
       description="No MCP intents recorded — the daemon hasn't seen any AI-signed destructive ops yet."
     />
 
+    <el-empty
+      v-else-if="!filteredEntries.length"
+      :image-size="60"
+      description="No intents match the current filters"
+    />
+
     <el-table
       v-else
-      :data="entries"
+      :data="filteredEntries"
       stripe
       size="small"
       :empty-text="'No intents'"
@@ -110,6 +161,7 @@ import {
   Warning,
   CircleClose,
   Loading,
+  Search,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -121,6 +173,23 @@ import {
 const entries = ref<IntentInventoryEntry[]>([])
 const loading = ref(false)
 const revokingId = ref<string | null>(null)
+
+// Phase 6.13b — client-side filters. Empty/null = no filter applied.
+const stateFilter = ref<string | null>(null)
+const kindFilter = ref<string | null>(null)
+const domainFilter = ref('')
+
+const filteredEntries = computed<IntentInventoryEntry[]>(() => {
+  const q = domainFilter.value.trim().toLowerCase()
+  return entries.value.filter((e) => {
+    if (stateFilter.value && e.state !== stateFilter.value) return false
+    if (kindFilter.value && e.kind !== kindFilter.value) return false
+    if (q && !e.domain.toLowerCase().includes(q) && !e.host.toLowerCase().includes(q)) {
+      return false
+    }
+    return true
+  })
+})
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -244,6 +313,20 @@ onMounted(() => refresh())
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+}
+.filter-count {
+  margin-left: auto;
+  font-size: 12px;
 }
 .intent-table {
   width: 100%;

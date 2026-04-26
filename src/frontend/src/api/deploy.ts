@@ -368,6 +368,27 @@ export interface StartGroupResult {
   hostCount: number
 }
 
+export interface RollbackGroupResult {
+  groupId: string
+  status: string
+}
+
+/**
+ * Phase 6.13a — operator-driven group cascade rollback. Posts to the
+ * plugin's POST /sites/{domain}/groups/{groupId}/rollback endpoint.
+ * Like single-host rollback, GUI calls don't need an intent token —
+ * the bearer-auth + GUI confirmation modal are sufficient gates.
+ */
+export async function rollbackDeployGroup(
+  domain: string,
+  groupId: string,
+): Promise<RollbackGroupResult> {
+  return request<RollbackGroupResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/groups/${encodeURIComponent(groupId)}/rollback`,
+    { method: 'POST', body: '{}' },
+  )
+}
+
 /**
  * Phase 6.10 — kick off a multi-host atomic deploy group from the GUI.
  * Posts to the plugin's POST /sites/{domain}/groups endpoint. Intent
