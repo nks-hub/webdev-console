@@ -1212,6 +1212,13 @@
       "deadweight": "DEADWEIGHT",
       "deadweightTooltip": "This grant has existed for more than {days} days and never matched anything. Likely safe to revoke."
     },
+    "expiresIn": {
+      "expired": "expired",
+      "seconds": "in {n}s",
+      "minutes": "in {n}m",
+      "hours": "in {n}h"
+    },
+    "expiringSoonTooltip": "This grant expires within 1 hour. AI will fall back to the GUI banner until you mint a new grant.",
     "usage": {
       "all": "All",
       "inuse": "In use",

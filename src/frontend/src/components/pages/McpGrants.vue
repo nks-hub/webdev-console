@@ -115,9 +115,18 @@
       <el-table-column prop="grantedAt" :label="t('mcpGrants.col.grantedAt')" min-width="170">
         <template #default="{ row }">{{ formatDate(row.grantedAt) }}</template>
       </el-table-column>
-      <el-table-column prop="expiresAt" :label="t('mcpGrants.col.expires')" min-width="170">
+      <el-table-column prop="expiresAt" :label="t('mcpGrants.col.expires')" min-width="200">
         <template #default="{ row }">
-          <span v-if="row.expiresAt">{{ formatDate(row.expiresAt) }}</span>
+          <template v-if="row.expiresAt">
+            <span :class="{ 'expires-soon': isExpiringSoon(row.expiresAt) }">
+              {{ formatDate(row.expiresAt) }}
+            </span>
+            <span v-if="isExpiringSoon(row.expiresAt)"
+                  class="expires-soon-badge"
+                  :title="t('mcpGrants.expiringSoonTooltip')">
+              ⏱ {{ formatExpiresIn(row.expiresAt) }}
+            </span>
+          </template>
           <el-tag v-else type="warning" size="small">{{ t('mcpGrants.permanent') }}</el-tag>
         </template>
       </el-table-column>
@@ -590,6 +599,34 @@ function formatRelative(iso: string): string {
     return t('mcpGrants.matches.daysAgo', { n: Math.floor(deltaSec / 86400) })
   } catch { return '' }
 }
+
+// Phase 7.5+++ — "expires soon" detection + relative formatter for the
+// future direction. Threshold is 1 hour; under that the row gets the
+// .expires-soon styling (bold orange) so operators see "this trust
+// window is about to close" without parsing dates by hand.
+const EXPIRES_SOON_THRESHOLD_SEC = 3600
+
+function expiresInSeconds(iso: string): number {
+  try {
+    const dt = new Date(iso).getTime()
+    if (!Number.isFinite(dt)) return Number.POSITIVE_INFINITY
+    return Math.max(0, Math.round((dt - Date.now()) / 1000))
+  } catch { return Number.POSITIVE_INFINITY }
+}
+
+function isExpiringSoon(iso: string | null | undefined): boolean {
+  if (!iso) return false
+  const s = expiresInSeconds(iso)
+  return s > 0 && s <= EXPIRES_SOON_THRESHOLD_SEC
+}
+
+function formatExpiresIn(iso: string): string {
+  const s = expiresInSeconds(iso)
+  if (!Number.isFinite(s) || s <= 0) return t('mcpGrants.expiresIn.expired')
+  if (s < 60) return t('mcpGrants.expiresIn.seconds', { n: s })
+  if (s < 3600) return t('mcpGrants.expiresIn.minutes', { n: Math.floor(s / 60) })
+  return t('mcpGrants.expiresIn.hours', { n: Math.floor(s / 3600) })
+}
 </script>
 
 <style scoped>
@@ -601,6 +638,20 @@ function formatRelative(iso: string): string {
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
 .last-match { margin-left: 4px; font-size: 11px; }
+.expires-soon {
+  color: var(--el-color-warning);
+  font-weight: 600;
+}
+.expires-soon-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  background: var(--el-color-warning-light-9);
+  border: 1px solid var(--el-color-warning-light-5);
+  border-radius: 3px;
+  color: var(--el-color-warning-dark-2);
+}
 .test-match-result {
   margin-top: 12px; padding: 8px 12px; border-radius: 4px;
   font-size: 13px;

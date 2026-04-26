@@ -1212,6 +1212,13 @@
       "deadweight": "DEADWEIGHT",
       "deadweightTooltip": "Toto oprávnění existuje déle než {days} dní a nikdy se nezmatchovalo. Pravděpodobně bezpečně odvolatelné."
     },
+    "expiresIn": {
+      "expired": "vypršelo",
+      "seconds": "za {n} s",
+      "minutes": "za {n} m",
+      "hours": "za {n} h"
+    },
+    "expiringSoonTooltip": "Toto oprávnění vyprší během 1 hodiny. AI bude muset znovu projít přes GUI banner, dokud nezmnotujete nové oprávnění.",
     "usage": {
       "all": "Vše",
       "inuse": "Aktivně použité",
