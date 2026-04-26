@@ -137,11 +137,29 @@
   },
   "mcpHub": {
     "title": "Model Context Protocol",
-    "description": "Audit trail of every signed AI request (Intents) plus persistent trust rules that pre-approve future requests (Grants).",
+    "description": "Audit trail of every signed AI request (Intents) plus persistent trust rules that pre-approve future requests (Grants). Kinds shows what destructive operations plugins have registered.",
     "tabs": {
       "intents": "Intents (audit log)",
-      "grants": "Grants (trust policy)"
+      "grants": "Grants (trust policy)",
+      "kinds": "Kinds (registered ops)"
     }
+  },
+  "mcpKinds": {
+    "title": "Registered destructive operation kinds",
+    "refresh": "Refresh",
+    "description": "Plugins register the destructive operations they expose to AI clients here. Each kind ships with a wire-format id (used in MCP intent tokens), a human-readable label (shown in the confirm banner), and a danger level (escalates banner visual treatment for irreversible ops).",
+    "empty": "No kinds registered",
+    "col": {
+      "id": "ID",
+      "label": "Label",
+      "plugin": "Plugin",
+      "danger": "Danger"
+    },
+    "danger": {
+      "reversible": "Reversible",
+      "destructive": "Destructive"
+    },
+    "toastLoadFailed": "Could not load kinds: {error}"
   },
   "composer": {
     "title": "Composer",

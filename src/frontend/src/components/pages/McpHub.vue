@@ -18,6 +18,12 @@
         </template>
         <McpGrants />
       </el-tab-pane>
+      <el-tab-pane name="kinds">
+        <template #label>
+          <span class="tab-label"><el-icon><Operation /></el-icon> {{ t('mcpHub.tabs.kinds') }}</span>
+        </template>
+        <McpKinds />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -26,28 +32,36 @@
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Lock, Key } from '@element-plus/icons-vue'
+import { Lock, Key, Operation } from '@element-plus/icons-vue'
 import McpIntents from './McpIntents.vue'
 import McpGrants from './McpGrants.vue'
+import McpKinds from './McpKinds.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
-type TabName = 'intents' | 'grants'
+type TabName = 'intents' | 'grants' | 'kinds'
 
 const activeTab = ref<TabName>(parseTab())
 
 function parseTab(): TabName {
-  return route.path.endsWith('/grants') ? 'grants' : 'intents'
+  if (route.path.endsWith('/kinds')) return 'kinds'
+  if (route.path.endsWith('/grants')) return 'grants'
+  return 'intents'
 }
 
-// Keep tab state ↔ URL in sync so deep-links (`/mcp/grants`) land
-// directly on the right tab and the browser back button works.
+// Keep tab state ↔ URL in sync so deep-links (`/mcp/grants`,
+// `/mcp/kinds`) land directly on the right tab and the browser back
+// button works.
 watch(() => route.path, () => { activeTab.value = parseTab() })
 
 function onTabChange(name: string | number): void {
-  const next = name === 'grants' ? '/mcp/grants' : '/mcp/intents'
+  const next = name === 'kinds'
+    ? '/mcp/kinds'
+    : name === 'grants'
+      ? '/mcp/grants'
+      : '/mcp/intents'
   if (route.path !== next) router.push(next)
 }
 

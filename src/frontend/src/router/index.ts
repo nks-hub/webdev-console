@@ -58,6 +58,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/mcp', redirect: '/mcp/intents' },
   { path: '/mcp/intents', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
   { path: '/mcp/grants',  component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
+  { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
   { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
 ]

@@ -137,11 +137,29 @@
   },
   "mcpHub": {
     "title": "Model Context Protocol",
-    "description": "Audit log každého podepsaného AI požadavku (Intents) plus trvalá pravidla, která předem schvalují další požadavky (Oprávnění).",
+    "description": "Audit log každého podepsaného AI požadavku (Intents) plus trvalá pravidla, která předem schvalují další požadavky (Oprávnění). Druhy ukazuje, jaké destruktivní operace pluginy zaregistrovaly.",
     "tabs": {
       "intents": "Intents (audit log)",
-      "grants": "Oprávnění (pravidla důvěry)"
+      "grants": "Oprávnění (pravidla důvěry)",
+      "kinds": "Druhy (registrované operace)"
     }
+  },
+  "mcpKinds": {
+    "title": "Registrované druhy destruktivních operací",
+    "refresh": "Obnovit",
+    "description": "Pluginy zde registrují destruktivní operace, které vystavují AI klientům. Každý druh má wire-format ID (použité v MCP intent tokenech), čitelný popisek (zobrazený v potvrzovacím banneru) a úroveň nebezpečí (eskaluje vizuální zpracování banneru u nevratných operací).",
+    "empty": "Žádné druhy nejsou registrované",
+    "col": {
+      "id": "ID",
+      "label": "Popis",
+      "plugin": "Plugin",
+      "danger": "Nebezpečí"
+    },
+    "danger": {
+      "reversible": "Vratné",
+      "destructive": "Destruktivní"
+    },
+    "toastLoadFailed": "Nepodařilo se načíst druhy: {error}"
   },
   "composer": {
     "title": "Composer",

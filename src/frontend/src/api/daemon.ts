@@ -228,6 +228,20 @@ export interface McpGrantCreateBody {
 export const listMcpGrants = (): Promise<{ count: number; entries: McpGrantRow[] }> =>
   json('/api/mcp/grants')
 
+// ----------------------------------------------------------------------------
+// Phase 7.4b — registered destructive op kinds (deploy/restore/+ plugin-defined).
+// Read-only discovery surface so the GUI + MCP clients see what they can mint.
+// ----------------------------------------------------------------------------
+export interface McpKindRow {
+  id: string
+  label: string
+  pluginId: string
+  danger: 'reversible' | 'destructive'
+}
+
+export const listMcpKinds = (): Promise<{ count: number; entries: McpKindRow[] }> =>
+  json('/api/mcp/kinds')
+
 export const createMcpGrant = (body: McpGrantCreateBody): Promise<{ id: string; status: string }> =>
   json('/api/mcp/grants', { method: 'POST', body: JSON.stringify(body) })
 
