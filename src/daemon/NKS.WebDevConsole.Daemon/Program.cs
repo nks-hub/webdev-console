@@ -1438,6 +1438,7 @@ app.MapGet("/api/mcp/grants", async (
 app.MapPost("/api/mcp/grants", async (
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
@@ -1473,6 +1474,21 @@ app.MapPost("/api/mcp/grants", async (
         Note: body.Note);
 
     var id = await grants.InsertAsync(row, ct);
+    // Phase 7.5+++ — broadcast lifecycle event so any open McpHub Grants
+    // tab refreshes its list without operator F5. Best-effort; failure
+    // doesn't roll back the grant.
+    try
+    {
+        await eventsBus.BroadcastAsync("mcp:grant-changed", new
+        {
+            change = "created",
+            id,
+            scopeType = body.ScopeType,
+            kindPattern = row.KindPattern,
+            targetPattern = row.TargetPattern,
+        });
+    }
+    catch { /* SSE best-effort */ }
     return Results.Ok(new { id, status = "created" });
 });
 
@@ -1481,13 +1497,18 @@ app.MapDelete("/api/mcp/grants/{id}", async (
     string id,
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     var ok = await grants.RevokeAsync(id, ct);
-    return ok
-        ? Results.Ok(new { id, status = "revoked" })
-        : Results.NotFound(new { error = "grant_not_found_or_already_revoked", id });
+    if (!ok)
+    {
+        return Results.NotFound(new { error = "grant_not_found_or_already_revoked", id });
+    }
+    try { await eventsBus.BroadcastAsync("mcp:grant-changed", new { change = "revoked", id }); }
+    catch { /* SSE best-effort */ }
+    return Results.Ok(new { id, status = "revoked" });
 });
 
 // Body record for the POST endpoint. Lives at file scope so the

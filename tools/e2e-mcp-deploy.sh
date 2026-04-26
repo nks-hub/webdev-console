@@ -730,6 +730,45 @@ HAS_NOSNAP=$(echo "$SNAPSHOTS2" | grep -c "$NOSNAP_ID" || true)
 step "deploy without snapshot stays out of snapshot list" "$HAS_NOSNAP" '^0$'
 
 # ============================================================================
+echo ""; echo "${YEL}=== W. SSE grant lifecycle (created / revoked) ===${END}"
+# ============================================================================
+# Subscribe to mcp:grant-changed BEFORE creating/revoking so we capture
+# every event. Frontend uses these to refresh McpGrants page without F5.
+W_SSE_LOG="/c/temp/.e2e-grant-sse.log"
+rm -f "$W_SSE_LOG"
+( curl -s --max-time 4 -H "Authorization: Bearer $TOKEN" -H "Accept: text/event-stream" \
+    "$BASE/api/events?topics=mcp:grant-changed" > "$W_SSE_LOG" 2>&1 ) &
+W_SSE_PID=$!
+sleep 1
+
+# Create a grant
+python3 - <<EOF > /c/temp/.e2e-w-grant.json
+import json
+print(json.dumps({
+    "scopeType": "session", "scopeValue": "ai-w-test",
+    "kindPattern": "deploy", "targetPattern": "blog.loc",
+    "expiresAt": None, "note": "SSE lifecycle test"
+}))
+EOF
+W_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-w-grant.json "$BASE/api/mcp/grants")
+W_ID=$(echo "$W_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "grant created (for SSE test)" "$W_GR" '"status":"created"'
+
+# Revoke
+api DELETE /api/mcp/grants/$W_ID >/dev/null
+
+# Wait for SSE drain
+sleep 3
+wait $W_SSE_PID 2>/dev/null
+
+DUMP=$(cat "$W_SSE_LOG")
+step "SSE feed captured grant-changed event" "$DUMP" 'event: mcp:grant-changed'
+step "SSE captured the created event" "$DUMP" '"change":"created"'
+step "SSE captured the revoked event" "$DUMP" '"change":"revoked"'
+step "SSE created event carries our grant id" "$DUMP" "\"id\":\"$W_ID\""
+
+# ============================================================================
 echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
 # ============================================================================
 # Subscribe to SSE BEFORE firing the deploy so we capture every event.
