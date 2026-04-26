@@ -1210,7 +1210,8 @@
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d",
       "deadweight": "DEADWEIGHT",
-      "deadweightTooltip": "Toto oprávnění existuje déle než {days} dní a nikdy se nezmatchovalo. Pravděpodobně bezpečně odvolatelné."
+      "deadweightTooltip": "Toto oprávnění existuje déle než {days} dní a nikdy se nezmatchovalo. Pravděpodobně bezpečně odvolatelné.",
+      "drilldownTooltip": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id})."
     },
     "expiresIn": {
       "expired": "vypršelo",

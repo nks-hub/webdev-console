@@ -139,12 +139,18 @@
           <el-tag v-else-if="(row.matchCount ?? 0) === 0" type="info" size="small" effect="plain">
             {{ t('mcpGrants.matches.none') }}
           </el-tag>
-          <span v-else>
+          <!-- Phase 7.5+++ — clickable count drills down to McpIntents
+               filtered by matchedGrantId. Cross-tab nav via router. -->
+          <a v-else
+            class="match-link"
+            href="javascript:void(0)"
+            :title="t('mcpGrants.matches.drilldownTooltip', { id: row.id })"
+            @click="goToMatchedIntents(row.id)">
             <strong>{{ row.matchCount }}</strong>
             <span v-if="row.lastMatchedAt" class="muted last-match">
               · {{ formatRelative(row.lastMatchedAt) }}
             </span>
-          </span>
+          </a>
         </template>
       </el-table-column>
       <el-table-column prop="note" :label="t('mcpGrants.col.note')" min-width="200">
@@ -257,6 +263,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Delete, Search } from '@element-plus/icons-vue'
 import {
@@ -266,8 +273,15 @@ import {
 } from '../../api/daemon'
 
 const { t } = useI18n()
+const router = useRouter()
 const loading = ref(false)
 const grants = ref<McpGrantRow[]>([])
+
+// Phase 7.5+++ — drilldown to McpIntents filtered by this grant id.
+// Uses URL query so deep-links work + the back button restores state.
+function goToMatchedIntents(grantId: string): void {
+  void router.push({ path: '/mcp/intents', query: { matchedGrantId: grantId } })
+}
 
 // Phase 7.5+++ — bulk-revoke selection state. Mirrors McpIntents:
 // el-table emits selection-change with FULL set; we mirror it as a
@@ -638,6 +652,16 @@ function formatExpiresIn(iso: string): string {
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
 .last-match { margin-left: 4px; font-size: 11px; }
+.match-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-bottom: 1px dotted var(--el-color-info);
+}
+.match-link:hover {
+  color: var(--el-color-primary);
+  border-bottom-color: var(--el-color-primary);
+}
 .expires-soon {
   color: var(--el-color-warning);
   font-weight: 600;

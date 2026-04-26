@@ -244,7 +244,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Refresh,
@@ -508,13 +509,32 @@ async function copyId(id: string): Promise<void> {
 // Single shared EventSource via subscribeEventsMap multiplex.
 let unsubscribeIntentSse: (() => void) | null = null
 
+// Phase 7.5+++ — read URL `?matchedGrantId=<id>` on mount + on route
+// change so deep-links from McpGrants drilldown apply the filter
+// without manual user interaction. Keeps local ref + URL in sync via
+// `watch`; setMatchedGrantFilter() updates the ref but not the URL
+// to avoid feedback loops (URL is read-only input, not output).
+const route = useRoute()
+
+function applyMatchedGrantFromRoute(): void {
+  const fromRoute = (route.query.matchedGrantId as string | undefined) ?? null
+  if (fromRoute && fromRoute !== matchedGrantFilter.value) {
+    matchedGrantFilter.value = fromRoute
+    void refresh()
+  }
+}
+
 onMounted(() => {
+  applyMatchedGrantFromRoute()
   refresh()
   unsubscribeIntentSse = subscribeEventsMap({
     'mcp:intent-changed': () => { void refresh() },
     'mcp:confirm-request': () => { void refresh() },
   })
 })
+
+// Re-apply when navigating between tabs that share the page instance.
+watch(() => route.query.matchedGrantId, () => { applyMatchedGrantFromRoute() })
 
 onBeforeUnmount(() => {
   if (unsubscribeIntentSse) { unsubscribeIntentSse(); unsubscribeIntentSse = null }

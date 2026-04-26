@@ -1210,7 +1210,8 @@
       "hoursAgo": "{n}h ago",
       "daysAgo": "{n}d ago",
       "deadweight": "DEADWEIGHT",
-      "deadweightTooltip": "This grant has existed for more than {days} days and never matched anything. Likely safe to revoke."
+      "deadweightTooltip": "This grant has existed for more than {days} days and never matched anything. Likely safe to revoke.",
+      "drilldownTooltip": "Click to show all intents this grant approved ({id})."
     },
     "expiresIn": {
       "expired": "expired",
