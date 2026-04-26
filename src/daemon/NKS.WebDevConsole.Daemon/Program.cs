@@ -1553,10 +1553,8 @@ static string DeploySettingsPath(string domain)
 {
     var dir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "deploy-settings");
     Directory.CreateDirectory(dir);
-    // Sanitise domain for filename — letters/digits/dot/dash/underscore
-    // only (ASP.NET routing has already enforced no slashes).
-    var safe = System.Text.RegularExpressions.Regex.Replace(domain, "[^a-zA-Z0-9._-]", "_");
-    return Path.Combine(dir, safe + ".json");
+    return Path.Combine(dir,
+        NKS.WebDevConsole.Daemon.Deploy.DeployRestHelpers.SanitiseDomainForFilename(domain) + ".json");
 }
 
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
@@ -1733,21 +1731,9 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         new { deployId, status = "queued", note = "dummy backend — async state progression" });
 });
 
-// nksdeploy phase strings → frontend DeployPhase enum mapping.
-// Conservative: anything we don't recognise becomes "Unknown" so the
-// frontend can still render a tag instead of crashing.
-static string MapStatusToPhase(string status) => status?.ToLowerInvariant() switch
-{
-    "queued" => "Queued",
-    "running" => "Building",
-    "awaiting_soak" => "AwaitingSoak",
-    "completed" => "Done",
-    "failed" => "Failed",
-    "cancelled" => "Cancelled",
-    "rolling_back" => "RollingBack",
-    "rolled_back" => "RolledBack",
-    _ => "Unknown",
-};
+// Phase 7.5 — phase mapping moved to DeployRestHelpers for testability.
+static string MapStatusToPhase(string status) =>
+    NKS.WebDevConsole.Daemon.Deploy.DeployRestHelpers.MapStatusToPhase(status);
 
 // Phase 7.1a — deploy.enabled gate. Runs BEFORE auth so a disabled
 // deploy plugin returns clean 404 to ANY /api/nks.wdc.deploy/* request
