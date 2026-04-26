@@ -471,15 +471,13 @@
                  return 404. Operators not running an AI client see no
                  trace of the subsystem. -->
             <div class="settings-section" style="margin-top: 16px">
-              <h4 class="section-title">Model Context Protocol (MCP)</h4>
+              <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
               <p class="hint">
-                Optional integration for AI agents (Claude, Cursor, …) connecting via MCP.
-                When enabled, AI deploy/restore requests prompt for confirmation in a banner;
-                signed intent tokens audit-able under "MCP Intents" sidebar entry.
-                <strong>Leave OFF unless you actively run an AI agent against this daemon.</strong>
+                {{ $t('settings.mcp.description') }}
+                <strong>{{ $t('settings.mcp.warning') }}</strong>
               </p>
               <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
-                <el-form-item label="Enable MCP integration">
+                <el-form-item :label="$t('settings.mcp.enableLabel')">
                   <el-switch v-model="mcpEnabled" />
                 </el-form-item>
               </el-form>
@@ -491,14 +489,12 @@
                  return 404. Useful for installs that only use WDC as
                  local Apache/MySQL manager without remote deploys. -->
             <div class="settings-section" style="margin-top: 16px">
-              <h4 class="section-title">Deploy subsystem</h4>
+              <h4 class="section-title">{{ $t('settings.deploySubsystem.title') }}</h4>
               <p class="hint">
-                Per-site Deploy tab + nksdeploy plugin endpoints. Disable when this WDC
-                instance only manages local services and never pushes to remote hosts.
-                History stays in the database (additive-only); turning back ON restores everything.
+                {{ $t('settings.deploySubsystem.description') }}
               </p>
               <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
-                <el-form-item label="Enable Deploy subsystem">
+                <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
                 </el-form-item>
               </el-form>

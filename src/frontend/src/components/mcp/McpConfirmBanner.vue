@@ -11,7 +11,7 @@
     class="mcp-confirm-stack"
     aria-live="assertive"
     aria-atomic="false"
-    aria-label="MCP deploy approval requests"
+    :aria-label="t('mcp.banner.stackLabel')"
   >
     <div
       v-for="(item, index) in store.list"
@@ -24,17 +24,20 @@
       </div>
       <div class="mcp-confirm-body">
         <div class="mcp-confirm-title">
-          <span v-if="item.kind">AI requests <strong>{{ item.kind }}</strong></span>
-          <span v-else>AI is requesting a destructive operation</span>
-          <span v-if="item.domain && item.host">
-            on <code class="mono">{{ item.domain }} → {{ item.host }}</code>
-          </span>
+          <i18n-t v-if="item.kind" keypath="mcp.banner.kindRequest" tag="span">
+            <template #kind><strong>{{ item.kind }}</strong></template>
+          </i18n-t>
+          <span v-else>{{ t('mcp.banner.genericRequest') }}</span>
+          <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span">
+            <template #domain><code class="mono">{{ item.domain }}</code></template>
+            <template #host><code class="mono">{{ item.host }}</code></template>
+          </i18n-t>
         </div>
         <div class="mcp-confirm-prompt">
-          {{ item.prompt || 'No description provided.' }}
+          {{ item.prompt || t('mcp.banner.noDescription') }}
         </div>
         <div class="mcp-confirm-meta">
-          intent <code>{{ shortId(item.intentId) }}</code>
+          {{ t('mcp.banner.intent') }} <code>{{ shortId(item.intentId) }}</code>
           · {{ ageLabel(item.receivedAt) }}
           <!-- Phase 6.14b — live expiry countdown. Renders only inside the
                last 60 s window (urgency signal); earlier the banner just
@@ -46,7 +49,7 @@
             :class="expiryClass(item)"
             role="status"
           >
-            · expires in {{ expiryRemaining(item) }}s
+            · {{ t('mcp.banner.expiresIn', { seconds: expiryRemaining(item) }) }}
           </span>
         </div>
       </div>
@@ -59,7 +62,7 @@
           @click="approve(item.intentId)"
           @keydown.esc.prevent="dismiss(item.intentId)"
         >
-          Approve
+          {{ t('mcp.banner.approve') }}
         </el-button>
         <!-- Phase 6.17a — inline revoke. Dismiss only removes the banner
              locally (intent expires naturally); Decline ALSO calls the
@@ -71,17 +74,17 @@
           size="default"
           :loading="declining.has(item.intentId)"
           :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
-          aria-label="Decline AND revoke this intent so the AI cannot retry"
+          :aria-label="t('mcp.banner.declineAria')"
           @click="decline(item.intentId)"
         >
-          Decline
+          {{ t('mcp.banner.decline') }}
         </el-button>
         <el-button
           size="default"
           :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
           @click="dismiss(item.intentId)"
         >
-          Dismiss
+          {{ t('mcp.banner.dismiss') }}
         </el-button>
       </div>
     </div>
@@ -90,11 +93,13 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
 import { revokeIntent } from '../../api/daemon'
 
+const { t } = useI18n()
 const store = useMcpConfirmStore()
 
 // In-flight approval calls — keeps the user from double-clicking before the
@@ -166,16 +171,16 @@ async function decline(intentId: string): Promise<void> {
   declining.value = next
   try {
     await revokeIntent(intentId)
-    ElMessage.success('Intent declined and revoked')
+    ElMessage.success(t('mcp.banner.toastDeclined'))
   } catch (err) {
     // 409 already_used is the most likely error here (race with the
     // sweeper or a confirmed/consumed intent we hadn't refreshed). Log
     // a softer message in that case so the user isn't alarmed.
     const msg = err instanceof Error ? err.message : String(err)
     if (msg.includes('already_used')) {
-      ElMessage.info('Intent was already consumed or revoked elsewhere')
+      ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
     } else {
-      ElMessage.warning(`Decline failed (banner dismissed locally): ${msg}`)
+      ElMessage.warning(t('mcp.banner.toastDeclineFailed', { error: msg }))
     }
   } finally {
     const cleared = new Set(declining.value)
@@ -193,9 +198,9 @@ function shortId(id: string): string {
 
 function ageLabel(receivedAt: number): string {
   const sec = Math.floor((tickNow.value - receivedAt) / 1000)
-  if (sec < 5) return 'just now'
-  if (sec < 60) return `${sec}s ago`
-  return `${Math.floor(sec / 60)}m ${sec % 60}s ago`
+  if (sec < 5) return t('mcp.banner.ageJustNow')
+  if (sec < 60) return t('mcp.banner.ageSeconds', { seconds: sec })
+  return t('mcp.banner.ageMinutes', { minutes: Math.floor(sec / 60), seconds: sec % 60 })
 }
 
 /**
@@ -206,9 +211,9 @@ function ageLabel(receivedAt: number): string {
  */
 function expiryRemaining(item: PendingConfirm): number | null {
   if (!item.expiresAt) return null
-  const t = new Date(item.expiresAt).getTime()
-  if (Number.isNaN(t)) return null
-  const sec = Math.max(0, Math.round((t - tickNow.value) / 1000))
+  const expiryMs = new Date(item.expiresAt).getTime()
+  if (Number.isNaN(expiryMs)) return null
+  const sec = Math.max(0, Math.round((expiryMs - tickNow.value) / 1000))
   if (sec > 60) return null
   return sec
 }
@@ -229,11 +234,11 @@ onMounted(() => {
     // re-mint a fresh intent if they still want to act.
     for (const item of store.list) {
       if (!item.expiresAt) continue
-      const t = new Date(item.expiresAt).getTime()
-      if (!Number.isNaN(t) && t <= tickNow.value) {
+      const expiryMs = new Date(item.expiresAt).getTime()
+      if (!Number.isNaN(expiryMs) && expiryMs <= tickNow.value) {
         store.dismiss(item.intentId)
         ElMessage.warning(
-          `Intent ${item.intentId.slice(0, 8)} expired before approval — banner dismissed`,
+          t('mcp.banner.toastExpired', { id: item.intentId.slice(0, 8) }),
         )
       }
     }

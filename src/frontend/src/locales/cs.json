@@ -674,6 +674,39 @@
       "openRelease": "Otevřít na GitHubu",
       "releaseNotesTitle": "Poznámky k vydání",
       "viewOnGithub": "Zobrazit na GitHubu"
+    },
+    "mcp": {
+      "title": "Model Context Protocol (MCP)",
+      "description": "Volitelná integrace pro AI agenty (Claude, Cursor, …) připojující se přes MCP. Pokud je zapnuto, AI požadavky na deploy/restore vyžadují potvrzení v banneru; podepsané intent tokeny lze auditovat v sekci „MCP Intents“ v postranní liště.",
+      "warning": "Nechte VYPNUTÉ, pokud aktivně neprovozujete AI agenta proti tomuto daemonu.",
+      "enableLabel": "Zapnout MCP integraci"
+    },
+    "deploySubsystem": {
+      "title": "Deploy subsystém",
+      "description": "Záložka Deploy u jednotlivých webů + endpointy pluginu nksdeploy. Vypněte, pokud tato instance WDC spravuje pouze lokální služby a nikdy nedeployuje na vzdálené hostitele. Historie zůstává v databázi (pouze přidávání); opětovným zapnutím se vše obnoví.",
+      "enableLabel": "Zapnout Deploy subsystém"
+    }
+  },
+  "mcp": {
+    "banner": {
+      "stackLabel": "Žádosti o potvrzení MCP deploye",
+      "kindRequest": "AI požaduje {kind}",
+      "genericRequest": "AI požaduje destruktivní operaci",
+      "onTarget": "na {domain} → {host}",
+      "noDescription": "Bez popisu.",
+      "intent": "intent",
+      "expiresIn": "vyprší za {seconds} s",
+      "approve": "Schválit",
+      "decline": "Odmítnout",
+      "declineAria": "Odmítnout A odvolat tento intent, aby ho AI nemohla znovu zkusit",
+      "dismiss": "Zavřít",
+      "ageJustNow": "právě teď",
+      "ageSeconds": "před {seconds} s",
+      "ageMinutes": "před {minutes} m {seconds} s",
+      "toastDeclined": "Intent odmítnut a odvolán",
+      "toastAlreadyConsumed": "Intent byl mezitím spotřebován nebo odvolán jinde",
+      "toastDeclineFailed": "Odmítnutí selhalo (banner uzavřen lokálně): {error}",
+      "toastExpired": "Intent {id} vypršel před schválením — banner uzavřen"
     }
   },
   "footer": {

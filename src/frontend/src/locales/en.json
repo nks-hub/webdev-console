@@ -674,6 +674,39 @@
       "openRelease": "Open on GitHub",
       "releaseNotesTitle": "Release notes",
       "viewOnGithub": "View on GitHub"
+    },
+    "mcp": {
+      "title": "Model Context Protocol (MCP)",
+      "description": "Optional integration for AI agents (Claude, Cursor, …) connecting via MCP. When enabled, AI deploy/restore requests prompt for confirmation in a banner; signed intent tokens are auditable under the \"MCP Intents\" sidebar entry.",
+      "warning": "Leave OFF unless you actively run an AI agent against this daemon.",
+      "enableLabel": "Enable MCP integration"
+    },
+    "deploySubsystem": {
+      "title": "Deploy subsystem",
+      "description": "Per-site Deploy tab + nksdeploy plugin endpoints. Disable when this WDC instance only manages local services and never pushes to remote hosts. History stays in the database (additive-only); turning back ON restores everything.",
+      "enableLabel": "Enable Deploy subsystem"
+    }
+  },
+  "mcp": {
+    "banner": {
+      "stackLabel": "MCP deploy approval requests",
+      "kindRequest": "AI requests {kind}",
+      "genericRequest": "AI is requesting a destructive operation",
+      "onTarget": "on {domain} → {host}",
+      "noDescription": "No description provided.",
+      "intent": "intent",
+      "expiresIn": "expires in {seconds}s",
+      "approve": "Approve",
+      "decline": "Decline",
+      "declineAria": "Decline AND revoke this intent so the AI cannot retry",
+      "dismiss": "Dismiss",
+      "ageJustNow": "just now",
+      "ageSeconds": "{seconds}s ago",
+      "ageMinutes": "{minutes}m {seconds}s ago",
+      "toastDeclined": "Intent declined and revoked",
+      "toastAlreadyConsumed": "Intent was already consumed or revoked elsewhere",
+      "toastDeclineFailed": "Decline failed (banner dismissed locally): {error}",
+      "toastExpired": "Intent {id} expired before approval — banner dismissed"
     }
   },
   "footer": {
