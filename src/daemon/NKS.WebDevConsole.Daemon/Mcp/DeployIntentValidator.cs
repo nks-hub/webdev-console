@@ -23,15 +23,50 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
     private readonly Database _db;
     private readonly IntentSigner _signer;
     private readonly IMcpSessionGrantsRepository _grants;
+    private readonly IDestructiveOperationKinds _kinds;
+    private readonly Func<bool> _strictKindsLookup;
 
+    /// <summary>
+    /// Phase 7.4e ctor — adds the kinds registry and a strict-mode lookup.
+    /// The lookup is a delegate so the validator picks up live setting
+    /// flips without singleton recreation; daemon Program.cs wires it to
+    /// <c>SettingsStore.GetBool("mcp", "strict_kinds", false)</c>.
+    /// </summary>
     public DeployIntentValidator(
         Database db,
         IntentSigner signer,
-        IMcpSessionGrantsRepository grants)
+        IMcpSessionGrantsRepository grants,
+        IDestructiveOperationKinds kinds,
+        Func<bool> strictKindsLookup)
     {
         _db = db;
         _signer = signer;
         _grants = grants;
+        _kinds = kinds;
+        _strictKindsLookup = strictKindsLookup;
+    }
+
+    /// <summary>
+    /// Backwards-compat ctor — pre-7.4e callers (existing tests + DI before
+    /// 7.4e wire-up). Defaults to lenient kind validation (no strict mode)
+    /// and a null-object kinds registry. Should NOT be used in new code.
+    /// </summary>
+    public DeployIntentValidator(
+        Database db,
+        IntentSigner signer,
+        IMcpSessionGrantsRepository grants)
+        : this(db, signer, grants, NullKinds.Instance, () => false)
+    { }
+
+    /// <summary>Empty kinds registry for the legacy ctor — every Get returns null.</summary>
+    private sealed class NullKinds : IDestructiveOperationKinds
+    {
+        public static readonly NullKinds Instance = new();
+        public void Register(DestructiveOperationKind kind) { }
+        public void Register(string id, string label, string pluginId) { }
+        public void UnregisterPlugin(string pluginId) { }
+        public DestructiveOperationKind? Get(string id) => null;
+        public IReadOnlyList<DestructiveOperationKind> List() => Array.Empty<DestructiveOperationKind>();
     }
 
     public async Task<IntentValidationResult> ValidateAndConsumeAsync(
@@ -66,6 +101,15 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         if (!string.IsNullOrEmpty(row.UsedAt)) return IntentValidationResult.Deny("already_used");
         if (!string.Equals(row.Kind, kind, StringComparison.OrdinalIgnoreCase))
             return IntentValidationResult.Deny("kind_mismatch");
+
+        // Phase 7.4e — strict kind mode. When mcp.strict_kinds=true the
+        // validator refuses any kind not currently in IDestructiveOperationKinds.
+        // Useful when an operator wants belt-and-braces: only kinds plugins
+        // have explicitly registered (and which therefore have human labels +
+        // danger metadata for the banner) can fire. Default false so existing
+        // intent flows minted before plugins migrate keep working.
+        if (_strictKindsLookup() && _kinds.Get(row.Kind) is null)
+            return IntentValidationResult.Deny("kind_unknown");
         if (!string.Equals(row.Domain, domain, StringComparison.OrdinalIgnoreCase))
             return IntentValidationResult.Deny("domain_mismatch");
         if (!string.Equals(row.Host, host, StringComparison.OrdinalIgnoreCase))

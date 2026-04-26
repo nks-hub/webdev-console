@@ -254,6 +254,67 @@ public sealed class DeployIntentValidatorTests
         finally { Cleanup(path); }
     }
 
+    // --- Phase 7.4e — strict-kinds mode rejects unregistered kinds ---
+
+    [Fact]
+    public async Task StrictMode_UnregisteredKind_Returns_KindUnknown()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var (token, _) = InsertValidIntent(db, kind: "rogue:plugin_op", confirmedAt: "stamped");
+            var registry = new NKS.WebDevConsole.Daemon.Mcp.DestructiveOperationKindsRegistry();
+            // registry has the 4 core seeded kinds but NOT "rogue:plugin_op"
+            var validator = new DeployIntentValidator(
+                db, Signer, new EmptyGrantsRepo(), registry, () => true /* strict */);
+            var result = await validator.ValidateAndConsumeAsync(
+                token, "rogue:plugin_op", "myapp.loc", "production",
+                allowUnconfirmed: false, CancellationToken.None);
+            Assert.False(result.Ok);
+            Assert.Equal("kind_unknown", result.Reason);
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
+    public async Task StrictMode_RegisteredPluginKind_PassesValidation()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var (token, _) = InsertValidIntent(db, kind: "nksbackup:restore", confirmedAt: "stamped");
+            var registry = new NKS.WebDevConsole.Daemon.Mcp.DestructiveOperationKindsRegistry();
+            registry.Register("nksbackup:restore", "Restore backup", "nksbackup");
+            var validator = new DeployIntentValidator(
+                db, Signer, new EmptyGrantsRepo(), registry, () => true /* strict */);
+            var result = await validator.ValidateAndConsumeAsync(
+                token, "nksbackup:restore", "myapp.loc", "production",
+                allowUnconfirmed: false, CancellationToken.None);
+            Assert.True(result.Ok);
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
+    public async Task LenientMode_UnregisteredKind_StillPasses()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            // Default behaviour (strict=false) — any regex-valid kind is fine
+            // even if not in the registry. Backwards-compat with pre-7.4e flows.
+            var (token, _) = InsertValidIntent(db, kind: "rogue:plugin_op", confirmedAt: "stamped");
+            var registry = new NKS.WebDevConsole.Daemon.Mcp.DestructiveOperationKindsRegistry();
+            var validator = new DeployIntentValidator(
+                db, Signer, new EmptyGrantsRepo(), registry, () => false /* lenient */);
+            var result = await validator.ValidateAndConsumeAsync(
+                token, "rogue:plugin_op", "myapp.loc", "production",
+                allowUnconfirmed: false, CancellationToken.None);
+            Assert.True(result.Ok);
+        }
+        finally { Cleanup(path); }
+    }
+
     // --- Phase 7.4 — plugin-defined custom kinds round-trip through the validator ---
 
     [Fact]

@@ -133,8 +133,17 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrant
 // before any plugin registers.
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds,
     NKS.WebDevConsole.Daemon.Mcp.DestructiveOperationKindsRegistry>();
-builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator,
-    NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>();
+// Phase 7.4e — explicit factory wiring so the validator picks up the
+// kinds registry + a live mcp.strict_kinds setting lookup. The lookup
+// is a delegate (not a captured bool) so flipping the toggle in the
+// settings UI takes effect immediately, without daemon restart.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>(sp =>
+    new NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator(
+        sp.GetRequiredService<NKS.WebDevConsole.Daemon.Data.Database>(),
+        sp.GetRequiredService<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>(),
+        sp.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository>(),
+        sp.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds>(),
+        () => sp.GetRequiredService<SettingsStore>().GetBool("mcp", "strict_kinds", defaultValue: false)));
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
 // intents (audit tail), 1-day for unused expired ones. See class docs.
 builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.IntentSweeperService>();
