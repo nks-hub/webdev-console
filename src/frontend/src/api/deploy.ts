@@ -169,6 +169,10 @@ export interface DeployHostConfig {
   // daemon falls back to these stored values for that host.
   localSourcePath?: string
   localTargetPath?: string
+  // Phase 7.5+++ nksdeploy compat — shared dirs/files symlinked from
+  // shared/ into each release. Defaults (log/, temp/) apply when empty.
+  sharedDirs?: string[]
+  sharedFiles?: string[]
 }
 
 export interface DeployHookConfig {

@@ -705,6 +705,28 @@
             clearable
           />
         </el-form-item>
+
+        <!-- Phase 7.5+++ nksdeploy compat — shared dirs/files. Stored
+             as comma-separated text in the form, parsed/joined on
+             submit/load so the v-model stays a simple string. -->
+        <el-form-item :label="t('deploySettings.hostDialog.sharedDirs')">
+          <el-input
+            id="host-shared-dirs"
+            v-model="hostForm._sharedDirsCsv"
+            :placeholder="t('deploySettings.hostDialog.sharedDirsPlaceholder')"
+            clearable
+          />
+          <div class="field-hint">{{ t('deploySettings.hostDialog.sharedDirsHelp') }}</div>
+        </el-form-item>
+        <el-form-item :label="t('deploySettings.hostDialog.sharedFiles')">
+          <el-input
+            id="host-shared-files"
+            v-model="hostForm._sharedFilesCsv"
+            :placeholder="t('deploySettings.hostDialog.sharedFilesPlaceholder')"
+            clearable
+          />
+          <div class="field-hint">{{ t('deploySettings.hostDialog.sharedFilesHelp') }}</div>
+        </el-form-item>
       </el-form>
 
       <!-- Phase 7.5+++ — TCP probe button. Surfaces inline status next
@@ -898,7 +920,11 @@ async function onTestConnection(): Promise<void> {
   }
 }
 
-function emptyHostForm(): DeployHostConfig {
+// Form-shape extends DeployHostConfig with two CSV fields backing
+// sharedDirs/sharedFiles arrays. Conversion happens on open/submit.
+type HostForm = DeployHostConfig & { _sharedDirsCsv: string; _sharedFilesCsv: string }
+
+function emptyHostForm(): HostForm {
   return {
     name: '',
     sshHost: '',
@@ -913,10 +939,14 @@ function emptyHostForm(): DeployHostConfig {
     healthCheckUrl: '',
     localSourcePath: '',
     localTargetPath: '',
+    sharedDirs: [],
+    sharedFiles: [],
+    _sharedDirsCsv: '',
+    _sharedFilesCsv: '',
   }
 }
 
-const hostForm = reactive<DeployHostConfig>(emptyHostForm())
+const hostForm = reactive<HostForm>(emptyHostForm())
 
 const hostRules: FormRules = {
   name: [
@@ -937,7 +967,11 @@ function openAddHostModal(): void {
 
 function openEditHostModal(host: DeployHostConfig): void {
   editingHost.value = host.name
-  Object.assign(hostForm, { ...host })
+  Object.assign(hostForm, {
+    ...host,
+    _sharedDirsCsv: (host.sharedDirs ?? []).join(', '),
+    _sharedFilesCsv: (host.sharedFiles ?? []).join(', '),
+  })
   hostModalOpen.value = true
 }
 
@@ -967,6 +1001,10 @@ async function submitHostForm(): Promise<void> {
   if (hostForm.healthCheckUrl) payload.healthCheckUrl = hostForm.healthCheckUrl
   if (hostForm.localSourcePath) payload.localSourcePath = hostForm.localSourcePath
   if (hostForm.localTargetPath) payload.localTargetPath = hostForm.localTargetPath
+  const sharedDirs = hostForm._sharedDirsCsv.split(',').map(s => s.trim()).filter(Boolean)
+  const sharedFiles = hostForm._sharedFilesCsv.split(',').map(s => s.trim()).filter(Boolean)
+  if (sharedDirs.length > 0) payload.sharedDirs = sharedDirs
+  if (sharedFiles.length > 0) payload.sharedFiles = sharedFiles
 
   if (editingHost.value) {
     store.updateHost(props.domain, editingHost.value, payload)

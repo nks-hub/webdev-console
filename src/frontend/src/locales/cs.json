@@ -765,7 +765,13 @@
       "localSourcePath": "Lokální zdrojová cesta",
       "localSourcePathPlaceholder": "C:/work/sites/blog.loc",
       "localTargetPath": "Lokální cílová cesta",
-      "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc"
+      "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc",
+      "sharedDirs": "Sdílené adresáře",
+      "sharedDirsPlaceholder": "log, temp, uploads",
+      "sharedDirsHelp": "Adresáře symlinkované ze shared/ do každého releasu. Default: log, temp",
+      "sharedFiles": "Sdílené soubory",
+      "sharedFilesPlaceholder": ".env, config.local.neon",
+      "sharedFilesHelp": "Soubory symlinkované ze shared/ do každého releasu (např. .env)"
     },
     "wizard": {
       "step1Title": "Detaily hosta",

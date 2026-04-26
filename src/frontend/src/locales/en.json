@@ -765,7 +765,13 @@
       "localSourcePath": "Local source path",
       "localSourcePathPlaceholder": "C:/work/sites/blog.loc",
       "localTargetPath": "Local target path",
-      "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc"
+      "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc",
+      "sharedDirs": "Shared directories",
+      "sharedDirsPlaceholder": "log, temp, uploads",
+      "sharedDirsHelp": "Directories symlinked from shared/ into each release. Default: log, temp",
+      "sharedFiles": "Shared files",
+      "sharedFilesPlaceholder": ".env, config.local.neon",
+      "sharedFilesHelp": "Files symlinked from shared/ into each release (e.g. .env)"
     },
     "wizard": {
       "step1Title": "Host details",
