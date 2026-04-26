@@ -1052,6 +1052,22 @@
       "daysAgo": "{n}d ago",
       "triggeredByLabel": "Sources:"
     },
+    "quickBar": {
+      "aria": "Quick deploy",
+      "label": "Quick deploy:",
+      "targetPlaceholder": "Pick target",
+      "targetAria": "Target host",
+      "allHosts": "— All hosts —",
+      "branchPlaceholder": "branch (optional)",
+      "branchAria": "Branch",
+      "withSnapshot": "With DB snapshot",
+      "deployOne": "Deploy",
+      "deployAll": "Deploy {n} hosts",
+      "started": "Deploy started",
+      "startedGroup": "Group deploy started ({id})",
+      "failed": "Deploy failed",
+      "hint": "Skips the confirm dialog. Use the host card's Deploy button for full options."
+    },
     "commandCenter": {
       "noHosts": "No deploy hosts configured",
       "groupToolbarAria": "Multi-host group deploy",

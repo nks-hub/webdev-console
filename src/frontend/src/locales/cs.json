@@ -1052,6 +1052,22 @@
       "daysAgo": "před {n} d",
       "triggeredByLabel": "Zdroje:"
     },
+    "quickBar": {
+      "aria": "Rychlý deploy",
+      "label": "Rychlý deploy:",
+      "targetPlaceholder": "Vyberte cíl",
+      "targetAria": "Cílový host",
+      "allHosts": "— Všichni hosti —",
+      "branchPlaceholder": "větev (volitelné)",
+      "branchAria": "Větev",
+      "withSnapshot": "Se snapshotem DB",
+      "deployOne": "Deploy",
+      "deployAll": "Deploy {n} hostů",
+      "started": "Deploy spuštěn",
+      "startedGroup": "Skupinový deploy spuštěn ({id})",
+      "failed": "Deploy se nezdařil",
+      "hint": "Přeskočí potvrzovací dialog. Pro plné nastavení použijte tlačítko Deploy na kartě hosta."
+    },
     "commandCenter": {
       "noHosts": "Žádní deploy hosti nejsou nakonfigurovaní",
       "groupToolbarAria": "Skupinový deploy na více hostů",

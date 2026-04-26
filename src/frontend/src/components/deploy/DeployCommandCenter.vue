@@ -4,6 +4,10 @@
          success rate, last-deploy age, per-host strip. Auto-hidden when
          no history. -->
     <DeployStatusBanner :entries="history" />
+    <!-- Phase 7.5+++ — quick-deploy bar above the host grid. Only renders
+         when hosts exist; lets the operator fire a deploy at one host or
+         all of them without going through the confirm modal. -->
+    <DeployQuickBar v-if="hosts.length > 0" :domain="domain" :hosts="hosts" />
     <div v-if="hosts.length === 0" class="cmd-empty">
       <el-empty :description="t('deploy.commandCenter.noHosts')" />
     </div>
@@ -78,6 +82,7 @@ import PreflightChecklist, { type PreflightCheck } from './PreflightChecklist.vu
 import DeployHistoryTable from './DeployHistoryTable.vue'
 import DeployConfirmModal from './DeployConfirmModal.vue'
 import DeployStatusBanner from './DeployStatusBanner.vue'
+import DeployQuickBar from './DeployQuickBar.vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
 
 const props = defineProps<{
