@@ -153,6 +153,17 @@
           <!-- Recent snapshots -->
           <div class="subsection">
             <div class="subsection-header">{{ t('deploySettings.snapshot.recentTitle') }}</div>
+            <!-- Phase 7.5+++ — disk impact summary. Surfaces only when
+                 there's something to summarize so empty state stays clean. -->
+            <div v-if="snapshots.length > 0" class="snapshots-summary muted">
+              {{ t('deploySettings.snapshot.summaryCount', { n: snapshots.length }) }}
+              ·
+              {{ t('deploySettings.snapshot.summarySize', { size: formatBytes(snapshotsTotalBytes) }) }}
+              <span v-if="snapshotsOldestAt" class="snapshots-oldest">
+                · {{ t('deploySettings.snapshot.summaryOldest',
+                       { when: formatDate(snapshotsOldestAt) }) }}
+              </span>
+            </div>
             <div v-if="snapshots.length === 0" class="muted">
               {{ t('deploySettings.snapshot.noneYet') }}
             </div>
@@ -736,6 +747,23 @@ const activeSection = ref('hosts')
 // Deep-reactive local copy that we mutate freely; saved explicitly.
 const settings = reactive<DeploySettings>(defaultDeploySettings())
 const snapshots = ref<DeploySnapshotEntry[]>([])
+
+// Phase 7.5+++ — disk impact aggregates over the loaded snapshot list.
+// Drives the inline "12 snapshots · 240 MB" summary; cheap reduce so
+// the operator sees impact without opening a new endpoint.
+const snapshotsTotalBytes = computed<number>(() =>
+  snapshots.value.reduce((sum, s) => sum + (s.sizeBytes ?? 0), 0))
+const snapshotsOldestAt = computed<string | null>(() => {
+  if (snapshots.value.length === 0) return null
+  // Endpoint returns newest-first per current Program.cs ORDER BY, so
+  // the LAST element is the oldest. Falls back to min() if order ever
+  // changes — defensive against contract drift.
+  let oldest = snapshots.value[snapshots.value.length - 1].createdAt
+  for (const s of snapshots.value) {
+    if (s.createdAt && s.createdAt < oldest) oldest = s.createdAt
+  }
+  return oldest
+})
 // In-flight restore deployId — disables the OTHER snapshots' Restore
 // buttons while one is running so the user can't double-fire the
 // destructive flow against a different row mid-restore.
@@ -1263,6 +1291,13 @@ defineExpose({ saveSettings })
 .form-row :deep(.el-form-item) {
   margin-bottom: 0;
 }
+
+/* Phase 7.5+++ — snapshots disk-impact summary. */
+.snapshots-summary {
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+.snapshots-oldest { margin-left: 6px; }
 
 /* Phase 7.5+++ — TCP probe row in host edit dialog. */
 .test-conn-row {

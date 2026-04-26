@@ -783,6 +783,9 @@
       "snapshotNow": "Snapshot database now",
       "recentTitle": "Recent snapshots",
       "noneYet": "No snapshots recorded yet.",
+      "summaryCount": "{n} snapshots",
+      "summarySize": "{size} total",
+      "summaryOldest": "oldest: {when}",
       "restore": "Restore",
       "saveSettings": "Save snapshot settings"
     },

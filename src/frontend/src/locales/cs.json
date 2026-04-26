@@ -783,6 +783,9 @@
       "snapshotNow": "Vytvořit snapshot databáze",
       "recentTitle": "Poslední snapshoty",
       "noneYet": "Zatím nebyl uložen žádný snapshot.",
+      "summaryCount": "{n} snapshotů",
+      "summarySize": "celkem {size}",
+      "summaryOldest": "nejstarší: {when}",
       "restore": "Obnovit",
       "saveSettings": "Uložit nastavení snapshotů"
     },
