@@ -1124,6 +1124,9 @@
       "catalogReachable": "reachable · last sync {ago}",
       "catalogNeverSynced": "never synced"
     },
+    "advanced": {
+      "refreshCatalog": "Sync now"
+    },
     "language": "Language",
     "languageEn": "English",
     "languageCs": "Čeština",
@@ -1266,6 +1269,10 @@
     "sweepNow": "Clean now",
     "exportJson": "Export JSON",
     "exportToast": "Exported {n} grants to JSON file",
+    "importJson": "Import JSON",
+    "importToast": "Imported {imported} grants (skipped duplicates: {skipped})",
+    "importPartial": "Imported {imported} (duplicates: {skipped}, errors: {failed}) — check server logs",
+    "importFailed": "Import failed: {error}",
     "sweepDone": "Cleaned {n} stale grants",
     "sweepNothing": "Nothing to clean — all grants are current",
     "sweepFailed": "Cleanup failed: {error}",

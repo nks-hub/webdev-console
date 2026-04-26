@@ -292,6 +292,18 @@ export const revokeMcpGrant = (id: string): Promise<{ id: string; status: string
 export const sweepMcpGrantsNow = (): Promise<{ deleted: number }> =>
   json('/api/mcp/grants/sweep-now', { method: 'POST' })
 
+// Phase 7.5+++ — bulk import from a previously-exported envelope.
+// Server skips dup ids; payload is the raw text the user uploaded
+// (we don't re-parse client-side so unknown fields pass through).
+export interface McpGrantsImportResult {
+  imported: number
+  skipped: number
+  errors: Array<{ index: number; error: string }>
+}
+
+export const importMcpGrants = (envelopeJson: string): Promise<McpGrantsImportResult> =>
+  json('/api/mcp/grants/import', { method: 'POST', body: envelopeJson })
+
 // Phase 7.5+++ — dry-run grant matching. Asks "would these caller
 // identity slots + kind + target match an existing active grant?"
 // without firing an intent. Returns the matching grant's metadata so

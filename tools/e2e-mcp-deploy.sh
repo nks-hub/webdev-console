@@ -956,6 +956,45 @@ step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:comple
 step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
 
 # ============================================================================
+echo ""; echo "${YEL}=== EE. grants bulk import (round-trip with export) ===${END}"
+# ============================================================================
+# Build a 2-row envelope, POST to /import, verify imported=2 + skipped=0
+# on first call, then re-import to verify skipped=2 (idempotent re-import).
+python3 - <<EOF > /c/temp/.e2e-ee-envelope.json
+import json
+print(json.dumps({
+    "formatVersion": 1,
+    "exportedAt": "2026-04-26T00:00:00Z",
+    "includeRevoked": False,
+    "count": 2,
+    "entries": [
+        {"id":"ee-import-1","scopeType":"session","scopeValue":"imp-1","kindPattern":"deploy","targetPattern":"blog.loc","note":"E2E import row 1"},
+        {"id":"ee-import-2","scopeType":"always","scopeValue":None,"kindPattern":"restore","targetPattern":"shop.loc","note":"E2E import row 2"}
+    ]
+}))
+EOF
+EE_FIRST=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ee-envelope.json "$BASE/api/mcp/grants/import")
+step "import accepts envelope"             "$EE_FIRST" '"imported":2'
+step "import reports zero skipped first"   "$EE_FIRST" '"skipped":0'
+
+# Second call — same payload — should skip both
+EE_SECOND=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-ee-envelope.json "$BASE/api/mcp/grants/import")
+step "second import skips dup ids"         "$EE_SECOND" '"skipped":2'
+step "second import imports zero"          "$EE_SECOND" '"imported":0'
+
+# Bad envelope: missing formatVersion → 400
+EE_BAD=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" -d '{"entries":[]}' \
+    "$BASE/api/mcp/grants/import")
+step "import without formatVersion → 400"  "$EE_BAD" '400'
+
+# Cleanup the imported test rows
+api DELETE /api/mcp/grants/ee-import-1 >/dev/null
+api DELETE /api/mcp/grants/ee-import-2 >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== DD. grants ?includeRevoked audit view ===${END}"
 # ============================================================================
 # Default GET hides revoked rows. Create + revoke a grant, then verify:

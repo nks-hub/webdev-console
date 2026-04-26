@@ -15,6 +15,16 @@
         >
           <el-icon><Download /></el-icon> {{ t('mcpGrants.exportJson') }}
         </el-button>
+        <el-button :loading="importing" @click="triggerImportPicker">
+          <el-icon><Upload /></el-icon> {{ t('mcpGrants.importJson') }}
+        </el-button>
+        <input
+          ref="importFileInput"
+          type="file"
+          accept="application/json,.json"
+          style="display:none"
+          @change="onImportFileChosen"
+        />
         <el-button :loading="sweeping" @click="onSweepNow">
           <el-icon><Delete /></el-icon> {{ t('mcpGrants.sweepNow') }}
         </el-button>
@@ -297,10 +307,10 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus, Delete, Search, Download } from '@element-plus/icons-vue'
+import { Refresh, Plus, Delete, Search, Download, Upload } from '@element-plus/icons-vue'
 import {
   listMcpGrants, createMcpGrant, revokeMcpGrant, sweepMcpGrantsNow,
-  testMatchMcpGrant, subscribeEventsMap,
+  testMatchMcpGrant, importMcpGrants, subscribeEventsMap,
   type McpGrantRow, type McpGrantScopeType, type McpGrantTestMatchResult,
 } from '../../api/daemon'
 
@@ -335,6 +345,40 @@ function onIncludeRevokedChange(): void { void refresh() }
 // active only, on → full audit including revoked). Includes a small
 // envelope header (timestamp + format version) so future imports can
 // reject incompatible payloads.
+// Phase 7.5+++ — bulk import from a previously-exported envelope.
+// Skips dup ids server-side, so re-importing the same backup is safe.
+const importing = ref(false)
+const importFileInput = ref<HTMLInputElement | null>(null)
+
+function triggerImportPicker(): void {
+  importFileInput.value?.click()
+}
+
+async function onImportFileChosen(ev: Event): Promise<void> {
+  const target = ev.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  importing.value = true
+  try {
+    const text = await file.text()
+    const r = await importMcpGrants(text)
+    if (r.errors.length === 0) {
+      ElMessage.success(t('mcpGrants.importToast', { imported: r.imported, skipped: r.skipped }))
+    } else {
+      ElMessage.warning(t('mcpGrants.importPartial', {
+        imported: r.imported, skipped: r.skipped, failed: r.errors.length,
+      }))
+    }
+    await refresh()
+  } catch (e) {
+    ElMessage.error(t('mcpGrants.importFailed', { error: (e as Error).message }))
+  } finally {
+    importing.value = false
+    // Allow picking the same file again immediately.
+    if (target) target.value = ''
+  }
+}
+
 function onExportJson(): void {
   if (grants.value.length === 0) return
   const payload = {

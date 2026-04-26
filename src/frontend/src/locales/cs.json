@@ -1124,6 +1124,9 @@
       "catalogReachable": "dostupný · poslední synchronizace {ago}",
       "catalogNeverSynced": "dosud nesynchronizováno"
     },
+    "advanced": {
+      "refreshCatalog": "Synchronizovat nyní"
+    },
     "language": "Jazyk",
     "languageEn": "English",
     "languageCs": "Čeština",
@@ -1266,6 +1269,10 @@
     "sweepNow": "Vyčistit",
     "exportJson": "Export JSON",
     "exportToast": "Exportováno {n} oprávnění do JSON souboru",
+    "importJson": "Import JSON",
+    "importToast": "Importováno {imported} oprávnění (přeskočeno duplicit: {skipped})",
+    "importPartial": "Importováno {imported} (duplicit: {skipped}, chyb: {failed}) — zkontrolujte serverové logy",
+    "importFailed": "Import selhal: {error}",
     "sweepDone": "Vyčištěno {n} starých oprávnění",
     "sweepNothing": "Není co čistit — všechna oprávnění jsou aktuální",
     "sweepFailed": "Čištění selhalo: {error}",

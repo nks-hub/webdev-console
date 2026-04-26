@@ -1732,6 +1732,89 @@ app.MapPost("/api/mcp/grants/sweep-now", async (
     return Results.Ok(new { deleted });
 });
 
+// Phase 7.5+++ — bulk import grants from a previously-exported envelope.
+// Payload shape (matches the GUI export):
+//   { "formatVersion": 1, "entries": [ { id?, scopeType, scopeValue?,
+//     kindPattern, targetPattern, expiresAt?, grantedBy?, note? }, … ] }
+//
+// Strategy: skip rows whose `id` already exists (idempotent re-import
+// of the same backup). Rows without an id get a fresh UUID. Validation
+// is delegated to the existing INSERT path's CHECK constraints — bad
+// scope_type values blow up per-row and land in the errors[] array
+// without aborting the whole batch.
+//
+// Returns: { imported, skipped, errors: [{index, error}] }
+app.MapPost("/api/mcp/grants/import", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    System.Text.Json.JsonDocument doc;
+    try { doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON body" }); }
+    using var _ = doc;
+    var root = doc.RootElement;
+    if (!root.TryGetProperty("formatVersion", out var fv) || fv.ValueKind != System.Text.Json.JsonValueKind.Number || fv.GetInt32() != 1)
+        return Results.BadRequest(new { error = "formatVersion must be 1" });
+    if (!root.TryGetProperty("entries", out var entries) || entries.ValueKind != System.Text.Json.JsonValueKind.Array)
+        return Results.BadRequest(new { error = "entries must be an array" });
+
+    // Pre-load existing ids in one shot so dup detection is O(1).
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync(ct);
+    var existing = (await Dapper.SqlMapper.QueryAsync<string>(conn,
+        "SELECT id FROM mcp_session_grants")).ToHashSet(StringComparer.Ordinal);
+
+    int imported = 0, skipped = 0;
+    var errors = new List<object>();
+    int idx = -1;
+    foreach (var e in entries.EnumerateArray())
+    {
+        idx++;
+        try
+        {
+            var id = e.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+            if (!string.IsNullOrEmpty(id) && existing.Contains(id))
+            {
+                skipped++;
+                continue;
+            }
+            var row = new NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow(
+                Id: id,
+                ScopeType: e.GetProperty("scopeType").GetString() ?? "session",
+                ScopeValue: e.TryGetProperty("scopeValue", out var sv) ? sv.GetString() : null,
+                KindPattern: e.TryGetProperty("kindPattern", out var kp) ? (kp.GetString() ?? "*") : "*",
+                TargetPattern: e.TryGetProperty("targetPattern", out var tp) ? (tp.GetString() ?? "*") : "*",
+                GrantedAt: e.TryGetProperty("grantedAt", out var ga) ? (ga.GetString() ?? "") : "",
+                ExpiresAt: e.TryGetProperty("expiresAt", out var ea) ? ea.GetString() : null,
+                GrantedBy: e.TryGetProperty("grantedBy", out var gb) ? (gb.GetString() ?? "import") : "import",
+                RevokedAt: null, // imported grants always start active; ignore source revoked_at
+                Note: e.TryGetProperty("note", out var note) ? note.GetString() : null);
+            await grants.InsertAsync(row, ct);
+            imported++;
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new { index = idx, error = ex.Message });
+        }
+    }
+
+    if (imported > 0)
+    {
+        try
+        {
+            await eventsBus.BroadcastAsync("mcp:grant-changed",
+                new { change = "imported", count = imported });
+        }
+        catch { /* SSE best-effort */ }
+    }
+
+    return Results.Ok(new { imported, skipped, errors });
+});
+
 // Body record for the POST endpoint. Lives at file scope so the
 // minimal-API binder can deserialise it.
 
