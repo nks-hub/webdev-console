@@ -123,7 +123,10 @@
       "intentId": "ID intentu",
       "matchedGrant": "Auto-via grant"
     },
-    "matchedGrantTooltip": "Auto-confirmed přes oprávnění {id}. Klikněte pro zkopírování ID.",
+    "matchedGrantTooltip": "Auto-confirmed přes oprávnění {id}.",
+    "matchedGrantClickHint": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id}).",
+    "matchedGrantBanner": "Filtrováno: zobrazují se jen intenty schválené oprávněním",
+    "clearMatchedGrantFilter": "Zrušit filtr",
     "manualConfirm": "ručně",
     "confirmedManually": "Potvrzeno ručně přes GUI banner (žádné oprávnění nematchovalo)",
     "revoke": "Odvolat",

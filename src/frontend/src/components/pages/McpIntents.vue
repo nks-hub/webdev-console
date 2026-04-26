@@ -9,6 +9,29 @@
 
     <p class="muted">{{ t('mcpIntents.description') }}</p>
 
+    <!-- Phase 7.5+++ — active matchedGrant drilldown banner. Surfaces
+         when operator clicked a grant id; one-click clear restores the
+         full inventory. -->
+    <el-alert
+      v-if="matchedGrantFilter"
+      type="info"
+      show-icon
+      :closable="false"
+      class="grant-drilldown-banner"
+    >
+      <template #title>
+        <span>
+          {{ t('mcpIntents.matchedGrantBanner') }}
+          <code class="mono">{{ matchedGrantFilter }}</code>
+        </span>
+      </template>
+      <template #default>
+        <el-button size="small" @click="setMatchedGrantFilter(null)">
+          {{ t('mcpIntents.clearMatchedGrantFilter') }}
+        </el-button>
+      </template>
+    </el-alert>
+
     <!-- State summary chips -->
     <div class="state-summary" role="group" :aria-label="t('mcpIntents.stateSummaryAria')">
       <el-tag v-for="s in stateCounts" :key="s.state" :type="stateTagType(s.state)" effect="plain">
@@ -187,8 +210,8 @@
       <el-table-column :label="t('mcpIntents.col.matchedGrant')" width="130">
         <template #default="{ row }">
           <code v-if="row.matchedGrantId" class="mono auto-grant"
-            :title="t('mcpIntents.matchedGrantTooltip', { id: row.matchedGrantId })"
-            @click="copyId(row.matchedGrantId)">
+            :title="t('mcpIntents.matchedGrantClickHint', { id: row.matchedGrantId })"
+            @click="setMatchedGrantFilter(row.matchedGrantId)">
             ⚡ {{ row.matchedGrantId.slice(0, 8) }}…
           </code>
           <span v-else-if="row.confirmedAt" class="muted"
@@ -323,6 +346,17 @@ const stateFilter = ref<string | null>(null)
 const kindFilter = ref<string | null>(null)
 const domainFilter = ref('')
 
+// Phase 7.5+++ — server-side matchedGrantId drilldown. When set, we
+// re-fetch with the filter so the count + entries reflect the full
+// archive of intents this grant approved (not just what's in the
+// current 200-row window). null = filter inactive.
+const matchedGrantFilter = ref<string | null>(null)
+
+function setMatchedGrantFilter(id: string | null): void {
+  matchedGrantFilter.value = id
+  void refresh()
+}
+
 const filteredEntries = computed<IntentInventoryEntry[]>(() => {
   const q = domainFilter.value.trim().toLowerCase()
   return entries.value.filter((e) => {
@@ -338,7 +372,10 @@ const filteredEntries = computed<IntentInventoryEntry[]>(() => {
 async function refresh(): Promise<void> {
   loading.value = true
   try {
-    const result = await fetchIntentInventory(200)
+    // Phase 7.5+++ — pass current matchedGrant filter so the inventory
+    // shows the full audit chain (not capped to recent 200 across all
+    // grants when one grant might have hundreds of historical hits).
+    const result = await fetchIntentInventory(200, matchedGrantFilter.value)
     entries.value = result.entries
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -597,11 +634,14 @@ onBeforeUnmount(() => {
   user-select: all;
 }
 .auto-grant {
-  cursor: copy;
-  user-select: all;
+  cursor: pointer;
   color: var(--el-color-warning);
   font-weight: 600;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
 }
+.auto-grant:hover { opacity: 0.85; }
+.grant-drilldown-banner { margin-bottom: 4px; }
 .state-icon {
   margin-right: 4px;
   vertical-align: -2px;

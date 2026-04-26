@@ -886,6 +886,16 @@ step "grant lastMatchedAt populated" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"lastMa
 Z_INV=$(api GET /api/mcp/intents?limit=20)
 step "intent inventory carries matchedGrantId" "$Z_INV" "\"matchedGrantId\":\"$Z_ID\""
 
+# Phase 7.5+++ — server-side ?matchedGrantId= drilldown filter.
+# Filtering by our grant id should return AT LEAST our auto-confirmed
+# intent and NOTHING with a different matchedGrantId.
+Z_INV_FILTERED=$(api GET /api/mcp/intents?limit=200&matchedGrantId=$Z_ID)
+step "filter ?matchedGrantId= returns matching row" "$Z_INV_FILTERED" "\"matchedGrantId\":\"$Z_ID\""
+
+# Filter on a non-existent id → empty entries.
+Z_INV_NONE=$(api GET /api/mcp/intents?matchedGrantId=00000000-0000-0000-0000-000000000000)
+step "filter on missing id returns count=0"        "$Z_INV_NONE" '"count":0'
+
 # Phase 7.5+++ — server-side aggregate stats endpoint. With one active
 # grant we just exercised, expect total≥1, active≥1, totalMatches≥1.
 Z_STATS=$(api GET /api/mcp/grants/stats)

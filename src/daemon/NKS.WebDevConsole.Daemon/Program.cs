@@ -1363,16 +1363,25 @@ app.MapGet("/api/mcp/intents", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
     NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
-    int limit = 100) =>
+    int limit = 100,
+    string? matchedGrantId = null) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var conn = db.CreateConnection();
     await conn.OpenAsync();
-    var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn,
-        "SELECT id, domain, host, release_id, kind, expires_at, used_at, " +
-        "confirmed_at, created_at, matched_grant_id " +
-        "FROM deploy_intents ORDER BY created_at DESC LIMIT @Limit",
-        new { Limit = Math.Clamp(limit, 1, 500) });
+    // Phase 7.5+++ — optional matchedGrantId filter for "show all
+    // intents this grant approved" drilldown. Server-side WHERE clause
+    // is faster than fetching the full inventory and filtering client-
+    // side, and lets the limit param scope the response correctly.
+    var sql = "SELECT id, domain, host, release_id, kind, expires_at, used_at, " +
+              "confirmed_at, created_at, matched_grant_id " +
+              "FROM deploy_intents " +
+              (string.IsNullOrWhiteSpace(matchedGrantId)
+                  ? ""
+                  : "WHERE matched_grant_id = @MatchedGrantId ") +
+              "ORDER BY created_at DESC LIMIT @Limit";
+    var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn, sql,
+        new { Limit = Math.Clamp(limit, 1, 500), MatchedGrantId = matchedGrantId });
     // Phase 7.5+ — enrich the inventory with the registry-resolved label
     // + danger so the McpIntents page can render "Restore database
     // snapshot (destructive)" instead of bare "restore". Lookup is

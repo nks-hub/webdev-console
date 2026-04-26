@@ -196,8 +196,16 @@ export interface IntentInventoryResponse {
   entries: IntentInventoryEntry[]
 }
 
-export const fetchIntentInventory = (limit = 100): Promise<IntentInventoryResponse> =>
-  json(`/api/mcp/intents?limit=${limit}`)
+export const fetchIntentInventory = (
+  limit = 100,
+  matchedGrantId?: string | null,
+): Promise<IntentInventoryResponse> => {
+  // Phase 7.5+++ — optional matchedGrantId filter for "show all
+  // intents this grant approved" drilldown from McpGrants → McpIntents.
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (matchedGrantId) params.set('matchedGrantId', matchedGrantId)
+  return json(`/api/mcp/intents?${params.toString()}`)
+}
 
 export interface RevokeIntentResponse {
   intentId: string

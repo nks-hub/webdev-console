@@ -123,7 +123,10 @@
       "intentId": "Intent ID",
       "matchedGrant": "Auto-via grant"
     },
-    "matchedGrantTooltip": "Auto-confirmed via grant {id}. Click to copy ID.",
+    "matchedGrantTooltip": "Auto-confirmed via grant {id}.",
+    "matchedGrantClickHint": "Click to show all intents this grant approved ({id}).",
+    "matchedGrantBanner": "Filtered: showing only intents approved by grant",
+    "clearMatchedGrantFilter": "Clear filter",
     "manualConfirm": "manual",
     "confirmedManually": "Confirmed manually via GUI banner (no grant matched)",
     "revoke": "Revoke",
