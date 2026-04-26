@@ -12,6 +12,25 @@
           />
           <span class="host-card-name">{{ host }}</span>
           <el-tag v-if="isProduction" type="danger" size="small" effect="plain">PROD</el-tag>
+          <!-- Phase 6.17b — live phase indicator. Renders when an active
+               run exists for this host (parent passes activeRun), so the
+               operator sees "deploying" / "awaiting_soak" inline next to
+               the host name without opening the drawer. -->
+          <el-tag
+            v-if="activeRun"
+            :type="livePhaseTagType(activeRun.latestPhase)"
+            size="small"
+            effect="dark"
+            class="host-card-live-phase"
+            :aria-label="`Live phase ${activeRun.latestPhase}`"
+          >
+            <el-icon class="live-icon" aria-hidden="true">
+              <Loading v-if="!activeRun.isTerminal" class="is-spinning" />
+              <CircleCheck v-else-if="activeRun.success" />
+              <CircleClose v-else />
+            </el-icon>
+            {{ activeRun.latestPhase }}
+          </el-tag>
         </div>
         <HealthBadge :state="healthState" />
       </div>
@@ -48,8 +67,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HealthBadge from './HealthBadge.vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
+import type { DeployRunState } from '../../stores/deploy'
 
 const props = defineProps<{
   host: string
@@ -58,6 +79,12 @@ const props = defineProps<{
   selectable?: boolean
   /** Phase 6.10 — current selection state (controlled by parent). */
   selected?: boolean
+  /**
+   * Phase 6.17b — live run state for this host (parent picks the most
+   * recent non-terminal run from the deploy store keyed by host).
+   * Null when no active deploy is in flight for this host.
+   */
+  activeRun?: DeployRunState | null
 }>()
 
 defineEmits<{
@@ -74,6 +101,18 @@ const healthState = computed<'healthy' | 'degraded' | 'down' | 'unknown'>(() => 
   if (props.lastDeploy.error) return 'down'
   return 'healthy'
 })
+
+/**
+ * Phase 6.17b — color-code the live phase tag. In-flight phases get a
+ * primary accent (blue) so they stand out as "happening now"; terminal
+ * success/failure get the standard green/red.
+ */
+function livePhaseTagType(phase: string): 'success' | 'danger' | 'warning' | 'primary' | 'info' {
+  if (phase === 'Done') return 'success'
+  if (phase === 'Failed' || phase === 'Cancelled') return 'danger'
+  if (phase === 'RolledBack' || phase === 'RollingBack' || phase === 'AwaitingSoak') return 'warning'
+  return 'primary' // anything in-flight (Queued, Fetching, Building, Migrating, Switched, etc.)
+}
 
 function formatRelative(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
@@ -101,4 +140,23 @@ function formatRelative(iso: string): string {
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
 
 .host-card-footer { display: flex; gap: 8px; justify-content: flex-end; }
+
+.host-card-live-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.live-icon {
+  font-size: 12px;
+}
+.is-spinning {
+  animation: spin 1.4s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-spinning { animation: none; }
+}
 </style>

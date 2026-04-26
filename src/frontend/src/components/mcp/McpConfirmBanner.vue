@@ -61,9 +61,24 @@
         >
           Approve
         </el-button>
+        <!-- Phase 6.17a — inline revoke. Dismiss only removes the banner
+             locally (intent expires naturally); Decline ALSO calls the
+             revoke endpoint server-side so any AI client that tries to
+             fire the token sees `already_used` immediately. -->
+        <el-button
+          type="danger"
+          plain
+          size="default"
+          :loading="declining.has(item.intentId)"
+          :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+          aria-label="Decline AND revoke this intent so the AI cannot retry"
+          @click="decline(item.intentId)"
+        >
+          Decline
+        </el-button>
         <el-button
           size="default"
-          :disabled="busy.has(item.intentId)"
+          :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
           @click="dismiss(item.intentId)"
         >
           Dismiss
@@ -78,12 +93,18 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
+import { revokeIntent } from '../../api/daemon'
 
 const store = useMcpConfirmStore()
 
 // In-flight approval calls — keeps the user from double-clicking before the
 // daemon responds. Cleared on completion (whether success or 4xx).
 const busy = ref<Set<string>>(new Set())
+// Phase 6.17a — separate "declining" set so Decline/Approve can each
+// disable the OTHER without sharing a single is-busy flag (which would
+// prevent users from clicking Decline while the Approve call is in
+// flight if both shared `busy`).
+const declining = ref<Set<string>>(new Set())
 
 // Phase 6.14b — tick used for the expiry countdown reactivity. Updated
 // once per second by the timer below; computed countdown reads it so
@@ -126,6 +147,42 @@ async function approve(intentId: string): Promise<void> {
 
 function dismiss(intentId: string): void {
   store.dismiss(intentId)
+}
+
+/**
+ * Phase 6.17a — decline + revoke. Like dismiss, but ALSO calls the
+ * daemon's POST /api/mcp/intents/{id}/revoke so the AI client trying
+ * to fire this token sees `already_used` immediately rather than
+ * waiting for the natural expiry.
+ *
+ * Failure to revoke (network blip, intent already consumed by a race)
+ * is non-fatal — we drop the banner regardless. The toast tells the
+ * user what happened.
+ */
+async function decline(intentId: string): Promise<void> {
+  if (declining.value.has(intentId)) return
+  const next = new Set(declining.value)
+  next.add(intentId)
+  declining.value = next
+  try {
+    await revokeIntent(intentId)
+    ElMessage.success('Intent declined and revoked')
+  } catch (err) {
+    // 409 already_used is the most likely error here (race with the
+    // sweeper or a confirmed/consumed intent we hadn't refreshed). Log
+    // a softer message in that case so the user isn't alarmed.
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('already_used')) {
+      ElMessage.info('Intent was already consumed or revoked elsewhere')
+    } else {
+      ElMessage.warning(`Decline failed (banner dismissed locally): ${msg}`)
+    }
+  } finally {
+    const cleared = new Set(declining.value)
+    cleared.delete(intentId)
+    declining.value = cleared
+    store.dismiss(intentId)
+  }
 }
 
 function shortId(id: string): string {

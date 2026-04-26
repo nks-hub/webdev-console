@@ -35,6 +35,7 @@
           :key="host"
           :host="host"
           :last-deploy="lastDeployByHost.get(host) ?? null"
+          :active-run="activeRunByHost.get(host) ?? null"
           :selectable="hosts.length >= 2"
           :selected="selectedHosts.has(host)"
           @deploy="onDeploy(host)"
@@ -135,6 +136,30 @@ const lastDeployByHost = computed<Map<string, DeployHistoryEntryDto>>(() => {
   const m = new Map<string, DeployHistoryEntryDto>()
   for (const h of props.history) {
     if (!m.has(h.host)) m.set(h.host, h)
+  }
+  return m
+})
+
+/**
+ * Phase 6.17b — pick the most recent NON-TERMINAL run per host from the
+ * deploy store so HostCard can render a live phase tag inline. Filters
+ * to runs for the current domain so we don't surface another site's
+ * deploy if the store still holds a run from a previous navigation.
+ *
+ * Reactive over deployStore.runs because Pinia's `runs` ref triggers
+ * recomputation whenever events arrive via SSE → handleSseEvent.
+ */
+const activeRunByHost = computed<Map<string, ReturnType<typeof Array.from<unknown>>[number] | null>>(() => {
+  const m = new Map<string, ReturnType<typeof Array.from<unknown>>[number] | null>()
+  for (const run of deployStore.runs.values()) {
+    if (run.domain !== props.domain) continue
+    if (run.isTerminal) continue
+    const existing = m.get(run.host)
+    // Prefer the newest startedAt when multiple non-terminal runs exist
+    // for the same host (rare — usually only one in flight at a time).
+    if (!existing || new Date(run.startedAt).getTime() > new Date((existing as { startedAt: string }).startedAt).getTime()) {
+      m.set(run.host, run)
+    }
   }
   return m
 })
