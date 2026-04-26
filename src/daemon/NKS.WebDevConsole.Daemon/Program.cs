@@ -1519,6 +1519,74 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", (string domain) =>
     Results.Ok(new { domain, count = 0, entries = Array.Empty<object>() }));
 
+// Deploy settings persistence — JSON file under
+// {WdcPaths.DataRoot}/deploy-settings/{domain}.json. Frontend's
+// DeploySettingsPanel writes here when operator clicks Save in any tab.
+// Setup wizard's Finish button stores its first-host config here too,
+// which transitions the site from "wizard CTA" empty state to the full
+// command center on next page load (DeploySiteTab.refreshAll() now
+// has a hasConfig truthy signal).
+//
+// File-per-site keeps the schema dumb: we serialise the body the
+// frontend posts verbatim (Phase 7.5 stub). When the real backend ships
+// it can validate against a schema before persist.
+static string DeploySettingsPath(string domain)
+{
+    var dir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "deploy-settings");
+    Directory.CreateDirectory(dir);
+    // Sanitise domain for filename — letters/digits/dot/dash/underscore
+    // only (ASP.NET routing has already enforced no slashes).
+    var safe = System.Text.RegularExpressions.Regex.Replace(domain, "[^a-zA-Z0-9._-]", "_");
+    return Path.Combine(dir, safe + ".json");
+}
+
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
+{
+    var path = DeploySettingsPath(domain);
+    if (!File.Exists(path))
+    {
+        // 404 lets the frontend fall back to defaultDeploySettings() —
+        // keeps existing behaviour from when this endpoint didn't exist.
+        return Results.NotFound(new { error = "no_settings_yet", domain });
+    }
+    try
+    {
+        var json = File.ReadAllText(path);
+        // Stream the raw JSON back rather than re-deserialising —
+        // frontend's DeploySettings shape is what we wrote, what we
+        // read should round-trip byte-equivalent.
+        return Results.Content(json, "application/json");
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { error = "read_failed", message = ex.Message }, statusCode: 500);
+    }
+});
+
+app.MapPut("/api/nks.wdc.deploy/sites/{domain}/settings", async (
+    string domain, HttpContext ctx, CancellationToken ct) =>
+{
+    // Read and validate body is JSON-shaped — anything past that is the
+    // frontend's contract; we don't enforce per-field rules here so a new
+    // setting can land without daemon restart.
+    string body;
+    using (var reader = new StreamReader(ctx.Request.Body))
+        body = await reader.ReadToEndAsync(ct);
+    try { System.Text.Json.JsonDocument.Parse(body); }
+    catch { return Results.BadRequest(new { error = "invalid_json" }); }
+
+    var path = DeploySettingsPath(domain);
+    // Atomic write: temp file in same dir + File.Move with overwrite.
+    // Avoids leaving a half-written file if the daemon crashes mid-flush.
+    var tmp = path + ".tmp";
+    await File.WriteAllTextAsync(tmp, body, ct);
+    // File.Move on Windows pre-.NET 5 errored on overwrite; current .NET
+    // overload accepts overwrite=true safely.
+    if (File.Exists(path)) File.Delete(path);
+    File.Move(tmp, path);
+    return Results.Ok(new { domain, status = "saved", bytes = body.Length });
+});
+
 // Single deploy status — used by the drawer's status polling fallback.
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     string domain,

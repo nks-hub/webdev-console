@@ -283,6 +283,54 @@ step "always grant revoke OK" "$(api DELETE /api/mcp/grants/$ALWAYS_ID)" '"statu
 [ -n "$ANON_ID" ] && api POST /api/mcp/intents/$ANON_ID/revoke >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== N. deploy settings persistence (round-trip) ===${END}"
+# ============================================================================
+# Wizard finish + Save buttons in DeploySettingsPanel POST a JSON body
+# here. Daemon writes to ~/.wdc/data/deploy-settings/{domain}.json.
+# E2E proves: 404 before any save, save returns ok+bytes, GET returns
+# byte-equivalent JSON, second save overwrites cleanly.
+
+DOM="e2e-test.loc"
+echo "  → unique site name: $DOM (cleanup after)"
+
+GET_404=$(curl -s -w "%{http_code}" -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/$DOM/settings")
+step "settings GET before save → 404 no_settings_yet" "$GET_404" 'no_settings_yet.*404'
+
+SAVE_BODY='{"hosts":[{"name":"production","sshHost":"deploy.example.com","sshUser":"deploy","sshPort":22,"remotePath":"/var/www/myapp","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":30}],"snapshot":{"enabled":true,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":["ops@example.com"],"notifyOn":["success","failure"]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{"APP_ENV":"production"}}}'
+
+SAVE_RESP=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "$SAVE_BODY" "$BASE/api/nks.wdc.deploy/sites/$DOM/settings")
+step "PUT settings returns saved+bytes" "$SAVE_RESP" '"status":"saved".*"bytes":'
+
+GOT=$(curl -s -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/$DOM/settings")
+step "GET after save returns the JSON" "$GOT" '"sshHost":"deploy.example.com"'
+step "GET preserved snapshot config" "$GOT" '"retentionDays":30'
+step "GET preserved env vars" "$GOT" '"APP_ENV":"production"'
+
+# Overwrite with new content
+SAVE2=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"hosts":[],"snapshot":{"enabled":false,"retentionDays":7},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":["failure"]},"advanced":{"keepReleases":3,"lockTimeoutSeconds":300,"allowConcurrentHosts":false,"envVars":{}}}' \
+    "$BASE/api/nks.wdc.deploy/sites/$DOM/settings")
+step "second PUT overwrites" "$SAVE2" '"status":"saved"'
+GOT2=$(curl -s -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/$DOM/settings")
+step "after overwrite, old hosts gone" "$GOT2" '"hosts":\[\]'
+step "after overwrite, new keepReleases=3" "$GOT2" '"keepReleases":3'
+
+# Invalid JSON → 400
+BAD=$(curl -s -w "%{http_code}" -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d 'not json at all' "$BASE/api/nks.wdc.deploy/sites/$DOM/settings")
+step "PUT with non-JSON body → 400 invalid_json" "$BAD" 'invalid_json.*400'
+
+# Cleanup test settings file via rcmd (elevated client owns ~/.wdc dir on prod)
+# Best-effort: ignore failure (file might be locked).
+if [ -f "$HOME/.wdc/data/deploy-settings/${DOM}.json" ]; then
+    rm -f "$HOME/.wdc/data/deploy-settings/${DOM}.json" 2>/dev/null || true
+fi
+
+# ============================================================================
 echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
 # ============================================================================
 # Subscribe to SSE BEFORE firing the deploy so we capture every event.
