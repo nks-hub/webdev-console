@@ -322,7 +322,9 @@
                 <el-input
                   :id="`hook-cmd-${idx}`"
                   v-model="hook.command"
-                  :placeholder="hook.type === 'http' ? 'https://...' : 'php artisan migrate'"
+                  :placeholder="hook.type === 'http'
+                    ? t('deploySettings.hooks.urlPlaceholder')
+                    : t('deploySettings.hooks.commandPlaceholder')"
                   aria-required="true"
                 />
               </el-form-item>
@@ -380,7 +382,7 @@
               <el-input
                 :id="ids.slackWebhook"
                 v-model="settings.notifications.slackWebhook"
-                placeholder="https://hooks.slack.com/services/..."
+                :placeholder="t('deploySettings.notifications.slackWebhookPlaceholder')"
                 clearable
               />
             </el-form-item>

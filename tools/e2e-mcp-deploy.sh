@@ -960,16 +960,21 @@ echo ""; echo "${YEL}=== EE. grants bulk import (round-trip with export) ===${EN
 # ============================================================================
 # Build a 2-row envelope, POST to /import, verify imported=2 + skipped=0
 # on first call, then re-import to verify skipped=2 (idempotent re-import).
+# Use per-run unique IDs so re-runs against a daemon DB that retains
+# soft-revoked rows from prior E2E executions don't see false dup hits.
+EE_TS=$(date +%s%N | head -c 13)
+export EE_TS
 python3 - <<EOF > /c/temp/.e2e-ee-envelope.json
-import json
+import json, os
+ts = os.environ['EE_TS']
 print(json.dumps({
     "formatVersion": 1,
     "exportedAt": "2026-04-26T00:00:00Z",
     "includeRevoked": False,
     "count": 2,
     "entries": [
-        {"id":"ee-import-1","scopeType":"session","scopeValue":"imp-1","kindPattern":"deploy","targetPattern":"blog.loc","note":"E2E import row 1"},
-        {"id":"ee-import-2","scopeType":"always","scopeValue":None,"kindPattern":"restore","targetPattern":"shop.loc","note":"E2E import row 2"}
+        {"id":f"ee-import-{ts}-1","scopeType":"session","scopeValue":"imp-1","kindPattern":"deploy","targetPattern":"blog.loc","note":"E2E import row 1"},
+        {"id":f"ee-import-{ts}-2","scopeType":"always","scopeValue":None,"kindPattern":"restore","targetPattern":"shop.loc","note":"E2E import row 2"}
     ]
 }))
 EOF
@@ -990,9 +995,9 @@ EE_BAD=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
     "$BASE/api/mcp/grants/import")
 step "import without formatVersion → 400"  "$EE_BAD" '400'
 
-# Cleanup the imported test rows
-api DELETE /api/mcp/grants/ee-import-1 >/dev/null
-api DELETE /api/mcp/grants/ee-import-2 >/dev/null
+# Cleanup the imported test rows (soft revoke; janitor sweeps later)
+api DELETE /api/mcp/grants/ee-import-${EE_TS}-1 >/dev/null
+api DELETE /api/mcp/grants/ee-import-${EE_TS}-2 >/dev/null
 
 # ============================================================================
 echo ""; echo "${YEL}=== DD. grants ?includeRevoked audit view ===${END}"

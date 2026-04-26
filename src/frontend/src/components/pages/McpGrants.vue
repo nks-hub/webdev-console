@@ -215,19 +215,24 @@
       <p class="muted" style="margin-top: 0">{{ t('mcpGrants.testMatch.description') }}</p>
       <el-form :model="testMatchForm" label-width="120px" size="small">
         <el-form-item :label="t('mcpGrants.testMatch.sessionId')">
-          <el-input v-model="testMatchForm.sessionId" placeholder="agent-42 (volitelné)" clearable />
+          <el-input v-model="testMatchForm.sessionId"
+            :placeholder="t('mcpGrants.testMatch.sessionIdPlaceholder')" clearable />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.testMatch.instanceId')">
-          <el-input v-model="testMatchForm.instanceId" placeholder="wdc-uuid (volitelné)" clearable />
+          <el-input v-model="testMatchForm.instanceId"
+            :placeholder="t('mcpGrants.testMatch.instanceIdPlaceholder')" clearable />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.testMatch.apiKeyId')">
-          <el-input v-model="testMatchForm.apiKeyId" placeholder="claude-code-LuRy (volitelné)" clearable />
+          <el-input v-model="testMatchForm.apiKeyId"
+            :placeholder="t('mcpGrants.testMatch.apiKeyIdPlaceholder')" clearable />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.testMatch.kind')" required>
-          <el-input v-model="testMatchForm.kind" placeholder="deploy | rollback | restore | …" />
+          <el-input v-model="testMatchForm.kind"
+            :placeholder="t('mcpGrants.testMatch.kindPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.testMatch.target')" required>
-          <el-input v-model="testMatchForm.target" placeholder="blog.loc | shop.loc | …" />
+          <el-input v-model="testMatchForm.target"
+            :placeholder="t('mcpGrants.testMatch.targetPlaceholder')" />
         </el-form-item>
       </el-form>
 
@@ -275,10 +280,12 @@
           <el-input v-model="form.scopeValue" :placeholder="scopeValuePlaceholder" />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.kindPattern')">
-          <el-input v-model="form.kindPattern" placeholder="* | deploy | rollback | cancel | restore" />
+          <el-input v-model="form.kindPattern"
+            :placeholder="t('mcpGrants.dialog.kindPatternPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.targetPattern')">
-          <el-input v-model="form.targetPattern" placeholder="* | blog.loc | ..." />
+          <el-input v-model="form.targetPattern"
+            :placeholder="t('mcpGrants.dialog.targetPatternPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.expiry')">
           <el-radio-group v-model="form.expiryMode">
@@ -543,9 +550,9 @@ const form = ref<{
 
 const scopeValuePlaceholder = computed(() => {
   switch (form.value.scopeType) {
-    case 'session':  return 'mcp-session-id (e.g. agent-42)'
-    case 'api_key':  return 'api-key fingerprint (NOT the key itself)'
-    case 'instance': return 'wdc instance UUID'
+    case 'session':  return t('mcpGrants.dialog.scopeValuePlaceholder.session')
+    case 'api_key':  return t('mcpGrants.dialog.scopeValuePlaceholder.apiKey')
+    case 'instance': return t('mcpGrants.dialog.scopeValuePlaceholder.instance')
     default:         return ''
   }
 })
