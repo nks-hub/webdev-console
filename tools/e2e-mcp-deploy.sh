@@ -53,13 +53,15 @@ api() {
 # Usage: deploy_body blog.loc '{"host":"production"}'
 deploy_body() {
     local domain="$1"; local extra="${2:-{\}}"
+    # .NET Directory.* + File.* on Windows accept forward slashes — keeps
+    # the JSON escape minimal vs the C:\\work\\... double-backslash dance.
     DEPLOY_DOMAIN="$domain" DEPLOY_EXTRA="$extra" python3 -c "
 import json, os
 extra = json.loads(os.environ['DEPLOY_EXTRA'])
 domain = os.environ['DEPLOY_DOMAIN']
 body = {**extra, 'localPaths': {
-    'source': r'C:\\work\\sites\\' + domain,
-    'target': r'C:\\work\\deploy-targets\\' + domain,
+    'source': 'C:/work/sites/' + domain,
+    'target': 'C:/work/deploy-targets/' + domain,
 }}
 print(json.dumps(body))
 "
@@ -82,8 +84,8 @@ fire_deploy_w_code() {
 # JSON sees "C:\\work\\..." (2 backslashes) → decodes to "C:\work\..."
 # When interpolated via ${LP_BLOG} inside a "..." bash string, bash
 # does NO further escape processing on the variable's content.
-LP_BLOG=',"localPaths":{"source":"C:\\work\\sites\\blog.loc","target":"C:\\work\\deploy-targets\\blog.loc"}'
-LP_SHOP=',"localPaths":{"source":"C:\\work\\sites\\shop.loc","target":"C:\\work\\deploy-targets\\shop.loc"}'
+LP_BLOG=',"localPaths":{"source":"C:/work/sites/blog.loc","target":"C:/work/deploy-targets/blog.loc"}'
+LP_SHOP=',"localPaths":{"source":"C:/work/sites/shop.loc","target":"C:/work/deploy-targets/shop.loc"}'
 
 # ============================================================================
 echo ""; echo "${YEL}=== A. preconditions ===${END}"
@@ -221,7 +223,7 @@ step "intent-gated: mint OK" "$INTENT_GATED" '"intentToken":"'
 
 # Try fire deploy WITHOUT operator approval — should fail with pending_confirmation
 PEND=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "fire without approval → 425 pending_confirmation" "$PEND" 'pending_confirmation.*425'
 
@@ -230,7 +232,7 @@ api POST /api/mcp/intents/$GATED_ID/confirm >/dev/null
 
 # AI fires deploy WITH token — should accept
 FIRED=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "fire with approved token → 202" "$FIRED" '"status":"queued".*202'
 GATED_DEPLOY_ID=$(echo "$FIRED" | python3 -c "import sys; t=sys.stdin.read(); import re; m=re.search(r'\"deployId\":\"([a-f0-9-]+)\"',t); print(m.group(1) if m else '')")
@@ -243,7 +245,7 @@ step "intent-gated deploy triggered_by recorded" "$DONE" '"deployId":"'
 
 # Re-using same intent should fail (single-use enforced by validator)
 REPLAY=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$GATED_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "intent replay rejected (already_used)" "$REPLAY" 'already_used'
 
@@ -287,7 +289,7 @@ step "AI mints intent (with session header)" "$INTENT_AUTO" '"intentToken":"'
 # session header so the validator can see the caller identity.
 AUTO_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: $SESSION_ID" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$AUTO_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$AUTO_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "deploy fires without operator click (grant auto-confirms)" "$AUTO_FIRE" '"status":"queued".*202'
 
@@ -305,7 +307,7 @@ INTENT_OTHER=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Typ
 OTHER_TOKEN=$(echo "$INTENT_OTHER" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
 OTHER_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: different-ai-session" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$OTHER_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$OTHER_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "different session → grant doesn't apply → 425" "$OTHER_FIRE" 'pending_confirmation.*425'
 
@@ -428,7 +430,7 @@ INTENT_X_ID=$(echo "$INTENT_X" | python3 -c "import sys,json; print(json.load(sy
 
 X_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: $EXPIRED_SESSION" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_X_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_X_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pending_confirmation.*425'
 
@@ -617,25 +619,25 @@ step "victim intent minted + confirmed" "$S_INTENT" '"intentToken":"'
 # Token format: {id}.{nonce}.{sig} — twiddle one char of sig
 TAMPERED_SIG=$(python3 -c "t='$S_TOKEN'; parts=t.split('.'); sig=parts[2]; flip='X' if sig[-1] != 'X' else 'Y'; parts[2]=sig[:-1]+flip; print('.'.join(parts))")
 T1=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$TAMPERED_SIG\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$TAMPERED_SIG\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "tampered signature → signature_mismatch" "$T1" 'signature_mismatch.*403'
 
 # Attack 2: domain mismatch — token for blog.loc fired against shop.loc
 T2=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$S_TOKEN\"}${LP_SHOP}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$S_TOKEN\"${LP_SHOP}}" \
     "$BASE/api/nks.wdc.deploy/sites/shop.loc/deploy")
 step "domain mismatch (blog token on shop URL) → 403" "$T2" 'domain_mismatch.*403'
 
 # Attack 3: host mismatch — original was production, fire on staging
 T3=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"staging\",\"intentToken\":\"$S_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"staging\",\"intentToken\":\"$S_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "host mismatch (production token on staging) → 403" "$T3" 'host_mismatch.*403'
 
 # Attack 4: malformed token shape (not three dot-separated parts)
 T4=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d '{"host":"production","intentToken":"not.a.valid.token.has.too.many.parts"}' \
+    -d "{\"host\":\"production\",\"intentToken\":\"not.a.valid.token.has.too.many.parts\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "malformed token shape → 403 malformed_token" "$T4" 'malformed_token.*403'
 
@@ -643,7 +645,7 @@ step "malformed token shape → 403 malformed_token" "$T4" 'malformed_token.*403
 # without a token, body is treated as direct GUI deploy (no validator),
 # so this just lands as 202 queued. Verify that path:
 T5=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d '{"host":"production","intentToken":""}' \
+    -d "{\"host\":\"production\",\"intentToken\":\"\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "empty token treated as direct GUI deploy" "$T5" '"status":"queued".*202'
 
@@ -655,7 +657,7 @@ WK_TOKEN=$(echo "$WRONG_KIND_INTENT" | python3 -c "import sys,json; print(json.l
 WK_ID=$(echo "$WRONG_KIND_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
 api POST /api/mcp/intents/$WK_ID/confirm >/dev/null
 T6=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$WK_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$WK_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "wrong-kind token (rollback fired as deploy) → 403 kind_mismatch" "$T6" 'kind_mismatch.*403'
 
@@ -704,7 +706,7 @@ INTENT_R_ID=$(echo "$INTENT_R" | python3 -c "import sys,json; print(json.load(sy
 
 R_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "X-Mcp-Session-Id: $REVOKED_SESSION" \
-    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_R_TOKEN\"}${LP_BLOG}" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_R_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "revoked-grant session → fire still 425 pending_confirmation" "$R_FIRE" 'pending_confirmation.*425'
 
@@ -733,7 +735,7 @@ RESULTS_DIR=/c/temp/.e2e-race-out
 rm -rf "$RESULTS_DIR" && mkdir -p "$RESULTS_DIR"
 for i in 1 2 3 4 5; do
     (curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-        -d "{\"host\":\"production\",\"intentToken\":\"$RACE_TOKEN\"}${LP_BLOG}" \
+        -d "{\"host\":\"production\",\"intentToken\":\"$RACE_TOKEN\"${LP_BLOG}}" \
         "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > "$RESULTS_DIR/r$i.json" 2>&1) &
 done
 wait
@@ -908,7 +910,7 @@ Z_INT_TOKEN=$(echo "$Z_INT" | python3 -c "import sys,json; print(json.load(sys.s
 # intentToken from JSON body, not from a header). Caller identity
 # header lets the always-grant pre-check fire (HasAnyIdentity).
 export Z_INT_TOKEN
-python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['Z_INT_TOKEN']}))" > /c/temp/.e2e-z-deploy.json
+python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['Z_INT_TOKEN'],'localPaths':{'source':'C:/work/sites/blog.loc','target':'C:/work/deploy-targets/blog.loc'}}))" > /c/temp/.e2e-z-deploy.json
 Z_FIRE=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
     -H "X-Mcp-Session-Id: e2e-z-test" -H "Content-Type: application/json" \
     --data-binary @/c/temp/.e2e-z-deploy.json \
@@ -1027,7 +1029,7 @@ FF_INT1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: ap
     --data-binary @/c/temp/.e2e-ff-int.json "$BASE/api/mcp/intents")
 FF_TOK1=$(echo "$FF_INT1" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
 export FF_TOK1
-python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['FF_TOK1']}))" > /c/temp/.e2e-ff-deploy1.json
+python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['FF_TOK1'],'localPaths':{'source':'C:/work/sites/shop.loc','target':'C:/work/deploy-targets/shop.loc'}}))" > /c/temp/.e2e-ff-deploy1.json
 FF_FIRE1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
     -H "X-Mcp-Session-Id: ff-cooldown-test" -H "Content-Type: application/json" \
     --data-binary @/c/temp/.e2e-ff-deploy1.json \
@@ -1040,7 +1042,7 @@ FF_INT2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: ap
     --data-binary @/c/temp/.e2e-ff-int.json "$BASE/api/mcp/intents")
 FF_TOK2=$(echo "$FF_INT2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
 export FF_TOK2
-python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['FF_TOK2']}))" > /c/temp/.e2e-ff-deploy2.json
+python3 -c "import json,os; print(json.dumps({'host':'production','branch':'main','intentToken':os.environ['FF_TOK2'],'localPaths':{'source':'C:/work/sites/shop.loc','target':'C:/work/deploy-targets/shop.loc'}}))" > /c/temp/.e2e-ff-deploy2.json
 FF_FIRE2=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
     -H "X-Mcp-Session-Id: ff-cooldown-test" -H "Content-Type: application/json" \
     --data-binary @/c/temp/.e2e-ff-deploy2.json \
