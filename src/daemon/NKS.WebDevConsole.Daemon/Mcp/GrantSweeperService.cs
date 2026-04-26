@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Daemon.Data;
 
 namespace NKS.WebDevConsole.Daemon.Mcp;
@@ -31,11 +32,16 @@ public sealed class GrantSweeperService : BackgroundService
 
     private readonly Database _db;
     private readonly ILogger<GrantSweeperService> _logger;
+    private readonly IDeployEventBroadcaster _eventsBus;
 
-    public GrantSweeperService(Database db, ILogger<GrantSweeperService> logger)
+    public GrantSweeperService(
+        Database db,
+        ILogger<GrantSweeperService> logger,
+        IDeployEventBroadcaster eventsBus)
     {
         _db = db;
         _logger = logger;
+        _eventsBus = eventsBus;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -78,6 +84,15 @@ public sealed class GrantSweeperService : BackgroundService
         {
             _logger.LogInformation(
                 "Grant sweeper deleted {Rows} stale mcp_session_grants row(s)", rows);
+            // Phase 7.5+++ — broadcast so any open McpGrants table refreshes
+            // and shows the new (smaller) list. Best-effort; SSE failure is
+            // never allowed to break the janitor loop.
+            try
+            {
+                await _eventsBus.BroadcastAsync("mcp:grant-changed",
+                    new { change = "swept", count = rows });
+            }
+            catch { /* SSE failure is non-fatal */ }
         }
     }
 
