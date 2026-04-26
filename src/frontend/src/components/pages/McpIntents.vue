@@ -107,14 +107,36 @@
       description="No intents match the current filters"
     />
 
-    <el-table
-      v-else
-      :data="filteredEntries"
-      stripe
-      size="small"
-      :empty-text="'No intents'"
-      class="intent-table"
-    >
+    <template v-else>
+      <!-- Phase 6.18b — bulk action toolbar. Renders when at least one
+           revokable row is selected. Sits inside the table render path
+           so the empty-state v-if/v-else-if chain above stays intact. -->
+      <div v-if="selectedRevokable.length > 0" class="bulk-toolbar" role="toolbar"
+           aria-label="Bulk intent actions">
+        <span class="muted">{{ selectedRevokable.length }} selected:</span>
+        <el-button
+          type="danger"
+          size="small"
+          :loading="bulkRevoking"
+          @click="onBulkRevoke"
+        >
+          Revoke selected ({{ selectedRevokable.length }})
+        </el-button>
+        <el-button size="small" @click="clearSelection">Clear selection</el-button>
+      </div>
+
+      <el-table
+        ref="tableRef"
+        :data="filteredEntries"
+        stripe
+        size="small"
+        :empty-text="'No intents'"
+        class="intent-table"
+        @selection-change="onSelectionChange"
+      >
+        <!-- Selection column. el-table's `type=selection` + `selectable`
+             prop disables the checkbox for non-revokable rows. -->
+        <el-table-column type="selection" width="40" :selectable="rowSelectable" />
       <el-table-column label="Created" width="170">
         <template #default="{ row }">
           <span class="mono">{{ formatDate(row.createdAt) }}</span>
@@ -178,7 +200,8 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
+      </el-table>
+    </template>
   </div>
 </template>
 
@@ -202,6 +225,76 @@ import {
 const entries = ref<IntentInventoryEntry[]>([])
 const loading = ref(false)
 const revokingId = ref<string | null>(null)
+
+// Phase 6.18b — bulk revoke selection state. The el-table emits
+// selection-change with the FULL selected set (not deltas) so we mirror
+// it as a Set for fast membership checks.
+const selectedIntents = ref<IntentInventoryEntry[]>([])
+const bulkRevoking = ref(false)
+const tableRef = ref<unknown>(null)
+
+function rowSelectable(row: IntentInventoryEntry): boolean {
+  // Only ready/pending_confirmation rows are revokable. Mirroring the
+  // single-row Revoke button visibility check.
+  return row.state === 'ready' || row.state === 'pending_confirmation'
+}
+
+function onSelectionChange(rows: IntentInventoryEntry[]): void {
+  selectedIntents.value = rows
+}
+
+const selectedRevokable = computed(() =>
+  selectedIntents.value.filter((r) => rowSelectable(r)))
+
+function clearSelection(): void {
+  // Reach into the el-table instance to clear its checkbox state.
+  // Element Plus exposes clearSelection() on the table ref.
+  const t = tableRef.value as { clearSelection?: () => void } | null
+  t?.clearSelection?.()
+  selectedIntents.value = []
+}
+
+async function onBulkRevoke(): Promise<void> {
+  const targets = selectedRevokable.value
+  if (targets.length === 0 || bulkRevoking.value) return
+  try {
+    await ElMessageBox.confirm(
+      `Revoke ${targets.length} intent(s)? Each will be marked used_at on the daemon ` +
+        `so any AI client trying to fire them gets already_used.\n\n` +
+        `Targets: ${targets.slice(0, 5).map((r) => `${r.kind} on ${r.domain}`).join(', ')}` +
+        (targets.length > 5 ? ` and ${targets.length - 5} more…` : ''),
+      'Bulk revoke MCP intents',
+      { type: 'warning', confirmButtonText: 'Revoke all', cancelButtonText: 'Cancel' },
+    )
+  } catch { return }
+
+  bulkRevoking.value = true
+  let ok = 0
+  let failed = 0
+  // Serial revoke — daemon writes are cheap and serial keeps the
+  // failure surface deterministic (operator sees "5 ok, 2 failed"
+  // rather than racing parallel POSTs).
+  for (const t of targets) {
+    try {
+      await revokeIntent(t.intentId)
+      ok++
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // 409 already_used is benign here (same as single-row revoke);
+      // count as success since the desired end state was reached.
+      if (msg.includes('already_used')) ok++
+      else failed++
+    }
+  }
+  bulkRevoking.value = false
+  clearSelection()
+  if (failed === 0) {
+    ElMessage.success(`Revoked ${ok} intent(s)`)
+  } else {
+    ElMessage.warning(`Revoked ${ok}, ${failed} failed`)
+  }
+  await refresh()
+}
 
 // Phase 6.13b — client-side filters. Empty/null = no filter applied.
 const stateFilter = ref<string | null>(null)
@@ -426,6 +519,17 @@ onMounted(() => refresh())
 .filter-count {
   margin-left: auto;
   font-size: 12px;
+}
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--el-color-warning-light-9, #fdf6ec);
+  border: 1px solid var(--el-color-warning, #e6a23c);
+  border-left-width: 4px;
+  border-radius: 4px;
+  margin-bottom: 4px;
 }
 .intent-table {
   width: 100%;

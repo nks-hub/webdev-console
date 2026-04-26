@@ -2,6 +2,16 @@
   <div class="group-history">
     <div class="group-history-header">
       <h4 class="group-history-title">Deploy group history</h4>
+      <!-- Phase 6.18a — group success-rate at a glance. all_succeeded /
+           total of terminal groups (excludes in-flight from denominator
+           since they haven't decided yet). Hidden when no terminal
+           groups exist. -->
+      <div v-if="successRate !== null" class="group-success-rate" role="status">
+        <el-tag :type="rateTagType(successRate)" size="small" effect="plain">
+          {{ successCount }}/{{ terminalCount }} groups succeeded
+          <span class="rate-pct">({{ Math.round(successRate * 100) }}%)</span>
+        </el-tag>
+      </div>
       <el-button link size="small" :loading="loading" @click="refresh">
         <el-icon><Refresh /></el-icon> Refresh
       </el-button>
@@ -140,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Refresh,
   CircleCheck,
@@ -185,6 +195,31 @@ let unsubscribeSse: (() => void) | null = null
 // during a fan-out. Rather than refetching the list per event, we coalesce
 // into one refresh after a quiet 500 ms window.
 let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Phase 6.18a — group success-rate metric over TERMINAL groups only.
+ * In-flight groups (initializing/preflight/deploying/awaiting_all_soak/
+ * rolling_back_all) don't count in the denominator since their outcome
+ * isn't decided yet. Returns null when zero terminal groups present so
+ * the header tag hides cleanly on a fresh project.
+ */
+const TERMINAL_PHASES: DeployGroupPhase[] = [
+  'all_succeeded', 'partial_failure', 'rolled_back', 'group_failed',
+]
+const terminalCount = computed(() =>
+  entries.value.filter((e) => TERMINAL_PHASES.includes(e.phase)).length)
+const successCount = computed(() =>
+  entries.value.filter((e) => e.phase === 'all_succeeded').length)
+const successRate = computed<number | null>(() => {
+  if (terminalCount.value === 0) return null
+  return successCount.value / terminalCount.value
+})
+function rateTagType(rate: number): 'success' | 'warning' | 'danger' | 'info' {
+  if (rate >= 0.9) return 'success'
+  if (rate >= 0.7) return 'warning'
+  if (rate > 0) return 'danger'
+  return 'info'
+}
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -443,8 +478,19 @@ watch(() => props.domain, () => refresh())
 .group-history-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
+}
+.group-history-header .group-history-title {
+  margin-right: auto;
+}
+.rate-pct {
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+}
+.group-success-rate {
+  display: inline-flex;
+  align-items: center;
 }
 .group-history-title {
   margin: 0;
