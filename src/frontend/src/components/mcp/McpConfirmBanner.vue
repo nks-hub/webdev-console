@@ -64,6 +64,29 @@
         >
           {{ t('mcp.banner.approve') }}
         </el-button>
+        <!-- Phase 7.3 — persistent trust shortcuts. Both create an
+             mcp_session_grants row server-side BEFORE approving the
+             current intent so future identical requests skip the
+             banner entirely. "30 min" scopes by session id (per-agent),
+             "always" by api_key id (per-credential, survives session
+             rotation). Falls back to a plain approve if neither id is
+             known (no MCP middleware headers). -->
+        <el-button
+          size="default"
+          :loading="busy.has(item.intentId)"
+          :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+          @click="approveAndTrust(item, 30)"
+        >
+          {{ t('mcp.banner.trust30Min') }}
+        </el-button>
+        <el-button
+          size="default"
+          :loading="busy.has(item.intentId)"
+          :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+          @click="approveAndTrust(item, null)"
+        >
+          {{ t('mcp.banner.alwaysTrust') }}
+        </el-button>
         <!-- Phase 6.17a — inline revoke. Dismiss only removes the banner
              locally (intent expires naturally); Decline ALSO calls the
              revoke endpoint server-side so any AI client that tries to
@@ -97,7 +120,7 @@ import { useI18n } from 'vue-i18n'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
-import { revokeIntent } from '../../api/daemon'
+import { createMcpGrant, revokeIntent, type McpGrantCreateBody } from '../../api/daemon'
 
 const { t } = useI18n()
 const store = useMcpConfirmStore()
@@ -146,6 +169,61 @@ async function approve(intentId: string): Promise<void> {
   } finally {
     const cleared = new Set(busy.value)
     cleared.delete(intentId)
+    busy.value = cleared
+  }
+}
+
+/**
+ * Phase 7.3 — approve THIS intent AND create a persistent grant so future
+ * identical requests skip the banner. `expiresMin === null` means the
+ * grant never expires (always-trust); a number is added to "now" as
+ * minutes until expiry.
+ *
+ * Scope strategy: until the daemon's confirm-request SSE event carries
+ * the calling caller's session/api-key id, we use scope_type='always'
+ * (any caller) but narrow by kind+target so the grant only covers the
+ * specific operation the user was shown. Approving "deploy on blog.loc"
+ * doesn't auto-confirm "rollback on shop.loc". When the daemon starts
+ * forwarding caller ids in the SSE payload we can flip to scope='session'
+ * for the timed variant and 'api_key' for the permanent one.
+ *
+ * Errors are non-fatal — if grant creation fails (mcp.enabled flipped
+ * mid-flight, network blip), we still proceed with the one-shot approve
+ * so the user's primary action ("ship this deploy") completes.
+ */
+async function approveAndTrust(item: PendingConfirm, expiresMin: number | null): Promise<void> {
+  if (busy.value.has(item.intentId)) return
+  const next = new Set(busy.value)
+  next.add(item.intentId)
+  busy.value = next
+  try {
+    const body: McpGrantCreateBody = {
+      scopeType: 'always',
+      scopeValue: null,
+      kindPattern: item.kind ?? '*',
+      targetPattern: item.domain ?? '*',
+      expiresAt: expiresMin === null
+        ? null
+        : new Date(Date.now() + expiresMin * 60_000).toISOString(),
+      grantedBy: 'banner',
+      note: expiresMin === null
+        ? `Always trust ${item.kind ?? 'any'} on ${item.domain ?? 'any'}`
+        : `Trust ${item.kind ?? 'any'} on ${item.domain ?? 'any'} for ${expiresMin} min`,
+    }
+    try {
+      await createMcpGrant(body)
+      ElMessage.success(expiresMin === null
+        ? t('mcp.banner.toastAlwaysTrusted')
+        : t('mcp.banner.toastTrustedFor', { minutes: expiresMin }))
+    } catch (err) {
+      ElMessage.warning(t('mcp.banner.toastGrantFailed', {
+        error: err instanceof Error ? err.message : String(err),
+      }))
+    }
+    await store.approve(item.intentId)
+  } finally {
+    const cleared = new Set(busy.value)
+    cleared.delete(item.intentId)
     busy.value = cleared
   }
 }

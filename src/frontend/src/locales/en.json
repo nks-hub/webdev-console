@@ -75,7 +75,9 @@
     "tunnel": "Tunnel",
     "tools": "Tools",
     "composer": "Composer",
-    "hosts": "Hosts file"
+    "hosts": "Hosts file",
+    "mcpIntents": "MCP Intents",
+    "mcpGrants": "MCP Grants"
   },
   "composer": {
     "title": "Composer",
@@ -719,6 +721,50 @@
       "enableLabel": "Enable Deploy subsystem"
     }
   },
+  "mcpGrants": {
+    "title": "MCP trust grants",
+    "description": "Persistent trust rules consulted by the daemon BEFORE asking the GUI banner for confirmation. A matching grant auto-approves an intent. Survives daemon restarts.",
+    "refresh": "Refresh",
+    "newGrant": "New grant",
+    "revoke": "Revoke",
+    "permanent": "Permanent",
+    "empty": {
+      "title": "No active grants",
+      "description": "Approve a request via the banner with \"Trust 30 min\" or \"Always trust\" to create one — or use \"New grant\" above for fine-grained control."
+    },
+    "col": {
+      "scope": "Scope",
+      "scopeValue": "Scope value",
+      "kind": "Kind",
+      "target": "Target",
+      "grantedAt": "Granted at",
+      "expires": "Expires",
+      "note": "Note",
+      "actions": "Actions"
+    },
+    "dialog": {
+      "title": "New trust grant",
+      "scopeType": "Scope type",
+      "scopeValue": "Scope value",
+      "scopeValueRequired": "Scope value is required for this scope type.",
+      "kindPattern": "Kind pattern",
+      "targetPattern": "Target pattern",
+      "expiry": "Expiry",
+      "expiryPermanent": "Permanent",
+      "note": "Note",
+      "notePlaceholder": "Why this grant exists (free-form, optional)",
+      "create": "Create grant"
+    },
+    "confirmRevoke": {
+      "title": "Revoke trust grant?",
+      "message": "Future matching requests will require GUI confirmation again. The grant row stays in the database (audit trail) but is marked revoked."
+    },
+    "toastLoadFailed": "Could not load grants: {error}",
+    "toastCreated": "Grant created",
+    "toastCreateFailed": "Could not create grant: {error}",
+    "toastRevoked": "Grant revoked",
+    "toastRevokeFailed": "Could not revoke grant: {error}"
+  },
   "mcp": {
     "banner": {
       "stackLabel": "MCP deploy approval requests",
@@ -738,7 +784,12 @@
       "toastDeclined": "Intent declined and revoked",
       "toastAlreadyConsumed": "Intent was already consumed or revoked elsewhere",
       "toastDeclineFailed": "Decline failed (banner dismissed locally): {error}",
-      "toastExpired": "Intent {id} expired before approval — banner dismissed"
+      "toastExpired": "Intent {id} expired before approval — banner dismissed",
+      "trust30Min": "Trust 30 min",
+      "alwaysTrust": "Always trust",
+      "toastTrustedFor": "Trusted for {minutes} min — future identical requests skip the banner",
+      "toastAlwaysTrusted": "Trust grant saved — future identical requests skip the banner",
+      "toastGrantFailed": "Could not save trust grant: {error}"
     }
   },
   "footer": {

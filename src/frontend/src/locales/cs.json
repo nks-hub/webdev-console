@@ -75,7 +75,9 @@
     "tunnel": "Tunel",
     "tools": "Nástroje",
     "composer": "Composer",
-    "hosts": "Hosts soubor"
+    "hosts": "Hosts soubor",
+    "mcpIntents": "MCP Intents",
+    "mcpGrants": "MCP důvěry"
   },
   "composer": {
     "title": "Composer",
@@ -719,6 +721,50 @@
       "enableLabel": "Zapnout Deploy subsystém"
     }
   },
+  "mcpGrants": {
+    "title": "MCP důvěry",
+    "description": "Trvalá pravidla důvěry, která daemon zkontroluje DŘÍVE než se zeptá GUI banneru. Shoda automaticky schválí intent. Přežijí restart daemonu.",
+    "refresh": "Obnovit",
+    "newGrant": "Nová důvěra",
+    "revoke": "Odvolat",
+    "permanent": "Trvalá",
+    "empty": {
+      "title": "Žádná aktivní důvěra",
+      "description": "Schvalte v banneru tlačítkem „Důvěřovat 30 min“ nebo „Vždy důvěřovat“ — nebo použijte „Nová důvěra“ výše pro detailní nastavení."
+    },
+    "col": {
+      "scope": "Rozsah",
+      "scopeValue": "Hodnota rozsahu",
+      "kind": "Druh",
+      "target": "Cíl",
+      "grantedAt": "Uděleno",
+      "expires": "Vyprší",
+      "note": "Poznámka",
+      "actions": "Akce"
+    },
+    "dialog": {
+      "title": "Nová důvěra",
+      "scopeType": "Typ rozsahu",
+      "scopeValue": "Hodnota rozsahu",
+      "scopeValueRequired": "Hodnota rozsahu je pro tento typ povinná.",
+      "kindPattern": "Vzor druhu",
+      "targetPattern": "Vzor cíle",
+      "expiry": "Platnost",
+      "expiryPermanent": "Trvalá",
+      "note": "Poznámka",
+      "notePlaceholder": "Proč tato důvěra existuje (volitelné)",
+      "create": "Vytvořit"
+    },
+    "confirmRevoke": {
+      "title": "Odvolat důvěru?",
+      "message": "Budoucí shodné požadavky budou opět vyžadovat potvrzení v GUI. Záznam zůstane v databázi (audit), ale bude označen jako odvolaný."
+    },
+    "toastLoadFailed": "Nepodařilo se načíst důvěry: {error}",
+    "toastCreated": "Důvěra vytvořena",
+    "toastCreateFailed": "Nepodařilo se vytvořit důvěru: {error}",
+    "toastRevoked": "Důvěra odvolána",
+    "toastRevokeFailed": "Nepodařilo se odvolat důvěru: {error}"
+  },
   "mcp": {
     "banner": {
       "stackLabel": "Žádosti o potvrzení MCP deploye",
@@ -738,7 +784,12 @@
       "toastDeclined": "Intent odmítnut a odvolán",
       "toastAlreadyConsumed": "Intent byl mezitím spotřebován nebo odvolán jinde",
       "toastDeclineFailed": "Odmítnutí selhalo (banner uzavřen lokálně): {error}",
-      "toastExpired": "Intent {id} vypršel před schválením — banner uzavřen"
+      "toastExpired": "Intent {id} vypršel před schválením — banner uzavřen",
+      "trust30Min": "Důvěřovat 30 min",
+      "alwaysTrust": "Vždy důvěřovat",
+      "toastTrustedFor": "Důvěra na {minutes} min uložena — další shodné požadavky banner přeskočí",
+      "toastAlwaysTrusted": "Trvalá důvěra uložena — další shodné požadavky banner přeskočí",
+      "toastGrantFailed": "Nepodařilo se uložit důvěru: {error}"
     }
   },
   "footer": {

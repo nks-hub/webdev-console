@@ -1,0 +1,251 @@
+<template>
+  <div class="page mcp-grants-page">
+    <div class="page-header">
+      <h2>{{ t('mcpGrants.title') }}</h2>
+      <div class="actions">
+        <el-button :loading="loading" @click="refresh">
+          <el-icon><Refresh /></el-icon> {{ t('mcpGrants.refresh') }}
+        </el-button>
+        <el-button type="primary" @click="createDialogOpen = true">
+          <el-icon><Plus /></el-icon> {{ t('mcpGrants.newGrant') }}
+        </el-button>
+      </div>
+    </div>
+
+    <p class="muted">{{ t('mcpGrants.description') }}</p>
+
+    <el-alert
+      v-if="!loading && grants.length === 0"
+      :title="t('mcpGrants.empty.title')"
+      :description="t('mcpGrants.empty.description')"
+      type="info"
+      show-icon
+      :closable="false"
+    />
+
+    <el-table v-else :data="grants" stripe size="small" class="grants-table">
+      <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="100">
+        <template #default="{ row }">
+          <el-tag :type="scopeTagType(row.scopeType)" size="small">{{ row.scopeType }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="scopeValue" :label="t('mcpGrants.col.scopeValue')" min-width="180">
+        <template #default="{ row }">
+          <code v-if="row.scopeValue" class="mono">{{ truncate(row.scopeValue, 22) }}</code>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="kindPattern" :label="t('mcpGrants.col.kind')" min-width="100">
+        <template #default="{ row }">
+          <code class="mono">{{ row.kindPattern }}</code>
+        </template>
+      </el-table-column>
+      <el-table-column prop="targetPattern" :label="t('mcpGrants.col.target')" min-width="160">
+        <template #default="{ row }">
+          <code class="mono">{{ row.targetPattern }}</code>
+        </template>
+      </el-table-column>
+      <el-table-column prop="grantedAt" :label="t('mcpGrants.col.grantedAt')" min-width="170">
+        <template #default="{ row }">{{ formatDate(row.grantedAt) }}</template>
+      </el-table-column>
+      <el-table-column prop="expiresAt" :label="t('mcpGrants.col.expires')" min-width="170">
+        <template #default="{ row }">
+          <span v-if="row.expiresAt">{{ formatDate(row.expiresAt) }}</span>
+          <el-tag v-else type="warning" size="small">{{ t('mcpGrants.permanent') }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="note" :label="t('mcpGrants.col.note')" min-width="200">
+        <template #default="{ row }"><span class="muted">{{ row.note || '—' }}</span></template>
+      </el-table-column>
+      <el-table-column :label="t('mcpGrants.col.actions')" width="120" fixed="right">
+        <template #default="{ row }">
+          <el-button type="danger" size="small" plain @click="revoke(row.id)">
+            {{ t('mcpGrants.revoke') }}
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- Create grant dialog -->
+    <el-dialog v-model="createDialogOpen" :title="t('mcpGrants.dialog.title')" width="520">
+      <el-form :model="form" label-width="120px" size="small">
+        <el-form-item :label="t('mcpGrants.dialog.scopeType')">
+          <el-select v-model="form.scopeType" @change="onScopeTypeChange">
+            <el-option label="session" value="session" />
+            <el-option label="api_key" value="api_key" />
+            <el-option label="instance" value="instance" />
+            <el-option label="always" value="always" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="form.scopeType !== 'always'" :label="t('mcpGrants.dialog.scopeValue')">
+          <el-input v-model="form.scopeValue" :placeholder="scopeValuePlaceholder" />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.dialog.kindPattern')">
+          <el-input v-model="form.kindPattern" placeholder="* | deploy | rollback | cancel | restore" />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.dialog.targetPattern')">
+          <el-input v-model="form.targetPattern" placeholder="* | blog.loc | ..." />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.dialog.expiry')">
+          <el-radio-group v-model="form.expiryMode">
+            <el-radio value="permanent">{{ t('mcpGrants.dialog.expiryPermanent') }}</el-radio>
+            <el-radio value="30m">30 min</el-radio>
+            <el-radio value="2h">2 h</el-radio>
+            <el-radio value="24h">24 h</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.dialog.note')">
+          <el-input v-model="form.note" type="textarea" :rows="2" :placeholder="t('mcpGrants.dialog.notePlaceholder')" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="creating" @click="submitCreate">
+          {{ t('mcpGrants.dialog.create') }}
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh, Plus } from '@element-plus/icons-vue'
+import {
+  listMcpGrants, createMcpGrant, revokeMcpGrant,
+  type McpGrantRow, type McpGrantScopeType,
+} from '../../api/daemon'
+
+const { t } = useI18n()
+const loading = ref(false)
+const grants = ref<McpGrantRow[]>([])
+
+const createDialogOpen = ref(false)
+const creating = ref(false)
+const form = ref<{
+  scopeType: McpGrantScopeType
+  scopeValue: string
+  kindPattern: string
+  targetPattern: string
+  expiryMode: 'permanent' | '30m' | '2h' | '24h'
+  note: string
+}>({
+  scopeType: 'session',
+  scopeValue: '',
+  kindPattern: '*',
+  targetPattern: '*',
+  expiryMode: '30m',
+  note: '',
+})
+
+const scopeValuePlaceholder = computed(() => {
+  switch (form.value.scopeType) {
+    case 'session':  return 'mcp-session-id (e.g. agent-42)'
+    case 'api_key':  return 'api-key fingerprint (NOT the key itself)'
+    case 'instance': return 'wdc instance UUID'
+    default:         return ''
+  }
+})
+
+onMounted(refresh)
+
+async function refresh(): Promise<void> {
+  loading.value = true
+  try {
+    const r = await listMcpGrants()
+    grants.value = r.entries
+  } catch (e) {
+    ElMessage.error(t('mcpGrants.toastLoadFailed', { error: (e as Error).message }))
+  } finally {
+    loading.value = false
+  }
+}
+
+async function revoke(id: string): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      t('mcpGrants.confirmRevoke.message'),
+      t('mcpGrants.confirmRevoke.title'),
+      { type: 'warning', confirmButtonText: t('mcpGrants.revoke'), cancelButtonText: t('common.cancel') },
+    )
+  } catch { return }
+  try {
+    await revokeMcpGrant(id)
+    ElMessage.success(t('mcpGrants.toastRevoked'))
+    await refresh()
+  } catch (e) {
+    ElMessage.error(t('mcpGrants.toastRevokeFailed', { error: (e as Error).message }))
+  }
+}
+
+function onScopeTypeChange(): void {
+  if (form.value.scopeType === 'always') form.value.scopeValue = ''
+}
+
+async function submitCreate(): Promise<void> {
+  if (form.value.scopeType !== 'always' && !form.value.scopeValue.trim()) {
+    ElMessage.warning(t('mcpGrants.dialog.scopeValueRequired'))
+    return
+  }
+  creating.value = true
+  try {
+    const expiresAt = form.value.expiryMode === 'permanent'
+      ? null
+      : new Date(Date.now() + expiryMs(form.value.expiryMode)).toISOString()
+    await createMcpGrant({
+      scopeType: form.value.scopeType,
+      scopeValue: form.value.scopeType === 'always' ? null : form.value.scopeValue.trim(),
+      kindPattern: form.value.kindPattern || '*',
+      targetPattern: form.value.targetPattern || '*',
+      expiresAt,
+      grantedBy: 'gui-admin',
+      note: form.value.note || undefined,
+    })
+    ElMessage.success(t('mcpGrants.toastCreated'))
+    createDialogOpen.value = false
+    // Reset form for next entry
+    form.value.scopeValue = ''
+    form.value.note = ''
+    await refresh()
+  } catch (e) {
+    ElMessage.error(t('mcpGrants.toastCreateFailed', { error: (e as Error).message }))
+  } finally {
+    creating.value = false
+  }
+}
+
+function expiryMs(mode: '30m' | '2h' | '24h'): number {
+  return mode === '30m' ? 30 * 60_000 : mode === '2h' ? 2 * 3_600_000 : 24 * 3_600_000
+}
+
+function scopeTagType(scope: string): 'success' | 'warning' | 'info' | 'danger' {
+  switch (scope) {
+    case 'session':  return 'info'
+    case 'api_key':  return 'success'
+    case 'instance': return 'warning'
+    case 'always':   return 'danger'
+    default:         return 'info'
+  }
+}
+
+function truncate(s: string | null, n: number): string {
+  if (!s) return ''
+  return s.length > n ? s.slice(0, n) + '…' : s
+}
+
+function formatDate(iso: string): string {
+  try { return new Date(iso).toLocaleString() } catch { return iso }
+}
+</script>
+
+<style scoped>
+.page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; }
+.page-header h2 { margin: 0; }
+.page-header .actions { display: flex; gap: 8px; }
+.muted { color: var(--el-text-color-secondary); }
+.grants-table { margin-top: 8px; }
+.mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
+</style>

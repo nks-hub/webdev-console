@@ -191,7 +191,17 @@
         @click="navigate('/mcp/intents')"
       >
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label">MCP Intents</span>
+        <span class="nav-label">{{ $t('nav.mcpIntents') }}</span>
+      </div>
+      <!-- Phase 7.3 — persistent trust grants admin (list / revoke). -->
+      <div
+        v-if="uiModeStore.isAdvanced && featureFlagsStore.showMcpSurface"
+        class="nav-item"
+        :class="{ active: isActive('/mcp/grants') }"
+        @click="navigate('/mcp/grants')"
+      >
+        <span class="nav-icon-shell"><el-icon :size="18"><Key /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.mcpGrants') }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
@@ -243,7 +253,7 @@
 <script setup lang="ts">
 import { computed, onMounted, markRaw, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'

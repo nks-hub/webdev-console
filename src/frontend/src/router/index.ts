@@ -30,6 +30,7 @@ const Help = () => import('../components/pages/Help.vue')
 const Login = () => import('../components/pages/Login.vue')
 const BackupsPage = () => import('../components/pages/BackupsPage.vue')
 const McpIntents = () => import('../components/pages/McpIntents.vue')
+const McpGrants = () => import('../components/pages/McpGrants.vue')
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
@@ -55,6 +56,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services', requiresAdvanced: true } },
   { path: '/backups', component: BackupsPage, meta: { title: 'Zálohy', titleKey: 'nav.backups' } },
   { path: '/mcp/intents', component: McpIntents, meta: { title: 'MCP Intents', titleKey: 'nav.mcpIntents', requiresAdvanced: true } },
+  { path: '/mcp/grants', component: McpGrants, meta: { title: 'MCP Grants', titleKey: 'nav.mcpGrants', requiresAdvanced: true } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
   { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
 ]

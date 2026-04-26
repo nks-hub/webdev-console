@@ -196,6 +196,44 @@ export interface RevokeIntentResponse {
 export const revokeIntent = (intentId: string): Promise<RevokeIntentResponse> =>
   json(`/api/mcp/intents/${encodeURIComponent(intentId)}/revoke`, { method: 'POST' })
 
+// ----------------------------------------------------------------------------
+// Phase 7.3 — MCP grants (persistent trust). Banner buttons + admin page
+// hit these endpoints. Backend = /api/mcp/grants in Program.cs.
+// ----------------------------------------------------------------------------
+export type McpGrantScopeType = 'session' | 'instance' | 'api_key' | 'always'
+
+export interface McpGrantRow {
+  id: string
+  scopeType: McpGrantScopeType
+  scopeValue: string | null
+  kindPattern: string
+  targetPattern: string
+  grantedAt: string
+  expiresAt: string | null
+  grantedBy: string
+  revokedAt: string | null
+  note: string | null
+}
+
+export interface McpGrantCreateBody {
+  scopeType: McpGrantScopeType
+  scopeValue: string | null
+  kindPattern?: string
+  targetPattern?: string
+  expiresAt?: string | null
+  grantedBy?: string
+  note?: string
+}
+
+export const listMcpGrants = (): Promise<{ count: number; entries: McpGrantRow[] }> =>
+  json('/api/mcp/grants')
+
+export const createMcpGrant = (body: McpGrantCreateBody): Promise<{ id: string; status: string }> =>
+  json('/api/mcp/grants', { method: 'POST', body: JSON.stringify(body) })
+
+export const revokeMcpGrant = (id: string): Promise<{ id: string; status: string }> =>
+  json(`/api/mcp/grants/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }
