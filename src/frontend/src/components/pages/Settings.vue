@@ -476,9 +476,16 @@
                 {{ $t('settings.mcp.description') }}
                 <strong>{{ $t('settings.mcp.warning') }}</strong>
               </p>
-              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
                 <el-form-item :label="$t('settings.mcp.enableLabel')">
                   <el-switch v-model="mcpEnabled" />
+                </el-form-item>
+                <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
+                     mode where any regex-valid kind passes). Turn ON to refuse
+                     any kind not registered via IDestructiveOperationKinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
+                  <el-switch v-model="mcpStrictKinds" />
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.strictKindsHint') }}</div>
                 </el-form-item>
               </el-form>
             </div>
@@ -1181,6 +1188,9 @@ const runOnStartup = ref(false)
 // own `mcp.enabled` setting. When false, sidebar entry, banner, and
 // /api/mcp/intents endpoints are all hidden/404.
 const mcpEnabled = ref(false)
+// Phase 7.4e — strict kind validation. Default false (lenient).
+// When true, intents with unregistered kinds get kind_unknown.
+const mcpStrictKinds = ref(false)
 // Phase 7.1a — Deploy subsystem toggle. Default TRUE; mirrors daemon's
 // own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
 // /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
@@ -1616,6 +1626,8 @@ async function loadSettings() {
     // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
     // accept "true"/"1" as truthy, default false when missing.
     mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
+    // Phase 7.4e — strict_kinds (default false: lenient).
+    mcpStrictKinds.value = data['mcp.strict_kinds'] === 'true' || data['mcp.strict_kinds'] === '1'
     // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
     // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
     deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
@@ -2478,6 +2490,7 @@ async function save() {
       'ports.redis':         String(ports.redis),
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'mcp.enabled':         String(mcpEnabled.value),
+      'mcp.strict_kinds':    String(mcpStrictKinds.value),
       'deploy.enabled':      String(deployEnabled.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),

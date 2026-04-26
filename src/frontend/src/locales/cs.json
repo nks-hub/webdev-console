@@ -1131,7 +1131,9 @@
       "title": "Model Context Protocol (MCP)",
       "description": "Volitelná integrace pro AI agenty (Claude, Cursor, …) připojující se přes MCP. Pokud je zapnuto, AI požadavky na deploy/restore vyžadují potvrzení v banneru; podepsané intent tokeny lze auditovat v sekci „MCP Intents“ v postranní liště.",
       "warning": "Nechte VYPNUTÉ, pokud aktivně neprovozujete AI agenta proti tomuto daemonu.",
-      "enableLabel": "Zapnout MCP integraci"
+      "enableLabel": "Zapnout MCP integraci",
+      "strictKindsLabel": "Striktní validace druhů",
+      "strictKindsHint": "Pokud zapnuto, intenty selžou s kind_unknown, dokud druh není registrovaný v registru. Omezuje AI jen na verby, které pluginy explicitně vystavují. Výchozí VYPNUTO kvůli zpětné kompatibilitě."
     },
     "deploySubsystem": {
       "title": "Deploy subsystém",
