@@ -86,6 +86,11 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
             var mysqldump = TryFindMysqldump();
             if (mysqldump is not null)
             {
+                // Fast TCP probe before spawning mysqldump — surfaces
+                // "DB unreachable" with the actual connection details
+                // instead of waiting for mysqldump's connect timeout +
+                // generic "Can't connect to MySQL server" output.
+                await ProbeTcpAsync(envConn.Host, envConn.Port, "mysql", ct);
                 _logger.LogInformation(
                     "Pre-deploy snapshot: mysqldump {Db}@{Host}:{Port} (envFile={EnvFile}, deploy {DeployId})",
                     envConn.Database, envConn.Host, envConn.Port, envConn.DiscoveredAt, deployId);
@@ -108,6 +113,9 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
             var pgDump = TryFindPgDump();
             if (pgDump is not null)
             {
+                // Fast TCP probe before spawning pg_dump (same rationale
+                // as the mysqldump path above — clearer error surface).
+                await ProbeTcpAsync(envConn.Host, envConn.Port, "pgsql", ct);
                 _logger.LogInformation(
                     "Pre-deploy snapshot: pg_dump {Db}@{Host}:{Port} (envFile={EnvFile}, deploy {DeployId})",
                     envConn.Database, envConn.Host, envConn.Port, envConn.DiscoveredAt, deployId);
@@ -297,6 +305,39 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
         await using var outFs = File.Create(dst);
         await using var gz = new GZipStream(outFs, CompressionLevel.SmallestSize);
         await input.CopyToAsync(gz, ct);
+    }
+
+    /// <summary>
+    /// Fast TCP probe with a 3-second budget. Throws a clear
+    /// <see cref="InvalidOperationException"/> when the DB host/port
+    /// can't be reached, so the failure surface in deploy_runs's
+    /// error_message is "DB unreachable at host:port" rather than the
+    /// dump tool's generic exit code.
+    ///
+    /// 3 s is intentionally short — a healthy local DB connects in ~1ms;
+    /// a healthy LAN DB in ~10ms. Anything past that is a misconfig and
+    /// failing fast beats hanging the deploy waiting for a TCP timeout.
+    /// </summary>
+    internal static async Task ProbeTcpAsync(string host, int port, string dbType, CancellationToken ct)
+    {
+        using var probe = new System.Net.Sockets.TcpClient();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(3));
+        try
+        {
+            await probe.ConnectAsync(host, port, cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            throw new InvalidOperationException(
+                $"{dbType} DB unreachable at {host}:{port} (TCP probe timed out after 3s) — " +
+                $"check the .env DB_HOST/DB_PORT values and that the DB server is running.");
+        }
+        catch (System.Net.Sockets.SocketException ex)
+        {
+            throw new InvalidOperationException(
+                $"{dbType} DB unreachable at {host}:{port}: {ex.Message}", ex);
+        }
     }
 
     /// <summary>
