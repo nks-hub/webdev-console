@@ -937,6 +937,26 @@ step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:comple
 step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
 
 # ============================================================================
+echo ""; echo "${YEL}=== BB. history.triggeredBy field + filter ===${END}"
+# ============================================================================
+# History endpoint should include the triggeredBy field for each row, and
+# the optional ?triggeredBy= query param should filter server-side.
+# Section O above already fired a snapshot=true deploy, plus section M and
+# others — all triggered by GUI calls (no intentToken in body), so they're
+# tagged 'gui'. Section Z fired one with an intent token → 'mcp'.
+
+HIST_FULL=$(api GET /api/nks.wdc.deploy/sites/blog.loc/history?limit=50)
+step "history rows expose triggeredBy field" "$HIST_FULL" '"triggeredBy":"'
+
+# Section Z's deploy was triggered with an intent token → 'mcp' tag.
+HIST_MCP=$(api GET /api/nks.wdc.deploy/sites/blog.loc/history?limit=50&triggeredBy=mcp)
+step "filter triggeredBy=mcp returns mcp rows" "$HIST_MCP" '"triggeredBy":"mcp"'
+
+# Filter to a non-existent source → empty entries array, count=0.
+HIST_NONE=$(api GET /api/nks.wdc.deploy/sites/blog.loc/history?triggeredBy=nonexistent_source)
+step "filter on missing source returns count=0" "$HIST_NONE" '"count":0'
+
+# ============================================================================
 echo ""; echo "${YEL}=== AA. test-host-connection TCP probe ===${END}"
 # ============================================================================
 # Pure network probe — no actual SSH handshake. Test against:

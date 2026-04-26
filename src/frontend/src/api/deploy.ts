@@ -61,6 +61,9 @@ export interface DeployHistoryEntryDto {
   commitSha: string | null
   releaseId: string | null
   error: string | null
+  // Phase 7.5+++ — surface the trigger source ('gui' | 'mcp' | 'cli' | …).
+  // Optional because older daemons / older history rows may not include it.
+  triggeredBy?: string
 }
 
 /** Response envelope from POST .../deploy. deployId may be null in the 1s

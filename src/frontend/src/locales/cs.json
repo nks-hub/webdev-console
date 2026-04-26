@@ -966,8 +966,10 @@
         "branch": "Větev",
         "commit": "Commit",
         "phase": "Fáze",
+        "triggeredBy": "Zdroj",
         "actions": "Akce"
       },
+      "filterTriggeredByPlaceholder": "Filtr zdroje",
       "rollback": "Vrátit"
     },
     "confirmModal": {

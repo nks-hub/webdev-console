@@ -1713,10 +1713,19 @@ app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
     string domain,
     int? limit,
+    string? triggeredBy,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
     CancellationToken ct) =>
 {
     var rows = await runs.ListForDomainAsync(domain, limit ?? 50, ct);
+    // Phase 7.5+++ — optional triggeredBy filter (gui|mcp|cli|other).
+    // In-memory filter is fine since the rowcount is already capped by
+    // the limit param (default 50). Empty string = no filter applied.
+    if (!string.IsNullOrWhiteSpace(triggeredBy))
+    {
+        rows = rows.Where(r => string.Equals(r.TriggeredBy, triggeredBy,
+            StringComparison.OrdinalIgnoreCase)).ToList();
+    }
     var entries = rows.Select(r => new
     {
         deployId   = r.Id,
@@ -1729,6 +1738,9 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
         commitSha  = r.CommitSha,
         releaseId  = r.ReleaseId,
         error      = r.ErrorMessage,
+        // Phase 7.5+++ — surface trigger source so operators can audit
+        // which deploys came from AI/MCP vs GUI vs CI/CLI.
+        triggeredBy = r.TriggeredBy,
     }).ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });

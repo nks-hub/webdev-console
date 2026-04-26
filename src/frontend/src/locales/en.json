@@ -966,8 +966,10 @@
         "branch": "Branch",
         "commit": "Commit",
         "phase": "Phase",
+        "triggeredBy": "Source",
         "actions": "Actions"
       },
+      "filterTriggeredByPlaceholder": "Source filter",
       "rollback": "Rollback"
     },
     "confirmModal": {
