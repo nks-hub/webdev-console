@@ -20,6 +20,19 @@ export interface PendingConfirm {
   prompt?: string
   /** Local timestamp the banner appeared — used for ordering + age display. */
   receivedAt: number
+  /**
+   * Phase 6.14b — server-side intent expiry. ISO-8601 string. When
+   * present the banner shows a live countdown; when the wall clock
+   * passes it the banner auto-dismisses with a toast since approving
+   * an expired intent would surface a 403 from the validator anyway.
+   */
+  expiresAt?: string
+  /** Phase 6.14b — verb (deploy/rollback/cancel/restore) for the banner action label. */
+  kind?: 'deploy' | 'rollback' | 'cancel' | 'restore'
+  /** Phase 6.14b — target domain for clarity in the banner. */
+  domain?: string
+  /** Phase 6.14b — target host (or synthetic group/restore markers). */
+  host?: string
 }
 
 export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
@@ -31,7 +44,14 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
   const count = computed(() => pending.value.size)
 
   /** Called by the SSE subscription in App.vue. Idempotent on intentId. */
-  function addPending(payload: { intentId: string; prompt?: string }): void {
+  function addPending(payload: {
+    intentId: string
+    prompt?: string
+    expiresAt?: string
+    kind?: 'deploy' | 'rollback' | 'cancel' | 'restore'
+    domain?: string
+    host?: string
+  }): void {
     if (!payload?.intentId) return
     if (pending.value.has(payload.intentId)) return
     const next = new Map(pending.value)
@@ -39,6 +59,10 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
       intentId: payload.intentId,
       prompt: payload.prompt,
       receivedAt: Date.now(),
+      expiresAt: payload.expiresAt,
+      kind: payload.kind,
+      domain: payload.domain,
+      host: payload.host,
     })
     pending.value = next
   }

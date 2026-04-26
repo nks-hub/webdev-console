@@ -1026,7 +1026,8 @@ app.MapPost("/api/mcp/intents", async (
 
 app.MapPost("/api/mcp/intents/confirm-request", async (
     HttpContext ctx,
-    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster) =>
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster,
+    NKS.WebDevConsole.Daemon.Data.Database db) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
     var root = doc.RootElement;
@@ -1036,10 +1037,36 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
     {
         return Results.BadRequest(new { error = "intentId is required" });
     }
+    // Phase 6.14b — include expiresAt + kind so the GUI banner can show a
+    // live countdown and surface what verb is about to fire. Best-effort
+    // lookup; if the row vanished (intent never persisted, race with
+    // sweeper), fall back to the minimal payload.
+    string? expiresAt = null;
+    string? kind = null;
+    string? domain = null;
+    string? host = null;
+    try
+    {
+        using var conn = db.CreateConnection();
+        await conn.OpenAsync();
+        var meta = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<dynamic>(conn,
+            "SELECT expires_at, kind, domain, host FROM deploy_intents WHERE id = @Id",
+            new { Id = intentId });
+        if (meta is not null)
+        {
+            expiresAt = (string?)meta.expires_at;
+            kind = (string?)meta.kind;
+            domain = (string?)meta.domain;
+            host = (string?)meta.host;
+        }
+    }
+    catch { /* best-effort; banner still renders without metadata */ }
+
     // Best-effort: the SSE bus is the GUI's notification channel. Failure
     // to broadcast (no subscribers, etc.) is not fatal — the AI can still
     // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
-    await broadcaster.BroadcastAsync("mcp:confirm-request", new { intentId, prompt });
+    await broadcaster.BroadcastAsync("mcp:confirm-request",
+        new { intentId, prompt, expiresAt, kind, domain, host });
     return Results.Accepted();
 });
 

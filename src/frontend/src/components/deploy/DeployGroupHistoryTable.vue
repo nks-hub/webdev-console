@@ -107,7 +107,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="" width="100" align="right">
+      <el-table-column label="" width="170" align="right">
         <template #default="{ row }">
           <el-button
             v-if="canRollback(row)"
@@ -115,11 +115,23 @@
             link
             type="warning"
             :loading="rollingBackId === row.id"
-            :disabled="rollingBackId !== null && rollingBackId !== row.id"
+            :disabled="(rollingBackId !== null && rollingBackId !== row.id) || replayingId !== null"
             aria-label="Cascade rollback every committed host in this group"
             @click="onRollbackGroup(row)"
           >
             <el-icon><RefreshRight /></el-icon> Rollback
+          </el-button>
+          <el-button
+            v-if="canReplay(row)"
+            size="small"
+            link
+            type="primary"
+            :loading="replayingId === row.id"
+            :disabled="(replayingId !== null && replayingId !== row.id) || rollingBackId !== null"
+            aria-label="Re-run this group with the same hosts list"
+            @click="onReplayGroup(row)"
+          >
+            <el-icon><Refresh /></el-icon> Replay
           </el-button>
         </template>
       </el-table-column>
@@ -140,6 +152,7 @@ import {
 import {
   fetchDeployGroups,
   rollbackDeployGroup,
+  startDeployGroup,
   type DeployGroupEntry,
   type DeployGroupPhase,
 } from '../../api/deploy'
@@ -163,6 +176,7 @@ const loading = ref(false)
 const expandedKeys = ref<string[]>([])
 const openingDeployId = ref<string | null>(null)
 const rollingBackId = ref<string | null>(null)
+const replayingId = ref<string | null>(null)
 const deployStore = useDeployStore()
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -212,6 +226,48 @@ function canRollback(row: DeployGroupEntry): boolean {
     return false
   }
   return Object.keys(row.hostDeployIds ?? {}).length > 0
+}
+
+/**
+ * Phase 6.14a — re-run a failed group with the same hosts list.
+ * Useful when a transient infra failure (network blip, full disk on
+ * one host) torpedoed the original fan-out — replay starts fresh
+ * with all original hosts. Shown only on terminal-failed states so
+ * a successful group doesn't get an accidental "replay" click.
+ */
+function canReplay(row: DeployGroupEntry): boolean {
+  if (row.phase !== 'group_failed' && row.phase !== 'partial_failure' &&
+      row.phase !== 'rolled_back') {
+    return false
+  }
+  return row.hosts.length > 0
+}
+
+async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
+  if (replayingId.value !== null) return
+  try {
+    await ElMessageBox.confirm(
+      `Re-run this group with the same hosts (${row.hosts.length})?\n\n` +
+        `Hosts: ${row.hosts.join(', ')}\n` +
+        `Original group: ${row.id.slice(0, 8)}…\n\n` +
+        `A new groupId will be minted; the original row stays unchanged ` +
+        `as audit history.`,
+      'Confirm group replay',
+      { type: 'warning', confirmButtonText: 'Replay group', cancelButtonText: 'Cancel' },
+    )
+  } catch { return }
+
+  replayingId.value = row.id
+  try {
+    const result = await startDeployGroup(props.domain, row.hosts)
+    ElMessage.success(`Replay started — new group ${result.groupId.slice(0, 8)}…`)
+    await refresh()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(`Replay failed to start: ${msg}`)
+  } finally {
+    replayingId.value = null
+  }
 }
 
 async function onRollbackGroup(row: DeployGroupEntry): Promise<void> {

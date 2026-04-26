@@ -23,13 +23,31 @@
         <el-icon :size="20"><Warning /></el-icon>
       </div>
       <div class="mcp-confirm-body">
-        <div class="mcp-confirm-title">AI is requesting a destructive operation</div>
+        <div class="mcp-confirm-title">
+          <span v-if="item.kind">AI requests <strong>{{ item.kind }}</strong></span>
+          <span v-else>AI is requesting a destructive operation</span>
+          <span v-if="item.domain && item.host">
+            on <code class="mono">{{ item.domain }} → {{ item.host }}</code>
+          </span>
+        </div>
         <div class="mcp-confirm-prompt">
           {{ item.prompt || 'No description provided.' }}
         </div>
         <div class="mcp-confirm-meta">
           intent <code>{{ shortId(item.intentId) }}</code>
           · {{ ageLabel(item.receivedAt) }}
+          <!-- Phase 6.14b — live expiry countdown. Renders only inside the
+               last 60 s window (urgency signal); earlier the banner just
+               shows age. Color escalates: warning under 60 s, danger
+               under 15 s. -->
+          <span
+            v-if="expiryRemaining(item) !== null"
+            class="mcp-confirm-expiry"
+            :class="expiryClass(item)"
+            role="status"
+          >
+            · expires in {{ expiryRemaining(item) }}s
+          </span>
         </div>
       </div>
       <div class="mcp-confirm-actions">
@@ -56,15 +74,22 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Warning } from '@element-plus/icons-vue'
-import { useMcpConfirmStore } from '../../stores/mcpConfirm'
+import { ElMessage } from 'element-plus'
+import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
 
 const store = useMcpConfirmStore()
 
 // In-flight approval calls — keeps the user from double-clicking before the
 // daemon responds. Cleared on completion (whether success or 4xx).
 const busy = ref<Set<string>>(new Set())
+
+// Phase 6.14b — tick used for the expiry countdown reactivity. Updated
+// once per second by the timer below; computed countdown reads it so
+// the banner re-renders without manual nudges.
+const tickNow = ref(Date.now())
+let tickTimer: ReturnType<typeof setInterval> | null = null
 
 const firstApproveRef = ref<unknown>(null)
 function setFirstApproveRef(el: unknown): void {
@@ -110,11 +135,57 @@ function shortId(id: string): string {
 }
 
 function ageLabel(receivedAt: number): string {
-  const sec = Math.floor((Date.now() - receivedAt) / 1000)
+  const sec = Math.floor((tickNow.value - receivedAt) / 1000)
   if (sec < 5) return 'just now'
   if (sec < 60) return `${sec}s ago`
   return `${Math.floor(sec / 60)}m ${sec % 60}s ago`
 }
+
+/**
+ * Phase 6.14b — return seconds until expiry, or null if no expiresAt
+ * was provided OR more than 60 seconds remain (we only show the
+ * countdown inside the urgency window — no need to clutter the banner
+ * for fresh intents).
+ */
+function expiryRemaining(item: PendingConfirm): number | null {
+  if (!item.expiresAt) return null
+  const t = new Date(item.expiresAt).getTime()
+  if (Number.isNaN(t)) return null
+  const sec = Math.max(0, Math.round((t - tickNow.value) / 1000))
+  if (sec > 60) return null
+  return sec
+}
+
+function expiryClass(item: PendingConfirm): string {
+  const sec = expiryRemaining(item)
+  if (sec === null) return ''
+  if (sec <= 15) return 'expiry-danger'
+  return 'expiry-warning'
+}
+
+onMounted(() => {
+  tickTimer = setInterval(() => {
+    tickNow.value = Date.now()
+    // Auto-dismiss expired entries — approving an expired intent would
+    // surface a 403 from the validator, so we drop the banner with a
+    // toast as soon as the wall-clock passes expiresAt. Operator can
+    // re-mint a fresh intent if they still want to act.
+    for (const item of store.list) {
+      if (!item.expiresAt) continue
+      const t = new Date(item.expiresAt).getTime()
+      if (!Number.isNaN(t) && t <= tickNow.value) {
+        store.dismiss(item.intentId)
+        ElMessage.warning(
+          `Intent ${item.intentId.slice(0, 8)} expired before approval — banner dismissed`,
+        )
+      }
+    }
+  }, 1000)
+})
+
+onBeforeUnmount(() => {
+  if (tickTimer !== null) clearInterval(tickTimer)
+})
 </script>
 
 <style scoped>
@@ -177,6 +248,13 @@ function ageLabel(receivedAt: number): string {
   padding: 1px 4px;
   border-radius: 3px;
 }
+.mcp-confirm-expiry {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.expiry-warning { color: var(--el-color-warning); }
+.expiry-danger { color: var(--el-color-danger); }
+.mono { font-family: var(--el-font-family-monospace, monospace); }
 
 .mcp-confirm-actions {
   display: flex;
