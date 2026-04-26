@@ -12,6 +12,20 @@ import { tmpdir } from 'node:os'
 interface PortFile {
   port: number
   token: string
+  /**
+   * Optional list of scopes the daemon granted to this token (e.g. plain
+   * `*` for legacy / no-restriction tokens, or any subset of
+   * `deploy:read`, `deploy:write`, `deploy:admin`). Read from an optional
+   * `scope:` prefixed third line of the port file. The MCP server uses
+   * this to decide which tools to register.
+   *
+   * Default when the line is absent (or contains only `*`): legacy
+   * behaviour — all tools register, mirroring how the MCP server worked
+   * before scopes existed. Per v2 audit fix the destructive deploy tools
+   * (deploy / rollback / cancel) ALSO check `MCP_DEPLOY_AUTO_APPROVE` env
+   * var before firing, so absent scope is not the only gate.
+   */
+  scopes: string[]
 }
 
 class DaemonNotRunningError extends Error {
@@ -46,12 +60,33 @@ class DaemonClient {
         const port = parseInt(lines[0]!, 10)
         const token = lines[1]!.trim()
         if (!Number.isFinite(port) || port <= 0 || !token) continue
-        return { port, token }
+        // Optional third line "scope:deploy:read,deploy:write,..." — when
+        // absent we assume legacy "no restriction" (= ['*']) so existing
+        // daemons that don't write the scope line keep working.
+        let scopes: string[] = ['*']
+        if (lines.length >= 3) {
+          const m = lines[2]!.match(/^scope:(.+)$/i)
+          if (m) {
+            scopes = m[1]!.split(',').map(s => s.trim()).filter(Boolean)
+          }
+        }
+        return { port, token, scopes }
       } catch {
         continue
       }
     }
     return null
+  }
+
+  /** Returns the scope list from the current port file (or `['*']` if absent). */
+  scopes(): string[] {
+    return this.current?.scopes ?? ['*']
+  }
+
+  /** True iff the granted scope list includes the given one (or `*`). */
+  hasScope(scope: string): boolean {
+    const granted = this.scopes()
+    return granted.includes('*') || granted.includes(scope)
   }
 
   private ensureConnection(): PortFile {

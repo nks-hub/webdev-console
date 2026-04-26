@@ -28,9 +28,19 @@ import { registerPluginsTools } from './tools/plugins.js'
 import { registerBackupTools } from './tools/backup.js'
 import { registerSettingsTools } from './tools/settings.js'
 import { registerCloudflareTools } from './tools/cloudflare.js'
+import { registerDeployTools } from './tools/deploy.js'
+import { daemonClient } from './daemonClient.js'
 
 export interface RegisterOptions {
   readonly: boolean
+  /**
+   * Per-token deploy scope set, parsed from the port file's optional
+   * `scope:` line. `['*']` = no restriction (legacy default). Concrete
+   * scopes: `deploy:read`, `deploy:write`, `deploy:admin`. The deploy
+   * tool registrar consults this to decide which of the 12 tools to
+   * actually expose to the AI client.
+   */
+  deployScopes: string[]
 }
 
 const READONLY = process.argv.includes('--readonly')
@@ -40,7 +50,19 @@ const server = new McpServer({
   version: '0.2.0',
 })
 
-const opts: RegisterOptions = { readonly: READONLY }
+// Pre-warm the connection so we can read the port file's scope line. Best-
+// effort: if the daemon is not running, fall back to `['*']` so the MCP
+// server still starts cleanly and a deferred client request triggers the
+// "daemon not running" error path at call time instead of during boot.
+let deployScopes: string[] = ['*']
+try {
+  await daemonClient.get('/healthz').catch(() => undefined)
+  deployScopes = daemonClient.scopes()
+} catch {
+  /* swallow — daemon offline at MCP boot */
+}
+
+const opts: RegisterOptions = { readonly: READONLY, deployScopes }
 
 // Each module's register function calls server.registerTool(...) for its
 // tools. The READONLY flag is forwarded so mutation tools can opt out of
@@ -56,10 +78,12 @@ registerPluginsTools(server, opts)
 registerBackupTools(server, opts)
 registerSettingsTools(server, opts)
 registerCloudflareTools(server, opts)
+registerDeployTools(server, opts)
 
 const transport = new StdioServerTransport()
 await server.connect(transport)
 
 process.stderr.write(
-  `[nks-wdc-mcp-server] connected via stdio${READONLY ? ' (read-only)' : ''}\n`,
+  `[nks-wdc-mcp-server] connected via stdio${READONLY ? ' (read-only)' : ''} ` +
+  `[deploy-scopes: ${deployScopes.join(',') || 'none'}]\n`,
 )
