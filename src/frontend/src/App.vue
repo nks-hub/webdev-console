@@ -50,6 +50,13 @@
          starts and the user can close it manually. -->
     <DeployRunDrawer />
 
+    <!-- MCP destructive-operation approval banners (Mode A). When an AI
+         issues a deploy intent the daemon broadcasts mcp:confirm-request;
+         the SSE handler below pushes the payload into useMcpConfirmStore.
+         The banner stack is fixed top-right so it doesn't compete with
+         the deploy drawer for screen real-estate. -->
+    <McpConfirmBanner />
+
     <!-- Splash overlay shown until the daemon answers for the first time.
          Distinguishes "backend still booting" from "runtime offline".
          Phase + elapsed-time + error-kind come from daemonStore telemetry
@@ -82,6 +89,7 @@ import AppStatusBar from './components/layout/AppStatusBar.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
 import OnboardingWizard from './components/shared/OnboardingWizard.vue'
 import DeployRunDrawer from './components/deploy/DeployRunDrawer.vue'
+import McpConfirmBanner from './components/mcp/McpConfirmBanner.vue'
 import { useDaemonStore } from './stores/daemon'
 import { useUpdatesStore } from './stores/updates'
 import { usePluginsStore } from './stores/plugins'
@@ -89,6 +97,7 @@ import { useSitesStore } from './stores/sites'
 import { useThemeStore } from './stores/theme'
 import { useAuthStore } from './stores/auth'
 import { useDeployStore } from './stores/deploy'
+import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
 
@@ -104,6 +113,7 @@ const pluginsStore = usePluginsStore()
 const sitesStore = useSitesStore()
 const authStore = useAuthStore()
 const deployStore = useDeployStore()
+const mcpConfirmStore = useMcpConfirmStore()
 useThemeStore()
 
 // Single SSE subscription that fans the daemon's "deploy:event" channel
@@ -115,6 +125,8 @@ function startDeploySse(): void {
   if (unsubscribeDeploy) return
   unsubscribeDeploy = subscribeEventsMap({
     'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
+    'mcp:confirm-request': (data) =>
+      mcpConfirmStore.addPending(data as { intentId: string; prompt?: string }),
   })
 }
 function stopDeploySse(): void {

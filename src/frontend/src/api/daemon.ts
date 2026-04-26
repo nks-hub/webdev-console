@@ -144,6 +144,18 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 export const fetchStatus = (): Promise<StatusResponse> =>
   json('/api/status')
 
+// MCP intent confirmation (Mode A hybrid flow). The wdc GUI calls this
+// when the user clicks Approve on the McpConfirmBanner — flips
+// deploy_intents.confirmed_at so the destructive route can fire.
+// Returns 200 on success, 409 when already confirmed (banner double-click),
+// 404 when the intent vanished (expired + swept by IntentSweeperService).
+export interface ConfirmIntentResponse {
+  intentId: string
+  confirmedAt: string
+}
+export const confirmIntent = (intentId: string): Promise<ConfirmIntentResponse> =>
+  json(`/api/mcp/intents/${encodeURIComponent(intentId)}/confirm`, { method: 'POST' })
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }
