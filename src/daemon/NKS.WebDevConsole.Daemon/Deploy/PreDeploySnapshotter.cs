@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using CliWrap;
+using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Services;
@@ -75,19 +77,162 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
             return new PreDeploySnapshotResult(outPath, size, sw.Elapsed);
         }
 
-        // No SQLite — write the SCAFFOLD metadata file. Real mysqldump /
-        // pg_dump integration lands in Phase 6.3 once we wire site→DB
-        // credential resolution. Until then this gives the deploy_runs
-        // row a populated path (so the GUI can show "snapshot pending
-        // implementation" instead of guessing).
-        await WriteScaffoldAsync(outPath, domain, deployId, ct);
+        // Phase 6.3 — no SQLite, try mysqldump via .env discovery. The
+        // resolver scans common .env locations for DB_* keys (Laravel /
+        // Symfony / Next.js convention).
+        var envConn = EnvFileDatabaseResolver.TryResolve(site.DocumentRoot);
+        if (envConn is not null && envConn.Type is "mysql" or "mariadb")
+        {
+            var mysqldump = TryFindMysqldump();
+            if (mysqldump is not null)
+            {
+                _logger.LogInformation(
+                    "Pre-deploy snapshot: mysqldump {Db}@{Host}:{Port} (envFile={EnvFile}, deploy {DeployId})",
+                    envConn.Database, envConn.Host, envConn.Port, envConn.DiscoveredAt, deployId);
+                await DumpMysqlAsync(mysqldump, envConn, outPath, ct);
+                sw.Stop();
+                var size = new FileInfo(outPath).Length;
+                return new PreDeploySnapshotResult(outPath, size, sw.Elapsed);
+            }
+            _logger.LogWarning(
+                "Pre-deploy snapshot: .env identifies {Type} db {Db} for {Domain}, but mysqldump binary " +
+                "not found in WdcPaths.BinariesRoot or PATH — falling back to scaffold stub.",
+                envConn.Type, envConn.Database, domain);
+        }
+
+        // Last resort — SCAFFOLD metadata file. Either no .env was found,
+        // it had no DB_* keys, the type is unsupported (postgres impl is
+        // Phase 6.4), or the dump tool is missing. Always succeeds so the
+        // deploy_runs row gets a populated path; restore against this
+        // archive will surface a clear error.
+        await WriteScaffoldAsync(outPath, domain, deployId, envConn, ct);
         sw.Stop();
         var scaffoldSize = new FileInfo(outPath).Length;
         _logger.LogWarning(
-            "Pre-deploy snapshot: no SQLite found for {Domain}; wrote SCAFFOLD stub at {Path}. " +
-            "Real mysqldump/pg_dump integration is Phase 6.3 — set Snapshot.Include=false to skip.",
-            domain, outPath);
+            "Pre-deploy snapshot: wrote SCAFFOLD stub for {Domain} at {Path}. " +
+            "(detected db type: {DbType})",
+            domain, outPath, envConn?.Type ?? "none");
         return new PreDeploySnapshotResult(outPath, scaffoldSize, sw.Elapsed);
+    }
+
+    /// <summary>
+    /// Locate the mysqldump binary. Prefers a wdc-managed install at
+    /// <c>{BinariesRoot}/mysql/{any-version}/bin/mysqldump</c>, falls back
+    /// to PATH so a system mysql/mariadb client also works on dev machines.
+    /// </summary>
+    private static string? TryFindMysqldump()
+    {
+        var ext = OperatingSystem.IsWindows() ? ".exe" : "";
+        // Managed install — pick the first version directory that has
+        // mysqldump (we don't care which version for snapshotting).
+        var managedRoot = Path.Combine(WdcPaths.BinariesRoot, "mysql");
+        if (Directory.Exists(managedRoot))
+        {
+            foreach (var versionDir in Directory.EnumerateDirectories(managedRoot))
+            {
+                var candidate = Path.Combine(versionDir, "bin", "mysqldump" + ext);
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+        // Same probe for mariadb-managed installs (mariadb-dump alias).
+        var mariaRoot = Path.Combine(WdcPaths.BinariesRoot, "mariadb");
+        if (Directory.Exists(mariaRoot))
+        {
+            foreach (var versionDir in Directory.EnumerateDirectories(mariaRoot))
+            {
+                foreach (var name in new[] { "mysqldump", "mariadb-dump" })
+                {
+                    var candidate = Path.Combine(versionDir, "bin", name + ext);
+                    if (File.Exists(candidate)) return candidate;
+                }
+            }
+        }
+        // Fall back to PATH — CliWrap handles the resolution if we just
+        // pass the bare name. Verify presence by checking PATH dirs.
+        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var pathSep = OperatingSystem.IsWindows() ? ';' : ':';
+        foreach (var dir in pathEnv.Split(pathSep, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = Path.Combine(dir.Trim(), "mysqldump" + ext);
+            if (File.Exists(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Run mysqldump against the resolved connection, gzipping the stream
+    /// as it arrives. Password (if any) is passed via a temp
+    /// <c>--defaults-extra-file</c> so it never appears in the process
+    /// argv (avoids leaking via <c>ps</c> and the daemon's own subprocess
+    /// logs). The temp file is deleted in finally regardless of outcome.
+    /// </summary>
+    private async Task DumpMysqlAsync(
+        string mysqldump,
+        EnvFileDatabaseResolver.DatabaseConnection conn,
+        string outPath,
+        CancellationToken ct)
+    {
+        string? defaultsFile = null;
+        try
+        {
+            // mysqldump uses [client] section credentials when --defaults-extra-file
+            // is supplied. Username goes here too so the final argv is just
+            // the dump options + the database name.
+            var defaultsContent =
+                "[client]\n" +
+                $"user={conn.User}\n" +
+                (string.IsNullOrEmpty(conn.Password) ? "" : $"password={conn.Password}\n") +
+                $"host={conn.Host}\n" +
+                $"port={conn.Port}\n";
+            defaultsFile = Path.Combine(Path.GetTempPath(),
+                $"wdc-mysqldump-{Guid.NewGuid():N}.cnf");
+            await File.WriteAllTextAsync(defaultsFile, defaultsContent, ct);
+            if (!OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    new FileInfo(defaultsFile).UnixFileMode =
+                        UnixFileMode.UserRead | UnixFileMode.UserWrite;
+                }
+                catch { /* best effort */ }
+            }
+
+            // Stream stdout straight into a GZipStream — avoids buffering
+            // the entire dump in memory for big DBs.
+            await using var outFs = File.Create(outPath);
+            await using var gz = new GZipStream(outFs, CompressionLevel.SmallestSize);
+            // CliWrap PipeTarget.ToStream wires stdout → our gzip sink.
+            // --single-transaction gives a consistent snapshot on InnoDB
+            // without taking table-level locks; --quick streams row-by-row
+            // so big tables don't pin RAM.
+            var result = await Cli.Wrap(mysqldump)
+                .WithArguments(new[]
+                {
+                    $"--defaults-extra-file={defaultsFile}",
+                    "--single-transaction",
+                    "--quick",
+                    "--routines",
+                    "--triggers",
+                    "--events",
+                    "--skip-lock-tables",
+                    conn.Database,
+                })
+                .WithStandardOutputPipe(PipeTarget.ToStream(gz))
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync(ct);
+            if (result.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"mysqldump exit {result.ExitCode}: {result.StandardError.Trim()}");
+            }
+        }
+        finally
+        {
+            if (defaultsFile is not null)
+            {
+                try { File.Delete(defaultsFile); } catch { /* best effort */ }
+            }
+        }
     }
 
     private static string? TryFindSqliteFile(string documentRoot)
@@ -132,19 +277,32 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
         await input.CopyToAsync(gz, ct);
     }
 
-    private static async Task WriteScaffoldAsync(string dst, string domain, string deployId, CancellationToken ct)
+    private static async Task WriteScaffoldAsync(
+        string dst,
+        string domain,
+        string deployId,
+        EnvFileDatabaseResolver.DatabaseConnection? envConn,
+        CancellationToken ct)
     {
-        var header = new StringBuilder()
+        var sb = new StringBuilder()
             .AppendLine("-- NKS WDC pre-deploy snapshot SCAFFOLD")
             .AppendLine($"-- domain: {domain}")
             .AppendLine($"-- deployId: {deployId}")
             .AppendLine($"-- createdAt: {DateTimeOffset.UtcNow:O}")
-            .AppendLine("-- status: PENDING — real mysqldump/pg_dump integration in Phase 6.3")
-            .AppendLine("-- This file is a placeholder. Restore against this archive will refuse.")
-            .ToString();
+            .AppendLine("-- status: PENDING — could not produce a real DB dump.")
+            .AppendLine("-- Reason chain: SQLite scan negative; mysqldump path either")
+            .AppendLine("--   (a) no .env-discovered DB credentials, or")
+            .AppendLine("--   (b) DB type unsupported (postgres ships in Phase 6.4), or")
+            .AppendLine("--   (c) mysqldump binary missing from BinariesRoot + PATH.");
+        if (envConn is not null)
+        {
+            sb.AppendLine("-- Discovered .env conn (for operator triage):")
+              .AppendLine($"--   type={envConn.Type} host={envConn.Host} port={envConn.Port} db={envConn.Database} user={envConn.User} envFile={envConn.DiscoveredAt}");
+        }
+        sb.AppendLine("-- Restore against this archive will refuse.");
         await using var outFs = File.Create(dst);
         await using var gz = new GZipStream(outFs, CompressionLevel.SmallestSize);
-        var bytes = Encoding.UTF8.GetBytes(header);
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
         await gz.WriteAsync(bytes.AsMemory(), ct);
     }
 }
