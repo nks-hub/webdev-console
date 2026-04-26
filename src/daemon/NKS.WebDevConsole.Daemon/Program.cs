@@ -2712,33 +2712,49 @@ siteManager.LoadAll();
 // Per-site still guarded by 25s timeout from F51g. One slow site (Apache reload,
 // PHP-FPM spawn, cert install) no longer blocks boot for N×25s. Sites re-apply
 // in background after daemon is already serving requests.
+//
+// Phase 7.x dev opt-out: WDC_SKIP_STARTUP_REAPPLY=1 short-circuits the whole
+// 19-site dance. Useful during dev iterations where the daemon restarts on
+// every source change but vhosts/SSL/Cloudflare config didn't actually
+// change. Vhosts already on disk from the last apply remain valid;
+// boot-heal sweep (Phase 6.20b) still fixes drift on its own schedule.
+var skipStartupReapply = string.Equals(
+    Environment.GetEnvironmentVariable("WDC_SKIP_STARTUP_REAPPLY"),
+    "1", StringComparison.Ordinal);
 var startupOrchestrator = app.Services.GetRequiredService<SiteOrchestrator>();
 var startupSitesSnapshot = siteManager.Sites.Values.ToList();
-_ = Task.Run(async () =>
+if (skipStartupReapply)
 {
-    foreach (var siteToApply in startupSitesSnapshot)
+    Console.WriteLine($"[startup-bg] WDC_SKIP_STARTUP_REAPPLY=1 — skipping re-apply of {startupSitesSnapshot.Count} site(s); use UI to re-apply if needed");
+}
+else
+{
+    _ = Task.Run(async () =>
     {
-        try
+        foreach (var siteToApply in startupSitesSnapshot)
         {
-            Console.WriteLine($"[startup-bg] re-applying site {siteToApply.Domain}...");
-            var applyTask = startupOrchestrator.ApplyAsync(siteToApply);
-            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(25));
-            var completed = await Task.WhenAny(applyTask, timeoutTask);
-            if (completed == timeoutTask)
+            try
             {
-                Console.WriteLine($"[startup-bg] site {siteToApply.Domain} re-apply timed out after 25s — skipped; re-apply via UI");
-                continue;
+                Console.WriteLine($"[startup-bg] re-applying site {siteToApply.Domain}...");
+                var applyTask = startupOrchestrator.ApplyAsync(siteToApply);
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(25));
+                var completed = await Task.WhenAny(applyTask, timeoutTask);
+                if (completed == timeoutTask)
+                {
+                    Console.WriteLine($"[startup-bg] site {siteToApply.Domain} re-apply timed out after 25s — skipped; re-apply via UI");
+                    continue;
+                }
+                await applyTask;
+                Console.WriteLine($"[startup-bg] site {siteToApply.Domain} re-applied");
             }
-            await applyTask;
-            Console.WriteLine($"[startup-bg] site {siteToApply.Domain} re-applied");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[startup-bg] failed to re-apply site {siteToApply.Domain}: {ex.Message}");
+            }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[startup-bg] failed to re-apply site {siteToApply.Domain}: {ex.Message}");
-        }
-    }
-    Console.WriteLine("[startup-bg] all site re-apply complete");
-});
+        Console.WriteLine("[startup-bg] all site re-apply complete");
+    });
+}
 
 // Sweep orphan *.tmp files left over from a previous daemon crash or taskkill
 // during an in-progress atomic write. Covers both AtomicWriter.WriteAsync
