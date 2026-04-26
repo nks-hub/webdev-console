@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Refresh,
   CircleCheck,
@@ -110,6 +110,7 @@ import {
   type DeployGroupEntry,
   type DeployGroupPhase,
 } from '../../api/deploy'
+import { subscribeEventsMap } from '../../api/daemon'
 
 interface Props {
   domain: string
@@ -127,6 +128,11 @@ const loading = ref(false)
 const expandedKeys = ref<string[]>([])
 
 let timer: ReturnType<typeof setInterval> | null = null
+let unsubscribeSse: (() => void) | null = null
+// Pending refresh debounce — many deploy:group-event events fire per second
+// during a fan-out. Rather than refetching the list per event, we coalesce
+// into one refresh after a quiet 500 ms window.
+let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -136,6 +142,14 @@ async function refresh(): Promise<void> {
   } finally {
     loading.value = false
   }
+}
+
+function scheduleRefresh(): void {
+  if (refreshDebounceTimer !== null) clearTimeout(refreshDebounceTimer)
+  refreshDebounceTimer = setTimeout(() => {
+    refreshDebounceTimer = null
+    refresh()
+  }, 500)
 }
 
 function onExpandChange(row: DeployGroupEntry, expanded: DeployGroupEntry[]): void {
@@ -183,6 +197,36 @@ onMounted(() => {
   if (props.refreshSeconds > 0) {
     timer = setInterval(refresh, props.refreshSeconds * 1000)
   }
+  // Live updates via the deploy:group-event SSE channel. Every per-host
+  // event AND every group-level state transition triggers a debounced
+  // refresh — the list reads come from SQLite and are cheap, so simple
+  // re-fetch beats incremental patch logic for now.
+  unsubscribeSse = subscribeEventsMap({
+    'deploy:group-event': (data) => {
+      // Filter to this site only — the SSE channel is global. Without the
+      // domain check, opening Site A would refresh whenever Site B's
+      // group fires, wasting cycles.
+      const evt = data as { domain?: string; groupId?: string }
+      // Group events don't carry domain directly; the join key is
+      // groupId → check our current entries (cheap O(N) over <=50 rows).
+      // If the groupId matches one we know about, refresh.
+      if (evt.groupId && entries.value.some((e) => e.id === evt.groupId)) {
+        scheduleRefresh()
+        return
+      }
+      // Unknown groupId — could be a brand-new group on THIS site (we
+      // haven't seen it yet) OR another site's. Only way to know is to
+      // refetch and let the server filter; refresh anyway. This is the
+      // edge case that justifies the debounce.
+      scheduleRefresh()
+    },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (timer !== null) clearInterval(timer)
+  if (unsubscribeSse !== null) unsubscribeSse()
+  if (refreshDebounceTimer !== null) clearTimeout(refreshDebounceTimer)
 })
 
 watch(() => props.domain, () => refresh())
