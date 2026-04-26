@@ -254,6 +254,42 @@ public sealed class DeployIntentValidatorTests
         finally { Cleanup(path); }
     }
 
+    // --- Phase 7.4 — plugin-defined custom kinds round-trip through the validator ---
+
+    [Fact]
+    public async Task CustomPluginKind_RoundTripsThroughValidator()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            // A plugin-namespaced kind ("db:drop_table") is treated identically
+            // to the legacy hardcoded kinds — the validator only compares the
+            // requested kind to the row's stored kind, no whitelist anywhere.
+            // This is what makes MCP intents truly globally usable for any
+            // destructive op a plugin defines.
+            var (token, intentId) = InsertValidIntent(db, kind: "db:drop_table", confirmedAt: "stamped");
+            var result = await MakeValidator(db).ValidateAndConsumeAsync(
+                token, "db:drop_table", "myapp.loc", "production",
+                allowUnconfirmed: false, CancellationToken.None);
+            Assert.True(result.Ok);
+            Assert.Null(result.Reason);
+            // And the wrong kind for the same intent still gets kind_mismatch.
+            var (token2, _) = InsertValidIntent(db, kind: "site:delete", confirmedAt: "stamped");
+            var mismatch = await MakeValidator(db).ValidateAndConsumeAsync(
+                token2, "deploy", "myapp.loc", "production",
+                allowUnconfirmed: false, CancellationToken.None);
+            Assert.False(mismatch.Ok);
+            Assert.Equal("kind_mismatch", mismatch.Reason);
+            // Sanity: the consumed flag stuck on the first row.
+            using var conn = db.CreateConnection();
+            var usedAt = conn.QuerySingleOrDefault<string>(
+                "SELECT used_at FROM deploy_intents WHERE id = @Id",
+                new { Id = intentId });
+            Assert.NotNull(usedAt);
+        }
+        finally { Cleanup(path); }
+    }
+
     // --- Deny: domain_mismatch ---
 
     [Fact]

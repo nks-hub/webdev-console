@@ -1126,9 +1126,19 @@ app.MapPost("/api/mcp/intents", async (
     {
         return Results.BadRequest(new { error = "domain, host, kind are required" });
     }
-    if (kind is not ("deploy" or "rollback" or "cancel" or "restore"))
+    // Phase 7.4 — kind is now an open namespace so plugins can mint
+    // intents for their own destructive ops (db:drop_table, site:delete,
+    // plugin:reset, …) without requiring a daemon-side migration.
+    // Charset/length rule mirrors the schema CHECK in migration 013:
+    // 1-64 chars, must start with a letter, [a-z0-9_:] only. Colon
+    // is the conventional namespace separator (e.g. "deploy:full").
+    if (!System.Text.RegularExpressions.Regex.IsMatch(kind!, "^[a-z][a-z0-9_:]{0,63}$"))
     {
-        return Results.BadRequest(new { error = "kind must be deploy|rollback|cancel|restore" });
+        return Results.BadRequest(new
+        {
+            error = "kind_invalid",
+            detail = "kind must match ^[a-z][a-z0-9_:]{0,63}$ (lowercase letters/digits/_/:; max 64 chars)",
+        });
     }
     // Clamp the expiry window. Long-lived signed intents defeat the point
     // of single-use tokens — 1h ceiling matches the MCP server's CCR
