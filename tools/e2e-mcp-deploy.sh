@@ -385,6 +385,64 @@ step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pe
 [ -n "$INTENT_X_ID" ] && api POST /api/mcp/intents/$INTENT_X_ID/revoke >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== T. restore destructive op (kind=restore) ===${END}"
+# ============================================================================
+# Restore endpoint exercises the destructive-kind path: registry tags
+# 'restore' as Destructive (not Reversible like 'deploy'); banner uses
+# stronger confirm flow; validator enforces kind='restore' specifically
+# so a deploy token can't accidentally fire a restore.
+
+# 1. Create a snapshot via dummy deploy with snapshot:true
+SNAP_DEPLOY=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main","snapshot":true}')
+SNAP_DEPLOY_ID=$(echo "$SNAP_DEPLOY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+step "snapshot-bearing deploy fired" "$SNAP_DEPLOY" '"deployId":"'
+sleep 1
+
+# 2. Verify it's in the snapshot list
+SNAP_LIST=$(api GET /api/nks.wdc.deploy/sites/blog.loc/snapshots)
+step "snapshot visible on list" "$SNAP_LIST" "\"id\":\"$SNAP_DEPLOY_ID\""
+
+# 3. Mint restore intent
+RESTORE_INTENT=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"restore","expiresIn":120}')
+RT_TOKEN=$(echo "$RESTORE_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+RT_ID=$(echo "$RESTORE_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+step "restore intent minted" "$RESTORE_INTENT" '"intentToken":"'
+
+# 4. Fire restore WITHOUT approval → 425 pending_confirmation
+RT_NO_APPROVE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"snapshotId\":\"$SNAP_DEPLOY_ID\",\"host\":\"production\",\"intentToken\":\"$RT_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/restore")
+step "restore without approval → 425 pending_confirmation" "$RT_NO_APPROVE" 'pending_confirmation.*425'
+
+# 5. Approve + fire restore → success
+api POST /api/mcp/intents/$RT_ID/confirm >/dev/null
+RT_FIRE=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"snapshotId\":\"$SNAP_DEPLOY_ID\",\"host\":\"production\",\"intentToken\":\"$RT_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/restore")
+step "approved restore returns restored=true" "$RT_FIRE" '"restored":true'
+step "restore reports source deployId" "$RT_FIRE" "\"sourceDeployId\":\"$SNAP_DEPLOY_ID\""
+step "restore reports backupPath" "$RT_FIRE" '"backupPath":"~/.wdc/backups'
+
+# 6. Try restore non-existent snapshot
+RT_BAD=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"snapshotId":"no-such-id","host":"production"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/restore")
+step "restore non-existent snapshot → 404 snapshot_not_found" "$RT_BAD" 'snapshot_not_found.*404'
+
+# 7. Try fire restore with a DEPLOY token (kind mismatch)
+DEPLOY_INTENT_FOR_REST=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":60}')
+DR_TOKEN=$(echo "$DEPLOY_INTENT_FOR_REST" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+DR_ID=$(echo "$DEPLOY_INTENT_FOR_REST" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+api POST /api/mcp/intents/$DR_ID/confirm >/dev/null
+RT_WRONG_KIND=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"snapshotId\":\"$SNAP_DEPLOY_ID\",\"host\":\"production\",\"intentToken\":\"$DR_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/restore")
+step "deploy token can't fire restore (kind_mismatch)" "$RT_WRONG_KIND" 'kind_mismatch.*403'
+
+# Cleanup
+api POST /api/mcp/intents/$DR_ID/revoke >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== S. token tampering attacks ===${END}"
 # ============================================================================
 # Validator must reject tokens where signature/payload doesn't reconcile

@@ -1629,6 +1629,79 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     });
 });
 
+// Phase 7.5+ — restore a previous snapshot. The kind on the intent token
+// MUST be 'restore' (validator enforces) which the registry tags as
+// Destructive — banner uses the typed-host-name confirmation flow.
+// Body: { "snapshotId": "<deployId of run that captured snapshot>",
+//         "intentToken": "<id>.<nonce>.<sig>" (required for MCP path) }
+// This is a dummy that just verifies the snapshot existed; real backend
+// would actually `gunzip + mysql restore` from the path.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/restore", async (
+    string domain,
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    CancellationToken ct) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    var snapshotId = root.TryGetProperty("snapshotId", out var sEl) ? sEl.GetString() : null;
+    var intentToken = root.TryGetProperty("intentToken", out var tEl) ? tEl.GetString() : null;
+    var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "production" : "production";
+    if (string.IsNullOrEmpty(snapshotId))
+        return Results.BadRequest(new { error = "snapshotId is required" });
+
+    // MCP intent gate — restore requires kind='restore' specifically (NOT
+    // kind='deploy'); validator enforces the kind_match check. Caller
+    // can pass X-Allow-Unconfirmed for headless flows.
+    if (!string.IsNullOrEmpty(intentToken))
+    {
+        var allowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            intentToken, "restore", domain, host, allowUnconfirmed, ct);
+        if (!verdict.Ok)
+        {
+            return Results.Json(
+                new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+        }
+    }
+
+    // Verify the snapshot row exists and actually has a backup path —
+    // otherwise the restore would have nothing to restore from.
+    var sourceRow = await runs.GetByIdAsync(snapshotId, ct);
+    if (sourceRow is null)
+        return Results.NotFound(new { error = "snapshot_not_found", snapshotId });
+    if (string.IsNullOrEmpty(sourceRow.PreDeployBackupPath))
+        return Results.BadRequest(new
+        {
+            error = "snapshot_has_no_backup",
+            detail = $"Deploy {snapshotId[..8]} did not capture a pre-deploy snapshot.",
+        });
+
+    // Broadcast the audit event so the GUI's activity feed / drawer
+    // sees something happened. Real backend would emit additional
+    // restore:phase events as the actual gunzip+mysql work progresses.
+    await eventsBus.BroadcastAsync("restore:complete", new
+    {
+        domain, snapshotId, host,
+        backupPath = sourceRow.PreDeployBackupPath,
+        backupSizeBytes = sourceRow.PreDeployBackupSizeBytes ?? 0,
+    });
+
+    return Results.Ok(new
+    {
+        restored = true,
+        sourceDeployId = snapshotId,
+        backupPath = sourceRow.PreDeployBackupPath,
+        backupSizeBytes = sourceRow.PreDeployBackupSizeBytes ?? 0,
+        note = "dummy backend — Phase 7.5 stub (no actual mysql restore)",
+    });
+});
+
 // Phase 7.5 dummy backend with realistic state-machine + optional MCP
 // intent gate. POST body:
 //   { "host": "...", "branch": "...", "intentToken": "<id>.<nonce>.<sig>" }
