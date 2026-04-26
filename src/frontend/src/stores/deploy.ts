@@ -202,6 +202,7 @@ export const useDeployStore = defineStore('deploy', () => {
         isPastPonr: false,
         isTerminal: true,
         success: status.success,
+        groupId: status.groupId ?? null,
       }
       const next = new Map(runs.value)
       next.set(deployId, synthetic)
@@ -254,4 +255,6 @@ export interface DeployRunState {
   isPastPonr: boolean
   isTerminal: boolean
   success: boolean | null
+  /** Phase 6.19a — populated by loadAndOpenHistorical when the daemon row carries it. */
+  groupId?: string | null
 }

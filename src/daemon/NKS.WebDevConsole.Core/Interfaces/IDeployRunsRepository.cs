@@ -117,4 +117,11 @@ public sealed record DeployRunRow(
     DateTimeOffset UpdatedAt,
     /// <summary>Phase 6.2 — populated when a pre-deploy snapshot ran.</summary>
     string? PreDeployBackupPath = null,
-    long? PreDeployBackupSizeBytes = null);
+    long? PreDeployBackupSizeBytes = null,
+    /// <summary>
+    /// Phase 6.19a — FK to deploy_groups when this run is part of a
+    /// multi-host fan-out (set by NksDeployGroupCoordinator via
+    /// SetGroupIdAsync). NULL for single-host deploys. Surface it here
+    /// so the GUI can render a "View related group" link in the drawer.
+    /// </summary>
+    string? GroupId = null);

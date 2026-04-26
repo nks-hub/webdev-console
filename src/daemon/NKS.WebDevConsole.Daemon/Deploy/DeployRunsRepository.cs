@@ -190,7 +190,8 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
         "triggered_by AS TriggeredBy, backend_id AS BackendId, " +
         "created_at AS CreatedAtRaw, updated_at AS UpdatedAtRaw, " +
         "pre_deploy_backup_path AS PreDeployBackupPath, " +
-        "pre_deploy_backup_size_bytes AS PreDeployBackupSizeBytes " +
+        "pre_deploy_backup_size_bytes AS PreDeployBackupSizeBytes, " +
+        "group_id AS GroupId " +
         "FROM deploy_runs";
 
     /// <summary>
@@ -219,6 +220,7 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
         public string UpdatedAtRaw { get; set; } = "";
         public string? PreDeployBackupPath { get; set; }
         public long? PreDeployBackupSizeBytes { get; set; }
+        public string? GroupId { get; set; }
 
         public DeployRunRow ToRecord() => new(
             Id,
@@ -239,6 +241,7 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
             DateTimeOffset.Parse(CreatedAtRaw),
             DateTimeOffset.Parse(UpdatedAtRaw),
             PreDeployBackupPath,
-            PreDeployBackupSizeBytes);
+            PreDeployBackupSizeBytes,
+            GroupId);
     }
 }

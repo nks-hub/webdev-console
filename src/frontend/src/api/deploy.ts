@@ -45,6 +45,8 @@ export interface DeployResultDto {
   releaseId: string | null
   commitSha: string | null
   finalPhase: DeployPhase
+  /** Phase 6.19a — set when this run is part of a multi-host group. */
+  groupId?: string | null
 }
 
 /** History entry returned by GET /sites/{domain}/history. */

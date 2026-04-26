@@ -31,6 +31,27 @@
     </template>
 
     <div v-if="run" class="drawer-body">
+      <!-- Phase 6.19a — link to the parent group when this run was part
+           of a multi-host fan-out. Shows above the waterfall so it's
+           visible at a glance; clicking navigates to the per-site
+           Deploy tab → Groups sub-tab. The drawer stays open so the
+           operator can flip between drawer + group context. -->
+      <el-alert
+        v-if="run.groupId"
+        type="info"
+        :closable="false"
+        show-icon
+        class="drawer-group-link"
+      >
+        <template #title>
+          Part of multi-host group
+          <code class="mono">{{ run.groupId.slice(0, 8) }}…</code>
+        </template>
+        <el-button link type="primary" size="small" @click="goToGroups">
+          View related group →
+        </el-button>
+      </el-alert>
+
       <StepWaterfall
         :steps="waterfallSteps"
         :current-idx="currentIdx"
@@ -81,9 +102,12 @@
  * focus NOT trapped (drawer state mirrors aria-live updates).
  */
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Close } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
+
+const router = useRouter()
 import StepWaterfall, { type WaterfallStep } from './StepWaterfall.vue'
 import RawOutputPane from './RawOutputPane.vue'
 import HealthBadge from './HealthBadge.vue'
@@ -182,6 +206,21 @@ const healthState = computed<'healthy' | 'degraded' | 'down' | 'unknown'>(() => 
   if (run.value.isPastPonr) return 'degraded'
   return 'unknown'
 })
+
+/**
+ * Phase 6.19a — navigate to the per-site Deploy tab and request the
+ * Groups sub-tab. We push to /sites/{domain}/edit with a query hint
+ * the SiteEdit page reads on mount to switch its inner tab. Drawer
+ * stays open so the operator can flip back/forth between drawer +
+ * group context without losing the run state.
+ */
+function goToGroups(): void {
+  if (!run.value) return
+  router.push({
+    path: `/sites/${encodeURIComponent(run.value.domain)}/edit`,
+    query: { tab: 'deploy', deployTab: 'groups' },
+  })
+}
 
 async function onCancel(): Promise<void> {
   if (!run.value) return

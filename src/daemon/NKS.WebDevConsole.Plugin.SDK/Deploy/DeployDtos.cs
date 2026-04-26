@@ -86,7 +86,13 @@ public sealed record DeployResult(
     DateTimeOffset? CompletedAt,
     string? ReleaseId,
     string? CommitSha,
-    DeployPhase FinalPhase);
+    DeployPhase FinalPhase,
+    /// <summary>
+    /// Phase 6.19a — when this run was part of a multi-host group fan-out,
+    /// the parent deploy_groups id. NULL for standalone single-host runs.
+    /// Surfaced so the GUI drawer can offer a "View related group" link.
+    /// </summary>
+    string? GroupId = null);
 
 /// <summary>
 /// Historical deploy record. Backends can synthesize these from their own
