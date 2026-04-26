@@ -139,11 +139,17 @@
 
       <el-table-column prop="domain" :label="t('mcpIntents.col.domain')" min-width="140" />
       <el-table-column prop="host" :label="t('mcpIntents.col.host')" width="120" />
-      <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" width="100">
+      <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" min-width="180">
         <template #default="{ row }">
-          <el-tag :type="kindTagType(row.kind)" size="small" effect="plain">
-            {{ row.kind }}
+          <el-tag
+            :type="row.kindDanger === 'destructive' ? 'danger' : kindTagType(row.kind)"
+            size="small"
+            effect="plain"
+            :title="row.kindLabel ? row.kindLabel + (row.kindPluginId ? ' (' + row.kindPluginId + ')' : '') : row.kind"
+          >
+            {{ row.kindLabel || row.kind }}
           </el-tag>
+          <code v-if="row.kindLabel" class="kind-id-mono mono">{{ row.kind }}</code>
         </template>
       </el-table-column>
 
@@ -540,6 +546,12 @@ onMounted(() => refresh())
 }
 .intent-table {
   width: 100%;
+}
+.kind-id-mono {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  opacity: 0.7;
 }
 .mono {
   font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;

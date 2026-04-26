@@ -166,7 +166,20 @@ export interface IntentInventoryEntry {
   domain: string
   host: string
   releaseId: string | null
-  kind: 'deploy' | 'rollback' | 'cancel' | 'restore'
+  /**
+   * Phase 7.4a — open kind namespace; can be any plugin-defined id like
+   * "nksbackup:restore", not just the four legacy core kinds.
+   */
+  kind: string
+  /**
+   * Phase 7.5+ — registry-resolved label / danger / owning plugin id,
+   * surfaced by the inventory endpoint when the kind is registered.
+   * Null when the daemon's IDestructiveOperationKinds doesn't know
+   * the kind (post-uninstall, or pre-registration race).
+   */
+  kindLabel: string | null
+  kindDanger: 'reversible' | 'destructive' | null
+  kindPluginId: string | null
   expiresAt: string
   usedAt: string | null
   confirmedAt: string | null

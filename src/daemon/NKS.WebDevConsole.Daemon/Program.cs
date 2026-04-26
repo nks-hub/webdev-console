@@ -1336,6 +1336,7 @@ app.MapPost("/api/mcp/intents/{intentId}/revoke", async (
 app.MapGet("/api/mcp/intents", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
+    NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
     int limit = 100) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
@@ -1346,22 +1347,34 @@ app.MapGet("/api/mcp/intents", async (
         "confirmed_at, created_at " +
         "FROM deploy_intents ORDER BY created_at DESC LIMIT @Limit",
         new { Limit = Math.Clamp(limit, 1, 500) });
-    var entries = rows.Select(r => new
+    // Phase 7.5+ — enrich the inventory with the registry-resolved label
+    // + danger so the McpIntents page can render "Restore database
+    // snapshot (destructive)" instead of bare "restore". Lookup is
+    // O(1) per row against the in-memory registry.
+    var entries = rows.Select(r =>
     {
-        intentId = (string)r.id,
-        domain = (string)r.domain,
-        host = (string)r.host,
-        releaseId = (string?)r.release_id,
-        kind = (string)r.kind,
-        expiresAt = (string)r.expires_at,
-        usedAt = (string?)r.used_at,
-        confirmedAt = (string?)r.confirmed_at,
-        createdAt = (string)r.created_at,
-        // Derived state for UI rendering convenience.
-        state = ComputeIntentState(
-            (string?)r.used_at,
-            (string?)r.confirmed_at,
-            (string)r.expires_at),
+        var kindId = (string)r.kind;
+        var registered = kindsRegistry.Get(kindId);
+        return new
+        {
+            intentId = (string)r.id,
+            domain = (string)r.domain,
+            host = (string)r.host,
+            releaseId = (string?)r.release_id,
+            kind = kindId,
+            kindLabel = registered?.Label,
+            kindDanger = registered?.Danger.ToString().ToLowerInvariant(),
+            kindPluginId = registered?.PluginId,
+            expiresAt = (string)r.expires_at,
+            usedAt = (string?)r.used_at,
+            confirmedAt = (string?)r.confirmed_at,
+            createdAt = (string)r.created_at,
+            // Derived state for UI rendering convenience.
+            state = ComputeIntentState(
+                (string?)r.used_at,
+                (string?)r.confirmed_at,
+                (string)r.expires_at),
+        };
     }).ToList();
     return Results.Ok(new { count = entries.Count, entries });
 });
