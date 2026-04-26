@@ -442,6 +442,22 @@ step "deploy token can't fire restore (kind_mismatch)" "$RT_WRONG_KIND" 'kind_mi
 # Cleanup
 api POST /api/mcp/intents/$DR_ID/revoke >/dev/null
 
+# 8. Frontend route alias: /sites/{domain}/snapshots/{id}/restore + X-Intent-Token header
+SNAP_DEPLOY_2=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main","snapshot":true}')
+SNAP_DEPLOY_2_ID=$(echo "$SNAP_DEPLOY_2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+sleep 1
+RESTORE_INTENT_2=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"restore","expiresIn":120}')
+RT2_TOKEN=$(echo "$RESTORE_INTENT_2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+RT2_ID=$(echo "$RESTORE_INTENT_2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+api POST /api/mcp/intents/$RT2_ID/confirm >/dev/null
+# Use the frontend's path shape + header convention
+ALIAS_FIRE=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Intent-Token: $RT2_TOKEN" \
+    -d '{"confirm":true,"host":"production"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/snapshots/$SNAP_DEPLOY_2_ID/restore")
+step "alias route /snapshots/{id}/restore + X-Intent-Token header" "$ALIAS_FIRE" '"restored":true'
+step "alias route reports same sourceDeployId from path" "$ALIAS_FIRE" "\"sourceDeployId\":\"$SNAP_DEPLOY_2_ID\""
+
 # ============================================================================
 echo ""; echo "${YEL}=== S. token tampering attacks ===${END}"
 # ============================================================================

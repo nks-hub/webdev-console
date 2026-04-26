@@ -1645,22 +1645,31 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
 // Phase 7.5+ — restore a previous snapshot. The kind on the intent token
 // MUST be 'restore' (validator enforces) which the registry tags as
 // Destructive — banner uses the typed-host-name confirmation flow.
-// Body: { "snapshotId": "<deployId of run that captured snapshot>",
-//         "intentToken": "<id>.<nonce>.<sig>" (required for MCP path) }
+//
+// Two route shapes accepted (both fixed to frontend expectations):
+//   POST /sites/{domain}/restore                       — body { snapshotId, intentToken }
+//   POST /sites/{domain}/snapshots/{snapshotId}/restore — header X-Intent-Token, body { confirm: true }
+// Both lower into the same handler below.
+//
 // This is a dummy that just verifies the snapshot existed; real backend
 // would actually `gunzip + mysql restore` from the path.
-app.MapPost("/api/nks.wdc.deploy/sites/{domain}/restore", async (
-    string domain,
-    HttpContext ctx,
+static async Task<IResult> HandleRestoreAsync(
+    string domain, string? snapshotIdFromRoute, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
     NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
-    CancellationToken ct) =>
+    CancellationToken ct)
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
     var root = doc.RootElement;
-    var snapshotId = root.TryGetProperty("snapshotId", out var sEl) ? sEl.GetString() : null;
-    var intentToken = root.TryGetProperty("intentToken", out var tEl) ? tEl.GetString() : null;
+    // snapshotId can come from route path OR body — route wins (more specific).
+    var snapshotId = !string.IsNullOrEmpty(snapshotIdFromRoute)
+        ? snapshotIdFromRoute
+        : (root.TryGetProperty("snapshotId", out var sEl) ? sEl.GetString() : null);
+    // Intent token from header X-Intent-Token (frontend convention) OR body field.
+    var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (string.IsNullOrEmpty(intentToken) && root.TryGetProperty("intentToken", out var tEl))
+        intentToken = tEl.GetString();
     var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "production" : "production";
     if (string.IsNullOrEmpty(snapshotId))
         return Results.BadRequest(new { error = "snapshotId is required" });
@@ -1713,7 +1722,24 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/restore", async (
         backupSizeBytes = sourceRow.PreDeployBackupSizeBytes ?? 0,
         note = "dummy backend — Phase 7.5 stub (no actual mysql restore)",
     });
-});
+}
+
+// Both routes alias HandleRestoreAsync.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/restore",
+    (string domain, HttpContext ctx,
+     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+     NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+     CancellationToken ct) =>
+        HandleRestoreAsync(domain, null, ctx, runs, intentValidator, eventsBus, ct));
+
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore",
+    (string domain, string snapshotId, HttpContext ctx,
+     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+     NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+     CancellationToken ct) =>
+        HandleRestoreAsync(domain, snapshotId, ctx, runs, intentValidator, eventsBus, ct));
 
 // Phase 7.5 dummy backend with realistic state-machine + optional MCP
 // intent gate. POST body:
