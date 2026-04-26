@@ -1537,6 +1537,34 @@ app.MapDelete("/api/mcp/grants/{id}", async (
     return Results.Ok(new { id, status = "revoked" });
 });
 
+// Phase 7.5+++ — manual sweep trigger. Operator can fire the grant
+// janitor on demand without waiting for the 15-minute background tick.
+// Reuses the same SQL helper the BackgroundService uses; broadcasts
+// mcp:grant-changed{change:swept} on success so the GUI table updates.
+app.MapPost("/api/mcp/grants/sweep-now", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync(ct);
+    var deleted = await NKS.WebDevConsole.Daemon.Mcp.GrantSweeperService.SweepAsync(
+        conn, DateTimeOffset.UtcNow,
+        TimeSpan.FromDays(1), TimeSpan.FromDays(30), ct);
+    if (deleted > 0)
+    {
+        try
+        {
+            await eventsBus.BroadcastAsync("mcp:grant-changed",
+                new { change = "swept", count = deleted });
+        }
+        catch { /* SSE best-effort */ }
+    }
+    return Results.Ok(new { deleted });
+});
+
 // Body record for the POST endpoint. Lives at file scope so the
 // minimal-API binder can deserialise it.
 

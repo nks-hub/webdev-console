@@ -1186,6 +1186,10 @@
     "toastCreateFailed": "Could not create grant: {error}",
     "toastRevoked": "Grant revoked",
     "toastRevokeFailed": "Could not revoke grant: {error}",
+    "sweepNow": "Clean now",
+    "sweepDone": "Cleaned {n} stale grants",
+    "sweepNothing": "Nothing to clean — all grants are current",
+    "sweepFailed": "Cleanup failed: {error}",
     "bulk": {
       "selected": "Selected: {n}",
       "clear": "Clear selection",

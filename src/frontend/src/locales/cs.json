@@ -1186,6 +1186,10 @@
     "toastCreateFailed": "Nepodařilo se vytvořit oprávnění: {error}",
     "toastRevoked": "Oprávnění odvoláno",
     "toastRevokeFailed": "Nepodařilo se odvolat oprávnění: {error}",
+    "sweepNow": "Vyčistit",
+    "sweepDone": "Vyčištěno {n} starých oprávnění",
+    "sweepNothing": "Není co čistit — všechna oprávnění jsou aktuální",
+    "sweepFailed": "Čištění selhalo: {error}",
     "bulk": {
       "selected": "Vybráno: {n}",
       "clear": "Zrušit výběr",

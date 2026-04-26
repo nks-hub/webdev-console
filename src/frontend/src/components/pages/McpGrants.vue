@@ -6,6 +6,9 @@
         <el-button :loading="loading" @click="refresh">
           <el-icon><Refresh /></el-icon> {{ t('mcpGrants.refresh') }}
         </el-button>
+        <el-button :loading="sweeping" @click="onSweepNow">
+          <el-icon><Delete /></el-icon> {{ t('mcpGrants.sweepNow') }}
+        </el-button>
         <el-button type="primary" @click="createDialogOpen = true">
           <el-icon><Plus /></el-icon> {{ t('mcpGrants.newGrant') }}
         </el-button>
@@ -132,9 +135,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus } from '@element-plus/icons-vue'
+import { Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import {
-  listMcpGrants, createMcpGrant, revokeMcpGrant, subscribeEventsMap,
+  listMcpGrants, createMcpGrant, revokeMcpGrant, sweepMcpGrantsNow, subscribeEventsMap,
   type McpGrantRow, type McpGrantScopeType,
 } from '../../api/daemon'
 
@@ -148,6 +151,9 @@ const grants = ref<McpGrantRow[]>([])
 const selectedGrants = ref<McpGrantRow[]>([])
 const bulkRevoking = ref(false)
 const tableRef = ref<unknown>(null)
+
+// Phase 7.5+++ — manual sweep trigger ("clean now" button).
+const sweeping = ref(false)
 
 const createDialogOpen = ref(false)
 const creating = ref(false)
@@ -260,6 +266,27 @@ async function onBulkRevoke(): Promise<void> {
   if (failed === 0) ElMessage.success(t('mcpGrants.bulk.toastOk', { n: ok }))
   else ElMessage.warning(t('mcpGrants.bulk.toastPartial', { ok, failed }))
   await refresh()
+}
+
+async function onSweepNow(): Promise<void> {
+  if (sweeping.value) return
+  sweeping.value = true
+  try {
+    const r = await sweepMcpGrantsNow()
+    if (r.deleted > 0) {
+      ElMessage.success(t('mcpGrants.sweepDone', { n: r.deleted }))
+      // Janitor broadcasts mcp:grant-changed → SSE handler refreshes,
+      // but call refresh() explicitly to cover the case where the SSE
+      // round-trip is slower than the operator's eye.
+      await refresh()
+    } else {
+      ElMessage.info(t('mcpGrants.sweepNothing'))
+    }
+  } catch (e) {
+    ElMessage.error(t('mcpGrants.sweepFailed', { error: (e as Error).message }))
+  } finally {
+    sweeping.value = false
+  }
 }
 
 async function revoke(id: string): Promise<void> {

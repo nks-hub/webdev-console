@@ -815,6 +815,18 @@ step "SSE captured the revoked event"  "$X_DUMP" '"change":"revoked"'
 step "SSE created event carries our intent id" "$X_DUMP" "\"intentId\":\"$X_ID\""
 
 # ============================================================================
+echo ""; echo "${YEL}=== Y. manual grant sweep-now endpoint ===${END}"
+# ============================================================================
+# Operator can fire the janitor on demand without waiting for the 15-min
+# tick. With no sweepable rows present (E2E test grants are typically
+# active or freshly revoked, well within the 30-day audit window) the
+# call should return deleted=0 and not blow up. The retention semantics
+# themselves are covered by GrantSweeperTests; here we only verify
+# wire connectivity + 200 status.
+SWEEP_RESP=$(api POST /api/mcp/grants/sweep-now)
+step "sweep-now returns 200 with deleted count" "$SWEEP_RESP" '"deleted":[0-9]'
+
+# ============================================================================
 echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
 # ============================================================================
 # Subscribe to SSE BEFORE firing the deploy so we capture every event.

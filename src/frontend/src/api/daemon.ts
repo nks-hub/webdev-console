@@ -261,6 +261,11 @@ export const createMcpGrant = (body: McpGrantCreateBody): Promise<{ id: string; 
 export const revokeMcpGrant = (id: string): Promise<{ id: string; status: string }> =>
   json(`/api/mcp/grants/${encodeURIComponent(id)}`, { method: 'DELETE' })
 
+// Phase 7.5+++ — manual sweep trigger. Returns the count of grants
+// the janitor deleted (expired past grace OR revoked past audit window).
+export const sweepMcpGrantsNow = (): Promise<{ deleted: number }> =>
+  json('/api/mcp/grants/sweep-now', { method: 'POST' })
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }
