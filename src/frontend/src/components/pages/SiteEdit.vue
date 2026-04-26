@@ -366,7 +366,7 @@
              the NksDeploy plugin (registered through IDeployBackend); the
              tab itself ships with the app rather than being a plugin
              contribution to keep its placement deterministic. -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="deploy">
+        <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy">
           <template #label>
             <span class="tab-label"><el-icon><Upload /></el-icon> Deploy</span>
           </template>
@@ -635,6 +635,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
@@ -667,6 +668,7 @@ const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
+const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
 
 const domain = computed(() => String(route.params.domain || ''))

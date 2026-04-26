@@ -1092,6 +1092,15 @@ static bool IsMcpEnabled(HttpContext ctx) =>
     ctx.RequestServices.GetRequiredService<SettingsStore>()
         .GetBool("mcp", "enabled", defaultValue: false);
 
+// Phase 7.1a — deploy subsystem toggle. Defaults TRUE because users
+// who installed WDC for site management typically want deploy. When
+// false: deploy plugin (nks.wdc.deploy) endpoints under
+// /api/nks.wdc.deploy/* return 404, frontend hides Deploy tab in
+// SiteEdit + sub-tabs. Migration tables remain (additive-only).
+static bool IsDeployEnabled(HttpContext ctx) =>
+    ctx.RequestServices.GetRequiredService<SettingsStore>()
+        .GetBool("deploy", "enabled", defaultValue: true);
+
 app.MapPost("/api/mcp/intents", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
@@ -1311,6 +1320,25 @@ static string ComputeIntentState(string? usedAt, string? confirmedAt, string exp
     if (string.IsNullOrEmpty(confirmedAt)) return "pending_confirmation";
     return "ready";
 }
+
+// Phase 7.1a — deploy.enabled gate. Runs BEFORE auth so a disabled
+// deploy plugin returns clean 404 to ANY /api/nks.wdc.deploy/* request
+// (instead of going through bearer-auth then plugin handler then a
+// plugin-side check). When the flag is true (default), this middleware
+// is a pass-through and the plugin's normal route handlers run.
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api/nks.wdc.deploy"))
+    {
+        if (!IsDeployEnabled(ctx))
+        {
+            ctx.Response.StatusCode = 404;
+            await ctx.Response.WriteAsJsonAsync(new { error = "deploy_disabled" });
+            return;
+        }
+    }
+    await next();
+});
 
 // Auth middleware for /api/* requests.
 // SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.

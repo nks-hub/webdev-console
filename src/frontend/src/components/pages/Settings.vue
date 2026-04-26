@@ -484,6 +484,25 @@
                 </el-form-item>
               </el-form>
             </div>
+
+            <!-- Phase 7.1a — deploy subsystem toggle. Default ON since
+                 most users install WDC FOR site management with deploy.
+                 OFF hides Deploy tab in SiteEdit + plugin REST endpoints
+                 return 404. Useful for installs that only use WDC as
+                 local Apache/MySQL manager without remote deploys. -->
+            <div class="settings-section" style="margin-top: 16px">
+              <h4 class="section-title">Deploy subsystem</h4>
+              <p class="hint">
+                Per-site Deploy tab + nksdeploy plugin endpoints. Disable when this WDC
+                instance only manages local services and never pushes to remote hosts.
+                History stays in the database (additive-only); turning back ON restores everything.
+              </p>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+                <el-form-item label="Enable Deploy subsystem">
+                  <el-switch v-model="deployEnabled" />
+                </el-form-item>
+              </el-form>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -1166,6 +1185,10 @@ const runOnStartup = ref(false)
 // own `mcp.enabled` setting. When false, sidebar entry, banner, and
 // /api/mcp/intents endpoints are all hidden/404.
 const mcpEnabled = ref(false)
+// Phase 7.1a — Deploy subsystem toggle. Default TRUE; mirrors daemon's
+// own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
+// /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
+const deployEnabled = ref(true)
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
@@ -1597,6 +1620,9 @@ async function loadSettings() {
     // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
     // accept "true"/"1" as truthy, default false when missing.
     mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
+    // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
+    // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
+    deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
@@ -2456,6 +2482,7 @@ async function save() {
       'ports.redis':         String(ports.redis),
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'mcp.enabled':         String(mcpEnabled.value),
+      'deploy.enabled':      String(deployEnabled.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),
       'paths.apache':   paths.apache,
