@@ -1079,13 +1079,25 @@ app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, SiteManager
 //   the destructive endpoints check (Phase 5 — currently no-op stub so
 //   the SSE wiring lands now and Mode-A approval can be layered on
 //   without touching the validator contract).
+//
+// Phase 6.23 — gated by `mcp.enabled` settings flag (default false).
+// When disabled, every endpoint below short-circuits with 404 so users
+// who don't run AI agents see no MCP surface at all.
 // ---------------------------------------------------------------------------
+
+// Helper: read mcp.enabled from settings on every request. Cheap (in-memory
+// dictionary lookup); could be cached but settings rarely change so the
+// extra round-trip via SettingsStore is fine.
+static bool IsMcpEnabled(HttpContext ctx) =>
+    ctx.RequestServices.GetRequiredService<SettingsStore>()
+        .GetBool("mcp", "enabled", defaultValue: false);
 
 app.MapPost("/api/mcp/intents", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
     NKS.WebDevConsole.Daemon.Mcp.IntentSigner signer) =>
 {
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
     var root = doc.RootElement;
     string? domain = root.TryGetProperty("domain", out var dEl) ? dEl.GetString() : null;
@@ -1146,6 +1158,7 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster,
     NKS.WebDevConsole.Daemon.Data.Database db) =>
 {
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
     var root = doc.RootElement;
     string? intentId = root.TryGetProperty("intentId", out var iEl) ? iEl.GetString() : null;
@@ -1193,8 +1206,10 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
 // double-click can't be mistaken for a fresh approval.
 app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
     string intentId,
+    HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db) =>
 {
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     if (string.IsNullOrWhiteSpace(intentId))
     {
         return Results.BadRequest(new { error = "intentId is required" });
@@ -1225,8 +1240,10 @@ app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
 // returns 409 already_used.
 app.MapPost("/api/mcp/intents/{intentId}/revoke", async (
     string intentId,
+    HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db) =>
 {
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     if (string.IsNullOrWhiteSpace(intentId))
     {
         return Results.BadRequest(new { error = "intentId is required" });
@@ -1254,9 +1271,11 @@ app.MapPost("/api/mcp/intents/{intentId}/revoke", async (
 // list (newest first) so a wdc operator can audit what AI/CI clients
 // have minted recently. Bearer-auth on /api/* is sufficient gate.
 app.MapGet("/api/mcp/intents", async (
+    HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
     int limit = 100) =>
 {
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var conn = db.CreateConnection();
     await conn.OpenAsync();
     var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn,

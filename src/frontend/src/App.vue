@@ -55,7 +55,7 @@
          the SSE handler below pushes the payload into useMcpConfirmStore.
          The banner stack is fixed top-right so it doesn't compete with
          the deploy drawer for screen real-estate. -->
-    <McpConfirmBanner />
+    <McpConfirmBanner v-if="featureFlagsStore.showMcpSurface" />
 
     <!-- Splash overlay shown until the daemon answers for the first time.
          Distinguishes "backend still booting" from "runtime offline".
@@ -98,6 +98,7 @@ import { useThemeStore } from './stores/theme'
 import { useAuthStore } from './stores/auth'
 import { useDeployStore } from './stores/deploy'
 import { useMcpConfirmStore } from './stores/mcpConfirm'
+import { useFeatureFlagsStore } from './stores/featureFlags'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
 
@@ -114,6 +115,7 @@ const sitesStore = useSitesStore()
 const authStore = useAuthStore()
 const deployStore = useDeployStore()
 const mcpConfirmStore = useMcpConfirmStore()
+const featureFlagsStore = useFeatureFlagsStore()
 useThemeStore()
 
 // Single SSE subscription that fans the daemon's "deploy:event" channel
@@ -244,6 +246,9 @@ async function mirrorAuthTokenToDaemon() {
 onMounted(() => {
   daemonStore.startPolling()
   void mirrorAuthTokenToDaemon()
+  // Phase 6.23 — hydrate feature flags so guards (sidebar entries, MCP
+  // banner mount, etc.) flip to their real values once daemon answers.
+  void featureFlagsStore.ensureLoaded()
   // F96: kick off background update check once per session. Store guards
   // against flooding the public GitHub API — refresh() honors a 6h cached
   // window, so the hourly setInterval inside startAutoCheck is idempotent.

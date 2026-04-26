@@ -464,6 +464,26 @@
                 >Tovární reset</el-button>
               </div>
             </div>
+
+            <!-- Phase 6.23 — MCP integration toggle. Default OFF: hides
+                 the AI agent confirmation banner + MCP Intents sidebar
+                 entry + makes the daemon's /api/mcp/intents endpoints
+                 return 404. Operators not running an AI client see no
+                 trace of the subsystem. -->
+            <div class="settings-section" style="margin-top: 16px">
+              <h4 class="section-title">Model Context Protocol (MCP)</h4>
+              <p class="hint">
+                Optional integration for AI agents (Claude, Cursor, …) connecting via MCP.
+                When enabled, AI deploy/restore requests prompt for confirmation in a banner;
+                signed intent tokens audit-able under "MCP Intents" sidebar entry.
+                <strong>Leave OFF unless you actively run an AI agent against this daemon.</strong>
+              </p>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+                <el-form-item label="Enable MCP integration">
+                  <el-switch v-model="mcpEnabled" />
+                </el-form-item>
+              </el-form>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -1142,6 +1162,10 @@ const ports = reactive({
 })
 
 const runOnStartup = ref(false)
+// Phase 6.23 — MCP integration toggle. Default false; mirrors daemon's
+// own `mcp.enabled` setting. When false, sidebar entry, banner, and
+// /api/mcp/intents endpoints are all hidden/404.
+const mcpEnabled = ref(false)
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
@@ -1570,6 +1594,9 @@ async function loadSettings() {
     const data = await fetchSettings()
     if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
     if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
+    // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
+    // accept "true"/"1" as truthy, default false when missing.
+    mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
@@ -2428,6 +2455,7 @@ async function save() {
       'ports.mysql':         String(ports.mysql),
       'ports.redis':         String(ports.redis),
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
+      'mcp.enabled':         String(mcpEnabled.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),
       'paths.apache':   paths.apache,

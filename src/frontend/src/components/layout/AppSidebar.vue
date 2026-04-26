@@ -181,10 +181,11 @@
         <span class="nav-label">Zálohy</span>
       </div>
       <!-- Phase 6.11b — admin audit view of all signed MCP intents.
-           Advanced-only because it surfaces low-level token machinery
-           that's irrelevant to operators who never invoke an AI agent. -->
+           Phase 6.23 — gated by featureFlagsStore.mcpEnabled (default
+           false). Advanced-only AND mcp.enabled=true to render —
+           hidden by default for operators not running AI agents. -->
       <div
-        v-if="uiModeStore.isAdvanced"
+        v-if="uiModeStore.isAdvanced && featureFlagsStore.showMcpSurface"
         class="nav-item"
         :class="{ active: isActive('/mcp/intents') }"
         @click="navigate('/mcp/intents')"
@@ -248,6 +249,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useServicesStore } from '../../stores/services'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -259,6 +261,7 @@ const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiModeStore = useUiModeStore()
+const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
 const authStore = useAuthStore()
 

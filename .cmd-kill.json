@@ -1,0 +1,1 @@
+{"command":"Get-Process | Where-Object { $_.ProcessName -match 'NKS WebDev|NKS\\.WebDevConsole\\.Daemon' } | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; (Get-Process | Where-Object { $_.ProcessName -match 'NKS WebDev|NKS\\.WebDevConsole\\.Daemon' } | Measure-Object).Count","timeoutSeconds":30}
