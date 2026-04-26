@@ -40,6 +40,21 @@
                   <span v-else class="muted">—</span>
                 </template>
               </el-table-column>
+              <el-table-column label="" width="100" align="right">
+                <template #default="{ row: hr }">
+                  <el-button
+                    v-if="hr.deployId"
+                    size="small"
+                    link
+                    type="primary"
+                    :loading="openingDeployId === hr.deployId"
+                    aria-label="Open this per-host deploy in the drawer"
+                    @click="onOpenHostRun(hr.host, hr.deployId)"
+                  >
+                    Open
+                  </el-button>
+                </template>
+              </el-table-column>
             </el-table>
             <p v-if="row.errorMessage" class="group-error" role="status">
               <strong>Error:</strong> {{ row.errorMessage }}
@@ -111,6 +126,8 @@ import {
   type DeployGroupPhase,
 } from '../../api/deploy'
 import { subscribeEventsMap } from '../../api/daemon'
+import { ElMessage } from 'element-plus'
+import { useDeployStore } from '../../stores/deploy'
 
 interface Props {
   domain: string
@@ -126,6 +143,8 @@ const props = withDefaults(defineProps<Props>(), { refreshSeconds: 0 })
 const entries = ref<DeployGroupEntry[]>([])
 const loading = ref(false)
 const expandedKeys = ref<string[]>([])
+const openingDeployId = ref<string | null>(null)
+const deployStore = useDeployStore()
 
 let timer: ReturnType<typeof setInterval> | null = null
 let unsubscribeSse: (() => void) | null = null
@@ -154,6 +173,19 @@ function scheduleRefresh(): void {
 
 function onExpandChange(row: DeployGroupEntry, expanded: DeployGroupEntry[]): void {
   expandedKeys.value = expanded.map((r) => r.id)
+}
+
+async function onOpenHostRun(host: string, deployId: string): Promise<void> {
+  if (openingDeployId.value !== null) return
+  openingDeployId.value = deployId
+  try {
+    await deployStore.loadAndOpenHistorical(props.domain, deployId, host)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(`Could not open run: ${msg}`)
+  } finally {
+    openingDeployId.value = null
+  }
 }
 
 function hostRows(row: DeployGroupEntry): Array<{ host: string; deployId: string | null }> {

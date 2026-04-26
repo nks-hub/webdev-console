@@ -145,6 +145,49 @@ export const useDeployStore = defineStore('deploy', () => {
     }
   }
 
+  /**
+   * Phase 6.9 — drill into a HISTORICAL run (no live SSE replay). Used by
+   * DeployGroupHistoryTable's per-host expand row click. Fetches the
+   * terminal status snapshot, synthesises a DeployRunState with empty
+   * events (the run has already ended; we only show its final state),
+   * and opens the drawer. If the run is already in the local map (live
+   * deploy in progress), we skip the fetch and just activate it.
+   */
+  async function loadAndOpenHistorical(
+    domain: string,
+    deployId: string,
+    host: string,
+  ): Promise<void> {
+    if (runs.value.has(deployId)) {
+      activeRunId.value = deployId
+      return
+    }
+    try {
+      const status = await getDeployStatus(domain, deployId)
+      const synthetic: DeployRunState = {
+        deployId,
+        domain,
+        host,
+        startedAt: status.startedAt,
+        completedAt: status.completedAt ?? undefined,
+        events: [],
+        latestPhase: status.finalPhase,
+        latestStep: status.errorMessage ? 'error' : (status.success ? 'deploy_complete' : 'unknown'),
+        latestMessage: status.errorMessage ?? (status.success ? 'completed' : 'finished'),
+        isPastPonr: false,
+        isTerminal: true,
+        success: status.success,
+      }
+      const next = new Map(runs.value)
+      next.set(deployId, synthetic)
+      runs.value = next
+      activeRunId.value = deployId
+    } catch (err) {
+      // Surface to caller — the drawer simply won't open.
+      throw err instanceof Error ? err : new Error(String(err))
+    }
+  }
+
   function closeDrawer(): void {
     activeRunId.value = null
   }
@@ -162,6 +205,7 @@ export const useDeployStore = defineStore('deploy', () => {
     rollback,
     cancel,
     openDrawerFor,
+    loadAndOpenHistorical,
     closeDrawer,
   }
 })
