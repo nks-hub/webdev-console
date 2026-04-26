@@ -151,6 +151,43 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
         return raw is null ? null : ToRecord(raw);
     }
 
+    public async Task<bool> UpdateMutableAsync(
+        string id,
+        int? minCooldownSeconds,
+        string? expiresAtIso,
+        string? note,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(id)) return false;
+        var sets = new List<string>();
+        var p = new DynamicParameters();
+        p.Add("Id", id);
+        if (minCooldownSeconds.HasValue)
+        {
+            sets.Add("min_cooldown_seconds = @MinCooldown");
+            p.Add("MinCooldown", Math.Max(0, minCooldownSeconds.Value));
+        }
+        if (expiresAtIso is not null)
+        {
+            sets.Add("expires_at = @ExpiresAt");
+            // Sentinel "__null__" means clear → permanent; any other
+            // value is the new ISO timestamp.
+            p.Add("ExpiresAt", expiresAtIso == "__null__" ? null : expiresAtIso);
+        }
+        if (note is not null)
+        {
+            sets.Add("note = @Note");
+            p.Add("Note", string.IsNullOrEmpty(note) ? null : note);
+        }
+        if (sets.Count == 0) return false; // nothing to update
+
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var sql = "UPDATE mcp_session_grants SET " + string.Join(", ", sets) + " WHERE id = @Id";
+        var rows = await conn.ExecuteAsync(sql, p);
+        return rows > 0;
+    }
+
     public async Task RecordMatchAsync(string id, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(id)) return;

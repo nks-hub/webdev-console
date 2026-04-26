@@ -220,6 +220,20 @@
       </el-table-column>
     </el-table>
 
+    <!-- Phase 7.5+++ — pagination. Hidden when total fits on one page;
+         shows when filtered set crosses pageSize. -->
+    <el-pagination
+      v-if="totalGrants > pageSize"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :total="totalGrants"
+      :page-sizes="[20, 50, 100, 200]"
+      layout="total, sizes, prev, pager, next, jumper"
+      class="grants-pagination"
+      @current-change="refresh"
+      @size-change="refresh"
+    />
+
     <!-- Phase 7.5+++ — Test match dialog. Dry-run query that hits the
          same FindMatchingActiveAsync path the validator uses, so the
          result tells operators exactly which grant would auto-confirm
@@ -360,6 +374,13 @@ const tableRef = ref<unknown>(null)
 
 // Phase 7.5+++ — manual sweep trigger ("clean now" button).
 const sweeping = ref(false)
+
+// Phase 7.5+++ — pagination state. `totalGrants` comes from server's
+// `total` field; `grants` is the current page only. Page changes
+// trigger refresh. Default 50 to match daemon default.
+const currentPage = ref(1)
+const pageSize = ref(50)
+const totalGrants = ref(0)
 
 // Phase 7.5+++ — audit view: when on, fetches with ?includeRevoked=true
 // so soft-revoked rows appear too (visually muted in the table).
@@ -598,9 +619,11 @@ onBeforeUnmount(() => {
 async function refresh(): Promise<void> {
   loading.value = true
   try {
-    // Phase 7.5+++ — pass includeRevoked so audit view sees full set.
-    const r = await listMcpGrants(includeRevoked.value)
+    // Phase 7.5+++ — pass includeRevoked + page/pageSize so audit view
+    // sees full set and pagination works server-side.
+    const r = await listMcpGrants(includeRevoked.value, currentPage.value, pageSize.value)
     grants.value = r.entries
+    totalGrants.value = r.total ?? r.count
   } catch (e) {
     ElMessage.error(t('mcpGrants.toastLoadFailed', { error: (e as Error).message }))
   } finally {

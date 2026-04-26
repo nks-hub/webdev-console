@@ -259,15 +259,45 @@ export interface McpGrantCreateBody {
   minCooldownSeconds?: number
 }
 
+export interface McpGrantsListResult {
+  count: number
+  total?: number
+  page?: number
+  pageSize?: number
+  totalPages?: number
+  entries: McpGrantRow[]
+}
+
 export const listMcpGrants = (
   includeRevoked = false,
-): Promise<{ count: number; entries: McpGrantRow[] }> => {
-  // Phase 7.5+++ — opt-in audit view that includes soft-revoked +
-  // expired rows. Default false preserves McpHub badge semantics
-  // (counts only currently-active grants).
-  const qs = includeRevoked ? '?includeRevoked=true' : ''
-  return json(`/api/mcp/grants${qs}`)
+  page?: number,
+  pageSize?: number,
+): Promise<McpGrantsListResult> => {
+  // Phase 7.5+++ — opt-in audit view + pagination. Defaults preserve
+  // backward compat (single un-paged response when page/pageSize omitted
+  // — daemon still applies its default 50-row page).
+  const params = new URLSearchParams()
+  if (includeRevoked) params.set('includeRevoked', 'true')
+  if (page !== undefined) params.set('page', String(page))
+  if (pageSize !== undefined) params.set('pageSize', String(pageSize))
+  const qs = params.toString()
+  return json(`/api/mcp/grants${qs ? `?${qs}` : ''}`)
 }
+
+export interface McpGrantUpdateBody {
+  minCooldownSeconds?: number
+  expiresAt?: string | null  // null = make permanent
+  note?: string
+}
+
+export const updateMcpGrant = (
+  id: string,
+  body: McpGrantUpdateBody,
+): Promise<{ id: string; status: string }> =>
+  json(`/api/mcp/grants/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
 
 // ----------------------------------------------------------------------------
 // Phase 7.4b — registered destructive op kinds (deploy/restore/+ plugin-defined).

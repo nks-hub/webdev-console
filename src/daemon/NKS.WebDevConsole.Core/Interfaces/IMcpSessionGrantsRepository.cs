@@ -44,6 +44,26 @@ public interface IMcpSessionGrantsRepository
     Task<bool> RevokeAsync(string id, CancellationToken ct);
 
     /// <summary>
+    /// Phase 7.5+++ — partial update of operator-tunable fields on an
+    /// existing grant. Identity fields (scope_type, scope_value, kind/
+    /// target patterns, granted_at, granted_by) are immutable — change
+    /// those would break the audit chain. Telemetry (match_count,
+    /// last_matched_at) is also untouched. Returns true if a row was
+    /// updated, false if the id was unknown.
+    ///
+    /// Null parameters mean "leave unchanged"; pass the new value to
+    /// overwrite. <paramref name="expiresAtIso"/> uses sentinel
+    /// <c>"__null__"</c> to explicitly clear (set to permanent), since
+    /// plain null would mean "don't touch".
+    /// </summary>
+    Task<bool> UpdateMutableAsync(
+        string id,
+        int? minCooldownSeconds,
+        string? expiresAtIso,
+        string? note,
+        CancellationToken ct);
+
+    /// <summary>
     /// Find the FIRST active grant that matches the calling context.
     /// Match rules:
     /// <list type="bullet">

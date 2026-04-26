@@ -1486,7 +1486,9 @@ app.MapGet("/api/mcp/grants", async (
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
     CancellationToken ct,
-    bool? includeRevoked = null) =>
+    bool? includeRevoked = null,
+    int? page = null,
+    int? pageSize = null) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     // Phase 7.5+++ — opt-in audit view. Nullable + default null so the
@@ -1495,7 +1497,26 @@ app.MapGet("/api/mcp/grants", async (
     var rows = includeRevoked == true
         ? await grants.ListAllAsync(ct)
         : await grants.ListActiveAsync(ct);
-    return Results.Ok(new { count = rows.Count, entries = rows });
+    var total = rows.Count;
+    // Phase 7.5+++ — pagination on top of the in-memory list. Defaults
+    // (page=1, pageSize=50) keep BC for callers that don't pass params.
+    // Page 0 / negative is treated as 1; pageSize clamped to [1, 500]
+    // to bound payload size.
+    var p = Math.Max(1, page ?? 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 500);
+    var skip = (p - 1) * ps;
+    var paged = skip >= total
+        ? new List<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>()
+        : rows.Skip(skip).Take(ps).ToList();
+    return Results.Ok(new
+    {
+        count = paged.Count,
+        total,
+        page = p,
+        pageSize = ps,
+        totalPages = (total + ps - 1) / ps,
+        entries = paged,
+    });
 });
 
 // Create a grant. Body shape:
@@ -1732,6 +1753,57 @@ app.MapPost("/api/mcp/grants/sweep-now", async (
         catch { /* SSE best-effort */ }
     }
     return Results.Ok(new { deleted });
+});
+
+// Phase 7.5+++ — partial update of an existing grant. Only mutable
+// operator-tunable fields (cooldown, expiresAt, note) — identity and
+// telemetry are immutable. Body shape:
+//   { "minCooldownSeconds": 60?,
+//     "expiresAt": "2026-05-01T00:00:00Z" | null,  ← null = make permanent
+//     "note": "updated reason" }
+// Any field omitted = leave unchanged. Returns 200 with id, 404 if not
+// found, 400 if body has nothing to change.
+app.MapPatch("/api/mcp/grants/{id}", async (
+    string id,
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    System.Text.Json.JsonDocument doc;
+    try { doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON body" }); }
+    using var _ = doc;
+    var root = doc.RootElement;
+
+    int? cooldown = null;
+    string? expiresAt = null;
+    string? note = null;
+    if (root.TryGetProperty("minCooldownSeconds", out var cdEl) && cdEl.ValueKind == System.Text.Json.JsonValueKind.Number)
+        cooldown = cdEl.GetInt32();
+    if (root.TryGetProperty("expiresAt", out var exEl))
+    {
+        // Distinguish "absent" vs "null" vs "string". Null in JSON → set
+        // permanent (sentinel "__null__"); string → use as-is.
+        if (exEl.ValueKind == System.Text.Json.JsonValueKind.Null) expiresAt = "__null__";
+        else if (exEl.ValueKind == System.Text.Json.JsonValueKind.String) expiresAt = exEl.GetString();
+    }
+    if (root.TryGetProperty("note", out var noteEl) && noteEl.ValueKind == System.Text.Json.JsonValueKind.String)
+        note = noteEl.GetString();
+
+    if (cooldown is null && expiresAt is null && note is null)
+        return Results.BadRequest(new { error = "no_mutable_fields", hint = "send minCooldownSeconds, expiresAt, or note" });
+
+    var ok = await grants.UpdateMutableAsync(id, cooldown, expiresAt, note, ct);
+    if (!ok) return Results.NotFound(new { error = "grant_not_found", id });
+
+    try
+    {
+        await eventsBus.BroadcastAsync("mcp:grant-changed", new { change = "updated", id });
+    }
+    catch { /* SSE best-effort */ }
+    return Results.Ok(new { id, status = "updated" });
 });
 
 // Phase 7.5+++ — bulk import grants from a previously-exported envelope.

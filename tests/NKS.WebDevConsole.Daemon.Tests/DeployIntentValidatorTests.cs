@@ -118,6 +118,7 @@ public sealed class DeployIntentValidatorTests
             string kind, string target, CancellationToken ct) =>
             Task.FromResult<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?>(null);
         public Task RecordMatchAsync(string id, CancellationToken ct) => Task.CompletedTask;
+        public Task<bool> UpdateMutableAsync(string id, int? minCooldownSeconds, string? expiresAtIso, string? note, CancellationToken ct) => Task.FromResult(false);
     }
 
     // --- Allow path ---
@@ -565,6 +566,7 @@ public sealed class DeployIntentValidatorTests
             RecordedMatches++;
             return Task.CompletedTask;
         }
+        public Task<bool> UpdateMutableAsync(string id, int? minCooldownSeconds, string? expiresAtIso, string? note, CancellationToken ct) => Task.FromResult(false);
     }
 
     // --- Allow: allowUnconfirmed pre-stamps confirmed_at ---
