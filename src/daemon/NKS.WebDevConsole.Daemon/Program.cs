@@ -1701,20 +1701,36 @@ app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
 });
 
 // GET /sites/{domain}/groups — list multi-host deploy groups for site.
-app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", (string domain, int? limit) =>
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", async (
+    string domain, int? limit,
+    NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
+    CancellationToken ct) =>
 {
-    // Stub: empty list. Real backend would query deploy_groups table.
-    return Results.Ok(new
+    var rows = await groups.ListForDomainAsync(domain, limit ?? 50, ct);
+    var entries = rows.Select(g => new
     {
-        domain, count = 0,
-        entries = Array.Empty<object>(),
-    });
+        id          = g.Id,
+        domain      = g.Domain,
+        hosts       = g.Hosts,
+        hostDeployIds = g.HostDeployIds,
+        phase       = g.Phase,
+        startedAt   = g.StartedAt.ToString("o"),
+        completedAt = g.CompletedAt?.ToString("o"),
+        errorMessage = g.ErrorMessage,
+        triggeredBy = g.TriggeredBy,
+    }).ToList();
+    return Results.Ok(new { domain, count = entries.Count, entries });
 });
 
 // POST /sites/{domain}/groups — start a multi-host deploy group.
-// Stub: returns a fake groupId + idempotencyKey + hostCount echoed back.
+// Phase 7.5++ persists to deploy_groups table + spawns one DeployRunRow
+// per host (BackendId='dummy-group') so the GUI's Groups tab + drilldown
+// both show real data. Hosts list of length < 2 → 400.
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
-    string domain, HttpContext ctx, CancellationToken ct) =>
+    string domain, HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
     var root = doc.RootElement;
@@ -1723,20 +1739,67 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
         : new List<string>();
     if (hosts.Count < 2)
         return Results.BadRequest(new { error = "groups_require_2_or_more_hosts", got = hosts.Count });
+
     var groupId = Guid.NewGuid().ToString("D");
+    var now = DateTimeOffset.UtcNow;
+
+    // Spawn one DeployRunRow per host + capture (host → deployId) map.
+    var hostDeployIds = new Dictionary<string, string>(hosts.Count);
+    foreach (var host in hosts)
+    {
+        var deployId = Guid.NewGuid().ToString("D");
+        await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
+            Id: deployId, Domain: domain, Host: host,
+            ReleaseId: now.ToString("yyyyMMdd_HHmmss"),
+            Branch: null, CommitSha: null,
+            Status: "completed", IsPastPonr: true,
+            StartedAt: now, CompletedAt: now,
+            ExitCode: 0, ErrorMessage: null, DurationMs: 50,
+            TriggeredBy: "gui", BackendId: "dummy-group",
+            CreatedAt: now, UpdatedAt: now,
+            GroupId: groupId), ct);
+        hostDeployIds[host] = deployId;
+    }
+
+    await groups.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployGroupRow(
+        Id: groupId, Domain: domain, Hosts: hosts,
+        HostDeployIds: hostDeployIds,
+        // Schema CHECK accepts only specific phase values — 'all_succeeded'
+        // is the happy-path terminal phase per migration 009. Don't use
+        // 'completed' here (that's deploy_runs.status, different vocab).
+        Phase: "all_succeeded", StartedAt: now, CompletedAt: now,
+        ErrorMessage: null, TriggeredBy: "gui",
+        CreatedAt: now, UpdatedAt: now), ct);
+
     return Results.Ok(new
     {
         groupId,
         idempotencyKey = Guid.NewGuid().ToString("D"),
         hostCount = hosts.Count,
-        note = "dummy backend — Phase 7.5+ stub (no actual fan-out)",
+        note = "dummy backend — Phase 7.5+ persists rows but doesn't actually fan out",
     });
 });
 
-// POST /sites/{domain}/groups/{groupId}/rollback — cascade rollback every committed host.
-app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback",
-    (string domain, string groupId) =>
-        Results.Ok(new { groupId, status = "rolled_back", note = "dummy stub" }));
+// POST /sites/{domain}/groups/{groupId}/rollback — cascade rollback
+// every committed host. Phase 7.5++ also flips per-host deploy_runs
+// rows to status='rolled_back' so Groups tab → drilldown shows the
+// rollback state, not stale Done.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", async (
+    string domain, string groupId,
+    NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
+{
+    var grp = await groups.GetByIdAsync(groupId, ct);
+    if (grp is null || !string.Equals(grp.Domain, domain, StringComparison.OrdinalIgnoreCase))
+        return Results.NotFound(new { error = "group_not_found", groupId });
+
+    foreach (var (_, deployId) in grp.HostDeployIds)
+    {
+        try { await runs.UpdateStatusAsync(deployId, "rolled_back", ct); } catch { }
+    }
+    return Results.Ok(new { groupId, status = "rolled_back", hostCount = grp.Hosts.Count });
+});
 
 // Phase 7.5+ — on-demand snapshot WITHOUT a deploy. Frontend's
 // "Snapshot database now" button in DeploySettingsPanel hits this.

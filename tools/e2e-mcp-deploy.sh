@@ -441,9 +441,26 @@ GRP_ID=$(echo "$GRP_OK" | python3 -c "import sys,json; print(json.load(sys.stdin
 step "group start with 3 hosts returns groupId" "$GRP_OK" '"hostCount":3'
 step "group start returns idempotencyKey" "$GRP_OK" '"idempotencyKey":"'
 
+# Phase 7.5++ — group should now persist + appear in /groups list
+GRP_LIST_2=$(api GET /api/nks.wdc.deploy/sites/blog.loc/groups)
+step "groups list shows the new group" "$GRP_LIST_2" "\"id\":\"$GRP_ID\""
+step "group lists 3 hosts" "$GRP_LIST_2" '"hosts":\["production","staging","canary"\]'
+step "group has hostDeployIds map" "$GRP_LIST_2" '"hostDeployIds":\{'
+
+# 3 child deploy_runs should exist tagged with this groupId+backend_id
+HIST_AFTER_GRP=$(api GET '/api/nks.wdc.deploy/sites/blog.loc/history?limit=20')
+GRP_RUN_COUNT=$(echo "$HIST_AFTER_GRP" | python3 -c "import sys,json,re; entries=json.load(sys.stdin)['entries']; print(sum(1 for e in entries if e.get('host') in ('production','staging','canary')))")
+step "history has at least 3 child runs from group" "$GRP_RUN_COUNT" '^[3-9][0-9]*$|^[1-9][0-9]+$'
+
 # Cascade rollback
 GRP_RB=$(api POST /api/nks.wdc.deploy/sites/blog.loc/groups/$GRP_ID/rollback -d '{}')
 step "group cascade rollback returns rolled_back" "$GRP_RB" '"status":"rolled_back"'
+step "group rollback reports 3-host count" "$GRP_RB" '"hostCount":3'
+
+# Cascade rollback non-existent group
+GRP_RB_404=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/groups/no-such-group/rollback")
+step "rollback non-existent group → 404 group_not_found" "$GRP_RB_404" 'group_not_found.*404'
 
 # ============================================================================
 echo ""; echo "${YEL}=== U. on-demand snapshot-now (DeploySettingsPanel button) ===${END}"
@@ -770,9 +787,10 @@ for cand in "$(which sqlite3 2>/dev/null)" \
 done
 WDC_DB="$HOME/.wdc/data/state.db"
 if [ -n "$SQLITE_BIN" ] && [ -f "$WDC_DB" ]; then
-    BEFORE=$("$SQLITE_BIN" "$WDC_DB" "SELECT COUNT(*) FROM deploy_runs WHERE backend_id = 'dummy'")
-    "$SQLITE_BIN" "$WDC_DB" "DELETE FROM deploy_runs WHERE backend_id = 'dummy'" 2>/dev/null
-    AFTER=$("$SQLITE_BIN" "$WDC_DB" "SELECT COUNT(*) FROM deploy_runs WHERE backend_id = 'dummy'")
+    BEFORE=$("$SQLITE_BIN" "$WDC_DB" "SELECT COUNT(*) FROM deploy_runs WHERE backend_id LIKE 'dummy%' OR backend_id = 'manual-snapshot'")
+    "$SQLITE_BIN" "$WDC_DB" "DELETE FROM deploy_runs WHERE backend_id LIKE 'dummy%' OR backend_id = 'manual-snapshot'" 2>/dev/null
+    "$SQLITE_BIN" "$WDC_DB" "DELETE FROM deploy_groups WHERE triggered_by = 'gui'" 2>/dev/null
+    AFTER=$("$SQLITE_BIN" "$WDC_DB" "SELECT COUNT(*) FROM deploy_runs WHERE backend_id LIKE 'dummy%' OR backend_id = 'manual-snapshot'")
     echo "  → cleaned $BEFORE dummy deploy rows (now $AFTER) via $SQLITE_BIN"
 else
     echo "  → sqlite client not found, skipping cleanup (DB at $WDC_DB)"
