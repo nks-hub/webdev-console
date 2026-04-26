@@ -336,6 +336,12 @@ export interface DeployGroupEntry {
   domain: string
   hosts: string[]
   hostDeployIds: Record<string, string>
+  /**
+   * Phase 6.15b — per-host terminal status from deploy_runs.status.
+   * Keyed by host name. Empty/missing keys = pre-fan-out or status not
+   * recorded. Used for "replay only failed hosts" subset offer.
+   */
+  hostStatuses?: Record<string, string>
   phase: DeployGroupPhase
   startedAt: string
   completedAt: string | null

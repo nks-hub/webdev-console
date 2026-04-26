@@ -243,24 +243,75 @@ function canReplay(row: DeployGroupEntry): boolean {
   return row.hosts.length > 0
 }
 
+/**
+ * Phase 6.15b — return the host names that did NOT complete successfully.
+ * "Failed" = anything in hostStatuses NOT equal to 'completed'. Hosts
+ * with no entry in hostStatuses are also treated as failed (the run
+ * never started or its row vanished — still want to retry them).
+ */
+function failedHosts(row: DeployGroupEntry): string[] {
+  const statuses = row.hostStatuses ?? {}
+  return row.hosts.filter((h) => (statuses[h] ?? 'unknown') !== 'completed')
+}
+
 async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
   if (replayingId.value !== null) return
-  try {
-    await ElMessageBox.confirm(
-      `Re-run this group with the same hosts (${row.hosts.length})?\n\n` +
-        `Hosts: ${row.hosts.join(', ')}\n` +
-        `Original group: ${row.id.slice(0, 8)}…\n\n` +
-        `A new groupId will be minted; the original row stays unchanged ` +
-        `as audit history.`,
-      'Confirm group replay',
-      { type: 'warning', confirmButtonText: 'Replay group', cancelButtonText: 'Cancel' },
-    )
-  } catch { return }
+
+  const failed = failedHosts(row)
+  const allHosts = row.hosts
+  const hasMixedOutcome = failed.length > 0 && failed.length < allHosts.length
+
+  // When some hosts succeeded and others failed (typical partial_failure
+  // case), offer the operator the choice of replaying ONLY the failed
+  // ones (faster, doesn't disturb successful releases) or all hosts
+  // (full re-run for consistency).
+  let hostsToReplay: string[]
+  if (hasMixedOutcome) {
+    let choice: string
+    try {
+      choice = await ElMessageBox.confirm(
+        `Original group had mixed outcomes:\n` +
+          `  Succeeded: ${allHosts.length - failed.length} (${allHosts.filter((h) => !failed.includes(h)).join(', ')})\n` +
+          `  Failed: ${failed.length} (${failed.join(', ')})\n\n` +
+          `Replay only the FAILED hosts (recommended) or ALL hosts?`,
+        'Replay subset?',
+        {
+          confirmButtonText: `Failed only (${failed.length})`,
+          cancelButtonText: `All hosts (${allHosts.length})`,
+          distinguishCancelAndClose: true,
+          type: 'warning',
+        },
+      )
+    } catch (e) {
+      // ElMessageBox throws "cancel" for the cancel button and "close"
+      // when dismissed via X/Esc. We treat cancel as "all hosts" choice;
+      // close = abort the replay entirely.
+      const action = (e as Error).message === 'close' || e === 'close' ? 'close' : 'cancel'
+      if (action === 'close') return
+      choice = 'cancel'
+    }
+    hostsToReplay = choice === 'confirm' ? failed : allHosts
+  } else {
+    try {
+      await ElMessageBox.confirm(
+        `Re-run this group with the same hosts (${allHosts.length})?\n\n` +
+          `Hosts: ${allHosts.join(', ')}\n` +
+          `Original group: ${row.id.slice(0, 8)}…\n\n` +
+          `A new groupId will be minted; the original row stays unchanged ` +
+          `as audit history.`,
+        'Confirm group replay',
+        { type: 'warning', confirmButtonText: 'Replay group', cancelButtonText: 'Cancel' },
+      )
+    } catch { return }
+    hostsToReplay = allHosts
+  }
 
   replayingId.value = row.id
   try {
-    const result = await startDeployGroup(props.domain, row.hosts)
-    ElMessage.success(`Replay started — new group ${result.groupId.slice(0, 8)}…`)
+    const result = await startDeployGroup(props.domain, hostsToReplay)
+    ElMessage.success(
+      `Replay started (${hostsToReplay.length} hosts) — new group ${result.groupId.slice(0, 8)}…`,
+    )
     await refresh()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

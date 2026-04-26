@@ -136,6 +136,30 @@ public sealed class DeployRunsRepository : IDeployRunsRepository
         return rows.Select(r => r.ToRecord()).ToList();
     }
 
+    public async Task<IReadOnlyList<DeployRunRow>> ListByGroupAsync(string groupId, CancellationToken ct)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var rows = await conn.QueryAsync<RawRow>(
+            BaseSelect + " WHERE group_id = @GroupId",
+            new { GroupId = groupId });
+        return rows.Select(r => r.ToRecord()).ToList();
+    }
+
+    public async Task SetGroupIdAsync(string deployId, string groupId, CancellationToken ct)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(
+            "UPDATE deploy_runs SET group_id = @GroupId, updated_at = @UpdatedAt WHERE id = @Id",
+            new
+            {
+                Id = deployId,
+                GroupId = groupId,
+                UpdatedAt = DateTimeOffset.UtcNow.ToString("o"),
+            });
+    }
+
     public async Task UpdatePreDeployBackupAsync(
         string deployId,
         string path,

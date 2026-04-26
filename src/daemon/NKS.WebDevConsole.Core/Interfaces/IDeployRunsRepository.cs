@@ -67,6 +67,23 @@ public interface IDeployRunsRepository
         CancellationToken ct);
 
     /// <summary>
+    /// Phase 6.15b — list every per-host run that belongs to the given
+    /// group_id. Used by the group history endpoint to enrich the
+    /// hostDeployIds map with per-host terminal status, so the GUI can
+    /// offer "replay only failed hosts" as a refined replay action.
+    /// Order is unspecified — callers index by host name.
+    /// </summary>
+    Task<IReadOnlyList<DeployRunRow>> ListByGroupAsync(string groupId, CancellationToken ct);
+
+    /// <summary>
+    /// Phase 6.15b — stamp the group_id FK on a per-host deploy run.
+    /// Called by the group coordinator after the per-host StartDeployAsync
+    /// returns its deployId so the run row joins into ListByGroupAsync.
+    /// Idempotent — overwrites any prior value.
+    /// </summary>
+    Task SetGroupIdAsync(string deployId, string groupId, CancellationToken ct);
+
+    /// <summary>
     /// Rows still marked 'running' / 'awaiting_soak' / 'rolling_back'. Daemon
     /// queries this on startup for stale-run recovery — anything still here
     /// after a daemon restart had its supervising subprocess killed and needs
