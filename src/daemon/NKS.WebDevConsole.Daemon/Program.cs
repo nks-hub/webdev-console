@@ -812,28 +812,12 @@ app.Lifetime.ApplicationStarted.Register(() =>
             }
             if (sitesEnabled is null) return;
 
-            var stale = new List<string>();
-            var portRegex = new System.Text.RegularExpressions.Regex(
-                @"<VirtualHost\s+\*:(\d+)\s*>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            foreach (var path in Directory.EnumerateFiles(sitesEnabled, "*.conf"))
-            {
-                try
-                {
-                    var content = await File.ReadAllTextAsync(path);
-                    var matches = portRegex.Matches(content);
-                    foreach (System.Text.RegularExpressions.Match m in matches)
-                    {
-                        if (!int.TryParse(m.Groups[1].Value, out var port)) continue;
-                        if (port != httpPort && port != httpsPort)
-                        {
-                            stale.Add(Path.GetFileName(path));
-                            break;
-                        }
-                    }
-                }
-                catch { /* unreadable file — skip; next sweep retries */ }
-            }
+            // Phase 6.22 — extracted scan into VhostStalePortScanner so
+            // the regex + file-walk logic is testable without spinning
+            // the full ApplicationStarted hook.
+            var acceptablePorts = new HashSet<int> { httpPort, httpsPort };
+            var stale = NKS.WebDevConsole.Daemon.Apache.VhostStalePortScanner
+                .FindStaleFiles(sitesEnabled, acceptablePorts).ToList();
 
             if (stale.Count == 0)
             {
