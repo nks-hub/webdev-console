@@ -77,7 +77,16 @@
     "composer": "Composer",
     "hosts": "Hosts soubor",
     "mcpIntents": "MCP Intents",
-    "mcpGrants": "MCP oprávnění"
+    "mcpGrants": "MCP oprávnění",
+    "mcp": "MCP"
+  },
+  "mcpHub": {
+    "title": "Model Context Protocol",
+    "description": "Audit log každého podepsaného AI požadavku (Intents) plus trvalá pravidla, která předem schvalují další požadavky (Oprávnění).",
+    "tabs": {
+      "intents": "Intents (audit log)",
+      "grants": "Oprávnění (pravidla důvěry)"
+    }
   },
   "composer": {
     "title": "Composer",
@@ -610,6 +619,38 @@
       "soakSeconds": "Soak (sekundy)",
       "composerInstall": "Spustit composer install",
       "runMigrations": "Spustit migrace"
+    },
+    "wizard": {
+      "step1Title": "Detaily hosta",
+      "step2Title": "Strategie",
+      "step3Title": "Ověření",
+      "host": "Název cíle (používá se v URL)",
+      "hostHint": "Krátký slug jako „production“ nebo „staging“. Používá se v URL a CLI příkazech.",
+      "hostnameField": "SSH host",
+      "hostnameHint": "Hostname nebo IP, kam CI připojuje ssh. Musí být dosažitelný z tohoto stroje.",
+      "userField": "SSH user",
+      "deployPath": "Vzdálená cesta pro deploy",
+      "deployPathHint": "Absolutní cesta na vzdáleném hostu, kam se nahrávají release. Vytvoří se, pokud chybí.",
+      "branch": "Větev",
+      "healthCheckUrl": "URL health checku",
+      "healthCheckHint": "Endpoint, který vrátí 200 jakmile je nová verze živá. Při selhání spustí auto-rollback.",
+      "keepReleases": "Ponechat N starých releasů",
+      "autoRollback": "Auto-rollback při selhání health checku",
+      "reviewTitle": "Zkontrolujte a dokončete",
+      "reviewBody": "Průvodce zapíše deploy.neon (a deploy.local.neon pro tajné údaje). Soubor leží v rootu projektu a lze ho commitnout do gitu.",
+      "summary": {
+        "target": "Cíl",
+        "sshHost": "SSH host",
+        "remotePath": "Vzdálená cesta",
+        "branch": "Větev",
+        "healthCheck": "Health check",
+        "healthCheckNone": "žádný",
+        "keepReleases": "Ponechat releasů"
+      },
+      "back": "Zpět",
+      "cancel": "Zrušit",
+      "next": "Další",
+      "finish": "Dokončit nastavení"
     },
     "snapshot": {
       "title": "DB snapshot před deployem",

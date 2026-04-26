@@ -77,7 +77,16 @@
     "composer": "Composer",
     "hosts": "Hosts file",
     "mcpIntents": "MCP Intents",
-    "mcpGrants": "MCP Grants"
+    "mcpGrants": "MCP Grants",
+    "mcp": "MCP"
+  },
+  "mcpHub": {
+    "title": "Model Context Protocol",
+    "description": "Audit trail of every signed AI request (Intents) plus persistent trust rules that pre-approve future requests (Grants).",
+    "tabs": {
+      "intents": "Intents (audit log)",
+      "grants": "Grants (trust policy)"
+    }
   },
   "composer": {
     "title": "Composer",
@@ -610,6 +619,38 @@
       "soakSeconds": "Soak seconds",
       "composerInstall": "Composer install",
       "runMigrations": "Run migrations"
+    },
+    "wizard": {
+      "step1Title": "Host details",
+      "step2Title": "Strategy",
+      "step3Title": "Verify",
+      "host": "Target name (used in URL)",
+      "hostHint": "Short slug like \"production\" or \"staging\". Used in URL paths and CLI commands.",
+      "hostnameField": "SSH host",
+      "hostnameHint": "Hostname or IP your CI runs ssh against. Must be reachable from this machine.",
+      "userField": "SSH user",
+      "deployPath": "Remote deploy path",
+      "deployPathHint": "Absolute path on the remote host where releases land. Will be created if missing.",
+      "branch": "Branch",
+      "healthCheckUrl": "Health check URL",
+      "healthCheckHint": "Endpoint that returns 200 once the new release is live. Triggers auto-rollback if it fails.",
+      "keepReleases": "Keep N old releases",
+      "autoRollback": "Auto-rollback on health check failure",
+      "reviewTitle": "Review and finish",
+      "reviewBody": "The wizard will write deploy.neon (and deploy.local.neon for any secrets you supplied). The file lives in your project root and is committable to git.",
+      "summary": {
+        "target": "Target",
+        "sshHost": "SSH host",
+        "remotePath": "Remote path",
+        "branch": "Branch",
+        "healthCheck": "Health check",
+        "healthCheckNone": "none",
+        "keepReleases": "Keep releases"
+      },
+      "back": "Back",
+      "cancel": "Cancel",
+      "next": "Next",
+      "finish": "Finish setup"
     },
     "snapshot": {
       "title": "Pre-deploy DB snapshot",

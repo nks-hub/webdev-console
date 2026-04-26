@@ -184,24 +184,16 @@
            Phase 6.23 — gated by featureFlagsStore.mcpEnabled (default
            false). Advanced-only AND mcp.enabled=true to render —
            hidden by default for operators not running AI agents. -->
+      <!-- Phase 7.3 — single MCP hub entry; tabs inside the page split
+           between Intents (audit log) and Oprávnění (persistent grants). -->
       <div
         v-if="uiModeStore.isAdvanced && featureFlagsStore.showMcpSurface"
         class="nav-item"
-        :class="{ active: isActive('/mcp/intents') }"
+        :class="{ active: isActive('/mcp/intents') || isActive('/mcp/grants') }"
         @click="navigate('/mcp/intents')"
       >
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.mcpIntents') }}</span>
-      </div>
-      <!-- Phase 7.3 — persistent trust grants admin (list / revoke). -->
-      <div
-        v-if="uiModeStore.isAdvanced && featureFlagsStore.showMcpSurface"
-        class="nav-item"
-        :class="{ active: isActive('/mcp/grants') }"
-        @click="navigate('/mcp/grants')"
-      >
-        <span class="nav-icon-shell"><el-icon :size="18"><Key /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.mcpGrants') }}</span>
+        <span class="nav-label">{{ $t('nav.mcp') }}</span>
       </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
