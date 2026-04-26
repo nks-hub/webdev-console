@@ -772,6 +772,139 @@ app.Lifetime.ApplicationStarted.Register(() =>
     });
 });
 
+// ---------------------------------------------------------------------------
+// Phase 6.20b — boot-time vhost stale-port heal.
+//
+// Production 0.2.25 hit a bug where changing Apache HttpPort via Settings
+// reloaded the service binary but DIDN'T regenerate per-site vhost configs.
+// The fix in PUT /api/settings prevents new occurrences. This sweep on boot
+// auto-heals existing broken installs: scan every per-site vhost in
+// sites-enabled/, parse the `<VirtualHost *:PORT>` line, compare to the
+// current Apache settings ports. If ANY mismatch found, log + bulk
+// regenerate every site's vhost so Apache reload picks up fresh files.
+//
+// Fire-and-forget — failure is non-fatal; the next port-change PUT or the
+// next daemon boot retries.
+// ---------------------------------------------------------------------------
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = Task.Run(async () =>
+    {
+        var healLogger = app.Services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("VhostStalePortHeal");
+        try
+        {
+            var settings = app.Services.GetRequiredService<SettingsStore>();
+            var httpPort = settings.GetInt("ports", "http", defaultValue: 80);
+            var httpsPort = settings.GetInt("ports", "https", defaultValue: 443);
+
+            // Find Apache's sites-enabled dir via the active version under
+            // ~/.wdc/binaries/apache. We don't reflect into the module here
+            // because boot-order may not have it ready yet — direct path
+            // scan is more robust.
+            var apacheRoot = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BinariesRoot, "apache");
+            if (!Directory.Exists(apacheRoot)) return;
+            string? sitesEnabled = null;
+            foreach (var versionDir in Directory.EnumerateDirectories(apacheRoot))
+            {
+                var candidate = Path.Combine(versionDir, "conf", "sites-enabled");
+                if (Directory.Exists(candidate)) { sitesEnabled = candidate; break; }
+            }
+            if (sitesEnabled is null) return;
+
+            var stale = new List<string>();
+            var portRegex = new System.Text.RegularExpressions.Regex(
+                @"<VirtualHost\s+\*:(\d+)\s*>",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            foreach (var path in Directory.EnumerateFiles(sitesEnabled, "*.conf"))
+            {
+                try
+                {
+                    var content = await File.ReadAllTextAsync(path);
+                    var matches = portRegex.Matches(content);
+                    foreach (System.Text.RegularExpressions.Match m in matches)
+                    {
+                        if (!int.TryParse(m.Groups[1].Value, out var port)) continue;
+                        if (port != httpPort && port != httpsPort)
+                        {
+                            stale.Add(Path.GetFileName(path));
+                            break;
+                        }
+                    }
+                }
+                catch { /* unreadable file — skip; next sweep retries */ }
+            }
+
+            if (stale.Count == 0)
+            {
+                healLogger.LogDebug("Vhost stale-port heal: no stale ports detected ({Http}/{Https})",
+                    httpPort, httpsPort);
+                return;
+            }
+
+            healLogger.LogWarning(
+                "Vhost stale-port heal: {Count} site vhost(s) reference ports outside the current " +
+                "settings ({Http}/{Https}); bulk-regenerating. Stale files: {Files}",
+                stale.Count, httpPort, httpsPort, string.Join(", ", stale.Take(5)) +
+                    (stale.Count > 5 ? $" and {stale.Count - 5} more" : ""));
+
+            // Reflect into the Apache module like the PUT handler does.
+            var sp = app.Services;
+            var modules = sp.GetServices<IServiceModule>().ToArray();
+            var apache = modules.FirstOrDefault(m =>
+                string.Equals(m.ServiceId, "apache", StringComparison.OrdinalIgnoreCase));
+            if (apache is null) return;
+            var generateVhost = apache.GetType().GetMethod("GenerateVhostAsync");
+            if (generateVhost is null) return;
+            var siteRegistry = sp.GetService<NKS.WebDevConsole.Core.Interfaces.ISiteRegistry>();
+            if (siteRegistry is null) return;
+
+            int regenerated = 0;
+            foreach (var (_, siteCfg) in siteRegistry.Sites)
+            {
+                try
+                {
+                    var task = generateVhost.Invoke(apache,
+                        new object[] { siteCfg, CancellationToken.None }) as Task;
+                    if (task is not null) await task;
+                    regenerated++;
+                }
+                catch (Exception perSiteEx)
+                {
+                    healLogger.LogWarning(perSiteEx,
+                        "Stale-port heal: vhost regen for {Domain} failed (continuing with rest)",
+                        siteCfg.Domain);
+                }
+            }
+
+            // Trigger Apache reload so the freshly-written files are picked up.
+            // We don't fail if Apache isn't running yet — the on-start path
+            // will read the corrected files when it does come up.
+            try
+            {
+                var reload = apache.GetType().GetMethod("ReloadAsync", new[] { typeof(CancellationToken) });
+                if (reload is not null)
+                {
+                    var rtask = reload.Invoke(apache, new object[] { CancellationToken.None }) as Task;
+                    if (rtask is not null) await rtask;
+                }
+            }
+            catch (Exception reloadEx)
+            {
+                healLogger.LogWarning(reloadEx,
+                    "Stale-port heal: Apache reload after regen failed (vhost files are still corrected)");
+            }
+
+            healLogger.LogInformation(
+                "Vhost stale-port heal complete: {Count} site(s) regenerated", regenerated);
+        }
+        catch (Exception ex)
+        {
+            healLogger.LogError(ex, "Vhost stale-port heal swept failed");
+        }
+    });
+});
+
 // Health endpoint — no auth required (for monitoring + Electron daemon detection).
 // Returns a unique `service` marker so callers can tell our daemon from
 // another HTTP responder that happens to bind the same port (e.g. macOS
