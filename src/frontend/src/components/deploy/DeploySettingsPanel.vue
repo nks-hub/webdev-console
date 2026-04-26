@@ -1,97 +1,73 @@
 <template>
   <div class="settings-panel">
+    <!-- Phase 7.5+++ Settings redesign — sticky save bar at the top.
+         Always visible while the operator scrolls; dirty indicator shows
+         when there are pending changes; primary CTA saves all sections
+         in one round-trip so individual section "Save" buttons aren't
+         load-bearing anymore. -->
+    <div class="settings-header">
+      <div class="settings-header-left">
+        <span class="settings-domain">{{ domain }}</span>
+        <span class="settings-section-label">· {{ activeSectionLabel }}</span>
+        <el-tag v-if="dirty" type="warning" size="small" effect="dark" class="dirty-tag">
+          ● {{ t('deploySettings.unsavedChanges') }}
+        </el-tag>
+        <el-tag v-else type="success" size="small" effect="plain" class="dirty-tag">
+          ✓ {{ t('deploySettings.allSaved') }}
+        </el-tag>
+      </div>
+      <div class="settings-header-actions">
+        <el-button :disabled="!dirty || saving" plain @click="discardChanges">
+          {{ t('deploySettings.discard') }}
+        </el-button>
+        <el-button type="primary" :disabled="!dirty" :loading="saving" @click="saveSettings">
+          {{ t('deploySettings.saveAll') }}
+        </el-button>
+      </div>
+    </div>
+
     <el-tabs v-model="activeSection" tab-position="left" class="settings-tabs">
 
       <!-- ── A: Hosts ──────────────────────────────────────────── -->
       <el-tab-pane name="hosts" :label="t('deploySettings.tabs.hosts')">
         <div class="section-body">
-          <div class="section-header">
-            <h3 class="section-title">{{ t('deploySettings.hosts.title') }}</h3>
-            <el-button type="primary" size="small" @click="openAddHostModal">
-              {{ t('deploySettings.hosts.addHost') }}
-            </el-button>
+          <div class="section-intro">
+            <h2 class="section-h2">{{ t('deploySettings.hosts.title') }}</h2>
+            <p class="section-lead">{{ t('deploySettings.hosts.lead') }}</p>
           </div>
 
-          <el-table
-            :data="settings.hosts"
-            size="default"
-            :aria-label="t('deploySettings.hosts.title')"
-            class="hosts-table"
-            :empty-text="t('deploySettings.hosts.empty')"
-          >
-            <el-table-column :label="t('deploySettings.hosts.col.name')" prop="name" min-width="120">
-              <template #default="{ row }">
-                <span class="mono">{{ row.name }}</span>
+          <!-- Empty state when no hosts configured: rich CTA panel. -->
+          <div v-if="settings.hosts.length === 0" class="hosts-empty">
+            <el-empty :image-size="100" :description="''">
+              <template #description>
+                <h3 class="empty-title">{{ t('deploySettings.hosts.emptyTitle') }}</h3>
+                <p class="empty-lead">{{ t('deploySettings.hosts.empty') }}</p>
               </template>
-            </el-table-column>
-            <el-table-column :label="t('deploySettings.hosts.col.sshTarget')" min-width="180">
-              <template #default="{ row }">
-                <span class="mono">{{ row.sshUser }}@{{ row.sshHost }}:{{ row.sshPort }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('deploySettings.hosts.col.remotePath')" prop="remotePath" min-width="160">
-              <template #default="{ row }">
-                <span class="mono">{{ row.remotePath }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('deploySettings.hosts.col.branch')" prop="branch" width="100" />
-            <el-table-column :label="t('deploySettings.hosts.col.autoDeploy')" width="110" align="center">
-              <template #default="{ row }">
-                <el-tag
-                  :type="row.composerInstall ? 'success' : 'info'"
-                  size="small"
-                  effect="plain"
-                  :aria-label="row.composerInstall ? t('deploySettings.hosts.ariaComposerEnabled') : t('deploySettings.hosts.ariaComposerDisabled')"
-                >
-                  {{ row.composerInstall ? t('deploySettings.hosts.tagComposer') : t('deploySettings.hosts.tagSkip') }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <!-- Phase 7.5+++ — surface localPaths configuration without
-                 requiring the operator to open the host edit dialog.
-                 A configured host (both source+target) shows a check
-                 with the target path on hover; missing shows muted dash. -->
-            <el-table-column :label="t('deploySettings.hosts.col.localPaths')" width="110" align="center">
-              <template #default="{ row }">
-                <el-tooltip
-                  v-if="row.localSourcePath && row.localTargetPath"
-                  :content="`${row.localSourcePath} → ${row.localTargetPath}`"
-                  placement="top"
-                >
-                  <el-tag type="success" size="small" effect="plain">
-                    {{ t('deploySettings.hosts.tagLocalPathsSet') }}
-                  </el-tag>
-                </el-tooltip>
-                <span v-else class="muted">—</span>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('deploySettings.hosts.col.actions')" width="120" align="right">
-              <template #default="{ row }">
-                <el-button
-                  size="small"
-                  text
-                  :aria-label="t('deploySettings.hosts.ariaEditHost', { name: row.name })"
-                  @click="openEditHostModal(row)"
-                >
-                  {{ t('deploySettings.common.edit') }}
-                </el-button>
-                <el-button
-                  size="small"
-                  text
-                  type="danger"
-                  :aria-label="t('deploySettings.hosts.ariaRemoveHost', { name: row.name })"
-                  @click="removeHost(row.name)"
-                >
-                  {{ t('deploySettings.common.remove') }}
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+              <el-button type="primary" size="large" @click="openAddHostModal">
+                + {{ t('deploySettings.hosts.addFirstHost') }}
+              </el-button>
+            </el-empty>
+          </div>
 
-          <div class="section-footer">
-            <el-button type="primary" :loading="saving" @click="saveSettings">
-              {{ t('deploySettings.hosts.saveHosts') }}
-            </el-button>
+          <!-- Card grid when hosts exist — replaces the bare table. -->
+          <div v-else>
+            <div class="hosts-toolbar">
+              <span class="hosts-count muted">
+                {{ t('deploySettings.hosts.count', { n: settings.hosts.length }) }}
+              </span>
+              <el-button type="primary" size="default" @click="openAddHostModal">
+                + {{ t('deploySettings.hosts.addHost') }}
+              </el-button>
+            </div>
+            <div class="hosts-grid">
+              <HostSettingsCard
+                v-for="h in settings.hosts"
+                :key="h.name"
+                :host="h"
+                @edit="openEditHostModal(h)"
+                @remove="removeHost(h.name)"
+              />
+            </div>
           </div>
         </div>
       </el-tab-pane>
@@ -766,12 +742,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import HostSettingsCard from './HostSettingsCard.vue'
 import {
   fetchDeploySnapshots,
   defaultDeploySettings,
@@ -789,6 +766,36 @@ const props = defineProps<{ domain: string }>()
 const store = useDeploySettingsStore()
 const saving = ref(false)
 const activeSection = ref('hosts')
+
+// Phase 7.5+++ Settings redesign — dirty tracking by snapshotting the
+// last-saved settings JSON on load + every save and comparing against
+// the live reactive copy. Cheap O(n) JSON diff is plenty since the
+// settings payload is small (~kilobytes).
+const lastSavedSnapshot = ref<string>('')
+const dirty = computed(() => JSON.stringify(settings) !== lastSavedSnapshot.value)
+
+const SECTION_LABEL_KEYS: Record<string, string> = {
+  hosts: 'deploySettings.tabs.hosts',
+  snapshots: 'deploySettings.tabs.snapshots',
+  hooks: 'deploySettings.tabs.hooks',
+  notifications: 'deploySettings.tabs.notifications',
+  advanced: 'deploySettings.tabs.advanced',
+}
+const activeSectionLabel = computed(() =>
+  t(SECTION_LABEL_KEYS[activeSection.value] ?? 'deploySettings.tabs.hosts'))
+
+async function discardChanges(): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      t('deploySettings.discardConfirmMessage'),
+      t('deploySettings.discardConfirmTitle'),
+      { type: 'warning' },
+    )
+  } catch { return }
+  const snap = JSON.parse(lastSavedSnapshot.value || '{}') as DeploySettings
+  Object.assign(settings, snap)
+  ElMessage.success(t('deploySettings.discarded'))
+}
 
 // Deep-reactive local copy that we mutate freely; saved explicitly.
 const settings = reactive<DeploySettings>(defaultDeploySettings())
@@ -834,6 +841,7 @@ const ids = {
 onMounted(async () => {
   const loaded = await store.loadForDomain(props.domain)
   Object.assign(settings, loaded)
+  lastSavedSnapshot.value = JSON.stringify(settings)
 
   snapshots.value = await fetchDeploySnapshots(props.domain)
 })
@@ -842,13 +850,15 @@ async function saveSettings(): Promise<void> {
   saving.value = true
   try {
     await store.save(props.domain, { ...settings })
-    ElMessage.success('Settings saved')
+    lastSavedSnapshot.value = JSON.stringify(settings)
+    ElMessage.success(t('deploySettings.saveSuccess'))
   } catch (e) {
     const msg = e instanceof Error ? e.message : ''
     if (msg === 'PENDING_BACKEND') {
-      ElMessage.info('Settings saved locally — persistence to deploy.neon coming in Phase 6.3')
+      lastSavedSnapshot.value = JSON.stringify(settings)
+      ElMessage.info(t('deploySettings.saveLocalOnly'))
     } else {
-      ElMessage.error(msg || 'Failed to save settings')
+      ElMessage.error(msg || t('deploySettings.saveFailed'))
     }
   } finally {
     saving.value = false
@@ -1152,6 +1162,94 @@ defineExpose({ saveSettings })
 .settings-panel {
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+
+/* Phase 7.5+++ Settings redesign — sticky save bar styling */
+.settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  margin-bottom: 16px;
+  gap: 12px;
+}
+.settings-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-domain {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+}
+.settings-section-label {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+.dirty-tag { margin-left: 4px; }
+.settings-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.section-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.section-h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.section-lead {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Hosts grid */
+.hosts-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+.hosts-count { font-size: 13px; }
+.hosts-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+.hosts-empty {
+  padding: 32px 16px;
+  background: var(--el-fill-color-lighter);
+  border: 1px dashed var(--el-border-color-lighter);
+  border-radius: 8px;
+  text-align: center;
+}
+.empty-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+.empty-lead {
+  margin: 0 0 16px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  max-width: 480px;
 }
 
 /* Left-tab layout overrides */
