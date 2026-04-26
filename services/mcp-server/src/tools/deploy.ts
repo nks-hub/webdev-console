@@ -71,6 +71,22 @@ function destructiveGuard(intentToken: string | undefined): { allow: true } | { 
   }
 }
 
+/**
+ * Build the request headers for a destructive call:
+ *  - X-Intent-Token: the HMAC-signed intent (always required for daemon-side validator)
+ *  - X-Allow-Unconfirmed: only when MCP_DEPLOY_AUTO_APPROVE=true; tells the
+ *    daemon to bypass the GUI banner gate (Phase 5.5 Mode A). Without this
+ *    header the daemon returns 425 Too Early until a GUI user clicks Approve.
+ */
+function destructiveHeaders(intentToken: string | undefined): Record<string, string> | undefined {
+  if (!intentToken) return undefined
+  const headers: Record<string, string> = { 'X-Intent-Token': intentToken }
+  if ((process.env.MCP_DEPLOY_AUTO_APPROVE ?? '').toLowerCase() === 'true') {
+    headers['X-Allow-Unconfirmed'] = 'true'
+  }
+  return headers
+}
+
 export function registerDeployTools(server: McpServer, opts: RegisterOptions): void {
   const has = (scope: string) => opts.deployScopes.includes('*') || opts.deployScopes.includes(scope)
   const canRead = has('deploy:read')
@@ -215,14 +231,25 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
         // NksDeploy plugin prefix. Field name is `expiresIn` per the
         // daemon's contract; `kind=deploy` here, callers can mint
         // separate intents for rollback/cancel via the same flow.
-        safe(() =>
-          daemonClient.post('/api/mcp/intents', {
-            domain,
-            host,
-            kind: 'deploy',
-            expiresIn: ttlSeconds,
-          }),
-        ),
+        // After creation we broadcast a `mcp:confirm-request` SSE so the
+        // wdc GUI shows the Approve banner. Best-effort — failure to
+        // broadcast still returns the intent to the AI client.
+        safe(async () => {
+          const created = await daemonClient.post<{ intentId: string; intentToken: string; expiresAt: string }>(
+            '/api/mcp/intents',
+            { domain, host, kind: 'deploy', expiresIn: ttlSeconds },
+          )
+          try {
+            await daemonClient.post('/api/mcp/intents/confirm-request', {
+              intentId: created.intentId,
+              prompt: `AI requests deploy of ${domain} → ${host}`,
+            })
+          } catch {
+            // Non-fatal — GUI may be offline or operator may want to
+            // fall back to MCP_DEPLOY_AUTO_APPROVE.
+          }
+          return created
+        }),
     )
 
     server.registerTool(
@@ -326,7 +353,7 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
         if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
         // Intent token rides as the X-Intent-Token header; the plugin's
         // CheckIntentAsync helper validates it before any destructive work.
-        const headers = intentToken ? { 'X-Intent-Token': intentToken } : undefined
+        const headers = destructiveHeaders(intentToken)
         return safe(() =>
           daemonClient.post(
             `${PREFIX}/sites/${encodeURIComponent(domain)}/hosts/${encodeURIComponent(host)}/deploy`,
@@ -359,7 +386,7 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
       async ({ domain, deployId, intentToken }) => {
         const guard = destructiveGuard(intentToken)
         if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
-        const headers = intentToken ? { 'X-Intent-Token': intentToken } : undefined
+        const headers = destructiveHeaders(intentToken)
         return safe(() =>
           daemonClient.post(
             `${PREFIX}/sites/${encodeURIComponent(domain)}/deploys/${encodeURIComponent(deployId)}/rollback`,
@@ -389,7 +416,7 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
       async ({ domain, deployId, intentToken }) => {
         const guard = destructiveGuard(intentToken)
         if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
-        const headers = intentToken ? { 'X-Intent-Token': intentToken } : undefined
+        const headers = destructiveHeaders(intentToken)
         return safe(() =>
           daemonClient.delete(
             `${PREFIX}/sites/${encodeURIComponent(domain)}/deploys/${encodeURIComponent(deployId)}`,

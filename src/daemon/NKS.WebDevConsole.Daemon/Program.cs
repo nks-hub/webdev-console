@@ -1031,6 +1031,38 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
     return Results.Accepted();
 });
 
+// GUI calls this when the user clicks Approve on the banner that the
+// confirm-request SSE event raised. Single-stamp: only the first POST
+// flips `confirmed_at`; subsequent calls return 409 so a confused
+// double-click can't be mistaken for a fresh approval.
+app.MapPost("/api/mcp/intents/{intentId}/confirm", async (
+    string intentId,
+    NKS.WebDevConsole.Daemon.Data.Database db) =>
+{
+    if (string.IsNullOrWhiteSpace(intentId))
+    {
+        return Results.BadRequest(new { error = "intentId is required" });
+    }
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync();
+    // Pre-check existence so we can distinguish 404 from 409 cleanly —
+    // SQLite's UPDATE rowcount alone collapses both into 0.
+    var exists = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<int?>(conn,
+        "SELECT 1 FROM deploy_intents WHERE id = @Id",
+        new { Id = intentId });
+    if (exists is null) return Results.NotFound(new { error = "intent_not_found", intentId });
+
+    var now = DateTimeOffset.UtcNow.ToString("o");
+    var rows = await Dapper.SqlMapper.ExecuteAsync(conn,
+        "UPDATE deploy_intents SET confirmed_at = @Now WHERE id = @Id AND confirmed_at IS NULL",
+        new { Id = intentId, Now = now });
+    if (rows == 0)
+    {
+        return Results.Conflict(new { error = "already_confirmed", intentId });
+    }
+    return Results.Ok(new { intentId, confirmedAt = now });
+});
+
 // Auth middleware for /api/* requests.
 // SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
 var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);

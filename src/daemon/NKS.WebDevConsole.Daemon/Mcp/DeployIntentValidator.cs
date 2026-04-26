@@ -34,6 +34,7 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         string kind,
         string domain,
         string host,
+        bool allowUnconfirmed,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(intentToken))
@@ -50,7 +51,8 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         var row = await conn.QuerySingleOrDefaultAsync<IntentRow>(
             "SELECT id AS Id, domain AS Domain, host AS Host, release_id AS ReleaseId, " +
             "kind AS Kind, nonce AS Nonce, expires_at AS ExpiresAtRaw, " +
-            "hmac_signature AS HmacSignature, used_at AS UsedAt " +
+            "hmac_signature AS HmacSignature, used_at AS UsedAt, " +
+            "confirmed_at AS ConfirmedAt " +
             "FROM deploy_intents WHERE id = @Id",
             new { Id = intentId });
 
@@ -80,6 +82,23 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         if (!string.Equals(row.HmacSignature, signature, StringComparison.Ordinal))
             return IntentValidationResult.Deny("signature_mismatch");
 
+        // Phase 5.5 Mode A gate: refuse to consume an intent that the GUI
+        // hasn't approved yet. The HTTP route layer translates this reason
+        // to 425 Too Early; CI / headless callers bypass the gate by
+        // passing allowUnconfirmed=true (which pre-stamps confirmed_at
+        // BEFORE the gate check, so the gate trivially passes).
+        if (string.IsNullOrEmpty(row.ConfirmedAt))
+        {
+            if (!allowUnconfirmed)
+                return IntentValidationResult.Deny("pending_confirmation");
+            // Pre-stamp via single UPDATE — no-op if a concurrent GUI click
+            // already stamped (rowcount=0 is fine, the row is now
+            // confirmed either way and the next read will see it).
+            await conn.ExecuteAsync(
+                "UPDATE deploy_intents SET confirmed_at = @Now WHERE id = @Id AND confirmed_at IS NULL",
+                new { Id = intentId, Now = DateTimeOffset.UtcNow.ToString("o") });
+        }
+
         // Atomic single-use stamp. The `used_at IS NULL` predicate guards
         // against a concurrent validator winning the race — only one of
         // the two callers will get rowcount=1.
@@ -103,5 +122,7 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         public string ExpiresAtRaw { get; set; } = "";
         public string HmacSignature { get; set; } = "";
         public string? UsedAt { get; set; }
+        /// <summary>NULL until the GUI banner is approved (Mode A).</summary>
+        public string? ConfirmedAt { get; set; }
     }
 }
