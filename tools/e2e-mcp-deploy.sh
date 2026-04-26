@@ -395,6 +395,36 @@ step "deploy.enabled=false → 404 deploy_disabled" "$GATED" 'deploy_disabled.*4
 api PUT /api/settings -d '{"deploy.enabled":"true"}' >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== cleanup — remove dummy backend rows from deploy_runs ===${END}"
+# ============================================================================
+# Each E2E run inserts ~6 dummy DeployRunRow entries. Periodic cleanup keeps
+# the GUI history list short. Best-effort: ignore failure (sqlite missing,
+# perms, etc.) — never blocks CI exit.
+# Try several sqlite binary locations — system PATH first, then the
+# WDC bundled one (path varies by version), then the Android platform
+# tools shipped with many dev environments.
+SQLITE_BIN=""
+for cand in "$(which sqlite3 2>/dev/null)" \
+            "$HOME/.wdc/binaries/sqlite/sqlite3.exe" \
+            /c/Android/platform-tools/sqlite3.exe \
+            /c/Android/platform-tools/sqlite3; do
+    if [ -n "$cand" ] && [ -x "$cand" ]; then SQLITE_BIN="$cand"; break; fi
+done
+WDC_DB="$HOME/.wdc/data/state.db"
+if [ -n "$SQLITE_BIN" ] && [ -f "$WDC_DB" ]; then
+    BEFORE=$("$SQLITE_BIN" "$WDC_DB" "SELECT COUNT(*) FROM deploy_runs WHERE backend_id = 'dummy'")
+    "$SQLITE_BIN" "$WDC_DB" "DELETE FROM deploy_runs WHERE backend_id = 'dummy'" 2>/dev/null
+    AFTER=$("$SQLITE_BIN" "$WDC_DB" "SELECT COUNT(*) FROM deploy_runs WHERE backend_id = 'dummy'")
+    echo "  → cleaned $BEFORE dummy deploy rows (now $AFTER) via $SQLITE_BIN"
+else
+    echo "  → sqlite client not found, skipping cleanup (DB at $WDC_DB)"
+fi
+
+# Cleanup test settings file from section N
+TEST_DOM_SETTINGS="$HOME/.wdc/data/deploy-settings/e2e-test.loc.json"
+[ -f "$TEST_DOM_SETTINGS" ] && rm -f "$TEST_DOM_SETTINGS" && echo "  → removed e2e-test.loc settings file"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
