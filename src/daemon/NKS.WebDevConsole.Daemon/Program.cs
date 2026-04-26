@@ -116,6 +116,10 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.ISnapshotRestore
     NKS.WebDevConsole.Daemon.Deploy.SnapshotRestorer>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster,
     NKS.WebDevConsole.Daemon.Deploy.SseDeployEventBroadcaster>();
+// Phase 7.5+++ — REAL deploy backend (local-loopback file copy + symlink).
+// Activated when POST /sites/{domain}/deploy body includes localPaths:
+// {source,target}. Without it the existing dummy state-machine still runs.
+builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend>();
 // MCP intent signer + validator. The signer holds the long-lived HMAC key
 // (DPAPI-wrapped on Windows, 0600 on POSIX); the validator persists/consumes
 // signed intent rows. Both are singletons so the key is loaded exactly once
@@ -2423,6 +2427,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
     NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
     CancellationToken ct) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
@@ -2431,6 +2436,25 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     var branch = root.TryGetProperty("branch", out var bEl) ? bEl.GetString() : null;
     var intentToken = root.TryGetProperty("intentToken", out var tEl) ? tEl.GetString() : null;
     var triggeredBy = string.IsNullOrEmpty(intentToken) ? "gui" : "mcp";
+
+    // Phase 7.5+++ — `localPaths: {source, target}` is REQUIRED. Real
+    // local-loopback backend only — no dummy state machine. Without
+    // valid paths the deploy endpoint refuses with 400.
+    string? localSource = null;
+    string? localTarget = null;
+    if (root.TryGetProperty("localPaths", out var lpEl) && lpEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+    {
+        if (lpEl.TryGetProperty("source", out var srcEl)) localSource = srcEl.GetString();
+        if (lpEl.TryGetProperty("target", out var tgtEl)) localTarget = tgtEl.GetString();
+    }
+    if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
+    {
+        return Results.BadRequest(new
+        {
+            error = "localPaths_required",
+            detail = "Body must include localPaths: {source: '...', target: '...'} for the local deploy backend.",
+        });
+    }
 
     // Optional MCP gate. When token provided, must be valid + confirmed
     // (or the caller passes X-Allow-Unconfirmed for CI). Plugin-extensible
@@ -2453,14 +2477,16 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
 
     var deployId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
+    var releaseId = now.ToString("yyyyMMdd_HHmmss");
     await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
         Id: deployId, Domain: domain, Host: host,
-        ReleaseId: now.ToString("yyyyMMdd_HHmmss"),
+        ReleaseId: releaseId,
         Branch: branch, CommitSha: null,
         Status: "queued", IsPastPonr: false,
         StartedAt: now, CompletedAt: null,
         ExitCode: null, ErrorMessage: null, DurationMs: null,
-        TriggeredBy: triggeredBy, BackendId: "dummy",
+        TriggeredBy: triggeredBy,
+        BackendId: "local",
         CreatedAt: now, UpdatedAt: now), ct);
 
     // Phase 7.5+ — body { "snapshot": true } records a fake snapshot path
@@ -2473,43 +2499,14 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     }
 
     await eventsBus.BroadcastAsync("deploy:started",
-        new { deployId, domain, host, triggeredBy });
+        new { deployId, domain, host, triggeredBy, backend = "local" });
 
-    // Background state-machine: queued → running → awaiting_soak → completed.
-    // Each transition broadcasts an SSE event the drawer can render in
-    // real time. Total wall-clock: ~600ms — fast enough for E2E loops
-    // but visible to humans. Real backend would have steps minutes long.
-    _ = Task.Run(async () =>
-    {
-        try
-        {
-            await Task.Delay(150);
-            await runs.UpdateStatusAsync(deployId, "running", default);
-            await eventsBus.BroadcastAsync("deploy:phase",
-                new { deployId, phase = "Building", message = "Building release artifact" });
-
-            await Task.Delay(150);
-            await runs.MarkPastPonrAsync(deployId, default);
-            await eventsBus.BroadcastAsync("deploy:phase",
-                new { deployId, phase = "AwaitingSoak", message = "Symlink switched, awaiting health checks" });
-            await runs.UpdateStatusAsync(deployId, "awaiting_soak", default);
-
-            await Task.Delay(150);
-            await runs.MarkCompletedAsync(deployId, success: true, exitCode: 0,
-                errorMessage: null, durationMs: 450, default);
-            await eventsBus.BroadcastAsync("deploy:complete",
-                new { deployId, success = true, durationMs = 450 });
-        }
-        catch (Exception ex)
-        {
-            try { await runs.MarkCompletedAsync(deployId, success: false, -1, ex.Message, 0, default); } catch { }
-            try { await eventsBus.BroadcastAsync("deploy:complete",
-                new { deployId, success = false, error = ex.Message }); } catch { }
-        }
-    });
-
+    // REAL local-loopback deploy. Background fire-and-forget — HTTP returns
+    // 202 immediately, the backend writes status updates and SSE events as
+    // it progresses through copy + symlink phases.
+    _ = Task.Run(() => localBackend.RunAsync(deployId, releaseId, localSource!, localTarget!));
     return Results.Accepted($"/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
-        new { deployId, status = "queued", note = "dummy backend — async state progression" });
+        new { deployId, status = "queued", note = "local backend — copying files" });
 });
 
 // Phase 7.5 — phase mapping moved to DeployRestHelpers for testability.
