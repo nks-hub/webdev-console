@@ -385,6 +385,90 @@ step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pe
 [ -n "$INTENT_X_ID" ] && api POST /api/mcp/intents/$INTENT_X_ID/revoke >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== Q. revoked grants — soft-deleted grants never auto-confirm ===${END}"
+# ============================================================================
+# After DELETE /api/mcp/grants/:id the row's revoked_at is stamped non-null.
+# ListActiveAsync/FindMatchingActiveAsync MUST filter on revoked_at IS NULL,
+# otherwise a revoked grant could still auto-confirm intents (worse than
+# expiry: operator EXPLICITLY took permission away).
+
+REVOKED_SESSION="ai-revoked-$(date +%s)"
+python3 - <<EOF > /c/temp/.e2e-revokedgrant.json
+import json
+print(json.dumps({
+    "scopeType": "session", "scopeValue": "$REVOKED_SESSION",
+    "kindPattern": "deploy", "targetPattern": "blog.loc",
+    "expiresAt": None, "note": "E2E revoked-grant test"
+}))
+EOF
+REV_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-revokedgrant.json "$BASE/api/mcp/grants")
+REV_ID=$(echo "$REV_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "permanent grant created" "$REV_GR" '"status":"created"'
+
+# Operator revokes
+DEL=$(api DELETE /api/mcp/grants/$REV_ID)
+step "grant revoked" "$DEL" '"status":"revoked"'
+
+# Revoked grant invisible on list
+LIST_AFTER_REV=$(api GET /api/mcp/grants)
+HAS_REV=$(echo "$LIST_AFTER_REV" | grep -c "$REV_ID" || true)
+step "revoked grant filtered from active list" "$HAS_REV" '^0$'
+
+# Validator must reject auto-confirm using the same session header
+INTENT_R=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $REVOKED_SESSION" \
+    -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":60}' \
+    "$BASE/api/mcp/intents")
+INTENT_R_TOKEN=$(echo "$INTENT_R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+INTENT_R_ID=$(echo "$INTENT_R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+
+R_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $REVOKED_SESSION" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$INTENT_R_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "revoked-grant session → fire still 425 pending_confirmation" "$R_FIRE" 'pending_confirmation.*425'
+
+# Re-revoking same id is idempotent (must not crash, returns 404)
+DOUBLE_DEL=$(api DELETE /api/mcp/grants/$REV_ID)
+step "double-revoke returns grant_not_found_or_already_revoked" "$DOUBLE_DEL" 'grant_not_found_or_already_revoked'
+
+[ -n "$INTENT_R_ID" ] && api POST /api/mcp/intents/$INTENT_R_ID/revoke >/dev/null
+
+# ============================================================================
+echo ""; echo "${YEL}=== R. concurrent intent fire — single-use enforced under race ===${END}"
+# ============================================================================
+# Two callers fire the same intent token simultaneously. Validator's
+# UPDATE deploy_intents SET used_at = ... WHERE id = ? AND used_at IS NULL
+# pattern means SQLite serialises writes; only one caller wins. The other
+# must get 'already_used' error.
+
+INTENT_RACE=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":120}')
+RACE_TOKEN=$(echo "$INTENT_RACE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+RACE_ID=$(echo "$INTENT_RACE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+api POST /api/mcp/intents/$RACE_ID/confirm >/dev/null
+step "race intent minted + pre-confirmed" "$INTENT_RACE" '"intentToken":"'
+
+# Fire 5 concurrent requests with the same token
+RESULTS_DIR=/c/temp/.e2e-race-out
+rm -rf "$RESULTS_DIR" && mkdir -p "$RESULTS_DIR"
+for i in 1 2 3 4 5; do
+    (curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -d "{\"host\":\"production\",\"intentToken\":\"$RACE_TOKEN\"}" \
+        "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > "$RESULTS_DIR/r$i.json" 2>&1) &
+done
+wait
+
+# Count successes vs already_used rejections
+OK_COUNT=$(grep -l '"deployId":' "$RESULTS_DIR"/r*.json 2>/dev/null | wc -l | tr -d ' ')
+USED_COUNT=$(grep -l 'already_used' "$RESULTS_DIR"/r*.json 2>/dev/null | wc -l | tr -d ' ')
+echo "  → race result: $OK_COUNT success, $USED_COUNT already_used (out of 5)"
+step "exactly ONE concurrent fire succeeded" "$OK_COUNT" '^1$'
+step "the other 4 got already_used" "$USED_COUNT" '^4$'
+
+rm -rf "$RESULTS_DIR"
+
+# ============================================================================
 echo ""; echo "${YEL}=== O. snapshot list wired to real data ===${END}"
 # ============================================================================
 # Fire a deploy WITH snapshot:true → backend stamps PreDeployBackupPath
