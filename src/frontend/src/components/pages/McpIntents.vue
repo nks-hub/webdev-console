@@ -184,6 +184,21 @@
         </template>
       </el-table-column>
 
+      <el-table-column :label="t('mcpIntents.col.matchedGrant')" width="130">
+        <template #default="{ row }">
+          <code v-if="row.matchedGrantId" class="mono auto-grant"
+            :title="t('mcpIntents.matchedGrantTooltip', { id: row.matchedGrantId })"
+            @click="copyId(row.matchedGrantId)">
+            ⚡ {{ row.matchedGrantId.slice(0, 8) }}…
+          </code>
+          <span v-else-if="row.confirmedAt" class="muted"
+            :title="t('mcpIntents.confirmedManually')">
+            {{ t('mcpIntents.manualConfirm') }}
+          </span>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
+
       <el-table-column label="" width="100" align="right">
         <template #default="{ row }">
           <el-button
@@ -580,6 +595,12 @@ onBeforeUnmount(() => {
 .intent-id {
   cursor: copy;
   user-select: all;
+}
+.auto-grant {
+  cursor: copy;
+  user-select: all;
+  color: var(--el-color-warning);
+  font-weight: 600;
 }
 .state-icon {
   margin-right: 4px;

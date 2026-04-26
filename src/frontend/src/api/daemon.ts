@@ -184,6 +184,10 @@ export interface IntentInventoryEntry {
   usedAt: string | null
   confirmedAt: string | null
   createdAt: string
+  // Phase 7.5+++ — id of the grant that auto-confirmed this intent,
+  // or null when the operator confirmed manually via the GUI banner
+  // (or used the allowUnconfirmed CI escape hatch).
+  matchedGrantId?: string | null
   state: 'consumed' | 'expired' | 'pending_confirmation' | 'ready'
 }
 

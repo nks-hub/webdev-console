@@ -1370,7 +1370,7 @@ app.MapGet("/api/mcp/intents", async (
     await conn.OpenAsync();
     var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn,
         "SELECT id, domain, host, release_id, kind, expires_at, used_at, " +
-        "confirmed_at, created_at " +
+        "confirmed_at, created_at, matched_grant_id " +
         "FROM deploy_intents ORDER BY created_at DESC LIMIT @Limit",
         new { Limit = Math.Clamp(limit, 1, 500) });
     // Phase 7.5+ — enrich the inventory with the registry-resolved label
@@ -1395,6 +1395,10 @@ app.MapGet("/api/mcp/intents", async (
             usedAt = (string?)r.used_at,
             confirmedAt = (string?)r.confirmed_at,
             createdAt = (string)r.created_at,
+            // Phase 7.5+++ — audit trail: which grant auto-confirmed
+            // this intent (NULL = manually confirmed via banner OR
+            // allowUnconfirmed CI path).
+            matchedGrantId = (string?)r.matched_grant_id,
             // Derived state for UI rendering convenience.
             state = ComputeIntentState(
                 (string?)r.used_at,

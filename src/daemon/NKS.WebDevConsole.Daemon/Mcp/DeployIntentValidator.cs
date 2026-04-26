@@ -148,6 +148,7 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         if (string.IsNullOrEmpty(row.ConfirmedAt))
         {
             var grantedAuto = false;
+            string? matchedGrantId = null;
             if (!allowUnconfirmed && McpCallerContext.HasAnyIdentity)
             {
                 var grant = await _grants.FindMatchingActiveAsync(
@@ -163,6 +164,7 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
                 // the auth path (RecordMatchAsync swallows DB errors).
                 if (grant is not null && !string.IsNullOrEmpty(grant.Id))
                 {
+                    matchedGrantId = grant.Id;
                     await _grants.RecordMatchAsync(grant.Id, ct);
                 }
             }
@@ -172,9 +174,18 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
             // Pre-stamp via single UPDATE — no-op if a concurrent GUI click
             // already stamped (rowcount=0 is fine, the row is now
             // confirmed either way and the next read will see it).
+            // Phase 7.5+++ — also stamp `matched_grant_id` (NULL when this
+            // confirm came from allowUnconfirmed/CI rather than a grant
+            // pre-check), giving the inventory page a clean audit chain.
             await conn.ExecuteAsync(
-                "UPDATE deploy_intents SET confirmed_at = @Now WHERE id = @Id AND confirmed_at IS NULL",
-                new { Id = intentId, Now = DateTimeOffset.UtcNow.ToString("o") });
+                "UPDATE deploy_intents SET confirmed_at = @Now, matched_grant_id = @GrantId " +
+                "WHERE id = @Id AND confirmed_at IS NULL",
+                new
+                {
+                    Id = intentId,
+                    Now = DateTimeOffset.UtcNow.ToString("o"),
+                    GrantId = matchedGrantId,
+                });
         }
 
         // Atomic single-use stamp. The `used_at IS NULL` predicate guards

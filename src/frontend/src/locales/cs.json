@@ -120,8 +120,12 @@
       "kind": "Druh",
       "state": "Stav",
       "expires": "Vyprší",
-      "intentId": "ID intentu"
+      "intentId": "ID intentu",
+      "matchedGrant": "Auto-via grant"
     },
+    "matchedGrantTooltip": "Auto-confirmed přes oprávnění {id}. Klikněte pro zkopírování ID.",
+    "manualConfirm": "ručně",
+    "confirmedManually": "Potvrzeno ručně přes GUI banner (žádné oprávnění nematchovalo)",
     "revoke": "Odvolat",
     "revokeAria": "Odvolat tento intent (označit jako použitý bez spuštění)",
     "single": {

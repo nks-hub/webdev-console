@@ -25,6 +25,7 @@ public sealed class DeployIntentValidatorTests
             used_at TEXT,
             kind TEXT NOT NULL DEFAULT 'deploy',
             confirmed_at TEXT,
+            matched_grant_id TEXT,
             created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
         );
         """;

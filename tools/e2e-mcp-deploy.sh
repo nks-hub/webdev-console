@@ -880,6 +880,12 @@ Z_LIST_AFTER=$(api GET /api/mcp/grants)
 step "grant matchCount bumped to ≥1 after match" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"matchCount\":[1-9]"
 step "grant lastMatchedAt populated" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"lastMatchedAt\":\"20"
 
+# Phase 7.5+++ — verify the matching grant id was stamped on the
+# auto-confirmed intent. The intent inventory should show our grant id
+# under matchedGrantId for the intent that fired the deploy.
+Z_INV=$(api GET /api/mcp/intents?limit=20)
+step "intent inventory carries matchedGrantId" "$Z_INV" "\"matchedGrantId\":\"$Z_ID\""
+
 # Phase 7.5+++ — server-side aggregate stats endpoint. With one active
 # grant we just exercised, expect total≥1, active≥1, totalMatches≥1.
 Z_STATS=$(api GET /api/mcp/grants/stats)

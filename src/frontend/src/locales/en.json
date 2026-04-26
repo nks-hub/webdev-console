@@ -120,8 +120,12 @@
       "kind": "Kind",
       "state": "State",
       "expires": "Expires",
-      "intentId": "Intent ID"
+      "intentId": "Intent ID",
+      "matchedGrant": "Auto-via grant"
     },
+    "matchedGrantTooltip": "Auto-confirmed via grant {id}. Click to copy ID.",
+    "manualConfirm": "manual",
+    "confirmedManually": "Confirmed manually via GUI banner (no grant matched)",
     "revoke": "Revoke",
     "revokeAria": "Revoke this intent (mark as used without firing)",
     "single": {
