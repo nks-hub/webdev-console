@@ -270,6 +270,20 @@ export const revokeMcpGrant = (id: string): Promise<{ id: string; status: string
 export const sweepMcpGrantsNow = (): Promise<{ deleted: number }> =>
   json('/api/mcp/grants/sweep-now', { method: 'POST' })
 
+// Phase 7.5+++ — server-side aggregate stats. Single call returns
+// counts the GUI would otherwise compute by walking the full grant
+// list. Useful for the McpHub badge + Settings snapshot.
+export interface McpGrantsStats {
+  total: number
+  active: number
+  deadweight: number
+  totalMatches: number
+  lastMatchAt: string | null
+}
+
+export const fetchMcpGrantsStats = (): Promise<McpGrantsStats> =>
+  json('/api/mcp/grants/stats')
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }

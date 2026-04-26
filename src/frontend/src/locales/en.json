@@ -142,6 +142,16 @@
       "intents": "Intents (audit log)",
       "grants": "Grants (trust policy)",
       "kinds": "Kinds (registered ops)"
+    },
+    "stats": {
+      "active": "active grants",
+      "deadweight": "deadweight (revoke candidates)",
+      "totalMatches": "total matches",
+      "lastMatch": "last match:",
+      "justNow": "just now",
+      "minutesAgo": "{n}m ago",
+      "hoursAgo": "{n}h ago",
+      "daysAgo": "{n}d ago"
     }
   },
   "mcpKinds": {

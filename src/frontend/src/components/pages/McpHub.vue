@@ -3,6 +3,26 @@
     <div class="hub-header">
       <h2>{{ t('mcpHub.title') }}</h2>
       <p class="muted">{{ t('mcpHub.description') }}</p>
+      <!-- Phase 7.5+++ — at-a-glance summary card. Telemetry that the
+           individual tabs would only surface after switching. -->
+      <div v-if="grantsStats" class="hub-stats">
+        <span class="stat">
+          <strong>{{ grantsStats.active }}</strong>
+          <span class="muted">{{ t('mcpHub.stats.active') }}</span>
+        </span>
+        <span v-if="grantsStats.deadweight > 0" class="stat warn">
+          <strong>{{ grantsStats.deadweight }}</strong>
+          <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
+        </span>
+        <span class="stat">
+          <strong>{{ grantsStats.totalMatches }}</strong>
+          <span class="muted">{{ t('mcpHub.stats.totalMatches') }}</span>
+        </span>
+        <span v-if="grantsStats.lastMatchAt" class="stat">
+          <span class="muted">{{ t('mcpHub.stats.lastMatch') }}</span>
+          <strong>{{ formatRelative(grantsStats.lastMatchAt) }}</strong>
+        </span>
+      </div>
     </div>
 
     <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
@@ -50,9 +70,11 @@ import McpGrants from './McpGrants.vue'
 import McpKinds from './McpKinds.vue'
 import {
   fetchIntentInventory,
+  fetchMcpGrantsStats,
   listMcpGrants,
   listMcpKinds,
   subscribeEventsMap,
+  type McpGrantsStats,
 } from '../../api/daemon'
 
 const { t } = useI18n()
@@ -88,6 +110,7 @@ function onTabChange(name: string | number): void {
 // auto-refresh on the existing SSE events. The badges give operators
 // at-a-glance visibility without forcing them to switch tabs.
 const counts = reactive({ intents: 0, grants: 0, kinds: 0 })
+const grantsStats = ref<McpGrantsStats | null>(null)
 let unsubscribeHubSse: (() => void) | null = null
 
 async function refreshCounts(): Promise<void> {
@@ -95,16 +118,31 @@ async function refreshCounts(): Promise<void> {
     // ready + pending_confirmation = "live" intents (the rest are
     // terminal: consumed/expired). Operators care about ones that
     // could still fire.
-    const [intents, grants, kinds] = await Promise.all([
+    const [intents, grants, kinds, stats] = await Promise.all([
       fetchIntentInventory(200).catch(() => ({ entries: [] })),
       listMcpGrants().catch(() => ({ entries: [] })),
       listMcpKinds().catch(() => ({ entries: [] })),
+      fetchMcpGrantsStats().catch(() => null),
     ])
     counts.intents = intents.entries.filter((e) =>
       e.state === 'ready' || e.state === 'pending_confirmation').length
     counts.grants = grants.entries.length
     counts.kinds = kinds.entries.length
+    grantsStats.value = stats
   } catch { /* badges stay stale rather than disrupt the page */ }
+}
+
+// Phase 7.5+++ — humanise lastMatchAt for the at-a-glance card.
+function formatRelative(iso: string): string {
+  try {
+    const dt = new Date(iso).getTime()
+    if (!Number.isFinite(dt)) return ''
+    const deltaSec = Math.max(0, Math.round((Date.now() - dt) / 1000))
+    if (deltaSec < 60) return t('mcpHub.stats.justNow')
+    if (deltaSec < 3600) return t('mcpHub.stats.minutesAgo', { n: Math.floor(deltaSec / 60) })
+    if (deltaSec < 86400) return t('mcpHub.stats.hoursAgo', { n: Math.floor(deltaSec / 3600) })
+    return t('mcpHub.stats.daysAgo', { n: Math.floor(deltaSec / 86400) })
+  } catch { return '' }
 }
 
 onMounted(() => {
@@ -128,6 +166,14 @@ onBeforeUnmount(() => {
 .hub-header .muted { color: var(--el-text-color-secondary); margin: 0 0 8px; font-size: 13px; }
 .hub-tabs :deep(.el-tabs__content) { padding-top: 8px; }
 .tab-label { display: inline-flex; align-items: center; gap: 6px; }
+.hub-stats {
+  display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 4px;
+  padding: 8px 12px; background: var(--el-fill-color-light);
+  border-radius: 4px; font-size: 13px;
+}
+.hub-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
+.hub-stats .stat strong { font-weight: 600; }
+.hub-stats .stat.warn strong { color: var(--el-color-warning); }
 .tab-badge { margin-left: 4px; }
 /* Push the badge counter inline rather than absolute-positioned. */
 .tab-badge :deep(.el-badge__content) {

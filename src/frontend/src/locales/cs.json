@@ -142,6 +142,16 @@
       "intents": "Intents (audit log)",
       "grants": "Oprávnění (pravidla důvěry)",
       "kinds": "Druhy (registrované operace)"
+    },
+    "stats": {
+      "active": "aktivní oprávnění",
+      "deadweight": "deadweight (kandidáti na revoke)",
+      "totalMatches": "celkem matchů",
+      "lastMatch": "poslední match:",
+      "justNow": "právě teď",
+      "minutesAgo": "před {n} m",
+      "hoursAgo": "před {n} h",
+      "daysAgo": "před {n} d"
     }
   },
   "mcpKinds": {

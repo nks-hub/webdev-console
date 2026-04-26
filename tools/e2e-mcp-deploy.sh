@@ -880,6 +880,14 @@ Z_LIST_AFTER=$(api GET /api/mcp/grants)
 step "grant matchCount bumped to ≥1 after match" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"matchCount\":[1-9]"
 step "grant lastMatchedAt populated" "$Z_LIST_AFTER" "\"id\":\"$Z_ID\".*\"lastMatchedAt\":\"20"
 
+# Phase 7.5+++ — server-side aggregate stats endpoint. With one active
+# grant we just exercised, expect total≥1, active≥1, totalMatches≥1.
+Z_STATS=$(api GET /api/mcp/grants/stats)
+step "stats endpoint returns shape"      "$Z_STATS" '"total":[0-9]'
+step "stats reports our active grant"    "$Z_STATS" '"active":[1-9]'
+step "stats sums our match into total"   "$Z_STATS" '"totalMatches":[1-9]'
+step "stats has lastMatchAt populated"   "$Z_STATS" '"lastMatchAt":"20'
+
 # Cleanup the telemetry test grant
 api DELETE /api/mcp/grants/$Z_ID >/dev/null
 

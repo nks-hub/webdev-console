@@ -1537,6 +1537,65 @@ app.MapDelete("/api/mcp/grants/{id}", async (
     return Results.Ok(new { id, status = "revoked" });
 });
 
+// Phase 7.5+++ — aggregate grant statistics. Single round-trip that
+// the McpHub uses to render rich badges + the Settings page can show
+// as a snapshot card. Server-side aggregation keeps the GUI fast even
+// when the grants table grows beyond the 200-row default page size.
+//
+// Returned shape:
+//   {
+//     "total": int,            // all rows (active + revoked, not swept)
+//     "active": int,           // revoked_at IS NULL AND not yet expired
+//     "deadweight": int,       // active AND match_count=0 AND age >7d
+//     "totalMatches": long,    // sum(match_count) across all rows
+//     "lastMatchAt": ISO?      // max(last_matched_at), null if never
+//   }
+app.MapGet("/api/mcp/grants/stats", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync(ct);
+    try
+    {
+        var deadweightCutoff = DateTimeOffset.UtcNow.AddDays(-7).ToString("o");
+        var stats = await Dapper.SqlMapper.QuerySingleAsync<GrantStatsRow>(conn,
+            "SELECT " +
+            "  COUNT(*) AS Total, " +
+            "  SUM(CASE WHEN revoked_at IS NULL AND " +
+            "           (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) " +
+            "           THEN 1 ELSE 0 END) AS Active, " +
+            "  SUM(CASE WHEN revoked_at IS NULL AND " +
+            "           (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) AND " +
+            "           match_count = 0 AND granted_at < @Cutoff " +
+            "           THEN 1 ELSE 0 END) AS Deadweight, " +
+            "  COALESCE(SUM(match_count), 0) AS TotalMatches, " +
+            "  MAX(last_matched_at) AS LastMatchAt " +
+            "FROM mcp_session_grants",
+            new { Cutoff = deadweightCutoff });
+        return Results.Ok(new
+        {
+            total = stats.Total,
+            active = stats.Active,
+            deadweight = stats.Deadweight,
+            totalMatches = stats.TotalMatches,
+            lastMatchAt = stats.LastMatchAt,
+        });
+    }
+    catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 1)
+    {
+        // Table doesn't exist (fresh DB before migration 012/014). Return
+        // zeros so the GUI renders gracefully rather than choking on 500.
+        return Results.Ok(new
+        {
+            total = 0, active = 0, deadweight = 0,
+            totalMatches = 0L, lastMatchAt = (string?)null,
+        });
+    }
+});
+
 // Phase 7.5+++ — manual sweep trigger. Operator can fire the grant
 // janitor on demand without waiting for the 15-minute background tick.
 // Reuses the same SQL helper the BackgroundService uses; broadcasts
@@ -8531,3 +8590,13 @@ record AccessEntry(
     string? UserAgent,
     string? XForwardedFor,
     string? CfConnectingIp);
+
+/// <summary>Phase 7.5+++ — Dapper row for /api/mcp/grants/stats.</summary>
+sealed class GrantStatsRow
+{
+    public int Total { get; set; }
+    public int Active { get; set; }
+    public int Deadweight { get; set; }
+    public long TotalMatches { get; set; }
+    public string? LastMatchAt { get; set; }
+}
