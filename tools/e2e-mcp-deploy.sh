@@ -331,6 +331,30 @@ if [ -f "$HOME/.wdc/data/deploy-settings/${DOM}.json" ]; then
 fi
 
 # ============================================================================
+echo ""; echo "${YEL}=== O. snapshot list wired to real data ===${END}"
+# ============================================================================
+# Fire a deploy WITH snapshot:true → backend stamps PreDeployBackupPath
+# on the row → /snapshots projects it into a DeploySnapshotEntry.
+SNAP_FIRE=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production","branch":"main","snapshot":true}')
+SNAP_DEPLOY_ID=$(echo "$SNAP_FIRE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+step "deploy with snapshot:true fired" "$SNAP_FIRE" '"deployId":"'
+
+sleep 1
+SNAPSHOTS=$(api GET /api/nks.wdc.deploy/sites/blog.loc/snapshots)
+step "snapshots endpoint returns count > 0" "$SNAPSHOTS" '"count":[1-9]'
+step "snapshot entry has our deployId as id"   "$SNAPSHOTS" "\"id\":\"$SNAP_DEPLOY_ID\""
+step "snapshot has sizeBytes > 0"              "$SNAPSHOTS" '"sizeBytes":[1-9][0-9]*'
+step "snapshot has path under ~/.wdc/backups"  "$SNAPSHOTS" '"path":"~/\.wdc/backups/pre-deploy/blog\.loc/'
+
+# Deploy WITHOUT snapshot:true → stays out of the snapshots projection
+NOSNAP_FIRE=$(api POST /api/nks.wdc.deploy/sites/blog.loc/deploy -d '{"host":"production"}')
+NOSNAP_ID=$(echo "$NOSNAP_FIRE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))")
+SNAPSHOTS2=$(api GET /api/nks.wdc.deploy/sites/blog.loc/snapshots)
+# The new deploy id should NOT appear in snapshots (no PreDeployBackupPath set)
+HAS_NOSNAP=$(echo "$SNAPSHOTS2" | grep -c "$NOSNAP_ID" || true)
+step "deploy without snapshot stays out of snapshot list" "$HAS_NOSNAP" '^0$'
+
+# ============================================================================
 echo ""; echo "${YEL}=== M. SSE event broadcast (real-time deploy phase events) ===${END}"
 # ============================================================================
 # Subscribe to SSE BEFORE firing the deploy so we capture every event.

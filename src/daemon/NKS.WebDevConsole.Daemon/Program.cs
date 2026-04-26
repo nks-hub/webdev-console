@@ -1514,10 +1514,29 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
 
-// Snapshot list — pre-deploy DB snapshots taken for this site.
-// Stub returns empty until snapshot writer is wired into a deploy run.
-app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", (string domain) =>
-    Results.Ok(new { domain, count = 0, entries = Array.Empty<object>() }));
+// Snapshot list — pre-deploy DB snapshots that ran for this site.
+// Composed from deploy_runs rows with non-null pre_deploy_backup_path.
+// Real backend (when it ships) writes the snapshot path + size via
+// IDeployRunsRepository.UpdatePreDeployBackupAsync mid-run; this view
+// just projects those rows into the frontend's DeploySnapshotEntry shape.
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", async (
+    string domain,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
+{
+    var rows = await runs.ListForDomainAsync(domain, limit: 200, ct);
+    var entries = rows
+        .Where(r => !string.IsNullOrEmpty(r.PreDeployBackupPath))
+        .Select(r => new
+        {
+            id          = r.Id,
+            createdAt   = r.StartedAt.ToString("o"),
+            sizeBytes   = r.PreDeployBackupSizeBytes ?? 0,
+            path        = r.PreDeployBackupPath!,
+        })
+        .ToList();
+    return Results.Ok(new { domain, count = entries.Count, entries });
+});
 
 // Deploy settings persistence — JSON file under
 // {WdcPaths.DataRoot}/deploy-settings/{domain}.json. Frontend's
@@ -1664,6 +1683,15 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         ExitCode: null, ErrorMessage: null, DurationMs: null,
         TriggeredBy: triggeredBy, BackendId: "dummy",
         CreatedAt: now, UpdatedAt: now), ct);
+
+    // Phase 7.5+ — body { "snapshot": true } records a fake snapshot path
+    // so the snapshots endpoint has data to return. Real backend would
+    // actually run pg_dump / mysqldump and store the file on disk.
+    if (root.TryGetProperty("snapshot", out var sEl) && sEl.ValueKind == System.Text.Json.JsonValueKind.True)
+    {
+        var fakePath = $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.sql.gz";
+        await runs.UpdatePreDeployBackupAsync(deployId, fakePath, sizeBytes: 1024 * 256, ct);
+    }
 
     await eventsBus.BroadcastAsync("deploy:started",
         new { deployId, domain, host, triggeredBy });
