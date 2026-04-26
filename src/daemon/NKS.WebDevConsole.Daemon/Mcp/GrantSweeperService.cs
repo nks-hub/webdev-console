@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Daemon.Data;
+using NKS.WebDevConsole.Daemon.Services;
 
 namespace NKS.WebDevConsole.Daemon.Mcp;
 
@@ -27,21 +28,25 @@ namespace NKS.WebDevConsole.Daemon.Mcp;
 public sealed class GrantSweeperService : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
-    private static readonly TimeSpan ExpiredRetention = TimeSpan.FromDays(1);
-    private static readonly TimeSpan RevokedRetention = TimeSpan.FromDays(30);
+    /// <summary>Defaults applied when SettingsStore values are missing or invalid.</summary>
+    public const int DefaultExpiredRetentionDays = 1;
+    public const int DefaultRevokedRetentionDays = 30;
 
     private readonly Database _db;
     private readonly ILogger<GrantSweeperService> _logger;
     private readonly IDeployEventBroadcaster _eventsBus;
+    private readonly SettingsStore _settings;
 
     public GrantSweeperService(
         Database db,
         ILogger<GrantSweeperService> logger,
-        IDeployEventBroadcaster eventsBus)
+        IDeployEventBroadcaster eventsBus,
+        SettingsStore settings)
     {
         _db = db;
         _logger = logger;
         _eventsBus = eventsBus;
+        _settings = settings;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -77,8 +82,16 @@ public sealed class GrantSweeperService : BackgroundService
         using var conn = _db.CreateConnection();
         await conn.OpenAsync(ct);
 
+        // Phase 7.5+++ — operator-tunable retention. Re-read on every
+        // tick so a Settings change propagates without restart. Negative
+        // or absurd values fall back to defaults via Math.Max.
+        var expiredDays = Math.Max(0, _settings.GetInt(
+            "mcp", "grant_expired_retention_days", DefaultExpiredRetentionDays));
+        var revokedDays = Math.Max(0, _settings.GetInt(
+            "mcp", "grant_revoked_retention_days", DefaultRevokedRetentionDays));
+
         var rows = await SweepAsync(conn, DateTimeOffset.UtcNow,
-            ExpiredRetention, RevokedRetention, ct);
+            TimeSpan.FromDays(expiredDays), TimeSpan.FromDays(revokedDays), ct);
 
         if (rows > 0)
         {

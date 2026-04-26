@@ -888,6 +888,19 @@ step "stats reports our active grant"    "$Z_STATS" '"active":[1-9]'
 step "stats sums our match into total"   "$Z_STATS" '"totalMatches":[1-9]'
 step "stats has lastMatchAt populated"   "$Z_STATS" '"lastMatchAt":"20'
 
+# Phase 7.5+++ — Settings-tunable retention. Verify that changing
+# mcp.grant_expired_retention_days affects sweep behaviour. Default
+# is 1 day (grants expired <1d ago kept). Set retention to 0 days,
+# which means ALL expired grants get swept regardless of how recent.
+# Just verify the setting persists + sweep-now still returns 200 with
+# the new value in effect (no actual expired rows present in this
+# E2E run, so deleted=0 either way).
+api PUT /api/settings -d '{"mcp.grant_expired_retention_days":"0"}' >/dev/null
+SWEEP_RESP2=$(api POST /api/mcp/grants/sweep-now)
+step "sweep-now still works with retention=0" "$SWEEP_RESP2" '"deleted":[0-9]'
+# Restore default so other test runs aren't surprised.
+api PUT /api/settings -d '{"mcp.grant_expired_retention_days":"1"}' >/dev/null
+
 # Cleanup the telemetry test grant
 api DELETE /api/mcp/grants/$Z_ID >/dev/null
 

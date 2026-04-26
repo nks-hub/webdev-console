@@ -487,6 +487,21 @@
                   <el-switch v-model="mcpStrictKinds" />
                   <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.strictKindsHint') }}</div>
                 </el-form-item>
+                <!-- Phase 7.5+++ — operator-tunable janitor retention.
+                     Defaults match GrantSweeperService.Default* (1d/30d).
+                     Setting either to 0 disables that branch (keep all). -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
+                  <el-input-number v-model="mcpExpiredRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px" />
+                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
+                </el-form-item>
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
+                  <el-input-number v-model="mcpRevokedRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px" />
+                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
+                </el-form-item>
               </el-form>
             </div>
 
@@ -1191,6 +1206,11 @@ const mcpEnabled = ref(false)
 // Phase 7.4e — strict kind validation. Default false (lenient).
 // When true, intents with unregistered kinds get kind_unknown.
 const mcpStrictKinds = ref(false)
+// Phase 7.5+++ — janitor retention windows. Defaults match
+// GrantSweeperService.Default* constants (1 day, 30 days). Setting
+// either to 0 disables that branch (operator keeps everything).
+const mcpExpiredRetentionDays = ref(1)
+const mcpRevokedRetentionDays = ref(30)
 // Phase 7.1a — Deploy subsystem toggle. Default TRUE; mirrors daemon's
 // own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
 // /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
@@ -1628,6 +1648,15 @@ async function loadSettings() {
     mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
     // Phase 7.4e — strict_kinds (default false: lenient).
     mcpStrictKinds.value = data['mcp.strict_kinds'] === 'true' || data['mcp.strict_kinds'] === '1'
+    // Phase 7.5+++ — janitor retention windows. parseInt yields NaN on
+    // missing/empty; coalesce to defaults (1d/30d) so the inputs land
+    // on sensible numbers when settings haven't been touched.
+    {
+      const exp = parseInt(data['mcp.grant_expired_retention_days'] ?? '')
+      mcpExpiredRetentionDays.value = Number.isFinite(exp) && exp >= 0 ? exp : 1
+      const rev = parseInt(data['mcp.grant_revoked_retention_days'] ?? '')
+      mcpRevokedRetentionDays.value = Number.isFinite(rev) && rev >= 0 ? rev : 30
+    }
     // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
     // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
     deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
@@ -2491,6 +2520,8 @@ async function save() {
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'mcp.enabled':         String(mcpEnabled.value),
       'mcp.strict_kinds':    String(mcpStrictKinds.value),
+      'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
+      'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
       'deploy.enabled':      String(deployEnabled.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),

@@ -1604,14 +1604,23 @@ app.MapPost("/api/mcp/grants/sweep-now", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    SettingsStore settings,
     CancellationToken ct) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var conn = db.CreateConnection();
     await conn.OpenAsync(ct);
+    // Read the same operator-tunable retention the background janitor uses
+    // so the manual button matches the timer's behaviour exactly.
+    var expiredDays = Math.Max(0, settings.GetInt(
+        "mcp", "grant_expired_retention_days",
+        NKS.WebDevConsole.Daemon.Mcp.GrantSweeperService.DefaultExpiredRetentionDays));
+    var revokedDays = Math.Max(0, settings.GetInt(
+        "mcp", "grant_revoked_retention_days",
+        NKS.WebDevConsole.Daemon.Mcp.GrantSweeperService.DefaultRevokedRetentionDays));
     var deleted = await NKS.WebDevConsole.Daemon.Mcp.GrantSweeperService.SweepAsync(
         conn, DateTimeOffset.UtcNow,
-        TimeSpan.FromDays(1), TimeSpan.FromDays(30), ct);
+        TimeSpan.FromDays(expiredDays), TimeSpan.FromDays(revokedDays), ct);
     if (deleted > 0)
     {
         try

@@ -1145,7 +1145,12 @@
       "warning": "Leave OFF unless you actively run an AI agent against this daemon.",
       "enableLabel": "Enable MCP integration",
       "strictKindsLabel": "Strict kind validation",
-      "strictKindsHint": "When ON, intents fail with kind_unknown unless the kind is registered in the kinds registry. Restricts AI to verbs plugins explicitly expose. Default OFF for backwards compatibility."
+      "strictKindsHint": "When ON, intents fail with kind_unknown unless the kind is registered in the kinds registry. Restricts AI to verbs plugins explicitly expose. Default OFF for backwards compatibility.",
+      "expiredRetentionLabel": "Expired-grant retention",
+      "expiredRetentionHint": "After expiry, the janitor waits this many days before deleting the row. 0 = never delete naturally-expired grants (only explicitly revoked ones).",
+      "revokedRetentionLabel": "Revoked-grant retention",
+      "revokedRetentionHint": "Audit rows for revoked grants are deleted only after this many days. 0 = delete immediately on revoke (no audit trail).",
+      "daysSuffix": "days"
     },
     "deploySubsystem": {
       "title": "Deploy subsystem",

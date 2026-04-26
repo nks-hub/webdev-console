@@ -1145,7 +1145,12 @@
       "warning": "Nechte VYPNUTÉ, pokud aktivně neprovozujete AI agenta proti tomuto daemonu.",
       "enableLabel": "Zapnout MCP integraci",
       "strictKindsLabel": "Striktní validace druhů",
-      "strictKindsHint": "Pokud zapnuto, intenty selžou s kind_unknown, dokud druh není registrovaný v registru. Omezuje AI jen na verby, které pluginy explicitně vystavují. Výchozí VYPNUTO kvůli zpětné kompatibilitě."
+      "strictKindsHint": "Pokud zapnuto, intenty selžou s kind_unknown, dokud druh není registrovaný v registru. Omezuje AI jen na verby, které pluginy explicitně vystavují. Výchozí VYPNUTO kvůli zpětné kompatibilitě.",
+      "expiredRetentionLabel": "Retence expirovaných oprávnění",
+      "expiredRetentionHint": "Po vypršení čeká janitor tolik dní, než řádek smaže. 0 = nikdy neexpirovaná oprávnění nemazat (jen revokovaná).",
+      "revokedRetentionLabel": "Retence odvolaných oprávnění",
+      "revokedRetentionHint": "Audit záznamy odvolaných oprávnění se mažou až po této době. 0 = mazat ihned po revoke (žádný audit log).",
+      "daysSuffix": "dní"
     },
     "deploySubsystem": {
       "title": "Deploy subsystém",
