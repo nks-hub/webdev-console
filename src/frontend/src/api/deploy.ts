@@ -311,6 +311,52 @@ export async function snapshotNow(domain: string): Promise<SnapshotNowResult> {
 }
 
 /**
+ * Phase 6.7 — DeployGroup history. Lists multi-host deploy fan-outs for
+ * the site, newest first.
+ */
+export type DeployGroupPhase =
+  | 'initializing'
+  | 'preflight'
+  | 'deploying'
+  | 'awaiting_all_soak'
+  | 'all_succeeded'
+  | 'partial_failure'
+  | 'rolling_back_all'
+  | 'rolled_back'
+  | 'group_failed'
+
+export interface DeployGroupEntry {
+  id: string
+  domain: string
+  hosts: string[]
+  hostDeployIds: Record<string, string>
+  phase: DeployGroupPhase
+  startedAt: string
+  completedAt: string | null
+  errorMessage: string | null
+  triggeredBy: 'gui' | 'mcp' | 'cli'
+}
+
+export interface DeployGroupHistoryResponse {
+  domain: string
+  count: number
+  entries: DeployGroupEntry[]
+}
+
+export async function fetchDeployGroups(
+  domain: string,
+  limit = 50,
+): Promise<DeployGroupHistoryResponse> {
+  try {
+    return await request<DeployGroupHistoryResponse>(
+      `${PREFIX}/sites/${encodeURIComponent(domain)}/groups?limit=${limit}`,
+    )
+  } catch {
+    return { domain, count: 0, entries: [] }
+  }
+}
+
+/**
  * POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore.
  * Caller must mint+confirm an intent first; this helper attaches the
  * X-Intent-Token header. Body always includes `confirm: true` per the

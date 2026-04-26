@@ -57,6 +57,10 @@
         />
       </el-tab-pane>
 
+      <el-tab-pane name="groups" label="Groups">
+        <DeployGroupHistoryTable :domain="domain" />
+      </el-tab-pane>
+
       <el-tab-pane name="settings" label="Settings">
         <DeploySettingsPanel :domain="domain" />
       </el-tab-pane>
@@ -72,6 +76,7 @@ import { useDeployStore } from '../../stores/deploy'
 import DeploySetupWizard from './DeploySetupWizard.vue'
 import DeployCommandCenter from './DeployCommandCenter.vue'
 import DeploySettingsPanel from './DeploySettingsPanel.vue'
+import DeployGroupHistoryTable from './DeployGroupHistoryTable.vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
 import type { DeployDiff } from './DiffSummary.vue'
 import type { PreflightCheck } from './PreflightChecklist.vue'
