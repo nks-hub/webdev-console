@@ -166,6 +166,9 @@ export interface DeployHookConfig {
   // Phase 7.5+++ — per-hook on/off toggle. Optional + treated as TRUE
   // when undefined so existing configs stay enabled without migration.
   enabled?: boolean
+  // Phase 7.5+++ — free-form name for the hook ("Notify Slack on prod
+  // deploy"). Optional; row falls back to the command/URL when empty.
+  description?: string
 }
 
 export interface DeploySnapshotConfig {

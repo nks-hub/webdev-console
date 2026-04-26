@@ -795,6 +795,8 @@
       "remove": "Remove",
       "save": "Save hooks",
       "enabledAria": "Enable/disable hook {n} (disabled hooks stay in config but never run)",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "e.g. \"Notify Slack on prod deploy\" — helps identification in long lists",
       "event": "Event",
       "type": "Type",
       "url": "URL",

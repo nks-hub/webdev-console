@@ -795,6 +795,8 @@
       "remove": "Odebrat",
       "save": "Uložit hooks",
       "enabledAria": "Zapnout/vypnout hook {n} (vypnuté zůstanou v configu, ale neběží)",
+      "description": "Popis (volitelný)",
+      "descriptionPlaceholder": "např. „Notify Slack na prod deploy“ — pomáhá identifikaci v dlouhém seznamu",
       "event": "Event",
       "type": "Typ",
       "url": "URL",

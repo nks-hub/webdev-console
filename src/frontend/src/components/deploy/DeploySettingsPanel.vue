@@ -252,6 +252,21 @@
               class="hook-form"
               :aria-label="t('deploySettings.hooks.ariaForm', { n: idx + 1 })"
             >
+              <!-- Phase 7.5+++ — free-form description ("Slack notify on
+                   prod"). Optional; full-width across the row so it
+                   reads as the hook's title rather than a side field. -->
+              <el-form-item style="flex-basis: 100%; margin-bottom: 8px">
+                <template #label>
+                  <label :for="`hook-desc-${idx}`">{{ t('deploySettings.hooks.description') }}</label>
+                </template>
+                <el-input
+                  :id="`hook-desc-${idx}`"
+                  v-model="hook.description"
+                  :placeholder="t('deploySettings.hooks.descriptionPlaceholder')"
+                  clearable
+                />
+              </el-form-item>
+
               <el-form-item required>
                 <template #label>
                   <label :for="`hook-event-${idx}`">{{ t('deploySettings.hooks.event') }}</label>
@@ -902,8 +917,9 @@ async function removeHost(name: string): Promise<void> {
 function defaultHook(): DeployHookConfig {
   // Phase 7.5+++ — explicitly enabled by default (matches the
   // `?? true` fallback we apply when reading legacy configs without
-  // the field).
-  return { event: 'post_switch', type: 'shell', command: '', timeoutSeconds: 30, enabled: true }
+  // the field). Description starts empty so operators see the
+  // placeholder hint rather than baked-in noise.
+  return { event: 'post_switch', type: 'shell', command: '', timeoutSeconds: 30, enabled: true, description: '' }
 }
 
 function addHook(): void {
