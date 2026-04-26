@@ -368,78 +368,117 @@
         </div>
       </el-tab-pane>
 
-      <!-- ── D: Notifications ──────────────────────────────────── -->
+      <!-- ── D: Notifications (redesign #156 — per-channel cards) ─── -->
       <el-tab-pane name="notifications" :label="t('deploySettings.tabs.notifications')">
         <div class="section-body">
-          <h3 class="section-title">{{ t('deploySettings.notifications.title') }}</h3>
+          <div class="section-intro">
+            <h2 class="section-h2">{{ t('deploySettings.notifications.title') }}</h2>
+            <p class="section-lead">{{ t('deploySettings.notifications.lead') }}</p>
+          </div>
 
-          <el-form
-            :model="settings.notifications"
-            label-position="top"
-            size="default"
-            class="settings-form"
-          >
-            <el-form-item>
-              <template #label>
-                <label :for="ids.slackWebhook">{{ t('deploySettings.notifications.slackWebhook') }}</label>
+          <div class="notify-grid">
+            <!-- Slack channel card -->
+            <el-card class="notify-card" shadow="hover">
+              <template #header>
+                <div class="notify-card-header">
+                  <div class="notify-card-title">
+                    <span class="notify-channel-icon" aria-hidden="true">#</span>
+                    <span>{{ t('deploySettings.notifications.slackTitle') }}</span>
+                  </div>
+                  <el-tag
+                    :type="settings.notifications.slackWebhook ? 'success' : 'info'"
+                    size="small" effect="plain"
+                  >
+                    {{ settings.notifications.slackWebhook
+                        ? t('deploySettings.notifications.statusOn')
+                        : t('deploySettings.notifications.statusOff') }}
+                  </el-tag>
+                </div>
               </template>
-              <el-input
-                :id="ids.slackWebhook"
-                v-model="settings.notifications.slackWebhook"
-                :placeholder="t('deploySettings.notifications.slackWebhookPlaceholder')"
-                clearable
-              />
-            </el-form-item>
-
-            <el-form-item>
-              <template #label>
-                <span>{{ t('deploySettings.notifications.emailRecipients') }}</span>
-              </template>
-              <div class="chip-input-wrap">
-                <el-tag
-                  v-for="(email, i) in settings.notifications.emailRecipients"
-                  :key="i"
-                  closable
-                  class="email-chip"
-                  :aria-label="t('deploySettings.notifications.emailAriaChip', { email })"
-                  @close="removeEmailRecipient(i)"
-                >
-                  {{ email }}
-                </el-tag>
+              <p class="notify-card-lead muted">{{ t('deploySettings.notifications.slackLead') }}</p>
+              <el-form-item :label="t('deploySettings.notifications.slackWebhook')">
                 <el-input
-                  :id="ids.emailInput"
-                  v-model="emailInputValue"
-                  size="small"
-                  :placeholder="t('deploySettings.notifications.emailPlaceholder')"
-                  class="chip-input"
-                  :aria-label="t('deploySettings.notifications.emailAriaAdd')"
-                  @keydown.enter.prevent="addEmailRecipient"
-                  @keydown.tab.prevent="addEmailRecipient"
-                  @blur="addEmailRecipient"
+                  :id="ids.slackWebhook"
+                  v-model="settings.notifications.slackWebhook"
+                  :placeholder="t('deploySettings.notifications.slackWebhookPlaceholder')"
+                  clearable
                 />
-              </div>
-            </el-form-item>
+              </el-form-item>
+            </el-card>
 
-            <el-form-item>
-              <template #label>
-                <span id="notify-on-label">{{ t('deploySettings.notifications.notifyOn') }}</span>
+            <!-- Email channel card -->
+            <el-card class="notify-card" shadow="hover">
+              <template #header>
+                <div class="notify-card-header">
+                  <div class="notify-card-title">
+                    <span class="notify-channel-icon" aria-hidden="true">@</span>
+                    <span>{{ t('deploySettings.notifications.emailTitle') }}</span>
+                  </div>
+                  <el-tag
+                    :type="settings.notifications.emailRecipients.length > 0 ? 'success' : 'info'"
+                    size="small" effect="plain"
+                  >
+                    {{ settings.notifications.emailRecipients.length > 0
+                        ? t('deploySettings.notifications.statusCount',
+                            { n: settings.notifications.emailRecipients.length })
+                        : t('deploySettings.notifications.statusOff') }}
+                  </el-tag>
+                </div>
               </template>
+              <p class="notify-card-lead muted">{{ t('deploySettings.notifications.emailLead') }}</p>
+              <el-form-item :label="t('deploySettings.notifications.emailRecipients')">
+                <div class="chip-input-wrap">
+                  <el-tag
+                    v-for="(email, i) in settings.notifications.emailRecipients"
+                    :key="i"
+                    closable
+                    class="email-chip"
+                    :aria-label="t('deploySettings.notifications.emailAriaChip', { email })"
+                    @close="removeEmailRecipient(i)"
+                  >
+                    {{ email }}
+                  </el-tag>
+                  <el-input
+                    :id="ids.emailInput"
+                    v-model="emailInputValue"
+                    size="small"
+                    :placeholder="t('deploySettings.notifications.emailPlaceholder')"
+                    class="chip-input"
+                    :aria-label="t('deploySettings.notifications.emailAriaAdd')"
+                    @keydown.enter.prevent="addEmailRecipient"
+                    @keydown.tab.prevent="addEmailRecipient"
+                    @blur="addEmailRecipient"
+                  />
+                </div>
+              </el-form-item>
+            </el-card>
+
+            <!-- Triggers card — applies across both channels -->
+            <el-card class="notify-card notify-card-wide" shadow="hover">
+              <template #header>
+                <div class="notify-card-header">
+                  <div class="notify-card-title">
+                    <span class="notify-channel-icon" aria-hidden="true">★</span>
+                    <span>{{ t('deploySettings.notifications.triggersTitle') }}</span>
+                  </div>
+                  <el-tag size="small" effect="plain">
+                    {{ t('deploySettings.notifications.triggersCount',
+                        { n: settings.notifications.notifyOn.length }) }}
+                  </el-tag>
+                </div>
+              </template>
+              <p class="notify-card-lead muted">{{ t('deploySettings.notifications.triggersLead') }}</p>
               <el-checkbox-group
                 v-model="settings.notifications.notifyOn"
                 aria-labelledby="notify-on-label"
+                class="notify-triggers-group"
               >
                 <el-checkbox value="success">{{ t('deploySettings.notifications.stateSuccess') }}</el-checkbox>
                 <el-checkbox value="failure">{{ t('deploySettings.notifications.stateFailure') }}</el-checkbox>
                 <el-checkbox value="awaiting_soak">{{ t('deploySettings.notifications.stateAwaitingSoak') }}</el-checkbox>
                 <el-checkbox value="cancelled">{{ t('deploySettings.notifications.stateCancelled') }}</el-checkbox>
               </el-checkbox-group>
-            </el-form-item>
-          </el-form>
-
-          <div class="section-footer">
-            <el-button type="primary" :loading="saving" @click="saveSettings">
-              {{ t('deploySettings.notifications.save') }}
-            </el-button>
+            </el-card>
           </div>
         </div>
       </el-tab-pane>
@@ -1445,6 +1484,52 @@ defineExpose({ saveSettings })
 .subsection-header {
   font-weight: 600;
   font-size: 13px;
+}
+
+/* Notifications redesign #156 — per-channel cards */
+.notify-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 720px) {
+  .notify-grid { grid-template-columns: 1fr; }
+}
+.notify-card-wide { grid-column: 1 / -1; }
+.notify-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.notify-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.notify-channel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--el-color-primary);
+}
+.notify-card-lead {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.notify-triggers-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 /* Hooks redesign #155 — card grid */
