@@ -211,7 +211,18 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       },
       async ({ domain, host, ttlSeconds }) =>
-        safe(() => daemonClient.post(`${PREFIX}/intents`, { domain, host, ttlSeconds })),
+        // Intents live on the daemon (cross-plugin), NOT under the
+        // NksDeploy plugin prefix. Field name is `expiresIn` per the
+        // daemon's contract; `kind=deploy` here, callers can mint
+        // separate intents for rollback/cancel via the same flow.
+        safe(() =>
+          daemonClient.post('/api/mcp/intents', {
+            domain,
+            host,
+            kind: 'deploy',
+            expiresIn: ttlSeconds,
+          }),
+        ),
     )
 
     server.registerTool(
@@ -313,12 +324,18 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
       async ({ domain, host, branch, intentToken, idempotencyKey }) => {
         const guard = destructiveGuard(intentToken)
         if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
+        // Intent token rides as the X-Intent-Token header; the plugin's
+        // CheckIntentAsync helper validates it before any destructive work.
+        const headers = intentToken ? { 'X-Intent-Token': intentToken } : undefined
         return safe(() =>
-          daemonClient.post(`${PREFIX}/sites/${encodeURIComponent(domain)}/hosts/${encodeURIComponent(host)}/deploy`, {
-            idempotencyKey: idempotencyKey ?? randomUuid(),
-            options: branch ? { branch } : {},
-            intentToken,
-          }),
+          daemonClient.post(
+            `${PREFIX}/sites/${encodeURIComponent(domain)}/hosts/${encodeURIComponent(host)}/deploy`,
+            {
+              idempotencyKey: idempotencyKey ?? randomUuid(),
+              options: branch ? { branch } : {},
+            },
+            headers,
+          ),
         )
       },
     )
@@ -342,10 +359,12 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
       async ({ domain, deployId, intentToken }) => {
         const guard = destructiveGuard(intentToken)
         if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
+        const headers = intentToken ? { 'X-Intent-Token': intentToken } : undefined
         return safe(() =>
           daemonClient.post(
             `${PREFIX}/sites/${encodeURIComponent(domain)}/deploys/${encodeURIComponent(deployId)}/rollback`,
             {},
+            headers,
           ),
         )
       },
@@ -370,9 +389,11 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
       async ({ domain, deployId, intentToken }) => {
         const guard = destructiveGuard(intentToken)
         if (!guard.allow) return safe(async () => { throw new Error(guard.reason) })
+        const headers = intentToken ? { 'X-Intent-Token': intentToken } : undefined
         return safe(() =>
           daemonClient.delete(
             `${PREFIX}/sites/${encodeURIComponent(domain)}/deploys/${encodeURIComponent(deployId)}`,
+            headers,
           ),
         )
       },

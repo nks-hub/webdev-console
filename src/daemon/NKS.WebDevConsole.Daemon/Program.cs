@@ -103,6 +103,13 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepos
     NKS.WebDevConsole.Daemon.Deploy.DeployRunsRepository>();
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster,
     NKS.WebDevConsole.Daemon.Deploy.SseDeployEventBroadcaster>();
+// MCP intent signer + validator. The signer holds the long-lived HMAC key
+// (DPAPI-wrapped on Windows, 0600 on POSIX); the validator persists/consumes
+// signed intent rows. Both are singletons so the key is loaded exactly once
+// and so concurrent intent issuance shares one keyed-hash instance.
+builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>();
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator,
+    NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>();
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
 builder.Services.AddSingleton<SitePhpIniWriter>();
@@ -859,6 +866,106 @@ app.MapPost("/api/admin/reset", async (HttpContext ctx, Database db, SiteManager
         Environment.Exit(exitCode);
     });
     return Results.Ok(new { scope = effectiveScope, restarting = true, exitCode });
+});
+
+// ---------------------------------------------------------------------------
+// MCP intent endpoints — Phase 4d hybrid confirmation flow.
+//
+// Issuance: POST /api/mcp/intents
+//   Body: { domain, host, kind: "deploy"|"rollback"|"cancel", expiresIn?: int, releaseId? }
+//   Returns: { intentId, intentToken, expiresAt }
+//   The token format is "{intentId}.{nonce}.{hmacBase64Url}" — the MCP
+//   server stuffs it into a follow-up destructive call, the plugin asks
+//   IDeployIntentValidator to consume it. Single-use; `used_at` flips
+//   atomically inside the validator's UPDATE.
+//
+// GUI confirmation: POST /api/mcp/intents/confirm-request
+//   Body: { intentId, prompt? }
+//   Pushes an "mcp:confirm-request" SSE event so the GUI can show a
+//   user-facing banner ("AI wants to deploy X — approve?"). The GUI then
+//   pings POST /api/mcp/intents/{id}/confirm to flip a confirmed flag
+//   the destructive endpoints check (Phase 5 — currently no-op stub so
+//   the SSE wiring lands now and Mode-A approval can be layered on
+//   without touching the validator contract).
+// ---------------------------------------------------------------------------
+
+app.MapPost("/api/mcp/intents", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    NKS.WebDevConsole.Daemon.Mcp.IntentSigner signer) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    var root = doc.RootElement;
+    string? domain = root.TryGetProperty("domain", out var dEl) ? dEl.GetString() : null;
+    string? host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() : null;
+    string? kind = root.TryGetProperty("kind", out var kEl) ? kEl.GetString() : null;
+    string? releaseId = root.TryGetProperty("releaseId", out var rEl) ? rEl.GetString() : null;
+    int expiresInSec = root.TryGetProperty("expiresIn", out var eEl) && eEl.TryGetInt32(out var ei) ? ei : 300;
+
+    if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(host) ||
+        string.IsNullOrWhiteSpace(kind))
+    {
+        return Results.BadRequest(new { error = "domain, host, kind are required" });
+    }
+    if (kind is not ("deploy" or "rollback" or "cancel"))
+    {
+        return Results.BadRequest(new { error = "kind must be deploy|rollback|cancel" });
+    }
+    // Clamp the expiry window. Long-lived signed intents defeat the point
+    // of single-use tokens — 1h ceiling matches the MCP server's CCR
+    // session length so a single AI turn always has a fresh signature.
+    expiresInSec = Math.Clamp(expiresInSec, 30, 3600);
+
+    var intentId = Guid.NewGuid().ToString("D");
+    var nonce = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16))
+        .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    var expiresAt = DateTimeOffset.UtcNow.AddSeconds(expiresInSec);
+    var canonical = NKS.WebDevConsole.Daemon.Mcp.IntentSigner.Canonicalize(
+        intentId, domain!, host!, kind!, nonce, expiresAt, releaseId);
+    var signature = signer.Sign(canonical);
+
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync();
+    await Dapper.SqlMapper.ExecuteAsync(conn,
+        "INSERT INTO deploy_intents (id, domain, host, release_id, kind, nonce, expires_at, hmac_signature) " +
+        "VALUES (@Id, @Domain, @Host, @ReleaseId, @Kind, @Nonce, @ExpiresAt, @Signature)",
+        new
+        {
+            Id = intentId,
+            Domain = domain,
+            Host = host,
+            ReleaseId = releaseId,
+            Kind = kind,
+            Nonce = nonce,
+            ExpiresAt = expiresAt.ToString("o"),
+            Signature = signature,
+        });
+
+    return Results.Ok(new
+    {
+        intentId,
+        intentToken = $"{intentId}.{nonce}.{signature}",
+        expiresAt = expiresAt.ToString("o"),
+    });
+});
+
+app.MapPost("/api/mcp/intents/confirm-request", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+    var root = doc.RootElement;
+    string? intentId = root.TryGetProperty("intentId", out var iEl) ? iEl.GetString() : null;
+    string? prompt = root.TryGetProperty("prompt", out var pEl) ? pEl.GetString() : null;
+    if (string.IsNullOrWhiteSpace(intentId))
+    {
+        return Results.BadRequest(new { error = "intentId is required" });
+    }
+    // Best-effort: the SSE bus is the GUI's notification channel. Failure
+    // to broadcast (no subscribers, etc.) is not fatal — the AI can still
+    // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
+    await broadcaster.BroadcastAsync("mcp:confirm-request", new { intentId, prompt });
+    return Results.Accepted();
 });
 
 // Auth middleware for /api/* requests.

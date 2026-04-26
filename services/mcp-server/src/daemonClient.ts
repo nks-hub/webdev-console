@@ -101,7 +101,12 @@ class DaemonClient {
    * Send a request to the daemon, refreshing the port file once on 401
    * (token rotated due to daemon restart between calls).
    */
-  private buildInit(method: string, token: string, body?: unknown): RequestInit {
+  private buildInit(
+    method: string,
+    token: string,
+    body?: unknown,
+    extraHeaders?: Record<string, string>,
+  ): RequestInit {
     // Only advertise application/json when a body is actually present.
     // Bodyless POSTs (start-service, install-ca, create-backup, etc.)
     // should not carry a Content-Type header — some HTTP middleware
@@ -110,6 +115,7 @@ class DaemonClient {
       Authorization: `Bearer ${token}`,
     }
     if (body !== undefined) headers['Content-Type'] = 'application/json'
+    if (extraHeaders) Object.assign(headers, extraHeaders)
     return {
       method,
       headers,
@@ -121,11 +127,12 @@ class DaemonClient {
     method: string,
     path: string,
     body?: unknown,
+    extraHeaders?: Record<string, string>,
   ): Promise<unknown> {
     const conn = this.ensureConnection()
     let res: Response
     try {
-      res = await fetch(`http://127.0.0.1:${conn.port}${path}`, this.buildInit(method, conn.token, body))
+      res = await fetch(`http://127.0.0.1:${conn.port}${path}`, this.buildInit(method, conn.token, body, extraHeaders))
     } catch {
       // Connection refused — daemon stopped between calls.
       this.current = null
@@ -141,7 +148,7 @@ class DaemonClient {
       try {
         res = await fetch(
           `http://127.0.0.1:${fresh.port}${path}`,
-          this.buildInit(method, fresh.token, body),
+          this.buildInit(method, fresh.token, body, extraHeaders),
         )
       } catch {
         this.current = null
@@ -169,17 +176,17 @@ class DaemonClient {
     return res.text()
   }
 
-  get<T = unknown>(path: string): Promise<T> {
-    return this.request('GET', path) as Promise<T>
+  get<T = unknown>(path: string, extraHeaders?: Record<string, string>): Promise<T> {
+    return this.request('GET', path, undefined, extraHeaders) as Promise<T>
   }
-  post<T = unknown>(path: string, body?: unknown): Promise<T> {
-    return this.request('POST', path, body) as Promise<T>
+  post<T = unknown>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
+    return this.request('POST', path, body, extraHeaders) as Promise<T>
   }
-  put<T = unknown>(path: string, body?: unknown): Promise<T> {
-    return this.request('PUT', path, body) as Promise<T>
+  put<T = unknown>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
+    return this.request('PUT', path, body, extraHeaders) as Promise<T>
   }
-  delete<T = unknown>(path: string): Promise<T> {
-    return this.request('DELETE', path) as Promise<T>
+  delete<T = unknown>(path: string, extraHeaders?: Record<string, string>): Promise<T> {
+    return this.request('DELETE', path, undefined, extraHeaders) as Promise<T>
   }
 }
 
