@@ -97,6 +97,8 @@ builder.Services.AddSingleton(sp => new SiteManager(
     NKS.WebDevConsole.Core.Services.WdcPaths.SitesRoot,
     NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot
 ));
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.ISiteRegistry>(
+    sp => sp.GetRequiredService<SiteManager>());
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
 builder.Services.AddSingleton<SitePhpIniWriter>();
