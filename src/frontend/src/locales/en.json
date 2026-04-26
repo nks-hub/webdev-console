@@ -855,7 +855,10 @@
       "url": "URL",
       "command": "Command / script",
       "timeout": "Timeout (s)",
-      "ariaForm": "Hook {n}"
+      "ariaForm": "Hook {n}",
+      "emptyTitle": "No hooks",
+      "count": "{n} hooks",
+      "untitled": "(no description)"
     },
     "notifications": {
       "title": "Notifications",

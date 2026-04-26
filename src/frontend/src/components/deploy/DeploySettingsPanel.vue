@@ -219,162 +219,151 @@
         </div>
       </el-tab-pane>
 
-      <!-- ── C: Hooks ──────────────────────────────────────────── -->
+      <!-- ── C: Hooks (redesign #155 — card per hook) ─────────────── -->
       <el-tab-pane name="hooks" :label="t('deploySettings.tabs.hooks')">
         <div class="section-body">
-          <div class="section-header">
-            <h3 class="section-title">{{ t('deploySettings.hooks.title') }}</h3>
-            <el-button type="primary" size="small" @click="addHook">
-              {{ t('deploySettings.hooks.addHook') }}
-            </el-button>
-          </div>
-          <p class="muted">{{ t('deploySettings.hooks.intro') }}</p>
-
-          <div v-if="settings.hooks.length === 0" class="empty-state">
-            {{ t('deploySettings.hooks.empty') }}
+          <div class="section-intro">
+            <h2 class="section-h2">{{ t('deploySettings.hooks.title') }}</h2>
+            <p class="section-lead">{{ t('deploySettings.hooks.intro') }}</p>
           </div>
 
-          <div
-            v-for="(hook, idx) in settings.hooks"
-            :key="idx"
-            class="hook-row"
-            :class="{ 'hook-disabled': hook.enabled === false }"
-          >
-            <!-- Phase 7.5+++ — per-hook on/off switch. Disabled hooks
-                 stay in the config (no accidental delete) but the
-                 deploy backend should skip them. Backwards-compat:
-                 undefined treated as enabled. -->
-            <el-switch
-              :model-value="hook.enabled !== false"
-              size="small"
-              :aria-label="t('deploySettings.hooks.enabledAria', { n: idx + 1 })"
-              @update:model-value="(v: any) => { hook.enabled = !!v }"
-            />
-            <div class="hook-order-btns">
-              <el-button
-                size="small"
-                text
-                :disabled="idx === 0"
-                :aria-label="t('deploySettings.hooks.moveUp', { n: idx + 1 })"
-                @click="moveHook(idx, -1)"
-              >
-                &#8593;
+          <div v-if="settings.hooks.length === 0" class="hosts-empty">
+            <el-empty :image-size="80" :description="''">
+              <template #description>
+                <h3 class="empty-title">{{ t('deploySettings.hooks.emptyTitle') }}</h3>
+                <p class="empty-lead">{{ t('deploySettings.hooks.empty') }}</p>
+              </template>
+              <el-button type="primary" size="default" @click="addHook">
+                + {{ t('deploySettings.hooks.addHook') }}
               </el-button>
-              <el-button
-                size="small"
-                text
-                :disabled="idx === settings.hooks.length - 1"
-                :aria-label="t('deploySettings.hooks.moveDown', { n: idx + 1 })"
-                @click="moveHook(idx, 1)"
-              >
-                &#8595;
+            </el-empty>
+          </div>
+
+          <div v-else>
+            <div class="hosts-toolbar">
+              <span class="hosts-count muted">
+                {{ t('deploySettings.hooks.count', { n: settings.hooks.length }) }}
+              </span>
+              <el-button type="primary" size="default" @click="addHook">
+                + {{ t('deploySettings.hooks.addHook') }}
               </el-button>
             </div>
 
-            <el-form
-              :model="hook"
-              label-position="top"
-              size="small"
-              class="hook-form"
-              :aria-label="t('deploySettings.hooks.ariaForm', { n: idx + 1 })"
-            >
-              <!-- Phase 7.5+++ — free-form description ("Slack notify on
-                   prod"). Optional; full-width across the row so it
-                   reads as the hook's title rather than a side field. -->
-              <el-form-item style="flex-basis: 100%; margin-bottom: 8px">
-                <template #label>
-                  <label :for="`hook-desc-${idx}`">{{ t('deploySettings.hooks.description') }}</label>
+            <div class="hooks-grid">
+              <el-card
+                v-for="(hook, idx) in settings.hooks"
+                :key="idx"
+                class="hook-card"
+                :class="{ 'hook-disabled': hook.enabled === false }"
+                shadow="hover"
+              >
+                <template #header>
+                  <div class="hook-card-header">
+                    <div class="hook-card-meta">
+                      <el-tag :type="eventTagType(hook.event)" size="small" effect="dark">
+                        {{ hook.event }}
+                      </el-tag>
+                      <el-tag size="small" effect="plain">{{ hook.type }}</el-tag>
+                      <span class="hook-desc-text">
+                        {{ hook.description || t('deploySettings.hooks.untitled') }}
+                      </span>
+                    </div>
+                    <div class="hook-card-actions">
+                      <el-switch
+                        :model-value="hook.enabled !== false"
+                        size="small"
+                        :aria-label="t('deploySettings.hooks.enabledAria', { n: idx + 1 })"
+                        @update:model-value="(v: any) => { hook.enabled = !!v }"
+                      />
+                      <el-button
+                        size="small" text
+                        :disabled="idx === 0"
+                        :aria-label="t('deploySettings.hooks.moveUp', { n: idx + 1 })"
+                        @click="moveHook(idx, -1)"
+                      >&#8593;</el-button>
+                      <el-button
+                        size="small" text
+                        :disabled="idx === settings.hooks.length - 1"
+                        :aria-label="t('deploySettings.hooks.moveDown', { n: idx + 1 })"
+                        @click="moveHook(idx, 1)"
+                      >&#8595;</el-button>
+                      <el-button
+                        size="small" text type="danger"
+                        :aria-label="t('deploySettings.hooks.removeAria', { n: idx + 1 })"
+                        @click="removeHook(idx)"
+                      >{{ t('deploySettings.hooks.remove') }}</el-button>
+                    </div>
+                  </div>
                 </template>
-                <el-input
-                  :id="`hook-desc-${idx}`"
-                  v-model="hook.description"
-                  :placeholder="t('deploySettings.hooks.descriptionPlaceholder')"
-                  clearable
-                />
-              </el-form-item>
 
-              <el-form-item required>
-                <template #label>
-                  <label :for="`hook-event-${idx}`">{{ t('deploySettings.hooks.event') }}</label>
-                </template>
-                <el-select
-                  :id="`hook-event-${idx}`"
-                  v-model="hook.event"
-                  style="width: 160px"
-                  aria-required="true"
-                >
-                  <el-option label="pre_deploy" value="pre_deploy" />
-                  <el-option label="post_fetch" value="post_fetch" />
-                  <el-option label="pre_switch" value="pre_switch" />
-                  <el-option label="post_switch" value="post_switch" />
-                  <el-option label="on_failure" value="on_failure" />
-                  <el-option label="on_rollback" value="on_rollback" />
-                </el-select>
-              </el-form-item>
+                <div class="hook-card-body">
+                  <el-form
+                    :model="hook"
+                    label-position="top"
+                    size="small"
+                    :aria-label="t('deploySettings.hooks.ariaForm', { n: idx + 1 })"
+                  >
+                    <el-form-item :label="t('deploySettings.hooks.description')">
+                      <el-input
+                        :id="`hook-desc-${idx}`"
+                        v-model="hook.description"
+                        :placeholder="t('deploySettings.hooks.descriptionPlaceholder')"
+                        clearable
+                      />
+                    </el-form-item>
 
-              <el-form-item required>
-                <template #label>
-                  <label :for="`hook-type-${idx}`">{{ t('deploySettings.hooks.type') }}</label>
-                </template>
-                <el-select
-                  :id="`hook-type-${idx}`"
-                  v-model="hook.type"
-                  style="width: 100px"
-                  aria-required="true"
-                >
-                  <el-option label="shell" value="shell" />
-                  <el-option label="http" value="http" />
-                  <el-option label="php" value="php" />
-                </el-select>
-              </el-form-item>
+                    <div class="hook-row-flex">
+                      <el-form-item :label="t('deploySettings.hooks.event')" required style="width: 170px">
+                        <el-select :id="`hook-event-${idx}`" v-model="hook.event" aria-required="true">
+                          <el-option label="pre_deploy" value="pre_deploy" />
+                          <el-option label="post_fetch" value="post_fetch" />
+                          <el-option label="pre_switch" value="pre_switch" />
+                          <el-option label="post_switch" value="post_switch" />
+                          <el-option label="on_failure" value="on_failure" />
+                          <el-option label="on_rollback" value="on_rollback" />
+                        </el-select>
+                      </el-form-item>
 
-              <el-form-item required style="flex: 1">
-                <template #label>
-                  <label :for="`hook-cmd-${idx}`">
-                    {{ hook.type === 'http' ? t('deploySettings.hooks.url') : t('deploySettings.hooks.command') }}
-                  </label>
-                </template>
-                <el-input
-                  :id="`hook-cmd-${idx}`"
-                  v-model="hook.command"
-                  :placeholder="hook.type === 'http'
-                    ? t('deploySettings.hooks.urlPlaceholder')
-                    : t('deploySettings.hooks.commandPlaceholder')"
-                  aria-required="true"
-                />
-              </el-form-item>
+                      <el-form-item :label="t('deploySettings.hooks.type')" required style="width: 110px">
+                        <el-select :id="`hook-type-${idx}`" v-model="hook.type" aria-required="true">
+                          <el-option label="shell" value="shell" />
+                          <el-option label="http" value="http" />
+                          <el-option label="php" value="php" />
+                        </el-select>
+                      </el-form-item>
 
-              <el-form-item>
-                <template #label>
-                  <label :for="`hook-timeout-${idx}`">{{ t('deploySettings.hooks.timeout') }}</label>
-                </template>
-                <el-input-number
-                  :id="`hook-timeout-${idx}`"
-                  v-model="hook.timeoutSeconds"
-                  :min="1"
-                  :max="3600"
-                  controls-position="right"
-                  style="width: 100px"
-                />
-              </el-form-item>
-            </el-form>
+                      <el-form-item :label="t('deploySettings.hooks.timeout')" style="width: 110px">
+                        <el-input-number
+                          :id="`hook-timeout-${idx}`"
+                          v-model="hook.timeoutSeconds"
+                          :min="1" :max="3600"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                      </el-form-item>
+                    </div>
 
-            <el-button
-              size="small"
-              text
-              type="danger"
-              :aria-label="t('deploySettings.hooks.removeAria', { n: idx + 1 })"
-              class="hook-remove"
-              @click="removeHook(idx)"
-            >
-              {{ t('deploySettings.hooks.remove') }}
-            </el-button>
-          </div>
-
-          <div class="section-footer">
-            <el-button type="primary" :loading="saving" @click="saveSettings">
-              {{ t('deploySettings.hooks.save') }}
-            </el-button>
+                    <el-form-item required>
+                      <template #label>
+                        <label :for="`hook-cmd-${idx}`">
+                          {{ hook.type === 'http' ? t('deploySettings.hooks.url') : t('deploySettings.hooks.command') }}
+                        </label>
+                      </template>
+                      <el-input
+                        :id="`hook-cmd-${idx}`"
+                        v-model="hook.command"
+                        :placeholder="hook.type === 'http'
+                          ? t('deploySettings.hooks.urlPlaceholder')
+                          : t('deploySettings.hooks.commandPlaceholder')"
+                        type="textarea"
+                        :rows="2"
+                        aria-required="true"
+                      />
+                    </el-form-item>
+                  </el-form>
+                </div>
+              </el-card>
+            </div>
           </div>
         </div>
       </el-tab-pane>
@@ -852,6 +841,16 @@ const snapshots = ref<DeploySnapshotEntry[]>([])
 // under …/pre-deploy/, so a substring check is enough to bucket them.
 function snapshotKind(path: string): 'pre-deploy' | 'manual' {
   return path.includes('/pre-deploy/') ? 'pre-deploy' : 'manual'
+}
+
+// Phase 7.5+++ Hooks redesign — color-code event tags by lifecycle
+// position so an operator can scan a long hook list and see which
+// stage each one fires at without reading the label.
+function eventTagType(event: string): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
+  if (event === 'pre_deploy' || event === 'post_fetch') return 'info'
+  if (event === 'pre_switch' || event === 'post_switch') return 'primary'
+  if (event === 'on_failure' || event === 'on_rollback') return 'danger'
+  return 'info'
 }
 const snapshotsFilter = ref<'all' | 'pre-deploy' | 'manual'>('all')
 const filteredSnapshots = computed(() =>
@@ -1448,7 +1447,52 @@ defineExpose({ saveSettings })
   font-size: 13px;
 }
 
-/* Hooks */
+/* Hooks redesign #155 — card grid */
+.hooks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hook-card.hook-disabled {
+  opacity: 0.6;
+  background: var(--el-fill-color-lighter);
+}
+.hook-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hook-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+.hook-desc-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hook-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hook-card-body { padding-top: 4px; }
+.hook-row-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+/* Legacy hook-row block — kept for any pages still using it */
 .hook-row {
   display: flex;
   align-items: flex-start;

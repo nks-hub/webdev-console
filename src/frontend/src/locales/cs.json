@@ -855,7 +855,10 @@
       "url": "URL",
       "command": "Příkaz / skript",
       "timeout": "Timeout (s)",
-      "ariaForm": "Hook {n}"
+      "ariaForm": "Hook {n}",
+      "emptyTitle": "Žádné hooks",
+      "count": "{n} hooks",
+      "untitled": "(bez popisu)"
     },
     "notifications": {
       "title": "Notifikace",
