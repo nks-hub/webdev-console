@@ -95,7 +95,26 @@ public sealed class DeployIntentValidatorTests
     }
 
     private static DeployIntentValidator MakeValidator(Database db) =>
-        new DeployIntentValidator(db, Signer);
+        new DeployIntentValidator(db, Signer, new EmptyGrantsRepo());
+
+    /// <summary>
+    /// Phase 7.3 — null-object grants repo. Returns "no match" for every
+    /// lookup so the validator falls back to its existing pending-confirmation
+    /// behaviour. Tests that exercise the grants pre-check pass a custom
+    /// implementation in their own MakeValidator helper instead.
+    /// </summary>
+    private sealed class EmptyGrantsRepo : NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository
+    {
+        public Task<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>> ListActiveAsync(CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>>(Array.Empty<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>());
+        public Task<string> InsertAsync(NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow row, CancellationToken ct) =>
+            Task.FromResult(Guid.NewGuid().ToString("D"));
+        public Task<bool> RevokeAsync(string id, CancellationToken ct) => Task.FromResult(false);
+        public Task<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?> FindMatchingActiveAsync(
+            string? sessionId, string? instanceId, string? apiKeyId,
+            string kind, string target, CancellationToken ct) =>
+            Task.FromResult<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?>(null);
+    }
 
     // --- Allow path ---
 
@@ -351,6 +370,92 @@ public sealed class DeployIntentValidatorTests
             Assert.Equal("pending_confirmation", result.Reason);
         }
         finally { Cleanup(path); }
+    }
+
+    // --- Phase 7.3 — grant pre-check auto-confirms ---
+
+    [Fact]
+    public async Task ConfirmedAtNull_GrantMatches_PreStampsAndSucceeds()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var (token, intentId) = InsertValidIntent(db, confirmedAt: null);
+
+            var grants = new StubGrantsRepo();
+            grants.MatchOn(sessionId: "agent-42", kind: "deploy", target: "myapp.loc");
+            var validator = new DeployIntentValidator(db, Signer, grants);
+
+            // Simulate the middleware setting AsyncLocal slots from request headers.
+            NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.SessionId = "agent-42";
+            try
+            {
+                var result = await validator.ValidateAndConsumeAsync(
+                    token, "deploy", "myapp.loc", "production",
+                    allowUnconfirmed: false, CancellationToken.None);
+                Assert.True(result.Ok);
+                using var conn = db.CreateConnection();
+                var confirmedAt = conn.QuerySingleOrDefault<string>(
+                    "SELECT confirmed_at FROM deploy_intents WHERE id = @Id",
+                    new { Id = intentId });
+                Assert.NotNull(confirmedAt);
+            }
+            finally { NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.Clear(); }
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
+    public async Task ConfirmedAtNull_NoGrantMatch_StillDeniesPendingConfirmation()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var (token, _) = InsertValidIntent(db, confirmedAt: null);
+            var grants = new StubGrantsRepo();    // no grants registered
+            var validator = new DeployIntentValidator(db, Signer, grants);
+            NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.SessionId = "agent-42";
+            try
+            {
+                var result = await validator.ValidateAndConsumeAsync(
+                    token, "deploy", "myapp.loc", "production",
+                    allowUnconfirmed: false, CancellationToken.None);
+                Assert.False(result.Ok);
+                Assert.Equal("pending_confirmation", result.Reason);
+            }
+            finally { NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.Clear(); }
+        }
+        finally { Cleanup(path); }
+    }
+
+    /// <summary>Stub grants repo whose lookup returns a match only when caller
+    /// + kind + target line up with the slot configured via MatchOn.</summary>
+    private sealed class StubGrantsRepo : NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository
+    {
+        private string? _sessionId; private string? _kind; private string? _target;
+        public void MatchOn(string sessionId, string kind, string target)
+        { _sessionId = sessionId; _kind = kind; _target = target; }
+
+        public Task<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>> ListActiveAsync(CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>>(Array.Empty<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow>());
+        public Task<string> InsertAsync(NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow row, CancellationToken ct) =>
+            Task.FromResult("");
+        public Task<bool> RevokeAsync(string id, CancellationToken ct) => Task.FromResult(false);
+        public Task<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?> FindMatchingActiveAsync(
+            string? sessionId, string? instanceId, string? apiKeyId,
+            string kind, string target, CancellationToken ct)
+        {
+            if (sessionId == _sessionId && kind == _kind && target == _target)
+            {
+                return Task.FromResult<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?>(
+                    new NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow(
+                        Id: "stub", ScopeType: "session", ScopeValue: sessionId,
+                        KindPattern: kind, TargetPattern: target,
+                        GrantedAt: "now", ExpiresAt: null, GrantedBy: "test",
+                        RevokedAt: null, Note: null));
+            }
+            return Task.FromResult<NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow?>(null);
+        }
     }
 
     // --- Allow: allowUnconfirmed pre-stamps confirmed_at ---

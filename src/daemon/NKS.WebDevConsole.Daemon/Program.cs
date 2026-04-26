@@ -7,6 +7,7 @@ using NKS.WebDevConsole.Daemon.Binaries;
 using NKS.WebDevConsole.Daemon.Backup;
 using NKS.WebDevConsole.Daemon.Config;
 using NKS.WebDevConsole.Daemon.Data;
+using NKS.WebDevConsole.Daemon.Mcp;
 using CliWrap.Buffered;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
@@ -1326,6 +1327,91 @@ static string ComputeIntentState(string? usedAt, string? confirmedAt, string exp
     return "ready";
 }
 
+// ============================================================================
+// Phase 7.3 — MCP grants CRUD. The grants table powers persistent trust:
+// "approve THIS session for 30 min", "always trust THIS API key", or coarse
+// "always trust any AI on THIS daemon". Endpoints are gated by mcp.enabled
+// (same as /api/mcp/intents) and the standard bearer auth on /api/*.
+// ============================================================================
+
+// List active grants — newest first. Used by GUI grants page + tests.
+app.MapGet("/api/mcp/grants", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    var rows = await grants.ListActiveAsync(ct);
+    return Results.Ok(new { count = rows.Count, entries = rows });
+});
+
+// Create a grant. Body shape:
+// {
+//   "scopeType":   "session" | "instance" | "api_key" | "always",
+//   "scopeValue":  "<id>" | null (must be null when scopeType='always'),
+//   "kindPattern": "*" or "deploy" | "rollback" | "cancel" | "restore",
+//   "targetPattern":"*" or specific target (e.g. domain),
+//   "expiresAt":   ISO-8601 UTC or null (null = permanent),
+//   "note":        free-form, optional
+// }
+app.MapPost("/api/mcp/grants", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+
+    GrantCreateBody? body;
+    try { body = await ctx.Request.ReadFromJsonAsync<GrantCreateBody>(ct); }
+    catch { return Results.BadRequest(new { error = "invalid_json" }); }
+    if (body is null) return Results.BadRequest(new { error = "missing_body" });
+
+    var allowedScopes = new[] { "session", "instance", "api_key", "always" };
+    if (string.IsNullOrEmpty(body.ScopeType) || !allowedScopes.Contains(body.ScopeType))
+        return Results.BadRequest(new { error = "invalid_scope_type", allowed = allowedScopes });
+    if (body.ScopeType == "always")
+    {
+        if (!string.IsNullOrEmpty(body.ScopeValue))
+            return Results.BadRequest(new { error = "scope_value_must_be_null_for_always" });
+    }
+    else if (string.IsNullOrEmpty(body.ScopeValue))
+    {
+        return Results.BadRequest(new { error = "scope_value_required" });
+    }
+
+    var row = new NKS.WebDevConsole.Core.Interfaces.McpSessionGrantRow(
+        Id: null,
+        ScopeType: body.ScopeType,
+        ScopeValue: body.ScopeType == "always" ? null : body.ScopeValue,
+        KindPattern: string.IsNullOrEmpty(body.KindPattern) ? "*" : body.KindPattern,
+        TargetPattern: string.IsNullOrEmpty(body.TargetPattern) ? "*" : body.TargetPattern,
+        GrantedAt: "",
+        ExpiresAt: body.ExpiresAt,
+        GrantedBy: string.IsNullOrEmpty(body.GrantedBy) ? "gui" : body.GrantedBy,
+        RevokedAt: null,
+        Note: body.Note);
+
+    var id = await grants.InsertAsync(row, ct);
+    return Results.Ok(new { id, status = "created" });
+});
+
+// Revoke (soft-delete) a grant by id.
+app.MapDelete("/api/mcp/grants/{id}", async (
+    string id,
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    var ok = await grants.RevokeAsync(id, ct);
+    return ok
+        ? Results.Ok(new { id, status = "revoked" })
+        : Results.NotFound(new { error = "grant_not_found_or_already_revoked", id });
+});
+
+// Body record for the POST endpoint. Lives at file scope so the
+// minimal-API binder can deserialise it.
+
 // Phase 7.1a — deploy.enabled gate. Runs BEFORE auth so a disabled
 // deploy plugin returns clean 404 to ANY /api/nks.wdc.deploy/* request
 // (instead of going through bearer-auth then plugin handler then a
@@ -1341,6 +1427,28 @@ app.Use(async (ctx, next) =>
             await ctx.Response.WriteAsJsonAsync(new { error = "deploy_disabled" });
             return;
         }
+    }
+    await next();
+});
+
+// Phase 7.3 — populate McpCallerContext from request headers so the
+// DeployIntentValidator's grants pre-check can identify the caller.
+// The MCP server is expected to set X-Mcp-Session-Id (the in-process
+// session token, rotates per agent run), X-Mcp-Api-Key-Id (a stable
+// fingerprint of the API key, NEVER the key itself), and
+// X-Mcp-Instance-Id (this WDC install's UUID, useful for "trust any
+// agent talking to THIS daemon" grants). Each header is read once and
+// pushed into AsyncLocal — flows through every async hop inside the
+// validator without us threading a parameter through the plugin
+// boundary. Slots are cleared automatically when the request scope
+// ends (AsyncLocal copy-on-write semantics).
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api"))
+    {
+        McpCallerContext.SessionId  = ctx.Request.Headers["X-Mcp-Session-Id"].FirstOrDefault();
+        McpCallerContext.ApiKeyId   = ctx.Request.Headers["X-Mcp-Api-Key-Id"].FirstOrDefault();
+        McpCallerContext.InstanceId = ctx.Request.Headers["X-Mcp-Instance-Id"].FirstOrDefault();
     }
     await next();
 });
@@ -7660,6 +7768,15 @@ try { pluginLoader.WireEndpoints(app); }
 catch (Exception ex) { app.Logger.LogError(ex, "Plugin endpoint wiring failed"); }
 
 await app.RunAsync();
+
+record GrantCreateBody(
+    string ScopeType,
+    string? ScopeValue,
+    string? KindPattern,
+    string? TargetPattern,
+    string? ExpiresAt,
+    string? GrantedBy,
+    string? Note);
 
 record ConfigValidateRequest(string ConfigPath, string? Content, string? ServiceId);
 record ServiceConfigWriteRequest(string Path, string? Content);

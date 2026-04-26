@@ -22,11 +22,16 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
 {
     private readonly Database _db;
     private readonly IntentSigner _signer;
+    private readonly IMcpSessionGrantsRepository _grants;
 
-    public DeployIntentValidator(Database db, IntentSigner signer)
+    public DeployIntentValidator(
+        Database db,
+        IntentSigner signer,
+        IMcpSessionGrantsRepository grants)
     {
         _db = db;
         _signer = signer;
+        _grants = grants;
     }
 
     public async Task<IntentValidationResult> ValidateAndConsumeAsync(
@@ -87,9 +92,31 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         // to 425 Too Early; CI / headless callers bypass the gate by
         // passing allowUnconfirmed=true (which pre-stamps confirmed_at
         // BEFORE the gate check, so the gate trivially passes).
+        //
+        // Phase 7.3 — BEFORE returning pending_confirmation, check the
+        // persistent grants table. If the calling MCP context (session id /
+        // api-key id / instance id, set by middleware from X-Mcp-* headers)
+        // matches an active grant for this kind+domain, auto-stamp
+        // confirmed_at and proceed without bothering the operator. This is
+        // the "trust this session for 30 min" / "always trust this AI"
+        // story — the grant survives daemon restarts; X-Allow-Unconfirmed
+        // had to be re-asserted on every request.
         if (string.IsNullOrEmpty(row.ConfirmedAt))
         {
-            if (!allowUnconfirmed)
+            var grantedAuto = false;
+            if (!allowUnconfirmed && McpCallerContext.HasAnyIdentity)
+            {
+                var grant = await _grants.FindMatchingActiveAsync(
+                    McpCallerContext.SessionId,
+                    McpCallerContext.InstanceId,
+                    McpCallerContext.ApiKeyId,
+                    row.Kind,
+                    row.Domain,
+                    ct);
+                grantedAuto = grant is not null;
+            }
+
+            if (!allowUnconfirmed && !grantedAuto)
                 return IntentValidationResult.Deny("pending_confirmation");
             // Pre-stamp via single UPDATE — no-op if a concurrent GUI click
             // already stamped (rowcount=0 is fine, the row is now
