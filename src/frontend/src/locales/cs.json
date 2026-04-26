@@ -1264,6 +1264,8 @@
     "toastRevoked": "Oprávnění odvoláno",
     "toastRevokeFailed": "Nepodařilo se odvolat oprávnění: {error}",
     "sweepNow": "Vyčistit",
+    "exportJson": "Export JSON",
+    "exportToast": "Exportováno {n} oprávnění do JSON souboru",
     "sweepDone": "Vyčištěno {n} starých oprávnění",
     "sweepNothing": "Není co čistit — všechna oprávnění jsou aktuální",
     "sweepFailed": "Čištění selhalo: {error}",

@@ -1264,6 +1264,8 @@
     "toastRevoked": "Grant revoked",
     "toastRevokeFailed": "Could not revoke grant: {error}",
     "sweepNow": "Clean now",
+    "exportJson": "Export JSON",
+    "exportToast": "Exported {n} grants to JSON file",
     "sweepDone": "Cleaned {n} stale grants",
     "sweepNothing": "Nothing to clean — all grants are current",
     "sweepFailed": "Cleanup failed: {error}",

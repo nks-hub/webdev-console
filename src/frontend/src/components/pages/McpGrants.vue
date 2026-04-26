@@ -9,6 +9,12 @@
         <el-button @click="testMatchDialogOpen = true">
           <el-icon><Search /></el-icon> {{ t('mcpGrants.testMatch.button') }}
         </el-button>
+        <el-button
+          :disabled="grants.length === 0"
+          @click="onExportJson"
+        >
+          <el-icon><Download /></el-icon> {{ t('mcpGrants.exportJson') }}
+        </el-button>
         <el-button :loading="sweeping" @click="onSweepNow">
           <el-icon><Delete /></el-icon> {{ t('mcpGrants.sweepNow') }}
         </el-button>
@@ -291,7 +297,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus, Delete, Search } from '@element-plus/icons-vue'
+import { Refresh, Plus, Delete, Search, Download } from '@element-plus/icons-vue'
 import {
   listMcpGrants, createMcpGrant, revokeMcpGrant, sweepMcpGrantsNow,
   testMatchMcpGrant, subscribeEventsMap,
@@ -323,6 +329,33 @@ const sweeping = ref(false)
 // so soft-revoked rows appear too (visually muted in the table).
 const includeRevoked = ref(false)
 function onIncludeRevokedChange(): void { void refresh() }
+
+// Phase 7.5+++ — backup/migration export. Pure client-side Blob download
+// of the currently-loaded grant set (respects the audit toggle: off →
+// active only, on → full audit including revoked). Includes a small
+// envelope header (timestamp + format version) so future imports can
+// reject incompatible payloads.
+function onExportJson(): void {
+  if (grants.value.length === 0) return
+  const payload = {
+    formatVersion: 1,
+    exportedAt: new Date().toISOString(),
+    includeRevoked: includeRevoked.value,
+    count: grants.value.length,
+    entries: grants.value,
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `mcp-grants-${stamp}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  ElMessage.success(t('mcpGrants.exportToast', { n: grants.value.length }))
+}
 
 // Phase 7.5+++ — dry-run test-match dialog state.
 const testMatchDialogOpen = ref(false)
