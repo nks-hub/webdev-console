@@ -1480,6 +1480,123 @@ app.MapDelete("/api/mcp/grants/{id}", async (
 // Body record for the POST endpoint. Lives at file scope so the
 // minimal-API binder can deserialise it.
 
+// ============================================================================
+// Phase 7.5 — minimum deploy plugin REST routes living in daemon CORE.
+// Frontend api/deploy.ts calls /api/nks.wdc.deploy/sites/{domain}/* — these
+// routes were never registered before, so the GUI 404'd silently. This
+// surface uses the existing DeployRunsRepository so any real backend that
+// gets bolted in later just inherits the same audit trail.
+// ============================================================================
+
+// History — list deploy runs for a domain. Used by DeployHistoryTable
+// + DeploySiteTab's hasConfig probe (returns 404→empty when zero rows
+// would be returned, so frontend keeps showing the wizard CTA).
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
+    string domain,
+    int? limit,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
+{
+    var rows = await runs.ListForDomainAsync(domain, limit ?? 50, ct);
+    var entries = rows.Select(r => new
+    {
+        deployId   = r.Id,
+        domain     = r.Domain,
+        host       = r.Host,
+        branch     = r.Branch ?? "",
+        finalPhase = MapStatusToPhase(r.Status),
+        startedAt  = r.StartedAt.ToString("o"),
+        completedAt = r.CompletedAt?.ToString("o"),
+        commitSha  = r.CommitSha,
+        releaseId  = r.ReleaseId,
+        error      = r.ErrorMessage,
+    }).ToList();
+    return Results.Ok(new { domain, count = entries.Count, entries });
+});
+
+// Snapshot list — pre-deploy DB snapshots taken for this site.
+// Stub returns empty until snapshot writer is wired into a deploy run.
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", (string domain) =>
+    Results.Ok(new { domain, count = 0, entries = Array.Empty<object>() }));
+
+// Single deploy status — used by the drawer's status polling fallback.
+app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
+    string domain,
+    string deployId,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
+{
+    var row = await runs.GetByIdAsync(deployId, ct);
+    if (row is null || !string.Equals(row.Domain, domain, StringComparison.OrdinalIgnoreCase))
+        return Results.NotFound(new { error = "deploy_not_found", deployId });
+    return Results.Ok(new
+    {
+        deployId   = row.Id,
+        domain     = row.Domain,
+        host       = row.Host,
+        finalPhase = MapStatusToPhase(row.Status),
+        startedAt  = row.StartedAt.ToString("o"),
+        completedAt = row.CompletedAt?.ToString("o"),
+        commitSha  = row.CommitSha,
+        releaseId  = row.ReleaseId,
+        error      = row.ErrorMessage,
+        success    = row.Status == "completed",
+    });
+});
+
+// Stub deploy mint — Phase 7.5 dummy backend that just records a row in
+// status='completed' so the GUI flow can be exercised end-to-end. Real
+// backend (NksDeploy plugin) replaces this when it ships and inserts
+// running rows + drives status progression.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
+    string domain,
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    CancellationToken ct) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "production" : "production";
+    var deployId = Guid.NewGuid().ToString("D");
+    var now = DateTimeOffset.UtcNow;
+    var row = new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
+        Id:            deployId,
+        Domain:        domain,
+        Host:          host,
+        ReleaseId:     now.ToString("yyyyMMdd_HHmmss"),
+        Branch:        root.TryGetProperty("branch", out var bEl) ? bEl.GetString() : null,
+        CommitSha:     null,
+        Status:        "completed",     // dummy — real backend would write 'queued'+drive states
+        IsPastPonr:    true,
+        StartedAt:     now,
+        CompletedAt:   now,
+        ExitCode:      0,
+        ErrorMessage:  null,
+        DurationMs:    50,
+        TriggeredBy:   "gui",
+        BackendId:     "dummy",
+        CreatedAt:     now,
+        UpdatedAt:     now);
+    await runs.InsertAsync(row, ct);
+    return Results.Ok(new { deployId, status = "completed", note = "dummy backend — Phase 7.5 stub" });
+});
+
+// nksdeploy phase strings → frontend DeployPhase enum mapping.
+// Conservative: anything we don't recognise becomes "Unknown" so the
+// frontend can still render a tag instead of crashing.
+static string MapStatusToPhase(string status) => status?.ToLowerInvariant() switch
+{
+    "queued" => "Queued",
+    "running" => "Building",
+    "awaiting_soak" => "AwaitingSoak",
+    "completed" => "Done",
+    "failed" => "Failed",
+    "cancelled" => "Cancelled",
+    "rolling_back" => "RollingBack",
+    "rolled_back" => "RolledBack",
+    _ => "Unknown",
+};
+
 // Phase 7.1a — deploy.enabled gate. Runs BEFORE auth so a disabled
 // deploy plugin returns clean 404 to ANY /api/nks.wdc.deploy/* request
 // (instead of going through bearer-auth then plugin handler then a
