@@ -42,10 +42,15 @@
     <!-- F92: single source of truth for daemon version. Keep in sync with
          src/frontend/package.json on every bump so /api/status and
          /api/system return the real shipped version instead of hardcoded "0.1.0". -->
-    <Version>0.2.24</Version>
-    <AssemblyVersion>0.2.24.0</AssemblyVersion>
-    <FileVersion>0.2.24.0</FileVersion>
-    <InformationalVersion>0.2.24</InformationalVersion>
+    <Version>0.2.25</Version>
+    <AssemblyVersion>0.2.25.0</AssemblyVersion>
+    <FileVersion>0.2.25.0</FileVersion>
+    <!-- InformationalVersion = SemVer + git short SHA so /api/status
+         returns "0.2.25-abc1234". MSBuild $(SourceRevisionId) is set by
+         the SourceLink/CI props; falls back to a Target below for
+         local builds without SourceLink wired. -->
+    <InformationalVersion Condition=" '$(SourceRevisionId)' != '' ">0.2.25-$(SourceRevisionId.Substring(0,7))</InformationalVersion>
+    <InformationalVersion Condition=" '$(SourceRevisionId)' == '' ">0.2.25</InformationalVersion>
     <!-- Default release manifest: requireAdministrator (one UAC at
          launch, every child op inherits elevation). CI smoke test
          jobs pass -p:CiBuild=true to swap in app.ci.manifest which
@@ -63,5 +68,22 @@
   <ItemGroup>
     <InternalsVisibleTo Include="NKS.WebDevConsole.Daemon.Tests" />
   </ItemGroup>
+
+  <!-- Phase 6.21 — stamp git short SHA into InformationalVersion at build
+       time so /api/status returns "0.2.25-abc1234". Operators see the
+       exact commit a build came from. Best-effort: silently no-ops when
+       git is unavailable (clean tarball install) or working tree isn't
+       a git checkout. -->
+  <Target Name="StampGitShaIntoVersion" BeforeTargets="GetAssemblyVersion;BeforeBuild">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true"
+          ContinueOnError="true" StandardOutputImportance="low"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitShortSha" />
+      <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />
+    </Exec>
+    <PropertyGroup Condition=" '$(GitExitCode)' == '0' AND '$(GitShortSha)' != '' ">
+      <InformationalVersion>$(Version)-$(GitShortSha)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
 
 </Project>

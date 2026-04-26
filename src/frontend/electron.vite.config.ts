@@ -3,8 +3,33 @@ import vue from '@vitejs/plugin-vue'
 // Tailwind CSS removed — pure CSS design tokens + Element Plus components
 import { resolve } from 'path'
 import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
+
+/**
+ * Resolve the current git short SHA so the displayed version becomes
+ * "0.2.25-abc1234" — operators can tell at a glance which commit a
+ * build came from. Falls back to "dev" when git is unavailable
+ * (clean tarball install) and to "" if the env var GIT_SHORT_SHA is
+ * explicitly set to empty (CI override for reproducible-build tests).
+ */
+function resolveBuildSha(): string {
+  // CI / reproducible-build override
+  const fromEnv = process.env.GIT_SHORT_SHA
+  if (fromEnv !== undefined) return fromEnv
+  try {
+    return execSync('git rev-parse --short HEAD', {
+      cwd: new URL('.', import.meta.url).pathname,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString().trim()
+  } catch {
+    return 'dev'
+  }
+}
+
+const buildSha = resolveBuildSha()
+const fullVersion = buildSha ? `${pkg.version}-${buildSha}` : pkg.version
 
 // Sentry DSNs flow from GitHub Secrets → GHA env → Vite define. Empty
 // string at build time = no Sentry in shipped artifact; runtime env
@@ -67,7 +92,12 @@ export default defineConfig({
       host: '127.0.0.1',
     },
     define: {
-      'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(fullVersion),
+      // Expose the bare semver + sha separately too so any UI surface
+      // that wants to render them differently (e.g. tooltip on the
+      // commit hash linking to the GitHub commit) can.
+      'import.meta.env.VITE_APP_VERSION_BASE': JSON.stringify(pkg.version),
+      'import.meta.env.VITE_APP_GIT_SHA': JSON.stringify(buildSha),
       'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(sentryDsnFrontend),
       'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(sentryEnv),
     },
