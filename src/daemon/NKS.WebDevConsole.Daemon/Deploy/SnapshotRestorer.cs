@@ -154,10 +154,17 @@ public sealed class SnapshotRestorer : ISnapshotRestorer
         var safety = livePath + $".pre-restore.{DateTime.UtcNow:yyyyMMdd-HHmmss}.bak";
         File.Copy(livePath, safety, overwrite: false);
 
-        await using var src = File.OpenRead(archive);
-        await using var gz = new GZipStream(src, CompressionMode.Decompress);
-        await using var dst = File.Create(livePath);
-        await gz.CopyToAsync(dst, ct);
+        // Inline using-blocks (NOT method-scoped await using) so dst is
+        // flushed + closed BEFORE we measure FileInfo.Length. Otherwise
+        // the buffered writes are still pending and the size comes back
+        // as 0 / partial, and the caller sees a sharing violation on
+        // Windows when it tries to read the live file.
+        await using (var src = File.OpenRead(archive))
+        await using (var gz = new GZipStream(src, CompressionMode.Decompress))
+        await using (var dst = File.Create(livePath))
+        {
+            await gz.CopyToAsync(dst, ct);
+        }
         return new FileInfo(livePath).Length;
     }
 
