@@ -6355,6 +6355,71 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
                 logger.LogWarning(ex, "Port-change config hydration for {Service} failed (reflection)", module.ServiceId);
             }
 
+            // Phase 6.20 — when the changed key is ports.http or ports.https
+            // AND the module is a webserver (apache/caddy/nginx), per-site
+            // vhost configs in {VhostsDirectory}/*.conf bake the port number
+            // into `<VirtualHost *:PORT>` at write-time. A pure ReloadAsync
+            // re-runs httpd.conf but leaves stale per-site files referencing
+            // the OLD port, so Apache binds the new Listen but no vhost
+            // matches → all requests fall to the default htdocs page.
+            //
+            // Fix: for webserver modules with HTTP/HTTPS port changes, iterate
+            // every registered site and call the module's GenerateVhostAsync
+            // BEFORE reload. Reflection-based for the same cross-ALC reasons
+            // as the config-hydration block above.
+            var webServerModule = moduleId is "apache" or "caddy" or "nginx";
+            var httpPortChanged = portKeys.Any(k =>
+            {
+                var key = k.Substring("ports.".Length).ToLowerInvariant();
+                return key == "http" || key == "https";
+            });
+            if (webServerModule && httpPortChanged)
+            {
+                try
+                {
+                    var generateVhost = module.GetType().GetMethod("GenerateVhostAsync");
+                    if (generateVhost is not null)
+                    {
+                        var siteRegistry = sp.GetService<NKS.WebDevConsole.Core.Interfaces.ISiteRegistry>();
+                        if (siteRegistry is not null)
+                        {
+                            int regenerated = 0;
+                            foreach (var (_, siteCfg) in siteRegistry.Sites)
+                            {
+                                try
+                                {
+                                    // Signature is GenerateVhostAsync(SiteConfig site, CancellationToken ct = default).
+                                    // Pass the optional CT explicitly so reflection doesn't trip on default-arg metadata.
+                                    var task = generateVhost.Invoke(module,
+                                        new object[] { siteCfg, ctx.RequestAborted }) as Task;
+                                    if (task is not null) await task;
+                                    regenerated++;
+                                }
+                                catch (Exception perSiteEx)
+                                {
+                                    // Per-site failure (template missing for one site, e.g.) must not abort
+                                    // the whole regenerate sweep. Other sites still get fresh vhosts.
+                                    var logger = sp.GetRequiredService<ILogger<Program>>();
+                                    logger.LogWarning(perSiteEx,
+                                        "Port-change vhost regen for {Domain} failed (continuing with rest)",
+                                        siteCfg.Domain);
+                                }
+                            }
+                            var rlog = sp.GetRequiredService<ILogger<Program>>();
+                            rlog.LogInformation(
+                                "Port-change vhost bulk-regen completed: {Count} site(s) refreshed for {Service}",
+                                regenerated, module.ServiceId);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var logger = sp.GetRequiredService<ILogger<Program>>();
+                    logger.LogWarning(ex,
+                        "Port-change bulk vhost regen for {Service} failed", module.ServiceId);
+                }
+            }
+
             var reload = module.GetType().GetMethod("ReloadAsync", new[] { typeof(CancellationToken) });
             if (reload is null) continue;
             try
