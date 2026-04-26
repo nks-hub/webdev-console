@@ -1,12 +1,13 @@
 <template>
   <div class="site-tab">
-    <!-- Empty state — site has no deploy.neon yet. Per v2 ui-ux: dual CTA so
-         power users with an existing config aren't forced through the wizard. -->
+    <!-- Loading state -->
     <div v-if="loading" class="site-tab-loading">
       <el-icon class="is-loading"><Loading /></el-icon>
       <span>Loading deploy state…</span>
     </div>
 
+    <!-- Empty state — no deploy.neon yet. Dual CTA so power users with an
+         existing config aren't forced through the wizard. -->
     <div v-else-if="!hasConfig && !wizardOpen" class="site-tab-empty">
       <h3>Deploy {{ domain }}</h3>
       <p class="muted">
@@ -37,17 +38,29 @@
       @cancel="wizardOpen = false"
     />
 
-    <DeployCommandCenter
+    <!-- Main view: Deploy + Settings sub-tabs -->
+    <el-tabs
       v-else
-      :domain="domain"
-      :hosts="hosts"
-      :history="history"
-      :diff="diff"
-      :checks="checks"
-      :checks-loading="checksLoading"
-      @rerun-preflight="rerunPreflight"
-      @refresh-history="refreshHistory"
-    />
+      v-model="activeTab"
+      class="deploy-sub-tabs"
+    >
+      <el-tab-pane name="deploy" label="Deploy">
+        <DeployCommandCenter
+          :domain="domain"
+          :hosts="hosts"
+          :history="history"
+          :diff="diff"
+          :checks="checks"
+          :checks-loading="checksLoading"
+          @rerun-preflight="rerunPreflight"
+          @refresh-history="refreshHistory"
+        />
+      </el-tab-pane>
+
+      <el-tab-pane name="settings" label="Settings">
+        <DeploySettingsPanel :domain="domain" />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -58,6 +71,7 @@ import { ElMessage } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
 import DeploySetupWizard from './DeploySetupWizard.vue'
 import DeployCommandCenter from './DeployCommandCenter.vue'
+import DeploySettingsPanel from './DeploySettingsPanel.vue'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
 import type { DeployDiff } from './DiffSummary.vue'
 import type { PreflightCheck } from './PreflightChecklist.vue'
@@ -69,6 +83,9 @@ const deployStore = useDeployStore()
 const loading = ref(true)
 const hasConfig = ref(false)
 const wizardOpen = ref(false)
+
+// Default tab is "deploy" to preserve existing UX
+const activeTab = ref<'deploy' | 'settings'>('deploy')
 
 const hosts = ref<string[]>([])
 const history = ref<DeployHistoryEntryDto[]>([])
@@ -91,16 +108,10 @@ async function refreshAll(): Promise<void> {
   try {
     const entries = await deployStore.refreshHistory(props.domain, 50)
     history.value = entries
-    // Hosts inferred from history rows (until we wire a config-list endpoint).
+    // Hosts inferred from history rows (until a config-list endpoint exists)
     hosts.value = Array.from(new Set(entries.map(e => e.host)))
     hasConfig.value = entries.length > 0 || hosts.value.length > 0
-    if (!hasConfig.value) {
-      // Try config probe: if 404 it's truly empty; any other response = at
-      // least the file exists. v0.1 simply trusts history as the signal.
-    }
   } catch (e) {
-    // First-deploy: history endpoint returns 200 with empty entries; an
-    // outright 404 means the plugin isn't loaded → surface a clear error.
     ElMessage.warning(`Could not load deploy state: ${(e as Error).message}`)
   } finally {
     loading.value = false
@@ -112,15 +123,10 @@ async function refreshHistory(): Promise<void> {
 }
 
 function rerunPreflight(): void {
-  // v0.1: preflight tests are inferred from the latest deploy's events.
-  // A dedicated preflight REST endpoint comes in a follow-up commit.
   ElMessage.info('Preflight re-run coming in next commit')
 }
 
 function onWizardDone(_form: unknown): void {
-  // The wizard's `done` payload describes what the user wants in deploy.neon;
-  // a follow-up commit wires PUT /api/nks.wdc.deploy/sites/{domain}/config to
-  // persist it. v0.1 just closes the wizard and refreshes.
   wizardOpen.value = false
   ElMessage.info('Config persistence wiring coming in next commit')
   void refreshAll()
@@ -137,4 +143,8 @@ function onWizardDone(_form: unknown): void {
 .site-tab-foot { display: flex; align-items: center; gap: 6px; color: var(--el-text-color-secondary); font-size: 13px; }
 .muted { color: var(--el-text-color-secondary); }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
+
+.deploy-sub-tabs :deep(.el-tabs__content) {
+  padding: 16px 0 0;
+}
 </style>
