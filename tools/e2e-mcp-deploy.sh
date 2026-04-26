@@ -385,6 +385,71 @@ step "expired-grant session → fire still requires confirm (425)" "$X_FIRE" 'pe
 [ -n "$INTENT_X_ID" ] && api POST /api/mcp/intents/$INTENT_X_ID/revoke >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== S. token tampering attacks ===${END}"
+# ============================================================================
+# Validator must reject tokens where signature/payload doesn't reconcile
+# under the daemon's HMAC key, plus enforce kind/domain/host scope.
+# All covered by unit tests; E2E confirms the wire-format + middleware
+# + parsing layers all hold under real HTTP traffic.
+
+# Mint a clean intent for blog.loc + deploy
+S_INTENT=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":120}')
+S_TOKEN=$(echo "$S_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+S_ID=$(echo "$S_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+api POST /api/mcp/intents/$S_ID/confirm >/dev/null
+step "victim intent minted + confirmed" "$S_INTENT" '"intentToken":"'
+
+# Attack 1: flip last char of signature (HMAC mismatch)
+# Token format: {id}.{nonce}.{sig} — twiddle one char of sig
+TAMPERED_SIG=$(python3 -c "t='$S_TOKEN'; parts=t.split('.'); sig=parts[2]; flip='X' if sig[-1] != 'X' else 'Y'; parts[2]=sig[:-1]+flip; print('.'.join(parts))")
+T1=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$TAMPERED_SIG\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "tampered signature → signature_mismatch" "$T1" 'signature_mismatch.*403'
+
+# Attack 2: domain mismatch — token for blog.loc fired against shop.loc
+T2=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$S_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/shop.loc/deploy")
+step "domain mismatch (blog token on shop URL) → 403" "$T2" 'domain_mismatch.*403'
+
+# Attack 3: host mismatch — original was production, fire on staging
+T3=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"staging\",\"intentToken\":\"$S_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "host mismatch (production token on staging) → 403" "$T3" 'host_mismatch.*403'
+
+# Attack 4: malformed token shape (not three dot-separated parts)
+T4=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","intentToken":"not.a.valid.token.has.too.many.parts"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "malformed token shape → 403 malformed_token" "$T4" 'malformed_token.*403'
+
+# Attack 5: empty / missing intentToken with strict expectation —
+# without a token, body is treated as direct GUI deploy (no validator),
+# so this just lands as 202 queued. Verify that path:
+T5=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","intentToken":""}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "empty token treated as direct GUI deploy" "$T5" '"status":"queued".*202'
+
+# Attack 6: intent created for wrong kind. Mint as 'rollback' but fire
+# as 'deploy' on the deploy endpoint (which hardcodes kind='deploy' in
+# the validator call).
+WRONG_KIND_INTENT=$(api POST /api/mcp/intents -d '{"domain":"blog.loc","host":"production","kind":"rollback","expiresIn":120}')
+WK_TOKEN=$(echo "$WRONG_KIND_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+WK_ID=$(echo "$WRONG_KIND_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+api POST /api/mcp/intents/$WK_ID/confirm >/dev/null
+T6=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$WK_TOKEN\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "wrong-kind token (rollback fired as deploy) → 403 kind_mismatch" "$T6" 'kind_mismatch.*403'
+
+# Cleanup tampered + wrong-kind intents
+[ -n "$S_ID" ] && api POST /api/mcp/intents/$S_ID/revoke >/dev/null
+[ -n "$WK_ID" ] && api POST /api/mcp/intents/$WK_ID/revoke >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== Q. revoked grants — soft-deleted grants never auto-confirm ===${END}"
 # ============================================================================
 # After DELETE /api/mcp/grants/:id the row's revoked_at is stamped non-null.
