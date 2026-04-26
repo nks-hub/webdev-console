@@ -752,6 +752,34 @@
       "preflightRerun": "Preflight re-run coming in next commit",
       "configPersistence": "Config persistence wiring coming in next commit"
     },
+    "diff": {
+      "title": "Changes since last deploy",
+      "noNewCommits": "No new commits since last deploy",
+      "commits": "Commits:",
+      "composerChanged": "composer.lock changed — dependencies will be re-installed on remote",
+      "files": "Files:",
+      "showCommits": "Show {n} commits"
+    },
+    "preflight": {
+      "title": "Pre-deploy checks",
+      "rerun": "Re-run",
+      "rerunning": "Re-running…"
+    },
+    "hostCard": {
+      "selectAria": "Include {host} in group deploy",
+      "livePhaseAria": "Live phase {phase}",
+      "lastDeploy": "Last deploy:",
+      "noDeploys": "No deploys yet",
+      "release": "Release:",
+      "ok": "OK",
+      "failed": "FAILED",
+      "deploy": "Deploy",
+      "rollback": "Rollback",
+      "ageJustNow": "{n}s ago",
+      "ageMinutes": "{n}m ago",
+      "ageHours": "{n}h ago",
+      "ageDays": "{n}d ago"
+    },
     "history": {
       "title": "Deploy history",
       "refresh": "Refresh",

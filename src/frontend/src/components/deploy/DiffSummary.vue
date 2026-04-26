@@ -1,26 +1,26 @@
 <template>
   <div class="diff">
-    <h4 class="diff-title">Changes since last deploy</h4>
+    <h4 class="diff-title">{{ t('deploy.diff.title') }}</h4>
     <div v-if="!diff || diff.commitCount === 0" class="diff-empty">
       <el-icon><InfoFilled /></el-icon>
-      <span>No new commits since last deploy</span>
+      <span>{{ t('deploy.diff.noNewCommits') }}</span>
     </div>
     <div v-else class="diff-rows">
       <div class="diff-row">
-        <span class="muted">Commits:</span>
+        <span class="muted">{{ t('deploy.diff.commits') }}</span>
         <span class="mono">{{ diff.commitCount }}</span>
       </div>
       <div v-if="diff.composerLockChanged" class="diff-row diff-row--warn">
         <el-icon><WarningFilled /></el-icon>
-        <span>composer.lock changed — dependencies will be re-installed on remote</span>
+        <span>{{ t('deploy.diff.composerChanged') }}</span>
       </div>
       <div v-if="diff.filesChanged" class="diff-row">
-        <span class="muted">Files:</span>
+        <span class="muted">{{ t('deploy.diff.files') }}</span>
         <span class="mono">+{{ diff.filesAdded ?? 0 }} / -{{ diff.filesRemoved ?? 0 }} / ~{{ diff.filesModified ?? 0 }}</span>
       </div>
       <div v-if="diff.commits && diff.commits.length" class="diff-commits">
         <details>
-          <summary>Show {{ diff.commits.length }} commits</summary>
+          <summary>{{ t('deploy.diff.showCommits', { n: diff.commits.length }) }}</summary>
           <ul class="diff-commit-list">
             <li v-for="c in diff.commits" :key="c.sha" class="diff-commit-row">
               <code class="mono">{{ c.sha.slice(0, 7) }}</code>
@@ -35,7 +35,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { InfoFilled, WarningFilled } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 
 export interface DeployDiff {
   commitCount: number

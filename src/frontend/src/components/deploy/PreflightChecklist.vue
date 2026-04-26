@@ -1,9 +1,9 @@
 <template>
   <div class="preflight">
     <h4 class="preflight-title">
-      Preflight
+      {{ t('deploy.preflight.title') }}
       <el-button v-if="!loading" link size="small" @click="$emit('rerun')">
-        <el-icon><Refresh /></el-icon> Re-run
+        <el-icon><Refresh /></el-icon> {{ t('deploy.preflight.rerun') }}
       </el-button>
     </h4>
     <ul class="preflight-list" role="list">
@@ -28,7 +28,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { CircleCheck, CircleClose, Loading, Refresh, WarningFilled } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 
 export interface PreflightCheck {
   name: string

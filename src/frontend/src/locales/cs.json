@@ -752,6 +752,34 @@
       "preflightRerun": "Opětovné spuštění preflightu přijde v dalším commitu",
       "configPersistence": "Persistence konfigurace přijde v dalším commitu"
     },
+    "diff": {
+      "title": "Změny od posledního deploye",
+      "noNewCommits": "Žádné nové commity od posledního deploye",
+      "commits": "Commity:",
+      "composerChanged": "composer.lock se změnil — závislosti se na vzdáleném hostu znovu instalují",
+      "files": "Soubory:",
+      "showCommits": "Zobrazit {n} commitů"
+    },
+    "preflight": {
+      "title": "Pre-deploy kontroly",
+      "rerun": "Spustit znovu",
+      "rerunning": "Spouštím…"
+    },
+    "hostCard": {
+      "selectAria": "Zahrnout {host} do skupinového deploye",
+      "livePhaseAria": "Aktuální fáze {phase}",
+      "lastDeploy": "Poslední deploy:",
+      "noDeploys": "Zatím žádné deploye",
+      "release": "Release:",
+      "ok": "OK",
+      "failed": "SELHALO",
+      "deploy": "Deploy",
+      "rollback": "Vrátit",
+      "ageJustNow": "před {n} s",
+      "ageMinutes": "před {n} m",
+      "ageHours": "před {n} h",
+      "ageDays": "před {n} d"
+    },
     "history": {
       "title": "Historie deployů",
       "refresh": "Obnovit",

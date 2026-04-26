@@ -6,7 +6,7 @@
           <el-checkbox
             v-if="selectable"
             :model-value="selected"
-            :aria-label="`Include ${host} in group deploy`"
+            :aria-label="t('deploy.hostCard.selectAria', { host })"
             @update:model-value="(v: any) => $emit('toggle-select', !!v)"
             @click.stop
           />
@@ -22,7 +22,7 @@
             size="small"
             effect="dark"
             class="host-card-live-phase"
-            :aria-label="`Live phase ${activeRun.latestPhase}`"
+            :aria-label="t('deploy.hostCard.livePhaseAria', { phase: activeRun.latestPhase })"
           >
             <el-icon class="live-icon" aria-hidden="true">
               <Loading v-if="!activeRun.isTerminal" class="is-spinning" />
@@ -38,28 +38,28 @@
 
     <div class="host-card-body">
       <div v-if="lastDeploy" class="host-card-row">
-        <span class="muted">Last deploy:</span>
+        <span class="muted">{{ t('deploy.hostCard.lastDeploy') }}</span>
         <span class="mono">{{ formatRelative(lastDeploy.startedAt) }}</span>
         <el-tag :type="lastDeploy.success ? 'success' : 'danger'" size="small" effect="plain">
-          {{ lastDeploy.success ? 'OK' : 'FAILED' }}
+          {{ lastDeploy.success ? t('deploy.hostCard.ok') : t('deploy.hostCard.failed') }}
         </el-tag>
       </div>
-      <div v-else class="muted">No deploys yet</div>
+      <div v-else class="muted">{{ t('deploy.hostCard.noDeploys') }}</div>
 
       <div v-if="lastDeploy?.releaseId" class="host-card-row">
-        <span class="muted">Release:</span>
+        <span class="muted">{{ t('deploy.hostCard.release') }}</span>
         <span class="mono">{{ lastDeploy.releaseId }}</span>
       </div>
     </div>
 
     <template #footer>
       <div class="host-card-footer">
-        <el-button type="primary" @click="$emit('deploy')">Deploy</el-button>
+        <el-button type="primary" @click="$emit('deploy')">{{ t('deploy.hostCard.deploy') }}</el-button>
         <el-button
           v-if="lastDeploy && lastDeploy.success"
           plain
           @click="$emit('rollback')"
-        >Rollback</el-button>
+        >{{ t('deploy.hostCard.rollback') }}</el-button>
       </div>
     </template>
   </el-card>
@@ -67,8 +67,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HealthBadge from './HealthBadge.vue'
+
+const { t } = useI18n()
 import type { DeployHistoryEntryDto } from '../../api/deploy'
 import type { DeployRunState } from '../../stores/deploy'
 
@@ -116,10 +119,10 @@ function livePhaseTagType(phase: string): 'success' | 'danger' | 'warning' | 'pr
 
 function formatRelative(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
-  if (ms < 60_000) return `${Math.floor(ms / 1000)}s ago`
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`
-  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`
-  return `${Math.floor(ms / 86_400_000)}d ago`
+  if (ms < 60_000) return t('deploy.hostCard.ageJustNow', { n: Math.floor(ms / 1000) })
+  if (ms < 3_600_000) return t('deploy.hostCard.ageMinutes', { n: Math.floor(ms / 60_000) })
+  if (ms < 86_400_000) return t('deploy.hostCard.ageHours', { n: Math.floor(ms / 3_600_000) })
+  return t('deploy.hostCard.ageDays', { n: Math.floor(ms / 86_400_000) })
 }
 </script>
 
