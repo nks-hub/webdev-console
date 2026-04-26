@@ -17,6 +17,27 @@
 
     <p class="muted">{{ t('mcpGrants.description') }}</p>
 
+    <!-- Phase 7.5+++ — usage filter built on match telemetry. Three
+         buckets: All / In-use (matchCount>0) / Deadweight (never matched
+         AND >7d old). Counts inline so operators see the breakdown
+         without flipping. -->
+    <div v-if="grants.length > 0" class="usage-toolbar">
+      <el-radio-group v-model="usageFilter" size="small">
+        <el-radio-button value="all">
+          {{ t('mcpGrants.usage.all') }} ({{ grants.length }})
+        </el-radio-button>
+        <el-radio-button value="inuse">
+          {{ t('mcpGrants.usage.inuse') }} ({{ inUseCount }})
+        </el-radio-button>
+        <el-radio-button value="deadweight">
+          {{ t('mcpGrants.usage.deadweight') }} ({{ deadweightCount }})
+        </el-radio-button>
+      </el-radio-group>
+      <span v-if="deadweightCount > 0" class="muted hint">
+        {{ t('mcpGrants.usage.deadweightHint', { days: DEADWEIGHT_AGE_DAYS }) }}
+      </span>
+    </div>
+
     <el-alert
       v-if="!loading && grants.length === 0"
       :title="t('mcpGrants.empty.title')"
@@ -40,10 +61,18 @@
       </el-button>
     </div>
 
+    <el-alert
+      v-if="grants.length > 0 && filteredGrants.length === 0"
+      :title="t('mcpGrants.usage.emptyForFilter')"
+      type="info"
+      show-icon
+      :closable="false"
+    />
+
     <el-table
-      v-if="grants.length > 0"
+      v-if="filteredGrants.length > 0"
       ref="tableRef"
-      :data="grants" stripe size="small" class="grants-table"
+      :data="filteredGrants" stripe size="small" class="grants-table"
       @selection-change="onSelectionChange"
     >
       <el-table-column type="selection" width="40" />
@@ -77,9 +106,13 @@
           <el-tag v-else type="warning" size="small">{{ t('mcpGrants.permanent') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="matchCount" :label="t('mcpGrants.col.matchCount')" width="120" sortable>
+      <el-table-column prop="matchCount" :label="t('mcpGrants.col.matchCount')" width="140" sortable>
         <template #default="{ row }">
-          <el-tag v-if="(row.matchCount ?? 0) === 0" type="info" size="small" effect="plain">
+          <el-tag v-if="isDeadweight(row)" type="warning" size="small" effect="dark"
+            :title="t('mcpGrants.matches.deadweightTooltip', { days: DEADWEIGHT_AGE_DAYS })">
+            {{ t('mcpGrants.matches.deadweight') }}
+          </el-tag>
+          <el-tag v-else-if="(row.matchCount ?? 0) === 0" type="info" size="small" effect="plain">
             {{ t('mcpGrants.matches.none') }}
           </el-tag>
           <span v-else>
@@ -167,6 +200,35 @@ const tableRef = ref<unknown>(null)
 
 // Phase 7.5+++ — manual sweep trigger ("clean now" button).
 const sweeping = ref(false)
+
+// Phase 7.5+++ — usage filter built on telemetry. "Deadweight" =
+// grant has never matched (matchCount=0) AND was minted >7 days ago.
+// The 7-day window is hardcoded to match the operator-facing hint
+// text; if it ever becomes settings-driven, change in both places.
+const DEADWEIGHT_AGE_DAYS = 7
+type UsageFilter = 'all' | 'inuse' | 'deadweight'
+const usageFilter = ref<UsageFilter>('all')
+
+function isDeadweight(g: McpGrantRow): boolean {
+  if ((g.matchCount ?? 0) > 0) return false
+  try {
+    const ageMs = Date.now() - new Date(g.grantedAt).getTime()
+    return ageMs > DEADWEIGHT_AGE_DAYS * 86_400_000
+  } catch { return false }
+}
+
+const inUseCount = computed(() =>
+  grants.value.filter((g) => (g.matchCount ?? 0) > 0).length)
+const deadweightCount = computed(() =>
+  grants.value.filter(isDeadweight).length)
+
+const filteredGrants = computed<McpGrantRow[]>(() => {
+  switch (usageFilter.value) {
+    case 'inuse': return grants.value.filter((g) => (g.matchCount ?? 0) > 0)
+    case 'deadweight': return grants.value.filter(isDeadweight)
+    default: return grants.value
+  }
+})
 
 const createDialogOpen = ref(false)
 const creating = ref(false)
@@ -408,4 +470,8 @@ function formatRelative(iso: string): string {
   background: var(--el-fill-color-light);
   border-radius: 4px;
 }
+.usage-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.usage-toolbar .hint { font-size: 12px; }
 </style>

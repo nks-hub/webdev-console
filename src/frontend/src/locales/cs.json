@@ -1170,7 +1170,16 @@
       "justNow": "právě teď",
       "minutesAgo": "před {n} m",
       "hoursAgo": "před {n} h",
-      "daysAgo": "před {n} d"
+      "daysAgo": "před {n} d",
+      "deadweight": "DEADWEIGHT",
+      "deadweightTooltip": "Toto oprávnění existuje déle než {days} dní a nikdy se nezmatchovalo. Pravděpodobně bezpečně odvolatelné."
+    },
+    "usage": {
+      "all": "Vše",
+      "inuse": "Aktivně použité",
+      "deadweight": "Deadweight",
+      "deadweightHint": "Deadweight = nikdy nepoužité oprávnění starší než {days} dní (kandidát na revoke).",
+      "emptyForFilter": "Žádná oprávnění neodpovídají tomuto filtru."
     },
     "dialog": {
       "title": "Nové oprávnění",

@@ -1170,7 +1170,16 @@
       "justNow": "just now",
       "minutesAgo": "{n}m ago",
       "hoursAgo": "{n}h ago",
-      "daysAgo": "{n}d ago"
+      "daysAgo": "{n}d ago",
+      "deadweight": "DEADWEIGHT",
+      "deadweightTooltip": "This grant has existed for more than {days} days and never matched anything. Likely safe to revoke."
+    },
+    "usage": {
+      "all": "All",
+      "inuse": "In use",
+      "deadweight": "Deadweight",
+      "deadweightHint": "Deadweight = never-used grants older than {days} days (revoke candidates).",
+      "emptyForFilter": "No grants match this filter."
     },
     "dialog": {
       "title": "New trust grant",
