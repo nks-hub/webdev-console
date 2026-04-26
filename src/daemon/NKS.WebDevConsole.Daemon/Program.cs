@@ -1596,6 +1596,59 @@ app.MapGet("/api/mcp/grants/stats", async (
     }
 });
 
+// Phase 7.5+++ — dry-run grant match. Operator can ask "would a caller
+// with this identity tuple firing this kind+target match an existing
+// active grant?" WITHOUT actually creating an intent or auto-firing
+// anything. Mirrors the validator's pre-check semantics 1:1 by going
+// through the same `FindMatchingActiveAsync` path.
+//
+// Body: { sessionId?: string, instanceId?: string, apiKeyId?: string,
+//         kind: string, target: string }
+// Returns: { matched: bool, grant?: { id, scopeType, scopeValue,
+//            kindPattern, targetPattern, matchCount, lastMatchedAt } }
+//
+// Use cases: debugging "why isn't my grant matching?" without firing
+// destructive ops; pre-flight checks from the MCP CLI; admin auditing.
+app.MapPost("/api/mcp/grants/test-match", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
+    CancellationToken ct) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    var sessionId  = root.TryGetProperty("sessionId",  out var sEl) ? sEl.GetString() : null;
+    var instanceId = root.TryGetProperty("instanceId", out var iEl) ? iEl.GetString() : null;
+    var apiKeyId   = root.TryGetProperty("apiKeyId",   out var aEl) ? aEl.GetString() : null;
+    var kind       = root.TryGetProperty("kind",       out var kEl) ? kEl.GetString() : null;
+    var target     = root.TryGetProperty("target",     out var tEl) ? tEl.GetString() : null;
+    if (string.IsNullOrWhiteSpace(kind) || string.IsNullOrWhiteSpace(target))
+        return Results.BadRequest(new { error = "kind and target are required" });
+
+    var grant = await grants.FindMatchingActiveAsync(
+        sessionId, instanceId, apiKeyId, kind!, target!, ct);
+    if (grant is null)
+    {
+        return Results.Ok(new { matched = false });
+    }
+    // NOTE: this is a dry-run — do NOT call RecordMatchAsync. The
+    // telemetry counters reflect REAL auto-confirms, not test queries.
+    return Results.Ok(new
+    {
+        matched = true,
+        grant = new
+        {
+            id            = grant.Id,
+            scopeType     = grant.ScopeType,
+            scopeValue    = grant.ScopeValue,
+            kindPattern   = grant.KindPattern,
+            targetPattern = grant.TargetPattern,
+            matchCount    = grant.MatchCount,
+            lastMatchedAt = grant.LastMatchedAt,
+        },
+    });
+});
+
 // Phase 7.5+++ — manual sweep trigger. Operator can fire the grant
 // janitor on demand without waiting for the 15-minute background tick.
 // Reuses the same SQL helper the BackgroundService uses; broadcasts

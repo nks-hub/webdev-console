@@ -1240,6 +1240,21 @@
     "sweepDone": "Vyčištěno {n} starých oprávnění",
     "sweepNothing": "Není co čistit — všechna oprávnění jsou aktuální",
     "sweepFailed": "Čištění selhalo: {error}",
+    "testMatch": {
+      "button": "Test shody",
+      "title": "Test shody oprávnění (dry-run)",
+      "description": "Zjistí, které aktivní oprávnění by zmatchovalo daný požadavek — bez vytvoření intentu nebo spuštění operace.",
+      "sessionId": "Session ID",
+      "instanceId": "Instance ID",
+      "apiKeyId": "API key ID",
+      "kind": "Druh",
+      "target": "Cíl",
+      "run": "Spustit test",
+      "resultMatch": "Shoda nalezena",
+      "resultNoMatch": "Žádná shoda",
+      "resultNoMatchHint": "Tento požadavek by skončil v banneru pro potvrzení (pending_confirmation). Zkontrolujte scope_type, kind_pattern, target_pattern.",
+      "previousMatches": "Toto oprávnění už zmatchovalo {n}× v minulosti."
+    },
     "bulk": {
       "selected": "Vybráno: {n}",
       "clear": "Zrušit výběr",

@@ -270,6 +270,39 @@ export const revokeMcpGrant = (id: string): Promise<{ id: string; status: string
 export const sweepMcpGrantsNow = (): Promise<{ deleted: number }> =>
   json('/api/mcp/grants/sweep-now', { method: 'POST' })
 
+// Phase 7.5+++ — dry-run grant matching. Asks "would these caller
+// identity slots + kind + target match an existing active grant?"
+// without firing an intent. Returns the matching grant's metadata so
+// operators can see WHY (e.g. "matched scope=always with kind=*").
+export interface McpGrantTestMatchBody {
+  sessionId?: string | null
+  instanceId?: string | null
+  apiKeyId?: string | null
+  kind: string
+  target: string
+}
+
+export interface McpGrantTestMatchResult {
+  matched: boolean
+  grant?: {
+    id: string
+    scopeType: string
+    scopeValue: string | null
+    kindPattern: string
+    targetPattern: string
+    matchCount?: number
+    lastMatchedAt?: string | null
+  }
+}
+
+export const testMatchMcpGrant = (
+  body: McpGrantTestMatchBody,
+): Promise<McpGrantTestMatchResult> =>
+  json('/api/mcp/grants/test-match', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
 // Phase 7.5+++ — server-side aggregate stats. Single call returns
 // counts the GUI would otherwise compute by walking the full grant
 // list. Useful for the McpHub badge + Settings snapshot.

@@ -1240,6 +1240,21 @@
     "sweepDone": "Cleaned {n} stale grants",
     "sweepNothing": "Nothing to clean — all grants are current",
     "sweepFailed": "Cleanup failed: {error}",
+    "testMatch": {
+      "button": "Test match",
+      "title": "Test grant match (dry-run)",
+      "description": "Find which active grant would match the given request — without creating an intent or firing the operation.",
+      "sessionId": "Session ID",
+      "instanceId": "Instance ID",
+      "apiKeyId": "API key ID",
+      "kind": "Kind",
+      "target": "Target",
+      "run": "Run test",
+      "resultMatch": "Match found",
+      "resultNoMatch": "No match",
+      "resultNoMatchHint": "This request would land in the confirm banner (pending_confirmation). Check scope_type, kind_pattern, target_pattern.",
+      "previousMatches": "This grant has matched {n} time(s) previously."
+    },
     "bulk": {
       "selected": "Selected: {n}",
       "clear": "Clear selection",

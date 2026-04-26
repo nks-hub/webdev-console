@@ -6,6 +6,9 @@
         <el-button :loading="loading" @click="refresh">
           <el-icon><Refresh /></el-icon> {{ t('mcpGrants.refresh') }}
         </el-button>
+        <el-button @click="testMatchDialogOpen = true">
+          <el-icon><Search /></el-icon> {{ t('mcpGrants.testMatch.button') }}
+        </el-button>
         <el-button :loading="sweeping" @click="onSweepNow">
           <el-icon><Delete /></el-icon> {{ t('mcpGrants.sweepNow') }}
         </el-button>
@@ -147,6 +150,59 @@
       </el-table-column>
     </el-table>
 
+    <!-- Phase 7.5+++ — Test match dialog. Dry-run query that hits the
+         same FindMatchingActiveAsync path the validator uses, so the
+         result tells operators exactly which grant would auto-confirm
+         (or that none would). -->
+    <el-dialog v-model="testMatchDialogOpen" :title="t('mcpGrants.testMatch.title')" width="520">
+      <p class="muted" style="margin-top: 0">{{ t('mcpGrants.testMatch.description') }}</p>
+      <el-form :model="testMatchForm" label-width="120px" size="small">
+        <el-form-item :label="t('mcpGrants.testMatch.sessionId')">
+          <el-input v-model="testMatchForm.sessionId" placeholder="agent-42 (volitelné)" clearable />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.testMatch.instanceId')">
+          <el-input v-model="testMatchForm.instanceId" placeholder="wdc-uuid (volitelné)" clearable />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.testMatch.apiKeyId')">
+          <el-input v-model="testMatchForm.apiKeyId" placeholder="claude-code-LuRy (volitelné)" clearable />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.testMatch.kind')" required>
+          <el-input v-model="testMatchForm.kind" placeholder="deploy | rollback | restore | …" />
+        </el-form-item>
+        <el-form-item :label="t('mcpGrants.testMatch.target')" required>
+          <el-input v-model="testMatchForm.target" placeholder="blog.loc | shop.loc | …" />
+        </el-form-item>
+      </el-form>
+
+      <div v-if="testMatchResult !== null" class="test-match-result"
+           :class="{ ok: testMatchResult.matched, none: !testMatchResult.matched }">
+        <template v-if="testMatchResult.matched">
+          <strong>✓ {{ t('mcpGrants.testMatch.resultMatch') }}</strong>
+          <div class="muted" style="margin-top: 4px; font-size: 12px">
+            <div>id: <code class="mono">{{ testMatchResult.grant?.id }}</code></div>
+            <div>scope: <code class="mono">{{ testMatchResult.grant?.scopeType }}{{ testMatchResult.grant?.scopeValue ? ' = ' + testMatchResult.grant.scopeValue : '' }}</code></div>
+            <div>kind: <code class="mono">{{ testMatchResult.grant?.kindPattern }}</code> · target: <code class="mono">{{ testMatchResult.grant?.targetPattern }}</code></div>
+            <div>{{ t('mcpGrants.testMatch.previousMatches', { n: testMatchResult.grant?.matchCount ?? 0 }) }}</div>
+          </div>
+        </template>
+        <template v-else>
+          <strong>✗ {{ t('mcpGrants.testMatch.resultNoMatch') }}</strong>
+          <div class="muted" style="margin-top: 4px; font-size: 12px">
+            {{ t('mcpGrants.testMatch.resultNoMatchHint') }}
+          </div>
+        </template>
+      </div>
+
+      <template #footer>
+        <el-button @click="testMatchDialogOpen = false">{{ t('common.close') }}</el-button>
+        <el-button type="primary" :loading="testingMatch"
+          :disabled="!testMatchForm.kind.trim() || !testMatchForm.target.trim()"
+          @click="onRunTestMatch">
+          {{ t('mcpGrants.testMatch.run') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- Create grant dialog -->
     <el-dialog v-model="createDialogOpen" :title="t('mcpGrants.dialog.title')" width="520">
       <el-form :model="form" label-width="120px" size="small">
@@ -193,10 +249,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus, Delete } from '@element-plus/icons-vue'
+import { Refresh, Plus, Delete, Search } from '@element-plus/icons-vue'
 import {
-  listMcpGrants, createMcpGrant, revokeMcpGrant, sweepMcpGrantsNow, subscribeEventsMap,
-  type McpGrantRow, type McpGrantScopeType,
+  listMcpGrants, createMcpGrant, revokeMcpGrant, sweepMcpGrantsNow,
+  testMatchMcpGrant, subscribeEventsMap,
+  type McpGrantRow, type McpGrantScopeType, type McpGrantTestMatchResult,
 } from '../../api/daemon'
 
 const { t } = useI18n()
@@ -212,6 +269,34 @@ const tableRef = ref<unknown>(null)
 
 // Phase 7.5+++ — manual sweep trigger ("clean now" button).
 const sweeping = ref(false)
+
+// Phase 7.5+++ — dry-run test-match dialog state.
+const testMatchDialogOpen = ref(false)
+const testingMatch = ref(false)
+const testMatchResult = ref<McpGrantTestMatchResult | null>(null)
+const testMatchForm = ref({
+  sessionId: '', instanceId: '', apiKeyId: '',
+  kind: 'deploy', target: 'blog.loc',
+})
+
+async function onRunTestMatch(): Promise<void> {
+  if (testingMatch.value) return
+  testingMatch.value = true
+  try {
+    testMatchResult.value = await testMatchMcpGrant({
+      sessionId:  testMatchForm.value.sessionId.trim() || null,
+      instanceId: testMatchForm.value.instanceId.trim() || null,
+      apiKeyId:   testMatchForm.value.apiKeyId.trim() || null,
+      kind:       testMatchForm.value.kind.trim(),
+      target:     testMatchForm.value.target.trim(),
+    })
+  } catch (e) {
+    ElMessage.error((e as Error).message)
+    testMatchResult.value = null
+  } finally {
+    testingMatch.value = false
+  }
+}
 
 // Phase 7.5+++ — usage filter built on telemetry. "Deadweight" =
 // grant has never matched (matchCount=0) AND was minted >7 days ago.
@@ -516,6 +601,18 @@ function formatRelative(iso: string): string {
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
 .last-match { margin-left: 4px; font-size: 11px; }
+.test-match-result {
+  margin-top: 12px; padding: 8px 12px; border-radius: 4px;
+  font-size: 13px;
+}
+.test-match-result.ok {
+  background: var(--el-color-success-light-9);
+  border-left: 3px solid var(--el-color-success);
+}
+.test-match-result.none {
+  background: var(--el-color-info-light-9);
+  border-left: 3px solid var(--el-color-info);
+}
 .bulk-toolbar {
   display: flex; align-items: center; gap: 12px;
   padding: 8px 12px; margin-top: 4px;

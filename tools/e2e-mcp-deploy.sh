@@ -937,6 +937,46 @@ step "SSE feed captured deploy:complete event" "$SSE_DUMP" 'event: deploy:comple
 step "SSE deploy:complete reports success"     "$SSE_DUMP" '"success":true'
 
 # ============================================================================
+echo ""; echo "${YEL}=== CC. grants test-match dry-run endpoint ===${END}"
+# ============================================================================
+# Operator can ask "would this caller+kind+target match an active grant?"
+# WITHOUT firing an intent. Verify:
+#   1. With a known active grant present, matching tuple → matched=true + grant id
+#   2. Non-matching tuple → matched=false
+#   3. Missing required field (kind) → 400
+# Re-create an always-grant for the test (section Z's grant was DELETEd).
+python3 - <<EOF > /c/temp/.e2e-cc-grant.json
+import json
+print(json.dumps({
+    "scopeType": "always", "scopeValue": None,
+    "kindPattern": "deploy", "targetPattern": "blog.loc",
+    "expiresAt": None, "note": "test-match dry-run probe"
+}))
+EOF
+CC_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-cc-grant.json "$BASE/api/mcp/grants")
+CC_GR_ID=$(echo "$CC_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+step "test-match precondition grant created" "$CC_GR" '"status":"created"'
+
+# Hit on always-grant: any caller (we still pass sessionId for HasAnyIdentity).
+CC_HIT=$(api POST /api/mcp/grants/test-match -d '{"sessionId":"test-cc","kind":"deploy","target":"blog.loc"}')
+step "test-match returns matched=true for hit" "$CC_HIT" '"matched":true'
+step "test-match echoes grant id"               "$CC_HIT" "\"id\":\"$CC_GR_ID\""
+
+# Miss: kind doesn't match the kindPattern.
+CC_MISS=$(api POST /api/mcp/grants/test-match -d '{"sessionId":"test-cc","kind":"rollback","target":"blog.loc"}')
+step "test-match returns matched=false for miss" "$CC_MISS" '"matched":false'
+
+# Bad: missing kind.
+CC_BAD=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" -d '{"target":"blog.loc"}' \
+    "$BASE/api/mcp/grants/test-match")
+step "test-match without kind returns 400"      "$CC_BAD" '400'
+
+# Cleanup
+api DELETE /api/mcp/grants/$CC_GR_ID >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== BB. history.triggeredBy field + filter ===${END}"
 # ============================================================================
 # History endpoint should include the triggeredBy field for each row, and
