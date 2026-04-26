@@ -144,11 +144,23 @@
             </el-button>
           </div>
 
-          <!-- Recent snapshots -->
+          <!-- Phase 7.5+++ Snapshots timeline redesign — vertical chronological
+               feed with kind badges + filter. Replaces the bare table for a
+               more "audit log"-style view that's easier to scan. -->
           <div class="subsection">
-            <div class="subsection-header">{{ t('deploySettings.snapshot.recentTitle') }}</div>
-            <!-- Phase 7.5+++ — disk impact summary. Surfaces only when
-                 there's something to summarize so empty state stays clean. -->
+            <div class="subsection-header snapshots-header">
+              <span>{{ t('deploySettings.snapshot.recentTitle') }}</span>
+              <el-radio-group
+                v-if="snapshots.length > 0"
+                v-model="snapshotsFilter"
+                size="small"
+                class="snapshots-filter"
+              >
+                <el-radio-button label="all">{{ t('deploySettings.snapshot.filterAll') }}</el-radio-button>
+                <el-radio-button label="pre-deploy">{{ t('deploySettings.snapshot.filterPreDeploy') }}</el-radio-button>
+                <el-radio-button label="manual">{{ t('deploySettings.snapshot.filterManual') }}</el-radio-button>
+              </el-radio-group>
+            </div>
             <div v-if="snapshots.length > 0" class="snapshots-summary muted">
               {{ t('deploySettings.snapshot.summaryCount', { n: snapshots.length }) }}
               ·
@@ -161,33 +173,42 @@
             <div v-if="snapshots.length === 0" class="muted">
               {{ t('deploySettings.snapshot.noneYet') }}
             </div>
-            <el-table v-else :data="snapshots" size="small" :aria-label="t('deploySettings.snapshot.snapshotsTitle')">
-              <el-table-column :label="t('deploySettings.snapshot.colCreated')" min-width="160">
-                <template #default="{ row }">
-                  {{ formatDate(row.createdAt) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="t('deploySettings.snapshot.colSize')" width="100">
-                <template #default="{ row }">
-                  {{ formatBytes(row.sizeBytes) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="t('deploySettings.hosts.col.actions')" width="120" align="right">
-                <template #default="{ row }">
-                  <el-button
-                    size="small"
-                    text
-                    type="danger"
-                    :loading="restoringId === row.id"
-                    :disabled="(restoringId !== null && restoringId !== row.id) || snapshotting"
-                    :aria-label="t('deploySettings.snapshot.restoreTitle')"
-                    @click="onRestoreSnapshot(row)"
-                  >
-                    {{ t('deploySettings.snapshot.restore') }}
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+            <div v-else-if="filteredSnapshots.length === 0" class="muted">
+              {{ t('deploySettings.snapshot.filterNoMatch') }}
+            </div>
+            <ul v-else class="snapshots-timeline">
+              <li v-for="snap in filteredSnapshots" :key="snap.id" class="timeline-item"
+                  :class="`tl-${snapshotKind(snap.path)}`">
+                <span class="timeline-dot"></span>
+                <div class="timeline-content">
+                  <div class="timeline-row">
+                    <el-tag
+                      :type="snapshotKind(snap.path) === 'pre-deploy' ? 'info' : 'warning'"
+                      size="small" effect="plain"
+                    >
+                      {{ snapshotKind(snap.path) === 'pre-deploy'
+                          ? t('deploySettings.snapshot.kindPreDeploy')
+                          : t('deploySettings.snapshot.kindManual') }}
+                    </el-tag>
+                    <span class="timeline-when">{{ formatDate(snap.createdAt) }}</span>
+                    <span class="muted">· {{ formatBytes(snap.sizeBytes) }}</span>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      plain
+                      class="timeline-restore"
+                      :loading="restoringId === snap.id"
+                      :disabled="(restoringId !== null && restoringId !== snap.id) || snapshotting"
+                      :aria-label="t('deploySettings.snapshot.restoreTitle')"
+                      @click="onRestoreSnapshot(snap)"
+                    >
+                      {{ t('deploySettings.snapshot.restore') }}
+                    </el-button>
+                  </div>
+                  <div class="timeline-path mono muted">{{ snap.path }}</div>
+                </div>
+              </li>
+            </ul>
           </div>
 
           <div class="section-footer">
@@ -826,6 +847,18 @@ const snapshots = ref<DeploySnapshotEntry[]>([])
 // Phase 7.5+++ — disk impact aggregates over the loaded snapshot list.
 // Drives the inline "12 snapshots · 240 MB" summary; cheap reduce so
 // the operator sees impact without opening a new endpoint.
+// Phase 7.5+++ Snapshots timeline — derive 'kind' from the snapshot
+// path. Daemon writes manual snapshots under …/manual/ and pre-deploy
+// under …/pre-deploy/, so a substring check is enough to bucket them.
+function snapshotKind(path: string): 'pre-deploy' | 'manual' {
+  return path.includes('/pre-deploy/') ? 'pre-deploy' : 'manual'
+}
+const snapshotsFilter = ref<'all' | 'pre-deploy' | 'manual'>('all')
+const filteredSnapshots = computed(() =>
+  snapshotsFilter.value === 'all'
+    ? snapshots.value
+    : snapshots.value.filter(s => snapshotKind(s.path) === snapshotsFilter.value))
+
 const snapshotsTotalBytes = computed<number>(() =>
   snapshots.value.reduce((sum, s) => sum + (s.sizeBytes ?? 0), 0))
 const snapshotsOldestAt = computed<string | null>(() => {
@@ -1348,6 +1381,61 @@ defineExpose({ saveSettings })
 .snapshot-notice {
   max-width: 600px;
 }
+
+/* Phase 7.5+++ — snapshots timeline */
+.snapshots-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.snapshots-filter { margin-left: auto; }
+.snapshots-summary { font-size: 12px; }
+.snapshots-timeline {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  position: relative;
+}
+.snapshots-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--el-border-color-lighter);
+}
+.timeline-item {
+  position: relative;
+  padding: 8px 0 8px 24px;
+}
+.timeline-dot {
+  position: absolute;
+  left: 2px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+  box-shadow: 0 0 0 2px var(--el-bg-color);
+}
+.tl-pre-deploy .timeline-dot { background: var(--el-color-info); }
+.tl-manual    .timeline-dot { background: var(--el-color-warning); }
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.timeline-when { font-size: 13px; }
+.timeline-path { font-size: 11px; word-break: break-all; }
+.timeline-restore { margin-left: auto; }
 
 .subsection {
   display: flex;

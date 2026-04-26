@@ -827,7 +827,13 @@
       "summarySize": "{size} total",
       "summaryOldest": "oldest: {when}",
       "restore": "Restore",
-      "saveSettings": "Save snapshot settings"
+      "saveSettings": "Save snapshot settings",
+      "filterAll": "All",
+      "filterPreDeploy": "Pre-deploy",
+      "filterManual": "Manual",
+      "filterNoMatch": "No snapshots in this category.",
+      "kindPreDeploy": "pre-deploy",
+      "kindManual": "manual"
     },
     "hooks": {
       "title": "Lifecycle hooks",

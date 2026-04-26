@@ -827,7 +827,13 @@
       "summarySize": "celkem {size}",
       "summaryOldest": "nejstarší: {when}",
       "restore": "Obnovit",
-      "saveSettings": "Uložit nastavení snapshotů"
+      "saveSettings": "Uložit nastavení snapshotů",
+      "filterAll": "Vše",
+      "filterPreDeploy": "Pre-deploy",
+      "filterManual": "Ruční",
+      "filterNoMatch": "Žádný snapshot v této kategorii.",
+      "kindPreDeploy": "pre-deploy",
+      "kindManual": "ruční"
     },
     "hooks": {
       "title": "Lifecycle hooks",
