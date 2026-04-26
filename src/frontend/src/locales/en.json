@@ -978,7 +978,17 @@
       "snapshotHint": "Creates a gzipped DB dump at ~/.wdc/backups/pre-deploy/ before the deploy starts. Snapshot failure aborts the deploy (fail-fast). Restorable via the snapshot list in the Settings tab.",
       "deployNow": "Deploy now",
       "countdown": "{seconds}s — release to abort",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "lastReleaseLabel": "Last release:",
+      "lastDeployedLabel": "Deployed:",
+      "lastDeployOk": "succeeded",
+      "lastDeployFailed": "failed",
+      "firstEverDeploy": "First-ever deploy to this host — no previous version.",
+      "recentDeployWarn": "Previous deploy ran {seconds}s ago — accidental double-click?",
+      "ageJustNow": "{n}s ago",
+      "ageMinutes": "{n}m ago",
+      "ageHours": "{n}h ago",
+      "ageDays": "{n}d ago"
     },
     "commandCenter": {
       "noHosts": "No deploy hosts configured",

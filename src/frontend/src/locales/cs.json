@@ -978,7 +978,17 @@
       "snapshotHint": "Vytvoří gzipped dump databáze do ~/.wdc/backups/pre-deploy/ před spuštěním deploye. Selhání snapshotu deploy zruší (fail-fast). Lze obnovit ze seznamu snapshotů v záložce Nastavení.",
       "deployNow": "Deploynout",
       "countdown": "{seconds} s — pusťte pro přerušení",
-      "cancel": "Zrušit"
+      "cancel": "Zrušit",
+      "lastReleaseLabel": "Poslední release:",
+      "lastDeployedLabel": "Nasazeno:",
+      "lastDeployOk": "úspěšně",
+      "lastDeployFailed": "se selháním",
+      "firstEverDeploy": "První deploy na tohoto hosta — žádná předchozí verze.",
+      "recentDeployWarn": "Předchozí deploy proběhl před {seconds} s — možná jste klikli omylem dvakrát?",
+      "ageJustNow": "před {n} s",
+      "ageMinutes": "před {n} m",
+      "ageHours": "před {n} h",
+      "ageDays": "před {n} d"
     },
     "commandCenter": {
       "noHosts": "Žádní deploy hosti nejsou nakonfigurovaní",

@@ -55,6 +55,7 @@
       v-model="confirmModalOpen"
       :domain="domain"
       :host="confirmHost"
+      :last-deploy="lastDeployByHost.get(confirmHost) ?? null"
       @confirmed="confirmDeploy($event)"
     />
   </div>
