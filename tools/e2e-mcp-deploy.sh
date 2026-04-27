@@ -101,7 +101,7 @@ api PUT /api/settings -d '{"mcp.enabled":"true","deploy.enabled":"true","mcp.str
 echo ""; echo "${YEL}=== B. MCP kinds discovery ===${END}"
 # ============================================================================
 KINDS=$(api GET /api/mcp/kinds)
-step "kinds endpoint returns 6 core kinds" "$KINDS" '"count":6'
+step "kinds endpoint returns 7 core kinds" "$KINDS" '"count":7'
 step "deploy kind has reversible danger" "$KINDS" '"id":"deploy".*"danger":"reversible"'
 step "restore kind has destructive danger" "$KINDS" '"id":"restore".*"danger":"destructive"'
 # Phase 7.5+++ — usage telemetry per kind. After many sections that
@@ -1930,6 +1930,15 @@ XX_SW_BOGUS=$(curl -s -o /dev/null -w '%{http_code}' \
     -d '{"hosts":[]}' \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/settings")
 step "settings PUT with bogus intent token returns 403" "$XX_SW_BOGUS" "403"
+
+# snapshot-now MCP gate — bogus token blocks; no token still works.
+XX_SN_BOGUS=$(curl -s -o /dev/null -w '%{http_code}' \
+    -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Intent-Token: bogus.fake.signature" \
+    -d '{"host":"production"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/snapshot-now")
+step "snapshot-now with bogus intent token returns 403" "$XX_SN_BOGUS" "403"
+step "snapshot_create kind is registered" "$XX_KINDS" '"id":"snapshot_create"'
 
 # ============================================================================
 echo ""; echo "${YEL}=== YY. always-confirm kinds override ===${END}"

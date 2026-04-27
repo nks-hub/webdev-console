@@ -53,6 +53,11 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // Reversible (file overwrite is undoable) but practically destructive.
         _kinds["settings_write"] = new DestructiveOperationKind(
             "settings_write", "Overwrite per-site deploy settings", CorePluginId, DangerLevel.Destructive);
+        // Phase 7.5+++ — snapshot_create runs a real ZIP of the current
+        // release dir and writes to disk. Reversible (operator can delete
+        // the file), but an AI loop spamming this is a disk-fill DoS.
+        _kinds["snapshot_create"] = new DestructiveOperationKind(
+            "snapshot_create", "Create a manual snapshot of the current release", CorePluginId, DangerLevel.Reversible);
     }
 
     public void Register(DestructiveOperationKind kind)

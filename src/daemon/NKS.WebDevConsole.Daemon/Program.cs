@@ -3027,8 +3027,25 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", asyn
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     CancellationToken ct) =>
 {
+    // Phase 7.5+++ — optional MCP intent gate. snapshot_create is
+    // disk-fill territory if AI spams it; gate keeps the operator's
+    // grant + always-confirm controls effective.
+    var snIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(snIntentToken))
+    {
+        var snAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var snVerdict = await intentValidator.ValidateAndConsumeAsync(
+            snIntentToken, "snapshot_create", domain, host: "*", snAllowUnconfirmed, ct);
+        if (!snVerdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = snVerdict.Reason, detail = snVerdict.Detail },
+                statusCode: snVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     var snapshotId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
     var sw = System.Diagnostics.Stopwatch.StartNew();
