@@ -1825,6 +1825,40 @@ if [ -n "$UU_BACKUP" ]; then echo "$UU_BACKUP" > "$UU_SETTINGS_FILE"; fi
 rm -rf "$UU_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== VV. nksdeploy structure on shop.loc fixture ===${END}"
+# ============================================================================
+# Mirror of section GG but against shop.loc to prove the daemon has no
+# blog.loc-specific assumptions. User asked for testing on BOTH fixtures.
+VV_TARGET_MSYS="/c/temp/e2e-shop-target"
+VV_TARGET_WIN="C:/temp/e2e-shop-target"
+VV_SOURCE_WIN="C:/work/sites/shop.loc"
+rm -rf "$VV_TARGET_MSYS"
+mkdir -p "$VV_TARGET_MSYS"
+
+VV_BODY='{"host":"production","branch":"main","localPaths":{"source":"'$VV_SOURCE_WIN'","target":"'$VV_TARGET_WIN'"},"localOptions":{"sharedDirs":["log","cache"],"sharedFiles":[".env"],"keepReleases":2}}'
+for i in 1 2 3; do
+    curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -d "$VV_BODY" "$BASE/api/nks.wdc.deploy/sites/shop.loc/deploy" > /dev/null
+    sleep 2
+done
+sleep 1
+
+step "shop.loc target has releases/" "$([ -d $VV_TARGET_MSYS/releases ] && echo y || echo n)" "y"
+step "shop.loc target has shared/"   "$([ -d $VV_TARGET_MSYS/shared   ] && echo y || echo n)" "y"
+step "shop.loc target has current symlink" "$([ -e $VV_TARGET_MSYS/current ] && echo y || echo n)" "y"
+step "shop.loc retention pruned to keep=2" "$(ls -1 $VV_TARGET_MSYS/releases 2>/dev/null | wc -l | tr -d ' ')" "^2$"
+step "shop.loc shared/cache present (custom dir)" "$([ -d $VV_TARGET_MSYS/shared/cache ] && echo y || echo n)" "y"
+step "shop.loc shared/.env file seeded" "$([ -f $VV_TARGET_MSYS/shared/.env ] && echo y || echo n)" "y"
+
+VV_NEWEST=$(ls -1 $VV_TARGET_MSYS/releases 2>/dev/null | sort | tail -1)
+if [ -n "$VV_NEWEST" ]; then
+    step "shop.loc newest release symlinks log → shared/log" \
+        "$(readlink $VV_TARGET_MSYS/releases/$VV_NEWEST/log 2>/dev/null | sed 's|\\\\|/|g')" "shared/log"
+fi
+
+rm -rf "$VV_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
