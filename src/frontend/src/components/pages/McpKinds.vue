@@ -78,7 +78,11 @@
           <code class="mono">{{ row.id }}</code>
         </template>
       </el-table-column>
-      <el-table-column prop="label" :label="t('mcpKinds.col.label')" min-width="240" />
+      <el-table-column prop="label" :label="t('mcpKinds.col.label')" min-width="240">
+        <template #default="{ row }">
+          {{ humanLabel(row) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="pluginId" :label="t('mcpKinds.col.plugin')" width="160">
         <template #default="{ row }">
           <el-tag :type="row.pluginId === 'core' ? 'info' : 'success'" size="small" effect="plain">
@@ -161,6 +165,18 @@ const route = useRoute()
 const loading = ref(false)
 const kinds = ref<McpKindRow[]>([])
 const grants = ref<McpGrantRow[]>([])
+
+// Phase 7.5+++ — humanise the label per locale. The daemon ships an
+// English label as a fallback (registered in
+// DestructiveOperationKindsRegistry); the operator's locale (cs/en)
+// overrides it via mcpKinds.labels.<id>. Falls back to the daemon
+// label, then the bare id, so plugin-supplied kinds without a frontend
+// translation degrade gracefully rather than rendering an empty cell.
+function humanLabel(row: { id: string; label: string }): string {
+  const key = `mcpKinds.labels.${row.id}`
+  const localized = t(key)
+  return localized !== key ? localized : (row.label || row.id)
+}
 
 function autoApproveCount(kindId: string): number {
   return grants.value.filter((g) => {
