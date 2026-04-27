@@ -178,6 +178,7 @@
     "unused": "never",
     "noAutoApprove": "—",
     "alwaysConfirm": "Always confirm",
+    "editAlwaysConfirm": "Edit ring-fence",
     "danger": {
       "reversible": "Reversible",
       "destructive": "Destructive"

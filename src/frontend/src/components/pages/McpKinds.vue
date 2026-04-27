@@ -2,9 +2,19 @@
   <div class="page mcp-kinds-page">
     <div class="page-header">
       <h2>{{ t('mcpKinds.title') }}</h2>
-      <el-button :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon> {{ t('mcpKinds.refresh') }}
-      </el-button>
+      <div class="header-actions">
+        <!-- Phase 7.5+++ — discoverable shortcut to the always-confirm
+             picker in Settings. Per-row chip click does the same thing
+             but only renders for already-locked rows; this button is
+             visible regardless so an operator can reach the override
+             editor from a clean list. -->
+        <el-button @click="goToAlwaysConfirmSetting">
+          🔒 {{ t('mcpKinds.editAlwaysConfirm') }}
+        </el-button>
+        <el-button :loading="loading" @click="refresh">
+          <el-icon><Refresh /></el-icon> {{ t('mcpKinds.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <p class="muted">{{ t('mcpKinds.description') }}</p>
@@ -246,6 +256,7 @@ async function refresh(): Promise<void> {
 .page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .page-header { display: flex; align-items: center; justify-content: space-between; }
 .page-header h2 { margin: 0; }
+.header-actions { display: flex; gap: 8px; }
 .muted { color: var(--el-text-color-secondary); }
 .kinds-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }

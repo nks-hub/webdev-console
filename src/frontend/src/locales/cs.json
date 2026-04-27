@@ -178,6 +178,7 @@
     "unused": "nikdy",
     "noAutoApprove": "—",
     "alwaysConfirm": "Vždy potvrdit",
+    "editAlwaysConfirm": "Upravit ring-fence",
     "danger": {
       "reversible": "Vratné",
       "destructive": "Destruktivní"
