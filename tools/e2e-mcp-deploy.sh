@@ -1752,6 +1752,42 @@ if [ -n "$SS_BACKUP" ]; then echo "$SS_BACKUP" > "$SS_SETTINGS_FILE"; fi
 rm -rf "$SS_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== TT. health probe FAILURE surfaces in soak phase ===${END}"
+# ============================================================================
+# Same shape as SS but with a bogus healthCheckUrl → expect SSE message
+# "Health check FAILED:" with the connection / DNS error.
+TT_TARGET_MSYS="/c/temp/e2e-health-fail-target"
+TT_TARGET_WIN="C:/temp/e2e-health-fail-target"
+rm -rf "$TT_TARGET_MSYS"
+mkdir -p "$TT_TARGET_MSYS"
+TT_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+TT_BACKUP=""
+[ -f "$TT_SETTINGS_FILE" ] && TT_BACKUP=$(cat "$TT_SETTINGS_FILE")
+cat > "$TT_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":2,"healthCheckUrl":"http://e2e-bogus-health.invalid/healthz","localSourcePath":"C:/work/sites/blog.loc","localTargetPath":"$TT_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+TT_SSE_OUT=$(mktemp)
+( timeout 10 curl -sN -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/events?token=$TOKEN" > "$TT_SSE_OUT" 2>/dev/null ) &
+TT_SSE_PID=$!
+sleep 1
+
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","branch":"main"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 8  # soak window 2s + probe retries + buffer
+wait $TT_SSE_PID 2>/dev/null
+
+step "SSE captured 'Health check FAILED' for bogus URL" "$(cat $TT_SSE_OUT)" 'Health check FAILED'
+# Deploy itself still completes (no auto-rollback), so a Done/complete event should also appear.
+step "deploy still progressed past soak (no auto-rollback)" "$(cat $TT_SSE_OUT)" '"deploy:complete"|"success":true'
+
+rm -f "$TT_SSE_OUT"
+if [ -n "$TT_BACKUP" ]; then echo "$TT_BACKUP" > "$TT_SETTINGS_FILE"; fi
+rm -rf "$TT_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
