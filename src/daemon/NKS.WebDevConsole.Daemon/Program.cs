@@ -1973,6 +1973,56 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/hooks/test", async (
     return Results.Ok(new { ok, durationMs, error, workingDir });
 });
 
+// Phase 7.5+++ — fire a test notification through the configured Slack
+// webhook so operator can verify the URL works without waiting for a
+// real deploy. Body shape: { slackWebhook?, host? } — both optional;
+// missing slackWebhook reads from the site settings.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/notifications/test", async (
+    string domain, HttpContext ctx,
+    NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
+    CancellationToken ct) =>
+{
+    if (!IsDeployEnabled(ctx)) return Results.NotFound(new { error = "deploy_disabled" });
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    string? slack = root.TryGetProperty("slackWebhook", out var swEl) ? swEl.GetString() : null;
+    var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "test" : "test";
+
+    // Fall back to settings if body didn't supply slackWebhook.
+    if (string.IsNullOrEmpty(slack))
+    {
+        try
+        {
+            var sp = DeploySettingsPath(domain);
+            if (File.Exists(sp))
+            {
+                using var sd = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(sp, ct));
+                if (sd.RootElement.TryGetProperty("notifications", out var nEl)
+                    && nEl.TryGetProperty("slackWebhook", out var swEl2))
+                    slack = swEl2.GetString();
+            }
+        }
+        catch { /* best-effort */ }
+    }
+    if (string.IsNullOrEmpty(slack))
+        return Results.BadRequest(new { error = "slack_webhook_not_configured" });
+
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    string? err = null;
+    try
+    {
+        // Direct POST (bypasses dispatch try/catch) so the operator
+        // sees real webhook errors here instead of silent success.
+        await NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.PostSlackAsync(
+            slack!, domain, host,
+            deployId: "test-" + Guid.NewGuid().ToString("D")[..8],
+            success: true, durationMs: 0, error: null, ct);
+    }
+    catch (Exception ex) { err = ex.Message; }
+    sw.Stop();
+    return Results.Ok(new { ok = err is null, durationMs = sw.ElapsedMilliseconds, error = err });
+});
+
 app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
     HttpContext ctx,
     CancellationToken ct) =>
@@ -3283,12 +3333,13 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         catch { /* swallow — fall through to 400 below if paths still empty */ }
     }
 
-    // Phase 7.5+++ — load hooks + envVars from settings for the backend
-    // to execute. Done in a separate pass so it runs even when localPaths
-    // came from body (E2E supplies paths in body but might also rely on
-    // settings-defined hooks).
+    // Phase 7.5+++ — load hooks + envVars + notifications from settings
+    // for the backend. Done in a separate pass so it runs even when
+    // localPaths came from body (E2E supplies paths in body but might
+    // also rely on settings-defined hooks/notifications).
     var optHooks = new List<NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.HookSpec>();
     var optEnvVars = new Dictionary<string, string>();
+    NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.NotificationsConfig? optNotifications = null;
     try
     {
         var settingsPath = DeploySettingsPath(domain);
@@ -3323,9 +3374,25 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
                         optEnvVars[prop.Name] = prop.Value.GetString() ?? "";
                 }
             }
+            if (rootEl.TryGetProperty("notifications", out var ntfEl)
+                && ntfEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                string? slack = null;
+                List<string>? recipients = null;
+                List<string>? notifyOn = null;
+                if (ntfEl.TryGetProperty("slackWebhook", out var swEl)) slack = swEl.GetString();
+                if (ntfEl.TryGetProperty("emailRecipients", out var erEl)
+                    && erEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    recipients = erEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+                if (ntfEl.TryGetProperty("notifyOn", out var noEl)
+                    && noEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    notifyOn = noEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+                optNotifications = new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.NotificationsConfig(
+                    SlackWebhook: slack, EmailRecipients: recipients, NotifyOn: notifyOn);
+            }
         }
     }
-    catch { /* best-effort — hooks/envVars are optional */ }
+    catch { /* best-effort — hooks/envVars/notifications are optional */ }
     if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
     {
         return Results.BadRequest(new
@@ -3445,7 +3512,10 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         SharedFiles: optSharedFiles,
         KeepReleases: optKeepReleases,
         Hooks: optHooks.Count > 0 ? optHooks : null,
-        EnvVars: optEnvVars.Count > 0 ? optEnvVars : null);
+        EnvVars: optEnvVars.Count > 0 ? optEnvVars : null,
+        Notifications: optNotifications,
+        Domain: domain,
+        Host: host);
     _ = Task.Run(() => localBackend.RunAsync(deployId, releaseId, localSource!, localTarget!, deployOptions));
     return Results.Accepted($"/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
         new { deployId, status = "queued", note = "local backend — copying files" });

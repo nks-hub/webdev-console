@@ -411,6 +411,14 @@
                   clearable
                 />
               </el-form-item>
+              <el-button
+                size="small" plain
+                :loading="testingSlack"
+                :disabled="testingSlack || !settings.notifications.slackWebhook"
+                @click="onTestSlack"
+              >
+                {{ t('deploySettings.notifications.testSlack') }}
+              </el-button>
             </el-card>
 
             <!-- Email channel card -->
@@ -853,6 +861,7 @@ import {
   snapshotNow,
   testHostConnection,
   testHook,
+  testNotification,
 } from '../../api/deploy'
 import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings, TestHostConnectionResult } from '../../api/deploy'
 
@@ -993,6 +1002,37 @@ const hostFormRef = ref<FormInstance>()
 // operator clicks Test, then sticks until they change a field that
 // invalidates it (handled via watch below) or close the dialog.
 const testingConnection = ref(false)
+
+// Phase 7.5+++ — Slack test-notification button busy state.
+const testingSlack = ref(false)
+async function onTestSlack(): Promise<void> {
+  if (testingSlack.value) return
+  testingSlack.value = true
+  try {
+    const r = await testNotification(props.domain, {
+      slackWebhook: settings.notifications.slackWebhook,
+    })
+    if (r.ok) {
+      ElNotification({
+        title: t('deploySettings.notifications.testSlackOkTitle'),
+        message: t('deploySettings.notifications.testSlackOkBody', { ms: r.durationMs }),
+        type: 'success',
+        duration: 4000,
+      })
+    } else {
+      ElNotification({
+        title: t('deploySettings.notifications.testSlackFailTitle'),
+        message: r.error ?? t('deploySettings.notifications.testSlackFailGeneric'),
+        type: 'error',
+        duration: 8000,
+      })
+    }
+  } catch (e) {
+    ElMessage.error((e as Error).message || t('deploySettings.notifications.testSlackFailGeneric'))
+  } finally {
+    testingSlack.value = false
+  }
+}
 
 // Phase 7.5+++ — track which hook is currently being test-fired so the
 // rest can be disabled (one fire at a time keeps the operator from

@@ -1658,6 +1658,20 @@ PP_NO_CMD=$(curl -s -w '\n%{http_code}' -X POST -H "Authorization: Bearer $TOKEN
 step "test-hook without command returns 400" "$PP_NO_CMD" 'command_required'
 
 # ============================================================================
+echo ""; echo "${YEL}=== QQ. test-notification endpoint (Slack webhook smoke) ===${END}"
+# ============================================================================
+# Bogus webhook → ok=false with DNS / connection error surfaced.
+QQ_BAD=$(api POST /api/nks.wdc.deploy/sites/blog.loc/notifications/test \
+    -d '{"slackWebhook":"https://e2e-bogus-host.invalid/webhook"}')
+step "test-notification returns ok=false for bogus webhook" "$QQ_BAD" '"ok":false'
+step "test-notification returns durationMs" "$QQ_BAD" '"durationMs":[0-9]+'
+
+# Missing webhook + no settings entry → 400
+QQ_NONE=$(curl -s -w '\n%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{}' "$BASE/api/nks.wdc.deploy/sites/no-such-site-q1q2.loc/notifications/test")
+step "test-notification without configured webhook returns 400" "$QQ_NONE" 'slack_webhook_not_configured'
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""

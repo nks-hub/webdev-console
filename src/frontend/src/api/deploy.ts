@@ -511,6 +511,26 @@ export async function testHook(
   )
 }
 
+/**
+ * Phase 7.5+++ — fire one Slack test message via the daemon. Body's
+ * slackWebhook overrides settings if present. Returns {ok, durationMs, error?}.
+ */
+export interface TestNotificationResult {
+  ok: boolean
+  durationMs: number
+  error?: string | null
+}
+
+export async function testNotification(
+  domain: string,
+  body: { slackWebhook?: string; host?: string } = {},
+): Promise<TestNotificationResult> {
+  return request<TestNotificationResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/notifications/test`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+}
+
 export async function testHostConnection(
   host: string,
   port: number,

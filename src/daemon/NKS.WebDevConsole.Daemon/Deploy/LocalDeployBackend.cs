@@ -81,7 +81,20 @@ public sealed class LocalDeployBackend
         IReadOnlyList<string>? SharedFiles = null,
         int? KeepReleases = null,
         IReadOnlyList<HookSpec>? Hooks = null,
-        IReadOnlyDictionary<string, string>? EnvVars = null);
+        IReadOnlyDictionary<string, string>? EnvVars = null,
+        NotificationsConfig? Notifications = null,
+        string? Domain = null,
+        string? Host = null);
+
+    /// <summary>
+    /// Notifications config resolved from settings.notifications. Empty
+    /// fields → that channel is silent. notifyOn values are matched to
+    /// the deploy outcome (success / failure / awaiting_soak / cancelled).
+    /// </summary>
+    public sealed record NotificationsConfig(
+        string? SlackWebhook = null,
+        IReadOnlyList<string>? EmailRecipients = null,
+        IReadOnlyList<string>? NotifyOn = null);
 
     /// <summary>
     /// One configured deploy hook. Mirrors DeployHookConfig in api/deploy.ts.
@@ -196,6 +209,10 @@ public sealed class LocalDeployBackend
                 errorMessage: null, durationMs: sw.ElapsedMilliseconds, ct);
             await _events.BroadcastAsync("deploy:complete",
                 new { deployId, success = true, durationMs = sw.ElapsedMilliseconds, releaseDir });
+            // Phase 7.5+++ — fire configured notifications (Slack/etc) on success.
+            try { await DispatchNotificationsAsync(options?.Notifications, options?.Domain, options?.Host,
+                deployId, success: true, durationMs: sw.ElapsedMilliseconds, error: null, ct); }
+            catch { }
         }
         catch (Exception ex)
         {
@@ -208,6 +225,74 @@ public sealed class LocalDeployBackend
                 errorMessage: ex.Message, durationMs: sw.ElapsedMilliseconds, ct); } catch { }
             try { await _events.BroadcastAsync("deploy:complete",
                 new { deployId, success = false, error = ex.Message }); } catch { }
+            // Failure notifications — same dispatcher, different outcome.
+            try { await DispatchNotificationsAsync(options?.Notifications, options?.Domain, options?.Host,
+                deployId, success: false, durationMs: sw.ElapsedMilliseconds, error: ex.Message, ct); }
+            catch { }
+        }
+    }
+
+    /// <summary>
+    /// Fire configured notification channels for a completed deploy.
+    /// Currently dispatches Slack webhooks (POST {text} JSON). Email
+    /// dispatch is deferred (needs SMTP server config). Channel-by-channel
+    /// failure isolation — one channel erroring doesn't skip the next.
+    /// Public so the test-notification endpoint can reuse it.
+    /// </summary>
+    public async Task DispatchNotificationsAsync(
+        NotificationsConfig? cfg, string? domain, string? host,
+        string deployId, bool success, long durationMs, string? error,
+        CancellationToken ct)
+    {
+        if (cfg is null) return;
+        // Map success/failure → string matching the GUI's notifyOn enum values.
+        var outcome = success ? "success" : "failure";
+        var notifyOn = cfg.NotifyOn ?? new[] { "success", "failure" };
+        if (!notifyOn.Contains(outcome, StringComparer.OrdinalIgnoreCase)) return;
+
+        if (!string.IsNullOrEmpty(cfg.SlackWebhook))
+        {
+            try
+            {
+                await PostSlackAsync(cfg.SlackWebhook, domain, host, deployId,
+                    success, durationMs, error, ct);
+            }
+            catch (Exception ex)
+            {
+                // Dispatch swallows: a notification failure is never allowed
+                // to mask the underlying deploy outcome. The test endpoint
+                // calls PostSlackAsync directly so it can surface failures.
+                _logger.LogWarning(ex, "Slack webhook dispatch failed for deploy {DeployId}", deployId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Inner Slack-webhook POST. Throws on non-2xx + on transport
+    /// failures so callers can surface the error. The dispatch path
+    /// wraps this in try/catch; the test-notification endpoint lets it
+    /// throw so the operator sees what's wrong.
+    /// </summary>
+    public static async Task PostSlackAsync(
+        string webhook, string? domain, string? host, string deployId,
+        bool success, long durationMs, string? error, CancellationToken ct)
+    {
+        var icon = success ? ":white_check_mark:" : ":x:";
+        var summary = success
+            ? $"{icon} *{domain ?? "?"}* deploy succeeded on `{host ?? "?"}` ({durationMs} ms)"
+            : $"{icon} *{domain ?? "?"}* deploy FAILED on `{host ?? "?"}` ({durationMs} ms)";
+        if (!success && !string.IsNullOrEmpty(error))
+            summary += $"\n>{error}";
+        summary += $"\n_deployId: `{deployId[..Math.Min(8, deployId.Length)]}`_";
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        var payload = System.Text.Json.JsonSerializer.Serialize(new { text = summary });
+        using var resp = await http.PostAsync(webhook,
+            new StringContent(payload, System.Text.Encoding.UTF8, "application/json"), ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            throw new InvalidOperationException(
+                $"Slack webhook returned {(int)resp.StatusCode} {resp.ReasonPhrase}: {body.Trim()}");
         }
     }
 
