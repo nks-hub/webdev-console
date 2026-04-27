@@ -2575,32 +2575,135 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", asyn
 // so it surfaces in the snapshot list (which projects rows with
 // non-null pre_deploy_backup_path) without needing an actual deploy.
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
-    string domain,
+    string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
     CancellationToken ct) =>
 {
     var snapshotId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
-    var fakePath = $"~/.wdc/backups/manual/{domain}/{snapshotId}.sql.gz";
-    long fakeSize = 1024 * 512; // 512 KB stub
+    var sw = System.Diagnostics.Stopwatch.StartNew();
 
+    // Phase 7.5+++ — when ANY host has localTargetPath configured + a
+    // resolvable `current` symlink, ZIP that release dir into the manual
+    // backups folder. Result is a REAL recovery artifact the operator
+    // can extract back to the host. Without localPaths we keep the
+    // historic fake-record behaviour so existing tests + the GUI list
+    // still see an entry (back-compat).
+    string? sourceCurrent = null;
+    string? hostName = null;
+    try
+    {
+        // Optional body { host: "..." } — picks a specific host's current/.
+        // No body or no host → first host with localTargetPath wins.
+        string? bodyHost = null;
+        if (ctx.Request.ContentLength is > 0)
+        {
+            try
+            {
+                using var bdoc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+                if (bdoc.RootElement.TryGetProperty("host", out var hEl))
+                    bodyHost = hEl.GetString();
+            }
+            catch { /* empty / non-JSON body is fine */ }
+        }
+
+        var settingsPath = DeploySettingsPath(domain);
+        if (File.Exists(settingsPath))
+        {
+            using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+            if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var hEl2 in hostsEl.EnumerateArray())
+                {
+                    if (!hEl2.TryGetProperty("name", out var nEl)) continue;
+                    var n = nEl.GetString() ?? "";
+                    if (!string.IsNullOrEmpty(bodyHost) && !string.Equals(n, bodyHost, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (hEl2.TryGetProperty("localTargetPath", out var ltEl))
+                    {
+                        var tgt = ltEl.GetString();
+                        if (!string.IsNullOrEmpty(tgt))
+                        {
+                            var candidate = Path.Combine(tgt, "current");
+                            if (Directory.Exists(candidate))
+                            {
+                                sourceCurrent = candidate;
+                                hostName = n;
+                                break;
+                            }
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(bodyHost)) break; // explicit host miss → don't fall through
+                }
+            }
+        }
+    }
+    catch { /* best-effort */ }
+
+    long sizeBytes;
+    string returnedPath;
+    if (sourceCurrent is not null)
+    {
+        // Real ZIP. Resolve `current` symlink target so the archive
+        // captures the actual files, not symlink metadata.
+        var realRoot = sourceCurrent;
+        try
+        {
+            var info = new DirectoryInfo(sourceCurrent);
+            if (info.LinkTarget is not null && Directory.Exists(info.LinkTarget))
+                realRoot = info.LinkTarget;
+        }
+        catch { /* fall back to current path */ }
+
+        var backupsDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "manual", domain);
+        Directory.CreateDirectory(backupsDir);
+        var realPath = Path.Combine(backupsDir, $"{snapshotId}.zip");
+        try
+        {
+            System.IO.Compression.ZipFile.CreateFromDirectory(
+                realRoot, realPath,
+                System.IO.Compression.CompressionLevel.Fastest,
+                includeBaseDirectory: false);
+            sizeBytes = new FileInfo(realPath).Length;
+        }
+        catch (Exception ex)
+        {
+            // Bubble up — operator sees the failure rather than getting a
+            // silently broken snapshot row. Common cause: file in release
+            // directory is locked by another process during the zip pass.
+            return Results.Json(new { error = "snapshot_zip_failed", detail = ex.Message },
+                statusCode: 500);
+        }
+        returnedPath = $"~/.wdc/backups/manual/{domain}/{snapshotId}.zip";
+    }
+    else
+    {
+        // No local target available — record a placeholder row so GUI
+        // shows an entry but flag the path as the legacy stub shape.
+        sizeBytes = 1024 * 512;
+        returnedPath = $"~/.wdc/backups/manual/{domain}/{snapshotId}.sql.gz";
+    }
+
+    sw.Stop();
     await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
-        Id: snapshotId, Domain: domain, Host: "manual",
+        Id: snapshotId, Domain: domain, Host: hostName ?? "manual",
         ReleaseId: now.ToString("yyyyMMdd_HHmmss") + "-manual",
         Branch: null, CommitSha: null,
         Status: "completed", IsPastPonr: false,
-        StartedAt: now, CompletedAt: now,
-        ExitCode: 0, ErrorMessage: null, DurationMs: 100,
+        StartedAt: now, CompletedAt: DateTimeOffset.UtcNow,
+        ExitCode: 0, ErrorMessage: null, DurationMs: sw.ElapsedMilliseconds,
         TriggeredBy: "gui", BackendId: "manual-snapshot",
         CreatedAt: now, UpdatedAt: now), ct);
-    await runs.UpdatePreDeployBackupAsync(snapshotId, fakePath, fakeSize, ct);
+    await runs.UpdatePreDeployBackupAsync(snapshotId, returnedPath, sizeBytes, ct);
 
     return Results.Ok(new
     {
         snapshotId, domain,
-        path = fakePath,
-        sizeBytes = fakeSize,
-        durationMs = 100L,
+        path = returnedPath,
+        sizeBytes,
+        durationMs = sw.ElapsedMilliseconds,
+        host = hostName,
     });
 });
 

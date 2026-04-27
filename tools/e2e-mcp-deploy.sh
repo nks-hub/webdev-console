@@ -1370,6 +1370,47 @@ fi
 rm -rf "$HH_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== II. snapshot-now writes a REAL zip artifact ===${END}"
+# ============================================================================
+# When localTargetPath is configured + a current/ symlink exists,
+# snapshot-now should produce an actual ZIP file under
+# ~/.wdc/backups/manual/{domain}/. Without localTargetPath the legacy
+# .sql.gz placeholder shape persists for back-compat.
+II_TARGET_MSYS="/c/temp/e2e-snapshot-target"
+II_TARGET_WIN="C:/temp/e2e-snapshot-target"
+II_SOURCE_WIN="C:/work/sites/blog.loc"
+rm -rf "$II_TARGET_MSYS"
+mkdir -p "$II_TARGET_MSYS"
+
+II_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+II_BACKUP=""
+[ -f "$II_SETTINGS_FILE" ] && II_BACKUP=$(cat "$II_SETTINGS_FILE")
+cat > "$II_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"$II_SOURCE_WIN","localTargetPath":"$II_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+# Fire a deploy so current/ exists
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 3
+
+II_RESP=$(api POST /api/nks.wdc.deploy/sites/blog.loc/snapshot-now -d '{}')
+II_ID=$(echo "$II_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('snapshotId',''))" 2>/dev/null)
+step "snapshot-now returns .zip path when localTargetPath configured" "$II_RESP" '\.zip"'
+step "snapshot-now reports host name from settings" "$II_RESP" '"host":"production"'
+step "snapshot-now sizeBytes reflects real archive (>0)" "$II_RESP" '"sizeBytes":[1-9][0-9]*'
+II_FILE="$HOME/.wdc/backups/manual/blog.loc/${II_ID}.zip"
+step "snapshot-now wrote a real .zip on disk" "$([ -s "$II_FILE" ] && echo y || echo n)" "y"
+
+# Cleanup
+[ -f "$II_FILE" ] && rm -f "$II_FILE"
+if [ -n "$II_BACKUP" ]; then
+    echo "$II_BACKUP" > "$II_SETTINGS_FILE"
+fi
+rm -rf "$II_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
