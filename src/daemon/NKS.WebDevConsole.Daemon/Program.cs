@@ -3534,6 +3534,30 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             }
         }
         catch { /* best-effort */ }
+
+        // Compute "would this be a no-op re-deploy?" by comparing source mtime
+        // vs the most recent successful deploy for this host. NULL when we
+        // can't tell (no source mtime / no prior success). True when source
+        // hasn't changed since the last green deploy — operator usually wants
+        // to know before committing a redundant re-run.
+        bool? sourceUnchangedSinceLastDeploy = null;
+        DateTimeOffset? lastSuccessfulDeployAt = null;
+        try
+        {
+            var recent = await runs.ListForDomainAsync(domain, 50, ct);
+            var lastSuccess = recent
+                .Where(r => string.Equals(r.Host, host, StringComparison.OrdinalIgnoreCase)
+                         && r.Status == "completed")
+                .OrderByDescending(r => r.StartedAt)
+                .FirstOrDefault();
+            if (lastSuccess is not null)
+            {
+                lastSuccessfulDeployAt = lastSuccess.StartedAt;
+                if (sourceLastModified is not null)
+                    sourceUnchangedSinceLastDeploy = sourceLastModified <= lastSuccess.StartedAt;
+            }
+        }
+        catch { /* best-effort */ }
         return Results.Ok(new
         {
             dryRun = true,
@@ -3544,6 +3568,8 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             wouldSwapCurrentFrom = prevPath,
             currentRelease,
             sourceLastModified,
+            lastSuccessfulDeployAt,
+            sourceUnchangedSinceLastDeploy,
             branch,
             sharedDirs = optSharedDirs ?? new List<string> { "log", "temp" },
             sharedFiles = optSharedFiles ?? new List<string>(),

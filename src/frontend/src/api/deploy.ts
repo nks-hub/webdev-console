@@ -545,6 +545,8 @@ export interface DryRunDeployResult {
   wouldSwapCurrentFrom: string | null
   currentRelease: string | null
   sourceLastModified: string | null
+  lastSuccessfulDeployAt: string | null
+  sourceUnchangedSinceLastDeploy: boolean | null
   branch: string | null
   sharedDirs: string[]
   sharedFiles: string[]

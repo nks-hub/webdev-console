@@ -115,6 +115,14 @@
       append-to-body
     >
       <div v-if="previewPlan" class="preview-plan">
+        <el-alert
+          v-if="previewPlan.sourceUnchangedSinceLastDeploy === true"
+          type="warning"
+          :closable="false"
+          show-icon
+          :title="t('deploy.quickBar.plan.staleSourceWarn')"
+          class="stale-source-alert"
+        />
         <div class="plan-row">
           <span class="plan-key">{{ t('deploy.quickBar.plan.wouldRelease') }}</span>
           <span class="plan-val mono">{{ previewPlan.wouldRelease }}</span>
@@ -413,5 +421,8 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
   margin-left: 8px;
   font-size: 11px;
   font-family: var(--el-font-family-monospace, ui-monospace, monospace);
+}
+.stale-source-alert {
+  margin-bottom: 4px;
 }
 </style>

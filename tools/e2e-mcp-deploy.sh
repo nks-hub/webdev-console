@@ -1877,6 +1877,8 @@ step "dry-run echoes branch from body" "$WW_RESP" '"branch":"main"'
 step "dry-run includes totalHooksEnabled field" "$WW_RESP" '"totalHooksEnabled":[0-9]+'
 step "dry-run includes currentRelease field" "$WW_RESP" '"currentRelease":'
 step "dry-run includes sourceLastModified field" "$WW_RESP" '"sourceLastModified":'
+step "dry-run includes lastSuccessfulDeployAt field" "$WW_RESP" '"lastSuccessfulDeployAt":'
+step "dry-run includes sourceUnchangedSinceLastDeploy field" "$WW_RESP" '"sourceUnchangedSinceLastDeploy":'
 # Confirm no DB row was written — history should NOT include this would-be deploy.
 sleep 1
 WW_HIST=$(api GET "/api/nks.wdc.deploy/sites/blog.loc/history?limit=5")

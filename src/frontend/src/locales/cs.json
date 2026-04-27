@@ -1160,6 +1160,7 @@
         "extractTo": "Cíl",
         "branch": "Větev",
         "sourceLastModified": "Zdroj naposledy změněn",
+        "staleSourceWarn": "Zdroj se od posledního úspěšného deploye nezměnil — zveřejníte identický release.",
         "currentRelease": "Aktuální release",
         "previousRelease": "Předchozí release",
         "shared": "Sdílené",

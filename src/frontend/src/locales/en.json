@@ -1160,6 +1160,7 @@
         "extractTo": "Target",
         "branch": "Branch",
         "sourceLastModified": "Source last modified",
+        "staleSourceWarn": "Source hasn't changed since the last successful deploy — you'd ship an identical release.",
         "currentRelease": "Current release",
         "previousRelease": "Previous release",
         "shared": "Shared",

@@ -68,6 +68,18 @@
       destroy-on-close
     >
       <div v-if="previewPlan" class="preview-plan">
+        <!-- Phase 7.5+++ — stale-source warning. Daemon flags this true
+             when source mtime <= last successful deploy.startedAt for this
+             host, i.e. you'd publish a release identical to the one
+             that's already live. Usually a finger slip. -->
+        <el-alert
+          v-if="previewPlan.sourceUnchangedSinceLastDeploy === true"
+          type="warning"
+          :closable="false"
+          show-icon
+          :title="t('deploy.quickBar.plan.staleSourceWarn')"
+          class="stale-source-alert"
+        />
         <div class="plan-row">
           <span class="plan-key">{{ t('deploy.quickBar.plan.wouldRelease') }}</span>
           <span class="plan-val mono">{{ previewPlan.wouldRelease }}</span>
@@ -292,5 +304,8 @@ async function onFire(): Promise<void> {
   margin-left: 8px;
   font-size: 11px;
   font-family: var(--el-font-family-monospace, ui-monospace, monospace);
+}
+.stale-source-alert {
+  margin-bottom: 4px;
 }
 </style>
