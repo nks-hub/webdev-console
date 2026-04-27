@@ -74,8 +74,22 @@
             <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
               <div class="muted" style="margin-bottom: 4px">Blockers:</div>
               <ul style="padding-left: 16px; margin: 0">
-                <li v-for="(b, i) in deployBackendReadiness.blockers" :key="i" style="line-height: 1.4">
-                  {{ b }}
+                <!-- Iter 18: when blockerDetails is loaded (via ?explain=true)
+                     each blocker shows phase tag + remediation as a muted
+                     line below the summary. Falls back to plain blockers[]
+                     when explain payload not available (older daemon). -->
+                <li
+                  v-for="(b, i) in deployBackendReadiness.blockerDetails ?? deployBackendReadiness.blockers.map((s) => ({ summary: s, phase: '', remediation: '' }))"
+                  :key="i"
+                  style="line-height: 1.4; margin-bottom: 6px"
+                >
+                  <span v-if="b.phase" style="display: inline-block; min-width: 28px">
+                    <el-tag size="small" type="info" effect="plain">{{ b.phase }}</el-tag>
+                  </span>
+                  {{ b.summary }}
+                  <div v-if="b.remediation" class="muted" style="font-size: 11px; margin-top: 2px; padding-left: 32px">
+                    → {{ b.remediation }}
+                  </div>
                 </li>
               </ul>
             </div>
@@ -1111,6 +1125,11 @@ const deployBackendEffectiveMode = ref<'built-in' | 'plugin' | null>(null)
 // When non-null, the badge becomes a popover trigger showing blockers +
 // recommendation inline. Null when fetch fails (old daemon binaries
 // pre-D1 don't expose this endpoint) — UI falls back to plain tooltip.
+interface DeployReadinessBlockerDetail {
+  summary: string
+  phase: string
+  remediation: string
+}
 interface DeployReadiness {
   mode: 'built-in' | 'plugin'
   pluginLoaded: boolean
@@ -1118,6 +1137,7 @@ interface DeployReadiness {
   useLegacyHostHandlers: boolean
   readyToFlip: boolean
   blockers: string[]
+  blockerDetails?: DeployReadinessBlockerDetail[]
   recommendation: string
 }
 const deployBackendReadiness = ref<DeployReadiness | null>(null)
@@ -1189,8 +1209,12 @@ async function loadDeployBackendInfo(): Promise<void> {
   // blockers + recommendation. Optional (older daemons return 404),
   // graceful degrade leaves popover off and falls back to plain tooltip.
   try {
+    // Iter 18: opt into ?explain=true so each blocker carries phase +
+    // remediation. Older daemons without the explain branch return the
+    // flat shape — type signature treats blockerDetails as optional so
+    // the popover falls back to just summary lines for old payloads.
     const probe = await fetch(
-      `${daemonBaseUrl()}/api/admin/plugin-readiness`,
+      `${daemonBaseUrl()}/api/admin/plugin-readiness?explain=true`,
       { method: 'GET', headers: daemonAuthHeaders() }
     )
     if (probe.ok) {
