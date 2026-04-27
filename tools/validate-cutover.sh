@@ -145,7 +145,12 @@ restart_daemon
 R2=$(api -X POST -d '{"type":"shell","command":"echo legacy-false-OK","timeoutSeconds":3}' \
     "http://localhost:$PORT/api/nks.wdc.deploy/sites/blog.loc/hooks/test")
 echo "  hooks/test response: $R2"
-if echo "$R2" | grep -qv '"workingDir"'; then
+# `! grep -q` (negate match) is more correct than `grep -qv` (any
+# non-matching line) — the latter passes if even ONE line lacks the
+# field, which would false-positive on multi-line pretty-printed JSON.
+# Daemon emits compact JSON today, but the negated form is portable
+# across any future formatting change.
+if ! echo "$R2" | grep -q '"workingDir"'; then
     ok "legacy=false: plugin handler authoritative (no workingDir field)"
 else
     err "legacy=false: workingDir leaked — plugin handler not winning"
@@ -169,7 +174,7 @@ fi
 # fast in the cutover validator before the operator commits to plugin.
 R2_SHOP=$(api -X POST -d '{"type":"shell","command":"echo shop-OK","timeoutSeconds":3}' \
     "http://localhost:$PORT/api/nks.wdc.deploy/sites/shop.loc/hooks/test")
-if echo "$R2_SHOP" | grep -qv '"workingDir"' && echo "$R2_SHOP" | grep -q 'shop-OK'; then
+if ! echo "$R2_SHOP" | grep -q '"workingDir"' && echo "$R2_SHOP" | grep -q 'shop-OK'; then
     ok "legacy=false: plugin handler resolves shop.loc fixture too"
 else
     err "legacy=false: shop.loc parity check failed — plugin can't reach fixture"
