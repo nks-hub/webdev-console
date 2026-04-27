@@ -6,19 +6,19 @@
       <!-- Phase 7.5+++ — at-a-glance summary card. Telemetry that the
            individual tabs would only surface after switching. -->
       <div v-if="grantsStats" class="hub-stats">
-        <span class="stat always-confirm-stat" @click="onActiveClick">
+        <span class="stat clickable-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
           <span class="muted">{{ t('mcpHub.stats.active') }}</span>
         </span>
         <span
           v-if="grantsStats.deadweight > 0"
-          class="stat warn always-confirm-stat"
+          class="stat warn clickable-stat"
           @click="onDeadweightClick"
         >
           <strong>{{ grantsStats.deadweight }}</strong>
           <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
         </span>
-        <span class="stat always-confirm-stat" @click="onTotalMatchesClick">
+        <span class="stat clickable-stat" @click="onTotalMatchesClick">
           <strong>{{ grantsStats.totalMatches }}</strong>
           <span class="muted">{{ t('mcpHub.stats.totalMatches') }}</span>
         </span>
@@ -32,7 +32,7 @@
              live; from there one more click jumps to Settings. -->
         <span
           v-if="alwaysConfirmCount > 0"
-          class="stat warn always-confirm-stat"
+          class="stat warn clickable-stat"
           @click="onAlwaysConfirmClick"
         >
           <strong>🔒 {{ alwaysConfirmCount }}</strong>
@@ -223,8 +223,8 @@ onBeforeUnmount(() => {
 .hub-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats .stat strong { font-weight: 600; }
 .hub-stats .stat.warn strong { color: var(--el-color-warning); }
-.always-confirm-stat { cursor: pointer; user-select: none; }
-.always-confirm-stat:hover strong { filter: brightness(1.2); }
+.clickable-stat { cursor: pointer; user-select: none; }
+.clickable-stat:hover strong { filter: brightness(1.2); }
 .tab-badge { margin-left: 4px; }
 /* Push the badge counter inline rather than absolute-positioned. */
 .tab-badge :deep(.el-badge__content) {
