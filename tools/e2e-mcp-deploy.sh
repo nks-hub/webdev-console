@@ -2041,6 +2041,41 @@ step "after reset + manual confirm → 202 queued" "$ZZ_FIRE2" '"status":"queued
 [ -n "$ZZ_GR_ID" ] && api DELETE /api/mcp/grants/$ZZ_GR_ID >/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== AAA. /api/admin/plugin-readiness contract + setting echo ===${END}"
+# ============================================================================
+# Phase 7.4 #109-D1+ — readiness diagnostic is the source-of-truth for the
+# Settings.vue locked toggle + DeploySettingsPanel popover. If the daemon
+# stops echoing useLegacyHostHandlers or silently flips readyToFlip without
+# shipping phase B/C/D, the UI lock breaks. This section asserts:
+#   1. envelope shape (mode, pluginLoaded, blockers[], readyToFlip)
+#   2. setting flip via PUT /api/settings round-trips through the diagnostic
+#   3. readyToFlip stays false even after manually flipping the setting
+#      (proves the lock can't be bypassed by writing the setting directly)
+# Restore original setting in cleanup so the suite is self-isolated.
+
+AAA_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
+AAA_R1=$(api GET /api/admin/plugin-readiness)
+step "readiness envelope has mode field" "$AAA_R1" '"mode":'
+step "readiness envelope has blockers array" "$AAA_R1" '"blockers":\['
+step "readiness envelope has readyToFlip:false today" "$AAA_R1" '"readyToFlip":false'
+step "readiness envelope echoes useLegacyHostHandlers:true (default)" "$AAA_R1" '"useLegacyHostHandlers":true'
+step "blockers list includes phase B" "$AAA_R1" 'phase B'
+step "blockers list includes phase C" "$AAA_R1" 'phase C'
+step "blockers list includes phase D" "$AAA_R1" 'phase D'
+
+# Flip useLegacyHostHandlers to false via settings API
+api PUT /api/settings -d '{"deploy.useLegacyHostHandlers":"false"}' >/dev/null
+AAA_R2=$(api GET /api/admin/plugin-readiness)
+step "readiness echoes useLegacyHostHandlers:false after flip" "$AAA_R2" '"useLegacyHostHandlers":false'
+# CRITICAL: setting flip alone must NOT set readyToFlip → that requires phase B/C/D.
+step "readyToFlip stays false even after manual setting flip" "$AAA_R2" '"readyToFlip":false'
+
+# Restore
+api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$AAA_BEFORE\"}" >/dev/null
+AAA_R3=$(api GET /api/admin/plugin-readiness)
+step "readiness echoes restored useLegacyHostHandlers value" "$AAA_R3" "\"useLegacyHostHandlers\":$AAA_BEFORE"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
