@@ -53,6 +53,24 @@ const repoRoot = resolve(__dirname, '..')
 const defaultDest = join(repoRoot, 'src', 'frontend', 'resources', 'daemon', 'plugins', 'nksdeploy.phar')
 const dest = process.argv[2] ? resolve(process.argv[2]) : defaultDest
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`Usage: node scripts/build-nksdeploy-phar.mjs [output-path]
+
+Builds nksdeploy.phar from source and stages it next to the daemon
+plugins directory (or at the given output-path if supplied).
+
+Environment variables:
+  NKSDEPLOY_SRC=<path>      explicit source tree override (must contain box.json)
+  PHP_BIN=<path>            explicit PHP binary; falls back to PATH then MAMP
+  WDC_SKIP_PHAR_BUILD=1     skip build entirely (when phar is provided otherwise)
+
+Resolution order: NKSDEPLOY_SRC → ../nksdeploy sibling → ../../gh-nks/nksdeploy
+                  → fresh git clone into tmpdir.
+
+Default output path: src/frontend/resources/daemon/plugins/nksdeploy.phar`)
+  process.exit(0)
+}
+
 if (process.env.WDC_SKIP_PHAR_BUILD === '1') {
   console.log('[build-phar] WDC_SKIP_PHAR_BUILD=1 — skipping')
   process.exit(0)
