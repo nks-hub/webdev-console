@@ -208,9 +208,12 @@ the next daemon start. The readiness diagnostic surfaces drift via
 **Endpoints NOT gated** (still daemon-authoritative even in plugin
 mode): real `deploy`, `rollback`, `rollback-to`, `groups` POST, `cancel`
 (DELETE), `settings` PUT. These either depend on `nksdeploy.phar` (which
-the plugin shells to via CliWrap and isn't built in the dev environment)
-or share state (intent validator, in-flight deploy registry) that
-hasn't been lifted into the plugin SDK.
+the plugin shells to via CliWrap; phar is built and bundled by
+`scripts/build-nksdeploy-phar.mjs` — invoked from `stage-plugins.mjs`
+during `npm run dist` — and ships next to the plugin DLL so
+`ResolveNksDeployPhar()` finds it at runtime) or share state (intent
+validator, in-flight deploy registry) that hasn't been lifted into the
+plugin SDK.
 
 ### Validating the cutover
 
