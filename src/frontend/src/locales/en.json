@@ -736,6 +736,7 @@
     "restartPendingTitle": "Daemon restart required",
     "restartPendingDescription": "deploy.useLegacyHostHandlers was changed but handler authority only applies on the next daemon start.",
     "restartPendingTooltip": "Setting flipped — restart daemon to apply",
+    "gatedEndpointsLabel": "Endpoints that will flip to plugin after restart ({n}):",
     "hostCardCmp": {
       "edit": "Edit",
       "remove": "Remove",

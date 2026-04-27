@@ -736,6 +736,7 @@
     "restartPendingTitle": "Vyžadován restart démona",
     "restartPendingDescription": "Hodnota deploy.useLegacyHostHandlers byla změněna, ale autorita handleru se aplikuje až při dalším startu démona.",
     "restartPendingTooltip": "Setting flipped — restart daemon to apply",
+    "gatedEndpointsLabel": "Endpointy které přejdou pod plugin po restartu ({n}):",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",

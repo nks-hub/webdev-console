@@ -112,6 +112,23 @@
                 :blocker-details="deployBackendReadiness.blockerDetails"
               />
             </div>
+            <!-- Iter 63 (#258 followup) — gatedEndpoints[] list. Empty/missing
+                 on older daemons → block hidden. Shows operator EXACTLY
+                 which routes flip authority on next restart-with-legacy=false,
+                 paired with cs/en label so operator knows what's at stake. -->
+            <div
+              v-if="deployBackendReadiness.gatedEndpoints && deployBackendReadiness.gatedEndpoints.length > 0"
+              style="margin-top: 10px"
+            >
+              <div class="muted" style="margin-bottom: 4px">
+                {{ t('deploySettings.gatedEndpointsLabel', { n: deployBackendReadiness.gatedEndpoints.length }) }}
+              </div>
+              <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+                <li v-for="ep in deployBackendReadiness.gatedEndpoints" :key="ep">
+                  <code class="mono">{{ ep }}</code>
+                </li>
+              </ul>
+            </div>
             <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
               <code class="mono">GET /api/admin/plugin-readiness</code>
               <div style="display: flex; gap: 6px">
@@ -1163,6 +1180,10 @@ interface DeployReadiness {
   readyToFlip: boolean
   blockers: string[]
   blockerDetails?: DeployReadinessBlockerDetail[]
+  // Iter 62 — list of daemon endpoints wrapped in
+  // `if (legacyHostHandlersAtBoot)` blocks. Empty when older daemon
+  // doesn't expose the field (graceful degradation).
+  gatedEndpoints?: string[]
   recommendation: string
 }
 const deployBackendReadiness = ref<DeployReadiness | null>(null)
