@@ -535,7 +535,7 @@
                   <div v-if="mcpKindOptions.length > 0" style="margin-top: 6px">
                     <el-button
                       size="small"
-                      :disabled="destructiveKindIds.length === 0"
+                      :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
                       @click="lockAllDestructive"
                     >
                       🔒 {{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}
@@ -1354,6 +1354,14 @@ const mcpKindOptions = ref<SettingsMcpKindOption[]>([])
 // auto-added without the operator having to know the id.
 const destructiveKindIds = computed<string[]>(() =>
   mcpKindOptions.value.filter((k) => k.danger === 'destructive').map((k) => k.id))
+
+// Phase 7.5+++ — disable Lock-all-destructive preset when every Destructive
+// kind is already in the picker. Prevents click-confusion (no-op feedback).
+const allDestructiveAlreadyLocked = computed<boolean>(() => {
+  if (destructiveKindIds.value.length === 0) return false
+  const current = new Set(mcpAlwaysConfirmKindsArr.value)
+  return destructiveKindIds.value.every((id) => current.has(id))
+})
 
 function lockAllDestructive(): void {
   // Union with current selection so the operator's existing custom
