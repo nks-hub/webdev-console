@@ -31,6 +31,14 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync, spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
+
+// Pinned SHA-384 of composer 2.8.0 (verified upstream 2026-04-27).
+// Box's compile step shells `composer --version`; an attacker-controlled
+// composer phar at build time would let them inject arbitrary code into
+// our nksdeploy.phar. Verifying upstream pin is a supply-chain guard.
+const COMPOSER_VERSION = '2.8.0'
+const COMPOSER_SHA384 = '8f926f44a8a56be162768b91b5e4c5c6fe9fced6e384ff1dc65b1f92a1da629543a614a90c09d9acdc5cf8b393b5951c'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(__dirname, '..')
@@ -99,9 +107,21 @@ function findComposer(php) {
   mkdirSync(buildDir, { recursive: true })
   const composerPhar = join(buildDir, 'composer.phar')
   if (!existsSync(composerPhar)) {
-    log('downloading composer 2.8.0 into build/composer.phar')
-    execSync(`curl -sSL https://getcomposer.org/download/2.8.0/composer.phar -o "${composerPhar}"`, { stdio: 'inherit' })
+    log(`downloading composer ${COMPOSER_VERSION} into build/composer.phar`)
+    execSync(`curl -sSL https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar -o "${composerPhar}"`, { stdio: 'inherit' })
   }
+  // Verify SHA-384 against pinned upstream hash. If composer.phar on
+  // disk doesn't match (corrupt download, MITM, malicious replacement),
+  // refuse to use it — Box would otherwise execute its bytecode while
+  // building our phar, allowing arbitrary code injection.
+  const composerBytes = readFileSync(composerPhar)
+  const actualHash = createHash('sha384').update(composerBytes).digest('hex')
+  if (actualHash !== COMPOSER_SHA384) {
+    die(`composer.phar checksum mismatch — expected ${COMPOSER_SHA384}, got ${actualHash}. ` +
+        `Refusing to use a tampered composer binary for phar build. ` +
+        `Delete ${composerPhar} and re-run to re-download.`)
+  }
+  log(`composer.phar SHA-384 verified (pin: ${COMPOSER_SHA384.slice(0, 16)}…)`)
   // Wrapper script that runs composer via PHP with deprecations silenced
   // — Box will exec this when checking version.
   const isWin = process.platform === 'win32'
