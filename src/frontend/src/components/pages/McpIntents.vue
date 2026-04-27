@@ -245,7 +245,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Refresh,
@@ -515,6 +515,7 @@ let unsubscribeIntentSse: (() => void) | null = null
 // `watch`; setMatchedGrantFilter() updates the ref but not the URL
 // to avoid feedback loops (URL is read-only input, not output).
 const route = useRoute()
+const router = useRouter()
 
 function applyMatchedGrantFromRoute(): void {
   const fromRoute = (route.query.matchedGrantId as string | undefined) ?? null
@@ -524,8 +525,20 @@ function applyMatchedGrantFromRoute(): void {
   }
 }
 
+// Phase 7.5+++ — also honour ?state= URL filter so deep-links can land
+// directly on a state slice (e.g. `?state=pending_confirmation` for
+// "intents waiting on operator click"). Bidirectional: local change
+// pushes back to URL via watcher below.
+function applyStateFromRoute(): void {
+  const fromRoute = (route.query.state as string | undefined) ?? null
+  if (fromRoute !== stateFilter.value) {
+    stateFilter.value = fromRoute
+  }
+}
+
 onMounted(() => {
   applyMatchedGrantFromRoute()
+  applyStateFromRoute()
   refresh()
   unsubscribeIntentSse = subscribeEventsMap({
     'mcp:intent-changed': () => { void refresh() },
@@ -535,6 +548,19 @@ onMounted(() => {
 
 // Re-apply when navigating between tabs that share the page instance.
 watch(() => route.query.matchedGrantId, () => { applyMatchedGrantFromRoute() })
+watch(() => route.query.state, () => { applyStateFromRoute() })
+
+// Push local stateFilter changes to URL so back/forward preserves it.
+watch(stateFilter, (next) => {
+  const current = (route.query.state as string | undefined) ?? null
+  const desired = next || null
+  if (current === desired) return
+  const { state: _, ...rest } = route.query
+  void router.replace({
+    path: route.path,
+    query: desired ? { ...rest, state: desired } : rest,
+  })
+})
 
 onBeforeUnmount(() => {
   if (unsubscribeIntentSse) { unsubscribeIntentSse(); unsubscribeIntentSse = null }
