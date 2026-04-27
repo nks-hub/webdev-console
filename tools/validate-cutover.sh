@@ -1,6 +1,7 @@
 #!/bin/bash
 # Phase D (#109-D2) — end-to-end validation that the cutover toggle
-# actually flips authority for the 9 gated endpoints.
+# actually flips authority for the 11 gated endpoints (see
+# /api/admin/plugin-readiness gatedEndpoints[] for the live list).
 #
 # Strategy:
 #   1. Capture current useLegacyHostHandlers value (will restore at end).

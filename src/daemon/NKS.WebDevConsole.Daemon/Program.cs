@@ -1028,7 +1028,7 @@ app.MapGet("/api/admin/plugin-readiness", (
     // the diagnostic see the cutover scope at a glance instead of having
     // to grep Program.cs. Each entry pairs HTTP verb with the route. The
     // list grows as more handlers join the gate; today's set covers the
-    // 9 handlers shipped via iter 55-61.
+    // 11 handlers shipped via iter 55-66 (incl. the snapshot restore aliases).
     var gatedEndpoints = new[]
     {
         "POST /test-host-connection",
