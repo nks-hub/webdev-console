@@ -1469,7 +1469,7 @@
         "instance": "wdc instance UUID"
       },
       "kindPattern": "Kind pattern",
-      "kindPatternPlaceholder": "* | deploy | rollback | cancel | restore",
+      "kindPatternPlaceholder": "* | deploy | rollback | database_drop | site_delete | plugin_install",
       "targetPattern": "Target pattern",
       "targetPatternPlaceholder": "* | blog.loc | …",
       "expiry": "Expiry",

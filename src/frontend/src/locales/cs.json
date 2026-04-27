@@ -1469,7 +1469,7 @@
         "instance": "wdc instance UUID"
       },
       "kindPattern": "Vzor druhu",
-      "kindPatternPlaceholder": "* | deploy | rollback | cancel | restore",
+      "kindPatternPlaceholder": "* | deploy | rollback | database_drop | site_delete | plugin_install",
       "targetPattern": "Vzor cíle",
       "targetPatternPlaceholder": "* | blog.loc | …",
       "expiry": "Platnost",
