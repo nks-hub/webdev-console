@@ -34,6 +34,26 @@
             🔓 {{ t('deploySettings.mcpGrantsBadge', { n: mcpGrantsCount }) }}
           </el-tag>
         </el-tooltip>
+        <!-- #109 — surface which backend the daemon will route deploys
+             through. Today (host-native) it shows "built-in" so operators
+             know the LocalDeployBackend is in charge; once the
+             nks.wdc.deploy plugin is loaded after restart it flips to
+             "plugin v<version>" so the migration progress is visible
+             without reading the daemon log. Static text for now — a
+             follow-up "Switch backend" CTA arrives in #109-D1. -->
+        <el-tooltip
+          :content="deployBackendTooltip"
+          placement="bottom"
+        >
+          <el-tag
+            :type="deployBackendIsPlugin ? 'success' : 'info'"
+            size="small"
+            effect="plain"
+            class="deploy-backend-tag"
+          >
+            {{ deployBackendBadge }}
+          </el-tag>
+        </el-tooltip>
       </div>
       <div class="settings-header-actions">
         <el-button :disabled="!dirty || saving" plain @click="discardChanges">
@@ -872,7 +892,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HostSettingsCard from './HostSettingsCard.vue'
-import { listMcpGrants, subscribeEventsMap } from '../../api/daemon'
+import { listMcpGrants, subscribeEventsMap, fetchPlugins } from '../../api/daemon'
 import { onBeforeUnmount } from 'vue'
 import {
   fetchDeploySnapshots,
@@ -1010,6 +1030,38 @@ function goToMcpGrants(): void {
   router.push({ path: '/mcp/grants', query: { target: props.domain } })
 }
 
+// #109 — deploy backend identity badge in the header. Reads /api/plugins
+// and surfaces whether the nks.wdc.deploy plugin is loaded. Today's
+// daemon serves /api/nks.wdc.deploy/* from Program.cs (built-in); once
+// the plugin extraction lands the same routes are owned by the plugin
+// DLL. Operators see the migration state without reading daemon logs.
+//
+// Best-effort: silently degrades to "built-in" if /api/plugins fails or
+// the response shape changes — never blocks the settings panel from
+// rendering.
+const deployBackendVersion = ref<string | null>(null)
+const deployBackendIsPlugin = computed<boolean>(() => deployBackendVersion.value !== null)
+const deployBackendBadge = computed<string>(() =>
+  deployBackendIsPlugin.value
+    ? `🔌 plugin v${deployBackendVersion.value}`
+    : '⚙ built-in')
+const deployBackendTooltip = computed<string>(() =>
+  deployBackendIsPlugin.value
+    ? t('deploySettings.backendPluginTooltip', { v: deployBackendVersion.value })
+    : t('deploySettings.backendBuiltInTooltip'))
+
+async function loadDeployBackendInfo(): Promise<void> {
+  try {
+    const plugins = await fetchPlugins()
+    const deployPlugin = plugins.find((p) => p.id === 'nks.wdc.deploy')
+    deployBackendVersion.value = deployPlugin?.version ?? null
+  } catch {
+    // /api/plugins failed — assume built-in (the safer default since the
+    // daemon is currently the canonical handler for /api/nks.wdc.deploy/*).
+    deployBackendVersion.value = null
+  }
+}
+
 // Phase 7.5+++ — also live-refresh the badge when grants change
 // elsewhere (banner approve, McpGrants page bulk-revoke, plugin
 // install). Cleaned up on unmount so EventSource count stays bounded.
@@ -1022,6 +1074,7 @@ onMounted(async () => {
 
   snapshots.value = await fetchDeploySnapshots(props.domain)
   void loadMcpGrantsCount()
+  void loadDeployBackendInfo()
   unsubscribeGrantSse = subscribeEventsMap({
     'mcp:grant-changed': () => { void loadMcpGrantsCount() },
   })
@@ -1490,6 +1543,11 @@ defineExpose({ saveSettings })
 }
 .mcp-grants-tag:hover {
   background: var(--el-color-info-light-7);
+}
+/* #109 — backend identity badge sits next to grants tag in the header.
+   Static (no click), default cursor distinguishes it from clickable tags. */
+.deploy-backend-tag {
+  margin-left: 4px;
 }
 .settings-header-actions {
   display: flex;

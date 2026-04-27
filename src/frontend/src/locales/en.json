@@ -707,6 +707,8 @@
     "allSaved": "saved",
     "mcpGrantsBadge": "{n} MCP grant(s)",
     "mcpGrantsTooltip": "{n} active MCP grants let AI fire destructive actions on this site without confirmation. Click for details.",
+    "backendBuiltInTooltip": "Deploys are served by the built-in daemon handler. Once the nks.wdc.deploy plugin is loaded the routes flip to plugin ownership.",
+    "backendPluginTooltip": "Deploys are served by the nks.wdc.deploy plugin v{v}. Disable the plugin from the plugin manager to short-circuit every deploy endpoint to 404.",
     "hostCardCmp": {
       "edit": "Edit",
       "remove": "Remove",
