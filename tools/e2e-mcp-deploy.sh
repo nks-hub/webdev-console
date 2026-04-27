@@ -101,7 +101,7 @@ api PUT /api/settings -d '{"mcp.enabled":"true","deploy.enabled":"true","mcp.str
 echo ""; echo "${YEL}=== B. MCP kinds discovery ===${END}"
 # ============================================================================
 KINDS=$(api GET /api/mcp/kinds)
-step "kinds endpoint returns 5 core kinds" "$KINDS" '"count":5'
+step "kinds endpoint returns 6 core kinds" "$KINDS" '"count":6'
 step "deploy kind has reversible danger" "$KINDS" '"id":"deploy".*"danger":"reversible"'
 step "restore kind has destructive danger" "$KINDS" '"id":"restore".*"danger":"destructive"'
 # Phase 7.5+++ — usage telemetry per kind. After many sections that
@@ -1919,6 +1919,17 @@ step "test-hook with bogus intent token returns 403" "$XX_HOOK_BOGUS" "403"
 # Verify kind=test_hook is in registered kinds.
 XX_KINDS=$(api GET /api/mcp/kinds)
 step "test_hook kind is registered (Destructive)" "$XX_KINDS" '"id":"test_hook"'
+step "settings_write kind is registered (Destructive)" "$XX_KINDS" '"id":"settings_write"'
+
+# Phase 7.5+++ — settings PUT now optionally MCP-gated. Bogus token →
+# 403; no token → still works (back-compat for the GUI which writes
+# without a token in normal operation).
+XX_SW_BOGUS=$(curl -s -o /dev/null -w '%{http_code}' \
+    -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Intent-Token: bogus.fake.signature" \
+    -d '{"hosts":[]}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/settings")
+step "settings PUT with bogus intent token returns 403" "$XX_SW_BOGUS" "403"
 
 # ============================================================================
 echo ""; echo "${YEL}=== YY. always-confirm kinds override ===${END}"

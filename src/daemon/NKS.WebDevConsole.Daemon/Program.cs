@@ -2298,8 +2298,27 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
 });
 
 app.MapPut("/api/nks.wdc.deploy/sites/{domain}/settings", async (
-    string domain, HttpContext ctx, CancellationToken ct) =>
+    string domain, HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    CancellationToken ct) =>
 {
+    // Phase 7.5+++ — optional MCP intent gate. settings_write rewrites
+    // the per-site deploy config file; uncontrolled access lets an AI
+    // plant hook payloads or change deploy targets. Validate-before-
+    // write so a bogus token is denied without touching the file.
+    var swIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(swIntentToken))
+    {
+        var swAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var swVerdict = await intentValidator.ValidateAndConsumeAsync(
+            swIntentToken, "settings_write", domain, host: "*", swAllowUnconfirmed, ct);
+        if (!swVerdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = swVerdict.Reason, detail = swVerdict.Detail },
+                statusCode: swVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     // Read and validate body is JSON-shaped — anything past that is the
     // frontend's contract; we don't enforce per-field rules here so a new
     // setting can land without daemon restart.

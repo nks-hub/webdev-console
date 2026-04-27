@@ -46,6 +46,13 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // it like a real destructive op.
         _kinds["test_hook"] = new DestructiveOperationKind(
             "test_hook", "Run a deploy hook command for testing", CorePluginId, DangerLevel.Destructive);
+        // Phase 7.5+++ — settings_write rewrites the per-site deploy config
+        // file (hooks, localPaths, notifications, retention). An AI with
+        // settings_write but without deploy could plant a malicious hook
+        // and wait for the next operator-triggered deploy to execute it.
+        // Reversible (file overwrite is undoable) but practically destructive.
+        _kinds["settings_write"] = new DestructiveOperationKind(
+            "settings_write", "Overwrite per-site deploy settings", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)
