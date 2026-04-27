@@ -123,7 +123,6 @@
       "intentId": "Intent ID",
       "matchedGrant": "Auto-via grant"
     },
-    "matchedGrantTooltip": "Auto-confirmed via grant {id}.",
     "matchedGrantClickHint": "Click to show all intents this grant approved ({id}).",
     "matchedGrantBanner": "Filtered: showing only intents approved by grant",
     "clearMatchedGrantFilter": "Clear filter",

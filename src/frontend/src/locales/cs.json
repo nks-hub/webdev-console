@@ -123,7 +123,6 @@
       "intentId": "ID intentu",
       "matchedGrant": "Auto-via grant"
     },
-    "matchedGrantTooltip": "Auto-confirmed přes oprávnění {id}.",
     "matchedGrantClickHint": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id}).",
     "matchedGrantBanner": "Filtrováno: zobrazují se jen intenty schválené oprávněním",
     "clearMatchedGrantFilter": "Zrušit filtr",
