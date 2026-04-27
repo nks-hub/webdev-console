@@ -1023,6 +1023,24 @@ app.MapGet("/api/admin/plugin-readiness", (
     // handlers honour the boot value, so the GUI needs to know "restart
     // to apply" and the readiness recommendation should reflect drift.
     var restartPending = legacyHandlers != legacyHostHandlersAtBoot;
+    // Iter 62 — surface exactly which daemon endpoints are wrapped in
+    // `if (legacyHostHandlersAtBoot) { ... }` blocks. Operators reading
+    // the diagnostic see the cutover scope at a glance instead of having
+    // to grep Program.cs. Each entry pairs HTTP verb with the route. The
+    // list grows as more handlers join the gate; today's set covers the
+    // 9 handlers shipped via iter 55-61.
+    var gatedEndpoints = new[]
+    {
+        "POST /test-host-connection",
+        "POST /sites/{domain}/hooks/test",
+        "POST /sites/{domain}/notifications/test",
+        "POST /sites/{domain}/snapshot-now",
+        "GET /sites/{domain}/history",
+        "GET /sites/{domain}/deploys/{deployId}",
+        "GET /sites/{domain}/snapshots",
+        "GET /sites/{domain}/settings",
+        "GET /sites/{domain}/groups",
+    };
     var explain = ctx.Request.Query["explain"].ToString() == "true";
     var baseRecommendation = readyToFlip
         ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
@@ -1048,6 +1066,7 @@ app.MapGet("/api/admin/plugin-readiness", (
                 phase = b.Phase,
                 remediation = b.Remediation,
             }),
+            gatedEndpoints,
             recommendation,
         });
     }
@@ -1061,6 +1080,7 @@ app.MapGet("/api/admin/plugin-readiness", (
         restartPending,
         readyToFlip,
         blockers,
+        gatedEndpoints,
         // Diagnostic: pretty-print this in the GUI so operators don't
         // have to dig in /api/plugins separately.
         recommendation,
