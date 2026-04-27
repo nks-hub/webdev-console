@@ -162,6 +162,31 @@ if (!sourceUsed) {
 const count = listPluginDlls(destDir).length
 console.log(`[stage-plugins] Copied ${count} plugin DLL(s) from ${sourceUsed} → ${destDir}`)
 
+// ─── companion artifacts: nksdeploy.phar ──────────────────────────────
+//
+// The NKS.WebDevConsole.Plugin.NksDeploy DLL shells out to nksdeploy.phar
+// at runtime via CliWrap. ResolveNksDeployPhar() looks beside the plugin
+// DLL first, so dropping the phar in destDir makes it bundle-portable
+// (electron-builder copies the whole resources/daemon/plugins/ tree).
+// Skipped when the NksDeploy plugin isn't present (other plugins don't
+// need phar) or via WDC_SKIP_PHAR_BUILD=1.
+const hasNksDeployPlugin = listPluginDlls(destDir).some(n => n === 'NKS.WebDevConsole.Plugin.NksDeploy.dll')
+if (hasNksDeployPlugin && process.env.WDC_SKIP_PHAR_BUILD !== '1') {
+  const pharDest = join(destDir, 'nksdeploy.phar')
+  const builderScript = join(__dirname, 'build-nksdeploy-phar.mjs')
+  console.log(`[stage-plugins] building nksdeploy.phar → ${pharDest}`)
+  try {
+    execSync(`node "${builderScript}" "${pharDest}"`, { stdio: 'inherit' })
+  } catch (err) {
+    console.warn(`[stage-plugins] phar build failed: ${err.message}`)
+    console.warn('[stage-plugins] plugin will fall back to PATH lookup at runtime; deploys may fail')
+    if (process.env.CI === 'true') {
+      console.error('[stage-plugins] CI=true and phar build failed — refusing to ship a broken plugin bundle.')
+      process.exit(1)
+    }
+  }
+}
+
 // ─── helpers ───────────────────────────────────────────────────────────
 
 async function fetchGithubJson(path) {
