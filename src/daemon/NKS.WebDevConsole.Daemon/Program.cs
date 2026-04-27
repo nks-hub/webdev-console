@@ -3490,6 +3490,25 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             }
         }
         catch { /* best-effort */ }
+        // Most-recent mtime in the source tree — operator can spot
+        // re-deploys of unchanged source ("Source last changed: 12m ago").
+        // Best-effort, top-level scan only to keep dry-run fast on large trees.
+        DateTimeOffset? sourceLastModified = null;
+        try
+        {
+            if (!string.IsNullOrEmpty(localSource) && Directory.Exists(localSource))
+            {
+                var srcInfo = new DirectoryInfo(localSource);
+                var maxTicks = srcInfo.LastWriteTimeUtc.Ticks;
+                foreach (var entry in srcInfo.EnumerateFileSystemInfos())
+                {
+                    if (entry.LastWriteTimeUtc.Ticks > maxTicks)
+                        maxTicks = entry.LastWriteTimeUtc.Ticks;
+                }
+                sourceLastModified = new DateTimeOffset(maxTicks, TimeSpan.Zero);
+            }
+        }
+        catch { /* best-effort */ }
         return Results.Ok(new
         {
             dryRun = true,
@@ -3499,6 +3518,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             wouldCopyFrom = localSource,
             wouldSwapCurrentFrom = prevPath,
             currentRelease,
+            sourceLastModified,
             branch,
             sharedDirs = optSharedDirs ?? new List<string> { "log", "temp" },
             sharedFiles = optSharedFiles ?? new List<string>(),

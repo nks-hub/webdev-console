@@ -1157,6 +1157,7 @@
         "copyFrom": "Zdroj",
         "extractTo": "Cíl",
         "branch": "Větev",
+        "sourceLastModified": "Zdroj naposledy změněn",
         "currentRelease": "Aktuální release",
         "previousRelease": "Předchozí release",
         "shared": "Sdílené",

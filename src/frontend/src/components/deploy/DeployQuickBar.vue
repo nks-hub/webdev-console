@@ -84,6 +84,10 @@
           <span class="plan-key">{{ t('deploy.quickBar.plan.branch') }}</span>
           <span class="plan-val mono">{{ previewPlan.branch }}</span>
         </div>
+        <div v-if="previewPlan.sourceLastModified" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.sourceLastModified') }}</span>
+          <span class="plan-val mono">{{ previewPlan.sourceLastModified }}</span>
+        </div>
         <div v-if="previewPlan.currentRelease" class="plan-row">
           <span class="plan-key">{{ t('deploy.quickBar.plan.currentRelease') }}</span>
           <span class="plan-val mono">{{ previewPlan.currentRelease }}</span>

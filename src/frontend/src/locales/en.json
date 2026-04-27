@@ -1157,6 +1157,7 @@
         "copyFrom": "Source",
         "extractTo": "Target",
         "branch": "Branch",
+        "sourceLastModified": "Source last modified",
         "currentRelease": "Current release",
         "previousRelease": "Previous release",
         "shared": "Shared",
