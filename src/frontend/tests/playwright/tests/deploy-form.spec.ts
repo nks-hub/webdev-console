@@ -143,6 +143,28 @@ test.describe('Deploy form (dry-run preview)', () => {
     expect(typeof j.error).toBe('string')
   })
 
+  // Iter 83 — directive "ověř ho i na shop.loc" wants both fixtures touched
+  // by the TS suite, not only by bash e2e. Dry-run is the cheapest assertion
+  // that proves the daemon side reads the fixture's deploy.local config and
+  // returns a coherent plan. If shop.loc's settings drift (host renamed,
+  // localPaths missing) this fails fast in Playwright instead of waiting
+  // for the bash run.
+  test('shop.loc dry-run also returns coherent plan', async ({ authedRequest }) => {
+    const r = await authedRequest.post('/api/nks.wdc.deploy/sites/shop.loc/deploy', {
+      data: { host: 'production', dryRun: true },
+    })
+    expect(r.status()).toBe(200)
+    const j = await r.json()
+    expect(j.dryRun).toBe(true)
+    expect(j.deployId).toBeNull()
+    expect(j.wouldRelease).toMatch(/^[0-9]{8}_[0-9]{6}$/)
+    expect(j.wouldExtractTo).toContain('releases')
+    // shop.loc fixture is independent of blog.loc — its release counters
+    // and existing release count must not bleed across.
+    expect(typeof j.existingReleaseCount).toBe('number')
+    expect(typeof j.keepReleases).toBe('number')
+  })
+
   test('test-host-connection rejects malformed body with 400', async ({ authedRequest }) => {
     // Missing host → 400 (not a hidden 200 with ok=false). The probe
     // endpoint validates input shape before opening any sockets.
