@@ -2556,12 +2556,37 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/rollback-to", async (
 // flipping the DB row that the backend then overwrites with completed).
 // Pre-PONR only — past_point_of_no_return → use rollback instead.
 app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
-    string domain, string deployId,
+    string domain, string deployId, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
     CancellationToken ct) =>
 {
+    // Phase 7.5+++ — optional MCP intent gate. Cancel interrupts an
+    // in-flight deploy; it's reversible (the operator can just re-deploy)
+    // but counts as a destructive override of an active operation.
+    // Validate-before-not-found prevents an oracle leak (bogus token
+    // can't enumerate deployIds via 403 vs 404).
+    var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(intentToken))
+    {
+        var allowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        // Best-effort host resolution from the row (after we look it up
+        // below, but for the intent we accept "*" host since cancel can
+        // legitimately fire on any host the deploy was started against).
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            intentToken, "cancel", domain, host: "*", allowUnconfirmed, ct);
+        if (!verdict.Ok)
+        {
+            return Results.Json(
+                new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+        }
+    }
+
     var row = await runs.GetByIdAsync(deployId, ct);
     if (row is null || !string.Equals(row.Domain, domain, StringComparison.OrdinalIgnoreCase))
         return Results.NotFound(new { error = "deploy_not_found", deployId });

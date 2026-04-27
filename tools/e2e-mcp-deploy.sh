@@ -1887,6 +1887,24 @@ case "$WW_HIST" in
 esac
 
 # ============================================================================
+echo ""; echo "${YEL}=== XX. MCP intent gate on cancel ===${END}"
+# ============================================================================
+# Phase 7.5+++ — cancel endpoint now optionally honours X-Intent-Token. No
+# token → still works (back-compat). Bogus token → 403 intent_rejected
+# BEFORE the not-found check (oracle leak prevention). Verifies kind=cancel
+# is registered + the gate fires.
+XX_BOGUS=$(curl -s -o /dev/null -w '%{http_code}' \
+    -X DELETE -H "Authorization: Bearer $TOKEN" \
+    -H "X-Intent-Token: bogus.fake.signature" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/never-existed-id")
+step "cancel with bogus intent token returns 403" "$XX_BOGUS" "403"
+
+XX_NO_TOKEN=$(curl -s -o /dev/null -w '%{http_code}' \
+    -X DELETE -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/never-existed-id")
+step "cancel without token still hits not-found path (back-compat)" "$XX_NO_TOKEN" "404"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
