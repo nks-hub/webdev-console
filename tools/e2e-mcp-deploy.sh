@@ -1478,6 +1478,35 @@ fi
 rm -rf "$KK_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== LL. MCP intent gate on rollback / rollback-to / groups ===${END}"
+# ============================================================================
+# Endpoints that mutate filesystem state should reject bogus intent
+# tokens with 403 intent_rejected. Confirms the intent check runs
+# BEFORE any not-found / state validation so a probe with bogus token
+# can't enumerate which deployIds exist.
+LL_RB=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H 'X-Intent-Token: bogus-token-llll' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/00000000-0000-0000-0000-000000000000/rollback")
+step "rollback with bogus intent token returns 403 intent_rejected" "$LL_RB" 'intent_rejected'
+
+LL_RT=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H 'X-Intent-Token: bogus-token-llll' -H 'Content-Type: application/json' \
+    -d '{"host":"production","releaseId":"20990101_000000"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/rollback-to")
+step "rollback-to with bogus intent token returns 403 intent_rejected" "$LL_RT" 'intent_rejected'
+
+LL_GR=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    -H 'X-Intent-Token: bogus-token-llll' -H 'Content-Type: application/json' \
+    -d '{"hosts":["production","staging"]}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/groups")
+step "group deploy with bogus intent token returns 403 intent_rejected" "$LL_GR" 'intent_rejected'
+
+# Without a token the same endpoints stay open (back-compat).
+LL_RB_OPEN=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/00000000-0000-0000-0000-000000000000/rollback")
+step "rollback WITHOUT token still works (404 for unknown id, NOT 403)" "$LL_RB_OPEN" 'deploy_not_found'
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""

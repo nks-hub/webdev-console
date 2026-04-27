@@ -2127,11 +2127,34 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
 // records a rollback row in the DB so the audit log stays accurate, but
 // the filesystem state isn't touched (no localPaths configured).
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback", async (
-    string domain, string deployId,
+    string domain, string deployId, HttpContext rbCtx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
+    // Phase 7.5+++ — optional MCP intent gate. Validate BEFORE the
+    // not-found check so a bogus token can't be probed against arbitrary
+    // deployIds to learn which exist (token validity 403 vs deploy
+    // existence 404 would otherwise leak that signal to an attacker).
+    // When X-Intent-Token header is present, validator enforces
+    // kind=rollback + scope match. Without a token the endpoint stays
+    // open (back-compat with GUI flows that don't request a token).
+    // Host scope is validated as wildcard "*" since we don't yet know
+    // the source row's host before the not-found check runs.
+    var rbIntentToken = rbCtx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(rbIntentToken))
+    {
+        var rbAllowUnconfirmed = string.Equals(
+            rbCtx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            rbIntentToken, "rollback", domain, "*", rbAllowUnconfirmed, ct);
+        if (!verdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     var source = await runs.GetByIdAsync(deployId, ct);
     if (source is null || !string.Equals(source.Domain, domain, StringComparison.OrdinalIgnoreCase))
         return Results.NotFound(new { error = "deploy_not_found", deployId });
@@ -2252,6 +2275,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback", as
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/rollback-to", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
@@ -2261,6 +2285,25 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/rollback-to", async (
     var releaseId = root.TryGetProperty("releaseId", out var rEl) ? rEl.GetString() : null;
     if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(releaseId))
         return Results.BadRequest(new { error = "host_and_releaseId_required" });
+
+    // Phase 7.5+++ — optional MCP intent gate. Same shape as the deploy-id
+    // rollback endpoint above. Token may also be provided in body for
+    // clients that can't set custom headers (older HTTP libs).
+    var rtIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (string.IsNullOrEmpty(rtIntentToken)
+        && root.TryGetProperty("intentToken", out var rtTokenEl))
+        rtIntentToken = rtTokenEl.GetString();
+    if (!string.IsNullOrEmpty(rtIntentToken))
+    {
+        var rtAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            rtIntentToken, "rollback", domain, host, rtAllowUnconfirmed, ct);
+        if (!verdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
 
     // Resolve target path from settings — same lookup as the deploy and
     // rollback endpoints so behaviour stays consistent.
@@ -2404,6 +2447,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
     CancellationToken ct) =>
@@ -2415,6 +2459,28 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
         : new List<string>();
     if (hosts.Count < 2)
         return Results.BadRequest(new { error = "groups_require_2_or_more_hosts", got = hosts.Count });
+
+    // Phase 7.5+++ — optional MCP intent gate. Group deploy uses kind=deploy
+    // (not 'group') because the per-host underlying operation IS deploy;
+    // a single intent token can authorize the whole fan-out. Validates
+    // against the FIRST host so MCP grants matching by exact host still
+    // work (the group shares one token across all hosts). Token can come
+    // from header X-Intent-Token or body.intentToken.
+    var grpIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (string.IsNullOrEmpty(grpIntentToken)
+        && root.TryGetProperty("intentToken", out var grpTokenEl))
+        grpIntentToken = grpTokenEl.GetString();
+    if (!string.IsNullOrEmpty(grpIntentToken))
+    {
+        var grpAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            grpIntentToken, "deploy", domain, hosts[0], grpAllowUnconfirmed, ct);
+        if (!verdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
 
     // Resolve per-host localPaths + shared/keepReleases options up-front
     // so we can decide which hosts will run real vs noop.
