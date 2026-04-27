@@ -80,11 +80,11 @@ jobs:
         run: dotnet build WebDevConsole.sln -c Release
 
       # PHP toolchain for nksdeploy.phar build. scripts/stage-plugins.mjs
-       # invokes scripts/build-nksdeploy-phar.mjs which clones nks-hub/nksdeploy
-       # and runs `box compile`. PHP 8.4+ required (vendor/humbug/box's
-       # composer constraints). Linux/Mac get shivammathur/setup-php; the
-       # Windows runner already ships PHP via Chocolatey but at an older
-       # version, so we explicitly install 8.4 there too.
+      # invokes scripts/build-nksdeploy-phar.mjs which clones nks-hub/nksdeploy
+      # and runs `box compile`. PHP 8.4+ required (vendor/humbug/box's
+      # composer constraints). Linux/Mac get shivammathur/setup-php; the
+      # Windows runner already ships PHP via Chocolatey but at an older
+      # version, so we explicitly install 8.4 there too.
       - name: Setup PHP 8.4 (for nksdeploy.phar build)
         uses: shivammathur/setup-php@v2
         with:
