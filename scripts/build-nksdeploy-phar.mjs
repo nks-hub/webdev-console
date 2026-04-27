@@ -37,6 +37,14 @@ import { createHash } from 'node:crypto'
 // Box's compile step shells `composer --version`; an attacker-controlled
 // composer phar at build time would let them inject arbitrary code into
 // our nksdeploy.phar. Verifying upstream pin is a supply-chain guard.
+//
+// Rotating the pin (e.g. bump to 2.8.1):
+//   1. Read upstream pubkeys.tags from https://composer.github.io/pubkeys.html
+//      and verify the new release with gpg, OR cross-check the hash from
+//      https://getcomposer.org/download/<ver>/composer.phar.sha384sum.
+//   2. curl -sSL https://getcomposer.org/download/<ver>/composer.phar | openssl dgst -sha384
+//   3. Update both COMPOSER_VERSION + COMPOSER_SHA384 below in the SAME commit.
+//   4. Delete build/composer.phar locally so the next run re-downloads.
 const COMPOSER_VERSION = '2.8.0'
 const COMPOSER_SHA384 = '8f926f44a8a56be162768b91b5e4c5c6fe9fced6e384ff1dc65b1f92a1da629543a614a90c09d9acdc5cf8b393b5951c'
 
