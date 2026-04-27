@@ -517,6 +517,33 @@ let unsubscribeIntentSse: (() => void) | null = null
 const route = useRoute()
 const router = useRouter()
 
+// Phase 7.5+++ — kind + domain filter URL sync for consistency with
+// other MCP pages. Initial values applied in onMounted (defined below).
+function applyKindFromRoute(): void {
+  const fromRoute = (route.query.kind as string | undefined) ?? null
+  if (fromRoute !== kindFilter.value) kindFilter.value = fromRoute
+}
+function applyDomainFromRoute(): void {
+  const fromRoute = (route.query.domain as string | undefined) ?? ''
+  if (fromRoute !== domainFilter.value) domainFilter.value = fromRoute
+}
+watch(() => route.query.kind, applyKindFromRoute)
+watch(() => route.query.domain, applyDomainFromRoute)
+watch(kindFilter, (next) => {
+  const current = (route.query.kind as string | undefined) ?? null
+  const desired = next || null
+  if (current === desired) return
+  const { kind: _, ...rest } = route.query
+  void router.replace({ path: route.path, query: desired ? { ...rest, kind: desired } : rest })
+})
+watch(domainFilter, (next) => {
+  const current = (route.query.domain as string | undefined) ?? ''
+  const desired = next || ''
+  if (current === desired) return
+  const { domain: _, ...rest } = route.query
+  void router.replace({ path: route.path, query: desired ? { ...rest, domain: desired } : rest })
+})
+
 function applyMatchedGrantFromRoute(): void {
   const fromRoute = (route.query.matchedGrantId as string | undefined) ?? null
   if (fromRoute && fromRoute !== matchedGrantFilter.value) {
@@ -539,6 +566,8 @@ function applyStateFromRoute(): void {
 onMounted(() => {
   applyMatchedGrantFromRoute()
   applyStateFromRoute()
+  applyKindFromRoute()
+  applyDomainFromRoute()
   refresh()
   unsubscribeIntentSse = subscribeEventsMap({
     'mcp:intent-changed': () => { void refresh() },
