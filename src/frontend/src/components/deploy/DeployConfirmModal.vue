@@ -86,6 +86,13 @@
       <div class="confirm-actions">
         <el-button @click="onCancel">{{ t('deploy.confirmModal.cancel') }}</el-button>
         <el-button
+          :loading="previewBusy"
+          :disabled="isDeploying"
+          @click="onPreview"
+        >
+          {{ t('deploy.confirmModal.preview') }}
+        </el-button>
+        <el-button
           type="danger"
           :disabled="!match || isDeploying"
           @click="onActivate"
@@ -96,13 +103,82 @@
         </el-button>
       </div>
     </div>
+
+    <!-- Phase 7.5+++ — dry-run plan preview, available from inside the
+         explicit-confirmation flow so the operator can sanity-check the
+         resolved release/source/target/hooks before clicking Deploy. -->
+    <el-dialog
+      v-model="previewOpen"
+      :title="t('deploy.confirmModal.previewTitle')"
+      width="540px"
+      destroy-on-close
+      append-to-body
+    >
+      <div v-if="previewPlan" class="preview-plan">
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.wouldRelease') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldRelease }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.copyFrom') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldCopyFrom }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.extractTo') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldExtractTo }}</span>
+        </div>
+        <div v-if="previewPlan.wouldSwapCurrentFrom" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.previousRelease') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldSwapCurrentFrom }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.shared') }}</span>
+          <span class="plan-val">
+            <el-tag v-for="d in previewPlan.sharedDirs" :key="`d-${d}`" size="small" effect="plain" class="plan-tag">{{ d }}/</el-tag>
+            <el-tag v-for="f in previewPlan.sharedFiles" :key="`f-${f}`" size="small" effect="plain" class="plan-tag">{{ f }}</el-tag>
+            <span v-if="previewPlan.sharedDirs.length === 0 && previewPlan.sharedFiles.length === 0" class="muted">—</span>
+          </span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.retention') }}</span>
+          <span class="plan-val">
+            {{ t('deploy.quickBar.plan.retentionValue', {
+              keep: previewPlan.keepReleases,
+              existing: previewPlan.existingReleaseCount,
+              prune: previewPlan.wouldPruneCount,
+            }) }}
+          </span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.hooks') }}</span>
+          <span class="plan-val">
+            <el-tag v-for="(n, evt) in previewPlan.hooksWillFire" :key="evt" size="small" effect="plain" class="plan-tag">{{ evt }} ×{{ n }}</el-tag>
+            <span v-if="Object.keys(previewPlan.hooksWillFire).length === 0" class="muted">{{ t('deploy.quickBar.plan.noHooks') }}</span>
+          </span>
+        </div>
+        <div v-if="previewPlan.healthCheckUrl" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.healthCheck') }}</span>
+          <span class="plan-val mono">{{ previewPlan.healthCheckUrl }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.notifications') }}</span>
+          <span class="plan-val">{{ previewPlan.slackEnabled
+            ? t('deploy.quickBar.plan.slackEnabled')
+            : t('deploy.quickBar.plan.slackDisabled') }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="previewOpen = false">{{ t('deploy.quickBar.previewClose') }}</el-button>
+      </template>
+    </el-dialog>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { ElInput } from 'element-plus'
+import { ElMessage, type ElInput } from 'element-plus'
+import { dryRunDeploy, type DryRunDeployResult } from '../../api/deploy'
 
 const { t } = useI18n()
 
@@ -203,6 +279,25 @@ function onCancel(): void {
   visible.value = false
 }
 
+// Phase 7.5+++ — preview state. Fetched lazily when operator clicks
+// Preview from inside the confirm modal so the explicit-confirmation
+// path also gets visibility into what the daemon would actually do.
+const previewBusy = ref<boolean>(false)
+const previewOpen = ref<boolean>(false)
+const previewPlan = ref<DryRunDeployResult | null>(null)
+
+async function onPreview(): Promise<void> {
+  previewBusy.value = true
+  try {
+    previewPlan.value = await dryRunDeploy(props.domain, props.host)
+    previewOpen.value = true
+  } catch (e) {
+    ElMessage.error((e as Error).message || t('deploy.quickBar.previewFailed'))
+  } finally {
+    previewBusy.value = false
+  }
+}
+
 watch(() => props.modelValue, (v) => { if (!v) abortCountdown() })
 
 // Phase 7.5+++ — context panel helpers. Recompute on each open via
@@ -257,4 +352,37 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
   font-weight: 500;
 }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
+.muted { color: var(--el-text-color-secondary); }
+
+.preview-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.plan-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+.plan-row:last-child { border-bottom: none; }
+.plan-key {
+  flex: 0 0 150px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+.plan-val {
+  flex: 1 1 auto;
+  word-break: break-all;
+}
+.plan-val.mono {
+  font-family: var(--el-font-family-monospace, ui-monospace, monospace);
+  font-size: 12px;
+}
+.plan-tag {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
 </style>

@@ -1116,7 +1116,9 @@
       "ageJustNow": "před {n} s",
       "ageMinutes": "před {n} m",
       "ageHours": "před {n} h",
-      "ageDays": "před {n} d"
+      "ageDays": "před {n} d",
+      "preview": "Náhled plánu",
+      "previewTitle": "Náhled deploy plánu"
     },
     "statusBanner": {
       "aria": "Přehled stavu deployů pro tento web",

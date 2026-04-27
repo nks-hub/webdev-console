@@ -1116,7 +1116,9 @@
       "ageJustNow": "{n}s ago",
       "ageMinutes": "{n}m ago",
       "ageHours": "{n}h ago",
-      "ageDays": "{n}d ago"
+      "ageDays": "{n}d ago",
+      "preview": "Preview plan",
+      "previewTitle": "Deploy plan preview"
     },
     "statusBanner": {
       "aria": "Deploy status overview for this site",
