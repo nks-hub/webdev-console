@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
@@ -93,7 +93,22 @@ const props = defineProps<{
 }>()
 
 const store = useDeployStore()
-const targetHost = ref<string>('')
+// Iter 72 — pre-select target host so operator doesn't need to click
+// the dropdown first. Single-host config (the common dev case) → that
+// host. Multi-host → "__all__" so operator can fan out in one click.
+// Operator can still re-pick from dropdown.
+const targetHost = ref<string>(
+  props.hosts.length === 1 ? props.hosts[0]
+  : props.hosts.length > 1 ? '__all__'
+  : ''
+)
+// Keep the auto-selection healthy if the host list changes mid-session
+// (e.g. operator adds a host in Settings without page reload).
+watch(() => props.hosts, (now) => {
+  if (!targetHost.value || (targetHost.value !== '__all__' && !now.includes(targetHost.value))) {
+    targetHost.value = now.length === 1 ? now[0] : now.length > 1 ? '__all__' : ''
+  }
+})
 const branch = ref<string>('')
 const snapshot = ref<boolean>(false)
 const busy = ref<boolean>(false)
