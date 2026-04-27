@@ -10,7 +10,8 @@
 #   - deploy history + dummy deploy fire (Phase 7.5 stub)
 #
 # Run: bash tools/e2e-mcp-deploy.sh
-# Exits non-zero on first failure.
+# Runs all sections to completion and exits non-zero at the end if any
+# `step` failed (PASS/FAIL summary printed before exit).
 set -u
 PASS=0; FAIL=0
 RED=$'\033[31m'; GRN=$'\033[32m'; YEL=$'\033[33m'; END=$'\033[0m'
