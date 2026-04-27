@@ -38,6 +38,21 @@ log() { echo "${YEL}==>${END} $*"; }
 ok()  { echo "  ${GRN}✓${END} $*"; PASS=$((PASS + 1)); }
 err() { echo "  ${RED}✗${END} $*" >&2; FAIL=$((FAIL + 1)); }
 
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    cat <<EOF
+Usage: tools/validate-cutover.sh
+
+End-to-end validation of the deploy.useLegacyHostHandlers cutover toggle.
+Flips legacy=true → restart → assert daemon authority → flip legacy=false
+→ restart → assert plugin authority (no workingDir field) → restore
+original setting via trap. Exits non-zero if any step failed.
+
+Self-isolating: original setting + restart restored even on failure.
+Runtime: ~30s (2× daemon restarts).
+EOF
+    exit 0
+fi
+
 read_port_token() {
     PORT=$(awk 'NR==1' "$PORT_FILE")
     TOKEN=$(awk 'NR==2' "$PORT_FILE")
