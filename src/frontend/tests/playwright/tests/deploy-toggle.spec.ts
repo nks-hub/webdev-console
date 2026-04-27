@@ -25,6 +25,17 @@ import { test, expect } from './_fixtures'
 test.describe.configure({ mode: 'serial' })
 
 test.describe('deploy.enabled toggle (operator switch)', () => {
+  // Iter 39 — afterEach hard-guarantee: regardless of how the test exited
+  // (assertion fail, exception, timeout), deploy.enabled is forced back
+  // to "true" at boundary. Belt for the existing finally; suspenders for
+  // the case finally never runs. Without this, sibling specs after this
+  // describe block see 404 from /api/nks.wdc.deploy/* until next run's
+  // globalSetup wipes the leak.
+  test.afterEach(async ({ authedRequest }) => {
+    await authedRequest.put('/api/settings', { data: { 'deploy.enabled': 'true' } })
+      .catch(() => { /* swallow — best-effort post-test cleanup */ })
+  })
+
   test('flipping deploy.enabled=false makes deploy routes 404', async ({ authedRequest }) => {
     const before = await authedRequest.get('/api/settings')
     const beforeJson = await before.json()
