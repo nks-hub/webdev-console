@@ -545,7 +545,23 @@ const deadweightCount = computed(() =>
   grants.value.filter(isDeadweight).length)
 
 // Phase 7.5+++ — scope_type filter (combines with usage tri-state).
-const scopeTypeFilter = ref<string | null>(null)
+// Phase 7.5+++ — scopeType filter URL sync. Consistent with target/kind/usage.
+const scopeTypeFilter = ref<string | null>(
+  typeof route.query.scope === 'string' ? route.query.scope : null,
+)
+watch(() => route.query.scope, (q) => {
+  scopeTypeFilter.value = typeof q === 'string' ? q : null
+})
+watch(scopeTypeFilter, (next) => {
+  const current = (route.query.scope as string | undefined) ?? null
+  const desired = next || null
+  if (current === desired) return
+  const { scope: _, ...rest } = route.query
+  void router.replace({
+    path: route.path,
+    query: desired ? { ...rest, scope: desired } : rest,
+  })
+})
 
 // Phase 7.5+++ — target filter sourced from URL ?target=. Driven by the
 // per-site MCP grants badge in DeploySettings header. Matches grants
