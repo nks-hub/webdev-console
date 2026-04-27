@@ -111,4 +111,41 @@ test.describe('Deploy form (dry-run preview)', () => {
     })
     expect(r.status()).toBe(403)
   })
+
+  test('test-host-connection probes TCP and surfaces structured result', async ({ authedRequest }) => {
+    // Host-only endpoint (#127) used by the host-edit dialog's "Test SSH"
+    // button. Two cases: (1) reachable host:port → ok=true + latencyMs,
+    // (2) unreachable → ok=false + code=socket_error|timeout.
+    //
+    // localhost:22 may or may not be reachable on the dev box (depends on
+    // whether OpenSSH server is running). To make the test deterministic
+    // we hit a port we know is closed (an unprivileged ephemeral port
+    // like 65530 — TCP listen would fail), so we should always get
+    // ok=false rather than depending on test environment.
+    const r = await authedRequest.post('/api/nks.wdc.deploy/test-host-connection', {
+      data: { host: '127.0.0.1', port: 65530 },
+    })
+    expect(r.status()).toBe(200)
+    const j = await r.json()
+    expect(j.ok).toBe(false)
+    // Either timeout or socket_error — both are valid "unreachable" codes.
+    // Don't pin the exact code (cross-platform variance).
+    expect(['timeout', 'socket_error']).toContain(j.code)
+    expect(typeof j.error).toBe('string')
+  })
+
+  test('test-host-connection rejects malformed body with 400', async ({ authedRequest }) => {
+    // Missing host → 400 (not a hidden 200 with ok=false). The probe
+    // endpoint validates input shape before opening any sockets.
+    const r1 = await authedRequest.post('/api/nks.wdc.deploy/test-host-connection', {
+      data: { port: 22 },
+    })
+    expect(r1.status()).toBe(400)
+
+    // Out-of-range port → 400 too.
+    const r2 = await authedRequest.post('/api/nks.wdc.deploy/test-host-connection', {
+      data: { host: '127.0.0.1', port: 70000 },
+    })
+    expect(r2.status()).toBe(400)
+  })
 })
