@@ -79,8 +79,15 @@
                 </li>
               </ul>
             </div>
-            <div class="muted" style="margin-top: 8px; font-size: 11px">
+            <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px">
               <code class="mono">GET /api/admin/plugin-readiness</code>
+              <el-button
+                size="small"
+                :loading="readinessRefreshing"
+                @click="refreshDeployBackendInfo"
+              >
+                {{ t('deploySettings.recheckReadiness') }}
+              </el-button>
             </div>
           </div>
         </el-popover>
@@ -1104,6 +1111,15 @@ interface DeployReadiness {
   recommendation: string
 }
 const deployBackendReadiness = ref<DeployReadiness | null>(null)
+const readinessRefreshing = ref<boolean>(false)
+async function refreshDeployBackendInfo(): Promise<void> {
+  readinessRefreshing.value = true
+  try {
+    await loadDeployBackendInfo()
+  } finally {
+    readinessRefreshing.value = false
+  }
+}
 const deployBackendIsPlugin = computed<boolean>(() =>
   // Header wins when present.
   deployBackendEffectiveMode.value === 'plugin'

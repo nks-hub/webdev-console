@@ -729,6 +729,7 @@
     "mcpGrantsTooltip": "{n} aktivních MCP grantů umožňuje AI provést destruktivní akce na tomto webu bez potvrzení. Klikněte pro detail.",
     "backendBuiltInTooltip": "Deploy obsluhuje vestavěný handler v daemon procesu. Po nahrání nks.wdc.deploy pluginu se přepne na plugin-řízený deploy.",
     "backendPluginTooltip": "Deploy obsluhuje plugin nks.wdc.deploy verze {v}. Plugin lze deaktivovat ve správě pluginů — daemon pak vrátí 404 na všechny deploy endpointy.",
+    "recheckReadiness": "Znovu zkontrolovat",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",
