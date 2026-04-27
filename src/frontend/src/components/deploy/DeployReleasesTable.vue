@@ -66,6 +66,23 @@
                   <span v-else class="muted">—</span>
                 </template>
               </el-table-column>
+              <el-table-column :label="t('deploy.releases.col.actions')" width="140" align="right">
+                <template #default="{ row: e }">
+                  <!-- Phase 7.5+++ — rollback to a SPECIFIC historical
+                       release. Only meaningful when the release isn't the
+                       active one + has a releaseId we can pin to the
+                       releases/ dir. The button confirms before firing. -->
+                  <el-button
+                    size="small"
+                    type="warning"
+                    plain
+                    :disabled="!e.releaseId"
+                    @click="onRollbackToRelease(e)"
+                  >
+                    {{ t('deploy.releases.rollbackToBtn') }}
+                  </el-button>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
         </template>
@@ -116,11 +133,41 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { DeployHistoryEntryDto } from '../../api/deploy'
+import { rollbackToRelease } from '../../api/deploy'
 
 const { t } = useI18n()
-const props = defineProps<{ entries: DeployHistoryEntryDto[] }>()
-defineEmits<{ refresh: [] }>()
+const props = defineProps<{ entries: DeployHistoryEntryDto[]; domain: string }>()
+const emit = defineEmits<{ refresh: [] }>()
+
+async function onRollbackToRelease(entry: DeployHistoryEntryDto): Promise<void> {
+  if (!entry.releaseId) return
+  try {
+    await ElMessageBox.confirm(
+      t('deploy.releases.rollbackToConfirmMessage', {
+        host: entry.host,
+        releaseId: entry.releaseId,
+      }),
+      t('deploy.releases.rollbackToConfirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('deploy.releases.rollbackToBtn'),
+      },
+    )
+  } catch { return }
+  try {
+    const r = await rollbackToRelease(props.domain, entry.host, entry.releaseId)
+    if (r.error) {
+      ElMessage.error(r.error)
+    } else {
+      ElMessage.success(t('deploy.releases.rollbackToSuccess', { releaseId: entry.releaseId }))
+      emit('refresh')
+    }
+  } catch (e) {
+    ElMessage.error((e as Error).message || 'Rollback failed')
+  }
+}
 
 interface ReleaseHostBadge { host: string; failed: boolean }
 interface ReleaseGroup {

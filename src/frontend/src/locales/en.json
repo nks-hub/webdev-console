@@ -931,8 +931,13 @@
         "startedAt": "Started",
         "duration": "Duration",
         "phase": "Phase",
-        "triggeredBy": "Source"
-      }
+        "triggeredBy": "Source",
+        "actions": "Actions"
+      },
+      "rollbackToBtn": "Roll back to this",
+      "rollbackToConfirmTitle": "Roll back to a specific release",
+      "rollbackToConfirmMessage": "Swap the current symlink for host '{host}' to release {releaseId}? This overwrites the live state.",
+      "rollbackToSuccess": "current symlink swapped to release {releaseId}"
     },
     "empty": {
       "title": "Deploy {domain}",

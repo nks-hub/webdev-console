@@ -931,8 +931,13 @@
         "startedAt": "Začátek",
         "duration": "Trvání",
         "phase": "Fáze",
-        "triggeredBy": "Zdroj"
-      }
+        "triggeredBy": "Zdroj",
+        "actions": "Akce"
+      },
+      "rollbackToBtn": "Vrátit se sem",
+      "rollbackToConfirmTitle": "Vrátit se na konkrétní release",
+      "rollbackToConfirmMessage": "Přepnout symlink current pro hosta '{host}' na release {releaseId}? Tato akce přepíše současný produkční stav.",
+      "rollbackToSuccess": "Symlink current přepnut na release {releaseId}"
     },
     "empty": {
       "title": "Deploy {domain}",

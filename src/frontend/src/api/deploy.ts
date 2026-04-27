@@ -143,6 +143,23 @@ export function rollbackDeploy(domain: string, deployId: string): Promise<{ sour
   )
 }
 
+/**
+ * Phase 7.5+++ — rollback to an arbitrary historical release. Used by the
+ * Releases sub-tab "Roll back to this" action when N-1 isn't enough (e.g.
+ * the previous release was also broken). Daemon validates that
+ * releases/{releaseId} exists before swapping the symlink.
+ */
+export function rollbackToRelease(
+  domain: string,
+  host: string,
+  releaseId: string,
+): Promise<{ status: string; host: string; releaseId: string; swappedTo: string | null; error: string | null }> {
+  return request(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/rollback-to`,
+    { method: 'POST', body: JSON.stringify({ host, releaseId }) },
+  )
+}
+
 export function cancelDeploy(domain: string, deployId: string): Promise<{ deployId: string; status: string }> {
   return request(
     `${PREFIX}/sites/${encodeURIComponent(domain)}/deploys/${encodeURIComponent(deployId)}`,

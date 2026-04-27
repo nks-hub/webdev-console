@@ -60,7 +60,7 @@
       </el-tab-pane>
 
       <el-tab-pane name="releases" :label="t('deploy.subTabs.releases')">
-        <DeployReleasesTable :entries="history" @refresh="refreshHistory" />
+        <DeployReleasesTable :domain="domain" :entries="history" @refresh="refreshHistory" />
       </el-tab-pane>
 
       <el-tab-pane name="groups" :label="t('deploy.subTabs.groups')">
