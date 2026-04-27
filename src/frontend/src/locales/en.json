@@ -833,7 +833,11 @@
       "filterManual": "Manual",
       "filterNoMatch": "No snapshots in this category.",
       "kindPreDeploy": "pre-deploy",
-      "kindManual": "manual"
+      "kindManual": "manual",
+      "restoreOkTitle": "Snapshot restored",
+      "restoreOkBody": "current symlink swapped to release {release} ({size}).",
+      "restoreOkGeneric": "Snapshot restored.",
+      "restoreFailed": "Snapshot restore failed: {error}"
     },
     "hooks": {
       "title": "Lifecycle hooks",

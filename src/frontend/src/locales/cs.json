@@ -833,7 +833,11 @@
       "filterManual": "Ruční",
       "filterNoMatch": "Žádný snapshot v této kategorii.",
       "kindPreDeploy": "pre-deploy",
-      "kindManual": "ruční"
+      "kindManual": "ruční",
+      "restoreOkTitle": "Snapshot obnoven",
+      "restoreOkBody": "Symlink current přepnut na release {release} ({size}).",
+      "restoreOkGeneric": "Snapshot byl obnoven.",
+      "restoreFailed": "Obnova snapshotu selhala: {error}"
     },
     "hooks": {
       "title": "Lifecycle hooks",

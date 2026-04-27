@@ -333,11 +333,23 @@ export async function confirmDeployIntent(intentId: string): Promise<void> {
 }
 
 export interface RestoreSnapshotResult {
-  deployId: string
-  domain: string
-  mode: 'sqlite' | 'mysql' | 'pgsql'
-  bytesProcessed: number
-  durationMs: number
+  // Legacy fields kept for backward compat with older daemons.
+  deployId?: string
+  domain?: string
+  mode?: 'sqlite' | 'mysql' | 'pgsql'
+  bytesProcessed?: number
+  durationMs?: number
+  // Phase 7.5+++ — real local-loopback restore response.
+  // restored=true means the .zip was extracted + current symlink swapped.
+  // extractedTo / swappedTo are the same Windows release dir path on success.
+  // error is non-null when extraction or symlink swap failed (e.g. permission).
+  restored?: boolean
+  sourceDeployId?: string
+  backupPath?: string
+  backupSizeBytes?: number
+  extractedTo?: string | null
+  swappedTo?: string | null
+  error?: string | null
 }
 
 /**

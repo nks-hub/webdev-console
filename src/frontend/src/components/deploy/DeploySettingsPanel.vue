@@ -815,7 +815,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
@@ -1236,12 +1236,31 @@ async function onRestoreSnapshot(snapshot: DeploySnapshotEntry): Promise<void> {
     const intent = await createDeployIntent(props.domain, '*restore*', 'restore')
     await confirmDeployIntent(intent.intentId)
     const result = await restoreSnapshot(props.domain, snapshot.id, intent.intentToken)
-    ElMessage.success(
-      `Restore ok (${result.mode}, ${formatBytes(result.bytesProcessed)} in ${result.durationMs} ms)`,
-    )
+    // Phase 7.5+++ — daemon now performs a real extract+symlink swap. Surface
+    // the resulting release dir so the operator can confirm what landed.
+    // Falls back to the older mode/bytesProcessed shape for legacy daemons.
+    if (result.error) {
+      ElMessage.error(t('deploySettings.snapshot.restoreFailed', { error: result.error }))
+    } else if (result.swappedTo) {
+      const releaseName = result.swappedTo.split(/[/\\]/).pop() ?? ''
+      ElNotification({
+        title: t('deploySettings.snapshot.restoreOkTitle'),
+        message: t('deploySettings.snapshot.restoreOkBody',
+          { release: releaseName, size: formatBytes(result.backupSizeBytes ?? 0) }),
+        type: 'success',
+        duration: 6000,
+      })
+    } else if (result.mode) {
+      ElMessage.success(
+        `Restore ok (${result.mode}, ${formatBytes(result.bytesProcessed ?? 0)} in ${result.durationMs ?? 0} ms)`,
+      )
+    } else {
+      ElMessage.success(t('deploySettings.snapshot.restoreOkGeneric'))
+    }
     // Refresh — SQLite restore creates a new .bak that may show up if
     // the daemon ever lists those, and the user wants visual feedback
-    // that the restore landed.
+    // that the restore landed. The new local-loopback restore also
+    // appends a deploy_runs row that affects history queries.
     snapshots.value = await fetchDeploySnapshots(props.domain)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
