@@ -2133,12 +2133,15 @@ step "readiness surfaces bootLegacyHostHandlers field" "$BBB_R0" '"bootLegacyHos
 step "readiness surfaces restartPending field" "$BBB_R0" '"restartPending":'
 # Boot==current → restartPending must be false
 step "no flip → restartPending:false" "$BBB_R0" '"restartPending":false'
-# Iter 62 — gatedEndpoints[] surfaces the 9 conditional handlers so the
+# Iter 62/65 — gatedEndpoints[] surfaces the 11 conditional handlers so the
 # GUI can render an exact list instead of trusting hand-coded copy.
 step "readiness lists gatedEndpoints array" "$BBB_R0" '"gatedEndpoints":\['
 step "gatedEndpoints includes hooks/test" "$BBB_R0" 'POST /sites/{domain}/hooks/test'
 step "gatedEndpoints includes snapshot-now" "$BBB_R0" 'POST /sites/{domain}/snapshot-now'
 step "gatedEndpoints includes history GET" "$BBB_R0" 'GET /sites/{domain}/history'
+# Iter 65 added the snapshot restore aliases (#109-D2 follow-up) — pin one
+# so a regression that drops the snapshots/{id}/restore route gets caught.
+step "gatedEndpoints includes snapshot restore alias" "$BBB_R0" 'POST /sites/{domain}/snapshots/{snapshotId}/restore'
 
 BBB_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
 # Toggle to opposite of boot value to force drift
