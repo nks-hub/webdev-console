@@ -42,6 +42,25 @@ import { Readable } from 'node:stream'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(__dirname, '..')
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`Usage: node scripts/stage-plugins.mjs
+
+Stages plugin DLLs and nksdeploy.phar into the packaged daemon layout
+at <repo>/src/frontend/resources/daemon/plugins/.
+
+Resolution order (first hit wins):
+  1. <repo>/build/plugins (escape hatch for manual drops)
+  2. <repo>/../webdev-console-plugins (sibling clone with bin/Release builds)
+  3. nks-hub/webdev-console-plugins GitHub Releases (downloaded fresh)
+
+Environment variables:
+  WDC_SKIP_PLUGIN_DOWNLOAD=1   skip GitHub release download (offline)
+  WDC_SKIP_PHAR_BUILD=1        skip the chained nksdeploy.phar build
+  GITHUB_TOKEN=<pat>           bump GitHub API rate limits (5000/hr vs 60/hr)
+  CI=true                      fail loudly if no plugins are staged`)
+  process.exit(0)
+}
+
 const destDir = join(repoRoot, 'src', 'frontend', 'resources', 'daemon', 'plugins')
 const PLUGINS_REPO = 'nks-hub/webdev-console-plugins'
 
