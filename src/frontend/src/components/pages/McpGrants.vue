@@ -407,8 +407,27 @@ const totalGrants = ref(0)
 
 // Phase 7.5+++ — audit view: when on, fetches with ?includeRevoked=true
 // so soft-revoked rows appear too (visually muted in the table).
-const includeRevoked = ref(false)
-function onIncludeRevokedChange(): void { void refresh() }
+const includeRevoked = ref<boolean>(route.query.audit === '1' || route.query.audit === 'true')
+function onIncludeRevokedChange(): void {
+  void refresh()
+  // Phase 7.5+++ — sync audit toggle to URL ?audit=1 so deep-links land
+  // in audit view and the recipient sees the same revoked rows.
+  const desired = includeRevoked.value ? '1' : ''
+  const current = (route.query.audit as string | undefined) ?? ''
+  if (current === desired) return
+  const { audit: _, ...rest } = route.query
+  void router.replace({
+    path: route.path,
+    query: desired ? { ...rest, audit: desired } : rest,
+  })
+}
+watch(() => route.query.audit, (q) => {
+  const next = q === '1' || q === 'true'
+  if (next !== includeRevoked.value) {
+    includeRevoked.value = next
+    void refresh()
+  }
+})
 
 // Phase 7.5+++ — backup/migration export. Pure client-side Blob download
 // of the currently-loaded grant set (respects the audit toggle: off →
