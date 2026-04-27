@@ -38,11 +38,18 @@
       </el-select>
       <!-- Phase 7.5+++ — danger-level tri-state filter (All / Reversible /
            Destructive). Mirrors the McpGrants usage filter pattern so
-           the operator can isolate the riskiest kinds in one click. -->
+           the operator can isolate the riskiest kinds in one click.
+           Counts inline so the breakdown is visible without flipping. -->
       <el-radio-group v-model="dangerFilter" size="small">
-        <el-radio-button value="all">{{ t('mcpKinds.dangerFilter.all') }}</el-radio-button>
-        <el-radio-button value="reversible">{{ t('mcpKinds.danger.reversible') }}</el-radio-button>
-        <el-radio-button value="destructive">{{ t('mcpKinds.danger.destructive') }}</el-radio-button>
+        <el-radio-button value="all">
+          {{ t('mcpKinds.dangerFilter.all') }} ({{ kinds.length }})
+        </el-radio-button>
+        <el-radio-button value="reversible">
+          {{ t('mcpKinds.danger.reversible') }} ({{ reversibleCount }})
+        </el-radio-button>
+        <el-radio-button value="destructive">
+          {{ t('mcpKinds.danger.destructive') }} ({{ destructiveCount }})
+        </el-radio-button>
       </el-radio-group>
     </div>
 
@@ -159,6 +166,10 @@ function goToAlwaysConfirmSetting(): void {
 const search = ref('')
 const pluginFilter = ref<string | null>(null)
 const dangerFilter = ref<'all' | 'reversible' | 'destructive'>('all')
+const reversibleCount = computed<number>(() =>
+  kinds.value.filter((k) => k.danger === 'reversible').length)
+const destructiveCount = computed<number>(() =>
+  kinds.value.filter((k) => k.danger === 'destructive').length)
 
 const filteredKinds = computed<McpKindRow[]>(() => {
   const q = search.value.trim().toLowerCase()
