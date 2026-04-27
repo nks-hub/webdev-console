@@ -1235,6 +1235,11 @@ onMounted(async () => {
   void loadDeployBackendInfo()
   unsubscribeGrantSse = subscribeEventsMap({
     'mcp:grant-changed': () => { void loadMcpGrantsCount() },
+    // Iter 28: live-refresh readiness when deploy.* settings change in
+    // another tab (e.g. operator flips useLegacyHostHandlers in global
+    // Settings). Without this, popover info goes stale until manual
+    // re-check or page reload.
+    'deploy:settings-changed': () => { void loadDeployBackendInfo() },
   })
 })
 

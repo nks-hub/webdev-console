@@ -9248,6 +9248,18 @@ app.MapPut("/api/settings", async (
         catch { /* best-effort SSE — never block the save path */ }
     }
 
+    // Phase 7.4 #109-D1+ iter 28 — deploy.* settings changes broadcast
+    // their own SSE event so DeploySettingsPanel + Settings.vue popovers
+    // refresh readiness without polling. Today only useLegacyHostHandlers
+    // matters for popovers; future deploy.* keys (timeouts, default
+    // hooks, etc.) get the same live-refresh for free.
+    var deployKeys = settings.Keys.Where(k => k.StartsWith("deploy.", StringComparison.OrdinalIgnoreCase)).ToList();
+    if (deployKeys.Count > 0)
+    {
+        try { await eventsBus.BroadcastAsync("deploy:settings-changed", new { keys = deployKeys }); }
+        catch { /* best-effort SSE — never block the save path */ }
+    }
+
     // Propagate port changes to live plugin config — without this, edits
     // to ports.http / ports.https / ports.redis / ports.mailpit* sat in
     // SQLite forever and never reached the service module. We look for
