@@ -182,6 +182,9 @@
       "reversible": "Reversible",
       "destructive": "Destructive"
     },
+    "dangerFilter": {
+      "all": "All"
+    },
     "toastLoadFailed": "Could not load kinds: {error}",
     "filterPlaceholder": "Search id or label…",
     "pluginFilterPlaceholder": "Plugin filter"

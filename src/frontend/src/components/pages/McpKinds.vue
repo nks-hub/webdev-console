@@ -36,6 +36,14 @@
         <el-option v-for="p in pluginCounts" :key="p.pluginId"
           :label="p.pluginId" :value="p.pluginId" />
       </el-select>
+      <!-- Phase 7.5+++ — danger-level tri-state filter (All / Reversible /
+           Destructive). Mirrors the McpGrants usage filter pattern so
+           the operator can isolate the riskiest kinds in one click. -->
+      <el-radio-group v-model="dangerFilter" size="small">
+        <el-radio-button value="all">{{ t('mcpKinds.dangerFilter.all') }}</el-radio-button>
+        <el-radio-button value="reversible">{{ t('mcpKinds.danger.reversible') }}</el-radio-button>
+        <el-radio-button value="destructive">{{ t('mcpKinds.danger.destructive') }}</el-radio-button>
+      </el-radio-group>
     </div>
 
     <el-alert
@@ -150,11 +158,13 @@ function goToAlwaysConfirmSetting(): void {
 
 const search = ref('')
 const pluginFilter = ref<string | null>(null)
+const dangerFilter = ref<'all' | 'reversible' | 'destructive'>('all')
 
 const filteredKinds = computed<McpKindRow[]>(() => {
   const q = search.value.trim().toLowerCase()
   return kinds.value.filter((k) => {
     if (pluginFilter.value && k.pluginId !== pluginFilter.value) return false
+    if (dangerFilter.value !== 'all' && k.danger !== dangerFilter.value) return false
     if (q && !k.id.toLowerCase().includes(q) && !k.label.toLowerCase().includes(q)) return false
     return true
   })

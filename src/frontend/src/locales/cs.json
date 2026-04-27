@@ -182,6 +182,9 @@
       "reversible": "Vratné",
       "destructive": "Destruktivní"
     },
+    "dangerFilter": {
+      "all": "Vše"
+    },
     "toastLoadFailed": "Nepodařilo se načíst druhy: {error}",
     "filterPlaceholder": "Hledat ID nebo popis…",
     "pluginFilterPlaceholder": "Filtr pluginu"
