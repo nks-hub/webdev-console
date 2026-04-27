@@ -311,6 +311,10 @@ export interface McpKindRow {
   // Phase 7.5+++ — lifetime intent count for this kind (all states).
   // Optional for backward compat with daemons that don't expose it yet.
   intentCount?: number
+  // Phase 7.5+++ — true when this kind is in mcp.always_confirm_kinds,
+  // i.e. the validator skips grant auto-approval for it. Optional for
+  // backward compat with older daemons.
+  alwaysConfirm?: boolean
 }
 
 export const listMcpKinds = (): Promise<{ count: number; entries: McpKindRow[] }> =>

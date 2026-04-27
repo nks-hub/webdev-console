@@ -80,11 +80,23 @@
       <!-- Phase 7.5+++ — auto-approving grants per kind. Counts active
            grants whose kindPattern is '*' or this exact kind id, i.e.
            how many ways an AI could fire this kind without operator
-           confirmation. Click → /mcp/grants pre-filtered for the kind. -->
-      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="180">
+           confirmation. Click → /mcp/grants pre-filtered for the kind.
+           When the kind is also in always-confirm, render a 🔒 chip to
+           make clear the operator has overridden auto-approval — those
+           grants will NOT actually fire for this kind. -->
+      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="220">
         <template #default="{ row }">
           <el-tag
-            v-if="autoApproveCount(row.id) > 0"
+            v-if="row.alwaysConfirm === true"
+            type="info"
+            size="small"
+            effect="dark"
+            class="always-confirm-tag"
+          >
+            🔒 {{ t('mcpKinds.alwaysConfirm') }}
+          </el-tag>
+          <el-tag
+            v-else-if="autoApproveCount(row.id) > 0"
             type="warning"
             size="small"
             effect="plain"
@@ -222,5 +234,8 @@ async function refresh(): Promise<void> {
 }
 .auto-approve-tag:hover {
   background: var(--el-color-warning-light-7);
+}
+.always-confirm-tag {
+  font-weight: 600;
 }
 </style>

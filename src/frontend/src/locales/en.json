@@ -176,6 +176,7 @@
     },
     "unused": "never",
     "noAutoApprove": "—",
+    "alwaysConfirm": "Always confirm",
     "danger": {
       "reversible": "Reversible",
       "destructive": "Destructive"

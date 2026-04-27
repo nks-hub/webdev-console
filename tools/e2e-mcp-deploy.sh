@@ -1917,10 +1917,18 @@ YY_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; print(json.load
 api PUT /api/settings -d '{"mcp.always_confirm_kinds":"deploy,restore,cancel,rollback"}' >/dev/null
 YY_AFTER=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
 step "always-confirm setting persists" "$YY_AFTER" "deploy,restore,cancel,rollback"
+# /api/mcp/kinds should reflect the override per-row
+YY_KINDS=$(api GET /api/mcp/kinds)
+YY_RESTORE_FLAG=$(echo "$YY_KINDS" | python3 -c "import sys,json; d=json.load(sys.stdin); r=[e for e in d['entries'] if e['id']=='restore']; print(r[0].get('alwaysConfirm') if r else '')" 2>/dev/null)
+step "kinds endpoint surfaces alwaysConfirm=true for restore" "$YY_RESTORE_FLAG" "True"
 # Reset (don't leave restore in always-confirm — would break unrelated tests)
 api PUT /api/settings -d "{\"mcp.always_confirm_kinds\":\"$YY_BEFORE\"}" >/dev/null
 YY_RESET=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
 step "always-confirm setting resets to prior value" "$YY_RESET" "$YY_BEFORE"
+# After reset, kinds endpoint should show alwaysConfirm=false again
+YY_KINDS_AFTER=$(api GET /api/mcp/kinds)
+YY_RESTORE_AFTER=$(echo "$YY_KINDS_AFTER" | python3 -c "import sys,json; d=json.load(sys.stdin); r=[e for e in d['entries'] if e['id']=='restore']; print(r[0].get('alwaysConfirm') if r else '')" 2>/dev/null)
+step "kinds endpoint shows alwaysConfirm=false after reset" "$YY_RESTORE_AFTER" "False"
 
 # ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"

@@ -1454,9 +1454,20 @@ app.MapGet("/api/mcp/kinds", async (
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kinds,
     NKS.WebDevConsole.Daemon.Data.Database db,
+    SettingsStore settings,
     CancellationToken ct) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    // Phase 7.5+++ — surface mcp.always_confirm_kinds membership per row.
+    // Same parsing rules as the validator's lookup so the GUI flag and
+    // the runtime gate can never disagree.
+    var alwaysConfirmRaw = settings.GetString("mcp", "always_confirm_kinds") ?? "";
+    var alwaysConfirmSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var part in alwaysConfirmRaw.Split(',', StringSplitOptions.RemoveEmptyEntries
+                                                   | StringSplitOptions.TrimEntries))
+    {
+        if (part.Length > 0) alwaysConfirmSet.Add(part);
+    }
     // Phase 7.5+++ — usage telemetry per kind. Single GROUP BY query
     // tells operators which destructive ops AI is actually exercising
     // (deploy: 47, restore: 3, rollback: 0). Tolerates missing table
@@ -1488,6 +1499,9 @@ app.MapGet("/api/mcp/kinds", async (
         // consumed + revoked + expired + still-pending; operators care
         // about historical use, not just live state.
         intentCount = usageByKind.TryGetValue(k.Id, out var c) ? c : 0,
+        // Phase 7.5+++ — true when operator has marked this kind as
+        // always-confirm via Settings → grants are bypassed for it.
+        alwaysConfirm = alwaysConfirmSet.Contains(k.Id),
     }).ToList();
     return Results.Ok(new { count = list.Count, entries = list });
 });

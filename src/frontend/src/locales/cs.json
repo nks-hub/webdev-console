@@ -176,6 +176,7 @@
     },
     "unused": "nikdy",
     "noAutoApprove": "—",
+    "alwaysConfirm": "Vždy potvrdit",
     "danger": {
       "reversible": "Vratné",
       "destructive": "Destruktivní"
