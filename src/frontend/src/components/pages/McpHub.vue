@@ -6,7 +6,7 @@
       <!-- Phase 7.5+++ — at-a-glance summary card. Telemetry that the
            individual tabs would only surface after switching. -->
       <div v-if="grantsStats" class="hub-stats">
-        <span class="stat">
+        <span class="stat always-confirm-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
           <span class="muted">{{ t('mcpHub.stats.active') }}</span>
         </span>
@@ -18,7 +18,7 @@
           <strong>{{ grantsStats.deadweight }}</strong>
           <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
         </span>
-        <span class="stat">
+        <span class="stat always-confirm-stat" @click="onTotalMatchesClick">
           <strong>{{ grantsStats.totalMatches }}</strong>
           <span class="muted">{{ t('mcpHub.stats.totalMatches') }}</span>
         </span>
@@ -132,6 +132,16 @@ const grantsStats = ref<McpGrantsStats | null>(null)
 // listMcpKinds() call so no extra round-trip.
 const alwaysConfirmCount = ref<number>(0)
 let unsubscribeHubSse: (() => void) | null = null
+
+function onActiveClick(): void {
+  // Navigate to grants tab (no filter) so operator can review all live grants.
+  void router.push({ path: '/mcp/grants' })
+}
+
+function onTotalMatchesClick(): void {
+  // Total matches counts auto-confirmed intents — go to intents tab.
+  void router.push({ path: '/mcp/intents' })
+}
 
 function onDeadweightClick(): void {
   // Phase 7.5+++ — go to /mcp/grants?usage=deadweight so the operator
