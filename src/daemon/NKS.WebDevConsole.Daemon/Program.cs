@@ -988,14 +988,19 @@ app.MapGet("/api/admin/plugin-readiness", (
             "nks.wdc.deploy plugin not loaded — DLL missing in build/plugins/ or plugin disabled",
             "A",
             "Stage NksDeploy plugin DLL into build/plugins/ and restart daemon. Verify via GET /api/plugins."));
+    // Phase B: complete in plugin@feature/nksdeploy-wdc-integration
+    // (commits 8958565, 51a1d19, 6f3c12e, c7b87ff, 74c61c8). All 5
+    // host-only endpoints — test-host-connection, sites/{domain}/deploy,
+    // rollback-to, hooks/test, notifications/test — now ship in
+    // NksDeployRoutes.cs. The route-conflict guard still defers to the
+    // daemon handlers while useLegacyHostHandlers=true.
+    // Phase C: test-hook executor + Slack dispatch shipped (commits
+    // 2893d0b, abf5090) — ZIP snapshot writer + SSE deploy:hook bridge
+    // remain.
     blockerDetails.Add((
-        "phase B: 6 host-only endpoints (hooks/test, notifications/test, test-host-connection, rollback-to, restore alias, deploy without /hosts/ segment) need plugin equivalents",
-        "B",
-        "PR against webdev-console-plugins/NksDeploy/Routes/NksDeployRoutes.cs adding the 6 missing routes with parity to host handlers."));
-    blockerDetails.Add((
-        "phase C: plugin-side ZIP snapshot service, SSE deploy:hook bridge, Slack dispatch, test-hook ad-hoc executor not yet ported",
+        "phase C: plugin-side ZIP snapshot service + SSE deploy:hook bridge not yet ported (test-hook executor + Slack dispatch shipped)",
         "C",
-        "Port LocalDeployBackend's snapshot zip writer + SSE bridge + Slack dispatch + test-hook executor into webdev-console-plugins/NksDeploy."));
+        "Port LocalDeployBackend's snapshot zip writer + SSE deploy:hook bridge into webdev-console-plugins/NksDeploy."));
     blockerDetails.Add((
         "phase D: plugin-only e2e on blog.loc + shop.loc not yet validated",
         "D",
