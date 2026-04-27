@@ -3172,6 +3172,16 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", asyn
 // records a synthetic deploy_runs row tagged backend_id='manual-snapshot'
 // so it surfaces in the snapshot list (which projects rows with
 // non-null pre_deploy_backup_path) without needing an actual deploy.
+//
+// Phase D (#109) — gated by legacyHostHandlersAtBoot. Plugin's
+// PostSnapshotNow ships an FS-ZIP-first path (commit 6cd22a5/6608838)
+// which captures the resolved host's current/ release directly without
+// shelling out to phar, so this endpoint is safe to delegate to plugin
+// authority when operator flips useLegacyHostHandlers=false. The DB
+// snapshotter fallback in plugin-mode handles sites without
+// localTargetPath the same way the daemon does.
+if (legacyHostHandlersAtBoot)
+{
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -3327,6 +3337,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
         host = hostName,
     });
 });
+} // end if (legacyHostHandlersAtBoot) — snapshot-now block
 
 // Phase 7.5+ — restore a previous snapshot. The kind on the intent token
 // MUST be 'restore' (validator enforces) which the registry tags as
