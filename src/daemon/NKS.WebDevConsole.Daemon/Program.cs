@@ -1970,9 +1970,27 @@ app.MapPost("/api/mcp/grants/import", async (
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/hooks/test", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     CancellationToken ct) =>
 {
     if (!IsDeployEnabled(ctx)) return Results.NotFound(new { error = "deploy_disabled" });
+    // Phase 7.5+++ — optional MCP intent gate. test-hook runs arbitrary
+    // shell/http/php commands; if AI can call this without a confirmed
+    // intent, the operator's intent gates on deploy/rollback/restore are
+    // bypassable. Validate-before-not-found ordering keeps the oracle
+    // shape consistent with the rest of the gated endpoints.
+    var thIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(thIntentToken))
+    {
+        var thAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var thVerdict = await intentValidator.ValidateAndConsumeAsync(
+            thIntentToken, "test_hook", domain, host: "*", thAllowUnconfirmed, ct);
+        if (!thVerdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = thVerdict.Reason, detail = thVerdict.Detail },
+                statusCode: thVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
     var root = doc.RootElement;
     var ty = root.TryGetProperty("type", out var tEl) ? tEl.GetString() ?? "shell" : "shell";

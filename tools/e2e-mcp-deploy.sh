@@ -101,7 +101,7 @@ api PUT /api/settings -d '{"mcp.enabled":"true","deploy.enabled":"true","mcp.str
 echo ""; echo "${YEL}=== B. MCP kinds discovery ===${END}"
 # ============================================================================
 KINDS=$(api GET /api/mcp/kinds)
-step "kinds endpoint returns 4 core kinds" "$KINDS" '"count":4'
+step "kinds endpoint returns 5 core kinds" "$KINDS" '"count":5'
 step "deploy kind has reversible danger" "$KINDS" '"id":"deploy".*"danger":"reversible"'
 step "restore kind has destructive danger" "$KINDS" '"id":"restore".*"danger":"destructive"'
 # Phase 7.5+++ — usage telemetry per kind. After many sections that
@@ -1905,6 +1905,20 @@ XX_NO_TOKEN=$(curl -s -o /dev/null -w '%{http_code}' \
     -X DELETE -H "Authorization: Bearer $TOKEN" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/never-existed-id")
 step "cancel without token still hits not-found path (back-compat)" "$XX_NO_TOKEN" "404"
+
+# Phase 7.5+++ — test-hook endpoint runs arbitrary shell/http/php commands
+# and is now optionally MCP-gated under kind=test_hook. Bogus token →
+# 403 (gate fires before command exec); no token → still works.
+XX_HOOK_BOGUS=$(curl -s -o /dev/null -w '%{http_code}' \
+    -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Intent-Token: bogus.fake.signature" \
+    -d '{"type":"shell","command":"echo hi","timeoutSeconds":5}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/hooks/test")
+step "test-hook with bogus intent token returns 403" "$XX_HOOK_BOGUS" "403"
+
+# Verify kind=test_hook is in registered kinds.
+XX_KINDS=$(api GET /api/mcp/kinds)
+step "test_hook kind is registered (Destructive)" "$XX_KINDS" '"id":"test_hook"'
 
 # ============================================================================
 echo ""; echo "${YEL}=== YY. always-confirm kinds override ===${END}"

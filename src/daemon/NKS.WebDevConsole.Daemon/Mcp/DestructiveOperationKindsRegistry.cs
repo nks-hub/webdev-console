@@ -39,6 +39,13 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
             "cancel", "Cancel an in-flight deploy", CorePluginId, DangerLevel.Reversible);
         _kinds["restore"] = new DestructiveOperationKind(
             "restore", "Restore a database snapshot", CorePluginId, DangerLevel.Destructive);
+        // Phase 7.5+++ — test_hook runs arbitrary operator-supplied
+        // shell/http/php commands. Ungated, an AI could call this with
+        // its own "hook" payload to execute anything on the host. Tagged
+        // Destructive so strict-kinds + always-confirm-by-default treat
+        // it like a real destructive op.
+        _kinds["test_hook"] = new DestructiveOperationKind(
+            "test_hook", "Run a deploy hook command for testing", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)
