@@ -27,6 +27,33 @@ test.describe('Deploy form (dry-run preview)', () => {
     expect(Array.isArray(j.sharedFiles)).toBe(true)
   })
 
+  test('dry-run plan exposes #188/#189 telemetry fields', async ({ authedRequest }) => {
+    // Phase 7.5+++ #188 added branch + currentRelease + totalHooksEnabled
+    // to the dry-run response; #189 added sourceLastModified so the
+    // operator spots stale-source re-deploys before committing. Keep all
+    // four asserted so a refactor that drops one breaks Playwright loud.
+    const r = await authedRequest.post('/api/nks.wdc.deploy/sites/blog.loc/deploy', {
+      data: { host: 'production', branch: 'main', dryRun: true },
+    })
+    expect(r.status()).toBe(200)
+    const j = await r.json()
+
+    // branch echoes back unchanged.
+    expect(j.branch).toBe('main')
+    // currentRelease can be null on a fresh site, but the property must
+    // exist (frontend's DryRunPlanView reads it directly).
+    expect(j).toHaveProperty('currentRelease')
+    // totalHooksEnabled is a number (count of hooks marked enabled).
+    expect(typeof j.totalHooksEnabled).toBe('number')
+    expect(j.totalHooksEnabled).toBeGreaterThanOrEqual(0)
+    // sourceLastModified is null OR an ISO 8601 timestamp string. The
+    // frontend formats it via formatRelative — we just assert shape.
+    if (j.sourceLastModified !== null) {
+      expect(typeof j.sourceLastModified).toBe('string')
+      expect(j.sourceLastModified).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    }
+  })
+
   test('dry-run alwaysConfirmKind reflects live setting', async ({ authedRequest }) => {
     // Save current value to restore.
     const before = await authedRequest.get('/api/settings')
