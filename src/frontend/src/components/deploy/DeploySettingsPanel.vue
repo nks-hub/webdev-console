@@ -483,66 +483,91 @@
         </div>
       </el-tab-pane>
 
-      <!-- ── E: Advanced ───────────────────────────────────────── -->
+      <!-- ── E: Advanced (redesign #171 — grouped into Lifecycle + Env cards) ── -->
       <el-tab-pane name="advanced" :label="t('deploySettings.tabs.advanced')">
         <div class="section-body">
-          <h3 class="section-title">{{ t('deploySettings.advanced.title') }}</h3>
+          <div class="section-intro">
+            <h2 class="section-h2">{{ t('deploySettings.advanced.title') }}</h2>
+            <p class="section-lead">{{ t('deploySettings.advanced.lead') }}</p>
+          </div>
 
-          <el-form
-            :model="settings.advanced"
-            label-position="top"
-            size="default"
-            class="settings-form"
-          >
-            <el-form-item required>
-              <template #label>
-                <label :for="ids.keepReleases">{{ t('deploySettings.advanced.keepReleases') }}</label>
+          <div class="advanced-grid">
+            <!-- Lifecycle card — release retention, lock timeout, concurrency -->
+            <el-card class="adv-card" shadow="hover">
+              <template #header>
+                <div class="adv-card-header">
+                  <span class="adv-card-title">
+                    <span class="adv-icon" aria-hidden="true">↻</span>
+                    {{ t('deploySettings.advanced.lifecycleTitle') }}
+                  </span>
+                </div>
               </template>
-              <el-input-number
-                :id="ids.keepReleases"
-                v-model="settings.advanced.keepReleases"
-                :min="1"
-                :max="50"
-                controls-position="right"
-                aria-required="true"
-                style="width: 140px"
-              />
-              <div class="field-hint">{{ t('deploySettings.advanced.keepReleasesHint') }}</div>
-            </el-form-item>
+              <p class="adv-card-lead muted">{{ t('deploySettings.advanced.lifecycleLead') }}</p>
 
-            <el-form-item required>
-              <template #label>
-                <label :for="ids.lockTimeout">{{ t('deploySettings.advanced.lockTimeout') }}</label>
-              </template>
-              <el-input-number
-                :id="ids.lockTimeout"
-                v-model="settings.advanced.lockTimeoutSeconds"
-                :min="30"
-                :max="3600"
-                controls-position="right"
-                aria-required="true"
-                style="width: 140px"
-              />
-              <div class="field-hint">{{ t('deploySettings.advanced.lockTimeoutHint') }}</div>
-            </el-form-item>
+              <el-form :model="settings.advanced" label-position="top" size="default">
+                <el-form-item required>
+                  <template #label>
+                    <label :for="ids.keepReleases">{{ t('deploySettings.advanced.keepReleases') }}</label>
+                  </template>
+                  <el-input-number
+                    :id="ids.keepReleases"
+                    v-model="settings.advanced.keepReleases"
+                    :min="1" :max="50"
+                    controls-position="right"
+                    aria-required="true"
+                    style="width: 140px"
+                  />
+                  <div class="field-hint">{{ t('deploySettings.advanced.keepReleasesHint') }}</div>
+                </el-form-item>
 
-            <el-form-item>
-              <template #label>
-                <label :for="ids.allowConcurrent">{{ t('deploySettings.advanced.allowConcurrent') }}</label>
-              </template>
-              <el-switch
-                :id="ids.allowConcurrent"
-                v-model="settings.advanced.allowConcurrentHosts"
-                :active-text="t('deploySettings.advanced.switchAllowed')"
-                :inactive-text="t('deploySettings.advanced.switchSerialised')"
-              />
-            </el-form-item>
+                <el-form-item required>
+                  <template #label>
+                    <label :for="ids.lockTimeout">{{ t('deploySettings.advanced.lockTimeout') }}</label>
+                  </template>
+                  <el-input-number
+                    :id="ids.lockTimeout"
+                    v-model="settings.advanced.lockTimeoutSeconds"
+                    :min="30" :max="3600"
+                    controls-position="right"
+                    aria-required="true"
+                    style="width: 140px"
+                  />
+                  <div class="field-hint">{{ t('deploySettings.advanced.lockTimeoutHint') }}</div>
+                </el-form-item>
 
-            <el-form-item>
-              <template #label>
-                <span>{{ t('deploySettings.advanced.envVars') }}</span>
+                <el-form-item>
+                  <template #label>
+                    <label :for="ids.allowConcurrent">{{ t('deploySettings.advanced.allowConcurrent') }}</label>
+                  </template>
+                  <el-switch
+                    :id="ids.allowConcurrent"
+                    v-model="settings.advanced.allowConcurrentHosts"
+                    :active-text="t('deploySettings.advanced.switchAllowed')"
+                    :inactive-text="t('deploySettings.advanced.switchSerialised')"
+                  />
+                </el-form-item>
+              </el-form>
+            </el-card>
+
+            <!-- Environment vars card — key/value list + add row -->
+            <el-card class="adv-card" shadow="hover">
+              <template #header>
+                <div class="adv-card-header">
+                  <span class="adv-card-title">
+                    <span class="adv-icon" aria-hidden="true">$</span>
+                    {{ t('deploySettings.advanced.envVars') }}
+                  </span>
+                  <el-tag size="small" effect="plain">
+                    {{ Object.keys(settings.advanced.envVars).length }}
+                  </el-tag>
+                </div>
               </template>
+              <p class="adv-card-lead muted">{{ t('deploySettings.advanced.envLead') }}</p>
+
               <div class="env-vars-wrap">
+                <div v-if="Object.keys(settings.advanced.envVars).length === 0" class="muted env-empty">
+                  {{ t('deploySettings.advanced.envEmpty') }}
+                </div>
                 <div
                   v-for="(_, key) in settings.advanced.envVars"
                   :key="key"
@@ -563,9 +588,7 @@
                     :aria-label="t('deploySettings.advanced.envValAria', { key })"
                   />
                   <el-button
-                    size="small"
-                    text
-                    type="danger"
+                    size="small" text type="danger"
                     :aria-label="t('deploySettings.advanced.envRemoveAria', { key })"
                     @click="removeEnvVar(key)"
                   >
@@ -592,21 +615,15 @@
                     @keydown.enter.prevent="addEnvVar"
                   />
                   <el-button
-                    size="small"
+                    size="small" type="primary"
                     :disabled="!newEnvKey.trim()"
                     @click="addEnvVar"
                   >
-                    {{ t('deploySettings.advanced.envAdd') }}
+                    + {{ t('deploySettings.advanced.envAdd') }}
                   </el-button>
                 </div>
               </div>
-            </el-form-item>
-          </el-form>
-
-          <div class="section-footer">
-            <el-button type="primary" :loading="saving" @click="saveSettings">
-              {{ t('deploySettings.advanced.save') }}
-            </el-button>
+            </el-card>
           </div>
         </div>
       </el-tab-pane>
@@ -1503,6 +1520,47 @@ defineExpose({ saveSettings })
 .subsection-header {
   font-weight: 600;
   font-size: 13px;
+}
+
+/* Advanced redesign #171 — Lifecycle + Env cards */
+.advanced-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+.adv-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.adv-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.adv-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--el-color-primary);
+}
+.adv-card-lead {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.env-empty {
+  padding: 8px 0;
+  font-size: 12px;
 }
 
 /* Notifications redesign #156 — per-channel cards */

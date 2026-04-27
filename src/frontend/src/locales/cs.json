@@ -892,6 +892,11 @@
     },
     "advanced": {
       "title": "Pokročilá nastavení",
+      "lead": "Méně časté přepínače pro zkušené operátory. Životní cyklus releasů + libovolné proměnné prostředí, které deploy backend vystaví během build/migration kroků.",
+      "lifecycleTitle": "Životní cyklus deploye",
+      "lifecycleLead": "Retence release adresářů, lock timeout a souběžnost pro multi-host deploy.",
+      "envLead": "Klíč/hodnota proměnných předaných buildu i migracím. Slouží např. pro APP_ENV=production, DB_PASSWORD=…, atd.",
+      "envEmpty": "Žádné proměnné prostředí.",
       "keepReleases": "Ponechat N releasů na vzdáleném hostu",
       "keepReleasesHint": "Starší release se po každém úspěšném deployi prořežou.",
       "lockTimeout": "Timeout zámku (sekundy)",

@@ -892,6 +892,11 @@
     },
     "advanced": {
       "title": "Advanced settings",
+      "lead": "Less-frequent toggles for experienced operators. Release lifecycle + arbitrary environment variables exposed by the deploy backend during build/migration steps.",
+      "lifecycleTitle": "Deploy lifecycle",
+      "lifecycleLead": "Release directory retention, lock timeout, concurrency for multi-host deploys.",
+      "envLead": "Key/value variables passed to build and migration steps. Use for APP_ENV=production, DB_PASSWORD=…, etc.",
+      "envEmpty": "No environment variables defined.",
       "keepReleases": "Keep N releases on remote",
       "keepReleasesHint": "Older releases are pruned after each successful deploy.",
       "lockTimeout": "Lock timeout (seconds)",
