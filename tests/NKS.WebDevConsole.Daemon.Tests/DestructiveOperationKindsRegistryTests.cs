@@ -106,8 +106,18 @@ public sealed class DestructiveOperationKindsRegistryTests
     public void UnregisterPlugin_UnknownId_IsNoOp()
     {
         var reg = new DestructiveOperationKindsRegistry();
+        var beforeCount = reg.List().Count;
         reg.UnregisterPlugin("never-registered");
-        Assert.Equal(4, reg.List().Count); // Just the 4 seeded core kinds.
+        // Unregistering a non-existent plugin must not change the seeded
+        // core kinds. Test is additive-tolerant: doesn't pin the seed
+        // count so adding a new core kind in the registry doesn't
+        // require updating this assertion. The legacy core kinds (deploy,
+        // rollback, cancel, restore) MUST still be present though —
+        // those are part of the public contract.
+        var after = reg.List();
+        Assert.Equal(beforeCount, after.Count);
+        foreach (var legacyId in new[] { "deploy", "rollback", "cancel", "restore" })
+            Assert.NotNull(reg.Get(legacyId));
     }
 
     [Fact]
@@ -120,12 +130,25 @@ public sealed class DestructiveOperationKindsRegistryTests
         var list = reg.List();
         // Sorted by pluginId (case-insensitive), then by id. Plugin order
         // ends up alphabetical: "aaa-plugin", "core" (legacy seeded),
-        // "zzz-plugin". Within "core" the four kinds are alphabetical too.
+        // "zzz-plugin". The exact set of core kinds is registry-defined
+        // and grows over time — assert structure (sort order, distinct
+        // plugin block) rather than enumerating every core id, so adding
+        // a new core kind doesn't break this test.
         var pluginIds = list.Select(k => k.PluginId).Distinct().ToList();
         Assert.Equal(new[] { "aaa-plugin", "core", "zzz-plugin" }, pluginIds);
-        // Core block: cancel, deploy, restore, rollback (alphabetical).
+
+        // The legacy four MUST appear in alphabetical order at the start
+        // of the core block (the contract this test originally pinned).
+        // Tail of core block can grow with future kinds — assert prefix.
         var coreIds = list.Where(k => k.PluginId == "core").Select(k => k.Id).ToArray();
-        Assert.Equal(new[] { "cancel", "deploy", "restore", "rollback" }, coreIds);
+        Assert.Equal(new[] { "cancel", "deploy", "restore", "rollback" },
+            coreIds.Where(id => id is "cancel" or "deploy" or "restore" or "rollback").ToArray());
+
+        // Whole core block is sorted alphabetically (extra kinds slot in
+        // their own positions — `database_drop`, `dns_record_delete` etc.
+        // — verifies the registry keeps its determinism contract).
+        var sortedCore = coreIds.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToArray();
+        Assert.Equal(sortedCore, coreIds);
     }
 
     [Fact]
@@ -133,11 +156,14 @@ public sealed class DestructiveOperationKindsRegistryTests
     {
         var reg = new DestructiveOperationKindsRegistry();
         var snapshot1 = reg.List();
+        var snapshot1Count = snapshot1.Count;
         reg.Register("plugin_x:op", "X op", "plugin-x");
         var snapshot2 = reg.List();
         // First snapshot reflects the state at the time of the call —
-        // late mutations don't appear in it.
-        Assert.Equal(4, snapshot1.Count);
-        Assert.Equal(5, snapshot2.Count);
+        // late mutations don't appear in it. Test is additive-tolerant:
+        // captures the initial count and asserts +1 after Register so
+        // future seed changes don't break the test.
+        Assert.Equal(snapshot1Count, snapshot1.Count);
+        Assert.Equal(snapshot1Count + 1, snapshot2.Count);
     }
 }
