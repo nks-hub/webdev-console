@@ -1345,6 +1345,8 @@
       "enableLabel": "Zapnout MCP integraci",
       "strictKindsLabel": "Striktní validace druhů",
       "strictKindsHint": "Pokud zapnuto, intenty selžou s kind_unknown, dokud druh není registrovaný v registru. Omezuje AI jen na verby, které pluginy explicitně vystavují. Výchozí VYPNUTO kvůli zpětné kompatibilitě.",
+      "alwaysConfirmKindsLabel": "Vždy vyžadovat potvrzení (druhy)",
+      "alwaysConfirmKindsHint": "Čárkou oddělený seznam druhů (např. \"restore,cancel\") pro které validátor PŘESKOČÍ automatické schválení přes granty — operátor musí potvrdit v GUI banneru i když existuje zástupný always-grant. Ring-fence pro nejrizikovější operace.",
       "expiredRetentionLabel": "Retence expirovaných oprávnění",
       "expiredRetentionHint": "Po vypršení čeká janitor tolik dní, než řádek smaže. 0 = nikdy neexpirovaná oprávnění nemazat (jen revokovaná).",
       "revokedRetentionLabel": "Retence odvolaných oprávnění",

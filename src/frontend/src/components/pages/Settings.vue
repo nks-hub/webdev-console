@@ -487,6 +487,20 @@
                   <el-switch v-model="mcpStrictKinds" />
                   <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.strictKindsHint') }}</div>
                 </el-form-item>
+                <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
+                     separated list (e.g. "restore,cancel") of kind ids
+                     for which the validator skips grant auto-approval.
+                     Operator's "ring-fence the riskiest ops" knob: even
+                     wildcard always-grants must yield to the GUI banner
+                     for these kinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
+                  <el-input
+                    v-model="mcpAlwaysConfirmKinds"
+                    placeholder="restore,cancel"
+                    style="max-width: 320px"
+                  />
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
+                </el-form-item>
                 <!-- Phase 7.5+++ — operator-tunable janitor retention.
                      Defaults match GrantSweeperService.Default* (1d/30d).
                      Setting either to 0 disables that branch (keep all). -->
@@ -1234,6 +1248,10 @@ const mcpEnabled = ref(false)
 // Phase 7.4e — strict kind validation. Default false (lenient).
 // When true, intents with unregistered kinds get kind_unknown.
 const mcpStrictKinds = ref(false)
+// Phase 7.5+++ — always-confirm kinds. Comma-separated list (e.g.
+// "restore,cancel"). Validator skips grant auto-approval for these
+// kinds, forcing GUI confirmation even with wildcard always-grants.
+const mcpAlwaysConfirmKinds = ref('')
 // Phase 7.5+++ — janitor retention windows. Defaults match
 // GrantSweeperService.Default* constants (1 day, 30 days). Setting
 // either to 0 disables that branch (operator keeps everything).
@@ -1695,6 +1713,8 @@ async function loadSettings() {
     mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
     // Phase 7.4e — strict_kinds (default false: lenient).
     mcpStrictKinds.value = data['mcp.strict_kinds'] === 'true' || data['mcp.strict_kinds'] === '1'
+    // Phase 7.5+++ — always-confirm kinds (comma-separated).
+    mcpAlwaysConfirmKinds.value = data['mcp.always_confirm_kinds'] ?? ''
     // Phase 7.5+++ — janitor retention windows. parseInt yields NaN on
     // missing/empty; coalesce to defaults (1d/30d) so the inputs land
     // on sensible numbers when settings haven't been touched.
@@ -2567,6 +2587,7 @@ async function save() {
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'mcp.enabled':         String(mcpEnabled.value),
       'mcp.strict_kinds':    String(mcpStrictKinds.value),
+      'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
       'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
       'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
       'deploy.enabled':      String(deployEnabled.value),
