@@ -731,6 +731,8 @@
     "backendPluginTooltip": "Deploy obsluhuje plugin nks.wdc.deploy verze {v}. Plugin lze deaktivovat ve správě pluginů — daemon pak vrátí 404 na všechny deploy endpointy.",
     "recheckReadiness": "Znovu zkontrolovat",
     "openGlobalSettings": "Otevřít v Nastavení",
+    "readyToFlip": "Plugin parita ověřena — flip useLegacyHostHandlers=false je bezpečný",
+    "stayOnBuiltIn": "Zůstaňte v built-in režimu — {n} blokátor(ů) výše",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",

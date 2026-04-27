@@ -69,7 +69,15 @@
           </template>
           <div style="font-size: 12px">
             <div style="margin-bottom: 6px">
-              <strong>{{ deployBackendReadiness.recommendation }}</strong>
+              <!-- Iter 23: localize recommendation from the same structured
+                   fields (readyToFlip + blockers count) instead of relying
+                   on the server-side English-only string. Fallback to the
+                   server text if neither localization branch matches. -->
+              <strong>
+                {{ deployBackendReadiness.readyToFlip
+                  ? t('deploySettings.readyToFlip')
+                  : t('deploySettings.stayOnBuiltIn', { n: deployBackendReadiness.blockers.length }) }}
+              </strong>
             </div>
             <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
               <div class="muted" style="margin-bottom: 4px">Blockers:</div>
