@@ -33,6 +33,20 @@ for arg in "$@"; do
     case "$arg" in
         --no-restart) DO_RESTART=false ;;
         --no-respawn) DO_RESPAWN=false ;;
+        -h|--help)
+            cat <<EOF
+Usage: tools/dev-daemon-rebuild.sh [options]
+
+Restart dev daemon → dotnet build → respawn. Standalone tool because
+the daemon's bin DLLs are locked while the process runs.
+
+Options:
+  --no-restart   skip the restart step (assumes daemon already down)
+  --no-respawn   restart + build only, leave daemon down
+  -h, --help     show this message
+EOF
+            exit 0
+            ;;
         *) err "unknown arg: $arg"; exit 2 ;;
     esac
 done
