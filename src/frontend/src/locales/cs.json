@@ -1299,6 +1299,16 @@
       "title": "Deploy subsystém",
       "description": "Záložka Deploy u jednotlivých webů + endpointy pluginu nksdeploy. Vypněte, pokud tato instance WDC spravuje pouze lokální služby a nikdy nedeployuje na vzdálené hostitele. Historie zůstává v databázi (pouze přidávání); opětovným zapnutím se vše obnoví.",
       "enableLabel": "Zapnout Deploy subsystém"
+    },
+    "osNotify": {
+      "title": "Systémové notifikace",
+      "description": "Toasty operačního systému (Windows, macOS, Linux), které se zobrazí i když je WDC okno na pozadí. Každý kanál lze vypnout zvlášť. Nastavení je lokální pro tento desktop.",
+      "deployLabel": "Notifikace deploye",
+      "mcpLabel": "MCP žádosti o potvrzení",
+      "systemLabel": "Systémové události",
+      "testBtn": "Otestovat notifikaci",
+      "testTitle": "NKS WDC — test notifikace",
+      "testBody": "Pokud vidíte tuto notifikaci, je vše správně nakonfigurované."
     }
   },
   "mcpGrants": {

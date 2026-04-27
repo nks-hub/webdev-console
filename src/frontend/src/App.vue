@@ -101,6 +101,7 @@ import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { useFeatureFlagsStore } from './stores/featureFlags'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
+import { osNotify } from './services/osNotifications'
 
 const router = useRouter()
 const route = useRoute()
@@ -127,8 +128,36 @@ function startDeploySse(): void {
   if (unsubscribeDeploy) return
   unsubscribeDeploy = subscribeEventsMap({
     'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
-    'mcp:confirm-request': (data) =>
-      mcpConfirmStore.addPending(data as { intentId: string; prompt?: string }),
+    'mcp:confirm-request': (data) => {
+      const evt = data as { intentId: string; prompt?: string; kind?: string }
+      mcpConfirmStore.addPending(evt)
+      // #147 — fire OS notification so the operator sees the request
+      // even when the WDC window is in the background.
+      void osNotify({
+        title: 'NKS WDC — MCP confirmation needed',
+        body: evt.kind
+          ? `Claude wants to perform ${evt.kind} — open WDC to approve.`
+          : 'Claude wants to run a destructive operation — open WDC to approve.',
+        urgency: 'critical',
+        channel: 'mcp',
+      })
+    },
+    // #147 — surface deploy completion in OS notification center so a
+    // long-running deploy doesn't require the operator to keep the
+    // window foregrounded to know when it finished.
+    'deploy:complete': (data) => {
+      const evt = data as { deployId?: string; success?: boolean; error?: string }
+      void osNotify({
+        title: evt.success
+          ? 'NKS WDC — Deploy succeeded'
+          : 'NKS WDC — Deploy failed',
+        body: evt.success
+          ? `Deploy ${evt.deployId?.slice(0, 8) ?? ''} completed.`
+          : (evt.error ?? `Deploy ${evt.deployId?.slice(0, 8) ?? ''} failed.`),
+        urgency: evt.success ? 'normal' : 'critical',
+        channel: 'deploy',
+      })
+    },
   })
 }
 function stopDeploySse(): void {

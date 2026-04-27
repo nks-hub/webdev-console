@@ -521,6 +521,33 @@
                 </el-form-item>
               </el-form>
             </div>
+
+            <!-- #147 — OS notification toggles. Stored client-side
+                 (localStorage via osNotifications service) since they
+                 only matter for THIS desktop install. Each channel can
+                 be turned off independently so an operator who lives in
+                 the WDC window all day can mute deploy toasts but keep
+                 the louder MCP confirm requests. -->
+            <div class="settings-section" style="margin-top: 16px">
+              <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
+              <p class="hint">{{ $t('settings.osNotify.description') }}</p>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+                <el-form-item :label="$t('settings.osNotify.deployLabel')">
+                  <el-switch v-model="osNotifyDeploy" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.osNotify.mcpLabel')">
+                  <el-switch v-model="osNotifyMcp" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.osNotify.systemLabel')">
+                  <el-switch v-model="osNotifySystem" />
+                </el-form-item>
+                <el-form-item>
+                  <el-button size="small" plain @click="onTestOsNotify">
+                    {{ $t('settings.osNotify.testBtn') }}
+                  </el-button>
+                </el-form-item>
+              </el-form>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -1134,6 +1161,7 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import { compareSemver } from '../../utils/semver'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
@@ -1215,6 +1243,25 @@ const mcpRevokedRetentionDays = ref(30)
 // own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
 // /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
 const deployEnabled = ref(true)
+
+// #147 — OS notification per-channel toggles. Persist via the
+// osNotifications service (localStorage-backed) on flip so the change
+// takes effect immediately without a Save All step.
+const osNotifyDeploy = ref(isChannelEnabled('deploy'))
+const osNotifyMcp = ref(isChannelEnabled('mcp'))
+const osNotifySystem = ref(isChannelEnabled('system'))
+watch(osNotifyDeploy, (v) => setChannelEnabled('deploy', v))
+watch(osNotifyMcp,    (v) => setChannelEnabled('mcp', v))
+watch(osNotifySystem, (v) => setChannelEnabled('system', v))
+
+async function onTestOsNotify(): Promise<void> {
+  await osNotify({
+    title: t('settings.osNotify.testTitle'),
+    body: t('settings.osNotify.testBody'),
+    urgency: 'normal',
+    channel: 'system',
+  })
+}
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
