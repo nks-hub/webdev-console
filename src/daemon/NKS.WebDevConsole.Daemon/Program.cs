@@ -2342,6 +2342,11 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
 // Real backend (when it ships) writes the snapshot path + size via
 // IDeployRunsRepository.UpdatePreDeployBackupAsync mid-run; this view
 // just projects those rows into the frontend's DeploySnapshotEntry shape.
+//
+// Phase D (#109) — gated, pure read, plugin's ListSnapshots handler
+// reads the same shared IDeployRunsRepository.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", async (
     string domain,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -2360,6 +2365,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", async (
         .ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
+} // end if (legacyHostHandlersAtBoot) — snapshots list GET block
 
 // Deploy settings persistence — JSON file under
 // {WdcPaths.DataRoot}/deploy-settings/{domain}.json. Frontend's
@@ -2430,6 +2436,12 @@ static int PurgeOldSnapshots(string subfolder, string domain, int retentionDays)
     catch { return 0; }
 }
 
+// Phase D (#109) — gated, pure read of per-site deploy-settings.json.
+// PUT counterpart stays daemon-authoritative (intent-gated, mutates
+// state — gating it would also need plugin to honour the same intent
+// validator path; deferred to a future iter).
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
 {
     var path = DeploySettingsPath(domain);
@@ -2452,6 +2464,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
         return Results.Json(new { error = "read_failed", message = ex.Message }, statusCode: 500);
     }
 });
+} // end if (legacyHostHandlersAtBoot) — settings GET block
 
 app.MapPut("/api/nks.wdc.deploy/sites/{domain}/settings", async (
     string domain, HttpContext ctx,
@@ -2862,6 +2875,9 @@ app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
 });
 
 // GET /sites/{domain}/groups — list multi-host deploy groups for site.
+// Phase D (#109) — gated, pure read.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     string domain, int? limit,
     NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
@@ -2882,6 +2898,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     }).ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
+} // end if (legacyHostHandlersAtBoot) — groups list GET block
 
 // POST /sites/{domain}/groups — start a multi-host deploy group.
 // Phase 7.5+++ — REAL fan-out via LocalDeployBackend when each host has
