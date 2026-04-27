@@ -1169,6 +1169,7 @@
         "branch": "Branch",
         "sourceLastModified": "Source last modified",
         "staleSourceWarn": "Source hasn't changed since the last successful deploy — you'd ship an identical release.",
+        "alwaysConfirmHint": "Operator marked the deploy kind as always-confirm — you'll see the GUI banner even with an active grant.",
         "currentRelease": "Current release",
         "previousRelease": "Previous release",
         "shared": "Shared",

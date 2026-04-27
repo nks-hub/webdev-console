@@ -3391,6 +3391,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
+    SettingsStore drSettings,
     CancellationToken ct) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
@@ -3687,6 +3688,13 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             healthCheckUrl = optHealthCheckUrl,
             soakSeconds = optSoakSeconds,
             slackEnabled = !string.IsNullOrEmpty(optNotifications?.SlackWebhook),
+            // Phase 7.5+++ — true when the operator has marked the deploy
+            // kind as always-confirm in settings. GUI preview can warn
+            // "even with a grant you'll see the banner first" before
+            // the operator commits.
+            alwaysConfirmKind = (drSettings.GetString("mcp", "always_confirm_kinds") ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(k => string.Equals(k, "deploy", StringComparison.OrdinalIgnoreCase)),
         });
     }
 

@@ -558,6 +558,9 @@ export interface DryRunDeployResult {
   healthCheckUrl: string | null
   soakSeconds: number
   slackEnabled: boolean
+  // Phase 7.5+++ — true when "deploy" kind is in mcp.always_confirm_kinds.
+  // GUI preview can hint the banner will fire even if a grant matches.
+  alwaysConfirmKind?: boolean
 }
 
 export async function dryRunDeploy(

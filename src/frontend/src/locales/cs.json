@@ -1169,6 +1169,7 @@
         "branch": "Větev",
         "sourceLastModified": "Zdroj naposledy změněn",
         "staleSourceWarn": "Zdroj se od posledního úspěšného deploye nezměnil — zveřejníte identický release.",
+        "alwaysConfirmHint": "Operátor označil druh deploy jako vždy-potvrdit — i s aktivním grantem uvidíte GUI banner.",
         "currentRelease": "Aktuální release",
         "previousRelease": "Předchozí release",
         "shared": "Sdílené",

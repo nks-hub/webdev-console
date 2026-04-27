@@ -19,6 +19,18 @@
       :title="t('deploy.quickBar.plan.staleSourceWarn')"
       class="stale-source-alert"
     />
+    <!-- Phase 7.5+++ — always-confirm hint. When the deploy kind is in
+         mcp.always_confirm_kinds, the operator will see the GUI banner
+         even with active grants. Surface that here so they're not
+         surprised after clicking Deploy. -->
+    <el-alert
+      v-if="plan.alwaysConfirmKind === true"
+      type="info"
+      :closable="false"
+      show-icon
+      :title="t('deploy.quickBar.plan.alwaysConfirmHint')"
+      class="stale-source-alert"
+    />
     <div class="plan-row">
       <span class="plan-key">{{ t('deploy.quickBar.plan.wouldRelease') }}</span>
       <span class="plan-val mono">{{ plan.wouldRelease }}</span>
