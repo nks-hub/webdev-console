@@ -220,7 +220,14 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
             }
 
             if (!allowUnconfirmed && !grantedAuto)
-                return IntentValidationResult.Deny("pending_confirmation");
+                // Phase 7.5+++ — when the always-confirm override forced the
+                // skip (rather than no-grant-found), tag the deny with
+                // detail="always_confirm" so the GUI banner can explain
+                // "operator marked this kind as always-confirm" rather
+                // than the generic "needs confirmation".
+                return alwaysConfirm
+                    ? IntentValidationResult.DenyWithDetail("pending_confirmation", "always_confirm")
+                    : IntentValidationResult.Deny("pending_confirmation");
             // Pre-stamp via single UPDATE — no-op if a concurrent GUI click
             // already stamped (rowcount=0 is fine, the row is now
             // confirmed either way and the next read will see it).

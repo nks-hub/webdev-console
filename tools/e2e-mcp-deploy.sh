@@ -1972,6 +1972,9 @@ ZZ_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H
     -d "{\"host\":\"production\",\"intentToken\":\"$ZZ_TOKEN\"${LP_BLOG}}" \
     "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
 step "always-confirm bypasses matching grant → 425" "$ZZ_FIRE" 'pending_confirmation.*425'
+# Phase 7.5+++ — response body should carry detail="always_confirm" so
+# the GUI banner can show distinct copy explaining the override.
+step "always-confirm 425 response carries detail=always_confirm" "$ZZ_FIRE" '"detail":"always_confirm"'
 
 # Reset always-confirm; same intent is now consumed (used_at set on first
 # attempt that found a kind_mismatch? actually validator returns BEFORE

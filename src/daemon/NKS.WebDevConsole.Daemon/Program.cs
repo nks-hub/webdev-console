@@ -2338,7 +2338,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback", as
         var verdict = await intentValidator.ValidateAndConsumeAsync(
             rbIntentToken, "rollback", domain, "*", rbAllowUnconfirmed, ct);
         if (!verdict.Ok)
-            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
     }
 
@@ -2488,7 +2488,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/rollback-to", async (
         var verdict = await intentValidator.ValidateAndConsumeAsync(
             rtIntentToken, "rollback", domain, host, rtAllowUnconfirmed, ct);
         if (!verdict.Ok)
-            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
     }
 
@@ -2610,7 +2610,7 @@ app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
         if (!verdict.Ok)
         {
             return Results.Json(
-                new { error = "intent_rejected", reason = verdict.Reason },
+                new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
         }
     }
@@ -2705,7 +2705,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
         var verdict = await intentValidator.ValidateAndConsumeAsync(
             grpIntentToken, "deploy", domain, hosts[0], grpAllowUnconfirmed, ct);
         if (!verdict.Ok)
-            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
     }
 
@@ -2867,7 +2867,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", asyn
         var verdict = await intentValidator.ValidateAndConsumeAsync(
             grbIntentToken, "rollback", domain, "*", grbAllowUnconfirmed, ct);
         if (!verdict.Ok)
-            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
     }
 
@@ -3150,7 +3150,7 @@ static async Task<IResult> HandleRestoreAsync(
         if (!verdict.Ok)
         {
             return Results.Json(
-                new { error = "intent_rejected", reason = verdict.Reason },
+                new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
         }
     }
@@ -3502,7 +3502,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         if (!verdict.Ok)
         {
             return Results.Json(
-                new { error = "intent_rejected", reason = verdict.Reason },
+                new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
         }
     }

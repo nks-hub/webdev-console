@@ -50,8 +50,18 @@ public interface IDeployIntentValidator
 /// <c>scope_mismatch</c>, <c>signature_mismatch</c>) the plugin can echo
 /// in its 401/403 response body so the MCP client can react sensibly.
 /// </summary>
-public sealed record IntentValidationResult(bool Ok, string? Reason)
+public sealed record IntentValidationResult(bool Ok, string? Reason, string? Detail = null)
 {
-    public static IntentValidationResult Allow() => new(true, null);
-    public static IntentValidationResult Deny(string reason) => new(false, reason);
+    public static IntentValidationResult Allow() => new(true, null, null);
+    public static IntentValidationResult Deny(string reason) => new(false, reason, null);
+    /// <summary>
+    /// Variant of <see cref="Deny"/> that carries an extra
+    /// machine-readable <paramref name="detail"/> alongside the primary
+    /// reason. Currently used to surface "pending_confirmation" caused
+    /// by the operator's <c>mcp.always_confirm_kinds</c> override
+    /// (detail = <c>"always_confirm"</c>) so the GUI banner can explain
+    /// why a normally-auto-approved action is asking for review.
+    /// </summary>
+    public static IntentValidationResult DenyWithDetail(string reason, string detail) =>
+        new(false, reason, detail);
 }
