@@ -2069,10 +2069,9 @@ step "readiness envelope has mode field" "$AAA_R1" '"mode":'
 step "readiness envelope has blockers array" "$AAA_R1" '"blockers":\['
 step "readiness envelope has readyToFlip:false today" "$AAA_R1" '"readyToFlip":false'
 step "readiness envelope echoes useLegacyHostHandlers:true (default)" "$AAA_R1" '"useLegacyHostHandlers":true'
-# Phase B was cleared from blockers after plugin endpoint parity shipped
-# (commits 8958565, 51a1d19, 6f3c12e, c7b87ff, 74c61c8). Phase C + D
-# remain as the gating blockers for readyToFlip.
-step "blockers list includes phase C" "$AAA_R1" 'phase C'
+# Phase B + C cleared from blockers after plugin parity shipped (B:
+# 5 endpoints; C: ZIP/snapshot, test-hook, Slack, SSE bridge). Phase D
+# (plugin-only e2e) remains the only blocker for readyToFlip.
 step "blockers list includes phase D" "$AAA_R1" 'phase D'
 
 # Flip useLegacyHostHandlers to false via settings API
@@ -2090,8 +2089,7 @@ step "readiness echoes restored useLegacyHostHandlers value" "$AAA_R3" "\"useLeg
 # Iter 17 — verbose ?explain=true mode adds blockerDetails[] with phase + remediation per blocker
 AAA_R4=$(api GET '/api/admin/plugin-readiness?explain=true')
 step "explain=true response includes blockerDetails array" "$AAA_R4" '"blockerDetails":\['
-# Phase B blocker cleared — only C + D remain in blockerDetails today.
-step "explain=true blockerDetails has phase C remediation" "$AAA_R4" '"phase":"C"'
+# Phase B + C blockers cleared — only D remains in blockerDetails.
 step "explain=true blockerDetails has phase D remediation" "$AAA_R4" '"phase":"D"'
 step "explain=true remediation field present" "$AAA_R4" '"remediation":'
 # Default mode (no explain) must keep flat blockers shape for back-compat with iter 5/6 consumers
