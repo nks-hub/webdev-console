@@ -862,7 +862,13 @@
       "ariaForm": "Hook {n}",
       "emptyTitle": "Žádné hooks",
       "count": "{n} hooks",
-      "untitled": "(bez popisu)"
+      "untitled": "(bez popisu)",
+      "test": "Test",
+      "testAria": "Otestovat hook {n} samostatně",
+      "testOkTitle": "Hook prošel",
+      "testOkBody": "Hook se vykonal v {ms} ms.",
+      "testFailTitle": "Hook selhal",
+      "testFailGeneric": "Hook se nepodařilo vykonat."
     },
     "notifications": {
       "title": "Notifikace",

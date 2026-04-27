@@ -862,7 +862,13 @@
       "ariaForm": "Hook {n}",
       "emptyTitle": "No hooks",
       "count": "{n} hooks",
-      "untitled": "(no description)"
+      "untitled": "(no description)",
+      "test": "Test",
+      "testAria": "Test hook {n} standalone",
+      "testOkTitle": "Hook OK",
+      "testOkBody": "Hook executed in {ms} ms.",
+      "testFailTitle": "Hook failed",
+      "testFailGeneric": "Hook execution failed."
     },
     "notifications": {
       "title": "Notifications",

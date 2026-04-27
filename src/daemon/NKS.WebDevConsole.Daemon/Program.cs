@@ -1914,6 +1914,65 @@ app.MapPost("/api/mcp/grants/import", async (
 // Body: { "host": "deploy.example.com", "port": 22 }
 // Returns 200 with { ok, latencyMs, error?, code? } — never 5xx so
 // the frontend can render the result inline regardless of probe outcome.
+// Phase 7.5+++ — test-fire one hook spec without doing a deploy. Used by
+// the Hooks settings card "Test" button so operator can validate a hook
+// works before relying on it. Body shape: { type, command, timeoutSeconds?,
+// description?, workingDir? }. Returns { ok, durationMs, error? }.
+app.MapPost("/api/nks.wdc.deploy/sites/{domain}/hooks/test", async (
+    string domain, HttpContext ctx,
+    NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
+    CancellationToken ct) =>
+{
+    if (!IsDeployEnabled(ctx)) return Results.NotFound(new { error = "deploy_disabled" });
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    var ty = root.TryGetProperty("type", out var tEl) ? tEl.GetString() ?? "shell" : "shell";
+    var cmd = root.TryGetProperty("command", out var cEl) ? cEl.GetString() ?? "" : "";
+    if (string.IsNullOrEmpty(cmd))
+        return Results.BadRequest(new { error = "command_required" });
+    var to = root.TryGetProperty("timeoutSeconds", out var toEl) && toEl.TryGetInt32(out var toVal) ? toVal : 30;
+    var desc = root.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+
+    // Resolve working dir: body override → host's localTargetPath/current
+    // → system temp. Falling all the way through to temp lets the operator
+    // smoke-test a hook even when no host is configured yet.
+    string? workingDir = root.TryGetProperty("workingDir", out var wdEl) ? wdEl.GetString() : null;
+    if (string.IsNullOrEmpty(workingDir))
+    {
+        try
+        {
+            var settingsPath = DeploySettingsPath(domain);
+            if (File.Exists(settingsPath))
+            {
+                using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+                if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                    && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var hEl2 in hostsEl.EnumerateArray())
+                    {
+                        if (hEl2.TryGetProperty("localTargetPath", out var ltEl))
+                        {
+                            var t = ltEl.GetString();
+                            if (!string.IsNullOrEmpty(t))
+                            {
+                                var c = Path.Combine(t, "current");
+                                if (Directory.Exists(c)) { workingDir = c; break; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* best-effort */ }
+    }
+    workingDir ??= Path.GetTempPath();
+
+    var spec = new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.HookSpec(
+        Event: "test", Type: ty, Command: cmd, TimeoutSeconds: to, Enabled: true, Description: desc);
+    var (ok, durationMs, error) = await localBackend.TestHookAsync(spec, workingDir, null, ct);
+    return Results.Ok(new { ok, durationMs, error, workingDir });
+});
+
 app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
     HttpContext ctx,
     CancellationToken ct) =>

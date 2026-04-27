@@ -489,6 +489,28 @@ export interface TestHostConnectionResult {
   code?: string
 }
 
+/**
+ * Phase 7.5+++ — fire one configured hook against the daemon's test
+ * endpoint without doing a full deploy. Returns the same shape as the
+ * `deploy:hook` SSE event so the GUI can show a consistent toast.
+ */
+export interface TestHookResult {
+  ok: boolean
+  durationMs: number
+  error?: string | null
+  workingDir?: string
+}
+
+export async function testHook(
+  domain: string,
+  hook: { type: string; command: string; timeoutSeconds?: number; description?: string },
+): Promise<TestHookResult> {
+  return request<TestHookResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/hooks/test`,
+    { method: 'POST', body: JSON.stringify(hook) },
+  )
+}
+
 export async function testHostConnection(
   host: string,
   port: number,

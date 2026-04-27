@@ -267,6 +267,31 @@ public sealed class LocalDeployBackend
     /// All paths run with the release dir as working directory + envVars
     /// merged into the process environment.
     /// </summary>
+    /// <summary>
+    /// Public entry for test-hook flows. Wraps ExecuteHookAsync with a
+    /// stopwatch + try/catch so the daemon endpoint can return a clean
+    /// shape `{ok, durationMs, error?}` to the GUI's Test button.
+    /// </summary>
+    public async Task<(bool ok, long durationMs, string? error)> TestHookAsync(
+        HookSpec hook, string workingDir,
+        IReadOnlyDictionary<string, string>? envVars = null,
+        CancellationToken ct = default)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            await ExecuteHookAsync(hook, workingDir,
+                envVars ?? new Dictionary<string, string>(), ct);
+            sw.Stop();
+            return (true, sw.ElapsedMilliseconds, null);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            return (false, sw.ElapsedMilliseconds, ex.Message);
+        }
+    }
+
     private async Task ExecuteHookAsync(
         HookSpec hook, string releaseDir,
         IReadOnlyDictionary<string, string> envVars,

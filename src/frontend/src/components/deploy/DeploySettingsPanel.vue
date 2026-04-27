@@ -288,6 +288,13 @@
                         @click="moveHook(idx, 1)"
                       >&#8595;</el-button>
                       <el-button
+                        size="small" text type="primary"
+                        :loading="testingHookIdx === idx"
+                        :disabled="testingHookIdx !== null || !hook.command"
+                        :aria-label="t('deploySettings.hooks.testAria', { n: idx + 1 })"
+                        @click="onTestHook(idx, hook)"
+                      >{{ t('deploySettings.hooks.test') }}</el-button>
+                      <el-button
                         size="small" text type="danger"
                         :aria-label="t('deploySettings.hooks.removeAria', { n: idx + 1 })"
                         @click="removeHook(idx)"
@@ -845,6 +852,7 @@ import {
   restoreSnapshot,
   snapshotNow,
   testHostConnection,
+  testHook,
 } from '../../api/deploy'
 import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings, TestHostConnectionResult } from '../../api/deploy'
 
@@ -985,6 +993,43 @@ const hostFormRef = ref<FormInstance>()
 // operator clicks Test, then sticks until they change a field that
 // invalidates it (handled via watch below) or close the dialog.
 const testingConnection = ref(false)
+
+// Phase 7.5+++ — track which hook is currently being test-fired so the
+// rest can be disabled (one fire at a time keeps the operator from
+// stacking concurrent process launches that step on each other's
+// stdout in the daemon log).
+const testingHookIdx = ref<number | null>(null)
+async function onTestHook(idx: number, hook: DeployHookConfig): Promise<void> {
+  if (testingHookIdx.value !== null) return
+  testingHookIdx.value = idx
+  try {
+    const r = await testHook(props.domain, {
+      type: hook.type,
+      command: hook.command,
+      timeoutSeconds: hook.timeoutSeconds,
+      description: hook.description,
+    })
+    if (r.ok) {
+      ElNotification({
+        title: t('deploySettings.hooks.testOkTitle'),
+        message: t('deploySettings.hooks.testOkBody', { ms: r.durationMs }),
+        type: 'success',
+        duration: 4000,
+      })
+    } else {
+      ElNotification({
+        title: t('deploySettings.hooks.testFailTitle'),
+        message: r.error ?? t('deploySettings.hooks.testFailGeneric'),
+        type: 'error',
+        duration: 8000,
+      })
+    }
+  } catch (e) {
+    ElMessage.error((e as Error).message || t('deploySettings.hooks.testFailGeneric'))
+  } finally {
+    testingHookIdx.value = null
+  }
+}
 const testConnectionResult = ref<TestHostConnectionResult | null>(null)
 
 async function onTestConnection(): Promise<void> {

@@ -1641,6 +1641,23 @@ if [ -n "$OO_BACKUP" ]; then echo "$OO_BACKUP" > "$OO_SETTINGS_FILE"; fi
 rm -rf "$OO_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== PP. test-hook endpoint (standalone hook execution) ===${END}"
+# ============================================================================
+PP_OK=$(api POST /api/nks.wdc.deploy/sites/blog.loc/hooks/test \
+    -d '{"type":"shell","command":"echo e2e-hook-ok","timeoutSeconds":5,"description":"PP smoke ok"}')
+step "test-hook returns ok=true for echo command" "$PP_OK" '"ok":true'
+step "test-hook reports durationMs" "$PP_OK" '"durationMs":[0-9]+'
+
+PP_FAIL=$(api POST /api/nks.wdc.deploy/sites/blog.loc/hooks/test \
+    -d '{"type":"shell","command":"definitely-not-a-real-command-x9q7","timeoutSeconds":5}')
+step "test-hook returns ok=false for bad command" "$PP_FAIL" '"ok":false'
+step "test-hook returns error message for bad command" "$PP_FAIL" '"error":"[^"]'
+
+PP_NO_CMD=$(curl -s -w '\n%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"type":"shell"}' "$BASE/api/nks.wdc.deploy/sites/blog.loc/hooks/test")
+step "test-hook without command returns 400" "$PP_NO_CMD" 'command_required'
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
