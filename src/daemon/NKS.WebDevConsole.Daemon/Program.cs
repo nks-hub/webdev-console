@@ -1035,6 +1035,8 @@ app.MapGet("/api/admin/plugin-readiness", (
         "POST /sites/{domain}/hooks/test",
         "POST /sites/{domain}/notifications/test",
         "POST /sites/{domain}/snapshot-now",
+        "POST /sites/{domain}/restore",
+        "POST /sites/{domain}/snapshots/{snapshotId}/restore",
         "GET /sites/{domain}/history",
         "GET /sites/{domain}/deploys/{deployId}",
         "GET /sites/{domain}/snapshots",
@@ -3570,6 +3572,15 @@ static async Task<IResult> HandleRestoreAsync(
 }
 
 // Both routes alias HandleRestoreAsync.
+//
+// Phase D (#109) — gated by legacyHostHandlersAtBoot. Daemon's restore
+// is pure direct-C# (ZipFile.ExtractToDirectory + symlink swap) — no
+// phar dep — and the plugin ships an equivalent PostSnapshotRestore
+// (NksDeployRoutes.cs) that validates the same intent kind 'restore'
+// against the shared validator. Safe for plugin to take over in
+// plugin-mode boot. Both alias routes flip together for consistency.
+if (legacyHostHandlersAtBoot)
+{
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/restore",
     (string domain, HttpContext ctx,
      NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -3585,6 +3596,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore",
      NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
      CancellationToken ct) =>
         HandleRestoreAsync(domain, snapshotId, ctx, runs, intentValidator, eventsBus, ct));
+} // end if (legacyHostHandlersAtBoot) — restore alias block
 
 // Phase 7.5 dummy backend with realistic state-machine + optional MCP
 // intent gate. POST body:
