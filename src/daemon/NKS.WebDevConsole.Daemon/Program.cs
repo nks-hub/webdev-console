@@ -3457,6 +3457,48 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     var deployId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
     var releaseId = now.ToString("yyyyMMdd_HHmmss");
+
+    // Phase 7.5+++ — dry-run preview. Body `dryRun:true` returns the
+    // resolved plan WITHOUT inserting deploy_runs row, broadcasting SSE,
+    // copying files, or running hooks. Operator uses this to inspect
+    // what a deploy WOULD do (which hooks fire, retention impact,
+    // shared symlinks to apply) before committing.
+    var dryRun = root.TryGetProperty("dryRun", out var drEl)
+                 && drEl.ValueKind == System.Text.Json.JsonValueKind.True;
+    if (dryRun)
+    {
+        var existingReleases = Directory.Exists(Path.Combine(localTarget!, "releases"))
+            ? Directory.EnumerateDirectories(Path.Combine(localTarget!, "releases"))
+                .Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal).ToList()
+            : new List<string?>();
+        var keep = optKeepReleases ?? 5;
+        var prunedCount = Math.Max(0, existingReleases.Count - keep + 1); // +1 because the new one will displace
+        var prevPath = File.Exists(Path.Combine(localTarget!, ".dep", "previous_release"))
+            ? File.ReadAllText(Path.Combine(localTarget!, ".dep", "previous_release")).Trim()
+            : null;
+        return Results.Ok(new
+        {
+            dryRun = true,
+            deployId = (string?)null,
+            wouldRelease = releaseId,
+            wouldExtractTo = Path.Combine(localTarget!, "releases", releaseId),
+            wouldCopyFrom = localSource,
+            wouldSwapCurrentFrom = prevPath,
+            sharedDirs = optSharedDirs ?? new List<string> { "log", "temp" },
+            sharedFiles = optSharedFiles ?? new List<string>(),
+            keepReleases = keep,
+            existingReleaseCount = existingReleases.Count,
+            wouldPruneCount = Math.Max(0, prunedCount),
+            hooksWillFire = optHooks
+                .Where(h => h.Enabled)
+                .GroupBy(h => h.Event)
+                .ToDictionary(g => g.Key, g => g.Count()),
+            healthCheckUrl = optHealthCheckUrl,
+            soakSeconds = optSoakSeconds,
+            slackEnabled = !string.IsNullOrEmpty(optNotifications?.SlackWebhook),
+        });
+    }
+
     await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
         Id: deployId, Domain: domain, Host: host,
         ReleaseId: releaseId,

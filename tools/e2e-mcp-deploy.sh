@@ -1859,6 +1859,28 @@ fi
 rm -rf "$VV_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== WW. dry-run deploy preview ===${END}"
+# ============================================================================
+# dryRun:true → resolved plan, no DB row, no copy, no SSE.
+WW_RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","branch":"main","dryRun":true,"localPaths":{"source":"C:/work/sites/blog.loc","target":"C:/temp/e2e-dryrun-target"},"localOptions":{"sharedDirs":["log","cache"],"sharedFiles":[".env"],"keepReleases":2}}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "dry-run returns dryRun:true" "$WW_RESP" '"dryRun":true'
+step "dry-run returns deployId:null" "$WW_RESP" '"deployId":null'
+step "dry-run returns wouldRelease timestamp" "$WW_RESP" '"wouldRelease":"[0-9]{8}_[0-9]{6}"'
+step "dry-run returns wouldExtractTo path" "$WW_RESP" '"wouldExtractTo":"[^"]*releases'
+step "dry-run echoes sharedDirs from body" "$WW_RESP" '"sharedDirs":\["log","cache"\]'
+step "dry-run echoes keepReleases" "$WW_RESP" '"keepReleases":2'
+# Confirm no DB row was written — history should NOT include this would-be deploy.
+sleep 1
+WW_HIST=$(api GET "/api/nks.wdc.deploy/sites/blog.loc/history?limit=5")
+WW_RID=$(echo "$WW_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('wouldRelease',''))" 2>/dev/null)
+case "$WW_HIST" in
+    *"$WW_RID"*) step "dry-run did NOT insert deploy_runs row" no yes ;;
+    *)           step "dry-run did NOT insert deploy_runs row" yes yes ;;
+esac
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
