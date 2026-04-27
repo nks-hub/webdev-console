@@ -134,9 +134,13 @@ function findComposer(php) {
   const composerBytes = readFileSync(composerPhar)
   const actualHash = createHash('sha384').update(composerBytes).digest('hex')
   if (actualHash !== COMPOSER_SHA384) {
+    // Self-heal: delete the bad file so the next run re-downloads. Spares
+    // the operator a "delete X and re-run" loop after a flaky download.
+    // We still die — running with a tampered/corrupt composer would let
+    // an attacker inject code into the phar build.
+    rmSync(composerPhar, { force: true })
     die(`composer.phar checksum mismatch — expected ${COMPOSER_SHA384}, got ${actualHash}. ` +
-        `Refusing to use a tampered composer binary for phar build. ` +
-        `Delete ${composerPhar} and re-run to re-download.`)
+        `Removed corrupt file at ${composerPhar}; re-run the build to download fresh.`)
   }
   log(`composer.phar SHA-384 verified (pin: ${COMPOSER_SHA384.slice(0, 16)}…)`)
   // Wrapper script that runs composer via PHP with deprecations silenced
