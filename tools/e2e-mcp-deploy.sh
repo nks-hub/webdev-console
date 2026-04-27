@@ -2094,6 +2094,27 @@ else
     PASS=$((PASS + 1))
 fi
 
+# Iter 31 — assert deploy:settings-changed SSE fires on deploy.* save.
+# Open a background SSE stream, trigger a settings PUT, capture the
+# event line within 5s. Validates iter 28 broadcast wiring.
+AAA_SSE_LOG=$(mktemp)
+curl -N -s -m 8 -H "Authorization: Bearer $TOKEN" "$BASE/api/events" > "$AAA_SSE_LOG" 2>&1 &
+AAA_SSE_PID=$!
+sleep 1
+api PUT /api/settings -d '{"deploy.useLegacyHostHandlers":"true"}' >/dev/null
+sleep 2
+kill $AAA_SSE_PID 2>/dev/null
+wait $AAA_SSE_PID 2>/dev/null
+if grep -q "event: deploy:settings-changed" "$AAA_SSE_LOG"; then
+    echo "  ${GRN}✓${END} deploy:settings-changed SSE event fired on deploy.* save"
+    PASS=$((PASS + 1))
+else
+    echo "  ${RED}✗${END} deploy:settings-changed SSE event MISSING from /api/events stream"
+    echo "      captured: $(head -c 200 "$AAA_SSE_LOG")"
+    FAIL=$((FAIL + 1))
+fi
+rm -f "$AAA_SSE_LOG"
+
 # ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
