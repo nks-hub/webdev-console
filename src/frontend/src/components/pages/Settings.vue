@@ -612,12 +612,27 @@
                      Persisted setting round-trips through Settings save
                      so when phase B/C land + tools/e2e proves parity,
                      operators can flip without code changes. -->
+                <!-- Iter 58 (#258) — restart-pending banner: when the
+                     operator flipped this switch but the daemon hasn't
+                     restarted, the conditional handler registration still
+                     honours the boot value. Banner appears INLINE so the
+                     operator sees it the moment they save without having
+                     to open the per-site popover. -->
+                <el-alert
+                  v-if="deployRestartPending"
+                  :title="$t('deploySettings.restartPendingTitle')"
+                  :description="$t('deploySettings.restartPendingDescription')"
+                  type="warning"
+                  :closable="false"
+                  show-icon
+                  style="margin-bottom: 12px; max-width: 480px"
+                />
                 <el-form-item :label="$t('settings.deploySubsystem.legacyHandlersLabel')">
                   <el-tooltip
                     :content="$t('settings.deploySubsystem.legacyHandlersTooltip')"
                     placement="right"
                   >
-                    <el-switch v-model="deployUseLegacyHostHandlers" :disabled="!deployFlipUnlocked" />
+                    <el-switch v-model="deployUseLegacyHostHandlers" :disabled="!deployFlipUnlocked && !deployRestartPending" />
                   </el-tooltip>
                   <span class="hint" style="margin-left: 12px">
                     {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
@@ -1499,6 +1514,12 @@ const deployFlipBlockerDetails = ref<DeployBlockerDetail[]>([])
 const deployBackendMode = ref<'built-in' | 'plugin' | null>(null)
 const deployPluginVersion = ref<string | null>(null)
 const deployPluginLoaded = ref<boolean>(false)
+// Iter 56-58 (#258) — restartPending becomes true when the operator has
+// flipped useLegacyHostHandlers but the daemon still serves under the
+// boot-time value. The global toggle is the place where the operator
+// most commonly does this flip, so the banner here is even more
+// important than the per-site popover.
+const deployRestartPending = ref<boolean>(false)
 async function loadDeployFlipReadiness(): Promise<void> {
   try {
     // Iter 19: fetch with ?explain=true so the locked-toggle popover can
@@ -1516,6 +1537,7 @@ async function loadDeployFlipReadiness(): Promise<void> {
       deployBackendMode.value = j.mode === 'plugin' || j.mode === 'built-in' ? j.mode : null
       deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
       deployPluginLoaded.value = j.pluginLoaded === true
+      deployRestartPending.value = j.restartPending === true
     }
   } catch { /* keep locked on error */ }
 }
