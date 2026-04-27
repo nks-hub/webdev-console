@@ -25,6 +25,7 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
     private readonly IMcpSessionGrantsRepository _grants;
     private readonly IDestructiveOperationKinds _kinds;
     private readonly Func<bool> _strictKindsLookup;
+    private readonly Func<IReadOnlySet<string>> _alwaysConfirmKindsLookup;
 
     /// <summary>
     /// Phase 7.4e ctor — adds the kinds registry and a strict-mode lookup.
@@ -38,12 +39,32 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         IMcpSessionGrantsRepository grants,
         IDestructiveOperationKinds kinds,
         Func<bool> strictKindsLookup)
+        : this(db, signer, grants, kinds, strictKindsLookup,
+              () => (IReadOnlySet<string>)new HashSet<string>(StringComparer.OrdinalIgnoreCase))
+    { }
+
+    /// <summary>
+    /// Phase 7.5+++ ctor — adds an "always confirm" kinds lookup. When a
+    /// kind appears in the returned set, the validator skips grant
+    /// auto-approval and forces operator confirmation through the GUI
+    /// banner. Override knob for the user's "trvale povoleni" surface
+    /// when an operator wants to ring-fence the riskiest ops (e.g.
+    /// restore, group rollback) regardless of session/instance grants.
+    /// </summary>
+    public DeployIntentValidator(
+        Database db,
+        IntentSigner signer,
+        IMcpSessionGrantsRepository grants,
+        IDestructiveOperationKinds kinds,
+        Func<bool> strictKindsLookup,
+        Func<IReadOnlySet<string>> alwaysConfirmKindsLookup)
     {
         _db = db;
         _signer = signer;
         _grants = grants;
         _kinds = kinds;
         _strictKindsLookup = strictKindsLookup;
+        _alwaysConfirmKindsLookup = alwaysConfirmKindsLookup;
     }
 
     /// <summary>
@@ -55,7 +76,8 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         Database db,
         IntentSigner signer,
         IMcpSessionGrantsRepository grants)
-        : this(db, signer, grants, NullKinds.Instance, () => false)
+        : this(db, signer, grants, NullKinds.Instance, () => false,
+              () => (IReadOnlySet<string>)new HashSet<string>(StringComparer.OrdinalIgnoreCase))
     { }
 
     /// <summary>Empty kinds registry for the legacy ctor — every Get returns null.</summary>
@@ -149,7 +171,19 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         {
             var grantedAuto = false;
             string? matchedGrantId = null;
-            if (!allowUnconfirmed && McpCallerContext.HasAnyIdentity)
+            // Phase 7.5+++ — always-confirm override. When the operator
+            // marks a kind as always-confirm via Settings, skip grant
+            // auto-approval entirely so the GUI banner is mandatory even
+            // for grants that would otherwise match. Permits the user's
+            // "ring-fence the riskiest ops" story without revoking
+            // trustworthy session/instance grants for everything else.
+            var alwaysConfirm = false;
+            try
+            {
+                alwaysConfirm = _alwaysConfirmKindsLookup().Contains(row.Kind);
+            }
+            catch { /* best-effort, fall back to grant matching */ }
+            if (!allowUnconfirmed && !alwaysConfirm && McpCallerContext.HasAnyIdentity)
             {
                 var grant = await _grants.FindMatchingActiveAsync(
                     McpCallerContext.SessionId,

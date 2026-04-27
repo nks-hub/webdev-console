@@ -1907,6 +1907,22 @@ XX_NO_TOKEN=$(curl -s -o /dev/null -w '%{http_code}' \
 step "cancel without token still hits not-found path (back-compat)" "$XX_NO_TOKEN" "404"
 
 # ============================================================================
+echo ""; echo "${YEL}=== YY. always-confirm kinds override ===${END}"
+# ============================================================================
+# Phase 7.5+++ — when mcp.always_confirm_kinds contains a kind, the
+# validator should refuse to auto-approve via grants for that kind, even
+# when an "always trust" wildcard grant exists. Setting persists +
+# influences validator immediately (lookup runs per-call).
+YY_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
+api PUT /api/settings -d '{"mcp.always_confirm_kinds":"deploy,restore,cancel,rollback"}' >/dev/null
+YY_AFTER=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
+step "always-confirm setting persists" "$YY_AFTER" "deploy,restore,cancel,rollback"
+# Reset (don't leave restore in always-confirm — would break unrelated tests)
+api PUT /api/settings -d "{\"mcp.always_confirm_kinds\":\"$YY_BEFORE\"}" >/dev/null
+YY_RESET=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
+step "always-confirm setting resets to prior value" "$YY_RESET" "$YY_BEFORE"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""

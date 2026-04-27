@@ -147,7 +147,21 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentVal
         sp.GetRequiredService<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>(),
         sp.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository>(),
         sp.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds>(),
-        () => sp.GetRequiredService<SettingsStore>().GetBool("mcp", "strict_kinds", defaultValue: false)));
+        () => sp.GetRequiredService<SettingsStore>().GetBool("mcp", "strict_kinds", defaultValue: false),
+        // Phase 7.5+++ — always-confirm override. Comma-separated list of kind ids
+        // (e.g. "restore,cancel"). Whitespace tolerated; case-insensitive set.
+        () =>
+        {
+            var raw = sp.GetRequiredService<SettingsStore>()
+                .GetString("mcp", "always_confirm_kinds") ?? "";
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries
+                                              | StringSplitOptions.TrimEntries))
+            {
+                if (part.Length > 0) set.Add(part);
+            }
+            return (IReadOnlySet<string>)set;
+        }));
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
 // intents (audit tail), 1-day for unused expired ones. See class docs.
 builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.IntentSweeperService>();
