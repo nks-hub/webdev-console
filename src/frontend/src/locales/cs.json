@@ -1209,6 +1209,8 @@
         "hooks": "Hooks",
         "noHooks": "žádné",
         "healthCheck": "Health check",
+        "soak": "Soak",
+        "soakSeconds": "{n} s před commitem",
         "notifications": "Notifikace",
         "slackEnabled": "Slack zapnutý",
         "slackDisabled": "Slack vypnutý"

@@ -1209,6 +1209,8 @@
         "hooks": "Hooks",
         "noHooks": "none",
         "healthCheck": "Health check",
+        "soak": "Soak",
+        "soakSeconds": "{n}s before commit",
         "notifications": "Notifications",
         "slackEnabled": "Slack enabled",
         "slackDisabled": "Slack disabled"

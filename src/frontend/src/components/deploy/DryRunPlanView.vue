@@ -91,6 +91,10 @@
       <span class="plan-key">{{ t('deploy.quickBar.plan.healthCheck') }}</span>
       <span class="plan-val mono">{{ plan.healthCheckUrl }}</span>
     </div>
+    <div v-if="plan.soakSeconds > 0" class="plan-row">
+      <span class="plan-key">{{ t('deploy.quickBar.plan.soak') }}</span>
+      <span class="plan-val">{{ t('deploy.quickBar.plan.soakSeconds', { n: plan.soakSeconds }) }}</span>
+    </div>
     <div class="plan-row">
       <span class="plan-key">{{ t('deploy.quickBar.plan.notifications') }}</span>
       <span class="plan-val">{{ plan.slackEnabled
