@@ -1713,6 +1713,45 @@ if [ -n "$RR_BACKUP" ]; then echo "$RR_BACKUP" > "$RR_SETTINGS_FILE"; fi
 rm -rf "$RR_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== SS. health check probe in soak phase ===${END}"
+# ============================================================================
+# Configure healthCheckUrl pointing at the daemon's own /healthz so we get
+# a deterministic 200, fire deploy, subscribe SSE briefly, assert the
+# soak phase emits "Health check OK (200, ...)" message.
+SS_TARGET_MSYS="/c/temp/e2e-health-target"
+SS_TARGET_WIN="C:/temp/e2e-health-target"
+rm -rf "$SS_TARGET_MSYS"
+mkdir -p "$SS_TARGET_MSYS"
+
+SS_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+SS_BACKUP=""
+[ -f "$SS_SETTINGS_FILE" ] && SS_BACKUP=$(cat "$SS_SETTINGS_FILE")
+cat > "$SS_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":3,"healthCheckUrl":"http://localhost:17280/healthz","localSourcePath":"C:/work/sites/blog.loc","localTargetPath":"$SS_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+# Capture SSE in background → temp file. timeout exits after 8s regardless.
+SS_SSE_OUT=$(mktemp)
+( timeout 8 curl -sN -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/events?token=$TOKEN" > "$SS_SSE_OUT" 2>/dev/null ) &
+SS_SSE_PID=$!
+sleep 1  # let SSE attach before fire
+
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","branch":"main"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 6  # soak window 3s + buffer
+wait $SS_SSE_PID 2>/dev/null
+
+step "SSE captured 'Health check OK' from soak phase" "$(cat $SS_SSE_OUT)" 'Health check OK \(200'
+step "SSE captured AwaitingSoak phase" "$(cat $SS_SSE_OUT)" '"phase":"AwaitingSoak"'
+
+# Cleanup
+rm -f "$SS_SSE_OUT"
+if [ -n "$SS_BACKUP" ]; then echo "$SS_BACKUP" > "$SS_SETTINGS_FILE"; fi
+rm -rf "$SS_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
