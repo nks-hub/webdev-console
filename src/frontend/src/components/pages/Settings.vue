@@ -641,8 +641,17 @@
                     <!-- Iter 21: shared component renders blockerDetails
                          phase tag + remediation. Same shape as the per-site
                          DeploySettingsPanel popover so operator sees identical
-                         UI in both global + per-site contexts. -->
+                         UI in both global + per-site contexts.
+                         Iter 24: localized recommendation header mirrors the
+                         per-site popover for visual symmetry. -->
                     <div style="font-size: 12px">
+                      <div style="margin-bottom: 6px">
+                        <strong>
+                          {{ deployFlipUnlocked
+                            ? $t('deploySettings.readyToFlip')
+                            : $t('deploySettings.stayOnBuiltIn', { n: deployFlipBlockers.length }) }}
+                        </strong>
+                      </div>
                       <ReadinessBlockerList
                         :blockers="deployFlipBlockers"
                         :blocker-details="deployFlipBlockerDetails"
