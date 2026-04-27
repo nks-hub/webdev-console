@@ -13,6 +13,23 @@
 # Runs all sections to completion and exits non-zero at the end if any
 # `step` failed (PASS/FAIL summary printed before exit).
 set -u
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    cat <<EOF
+Usage: tools/e2e-mcp-deploy.sh
+
+Full E2E test of MCP intent + grants + dummy deploy flow against
+blog.loc and shop.loc on a live daemon (port 17280, token from
+\$TEMP/nks-wdc-daemon.port). Runs all sections to completion and
+exits non-zero at the end if any step failed (PASS/FAIL summary
+printed before exit).
+
+Sections cover: settings, kinds, grants, intents, deploy history,
+real deploy fire, MCP gates, plugin readiness, gatedEndpoints[].
+EOF
+    exit 0
+fi
+
 PASS=0; FAIL=0
 RED=$'\033[31m'; GRN=$'\033[32m'; YEL=$'\033[33m'; END=$'\033[0m'
 
