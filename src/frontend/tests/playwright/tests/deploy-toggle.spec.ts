@@ -15,6 +15,15 @@ import { test, expect } from './_fixtures'
 // finally block so a partial failure can't leave the operator with
 // deploy disabled.
 
+// Iter 37 — force serial mode so this describe block holds the worker
+// for its full duration. Without this, Playwright (despite workers:1)
+// can interleave per-test boundaries between sibling describe blocks,
+// and our deploy.enabled=false mid-test window leaks `404 deploy_disabled`
+// into other specs' /api/nks.wdc.deploy/* assertions. Marking this
+// suite serial pins all its tests to one continuous worker slot, so
+// the false-state window can't coincide with other tests' execution.
+test.describe.configure({ mode: 'serial' })
+
 test.describe('deploy.enabled toggle (operator switch)', () => {
   test('flipping deploy.enabled=false makes deploy routes 404', async ({ authedRequest }) => {
     const before = await authedRequest.get('/api/settings')
