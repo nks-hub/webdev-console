@@ -39,7 +39,7 @@
       </el-checkbox>
 
       <el-button
-        :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy"
+        :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy || storeBusy"
         :loading="previewBusy"
         @click="onPreview"
       >
@@ -48,14 +48,27 @@
 
       <el-button
         type="primary"
-        :disabled="!targetHost || busy"
+        :disabled="!targetHost || busy || storeBusy"
         :loading="busy"
         @click="onFire"
       >
         {{ buttonLabel }}
       </el-button>
 
-      <span class="quick-hint muted">{{ t('deploy.quickBar.hint') }}</span>
+      <!-- Iter 73 — surface in-flight deploy from store so operator
+           sees what's blocking the fire button instead of a silently
+           grayed control. Click jumps to the running deploy's drawer. -->
+      <el-tag
+        v-if="storeBusy && activeRunSummary"
+        type="warning"
+        size="small"
+        effect="plain"
+        class="quick-running clickable-stat"
+        @click="onJumpToActive"
+      >
+        ⏵ {{ activeRunSummary }}
+      </el-tag>
+      <span v-else class="quick-hint muted">{{ t('deploy.quickBar.hint') }}</span>
     </div>
 
     <!-- Phase 7.5+++ — preview modal: shows the resolved deploy plan
@@ -93,6 +106,26 @@ const props = defineProps<{
 }>()
 
 const store = useDeployStore()
+// Iter 73 — surface ANY in-flight deploy from the store (not just one
+// fired by this QuickBar). HostCard / drawer flows share the same store,
+// so this catches fan-out groups too. Active run is "in-flight" while
+// it's not in a terminal phase.
+const TERMINAL_PHASES = new Set(['Done', 'Failed', 'Cancelled', 'RolledBack'])
+const storeBusy = computed(() => {
+  const r = store.activeRun
+  return !!(r && !TERMINAL_PHASES.has(r.latestPhase))
+})
+const activeRunSummary = computed(() => {
+  const r = store.activeRun
+  if (!r || TERMINAL_PHASES.has(r.latestPhase)) return ''
+  return `${r.host || '?'} · ${r.latestPhase}`
+})
+function onJumpToActive(): void {
+  // Re-open the drawer for whatever's currently active. The store
+  // already exposes activeRunId; openDrawerFor is the tracking helper
+  // the rest of the UI uses.
+  if (store.activeRunId) store.openDrawerFor(store.activeRunId)
+}
 // Iter 72 — pre-select target host so operator doesn't need to click
 // the dropdown first. Single-host config (the common dev case) → that
 // host. Multi-host → "__all__" so operator can fan out in one click.
