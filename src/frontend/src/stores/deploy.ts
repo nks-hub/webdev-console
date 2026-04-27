@@ -116,6 +116,39 @@ export const useDeployStore = defineStore('deploy', () => {
     runs.value = new Map(runs.value)
   }
 
+  /**
+   * Phase 7.5+++ — record a `deploy:hook` SSE event onto the matching
+   * run state. App.vue's subscribeEventsMap routes 'deploy:hook' here.
+   * Tolerates the run not yet existing (rare race where a hook fires
+   * before the seed event); creates a placeholder row in that case.
+   */
+  function handleHookEvent(evt: { deployId: string } & DeployHookEvent): void {
+    let run = runs.value.get(evt.deployId)
+    if (!run) {
+      run = {
+        deployId: evt.deployId,
+        domain: '?',
+        host: '?',
+        startedAt: new Date().toISOString(),
+        events: [],
+        latestPhase: 'Building',
+        latestStep: '',
+        latestMessage: '',
+        isPastPonr: false,
+        isTerminal: false,
+        success: null,
+        hooks: [],
+      }
+      runs.value.set(evt.deployId, run)
+    }
+    if (!run.hooks) run.hooks = []
+    run.hooks.push({
+      evt: evt.evt, type: evt.type, label: evt.label,
+      ok: evt.ok, durationMs: evt.durationMs, error: evt.error,
+    })
+    runs.value = new Map(runs.value)
+  }
+
   async function refreshStatus(domain: string, deployId: string): Promise<DeployResultDto> {
     const r = await getDeployStatus(domain, deployId)
     const existing = runs.value.get(deployId)
@@ -226,6 +259,7 @@ export const useDeployStore = defineStore('deploy', () => {
     historyByDomain,
     startDeploy,
     handleSseEvent,
+    handleHookEvent,
     refreshStatus,
     refreshHistory,
     rollback,
@@ -257,4 +291,16 @@ export interface DeployRunState {
   success: boolean | null
   /** Phase 6.19a — populated by loadAndOpenHistorical when the daemon row carries it. */
   groupId?: string | null
+  /** Phase 7.5+++ — accumulated deploy:hook SSE events for visual feedback in the drawer. */
+  hooks?: DeployHookEvent[]
+}
+
+/** Phase 7.5+++ — one hook fire as broadcast by the daemon. */
+export interface DeployHookEvent {
+  evt: string         // pre_deploy | post_fetch | pre_switch | post_switch | on_failure
+  type: string        // shell | http | php
+  label: string
+  ok: boolean
+  durationMs: number
+  error?: string
 }

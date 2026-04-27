@@ -128,6 +128,11 @@ function startDeploySse(): void {
   if (unsubscribeDeploy) return
   unsubscribeDeploy = subscribeEventsMap({
     'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
+    // Phase 7.5+++ — hook execution feedback. RunHooksAsync emits one
+    // event per hook fire so the drawer can show shell/http/php results.
+    'deploy:hook': (data) =>
+      deployStore.handleHookEvent(data as { deployId: string; evt: string;
+        type: string; label: string; ok: boolean; durationMs: number; error?: string }),
     'mcp:confirm-request': (data) => {
       const evt = data as { intentId: string; prompt?: string; kind?: string }
       mcpConfirmStore.addPending(evt)

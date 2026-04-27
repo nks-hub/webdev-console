@@ -998,6 +998,7 @@
       "groupLink": "Part of multi-host group",
       "viewGroup": "View related group →",
       "rawOutput": "Raw output",
+      "hooksTitle": "Hooks",
       "cancel": "Cancel",
       "cancelDisabled": "Cancel disabled (past PONR)",
       "cancelDisabledTitle": "Cannot cancel after point of no return — use rollback",

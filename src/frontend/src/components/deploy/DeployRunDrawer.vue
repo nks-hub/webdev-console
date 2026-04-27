@@ -59,6 +59,33 @@
         :show-ponr-alert="run.isPastPonr"
       />
 
+      <!-- Phase 7.5+++ — hook execution panel. Only renders when at
+           least one hook fired (so deploys without configured hooks
+           keep the drawer compact). One row per fire with status icon,
+           phase tag, type tag, label, duration. Failed hooks expand
+           the error message inline. -->
+      <div v-if="run.hooks && run.hooks.length > 0" class="hook-panel">
+        <div class="hook-panel-header">
+          <span>{{ t('deploy.drawer.hooksTitle') }}</span>
+          <el-tag size="small" effect="plain">{{ run.hooks.length }}</el-tag>
+        </div>
+        <ul class="hook-list">
+          <li v-for="(h, i) in run.hooks" :key="i" class="hook-row"
+              :class="{ 'hook-failed': !h.ok }">
+            <span class="hook-status" :class="{ ok: h.ok, fail: !h.ok }">
+              {{ h.ok ? '✓' : '✗' }}
+            </span>
+            <el-tag :type="hookEvtTagType(h.evt)" size="small" effect="dark" class="hook-evt">
+              {{ h.evt }}
+            </el-tag>
+            <el-tag size="small" effect="plain" class="hook-type">{{ h.type }}</el-tag>
+            <span class="hook-label">{{ h.label }}</span>
+            <span class="hook-duration muted">{{ h.durationMs }} ms</span>
+            <div v-if="!h.ok && h.error" class="hook-error mono">{{ h.error }}</div>
+          </li>
+        </ul>
+      </div>
+
       <el-collapse class="drawer-collapse">
         <el-collapse-item :title="t('deploy.drawer.rawOutput')">
           <RawOutputPane :lines="rawLines" />
@@ -120,6 +147,16 @@ defineEmits<{
 
 const deployStore = useDeployStore()
 const run = computed(() => deployStore.activeRun)
+
+// Phase 7.5+++ — color hook tags by lifecycle phase, mirroring the
+// settings Hooks tab. Helps the operator scan a long hook list and
+// see which stage each one fired at without reading the label.
+function hookEvtTagType(evt: string): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
+  if (evt === 'pre_deploy' || evt === 'post_fetch') return 'info'
+  if (evt === 'pre_switch' || evt === 'post_switch') return 'primary'
+  if (evt === 'on_failure' || evt === 'on_rollback') return 'danger'
+  return 'info'
+}
 const open = computed(() => deployStore.isDrawerOpen)
 
 // Convert the rolling event list into a 16-row waterfall. Each known nksdeploy
@@ -267,4 +304,37 @@ async function onCancel(): Promise<void> {
 .drawer-footer { display: flex; gap: 8px; justify-content: flex-end; }
 .drawer-empty { padding: 24px 0; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
+
+/* Phase 7.5+++ — hook execution panel */
+.hook-panel {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--el-fill-color-lighter);
+}
+.hook-panel-header {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; font-size: 13px; margin-bottom: 6px;
+}
+.hook-list { list-style: none; padding: 0; margin: 0; }
+.hook-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.hook-row.hook-failed { background: var(--el-color-danger-light-9); padding-left: 4px; border-radius: 3px; }
+.hook-status { font-weight: 700; width: 14px; text-align: center; }
+.hook-status.ok { color: var(--el-color-success); }
+.hook-status.fail { color: var(--el-color-danger); }
+.hook-evt, .hook-type { flex-shrink: 0; }
+.hook-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
+.hook-duration { font-size: 11px; flex-shrink: 0; }
+.hook-error {
+  flex-basis: 100%; padding-left: 22px;
+  font-size: 11px;
+  color: var(--el-color-danger);
+  word-break: break-all;
+}
+.muted { color: var(--el-text-color-secondary); }
 </style>

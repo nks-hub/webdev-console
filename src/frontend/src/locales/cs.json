@@ -998,6 +998,7 @@
       "groupLink": "Součást skupinového deploye",
       "viewGroup": "Zobrazit skupinu →",
       "rawOutput": "Surový výstup",
+      "hooksTitle": "Hooks",
       "cancel": "Zrušit",
       "cancelDisabled": "Cancel zakázán (po PONR)",
       "cancelDisabledTitle": "Nelze zrušit po bodu, ze kterého není návratu — použijte rollback",
