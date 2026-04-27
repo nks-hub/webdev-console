@@ -470,7 +470,7 @@
                  entry + makes the daemon's /api/mcp/intents endpoints
                  return 404. Operators not running an AI client see no
                  trace of the subsystem. -->
-            <div class="settings-section" style="margin-top: 16px">
+            <div class="settings-section" id="mcp-section" style="margin-top: 16px">
               <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.mcp.description') }}
@@ -1190,6 +1190,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download } from '@element-plus/icons-vue'
@@ -1253,6 +1254,29 @@ watch(() => uiModeStore.isSimple, (simple) => {
     activeTab.value = 'general'
   }
 })
+
+// Phase 7.5+++ — deep-link target. Supports ?tab=advanced&scroll=mcp-section
+// from cross-page links (McpKinds always-confirm chip, etc.). Selecting
+// the tab is enough to surface the MCP section within Advanced; the
+// scroll attribute lets us jump to a specific anchor.
+const route = useRoute()
+function applyDeepLink(): void {
+  const tabParam = typeof route.query.tab === 'string' ? route.query.tab : ''
+  if (tabParam) {
+    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) return
+    activeTab.value = tabParam
+  }
+  const scrollTarget = typeof route.query.scroll === 'string' ? route.query.scroll : ''
+  if (scrollTarget) {
+    // Defer to next tick so the tab content is in the DOM before we
+    // scroll to its anchor.
+    setTimeout(() => {
+      const el = document.getElementById(scrollTarget)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }
+}
+watch(() => route.query, applyDeepLink, { immediate: true })
 
 const saving = ref(false)
 const databases = ref<string[]>([])

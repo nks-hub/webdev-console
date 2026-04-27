@@ -92,6 +92,7 @@
             size="small"
             effect="dark"
             class="always-confirm-tag"
+            @click="goToAlwaysConfirmSetting"
           >
             🔒 {{ t('mcpKinds.alwaysConfirm') }}
           </el-tag>
@@ -138,6 +139,13 @@ function autoApproveCount(kindId: string): number {
 
 function goToGrants(kindId: string): void {
   void router.push({ path: '/mcp/grants', query: { kind: kindId } })
+}
+
+// Phase 7.5+++ — deep-link to the Settings → Advanced → MCP section
+// where the always-confirm picker lives. Operator can edit the
+// override directly from a kind row.
+function goToAlwaysConfirmSetting(): void {
+  void router.push({ path: '/settings', query: { tab: 'advanced', scroll: 'mcp-section' } })
 }
 
 const search = ref('')
@@ -237,5 +245,10 @@ async function refresh(): Promise<void> {
 }
 .always-confirm-tag {
   font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.always-confirm-tag:hover {
+  filter: brightness(1.1);
 }
 </style>
