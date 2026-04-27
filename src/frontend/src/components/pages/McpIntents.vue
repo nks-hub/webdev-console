@@ -164,15 +164,21 @@
       <el-table-column prop="host" :label="t('mcpIntents.col.host')" width="120" />
       <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" min-width="180">
         <template #default="{ row }">
+          <!-- Phase 7.5+++ — operator-locale label via humanKindLabel
+               (mirrors the helper in McpKinds, McpConfirmBanner,
+               Settings always-confirm picker, McpGrants tooltip).
+               When the localized label differs from the daemon-supplied
+               one, surface the daemon label as the title attr so plugin
+               authors can verify their English shipped through. -->
           <el-tag
             :type="row.kindDanger === 'destructive' ? 'danger' : kindTagType(row.kind)"
             size="small"
             effect="plain"
-            :title="row.kindLabel ? row.kindLabel + (row.kindPluginId ? ' (' + row.kindPluginId + ')' : '') : row.kind"
+            :title="kindTagTitle(row)"
           >
-            {{ row.kindLabel || row.kind }}
+            {{ humanKindLabel(row) }}
           </el-tag>
-          <code v-if="row.kindLabel" class="kind-id-mono mono">{{ row.kind }}</code>
+          <code v-if="humanKindLabel(row) !== row.kind" class="kind-id-mono mono">{{ row.kind }}</code>
         </template>
       </el-table-column>
 
@@ -460,6 +466,26 @@ function kindTagType(kind: string): 'danger' | 'warning' | 'info' {
   if (kind === 'restore' || kind === 'rollback') return 'warning'
   if (kind === 'deploy') return 'danger'
   return 'info' // cancel
+}
+
+// Phase 7.5+++ — same kind-label helper as the other 4 MCP surfaces
+// (McpKinds table, McpConfirmBanner, Settings picker, McpGrants
+// tooltip). 3-level fallback: localized i18n key → daemon-supplied
+// kindLabel → bare wire id.
+function humanKindLabel(row: { kind: string; kindLabel?: string }): string {
+  const key = `mcpKinds.labels.${row.kind}`
+  const localized = t(key)
+  return localized !== key ? localized : (row.kindLabel || row.kind)
+}
+
+// Title attribute for the kind tag — surfaces daemon-supplied label
+// when our localization replaces it (so plugin authors verify their
+// shipped English carries through), plus pluginId for provenance.
+function kindTagTitle(row: { kind: string; kindLabel?: string; kindPluginId?: string }): string {
+  const localized = humanKindLabel(row)
+  const daemon = row.kindLabel || row.kind
+  const provenance = row.kindPluginId ? ` (${row.kindPluginId})` : ''
+  return localized !== daemon ? `${daemon}${provenance}` : `${row.kind}${provenance}`
 }
 
 async function onRevoke(row: IntentInventoryEntry): Promise<void> {
