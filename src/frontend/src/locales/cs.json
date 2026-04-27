@@ -761,7 +761,6 @@
         "sshTarget": "SSH user@host",
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
-        "autoDeploy": "Auto-deploy",
         "localPaths": "Lokální cesty",
         "actions": "Akce"
       },

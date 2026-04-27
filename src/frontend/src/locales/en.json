@@ -761,7 +761,6 @@
         "sshTarget": "SSH user@host",
         "remotePath": "Remote path",
         "branch": "Branch",
-        "autoDeploy": "Auto-deploy",
         "localPaths": "Local paths",
         "actions": "Actions"
       },
