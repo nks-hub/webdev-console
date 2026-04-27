@@ -26,7 +26,7 @@
  * phar fails late, not at staging time.
  */
 
-import { existsSync, mkdirSync, copyFileSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, copyFileSync, rmSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync, spawnSync } from 'node:child_process'
@@ -108,8 +108,24 @@ function findPhp() {
   const onPath = which('php')
   if (onPath) return assertPhpVersion(onPath)
   if (process.platform === 'win32') {
-    const mamp = 'C:/MAMP/bin/php/php8.4.12/php.exe'
-    if (existsSync(mamp)) return assertPhpVersion(mamp)
+    // MAMP can ship multiple PHP versions side by side under C:/MAMP/bin/php/.
+    // Parse numeric major/minor and keep only >=8.4. Sort descending so the
+    // newest matching version wins. Avoids hardcoding a point version
+    // (was php8.4.12, broke when MAMP shipped 8.4.13).
+    const mampRoot = 'C:/MAMP/bin/php'
+    if (existsSync(mampRoot)) {
+      const candidates = readdirSync(mampRoot)
+        .map(n => {
+          const m = n.match(/^php(\d+)\.(\d+)\.(\d+)$/)
+          return m ? { name: n, major: +m[1], minor: +m[2], patch: +m[3] } : null
+        })
+        .filter(c => c && (c.major > 8 || (c.major === 8 && c.minor >= 4)))
+        .sort((a, b) => b.major - a.major || b.minor - a.minor || b.patch - a.patch)
+      for (const c of candidates) {
+        const exe = `${mampRoot}/${c.name}/php.exe`
+        if (existsSync(exe)) return assertPhpVersion(exe)
+      }
+    }
   }
   die('php not found — set PHP_BIN or install php on PATH (>=8.4 required)')
 }
