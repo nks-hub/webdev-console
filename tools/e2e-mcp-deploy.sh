@@ -1871,6 +1871,11 @@ step "dry-run returns wouldRelease timestamp" "$WW_RESP" '"wouldRelease":"[0-9]{
 step "dry-run returns wouldExtractTo path" "$WW_RESP" '"wouldExtractTo":"[^"]*releases'
 step "dry-run echoes sharedDirs from body" "$WW_RESP" '"sharedDirs":\["log","cache"\]'
 step "dry-run echoes keepReleases" "$WW_RESP" '"keepReleases":2'
+# Phase 7.5+++ — extended fields: branch echoed, currentRelease may be null,
+# totalHooksEnabled is a number. Used by GUI Preview dialog.
+step "dry-run echoes branch from body" "$WW_RESP" '"branch":"main"'
+step "dry-run includes totalHooksEnabled field" "$WW_RESP" '"totalHooksEnabled":[0-9]+'
+step "dry-run includes currentRelease field" "$WW_RESP" '"currentRelease":'
 # Confirm no DB row was written — history should NOT include this would-be deploy.
 sleep 1
 WW_HIST=$(api GET "/api/nks.wdc.deploy/sites/blog.loc/history?limit=5")

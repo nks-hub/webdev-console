@@ -3476,6 +3476,20 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         var prevPath = File.Exists(Path.Combine(localTarget!, ".dep", "previous_release"))
             ? File.ReadAllText(Path.Combine(localTarget!, ".dep", "previous_release")).Trim()
             : null;
+        // Resolve `current` symlink to the release ID it points at — lets the
+        // operator see "this would replace release X" alongside the new ID.
+        string? currentRelease = null;
+        try
+        {
+            var curDir = Path.Combine(localTarget!, "current");
+            if (Directory.Exists(curDir))
+            {
+                var info = new DirectoryInfo(curDir);
+                if (info.LinkTarget is not null)
+                    currentRelease = Path.GetFileName(info.LinkTarget);
+            }
+        }
+        catch { /* best-effort */ }
         return Results.Ok(new
         {
             dryRun = true,
@@ -3484,6 +3498,8 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
             wouldExtractTo = Path.Combine(localTarget!, "releases", releaseId),
             wouldCopyFrom = localSource,
             wouldSwapCurrentFrom = prevPath,
+            currentRelease,
+            branch,
             sharedDirs = optSharedDirs ?? new List<string> { "log", "temp" },
             sharedFiles = optSharedFiles ?? new List<string>(),
             keepReleases = keep,
@@ -3493,6 +3509,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
                 .Where(h => h.Enabled)
                 .GroupBy(h => h.Event)
                 .ToDictionary(g => g.Key, g => g.Count()),
+            totalHooksEnabled = optHooks.Count(h => h.Enabled),
             healthCheckUrl = optHealthCheckUrl,
             soakSeconds = optSoakSeconds,
             slackEnabled = !string.IsNullOrEmpty(optNotifications?.SlackWebhook),

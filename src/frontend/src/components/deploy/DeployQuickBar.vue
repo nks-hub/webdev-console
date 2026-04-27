@@ -80,6 +80,14 @@
           <span class="plan-key">{{ t('deploy.quickBar.plan.extractTo') }}</span>
           <span class="plan-val mono">{{ previewPlan.wouldExtractTo }}</span>
         </div>
+        <div v-if="previewPlan.branch" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.branch') }}</span>
+          <span class="plan-val mono">{{ previewPlan.branch }}</span>
+        </div>
+        <div v-if="previewPlan.currentRelease" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.currentRelease') }}</span>
+          <span class="plan-val mono">{{ previewPlan.currentRelease }}</span>
+        </div>
         <div v-if="previewPlan.wouldSwapCurrentFrom" class="plan-row">
           <span class="plan-key">{{ t('deploy.quickBar.plan.previousRelease') }}</span>
           <span class="plan-val mono">{{ previewPlan.wouldSwapCurrentFrom }}</span>

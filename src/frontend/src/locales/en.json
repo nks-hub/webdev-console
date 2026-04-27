@@ -1156,6 +1156,8 @@
         "wouldRelease": "New release",
         "copyFrom": "Source",
         "extractTo": "Target",
+        "branch": "Branch",
+        "currentRelease": "Current release",
         "previousRelease": "Previous release",
         "shared": "Shared",
         "retention": "Retention",

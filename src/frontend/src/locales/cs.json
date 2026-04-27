@@ -1156,6 +1156,8 @@
         "wouldRelease": "Nový release",
         "copyFrom": "Zdroj",
         "extractTo": "Cíl",
+        "branch": "Větev",
+        "currentRelease": "Aktuální release",
         "previousRelease": "Předchozí release",
         "shared": "Sdílené",
         "retention": "Retence",

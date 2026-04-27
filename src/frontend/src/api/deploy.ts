@@ -543,12 +543,15 @@ export interface DryRunDeployResult {
   wouldExtractTo: string
   wouldCopyFrom: string | null
   wouldSwapCurrentFrom: string | null
+  currentRelease: string | null
+  branch: string | null
   sharedDirs: string[]
   sharedFiles: string[]
   keepReleases: number
   existingReleaseCount: number
   wouldPruneCount: number
   hooksWillFire: Record<string, number>
+  totalHooksEnabled: number
   healthCheckUrl: string | null
   soakSeconds: number
   slackEnabled: boolean
