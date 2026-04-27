@@ -105,7 +105,14 @@ test.describe('MCP grants flow', () => {
       byId[k.id] = { danger: k.danger.toLowerCase(), alwaysConfirm: k.alwaysConfirm }
     }
 
-    const expected = ['database_drop', 'site_delete', 'dns_record_delete', 'ssl_cert_delete', 'plugin_uninstall']
+    const expected = [
+      'database_drop',
+      'database_query',
+      'site_delete',
+      'dns_record_delete',
+      'ssl_cert_delete',
+      'plugin_uninstall',
+    ]
     const missing = expected.filter((id) => !byId[id])
 
     if (missing.length === expected.length) {

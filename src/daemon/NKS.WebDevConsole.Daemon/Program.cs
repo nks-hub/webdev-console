@@ -9931,11 +9931,39 @@ app.MapGet("/api/databases/{name}/size", async (string name, BinaryManager bm, S
 });
 
 // Database query execution
-app.MapPost("/api/databases/{name}/query", async (string name, HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+// MCP intent-gated under kind=database_query. The endpoint accepts any
+// SQL — SELECT for the GUI database explorer is the common case, but
+// nothing prevents DROP/DELETE/TRUNCATE from being submitted. An AI
+// with a wildcard grant + this endpoint ungated could chain destructive
+// SQL as a single action; the gate forces the same intent + always-
+// confirm pipeline. Header-driven so the GUI explorer stays untouched.
+app.MapPost("/api/databases/{name}/query", async (
+    string name,
+    HttpContext ctx,
+    BinaryManager bm,
+    SettingsStore settings,
+    IServiceProvider sp,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    CancellationToken ct) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
-    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+
+    var dbqIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(dbqIntentToken))
+    {
+        var dbqAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var dbqVerdict = await intentValidator.ValidateAndConsumeAsync(
+            dbqIntentToken, "database_query", domain: name, host: "*db*", dbqAllowUnconfirmed, ct);
+        if (!dbqVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
+                statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
     var sql = body?.GetValueOrDefault("sql") ?? "";
     if (string.IsNullOrWhiteSpace(sql))
         return Results.BadRequest(new { error = "sql required" });

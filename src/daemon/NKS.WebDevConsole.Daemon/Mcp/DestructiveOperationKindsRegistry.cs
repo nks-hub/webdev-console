@@ -82,6 +82,16 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
             "ssl_cert_delete", "Delete an SSL certificate", CorePluginId, DangerLevel.Destructive);
         _kinds["plugin_uninstall"] = new DestructiveOperationKind(
             "plugin_uninstall", "Uninstall a plugin", CorePluginId, DangerLevel.Destructive);
+        // Phase 7.5+++ wave 2 — `database_query` covers arbitrary SQL
+        // execution via `POST /api/databases/{name}/query`. The endpoint
+        // accepts any SQL string in the body (SELECT, DROP, DELETE,
+        // TRUNCATE, …); the daemon doesn't parse it. An AI with a
+        // wildcard grant matching kindPattern="*" could chain DROP TABLE
+        // + DELETE FROM as a single irreversible destructive action.
+        // Tagged Destructive to qualify for the "Lock all destructive"
+        // preset (#208) and always-confirm-by-default in strict mode.
+        _kinds["database_query"] = new DestructiveOperationKind(
+            "database_query", "Execute arbitrary SQL against a database", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)
