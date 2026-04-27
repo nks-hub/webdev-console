@@ -39,6 +39,14 @@
       </el-checkbox>
 
       <el-button
+        :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy"
+        :loading="previewBusy"
+        @click="onPreview"
+      >
+        {{ t('deploy.quickBar.preview') }}
+      </el-button>
+
+      <el-button
         type="primary"
         :disabled="!targetHost || busy"
         :loading="busy"
@@ -49,6 +57,76 @@
 
       <span class="quick-hint muted">{{ t('deploy.quickBar.hint') }}</span>
     </div>
+
+    <!-- Phase 7.5+++ — preview modal: shows the resolved deploy plan
+         from the daemon's dryRun:true endpoint. Read-only summary;
+         operator clicks Deploy in the toolbar to actually commit. -->
+    <el-dialog
+      v-model="previewOpen"
+      :title="t('deploy.quickBar.previewTitle')"
+      width="540px"
+      destroy-on-close
+    >
+      <div v-if="previewPlan" class="preview-plan">
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.wouldRelease') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldRelease }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.copyFrom') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldCopyFrom }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.extractTo') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldExtractTo }}</span>
+        </div>
+        <div v-if="previewPlan.wouldSwapCurrentFrom" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.previousRelease') }}</span>
+          <span class="plan-val mono">{{ previewPlan.wouldSwapCurrentFrom }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.shared') }}</span>
+          <span class="plan-val">
+            <el-tag v-for="d in previewPlan.sharedDirs" :key="`d-${d}`" size="small" effect="plain" class="plan-tag">{{ d }}/</el-tag>
+            <el-tag v-for="f in previewPlan.sharedFiles" :key="`f-${f}`" size="small" effect="plain" class="plan-tag">{{ f }}</el-tag>
+            <span v-if="previewPlan.sharedDirs.length === 0 && previewPlan.sharedFiles.length === 0" class="muted">—</span>
+          </span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.retention') }}</span>
+          <span class="plan-val">
+            {{ t('deploy.quickBar.plan.retentionValue', {
+              keep: previewPlan.keepReleases,
+              existing: previewPlan.existingReleaseCount,
+              prune: previewPlan.wouldPruneCount,
+            }) }}
+          </span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.hooks') }}</span>
+          <span class="plan-val">
+            <el-tag v-for="(n, evt) in previewPlan.hooksWillFire" :key="evt" size="small" effect="plain" class="plan-tag">{{ evt }} ×{{ n }}</el-tag>
+            <span v-if="Object.keys(previewPlan.hooksWillFire).length === 0" class="muted">{{ t('deploy.quickBar.plan.noHooks') }}</span>
+          </span>
+        </div>
+        <div v-if="previewPlan.healthCheckUrl" class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.healthCheck') }}</span>
+          <span class="plan-val mono">{{ previewPlan.healthCheckUrl }}</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-key">{{ t('deploy.quickBar.plan.notifications') }}</span>
+          <span class="plan-val">{{ previewPlan.slackEnabled
+            ? t('deploy.quickBar.plan.slackEnabled')
+            : t('deploy.quickBar.plan.slackDisabled') }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="previewOpen = false">{{ t('deploy.quickBar.previewClose') }}</el-button>
+        <el-button type="primary" @click="onPreviewConfirm">
+          {{ t('deploy.quickBar.previewConfirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -57,6 +135,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
+import { dryRunDeploy, type DryRunDeployResult } from '../../api/deploy'
 
 const { t } = useI18n()
 const props = defineProps<{
@@ -69,6 +148,29 @@ const targetHost = ref<string>('')
 const branch = ref<string>('')
 const snapshot = ref<boolean>(false)
 const busy = ref<boolean>(false)
+const previewBusy = ref<boolean>(false)
+const previewOpen = ref<boolean>(false)
+const previewPlan = ref<DryRunDeployResult | null>(null)
+
+async function onPreview(): Promise<void> {
+  if (!targetHost.value || targetHost.value === '__all__') return
+  previewBusy.value = true
+  try {
+    previewPlan.value = await dryRunDeploy(props.domain, targetHost.value, {
+      branch: branch.value || undefined,
+    })
+    previewOpen.value = true
+  } catch (e) {
+    ElMessage.error((e as Error).message || t('deploy.quickBar.previewFailed'))
+  } finally {
+    previewBusy.value = false
+  }
+}
+
+async function onPreviewConfirm(): Promise<void> {
+  previewOpen.value = false
+  await onFire()
+}
 
 const buttonLabel = computed(() => {
   if (targetHost.value === '__all__') {
@@ -128,4 +230,36 @@ async function onFire(): Promise<void> {
   margin-left: auto;
 }
 .muted { color: var(--el-text-color-secondary); }
+
+.preview-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.plan-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+.plan-row:last-child { border-bottom: none; }
+.plan-key {
+  flex: 0 0 150px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+.plan-val {
+  flex: 1 1 auto;
+  word-break: break-all;
+}
+.plan-val.mono {
+  font-family: var(--el-font-family-monospace, ui-monospace, monospace);
+  font-size: 12px;
+}
+.plan-tag {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
 </style>

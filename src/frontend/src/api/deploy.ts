@@ -531,6 +531,43 @@ export async function testNotification(
   )
 }
 
+/**
+ * Phase 7.5+++ — dry-run preview of a deploy. Returns the resolved
+ * plan (release id, hooks that would fire, retention impact, etc.)
+ * WITHOUT executing anything. No DB write, no SSE, no copy.
+ */
+export interface DryRunDeployResult {
+  dryRun: true
+  deployId: null
+  wouldRelease: string
+  wouldExtractTo: string
+  wouldCopyFrom: string | null
+  wouldSwapCurrentFrom: string | null
+  sharedDirs: string[]
+  sharedFiles: string[]
+  keepReleases: number
+  existingReleaseCount: number
+  wouldPruneCount: number
+  hooksWillFire: Record<string, number>
+  healthCheckUrl: string | null
+  soakSeconds: number
+  slackEnabled: boolean
+}
+
+export async function dryRunDeploy(
+  domain: string,
+  host: string,
+  options?: { branch?: string; localPaths?: { source: string; target: string } },
+): Promise<DryRunDeployResult> {
+  const body: Record<string, unknown> = { host, dryRun: true }
+  if (options?.branch) body.branch = options.branch
+  if (options?.localPaths) body.localPaths = options.localPaths
+  return request<DryRunDeployResult>(
+    `${PREFIX}/sites/${encodeURIComponent(domain)}/deploy`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+}
+
 export async function testHostConnection(
   host: string,
   port: number,

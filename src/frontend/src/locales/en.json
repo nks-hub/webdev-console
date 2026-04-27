@@ -1144,7 +1144,27 @@
       "started": "Deploy started",
       "startedGroup": "Group deploy started ({id})",
       "failed": "Deploy failed",
-      "hint": "Skips the confirm dialog. Use the host card's Deploy button for full options."
+      "hint": "Skips the confirm dialog. Use the host card's Deploy button for full options.",
+      "preview": "Preview",
+      "previewTitle": "Deploy plan preview",
+      "previewClose": "Close",
+      "previewConfirm": "Deploy",
+      "previewFailed": "Preview failed",
+      "plan": {
+        "wouldRelease": "New release",
+        "copyFrom": "Source",
+        "extractTo": "Target",
+        "previousRelease": "Previous release",
+        "shared": "Shared",
+        "retention": "Retention",
+        "retentionValue": "Keep {keep} of {existing} (prune {prune})",
+        "hooks": "Hooks",
+        "noHooks": "none",
+        "healthCheck": "Health check",
+        "notifications": "Notifications",
+        "slackEnabled": "Slack enabled",
+        "slackDisabled": "Slack disabled"
+      }
     },
     "commandCenter": {
       "noHosts": "No deploy hosts configured",

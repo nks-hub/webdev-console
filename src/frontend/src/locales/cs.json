@@ -1144,7 +1144,27 @@
       "started": "Deploy spuštěn",
       "startedGroup": "Skupinový deploy spuštěn ({id})",
       "failed": "Deploy se nezdařil",
-      "hint": "Přeskočí potvrzovací dialog. Pro plné nastavení použijte tlačítko Deploy na kartě hosta."
+      "hint": "Přeskočí potvrzovací dialog. Pro plné nastavení použijte tlačítko Deploy na kartě hosta.",
+      "preview": "Náhled",
+      "previewTitle": "Náhled deploy plánu",
+      "previewClose": "Zavřít",
+      "previewConfirm": "Deploynout",
+      "previewFailed": "Náhled se nepodařilo načíst",
+      "plan": {
+        "wouldRelease": "Nový release",
+        "copyFrom": "Zdroj",
+        "extractTo": "Cíl",
+        "previousRelease": "Předchozí release",
+        "shared": "Sdílené",
+        "retention": "Retence",
+        "retentionValue": "Ponechat {keep} z {existing} (smaže {prune})",
+        "hooks": "Hooks",
+        "noHooks": "žádné",
+        "healthCheck": "Health check",
+        "notifications": "Notifikace",
+        "slackEnabled": "Slack zapnutý",
+        "slackDisabled": "Slack vypnutý"
+      }
     },
     "commandCenter": {
       "noHosts": "Žádní deploy hosti nejsou nakonfigurovaní",
