@@ -2074,6 +2074,23 @@ app.MapPost("/api/mcp/grants/import", async (
 // the Hooks settings card "Test" button so operator can validate a hook
 // works before relying on it. Body shape: { type, command, timeoutSeconds?,
 // description?, workingDir? }. Returns { ok, durationMs, error? }.
+//
+// Phase D (#109) — startup-time decision: when the operator has flipped
+// `deploy.useLegacyHostHandlers=false` we skip registering the 3
+// host-only daemon handlers below (hooks/test, notifications/test,
+// test-host-connection). Their plugin equivalents shipped in
+// webdev-console-plugins commits 8958565, c7b87ff, 74c61c8 and now win
+// the route table by default. Restart-required toggle (matches plugin
+// DLL load semantics — no hot reload).
+//
+// Real deploy/rollback still require phar; those handlers stay
+// daemon-authoritative until phase E rewrites the plugin's
+// NksDeployBackend to direct C#. This is the deliberate first slice of
+// the cutover so the toggle becomes meaningful without breaking anything.
+var legacyAtStartup = app.Services.GetRequiredService<SettingsStore>()
+    .GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
+if (legacyAtStartup)
+{
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/hooks/test", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
@@ -2250,6 +2267,7 @@ app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
         });
     }
 });
+} // end if (legacyAtStartup) — closes the 3 host-only daemon handler block
 
 // + DeploySiteTab's hasConfig probe (returns 404→empty when zero rows
 // would be returned, so frontend keeps showing the wizard CTA).
