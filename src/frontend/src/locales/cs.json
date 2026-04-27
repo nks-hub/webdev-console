@@ -1182,6 +1182,7 @@
       "branchPlaceholder": "větev (volitelné)",
       "branchAria": "Větev",
       "withSnapshot": "Se snapshotem DB",
+      "withSnapshotTip": "Před deployem vytvoří .zip aktuálního release adresáře — slouží jako rychlý rollback artefakt, není to dump databáze.",
       "deployOne": "Deploy",
       "deployAll": "Deploy {n} hostů",
       "started": "Deploy spuštěn",

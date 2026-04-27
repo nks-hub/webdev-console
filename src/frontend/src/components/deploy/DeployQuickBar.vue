@@ -34,9 +34,14 @@
         :aria-label="t('deploy.quickBar.branchAria')"
       />
 
-      <el-checkbox v-model="snapshot" size="default">
-        {{ t('deploy.quickBar.withSnapshot') }}
-      </el-checkbox>
+      <el-tooltip
+        :content="t('deploy.quickBar.withSnapshotTip')"
+        placement="top"
+      >
+        <el-checkbox v-model="snapshot" size="default">
+          {{ t('deploy.quickBar.withSnapshot') }}
+        </el-checkbox>
+      </el-tooltip>
 
       <el-tooltip
         :content="t('deploy.quickBar.previewAllHostsTip')"

@@ -1182,6 +1182,7 @@
       "branchPlaceholder": "branch (optional)",
       "branchAria": "Branch",
       "withSnapshot": "With DB snapshot",
+      "withSnapshotTip": "Before deploy, zips the current release directory as a fast rollback artifact — this is NOT a database dump.",
       "deployOne": "Deploy",
       "deployAll": "Deploy {n} hosts",
       "started": "Deploy started",
