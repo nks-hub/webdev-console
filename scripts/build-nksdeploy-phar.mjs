@@ -70,9 +70,18 @@ function which(cmd) {
 }
 
 function resolveSourceTree() {
-  if (process.env.NKSDEPLOY_SRC && existsSync(process.env.NKSDEPLOY_SRC)) {
-    log(`source from $NKSDEPLOY_SRC: ${process.env.NKSDEPLOY_SRC}`)
-    return process.env.NKSDEPLOY_SRC
+  if (process.env.NKSDEPLOY_SRC) {
+    const explicit = process.env.NKSDEPLOY_SRC
+    if (!existsSync(explicit)) {
+      die(`NKSDEPLOY_SRC=${explicit} does not exist on disk`)
+    }
+    if (!existsSync(join(explicit, 'box.json'))) {
+      die(`NKSDEPLOY_SRC=${explicit} is not an nksdeploy checkout (no box.json). ` +
+          `Either point it at a valid clone or unset and let the script fall back ` +
+          `to sibling/gh-nks/clone resolution.`)
+    }
+    log(`source from $NKSDEPLOY_SRC: ${explicit}`)
+    return explicit
   }
   const sibling = resolve(repoRoot, '..', 'nksdeploy')
   if (existsSync(join(sibling, 'box.json'))) {
