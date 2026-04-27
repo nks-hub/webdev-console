@@ -1788,6 +1788,43 @@ if [ -n "$TT_BACKUP" ]; then echo "$TT_BACKUP" > "$TT_SETTINGS_FILE"; fi
 rm -rf "$TT_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== UU. deploy:hook SSE event arrives during deploy ===${END}"
+# ============================================================================
+# Section OO already proves the hook process runs (marker file). This
+# verifies the SSE event the GUI drawer subscribes to actually broadcasts
+# with ok/durationMs/evt fields per the documented contract.
+UU_TARGET_MSYS="/c/temp/e2e-hooksse-target"
+UU_TARGET_WIN="C:/temp/e2e-hooksse-target"
+rm -rf "$UU_TARGET_MSYS"
+mkdir -p "$UU_TARGET_MSYS"
+UU_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+UU_BACKUP=""
+[ -f "$UU_SETTINGS_FILE" ] && UU_BACKUP=$(cat "$UU_SETTINGS_FILE")
+cat > "$UU_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"C:/work/sites/blog.loc","localTargetPath":"$UU_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[{"event":"post_switch","type":"shell","command":"echo uu-marker","timeoutSeconds":5,"enabled":true,"description":"UU SSE marker"}],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+UU_SSE_OUT=$(mktemp)
+( timeout 8 curl -sN -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/events?token=$TOKEN" > "$UU_SSE_OUT" 2>/dev/null ) &
+UU_SSE_PID=$!
+sleep 1
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","branch":"main"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 5
+wait $UU_SSE_PID 2>/dev/null
+
+step "SSE includes deploy:hook event" "$(cat $UU_SSE_OUT)" 'event: deploy:hook'
+step "SSE deploy:hook payload includes evt:post_switch" "$(cat $UU_SSE_OUT)" '"evt":"post_switch"'
+step "SSE deploy:hook payload includes ok:true" "$(cat $UU_SSE_OUT)" '"ok":true'
+step "SSE deploy:hook payload includes durationMs" "$(cat $UU_SSE_OUT)" '"durationMs":[0-9]'
+
+rm -f "$UU_SSE_OUT"
+if [ -n "$UU_BACKUP" ]; then echo "$UU_BACKUP" > "$UU_SETTINGS_FILE"; fi
+rm -rf "$UU_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
