@@ -69,6 +69,16 @@ public partial class PluginLoader
         // Phase #109 will move ownership to the plugin; until then, the
         // host wins and the plugin's clashing endpoints are skipped with a
         // visible log so operators can see the migration is in flight.
+        // Route templates that differ only by parameter NAME (e.g. host's
+        // `{snapshotId}` vs plugin's `{deployId}` for the same URL shape)
+        // would slip through a raw-text comparison and cause both routes
+        // to register — ASP.NET then resolves ambiguously to whichever
+        // it picks, breaking the host-wins guarantee we rely on for
+        // incremental plugin migration. Canonicalize by replacing every
+        // `{...}` segment with `{*}` so two patterns that match the same
+        // URL set hash to the same key regardless of parameter names.
+        static string Canonicalize(string raw) =>
+            System.Text.RegularExpressions.Regex.Replace(raw, @"\{[^{}]*\}", "{*}");
         var existing = new HashSet<(string Method, string Path)>(
             app.DataSources
                .SelectMany(ds => ds.Endpoints)
@@ -76,7 +86,7 @@ public partial class PluginLoader
                .SelectMany(re =>
                    (re.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()
                        ?.HttpMethods ?? Array.Empty<string>())
-                   .Select(method => (method.ToUpperInvariant(), re.RoutePattern.RawText ?? string.Empty))));
+                   .Select(method => (method.ToUpperInvariant(), Canonicalize(re.RoutePattern.RawText ?? string.Empty)))));
 
         foreach (var loaded in _plugins)
         {
@@ -88,7 +98,10 @@ public partial class PluginLoader
                 var skipped = 0;
                 foreach (var ep in reg.Endpoints)
                 {
-                    var key = (ep.Method.ToUpperInvariant(), ep.Path);
+                    // Canonicalize the plugin's path the same way the
+                    // host snapshot was, so parameter-name differences
+                    // ({deployId} vs {snapshotId}) don't slip through.
+                    var key = (ep.Method.ToUpperInvariant(), Canonicalize(ep.Path));
                     if (existing.Contains(key))
                     {
                         // Host already serves this route — skip silently in
@@ -102,8 +115,9 @@ public partial class PluginLoader
                     }
                     app.MapMethods(ep.Path, [ep.Method], ep.Handler)
                        .WithName($"{pluginId}:{ep.Method}:{ep.Path}");
-                    // Track newly-added so a SECOND plugin claiming the
-                    // same route doesn't double-register either.
+                    // Track newly-added (canonicalized) so a SECOND
+                    // plugin claiming the same route doesn't double-
+                    // register either.
                     existing.Add(key);
                 }
                 var registered = reg.Endpoints.Count - skipped;

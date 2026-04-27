@@ -101,7 +101,11 @@ api PUT /api/settings -d '{"mcp.enabled":"true","deploy.enabled":"true","mcp.str
 echo ""; echo "${YEL}=== B. MCP kinds discovery ===${END}"
 # ============================================================================
 KINDS=$(api GET /api/mcp/kinds)
-step "kinds endpoint returns 7 core kinds" "$KINDS" '"count":7'
+# Phase 7.5+++ wave 2 — registry expanded to 17 kinds covering deploy +
+# database + site + DNS + SSL + plugin + binary + service surfaces.
+# Match by ">=7" (additive-tolerant) so a future kind addition doesn't
+# break this assertion the way the original "==7" did.
+step "kinds endpoint returns at least 7 core kinds" "$KINDS" '"count":(1[0-9]|[7-9])'
 step "deploy kind has reversible danger" "$KINDS" '"id":"deploy".*"danger":"reversible"'
 step "restore kind has destructive danger" "$KINDS" '"id":"restore".*"danger":"destructive"'
 # Phase 7.5+++ — usage telemetry per kind. After many sections that
