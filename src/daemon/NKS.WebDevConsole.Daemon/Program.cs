@@ -2048,6 +2048,56 @@ static string DeploySettingsPath(string domain)
         NKS.WebDevConsole.Daemon.Deploy.DeployRestHelpers.SanitiseDomainForFilename(domain) + ".json");
 }
 
+// Phase 7.5+++ — read settings.snapshot.retentionDays for a domain.
+// Returns null when settings are absent / malformed so callers can
+// fall back to a sensible default. Best-effort — never throws.
+static int? ReadSnapshotRetentionDays(string domain)
+{
+    try
+    {
+        var sp = DeploySettingsPath(domain);
+        if (!File.Exists(sp)) return null;
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(sp));
+        if (doc.RootElement.TryGetProperty("snapshot", out var sEl)
+            && sEl.TryGetProperty("retentionDays", out var rdEl)
+            && rdEl.TryGetInt32(out var rd) && rd > 0)
+            return rd;
+    }
+    catch { /* best-effort */ }
+    return null;
+}
+
+// Phase 7.5+++ — purge snapshot zips older than retentionDays in the
+// given backups subfolder ("manual" or "pre-deploy"). Glob-and-delete
+// based on file mtime. Called at snapshot creation moments so no
+// separate scheduler is needed; the zip dir stays bounded by the
+// operator's own snapshot cadence + retention setting.
+static int PurgeOldSnapshots(string subfolder, string domain, int retentionDays)
+{
+    if (retentionDays <= 0) return 0;
+    try
+    {
+        var dir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, subfolder, domain);
+        if (!Directory.Exists(dir)) return 0;
+        var cutoff = DateTime.UtcNow - TimeSpan.FromDays(retentionDays);
+        var purged = 0;
+        foreach (var f in Directory.EnumerateFiles(dir))
+        {
+            try
+            {
+                if (File.GetLastWriteTimeUtc(f) < cutoff)
+                {
+                    File.Delete(f);
+                    purged++;
+                }
+            }
+            catch { /* skip locked / permission denied */ }
+        }
+        return purged;
+    }
+    catch { return 0; }
+}
+
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
 {
     var path = DeploySettingsPath(domain);
@@ -2732,6 +2782,12 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
                 System.IO.Compression.CompressionLevel.Fastest,
                 includeBaseDirectory: false);
             sizeBytes = new FileInfo(realPath).Length;
+
+            // Phase 7.5+++ — prune older zips per settings retention.
+            // Default 30 days when settings missing/malformed (matches
+            // defaultDeploySettings().snapshot.retentionDays in the GUI).
+            var rd = ReadSnapshotRetentionDays(domain) ?? 30;
+            PurgeOldSnapshots("manual", domain, rd);
         }
         catch (Exception ex)
         {
@@ -3153,6 +3209,11 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
                 var size = new FileInfo(realPath).Length;
                 await runs.UpdatePreDeployBackupAsync(deployId,
                     $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.zip", size, ct);
+
+                // Phase 7.5+++ — retention prune. Default 30 days when
+                // settings missing (matches defaultDeploySettings()).
+                var rd = ReadSnapshotRetentionDays(domain) ?? 30;
+                PurgeOldSnapshots("pre-deploy", domain, rd);
             }
             catch
             {

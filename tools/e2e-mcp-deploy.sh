@@ -1507,6 +1507,54 @@ LL_RB_OPEN=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $TOKE
 step "rollback WITHOUT token still works (404 for unknown id, NOT 403)" "$LL_RB_OPEN" 'deploy_not_found'
 
 # ============================================================================
+echo ""; echo "${YEL}=== MM. snapshot retention pruning (manual + pre-deploy) ===${END}"
+# ============================================================================
+# Plant a stale (5-day-old) zip in each backups subdir, set retentionDays=1,
+# trigger a snapshot creation in each — old zips should be pruned.
+MM_TARGET_MSYS="/c/temp/e2e-retention-target"
+MM_TARGET_WIN="C:/temp/e2e-retention-target"
+MM_SOURCE_WIN="C:/work/sites/blog.loc"
+rm -rf "$MM_TARGET_MSYS"
+mkdir -p "$MM_TARGET_MSYS"
+
+MM_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+MM_BACKUP=""
+[ -f "$MM_SETTINGS_FILE" ] && MM_BACKUP=$(cat "$MM_SETTINGS_FILE")
+cat > "$MM_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"$MM_SOURCE_WIN","localTargetPath":"$MM_TARGET_WIN"}],"snapshot":{"enabled":true,"retentionDays":1},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+mkdir -p "$HOME/.wdc/backups/manual/blog.loc" "$HOME/.wdc/backups/pre-deploy/blog.loc"
+MM_STALE_M="$HOME/.wdc/backups/manual/blog.loc/E2E-STALE-OLD.zip"
+MM_STALE_P="$HOME/.wdc/backups/pre-deploy/blog.loc/E2E-STALE-OLD.zip"
+echo old > "$MM_STALE_M"; echo old > "$MM_STALE_P"
+MM_PAST=$(date -d "5 days ago" +%Y%m%d%H%M 2>/dev/null || date -v-5d +%Y%m%d%H%M)
+touch -t "$MM_PAST" "$MM_STALE_M" "$MM_STALE_P"
+
+# Seed deploy so current/ exists
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 3
+
+# Trigger manual snapshot → manual/ prune
+api POST /api/nks.wdc.deploy/sites/blog.loc/snapshot-now -d '{}' > /dev/null
+sleep 1
+step "stale manual zip pruned by retentionDays=1" "$([ ! -f "$MM_STALE_M" ] && echo y || echo n)" "y"
+
+# Trigger pre-deploy snapshot → pre-deploy/ prune
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\",\"snapshot\":true}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 3
+step "stale pre-deploy zip pruned by retentionDays=1" "$([ ! -f "$MM_STALE_P" ] && echo y || echo n)" "y"
+
+# Cleanup
+if [ -n "$MM_BACKUP" ]; then echo "$MM_BACKUP" > "$MM_SETTINGS_FILE"; fi
+rm -rf "$MM_TARGET_MSYS"
+rm -f "$HOME/.wdc/backups/manual/blog.loc/"*.zip "$HOME/.wdc/backups/pre-deploy/blog.loc/"*.zip 2>/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
