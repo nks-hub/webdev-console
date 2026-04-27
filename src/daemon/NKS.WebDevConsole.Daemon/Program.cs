@@ -2121,8 +2121,11 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
 });
 
 // Phase 7.5+ — rollback a deploy. POST /sites/{domain}/deploys/{deployId}/rollback.
-// Dummy backend: insert a fresh row with status='completed', backend_id='dummy-rollback',
-// triggered_by='gui', linking to source via release_id naming.
+// Real local-loopback rollback: when host has localTargetPath configured AND
+// {target}/.dep/previous_release exists, atomically swap `current` symlink
+// back to the path stored in previous_release. Otherwise the call still
+// records a rollback row in the DB so the audit log stays accurate, but
+// the filesystem state isn't touched (no localPaths configured).
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback", async (
     string domain, string deployId,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -2133,25 +2136,111 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback", as
     if (source is null || !string.Equals(source.Domain, domain, StringComparison.OrdinalIgnoreCase))
         return Results.NotFound(new { error = "deploy_not_found", deployId });
 
+    // Resolve the local target for this host so we can perform a real
+    // symlink swap. Mirrors the deploy endpoint's settings lookup.
+    string? targetPath = null;
+    try
+    {
+        var settingsPath = DeploySettingsPath(domain);
+        if (File.Exists(settingsPath))
+        {
+            using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+            if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var hEl in hostsEl.EnumerateArray())
+                {
+                    if (!hEl.TryGetProperty("name", out var nEl)) continue;
+                    if (!string.Equals(nEl.GetString(), source.Host, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (hEl.TryGetProperty("localTargetPath", out var ltEl))
+                        targetPath = ltEl.GetString();
+                    break;
+                }
+            }
+        }
+    }
+    catch { /* best-effort */ }
+
+    string? swappedTo = null;
+    string? rollbackError = null;
+    if (!string.IsNullOrEmpty(targetPath))
+    {
+        var depPrev = Path.Combine(targetPath, ".dep", "previous_release");
+        var currentLink = Path.Combine(targetPath, "current");
+        if (File.Exists(depPrev))
+        {
+            try
+            {
+                var prevRelease = (await File.ReadAllTextAsync(depPrev, ct)).Trim();
+                if (!string.IsNullOrEmpty(prevRelease) && Directory.Exists(prevRelease))
+                {
+                    // Remove existing current link/dir, then recreate
+                    if (Directory.Exists(currentLink))
+                    {
+                        var fi = new DirectoryInfo(currentLink);
+                        if (fi.LinkTarget is not null) Directory.Delete(currentLink);
+                        else Directory.Delete(currentLink, recursive: true);
+                    }
+                    Directory.CreateSymbolicLink(currentLink, prevRelease);
+                    swappedTo = prevRelease;
+
+                    // Rotate .dep state — current_release points to prev,
+                    // and previous_release becomes the deploy we rolled back FROM
+                    // so a subsequent rollback returns to the more-recent release.
+                    var depCurrent = Path.Combine(targetPath, ".dep", "current_release");
+                    var oldCurrent = File.Exists(depCurrent)
+                        ? (await File.ReadAllTextAsync(depCurrent, ct)).Trim()
+                        : string.Empty;
+                    await File.WriteAllTextAsync(depCurrent, prevRelease, ct);
+                    if (!string.IsNullOrEmpty(oldCurrent))
+                        await File.WriteAllTextAsync(depPrev, oldCurrent, ct);
+                }
+                else
+                {
+                    rollbackError = "previous_release path missing or empty";
+                }
+            }
+            catch (Exception ex) { rollbackError = ex.Message; }
+        }
+        else
+        {
+            rollbackError = ".dep/previous_release file not found — nothing to roll back to";
+        }
+    }
+
     var rollbackId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
     await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
         Id: rollbackId, Domain: domain, Host: source.Host,
         ReleaseId: now.ToString("yyyyMMdd_HHmmss") + "-rollback-of-" + deployId[..8],
         Branch: source.Branch, CommitSha: source.CommitSha,
-        Status: "completed", IsPastPonr: true,
+        Status: rollbackError is null ? "completed" : "failed",
+        IsPastPonr: true,
         StartedAt: now, CompletedAt: now,
-        ExitCode: 0, ErrorMessage: null, DurationMs: 50,
-        TriggeredBy: "gui", BackendId: "dummy-rollback",
+        ExitCode: rollbackError is null ? 0 : -1,
+        ErrorMessage: rollbackError, DurationMs: 50,
+        TriggeredBy: "gui",
+        BackendId: swappedTo is not null ? "local-rollback" : "noop-rollback",
         CreatedAt: now, UpdatedAt: now), ct);
     // Mark the source as rolled-back so the UI tag flips.
     await runs.UpdateStatusAsync(deployId, "rolled_back", ct);
 
     await eventsBus.BroadcastAsync("deploy:complete", new
     {
-        deployId = rollbackId, success = true, sourceDeployId = deployId, kind = "rollback"
+        deployId = rollbackId,
+        success = rollbackError is null,
+        sourceDeployId = deployId,
+        kind = "rollback",
+        swappedTo,
+        error = rollbackError,
     });
-    return Results.Ok(new { sourceDeployId = deployId, status = "rolled_back" });
+    return Results.Ok(new
+    {
+        sourceDeployId = deployId,
+        status = rollbackError is null ? "rolled_back" : "rollback_failed",
+        swappedTo,
+        error = rollbackError,
+    });
 });
 
 // DELETE /sites/{domain}/deploys/{deployId} — cancel an in-flight deploy.

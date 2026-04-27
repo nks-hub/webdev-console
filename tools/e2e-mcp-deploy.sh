@@ -1313,6 +1313,63 @@ step "current symlink points into releases/ (got '$GG_CURRENT_TARGET')" "$GG_CUR
 rm -rf "$GG_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== HH. real rollback via .dep/previous_release ===${END}"
+# ============================================================================
+# Verifies the rollback endpoint actually swaps `current` back to the
+# release recorded in .dep/previous_release. Requires the host to have
+# localTargetPath configured in settings (which the deploy endpoint
+# tolerates being absent — but rollback specifically reads from there).
+HH_TARGET_MSYS="/c/temp/e2e-rollback-target"
+HH_TARGET_WIN="C:/temp/e2e-rollback-target"
+HH_SOURCE_WIN="C:/work/sites/blog.loc"
+rm -rf "$HH_TARGET_MSYS"
+mkdir -p "$HH_TARGET_MSYS"
+
+# Configure blog.loc settings to point at HH_TARGET so rollback can find it.
+HH_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+HH_BACKUP=""
+[ -f "$HH_SETTINGS_FILE" ] && HH_BACKUP=$(cat "$HH_SETTINGS_FILE")
+cat > "$HH_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"$HH_SOURCE_WIN","localTargetPath":"$HH_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+# Fire 2 deploys (so previous_release becomes meaningful).
+HH_RESP1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+HH_DID1=$(echo "$HH_RESP1" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))" 2>/dev/null)
+sleep 2
+HH_RESP2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+HH_DID2=$(echo "$HH_RESP2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))" 2>/dev/null)
+sleep 2
+
+HH_BEFORE=$(readlink "$HH_TARGET_MSYS/current" 2>/dev/null | sed 's|\\|/|g')
+HH_PREV_FILE_CONTENT=$(cat "$HH_TARGET_MSYS/.dep/previous_release" 2>/dev/null | sed 's|\\|/|g')
+
+step "rollback target has 2 releases" "$(ls -1 $HH_TARGET_MSYS/releases 2>/dev/null | wc -l | tr -d ' ')" "^2$"
+step ".dep/previous_release populated before rollback" "$([ -s $HH_TARGET_MSYS/.dep/previous_release ] && echo y || echo n)" "y"
+
+# Trigger rollback of the LATEST deploy (DID2) — current should swap
+# back to whatever previous_release pointed at (the FIRST deploy).
+HH_ROLLBACK_RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/$HH_DID2/rollback")
+sleep 1
+step "rollback endpoint returns rolled_back" "$HH_ROLLBACK_RESP" '"status":"rolled_back"'
+step "rollback response includes swappedTo path" "$HH_ROLLBACK_RESP" '"swappedTo"'
+
+HH_AFTER=$(readlink "$HH_TARGET_MSYS/current" 2>/dev/null | sed 's|\\|/|g')
+step "current symlink CHANGED after rollback (was '$HH_BEFORE', now '$HH_AFTER')" \
+    "$([ "$HH_BEFORE" != "$HH_AFTER" ] && [ -n "$HH_AFTER" ] && echo y || echo n)" "y"
+
+# Cleanup — restore settings + remove scratch target
+if [ -n "$HH_BACKUP" ]; then
+    echo "$HH_BACKUP" > "$HH_SETTINGS_FILE"
+fi
+rm -rf "$HH_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
