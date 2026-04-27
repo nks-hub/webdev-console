@@ -14,6 +14,7 @@
     "type-check": "vue-tsc --noEmit",
     "preview": "electron-vite preview",
     "stage:plugins": "node ../../scripts/stage-plugins.mjs",
+    "build:phar": "node ../../scripts/build-nksdeploy-phar.mjs",
     "stage:daemon:win": "dotnet publish ../daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r win-x64 --self-contained -o resources/daemon && npm run stage:plugins",
     "stage:daemon:mac": "dotnet publish ../daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r osx-arm64 --self-contained -o resources/daemon && npm run stage:plugins",
     "stage:daemon:linux": "dotnet publish ../daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release -r linux-x64 --self-contained -o resources/daemon && npm run stage:plugins",
