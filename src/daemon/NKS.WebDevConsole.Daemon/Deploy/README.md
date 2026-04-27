@@ -174,3 +174,66 @@ event: mcp:confirm-request — operator approval needed before destructive op pr
 
 EventSource `/api/events?token=<bearer>`. The daemon multiplex-broadcasts
 all events to every subscriber.
+
+## Plugin cutover (Phase D)
+
+`deploy.useLegacyHostHandlers` is a startup-time toggle that swaps
+authority for a subset of `/api/nks.wdc.deploy/*` routes from the
+daemon's built-in `LocalDeployBackend` to the `nks.wdc.deploy` plugin
+(loaded from `webdev-console-plugins/NksDeploy`).
+
+**Toggle semantics:** restart-required. The daemon reads the value at
+boot into `legacyHostHandlersAtBoot`. Runtime flip only takes effect on
+the next daemon start. The readiness diagnostic surfaces drift via
+`bootLegacyHostHandlers` + `restartPending` so the GUI can show
+"restart to apply" hint.
+
+**Gated endpoints** (currently 11 — see `gatedEndpoints[]` in
+`/api/admin/plugin-readiness?explain=true` for the live list):
+
+| Verb | Route | Plugin equivalent |
+|------|-------|-------------------|
+| POST | `/test-host-connection` | TCP probe utility |
+| POST | `/sites/{domain}/hooks/test` | Direct C# `TestHookAsync` |
+| POST | `/sites/{domain}/notifications/test` | Slack webhook smoke test |
+| POST | `/sites/{domain}/snapshot-now` | FS-ZIP first, DB snapshotter fallback |
+| POST | `/sites/{domain}/restore` | ZipFile.ExtractToDirectory + symlink swap |
+| POST | `/sites/{domain}/snapshots/{snapshotId}/restore` | (alias of above) |
+| GET  | `/sites/{domain}/history` | Pure read of shared `IDeployRunsRepository` |
+| GET  | `/sites/{domain}/deploys/{deployId}` | Pure read |
+| GET  | `/sites/{domain}/snapshots` | Pure read |
+| GET  | `/sites/{domain}/settings` | Pure read of per-site JSON file |
+| GET  | `/sites/{domain}/groups` | Pure read |
+
+**Endpoints NOT gated** (still daemon-authoritative even in plugin
+mode): real `deploy`, `rollback`, `rollback-to`, `groups` POST, `cancel`
+(DELETE), `settings` PUT. These either depend on `nksdeploy.phar` (which
+the plugin shells to via CliWrap and isn't built in the dev environment)
+or share state (intent validator, in-flight deploy registry) that
+hasn't been lifted into the plugin SDK.
+
+### Validating the cutover
+
+```bash
+bash tools/validate-cutover.sh
+```
+
+Self-isolating: captures original setting, flips to `legacy=false`,
+restarts daemon, asserts plugin handler authoritative (response shape
+diff: `workingDir` field present in daemon mode, absent in plugin mode),
+restores original setting via trap on exit. ~30s runtime with 2× daemon
+restarts.
+
+### Diagnostic envelope
+
+`GET /api/admin/plugin-readiness?explain=true` exposes:
+- `mode`: `built-in` | `plugin` (live setting view)
+- `useLegacyHostHandlers`: current setting
+- `bootLegacyHostHandlers`: value baked at daemon boot
+- `restartPending`: `current != boot` (drift signal)
+- `gatedEndpoints[]`: list of routes wrapped in
+  `if (legacyHostHandlersAtBoot)` blocks
+- `blockers[]` + `blockerDetails[]`: phase D2/D3/E reasons readyToFlip
+  is still false today
+- `recommendation`: human-readable status text (cs/en localized in
+  popovers, English on the wire)
