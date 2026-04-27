@@ -1189,6 +1189,7 @@
       "failed": "Deploy failed",
       "hint": "Skips the confirm dialog. Use the host card's Deploy button for full options.",
       "preview": "Preview",
+      "previewAllHostsTip": "Preview is per-host. Pick a specific host instead of \"— All hosts —\".",
       "previewTitle": "Deploy plan preview",
       "previewClose": "Close",
       "previewConfirm": "Deploy",

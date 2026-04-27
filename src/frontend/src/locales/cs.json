@@ -1189,6 +1189,7 @@
       "failed": "Deploy se nezdařil",
       "hint": "Přeskočí potvrzovací dialog. Pro plné nastavení použijte tlačítko Deploy na kartě hosta.",
       "preview": "Náhled",
+      "previewAllHostsTip": "Náhled je per-host. Vyberte konkrétního hosta místo „— Všichni hosti —“.",
       "previewTitle": "Náhled deploy plánu",
       "previewClose": "Zavřít",
       "previewConfirm": "Deploynout",

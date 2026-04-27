@@ -38,13 +38,21 @@
         {{ t('deploy.quickBar.withSnapshot') }}
       </el-checkbox>
 
-      <el-button
-        :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy || storeBusy"
-        :loading="previewBusy"
-        @click="onPreview"
+      <el-tooltip
+        :content="t('deploy.quickBar.previewAllHostsTip')"
+        :disabled="targetHost !== '__all__'"
+        placement="top"
       >
-        {{ t('deploy.quickBar.preview') }}
-      </el-button>
+        <span>
+          <el-button
+            :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy || storeBusy"
+            :loading="previewBusy"
+            @click="onPreview"
+          >
+            {{ t('deploy.quickBar.preview') }}
+          </el-button>
+        </span>
+      </el-tooltip>
 
       <el-button
         type="primary"
