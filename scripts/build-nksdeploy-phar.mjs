@@ -51,7 +51,6 @@ const COMPOSER_SHA384 = '8f926f44a8a56be162768b91b5e4c5c6fe9fced6e384ff1dc65b1f9
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(__dirname, '..')
 const defaultDest = join(repoRoot, 'src', 'frontend', 'resources', 'daemon', 'plugins', 'nksdeploy.phar')
-const dest = process.argv[2] ? resolve(process.argv[2]) : defaultDest
 
 // Guard against unknown --flags being silently interpreted as the output
 // path. argv[2] is the output path; if it starts with '-' and isn't a
@@ -85,6 +84,8 @@ if (process.env.WDC_SKIP_PHAR_BUILD === '1') {
   console.log('[build-phar] WDC_SKIP_PHAR_BUILD=1 — skipping')
   process.exit(0)
 }
+
+const dest = process.argv[2] ? resolve(process.argv[2]) : defaultDest
 
 function log(msg) { console.log(`[build-phar] ${msg}`) }
 function die(msg) { console.error(`[build-phar] ERROR: ${msg}`); process.exit(1) }
