@@ -101,12 +101,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { listMcpKinds, listMcpGrants, type McpKindRow, type McpGrantRow } from '../../api/daemon'
+import {
+  listMcpKinds, listMcpGrants, subscribeEventsMap,
+  type McpKindRow, type McpGrantRow,
+} from '../../api/daemon'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -159,7 +162,20 @@ const pluginCounts = computed(() => {
   return entries.map(([pluginId, count]) => ({ pluginId, count }))
 })
 
-onMounted(refresh)
+// Live-refresh on grant changes elsewhere so the auto-approve column
+// stays accurate without operator hitting Refresh. Cleaned on unmount.
+let unsubscribeGrantSse: (() => void) | null = null
+
+onMounted(() => {
+  void refresh()
+  unsubscribeGrantSse = subscribeEventsMap({
+    'mcp:grant-changed': () => { void refresh() },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribeGrantSse) { unsubscribeGrantSse(); unsubscribeGrantSse = null }
+})
 
 async function refresh(): Promise<void> {
   loading.value = true
