@@ -696,6 +696,8 @@
     "discarded": "Changes discarded",
     "unsavedChanges": "unsaved changes",
     "allSaved": "saved",
+    "mcpGrantsBadge": "{n} MCP grant(s)",
+    "mcpGrantsTooltip": "{n} active MCP grants let AI fire destructive actions on this site without confirmation. Click for details.",
     "hostCardCmp": {
       "edit": "Edit",
       "remove": "Remove",

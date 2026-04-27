@@ -696,6 +696,8 @@
     "discarded": "Změny zahozeny",
     "unsavedChanges": "neuložené změny",
     "allSaved": "uloženo",
+    "mcpGrantsBadge": "{n} MCP grant(ů)",
+    "mcpGrantsTooltip": "{n} aktivních MCP grantů umožňuje AI provést destruktivní akce na tomto webu bez potvrzení. Klikněte pro detail.",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",

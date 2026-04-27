@@ -15,6 +15,25 @@
         <el-tag v-else type="success" size="small" effect="plain" class="dirty-tag">
           ✓ {{ t('deploySettings.allSaved') }}
         </el-tag>
+        <!-- Phase 7.5+++ — MCP grants visibility per site. Surfaces how
+             many active grants would let an AI fire destructive actions
+             on this domain without confirmation. Click → /mcp/grants
+             pre-filtered. Hidden when zero (no AI exposure on this site). -->
+        <el-tooltip
+          v-if="mcpGrantsCount > 0"
+          :content="t('deploySettings.mcpGrantsTooltip', { n: mcpGrantsCount })"
+          placement="bottom"
+        >
+          <el-tag
+            type="info"
+            size="small"
+            effect="plain"
+            class="mcp-grants-tag"
+            @click="goToMcpGrants"
+          >
+            🔓 {{ t('deploySettings.mcpGrantsBadge', { n: mcpGrantsCount }) }}
+          </el-tag>
+        </el-tooltip>
       </div>
       <div class="settings-header-actions">
         <el-button :disabled="!dirty || saving" plain @click="discardChanges">
@@ -847,11 +866,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HostSettingsCard from './HostSettingsCard.vue'
+import { listMcpGrants } from '../../api/daemon'
 import {
   fetchDeploySnapshots,
   defaultDeploySettings,
@@ -965,12 +986,36 @@ const ids = {
   envVal: 'adv-env-val',
 }
 
+// Phase 7.5+++ — MCP grants visibility per site. Counts active grants
+// where targetPattern matches this domain (exact or wildcard '*'). Best-
+// effort: silently degrades to 0 if MCP is disabled or the request fails.
+const router = useRouter()
+const mcpGrantsCount = ref<number>(0)
+
+async function loadMcpGrantsCount(): Promise<void> {
+  try {
+    const result = await listMcpGrants(false, 1, 500)
+    const dom = props.domain.toLowerCase()
+    mcpGrantsCount.value = result.entries.filter((g) => {
+      const tp = (g.targetPattern || '').toLowerCase()
+      return tp === '*' || tp === dom
+    }).length
+  } catch {
+    mcpGrantsCount.value = 0
+  }
+}
+
+function goToMcpGrants(): void {
+  router.push({ path: '/mcp/grants', query: { target: props.domain } })
+}
+
 onMounted(async () => {
   const loaded = await store.loadForDomain(props.domain)
   Object.assign(settings, loaded)
   lastSavedSnapshot.value = JSON.stringify(settings)
 
   snapshots.value = await fetchDeploySnapshots(props.domain)
+  void loadMcpGrantsCount()
 })
 
 async function saveSettings(): Promise<void> {
@@ -1425,6 +1470,14 @@ defineExpose({ saveSettings })
   font-size: 13px;
 }
 .dirty-tag { margin-left: 4px; }
+.mcp-grants-tag {
+  margin-left: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.mcp-grants-tag:hover {
+  background: var(--el-color-info-light-7);
+}
 .settings-header-actions {
   display: flex;
   gap: 8px;
