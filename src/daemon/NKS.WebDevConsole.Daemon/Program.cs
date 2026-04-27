@@ -997,10 +997,9 @@ app.MapGet("/api/admin/plugin-readiness", (
     // Phase C: test-hook executor + Slack dispatch shipped (commits
     // 2893d0b, abf5090) — ZIP snapshot writer + SSE deploy:hook bridge
     // remain.
-    blockerDetails.Add((
-        "phase C: plugin-side SSE deploy:hook bridge not yet ported (ZIP snapshot service + test-hook + Slack dispatch shipped)",
-        "C",
-        "Port LocalDeployBackend's SSE deploy:hook bridge into webdev-console-plugins/NksDeploy."));
+    // Phase C complete: ZIP snapshot service (commit 6cd22a5/6608838),
+    // test-hook executor (2893d0b), Slack dispatch (abf5090), SSE
+    // deploy:hook bridge (967c6ef) all shipped on plugin side.
     blockerDetails.Add((
         "phase D: plugin-only e2e on blog.loc + shop.loc not yet validated",
         "D",
