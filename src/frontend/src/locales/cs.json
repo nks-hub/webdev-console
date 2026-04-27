@@ -155,6 +155,7 @@
       "deadweight": "deadweight (kandidáti na revoke)",
       "totalMatches": "celkem matchů",
       "lastMatch": "poslední match:",
+      "alwaysConfirm": "druhů ring-fenced",
       "justNow": "právě teď",
       "minutesAgo": "před {n} m",
       "hoursAgo": "před {n} h",

@@ -155,6 +155,7 @@
       "deadweight": "deadweight (revoke candidates)",
       "totalMatches": "total matches",
       "lastMatch": "last match:",
+      "alwaysConfirm": "kinds ring-fenced",
       "justNow": "just now",
       "minutesAgo": "{n}m ago",
       "hoursAgo": "{n}h ago",

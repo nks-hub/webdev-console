@@ -22,6 +22,18 @@
           <span class="muted">{{ t('mcpHub.stats.lastMatch') }}</span>
           <strong>{{ formatRelative(grantsStats.lastMatchAt) }}</strong>
         </span>
+        <!-- Phase 7.5+++ — always-confirm summary. Sourced from the same
+             listMcpKinds() refresh that powers the Kinds tab badge.
+             Click pulls operator into the Kinds tab where the 🔒 chips
+             live; from there one more click jumps to Settings. -->
+        <span
+          v-if="alwaysConfirmCount > 0"
+          class="stat warn always-confirm-stat"
+          @click="onAlwaysConfirmClick"
+        >
+          <strong>🔒 {{ alwaysConfirmCount }}</strong>
+          <span class="muted">{{ t('mcpHub.stats.alwaysConfirm') }}</span>
+        </span>
       </div>
     </div>
 
@@ -111,7 +123,19 @@ function onTabChange(name: string | number): void {
 // at-a-glance visibility without forcing them to switch tabs.
 const counts = reactive({ intents: 0, grants: 0, kinds: 0 })
 const grantsStats = ref<McpGrantsStats | null>(null)
+// Phase 7.5+++ — count of kinds in mcp.always_confirm_kinds (those that
+// the operator has ring-fenced past grants). Refreshed from the same
+// listMcpKinds() call so no extra round-trip.
+const alwaysConfirmCount = ref<number>(0)
 let unsubscribeHubSse: (() => void) | null = null
+
+function onAlwaysConfirmClick(): void {
+  // Switch to the Kinds tab where the 🔒 chip rows are visible.
+  if (activeTab.value !== 'kinds') {
+    activeTab.value = 'kinds'
+    onTabChange('kinds')
+  }
+}
 
 async function refreshCounts(): Promise<void> {
   try {
@@ -128,6 +152,7 @@ async function refreshCounts(): Promise<void> {
       e.state === 'ready' || e.state === 'pending_confirmation').length
     counts.grants = grants.entries.length
     counts.kinds = kinds.entries.length
+    alwaysConfirmCount.value = kinds.entries.filter((k) => k.alwaysConfirm === true).length
     grantsStats.value = stats
   } catch { /* badges stay stale rather than disrupt the page */ }
 }
@@ -174,6 +199,8 @@ onBeforeUnmount(() => {
 .hub-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats .stat strong { font-weight: 600; }
 .hub-stats .stat.warn strong { color: var(--el-color-warning); }
+.always-confirm-stat { cursor: pointer; user-select: none; }
+.always-confirm-stat:hover strong { filter: brightness(1.2); }
 .tab-badge { margin-left: 4px; }
 /* Push the badge counter inline rather than absolute-positioned. */
 .tab-badge :deep(.el-badge__content) {
