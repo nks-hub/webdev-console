@@ -952,6 +952,16 @@ app.MapGet("/healthz", () => Results.Ok(new
         ?? "unknown",
     timestamp = DateTime.UtcNow,
 }));
+// Phase D (#258) — capture legacyHostHandlers value at daemon boot. The
+// 3 conditional handler registrations (hooks/test, notifications/test,
+// test-host-connection) read this value once at startup. Operator
+// changes to the setting at runtime do NOT take effect until daemon
+// restart. Readiness diagnostic surfaces the drift via restartPending
+// so the GUI can show "restart to apply" hint when boot value differs
+// from current setting.
+var legacyHostHandlersAtBoot = app.Services.GetRequiredService<SettingsStore>()
+    .GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
+
 // Phase 7.4 #109-D1 — plugin migration readiness diagnostic. Operator
 // (or future automation) reads this before flipping
 // deploy.useLegacyHostHandlers=false to know whether the plugin has
@@ -967,6 +977,8 @@ app.MapGet("/healthz", () => Results.Ok(new
 //     LocalDeployBackend without phase B/C/D work.
 //   - blockers: string[] — human-readable reasons a flip would break
 //     things. Empty when readyToFlip=true.
+//   - bootLegacyHostHandlers: bool — value baked at daemon boot.
+//   - restartPending: bool — true when current setting differs from boot.
 app.MapGet("/api/admin/plugin-readiness", (
     PluginLoader pl,
     SettingsStore settings,
@@ -1006,7 +1018,18 @@ app.MapGet("/api/admin/plugin-readiness", (
         "Run tools/e2e-mcp-deploy.sh against a daemon with deploy.useLegacyHostHandlers=false; all 264 sections must pass."));
     var blockers = blockerDetails.ConvertAll(b => b.Summary);
     var readyToFlip = blockers.Count == 0;
+    // Phase D (#258) — operator flipped the setting but the daemon is
+    // still running with the boot-time value. The 3 conditional host
+    // handlers honour the boot value, so the GUI needs to know "restart
+    // to apply" and the readiness recommendation should reflect drift.
+    var restartPending = legacyHandlers != legacyHostHandlersAtBoot;
     var explain = ctx.Request.Query["explain"].ToString() == "true";
+    var baseRecommendation = readyToFlip
+        ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
+        : $"Stay on built-in mode — {blockers.Count} blocker(s) listed above";
+    var recommendation = restartPending
+        ? baseRecommendation + " — daemon restart required to apply current setting"
+        : baseRecommendation;
     if (explain)
     {
         return Results.Ok(new
@@ -1015,6 +1038,8 @@ app.MapGet("/api/admin/plugin-readiness", (
             pluginLoaded,
             pluginVersion,
             useLegacyHostHandlers = legacyHandlers,
+            bootLegacyHostHandlers = legacyHostHandlersAtBoot,
+            restartPending,
             readyToFlip,
             blockers,
             blockerDetails = blockerDetails.ConvertAll(b => new
@@ -1023,9 +1048,7 @@ app.MapGet("/api/admin/plugin-readiness", (
                 phase = b.Phase,
                 remediation = b.Remediation,
             }),
-            recommendation = readyToFlip
-                ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
-                : $"Stay on built-in mode — {blockers.Count} blocker(s) listed above",
+            recommendation,
         });
     }
     return Results.Ok(new
@@ -1034,13 +1057,13 @@ app.MapGet("/api/admin/plugin-readiness", (
         pluginLoaded,
         pluginVersion,
         useLegacyHostHandlers = legacyHandlers,
+        bootLegacyHostHandlers = legacyHostHandlersAtBoot,
+        restartPending,
         readyToFlip,
         blockers,
         // Diagnostic: pretty-print this in the GUI so operators don't
         // have to dig in /api/plugins separately.
-        recommendation = readyToFlip
-            ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
-            : $"Stay on built-in mode — {blockers.Count} blocker(s) listed above",
+        recommendation,
     });
 });
 
@@ -2087,9 +2110,9 @@ app.MapPost("/api/mcp/grants/import", async (
 // daemon-authoritative until phase E rewrites the plugin's
 // NksDeployBackend to direct C#. This is the deliberate first slice of
 // the cutover so the toggle becomes meaningful without breaking anything.
-var legacyAtStartup = app.Services.GetRequiredService<SettingsStore>()
-    .GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
-if (legacyAtStartup)
+// Phase D (#258) — uses the captured legacyHostHandlersAtBoot from
+// near the top of this file so readiness can compute restartPending.
+if (legacyHostHandlersAtBoot)
 {
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/hooks/test", async (
     string domain, HttpContext ctx,
@@ -2267,7 +2290,7 @@ app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
         });
     }
 });
-} // end if (legacyAtStartup) — closes the 3 host-only daemon handler block
+} // end if (legacyHostHandlersAtBoot) — closes the 3 host-only daemon handler block
 
 // + DeploySiteTab's hasConfig probe (returns 404→empty when zero rows
 // would be returned, so frontend keeps showing the wizard CTA).
