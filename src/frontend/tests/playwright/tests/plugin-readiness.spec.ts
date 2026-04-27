@@ -43,5 +43,33 @@ test.describe('Plugin readiness diagnostic (#109-D1)', () => {
 
     expect(typeof j.recommendation).toBe('string')
     expect(j.recommendation.length).toBeGreaterThan(0)
+
+    // Iter 17: default mode must NOT include blockerDetails — back-compat
+    // guard for clients written against iter 5/6 envelope shape.
+    expect(j.blockerDetails).toBeUndefined()
+  })
+
+  test('explain=true returns structured blockerDetails with phase + remediation', async ({ authedRequest }) => {
+    const r = await authedRequest.get('/api/admin/plugin-readiness?explain=true')
+    expect(r.status()).toBe(200)
+    const j = await r.json()
+
+    // Flat blockers[] still present alongside structured details.
+    expect(Array.isArray(j.blockers)).toBe(true)
+    expect(Array.isArray(j.blockerDetails)).toBe(true)
+    expect(j.blockerDetails.length).toBe(j.blockers.length)
+
+    // Each detail entry has the expected shape — operators get a
+    // phase tag + concrete remediation step per blocker.
+    for (const d of j.blockerDetails) {
+      expect(typeof d.summary).toBe('string')
+      expect(typeof d.phase).toBe('string')
+      expect(typeof d.remediation).toBe('string')
+      expect(d.remediation.length).toBeGreaterThan(0)
+    }
+
+    // The 3 always-present blockers cover phases B/C/D.
+    const phases = j.blockerDetails.map((d: { phase: string }) => d.phase).sort()
+    expect(phases).toEqual(expect.arrayContaining(['B', 'C', 'D']))
   })
 })

@@ -969,7 +969,8 @@ app.MapGet("/healthz", () => Results.Ok(new
 //     things. Empty when readyToFlip=true.
 app.MapGet("/api/admin/plugin-readiness", (
     PluginLoader pl,
-    SettingsStore settings) =>
+    SettingsStore settings,
+    HttpContext ctx) =>
 {
     var deployPlugin = pl.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.deploy");
     var pluginLoaded = deployPlugin is not null;
@@ -978,13 +979,51 @@ app.MapGet("/api/admin/plugin-readiness", (
     var mode = legacyHandlers ? "built-in" : "plugin";
     // Today's static blockers for the flip — surfaced even when no
     // plugin is loaded so operators see WHY they can't flip yet.
-    var blockers = new List<string>();
+    // Iter 17 #109-D1+: each blocker also gets a structured detail
+    // record (phase + remediation) used when ?explain=true. Keeping
+    // the flat blockers[] for back-compat with iter 5/6 consumers.
+    var blockerDetails = new List<(string Summary, string Phase, string Remediation)>();
     if (!pluginLoaded)
-        blockers.Add("nks.wdc.deploy plugin not loaded — DLL missing in build/plugins/ or plugin disabled");
-    blockers.Add("phase B: 6 host-only endpoints (hooks/test, notifications/test, test-host-connection, rollback-to, restore alias, deploy without /hosts/ segment) need plugin equivalents");
-    blockers.Add("phase C: plugin-side ZIP snapshot service, SSE deploy:hook bridge, Slack dispatch, test-hook ad-hoc executor not yet ported");
-    blockers.Add("phase D: plugin-only e2e on blog.loc + shop.loc not yet validated");
+        blockerDetails.Add((
+            "nks.wdc.deploy plugin not loaded — DLL missing in build/plugins/ or plugin disabled",
+            "A",
+            "Stage NksDeploy plugin DLL into build/plugins/ and restart daemon. Verify via GET /api/plugins."));
+    blockerDetails.Add((
+        "phase B: 6 host-only endpoints (hooks/test, notifications/test, test-host-connection, rollback-to, restore alias, deploy without /hosts/ segment) need plugin equivalents",
+        "B",
+        "PR against webdev-console-plugins/NksDeploy/Routes/NksDeployRoutes.cs adding the 6 missing routes with parity to host handlers."));
+    blockerDetails.Add((
+        "phase C: plugin-side ZIP snapshot service, SSE deploy:hook bridge, Slack dispatch, test-hook ad-hoc executor not yet ported",
+        "C",
+        "Port LocalDeployBackend's snapshot zip writer + SSE bridge + Slack dispatch + test-hook executor into webdev-console-plugins/NksDeploy."));
+    blockerDetails.Add((
+        "phase D: plugin-only e2e on blog.loc + shop.loc not yet validated",
+        "D",
+        "Run tools/e2e-mcp-deploy.sh against a daemon with deploy.useLegacyHostHandlers=false; all 264 sections must pass."));
+    var blockers = blockerDetails.ConvertAll(b => b.Summary);
     var readyToFlip = blockers.Count == 0;
+    var explain = ctx.Request.Query["explain"].ToString() == "true";
+    if (explain)
+    {
+        return Results.Ok(new
+        {
+            mode,
+            pluginLoaded,
+            pluginVersion,
+            useLegacyHostHandlers = legacyHandlers,
+            readyToFlip,
+            blockers,
+            blockerDetails = blockerDetails.ConvertAll(b => new
+            {
+                summary = b.Summary,
+                phase = b.Phase,
+                remediation = b.Remediation,
+            }),
+            recommendation = readyToFlip
+                ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
+                : $"Stay on built-in mode — {blockers.Count} blocker(s) listed above",
+        });
+    }
     return Results.Ok(new
     {
         mode,

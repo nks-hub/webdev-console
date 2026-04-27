@@ -2075,6 +2075,25 @@ api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$AAA_BEFORE\"}" >/
 AAA_R3=$(api GET /api/admin/plugin-readiness)
 step "readiness echoes restored useLegacyHostHandlers value" "$AAA_R3" "\"useLegacyHostHandlers\":$AAA_BEFORE"
 
+# Iter 17 — verbose ?explain=true mode adds blockerDetails[] with phase + remediation per blocker
+AAA_R4=$(api GET '/api/admin/plugin-readiness?explain=true')
+step "explain=true response includes blockerDetails array" "$AAA_R4" '"blockerDetails":\['
+step "explain=true blockerDetails has phase B remediation" "$AAA_R4" '"phase":"B"'
+step "explain=true blockerDetails has phase C remediation" "$AAA_R4" '"phase":"C"'
+step "explain=true blockerDetails has phase D remediation" "$AAA_R4" '"phase":"D"'
+step "explain=true remediation field present" "$AAA_R4" '"remediation":'
+# Default mode (no explain) must keep flat blockers shape for back-compat with iter 5/6 consumers
+AAA_R5=$(api GET /api/admin/plugin-readiness)
+step "default response still has blockers array" "$AAA_R5" '"blockers":\['
+# Negative check: default response must NOT include blockerDetails (back-compat guard)
+if echo "$AAA_R5" | grep -q '"blockerDetails"'; then
+    echo "  ${RED}✗${END} default response leaked blockerDetails (back-compat broken)"
+    FAIL=$((FAIL + 1))
+else
+    echo "  ${GRN}✓${END} default response omits blockerDetails (back-compat preserved)"
+    PASS=$((PASS + 1))
+fi
+
 # ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
