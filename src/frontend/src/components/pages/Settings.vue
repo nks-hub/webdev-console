@@ -528,6 +528,27 @@
                     placeholder="restore,cancel"
                     style="max-width: 320px"
                   />
+                  <!-- Phase 7.5+++ — one-click presets. "Lock all destructive"
+                       fills the picker with every kind tagged Destructive
+                       (restore, test_hook, settings_write, plus any plugin-
+                       contributed dangerous kinds). "Clear" resets. -->
+                  <div v-if="mcpKindOptions.length > 0" style="margin-top: 6px">
+                    <el-button
+                      size="small"
+                      :disabled="destructiveKindIds.length === 0"
+                      @click="lockAllDestructive"
+                    >
+                      🔒 {{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}
+                    </el-button>
+                    <el-button
+                      size="small"
+                      plain
+                      :disabled="mcpAlwaysConfirmKindsArr.length === 0"
+                      @click="clearAlwaysConfirm"
+                    >
+                      {{ $t('settings.mcp.clearAlwaysConfirm') }}
+                    </el-button>
+                  </div>
                   <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
                 </el-form-item>
                 <!-- Phase 7.5+++ — operator-tunable janitor retention.
@@ -1325,6 +1346,25 @@ interface SettingsMcpKindOption {
   danger: 'reversible' | 'destructive'
 }
 const mcpKindOptions = ref<SettingsMcpKindOption[]>([])
+
+// Phase 7.5+++ — preset helpers for the always-confirm picker. The
+// "lock all destructive" button is the safest one-click ring-fence:
+// any kind tagged DangerLevel.Destructive (restore, test_hook,
+// settings_write today; plugin-contributed kinds tomorrow) gets
+// auto-added without the operator having to know the id.
+const destructiveKindIds = computed<string[]>(() =>
+  mcpKindOptions.value.filter((k) => k.danger === 'destructive').map((k) => k.id))
+
+function lockAllDestructive(): void {
+  // Union with current selection so the operator's existing custom
+  // additions (e.g. plugin-specific kinds) aren't dropped.
+  const merged = new Set([...mcpAlwaysConfirmKindsArr.value, ...destructiveKindIds.value])
+  mcpAlwaysConfirmKindsArr.value = Array.from(merged)
+}
+
+function clearAlwaysConfirm(): void {
+  mcpAlwaysConfirmKindsArr.value = []
+}
 // Phase 7.5+++ — janitor retention windows. Defaults match
 // GrantSweeperService.Default* constants (1 day, 30 days). Setting
 // either to 0 disables that branch (operator keeps everything).
