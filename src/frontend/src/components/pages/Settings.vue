@@ -622,16 +622,49 @@
                   <span class="hint" style="margin-left: 12px">
                     {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
                   </span>
-                  <el-tag
+                  <el-popover
                     v-if="!deployFlipUnlocked && deployFlipBlockers.length > 0"
-                    type="warning"
-                    size="small"
-                    effect="plain"
-                    style="margin-left: 12px"
-                    :title="deployFlipBlockers.join('\n')"
+                    placement="right"
+                    :width="400"
+                    trigger="click"
                   >
-                    🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
-                  </el-tag>
+                    <template #reference>
+                      <el-tag
+                        type="warning"
+                        size="small"
+                        effect="plain"
+                        style="margin-left: 12px; cursor: pointer"
+                      >
+                        🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
+                      </el-tag>
+                    </template>
+                    <!-- Iter 19: when blockerDetails available (?explain=true)
+                         render phase tag + remediation per blocker so operator
+                         sees actionable next-steps inline without leaving
+                         Settings. Falls back to summary list for older daemon. -->
+                    <div style="font-size: 12px">
+                      <ul style="padding-left: 16px; margin: 0">
+                        <li
+                          v-for="(b, i) in deployFlipBlockerDetails.length > 0
+                            ? deployFlipBlockerDetails
+                            : deployFlipBlockers.map((s) => ({ summary: s, phase: '', remediation: '' }))"
+                          :key="i"
+                          style="line-height: 1.4; margin-bottom: 6px"
+                        >
+                          <span v-if="b.phase" style="display: inline-block; min-width: 28px">
+                            <el-tag size="small" type="info" effect="plain">{{ b.phase }}</el-tag>
+                          </span>
+                          {{ b.summary }}
+                          <div v-if="b.remediation" class="muted" style="font-size: 11px; margin-top: 2px; padding-left: 32px">
+                            → {{ b.remediation }}
+                          </div>
+                        </li>
+                      </ul>
+                      <div class="muted" style="margin-top: 8px; font-size: 11px">
+                        <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
+                      </div>
+                    </div>
+                  </el-popover>
                 </el-form-item>
               </el-form>
             </div>
@@ -1463,12 +1496,17 @@ const deployUseLegacyHostHandlers = ref(true)
 // header can render a status banner ("⚙ built-in" / "🔌 plugin v0.1.0").
 const deployFlipUnlocked = ref<boolean>(false)
 const deployFlipBlockers = ref<string[]>([])
+interface DeployBlockerDetail { summary: string; phase: string; remediation: string }
+const deployFlipBlockerDetails = ref<DeployBlockerDetail[]>([])
 const deployBackendMode = ref<'built-in' | 'plugin' | null>(null)
 const deployPluginVersion = ref<string | null>(null)
 const deployPluginLoaded = ref<boolean>(false)
 async function loadDeployFlipReadiness(): Promise<void> {
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/admin/plugin-readiness`, {
+    // Iter 19: fetch with ?explain=true so the locked-toggle popover can
+    // render per-blocker remediation. Older daemons return flat shape and
+    // blockerDetails stays empty → popover falls back to summary list.
+    const r = await fetch(`${daemonBaseUrl()}/api/admin/plugin-readiness?explain=true`, {
       method: 'GET',
       headers: authHeaders(),
     })
@@ -1476,6 +1514,7 @@ async function loadDeployFlipReadiness(): Promise<void> {
       const j = await r.json()
       deployFlipUnlocked.value = j.readyToFlip === true
       deployFlipBlockers.value = Array.isArray(j.blockers) ? j.blockers : []
+      deployFlipBlockerDetails.value = Array.isArray(j.blockerDetails) ? j.blockerDetails : []
       deployBackendMode.value = j.mode === 'plugin' || j.mode === 'built-in' ? j.mode : null
       deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
       deployPluginLoaded.value = j.pluginLoaded === true
