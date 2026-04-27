@@ -24,6 +24,7 @@
     "test": "playwright test",
     "test:e2e": "bash ../../tools/e2e-mcp-deploy.sh",
     "validate:cutover": "bash ../../tools/validate-cutover.sh",
+    "dev:rebuild": "bash ../../tools/dev-daemon-rebuild.sh",
     "smoke:packaged:win": "node ../../scripts/smoke-packaged-electron.mjs --replace-dev-daemon --exe \"./release/win-unpacked/NKS WebDev Console.exe\"",
     "smoke:e2e": "node ../../scripts/smoke-e2e.mjs",
     "smoke:f91-disable": "node ../../scripts/smoke-f91-disable.mjs",
