@@ -638,28 +638,15 @@
                         🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
                       </el-tag>
                     </template>
-                    <!-- Iter 19: when blockerDetails available (?explain=true)
-                         render phase tag + remediation per blocker so operator
-                         sees actionable next-steps inline without leaving
-                         Settings. Falls back to summary list for older daemon. -->
+                    <!-- Iter 21: shared component renders blockerDetails
+                         phase tag + remediation. Same shape as the per-site
+                         DeploySettingsPanel popover so operator sees identical
+                         UI in both global + per-site contexts. -->
                     <div style="font-size: 12px">
-                      <ul style="padding-left: 16px; margin: 0">
-                        <li
-                          v-for="(b, i) in deployFlipBlockerDetails.length > 0
-                            ? deployFlipBlockerDetails
-                            : deployFlipBlockers.map((s) => ({ summary: s, phase: '', remediation: '' }))"
-                          :key="i"
-                          style="line-height: 1.4; margin-bottom: 6px"
-                        >
-                          <span v-if="b.phase" style="display: inline-block; min-width: 28px">
-                            <el-tag size="small" type="info" effect="plain">{{ b.phase }}</el-tag>
-                          </span>
-                          {{ b.summary }}
-                          <div v-if="b.remediation" class="muted" style="font-size: 11px; margin-top: 2px; padding-left: 32px">
-                            → {{ b.remediation }}
-                          </div>
-                        </li>
-                      </ul>
+                      <ReadinessBlockerList
+                        :blockers="deployFlipBlockers"
+                        :blocker-details="deployFlipBlockerDetails"
+                      />
                       <div class="muted" style="margin-top: 8px; font-size: 11px">
                         <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
                       </div>
@@ -1310,6 +1297,7 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
+import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import { compareSemver } from '../../utils/semver'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'

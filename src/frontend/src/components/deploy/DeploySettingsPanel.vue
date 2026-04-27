@@ -73,25 +73,13 @@
             </div>
             <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
               <div class="muted" style="margin-bottom: 4px">Blockers:</div>
-              <ul style="padding-left: 16px; margin: 0">
-                <!-- Iter 18: when blockerDetails is loaded (via ?explain=true)
-                     each blocker shows phase tag + remediation as a muted
-                     line below the summary. Falls back to plain blockers[]
-                     when explain payload not available (older daemon). -->
-                <li
-                  v-for="(b, i) in deployBackendReadiness.blockerDetails ?? deployBackendReadiness.blockers.map((s) => ({ summary: s, phase: '', remediation: '' }))"
-                  :key="i"
-                  style="line-height: 1.4; margin-bottom: 6px"
-                >
-                  <span v-if="b.phase" style="display: inline-block; min-width: 28px">
-                    <el-tag size="small" type="info" effect="plain">{{ b.phase }}</el-tag>
-                  </span>
-                  {{ b.summary }}
-                  <div v-if="b.remediation" class="muted" style="font-size: 11px; margin-top: 2px; padding-left: 32px">
-                    → {{ b.remediation }}
-                  </div>
-                </li>
-              </ul>
+              <!-- Iter 21: shared component renders blockerDetails phase tag
+                   + remediation when ?explain=true payload available; falls
+                   back to summary-only rows for older daemons. -->
+              <ReadinessBlockerList
+                :blockers="deployBackendReadiness.blockers"
+                :blocker-details="deployBackendReadiness.blockerDetails"
+              />
             </div>
             <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
               <code class="mono">GET /api/admin/plugin-readiness</code>
@@ -963,6 +951,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HostSettingsCard from './HostSettingsCard.vue'
+import ReadinessBlockerList from './ReadinessBlockerList.vue'
 import { listMcpGrants, subscribeEventsMap, fetchPlugins, daemonBaseUrl, daemonAuthHeaders } from '../../api/daemon'
 import { onBeforeUnmount } from 'vue'
 import {
