@@ -130,11 +130,11 @@ const alwaysConfirmCount = ref<number>(0)
 let unsubscribeHubSse: (() => void) | null = null
 
 function onAlwaysConfirmClick(): void {
-  // Switch to the Kinds tab where the 🔒 chip rows are visible.
-  if (activeTab.value !== 'kinds') {
-    activeTab.value = 'kinds'
-    onTabChange('kinds')
-  }
+  // Phase 7.5+++ — go to /mcp/kinds with danger filter pre-set to
+  // destructive (the kinds eligible for always-confirm). This narrows
+  // operator focus from the start instead of forcing them to pick the
+  // filter manually.
+  void router.push({ path: '/mcp/kinds', query: { danger: 'destructive' } })
 }
 
 async function refreshCounts(): Promise<void> {

@@ -139,9 +139,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import {
@@ -151,6 +151,7 @@ import {
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const kinds = ref<McpKindRow[]>([])
 const grants = ref<McpGrantRow[]>([])
@@ -175,7 +176,14 @@ function goToAlwaysConfirmSetting(): void {
 
 const search = ref('')
 const pluginFilter = ref<string | null>(null)
-const dangerFilter = ref<'all' | 'reversible' | 'destructive'>('all')
+// Phase 7.5+++ — danger filter pre-set from URL ?danger=. Driven by
+// the McpHub stats card click on the ring-fenced count chip.
+function parseDangerQuery(): 'all' | 'reversible' | 'destructive' {
+  const q = typeof route.query.danger === 'string' ? route.query.danger : ''
+  return q === 'reversible' || q === 'destructive' ? q : 'all'
+}
+const dangerFilter = ref<'all' | 'reversible' | 'destructive'>(parseDangerQuery())
+watch(() => route.query.danger, () => { dangerFilter.value = parseDangerQuery() })
 const reversibleCount = computed<number>(() =>
   kinds.value.filter((k) => k.danger === 'reversible').length)
 const destructiveCount = computed<number>(() =>
