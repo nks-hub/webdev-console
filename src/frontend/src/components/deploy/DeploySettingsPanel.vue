@@ -41,10 +41,50 @@
              "plugin v<version>" so the migration progress is visible
              without reading the daemon log. Static text for now — a
              follow-up "Switch backend" CTA arrives in #109-D1. -->
-        <el-tooltip
-          :content="deployBackendTooltip"
+        <!-- #109-D1+: badge becomes a popover trigger when readiness
+             diagnostic is loaded. Click → see blockers + recommendation
+             from /api/admin/plugin-readiness inline. Falls back to plain
+             tooltip when readiness fetch failed (older daemons or net
+             error). -->
+        <el-popover
+          v-if="deployBackendReadiness"
           placement="bottom"
+          :width="380"
+          trigger="click"
         >
+          <template #reference>
+            <el-tag
+              :type="deployBackendIsPlugin ? 'success' : 'info'"
+              size="small"
+              effect="plain"
+              class="deploy-backend-tag clickable-stat"
+              :title="deployBackendTooltip"
+            >
+              {{ deployBackendBadge }}
+              <span v-if="deployBackendReadiness.blockers.length > 0" style="margin-left: 4px">
+                · {{ deployBackendReadiness.blockers.length }}⚠
+              </span>
+              <span v-else style="margin-left: 4px">· ✓</span>
+            </el-tag>
+          </template>
+          <div style="font-size: 12px">
+            <div style="margin-bottom: 6px">
+              <strong>{{ deployBackendReadiness.recommendation }}</strong>
+            </div>
+            <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
+              <div class="muted" style="margin-bottom: 4px">Blockers:</div>
+              <ul style="padding-left: 16px; margin: 0">
+                <li v-for="(b, i) in deployBackendReadiness.blockers" :key="i" style="line-height: 1.4">
+                  {{ b }}
+                </li>
+              </ul>
+            </div>
+            <div class="muted" style="margin-top: 8px; font-size: 11px">
+              <code class="mono">GET /api/admin/plugin-readiness</code>
+            </div>
+          </div>
+        </el-popover>
+        <el-tooltip v-else :content="deployBackendTooltip" placement="bottom">
           <el-tag
             :type="deployBackendIsPlugin ? 'success' : 'info'"
             size="small"
@@ -1050,6 +1090,20 @@ function goToMcpGrants(): void {
 // never blocks the settings panel from rendering.
 const deployBackendVersion = ref<string | null>(null)
 const deployBackendEffectiveMode = ref<'built-in' | 'plugin' | null>(null)
+// #109-D1+: cached readiness payload from /api/admin/plugin-readiness.
+// When non-null, the badge becomes a popover trigger showing blockers +
+// recommendation inline. Null when fetch fails (old daemon binaries
+// pre-D1 don't expose this endpoint) — UI falls back to plain tooltip.
+interface DeployReadiness {
+  mode: 'built-in' | 'plugin'
+  pluginLoaded: boolean
+  pluginVersion: string | null
+  useLegacyHostHandlers: boolean
+  readyToFlip: boolean
+  blockers: string[]
+  recommendation: string
+}
+const deployBackendReadiness = ref<DeployReadiness | null>(null)
 const deployBackendIsPlugin = computed<boolean>(() =>
   // Header wins when present.
   deployBackendEffectiveMode.value === 'plugin'
@@ -1095,6 +1149,18 @@ async function loadDeployBackendInfo(): Promise<void> {
     // Probe failed — leave effectiveMode null so the version-based
     // fallback in deployBackendIsPlugin kicks in.
   }
+  // Readiness diagnostic — feeds the click-popover with structured
+  // blockers + recommendation. Optional (older daemons return 404),
+  // graceful degrade leaves popover off and falls back to plain tooltip.
+  try {
+    const probe = await fetch(
+      `${daemonBaseUrl()}/api/admin/plugin-readiness`,
+      { method: 'GET', headers: daemonAuthHeaders() }
+    )
+    if (probe.ok) {
+      deployBackendReadiness.value = await probe.json()
+    }
+  } catch { /* graceful degrade */ }
 }
 
 // Phase 7.5+++ — also live-refresh the badge when grants change
