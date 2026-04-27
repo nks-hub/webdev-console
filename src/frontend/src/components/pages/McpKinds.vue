@@ -209,8 +209,12 @@ let unsubscribeGrantSse: (() => void) | null = null
 
 onMounted(() => {
   void refresh()
+  // Phase 7.5+++ — also listen to mcp:settings-changed so the
+  // alwaysConfirm column reflects always_confirm_kinds edits in
+  // another tab without manual Refresh.
   unsubscribeGrantSse = subscribeEventsMap({
     'mcp:grant-changed': () => { void refresh() },
+    'mcp:settings-changed': () => { void refresh() },
   })
 })
 

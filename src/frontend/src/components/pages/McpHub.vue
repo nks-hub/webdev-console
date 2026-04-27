@@ -177,6 +177,9 @@ onMounted(() => {
     'mcp:intent-changed': () => { void refreshCounts() },
     'mcp:confirm-request': () => { void refreshCounts() },
     'mcp:grant-changed': () => { void refreshCounts() },
+    // Phase 7.5+++ — settings change refreshes the kinds list so the
+    // ring-fenced count chip stays accurate without manual reload.
+    'mcp:settings-changed': () => { void refreshCounts() },
   })
 })
 

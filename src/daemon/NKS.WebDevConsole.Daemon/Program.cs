@@ -8883,7 +8883,9 @@ app.MapGet("/api/settings", async (Database db) =>
     return Results.Ok(dict);
 });
 
-app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
+app.MapPut("/api/settings", async (
+    HttpContext ctx, Database db,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
 {
     // Frontend sends mixed-type JSON — booleans for toggles, numbers for
     // timeouts, strings for URLs. Hard-typing to Dictionary<string,string>
@@ -8944,6 +8946,17 @@ app.MapPut("/api/settings", async (HttpContext ctx, Database db) =>
     {
         tx.Rollback();
         throw;
+    }
+
+    // Phase 7.5+++ — broadcast mcp:settings-changed when any mcp.* key
+    // was touched in this batch so live MCP pages (Kinds, Hub, Settings
+    // open in another tab) re-fetch and reflect the change without
+    // operator hitting Refresh. Lists the affected keys for telemetry.
+    var mcpKeys = settings.Keys.Where(k => k.StartsWith("mcp.", StringComparison.OrdinalIgnoreCase)).ToList();
+    if (mcpKeys.Count > 0)
+    {
+        try { await eventsBus.BroadcastAsync("mcp:settings-changed", new { keys = mcpKeys }); }
+        catch { /* best-effort SSE — never block the save path */ }
     }
 
     // Propagate port changes to live plugin config — without this, edits
