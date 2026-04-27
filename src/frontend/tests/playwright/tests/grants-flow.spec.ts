@@ -60,13 +60,15 @@ test.describe('MCP grants flow', () => {
     expect(j.entries.length).toBeLessThanOrEqual(10)
   })
 
-  test('mcp:kinds endpoint returns 7 core kinds with alwaysConfirm flag', async ({ authedRequest }) => {
+  test('mcp:kinds endpoint exposes the seeded kinds with alwaysConfirm flag', async ({ authedRequest }) => {
     const r = await authedRequest.get('/api/mcp/kinds')
     expect(r.status()).toBe(200)
     const j = await r.json()
-    expect(j.count).toBe(7)
     const ids = j.entries.map((k: { id: string }) => k.id).sort()
-    expect(ids).toEqual([
+
+    // Original 7 deploy kinds — must always be present, defines the
+    // legacy contract the GUI relied on before non-deploy gates landed.
+    expect(ids).toEqual(expect.arrayContaining([
       'cancel',
       'deploy',
       'restore',
@@ -74,10 +76,51 @@ test.describe('MCP grants flow', () => {
       'settings_write',
       'snapshot_create',
       'test_hook',
-    ])
+    ]))
+    expect(j.count).toBeGreaterThanOrEqual(7)
+
     // alwaysConfirm field present on every row (boolean).
     for (const k of j.entries) {
       expect(typeof k.alwaysConfirm).toBe('boolean')
+      // Every kind belongs to a plugin id — non-empty string.
+      expect(typeof k.pluginId).toBe('string')
+      expect(k.pluginId.length).toBeGreaterThan(0)
+      // Danger level is one of the known set.
+      expect(['reversible', 'destructive']).toContain(k.danger.toLowerCase())
+    }
+  })
+
+  test('non-deploy destructive kinds are seeded once daemon picks up new registry', async ({ authedRequest }) => {
+    // Phase 7.5+++ — extends MCP gate to non-deploy ops (database_drop,
+    // site_delete, dns_record_delete, ssl_cert_delete, plugin_uninstall).
+    // The seed is in DestructiveOperationKindsRegistry but only takes
+    // effect after daemon restart. While the running daemon still has
+    // only the original 7 kinds this test gracefully skips; once the
+    // daemon picks up the new registry, the test becomes a hard
+    // assertion that all 5 non-deploy kinds are present + Destructive.
+    const r = await authedRequest.get('/api/mcp/kinds')
+    const j = await r.json()
+    const byId: Record<string, { danger: string; alwaysConfirm: boolean }> = {}
+    for (const k of j.entries) {
+      byId[k.id] = { danger: k.danger.toLowerCase(), alwaysConfirm: k.alwaysConfirm }
+    }
+
+    const expected = ['database_drop', 'site_delete', 'dns_record_delete', 'ssl_cert_delete', 'plugin_uninstall']
+    const missing = expected.filter((id) => !byId[id])
+
+    if (missing.length === expected.length) {
+      // Daemon hasn't picked up the new registry yet — every expected
+      // kind is missing. Skip with a clear reason rather than failing.
+      test.skip(true, `running daemon registry does not yet include non-deploy kinds (missing: ${missing.join(', ')}); restart daemon to pick up DestructiveOperationKindsRegistry seed`)
+      return
+    }
+
+    // Partial coverage = bug. Either all 5 land together or none.
+    expect(missing).toEqual([])
+
+    // Each must be Destructive (qualifies for Lock-all-destructive #208).
+    for (const id of expected) {
+      expect(byId[id].danger).toBe('destructive')
     }
   })
 

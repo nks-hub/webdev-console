@@ -58,6 +58,30 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // the file), but an AI loop spamming this is a disk-fill DoS.
         _kinds["snapshot_create"] = new DestructiveOperationKind(
             "snapshot_create", "Create a manual snapshot of the current release", CorePluginId, DangerLevel.Reversible);
+        // Phase 7.5+++ — extend MCP gate beyond deploy. Non-deploy
+        // destructive endpoints (DROP DATABASE, site delete, DNS record
+        // delete, SSL cert removal, plugin uninstall) all share the same
+        // attack surface as deploy ops: an AI agent with a wildcard
+        // session grant could chain them to silently dismantle the
+        // operator's environment. Registering them as Destructive kinds
+        // unlocks the same intent + always-confirm + grant cooldown
+        // protections that already cover the deploy surface.
+        //
+        // These are PERMANENTLY destructive — the live data being
+        // dropped is unrecoverable from within WDC (operator must have
+        // their own out-of-band backup). DangerLevel.Destructive surfaces
+        // them in the McpKinds destructive filter and qualifies them for
+        // the "Lock all destructive" preset (#208).
+        _kinds["database_drop"] = new DestructiveOperationKind(
+            "database_drop", "Drop a database", CorePluginId, DangerLevel.Destructive);
+        _kinds["site_delete"] = new DestructiveOperationKind(
+            "site_delete", "Delete a managed site", CorePluginId, DangerLevel.Destructive);
+        _kinds["dns_record_delete"] = new DestructiveOperationKind(
+            "dns_record_delete", "Delete a Cloudflare DNS record", CorePluginId, DangerLevel.Destructive);
+        _kinds["ssl_cert_delete"] = new DestructiveOperationKind(
+            "ssl_cert_delete", "Delete an SSL certificate", CorePluginId, DangerLevel.Destructive);
+        _kinds["plugin_uninstall"] = new DestructiveOperationKind(
+            "plugin_uninstall", "Uninstall a plugin", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)

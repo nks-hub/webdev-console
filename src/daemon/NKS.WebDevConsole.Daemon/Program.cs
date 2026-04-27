@@ -9705,11 +9705,44 @@ app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, Settings
     }
 });
 
-// Drop database
-app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+// Drop database — MCP intent-gated under kind=database_drop. An AI
+// with a wildcard session grant could otherwise chain DROP DATABASE
+// against every site as a single irreversible action; the gate forces
+// the same intent + always-confirm pipeline that protects deploy
+// kinds. Header-driven (X-Intent-Token) so the GUI delete button
+// (which doesn't set the header) keeps working unchanged — only AI
+// callers that DON'T already hold a GUI session pay the gate cost.
+app.MapDelete("/api/databases/{name}", async (
+    string name,
+    BinaryManager bm,
+    SettingsStore settings,
+    IServiceProvider sp,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
+
+    // MCP intent gate. Mirrors the test_hook / settings_write gates in
+    // the deploy plugin: only validates if a token is present, so direct
+    // GUI calls flow through unchanged. Bound to the synthetic host
+    // marker "*db*" since database operations aren't tied to a deploy
+    // host — keeps a deploy intent from being reused as a database
+    // intent and vice versa.
+    var dbIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(dbIntentToken))
+    {
+        var dbAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var dbVerdict = await intentValidator.ValidateAndConsumeAsync(
+            dbIntentToken, "database_drop", domain: name, host: "*db*", dbAllowUnconfirmed, ct);
+        if (!dbVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = dbVerdict.Reason, detail = dbVerdict.Detail },
+                statusCode: dbVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
 
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
@@ -9725,7 +9758,7 @@ app.MapDelete("/api/databases/{name}", async (string name, BinaryManager bm, Set
             .WithArguments(args)
             .WithEnvironmentVariables(MysqlEnvVars())
             .WithValidation(CliWrap.CommandResultValidation.None)
-            .ExecuteBufferedAsync();
+            .ExecuteBufferedAsync(ct);
         return result.ExitCode == 0
             ? Results.NoContent()
             : Results.BadRequest(new { error = result.StandardError.Trim() });
