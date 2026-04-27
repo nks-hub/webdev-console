@@ -4888,8 +4888,33 @@ app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, I
     }
 });
 
-app.MapPost("/api/services/{id}/stop", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
+// MCP intent-gated under kind=service_restart. Service stop = downtime
+// for the dependent surface (sites going through Apache/Nginx, queries
+// hitting MySQL/Redis). An AI loop spamming stop = effective DoS;
+// header-conditional gate means GUI service rows keep working without
+// a token.
+app.MapPost("/api/services/{id}/stop", async (
+    string id,
+    IServiceProvider sp,
+    ILoggerFactory lf,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
 {
+    var stopIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(stopIntentToken))
+    {
+        var stopAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var stopVerdict = await intentValidator.ValidateAndConsumeAsync(
+            stopIntentToken, "service_restart", domain: id, host: "*svc*", stopAllowUnconfirmed, ct);
+        if (!stopVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = stopVerdict.Reason, detail = stopVerdict.Detail },
+                statusCode: stopVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     var modules = sp.GetServices<IServiceModule>();
     var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
         || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -4911,8 +4936,30 @@ app.MapPost("/api/services/{id}/stop", async (string id, IServiceProvider sp, IL
     }
 });
 
-app.MapPost("/api/services/{id}/restart", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
+// MCP intent-gated under kind=service_restart. Same risk profile as
+// stop (downtime during the stop-then-start window).
+app.MapPost("/api/services/{id}/restart", async (
+    string id,
+    IServiceProvider sp,
+    ILoggerFactory lf,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
 {
+    var rstIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(rstIntentToken))
+    {
+        var rstAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var rstVerdict = await intentValidator.ValidateAndConsumeAsync(
+            rstIntentToken, "service_restart", domain: id, host: "*svc*", rstAllowUnconfirmed, ct);
+        if (!rstVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = rstVerdict.Reason, detail = rstVerdict.Detail },
+                statusCode: rstVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     var modules = sp.GetServices<IServiceModule>();
     var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
         || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -10036,11 +10083,36 @@ app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm,
     }
 });
 
-// Database import (mysql < file)
-app.MapPost("/api/databases/{name}/import", async (string name, HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+// Database import (mysql < file). MCP intent-gated under
+// kind=database_import. Imports overwrite the destination database
+// — strictly destructive when the operator runs against an existing
+// schema. Header-driven gate so the GUI import wizard stays untouched.
+app.MapPost("/api/databases/{name}/import", async (
+    string name,
+    HttpContext ctx,
+    BinaryManager bm,
+    SettingsStore settings,
+    IServiceProvider sp,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    CancellationToken ct) =>
 {
     if (!IsValidDatabaseName(name))
         return Results.BadRequest(new { error = "Invalid database name" });
+
+    var impIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(impIntentToken))
+    {
+        var impAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var impVerdict = await intentValidator.ValidateAndConsumeAsync(
+            impIntentToken, "database_import", domain: name, host: "*db*", impAllowUnconfirmed, ct);
+        if (!impVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = impVerdict.Reason, detail = impVerdict.Detail },
+                statusCode: impVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
         return Results.BadRequest(new { error = "MySQL not installed" });

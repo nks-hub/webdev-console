@@ -92,6 +92,20 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // preset (#208) and always-confirm-by-default in strict mode.
         _kinds["database_query"] = new DestructiveOperationKind(
             "database_query", "Execute arbitrary SQL against a database", CorePluginId, DangerLevel.Destructive);
+        // Phase 7.5+++ wave 2 — service lifecycle ops cause downtime
+        // (stop) or service interruption (restart). Reversible (service
+        // restarts cleanly), but spam from an AI loop = effective DoS.
+        // One kind covers stop+restart since both share the same risk
+        // profile; start is unguarded (no downtime to cause when starting
+        // an already-stopped service).
+        _kinds["service_restart"] = new DestructiveOperationKind(
+            "service_restart", "Stop or restart a managed service", CorePluginId, DangerLevel.Reversible);
+        // `database_import` overwrites the target database with the SQL
+        // dump in the request body. Strictly destructive — the existing
+        // schema/data is gone. Operator-driven imports happen via the
+        // GUI database tab; AI callers must clear the gate first.
+        _kinds["database_import"] = new DestructiveOperationKind(
+            "database_import", "Import a SQL dump into a database (overwrites)", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)
