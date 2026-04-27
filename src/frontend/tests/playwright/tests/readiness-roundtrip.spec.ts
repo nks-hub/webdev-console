@@ -18,6 +18,14 @@ import { test, expect } from './_fixtures'
 
 test.describe('Readiness ↔ settings round-trip (#109-D1+)', () => {
   test('useLegacyHostHandlers flip echoes through plugin-readiness', async ({ authedRequest }) => {
+    // Iter 34 — defensive baseline reset. If a previous test run was
+    // killed mid-test (signal interrupt), the setting may still be 'false'
+    // in daemon SQLite. Force baseline to default before our assertions
+    // so the test is hermetic against prior-run bleed. Idempotent.
+    await authedRequest.put('/api/settings', {
+      data: { 'deploy.useLegacyHostHandlers': 'true' },
+    })
+
     const before = await authedRequest.get('/api/settings')
     const beforeJson = await before.json()
     const original = beforeJson['deploy.useLegacyHostHandlers']

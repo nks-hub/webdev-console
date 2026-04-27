@@ -46,13 +46,15 @@ api() {
     curl -s -X "$method" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@" "$BASE$path"
 }
 
-# Iter 33 — defensive startup reset. Section ZZ writes mcp.always_confirm_kinds=deploy
-# and resets to ZZ_BEFORE in its own teardown. If a previous run was killed
-# mid-ZZ, "deploy" stays in SQLite and poisons the next run's grant-flow
-# tests with `intent_rejected/always_confirm`. Reset at startup so each
-# run begins from a clean baseline regardless of how the prior run exited.
-# Idempotent: empty value is the default-safe state.
+# Iter 33-34 — defensive startup reset for settings that other tests
+# mutate-and-restore. If a previous run (this script OR Playwright) was
+# killed mid-test, the value stays in SQLite and poisons the next run.
+# Each entry below is the default-safe baseline; idempotent if already at default.
+# Why this exists: try/finally restore is fragile against signal kills;
+# pair with startup wipe (belt + suspenders). See bugfix_e2e_state_poisoning.md.
 api PUT /api/settings -d '{"mcp.always_confirm_kinds":""}' >/dev/null 2>&1 || true
+api PUT /api/settings -d '{"deploy.useLegacyHostHandlers":"true"}' >/dev/null 2>&1 || true
+api PUT /api/settings -d '{"deploy.enabled":"true"}' >/dev/null 2>&1 || true
 
 # Phase 7.5+++ — REAL deploy: helper builds the localPaths body. Real
 # git repos at C:\work\sites\{blog.loc,shop.loc} get copied into release
