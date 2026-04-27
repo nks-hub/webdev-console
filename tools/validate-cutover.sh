@@ -163,6 +163,18 @@ else
     err "restartPending mismatch — boot/current drift not cleared"
 fi
 
+# Iter 87 — directive "ověř ho i na shop.loc". Confirm the plugin handler
+# resolves the shop.loc fixture too, not only blog.loc. If shop.loc's
+# settings drift (host renamed, deploy.local.neon missing), this fails
+# fast in the cutover validator before the operator commits to plugin.
+R2_SHOP=$(api -X POST -d '{"type":"shell","command":"echo shop-OK","timeoutSeconds":3}' \
+    "http://localhost:$PORT/api/nks.wdc.deploy/sites/shop.loc/hooks/test")
+if echo "$R2_SHOP" | grep -qv '"workingDir"' && echo "$R2_SHOP" | grep -q 'shop-OK'; then
+    ok "legacy=false: plugin handler resolves shop.loc fixture too"
+else
+    err "legacy=false: shop.loc parity check failed — plugin can't reach fixture"
+fi
+
 # Probe the test-host-connection plugin endpoint too — pure utility.
 R2C=$(api -X POST -d '{"host":"127.0.0.1","port":80}' \
     "http://localhost:$PORT/api/nks.wdc.deploy/test-host-connection")
