@@ -1555,6 +1555,56 @@ rm -rf "$MM_TARGET_MSYS"
 rm -f "$HOME/.wdc/backups/manual/blog.loc/"*.zip "$HOME/.wdc/backups/pre-deploy/blog.loc/"*.zip 2>/dev/null
 
 # ============================================================================
+echo ""; echo "${YEL}=== NN. group rollback cascades real symlink swaps ===${END}"
+# ============================================================================
+# Group rollback now reports realSwaps[] for hosts with localPaths and
+# noopHosts[] for hosts without. Each real swap atomically points current
+# back at .dep/previous_release.
+NN_TARGET_MSYS="/c/temp/e2e-grouprb-target"
+NN_TARGET_WIN="C:/temp/e2e-grouprb-target"
+rm -rf "$NN_TARGET_MSYS"
+mkdir -p "$NN_TARGET_MSYS"
+
+NN_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+NN_BACKUP=""
+[ -f "$NN_SETTINGS_FILE" ] && NN_BACKUP=$(cat "$NN_SETTINGS_FILE")
+# production has localPaths, staging doesn't (so it should land in noopHosts)
+cat > "$NN_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"C:/work/sites/blog.loc","localTargetPath":"$NN_TARGET_WIN"},{"name":"staging","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+# 2 deploys to production so .dep/previous_release exists
+for i in 1 2; do
+    curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -d '{"host":"production","branch":"main"}' \
+        "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+    sleep 2
+done
+
+# Start a group with both hosts
+NN_GRP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"hosts":["production","staging"]}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/groups")
+NN_GID=$(echo "$NN_GRP" | python3 -c "import sys,json; print(json.load(sys.stdin)['groupId'])" 2>/dev/null)
+sleep 3
+
+# Cascade rollback
+NN_RB=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/groups/$NN_GID/rollback")
+step "group rollback returns realSwaps for production" "$NN_RB" '"realSwaps"'
+step "group rollback reports staging as noop (no localPaths)" "$NN_RB" '"noopHosts":\["staging"\]'
+step "group rollback returns rolled_back status" "$NN_RB" '"status":"rolled_back"'
+
+# Cleanup — also wipe deploy_groups rows so subsequent suite runs that
+# expect blog.loc to start with count=0 don't fail. Best-effort sqlite.
+if [ -n "$SQLITE_BIN" ] && [ -f "$WDC_DB" ]; then
+    "$SQLITE_BIN" "$WDC_DB" "DELETE FROM deploy_groups WHERE domain='blog.loc'" 2>/dev/null
+    "$SQLITE_BIN" "$WDC_DB" "DELETE FROM deploy_runs WHERE group_id='$NN_GID'" 2>/dev/null
+fi
+if [ -n "$NN_BACKUP" ]; then echo "$NN_BACKUP" > "$NN_SETTINGS_FILE"; fi
+rm -rf "$NN_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""

@@ -2664,24 +2664,123 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
 });
 
 // POST /sites/{domain}/groups/{groupId}/rollback — cascade rollback
-// every committed host. Phase 7.5++ also flips per-host deploy_runs
-// rows to status='rolled_back' so Groups tab → drilldown shows the
-// rollback state, not stale Done.
+// every committed host. Phase 7.5++ flipped per-host deploy_runs rows.
+// Phase 7.5+++ — also performs the REAL atomic symlink swap per host
+// when localTargetPath is configured + .dep/previous_release exists.
+// Hosts without localPaths get the legacy DB-only flip so the Groups
+// tab → drilldown shows them as rolled_back rather than stuck Done.
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", async (
-    string domain, string groupId,
+    string domain, string groupId, HttpContext grbCtx,
     NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
     CancellationToken ct) =>
 {
     var grp = await groups.GetByIdAsync(groupId, ct);
     if (grp is null || !string.Equals(grp.Domain, domain, StringComparison.OrdinalIgnoreCase))
         return Results.NotFound(new { error = "group_not_found", groupId });
 
-    foreach (var (_, deployId) in grp.HostDeployIds)
+    // Optional MCP intent gate (kind=rollback, host=*).
+    var grbIntentToken = grbCtx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(grbIntentToken))
+    {
+        var grbAllowUnconfirmed = string.Equals(
+            grbCtx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            grbIntentToken, "rollback", domain, "*", grbAllowUnconfirmed, ct);
+        if (!verdict.Ok)
+            return Results.Json(new { error = "intent_rejected", reason = verdict.Reason },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
+    // Resolve per-host localTargetPath up-front so the cascade can do
+    // real swaps where configured.
+    var hostTargets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    try
+    {
+        var settingsPath = DeploySettingsPath(domain);
+        if (File.Exists(settingsPath))
+        {
+            using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+            if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var hEl in hostsEl.EnumerateArray())
+                {
+                    if (!hEl.TryGetProperty("name", out var nEl)) continue;
+                    var name = nEl.GetString() ?? "";
+                    if (hEl.TryGetProperty("localTargetPath", out var ltEl))
+                    {
+                        var t = ltEl.GetString();
+                        if (!string.IsNullOrEmpty(t)) hostTargets[name] = t;
+                    }
+                }
+            }
+        }
+    }
+    catch { /* best-effort — hosts without entries get DB-only flip */ }
+
+    var realSwaps = new List<object>();
+    var noopHosts = new List<string>();
+    foreach (var (host, deployId) in grp.HostDeployIds)
     {
         try { await runs.UpdateStatusAsync(deployId, "rolled_back", ct); } catch { }
+        if (!hostTargets.TryGetValue(host, out var tgt))
+        {
+            noopHosts.Add(host);
+            continue;
+        }
+        var depPrev = Path.Combine(tgt, ".dep", "previous_release");
+        var currentLink = Path.Combine(tgt, "current");
+        if (!File.Exists(depPrev))
+        {
+            noopHosts.Add(host);
+            continue;
+        }
+        try
+        {
+            var prevRelease = (await File.ReadAllTextAsync(depPrev, ct)).Trim();
+            if (string.IsNullOrEmpty(prevRelease) || !Directory.Exists(prevRelease))
+            {
+                noopHosts.Add(host);
+                continue;
+            }
+            // Atomic swap + .dep rotation (mirrors single-host rollback).
+            if (Directory.Exists(currentLink))
+            {
+                var fi = new DirectoryInfo(currentLink);
+                if (fi.LinkTarget is not null) Directory.Delete(currentLink);
+                else Directory.Delete(currentLink, recursive: true);
+            }
+            Directory.CreateSymbolicLink(currentLink, prevRelease);
+            var depCurrent = Path.Combine(tgt, ".dep", "current_release");
+            var oldCurrent = File.Exists(depCurrent)
+                ? (await File.ReadAllTextAsync(depCurrent, ct)).Trim() : string.Empty;
+            await File.WriteAllTextAsync(depCurrent, prevRelease, ct);
+            if (!string.IsNullOrEmpty(oldCurrent) && oldCurrent != prevRelease)
+                await File.WriteAllTextAsync(depPrev, oldCurrent, ct);
+            realSwaps.Add(new { host, swappedTo = prevRelease });
+        }
+        catch (Exception ex)
+        {
+            realSwaps.Add(new { host, error = ex.Message });
+        }
     }
-    return Results.Ok(new { groupId, status = "rolled_back", hostCount = grp.Hosts.Count });
+
+    // Mark group as rolled_back via UpdatePhaseAsync — schema CHECK
+    // accepts 'rolled_back' (migration 009).
+    try { await groups.UpdatePhaseAsync(groupId, "rolled_back", isTerminal: true, errorMessage: null, ct); }
+    catch { /* best-effort */ }
+
+    return Results.Ok(new
+    {
+        groupId,
+        status = "rolled_back",
+        hostCount = grp.Hosts.Count,
+        realSwaps,
+        noopHosts,
+    });
 });
 
 // Phase 7.5+ — on-demand snapshot WITHOUT a deploy. Frontend's
