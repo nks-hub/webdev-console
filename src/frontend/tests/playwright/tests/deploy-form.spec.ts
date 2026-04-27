@@ -163,6 +163,11 @@ test.describe('Deploy form (dry-run preview)', () => {
     // and existing release count must not bleed across.
     expect(typeof j.existingReleaseCount).toBe('number')
     expect(typeof j.keepReleases).toBe('number')
+    // Same shape contract as blog.loc — DryRunPlanView reads these fields
+    // for both fixtures, so per-fixture parity matters.
+    expect(typeof j.soakSeconds).toBe('number')
+    expect(j).toHaveProperty('healthCheckUrl')
+    expect(typeof j.alwaysConfirmKind).toBe('boolean')
   })
 
   test('test-host-connection rejects malformed body with 400', async ({ authedRequest }) => {
