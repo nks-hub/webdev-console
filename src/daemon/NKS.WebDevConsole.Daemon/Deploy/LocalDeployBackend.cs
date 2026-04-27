@@ -79,7 +79,20 @@ public sealed class LocalDeployBackend
     public sealed record Options(
         IReadOnlyList<string>? SharedDirs = null,
         IReadOnlyList<string>? SharedFiles = null,
-        int? KeepReleases = null);
+        int? KeepReleases = null,
+        IReadOnlyList<HookSpec>? Hooks = null,
+        IReadOnlyDictionary<string, string>? EnvVars = null);
+
+    /// <summary>
+    /// One configured deploy hook. Mirrors DeployHookConfig in api/deploy.ts.
+    /// Event values: pre_deploy, post_fetch, pre_switch, post_switch, on_failure, on_rollback.
+    /// Type values: shell, http, php.
+    /// </summary>
+    public sealed record HookSpec(
+        string Event, string Type, string Command,
+        int TimeoutSeconds = 60,
+        bool Enabled = true,
+        string? Description = null);
 
     /// <summary>
     /// Run the full pipeline. Returns when complete (success or failure).
@@ -98,6 +111,9 @@ public sealed class LocalDeployBackend
         var sharedDirs = options?.SharedDirs ?? DefaultSharedDirs;
         var sharedFiles = options?.SharedFiles ?? DefaultSharedFiles;
         var keepReleases = Math.Max(1, options?.KeepReleases ?? DefaultKeepReleases);
+        var hooks = options?.Hooks ?? Array.Empty<HookSpec>();
+        var envVars = options?.EnvVars ?? new Dictionary<string, string>();
+        string? releaseDirForHooks = null;
 
         try
         {
@@ -117,13 +133,20 @@ public sealed class LocalDeployBackend
 
             var releaseDir = Path.Combine(releasesDir, releaseId);
             Directory.CreateDirectory(releaseDir);
+            releaseDirForHooks = releaseDir;
 
             await _runs.UpdateStatusAsync(deployId, "running", ct);
+
+            // Phase 7.5+++ — pre_deploy hooks fire before any file work.
+            await RunHooksAsync(hooks, "pre_deploy", deployId, releaseDir, envVars, ct);
 
             // ── 2. Copy source → release dir ─────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
                 new { deployId, phase = "Fetching", message = $"Copying files to {releaseDir}" });
             CopyDirectory(sourcePath, releaseDir);
+
+            // post_fetch hooks: copy is done, shared not linked yet.
+            await RunHooksAsync(hooks, "post_fetch", deployId, releaseDir, envVars, ct);
 
             // ── 3. Apply shared symlinks ─────────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
@@ -133,6 +156,9 @@ public sealed class LocalDeployBackend
                 LinkSharedDir(releaseDir, sharedDir, dir);
             foreach (var file in sharedFiles)
                 LinkSharedFile(releaseDir, sharedDir, file);
+
+            // pre_switch hooks: release is fully prepared, current still old.
+            await RunHooksAsync(hooks, "pre_switch", deployId, releaseDir, envVars, ct);
 
             // ── 4. Record previous release (for rollback) ────────────────
             var currentLink = Path.Combine(targetPath, "current");
@@ -150,6 +176,9 @@ public sealed class LocalDeployBackend
                 new { deployId, phase = "Switching", message = "Atomic symlink swap" });
             SwitchSymlinkOrCopy(currentLink, releaseDir);
             await _runs.MarkPastPonrAsync(deployId, ct);
+
+            // post_switch hooks: current now points at the new release.
+            await RunHooksAsync(hooks, "post_switch", deployId, releaseDir, envVars, ct);
 
             // ── 6. Soak (health placeholder) ─────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
@@ -172,10 +201,150 @@ public sealed class LocalDeployBackend
         {
             sw.Stop();
             _logger.LogWarning(ex, "Local deploy {DeployId} failed: {Msg}", deployId, ex.Message);
+            // on_failure hooks — best-effort, never block reporting the failure.
+            try { await RunHooksAsync(hooks, "on_failure", deployId, releaseDirForHooks ?? targetPath, envVars, ct); }
+            catch { }
             try { await _runs.MarkCompletedAsync(deployId, success: false, exitCode: -1,
                 errorMessage: ex.Message, durationMs: sw.ElapsedMilliseconds, ct); } catch { }
             try { await _events.BroadcastAsync("deploy:complete",
                 new { deployId, success = false, error = ex.Message }); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// Execute every enabled hook matching the given event in declared
+    /// order. Each hook runs sequentially (parallelism would mask which
+    /// step failed in operator logs). Failures broadcast a `deploy:hook`
+    /// SSE event but do NOT abort the deploy — the operator can
+    /// configure on_failure hooks for that. Honors per-hook timeout.
+    /// </summary>
+    private async Task RunHooksAsync(
+        IReadOnlyList<HookSpec> hooks, string evt,
+        string deployId, string releaseDir,
+        IReadOnlyDictionary<string, string> envVars,
+        CancellationToken ct)
+    {
+        var matched = hooks.Where(h => h.Enabled && string.Equals(h.Event, evt, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (matched.Count == 0) return;
+
+        await _events.BroadcastAsync("deploy:phase",
+            new { deployId, phase = "Building",
+                  message = $"Running {matched.Count} {evt} hook(s)" });
+
+        foreach (var hook in matched)
+        {
+            var hookSw = System.Diagnostics.Stopwatch.StartNew();
+            var label = hook.Description ?? hook.Command;
+            try
+            {
+                await ExecuteHookAsync(hook, releaseDir, envVars, ct);
+                hookSw.Stop();
+                await _events.BroadcastAsync("deploy:hook",
+                    new { deployId, evt, type = hook.Type, label,
+                          ok = true, durationMs = hookSw.ElapsedMilliseconds });
+                _logger.LogInformation("Hook {Event}/{Type} OK in {Ms}ms: {Label}",
+                    evt, hook.Type, hookSw.ElapsedMilliseconds, label);
+            }
+            catch (Exception ex)
+            {
+                hookSw.Stop();
+                _logger.LogWarning(ex, "Hook {Event}/{Type} FAILED: {Label} — {Msg}",
+                    evt, hook.Type, label, ex.Message);
+                await _events.BroadcastAsync("deploy:hook",
+                    new { deployId, evt, type = hook.Type, label,
+                          ok = false, error = ex.Message, durationMs = hookSw.ElapsedMilliseconds });
+                // Continue to next hook — failure-isolation. on_failure
+                // hooks intentionally fall through so the operator's
+                // notification still fires when a recovery hook errors.
+            }
+        }
+    }
+
+    /// <summary>
+    /// Dispatch one hook by type. shell → cmd.exe (Windows) or sh -c
+    /// (POSIX). http → POST to URL with deploy context as body. php →
+    /// `php -r {command}` if no path-like first token, else php {file}.
+    /// All paths run with the release dir as working directory + envVars
+    /// merged into the process environment.
+    /// </summary>
+    private async Task ExecuteHookAsync(
+        HookSpec hook, string releaseDir,
+        IReadOnlyDictionary<string, string> envVars,
+        CancellationToken ct)
+    {
+        var timeout = TimeSpan.FromSeconds(Math.Max(1, hook.TimeoutSeconds));
+        using var hookCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        hookCts.CancelAfter(timeout);
+
+        switch (hook.Type.ToLowerInvariant())
+        {
+            case "http":
+                using (var http = new HttpClient { Timeout = timeout })
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(
+                        new { releaseDir, hook.Event });
+                    using var req = new HttpRequestMessage(HttpMethod.Post, hook.Command)
+                    {
+                        Content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json"),
+                    };
+                    using var resp = await http.SendAsync(req, hookCts.Token);
+                    if (!resp.IsSuccessStatusCode)
+                        throw new InvalidOperationException(
+                            $"HTTP hook returned {(int)resp.StatusCode} {resp.ReasonPhrase}");
+                }
+                return;
+
+            case "php":
+                {
+                    // First token decides: looks-like-path → run as script,
+                    // else treat the whole command as inline code via -r.
+                    var firstToken = hook.Command.Split(' ', 2)[0];
+                    var isPath = firstToken.EndsWith(".php", StringComparison.OrdinalIgnoreCase)
+                                 || File.Exists(firstToken)
+                                 || File.Exists(Path.Combine(releaseDir, firstToken));
+                    var args = isPath ? hook.Command : $"-r \"{hook.Command.Replace("\"", "\\\"")}\"";
+                    await RunProcessAsync("php", args, releaseDir, envVars, hookCts.Token);
+                }
+                return;
+
+            case "shell":
+            default:
+                if (OperatingSystem.IsWindows())
+                    await RunProcessAsync("cmd.exe", $"/c {hook.Command}", releaseDir, envVars, hookCts.Token);
+                else
+                    await RunProcessAsync("sh", $"-c \"{hook.Command.Replace("\"", "\\\"")}\"", releaseDir, envVars, hookCts.Token);
+                return;
+        }
+    }
+
+    /// <summary>
+    /// Spawn a child process with stdout/stderr piped + envVars merged.
+    /// Throws on non-zero exit code with stderr appended for diagnostics.
+    /// </summary>
+    private static async Task RunProcessAsync(
+        string fileName, string arguments, string workingDir,
+        IReadOnlyDictionary<string, string> envVars,
+        CancellationToken ct)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            WorkingDirectory = workingDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        foreach (var (k, v) in envVars) psi.Environment[k] = v;
+        using var proc = System.Diagnostics.Process.Start(psi)
+            ?? throw new InvalidOperationException($"Failed to start {fileName}");
+        await proc.WaitForExitAsync(ct);
+        if (proc.ExitCode != 0)
+        {
+            var stderr = await proc.StandardError.ReadToEndAsync(ct);
+            throw new InvalidOperationException(
+                $"{fileName} exited with {proc.ExitCode}: {stderr.Trim()}");
         }
     }
 

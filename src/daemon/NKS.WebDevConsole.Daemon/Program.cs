@@ -3223,6 +3223,50 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         }
         catch { /* swallow — fall through to 400 below if paths still empty */ }
     }
+
+    // Phase 7.5+++ — load hooks + envVars from settings for the backend
+    // to execute. Done in a separate pass so it runs even when localPaths
+    // came from body (E2E supplies paths in body but might also rely on
+    // settings-defined hooks).
+    var optHooks = new List<NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.HookSpec>();
+    var optEnvVars = new Dictionary<string, string>();
+    try
+    {
+        var settingsPath = DeploySettingsPath(domain);
+        if (File.Exists(settingsPath))
+        {
+            using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+            var rootEl = sdoc.RootElement;
+            if (rootEl.TryGetProperty("hooks", out var hooksEl)
+                && hooksEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var hkEl in hooksEl.EnumerateArray())
+                {
+                    var ev = hkEl.TryGetProperty("event", out var eEl) ? eEl.GetString() ?? "" : "";
+                    var ty = hkEl.TryGetProperty("type", out var hkTEl) ? hkTEl.GetString() ?? "shell" : "shell";
+                    var cmd = hkEl.TryGetProperty("command", out var cEl) ? cEl.GetString() ?? "" : "";
+                    if (string.IsNullOrEmpty(ev) || string.IsNullOrEmpty(cmd)) continue;
+                    var to = hkEl.TryGetProperty("timeoutSeconds", out var toEl) && toEl.TryGetInt32(out var toVal) ? toVal : 60;
+                    var en = !hkEl.TryGetProperty("enabled", out var enEl)
+                             || enEl.ValueKind != System.Text.Json.JsonValueKind.False; // default true
+                    var desc = hkEl.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+                    optHooks.Add(new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.HookSpec(
+                        Event: ev, Type: ty, Command: cmd, TimeoutSeconds: to, Enabled: en, Description: desc));
+                }
+            }
+            if (rootEl.TryGetProperty("advanced", out var advEl2)
+                && advEl2.TryGetProperty("envVars", out var evEl)
+                && evEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var prop in evEl.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                        optEnvVars[prop.Name] = prop.Value.GetString() ?? "";
+                }
+            }
+        }
+    }
+    catch { /* best-effort — hooks/envVars are optional */ }
     if (string.IsNullOrEmpty(localSource) || string.IsNullOrEmpty(localTarget))
     {
         return Results.BadRequest(new
@@ -3340,7 +3384,9 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     var deployOptions = new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.Options(
         SharedDirs: optSharedDirs,
         SharedFiles: optSharedFiles,
-        KeepReleases: optKeepReleases);
+        KeepReleases: optKeepReleases,
+        Hooks: optHooks.Count > 0 ? optHooks : null,
+        EnvVars: optEnvVars.Count > 0 ? optEnvVars : null);
     _ = Task.Run(() => localBackend.RunAsync(deployId, releaseId, localSource!, localTarget!, deployOptions));
     return Results.Accepted($"/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
         new { deployId, status = "queued", note = "local backend — copying files" });

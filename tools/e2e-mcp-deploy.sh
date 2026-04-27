@@ -1605,6 +1605,42 @@ if [ -n "$NN_BACKUP" ]; then echo "$NN_BACKUP" > "$NN_SETTINGS_FILE"; fi
 rm -rf "$NN_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== OO. deploy hooks execute (pre_deploy + post_switch) ===${END}"
+# ============================================================================
+# Configure two shell hooks that write marker files; verify both fire.
+OO_TARGET_MSYS="/c/temp/e2e-hooks-target"
+OO_TARGET_WIN="C:/temp/e2e-hooks-target"
+rm -rf "$OO_TARGET_MSYS"
+mkdir -p "$OO_TARGET_MSYS"
+
+OO_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+OO_BACKUP=""
+[ -f "$OO_SETTINGS_FILE" ] && OO_BACKUP=$(cat "$OO_SETTINGS_FILE")
+
+OO_PRE="C:/temp/e2e-hook-pre-marker.txt"
+OO_POST="C:/temp/e2e-hook-post-marker.txt"
+OO_PRE_MSYS="/c/temp/e2e-hook-pre-marker.txt"
+OO_POST_MSYS="/c/temp/e2e-hook-post-marker.txt"
+rm -f "$OO_PRE_MSYS" "$OO_POST_MSYS"
+
+cat > "$OO_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"C:/work/sites/blog.loc","localTargetPath":"$OO_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[{"event":"pre_deploy","type":"shell","command":"echo pre_deploy > $OO_PRE","timeoutSeconds":10,"enabled":true,"description":"E2E pre marker"},{"event":"post_switch","type":"shell","command":"echo post_switch > $OO_POST","timeoutSeconds":10,"enabled":true,"description":"E2E post marker"}],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 4
+
+step "pre_deploy hook wrote marker file" "$([ -s "$OO_PRE_MSYS" ] && echo y || echo n)" "y"
+step "post_switch hook wrote marker file" "$([ -s "$OO_POST_MSYS" ] && echo y || echo n)" "y"
+
+# Cleanup
+rm -f "$OO_PRE_MSYS" "$OO_POST_MSYS"
+if [ -n "$OO_BACKUP" ]; then echo "$OO_BACKUP" > "$OO_SETTINGS_FILE"; fi
+rm -rf "$OO_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
