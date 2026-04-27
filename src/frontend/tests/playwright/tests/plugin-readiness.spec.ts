@@ -40,6 +40,17 @@ test.describe('Plugin readiness diagnostic (#109-D1)', () => {
     expect(j.restartPending).toBe(false)
     expect(j.bootLegacyHostHandlers).toBe(j.useLegacyHostHandlers)
 
+    // Iter 62 — gatedEndpoints[] surfaces the conditional registration scope.
+    // Operators see exactly which routes will flip to plugin authority on
+    // restart-with-legacy=false. The list grows as more handlers join the
+    // gate; today's set is 9 entries (4 POST + 5 GET).
+    expect(Array.isArray(j.gatedEndpoints)).toBe(true)
+    expect(j.gatedEndpoints.length).toBeGreaterThanOrEqual(9)
+    const allGated = j.gatedEndpoints.join(' | ')
+    expect(allGated).toContain('POST /test-host-connection')
+    expect(allGated).toContain('POST /sites/{domain}/hooks/test')
+    expect(allGated).toContain('GET /sites/{domain}/history')
+
     // readyToFlip MUST be false today (phase D not yet shipped).
     expect(j.readyToFlip).toBe(false)
 

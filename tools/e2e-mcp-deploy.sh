@@ -2133,6 +2133,12 @@ step "readiness surfaces bootLegacyHostHandlers field" "$BBB_R0" '"bootLegacyHos
 step "readiness surfaces restartPending field" "$BBB_R0" '"restartPending":'
 # Boot==current → restartPending must be false
 step "no flip → restartPending:false" "$BBB_R0" '"restartPending":false'
+# Iter 62 — gatedEndpoints[] surfaces the 9 conditional handlers so the
+# GUI can render an exact list instead of trusting hand-coded copy.
+step "readiness lists gatedEndpoints array" "$BBB_R0" '"gatedEndpoints":\['
+step "gatedEndpoints includes hooks/test" "$BBB_R0" 'POST /sites/{domain}/hooks/test'
+step "gatedEndpoints includes snapshot-now" "$BBB_R0" 'POST /sites/{domain}/snapshot-now'
+step "gatedEndpoints includes history GET" "$BBB_R0" 'GET /sites/{domain}/history'
 
 BBB_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
 # Toggle to opposite of boot value to force drift
