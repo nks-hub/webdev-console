@@ -190,6 +190,19 @@ function parseDangerQuery(): 'all' | 'reversible' | 'destructive' {
 }
 const dangerFilter = ref<'all' | 'reversible' | 'destructive'>(parseDangerQuery())
 watch(() => route.query.danger, () => { dangerFilter.value = parseDangerQuery() })
+// Phase 7.5+++ — also push local changes to URL so browser back/forward
+// preserves filter state. Use replace to avoid polluting history with
+// every radio-button click; only push deep-deltas worth a back step.
+watch(dangerFilter, (next) => {
+  const current = typeof route.query.danger === 'string' ? route.query.danger : ''
+  const desired = next === 'all' ? '' : next
+  if (current === desired) return
+  const { danger: _, ...rest } = route.query
+  void router.replace({
+    path: route.path,
+    query: desired ? { ...rest, danger: desired } : rest,
+  })
+})
 const reversibleCount = computed<number>(() =>
   kinds.value.filter((k) => k.danger === 'reversible').length)
 const destructiveCount = computed<number>(() =>
