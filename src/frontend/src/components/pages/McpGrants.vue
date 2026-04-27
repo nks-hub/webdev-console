@@ -169,7 +169,20 @@
       </el-table-column>
       <el-table-column prop="kindPattern" :label="t('mcpGrants.col.kind')" min-width="100">
         <template #default="{ row }">
-          <code class="mono">{{ row.kindPattern }}</code>
+          <!-- Phase 7.5+++ — when kindPattern is an exact kind id (no
+               wildcards), wrap in a tooltip showing the human label so
+               non-technical operators reviewing the grants table see
+               "Smazat databázi" on hover instead of just `database_drop`.
+               Wildcard patterns (`*`, `deploy*`) skip the tooltip — no
+               single matching kind to humanize. -->
+          <el-tooltip
+            v-if="exactKindLabel(row.kindPattern)"
+            :content="exactKindLabel(row.kindPattern)"
+            placement="top"
+          >
+            <code class="mono">{{ row.kindPattern }}</code>
+          </el-tooltip>
+          <code v-else class="mono">{{ row.kindPattern }}</code>
         </template>
       </el-table-column>
       <el-table-column prop="targetPattern" :label="t('mcpGrants.col.target')" min-width="160">
@@ -921,6 +934,26 @@ function truncate(s: string | null, n: number): string {
 
 function formatDate(iso: string): string {
   try { return new Date(iso).toLocaleString() } catch { return iso }
+}
+
+// Phase 7.5+++ — when kindPattern is a literal kind id (alphanumeric +
+// underscores, no `*` or `,`), look up the operator-locale human label
+// via mcpKinds.labels.<id> with daemon-fallback. Returns empty string
+// for wildcard/composite patterns so the tooltip wrapper can skip
+// rendering. Mirrors the helper in McpKinds.vue + McpConfirmBanner +
+// Settings always-confirm picker — same 3-level fallback (i18n key →
+// daemon-supplied label → bare id), but here the "bare id" case
+// produces no tooltip since the visible code already shows it.
+function exactKindLabel(pattern: string | null | undefined): string {
+  if (!pattern) return ''
+  if (!/^[a-z0-9_]+$/i.test(pattern)) return ''
+  const key = `mcpKinds.labels.${pattern}`
+  const localized = t(key)
+  if (localized !== key) return localized
+  // Fall back to daemon label via the kinds list if available.
+  // kinds.value is populated alongside grants in McpHub but not in
+  // McpGrants standalone. Skip — tooltip would just repeat the id.
+  return ''
 }
 
 // Phase 7.5+++ — humanise lastMatchedAt for the inline "· 5m ago" annotation
