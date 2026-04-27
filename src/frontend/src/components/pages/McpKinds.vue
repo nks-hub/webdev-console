@@ -77,6 +77,25 @@
           <span v-else class="muted">{{ t('mcpKinds.unused') }}</span>
         </template>
       </el-table-column>
+      <!-- Phase 7.5+++ — auto-approving grants per kind. Counts active
+           grants whose kindPattern is '*' or this exact kind id, i.e.
+           how many ways an AI could fire this kind without operator
+           confirmation. Click → /mcp/grants pre-filtered for the kind. -->
+      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="180">
+        <template #default="{ row }">
+          <el-tag
+            v-if="autoApproveCount(row.id) > 0"
+            type="warning"
+            size="small"
+            effect="plain"
+            class="auto-approve-tag"
+            @click="goToGrants(row.id)"
+          >
+            ⚠ {{ autoApproveCount(row.id) }}
+          </el-tag>
+          <span v-else class="muted">{{ t('mcpKinds.noAutoApprove') }}</span>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 </template>
@@ -84,13 +103,27 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { listMcpKinds, type McpKindRow } from '../../api/daemon'
+import { listMcpKinds, listMcpGrants, type McpKindRow, type McpGrantRow } from '../../api/daemon'
 
 const { t } = useI18n()
+const router = useRouter()
 const loading = ref(false)
 const kinds = ref<McpKindRow[]>([])
+const grants = ref<McpGrantRow[]>([])
+
+function autoApproveCount(kindId: string): number {
+  return grants.value.filter((g) => {
+    const kp = (g.kindPattern || '').toLowerCase()
+    return kp === '*' || kp === kindId.toLowerCase()
+  }).length
+}
+
+function goToGrants(kindId: string): void {
+  void router.push({ path: '/mcp/grants', query: { kind: kindId } })
+}
 
 const search = ref('')
 const pluginFilter = ref<string | null>(null)
@@ -131,8 +164,15 @@ onMounted(refresh)
 async function refresh(): Promise<void> {
   loading.value = true
   try {
-    const r = await listMcpKinds()
-    kinds.value = r.entries
+    const [k, g] = await Promise.all([
+      listMcpKinds(),
+      // Best-effort grants fetch — pulled together so the auto-approve
+      // column lights up without a second round-trip. Failures here
+      // shouldn't block the main kinds list.
+      listMcpGrants(false, 1, 500).catch(() => ({ entries: [] as McpGrantRow[] })),
+    ])
+    kinds.value = k.entries
+    grants.value = g.entries as McpGrantRow[]
   } catch (e) {
     ElMessage.error(t('mcpKinds.toastLoadFailed', { error: (e as Error).message }))
   } finally {
@@ -160,4 +200,11 @@ async function refresh(): Promise<void> {
 }
 .filter-toolbar .search-input { max-width: 280px; }
 .filter-toolbar .plugin-select { width: 180px; }
+.auto-approve-tag {
+  cursor: pointer;
+  user-select: none;
+}
+.auto-approve-tag:hover {
+  background: var(--el-color-warning-light-7);
+}
 </style>

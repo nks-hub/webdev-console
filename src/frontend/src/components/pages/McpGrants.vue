@@ -83,6 +83,16 @@
       >
         {{ t('mcpGrants.targetFilterTag', { target: targetFilter }) }}
       </el-tag>
+      <el-tag
+        v-if="kindFilter"
+        type="info"
+        closable
+        size="small"
+        class="target-filter-tag"
+        @close="clearKindFilter"
+      >
+        {{ t('mcpGrants.kindFilterTag', { kind: kindFilter }) }}
+      </el-tag>
       <!-- Phase 7.5+++ — audit view toggle. Off by default; on flips
            the fetch to ?includeRevoked=true so operators see the full
            historical set including soft-revoked rows. -->
@@ -537,6 +547,21 @@ watch(() => route.query.target, (q) => {
   targetFilter.value = typeof q === 'string' ? q : ''
 })
 
+// Phase 7.5+++ — symmetric ?kind= filter. Driven by the McpKinds page
+// auto-approve column click. Matches grants where kindPattern is the
+// exact kind id OR the wildcard '*'.
+const kindFilter = ref<string>(
+  typeof route.query.kind === 'string' ? route.query.kind : '',
+)
+function clearKindFilter(): void {
+  kindFilter.value = ''
+  const { kind: _, ...rest } = route.query
+  void router.replace({ path: route.path, query: rest })
+}
+watch(() => route.query.kind, (q) => {
+  kindFilter.value = typeof q === 'string' ? q : ''
+})
+
 const scopeTypeOptions = computed(() => {
   const counts = new Map<string, number>()
   for (const g of grants.value) {
@@ -559,6 +584,13 @@ const filteredGrants = computed<McpGrantRow[]>(() => {
     rows = rows.filter((g) => {
       const tp = (g.targetPattern || '').toLowerCase()
       return tp === '*' || tp === t
+    })
+  }
+  if (kindFilter.value) {
+    const k = kindFilter.value.toLowerCase()
+    rows = rows.filter((g) => {
+      const kp = (g.kindPattern || '').toLowerCase()
+      return kp === '*' || kp === k
     })
   }
   switch (usageFilter.value) {

@@ -171,9 +171,11 @@
       "label": "Popis",
       "plugin": "Plugin",
       "danger": "Nebezpečí",
-      "intentCount": "Použito"
+      "intentCount": "Použito",
+      "autoApproveGrants": "Auto-schválení (granty)"
     },
     "unused": "nikdy",
+    "noAutoApprove": "—",
     "danger": {
       "reversible": "Vratné",
       "destructive": "Destruktivní"
@@ -1421,6 +1423,7 @@
     },
     "includeRevokedLabel": "Zobrazit i odvolaná (audit)",
     "targetFilterTag": "cíl: {target}",
+    "kindFilterTag": "druh: {kind}",
     "dialog": {
       "title": "Nové oprávnění",
       "scopeType": "Typ rozsahu",

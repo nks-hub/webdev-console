@@ -171,9 +171,11 @@
       "label": "Label",
       "plugin": "Plugin",
       "danger": "Danger",
-      "intentCount": "Used"
+      "intentCount": "Used",
+      "autoApproveGrants": "Auto-approve (grants)"
     },
     "unused": "never",
+    "noAutoApprove": "—",
     "danger": {
       "reversible": "Reversible",
       "destructive": "Destructive"
@@ -1421,6 +1423,7 @@
     },
     "includeRevokedLabel": "Show revoked (audit view)",
     "targetFilterTag": "target: {target}",
+    "kindFilterTag": "kind: {kind}",
     "dialog": {
       "title": "New trust grant",
       "scopeType": "Scope type",
