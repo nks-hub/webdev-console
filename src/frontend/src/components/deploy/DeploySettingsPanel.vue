@@ -872,7 +872,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HostSettingsCard from './HostSettingsCard.vue'
-import { listMcpGrants } from '../../api/daemon'
+import { listMcpGrants, subscribeEventsMap } from '../../api/daemon'
+import { onBeforeUnmount } from 'vue'
 import {
   fetchDeploySnapshots,
   defaultDeploySettings,
@@ -1009,6 +1010,11 @@ function goToMcpGrants(): void {
   router.push({ path: '/mcp/grants', query: { target: props.domain } })
 }
 
+// Phase 7.5+++ — also live-refresh the badge when grants change
+// elsewhere (banner approve, McpGrants page bulk-revoke, plugin
+// install). Cleaned up on unmount so EventSource count stays bounded.
+let unsubscribeGrantSse: (() => void) | null = null
+
 onMounted(async () => {
   const loaded = await store.loadForDomain(props.domain)
   Object.assign(settings, loaded)
@@ -1016,6 +1022,13 @@ onMounted(async () => {
 
   snapshots.value = await fetchDeploySnapshots(props.domain)
   void loadMcpGrantsCount()
+  unsubscribeGrantSse = subscribeEventsMap({
+    'mcp:grant-changed': () => { void loadMcpGrantsCount() },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribeGrantSse) { unsubscribeGrantSse(); unsubscribeGrantSse = null }
 })
 
 async function saveSettings(): Promise<void> {
