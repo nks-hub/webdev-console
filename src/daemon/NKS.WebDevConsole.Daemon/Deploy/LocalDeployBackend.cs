@@ -111,7 +111,9 @@ public sealed class LocalDeployBackend
         IReadOnlyDictionary<string, string>? EnvVars = null,
         NotificationsConfig? Notifications = null,
         string? Domain = null,
-        string? Host = null);
+        string? Host = null,
+        string? HealthCheckUrl = null,
+        int SoakSeconds = 0);
 
     /// <summary>
     /// Notifications config resolved from settings.notifications. Empty
@@ -233,10 +235,28 @@ public sealed class LocalDeployBackend
             // post_switch hooks: current now points at the new release.
             await RunHooksAsync(hooks, "post_switch", deployId, releaseDir, envVars, ct);
 
-            // ── 6. Soak (health placeholder) ─────────────────────────────
+            // ── 6. Soak + health check ───────────────────────────────────
+            // Phase 7.5+++ — when host has healthCheckUrl configured, probe
+            // it after symlink swap so operator sees whether the new release
+            // is actually serving. No auto-rollback (out of scope) — result
+            // visible in deploy:phase events.
             await _events.BroadcastAsync("deploy:phase",
-                new { deployId, phase = "AwaitingSoak", message = "Soak window (local backend skips real probe)" });
+                new { deployId, phase = "AwaitingSoak", message = "Soak window started" });
             await _runs.UpdateStatusAsync(deployId, "awaiting_soak", ct);
+            if (!string.IsNullOrEmpty(options?.HealthCheckUrl))
+            {
+                var healthResult = await ProbeHealthAsync(options.HealthCheckUrl,
+                    Math.Max(2, options.SoakSeconds), default); // don't honor cancel during soak (post-PONR)
+                await _events.BroadcastAsync("deploy:phase",
+                    new
+                    {
+                        deployId,
+                        phase = "AwaitingSoak",
+                        message = healthResult.ok
+                            ? $"Health check OK ({healthResult.statusCode}, {healthResult.latencyMs} ms)"
+                            : $"Health check FAILED: {healthResult.error}",
+                    });
+            }
 
             // ── 7. Cleanup old releases ──────────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
@@ -326,6 +346,40 @@ public sealed class LocalDeployBackend
                 _logger.LogWarning(ex, "Slack webhook dispatch failed for deploy {DeployId}", deployId);
             }
         }
+    }
+
+    /// <summary>
+    /// Probe healthCheckUrl with HTTP GET. Returns the resolved status
+    /// code + latency on success, error message on failure. Soak window
+    /// is the upper bound; we retry until success or timeout. NEVER
+    /// throws — soak failures shouldn't crash the backend.
+    /// </summary>
+    public static async Task<(bool ok, int statusCode, long latencyMs, string? error)> ProbeHealthAsync(
+        string url, int soakSeconds, CancellationToken ct)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(Math.Max(2, soakSeconds));
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        Exception? lastEx = null;
+        int lastStatus = 0;
+        while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
+        {
+            try
+            {
+                using var resp = await http.GetAsync(url, ct);
+                lastStatus = (int)resp.StatusCode;
+                if (resp.IsSuccessStatusCode)
+                {
+                    sw.Stop();
+                    return (true, lastStatus, sw.ElapsedMilliseconds, null);
+                }
+            }
+            catch (Exception ex) { lastEx = ex; }
+            try { await Task.Delay(500, ct); } catch { break; }
+        }
+        sw.Stop();
+        return (false, lastStatus, sw.ElapsedMilliseconds,
+            lastEx?.Message ?? $"HTTP {lastStatus}");
     }
 
     /// <summary>

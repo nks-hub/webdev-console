@@ -3355,6 +3355,8 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
     var optHooks = new List<NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.HookSpec>();
     var optEnvVars = new Dictionary<string, string>();
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.NotificationsConfig? optNotifications = null;
+    string? optHealthCheckUrl = null;
+    int optSoakSeconds = 30;
     try
     {
         var settingsPath = DeploySettingsPath(domain);
@@ -3362,6 +3364,22 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         {
             using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
             var rootEl = sdoc.RootElement;
+            // Phase 7.5+++ — pull healthCheckUrl + soakSeconds for the
+            // selected host so the soak phase can probe it after switch.
+            if (rootEl.TryGetProperty("hosts", out var hostsEl3)
+                && hostsEl3.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var hEl3 in hostsEl3.EnumerateArray())
+                {
+                    if (!hEl3.TryGetProperty("name", out var nEl3)) continue;
+                    if (!string.Equals(nEl3.GetString(), host, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (hEl3.TryGetProperty("healthCheckUrl", out var hcEl))
+                        optHealthCheckUrl = hcEl.GetString();
+                    if (hEl3.TryGetProperty("soakSeconds", out var ssEl) && ssEl.TryGetInt32(out var ssVal))
+                        optSoakSeconds = ssVal;
+                    break;
+                }
+            }
             if (rootEl.TryGetProperty("hooks", out var hooksEl)
                 && hooksEl.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
@@ -3530,7 +3548,9 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         EnvVars: optEnvVars.Count > 0 ? optEnvVars : null,
         Notifications: optNotifications,
         Domain: domain,
-        Host: host);
+        Host: host,
+        HealthCheckUrl: optHealthCheckUrl,
+        SoakSeconds: optSoakSeconds);
     _ = Task.Run(() => localBackend.RunAsync(deployId, releaseId, localSource!, localTarget!, deployOptions));
     return Results.Accepted($"/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
         new { deployId, status = "queued", note = "local backend — copying files" });
