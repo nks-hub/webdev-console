@@ -733,6 +733,20 @@ onMounted(() => {
   unsubscribeGrantSse = subscribeEventsMap({
     'mcp:grant-changed': () => { void refresh() },
   })
+  // Phase 7.5+++ — McpKinds → McpGrants quick-grant deep-link.
+  // `?createForKind=database_drop` opens the create dialog with
+  // kindPattern pre-filled. Saves a click for the operator who
+  // jumped here from the kinds tab to grant a specific kind.
+  const createForKind = typeof route.query.createForKind === 'string'
+    ? route.query.createForKind.trim()
+    : ''
+  if (createForKind) {
+    form.value.kindPattern = createForKind
+    createDialogOpen.value = true
+    // Clean the query so re-mount doesn't re-pop the dialog.
+    const { createForKind: _, ...rest } = route.query
+    void router.replace({ path: route.path, query: rest })
+  }
 })
 
 onBeforeUnmount(() => {

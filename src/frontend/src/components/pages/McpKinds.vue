@@ -142,6 +142,20 @@
             ⚠ {{ autoApproveCount(row.id) }}
           </el-tag>
           <span v-else class="muted">{{ t('mcpKinds.noAutoApprove') }}</span>
+          <!-- Phase 7.5+++ — quick "+ Grant" affordance per kind row.
+               Visible always (independent of auto-approve count) so the
+               operator can grant a freshly-registered kind even before
+               any AI has tried to use it. Pre-fills /mcp/grants create
+               dialog via ?createForKind=<id>. -->
+          <el-button
+            link
+            type="primary"
+            size="small"
+            class="quick-grant-btn"
+            @click="goToCreateGrantForKind(row.id)"
+          >
+            + {{ t('mcpKinds.quickGrant') }}
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -187,6 +201,14 @@ function autoApproveCount(kindId: string): number {
 
 function goToGrants(kindId: string): void {
   void router.push({ path: '/mcp/grants', query: { kind: kindId } })
+}
+
+// Phase 7.5+++ — quick-grant action: navigate to /mcp/grants and ask
+// it to open the create dialog pre-filled with this kindPattern. Saves
+// the operator the manual round-trip of switching tabs and copying the
+// kind id by hand. McpGrants reads ?createForKind=<id> on mount.
+function goToCreateGrantForKind(kindId: string): void {
+  void router.push({ path: '/mcp/grants', query: { createForKind: kindId } })
 }
 
 // Phase 7.5+++ — deep-link to the Settings → Advanced → MCP section
@@ -334,6 +356,10 @@ async function refresh(): Promise<void> {
 }
 .auto-approve-tag:hover {
   background: var(--el-color-warning-light-7);
+}
+.quick-grant-btn {
+  margin-left: 6px;
+  font-size: 11px;
 }
 .always-confirm-tag {
   font-weight: 600;

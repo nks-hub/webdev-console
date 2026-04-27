@@ -196,6 +196,7 @@
     },
     "unused": "never",
     "noAutoApprove": "—",
+    "quickGrant": "Create grant",
     "alwaysConfirm": "Always confirm",
     "alwaysConfirmTooltip": "Without ring-fence, this kind would auto-approve via {n} grant(s). Click to edit settings.",
     "editAlwaysConfirm": "Edit ring-fence",

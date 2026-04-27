@@ -196,6 +196,7 @@
     },
     "unused": "nikdy",
     "noAutoApprove": "—",
+    "quickGrant": "Vytvořit grant",
     "alwaysConfirm": "Vždy potvrdit",
     "alwaysConfirmTooltip": "Bez ring-fence by tento druh fungoval auto-přes {n} grantů. Klikněte pro úpravu nastavení.",
     "editAlwaysConfirm": "Upravit ring-fence",
