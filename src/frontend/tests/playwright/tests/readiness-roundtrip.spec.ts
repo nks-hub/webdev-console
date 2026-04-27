@@ -52,11 +52,13 @@ test.describe('Readiness ↔ settings round-trip (#109-D1+)', () => {
       expect(afterFlipJson.useLegacyHostHandlers).toBe(false)
 
       // readyToFlip is STILL false today — flipping the setting alone
-      // doesn't satisfy phase B/C/D blockers. The setting flip is the
-      // RESULT of readiness, not a cause of it. Verify the lock logic
-      // can't be bypassed by writing the setting directly.
+      // doesn't satisfy phase D (plugin-only e2e) blocker. Phases B + C
+      // were cleared in iters 54-55 (plugin endpoint parity + ZIP/SSE/
+      // test-hook/Slack ports landed). The setting flip is the RESULT
+      // of readiness, not a cause of it — verify the lock logic can't
+      // be bypassed by writing the setting directly.
       expect(afterFlipJson.readyToFlip).toBe(false)
-      expect(afterFlipJson.blockers.length).toBeGreaterThanOrEqual(3)
+      expect(afterFlipJson.blockers.length).toBeGreaterThanOrEqual(1)
 
       // Flip back to true.
       const flipOn = await authedRequest.put('/api/settings', {
