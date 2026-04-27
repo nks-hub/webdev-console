@@ -25,6 +25,15 @@ test.describe('Deploy form (dry-run preview)', () => {
     expect(typeof j.alwaysConfirmKind).toBe('boolean')
     expect(Array.isArray(j.sharedDirs)).toBe(true)
     expect(Array.isArray(j.sharedFiles)).toBe(true)
+
+    // Iter 77 — DryRunPlanView renders a "Soak" row when soakSeconds > 0,
+    // so the contract for the field must hold (number, never undefined).
+    // healthCheckUrl is rendered next to it; it's nullable but the property
+    // must exist so the v-if doesn't throw on undefined.
+    expect(typeof j.soakSeconds).toBe('number')
+    expect(j.soakSeconds).toBeGreaterThanOrEqual(0)
+    expect(j).toHaveProperty('healthCheckUrl')
+    expect(j.healthCheckUrl === null || typeof j.healthCheckUrl === 'string').toBe(true)
   })
 
   test('dry-run plan exposes #188/#189 telemetry fields', async ({ authedRequest }) => {
