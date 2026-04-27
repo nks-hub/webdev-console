@@ -2125,6 +2125,28 @@ else
 fi
 rm -f "$AAA_SSE_LOG"
 
+# Iter 56 #258 — restart-pending hint: when current setting differs from
+# boot value, readiness must surface restartPending=true so the GUI can
+# show "restart to apply" hint instead of silently lying about authority.
+BBB_R0=$(api GET /api/admin/plugin-readiness)
+step "readiness surfaces bootLegacyHostHandlers field" "$BBB_R0" '"bootLegacyHostHandlers":'
+step "readiness surfaces restartPending field" "$BBB_R0" '"restartPending":'
+# Boot==current → restartPending must be false
+step "no flip → restartPending:false" "$BBB_R0" '"restartPending":false'
+
+BBB_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
+# Toggle to opposite of boot value to force drift
+BBB_FLIP=$([ "$BBB_BEFORE" = "true" ] && echo "false" || echo "true")
+api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$BBB_FLIP\"}" >/dev/null
+BBB_R1=$(api GET /api/admin/plugin-readiness)
+step "after drift → restartPending:true" "$BBB_R1" '"restartPending":true'
+step "drift recommendation mentions restart" "$BBB_R1" 'restart required to apply'
+
+# Restore so the suite is self-isolated
+api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$BBB_BEFORE\"}" >/dev/null
+BBB_R2=$(api GET /api/admin/plugin-readiness)
+step "restored → restartPending:false" "$BBB_R2" '"restartPending":false'
+
 # ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
