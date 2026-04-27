@@ -1142,6 +1142,21 @@ static bool IsDeployEnabled(HttpContext ctx) =>
     ctx.RequestServices.GetRequiredService<SettingsStore>()
         .GetBool("deploy", "enabled", defaultValue: true);
 
+// Phase 7.4 #109-D1 — operator-controlled flag for the upcoming plugin
+// cutover. Default TRUE (current behavior — host's Program.cs handlers
+// own /api/nks.wdc.deploy/* routes; plugin endpoints get skipped by the
+// PluginLoader.WireEndpoints route-conflict guard). Reserved for future
+// flip to FALSE once the sibling webdev-console-plugins repo grows the
+// 6 host-only endpoints currently missing (hooks/test, notifications/
+// test, test-host-connection, rollback-to, restore alias, deploy-without
+// -hosts segment) AND the plugin-side ZIP/SSE/Slack feature parity is
+// proven. Today the flag is read-only-from-the-perspective-of-behavior:
+// the value round-trips through Settings but no middleware acts on it
+// yet. Surfacing now so operators see the planned migration in the UI.
+static bool IsLegacyHostHandlers(HttpContext ctx) =>
+    ctx.RequestServices.GetRequiredService<SettingsStore>()
+        .GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
+
 app.MapPost("/api/mcp/intents", async (
     HttpContext ctx,
     NKS.WebDevConsole.Daemon.Data.Database db,
@@ -3816,6 +3831,22 @@ app.Use(async (ctx, next) =>
             await ctx.Response.WriteAsJsonAsync(new { error = "deploy_disabled" });
             return;
         }
+        // Phase 7.4 #109-D1 — informational header surfacing which backend
+        // mode is in effect. Today always "built-in" because
+        // useLegacyHostHandlers defaults true. Operators (and the
+        // DeploySettings GUI badge / future alerting) can read this
+        // without parsing /api/settings, and downstream consumers can
+        // distinguish behaviour without round-tripping through the
+        // settings endpoint. No-op behaviorally.
+        ctx.Response.OnStarting(() =>
+        {
+            if (!ctx.Response.Headers.ContainsKey("X-Wdc-Backend-Mode"))
+            {
+                ctx.Response.Headers["X-Wdc-Backend-Mode"] =
+                    IsLegacyHostHandlers(ctx) ? "built-in" : "plugin";
+            }
+            return Task.CompletedTask;
+        });
     }
     await next();
 });

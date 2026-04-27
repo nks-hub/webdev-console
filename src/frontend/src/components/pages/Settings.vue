@@ -579,9 +579,28 @@
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
               </p>
-              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
+                </el-form-item>
+                <!-- Phase 7.4 #109-D1 — backend selector. Today the toggle
+                     is INFORMATIONAL only: useLegacyHostHandlers=true means
+                     Program.cs deploy handlers serve everything (current
+                     behaviour). The switch is disabled with a tooltip
+                     explaining the future flip needs plugin parity.
+                     Persisted setting round-trips through Settings save
+                     so when phase B/C land + tools/e2e proves parity,
+                     operators can flip without code changes. -->
+                <el-form-item :label="$t('settings.deploySubsystem.legacyHandlersLabel')">
+                  <el-tooltip
+                    :content="$t('settings.deploySubsystem.legacyHandlersTooltip')"
+                    placement="right"
+                  >
+                    <el-switch v-model="deployUseLegacyHostHandlers" disabled />
+                  </el-tooltip>
+                  <span class="hint" style="margin-left: 12px">
+                    {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
+                  </span>
                 </el-form-item>
               </el-form>
             </div>
@@ -1392,6 +1411,13 @@ const mcpRevokedRetentionDays = ref(30)
 // own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
 // /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
 const deployEnabled = ref(true)
+// Phase 7.4 #109-D1 — operator-controlled flag for the upcoming plugin
+// cutover. Default TRUE = current behaviour (host-native handlers in
+// Program.cs serve every deploy route, plugin endpoints get skipped by
+// the route-conflict guard). Switch is disabled in the UI today since
+// plugin parity isn't yet proven; the value still round-trips so once
+// phase B/C/D land the operator can flip without a redeploy.
+const deployUseLegacyHostHandlers = ref(true)
 
 // #147 — OS notification per-channel toggles. Persist via the
 // osNotifications service (localStorage-backed) on flip so the change
@@ -1871,6 +1897,10 @@ async function loadSettings() {
     // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
     // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
     deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
+    // Phase 7.4 #109-D1 — same boolean parsing convention as deploy.enabled.
+    // Default TRUE means current host-native behaviour stays in effect.
+    deployUseLegacyHostHandlers.value = !(data['deploy.useLegacyHostHandlers'] === 'false'
+      || data['deploy.useLegacyHostHandlers'] === '0')
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
@@ -2739,6 +2769,7 @@ async function save() {
       'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
       'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
       'deploy.enabled':      String(deployEnabled.value),
+      'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),
       'paths.apache':   paths.apache,

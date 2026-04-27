@@ -1389,7 +1389,10 @@
     "deploySubsystem": {
       "title": "Deploy subsystem",
       "description": "Per-site Deploy tab + nksdeploy plugin endpoints. Disable when this WDC instance only manages local services and never pushes to remote hosts. History stays in the database (additive-only); turning back ON restores everything.",
-      "enableLabel": "Enable Deploy subsystem"
+      "enableLabel": "Enable Deploy subsystem",
+      "legacyHandlersLabel": "Built-in deploy backend",
+      "legacyHandlersHint": "Built-in (host-native) deploy handlers — default",
+      "legacyHandlersTooltip": "Planned switch for the Phase 7.4 cutover to the nks.wdc.deploy plugin. Locked in the ON position today (built-in Program.cs handlers own every deploy route). Unlocks once phase B/C lands (plugin endpoint parity + ZIP/SSE/Slack feature parity), at which point operators can flip to plugin-only mode."
     },
     "osNotify": {
       "title": "System notifications",
