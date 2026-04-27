@@ -133,7 +133,10 @@
         </div>
         <div v-if="previewPlan.sourceLastModified" class="plan-row">
           <span class="plan-key">{{ t('deploy.quickBar.plan.sourceLastModified') }}</span>
-          <span class="plan-val mono">{{ previewPlan.sourceLastModified }}</span>
+          <span class="plan-val">
+            <span>{{ formatRelative(previewPlan.sourceLastModified) }}</span>
+            <span class="muted plan-iso-hint">· {{ previewPlan.sourceLastModified.slice(0, 19).replace('T', ' ') }}</span>
+          </span>
         </div>
         <div v-if="previewPlan.currentRelease" class="plan-row">
           <span class="plan-key">{{ t('deploy.quickBar.plan.currentRelease') }}</span>
@@ -310,6 +313,15 @@ async function onPreview(): Promise<void> {
   }
 }
 
+function formatRelative(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  if (Number.isNaN(ms)) return iso
+  if (ms < 60_000) return t('deploy.confirmModal.ageJustNow', { n: Math.max(0, Math.floor(ms / 1000)) })
+  if (ms < 3_600_000) return t('deploy.confirmModal.ageMinutes', { n: Math.floor(ms / 60_000) })
+  if (ms < 86_400_000) return t('deploy.confirmModal.ageHours', { n: Math.floor(ms / 3_600_000) })
+  return t('deploy.confirmModal.ageDays', { n: Math.floor(ms / 86_400_000) })
+}
+
 watch(() => props.modelValue, (v) => { if (!v) abortCountdown() })
 
 // Phase 7.5+++ — context panel helpers. Recompute on each open via
@@ -396,5 +408,10 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
 .plan-tag {
   margin-right: 4px;
   margin-bottom: 4px;
+}
+.plan-iso-hint {
+  margin-left: 8px;
+  font-size: 11px;
+  font-family: var(--el-font-family-monospace, ui-monospace, monospace);
 }
 </style>
