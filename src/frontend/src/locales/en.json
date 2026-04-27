@@ -1394,7 +1394,10 @@
       "legacyHandlersLabel": "Built-in deploy backend",
       "legacyHandlersHint": "Built-in (host-native) deploy handlers — default",
       "legacyHandlersTooltip": "Planned switch for the Phase 7.4 cutover to the nks.wdc.deploy plugin. Locked in the ON position today (built-in Program.cs handlers own every deploy route). Unlocks once phase B/C lands (plugin endpoint parity + ZIP/SSE/Slack feature parity), at which point operators can flip to plugin-only mode.",
-      "legacyHandlersLocked": "Locked: {n} blocker(s)"
+      "legacyHandlersLocked": "Locked: {n} blocker(s)",
+      "modeBuiltIn": "Currently: built-in (Program.cs handlers)",
+      "modePlugin": "Currently: plugin v{v}",
+      "pluginLoadedNotActive": "plugin v{v} loaded but inactive (legacy handlers own the routes)"
     },
     "osNotify": {
       "title": "System notifications",

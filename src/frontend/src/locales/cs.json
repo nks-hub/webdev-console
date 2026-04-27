@@ -1394,7 +1394,10 @@
       "legacyHandlersLabel": "Built-in deploy backend",
       "legacyHandlersHint": "Built-in (host-native) deploy handlers — výchozí",
       "legacyHandlersTooltip": "Plánovaný přepínač pro Phase 7.4 cutover na nks.wdc.deploy plugin. Dnes je zamčený v poloze ON (built-in handlers v Program.cs vlastní všechny deploy routy). Po dokončení phase B/C (parita pluginových endpointů + ZIP/SSE/Slack feature parity) se přepínač odemkne a operátor může flipnout na plugin-only mode.",
-      "legacyHandlersLocked": "Uzamčeno: {n} blokátor(ů)"
+      "legacyHandlersLocked": "Uzamčeno: {n} blokátor(ů)",
+      "modeBuiltIn": "Aktuálně: built-in (Program.cs handlers)",
+      "modePlugin": "Aktuálně: plugin v{v}",
+      "pluginLoadedNotActive": "plugin v{v} načten, ale neaktivní (legacy handlers vlastní routy)"
     },
     "osNotify": {
       "title": "Systémové notifikace",

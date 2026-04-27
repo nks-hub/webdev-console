@@ -579,6 +579,27 @@
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
               </p>
+              <!-- Iter 13: backend mode status banner. Shows operator at a
+                   glance which deploy backend is currently authoritative,
+                   sourced from /api/admin/plugin-readiness. Today always
+                   built-in (Program.cs handlers), but the banner already
+                   reflects the live mode so a future flip is visible
+                   without leaving Settings. -->
+              <div
+                v-if="deployBackendMode"
+                class="hint"
+                style="margin-bottom: 12px; padding: 8px 12px; border-radius: 4px; background: var(--el-fill-color-light, #f5f7fa); display: inline-block"
+              >
+                <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
+                  🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
+                </span>
+                <span v-else style="color: var(--el-color-info)">
+                  ⚙ {{ $t('settings.deploySubsystem.modeBuiltIn') }}
+                </span>
+                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: 8px">
+                  ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
+                </span>
+              </div>
               <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
@@ -1438,8 +1459,13 @@ const deployUseLegacyHostHandlers = ref(true)
 // #109-D1+ iter 10: store full readiness so the locked toggle can
 // surface blockers count inline — operator sees WHY at a glance without
 // having to open DeploySettings panel popover.
+// Iter 13: also store mode + pluginVersion + pluginLoaded so the section
+// header can render a status banner ("⚙ built-in" / "🔌 plugin v0.1.0").
 const deployFlipUnlocked = ref<boolean>(false)
 const deployFlipBlockers = ref<string[]>([])
+const deployBackendMode = ref<'built-in' | 'plugin' | null>(null)
+const deployPluginVersion = ref<string | null>(null)
+const deployPluginLoaded = ref<boolean>(false)
 async function loadDeployFlipReadiness(): Promise<void> {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/admin/plugin-readiness`, {
@@ -1450,6 +1476,9 @@ async function loadDeployFlipReadiness(): Promise<void> {
       const j = await r.json()
       deployFlipUnlocked.value = j.readyToFlip === true
       deployFlipBlockers.value = Array.isArray(j.blockers) ? j.blockers : []
+      deployBackendMode.value = j.mode === 'plugin' || j.mode === 'built-in' ? j.mode : null
+      deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
+      deployPluginLoaded.value = j.pluginLoaded === true
     }
   } catch { /* keep locked on error */ }
 }
