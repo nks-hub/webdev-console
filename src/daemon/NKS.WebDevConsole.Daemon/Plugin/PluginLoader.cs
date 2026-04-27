@@ -57,6 +57,27 @@ public partial class PluginLoader
     /// </summary>
     public void WireEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder app)
     {
+        // Snapshot the host-side route table BEFORE running any plugin's
+        // RegisterEndpoints. Used to filter out endpoint registrations whose
+        // (METHOD, path-template) already exist on the host — without this
+        // a plugin claiming a path that the daemon's Program.cs already
+        // serves causes an AmbiguousMatchException at the first request,
+        // breaking BOTH the plugin and the host handler. The most important
+        // case during the nksdeploy plugin migration: the daemon currently
+        // owns /api/nks.wdc.deploy/* routes inline, and the plugin (in the
+        // sibling webdev-console-plugins repo) registers overlapping paths.
+        // Phase #109 will move ownership to the plugin; until then, the
+        // host wins and the plugin's clashing endpoints are skipped with a
+        // visible log so operators can see the migration is in flight.
+        var existing = new HashSet<(string Method, string Path)>(
+            app.DataSources
+               .SelectMany(ds => ds.Endpoints)
+               .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+               .SelectMany(re =>
+                   (re.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()
+                       ?.HttpMethods ?? Array.Empty<string>())
+                   .Select(method => (method.ToUpperInvariant(), re.RoutePattern.RawText ?? string.Empty))));
+
         foreach (var loaded in _plugins)
         {
             var pluginId = loaded.Manifest?.Id ?? loaded.Instance.Id;
@@ -64,13 +85,35 @@ public partial class PluginLoader
             {
                 var reg = new NKS.WebDevConsole.Core.Interfaces.EndpointRegistration(pluginId);
                 loaded.Instance.RegisterEndpoints(reg);
+                var skipped = 0;
                 foreach (var ep in reg.Endpoints)
                 {
+                    var key = (ep.Method.ToUpperInvariant(), ep.Path);
+                    if (existing.Contains(key))
+                    {
+                        // Host already serves this route — skip silently in
+                        // production, log at warning so operators see the
+                        // overlap during incremental plugin migrations.
+                        _logger.LogWarning(
+                            "Plugin {Id} endpoint {Method} {Path} skipped — host already owns this route",
+                            pluginId, ep.Method, ep.Path);
+                        skipped++;
+                        continue;
+                    }
                     app.MapMethods(ep.Path, [ep.Method], ep.Handler)
                        .WithName($"{pluginId}:{ep.Method}:{ep.Path}");
+                    // Track newly-added so a SECOND plugin claiming the
+                    // same route doesn't double-register either.
+                    existing.Add(key);
                 }
-                if (reg.Endpoints.Count > 0)
-                    _logger.LogInformation("Plugin {Id} registered {Count} endpoint(s)", pluginId, reg.Endpoints.Count);
+                var registered = reg.Endpoints.Count - skipped;
+                if (registered > 0)
+                    _logger.LogInformation("Plugin {Id} registered {Count} endpoint(s){Skipped}",
+                        pluginId, registered,
+                        skipped > 0 ? $" ({skipped} skipped due to host conflict)" : "");
+                else if (skipped > 0)
+                    _logger.LogInformation("Plugin {Id} declared {Count} endpoint(s) but all are owned by the host — none wired",
+                        pluginId, skipped);
             }
             catch (Exception ex)
             {
