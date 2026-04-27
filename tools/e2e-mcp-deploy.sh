@@ -2142,6 +2142,10 @@ step "gatedEndpoints includes history GET" "$BBB_R0" 'GET /sites/{domain}/histor
 # Iter 65 added the snapshot restore aliases (#109-D2 follow-up) — pin one
 # so a regression that drops the snapshots/{id}/restore route gets caught.
 step "gatedEndpoints includes snapshot restore alias" "$BBB_R0" 'POST /sites/{domain}/snapshots/{snapshotId}/restore'
+# Iter 93 — recommendation field is always emitted (DeploySettingsPanel +
+# global Settings popover render it). Pin its presence so a refactor
+# that drops it breaks bash e2e instead of leaking through to GUI.
+step "readiness includes recommendation field even without drift" "$BBB_R0" '"recommendation":'
 
 BBB_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
 # Toggle to opposite of boot value to force drift
