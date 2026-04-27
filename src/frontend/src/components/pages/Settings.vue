@@ -1289,7 +1289,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -1301,6 +1301,7 @@ import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   daemonBaseUrl, daemonAuthHeaders as authHeaders,
   fetchPhpVersions, fetchSettings, saveSettings,
+  subscribeEventsMap,
   type DeviceInfo as CatalogDeviceInfo,
   type SystemInfo,
 } from '../../api/daemon'
@@ -2804,6 +2805,12 @@ function formatRelativeTime(iso: string): string {
   return `${Math.floor(h / 24)} d`
 }
 
+// Iter 29: live-refresh readiness on deploy.* settings save from another
+// tab. Mirrors the iter 28 wiring in DeploySettingsPanel — when operator
+// flips useLegacyHostHandlers via API or another open Settings page, the
+// locked-toggle popover reflects the new state without reload.
+let unsubscribeDeploySettingsSse: (() => void) | null = null
+
 onMounted(async () => {
   void loadSettings()
   void loadDatabases()
@@ -2813,6 +2820,9 @@ onMounted(async () => {
   void loadPluginCatalogStatus()
   void loadPluginPorts()
   void loadDeployFlipReadiness()
+  unsubscribeDeploySettingsSse = subscribeEventsMap({
+    'deploy:settings-changed': () => { void loadDeployFlipReadiness() },
+  })
   void loadMysqlRootStatus()
   void loadSnapshots()
   // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
@@ -2853,6 +2863,13 @@ onMounted(async () => {
       })
     }
   } catch { /* optional */ }
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribeDeploySettingsSse) {
+    unsubscribeDeploySettingsSse()
+    unsubscribeDeploySettingsSse = null
+  }
 })
 
 async function save() {
