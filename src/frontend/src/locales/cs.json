@@ -1393,7 +1393,8 @@
       "enableLabel": "Zapnout Deploy subsystém",
       "legacyHandlersLabel": "Built-in deploy backend",
       "legacyHandlersHint": "Built-in (host-native) deploy handlers — výchozí",
-      "legacyHandlersTooltip": "Plánovaný přepínač pro Phase 7.4 cutover na nks.wdc.deploy plugin. Dnes je zamčený v poloze ON (built-in handlers v Program.cs vlastní všechny deploy routy). Po dokončení phase B/C (parita pluginových endpointů + ZIP/SSE/Slack feature parity) se přepínač odemkne a operátor může flipnout na plugin-only mode."
+      "legacyHandlersTooltip": "Plánovaný přepínač pro Phase 7.4 cutover na nks.wdc.deploy plugin. Dnes je zamčený v poloze ON (built-in handlers v Program.cs vlastní všechny deploy routy). Po dokončení phase B/C (parita pluginových endpointů + ZIP/SSE/Slack feature parity) se přepínač odemkne a operátor může flipnout na plugin-only mode.",
+      "legacyHandlersLocked": "Uzamčeno: {n} blokátor(ů)"
     },
     "osNotify": {
       "title": "Systémové notifikace",

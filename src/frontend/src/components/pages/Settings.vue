@@ -601,6 +601,16 @@
                   <span class="hint" style="margin-left: 12px">
                     {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
                   </span>
+                  <el-tag
+                    v-if="!deployFlipUnlocked && deployFlipBlockers.length > 0"
+                    type="warning"
+                    size="small"
+                    effect="plain"
+                    style="margin-left: 12px"
+                    :title="deployFlipBlockers.join('\n')"
+                  >
+                    🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
+                  </el-tag>
                 </el-form-item>
               </el-form>
             </div>
@@ -1424,7 +1434,12 @@ const deployUseLegacyHostHandlers = ref(true)
 // and the endpoint flips readyToFlip → the switch unlocks automatically
 // without a code change. Operator sees the lock state matches the live
 // daemon's view of plugin parity, not a hardcoded hint.
+//
+// #109-D1+ iter 10: store full readiness so the locked toggle can
+// surface blockers count inline — operator sees WHY at a glance without
+// having to open DeploySettings panel popover.
 const deployFlipUnlocked = ref<boolean>(false)
+const deployFlipBlockers = ref<string[]>([])
 async function loadDeployFlipReadiness(): Promise<void> {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/admin/plugin-readiness`, {
@@ -1434,6 +1449,7 @@ async function loadDeployFlipReadiness(): Promise<void> {
     if (r.ok) {
       const j = await r.json()
       deployFlipUnlocked.value = j.readyToFlip === true
+      deployFlipBlockers.value = Array.isArray(j.blockers) ? j.blockers : []
     }
   } catch { /* keep locked on error */ }
 }
