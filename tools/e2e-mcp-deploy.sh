@@ -1879,6 +1879,17 @@ step "dry-run includes currentRelease field" "$WW_RESP" '"currentRelease":'
 step "dry-run includes sourceLastModified field" "$WW_RESP" '"sourceLastModified":'
 step "dry-run includes lastSuccessfulDeployAt field" "$WW_RESP" '"lastSuccessfulDeployAt":'
 step "dry-run includes sourceUnchangedSinceLastDeploy field" "$WW_RESP" '"sourceUnchangedSinceLastDeploy":'
+step "dry-run includes alwaysConfirmKind field" "$WW_RESP" '"alwaysConfirmKind":'
+
+# Phase 7.5+++ — alwaysConfirmKind reflects the live setting. Flip
+# always_confirm_kinds=deploy on, query, expect true; reset.
+WW_AC_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
+api PUT /api/settings -d '{"mcp.always_confirm_kinds":"deploy"}' >/dev/null
+WW_AC_RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","branch":"main","dryRun":true}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "dry-run alwaysConfirmKind=true when deploy is ring-fenced" "$WW_AC_RESP" '"alwaysConfirmKind":true'
+api PUT /api/settings -d "{\"mcp.always_confirm_kinds\":\"$WW_AC_BEFORE\"}" >/dev/null
 # Confirm no DB row was written — history should NOT include this would-be deploy.
 sleep 1
 WW_HIST=$(api GET "/api/nks.wdc.deploy/sites/blog.loc/history?limit=5")
