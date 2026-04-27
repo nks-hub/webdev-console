@@ -2290,13 +2290,17 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", async (
 });
 
 // POST /sites/{domain}/groups — start a multi-host deploy group.
-// Phase 7.5++ persists to deploy_groups table + spawns one DeployRunRow
-// per host (BackendId='dummy-group') so the GUI's Groups tab + drilldown
-// both show real data. Hosts list of length < 2 → 400.
+// Phase 7.5+++ — REAL fan-out via LocalDeployBackend when each host has
+// localPaths configured in settings. Hosts without localPaths get a
+// dummy-group row so they remain visible in the GUI Groups tab as a
+// noop entry (operator can spot which hosts are misconfigured).
+// Hosts list of length < 2 → 400.
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
     CancellationToken ct) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
@@ -2307,43 +2311,134 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     if (hosts.Count < 2)
         return Results.BadRequest(new { error = "groups_require_2_or_more_hosts", got = hosts.Count });
 
+    // Resolve per-host localPaths + shared/keepReleases options up-front
+    // so we can decide which hosts will run real vs noop.
+    var hostConfigs = new Dictionary<string, (string? src, string? tgt, IReadOnlyList<string>? sharedDirs, IReadOnlyList<string>? sharedFiles)>();
+    int? siteKeepReleases = null;
+    bool allowConcurrent = true;
+    try
+    {
+        var settingsPath = DeploySettingsPath(domain);
+        if (File.Exists(settingsPath))
+        {
+            using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+            var rootEl = sdoc.RootElement;
+            if (rootEl.TryGetProperty("hosts", out var hostsEl)
+                && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var hEl2 in hostsEl.EnumerateArray())
+                {
+                    if (!hEl2.TryGetProperty("name", out var nEl)) continue;
+                    var name = nEl.GetString() ?? "";
+                    if (!hosts.Contains(name)) continue;
+                    string? src = hEl2.TryGetProperty("localSourcePath", out var lsEl) ? lsEl.GetString() : null;
+                    string? tgt = hEl2.TryGetProperty("localTargetPath", out var ltEl) ? ltEl.GetString() : null;
+                    List<string>? sd = null;
+                    List<string>? sf = null;
+                    if (hEl2.TryGetProperty("sharedDirs", out var sdEl)
+                        && sdEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        sd = sdEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+                    if (hEl2.TryGetProperty("sharedFiles", out var sfEl)
+                        && sfEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        sf = sfEl.EnumerateArray().Select(x => x.GetString() ?? "").Where(s => s.Length > 0).ToList();
+                    hostConfigs[name] = (src, tgt, sd, sf);
+                }
+            }
+            if (rootEl.TryGetProperty("advanced", out var advEl))
+            {
+                if (advEl.TryGetProperty("keepReleases", out var krEl) && krEl.TryGetInt32(out var krVal))
+                    siteKeepReleases = krVal;
+                if (advEl.TryGetProperty("allowConcurrentHosts", out var acEl)
+                    && acEl.ValueKind == System.Text.Json.JsonValueKind.False)
+                    allowConcurrent = false;
+            }
+        }
+    }
+    catch { /* best-effort — hosts without config become noop entries */ }
+
     var groupId = Guid.NewGuid().ToString("D");
     var now = DateTimeOffset.UtcNow;
+    var releaseId = now.ToString("yyyyMMdd_HHmmss");
 
-    // Spawn one DeployRunRow per host + capture (host → deployId) map.
+    // Spawn one DeployRunRow per host. Real ones start in 'queued' so the
+    // background backend can transition them; noop ones go straight to
+    // 'completed' as before so they don't sit in queued forever.
     var hostDeployIds = new Dictionary<string, string>(hosts.Count);
+    var realDeploys = new List<(string deployId, string host, string src, string tgt, IReadOnlyList<string>? sd, IReadOnlyList<string>? sf)>();
     foreach (var host in hosts)
     {
         var deployId = Guid.NewGuid().ToString("D");
+        var (src, tgt, sd, sf) = hostConfigs.TryGetValue(host, out var c)
+            ? c : (null, null, null, null);
+        var hasPaths = !string.IsNullOrEmpty(src) && !string.IsNullOrEmpty(tgt);
         await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
             Id: deployId, Domain: domain, Host: host,
-            ReleaseId: now.ToString("yyyyMMdd_HHmmss"),
+            ReleaseId: releaseId,
             Branch: null, CommitSha: null,
-            Status: "completed", IsPastPonr: true,
-            StartedAt: now, CompletedAt: now,
-            ExitCode: 0, ErrorMessage: null, DurationMs: 50,
-            TriggeredBy: "gui", BackendId: "dummy-group",
+            Status: hasPaths ? "queued" : "completed",
+            IsPastPonr: !hasPaths,
+            StartedAt: now,
+            CompletedAt: hasPaths ? null : now,
+            ExitCode: hasPaths ? null : 0,
+            ErrorMessage: null,
+            DurationMs: hasPaths ? null : 50,
+            TriggeredBy: "gui",
+            BackendId: hasPaths ? "local" : "noop-group",
             CreatedAt: now, UpdatedAt: now,
             GroupId: groupId), ct);
         hostDeployIds[host] = deployId;
+        if (hasPaths) realDeploys.Add((deployId, host, src!, tgt!, sd, sf));
     }
 
     await groups.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployGroupRow(
         Id: groupId, Domain: domain, Hosts: hosts,
         HostDeployIds: hostDeployIds,
-        // Schema CHECK accepts only specific phase values — 'all_succeeded'
-        // is the happy-path terminal phase per migration 009. Don't use
-        // 'completed' here (that's deploy_runs.status, different vocab).
-        Phase: "all_succeeded", StartedAt: now, CompletedAt: now,
+        // Schema CHECK (migration 009) accepts: initializing, preflight,
+        // deploying, awaiting_all_soak, all_succeeded, partial_failure,
+        // rolling_back_all, rolled_back, group_failed.
+        // 'deploying' when we have real backend work to do; 'all_succeeded'
+        // when everything is noop (no localPaths configured for any host).
+        Phase: realDeploys.Count > 0 ? "deploying" : "all_succeeded",
+        StartedAt: now,
+        CompletedAt: realDeploys.Count > 0 ? null : now,
         ErrorMessage: null, TriggeredBy: "gui",
         CreatedAt: now, UpdatedAt: now), ct);
+
+    await eventsBus.BroadcastAsync("deploy:group-started",
+        new { groupId, domain, hosts, realCount = realDeploys.Count });
+
+    // Fan out — concurrent (default) or sequential per advanced config.
+    _ = Task.Run(async () =>
+    {
+        if (allowConcurrent)
+        {
+            var tasks = realDeploys.Select(r =>
+                localBackend.RunAsync(r.deployId, releaseId, r.src, r.tgt,
+                    new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.Options(
+                        SharedDirs: r.sd, SharedFiles: r.sf, KeepReleases: siteKeepReleases))).ToArray();
+            await Task.WhenAll(tasks);
+        }
+        else
+        {
+            foreach (var r in realDeploys)
+            {
+                await localBackend.RunAsync(r.deployId, releaseId, r.src, r.tgt,
+                    new NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend.Options(
+                        SharedDirs: r.sd, SharedFiles: r.sf, KeepReleases: siteKeepReleases));
+            }
+        }
+        await groups.UpdatePhaseAsync(groupId, "all_succeeded", isTerminal: true, errorMessage: null, default);
+        await eventsBus.BroadcastAsync("deploy:group-complete",
+            new { groupId, domain, success = true, realCount = realDeploys.Count });
+    });
 
     return Results.Ok(new
     {
         groupId,
         idempotencyKey = Guid.NewGuid().ToString("D"),
         hostCount = hosts.Count,
-        note = "dummy backend — Phase 7.5+ persists rows but doesn't actually fan out",
+        realCount = realDeploys.Count,
+        noopCount = hosts.Count - realDeploys.Count,
     });
 });
 
