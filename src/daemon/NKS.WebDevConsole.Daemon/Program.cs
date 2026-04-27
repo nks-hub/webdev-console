@@ -2769,23 +2769,121 @@ static async Task<IResult> HandleRestoreAsync(
             detail = $"Deploy {snapshotId[..8]} did not capture a pre-deploy snapshot.",
         });
 
+    // Phase 7.5+++ — REAL extract when the backup path resolves to an
+    // actual .zip file. Resolves the `~` prefix to the user's home dir.
+    // Without a real .zip file (legacy fake snapshot rows), keeps the
+    // dummy "verified-only" behaviour.
+    var backupPath = sourceRow.PreDeployBackupPath;
+    var resolvedBackupPath = backupPath.StartsWith("~/")
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            backupPath[2..].Replace('/', Path.DirectorySeparatorChar))
+        : backupPath;
+
+    string? targetPath = null;
+    string? extractedTo = null;
+    string? swappedTo = null;
+    string? restoreError = null;
+
+    if (File.Exists(resolvedBackupPath) && resolvedBackupPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+    {
+        // Find the host's localTargetPath so we know where to restore.
+        try
+        {
+            var settingsPath = DeploySettingsPath(domain);
+            if (File.Exists(settingsPath))
+            {
+                using var sdoc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, ct));
+                if (sdoc.RootElement.TryGetProperty("hosts", out var hostsEl)
+                    && hostsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var hEl2 in hostsEl.EnumerateArray())
+                    {
+                        if (!hEl2.TryGetProperty("name", out var nEl)) continue;
+                        if (!string.Equals(nEl.GetString(), host, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (hEl2.TryGetProperty("localTargetPath", out var ltEl))
+                            targetPath = ltEl.GetString();
+                        break;
+                    }
+                }
+            }
+        }
+        catch { /* best-effort */ }
+
+        if (!string.IsNullOrEmpty(targetPath))
+        {
+            try
+            {
+                // Extract into a fresh release dir so the restore is auditable
+                // alongside normal deploys (shows up in releases/ + Releases tab).
+                var nowR = DateTimeOffset.UtcNow;
+                var releaseId = nowR.ToString("yyyyMMdd_HHmmss") + "-restored-" + snapshotId[..8];
+                var releaseDir = Path.Combine(targetPath, "releases", releaseId);
+                Directory.CreateDirectory(releaseDir);
+                System.IO.Compression.ZipFile.ExtractToDirectory(
+                    resolvedBackupPath, releaseDir, overwriteFiles: true);
+                extractedTo = releaseDir;
+
+                // Atomic swap of current symlink → new release dir.
+                var currentLink = Path.Combine(targetPath, "current");
+                var depDir = Path.Combine(targetPath, ".dep");
+                Directory.CreateDirectory(depDir);
+                var depCurrent = Path.Combine(depDir, "current_release");
+                var depPrev = Path.Combine(depDir, "previous_release");
+                string? oldCurrent = File.Exists(depCurrent)
+                    ? (await File.ReadAllTextAsync(depCurrent, ct)).Trim()
+                    : null;
+                if (Directory.Exists(currentLink))
+                {
+                    var fi = new DirectoryInfo(currentLink);
+                    if (fi.LinkTarget is not null) Directory.Delete(currentLink);
+                    else Directory.Delete(currentLink, recursive: true);
+                }
+                Directory.CreateSymbolicLink(currentLink, releaseDir);
+                await File.WriteAllTextAsync(depCurrent, releaseDir, ct);
+                if (!string.IsNullOrEmpty(oldCurrent) && oldCurrent != releaseDir)
+                    await File.WriteAllTextAsync(depPrev, oldCurrent, ct);
+                swappedTo = releaseDir;
+
+                // Audit row in deploy_runs so the operation appears in
+                // history + the Releases sub-tab.
+                var restoreRunId = Guid.NewGuid().ToString("D");
+                await runs.InsertAsync(new NKS.WebDevConsole.Core.Interfaces.DeployRunRow(
+                    Id: restoreRunId, Domain: domain, Host: host,
+                    ReleaseId: releaseId,
+                    Branch: null, CommitSha: null,
+                    Status: "completed", IsPastPonr: true,
+                    StartedAt: nowR, CompletedAt: DateTimeOffset.UtcNow,
+                    ExitCode: 0, ErrorMessage: null, DurationMs: 50,
+                    TriggeredBy: "gui", BackendId: "local-restore",
+                    CreatedAt: nowR, UpdatedAt: nowR), ct);
+            }
+            catch (Exception ex) { restoreError = ex.Message; }
+        }
+        else
+        {
+            restoreError = "no_local_target_for_host — restore would have nowhere to write";
+        }
+    }
+
     // Broadcast the audit event so the GUI's activity feed / drawer
-    // sees something happened. Real backend would emit additional
-    // restore:phase events as the actual gunzip+mysql work progresses.
+    // sees something happened.
     await eventsBus.BroadcastAsync("restore:complete", new
     {
         domain, snapshotId, host,
         backupPath = sourceRow.PreDeployBackupPath,
         backupSizeBytes = sourceRow.PreDeployBackupSizeBytes ?? 0,
+        extractedTo, swappedTo, error = restoreError,
     });
 
     return Results.Ok(new
     {
-        restored = true,
+        restored = restoreError is null,
         sourceDeployId = snapshotId,
         backupPath = sourceRow.PreDeployBackupPath,
         backupSizeBytes = sourceRow.PreDeployBackupSizeBytes ?? 0,
-        note = "dummy backend — Phase 7.5 stub (no actual mysql restore)",
+        extractedTo,
+        swappedTo,
+        error = restoreError,
     });
 }
 

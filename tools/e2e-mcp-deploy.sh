@@ -1403,6 +1403,23 @@ step "snapshot-now sizeBytes reflects real archive (>0)" "$II_RESP" '"sizeBytes"
 II_FILE="$HOME/.wdc/backups/manual/blog.loc/${II_ID}.zip"
 step "snapshot-now wrote a real .zip on disk" "$([ -s "$II_FILE" ] && echo y || echo n)" "y"
 
+# ============================================================================
+echo ""; echo "${YEL}=== JJ. snapshot restore round-trip (extract zip + swap current) ===${END}"
+# ============================================================================
+# Builds on II's snapshot. Restore should extract the .zip into a new
+# releases/{ts}-restored-{shortId} dir + swap `current` symlink.
+JJ_RESTORE=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"snapshotId\":\"$II_ID\",\"host\":\"production\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/restore")
+step "restore returns restored:true" "$JJ_RESTORE" '"restored":true'
+step "restore returns extractedTo path" "$JJ_RESTORE" '"extractedTo":"[^"]*restored-'
+step "restore returns swappedTo path" "$JJ_RESTORE" '"swappedTo":"[^"]*restored-'
+JJ_CURRENT=$(readlink "$II_TARGET_MSYS/current" 2>/dev/null | sed 's|\\|/|g')
+case "$JJ_CURRENT" in
+    *-restored-*) step "current symlink now points at restored release" yes yes ;;
+    *)            step "current symlink now points at restored release (got '$JJ_CURRENT')" no yes ;;
+esac
+
 # Cleanup
 [ -f "$II_FILE" ] && rm -f "$II_FILE"
 if [ -n "$II_BACKUP" ]; then
