@@ -1419,6 +1419,7 @@
       "placeholder": "Filtr typu rozsahu"
     },
     "includeRevokedLabel": "Zobrazit i odvolaná (audit)",
+    "targetFilterTag": "cíl: {target}",
     "dialog": {
       "title": "Nové oprávnění",
       "scopeType": "Typ rozsahu",

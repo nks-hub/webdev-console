@@ -70,6 +70,19 @@
       <span v-if="deadweightCount > 0" class="muted hint">
         {{ t('mcpGrants.usage.deadweightHint', { days: DEADWEIGHT_AGE_DAYS }) }}
       </span>
+      <!-- Phase 7.5+++ — target= URL filter from the DeploySettings badge
+           link. Inline removable tag so operators see why their list is
+           narrowed and can clear it without touching the URL. -->
+      <el-tag
+        v-if="targetFilter"
+        type="info"
+        closable
+        size="small"
+        class="target-filter-tag"
+        @close="clearTargetFilter"
+      >
+        {{ t('mcpGrants.targetFilterTag', { target: targetFilter }) }}
+      </el-tag>
       <!-- Phase 7.5+++ — audit view toggle. Off by default; on flips
            the fetch to ?includeRevoked=true so operators see the full
            historical set including soft-revoked rows. -->
@@ -343,9 +356,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Delete, Search, Download, Upload } from '@element-plus/icons-vue'
 import {
@@ -506,6 +519,24 @@ const deadweightCount = computed(() =>
 // Phase 7.5+++ — scope_type filter (combines with usage tri-state).
 const scopeTypeFilter = ref<string | null>(null)
 
+// Phase 7.5+++ — target filter sourced from URL ?target=. Driven by the
+// per-site MCP grants badge in DeploySettings header. Matches grants
+// where targetPattern is the exact target OR the wildcard '*' (which
+// applies to all domains). Two-way bound back to the URL so the
+// browser back/forward buttons work as expected.
+const route = useRoute()
+const targetFilter = ref<string>(
+  typeof route.query.target === 'string' ? route.query.target : '',
+)
+function clearTargetFilter(): void {
+  targetFilter.value = ''
+  const { target: _, ...rest } = route.query
+  void router.replace({ path: route.path, query: rest })
+}
+watch(() => route.query.target, (q) => {
+  targetFilter.value = typeof q === 'string' ? q : ''
+})
+
 const scopeTypeOptions = computed(() => {
   const counts = new Map<string, number>()
   for (const g of grants.value) {
@@ -522,6 +553,13 @@ const filteredGrants = computed<McpGrantRow[]>(() => {
   let rows = grants.value
   if (scopeTypeFilter.value) {
     rows = rows.filter((g) => g.scopeType === scopeTypeFilter.value)
+  }
+  if (targetFilter.value) {
+    const t = targetFilter.value.toLowerCase()
+    rows = rows.filter((g) => {
+      const tp = (g.targetPattern || '').toLowerCase()
+      return tp === '*' || tp === t
+    })
   }
   switch (usageFilter.value) {
     case 'inuse': return rows.filter((g) => (g.matchCount ?? 0) > 0)
@@ -921,6 +959,7 @@ function cooldownActiveSec(g: McpGrantRow): number {
 }
 .usage-toolbar .hint { font-size: 12px; }
 .scope-filter { width: 180px; }
+.target-filter-tag { font-family: var(--el-font-family-monospace, ui-monospace, monospace); }
 /* Phase 7.5+++ — revoked rows visually de-emphasized in audit view. */
 .grants-table :deep(.grant-row-revoked) {
   opacity: 0.5;
