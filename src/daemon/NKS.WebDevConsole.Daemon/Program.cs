@@ -5976,8 +5976,32 @@ app.MapMethods("/api/sites/{domain}/enabled", ["PATCH"], async (string domain, H
     catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
-app.MapDelete("/api/sites/{domain}", async (string domain, SiteManager sm, SiteOrchestrator orchestrator) =>
+// MCP intent-gated under kind=site_delete. AI with a wildcard session
+// grant could otherwise wipe every site as a single irreversible chain;
+// gate forces the same intent + always-confirm pipeline as deploy ops.
+// Header-driven so the GUI delete button stays untouched.
+app.MapDelete("/api/sites/{domain}", async (
+    string domain,
+    SiteManager sm,
+    SiteOrchestrator orchestrator,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
 {
+    var sdIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(sdIntentToken))
+    {
+        var sdAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var sdVerdict = await intentValidator.ValidateAndConsumeAsync(
+            sdIntentToken, "site_delete", domain, host: "*site*", sdAllowUnconfirmed, ct);
+        if (!sdVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = sdVerdict.Reason, detail = sdVerdict.Detail },
+                statusCode: sdVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     try
     {
         if (!sm.Delete(domain)) return Results.NotFound();
