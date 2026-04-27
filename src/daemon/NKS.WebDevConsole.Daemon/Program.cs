@@ -4442,12 +4442,20 @@ app.MapGet("/api/plugins/ui", (IServiceProvider sp, PluginState pluginState) =>
 // extracts into the plugins directory. Daemon restart required to load the new DLL
 // because AssemblyLoadContext does not unload while assemblies are referenced.
 // Returns { installed: true, restartRequired: true, path: "..." }.
-app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory httpFactory) =>
+// MCP intent-gated under kind=plugin_install. Installing a new plugin
+// loads its DLL via PluginLoadContext on next daemon boot — arbitrary
+// code execution if the downloadUrl is operator-untrusted. Header-
+// driven gate so the GUI marketplace install button stays untouched.
+app.MapPost("/api/plugins/install", async (
+    HttpContext ctx,
+    IHttpClientFactory httpFactory,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    CancellationToken ct) =>
 {
     Dictionary<string, string>? body;
     try
     {
-        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
+        body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
     }
     catch (System.Text.Json.JsonException ex)
     {
@@ -4460,6 +4468,20 @@ app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory h
         return Results.BadRequest(new { error = "downloadUrl required" });
     if (string.IsNullOrWhiteSpace(pluginId))
         return Results.BadRequest(new { error = "id required" });
+
+    var piIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(piIntentToken))
+    {
+        var piAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var piVerdict = await intentValidator.ValidateAndConsumeAsync(
+            piIntentToken, "plugin_install", domain: pluginId, host: "*plugin*", piAllowUnconfirmed, ct);
+        if (!piVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = piVerdict.Reason, detail = piVerdict.Detail },
+                statusCode: piVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
 
     // Validate plugin id — only [a-z0-9.-]+ to prevent directory traversal in extract path
     if (!System.Text.RegularExpressions.Regex.IsMatch(pluginId, @"^[a-zA-Z0-9._\-]{1,128}$"))
@@ -10277,7 +10299,15 @@ app.MapGet("/api/binaries/installed", (BinaryManager bm) =>
 app.MapGet("/api/binaries/installed/{app}", (string app, BinaryManager bm) =>
     Results.Ok(bm.ListInstalled(app)));
 
-app.MapPost("/api/binaries/install", async (HttpContext ctx, BinaryManager bm) =>
+// MCP intent-gated under kind=binary_install. Installing a new binary
+// (PHP, MySQL, Redis, ...) downloads and unpacks an executable into
+// ~/.wdc/binaries that then gets run by service modules. AI-driven
+// install of an attacker-controlled URL = privilege escalation. Header-
+// driven gate so the GUI install button stays untouched.
+app.MapPost("/api/binaries/install", async (
+    HttpContext ctx,
+    BinaryManager bm,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
 {
     InstallBinaryRequest? req;
     try
@@ -10290,6 +10320,21 @@ app.MapPost("/api/binaries/install", async (HttpContext ctx, BinaryManager bm) =
     }
     if (req is null || string.IsNullOrWhiteSpace(req.App) || string.IsNullOrWhiteSpace(req.Version))
         return Results.BadRequest(new { error = "app and version required" });
+
+    var biIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(biIntentToken))
+    {
+        var biAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var biVerdict = await intentValidator.ValidateAndConsumeAsync(
+            biIntentToken, "binary_install", domain: req.App, host: "*binary*",
+            biAllowUnconfirmed, ctx.RequestAborted);
+        if (!biVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = biVerdict.Reason, detail = biVerdict.Detail },
+                statusCode: biVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
 
     try
     {

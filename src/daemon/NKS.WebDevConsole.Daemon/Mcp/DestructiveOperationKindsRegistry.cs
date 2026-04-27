@@ -106,6 +106,21 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // GUI database tab; AI callers must clear the gate first.
         _kinds["database_import"] = new DestructiveOperationKind(
             "database_import", "Import a SQL dump into a database (overwrites)", CorePluginId, DangerLevel.Destructive);
+        // Phase 7.5+++ wave 3 — code-load risk vectors. Installing a new
+        // plugin or binary brings third-party code into the daemon's
+        // process space (plugin DLL loaded via PluginLoadContext) or onto
+        // the host's filesystem (binary executable). An AI with grants
+        // matching plugin_install or binary_install but without operator
+        // sign-off would be effectively privilege-escalating: it could
+        // pull a malicious plugin/binary URL from a controlled source
+        // and have the daemon load + execute the code on the operator's
+        // box. Tagged Destructive — once installed, even uninstall
+        // doesn't undo any side-effects (env vars set, files written
+        // outside the plugin/binary tree, registry entries).
+        _kinds["plugin_install"] = new DestructiveOperationKind(
+            "plugin_install", "Install a new plugin DLL", CorePluginId, DangerLevel.Destructive);
+        _kinds["binary_install"] = new DestructiveOperationKind(
+            "binary_install", "Install a new binary (PHP, MySQL, …)", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)
