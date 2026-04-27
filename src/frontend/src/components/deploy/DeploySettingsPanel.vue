@@ -79,15 +79,25 @@
                 </li>
               </ul>
             </div>
-            <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+            <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
               <code class="mono">GET /api/admin/plugin-readiness</code>
-              <el-button
-                size="small"
-                :loading="readinessRefreshing"
-                @click="refreshDeployBackendInfo"
-              >
-                {{ t('deploySettings.recheckReadiness') }}
-              </el-button>
+              <div style="display: flex; gap: 6px">
+                <el-button
+                  size="small"
+                  :loading="readinessRefreshing"
+                  @click="refreshDeployBackendInfo"
+                >
+                  {{ t('deploySettings.recheckReadiness') }}
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  link
+                  @click="openGlobalSettings"
+                >
+                  {{ t('deploySettings.openGlobalSettings') }} →
+                </el-button>
+              </div>
             </div>
           </div>
         </el-popover>
@@ -1119,6 +1129,16 @@ async function refreshDeployBackendInfo(): Promise<void> {
   } finally {
     readinessRefreshing.value = false
   }
+}
+
+// Iter 16 — cross-navigation from per-site readiness popover to the
+// global Settings deploy-subsystem section. Same readyToFlip state is
+// authoritative on both pages; this saves the operator from having to
+// navigate manually after diagnosing the lock state from the per-site
+// popover. Anchor `deploy-subsystem` was added in Settings.vue alongside
+// this commit.
+function openGlobalSettings(): void {
+  void router.push({ path: '/settings', query: { tab: 'advanced', scroll: 'deploy-subsystem' } })
 }
 const deployBackendIsPlugin = computed<boolean>(() =>
   // Header wins when present.

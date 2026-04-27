@@ -730,6 +730,7 @@
     "backendBuiltInTooltip": "Deploys are served by the built-in daemon handler. Once the nks.wdc.deploy plugin is loaded the routes flip to plugin ownership.",
     "backendPluginTooltip": "Deploys are served by the nks.wdc.deploy plugin v{v}. Disable the plugin from the plugin manager to short-circuit every deploy endpoint to 404.",
     "recheckReadiness": "Re-check",
+    "openGlobalSettings": "Open in Settings",
     "hostCardCmp": {
       "edit": "Edit",
       "remove": "Remove",

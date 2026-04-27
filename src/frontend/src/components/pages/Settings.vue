@@ -574,7 +574,7 @@
                  OFF hides Deploy tab in SiteEdit + plugin REST endpoints
                  return 404. Useful for installs that only use WDC as
                  local Apache/MySQL manager without remote deploys. -->
-            <div class="settings-section" style="margin-top: 16px">
+            <div id="deploy-subsystem" class="settings-section" style="margin-top: 16px">
               <h4 class="section-title">{{ $t('settings.deploySubsystem.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
