@@ -4551,12 +4551,35 @@ app.MapPost("/api/plugins/install", async (HttpContext ctx, IHttpClientFactory h
 // on disk — DLL stays loaded in the current process (AssemblyLoadContext
 // doesn't unload while referenced), so the response flags restartRequired
 // and the UI surfaces that note so users know to restart.
-app.MapDelete("/api/plugins/{id}", (string id, PluginState pluginState) =>
+// MCP intent-gated under kind=plugin_uninstall. Uninstalling a plugin
+// removes a capability (deploy, SSL, MariaDB, …) from the daemon and
+// can break running services. Header-driven gate; GUI uninstall button
+// keeps working without a token.
+app.MapDelete("/api/plugins/{id}", async (
+    string id,
+    PluginState pluginState,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
 {
     // Path safety: same [a-z0-9.-]+ rule as install so the computed plugin
     // directory can't escape the plugins root.
     if (!System.Text.RegularExpressions.Regex.IsMatch(id, @"^[a-zA-Z0-9._\-]{1,128}$"))
         return Results.BadRequest(new { error = "Invalid plugin id" });
+
+    var puIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(puIntentToken))
+    {
+        var puAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var puVerdict = await intentValidator.ValidateAndConsumeAsync(
+            puIntentToken, "plugin_uninstall", domain: id, host: "*plugin*", puAllowUnconfirmed, ct);
+        if (!puVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = puVerdict.Reason, detail = puVerdict.Detail },
+                statusCode: puVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
 
     var plugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == id);
     if (plugin == null) return Results.NotFound(new { error = $"Plugin '{id}' not loaded" });
@@ -7866,8 +7889,33 @@ app.MapPost("/api/cloudflare/zones/{zoneId}/dns", async (string zoneId, HttpCont
     }
 });
 
-app.MapDelete("/api/cloudflare/zones/{zoneId}/dns/{recordId}", (string zoneId, string recordId, IServiceProvider sp) =>
-    InvokeCfAsync("DeleteDnsRecordAsync", new object[] { zoneId, recordId, CancellationToken.None }, sp));
+// MCP intent-gated under kind=dns_record_delete. Removing a DNS record
+// breaks the public-facing route to a site; an AI with a wildcard grant
+// could orphan every site by chaining this. Header-driven so the GUI
+// delete button keeps working unchanged.
+app.MapDelete("/api/cloudflare/zones/{zoneId}/dns/{recordId}", async (
+    string zoneId,
+    string recordId,
+    IServiceProvider sp,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
+{
+    var dnsIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(dnsIntentToken))
+    {
+        var dnsAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var dnsVerdict = await intentValidator.ValidateAndConsumeAsync(
+            dnsIntentToken, "dns_record_delete", domain: zoneId, host: "*dns*", dnsAllowUnconfirmed, ct);
+        if (!dnsVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = dnsVerdict.Reason, detail = dnsVerdict.Detail },
+                statusCode: dnsVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+    return await InvokeCfAsync("DeleteDnsRecordAsync", new object[] { zoneId, recordId, CancellationToken.None }, sp);
+});
 
 app.MapGet("/api/cloudflare/tunnels", (IServiceProvider sp) =>
     InvokeCfAsync("ListTunnelsAsync", new object[] { CancellationToken.None }, sp));
@@ -8718,8 +8766,29 @@ app.MapPost("/api/ssl/generate", async (HttpContext ctx) =>
     }
 });
 
-app.MapDelete("/api/ssl/certs/{domain}", (string domain) =>
+// MCP intent-gated under kind=ssl_cert_delete. Removing a cert without
+// re-provisioning breaks HTTPS for the whole domain — same risk class
+// as DNS deletion. Header-driven, GUI unaffected.
+app.MapDelete("/api/ssl/certs/{domain}", async (
+    string domain,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+    HttpContext ctx,
+    CancellationToken ct) =>
 {
+    var sslIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(sslIntentToken))
+    {
+        var sslAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var sslVerdict = await intentValidator.ValidateAndConsumeAsync(
+            sslIntentToken, "ssl_cert_delete", domain, host: "*ssl*", sslAllowUnconfirmed, ct);
+        if (!sslVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = sslVerdict.Reason, detail = sslVerdict.Detail },
+                statusCode: sslVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
     if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
     var method = sslPlugin.Instance.GetType().GetMethod("RevokeCert");
