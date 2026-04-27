@@ -10,6 +10,7 @@
              editor from a clean list. -->
         <el-button @click="goToAlwaysConfirmSetting">
           🔒 {{ t('mcpKinds.editAlwaysConfirm') }}
+          <span v-if="lockedKindCount > 0" class="lock-count-badge">{{ lockedKindCount }}</span>
         </el-button>
         <el-button :loading="loading" @click="refresh">
           <el-icon><Refresh /></el-icon> {{ t('mcpKinds.refresh') }}
@@ -193,6 +194,9 @@ const reversibleCount = computed<number>(() =>
   kinds.value.filter((k) => k.danger === 'reversible').length)
 const destructiveCount = computed<number>(() =>
   kinds.value.filter((k) => k.danger === 'destructive').length)
+// Phase 7.5+++ — count of currently-locked kinds for the header button badge.
+const lockedKindCount = computed<number>(() =>
+  kinds.value.filter((k) => k.alwaysConfirm === true).length)
 
 const filteredKinds = computed<McpKindRow[]>(() => {
   const q = search.value.trim().toLowerCase()
@@ -270,6 +274,16 @@ async function refresh(): Promise<void> {
 .page-header { display: flex; align-items: center; justify-content: space-between; }
 .page-header h2 { margin: 0; }
 .header-actions { display: flex; gap: 8px; }
+.lock-count-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: var(--el-color-warning);
+  color: white;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
 .muted { color: var(--el-text-color-secondary); }
 .kinds-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
