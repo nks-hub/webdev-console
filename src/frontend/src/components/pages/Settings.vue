@@ -596,7 +596,7 @@
                     :content="$t('settings.deploySubsystem.legacyHandlersTooltip')"
                     placement="right"
                   >
-                    <el-switch v-model="deployUseLegacyHostHandlers" disabled />
+                    <el-switch v-model="deployUseLegacyHostHandlers" :disabled="!deployFlipUnlocked" />
                   </el-tooltip>
                   <span class="hint" style="margin-left: 12px">
                     {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
@@ -1418,6 +1418,25 @@ const deployEnabled = ref(true)
 // plugin parity isn't yet proven; the value still round-trips so once
 // phase B/C/D land the operator can flip without a redeploy.
 const deployUseLegacyHostHandlers = ref(true)
+// Phase 7.4 #109-D1+: toggle is enabled iff /api/admin/plugin-readiness
+// reports readyToFlip:true. Today always false (phase B/C/D blockers
+// surfaced through the readiness diagnostic). Once those phases ship
+// and the endpoint flips readyToFlip → the switch unlocks automatically
+// without a code change. Operator sees the lock state matches the live
+// daemon's view of plugin parity, not a hardcoded hint.
+const deployFlipUnlocked = ref<boolean>(false)
+async function loadDeployFlipReadiness(): Promise<void> {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/admin/plugin-readiness`, {
+      method: 'GET',
+      headers: authHeaders(),
+    })
+    if (r.ok) {
+      const j = await r.json()
+      deployFlipUnlocked.value = j.readyToFlip === true
+    }
+  } catch { /* keep locked on error */ }
+}
 
 // #147 — OS notification per-channel toggles. Persist via the
 // osNotifications service (localStorage-backed) on flip so the change
@@ -2712,6 +2731,7 @@ onMounted(async () => {
   void loadDeviceId()
   void loadPluginCatalogStatus()
   void loadPluginPorts()
+  void loadDeployFlipReadiness()
   void loadMysqlRootStatus()
   void loadSnapshots()
   // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
