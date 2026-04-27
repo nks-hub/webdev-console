@@ -2294,6 +2294,13 @@ app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
 
 // + DeploySiteTab's hasConfig probe (returns 404→empty when zero rows
 // would be returned, so frontend keeps showing the wizard CTA).
+//
+// Phase D (#109) — gated by legacyHostHandlersAtBoot. Plugin's history
+// route in NksDeployRoutes.cs reads the same IDeployRunsRepository
+// (cross-ALC shared) so the projection shape matches when plugin
+// authority kicks in. Pure read, no destructive surface.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
     string domain,
     int? limit,
@@ -2328,6 +2335,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
     }).ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
+} // end if (legacyHostHandlersAtBoot) — history GET block
 
 // Snapshot list — pre-deploy DB snapshots that ran for this site.
 // Composed from deploy_runs rows with non-null pre_deploy_backup_path.
@@ -2489,6 +2497,10 @@ app.MapPut("/api/nks.wdc.deploy/sites/{domain}/settings", async (
 });
 
 // Single deploy status — used by the drawer's status polling fallback.
+// Phase D (#109) — gated, pure read, plugin's GetDeploy handler in
+// NksDeployRoutes.cs reads the same shared repository.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     string domain,
     string deployId,
@@ -2512,6 +2524,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
         success    = row.Status == "completed",
     });
 });
+} // end if (legacyHostHandlersAtBoot) — deploys/{deployId} GET block
 
 // Phase 7.5+ — rollback a deploy. POST /sites/{domain}/deploys/{deployId}/rollback.
 // Real local-loopback rollback: when host has localTargetPath configured AND
