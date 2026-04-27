@@ -3044,13 +3044,65 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/deploy", async (
         BackendId: "local",
         CreatedAt: now, UpdatedAt: now), ct);
 
-    // Phase 7.5+ — body { "snapshot": true } records a fake snapshot path
-    // so the snapshots endpoint has data to return. Real backend would
-    // actually run pg_dump / mysqldump and store the file on disk.
-    if (root.TryGetProperty("snapshot", out var sEl) && sEl.ValueKind == System.Text.Json.JsonValueKind.True)
+    // Phase 7.5+++ — body `snapshot: true` OR `snapshot: { include: true }`
+    // (the latter from the GUI) triggers a REAL pre-deploy snapshot when
+    // localTarget/current resolves to a real dir. Without a current dir
+    // (first deploy ever), records a placeholder so the row still has a
+    // backupPath for audit consistency.
+    bool snapshotRequested = false;
+    if (root.TryGetProperty("snapshot", out var sEl))
     {
-        var fakePath = $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.sql.gz";
-        await runs.UpdatePreDeployBackupAsync(deployId, fakePath, sizeBytes: 1024 * 256, ct);
+        if (sEl.ValueKind == System.Text.Json.JsonValueKind.True)
+            snapshotRequested = true;
+        else if (sEl.ValueKind == System.Text.Json.JsonValueKind.Object
+                 && sEl.TryGetProperty("include", out var incEl)
+                 && incEl.ValueKind == System.Text.Json.JsonValueKind.True)
+            snapshotRequested = true;
+    }
+    if (snapshotRequested)
+    {
+        var currentDir = Path.Combine(localTarget!, "current");
+        if (Directory.Exists(currentDir))
+        {
+            // Resolve symlink so we zip real contents (not link metadata).
+            var realRoot = currentDir;
+            try
+            {
+                var info = new DirectoryInfo(currentDir);
+                if (info.LinkTarget is not null && Directory.Exists(info.LinkTarget))
+                    realRoot = info.LinkTarget;
+            }
+            catch { /* fall back to currentDir */ }
+
+            var preDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot,
+                "pre-deploy", domain);
+            Directory.CreateDirectory(preDir);
+            var realPath = Path.Combine(preDir, $"{deployId}.zip");
+            try
+            {
+                System.IO.Compression.ZipFile.CreateFromDirectory(
+                    realRoot, realPath,
+                    System.IO.Compression.CompressionLevel.Fastest,
+                    includeBaseDirectory: false);
+                var size = new FileInfo(realPath).Length;
+                await runs.UpdatePreDeployBackupAsync(deployId,
+                    $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.zip", size, ct);
+            }
+            catch
+            {
+                // Don't block the deploy if the snapshot fails — log a
+                // placeholder so audit shows the attempt + the failure
+                // is visible in deploy logs.
+                await runs.UpdatePreDeployBackupAsync(deployId,
+                    $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.zip.failed", 0, ct);
+            }
+        }
+        else
+        {
+            // No prior deploy — placeholder for audit symmetry.
+            await runs.UpdatePreDeployBackupAsync(deployId,
+                $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.empty", 0, ct);
+        }
     }
 
     await eventsBus.BroadcastAsync("deploy:started",

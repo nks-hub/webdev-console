@@ -1428,6 +1428,56 @@ fi
 rm -rf "$II_TARGET_MSYS"
 
 # ============================================================================
+echo ""; echo "${YEL}=== KK. pre-deploy snapshot writes a REAL zip ===${END}"
+# ============================================================================
+# When deploy POST body has `snapshot:true` (or {include:true}) AND
+# target/current/ exists, the daemon should ZIP it under
+# ~/.wdc/backups/pre-deploy/{domain}/ before the deploy starts.
+KK_TARGET_MSYS="/c/temp/e2e-pre-deploy-target"
+KK_TARGET_WIN="C:/temp/e2e-pre-deploy-target"
+KK_SOURCE_WIN="C:/work/sites/blog.loc"
+rm -rf "$KK_TARGET_MSYS"
+mkdir -p "$KK_TARGET_MSYS"
+KK_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+KK_BACKUP=""
+[ -f "$KK_SETTINGS_FILE" ] && KK_BACKUP=$(cat "$KK_SETTINGS_FILE")
+cat > "$KK_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"$KK_SOURCE_WIN","localTargetPath":"$KK_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+# Seed deploy so current/ exists
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\"}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy" > /dev/null
+sleep 3
+
+# Deploy WITH snapshot:true → expect real zip
+KK_RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\",\"snapshot\":true}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+KK_DID=$(echo "$KK_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))" 2>/dev/null)
+sleep 3
+KK_ZIP="$HOME/.wdc/backups/pre-deploy/blog.loc/${KK_DID}.zip"
+step "pre-deploy snapshot zip exists on disk" "$([ -s "$KK_ZIP" ] && echo y || echo n)" "y"
+
+# Deploy WITH snapshot:{include:true} (GUI shape) → expect real zip
+KK_RESP2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"host\":\"production\",\"branch\":\"main\",\"snapshot\":{\"include\":true,\"retentionDays\":30}}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+KK_DID2=$(echo "$KK_RESP2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))" 2>/dev/null)
+sleep 3
+KK_ZIP2="$HOME/.wdc/backups/pre-deploy/blog.loc/${KK_DID2}.zip"
+step "pre-deploy snapshot zip from GUI shape exists" "$([ -s "$KK_ZIP2" ] && echo y || echo n)" "y"
+
+# Cleanup
+[ -f "$KK_ZIP" ] && rm -f "$KK_ZIP"
+[ -f "$KK_ZIP2" ] && rm -f "$KK_ZIP2"
+if [ -n "$KK_BACKUP" ]; then
+    echo "$KK_BACKUP" > "$KK_SETTINGS_FILE"
+fi
+rm -rf "$KK_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
