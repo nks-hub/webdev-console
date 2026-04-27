@@ -733,6 +733,9 @@
     "openGlobalSettings": "Otevřít v Nastavení",
     "readyToFlip": "Plugin parita ověřena — flip useLegacyHostHandlers=false je bezpečný",
     "stayOnBuiltIn": "Zůstaňte v built-in režimu — {n} blokátor(ů) výše",
+    "restartPendingTitle": "Vyžadován restart démona",
+    "restartPendingDescription": "Hodnota deploy.useLegacyHostHandlers byla změněna, ale autorita handleru se aplikuje až při dalším startu démona.",
+    "restartPendingTooltip": "Setting flipped — restart daemon to apply",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",

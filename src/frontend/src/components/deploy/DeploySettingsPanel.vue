@@ -65,9 +65,32 @@
                 · {{ deployBackendReadiness.blockers.length }}⚠
               </span>
               <span v-else style="margin-left: 4px">· ✓</span>
+              <!-- Iter 56 (#258) — surface restart-pending so operator
+                   spots the "setting flipped but daemon hasn't restarted"
+                   drift without having to open the popover. -->
+              <span
+                v-if="deployBackendReadiness.restartPending"
+                style="margin-left: 4px"
+                :title="t('deploySettings.restartPendingTooltip')"
+              >· ↻</span>
             </el-tag>
           </template>
           <div style="font-size: 12px">
+            <!-- Iter 56 (#258) — restart-pending banner appears when the
+                 operator has flipped useLegacyHostHandlers but the daemon
+                 still serves under the boot value. The conditional
+                 registration block honours bootLegacyHostHandlers, so the
+                 GUI must explicitly tell the operator a restart is
+                 required to apply the new authority. -->
+            <el-alert
+              v-if="deployBackendReadiness.restartPending"
+              :title="t('deploySettings.restartPendingTitle')"
+              :description="t('deploySettings.restartPendingDescription')"
+              type="warning"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 8px"
+            />
             <div style="margin-bottom: 6px">
               <!-- Iter 23: localize recommendation from the same structured
                    fields (readyToFlip + blockers count) instead of relying
@@ -1132,6 +1155,11 @@ interface DeployReadiness {
   pluginLoaded: boolean
   pluginVersion: string | null
   useLegacyHostHandlers: boolean
+  // Iter 56 (#258) — value baked at daemon boot. Conditional handler
+  // registration honours bootLegacyHostHandlers, not the live setting,
+  // so the GUI must show "restart pending" when these drift.
+  bootLegacyHostHandlers?: boolean
+  restartPending?: boolean
   readyToFlip: boolean
   blockers: string[]
   blockerDetails?: DeployReadinessBlockerDetail[]

@@ -733,6 +733,9 @@
     "openGlobalSettings": "Open in Settings",
     "readyToFlip": "Plugin parity proven — safe to flip useLegacyHostHandlers=false",
     "stayOnBuiltIn": "Stay on built-in mode — {n} blocker(s) listed above",
+    "restartPendingTitle": "Daemon restart required",
+    "restartPendingDescription": "deploy.useLegacyHostHandlers was changed but handler authority only applies on the next daemon start.",
+    "restartPendingTooltip": "Setting flipped — restart daemon to apply",
     "hostCardCmp": {
       "edit": "Edit",
       "remove": "Remove",
