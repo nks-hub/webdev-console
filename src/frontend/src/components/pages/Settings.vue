@@ -671,6 +671,23 @@
                         :blockers="deployFlipBlockers"
                         :blocker-details="deployFlipBlockerDetails"
                       />
+                      <!-- Iter 64 — mirror DeploySettingsPanel's gatedEndpoints
+                           list so the global popover and per-site popover
+                           stay visually symmetric. Operator sees the same
+                           cutover scope from either entry point. -->
+                      <div
+                        v-if="deployFlipGatedEndpoints.length > 0"
+                        style="margin-top: 10px"
+                      >
+                        <div class="muted" style="margin-bottom: 4px; font-size: 11px">
+                          {{ $t('deploySettings.gatedEndpointsLabel', { n: deployFlipGatedEndpoints.length }) }}
+                        </div>
+                        <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+                          <li v-for="ep in deployFlipGatedEndpoints" :key="ep">
+                            <code class="mono">{{ ep }}</code>
+                          </li>
+                        </ul>
+                      </div>
                       <div class="muted" style="margin-top: 8px; font-size: 11px">
                         <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
                       </div>
@@ -1520,6 +1537,10 @@ const deployPluginLoaded = ref<boolean>(false)
 // most commonly does this flip, so the banner here is even more
 // important than the per-site popover.
 const deployRestartPending = ref<boolean>(false)
+// Iter 64 — gatedEndpoints[] mirrored from per-site popover so both
+// surfaces show identical cutover scope. Empty when older daemon doesn't
+// expose the field (graceful degradation).
+const deployFlipGatedEndpoints = ref<string[]>([])
 async function loadDeployFlipReadiness(): Promise<void> {
   try {
     // Iter 19: fetch with ?explain=true so the locked-toggle popover can
@@ -1538,6 +1559,7 @@ async function loadDeployFlipReadiness(): Promise<void> {
       deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
       deployPluginLoaded.value = j.pluginLoaded === true
       deployRestartPending.value = j.restartPending === true
+      deployFlipGatedEndpoints.value = Array.isArray(j.gatedEndpoints) ? j.gatedEndpoints : []
     }
   } catch { /* keep locked on error */ }
 }
