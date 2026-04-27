@@ -1036,8 +1036,7 @@
     },
     "preflight": {
       "title": "Pre-deploy kontroly",
-      "rerun": "Spustit znovu",
-      "rerunning": "Spouštím…"
+      "rerun": "Spustit znovu"
     },
     "waterfall": {
       "ponrLabel": "BOD ZE KTERÉHO NENÍ NÁVRATU — symlink se přepne · cancel zakázán · po tomto už jen rollback",

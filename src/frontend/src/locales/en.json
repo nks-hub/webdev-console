@@ -1036,8 +1036,7 @@
     },
     "preflight": {
       "title": "Pre-deploy checks",
-      "rerun": "Re-run",
-      "rerunning": "Re-running…"
+      "rerun": "Re-run"
     },
     "waterfall": {
       "ponrLabel": "POINT OF NO RETURN — symlink will switch · cancel disabled · only rollback after this",
