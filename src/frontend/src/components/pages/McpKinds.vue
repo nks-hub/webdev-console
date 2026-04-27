@@ -111,16 +111,21 @@
            grants will NOT actually fire for this kind. -->
       <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="220">
         <template #default="{ row }">
-          <el-tag
+          <el-tooltip
             v-if="row.alwaysConfirm === true"
-            type="info"
-            size="small"
-            effect="dark"
-            class="always-confirm-tag"
-            @click="goToAlwaysConfirmSetting"
+            :content="t('mcpKinds.alwaysConfirmTooltip', { n: autoApproveCount(row.id) })"
+            placement="top"
           >
-            🔒 {{ t('mcpKinds.alwaysConfirm') }}
-          </el-tag>
+            <el-tag
+              type="info"
+              size="small"
+              effect="dark"
+              class="always-confirm-tag"
+              @click="goToAlwaysConfirmSetting"
+            >
+              🔒 {{ t('mcpKinds.alwaysConfirm') }}
+            </el-tag>
+          </el-tooltip>
           <el-tag
             v-else-if="autoApproveCount(row.id) > 0"
             type="warning"
