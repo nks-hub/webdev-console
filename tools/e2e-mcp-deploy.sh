@@ -1672,6 +1672,47 @@ QQ_NONE=$(curl -s -w '\n%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" 
 step "test-notification without configured webhook returns 400" "$QQ_NONE" 'slack_webhook_not_configured'
 
 # ============================================================================
+echo ""; echo "${YEL}=== RR. real cancel interrupts running deploy ===${END}"
+# ============================================================================
+# Configure a slow pre_deploy hook → deploy → cancel → expect interrupted:true.
+RR_TARGET_MSYS="/c/temp/e2e-cancel-target"
+RR_TARGET_WIN="C:/temp/e2e-cancel-target"
+rm -rf "$RR_TARGET_MSYS"
+mkdir -p "$RR_TARGET_MSYS"
+
+RR_SETTINGS_FILE="$HOME/.wdc/data/deploy-settings/blog.loc.json"
+RR_BACKUP=""
+[ -f "$RR_SETTINGS_FILE" ] && RR_BACKUP=$(cat "$RR_SETTINGS_FILE")
+# Cross-platform sleep — use bash sleep which exists in cmd via "sleep"
+# isn't standard on Windows; use ping localhost as a portable wait.
+# 5 seconds gives us a wide cancel window.
+cat > "$RR_SETTINGS_FILE" <<EOF
+{"hosts":[{"name":"production","sshHost":"localhost","sshUser":"deploy","sshPort":22,"remotePath":"/var/www","branch":"main","composerInstall":true,"runMigrations":true,"soakSeconds":1,"localSourcePath":"C:/work/sites/blog.loc","localTargetPath":"$RR_TARGET_WIN"}],"snapshot":{"enabled":false,"retentionDays":30},"hooks":[{"event":"pre_deploy","type":"shell","command":"ping -n 6 127.0.0.1","timeoutSeconds":15,"enabled":true,"description":"slow"}],"notifications":{"emailRecipients":[],"notifyOn":[]},"advanced":{"keepReleases":5,"lockTimeoutSeconds":600,"allowConcurrentHosts":true,"envVars":{}}}
+EOF
+
+RR_RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"host":"production","branch":"main"}' \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+RR_DID=$(echo "$RR_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))" 2>/dev/null)
+sleep 1
+RR_CANCEL=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploys/$RR_DID")
+step "cancel returns interrupted:true mid-deploy" "$RR_CANCEL" '"interrupted":true'
+step "cancel returns status:cancelled" "$RR_CANCEL" '"status":"cancelled"'
+
+# Status check — final phase should NOT be Done.
+sleep 6
+RR_STATUS=$(api GET /api/nks.wdc.deploy/sites/blog.loc/deploys/$RR_DID)
+case "$RR_STATUS" in
+    *'"finalPhase":"Done"'*) step "cancelled deploy did NOT progress to Done" no yes ;;
+    *)                       step "cancelled deploy did NOT progress to Done" yes yes ;;
+esac
+
+# Cleanup
+if [ -n "$RR_BACKUP" ]; then echo "$RR_BACKUP" > "$RR_SETTINGS_FILE"; fi
+rm -rf "$RR_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
