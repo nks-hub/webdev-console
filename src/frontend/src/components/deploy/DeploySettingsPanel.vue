@@ -892,7 +892,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HostSettingsCard from './HostSettingsCard.vue'
-import { listMcpGrants, subscribeEventsMap, fetchPlugins } from '../../api/daemon'
+import { listMcpGrants, subscribeEventsMap, fetchPlugins, daemonBaseUrl, daemonAuthHeaders } from '../../api/daemon'
 import { onBeforeUnmount } from 'vue'
 import {
   fetchDeploySnapshots,
@@ -1030,35 +1030,70 @@ function goToMcpGrants(): void {
   router.push({ path: '/mcp/grants', query: { target: props.domain } })
 }
 
-// #109 — deploy backend identity badge in the header. Reads /api/plugins
-// and surfaces whether the nks.wdc.deploy plugin is loaded. Today's
-// daemon serves /api/nks.wdc.deploy/* from Program.cs (built-in); once
-// the plugin extraction lands the same routes are owned by the plugin
-// DLL. Operators see the migration state without reading daemon logs.
+// #109 — deploy backend identity badge in the header. Two-source
+// detection so the badge reflects the EFFECTIVE backend, not just
+// plugin presence:
+//   1. X-Wdc-Backend-Mode response header (#109-D1) — authoritative
+//      "which handler ACTUALLY served this request" signal. Values:
+//      "built-in" (default, host's Program.cs handlers) or "plugin"
+//      (after the operator flips deploy.useLegacyHostHandlers=false
+//      and plugin parity is proven).
+//   2. /api/plugins — falls back to plugin-presence check if the header
+//      isn't available (older daemon binaries that predate D1).
 //
-// Best-effort: silently degrades to "built-in" if /api/plugins fails or
-// the response shape changes — never blocks the settings panel from
-// rendering.
+// `effectiveMode` wins — when both signals exist, the header is the
+// truth: a plugin can be LOADED in /api/plugins but still
+// host-handlers-win because of route-conflict guard, in which case the
+// badge correctly shows "built-in".
+//
+// Best-effort: silently degrades to "built-in" if both signals fail —
+// never blocks the settings panel from rendering.
 const deployBackendVersion = ref<string | null>(null)
-const deployBackendIsPlugin = computed<boolean>(() => deployBackendVersion.value !== null)
+const deployBackendEffectiveMode = ref<'built-in' | 'plugin' | null>(null)
+const deployBackendIsPlugin = computed<boolean>(() =>
+  // Header wins when present.
+  deployBackendEffectiveMode.value === 'plugin'
+  // Otherwise fall back to plugin-presence (legacy detection).
+  || (deployBackendEffectiveMode.value === null && deployBackendVersion.value !== null))
 const deployBackendBadge = computed<string>(() =>
   deployBackendIsPlugin.value
-    ? `🔌 plugin v${deployBackendVersion.value}`
+    ? (deployBackendVersion.value
+        ? `🔌 plugin v${deployBackendVersion.value}`
+        : '🔌 plugin')
     : '⚙ built-in')
 const deployBackendTooltip = computed<string>(() =>
   deployBackendIsPlugin.value
-    ? t('deploySettings.backendPluginTooltip', { v: deployBackendVersion.value })
+    ? t('deploySettings.backendPluginTooltip', { v: deployBackendVersion.value ?? '?' })
     : t('deploySettings.backendBuiltInTooltip'))
 
 async function loadDeployBackendInfo(): Promise<void> {
+  // Plugin presence check via /api/plugins — gives us the version when
+  // plugin is loaded (may or may not be the active backend).
   try {
     const plugins = await fetchPlugins()
     const deployPlugin = plugins.find((p) => p.id === 'nks.wdc.deploy')
     deployBackendVersion.value = deployPlugin?.version ?? null
   } catch {
-    // /api/plugins failed — assume built-in (the safer default since the
-    // daemon is currently the canonical handler for /api/nks.wdc.deploy/*).
     deployBackendVersion.value = null
+  }
+  // Authoritative effective-mode probe via X-Wdc-Backend-Mode header.
+  // Cheap GET that the gate middleware always tags. Use raw fetch with
+  // daemon auth headers (the json() helper in api/daemon.ts parses body
+  // and discards Response — we need response.headers here). Falls back
+  // silently if header is missing (pre-D1 daemon binary) — the plugin-
+  // presence check above is the legacy signal.
+  try {
+    const probe = await fetch(
+      `${daemonBaseUrl()}/api/nks.wdc.deploy/sites/${encodeURIComponent(props.domain)}/history?limit=1`,
+      { method: 'GET', headers: daemonAuthHeaders() }
+    )
+    const mode = probe.headers.get('X-Wdc-Backend-Mode')
+    if (mode === 'built-in' || mode === 'plugin') {
+      deployBackendEffectiveMode.value = mode
+    }
+  } catch {
+    // Probe failed — leave effectiveMode null so the version-based
+    // fallback in deployBackendIsPlugin kicks in.
   }
 }
 
