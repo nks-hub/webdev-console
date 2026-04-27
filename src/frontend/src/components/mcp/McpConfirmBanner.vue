@@ -26,7 +26,7 @@
       <div class="mcp-confirm-body">
         <div class="mcp-confirm-title">
           <i18n-t v-if="item.kind" keypath="mcp.banner.kindRequest" tag="span">
-            <template #kind><strong>{{ item.kindLabel || item.kind }}</strong></template>
+            <template #kind><strong>{{ humanKindLabel(item) }}</strong></template>
           </i18n-t>
           <span v-else>{{ t('mcp.banner.genericRequest') }}</span>
           <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span">
@@ -276,6 +276,18 @@ async function decline(intentId: string): Promise<void> {
     declining.value = cleared
     store.dismiss(intentId)
   }
+}
+
+// Phase 7.5+++ — operator-locale label for the kind. Prefers the
+// per-locale frontend translation under `mcpKinds.labels.<id>` (added
+// for all 17 seeded kinds in cs/en) and falls back to the daemon-
+// supplied kindLabel, then the bare wire id. Keeps cross-surface
+// consistency with the McpKinds tab where the same lookup runs.
+function humanKindLabel(item: { kind?: string; kindLabel?: string }): string {
+  if (!item.kind) return ''
+  const key = `mcpKinds.labels.${item.kind}`
+  const localized = t(key)
+  return localized !== key ? localized : (item.kindLabel || item.kind)
 }
 
 function shortId(id: string): string {

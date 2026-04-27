@@ -513,10 +513,10 @@
                     <el-option
                       v-for="opt in mcpKindOptions"
                       :key="opt.id"
-                      :label="opt.label || opt.id"
+                      :label="humanKindLabel(opt)"
                       :value="opt.id"
                     >
-                      <span>{{ opt.label || opt.id }}</span>
+                      <span>{{ humanKindLabel(opt) }}</span>
                       <span class="muted" style="margin-left: 8px; font-size: 11px">
                         {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
                       </span>
@@ -1368,6 +1368,16 @@ function lockAllDestructive(): void {
   // additions (e.g. plugin-specific kinds) aren't dropped.
   const merged = new Set([...mcpAlwaysConfirmKindsArr.value, ...destructiveKindIds.value])
   mcpAlwaysConfirmKindsArr.value = Array.from(merged)
+}
+
+// Phase 7.5+++ — operator-locale label for the kind. Shared lookup
+// pattern with McpKinds + McpConfirmBanner: localized i18n key first,
+// daemon-supplied label second, bare id last. Plugin-supplied kinds
+// without translation still render their daemon label.
+function humanKindLabel(opt: { id: string; label?: string }): string {
+  const key = `mcpKinds.labels.${opt.id}`
+  const localized = t(key)
+  return localized !== key ? localized : (opt.label || opt.id)
 }
 
 function clearAlwaysConfirm(): void {
