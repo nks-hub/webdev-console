@@ -1508,6 +1508,7 @@
       "genericRequest": "AI požaduje destruktivní operaci",
       "onTarget": "na {domain} → {host}",
       "noDescription": "Bez popisu.",
+      "alwaysConfirmExplain": "Operátor označil tento druh jako vždy-potvrdit — stávající trust granty byly přeskočeny.",
       "intent": "intent",
       "expiresIn": "vyprší za {seconds} s",
       "approve": "Schválit",

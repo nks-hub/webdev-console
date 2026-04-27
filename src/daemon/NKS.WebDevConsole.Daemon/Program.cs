@@ -1228,7 +1228,8 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
     HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster,
     NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
-    NKS.WebDevConsole.Daemon.Data.Database db) =>
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    SettingsStore settings) =>
 {
     if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
@@ -1285,11 +1286,31 @@ app.MapPost("/api/mcp/intents/confirm-request", async (
         }
     }
 
+    // Phase 7.5+++ — flag whether this kind is currently in
+    // mcp.always_confirm_kinds so the banner can show distinct copy
+    // ("operator marked this kind as always-confirm — your trust grants
+    // were skipped"). Same parsing as the validator's lookup so the GUI
+    // and runtime gate stay coherent.
+    bool alwaysConfirm = false;
+    if (!string.IsNullOrEmpty(kind))
+    {
+        var raw = settings.GetString("mcp", "always_confirm_kinds") ?? "";
+        foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries
+                                          | StringSplitOptions.TrimEntries))
+        {
+            if (string.Equals(part, kind, StringComparison.OrdinalIgnoreCase))
+            {
+                alwaysConfirm = true;
+                break;
+            }
+        }
+    }
+
     // Best-effort: the SSE bus is the GUI's notification channel. Failure
     // to broadcast (no subscribers, etc.) is not fatal — the AI can still
     // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
     await broadcaster.BroadcastAsync("mcp:confirm-request",
-        new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host });
+        new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host, alwaysConfirm });
     return Results.Accepted();
 });
 

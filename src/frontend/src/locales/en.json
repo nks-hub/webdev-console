@@ -1508,6 +1508,7 @@
       "genericRequest": "AI is requesting a destructive operation",
       "onTarget": "on {domain} → {host}",
       "noDescription": "No description provided.",
+      "alwaysConfirmExplain": "Operator marked this kind as always-confirm — existing trust grants were skipped.",
       "intent": "intent",
       "expiresIn": "expires in {seconds}s",
       "approve": "Approve",

@@ -52,6 +52,13 @@ export interface PendingConfirm {
   domain?: string
   /** Phase 6.14b — target host (or synthetic group/restore markers). */
   host?: string
+  /**
+   * Phase 7.5+++ — true when the operator has marked this kind in
+   * mcp.always_confirm_kinds. Banner uses this to show distinct copy
+   * explaining that grants were skipped by operator override (rather
+   * than the more common "no matching grant" case).
+   */
+  alwaysConfirm?: boolean
 }
 
 export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
@@ -73,6 +80,7 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
     kindPluginId?: string
     domain?: string
     host?: string
+    alwaysConfirm?: boolean
   }): void {
     if (!payload?.intentId) return
     if (pending.value.has(payload.intentId)) return
@@ -88,6 +96,7 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
       kindPluginId: payload.kindPluginId,
       domain: payload.domain,
       host: payload.host,
+      alwaysConfirm: payload.alwaysConfirm === true,
     })
     pending.value = next
   }

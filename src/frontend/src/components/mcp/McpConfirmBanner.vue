@@ -37,6 +37,15 @@
         <div class="mcp-confirm-prompt">
           {{ item.prompt || t('mcp.banner.noDescription') }}
         </div>
+        <!-- Phase 7.5+++ — explainer chip when the operator's always-confirm
+             override is what caused this banner (the AI has trust grants
+             but they were skipped by the kind ring-fence). Helps the
+             operator understand WHY they're being asked despite earlier
+             "trust 30 min" / "always trust" choices. -->
+        <div v-if="item.alwaysConfirm" class="mcp-confirm-always-tag">
+          <el-icon><Lock /></el-icon>
+          {{ t('mcp.banner.alwaysConfirmExplain') }}
+        </div>
         <div class="mcp-confirm-meta">
           {{ t('mcp.banner.intent') }} <code>{{ shortId(item.intentId) }}</code>
           · {{ ageLabel(item.receivedAt) }}
@@ -118,7 +127,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Warning } from '@element-plus/icons-vue'
+import { Warning, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
 import { createMcpGrant, revokeIntent, type McpGrantCreateBody } from '../../api/daemon'
@@ -389,6 +398,19 @@ onBeforeUnmount(() => {
 .mcp-confirm-meta {
   font-size: 11px;
   color: var(--el-text-color-secondary);
+}
+.mcp-confirm-always-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--el-color-warning-dark-2);
+  background: var(--el-color-warning-light-9);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 4px 0;
+  border-left: 3px solid var(--el-color-warning);
 }
 
 .mcp-confirm-meta code {
