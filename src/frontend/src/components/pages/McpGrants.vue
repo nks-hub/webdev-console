@@ -505,7 +505,25 @@ async function onRunTestMatch(): Promise<void> {
 // text; if it ever becomes settings-driven, change in both places.
 const DEADWEIGHT_AGE_DAYS = 7
 type UsageFilter = 'all' | 'inuse' | 'deadweight'
-const usageFilter = ref<UsageFilter>('all')
+function parseUsageQuery(): UsageFilter {
+  const q = typeof route.query.usage === 'string' ? route.query.usage : ''
+  return q === 'inuse' || q === 'deadweight' ? q : 'all'
+}
+// Phase 7.5+++ — usage filter sourced from URL ?usage=. Lets the McpHub
+// stats card click on deadweight count deep-link directly to the
+// Deadweight slice. Bidirectional sync below.
+const usageFilter = ref<UsageFilter>(parseUsageQuery())
+watch(() => route.query.usage, () => { usageFilter.value = parseUsageQuery() })
+watch(usageFilter, (next) => {
+  const current = typeof route.query.usage === 'string' ? route.query.usage : ''
+  const desired = next === 'all' ? '' : next
+  if (current === desired) return
+  const { usage: _, ...rest } = route.query
+  void router.replace({
+    path: route.path,
+    query: desired ? { ...rest, usage: desired } : rest,
+  })
+})
 
 // Phase 7.5+++ — row-class helper for the el-table. Greys out revoked
 // rows in audit view so they're clearly historical, not active.

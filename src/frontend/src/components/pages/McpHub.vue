@@ -10,7 +10,11 @@
           <strong>{{ grantsStats.active }}</strong>
           <span class="muted">{{ t('mcpHub.stats.active') }}</span>
         </span>
-        <span v-if="grantsStats.deadweight > 0" class="stat warn">
+        <span
+          v-if="grantsStats.deadweight > 0"
+          class="stat warn always-confirm-stat"
+          @click="onDeadweightClick"
+        >
           <strong>{{ grantsStats.deadweight }}</strong>
           <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
         </span>
@@ -128,6 +132,13 @@ const grantsStats = ref<McpGrantsStats | null>(null)
 // listMcpKinds() call so no extra round-trip.
 const alwaysConfirmCount = ref<number>(0)
 let unsubscribeHubSse: (() => void) | null = null
+
+function onDeadweightClick(): void {
+  // Phase 7.5+++ — go to /mcp/grants?usage=deadweight so the operator
+  // can review/revoke unused grants. Mirrors the always-confirm
+  // navigation pattern.
+  void router.push({ path: '/mcp/grants', query: { usage: 'deadweight' } })
+}
 
 function onAlwaysConfirmClick(): void {
   // Phase 7.5+++ — go to /mcp/kinds with danger filter pre-set to
