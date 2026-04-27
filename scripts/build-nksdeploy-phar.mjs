@@ -104,14 +104,32 @@ function findPhp() {
   // Prefer PHP 8.4+ since vendor's box requires it. MAMP layout under
   // Windows is the dev fallback; CI must have php on PATH.
   const explicit = process.env.PHP_BIN
-  if (explicit && existsSync(explicit)) return explicit
+  if (explicit && existsSync(explicit)) return assertPhpVersion(explicit)
   const onPath = which('php')
-  if (onPath) return onPath
+  if (onPath) return assertPhpVersion(onPath)
   if (process.platform === 'win32') {
     const mamp = 'C:/MAMP/bin/php/php8.4.12/php.exe'
-    if (existsSync(mamp)) return mamp
+    if (existsSync(mamp)) return assertPhpVersion(mamp)
   }
   die('php not found — set PHP_BIN or install php on PATH (>=8.4 required)')
+}
+
+function assertPhpVersion(phpBin) {
+  // Probe `php -v` first line: "PHP 8.4.12 (cli) (built: …)". Fail fast
+  // with a clear message if < 8.4 so the operator doesn't chase cryptic
+  // "box compile" failures caused by composer/Box constraints.
+  const r = spawnSync(phpBin, ['-r', 'echo PHP_VERSION;'], { encoding: 'utf8' })
+  if (r.status !== 0) {
+    die(`could not invoke ${phpBin} (exit ${r.status}); stderr: ${r.stderr?.slice(0, 200) ?? '?'}`)
+  }
+  const m = r.stdout.match(/^(\d+)\.(\d+)/)
+  if (!m) die(`unexpected PHP version output from ${phpBin}: ${r.stdout.slice(0, 80)}`)
+  const major = Number(m[1]); const minor = Number(m[2])
+  if (major < 8 || (major === 8 && minor < 4)) {
+    die(`${phpBin} is PHP ${major}.${minor} — vendor/humbug/box requires >=8.4. ` +
+        `Install PHP 8.4+ or set PHP_BIN to a valid binary.`)
+  }
+  return phpBin
 }
 
 function findComposer(php) {
