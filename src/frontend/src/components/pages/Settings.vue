@@ -494,7 +494,36 @@
                      wildcard always-grants must yield to the GUI banner
                      for these kinds. -->
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
+                  <!-- Phase 7.5+++ — multi-select over registered kinds.
+                       Falls back to a free-text input only if the kinds
+                       endpoint hasn't responded yet (or returns empty),
+                       so the setting is still editable without the
+                       registry. The store/save format stays a comma-
+                       separated string (back-compat with backend). -->
+                  <el-select
+                    v-if="mcpKindOptions.length > 0"
+                    v-model="mcpAlwaysConfirmKindsArr"
+                    multiple
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    :placeholder="$t('settings.mcp.alwaysConfirmKindsPlaceholder')"
+                    style="max-width: 480px; width: 100%"
+                  >
+                    <el-option
+                      v-for="opt in mcpKindOptions"
+                      :key="opt.id"
+                      :label="opt.label || opt.id"
+                      :value="opt.id"
+                    >
+                      <span>{{ opt.label || opt.id }}</span>
+                      <span class="muted" style="margin-left: 8px; font-size: 11px">
+                        {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
+                      </span>
+                    </el-option>
+                  </el-select>
                   <el-input
+                    v-else
                     v-model="mcpAlwaysConfirmKinds"
                     placeholder="restore,cancel"
                     style="max-width: 320px"
@@ -1252,6 +1281,26 @@ const mcpStrictKinds = ref(false)
 // "restore,cancel"). Validator skips grant auto-approval for these
 // kinds, forcing GUI confirmation even with wildcard always-grants.
 const mcpAlwaysConfirmKinds = ref('')
+// Two-way bridge between the comma-string storage format and the
+// el-select array model. The select renders the options, but the
+// backend persists a string for back-compat.
+const mcpAlwaysConfirmKindsArr = computed<string[]>({
+  get: () => mcpAlwaysConfirmKinds.value
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0),
+  set: (arr: string[]) => {
+    mcpAlwaysConfirmKinds.value = arr.join(',')
+  },
+})
+// Registered kinds for the multi-select. Fetched lazily; the input
+// gracefully falls back to a free-text field while empty.
+interface SettingsMcpKindOption {
+  id: string
+  label?: string
+  danger: 'reversible' | 'destructive'
+}
+const mcpKindOptions = ref<SettingsMcpKindOption[]>([])
 // Phase 7.5+++ — janitor retention windows. Defaults match
 // GrantSweeperService.Default* constants (1 day, 30 days). Setting
 // either to 0 disables that branch (operator keeps everything).
@@ -1339,7 +1388,7 @@ const backupDir = ref('')
 const backupScheduleHours = ref(0)
 
 // Backup management
-import { fetchBackups, createBackup, downloadBackup, type BackupEntry } from '../../api/daemon'
+import { fetchBackups, createBackup, downloadBackup, listMcpKinds, type BackupEntry } from '../../api/daemon'
 const backupsList = ref<BackupEntry[]>([])
 const backupsLoading = ref(false)
 const backupCreating = ref(false)
@@ -1701,6 +1750,19 @@ async function loadPhpVersions() {
     const data = await fetchPhpVersions()
     phpVersions.value = data.map(v => v.majorMinor || v.version)
   } catch { /* keep defaults */ }
+}
+
+async function loadMcpKindOptions(): Promise<void> {
+  try {
+    const r = await listMcpKinds()
+    mcpKindOptions.value = r.entries.map((e) => ({
+      id: e.id,
+      label: e.label,
+      danger: e.danger,
+    }))
+  } catch {
+    mcpKindOptions.value = []
+  }
 }
 
 async function loadSettings() {
@@ -2540,6 +2602,10 @@ onMounted(async () => {
   void loadPluginPorts()
   void loadMysqlRootStatus()
   void loadSnapshots()
+  // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
+  // multi-select. Best-effort: silent failure leaves the input as the
+  // free-text fallback, no toast (kinds endpoint may be MCP-disabled).
+  void loadMcpKindOptions()
   if (accountToken.value) {
     void loadDevicesAccount()
     // Mirror the renderer's accountToken into daemon SettingsStore so

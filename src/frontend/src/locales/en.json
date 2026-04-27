@@ -1348,6 +1348,7 @@
       "strictKindsHint": "When ON, intents fail with kind_unknown unless the kind is registered in the kinds registry. Restricts AI to verbs plugins explicitly expose. Default OFF for backwards compatibility.",
       "alwaysConfirmKindsLabel": "Always-confirm kinds",
       "alwaysConfirmKindsHint": "Comma-separated list of kinds (e.g. \"restore,cancel\") for which the validator SKIPS grant auto-approval — operator must confirm in the GUI banner even when a wildcard always-grant exists. Ring-fence for the riskiest ops.",
+      "alwaysConfirmKindsPlaceholder": "Pick kinds to ring-fence",
       "expiredRetentionLabel": "Expired-grant retention",
       "expiredRetentionHint": "After expiry, the janitor waits this many days before deleting the row. 0 = never delete naturally-expired grants (only explicitly revoked ones).",
       "revokedRetentionLabel": "Revoked-grant retention",
