@@ -2551,11 +2551,15 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/rollback-to", async (
 });
 
 // DELETE /sites/{domain}/deploys/{deployId} — cancel an in-flight deploy.
-// Dummy: only allows cancel when status is queued/running and not past PONR.
+// Phase 7.5+++ — actually trips the LocalDeployBackend's CancellationToken
+// so the running task bails at the next checkpoint (rather than just
+// flipping the DB row that the backend then overwrites with completed).
+// Pre-PONR only — past_point_of_no_return → use rollback instead.
 app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     string domain, string deployId,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
+    NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
     CancellationToken ct) =>
 {
     var row = await runs.GetByIdAsync(deployId, ct);
@@ -2566,12 +2570,23 @@ app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     if (row.Status is "completed" or "failed" or "cancelled" or "rolled_back")
         return Results.Conflict(new { error = "deploy_already_terminal", currentStatus = row.Status });
 
-    await runs.MarkCompletedAsync(deployId, success: false, exitCode: -1,
-        errorMessage: "cancelled by operator", durationMs: 0, ct);
-    await runs.UpdateStatusAsync(deployId, "cancelled", ct);
-    await eventsBus.BroadcastAsync("deploy:complete",
-        new { deployId, success = false, error = "cancelled" });
-    return Results.Ok(new { deployId, status = "cancelled" });
+    // Real cancel — trip the backend's CTS BEFORE writing DB rows so the
+    // backend's catch (OperationCanceledException) handles its own
+    // status flip. tripped=false means the backend already finished
+    // (race) so we still mark cancelled in DB for audit consistency.
+    var tripped = localBackend.TryCancel(deployId);
+    if (!tripped)
+    {
+        // Backend not in-flight (test fixture, dummy row, or finished
+        // racing): fall back to legacy DB-only flip so the audit trail
+        // still shows operator intent.
+        await runs.MarkCompletedAsync(deployId, success: false, exitCode: -1,
+            errorMessage: "cancelled by operator", durationMs: 0, ct);
+        await runs.UpdateStatusAsync(deployId, "cancelled", ct);
+        await eventsBus.BroadcastAsync("deploy:complete",
+            new { deployId, success = false, error = "cancelled" });
+    }
+    return Results.Ok(new { deployId, status = "cancelled", interrupted = tripped });
 });
 
 // GET /sites/{domain}/groups — list multi-host deploy groups for site.

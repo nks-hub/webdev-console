@@ -61,6 +61,33 @@ public sealed class LocalDeployBackend
     private readonly IDeployEventBroadcaster _events;
     private readonly ILogger<LocalDeployBackend> _logger;
 
+    /// <summary>
+    /// In-flight deploy registry → CancellationTokenSource keyed by
+    /// deployId so the cancel endpoint can interrupt a running backend
+    /// task. Entry added when RunAsync starts, removed when it ends
+    /// (success/fail/cancel). ConcurrentDictionary because cancel may
+    /// fire from another HTTP request thread mid-deploy.
+    /// </summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, CancellationTokenSource>
+        _inflight = new();
+
+    /// <summary>
+    /// Trip the cancellation token for a given deploy if it's still
+    /// in flight. Returns true when a CTS was found + cancelled, false
+    /// when the deploy already finished. The HTTP cancel endpoint calls
+    /// this BEFORE its own DB-status update so the backend has a chance
+    /// to bail at its next ct.ThrowIfCancellationRequested check.
+    /// </summary>
+    public bool TryCancel(string deployId)
+    {
+        if (_inflight.TryGetValue(deployId, out var cts))
+        {
+            try { cts.Cancel(); } catch { }
+            return true;
+        }
+        return false;
+    }
+
     public LocalDeployBackend(
         IDeployRunsRepository runs,
         IDeployEventBroadcaster events,
@@ -128,6 +155,13 @@ public sealed class LocalDeployBackend
         var envVars = options?.EnvVars ?? new Dictionary<string, string>();
         string? releaseDirForHooks = null;
 
+        // Phase 7.5+++ — register cancellation source so the cancel
+        // endpoint can interrupt this run. Linked CTS combines the
+        // caller's ct with our own so external cancel still works.
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var deployCt = runCts.Token;
+        _inflight[deployId] = runCts;
+
         try
         {
             // ── 1. Validate + setup target tree ──────────────────────────
@@ -149,9 +183,11 @@ public sealed class LocalDeployBackend
             releaseDirForHooks = releaseDir;
 
             await _runs.UpdateStatusAsync(deployId, "running", ct);
+            deployCt.ThrowIfCancellationRequested();
 
             // Phase 7.5+++ — pre_deploy hooks fire before any file work.
             await RunHooksAsync(hooks, "pre_deploy", deployId, releaseDir, envVars, ct);
+            deployCt.ThrowIfCancellationRequested();
 
             // ── 2. Copy source → release dir ─────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
@@ -160,6 +196,7 @@ public sealed class LocalDeployBackend
 
             // post_fetch hooks: copy is done, shared not linked yet.
             await RunHooksAsync(hooks, "post_fetch", deployId, releaseDir, envVars, ct);
+            deployCt.ThrowIfCancellationRequested();
 
             // ── 3. Apply shared symlinks ─────────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
@@ -172,6 +209,9 @@ public sealed class LocalDeployBackend
 
             // pre_switch hooks: release is fully prepared, current still old.
             await RunHooksAsync(hooks, "pre_switch", deployId, releaseDir, envVars, ct);
+            // Last cancellation checkpoint BEFORE the symlink swap (PONR).
+            // After this point we don't honor cancel — the deploy is committed.
+            deployCt.ThrowIfCancellationRequested();
 
             // ── 4. Record previous release (for rollback) ────────────────
             var currentLink = Path.Combine(targetPath, "current");
@@ -214,6 +254,21 @@ public sealed class LocalDeployBackend
                 deployId, success: true, durationMs: sw.ElapsedMilliseconds, error: null, ct); }
             catch { }
         }
+        catch (OperationCanceledException)
+        {
+            // Phase 7.5+++ — cancel by operator. Don't fire on_failure
+            // hooks (operator initiated, not a real failure). Status was
+            // likely already flipped to "cancelled" by the cancel endpoint;
+            // we re-flip just to win any race where the cancel handler
+            // ran BEFORE we started UpdateStatusAsync(running) above.
+            sw.Stop();
+            _logger.LogInformation("Local deploy {DeployId} cancelled by operator", deployId);
+            try { await _runs.UpdateStatusAsync(deployId, "cancelled", default); } catch { }
+            try { await _runs.MarkCompletedAsync(deployId, success: false, exitCode: -2,
+                errorMessage: "cancelled by operator", durationMs: sw.ElapsedMilliseconds, default); } catch { }
+            try { await _events.BroadcastAsync("deploy:complete",
+                new { deployId, success = false, error = "cancelled" }); } catch { }
+        }
         catch (Exception ex)
         {
             sw.Stop();
@@ -229,6 +284,12 @@ public sealed class LocalDeployBackend
             try { await DispatchNotificationsAsync(options?.Notifications, options?.Domain, options?.Host,
                 deployId, success: false, durationMs: sw.ElapsedMilliseconds, error: ex.Message, ct); }
             catch { }
+        }
+        finally
+        {
+            // Always remove from registry so cancel of a finished deploy
+            // returns false rather than triggering ghost cancellations.
+            _inflight.TryRemove(deployId, out _);
         }
     }
 
