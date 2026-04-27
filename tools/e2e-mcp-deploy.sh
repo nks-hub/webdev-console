@@ -1931,6 +1931,64 @@ YY_RESTORE_AFTER=$(echo "$YY_KINDS_AFTER" | python3 -c "import sys,json; d=json.
 step "kinds endpoint shows alwaysConfirm=false after reset" "$YY_RESTORE_AFTER" "False"
 
 # ============================================================================
+echo ""; echo "${YEL}=== ZZ. always-confirm overrides matching grant (real validator) ===${END}"
+# ============================================================================
+# Phase 7.5+++ — proves the runtime gate. Setup: create a session grant
+# that WOULD auto-confirm a deploy intent, then mark deploy as
+# always-confirm in settings, then mint+fire — must return 425
+# pending_confirmation instead of the usual 202 queued. Reset always-
+# confirm + clean grant when done so unrelated tests aren't disturbed.
+ZZ_SESSION="zz-always-confirm-session-$$"
+python3 - <<EOF > /c/temp/.e2e-zz-grantbody.json
+import json
+print(json.dumps({
+    "scopeType": "session",
+    "scopeValue": "$ZZ_SESSION",
+    "kindPattern": "deploy",
+    "targetPattern": "blog.loc",
+    "expiresAt": None,
+    "note": "ZZ always-confirm bypass test",
+}))
+EOF
+ZZ_GR=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    --data-binary @/c/temp/.e2e-zz-grantbody.json "$BASE/api/mcp/grants")
+ZZ_GR_ID=$(echo "$ZZ_GR" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
+
+# Flip always-confirm ON for deploy
+ZZ_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; print(json.load(sys.stdin).get('mcp.always_confirm_kinds',''))" 2>/dev/null)
+api PUT /api/settings -d '{"mcp.always_confirm_kinds":"deploy"}' >/dev/null
+
+# Mint intent + fire — grant exists for this session/kind/target so under
+# normal rules this would auto-confirm and return 202. Always-confirm
+# should bypass the grant matcher → 425 pending_confirmation.
+ZZ_INTENT=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $ZZ_SESSION" \
+    -d '{"domain":"blog.loc","host":"production","kind":"deploy","expiresIn":120}' \
+    "$BASE/api/mcp/intents")
+ZZ_TOKEN=$(echo "$ZZ_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentToken',''))")
+ZZ_INTENT_ID=$(echo "$ZZ_INTENT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('intentId',''))")
+ZZ_FIRE=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $ZZ_SESSION" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$ZZ_TOKEN\"${LP_BLOG}}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "always-confirm bypasses matching grant → 425" "$ZZ_FIRE" 'pending_confirmation.*425'
+
+# Reset always-confirm; same intent is now consumed (used_at set on first
+# attempt that found a kind_mismatch? actually validator returns BEFORE
+# UPDATE on pending_confirmation, so the intent stays unused. Confirm
+# manually + retry — should now succeed.
+api PUT /api/settings -d "{\"mcp.always_confirm_kinds\":\"$ZZ_BEFORE\"}" >/dev/null
+[ -n "$ZZ_INTENT_ID" ] && api POST /api/mcp/intents/$ZZ_INTENT_ID/confirm >/dev/null
+ZZ_FIRE2=$(curl -s -w "%{http_code}" -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "X-Mcp-Session-Id: $ZZ_SESSION" \
+    -d "{\"host\":\"production\",\"intentToken\":\"$ZZ_TOKEN\"${LP_BLOG}}" \
+    "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+step "after reset + manual confirm → 202 queued" "$ZZ_FIRE2" '"status":"queued".*202'
+
+# Cleanup
+[ -n "$ZZ_GR_ID" ] && api DELETE /api/mcp/grants/$ZZ_GR_ID >/dev/null
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
