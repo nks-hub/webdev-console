@@ -952,6 +952,55 @@ app.MapGet("/healthz", () => Results.Ok(new
         ?? "unknown",
     timestamp = DateTime.UtcNow,
 }));
+// Phase 7.4 #109-D1 — plugin migration readiness diagnostic. Operator
+// (or future automation) reads this before flipping
+// deploy.useLegacyHostHandlers=false to know whether the plugin has
+// feature parity. Returns a structured advisory:
+//   - mode: "built-in" | "plugin" — current authoritative backend
+//   - pluginLoaded: bool, pluginVersion: string|null
+//   - skippedRoutes: int — host-conflict-skipped plugin endpoints
+//     (these would activate after a flip)
+//   - readyToFlip: bool — true only when phase B (endpoint parity) +
+//     phase C (plugin-side ZIP/SSE/Slack) are observably done. For
+//     today: always false because plugin scaffold uses the obsolete
+//     PHP-CLI-via-CliWrap design and can't replace the live native
+//     LocalDeployBackend without phase B/C/D work.
+//   - blockers: string[] — human-readable reasons a flip would break
+//     things. Empty when readyToFlip=true.
+app.MapGet("/api/admin/plugin-readiness", (
+    PluginLoader pl,
+    SettingsStore settings) =>
+{
+    var deployPlugin = pl.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.deploy");
+    var pluginLoaded = deployPlugin is not null;
+    var pluginVersion = deployPlugin?.Instance.Version;
+    var legacyHandlers = settings.GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
+    var mode = legacyHandlers ? "built-in" : "plugin";
+    // Today's static blockers for the flip — surfaced even when no
+    // plugin is loaded so operators see WHY they can't flip yet.
+    var blockers = new List<string>();
+    if (!pluginLoaded)
+        blockers.Add("nks.wdc.deploy plugin not loaded — DLL missing in build/plugins/ or plugin disabled");
+    blockers.Add("phase B: 6 host-only endpoints (hooks/test, notifications/test, test-host-connection, rollback-to, restore alias, deploy without /hosts/ segment) need plugin equivalents");
+    blockers.Add("phase C: plugin-side ZIP snapshot service, SSE deploy:hook bridge, Slack dispatch, test-hook ad-hoc executor not yet ported");
+    blockers.Add("phase D: plugin-only e2e on blog.loc + shop.loc not yet validated");
+    var readyToFlip = blockers.Count == 0;
+    return Results.Ok(new
+    {
+        mode,
+        pluginLoaded,
+        pluginVersion,
+        useLegacyHostHandlers = legacyHandlers,
+        readyToFlip,
+        blockers,
+        // Diagnostic: pretty-print this in the GUI so operators don't
+        // have to dig in /api/plugins separately.
+        recommendation = readyToFlip
+            ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
+            : $"Stay on built-in mode — {blockers.Count} blocker(s) listed above",
+    });
+});
+
 app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
 {
     _ = Task.Run(() => lifetime.StopApplication());
