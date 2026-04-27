@@ -53,6 +53,16 @@ const repoRoot = resolve(__dirname, '..')
 const defaultDest = join(repoRoot, 'src', 'frontend', 'resources', 'daemon', 'plugins', 'nksdeploy.phar')
 const dest = process.argv[2] ? resolve(process.argv[2]) : defaultDest
 
+// Guard against unknown --flags being silently interpreted as the output
+// path. argv[2] is the output path; if it starts with '-' and isn't a
+// recognized flag, it's almost certainly a typo'd option, not a path.
+const positional = process.argv.slice(2)
+const unknownFlag = positional.find(a => a.startsWith('-') && a !== '--help' && a !== '-h')
+if (unknownFlag) {
+  console.error(`[build-phar] ERROR: unknown flag ${unknownFlag} (use --help for usage)`)
+  process.exit(2)
+}
+
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/build-nksdeploy-phar.mjs [output-path]
 
