@@ -192,7 +192,7 @@ public sealed class LocalDeployBackend
             // ── 2. Copy source → release dir ─────────────────────────────
             await _events.BroadcastAsync("deploy:phase",
                 new { deployId, phase = "Fetching", message = $"Copying files to {releaseDir}" });
-            CopyDirectory(sourcePath, releaseDir);
+            CopyDirectory(sourcePath, releaseDir, deployCt);
 
             // post_fetch hooks: copy is done, shared not linked yet.
             await RunHooksAsync(hooks, "post_fetch", deployId, releaseDir, envVars, ct);
@@ -521,17 +521,22 @@ public sealed class LocalDeployBackend
 
     /// <summary>
     /// Recursive directory copy excluding well-known build artefact dirs.
+    /// Optional cancellation token checked between entries so a mid-copy
+    /// cancel doesn't have to wait for the whole tree to finish before
+    /// the next phase checkpoint can fire. Throws OperationCanceledException
+    /// when tripped — caller's catch handles audit + cleanup.
     /// </summary>
-    private static void CopyDirectory(string source, string dest)
+    private static void CopyDirectory(string source, string dest, CancellationToken ct = default)
     {
         Directory.CreateDirectory(dest);
         foreach (var entry in Directory.EnumerateFileSystemEntries(source))
         {
+            ct.ThrowIfCancellationRequested();
             var name = Path.GetFileName(entry);
             if (Array.Exists(SkipDirs, s => string.Equals(s, name, StringComparison.OrdinalIgnoreCase)))
                 continue;
             var dst = Path.Combine(dest, name);
-            if (Directory.Exists(entry)) CopyDirectory(entry, dst);
+            if (Directory.Exists(entry)) CopyDirectory(entry, dst, ct);
             else File.Copy(entry, dst, overwrite: true);
         }
     }
