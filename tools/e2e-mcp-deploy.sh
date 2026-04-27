@@ -1246,6 +1246,73 @@ TEST_DOM_SETTINGS="$HOME/.wdc/data/deploy-settings/e2e-test.loc.json"
 [ -f "$TEST_DOM_SETTINGS" ] && rm -f "$TEST_DOM_SETTINGS" && echo "  → removed e2e-test.loc settings file"
 
 # ============================================================================
+echo ""; echo "${YEL}=== GG. nksdeploy folder structure (releases/, shared/, .dep/, retention) ===${END}"
+# ============================================================================
+# Exercises LocalDeployBackend's nksdeploy-compatible layout against a
+# scratch target dir under /c/temp so the E2E remains hermetic. Uses the
+# blog.loc fixture as source.
+# Use msys-style for filesystem ops, Windows-style for the JSON body
+# (the .NET daemon resolves Windows paths, not /c/... mounts).
+GG_TARGET_MSYS="/c/temp/e2e-deploy-gg-target"
+GG_TARGET_WIN="C:/temp/e2e-deploy-gg-target"
+GG_SOURCE_WIN="C:/work/sites/blog.loc"
+rm -rf "$GG_TARGET_MSYS"
+mkdir -p "$GG_TARGET_MSYS"
+
+# Override settings via body localPaths + localOptions for keep=2 + custom shared
+# Fire 4 deploys → expect retention to prune to 2 + current to point to newest.
+GG_SHARED_DIRS='["log","cache"]'
+GG_SHARED_FILES='[".env"]'
+GG_BODY_PREFIX='{"host":"production","branch":"main","localPaths":{"source":"'$GG_SOURCE_WIN'","target":"'$GG_TARGET_WIN'"},"localOptions":{"sharedDirs":'$GG_SHARED_DIRS',"sharedFiles":'$GG_SHARED_FILES',"keepReleases":2}}'
+
+GG_DIDS=()
+for i in 1 2 3 4; do
+    GG_RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -d "$GG_BODY_PREFIX" "$BASE/api/nks.wdc.deploy/sites/blog.loc/deploy")
+    GG_DID=$(echo "$GG_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployId',''))" 2>/dev/null)
+    GG_DIDS+=("$GG_DID")
+    sleep 2
+done
+sleep 2
+
+# Assertion 1: top-level structure exists
+step "GG target has releases/ dir" "$([ -d "$GG_TARGET_MSYS/releases" ] && echo y || echo n)" "y"
+step "GG target has shared/ dir"   "$([ -d "$GG_TARGET_MSYS/shared"   ] && echo y || echo n)" "y"
+step "GG target has .dep/ dir"     "$([ -d "$GG_TARGET_MSYS/.dep"     ] && echo y || echo n)" "y"
+step "GG target has current symlink/dir" "$([ -e "$GG_TARGET_MSYS/current" ] && echo y || echo n)" "y"
+
+# Assertion 2: shared dirs/files seeded per body localOptions
+step "GG shared/log present"   "$([ -d "$GG_TARGET_MSYS/shared/log"   ] && echo y || echo n)" "y"
+step "GG shared/cache present" "$([ -d "$GG_TARGET_MSYS/shared/cache" ] && echo y || echo n)" "y"
+step "GG shared/.env present"  "$([ -f "$GG_TARGET_MSYS/shared/.env"  ] && echo y || echo n)" "y"
+
+# Assertion 3: retention pruned to keep=2
+GG_RELEASE_COUNT=$(ls -1 "$GG_TARGET_MSYS/releases" 2>/dev/null | wc -l | tr -d ' ')
+step "GG retention pruned to keep=2 (got $GG_RELEASE_COUNT)" "$GG_RELEASE_COUNT" "^2$"
+
+# Assertion 4: .dep tracks current + previous
+step ".dep/current_release file populated"  "$([ -s "$GG_TARGET_MSYS/.dep/current_release"  ] && echo y || echo n)" "y"
+step ".dep/previous_release file populated" "$([ -s "$GG_TARGET_MSYS/.dep/previous_release" ] && echo y || echo n)" "y"
+
+# Assertion 5: each kept release has shared symlinks back into shared/
+GG_NEWEST=$(ls -1 "$GG_TARGET_MSYS/releases" 2>/dev/null | sort | tail -1)
+if [ -n "$GG_NEWEST" ]; then
+    GG_REL_DIR="$GG_TARGET_MSYS/releases/$GG_NEWEST"
+    step "newest release has log symlink"   "$([ -L "$GG_REL_DIR/log"   ] && echo y || echo n)" "y"
+    step "newest release has cache symlink" "$([ -L "$GG_REL_DIR/cache" ] && echo y || echo n)" "y"
+    step "newest release has .env symlink"  "$([ -L "$GG_REL_DIR/.env"  ] && echo y || echo n)" "y"
+    GG_LOG_TARGET=$(readlink "$GG_REL_DIR/log" 2>/dev/null | sed 's|\\|/|g')
+    step "log symlink points into shared/log (got '$GG_LOG_TARGET')" "$GG_LOG_TARGET" "shared/log"
+fi
+
+# Assertion 6: current symlink resolves to one of the kept releases
+GG_CURRENT_TARGET=$(readlink "$GG_TARGET_MSYS/current" 2>/dev/null | sed 's|\\|/|g')
+step "current symlink points into releases/ (got '$GG_CURRENT_TARGET')" "$GG_CURRENT_TARGET" "releases/"
+
+# Cleanup scratch target
+rm -rf "$GG_TARGET_MSYS"
+
+# ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"
 # ============================================================================
 echo ""
