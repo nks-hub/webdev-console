@@ -102,6 +102,7 @@ import { useFeatureFlagsStore } from './stores/featureFlags'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
 import { osNotify } from './services/osNotifications'
+import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
 
 const router = useRouter()
 const route = useRoute()
@@ -134,8 +135,15 @@ function startDeploySse(): void {
       deployStore.handleHookEvent(data as { deployId: string; evt: string;
         type: string; label: string; ok: boolean; durationMs: number; error?: string }),
     'mcp:confirm-request': (data) => {
-      const evt = data as { intentId: string; prompt?: string; kind?: string }
+      const evt = data as {
+        intentId: string; prompt?: string; kind?: string; kindLabel?: string;
+        domain?: string; host?: string
+      }
       mcpConfirmStore.addPending(evt)
+      // Phase 8 (3a) — inline approve toast in addition to the banner.
+      // The banner stays authoritative for the queue + expiry; the toast
+      // gives one-click Approve/Reject right where the operator's eyes are.
+      void showMcpConfirmToast(evt)
       // #147 — fire OS notification so the operator sees the request
       // even when the WDC window is in the background.
       void osNotify({
@@ -146,6 +154,12 @@ function startDeploySse(): void {
         urgency: 'critical',
         channel: 'mcp',
       })
+    },
+    // Auto-dismiss the toast when the intent is resolved through the
+    // banner or another surface (used_at / revoked / matched grant).
+    'mcp:intent-changed': (data) => {
+      const evt = data as { intentId?: string }
+      if (evt.intentId) closeMcpConfirmToast(evt.intentId)
     },
     // #147 — surface deploy completion in OS notification center so a
     // long-running deploy doesn't require the operator to keep the

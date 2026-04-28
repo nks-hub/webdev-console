@@ -1590,6 +1590,13 @@
     }
   },
   "mcp": {
+    "toast": {
+      "kindRequest": "AI: {kind}",
+      "genericRequest": "AI requests confirmation",
+      "approve": "Approve",
+      "reject": "Reject",
+      "detail": "Detail"
+    },
     "banner": {
       "stackLabel": "MCP deploy approval requests",
       "kindRequest": "AI requests {kind}",
