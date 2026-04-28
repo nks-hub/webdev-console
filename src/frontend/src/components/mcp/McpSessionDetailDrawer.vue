@@ -61,10 +61,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { fetchMcpToolCalls, type McpToolCallEntry } from '../../api/daemon'
+import { fetchMcpToolCalls, subscribeEventsMap, type McpToolCallEntry } from '../../api/daemon'
 
 const props = defineProps<{
   modelValue: boolean
@@ -102,27 +102,67 @@ const byToolBreakdown = computed<ToolBreakdown[]>(() => {
     .sort((a, b) => b.count - a.count)
 })
 
+async function loadSession(sid: string): Promise<void> {
+  try {
+    // Pull up to 1000 entries for this session — well above the
+    // typical session size (a long Claude Code conversation).
+    const data = await fetchMcpToolCalls(1000, 0, null, null, sid)
+    // Reverse so chronological (oldest first) — easier to follow.
+    entries.value = [...data.entries].reverse()
+  } catch (err) {
+    console.warn('[McpSessionDetailDrawer] load failed:', err)
+    entries.value = []
+  }
+}
+
+// Throttle: SSE bursts during a busy session could fire 100+ events/s
+// for read-heavy AI activity. Coalesce reloads to at most once per
+// 800 ms so the drawer stays responsive without thrashing the daemon.
+let pendingRefresh: ReturnType<typeof setTimeout> | null = null
+function throttledReload(): void {
+  if (!props.modelValue || !props.sessionId || pendingRefresh) return
+  pendingRefresh = setTimeout(() => {
+    pendingRefresh = null
+    if (props.modelValue && props.sessionId) {
+      void loadSession(props.sessionId)
+    }
+  }, 800)
+}
+
+let unsubscribe: (() => void) | null = null
+
 watch(
   () => [props.modelValue, props.sessionId],
   async ([visible, sid]) => {
     if (visible && sid) {
-      try {
-        // Pull up to 1000 entries for this session — well above the
-        // typical session size (a long Claude Code conversation).
-        const data = await fetchMcpToolCalls(1000, 0, null, null, sid as string)
-        // Reverse so chronological (oldest first) — easier to follow.
-        entries.value = [...data.entries].reverse()
-      } catch (err) {
-        console.warn('[McpSessionDetailDrawer] load failed:', err)
-        entries.value = []
+      await loadSession(sid as string)
+      // Subscribe to live tool-call events so the drawer reflects new
+      // calls landing in this session while it's open. Unsubscribe in
+      // the else branch / unmount.
+      if (!unsubscribe) {
+        unsubscribe = subscribeEventsMap({
+          'mcp:tool-call': (data) => {
+            const evt = data as { sessionId?: string }
+            // Only refresh when the event matches the open session.
+            if (evt.sessionId && evt.sessionId === props.sessionId) {
+              throttledReload()
+            }
+          },
+        })
       }
     } else if (!visible) {
       // Clear on close so reopening on a different session re-fetches.
       entries.value = []
+      if (unsubscribe) { unsubscribe(); unsubscribe = null }
     }
   },
   { immediate: true },
 )
+
+onBeforeUnmount(() => {
+  if (unsubscribe) unsubscribe()
+  if (pendingRefresh) clearTimeout(pendingRefresh)
+})
 
 function formatTime(iso: string): string {
   try {
