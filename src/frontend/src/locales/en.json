@@ -1578,6 +1578,24 @@
       "advanced": "Advanced",
       "description": "Advanced mode reveals all services, databases, ports and developer tools."
     },
+    "about": {
+      "subtitle": "Local development server manager",
+      "description": "A modern replacement for MAMP PRO, built with Electron + Vue 3 + Element Plus. Manages Apache, MySQL, PHP, Redis, Mailpit and SSL certificates for local development.",
+      "runtime": "Runtime",
+      "installedVersions": "Installed Versions",
+      "daemonUptime": "Daemon uptime",
+      "daemonPid": "Daemon PID",
+      "daemonVersion": "Daemon version",
+      "services": "Services",
+      "sites": "Sites",
+      "plugins": "Plugins",
+      "binaries": "Binaries"
+    },
+    "sync": {
+      "tabDesc": "Download a JSON file of all settings, or import from a previously exported file. Useful for offline transfers or version-controlled team configs.",
+      "exportFile": "Export to file",
+      "importFile": "Import from file"
+    },
     "advanced": {
       "tabDesc": "External services the daemon talks to. Leave blank to use built-in defaults. Changes take effect after restart or a catalog refresh.",
       "catalogUrl": "Catalog API URL",
@@ -1588,7 +1606,8 @@
       "mysqlRootPlaceholderEnter": "Enter root password to sync with mysqld",
       "save": "Save",
       "pluginAutoSync": "Plugin auto-sync",
-      "syncNow": "Sync now"
+      "syncNow": "Sync now",
+      "refreshCatalog": "Refresh catalog"
     },
     "paths": {
       "tabDesc": "Override binary paths. Leave blank to use auto-detected defaults.",

@@ -1543,7 +1543,7 @@
       "account": "Účet",
       "sync": "Synchronizace",
       "update": "Aktualizace",
-      "about": "About"
+      "about": "O aplikaci"
     },
     "account": {
       "passwordTitle": "Přihlášení e-mailem a heslem",
@@ -1580,6 +1580,24 @@
       "advanced": "Pokročilý",
       "description": "Pokročilý režim zobrazí všechny služby, databáze, porty a další nástroje pro vývojáře."
     },
+    "about": {
+      "subtitle": "Správa lokálního vývojového prostředí",
+      "description": "Moderní náhrada za MAMP PRO postavená na Electron + Vue 3 + Element Plus. Spravuje Apache, MySQL, PHP, Redis, Mailpit a SSL certifikáty pro lokální vývoj.",
+      "runtime": "Runtime",
+      "installedVersions": "Nainstalované verze",
+      "daemonUptime": "Doba běhu démona",
+      "daemonPid": "PID démona",
+      "daemonVersion": "Verze démona",
+      "services": "Služby",
+      "sites": "Weby",
+      "plugins": "Pluginy",
+      "binaries": "Binárky"
+    },
+    "sync": {
+      "tabDesc": "Stáhne JSON soubor se všemi nastaveními nebo naimportuje dříve exportovaný soubor. Užitečné pro offline přenos nebo verzované týmové konfigurace.",
+      "exportFile": "Exportovat do souboru",
+      "importFile": "Importovat ze souboru"
+    },
     "advanced": {
       "tabDesc": "Externí služby, se kterými démon komunikuje. Nech prázdné pro použití zabudovaných výchozích. Změny se projeví po restartu nebo obnovení katalogu.",
       "catalogUrl": "URL katalogu API",
@@ -1590,7 +1608,8 @@
       "mysqlRootPlaceholderEnter": "Zadej heslo root pro synchronizaci s mysqld",
       "save": "Uložit",
       "pluginAutoSync": "Auto-synchronizace pluginů",
-      "syncNow": "Synchronizovat teď"
+      "syncNow": "Synchronizovat teď",
+      "refreshCatalog": "Synchronizovat katalog"
     },
     "paths": {
       "tabDesc": "Přepiš cesty k binárkám. Nech prázdné pro použití auto-detekovaných výchozích.",

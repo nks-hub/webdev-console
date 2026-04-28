@@ -1177,19 +1177,15 @@
                 <span class="settings-card-title">Export / Import</span>
               </header>
               <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 12px;">
-                  Download a JSON file of all settings, or import from a
-                  previously exported file. Useful for offline transfers or
-                  version-controlled team configs.
-                </p>
+                <p class="tab-desc" style="margin-bottom: 12px;">{{ $t('settings.sync.tabDesc') }}</p>
                 <div class="sync-actions">
                   <el-button size="small" @click="exportSettings">
                     <el-icon><Download /></el-icon>
-                    <span>Export to file</span>
+                    <span>{{ $t('settings.sync.exportFile') }}</span>
                   </el-button>
                   <el-button size="small" @click="triggerImport">
                     <el-icon><Upload /></el-icon>
-                    <span>Import from file</span>
+                    <span>{{ $t('settings.sync.importFile') }}</span>
                   </el-button>
                   <input
                     ref="importFileInput"
@@ -1205,16 +1201,13 @@
         </el-tab-pane>
 
         <!-- About tab -->
-        <el-tab-pane label="About" name="about">
+        <el-tab-pane :label="$t('settings.tabs.about')" name="about">
           <div class="tab-content">
             <div class="about-card">
               <div class="about-logo">NKS WDC</div>
               <div class="about-version">v{{ appVersion }}</div>
-              <div class="about-subtitle">Local development server manager</div>
-              <div class="about-desc">
-                A modern replacement for MAMP PRO, built with Electron + Vue 3 + Element Plus.
-                Manages Apache, MySQL, PHP, Redis, Mailpit and SSL certificates for local development.
-              </div>
+              <div class="about-subtitle">{{ $t('settings.about.subtitle') }}</div>
+              <div class="about-desc">{{ $t('settings.about.description') }}</div>
 
               <!-- F85: Repo sources + docs — make the multi-repo architecture
                    discoverable from inside the app instead of only inside the
@@ -1259,39 +1252,39 @@
               </div>
 
               <div v-if="systemInfo" class="about-system">
-                <div class="about-sys-title">Runtime</div>
+                <div class="about-sys-title">{{ $t('settings.about.runtime') }}</div>
                 <!-- F85: daemon uptime + PID surfaced so user can see the
                      F90 fix reporting sane values (uptime since daemon start,
                      not system boot). -->
                 <div v-if="systemInfo.daemon?.uptime !== undefined" class="about-sys-row">
-                  <span class="sys-label">Daemon uptime</span>
+                  <span class="sys-label">{{ $t('settings.about.daemonUptime') }}</span>
                   <span class="sys-value">{{ formatUptime(systemInfo.daemon.uptime) }}</span>
                 </div>
                 <div v-if="systemInfo.daemon?.pid" class="about-sys-row">
-                  <span class="sys-label">Daemon PID</span>
+                  <span class="sys-label">{{ $t('settings.about.daemonPid') }}</span>
                   <span class="sys-value mono">{{ systemInfo.daemon.pid }}</span>
                 </div>
                 <div v-if="systemInfo.daemon?.version" class="about-sys-row">
-                  <span class="sys-label">Daemon version</span>
+                  <span class="sys-label">{{ $t('settings.about.daemonVersion') }}</span>
                   <span class="sys-value mono">{{ systemInfo.daemon.version }}</span>
                 </div>
                 <div class="about-sys-row">
-                  <span class="sys-label">Services</span>
-                  <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }} running</span>
+                  <span class="sys-label">{{ $t('settings.about.services') }}</span>
+                  <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }} {{ $t('dashboard.running') }}</span>
                 </div>
                 <div class="about-sys-row">
-                  <span class="sys-label">Sites</span>
+                  <span class="sys-label">{{ $t('settings.about.sites') }}</span>
                   <span class="sys-value">{{ systemInfo.sites }}</span>
                 </div>
                 <div class="about-sys-row">
-                  <span class="sys-label">Plugins</span>
+                  <span class="sys-label">{{ $t('settings.about.plugins') }}</span>
                   <span class="sys-value">{{ systemInfo.plugins }}</span>
                 </div>
                 <div class="about-sys-row">
-                  <span class="sys-label">Binaries</span>
+                  <span class="sys-label">{{ $t('settings.about.binaries') }}</span>
                   <span class="sys-value">{{ systemInfo.binaries }}</span>
                 </div>
-                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: 12px">Installed Versions</div>
+                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: 12px">{{ $t('settings.about.installedVersions') }}</div>
                 <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
                   <span class="sys-label">{{ bin.app }}</span>
                   <span class="sys-value">{{ bin.version }}</span>
