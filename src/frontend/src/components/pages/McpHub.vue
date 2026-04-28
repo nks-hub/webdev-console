@@ -40,6 +40,9 @@
       </div>
     </div>
 
+    <!-- Suggested grants — actionable nudges based on repeated manual approvals -->
+    <SuggestedGrantsBanner />
+
     <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
       <!-- Activity — unified feed of every MCP tool call, including reads.
            Default tab because it answers "what is AI doing right now". -->
@@ -102,6 +105,7 @@ import McpActivity from './McpActivity.vue'
 import McpIntents from './McpIntents.vue'
 import McpGrants from './McpGrants.vue'
 import McpKinds from './McpKinds.vue'
+import SuggestedGrantsBanner from '../mcp/SuggestedGrantsBanner.vue'
 import {
   fetchIntentInventory,
   fetchMcpGrantsStats,

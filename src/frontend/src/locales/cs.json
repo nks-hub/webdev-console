@@ -161,6 +161,14 @@
       "minutesAgo": "před {n} m",
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d"
+    },
+    "suggested": {
+      "title": "{n} návrh(ů) na auto-schválení",
+      "hint": "Tyto akce jsi v posledních 7 dnech schvaloval ručně víckrát. Klikni \"Auto-approve\" a vytvoří se pravidlo, které je propustí bez dalšího potvrzování.",
+      "occurrences": "{n}× ručně schváleno",
+      "autoApprove": "Auto-approve",
+      "created": "Pravidlo vytvořeno: {kind} → {domain}",
+      "failed": "Vytvoření pravidla selhalo: {error}"
     }
   },
   "mcpActivity": {

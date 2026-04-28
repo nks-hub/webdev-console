@@ -274,6 +274,33 @@ export const fetchMcpToolCalls = (
 export const fetchMcpToolCallStats = (withinMinutes = 1440): Promise<McpToolCallStats> =>
   json(`/api/mcp/tool-calls/stats?withinMinutes=${withinMinutes}`)
 
+// Phase 8 — Suggested grants. Backend aggregates manually-approved
+// intents over the last N days and surfaces (kind, domain, host) tuples
+// the operator confirmed >= minOccurrences times without a matching
+// grant — actionable hint to create an auto-approve rule.
+export interface McpGrantSuggestion {
+  kind: string
+  kindLabel: string | null
+  kindDanger: string | null
+  domain: string
+  host: string
+  occurrences: number
+  lastConfirmedAt: string | null
+}
+
+export interface McpGrantSuggestions {
+  withinDays: number
+  minOccurrences: number
+  count: number
+  suggestions: McpGrantSuggestion[]
+}
+
+export const fetchMcpSuggestedGrants = (
+  withinDays = 7,
+  minOccurrences = 3,
+): Promise<McpGrantSuggestions> =>
+  json(`/api/mcp/grants/suggested?withinDays=${withinDays}&minOccurrences=${minOccurrences}`)
+
 // ----------------------------------------------------------------------------
 // Phase 7.3 — MCP grants (persistent trust). Banner buttons + admin page
 // hit these endpoints. Backend = /api/mcp/grants in Program.cs.

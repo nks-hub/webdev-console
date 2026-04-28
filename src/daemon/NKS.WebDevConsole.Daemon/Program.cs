@@ -2167,6 +2167,59 @@ app.MapGet("/api/mcp/tool-calls/stats", async (
     return Results.Ok(stats);
 });
 
+// ============================================================================
+// Phase 8 — Suggested grants. Looks at the last 7 days of deploy_intents
+// where the operator manually approved (confirmed_at IS NOT NULL) but no
+// existing grant matched — i.e. the operator is doing the same approval
+// repeatedly. Surfaces (kind, domain, host) tuples with count >= 3 as
+// candidates for an auto-approve rule, reducing decision fatigue.
+// ============================================================================
+app.MapGet("/api/mcp/grants/suggested", async (
+    HttpContext ctx,
+    NKS.WebDevConsole.Daemon.Data.Database db,
+    NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
+    int? withinDays,
+    int? minOccurrences) =>
+{
+    if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+    var days = Math.Clamp(withinDays ?? 7, 1, 90);
+    var minN = Math.Max(2, minOccurrences ?? 3);
+    var cutoff = DateTime.UtcNow.AddDays(-days).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+    using var conn = db.CreateConnection();
+    await conn.OpenAsync();
+    var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn, @"
+        SELECT kind, domain, host,
+               COUNT(*) AS occurrences,
+               MAX(confirmed_at) AS last_confirmed_at
+        FROM deploy_intents
+        WHERE confirmed_at IS NOT NULL
+          AND matched_grant_id IS NULL
+          AND confirmed_at >= @Cutoff
+        GROUP BY kind, domain, host
+        HAVING COUNT(*) >= @MinN
+        ORDER BY COUNT(*) DESC, MAX(confirmed_at) DESC
+        LIMIT 25",
+        new { Cutoff = cutoff, MinN = minN });
+
+    var suggestions = rows.Select(r =>
+    {
+        var kindId = (string)r.kind;
+        var registered = kindsRegistry.Get(kindId);
+        return new
+        {
+            kind = kindId,
+            kindLabel = registered?.Label,
+            kindDanger = registered?.Danger.ToString().ToLowerInvariant(),
+            domain = (string)r.domain,
+            host = (string)r.host,
+            occurrences = (long)r.occurrences,
+            lastConfirmedAt = (string?)r.last_confirmed_at,
+        };
+    }).ToList();
+    return Results.Ok(new { withinDays = days, minOccurrences = minN, count = suggestions.Count, suggestions });
+});
+
 // Body record for the POST endpoint. Lives at file scope so the
 // minimal-API binder can deserialise it.
 
