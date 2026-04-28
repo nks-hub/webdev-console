@@ -118,14 +118,14 @@
           <el-icon class="stat-icon"><Monitor /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ sitesStore.sites.length }}</div>
-            <div class="stat-label">Sites</div>
+            <div class="stat-label">{{ $t('dashboard.stats.sites') }}</div>
           </div>
         </div>
         <div class="stat-card">
           <el-icon class="stat-icon stat-icon-running"><VideoPlay /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ runningCount }} / {{ totalCount }}</div>
-            <div class="stat-label">Services running</div>
+            <div class="stat-label">{{ $t('dashboard.stats.servicesRunning') }}</div>
           </div>
         </div>
         <!-- F91.6: show enabled/total so disabling plugins reflects here. -->
@@ -133,14 +133,14 @@
           <el-icon class="stat-icon"><Grid /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ pluginsStore.enabledPlugins.length }} / {{ pluginsStore.manifests.length || (daemonStore.status?.plugins ?? 0) }}</div>
-            <div class="stat-label">Plugins enabled</div>
+            <div class="stat-label">{{ $t('dashboard.stats.pluginsEnabled') }}</div>
           </div>
         </div>
         <div class="stat-card">
           <el-icon class="stat-icon"><Timer /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ formatUptime(daemonStore.status?.uptime ?? 0) }}</div>
-            <div class="stat-label">Daemon uptime</div>
+            <div class="stat-label">{{ $t('dashboard.stats.daemonUptime') }}</div>
           </div>
         </div>
         <!-- F91.6: gated by Node plugin state — zmizí okamžitě po vypnutí. -->
@@ -148,14 +148,14 @@
           <el-icon class="stat-icon" :class="nodeProcessCount > 0 ? 'stat-icon-running' : ''"><ChromeFilled /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ nodeProcessCount }}</div>
-            <div class="stat-label">Node.js processes</div>
+            <div class="stat-label">{{ $t('dashboard.stats.nodeProcesses') }}</div>
           </div>
         </div>
         <div class="stat-card" v-if="lastBackupAge">
           <el-icon class="stat-icon"><Cpu /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ lastBackupAge }}</div>
-            <div class="stat-label">Last backup</div>
+            <div class="stat-label">{{ $t('dashboard.stats.lastBackup') }}</div>
           </div>
         </div>
       </div>
@@ -165,14 +165,14 @@
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-card-header">
-              <span class="metric-card-title">CPU Usage</span>
+              <span class="metric-card-title">{{ $t('dashboard.metrics.cpuUsage') }}</span>
               <span class="metric-card-value mono">{{ totalCpu.toFixed(1) }}%</span>
             </div>
             <MetricsChart :data="daemonStore.cpuHistory" color="#6366f1" />
           </div>
           <div class="metric-card">
             <div class="metric-card-header">
-              <span class="metric-card-title">Memory</span>
+              <span class="metric-card-title">{{ $t('dashboard.metrics.memory') }}</span>
               <span class="metric-card-value mono">{{ totalRamMB }} MB</span>
             </div>
             <MetricsChart :data="daemonStore.ramHistory" color="#22c55e" />
@@ -188,7 +188,7 @@
             <span class="count-running">{{ runningCount }}</span>
             <span class="count-sep">/</span>
             <span class="count-total">{{ totalCount }}</span>
-            <span class="count-label">running</span>
+            <span class="count-label">{{ $t('dashboard.running') }}</span>
           </span>
         </div>
         <div class="service-list">

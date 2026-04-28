@@ -381,6 +381,19 @@
     "uptime": "Uptime",
     "services": "Services",
     "port": "Port",
+    "stats": {
+      "sites": "Sites",
+      "servicesRunning": "Services running",
+      "pluginsEnabled": "Plugins enabled",
+      "daemonUptime": "Daemon uptime",
+      "nodeProcesses": "Node.js processes",
+      "lastBackup": "Last backup"
+    },
+    "metrics": {
+      "cpuUsage": "CPU Usage",
+      "memory": "Memory"
+    },
+    "running": "running",
     "simple": {
       "subtitle": "Local dev environment for your sites",
       "welcomeTitle": "Welcome to NKS WDC",

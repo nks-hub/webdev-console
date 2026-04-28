@@ -381,6 +381,19 @@
     "uptime": "Doba běhu",
     "services": "Služby",
     "port": "Port",
+    "stats": {
+      "sites": "Weby",
+      "servicesRunning": "Běžící služby",
+      "pluginsEnabled": "Aktivní pluginy",
+      "daemonUptime": "Doba běhu démona",
+      "nodeProcesses": "Node.js procesy",
+      "lastBackup": "Poslední záloha"
+    },
+    "metrics": {
+      "cpuUsage": "Vytížení CPU",
+      "memory": "Paměť"
+    },
+    "running": "běží",
     "simple": {
       "subtitle": "Lokální vývojové prostředí pro vaše weby",
       "welcomeTitle": "Vítejte v NKS WDC",
