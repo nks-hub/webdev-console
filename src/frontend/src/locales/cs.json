@@ -430,6 +430,7 @@
     "aliases": "Aliasy",
     "create": "Nový web",
     "openHosts": "Otevřít hosts",
+    "additionalDomains": "{n} dalších domén",
     "reapplyAll": "Znovu aplikovat",
     "reapplyAllHint": "Znovu vygenerovat všechny vhosts",
     "openInBrowser": "Otevřít v prohlížeči",
@@ -929,7 +930,24 @@
     "ssl": "SSL",
     "composerPackages": "Composer balíčky",
     "history": "Historie",
-    "backup": "Záloha"
+    "backup": "Záloha",
+    "identity": "Identita",
+    "identityHint": "Doména a document root",
+    "aliasesCard": "Aliasy",
+    "frameworkCard": "Framework",
+    "frameworkHint": "Detekováno automaticky nebo nastaveno ručně",
+    "dockerCard": "Docker Compose",
+    "runtimeCard": "Runtime",
+    "runtimeHint": "Vyber, jak má být web obsluhován",
+    "static": "Statický",
+    "upstreamPort": "Upstream port",
+    "upstreamPortHint": "Port, na kterém poslouchá Node.js aplikace. Apache na něj přepošle všechny požadavky.",
+    "startCommand": "Příkaz pro spuštění",
+    "process": "Proces",
+    "start": "Spustit",
+    "restart": "Restartovat",
+    "ports": "Porty",
+    "historicalTitle": "Historický graf"
   },
   "deploySettings": {
     "tabs": {

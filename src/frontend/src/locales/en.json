@@ -430,6 +430,7 @@
     "aliases": "Aliases",
     "create": "New Site",
     "openHosts": "Open hosts",
+    "additionalDomains": "{n} additional domains",
     "reapplyAll": "Reapply All",
     "reapplyAllHint": "Regenerate all vhosts",
     "openInBrowser": "Open in Browser",
@@ -927,7 +928,24 @@
     "ssl": "SSL",
     "composerPackages": "Composer packages",
     "history": "History",
-    "backup": "Backup"
+    "backup": "Backup",
+    "identity": "Identity",
+    "identityHint": "Domain and document root",
+    "aliasesCard": "Aliases",
+    "frameworkCard": "Framework",
+    "frameworkHint": "Detected automatically or set manually",
+    "dockerCard": "Docker Compose",
+    "runtimeCard": "Runtime",
+    "runtimeHint": "Choose how this site is served",
+    "static": "Static",
+    "upstreamPort": "Upstream port",
+    "upstreamPortHint": "Port your Node.js app listens on. Apache will ProxyPass all requests to it.",
+    "startCommand": "Start command",
+    "process": "Process",
+    "start": "Start",
+    "restart": "Restart",
+    "ports": "Ports",
+    "historicalTitle": "Historical"
   },
   "deploySettings": {
     "tabs": {

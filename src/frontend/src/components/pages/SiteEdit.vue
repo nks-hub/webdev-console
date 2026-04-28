@@ -54,8 +54,8 @@
             <!-- Identity card -->
             <section class="edit-card">
               <header class="edit-card-header">
-                <span class="edit-card-title">Identity</span>
-                <span class="edit-card-hint">Domain and document root</span>
+                <span class="edit-card-title">{{ $t('siteEdit.identity') }}</span>
+                <span class="edit-card-hint">{{ $t('siteEdit.identityHint') }}</span>
               </header>
               <div class="edit-card-body">
                 <el-form :model="site" label-position="top" size="default">
@@ -94,8 +94,8 @@
             <!-- Alias picker card -->
             <section class="edit-card">
               <header class="edit-card-header">
-                <span class="edit-card-title">Aliases</span>
-                <span class="edit-card-hint">{{ aliases.length }} additional domain{{ aliases.length === 1 ? '' : 's' }}</span>
+                <span class="edit-card-title">{{ $t('siteEdit.aliasesCard') }}</span>
+                <span class="edit-card-hint">{{ $t('sites.additionalDomains', { n: aliases.length }) }}</span>
               </header>
               <div class="edit-card-body">
                 <div class="alias-chips">
@@ -137,8 +137,8 @@
             <!-- Framework detection card -->
             <section class="edit-card">
               <header class="edit-card-header">
-                <span class="edit-card-title">Framework</span>
-                <span class="edit-card-hint">Detected automatically or set manually</span>
+                <span class="edit-card-title">{{ $t('siteEdit.frameworkCard') }}</span>
+                <span class="edit-card-hint">{{ $t('siteEdit.frameworkHint') }}</span>
               </header>
               <div class="edit-card-body">
                 <div class="framework-row">
@@ -159,7 +159,7 @@
             <!-- Docker Compose detection + lifecycle card -->
             <section v-if="composeInfo" class="edit-card">
               <header class="edit-card-header">
-                <span class="edit-card-title">Docker Compose</span>
+                <span class="edit-card-title">{{ $t('siteEdit.dockerCard') }}</span>
                 <span class="edit-card-hint">{{ composeInfo.fileName }}</span>
               </header>
               <div class="edit-card-body">
@@ -194,8 +194,8 @@
           <div class="tab-content">
             <section class="edit-card">
               <header class="edit-card-header">
-                <span class="edit-card-title">Runtime</span>
-                <span class="edit-card-hint">Choose how this site is served</span>
+                <span class="edit-card-title">{{ $t('siteEdit.runtimeCard') }}</span>
+                <span class="edit-card-hint">{{ $t('siteEdit.runtimeHint') }}</span>
               </header>
               <div class="edit-card-body">
                 <div class="runtime-picker">
@@ -206,7 +206,7 @@
                     type="button"
                   >
                     <div class="runtime-card-icon runtime-static">HTML</div>
-                    <div class="runtime-card-title">Static</div>
+                    <div class="runtime-card-title">{{ $t('siteEdit.static') }}</div>
                     <div class="runtime-card-desc">Plain HTML / assets. No language runtime.</div>
                   </button>
                   <button
@@ -233,7 +233,7 @@
 
                 <!-- Node.js upstream port + start command (only when Node is selected) -->
                 <div v-if="selectedRuntime === 'node'" class="php-version-picker">
-                  <label class="sub-label">Upstream port</label>
+                  <label class="sub-label">{{ $t('siteEdit.upstreamPort') }}</label>
                   <el-input-number
                     v-model="nodeUpstreamPort"
                     :min="1024"
@@ -246,7 +246,7 @@
                     Port your Node.js app listens on. Apache will <code>ProxyPass</code> all requests to it.
                   </div>
 
-                  <label class="sub-label" style="margin-top: 16px">Start command</label>
+                  <label class="sub-label" style="margin-top: 16px">{{ $t('siteEdit.startCommand') }}</label>
                   <el-input
                     v-model="nodeStartCommand"
                     placeholder="npm start"
@@ -261,7 +261,7 @@
 
                   <!-- Per-site Node process controls -->
                   <div class="node-process-controls" style="margin-top: 16px">
-                    <label class="sub-label">Process</label>
+                    <label class="sub-label">{{ $t('siteEdit.process') }}</label>
                     <div v-if="!nodePluginAvailable" class="hint" style="margin-top: 4px">
                       <el-icon style="color: var(--el-color-warning)"><WarningFilled /></el-icon>
                       Node.js plugin not loaded in daemon. Apache will still reverse-proxy
@@ -284,7 +284,7 @@
                         type="success"
                         @click="startNodeProcess"
                         :loading="nodeProcessLoading"
-                      >Start</el-button>
+                      >{{ $t('siteEdit.start') }}</el-button>
                       <el-button
                         v-if="nodeProcessState === 2"
                         size="small"
@@ -297,7 +297,7 @@
                         size="small"
                         @click="restartNodeProcess"
                         :loading="nodeProcessLoading"
-                      >Restart</el-button>
+                      >{{ $t('siteEdit.restart') }}</el-button>
                     </div>
                   </div>
                 </div>
@@ -327,7 +327,7 @@
 
             <section class="edit-card">
               <header class="edit-card-header">
-                <span class="edit-card-title">Ports</span>
+                <span class="edit-card-title">{{ $t('siteEdit.ports') }}</span>
                 <span class="edit-card-hint">Default: 80 (HTTP) and 443 (HTTPS)</span>
               </header>
               <div class="edit-card-body">
