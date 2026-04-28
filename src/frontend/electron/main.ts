@@ -1379,6 +1379,20 @@ ipcMain.handle('restart-renderer', async (_evt) => {
   }
 })
 
+ipcMain.handle('app-get-version', async () => {
+  // app.getVersion() resolves the bundled package.json at Electron startup,
+  // so a version bump there is picked up on the very next launch — no renderer
+  // rebuild required. gitSha is still baked at build time (it identifies the
+  // artifact, not the runtime), full = `${version}-${gitSha}`.
+  const version = app.getVersion()
+  const gitSha = (import.meta.env.VITE_APP_GIT_SHA as string | undefined) ?? 'dev'
+  return {
+    version,
+    gitSha,
+    full: gitSha ? `${version}-${gitSha}` : version,
+  }
+})
+
 app.whenReady().then(async () => {
   // Banner: one line with every state a support ticket asks for.
   // Landing at INFO level so it's always in main.log regardless of

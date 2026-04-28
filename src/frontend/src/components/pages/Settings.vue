@@ -1341,8 +1341,10 @@ import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import { compareSemver } from '../../utils/semver'
+import { useAppVersion } from '../../utils/appVersion'
 
-const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
+const versionRef = useAppVersion()
+const appVersion = computed(() => versionRef.value.full)
 const themeStore = useThemeStore()
 const uiModeStore = useUiModeStore()
 const authStore = useAuthStore()

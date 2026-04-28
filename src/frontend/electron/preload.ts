@@ -125,4 +125,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     silent?: boolean
     channel?: string
   }) => ipcRenderer.invoke('os-notify', payload),
+
+  // Runtime version probe — reads from Electron's app.getVersion() (which
+  // resolves the bundled package.json at process start). Decouples the
+  // status-bar version stamp from build-time `import.meta.env.VITE_APP_VERSION`,
+  // so a `package.json` bump is reflected after a single Electron restart
+  // without a renderer rebuild. The build-time gitShortSha is still baked
+  // in (it's tied to the artifact identity) and returned alongside.
+  getAppVersion: (): Promise<{ version: string; gitSha: string; full: string }> =>
+    ipcRenderer.invoke('app-get-version'),
 })

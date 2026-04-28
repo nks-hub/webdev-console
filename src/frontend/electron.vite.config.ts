@@ -77,6 +77,11 @@ export default defineConfig({
       'process.env.SENTRY_DSN_DEFAULT': JSON.stringify(sentryDsnFrontend),
       'process.env.SENTRY_DSN_BACKEND_DEFAULT': JSON.stringify(sentryDsnBackend),
       'process.env.SENTRY_ENVIRONMENT_DEFAULT': JSON.stringify(sentryEnv),
+      // Main process needs gitSha for the app-get-version IPC handler.
+      // Renderer reads VITE_APP_VERSION as a fallback only — primary path
+      // is the IPC roundtrip so package.json bumps don't need a renderer
+      // rebuild, just an Electron restart.
+      'import.meta.env.VITE_APP_GIT_SHA': JSON.stringify(buildSha),
     },
   },
   preload: {

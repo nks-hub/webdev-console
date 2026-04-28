@@ -50,11 +50,13 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useAppVersion } from '../../utils/appVersion'
 
 const { t } = useI18n()
 const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
-const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
+const versionRef = useAppVersion()
+const appVersion = computed(() => versionRef.value.full)
 
 const services = computed(() => daemonStore.services)
 const totalCount = computed(() => services.value.length)

@@ -352,10 +352,12 @@ import ServiceIcon from '../shared/ServiceIcon.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
+import { useAppVersion } from '../../utils/appVersion'
 
 const router = useRouter()
 
-const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
+const versionRef = useAppVersion()
+const appVersion = computed(() => versionRef.value.full)
 
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
