@@ -779,10 +779,10 @@
                 <div class="settings-card-body">
                   <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
                   <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item label="Email">
+                    <el-form-item :label="$t('settings.account.email')">
                       <el-input v-model="authEmail" placeholder="you@example.com" />
                     </el-form-item>
-                    <el-form-item label="Password">
+                    <el-form-item :label="$t('settings.account.password')">
                       <el-input v-model="authPassword" type="password" show-password />
                     </el-form-item>
                     <div class="sync-actions">
@@ -828,10 +828,10 @@
                 <div class="settings-card-body">
                   <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
                   <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item label="Email">
+                    <el-form-item :label="$t('settings.account.email')">
                       <el-input v-model="authEmail" placeholder="you@example.com" />
                     </el-form-item>
-                    <el-form-item label="Password">
+                    <el-form-item :label="$t('settings.account.password')">
                       <el-input v-model="authPassword" type="password" show-password />
                     </el-form-item>
                     <div class="sync-actions">

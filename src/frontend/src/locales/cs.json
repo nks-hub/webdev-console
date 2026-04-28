@@ -1547,7 +1547,9 @@
     },
     "account": {
       "passwordTitle": "Přihlášení e-mailem a heslem",
-      "passwordAlt": "Alternativa k SSO — přihlášení e-mailem a heslem registrovaným přímo v katalogu NKS WDC Cloud."
+      "passwordAlt": "Alternativa k SSO — přihlášení e-mailem a heslem registrovaným přímo v katalogu NKS WDC Cloud.",
+      "email": "E-mail",
+      "password": "Heslo"
     },
     "sso": {
       "title": "Přihlášení přes SSO",
