@@ -21,15 +21,9 @@ const cached: Ref<{ version: string; gitSha: string; full: string }> = ref({
 
 let probed = false
 
-interface ElectronAPI {
-  getAppVersion?: () => Promise<{ version: string; gitSha: string; full: string }>
-}
-
-declare global {
-  interface Window {
-    electronAPI?: ElectronAPI
-  }
-}
+// `electronAPI` shape now lives in env.d.ts (single source of truth) so
+// every consumer sees the same getAppVersion/osNotify/rendererLog
+// signatures.
 
 export function useAppVersion() {
   if (!probed) {
@@ -37,10 +31,10 @@ export function useAppVersion() {
     const api = (typeof window !== 'undefined' ? window.electronAPI : undefined)
     if (api?.getAppVersion) {
       api.getAppVersion()
-        .then(v => {
+        .then((v: { version: string; gitSha: string; full: string }) => {
           if (v && typeof v.version === 'string') cached.value = v
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           // Keep fallback values; surface the error in main log.
           console.warn('[useAppVersion] IPC probe failed, using build-time fallback:', err)
         })

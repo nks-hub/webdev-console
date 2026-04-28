@@ -99,15 +99,46 @@ if ! $SKIP_TESTS; then
 fi
 
 if ! $SKIP_FE; then
-    step "4/6  frontend npm build"
+    step "4/7  frontend vue-tsc (strict type check)"
+    # CI ci.yml runs `npm run type-check` (vue-tsc --noEmit) which
+    # is stricter than `vite build`. Without this step in the gate
+    # parallel `electronAPI` declarations slipped through.
+    #
+    # Baseline tracking: tools/.vue-tsc-baseline holds the known
+    # pre-existing error count. Gate FAILS only if the current count
+    # EXCEEDS the baseline (= you introduced new errors). Pre-existing
+    # errors don't block — they're tracked separately. To accept a
+    # legitimate fix that lowers the count, just rerun the gate; it
+    # auto-updates the baseline downward.
+    BASELINE_FILE="tools/.vue-tsc-baseline"
+    BASELINE=$(cat "$BASELINE_FILE" 2>/dev/null || echo 9999)
+    TSC_OUT=$( (cd src/frontend && npx vue-tsc --noEmit 2>&1) || true)
+    TSC_COUNT=$(echo "$TSC_OUT" | grep -c "error TS" || true)
+    if [ "$TSC_COUNT" -gt "$BASELINE" ]; then
+        err "vue-tsc errors increased: baseline=$BASELINE, now=$TSC_COUNT (+$((TSC_COUNT - BASELINE)))"
+        echo "$TSC_OUT" | grep "error TS" | tail -10
+        err "Fix new errors before pushing (CI ci.yml will fail otherwise)"
+        exit 1
+    fi
+    if [ "$TSC_COUNT" -lt "$BASELINE" ]; then
+        echo "  baseline lowered: $BASELINE → $TSC_COUNT (you fixed pre-existing errors!)"
+        echo "$TSC_COUNT" > "$BASELINE_FILE"
+    fi
+    if [ "$TSC_COUNT" -eq 0 ]; then
+        ok "type check clean"
+    else
+        ok "type check at baseline ($TSC_COUNT pre-existing errors, NOT regressed)"
+    fi
+
+    step "5/7  frontend npm build"
     (cd src/frontend && npm run build --silent 2>&1 | tail -3)
     ok "frontend build clean"
 
-    step "5/6  vitest (mcp-server)"
+    step "6/7  vitest (mcp-server)"
     (cd services/mcp-server && npx vitest run --reporter=basic 2>&1 | tail -5)
     ok "vitest pass"
 
-    step "6/6  api-type-check (regenerate + diff)"
+    step "7/7  api-type-check (regenerate + diff)"
     # Mirror .github/workflows/api-type-check.yml — start daemon, regen
     # generated-types.ts, fail if it drifted from committed file. This is
     # the most-missed CI check because the drift is silent locally.

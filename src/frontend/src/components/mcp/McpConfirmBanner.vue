@@ -65,7 +65,7 @@
       </div>
       <div class="mcp-confirm-actions">
         <el-button
-          :ref="el => index === 0 && setFirstApproveRef(el)"
+          :ref="(el: unknown) => index === 0 && setFirstApproveRef(el)"
           type="primary"
           size="default"
           :loading="busy.has(item.intentId)"

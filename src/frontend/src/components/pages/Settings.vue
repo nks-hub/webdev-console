@@ -2806,7 +2806,7 @@ async function runUpdateCheck() {
     }
     const latest = (data.tag_name ?? '').replace(/^v/, '')
     updateCheck.latest = latest
-    updateCheck.hasUpdate = compareSemver(latest, currentVersion) > 0
+    updateCheck.hasUpdate = compareSemver(latest, currentVersion.value) > 0
     const setupAsset = (data.assets ?? []).find(a => /setup.*\.exe$/i.test(a.name))
     updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
     updateCheck.releaseNotes = data.body ?? null

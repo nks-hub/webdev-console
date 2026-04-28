@@ -60,5 +60,19 @@ interface Window {
      * `window.location.reload()` — the renderer-initiated reload under the
      * `app://` scheme can keep Pinia stores alive, leaving stale view state. */
     restartRenderer: () => Promise<boolean>
+    /** Forward a renderer-side log line into electron-log's main sink. */
+    rendererLog: (level: 'info' | 'warn' | 'error' | 'debug', args: unknown[]) => Promise<void>
+    /** Cross-platform OS notification — main process hands off to Electron's
+     * Notification API which uses the native mechanism per platform. */
+    osNotify: (payload: {
+      title?: string
+      body?: string
+      urgency?: 'low' | 'normal' | 'critical'
+      silent?: boolean
+      channel?: string
+    }) => Promise<boolean>
+    /** Phase 8 — runtime app version probe (reads main process app.getVersion
+     * which resolves the bundled package.json, no rebuild needed for bumps). */
+    getAppVersion: () => Promise<{ version: string; gitSha: string; full: string }>
   }
 }

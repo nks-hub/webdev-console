@@ -24,15 +24,8 @@ export interface OsNotifyPayload {
   channel: NotificationChannel
 }
 
-interface ElectronApiShape {
-  osNotify?: (p: OsNotifyPayload) => Promise<boolean>
-}
-
-declare global {
-  interface Window {
-    electronAPI?: ElectronApiShape
-  }
-}
+// `electronAPI` shape (incl. osNotify) lives in env.d.ts — single source
+// of truth so vue-tsc doesn't see conflicting parallel declarations.
 
 const PREF_PREFIX = 'wdc.osnotify.'
 
