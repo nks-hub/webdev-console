@@ -78,7 +78,9 @@
     "hosts": "Hosts file",
     "mcpIntents": "MCP Intents",
     "mcpGrants": "MCP Grants",
-    "mcp": "MCP"
+    "mcp": "MCP",
+    "backups": "Backups",
+    "help": "Help"
   },
   "mcpIntents": {
     "title": "MCP Intent Inventory",

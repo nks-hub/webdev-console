@@ -78,7 +78,9 @@
     "hosts": "Hosts soubor",
     "mcpIntents": "MCP Intents",
     "mcpGrants": "MCP oprávnění",
-    "mcp": "MCP"
+    "mcp": "MCP",
+    "backups": "Zálohy",
+    "help": "Nápověda"
   },
   "mcpIntents": {
     "title": "Inventář MCP intentů",
