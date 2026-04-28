@@ -8,6 +8,14 @@
            informational otherwise. Cleanup hint surfaces when grants are
            dead-weight (granted but never matched). -->
       <div v-if="grantsStats" class="hub-stats">
+        <!-- Trust tier indicator — derived from current grant set:
+             0 grants = Sandbox (everything asks)
+             1+ specific grants without wildcard = Balanced
+             single wildcard `*` `*` grant = Full Trust
+             other shapes = Custom -->
+        <span class="stat tier-chip" :class="`tier-${trustTier}`" :title="t(`mcpHub.tier.${trustTier}Hint`)">
+          <strong>{{ tierIcon }} {{ t(`mcpHub.tier.${trustTier}`) }}</strong>
+        </span>
         <span class="stat clickable-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
           <span class="muted">{{ t('mcpHub.stats.active') }}</span>
@@ -100,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Lock, Key, Operation, DataLine } from '@element-plus/icons-vue'
@@ -147,6 +155,33 @@ function onTabChange(name: string | number): void {
 const counts = reactive({ intents: 0, grants: 0, kinds: 0 })
 const grantsStats = ref<McpGrantsStats | null>(null)
 const alwaysConfirmCount = ref<number>(0)
+const grantsRaw = ref<{ kindPattern: string; targetPattern: string; scopeType: string }[]>([])
+
+// Trust tier classification — purely derived from the current grant
+// set, no separate stored field. Matches the 4 onboarding profiles.
+const trustTier = computed<'sandbox' | 'balanced' | 'fullTrust' | 'custom'>(() => {
+  const grants = grantsRaw.value
+  if (grants.length === 0) return 'sandbox'
+  // Full Trust = single grant of `*` × `*`
+  const isFullTrust = grants.length === 1
+    && (grants[0].kindPattern === '*' || grants[0].kindPattern === '')
+    && (grants[0].targetPattern === '*' || grants[0].targetPattern === '')
+  if (isFullTrust) return 'fullTrust'
+  // Balanced = exactly the deploy + rollback wildcards (any order)
+  const hasDeploy = grants.some(g => g.kindPattern === 'deploy' && g.targetPattern === '*')
+  const hasRollback = grants.some(g => g.kindPattern === 'rollback' && g.targetPattern === '*')
+  if (grants.length === 2 && hasDeploy && hasRollback) return 'balanced'
+  return 'custom'
+})
+
+const tierIcon = computed(() => {
+  switch (trustTier.value) {
+    case 'sandbox': return '🛡️'
+    case 'balanced': return '⚖️'
+    case 'fullTrust': return '🚀'
+    default: return '🎯'
+  }
+})
 let unsubscribeHubSse: (() => void) | null = null
 
 function onActiveClick(): void {
@@ -179,6 +214,12 @@ async function refreshCounts(): Promise<void> {
     counts.kinds = kinds.entries.length
     alwaysConfirmCount.value = kinds.entries.filter((k) => k.alwaysConfirm === true).length
     grantsStats.value = stats
+    // Capture pattern shape for trust-tier derivation.
+    grantsRaw.value = grants.entries.map(g => ({
+      kindPattern: g.kindPattern ?? '',
+      targetPattern: g.targetPattern ?? '',
+      scopeType: g.scopeType,
+    }))
   } catch { /* badges stay stale rather than disrupt the page */ }
 }
 
@@ -224,6 +265,16 @@ onBeforeUnmount(() => {
 .hub-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats .stat strong { font-weight: 600; }
 .hub-stats .stat.warn strong { color: var(--el-color-warning); }
+.tier-chip {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+.tier-chip.tier-sandbox { background: var(--el-color-info-light-9); color: var(--el-color-info); border-color: var(--el-color-info-light-7); }
+.tier-chip.tier-balanced { background: var(--el-color-success-light-9); color: var(--el-color-success); border-color: var(--el-color-success-light-7); }
+.tier-chip.tier-fullTrust { background: var(--el-color-warning-light-9); color: var(--el-color-warning); border-color: var(--el-color-warning-light-7); }
+.tier-chip.tier-custom { background: var(--el-fill-color); color: var(--el-text-color-secondary); }
 .clickable-stat { cursor: pointer; user-select: none; }
 .clickable-stat:hover strong { filter: brightness(1.2); }
 .tab-badge { margin-left: 4px; }

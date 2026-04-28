@@ -162,6 +162,16 @@
       "hoursAgo": "{n}h ago",
       "daysAgo": "{n}d ago"
     },
+    "tier": {
+      "sandbox": "Sandbox",
+      "sandboxHint": "No rules — AI asks for every destructive action",
+      "balanced": "Balanced",
+      "balancedHint": "Auto-approve reversible actions (deploy, rollback)",
+      "fullTrust": "Full Trust",
+      "fullTrustHint": "Wildcard rule accepts everything without asking",
+      "custom": "Custom",
+      "customHint": "Custom combination of rules"
+    },
     "suggested": {
       "title": "{n} auto-approval suggestion(s)",
       "hint": "You manually approved these actions multiple times in the last 7 days. Click \"Auto-approve\" to create a rule that lets them through without further prompts.",

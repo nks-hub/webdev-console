@@ -162,6 +162,16 @@
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d"
     },
+    "tier": {
+      "sandbox": "Sandbox",
+      "sandboxHint": "Žádná pravidla — AI se ptá na vše destruktivní",
+      "balanced": "Vyvážený",
+      "balancedHint": "Auto-schválení reverzibilních akcí (deploy, rollback)",
+      "fullTrust": "Plná důvěra",
+      "fullTrustHint": "Wildcard pravidlo přijímá vše bez ptaní",
+      "custom": "Custom",
+      "customHint": "Vlastní kombinace pravidel"
+    },
     "suggested": {
       "title": "{n} návrh(ů) na auto-schválení",
       "hint": "Tyto akce jsi v posledních 7 dnech schvaloval ručně víckrát. Klikni \"Auto-approve\" a vytvoří se pravidlo, které je propustí bez dalšího potvrzování.",
