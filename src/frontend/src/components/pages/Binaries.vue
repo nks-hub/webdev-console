@@ -6,7 +6,7 @@
         <div class="header-title-block">
           <h1 class="page-title">{{ $t('binaries.title') }}</h1>
           <p class="page-subtitle">
-            {{ moduleCards.length }} modules ·
+            {{ moduleCards.length }} {{ $t('binaries.modules') }} ·
             {{ installed.length }} {{ $t('binaries.installed') }} ·
             {{ totalAvailable }} {{ $t('binaries.available') }}
             <template v-if="outdatedCount > 0"> · <span style="color: var(--el-color-warning)">{{ outdatedCount }} {{ $t('binaries.outdated') }}</span></template>
@@ -22,10 +22,10 @@
           >
             <span class="catalog-health-dot"></span>
             <span class="catalog-health-label">
-              Catalog:
+              {{ $t('binaries.catalog') }}:
               {{ catalogStatus.reachable
-                ? `${catalogStatus.cachedCount} releases`
-                : 'unreachable' }}
+                ? $t('binaries.catalogReleases', { n: catalogStatus.cachedCount })
+                : $t('binaries.catalogUnreachable') }}
             </span>
             <span class="catalog-health-url mono">{{ catalogUrlShort }}</span>
           </div>
@@ -33,7 +33,7 @@
         <div class="header-actions">
           <el-input
             v-model="gridSearch"
-            placeholder="Filter modules…"
+            :placeholder="$t('binaries.filterPlaceholder')"
             clearable
             size="small"
             style="width: 220px"
@@ -48,7 +48,7 @@
       </div>
 
       <div v-else-if="filteredModules.length === 0" class="page-body-pad">
-        <el-empty :description="gridSearch ? `No modules matching \u2018${gridSearch}\u2019` : 'No catalog entries. Check daemon connection.'" :image-size="80" />
+        <el-empty :description="gridSearch ? $t('binaries.noMatching', { q: gridSearch }) : $t('binaries.noEntries')" :image-size="80" />
       </div>
 
       <template v-else>
@@ -64,7 +64,7 @@
               <div class="bin-card-title">
                 <span class="bin-card-name">
                   composer
-                  <el-tag size="small" type="info" effect="plain" class="builtin-tag">Built-in</el-tag>
+                  <el-tag size="small" type="info" effect="plain" class="builtin-tag">{{ $t('binaries.builtIn') }}</el-tag>
                 </span>
                 <span class="bin-card-latest mono" :title="composerVersion ? 'v' + composerVersion : 'latest'">{{ composerVersionDisplay }}</span>
               </div>
@@ -72,11 +72,11 @@
             <div class="bin-card-metrics">
               <div class="metric">
                 <span class="metric-num mono">{{ composerInstalled ? 1 : 0 }}</span>
-                <span class="metric-label">installed</span>
+                <span class="metric-label">{{ $t('binaries.metricInstalled') }}</span>
               </div>
               <div class="metric">
                 <span class="metric-num mono">1</span>
-                <span class="metric-label">available</span>
+                <span class="metric-label">{{ $t('binaries.metricAvailable') }}</span>
               </div>
             </div>
             <div class="bin-card-actions">
@@ -121,20 +121,20 @@
             <div class="bin-card-metrics">
               <div class="metric">
                 <span class="metric-num mono">{{ card.installedCount }}</span>
-                <span class="metric-label">installed</span>
+                <span class="metric-label">{{ $t('binaries.metricInstalled') }}</span>
               </div>
               <div class="metric">
                 <span class="metric-num mono">{{ card.available }}</span>
-                <span class="metric-label">available</span>
+                <span class="metric-label">{{ $t('binaries.metricAvailable') }}</span>
               </div>
               <div class="metric" v-if="card.defaultVersion">
                 <span class="metric-num mono">{{ card.defaultVersion }}</span>
-                <span class="metric-label">default</span>
+                <span class="metric-label">{{ $t('binaries.metricDefault') }}</span>
               </div>
             </div>
             <div class="bin-card-actions">
               <el-button size="small" type="primary" plain class="bin-open-btn">
-                Manage versions <el-icon><ArrowRight /></el-icon>
+                {{ $t('binaries.manageVersions') }} <el-icon><ArrowRight /></el-icon>
               </el-button>
             </div>
           </div>
@@ -147,7 +147,7 @@
       <div class="page-header">
         <div class="header-title-block">
           <el-button size="small" text class="back-btn" @click="selectedApp = null">
-            &larr; Back
+            &larr; {{ $t('binaries.back') }}
           </el-button>
           <h1 class="page-title page-title-detail">
             <ServiceIcon :service="selectedApp" :active="true" />
