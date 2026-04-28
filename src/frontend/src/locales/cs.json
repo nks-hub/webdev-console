@@ -1581,9 +1581,21 @@
       "description": "Pokročilý režim zobrazí všechny služby, databáze, porty a další nástroje pro vývojáře."
     },
     "general": {
+      "tabDesc": "Chování aplikace a nastavení při spuštění.",
+      "language": "Jazyk",
       "runOnStartup": "Spustit při startu",
       "autoStartServices": "Automaticky spustit služby",
-      "defaultPhpVersion": "Výchozí verze PHP"
+      "defaultPhpVersion": "Výchozí verze PHP",
+      "dnsCache": "DNS cache",
+      "flushDnsCache": "Vyprázdnit DNS cache",
+      "mampImport": "Import z MAMP PRO",
+      "mampMigrate": "Importovat z MAMP",
+      "mampHint": "Najde instalaci MAMP PRO na tomto počítači a naimportuje její vhosty jako weby ve WDC.",
+      "telemetry": "Telemetrie",
+      "telemetryHint": "Odesílá anonymní statistiky používání pro zlepšení NKS WDC. Žádná osobní data, žádné názvy webů, žádný kód — jen počty využití jednotlivých funkcí.",
+      "crashReports": "Hlášení o pádech",
+      "crashReportsHint": "Odesílá stack trace při pádu aplikace.",
+      "selectPlaceholder": "Vyber"
     },
     "ports": {
       "description": "Výchozí porty služeb. Po změně restartuj služby.",

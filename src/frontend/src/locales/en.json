@@ -1579,9 +1579,21 @@
       "description": "Advanced mode reveals all services, databases, ports and developer tools."
     },
     "general": {
+      "tabDesc": "Application behavior and startup preferences.",
+      "language": "Language",
       "runOnStartup": "Run on startup",
       "autoStartServices": "Auto-start services",
-      "defaultPhpVersion": "Default PHP version"
+      "defaultPhpVersion": "Default PHP version",
+      "dnsCache": "DNS Cache",
+      "flushDnsCache": "Flush DNS Cache",
+      "mampImport": "MAMP PRO import",
+      "mampMigrate": "Migrate MAMP",
+      "mampHint": "Scan for MAMP PRO installation on this machine and import its vhosts as WDC sites.",
+      "telemetry": "Telemetry",
+      "telemetryHint": "Send anonymous usage statistics to help improve NKS WDC. No personal data, no site names, no code — just feature usage counts.",
+      "crashReports": "Crash reports",
+      "crashReportsHint": "Send stack traces when the app crashes.",
+      "selectPlaceholder": "Select"
     },
     "ports": {
       "description": "Configure default service ports. Restart services after changing.",

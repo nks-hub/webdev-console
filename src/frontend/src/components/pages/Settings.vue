@@ -97,9 +97,9 @@
         <!-- General tab -->
         <el-tab-pane :label="$t('settings.tabs.general')" name="general">
           <div class="tab-content">
-            <p class="tab-desc">Application behavior and startup preferences.</p>
+            <p class="tab-desc">{{ $t('settings.general.tabDesc') }}</p>
             <el-form label-position="left" label-width="180px" size="small" style="max-width: 500px">
-              <el-form-item label="Language">
+              <el-form-item :label="$t('settings.general.language')">
                 <el-select
                   :model-value="locale"
                   @update:model-value="onLocaleChange"
@@ -135,36 +135,33 @@
                    jednotlivého pluginu v Plugin Manageru. Žádné duplicitní
                    ovládání tady, aby nebyl zmatek „kde to vlastně zapnu“. -->
               <el-form-item :label="$t('settings.general.defaultPhpVersion')">
-                <el-select v-model="defaultPhp" style="width: 160px" placeholder="Select">
+                <el-select v-model="defaultPhp" style="width: 160px" :placeholder="$t('settings.general.selectPlaceholder')">
                   <el-option v-for="v in phpVersions" :key="v" :label="'PHP ' + v" :value="v" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="DNS Cache">
+              <el-form-item :label="$t('settings.general.dnsCache')">
                 <el-button size="small" @click="flushDns" :loading="flushingDns">
-                  Flush DNS Cache
+                  {{ $t('settings.general.flushDnsCache') }}
                 </el-button>
               </el-form-item>
               <!-- F73: Migrate MAMP moved here from Sites toolbar. It's a
                    one-off import operation that belongs in settings, not in
                    the day-to-day Sites page where the toolbar button was
                    cluttering the primary site workflow. -->
-              <el-form-item label="MAMP PRO import">
-                <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" title="Import sites from MAMP PRO">
-                  Migrate MAMP
+              <el-form-item :label="$t('settings.general.mampImport')">
+                <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" :title="$t('settings.general.mampHint')">
+                  {{ $t('settings.general.mampMigrate') }}
                 </el-button>
-                <div class="hint">Scan for MAMP PRO installation on this machine and import its vhosts as WDC sites.</div>
+                <div class="hint">{{ $t('settings.general.mampHint') }}</div>
               </el-form-item>
 
               <el-divider />
 
-              <el-form-item label="Telemetry">
+              <el-form-item :label="$t('settings.general.telemetry')">
                 <el-switch v-model="telemetryEnabled" />
-                <div class="hint">
-                  Send anonymous usage statistics to help improve NKS WDC.
-                  No personal data, no site names, no code — just feature usage counts.
-                </div>
+                <div class="hint">{{ $t('settings.general.telemetryHint') }}</div>
               </el-form-item>
-              <el-form-item label="Crash reports" v-if="telemetryEnabled">
+              <el-form-item :label="$t('settings.general.crashReports')" v-if="telemetryEnabled">
                 <el-switch v-model="telemetryCrashReports" />
                 <div class="hint">
                   Send crash stack traces via Sentry when a daemon exception occurs.
