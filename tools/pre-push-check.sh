@@ -19,11 +19,14 @@ set -euo pipefail
 QUICK=false
 SKIP_FE=false
 SKIP_TESTS=false
+STRESS=false
+STRESS_RUNS=3
 for arg in "$@"; do
     case "$arg" in
         --quick) QUICK=true ;;
         --no-fe) SKIP_FE=true ;;
         --skip-tests) SKIP_TESTS=true ;;
+        --stress) STRESS=true ;;
         -h|--help)
             cat <<EOF
 Usage: tools/pre-push-check.sh [options]
@@ -35,6 +38,9 @@ Options:
   --quick         Use Debug config (faster, skips Release publish step)
   --no-fe         Skip frontend npm build + Playwright
   --skip-tests    Build only — don't run tests
+  --stress        Run dotnet test 3× to surface flaky tests
+                  (CI-2026-04-28 caught IntentSignerTests.Verify_RejectsTamperedSignature
+                  this way — base64 padding ambiguity that single-run gate missed)
   -h, --help      This message
 EOF
             exit 0
@@ -60,11 +66,11 @@ cd "$(dirname "$0")/.."
 # Kill any locally running daemon to avoid bin DLL locks.
 DAEMON_TOOL="$(dirname "$0")/dev-daemon-rebuild.sh"
 
-step "1/5  dotnet restore"
+step "1/7  dotnet restore"
 dotnet restore WebDevConsole.sln --verbosity quiet
 ok "restore clean"
 
-step "2/5  dotnet build ($CONFIG)"
+step "2/7  dotnet build ($CONFIG)"
 # Stop daemon first if running — its bin DLLs are locked otherwise.
 # Daemon API admin/restart triggers Environment.Exit(99) without UAC.
 PORT_FILE="/c/Users/LuRy/AppData/Local/Temp/nks-wdc-daemon.port"
@@ -90,12 +96,23 @@ fi
 ok "build clean"
 
 if ! $SKIP_TESTS; then
-    step "3/5  dotnet test ($CONFIG)"
-    if ! dotnet test WebDevConsole.sln -c "$CONFIG" --no-build --nologo --verbosity quiet 2>&1 | tail -5; then
-        err "tests failed"
-        exit 1
+    step "3/7  dotnet test ($CONFIG)"
+    if $STRESS; then
+        for run in $(seq 1 $STRESS_RUNS); do
+            echo "  stress run $run/$STRESS_RUNS …"
+            if ! dotnet test WebDevConsole.sln -c "$CONFIG" --no-build --nologo --verbosity quiet 2>&1 | tail -3; then
+                err "tests failed on stress run $run/$STRESS_RUNS — flaky test detected"
+                exit 1
+            fi
+        done
+        ok "tests pass ${STRESS_RUNS}× (no flakes)"
+    else
+        if ! dotnet test WebDevConsole.sln -c "$CONFIG" --no-build --nologo --verbosity quiet 2>&1 | tail -5; then
+            err "tests failed"
+            exit 1
+        fi
+        ok "tests pass"
     fi
-    ok "tests pass"
 fi
 
 if ! $SKIP_FE; then
