@@ -177,6 +177,10 @@
       "toolName": "Filter by tool…",
       "collapseReads": "Collapse reads"
     },
+    "view": {
+      "sessions": "By session",
+      "flat": "Flat"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

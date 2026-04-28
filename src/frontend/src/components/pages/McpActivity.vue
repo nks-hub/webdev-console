@@ -1,6 +1,6 @@
 <template>
   <div class="mcp-activity-page">
-    <!-- Activity stats banner — at-a-glance traffic overview for last 24h -->
+    <!-- Stats banner — at-a-glance traffic overview for last 24h -->
     <div v-if="stats" class="activity-stats">
       <div class="stat-tile">
         <div class="stat-num">{{ stats.total }}</div>
@@ -36,47 +36,103 @@
         <el-option :label="t('mcpActivity.danger.destructive')" value="destructive" />
       </el-select>
       <el-input v-model="toolFilter" size="small" :placeholder="t('mcpActivity.filter.toolName')" clearable style="width: 240px" />
+      <el-radio-group v-model="viewMode" size="small">
+        <el-radio-button value="sessions">{{ t('mcpActivity.view.sessions') }}</el-radio-button>
+        <el-radio-button value="flat">{{ t('mcpActivity.view.flat') }}</el-radio-button>
+      </el-radio-group>
       <el-checkbox v-model="collapseReads" size="small">{{ t('mcpActivity.filter.collapseReads') }}</el-checkbox>
       <el-button size="small" :loading="loading" @click="refresh">
         <el-icon><Refresh /></el-icon> {{ t('mcpActivity.refresh') }}
       </el-button>
       <span v-if="totalCount" class="muted total-count">
-        {{ t('mcpActivity.totalShown', { n: groupedView.length, total: totalCount }) }}
+        {{ t('mcpActivity.totalShown', { n: entries.length, total: totalCount }) }}
       </span>
     </div>
 
     <!-- Empty state -->
     <el-empty v-if="!loading && entries.length === 0" :description="t('mcpActivity.empty')" />
 
-    <!-- Grouped activity timeline -->
-    <div v-else class="activity-timeline">
-      <div v-for="group in groupedView" :key="group.key" class="activity-group" :class="{ collapsed: group.kind === 'collapsed-reads' }">
-        <!-- Collapsed reads summary row -->
-        <div v-if="group.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(group.key)">
-          <el-icon class="chev"><ArrowRight /></el-icon>
-          <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: group.count }) }}</span>
-          <span class="time-range muted">{{ formatRelative(group.lastAt) }}</span>
+    <!-- Session-grouped view -->
+    <div v-else-if="viewMode === 'sessions'" class="sessions-list">
+      <div
+        v-for="session in sessionGroups"
+        :key="session.key"
+        class="session-card"
+        :class="{ 'has-destructive': session.destructives > 0, 'has-error': session.errors > 0 }"
+      >
+        <div class="session-header" @click="toggleSession(session.key)">
+          <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
+          <code class="mono caller-pill">{{ session.caller }}</code>
+          <code v-if="session.sessionId" class="mono session-pill" :title="session.sessionId">
+            {{ session.sessionId.slice(0, 8) }}
+          </code>
+          <span class="muted at">{{ formatRelative(session.startedAt) }}</span>
+          <span class="muted dur-range" v-if="session.entries.length > 1">
+            ({{ formatDuration(session.startedAt, session.endedAt) }})
+          </span>
+          <div class="session-counts">
+            <span class="count-pill total">{{ session.entries.length }}</span>
+            <span v-if="session.reads > 0" class="count-pill read">{{ session.reads }}r</span>
+            <span v-if="session.mutates > 0" class="count-pill mutate">{{ session.mutates }}m</span>
+            <span v-if="session.destructives > 0" class="count-pill destructive">{{ session.destructives }}d</span>
+            <span v-if="session.errors > 0" class="count-pill error">{{ session.errors }}!</span>
+          </div>
         </div>
-        <!-- Standard call row -->
-        <div v-else class="call-row" :class="`danger-${group.entry.dangerLevel}`">
-          <span class="dot" :class="`dot-${group.entry.dangerLevel}`" />
-          <code class="mono tool-name">{{ group.entry.toolName }}</code>
-          <el-tag v-if="group.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
+        <div v-if="!collapsedSessions.has(session.key)" class="session-body">
+          <div v-for="row in groupReads(session.entries, session.key)" :key="row.key">
+            <div v-if="row.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(row.key)">
+              <el-icon class="chev"><ArrowRight /></el-icon>
+              <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
+              <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
+            </div>
+            <div v-else class="call-row" :class="`danger-${row.entry.dangerLevel}`">
+              <span class="dot" :class="`dot-${row.entry.dangerLevel}`" />
+              <code class="mono tool-name">{{ row.entry.toolName }}</code>
+              <el-tag v-if="row.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
+                {{ t('mcpActivity.danger.destructive') }}
+              </el-tag>
+              <el-tag v-else-if="row.entry.dangerLevel === 'mutate'" type="warning" size="small" effect="plain">
+                {{ t('mcpActivity.danger.mutate') }}
+              </el-tag>
+              <el-tag v-if="row.entry.resultCode !== 'ok'" type="danger" size="small">{{ row.entry.resultCode }}</el-tag>
+              <span class="muted dur">{{ row.entry.durationMs }}ms</span>
+              <span class="muted at">{{ formatRelative(row.entry.calledAt) }}</span>
+              <code v-if="row.entry.argsSummary && row.entry.argsSummary !== '{}'" class="mono args-preview" :title="row.entry.argsSummary">
+                {{ row.entry.argsSummary.length > 60 ? row.entry.argsSummary.slice(0, 57) + '…' : row.entry.argsSummary }}
+              </code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flat view (legacy / debugging) -->
+    <div v-else class="activity-timeline">
+      <div v-for="row in flatView" :key="row.key" class="activity-group" :class="{ collapsed: row.kind === 'collapsed-reads' }">
+        <div v-if="row.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(row.key)">
+          <el-icon class="chev"><ArrowRight /></el-icon>
+          <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
+          <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
+        </div>
+        <div v-else class="call-row" :class="`danger-${row.entry.dangerLevel}`">
+          <span class="dot" :class="`dot-${row.entry.dangerLevel}`" />
+          <code class="mono tool-name">{{ row.entry.toolName }}</code>
+          <el-tag v-if="row.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
             {{ t('mcpActivity.danger.destructive') }}
           </el-tag>
-          <el-tag v-else-if="group.entry.dangerLevel === 'mutate'" type="warning" size="small" effect="plain">
+          <el-tag v-else-if="row.entry.dangerLevel === 'mutate'" type="warning" size="small" effect="plain">
             {{ t('mcpActivity.danger.mutate') }}
           </el-tag>
-          <el-tag v-if="group.entry.resultCode !== 'ok'" type="danger" size="small">{{ group.entry.resultCode }}</el-tag>
-          <span class="muted dur">{{ group.entry.durationMs }}ms</span>
-          <span class="muted at">{{ formatRelative(group.entry.calledAt) }}</span>
-          <code v-if="group.entry.argsSummary && group.entry.argsSummary !== '{}'" class="mono args-preview" :title="group.entry.argsSummary">
-            {{ group.entry.argsSummary.length > 60 ? group.entry.argsSummary.slice(0, 57) + '…' : group.entry.argsSummary }}
+          <el-tag v-if="row.entry.resultCode !== 'ok'" type="danger" size="small">{{ row.entry.resultCode }}</el-tag>
+          <span class="muted dur">{{ row.entry.durationMs }}ms</span>
+          <span class="muted at">{{ formatRelative(row.entry.calledAt) }}</span>
+          <code v-if="row.entry.argsSummary && row.entry.argsSummary !== '{}'" class="mono args-preview" :title="row.entry.argsSummary">
+            {{ row.entry.argsSummary.length > 60 ? row.entry.argsSummary.slice(0, 57) + '…' : row.entry.argsSummary }}
           </code>
-          <code v-if="group.entry.sessionId" class="mono session-pill" :title="group.entry.sessionId">
-            {{ group.entry.sessionId.slice(0, 8) }}
+          <code v-if="row.entry.sessionId" class="mono session-pill" :title="row.entry.sessionId">
+            {{ row.entry.sessionId.slice(0, 8) }}
           </code>
-          <code class="mono caller-pill">{{ group.entry.caller }}</code>
+          <code class="mono caller-pill">{{ row.entry.caller }}</code>
         </div>
       </div>
     </div>
@@ -122,10 +178,12 @@ const pageSize = ref(50)
 const dangerFilter = ref<string | null>(null)
 const toolFilter = ref('')
 const collapseReads = ref(true)
+const viewMode = ref<'sessions' | 'flat'>('sessions')
 
-// Track which collapsed-read groups the operator has expanded — keyed
-// by group key (first read entry id) so toggling persists during page
-// session.
+// Track which session cards are collapsed (default: all but first).
+const collapsedSessions = ref<Set<string>>(new Set())
+
+// Track which collapsed-read groups the operator has expanded.
 const expandedReadGroups = ref<Set<string>>(new Set())
 
 function expandReads(key: string): void {
@@ -134,11 +192,19 @@ function expandReads(key: string): void {
   } else {
     expandedReadGroups.value.add(key)
   }
-  // Force reactivity refresh
   expandedReadGroups.value = new Set(expandedReadGroups.value)
 }
 
-interface DisplayGroup {
+function toggleSession(key: string): void {
+  if (collapsedSessions.value.has(key)) {
+    collapsedSessions.value.delete(key)
+  } else {
+    collapsedSessions.value.add(key)
+  }
+  collapsedSessions.value = new Set(collapsedSessions.value)
+}
+
+interface DisplayRow {
   key: string
   kind: 'call' | 'collapsed-reads'
   entry: McpToolCallEntry
@@ -146,36 +212,69 @@ interface DisplayGroup {
   lastAt: string
 }
 
-// Group consecutive reads (same tool name, < 5min gap) into a single
-// collapsed row. Mutate/destructive rows always render individually
-// because each one matters.
-const groupedView = computed<DisplayGroup[]>(() => {
-  const result: DisplayGroup[] = []
+interface SessionGroup {
+  key: string
+  sessionId: string | null
+  caller: string
+  startedAt: string
+  endedAt: string
+  entries: McpToolCallEntry[]
+  reads: number
+  mutates: number
+  destructives: number
+  errors: number
+}
+
+// Group consecutive entries by sessionId (5 min gap = new group).
+const sessionGroups = computed<SessionGroup[]>(() => {
+  const groups: SessionGroup[] = []
+  let current: SessionGroup | null = null
+  for (const e of entries.value) {
+    const breakHere = !current
+      || e.sessionId !== current.sessionId
+      || (current.endedAt && Math.abs(new Date(current.endedAt).getTime() - new Date(e.calledAt).getTime()) > 5 * 60 * 1000)
+    if (breakHere) {
+      current = {
+        key: `${e.sessionId ?? 'none'}-${e.id}`,
+        sessionId: e.sessionId,
+        caller: e.caller,
+        startedAt: e.calledAt,
+        endedAt: e.calledAt,
+        entries: [],
+        reads: 0,
+        mutates: 0,
+        destructives: 0,
+        errors: 0,
+      }
+      groups.push(current)
+    }
+    current!.entries.push(e)
+    current!.endedAt = e.calledAt
+    if (e.dangerLevel === 'read') current!.reads++
+    else if (e.dangerLevel === 'mutate') current!.mutates++
+    else if (e.dangerLevel === 'destructive') current!.destructives++
+    if (e.resultCode !== 'ok') current!.errors++
+  }
+  return groups
+})
+
+// Group reads inside a session (when collapseReads is on).
+function groupReads(sessionEntries: McpToolCallEntry[], _sessionKey: string): DisplayRow[] {
+  const result: DisplayRow[] = []
   let i = 0
-  const list = entries.value
-  while (i < list.length) {
-    const cur = list[i]
+  while (i < sessionEntries.length) {
+    const cur = sessionEntries[i]
     if (collapseReads.value && cur.dangerLevel === 'read') {
-      // Find run of consecutive read entries (any tool) within 5 min.
       let j = i + 1
-      while (j < list.length && list[j].dangerLevel === 'read') {
-        const gap = Math.abs(new Date(list[j - 1].calledAt).getTime() - new Date(list[j].calledAt).getTime())
-        if (gap > 5 * 60 * 1000) break
+      while (j < sessionEntries.length && sessionEntries[j].dangerLevel === 'read') {
         j++
       }
       const runLen = j - i
       if (runLen >= 3 && !expandedReadGroups.value.has(cur.id)) {
-        result.push({
-          key: cur.id,
-          kind: 'collapsed-reads',
-          entry: cur,
-          count: runLen,
-          lastAt: cur.calledAt,
-        })
+        result.push({ key: cur.id, kind: 'collapsed-reads', entry: cur, count: runLen, lastAt: cur.calledAt })
         i = j
         continue
       }
-      // Run too short or operator expanded — render individually.
       result.push({ key: cur.id, kind: 'call', entry: cur, count: 1, lastAt: cur.calledAt })
       i++
     } else {
@@ -184,6 +283,17 @@ const groupedView = computed<DisplayGroup[]>(() => {
     }
   }
   return result
+}
+
+// Flat-view grouping (legacy: all entries collapsed across sessions).
+const flatView = computed<DisplayRow[]>(() => groupReads(entries.value, 'flat'))
+
+// Auto-expand first session, collapse rest, on each refresh.
+watch(sessionGroups, (groups) => {
+  if (groups.length === 0) return
+  const newCollapsed = new Set<string>()
+  for (let idx = 1; idx < groups.length; idx++) newCollapsed.add(groups[idx].key)
+  collapsedSessions.value = newCollapsed
 })
 
 function formatRelative(iso: string): string {
@@ -195,6 +305,16 @@ function formatRelative(iso: string): string {
     if (deltaSec < 3600) return t('mcpActivity.minutesAgo', { n: Math.floor(deltaSec / 60) })
     if (deltaSec < 86400) return t('mcpActivity.hoursAgo', { n: Math.floor(deltaSec / 3600) })
     return t('mcpActivity.daysAgo', { n: Math.floor(deltaSec / 86400) })
+  } catch { return '' }
+}
+
+function formatDuration(startIso: string, endIso: string): string {
+  try {
+    const ms = Math.max(0, new Date(startIso).getTime() - new Date(endIso).getTime())
+    if (ms < 1000) return `${ms}ms`
+    const s = Math.round(ms / 1000)
+    if (s < 60) return `${s}s`
+    return `${Math.round(s / 60)}m`
   } catch { return '' }
 }
 
@@ -226,9 +346,6 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   void refresh()
-  // Refresh on relevant SSE events. Tool-call audit doesn't have its
-  // own event yet — we piggyback on intent-changed (which fires for
-  // destructive calls) plus a 30s poll for read traffic.
   unsubscribe = subscribeEventsMap({
     'mcp:intent-changed': () => { void refresh() },
     'mcp:confirm-request': () => { void refresh() },
@@ -243,12 +360,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.mcp-activity-page {
-  display: flex; flex-direction: column; gap: 12px;
-}
-.activity-stats {
-  display: flex; flex-wrap: wrap; gap: 12px;
-}
+.mcp-activity-page { display: flex; flex-direction: column; gap: 12px; }
+.activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;
   padding: 10px 14px;
@@ -267,6 +380,45 @@ onBeforeUnmount(() => {
   padding: 8px 0;
 }
 .total-count { font-size: 12px; }
+
+/* Sessions view */
+.sessions-list { display: flex; flex-direction: column; gap: 8px; }
+.session-card {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.session-card.has-destructive { border-color: var(--el-color-danger-light-5); }
+.session-card.has-error { border-color: var(--el-color-danger); }
+.session-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--el-fill-color-light);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+}
+.session-header:hover { background: var(--el-fill-color-darker); }
+.session-header .chev { transition: transform 0.15s; font-size: 12px; }
+.session-header .chev.rotated { transform: rotate(90deg); }
+.session-counts {
+  margin-left: auto;
+  display: flex; gap: 4px;
+}
+.count-pill {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--el-fill-color-darker);
+}
+.count-pill.read { background: var(--el-color-info-light-7); color: var(--el-color-info); }
+.count-pill.mutate { background: var(--el-color-warning-light-7); color: var(--el-color-warning); }
+.count-pill.destructive { background: var(--el-color-danger-light-7); color: var(--el-color-danger); }
+.count-pill.error { background: var(--el-color-danger); color: white; }
+.session-body { background: var(--el-bg-color); }
+
+/* Flat view & shared rows */
 .activity-timeline {
   display: flex; flex-direction: column;
   border: 1px solid var(--el-border-color-lighter);
@@ -288,7 +440,9 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 8px 12px;
   font-size: 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
+.session-body .call-row:first-child { border-top: none; }
 .call-row:hover { background: var(--el-fill-color-light); }
 .call-row.danger-destructive { background: var(--el-color-danger-light-9); }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -303,7 +457,7 @@ onBeforeUnmount(() => {
   border-radius: 3px;
   font-size: 10px;
 }
-.dur, .at { font-size: 11px; }
+.dur, .at, .dur-range { font-size: 11px; }
 .activity-pagination { display: flex; justify-content: flex-end; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
 .muted { color: var(--el-text-color-secondary); }

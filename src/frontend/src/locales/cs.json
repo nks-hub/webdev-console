@@ -177,6 +177,10 @@
       "toolName": "Filter podle nástroje…",
       "collapseReads": "Sbalit read volání"
     },
+    "view": {
+      "sessions": "Podle session",
+      "flat": "Plochý"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",
