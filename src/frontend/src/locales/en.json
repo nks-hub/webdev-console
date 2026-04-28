@@ -867,7 +867,42 @@
     "subtitle": "Expose local sites to the internet via an encrypted tunnel",
     "connecting": "Connecting to Cloudflare API…",
     "startTunnel": "Start tunnel",
-    "stopTunnel": "Stop tunnel"
+    "stopTunnel": "Stop tunnel",
+    "status": {
+      "tunnelRunning": "Tunnel running",
+      "stopped": "Stopped",
+      "unknown": "Unknown",
+      "serviceInfoUnavailable": "Service info unavailable — check daemon connection",
+      "tokenStored": "API token stored",
+      "tokenMissing": "API token missing",
+      "tokenVerified": "Token verified",
+      "noTunnel": "No tunnel selected",
+      "configureBelow": "Configure below",
+      "zoneCount": "{n} zones",
+      "defaultSelected": "Default selected",
+      "pickDefaultZone": "Pick default zone"
+    },
+    "tabs": {
+      "setup": "Setup",
+      "sites": "Sites",
+      "dns": "DNS"
+    },
+    "steps": {
+      "step1Title": "Step 1 — API token",
+      "step1Hint": "Paste a Cloudflare token, everything else is automatic",
+      "step2Title": "Step 2 — cloudflared binary",
+      "step2Hint": "Auto-detected from ~/.wdc/binaries/cloudflared/ and FlyEnv",
+      "step3Title": "Step 3 — start the tunnel",
+      "step3Hint": "Launches cloudflared as a managed service",
+      "subdomainTemplate": "Subdomain template",
+      "subdomainTemplateHint": "Default public hostname when enabling tunnel on a site"
+    },
+    "actions": {
+      "autoSetup": "Auto-setup tunnel",
+      "browse": "Browse…",
+      "savePath": "Save path",
+      "saveTemplate": "Save template"
+    }
   },
   "siteEdit": {
     "general": "General",

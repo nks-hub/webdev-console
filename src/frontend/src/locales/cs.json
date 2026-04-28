@@ -867,7 +867,44 @@
     "subtitle": "Zpřístupni lokální weby přes šifrovaný tunel",
     "connecting": "Připojování k Cloudflare API…",
     "startTunnel": "Spustit tunel",
-    "stopTunnel": "Zastavit tunel"
+    "stopTunnel": "Zastavit tunel",
+    "status": {
+      "tunnelRunning": "Tunel běží",
+      "stopped": "Zastaveno",
+      "unknown": "Neznámo",
+      "serviceInfoUnavailable": "Informace o službě nedostupné — zkontroluj připojení démona",
+      "tokenStored": "API token uložen",
+      "tokenMissing": "API token chybí",
+      "tokenStoredUnverified": "Token uložen (neověřen)",
+      "tokenInvalid": "Token neplatný",
+      "tokenVerified": "Token ověřen",
+      "noTunnel": "Žádný tunel vybrán",
+      "configureBelow": "Konfiguruj níže",
+      "zoneCount": "{n} zón",
+      "defaultSelected": "Výchozí vybrána",
+      "pickDefaultZone": "Vyber výchozí zónu"
+    },
+    "tabs": {
+      "setup": "Nastavení",
+      "sites": "Weby",
+      "dns": "DNS"
+    },
+    "steps": {
+      "step1Title": "Krok 1 — API token",
+      "step1Hint": "Vlož Cloudflare token, zbytek se nastaví automaticky",
+      "step2Title": "Krok 2 — binárka cloudflared",
+      "step2Hint": "Auto-detekce z ~/.wdc/binaries/cloudflared/ a FlyEnv",
+      "step3Title": "Krok 3 — spustit tunel",
+      "step3Hint": "Spustí cloudflared jako spravovanou službu",
+      "subdomainTemplate": "Šablona subdomény",
+      "subdomainTemplateHint": "Výchozí veřejný hostname při zapnutí tunelu na webu"
+    },
+    "actions": {
+      "autoSetup": "Auto-nastavení tunelu",
+      "browse": "Procházet…",
+      "savePath": "Uložit cestu",
+      "saveTemplate": "Uložit šablonu"
+    }
   },
   "siteEdit": {
     "general": "Obecné",

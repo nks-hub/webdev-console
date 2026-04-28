@@ -44,13 +44,13 @@
         <el-icon class="status-icon" :class="serviceRunning ? 'icon-running' : 'icon-stopped'"><CircleCheckFilled v-if="serviceRunning" /><CircleClose v-else /></el-icon>
         <div class="status-body">
           <div class="status-title">
-            {{ serviceRunning ? 'Tunnel running' : (serviceInfo ? 'Stopped' : 'Unknown') }}
+            {{ serviceRunning ? $t('cloudflare.status.tunnelRunning') : (serviceInfo ? $t('cloudflare.status.stopped') : $t('cloudflare.status.unknown')) }}
           </div>
           <div class="status-meta" v-if="serviceInfo">
             PID {{ serviceInfo.pid ?? '—' }} · uptime {{ formatUptime(serviceInfo.uptime) }}
           </div>
           <div class="status-meta" v-else-if="configReady">
-            Service info unavailable — check daemon connection
+            {{ $t('cloudflare.status.serviceInfoUnavailable') }}
           </div>
         </div>
       </div>
@@ -58,22 +58,22 @@
         <el-icon class="status-icon"><Key /></el-icon>
         <div class="status-body">
           <div class="status-title">{{ tokenState }}</div>
-          <div class="status-meta">{{ config.apiToken ? 'API token stored' : 'API token missing' }}</div>
+          <div class="status-meta">{{ config.apiToken ? $t('cloudflare.status.tokenStored') : $t('cloudflare.status.tokenMissing') }}</div>
         </div>
       </div>
       <div class="status-card">
         <el-icon class="status-icon"><Connection /></el-icon>
         <div class="status-body">
-          <div class="status-title">{{ config.tunnelName || 'No tunnel selected' }}</div>
+          <div class="status-title">{{ config.tunnelName || $t('cloudflare.status.noTunnel') }}</div>
           <div class="status-meta mono" v-if="config.tunnelId">{{ config.tunnelId.slice(0, 18) }}…</div>
-          <div class="status-meta" v-else>Configure below</div>
+          <div class="status-meta" v-else>{{ $t('cloudflare.status.configureBelow') }}</div>
         </div>
       </div>
       <div class="status-card">
         <el-icon class="status-icon"><Location /></el-icon>
         <div class="status-body">
-          <div class="status-title">{{ zones.length }} zone{{ zones.length === 1 ? '' : 's' }}</div>
-          <div class="status-meta">{{ config.defaultZoneId ? 'Default selected' : 'Pick default zone' }}</div>
+          <div class="status-title">{{ $t('cloudflare.status.zoneCount', { n: zones.length }) }}</div>
+          <div class="status-meta">{{ config.defaultZoneId ? $t('cloudflare.status.defaultSelected') : $t('cloudflare.status.pickDefaultZone') }}</div>
         </div>
       </div>
     </div>
@@ -83,14 +83,14 @@
       <!-- ═══ Setup (one-token flow) ════════════════ -->
       <el-tab-pane name="settings">
         <template #label>
-          <span class="tab-label"><el-icon><Setting /></el-icon> Setup</span>
+          <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('cloudflare.tabs.setup') }}</span>
         </template>
 
         <div class="tab-content">
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Step 1 — API token</span>
-              <span class="edit-card-hint">Paste a Cloudflare token, everything else is automatic</span>
+              <span class="edit-card-title">{{ $t('cloudflare.steps.step1Title') }}</span>
+              <span class="edit-card-hint">{{ $t('cloudflare.steps.step1Hint') }}</span>
             </header>
             <div class="edit-card-body">
               <el-input
@@ -118,7 +118,7 @@
                   @click="runAutoSetup"
                 >
                   <el-icon><Check /></el-icon>
-                  <span>Auto-setup tunnel</span>
+                  <span>{{ $t('cloudflare.actions.autoSetup') }}</span>
                 </el-button>
                 <span v-if="autoSetupResult" class="save-status ok">
                   <el-icon><CircleCheckFilled /></el-icon> Account: {{ autoSetupResult.account.name }} · Tunnel: {{ autoSetupResult.tunnel.name }}
@@ -138,10 +138,8 @@
 
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Step 2 — cloudflared binary</span>
-              <span class="edit-card-hint">
-                Auto-detected from <code>~/.wdc/binaries/cloudflared/</code> and FlyEnv
-              </span>
+              <span class="edit-card-title">{{ $t('cloudflare.steps.step2Title') }}</span>
+              <span class="edit-card-hint">{{ $t('cloudflare.steps.step2Hint') }}</span>
             </header>
             <div class="edit-card-body">
               <el-input
@@ -150,7 +148,7 @@
                 class="mono"
               >
                 <template #append>
-                  <el-button @click="showFolderBrowser = true">Browse…</el-button>
+                  <el-button @click="showFolderBrowser = true">{{ $t('cloudflare.actions.browse') }}</el-button>
                 </template>
               </el-input>
               <div class="card-actions">
@@ -163,8 +161,8 @@
 
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Subdomain template</span>
-              <span class="edit-card-hint">Default public hostname when enabling tunnel on a site</span>
+              <span class="edit-card-title">{{ $t('cloudflare.steps.subdomainTemplate') }}</span>
+              <span class="edit-card-hint">{{ $t('cloudflare.steps.subdomainTemplateHint') }}</span>
             </header>
             <div class="edit-card-body">
               <el-input
@@ -190,8 +188,8 @@
 
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Step 3 — start the tunnel</span>
-              <span class="edit-card-hint">Launches cloudflared as a managed service</span>
+              <span class="edit-card-title">{{ $t('cloudflare.steps.step3Title') }}</span>
+              <span class="edit-card-hint">{{ $t('cloudflare.steps.step3Hint') }}</span>
             </header>
             <div class="edit-card-body">
               <div class="ssl-toggle-row">
@@ -221,7 +219,7 @@
       <!-- ═══ Sites — per-site exposure ═════════════ -->
       <el-tab-pane name="ingress">
         <template #label>
-          <span class="tab-label"><el-icon><Share /></el-icon> Sites ({{ exposedSites.length }})</span>
+          <span class="tab-label"><el-icon><Share /></el-icon> {{ $t('cloudflare.tabs.sites') }} ({{ exposedSites.length }})</span>
         </template>
         <div class="tab-content">
           <section class="edit-card">
@@ -287,7 +285,7 @@
       <!-- ═══ DNS records ════════════════════════════ -->
       <el-tab-pane name="dns">
         <template #label>
-          <span class="tab-label"><el-icon><Postcard /></el-icon> DNS</span>
+          <span class="tab-label"><el-icon><Postcard /></el-icon> {{ $t('cloudflare.tabs.dns') }}</span>
         </template>
         <div class="tab-content">
           <section class="edit-card">
@@ -409,10 +407,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Setting, Check, Share, Delete, Right, Postcard, Link,
   CircleCheckFilled, CircleClose, Key, Connection, Location,
 } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
@@ -597,9 +598,9 @@ const tokenVerdictLabel = computed(() => {
   return ''
 })
 const tokenState = computed(() => {
-  if (tokenVerdict.value === 'ok') return 'Token verified'
-  if (tokenVerdict.value === 'fail') return 'Token invalid'
-  return config.apiToken ? 'Token stored (not verified)' : 'No token'
+  if (tokenVerdict.value === 'ok') return t('cloudflare.status.tokenVerified')
+  if (tokenVerdict.value === 'fail') return t('cloudflare.status.tokenInvalid')
+  return config.apiToken ? t('cloudflare.status.tokenStoredUnverified') : t('cloudflare.status.tokenMissing')
 })
 
 async function verifyToken() {
