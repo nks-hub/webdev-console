@@ -288,6 +288,20 @@ export const fetchMcpToolCallTimeline = (
 ): Promise<{ withinHours: number; buckets: McpToolCallTimelineBucket[] }> =>
   json(`/api/mcp/tool-calls/timeline?withinHours=${withinHours}`)
 
+export interface McpToolCallByToolRow {
+  toolName: string
+  count: number
+  avgDurationMs: number
+  dangerLevel: string
+  errors: number
+}
+
+export const fetchMcpToolCallsByTool = (
+  withinHours = 24,
+  limit = 10,
+): Promise<{ withinHours: number; limit: number; rows: McpToolCallByToolRow[] }> =>
+  json(`/api/mcp/tool-calls/by-tool?withinHours=${withinHours}&limit=${limit}`)
+
 // Phase 8 — Suggested grants. Backend aggregates manually-approved
 // intents over the last N days and surfaces (kind, domain, host) tuples
 // the operator confirmed >= minOccurrences times without a matching

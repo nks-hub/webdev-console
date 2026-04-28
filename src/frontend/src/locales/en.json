@@ -244,6 +244,10 @@
       "title": "Activity for last {hours}h",
       "empty": "(no activity)"
     },
+    "topTools": {
+      "title": "Top tools 24h",
+      "clickHint": "Filter to {tool}"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

@@ -244,6 +244,10 @@
       "title": "Aktivita za posledních {hours} h",
       "empty": "(žádná aktivita)"
     },
+    "topTools": {
+      "title": "Top nástroje 24h",
+      "clickHint": "Filtrovat na {tool}"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

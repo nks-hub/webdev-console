@@ -1,7 +1,15 @@
 <template>
   <div class="mcp-activity-page">
-    <!-- 24h timeline chart — visual signal of "what's normal" -->
-    <McpActivityTimeline />
+    <!-- Visual analytics row — timeline + top tools -->
+    <div class="analytics-row">
+      <McpActivityTimeline class="analytics-timeline" />
+      <McpTopToolsPanel
+        class="analytics-toptools"
+        :within-hours="24"
+        :limit="10"
+        @select="onToolSelect"
+      />
+    </div>
 
     <!-- Stats banner — at-a-glance traffic overview for last 24h -->
     <div v-if="stats" class="activity-stats">
@@ -176,6 +184,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
 import McpActivityTimeline from '../mcp/McpActivityTimeline.vue'
+import McpTopToolsPanel from '../mcp/McpTopToolsPanel.vue'
 import {
   fetchMcpToolCalls,
   fetchMcpToolCallStats,
@@ -337,6 +346,11 @@ function formatDuration(startIso: string, endIso: string): string {
   } catch { return '' }
 }
 
+function onToolSelect(toolName: string): void {
+  // TopTools click → instant filter on the feed below
+  toolFilter.value = toolName
+}
+
 async function exportCsv(): Promise<void> {
   // Stream from daemon directly; preserves Content-Disposition so the
   // browser saves it as `mcp-audit-{date}.csv`. Filters in URL match
@@ -426,6 +440,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mcp-activity-page { display: flex; flex-direction: column; gap: 12px; }
+.analytics-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .analytics-row { grid-template-columns: 1fr; }
+}
+.analytics-timeline, .analytics-toptools { min-width: 0; }
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;

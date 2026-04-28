@@ -166,6 +166,33 @@ public sealed class McpToolCallsRepository
         return rows.AsList();
     }
 
+    /// <summary>
+    /// Top-N tool aggregation — tool name × call count + avg duration over
+    /// the last N hours. Powers the "what is AI mostly doing" panel.
+    /// </summary>
+    public async Task<IReadOnlyList<McpToolCallByToolRow>> GetByToolAsync(
+        int withinHours, int limit, CancellationToken ct)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var since = DateTime.UtcNow.AddHours(-Math.Clamp(withinHours, 1, 168))
+            .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+        var rows = await conn.QueryAsync<McpToolCallByToolRow>(
+            @"SELECT tool_name AS ToolName,
+                     COUNT(*) AS Count,
+                     ROUND(AVG(duration_ms)) AS AvgDurationMs,
+                     MAX(danger_level) AS DangerLevel,
+                     SUM(CASE WHEN result_code != 'ok' THEN 1 ELSE 0 END) AS Errors
+              FROM mcp_tool_calls
+              WHERE called_at >= @Since
+              GROUP BY tool_name
+              ORDER BY Count DESC
+              LIMIT @Limit",
+            new { Since = since, Limit = Math.Clamp(limit, 1, 100) });
+        return rows.AsList();
+    }
+
     /// <summary>Trim rows older than retention. Called by background sweeper.</summary>
     public async Task<int> PruneAsync(int retentionDays, CancellationToken ct)
     {
@@ -214,4 +241,13 @@ public sealed record McpToolCallTimelineBucket
     public int Destructives { get; init; }
     public int Errors { get; init; }
     public int Total { get; init; }
+}
+
+public sealed record McpToolCallByToolRow
+{
+    public string ToolName { get; init; } = string.Empty;
+    public int Count { get; init; }
+    public int AvgDurationMs { get; init; }
+    public string DangerLevel { get; init; } = "read";
+    public int Errors { get; init; }
 }
