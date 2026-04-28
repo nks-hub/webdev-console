@@ -8,20 +8,24 @@
       :viewBox="`0 0 ${viewWidth} ${viewHeight}`"
       preserveAspectRatio="none"
       class="chart-svg"
-      :style="{ height: '60px' }"
       role="img"
       :aria-label="t('mcpActivity.timeline.title', { hours: withinHours }) + ' — ' + totalCalls + ' calls'"
     >
+      <!-- Y-axis baseline + 50% gridline so the chart reads as a chart
+           instead of "scattered rectangles". Drawn first so bars overlay
+           cleanly. -->
+      <line x1="0" :y1="chartHeight" :x2="viewWidth" :y2="chartHeight" class="grid-line" />
+      <line x1="0" :y1="chartHeight / 2" :x2="viewWidth" :y2="chartHeight / 2" class="grid-line dashed" />
       <g v-for="(b, idx) in buckets" :key="b.hour">
-        <!-- Baseline tick — 2px line at chart bottom for every bucket so
+        <!-- Baseline tick — small line at chart bottom for every bucket so
              the timeline reads as a continuous span even when most
              buckets have no calls (sparse data is the common case for
              a dev workstation). Without this the chart looks broken. -->
         <rect
           :x="idx * barWidth + 1"
-          :y="chartHeight - 2"
+          :y="chartHeight - 4"
           :width="barWidth - 2"
-          :height="2"
+          :height="4"
           class="bar-baseline"
         />
         <!-- Stacked bar: read (bottom), mutate, destructive (top) -->
@@ -101,9 +105,14 @@ const buckets = ref<McpToolCallTimelineBucket[]>([])
 const withinHours = 24
 const hover = ref<number | null>(null)
 
+// viewBox aspect ratio is tuned to match the typical chart card the
+// timeline lives in (~3:1). Earlier 800×60 viewBox combined with
+// `preserveAspectRatio="none"` stretched hour labels and bars
+// vertically by ~5× when the card was tall, making the chart look
+// distorted. 800×240 keeps stretch under 1.5× in the same card.
 const viewWidth = 800
-const viewHeight = 60
-const chartHeight = viewHeight - 12  // reserve 12px for hour labels
+const viewHeight = 240
+const chartHeight = viewHeight - 24  // reserve 24px for hour labels
 
 const barWidth = computed(() => viewWidth / Math.max(1, buckets.value.length))
 
@@ -145,9 +154,9 @@ function shortHour(hour: string): string {
 function errorMarker(idx: number): string {
   // Small downward-pointing triangle centered above the bar.
   const cx = idx * barWidth.value + barWidth.value / 2
-  const top = 2
-  const size = 4
-  return `${cx - size},${top} ${cx + size},${top} ${cx},${top + size + 1}`
+  const top = 4
+  const size = 8
+  return `${cx - size},${top} ${cx + size},${top} ${cx},${top + size + 2}`
 }
 
 function tooltipFor(b: McpToolCallTimelineBucket): string {
@@ -207,28 +216,43 @@ onBeforeUnmount(() => {
 .timeline-chart {
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 10px 14px 6px;
   background: var(--el-fill-color-light);
+  display: flex;
+  flex-direction: column;
+  /* Fill grid cell — was 60px-fixed which left huge empty space when
+     placed in a tall card; now the SVG flexes with the parent. */
+  height: 100%;
+  min-height: 140px;
 }
 .timeline-title {
   display: flex; align-items: center; gap: 8px;
   font-size: 11px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex: 0 0 auto;
 }
 .empty-note { color: var(--el-text-color-disabled); }
 .chart-svg {
   width: 100%;
+  flex: 1 1 auto;
   display: block;
+  min-height: 100px;
 }
-.bar-baseline { fill: var(--el-border-color-lighter); }
-.bar-read { fill: var(--el-color-info); opacity: 0.7; }
+.grid-line {
+  stroke: var(--el-border-color-lighter);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.grid-line.dashed { stroke-dasharray: 4 4; opacity: 0.6; }
+.bar-baseline { fill: var(--el-border-color); }
+.bar-read { fill: var(--el-color-info); opacity: 0.85; }
 .bar-mutate { fill: var(--el-color-warning); }
 .bar-destructive { fill: var(--el-color-danger); }
 .error-marker { fill: var(--el-color-danger); }
 .hour-label {
-  font-size: 9px;
+  font-size: 16px;
   fill: var(--el-text-color-secondary);
   font-family: ui-monospace, Consolas, monospace;
 }

@@ -707,29 +707,42 @@ onBeforeUnmount(() => {
 }
 .total-count { font-size: 12px; }
 
-/* Sessions view */
-.sessions-list { display: flex; flex-direction: column; gap: 8px; }
-.session-card {
+/* Sessions view — denser table-like layout instead of separate cards.
+   Rule of thumb: a 13" laptop should fit at least ~12 collapsed
+   sessions on screen. Each session is one compact row; only its
+   highlight (left edge color, expanded body) sets it apart. */
+.sessions-list {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 6px;
   overflow: hidden;
 }
-.session-card.has-destructive { border-color: var(--el-color-danger-light-5); }
-.session-card.has-error { border-color: var(--el-color-danger); }
+.session-card {
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-left: 3px solid transparent;
+}
+.session-card:last-child { border-bottom: none; }
+.session-card.has-destructive { border-left-color: var(--el-color-danger); }
+.session-card.has-error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
 .session-header {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px;
   background: var(--el-fill-color-light);
   cursor: pointer;
   user-select: none;
-  font-size: 13px;
+  font-size: 12px;
 }
 .session-header:hover { background: var(--el-fill-color-darker); }
-.session-header .chev { transition: transform 0.15s; font-size: 12px; }
+.session-header .chev { transition: transform 0.15s; font-size: 12px; flex-shrink: 0; }
 .session-header .chev.rotated { transform: rotate(90deg); }
+.session-header .at { flex-shrink: 0; }
+.session-header .dur-range { flex-shrink: 0; }
 .session-counts {
   margin-left: auto;
   display: flex; gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
 }
 .count-pill {
   padding: 2px 8px;
