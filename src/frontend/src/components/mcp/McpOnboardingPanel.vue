@@ -220,6 +220,10 @@ onMounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 2px 8px var(--el-color-primary-light-7);
 }
+.profile-card:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
 .profile-card.recommended {
   border-color: var(--el-color-success-light-5);
 }

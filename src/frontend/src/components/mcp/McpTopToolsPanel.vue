@@ -114,6 +114,10 @@ onBeforeUnmount(() => {
   transition: background 0.15s;
 }
 .tool-row:hover { background: var(--el-fill-color-darker); }
+.tool-row:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
 .tool-name { font-weight: 600; font-size: 11px; }
 .bar-track {
   height: 8px;
