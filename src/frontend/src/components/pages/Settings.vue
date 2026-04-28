@@ -314,12 +314,9 @@
         <!-- Advanced tab — integration endpoints -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.advanced')" name="advanced">
           <div class="tab-content">
-            <p class="tab-desc">
-              External services the daemon talks to. Leave blank to use built-in defaults.
-              Changes take effect after restart or a catalog refresh.
-            </p>
+            <p class="tab-desc">{{ $t('settings.advanced.tabDesc') }}</p>
             <el-form label-position="top" size="small" style="max-width: 560px">
-              <el-form-item label="Catalog API URL">
+              <el-form-item :label="$t('settings.advanced.catalogUrl')">
                 <el-input
                   v-model="catalogUrl"
                   placeholder="https://wdc.nks-hub.cz"
@@ -343,9 +340,9 @@
                   {{ catalogStatus.message }}
                 </div>
               </el-form-item>
-              <el-form-item label="Binary releases">
+              <el-form-item :label="$t('settings.advanced.binaryReleases')">
                 <el-button size="small" @click="testCatalogReachable" :loading="testingCatalog">
-                  Test connection
+                  {{ $t('settings.advanced.testConnection') }}
                 </el-button>
                 <el-button
                   size="small"
@@ -356,13 +353,13 @@
                   {{ $t('common.open') }} admin UI
                 </el-button>
               </el-form-item>
-              <el-form-item label="MySQL root password">
+              <el-form-item :label="$t('settings.advanced.mysqlRoot')">
                 <div class="mysql-root-row">
                   <el-input
                     v-model="mysqlRootPassword"
                     type="password"
                     show-password
-                    :placeholder="mysqlRootExists ? '•••••••• (stored)' : 'Enter root password to sync with mysqld'"
+                    :placeholder="mysqlRootExists ? $t('settings.advanced.mysqlRootPlaceholderStored') : $t('settings.advanced.mysqlRootPlaceholderEnter')"
                     class="mono-input"
                   />
                   <el-button
@@ -370,7 +367,7 @@
                     :loading="mysqlRootSaving"
                     :disabled="!mysqlRootPassword"
                     @click="saveMysqlRootPassword"
-                  >Save</el-button>
+                  >{{ $t('settings.advanced.save') }}</el-button>
                 </div>
                 <div class="hint">
                   {{ mysqlRootExists ? 'A password is currently stored (encrypted via DPAPI).' : 'No password stored — WDC cannot authenticate to mysqld.' }}
@@ -379,14 +376,14 @@
                   on the server itself.
                 </div>
               </el-form-item>
-              <el-form-item label="Plugin auto-sync">
+              <el-form-item :label="$t('settings.advanced.pluginAutoSync')">
                 <el-switch v-model="pluginAutoSync" />
                 <el-button
                   size="small"
                   style="margin-left: 12px"
                   :loading="syncingPlugins"
                   @click="syncPluginsNow"
-                >Sync now</el-button>
+                >{{ $t('settings.advanced.syncNow') }}</el-button>
                 <div class="hint">
                   When enabled the daemon pulls the plugin catalog from the
                   URL above on startup + every 6 hours and downloads any

@@ -1578,6 +1578,18 @@
       "advanced": "Advanced",
       "description": "Advanced mode reveals all services, databases, ports and developer tools."
     },
+    "advanced": {
+      "tabDesc": "External services the daemon talks to. Leave blank to use built-in defaults. Changes take effect after restart or a catalog refresh.",
+      "catalogUrl": "Catalog API URL",
+      "binaryReleases": "Binary releases",
+      "testConnection": "Test connection",
+      "mysqlRoot": "MySQL root password",
+      "mysqlRootPlaceholderStored": "•••••••• (stored)",
+      "mysqlRootPlaceholderEnter": "Enter root password to sync with mysqld",
+      "save": "Save",
+      "pluginAutoSync": "Plugin auto-sync",
+      "syncNow": "Sync now"
+    },
     "paths": {
       "tabDesc": "Override binary paths. Leave blank to use auto-detected defaults.",
       "apache": "Apache httpd.exe",
