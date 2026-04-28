@@ -48,6 +48,17 @@
       </div>
     </div>
 
+    <!-- Onboarding panel — first-time setup with preset profiles. Stays
+         above the tab strip so the four trust-tier cards are the first
+         thing the operator sees in MCP. Auto-hides after a profile is
+         picked or after the user dismisses it. -->
+    <McpOnboardingPanel />
+
+    <!-- Suggested grants — nudges based on repeated manual approvals.
+         Cross-tab so it surfaces regardless of which subview the user
+         is currently looking at. -->
+    <SuggestedGrantsBanner />
+
     <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
       <!-- Activity — unified feed of every MCP tool call, including reads.
            Default tab because it answers "what is AI doing right now". -->
@@ -58,13 +69,6 @@
             {{ t('mcpHub.tabs.activity') }}
           </span>
         </template>
-        <!-- Onboarding panel — first-time setup with preset profiles. -->
-        <!-- Suggested grants — nudges based on repeated manual approvals. -->
-        <!-- Both live inside the Activity tab so the tab strip stays at the
-             top of the page (primary navigation), and so these banners only
-             surface alongside the activity feed they relate to. -->
-        <McpOnboardingPanel />
-        <SuggestedGrantsBanner />
         <McpActivity />
       </el-tab-pane>
 
