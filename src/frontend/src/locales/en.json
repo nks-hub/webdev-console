@@ -1578,6 +1578,19 @@
       "advanced": "Advanced",
       "description": "Advanced mode reveals all services, databases, ports and developer tools."
     },
+    "paths": {
+      "tabDesc": "Override binary paths. Leave blank to use auto-detected defaults.",
+      "apache": "Apache httpd.exe",
+      "mysql": "MySQL mysqld.exe",
+      "php": "PHP executable",
+      "redis": "Redis redis-server.exe",
+      "sitesDir": "Sites config directory",
+      "hostsFile": "Hosts file",
+      "hostsHint": "Path to the system hosts file for local domain resolution. Leave blank for the OS default.",
+      "dataDir": "Data directory",
+      "dataHint": "Root for all daemon state: sites, binaries, SSL certs, backups, configs.",
+      "browse": "Browse"
+    },
     "general": {
       "tabDesc": "Application behavior and startup preferences.",
       "language": "Language",

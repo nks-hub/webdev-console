@@ -1580,6 +1580,19 @@
       "advanced": "Pokročilý",
       "description": "Pokročilý režim zobrazí všechny služby, databáze, porty a další nástroje pro vývojáře."
     },
+    "paths": {
+      "tabDesc": "Přepiš cesty k binárkám. Nech prázdné pro použití auto-detekovaných výchozích.",
+      "apache": "Apache httpd.exe",
+      "mysql": "MySQL mysqld.exe",
+      "php": "PHP executable",
+      "redis": "Redis redis-server.exe",
+      "sitesDir": "Adresář konfigurací webů",
+      "hostsFile": "Soubor hosts",
+      "hostsHint": "Cesta k systémovému souboru hosts pro lokální překlad domén. Nech prázdné pro výchozí podle OS.",
+      "dataDir": "Datový adresář",
+      "dataHint": "Root pro veškerý stav démona: weby, binárky, SSL certifikáty, zálohy, konfigurace.",
+      "browse": "Procházet"
+    },
     "general": {
       "tabDesc": "Chování aplikace a nastavení při spuštění.",
       "language": "Jazyk",
