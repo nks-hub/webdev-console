@@ -51,10 +51,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { createMcpGrant, listMcpGrants, type McpGrantCreateBody } from '../../api/daemon'
+import { createMcpGrant, listMcpGrants, subscribeEventsMap, type McpGrantCreateBody } from '../../api/daemon'
 
 const { t } = useI18n()
 
@@ -178,11 +178,24 @@ function dismiss(): void {
   try { localStorage.setItem(ONBOARDING_KEY, '1') } catch { /* ignore */ }
 }
 
+// SSE — if a grant is created/revoked elsewhere (Rules tab, banner
+// shortcut, suggested-grants banner), re-evaluate visibility. Without
+// this the panel keeps showing after `void refresh()` ran once on mount
+// because grantsCount stays at the stale 0 value.
+let unsubscribe: (() => void) | null = null
+
 onMounted(() => {
   try {
     if (localStorage.getItem(ONBOARDING_KEY) === '1') dismissed.value = true
   } catch { /* ignore */ }
   void refresh()
+  unsubscribe = subscribeEventsMap({
+    'mcp:grant-changed': () => { void refresh() },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribe) unsubscribe()
 })
 </script>
 
