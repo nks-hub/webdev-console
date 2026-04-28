@@ -657,6 +657,7 @@
     "sourceUnavailable": "Zdroj není dostupný",
     "restore": "Obnovit",
     "marketplaceCount": "{count} v marketplacu",
+    "searchPlaceholder": "Hledat pluginy…",
     "copyUrl": "Kopírovat URL",
     "openPanel": "Otevřít panel",
     "marketplaceUnreachable": "Marketplace nedostupný: {error}",

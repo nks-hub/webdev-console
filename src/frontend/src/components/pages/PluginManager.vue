@@ -13,7 +13,7 @@
       <el-input
         v-if="activeTab === 'installed'"
         v-model="search"
-        placeholder="Search plugins..."
+        :placeholder="$t('plugins.searchPlaceholder')"
         clearable
         size="small"
         style="width: 220px"
