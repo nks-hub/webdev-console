@@ -2189,6 +2189,15 @@ app.MapGet("/api/mcp/tool-calls/stats", async (
     return Results.Ok(stats);
 });
 
+app.MapGet("/api/mcp/tool-calls/timeline", async (
+    NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository repo,
+    int? withinHours,
+    CancellationToken ct) =>
+{
+    var buckets = await repo.GetTimelineAsync(withinHours ?? 24, ct);
+    return Results.Ok(new { withinHours = withinHours ?? 24, buckets });
+});
+
 // CSV export — RFC 4180 with comma delimiter. Streams the FULL audit
 // trail respecting current filters; capped at 10k rows so a runaway
 // AI session can't OOM the daemon. Operator gets Content-Disposition

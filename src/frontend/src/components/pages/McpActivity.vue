@@ -1,5 +1,8 @@
 <template>
   <div class="mcp-activity-page">
+    <!-- 24h timeline chart — visual signal of "what's normal" -->
+    <McpActivityTimeline />
+
     <!-- Stats banner — at-a-glance traffic overview for last 24h -->
     <div v-if="stats" class="activity-stats">
       <div class="stat-tile">
@@ -172,6 +175,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
+import McpActivityTimeline from '../mcp/McpActivityTimeline.vue'
 import {
   fetchMcpToolCalls,
   fetchMcpToolCallStats,

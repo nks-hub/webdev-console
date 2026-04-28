@@ -240,6 +240,10 @@
       "flat": "Plochý"
     },
     "filterBySession": "Filtrovat na session {id}",
+    "timeline": {
+      "title": "Aktivita za posledních {hours} h",
+      "empty": "(žádná aktivita)"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

@@ -137,6 +137,35 @@ public sealed class McpToolCallsRepository
         return row ?? new McpToolCallStats();
     }
 
+    /// <summary>
+    /// Hourly bucket counts for the last N hours. Returns one row per
+    /// bucket with read/mutate/destructive subtotals so the UI can render
+    /// a stacked-bar timeline without paginating through every entry.
+    /// </summary>
+    public async Task<IReadOnlyList<McpToolCallTimelineBucket>> GetTimelineAsync(
+        int withinHours, CancellationToken ct)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var since = DateTime.UtcNow.AddHours(-Math.Clamp(withinHours, 1, 168))
+            .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+        // SQLite strftime '%Y-%m-%dT%H' yields the hour bucket label.
+        var rows = await conn.QueryAsync<McpToolCallTimelineBucket>(
+            @"SELECT strftime('%Y-%m-%dT%H', called_at) AS Hour,
+                     SUM(CASE WHEN danger_level = 'read' THEN 1 ELSE 0 END) AS Reads,
+                     SUM(CASE WHEN danger_level = 'mutate' THEN 1 ELSE 0 END) AS Mutates,
+                     SUM(CASE WHEN danger_level = 'destructive' THEN 1 ELSE 0 END) AS Destructives,
+                     SUM(CASE WHEN result_code != 'ok' THEN 1 ELSE 0 END) AS Errors,
+                     COUNT(*) AS Total
+              FROM mcp_tool_calls
+              WHERE called_at >= @Since
+              GROUP BY Hour
+              ORDER BY Hour ASC",
+            new { Since = since });
+        return rows.AsList();
+    }
+
     /// <summary>Trim rows older than retention. Called by background sweeper.</summary>
     public async Task<int> PruneAsync(int retentionDays, CancellationToken ct)
     {
@@ -175,4 +204,14 @@ public sealed record McpToolCallStats
     public int Errors { get; init; }
     public string? LastCalledAt { get; init; }
     public int DistinctSessions { get; init; }
+}
+
+public sealed record McpToolCallTimelineBucket
+{
+    public string Hour { get; init; } = string.Empty;
+    public int Reads { get; init; }
+    public int Mutates { get; init; }
+    public int Destructives { get; init; }
+    public int Errors { get; init; }
+    public int Total { get; init; }
 }

@@ -240,6 +240,10 @@
       "flat": "Flat"
     },
     "filterBySession": "Filter to session {id}",
+    "timeline": {
+      "title": "Activity for last {hours}h",
+      "empty": "(no activity)"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",
