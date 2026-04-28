@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
 
@@ -13,6 +14,11 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
  * build came from. Falls back to "dev" when git is unavailable
  * (clean tarball install) and to "" if the env var GIT_SHORT_SHA is
  * explicitly set to empty (CI override for reproducible-build tests).
+ *
+ * NOTE: Use fileURLToPath() — `new URL('.', import.meta.url).pathname`
+ * returns "/C:/path/..." on Windows (leading slash before drive letter)
+ * which Node's child_process refuses with ENOENT, silently falling
+ * through to the "dev" fallback even on a healthy git checkout.
  */
 function resolveBuildSha(): string {
   // CI / reproducible-build override
@@ -20,7 +26,7 @@ function resolveBuildSha(): string {
   if (fromEnv !== undefined) return fromEnv
   try {
     return execSync('git rev-parse --short HEAD', {
-      cwd: new URL('.', import.meta.url).pathname,
+      cwd: fileURLToPath(new URL('.', import.meta.url)),
       stdio: ['ignore', 'pipe', 'ignore'],
     }).toString().trim()
   } catch {
