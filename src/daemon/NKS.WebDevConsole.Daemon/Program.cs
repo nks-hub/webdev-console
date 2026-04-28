@@ -2119,27 +2119,49 @@ app.MapPost("/api/mcp/tool-calls", async (
     NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
-    using var doc = await System.Text.Json.JsonDocument.ParseAsync(httpContext.Request.Body, cancellationToken: ct);
+    System.Text.Json.JsonDocument doc;
+    try
+    {
+        doc = await System.Text.Json.JsonDocument.ParseAsync(httpContext.Request.Body, cancellationToken: ct);
+    }
+    catch (System.Text.Json.JsonException ex)
+    {
+        // Don't 500 on a malformed payload — return 400 so the MCP server
+        // (and any other caller) can distinguish "your payload is wrong"
+        // from "the daemon is down".
+        return Results.BadRequest(new { error = "invalid_json", detail = ex.Message });
+    }
+    using var _ = doc;
     var root = doc.RootElement;
     string? GetStr(string n) => root.TryGetProperty(n, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.String ? p.GetString() : null;
     int GetInt(string n) => root.TryGetProperty(n, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? p.GetInt32() : 0;
 
+    // Defensive cap — a malicious or buggy caller could otherwise stuff
+    // multi-MB payloads into args_summary and bloat the SQLite file.
+    // The MCP server already pre-truncates to 500 chars, so anything
+    // bigger here is a contract violation; we hard-cap rather than
+    // reject so legitimate audit data survives the request.
+    static string? Cap(string? s, int maxLen) =>
+        s is null ? null : (s.Length <= maxLen ? s : s.Substring(0, maxLen));
+
     var toolName = GetStr("toolName");
     if (string.IsNullOrWhiteSpace(toolName))
         return Results.BadRequest(new { error = "toolName is required" });
+    if (toolName!.Length > 200)
+        return Results.BadRequest(new { error = "toolName too long (max 200)" });
 
     var row = new NKS.WebDevConsole.Daemon.Mcp.McpToolCallRow
     {
-        SessionId = GetStr("sessionId"),
-        Caller = GetStr("caller") ?? "unknown",
+        SessionId = Cap(GetStr("sessionId"), 100),
+        Caller = Cap(GetStr("caller"), 100) ?? "unknown",
         ToolName = toolName!,
-        ArgsSummary = GetStr("argsSummary"),
-        ArgsHash = GetStr("argsHash"),
+        ArgsSummary = Cap(GetStr("argsSummary"), 1000),
+        ArgsHash = Cap(GetStr("argsHash"), 64),
         DurationMs = GetInt("durationMs"),
-        ResultCode = GetStr("resultCode") ?? "ok",
-        ErrorMessage = GetStr("errorMessage"),
-        DangerLevel = GetStr("dangerLevel") ?? "read",
-        IntentId = GetStr("intentId"),
+        ResultCode = Cap(GetStr("resultCode"), 50) ?? "ok",
+        ErrorMessage = Cap(GetStr("errorMessage"), 1000),
+        DangerLevel = Cap(GetStr("dangerLevel"), 20) ?? "read",
+        IntentId = Cap(GetStr("intentId"), 100),
     };
     var id = await repo.InsertAsync(row, ct);
 

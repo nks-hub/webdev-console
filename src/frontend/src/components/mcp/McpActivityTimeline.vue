@@ -13,6 +13,17 @@
       :aria-label="t('mcpActivity.timeline.title', { hours: withinHours }) + ' — ' + totalCalls + ' calls'"
     >
       <g v-for="(b, idx) in buckets" :key="b.hour">
+        <!-- Baseline tick — 2px line at chart bottom for every bucket so
+             the timeline reads as a continuous span even when most
+             buckets have no calls (sparse data is the common case for
+             a dev workstation). Without this the chart looks broken. -->
+        <rect
+          :x="idx * barWidth + 1"
+          :y="chartHeight - 2"
+          :width="barWidth - 2"
+          :height="2"
+          class="bar-baseline"
+        />
         <!-- Stacked bar: read (bottom), mutate, destructive (top) -->
         <rect
           v-if="b.reads > 0"
@@ -211,6 +222,7 @@ onBeforeUnmount(() => {
   width: 100%;
   display: block;
 }
+.bar-baseline { fill: var(--el-border-color-lighter); }
 .bar-read { fill: var(--el-color-info); opacity: 0.7; }
 .bar-mutate { fill: var(--el-color-warning); }
 .bar-destructive { fill: var(--el-color-danger); }

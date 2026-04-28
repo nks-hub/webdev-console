@@ -14,8 +14,8 @@
     <!-- Perf KPI strip — latency percentiles + throughput + error rate -->
     <div v-if="stats && stats.total > 0" class="perf-kpis">
       <div class="kpi" :title="t('mcpActivity.kpi.callsPerMinHint')">
-        <span class="kpi-num">{{ stats.callsPerMinute.toFixed(1) }}</span>
-        <span class="kpi-unit">/min</span>
+        <span class="kpi-num">{{ formatThroughput(stats.callsPerMinute).num }}</span>
+        <span class="kpi-unit">{{ formatThroughput(stats.callsPerMinute).unit }}</span>
         <span class="kpi-label">{{ t('mcpActivity.kpi.throughput') }}</span>
       </div>
       <div class="kpi">
@@ -499,6 +499,17 @@ function formatDuration(startIso: string, endIso: string): string {
 function onToolSelect(toolName: string): void {
   // TopTools click → instant filter on the feed below
   toolFilter.value = toolName
+}
+
+// Pick a sensible unit for the throughput KPI so a low-traffic backend
+// doesn't show "0.0/min" when ~10 calls/day is plenty visible. Switches
+// to /h or /day when /min rounds toward zero.
+function formatThroughput(perMinute: number): { num: string; unit: string } {
+  if (perMinute >= 1) return { num: perMinute.toFixed(1), unit: '/min' }
+  const perHour = perMinute * 60
+  if (perHour >= 1) return { num: perHour.toFixed(1), unit: '/h' }
+  const perDay = perHour * 24
+  return { num: perDay.toFixed(0), unit: '/day' }
 }
 
 function setDangerFilter(level: 'read' | 'mutate' | 'destructive' | null): void {
