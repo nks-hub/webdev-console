@@ -18,7 +18,7 @@ Local development environment for **Windows, macOS, and Linux** — manages Apac
 - ✅ **Per-site PHP** — each site can pin its own PHP version, INI overrides (memory, timeouts, upload limits, Xdebug, OPcache, extensions) and Apache Fcgid timeouts
 - ✅ **MAMP PRO migration** — built-in importer reads MAMP PRO's SQLite database, recreates vhosts, copies SSL certs and migrates databases (verified on 17 sites + 66 databases)
 - ✅ **Three interfaces** — Electron GUI, `wdc` CLI, or REST API with Bearer-token auth
-- ✅ **MCP server** — 47 tools that let Claude Code (or any MCP client) manage your local stack: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels
+- ✅ **MCP server** — 67 tools that let Claude Code (or any MCP client) manage your local stack: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Full audit trail of every tool call surfaces in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
 - ✅ **Cloudflare integration** — built-in tunnel management, DNS records, route configuration via `cloudflared`
 - ✅ **Elevated by default on Windows** — single UAC prompt at launch, no per-operation prompts for hosts-file edits
 - ✅ **Self-contained daemon** — .NET 9 published with `--self-contained`, no separate runtime install needed
@@ -181,7 +181,7 @@ webdev-console/
 │   └── frontend/                            # Electron 34 + Vue 3 + Element Plus + Tailwind v4
 ├── services/
 │   ├── catalog-api/                         # FastAPI sidecar (binary + version catalog)
-│   └── mcp-server/                          # TypeScript stdio MCP server (47 tools)
+│   └── mcp-server/                          # TypeScript stdio MCP server (67 tools, Phase 8 audit log)
 ├── tests/                                   # xUnit tests (Daemon + Core)
 ├── scripts/                                 # build helpers
 └── .github/workflows/                       # CI matrix — Windows, macOS, Linux
