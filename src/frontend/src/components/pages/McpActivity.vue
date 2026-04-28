@@ -1,49 +1,11 @@
 <template>
   <div class="mcp-activity-page" role="region" :aria-label="t('mcpActivity.stats.totalCalls')">
-    <!-- Visual analytics row — timeline + top tools -->
-    <div class="analytics-row">
-      <McpActivityTimeline class="analytics-timeline" />
-      <McpTopToolsPanel
-        class="analytics-toptools"
-        :within-hours="24"
-        :limit="10"
-        @select="onToolSelect"
-      />
-    </div>
-
-    <!-- Perf KPI strip — latency percentiles + throughput + error rate -->
-    <div v-if="stats && stats.total > 0" class="perf-kpis">
-      <div class="kpi" :title="t('mcpActivity.kpi.callsPerMinHint')">
-        <span class="kpi-num">{{ formatThroughput(stats.callsPerMinute).num }}</span>
-        <span class="kpi-unit">{{ formatThroughput(stats.callsPerMinute).unit }}</span>
-        <span class="kpi-label">{{ t('mcpActivity.kpi.throughput') }}</span>
-      </div>
-      <div class="kpi">
-        <span class="kpi-num">{{ stats.p50DurationMs }}</span>
-        <span class="kpi-unit">ms</span>
-        <span class="kpi-label">p50 {{ t('mcpActivity.kpi.latency') }}</span>
-      </div>
-      <div class="kpi" :class="{ warn: stats.p95DurationMs > 1000 }">
-        <span class="kpi-num">{{ stats.p95DurationMs }}</span>
-        <span class="kpi-unit">ms</span>
-        <span class="kpi-label">p95 {{ t('mcpActivity.kpi.latency') }}</span>
-      </div>
-      <div class="kpi" :class="{ warn: stats.p99DurationMs > 5000 }">
-        <span class="kpi-num">{{ stats.p99DurationMs }}</span>
-        <span class="kpi-unit">ms</span>
-        <span class="kpi-label">p99 {{ t('mcpActivity.kpi.latency') }}</span>
-      </div>
-      <div class="kpi" :class="{ warn: stats.errorRatePercent > 1, danger: stats.errorRatePercent > 5 }">
-        <span class="kpi-num">{{ stats.errorRatePercent.toFixed(1) }}</span>
-        <span class="kpi-unit">%</span>
-        <span class="kpi-label">{{ t('mcpActivity.kpi.errorRate') }}</span>
-      </div>
-    </div>
-
-    <!-- Stats banner — at-a-glance traffic overview for last 24h. Tiles
-         are clickable: clicking a danger-level tile filters the feed
-         below to that level (or clears the filter when clicking the
-         already-active one). -->
+    <!-- Stats banner — moved to the very top so the six tiles (Celkem
+         volání / Read / Mutating / Destruktivní / Chyby / Session) are
+         the first thing the operator sees, before chart and KPIs.
+         Tiles are clickable: clicking a danger-level tile filters the
+         feed below to that level (or clears the filter when clicking
+         the already-active one). -->
     <div v-if="stats" class="activity-stats">
       <div
         class="stat-tile clickable"
@@ -108,6 +70,47 @@
       <div class="stat-tile">
         <div class="stat-num">{{ stats.distinctSessions }}</div>
         <div class="stat-label">{{ t('mcpActivity.stats.sessions') }}</div>
+      </div>
+    </div>
+
+    <!-- Visual analytics row — timeline + top tools (moved below tiles
+         so primary KPIs are read first). -->
+    <div class="analytics-row">
+      <McpActivityTimeline class="analytics-timeline" />
+      <McpTopToolsPanel
+        class="analytics-toptools"
+        :within-hours="24"
+        :limit="10"
+        @select="onToolSelect"
+      />
+    </div>
+
+    <!-- Perf KPI strip — latency percentiles + throughput + error rate -->
+    <div v-if="stats && stats.total > 0" class="perf-kpis">
+      <div class="kpi" :title="t('mcpActivity.kpi.callsPerMinHint')">
+        <span class="kpi-num">{{ formatThroughput(stats.callsPerMinute).num }}</span>
+        <span class="kpi-unit">{{ formatThroughput(stats.callsPerMinute).unit }}</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.throughput') }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">{{ stats.p50DurationMs }}</span>
+        <span class="kpi-unit">ms</span>
+        <span class="kpi-label">p50 {{ t('mcpActivity.kpi.latency') }}</span>
+      </div>
+      <div class="kpi" :class="{ warn: stats.p95DurationMs > 1000 }">
+        <span class="kpi-num">{{ stats.p95DurationMs }}</span>
+        <span class="kpi-unit">ms</span>
+        <span class="kpi-label">p95 {{ t('mcpActivity.kpi.latency') }}</span>
+      </div>
+      <div class="kpi" :class="{ warn: stats.p99DurationMs > 5000 }">
+        <span class="kpi-num">{{ stats.p99DurationMs }}</span>
+        <span class="kpi-unit">ms</span>
+        <span class="kpi-label">p99 {{ t('mcpActivity.kpi.latency') }}</span>
+      </div>
+      <div class="kpi" :class="{ warn: stats.errorRatePercent > 1, danger: stats.errorRatePercent > 5 }">
+        <span class="kpi-num">{{ stats.errorRatePercent.toFixed(1) }}</span>
+        <span class="kpi-unit">%</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.errorRate') }}</span>
       </div>
     </div>
 
