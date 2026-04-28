@@ -16,7 +16,12 @@
         :key="profile.id"
         class="profile-card"
         :class="{ pending: pending === profile.id, recommended: profile.id === 'balanced' }"
+        role="button"
+        tabindex="0"
+        :aria-label="t(`mcpOnboarding.profiles.${profile.id}.name`) + ' — ' + t(`mcpOnboarding.profiles.${profile.id}.desc`)"
         @click="apply(profile)"
+        @keydown.enter.prevent="apply(profile)"
+        @keydown.space.prevent="apply(profile)"
       >
         <div class="profile-icon">{{ profile.icon }}</div>
         <div class="profile-name">

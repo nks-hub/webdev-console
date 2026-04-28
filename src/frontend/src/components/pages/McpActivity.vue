@@ -1,5 +1,5 @@
 <template>
-  <div class="mcp-activity-page">
+  <div class="mcp-activity-page" role="region" :aria-label="t('mcpActivity.stats.totalCalls')">
     <!-- Visual analytics row — timeline + top tools -->
     <div class="analytics-row">
       <McpActivityTimeline class="analytics-timeline" />
@@ -48,7 +48,12 @@
       <div
         class="stat-tile clickable"
         :class="{ active: !dangerFilter }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="!dangerFilter"
         @click="setDangerFilter(null)"
+        @keydown.enter.prevent="setDangerFilter(null)"
+        @keydown.space.prevent="setDangerFilter(null)"
         :title="t('mcpActivity.stats.clickToClear')"
       >
         <div class="stat-num">{{ stats.total }}</div>
@@ -57,7 +62,12 @@
       <div
         class="stat-tile read clickable"
         :class="{ active: dangerFilter === 'read' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="dangerFilter === 'read'"
         @click="setDangerFilter('read')"
+        @keydown.enter.prevent="setDangerFilter('read')"
+        @keydown.space.prevent="setDangerFilter('read')"
         :title="t('mcpActivity.stats.clickToFilter')"
       >
         <div class="stat-num">{{ stats.reads }}</div>
@@ -66,7 +76,12 @@
       <div
         class="stat-tile mutate clickable"
         :class="{ active: dangerFilter === 'mutate' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="dangerFilter === 'mutate'"
         @click="setDangerFilter('mutate')"
+        @keydown.enter.prevent="setDangerFilter('mutate')"
+        @keydown.space.prevent="setDangerFilter('mutate')"
         :title="t('mcpActivity.stats.clickToFilter')"
       >
         <div class="stat-num">{{ stats.mutates }}</div>
@@ -75,7 +90,12 @@
       <div
         class="stat-tile destructive clickable"
         :class="{ active: dangerFilter === 'destructive' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="dangerFilter === 'destructive'"
         @click="setDangerFilter('destructive')"
+        @keydown.enter.prevent="setDangerFilter('destructive')"
+        @keydown.space.prevent="setDangerFilter('destructive')"
         :title="t('mcpActivity.stats.clickToFilter')"
       >
         <div class="stat-num">{{ stats.destructives }}</div>
@@ -135,14 +155,26 @@
         class="session-card"
         :class="{ 'has-destructive': session.destructives > 0, 'has-error': session.errors > 0 }"
       >
-        <div class="session-header" @click="toggleSession(session.key)">
+        <div
+          class="session-header"
+          role="button"
+          tabindex="0"
+          :aria-expanded="!collapsedSessions.has(session.key)"
+          @click="toggleSession(session.key)"
+          @keydown.enter.prevent="toggleSession(session.key)"
+          @keydown.space.prevent="toggleSession(session.key)"
+        >
           <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
           <code class="mono caller-pill">{{ session.caller }}</code>
           <code
             v-if="session.sessionId"
             class="mono session-pill clickable"
+            role="button"
+            tabindex="0"
             :title="t('mcpActivity.filterBySession', { id: session.sessionId.slice(0, 8) })"
             @click.stop="sessionFilter = session.sessionId!"
+            @keydown.enter.stop.prevent="sessionFilter = session.sessionId!"
+            @keydown.space.stop.prevent="sessionFilter = session.sessionId!"
           >
             {{ session.sessionId.slice(0, 8) }}
           </code>
@@ -645,6 +677,12 @@ onBeforeUnmount(() => {
 .stat-tile.clickable.active {
   background: var(--el-color-primary-light-9);
   outline: 2px solid var(--el-color-primary-light-5);
+}
+.stat-tile.clickable:focus-visible,
+.session-header:focus-visible,
+.session-pill.clickable:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 .stat-num { font-size: 20px; font-weight: 600; }
 .stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px; }

@@ -4,7 +4,14 @@
       {{ t('mcpActivity.timeline.title', { hours: withinHours }) }}
       <span v-if="totalCalls === 0" class="empty-note">{{ t('mcpActivity.timeline.empty') }}</span>
     </div>
-    <svg :viewBox="`0 0 ${viewWidth} ${viewHeight}`" preserveAspectRatio="none" class="chart-svg" :style="{ height: '60px' }">
+    <svg
+      :viewBox="`0 0 ${viewWidth} ${viewHeight}`"
+      preserveAspectRatio="none"
+      class="chart-svg"
+      :style="{ height: '60px' }"
+      role="img"
+      :aria-label="t('mcpActivity.timeline.title', { hours: withinHours }) + ' — ' + totalCalls + ' calls'"
+    >
       <g v-for="(b, idx) in buckets" :key="b.hour">
         <!-- Stacked bar: read (bottom), mutate, destructive (top) -->
         <rect
