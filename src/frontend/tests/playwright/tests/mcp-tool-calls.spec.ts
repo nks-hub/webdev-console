@@ -123,4 +123,74 @@ test.describe('MCP tool-calls audit log (Phase 8)', () => {
     expect(typeof j.count).toBe('number')
     expect(Array.isArray(j.suggestions)).toBe(true)
   })
+
+  // ── Server-side validation contract (Polish 23) ─────────────────────────
+  // The MCP server is trusted but a malicious / misconfigured client must
+  // not be able to bloat the audit table or crash the endpoint.
+
+  test('POST returns 400 on missing toolName', async ({ authedRequest }) => {
+    const r = await authedRequest.post('/api/mcp/tool-calls', {
+      data: { caller: 'test', dangerLevel: 'read' },
+    })
+    expect(r.status()).toBe(400)
+    const j = await r.json()
+    expect(j.error).toContain('toolName')
+  })
+
+  test('POST returns 400 on invalid JSON body', async ({ authedRequest }) => {
+    // Playwright's `data: string` JSON-stringifies the string when
+    // Content-Type is application/json — wrapping our raw payload in
+    // quotes and breaking the malformed-JSON test. Use the raw `body`
+    // option (Buffer) to send literal bytes through.
+    const r = await authedRequest.post('/api/mcp/tool-calls', {
+      headers: { 'Content-Type': 'application/json' },
+      data: Buffer.from('{not json'),
+    })
+    expect(r.status()).toBe(400)
+    const j = await r.json()
+    expect(j.error).toBe('invalid_json')
+  })
+
+  test('POST caps oversized argsSummary to 1000 chars', async ({ authedRequest }) => {
+    const huge = 'x'.repeat(5_000)
+    const tool = `wdc_pw_cap_${Date.now()}`
+    const post = await authedRequest.post('/api/mcp/tool-calls', {
+      data: { toolName: tool, argsSummary: huge, dangerLevel: 'read' },
+    })
+    expect(post.status()).toBe(200)
+    const id = (await post.json()).id
+
+    const get = await authedRequest.get(`/api/mcp/tool-calls?limit=5&toolName=${tool}`)
+    const entries = (await get.json()).entries
+    const ours = entries.find((e: { id: string }) => e.id === id)
+    expect(ours.argsSummary.length).toBeLessThanOrEqual(1000)
+  })
+
+  test('POST rejects toolName longer than 200 chars', async ({ authedRequest }) => {
+    const r = await authedRequest.post('/api/mcp/tool-calls', {
+      data: { toolName: 'a'.repeat(201), dangerLevel: 'read' },
+    })
+    expect(r.status()).toBe(400)
+    const j = await r.json()
+    expect(j.error).toContain('toolName')
+  })
+
+  test('POST records error result_code with errorMessage', async ({ authedRequest }) => {
+    const tool = `wdc_pw_err_${Date.now()}`
+    const post = await authedRequest.post('/api/mcp/tool-calls', {
+      data: {
+        toolName: tool,
+        dangerLevel: 'read',
+        resultCode: 'error',
+        errorMessage: 'simulated boom',
+      },
+    })
+    expect(post.status()).toBe(200)
+    const id = (await post.json()).id
+
+    const get = await authedRequest.get(`/api/mcp/tool-calls?limit=5&toolName=${tool}`)
+    const ours = (await get.json()).entries.find((e: { id: string }) => e.id === id)
+    expect(ours.resultCode).toBe('error')
+    expect(ours.errorMessage).toBe('simulated boom')
+  })
 })
