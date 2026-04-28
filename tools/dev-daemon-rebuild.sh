@@ -51,10 +51,24 @@ EOF
     esac
 done
 
+REMOTECMD="$(dirname "$0")/remote-cmd.sh"
+
+# Helper: kill any lingering dotnet daemon process via elevated remote-cmd
+# instead of local taskkill (which triggers UAC every call).
+elevated_kill_daemon() {
+    if [ ! -x "$REMOTECMD" ]; then return 0; fi
+    log "elevated kill via remote-cmd (no UAC popup)"
+    "$REMOTECMD" exec "Get-Process dotnet -ErrorAction SilentlyContinue | Where-Object { \$_.Path -like '*WebDevConsole.Daemon*' -or (\$_.MainModule.FileName -like '*WebDevConsole.Daemon*' 2>\$null) } | Stop-Process -Force -ErrorAction SilentlyContinue; 'ok'" \
+        2>/dev/null | head -3 || true
+}
+
 # Step 1: shut down daemon via /api/admin/restart
 if $DO_RESTART; then
     if [ ! -f "$PORT_FILE" ]; then
         log "no port file at $PORT_FILE — daemon already down, skipping restart"
+        # Still elevated-kill any orphan from a crashed previous run that
+        # might be holding bin DLL locks.
+        elevated_kill_daemon
     else
         TOKEN=$(awk 'NR==2' "$PORT_FILE")
         PORT=$(awk 'NR==1' "$PORT_FILE")
@@ -82,12 +96,17 @@ if $DO_RESTART; then
     fi
 fi
 
-# Step 2: build
+# Step 2: build (retry once via elevated kill if file lock blocks first attempt)
 log "dotnet build $DAEMON_DIR"
 cd "$DAEMON_DIR"
 if ! dotnet build --nologo --verbosity quiet 2>&1 | tail -5; then
-    err "build failed"
-    exit 1
+    log "build failed — likely lingering daemon process. Trying elevated kill via remote-cmd…"
+    elevated_kill_daemon
+    sleep 2
+    if ! dotnet build --nologo --verbosity quiet 2>&1 | tail -5; then
+        err "build still failing after elevated kill"
+        exit 1
+    fi
 fi
 ok "build clean"
 
