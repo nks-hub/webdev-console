@@ -28,7 +28,7 @@
     <!-- Body -->
     <div class="page-body">
       <!-- Initial load -->
-      <LoadingState v-if="loading && rows.length === 0" label="Parsing system hosts file…" />
+      <LoadingState v-if="loading && rows.length === 0" :label="$t('hosts.loadingHosts')" />
 
       <!-- Search -->
       <div v-if="!loading || rows.length > 0" class="toolbar">
@@ -39,7 +39,7 @@
           clearable
           style="max-width: 300px"
         />
-        <span class="entry-count">{{ filteredRows.length }} entries</span>
+        <span class="entry-count">{{ $t('hosts.entriesCount', { n: filteredRows.length }) }}</span>
       </div>
 
       <el-card v-if="!loading || rows.length > 0" shadow="never" class="table-card">

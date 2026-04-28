@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <LoadingState v-if="initialLoading" label="Connecting to Cloudflare API…" />
+    <LoadingState v-if="initialLoading" :label="$t('cloudflare.connecting')" />
 
     <template v-else>
     <el-alert

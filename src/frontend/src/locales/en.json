@@ -744,7 +744,9 @@
     "autoManagedInfo": "WDC automatically adds and removes entries when you create or delete sites.",
     "ipColumn": "IP Address",
     "hostnameColumn": "Hostname",
-    "sourceColumn": "Source (site)"
+    "sourceColumn": "Source (site)",
+    "entriesCount": "{n} entries",
+    "loadingHosts": "Parsing system hosts file…"
   },
   "apache": {
     "title": "Apache Web Server",
@@ -862,6 +864,7 @@
   "cloudflare": {
     "title": "Cloudflare Tunnel",
     "subtitle": "Expose local sites to the internet via an encrypted tunnel",
+    "connecting": "Connecting to Cloudflare API…",
     "startTunnel": "Start tunnel",
     "stopTunnel": "Stop tunnel"
   },

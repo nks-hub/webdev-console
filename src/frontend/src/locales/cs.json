@@ -744,7 +744,9 @@
     "autoManagedInfo": "WDC automaticky přidává a odebírá záznamy při vytvoření nebo smazání webu.",
     "ipColumn": "IP adresa",
     "hostnameColumn": "Hostname",
-    "sourceColumn": "Zdroj (web)"
+    "sourceColumn": "Zdroj (web)",
+    "entriesCount": "{n} záznamů",
+    "loadingHosts": "Parsování systémového hosts souboru…"
   },
   "apache": {
     "title": "Apache Web Server",
@@ -862,6 +864,7 @@
   "cloudflare": {
     "title": "Cloudflare Tunnel",
     "subtitle": "Zpřístupni lokální weby přes šifrovaný tunel",
+    "connecting": "Připojování k Cloudflare API…",
     "startTunnel": "Spustit tunel",
     "stopTunnel": "Zastavit tunel"
   },
