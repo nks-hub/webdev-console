@@ -430,6 +430,8 @@
     "aliases": "Aliases",
     "create": "New Site",
     "openHosts": "Open hosts",
+    "reapplyAll": "Reapply All",
+    "reapplyAllHint": "Regenerate all vhosts",
     "openInBrowser": "Open in Browser",
     "saveAndApply": "Save & Apply",
     "history": {

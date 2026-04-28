@@ -12,8 +12,8 @@
         <el-button size="small" @click="openHostsFile" title="Open hosts file">
           {{ $t('sites.openHosts') }}
         </el-button>
-        <el-button size="small" @click="reapplyAll" :loading="reapplying" title="Regenerate all vhosts">
-          Reapply All
+        <el-button size="small" @click="reapplyAll" :loading="reapplying" :title="$t('sites.reapplyAllHint')">
+          {{ $t('sites.reapplyAll') }}
         </el-button>
         <el-button type="primary" size="small" @click="showCreate = true">{{ $t('sites.create') }}</el-button>
       </div>

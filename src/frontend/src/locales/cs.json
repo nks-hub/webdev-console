@@ -430,6 +430,8 @@
     "aliases": "Aliasy",
     "create": "Nový web",
     "openHosts": "Otevřít hosts",
+    "reapplyAll": "Znovu aplikovat",
+    "reapplyAllHint": "Znovu vygenerovat všechny vhosts",
     "openInBrowser": "Otevřít v prohlížeči",
     "saveAndApply": "Uložit a použít",
     "history": {
