@@ -171,6 +171,56 @@
       "failed": "Vytvoření pravidla selhalo: {error}"
     }
   },
+  "mcpOnboarding": {
+    "title": "Vítej v MCP — pojďme to nastavit",
+    "hint": "Vyber profil podle toho, jak moc chceš AI důvěřovat. Pravidla můžeš později upravit v záložce Pravidla.",
+    "dismiss": "Přeskočit",
+    "recommended": "doporučeno",
+    "applied": "Profil {profile} aplikován ({n} pravidel vytvořeno)",
+    "minimalApplied": "Minimální profil aktivní — AI se ptá na vše",
+    "profiles": {
+      "minimal": {
+        "name": "Minimální",
+        "desc": "Nejbezpečnější — AI musíš schválit každou destruktivní akci ručně",
+        "bullets": [
+          "Žádná auto-schvalovací pravidla",
+          "Read-only volání procházejí volně",
+          "Každá mutace nebo destruktivní akce vyžaduje potvrzení"
+        ],
+        "cta": "Použít Minimální"
+      },
+      "balanced": {
+        "name": "Vyvážený",
+        "desc": "Reverzibilní akce projdou auto, destruktivní se ptají",
+        "bullets": [
+          "Auto-schválení: deploy, rollback (lze vrátit)",
+          "Vyžaduje potvrzení: restore, drop, snapshot delete",
+          "Vhodný pro většinu workflow"
+        ],
+        "cta": "Použít Vyvážený"
+      },
+      "permissive": {
+        "name": "Plná důvěra",
+        "desc": "AI smí vše bez ptaní — jen pro testovací prostředí",
+        "bullets": [
+          "Wildcard pravidlo: vše × vše",
+          "Žádná potvrzení",
+          "Doporučujeme: vždy použij Always-ask pro produkční domény"
+        ],
+        "cta": "Použít Plnou důvěru"
+      },
+      "custom": {
+        "name": "Ručně",
+        "desc": "Žádný preset — pravidla nastavím sám/sama",
+        "bullets": [
+          "Otevře záložku Pravidla",
+          "Vytvoříš si vlastní pravidla od nuly",
+          "Pro pokročilé operátory"
+        ],
+        "cta": "Otevřít Pravidla"
+      }
+    }
+  },
   "mcpActivity": {
     "stats": {
       "totalCalls": "Celkem volání 24h",

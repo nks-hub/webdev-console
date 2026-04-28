@@ -40,6 +40,9 @@
       </div>
     </div>
 
+    <!-- Onboarding panel — first-time setup with preset profiles -->
+    <McpOnboardingPanel />
+
     <!-- Suggested grants — actionable nudges based on repeated manual approvals -->
     <SuggestedGrantsBanner />
 
@@ -106,6 +109,7 @@ import McpIntents from './McpIntents.vue'
 import McpGrants from './McpGrants.vue'
 import McpKinds from './McpKinds.vue'
 import SuggestedGrantsBanner from '../mcp/SuggestedGrantsBanner.vue'
+import McpOnboardingPanel from '../mcp/McpOnboardingPanel.vue'
 import {
   fetchIntentInventory,
   fetchMcpGrantsStats,

@@ -171,6 +171,56 @@
       "failed": "Failed to create rule: {error}"
     }
   },
+  "mcpOnboarding": {
+    "title": "Welcome to MCP — let's set it up",
+    "hint": "Pick a profile based on how much you want to trust AI. You can adjust rules later in the Rules tab.",
+    "dismiss": "Skip",
+    "recommended": "recommended",
+    "applied": "Profile {profile} applied ({n} rules created)",
+    "minimalApplied": "Minimal profile active — AI asks for everything",
+    "profiles": {
+      "minimal": {
+        "name": "Minimal",
+        "desc": "Safest — manually approve every destructive AI action",
+        "bullets": [
+          "No auto-approve rules",
+          "Read-only calls pass freely",
+          "Every mutation or destructive op requires confirmation"
+        ],
+        "cta": "Use Minimal"
+      },
+      "balanced": {
+        "name": "Balanced",
+        "desc": "Reversible actions auto-approve, destructive ones ask",
+        "bullets": [
+          "Auto-approve: deploy, rollback (reversible)",
+          "Asks for: restore, drop, snapshot delete",
+          "Suits most workflows"
+        ],
+        "cta": "Use Balanced"
+      },
+      "permissive": {
+        "name": "Full Trust",
+        "desc": "AI may do anything without asking — test envs only",
+        "bullets": [
+          "Wildcard rule: everything × everything",
+          "No confirmations",
+          "Tip: pair with Always-ask for production domains"
+        ],
+        "cta": "Use Full Trust"
+      },
+      "custom": {
+        "name": "Manual",
+        "desc": "No preset — set up rules myself",
+        "bullets": [
+          "Opens the Rules tab",
+          "Build your own rules from scratch",
+          "For advanced operators"
+        ],
+        "cta": "Open Rules"
+      }
+    }
+  },
   "mcpActivity": {
     "stats": {
       "totalCalls": "Total calls 24h",
