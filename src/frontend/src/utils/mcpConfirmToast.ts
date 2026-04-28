@@ -1,5 +1,5 @@
 import { h, type VNode } from 'vue'
-import { ElNotification, ElButton } from 'element-plus'
+import { ElNotification, ElButton, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { i18n } from '../i18n'
 import { confirmIntent, revokeIntent } from '../api/daemon'
@@ -44,8 +44,13 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
   const onApprove = async (): Promise<void> => {
     try {
       await confirmIntent(evt.intentId)
+      ElMessage.success(t('mcp.toast.approveSuccess'))
     } catch (err) {
-      console.warn('[mcpConfirmToast] approve failed:', err)
+      // Surface the failure visibly — silent close was leaving operator
+      // wondering whether the request actually went through. Most common
+      // case: intent expired between SSE arrival and click.
+      const msg = err instanceof Error ? err.message : String(err)
+      ElMessage.error(t('mcp.toast.approveFailed', { error: msg }))
     } finally {
       close()
     }
@@ -53,8 +58,10 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
   const onReject = async (): Promise<void> => {
     try {
       await revokeIntent(evt.intentId)
+      ElMessage.info(t('mcp.toast.rejectSuccess'))
     } catch (err) {
-      console.warn('[mcpConfirmToast] revoke failed:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      ElMessage.error(t('mcp.toast.rejectFailed', { error: msg }))
     } finally {
       close()
     }

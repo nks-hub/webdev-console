@@ -1696,7 +1696,11 @@
       "genericRequest": "AI požaduje potvrzení",
       "approve": "Schválit",
       "reject": "Odmítnout",
-      "detail": "Detail"
+      "detail": "Detail",
+      "approveSuccess": "Žádost AI schválena",
+      "approveFailed": "Schválení selhalo: {error}",
+      "rejectSuccess": "Žádost AI odmítnuta",
+      "rejectFailed": "Odmítnutí selhalo: {error}"
     },
     "banner": {
       "stackLabel": "Žádosti o potvrzení MCP deploye",

@@ -1696,7 +1696,11 @@
       "genericRequest": "AI requests confirmation",
       "approve": "Approve",
       "reject": "Reject",
-      "detail": "Detail"
+      "detail": "Detail",
+      "approveSuccess": "AI request approved",
+      "approveFailed": "Approve failed: {error}",
+      "rejectSuccess": "AI request rejected",
+      "rejectFailed": "Reject failed: {error}"
     },
     "banner": {
       "stackLabel": "MCP deploy approval requests",
