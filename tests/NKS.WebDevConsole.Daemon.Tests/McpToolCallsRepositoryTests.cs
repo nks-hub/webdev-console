@@ -287,4 +287,77 @@ public sealed class McpToolCallsRepositoryTests
         }
         finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
     }
+
+    [Fact]
+    public async Task SearchQuery_MatchesToolNameOrArgs()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var repo = new McpToolCallsRepository(db);
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "wdc_list_sites", ArgsSummary = "{}" }, CancellationToken.None);
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "wdc_get_site", ArgsSummary = "{\"domain\":\"blog.loc\"}" }, CancellationToken.None);
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "wdc_create_database", ArgsSummary = "{\"name\":\"shop\"}" }, CancellationToken.None);
+
+            // Match by tool name (case-sensitive LIKE %site%).
+            var siteSearch = await repo.ListAsync(50, 0, null, null, null, CancellationToken.None, "site");
+            Assert.Equal(2, siteSearch.Count);
+
+            // Match by args content.
+            var blogSearch = await repo.ListAsync(50, 0, null, null, null, CancellationToken.None, "blog");
+            Assert.Single(blogSearch);
+            Assert.Equal("wdc_get_site", blogSearch[0].ToolName);
+
+            // No match.
+            var noMatch = await repo.ListAsync(50, 0, null, null, null, CancellationToken.None, "xyz999");
+            Assert.Empty(noMatch);
+
+            // Count respects search.
+            var count = await repo.CountAsync(null, null, null, CancellationToken.None, "site");
+            Assert.Equal(2, count);
+        }
+        finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
+    }
+
+    [Fact]
+    public async Task SearchQuery_TrimsWhitespace()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var repo = new McpToolCallsRepository(db);
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "wdc_list_sites" }, CancellationToken.None);
+
+            // Surrounding whitespace shouldn't break the LIKE.
+            var trimmed = await repo.ListAsync(50, 0, null, null, null, CancellationToken.None, "  list  ");
+            Assert.Single(trimmed);
+
+            // Empty/whitespace-only string treated as no filter.
+            var empty = await repo.ListAsync(50, 0, null, null, null, CancellationToken.None, "   ");
+            Assert.Single(empty);
+        }
+        finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
+    }
+
+    [Fact]
+    public async Task GetTimeline_BucketsByHour()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var repo = new McpToolCallsRepository(db);
+            // Two calls in the current hour (use UTC now).
+            var nowHour = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:00:00.000Z");
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "a", CalledAt = nowHour, DangerLevel = "read" }, CancellationToken.None);
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "b", CalledAt = nowHour, DangerLevel = "destructive", ResultCode = "error" }, CancellationToken.None);
+
+            var timeline = await repo.GetTimelineAsync(24, CancellationToken.None);
+            Assert.Single(timeline);
+            Assert.Equal(2, timeline[0].Total);
+            Assert.Equal(1, timeline[0].Reads);
+            Assert.Equal(1, timeline[0].Destructives);
+            Assert.Equal(1, timeline[0].Errors);
+        }
+        finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
+    }
 }
