@@ -144,7 +144,7 @@
 
       <el-table
         ref="tableRef"
-        :data="filteredEntries"
+        :data="pagedEntries"
         stripe
         size="small"
         :empty-text="t('mcpIntents.emptyTable')"
@@ -245,6 +245,21 @@
         </template>
       </el-table-column>
       </el-table>
+
+      <!-- Pagination — client-side page through filteredEntries.
+           Audit logs grow into the hundreds; rendering all rows at once
+           caused el-table reflow stalls on the operator workstation. -->
+      <div v-if="filteredEntries.length > pageSize" class="intent-pagination">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="filteredEntries.length"
+          :page-sizes="[25, 50, 100, 200]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          small
+        />
+      </div>
     </template>
   </div>
 </template>
@@ -375,6 +390,26 @@ const filteredEntries = computed<IntentInventoryEntry[]>(() => {
     return true
   })
 })
+
+// Client-side pagination — el-table reflow stalls past ~200 rows on the
+// operator workstation, so we slice filteredEntries and surface el-pagination.
+const currentPage = ref(1)
+const pageSize = ref(50)
+
+const pagedEntries = computed<IntentInventoryEntry[]>(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredEntries.value.slice(start, start + pageSize.value)
+})
+
+// Reset to page 1 whenever the filtered set shrinks underneath the
+// current page (e.g. operator typed a domain filter while on page 5)
+// or whenever the matched-grant drilldown re-fetches a different cohort.
+watch(
+  [stateFilter, kindFilter, domainFilter, matchedGrantFilter, pageSize],
+  () => {
+    currentPage.value = 1
+  },
+)
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -716,6 +751,11 @@ onBeforeUnmount(() => {
 }
 .intent-table {
   width: 100%;
+}
+.intent-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 .kind-id-mono {
   margin-left: 6px;
