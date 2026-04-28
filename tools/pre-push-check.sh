@@ -99,13 +99,38 @@ if ! $SKIP_TESTS; then
 fi
 
 if ! $SKIP_FE; then
-    step "4/5  frontend npm build"
+    step "4/6  frontend npm build"
     (cd src/frontend && npm run build --silent 2>&1 | tail -3)
     ok "frontend build clean"
 
-    step "5/5  vitest (mcp-server)"
+    step "5/6  vitest (mcp-server)"
     (cd services/mcp-server && npx vitest run --reporter=basic 2>&1 | tail -5)
     ok "vitest pass"
+
+    step "6/6  api-type-check (regenerate + diff)"
+    # Mirror .github/workflows/api-type-check.yml — start daemon, regen
+    # generated-types.ts, fail if it drifted from committed file. This is
+    # the most-missed CI check because the drift is silent locally.
+    PORT_FILE="/c/Users/LuRy/AppData/Local/Temp/nks-wdc-daemon.port"
+    if [ ! -f "$PORT_FILE" ]; then
+        REBUILD="$(dirname "$0")/dev-daemon-rebuild.sh"
+        if [ -x "$REBUILD" ]; then
+            "$REBUILD" --no-restart >/dev/null 2>&1 || true
+        fi
+    fi
+    if [ -f "$PORT_FILE" ]; then
+        DAEMON_PORT=$(awk 'NR==1' "$PORT_FILE")
+        node scripts/generate-api-types.mjs --port="$DAEMON_PORT" 2>&1 | tail -3
+        if ! git diff --exit-code --quiet src/frontend/src/api/generated-types.ts; then
+            err "API types drifted — generated-types.ts has uncommitted changes"
+            err "Commit regenerated file before pushing (api-type-check CI will fail otherwise)"
+            git diff --stat src/frontend/src/api/generated-types.ts
+            exit 1
+        fi
+        ok "api types in sync with OpenAPI"
+    else
+        echo "  (skipped — no daemon port file found)"
+    fi
 fi
 
 echo ""
