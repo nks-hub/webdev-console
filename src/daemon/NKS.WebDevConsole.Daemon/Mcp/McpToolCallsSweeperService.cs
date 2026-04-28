@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NKS.WebDevConsole.Core.Services;
+using NKS.WebDevConsole.Daemon.Services;
 
 namespace NKS.WebDevConsole.Daemon.Mcp;
 
