@@ -1,0 +1,26 @@
+<testsuites id="" name="" tests="10" failures="0" skipped="0" errors="0" time="0.85229">
+<testsuite name="deploy-form.spec.ts" timestamp="2026-04-27T08:39:11.215Z" hostname="" tests="6" failures="0" skipped="0" time="0.084" errors="0">
+<testcase name="Deploy form (dry-run preview) › dry-run returns plan without DB write" classname="deploy-form.spec.ts" time="0.037">
+</testcase>
+<testcase name="Deploy form (dry-run preview) › dry-run alwaysConfirmKind reflects live setting" classname="deploy-form.spec.ts" time="0.026">
+</testcase>
+<testcase name="Deploy form (dry-run preview) › cancel endpoint MCP-gated under kind=cancel" classname="deploy-form.spec.ts" time="0.005">
+</testcase>
+<testcase name="Deploy form (dry-run preview) › test-hook endpoint MCP-gated under kind=test_hook" classname="deploy-form.spec.ts" time="0.004">
+</testcase>
+<testcase name="Deploy form (dry-run preview) › settings PUT MCP-gated under kind=settings_write" classname="deploy-form.spec.ts" time="0.007">
+</testcase>
+<testcase name="Deploy form (dry-run preview) › snapshot-now MCP-gated under kind=snapshot_create" classname="deploy-form.spec.ts" time="0.005">
+</testcase>
+</testsuite>
+<testsuite name="grants-flow.spec.ts" timestamp="2026-04-27T08:39:11.215Z" hostname="" tests="4" failures="0" skipped="0" time="0.073" errors="0">
+<testcase name="MCP grants flow › create + list + revoke grant round-trip" classname="grants-flow.spec.ts" time="0.049">
+</testcase>
+<testcase name="MCP grants flow › grants endpoint pagination" classname="grants-flow.spec.ts" time="0.006">
+</testcase>
+<testcase name="MCP grants flow › mcp:kinds endpoint returns 7 core kinds with alwaysConfirm flag" classname="grants-flow.spec.ts" time="0.013">
+</testcase>
+<testcase name="MCP grants flow › grants stats aggregation endpoint" classname="grants-flow.spec.ts" time="0.005">
+</testcase>
+</testsuite>
+</testsuites>

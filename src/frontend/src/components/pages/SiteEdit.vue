@@ -59,12 +59,12 @@
               </header>
               <div class="edit-card-body">
                 <el-form :model="site" label-position="top" size="default">
-                  <el-form-item label="Domain">
+                  <el-form-item :label="$t('sites.domain')">
                     <el-input :model-value="site.domain" disabled>
                       <template #prepend><el-icon><Link /></el-icon></template>
                     </el-input>
                   </el-form-item>
-                  <el-form-item label="Document Root" required>
+                  <el-form-item :label="$t('sites.documentRoot')" required>
                     <el-input
                       v-model="site.documentRoot"
                       placeholder="C:\work\htdocs\myapp"
@@ -360,6 +360,21 @@
           </div>
         </el-tab-pane>
 
+        <!-- ── Deploy ──────────────────────────────
+             Inserted BEFORE <PluginSlot> for stable ordering (per v2 audit
+             ui-ux fix #2). The Deploy tab is a 1st-class wdc capability via
+             the NksDeploy plugin (registered through IDeployBackend); the
+             tab itself ships with the app rather than being a plugin
+             contribution to keep its placement deterministic. -->
+        <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy">
+          <template #label>
+            <span class="tab-label"><el-icon><Upload /></el-icon> {{ $t('siteEdit.deploy') }}</span>
+          </template>
+          <div class="tab-content">
+            <DeploySiteTab :domain="domain" />
+          </div>
+        </el-tab-pane>
+
         <!-- F91.6: plugin-contributed tabs (SSL, Cloudflare, Composer, …).
              Each plugin's UiContribution(slot="site-edit-tabs") renders as
              its own <el-tab-pane> with label/content the plugin supplies.
@@ -375,7 +390,7 @@
         <!-- ── History ──────────────────────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="history">
           <template #label>
-            <span class="tab-label"><el-icon><Clock /></el-icon> History ({{ history.length }})</span>
+            <span class="tab-label"><el-icon><Clock /></el-icon> {{ $t('siteEdit.history') }} ({{ history.length }})</span>
           </template>
           <div class="tab-content">
             <div class="history-banner">
@@ -523,7 +538,7 @@
         <!-- ── Per-site Backup (task 29) ─────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="backup">
           <template #label>
-            <span class="tab-label"><el-icon><FolderOpened /></el-icon> Backup</span>
+            <span class="tab-label"><el-icon><FolderOpened /></el-icon> {{ $t('siteEdit.backup') }}</span>
           </template>
           <div class="tab-content">
             <div class="history-banner">
@@ -613,12 +628,14 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
   FolderOpened, Check, Search, Link, DataLine, Refresh, Grid,
-  InfoFilled,
+  InfoFilled, Upload,
 } from '@element-plus/icons-vue'
+import DeploySiteTab from '../deploy/DeploySiteTab.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
@@ -651,6 +668,7 @@ const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
+const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
 
 const domain = computed(() => String(route.params.domain || ''))

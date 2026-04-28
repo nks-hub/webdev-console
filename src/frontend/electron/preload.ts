@@ -112,4 +112,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // scattered across DevTools consoles that disappear on reload.
   rendererLog: (level: 'info' | 'warn' | 'error' | 'debug', args: unknown[]) =>
     ipcRenderer.invoke('renderer-log', { level, args }),
+
+  // #147 — cross-platform OS notifications. Renderer side fires this
+  // on important events (deploy completed, MCP confirm requested, etc.)
+  // and main hands off to Electron's Notification API which uses the
+  // platform-native mechanism (Win toast, macOS NSUserNotification,
+  // Linux libnotify).
+  osNotify: (payload: {
+    title?: string
+    body?: string
+    urgency?: 'low' | 'normal' | 'critical'
+    silent?: boolean
+    channel?: string
+  }) => ipcRenderer.invoke('os-notify', payload),
 })

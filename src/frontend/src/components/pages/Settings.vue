@@ -48,6 +48,25 @@
             <!-- Legacy hardcoded ports form — will migrate to IPortMetadata
                  one plugin at a time. For now coexists so users can still
                  edit the values that haven't been wired to plugins yet. -->
+            <!-- Phase 6.21 — explain what changing the webserver port
+                 actually does, since the consequence isn't obvious from
+                 the form alone. The daemon now bulk-regenerates every
+                 site's vhost on Apache port change (Phase 6.20a) AND
+                 self-heals stale ports on boot (Phase 6.20b), but the
+                 user still sees a brief window where the webserver
+                 reloads and existing browser connections drop. -->
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 12px; max-width: 400px"
+            >
+              <template #title>Changing HTTP/HTTPS port reloads the webserver</template>
+              Every per-site vhost is regenerated to use the new port and
+              Apache (or nginx/caddy) is reloaded. In-flight browser
+              connections drop briefly. Check that the new port isn't
+              already used by another service before saving.
+            </el-alert>
             <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
               <el-form-item :label="$t('settings.ports.httpPort')">
                 <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
@@ -444,6 +463,154 @@
                   @click="confirmFactoryReset"
                 >Tovární reset</el-button>
               </div>
+            </div>
+
+            <!-- Phase 6.23 — MCP integration toggle. Default OFF: hides
+                 the AI agent confirmation banner + MCP Intents sidebar
+                 entry + makes the daemon's /api/mcp/intents endpoints
+                 return 404. Operators not running an AI client see no
+                 trace of the subsystem. -->
+            <div class="settings-section" id="mcp-section" style="margin-top: 16px">
+              <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
+              <p class="hint">
+                {{ $t('settings.mcp.description') }}
+                <strong>{{ $t('settings.mcp.warning') }}</strong>
+              </p>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
+                <el-form-item :label="$t('settings.mcp.enableLabel')">
+                  <el-switch v-model="mcpEnabled" />
+                </el-form-item>
+                <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
+                     mode where any regex-valid kind passes). Turn ON to refuse
+                     any kind not registered via IDestructiveOperationKinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
+                  <el-switch v-model="mcpStrictKinds" />
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.strictKindsHint') }}</div>
+                </el-form-item>
+                <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
+                     separated list (e.g. "restore,cancel") of kind ids
+                     for which the validator skips grant auto-approval.
+                     Operator's "ring-fence the riskiest ops" knob: even
+                     wildcard always-grants must yield to the GUI banner
+                     for these kinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
+                  <!-- Phase 7.5+++ — multi-select over registered kinds.
+                       Falls back to a free-text input only if the kinds
+                       endpoint hasn't responded yet (or returns empty),
+                       so the setting is still editable without the
+                       registry. The store/save format stays a comma-
+                       separated string (back-compat with backend). -->
+                  <el-select
+                    v-if="mcpKindOptions.length > 0"
+                    v-model="mcpAlwaysConfirmKindsArr"
+                    multiple
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    :placeholder="$t('settings.mcp.alwaysConfirmKindsPlaceholder')"
+                    style="max-width: 480px; width: 100%"
+                  >
+                    <el-option
+                      v-for="opt in mcpKindOptions"
+                      :key="opt.id"
+                      :label="humanKindLabel(opt)"
+                      :value="opt.id"
+                    >
+                      <span>{{ humanKindLabel(opt) }}</span>
+                      <span class="muted" style="margin-left: 8px; font-size: 11px">
+                        {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
+                      </span>
+                    </el-option>
+                  </el-select>
+                  <el-input
+                    v-else
+                    v-model="mcpAlwaysConfirmKinds"
+                    placeholder="restore,cancel"
+                    style="max-width: 320px"
+                  />
+                  <!-- Phase 7.5+++ — one-click presets. "Lock all destructive"
+                       fills the picker with every kind tagged Destructive
+                       (restore, test_hook, settings_write, plus any plugin-
+                       contributed dangerous kinds). "Clear" resets. -->
+                  <div v-if="mcpKindOptions.length > 0" style="margin-top: 6px">
+                    <el-button
+                      size="small"
+                      :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
+                      @click="lockAllDestructive"
+                    >
+                      🔒 {{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}
+                    </el-button>
+                    <el-button
+                      size="small"
+                      plain
+                      :disabled="mcpAlwaysConfirmKindsArr.length === 0"
+                      @click="clearAlwaysConfirm"
+                    >
+                      {{ $t('settings.mcp.clearAlwaysConfirm') }}
+                    </el-button>
+                  </div>
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
+                </el-form-item>
+                <!-- Phase 7.5+++ — operator-tunable janitor retention.
+                     Defaults match GrantSweeperService.Default* (1d/30d).
+                     Setting either to 0 disables that branch (keep all). -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
+                  <el-input-number v-model="mcpExpiredRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px" />
+                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
+                </el-form-item>
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
+                  <el-input-number v-model="mcpRevokedRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px" />
+                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
+                </el-form-item>
+              </el-form>
+            </div>
+
+            <!-- Phase 7.1a — deploy subsystem toggle. Default ON since
+                 most users install WDC FOR site management with deploy.
+                 OFF hides Deploy tab in SiteEdit + plugin REST endpoints
+                 return 404. Useful for installs that only use WDC as
+                 local Apache/MySQL manager without remote deploys. -->
+            <div class="settings-section" style="margin-top: 16px">
+              <h4 class="section-title">{{ $t('settings.deploySubsystem.title') }}</h4>
+              <p class="hint">
+                {{ $t('settings.deploySubsystem.description') }}
+              </p>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+                <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
+                  <el-switch v-model="deployEnabled" />
+                </el-form-item>
+              </el-form>
+            </div>
+
+            <!-- #147 — OS notification toggles. Stored client-side
+                 (localStorage via osNotifications service) since they
+                 only matter for THIS desktop install. Each channel can
+                 be turned off independently so an operator who lives in
+                 the WDC window all day can mute deploy toasts but keep
+                 the louder MCP confirm requests. -->
+            <div class="settings-section" style="margin-top: 16px">
+              <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
+              <p class="hint">{{ $t('settings.osNotify.description') }}</p>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+                <el-form-item :label="$t('settings.osNotify.deployLabel')">
+                  <el-switch v-model="osNotifyDeploy" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.osNotify.mcpLabel')">
+                  <el-switch v-model="osNotifyMcp" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.osNotify.systemLabel')">
+                  <el-switch v-model="osNotifySystem" />
+                </el-form-item>
+                <el-form-item>
+                  <el-button size="small" plain @click="onTestOsNotify">
+                    {{ $t('settings.osNotify.testBtn') }}
+                  </el-button>
+                </el-form-item>
+              </el-form>
             </div>
           </div>
         </el-tab-pane>
@@ -1044,6 +1211,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download } from '@element-plus/icons-vue'
@@ -1058,6 +1226,7 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import { compareSemver } from '../../utils/semver'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
@@ -1107,6 +1276,29 @@ watch(() => uiModeStore.isSimple, (simple) => {
   }
 })
 
+// Phase 7.5+++ — deep-link target. Supports ?tab=advanced&scroll=mcp-section
+// from cross-page links (McpKinds always-confirm chip, etc.). Selecting
+// the tab is enough to surface the MCP section within Advanced; the
+// scroll attribute lets us jump to a specific anchor.
+const route = useRoute()
+function applyDeepLink(): void {
+  const tabParam = typeof route.query.tab === 'string' ? route.query.tab : ''
+  if (tabParam) {
+    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) return
+    activeTab.value = tabParam
+  }
+  const scrollTarget = typeof route.query.scroll === 'string' ? route.query.scroll : ''
+  if (scrollTarget) {
+    // Defer to next tick so the tab content is in the DOM before we
+    // scroll to its anchor.
+    setTimeout(() => {
+      const el = document.getElementById(scrollTarget)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }
+}
+watch(() => route.query, applyDeepLink, { immediate: true })
+
 const saving = ref(false)
 const databases = ref<string[]>([])
 const newDbName = ref('')
@@ -1123,6 +1315,102 @@ const ports = reactive({
 })
 
 const runOnStartup = ref(false)
+// Phase 6.23 — MCP integration toggle. Default false; mirrors daemon's
+// own `mcp.enabled` setting. When false, sidebar entry, banner, and
+// /api/mcp/intents endpoints are all hidden/404.
+const mcpEnabled = ref(false)
+// Phase 7.4e — strict kind validation. Default false (lenient).
+// When true, intents with unregistered kinds get kind_unknown.
+const mcpStrictKinds = ref(false)
+// Phase 7.5+++ — always-confirm kinds. Comma-separated list (e.g.
+// "restore,cancel"). Validator skips grant auto-approval for these
+// kinds, forcing GUI confirmation even with wildcard always-grants.
+const mcpAlwaysConfirmKinds = ref('')
+// Two-way bridge between the comma-string storage format and the
+// el-select array model. The select renders the options, but the
+// backend persists a string for back-compat.
+const mcpAlwaysConfirmKindsArr = computed<string[]>({
+  get: () => mcpAlwaysConfirmKinds.value
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0),
+  set: (arr: string[]) => {
+    mcpAlwaysConfirmKinds.value = arr.join(',')
+  },
+})
+// Registered kinds for the multi-select. Fetched lazily; the input
+// gracefully falls back to a free-text field while empty.
+interface SettingsMcpKindOption {
+  id: string
+  label?: string
+  danger: 'reversible' | 'destructive'
+}
+const mcpKindOptions = ref<SettingsMcpKindOption[]>([])
+
+// Phase 7.5+++ — preset helpers for the always-confirm picker. The
+// "lock all destructive" button is the safest one-click ring-fence:
+// any kind tagged DangerLevel.Destructive (restore, test_hook,
+// settings_write today; plugin-contributed kinds tomorrow) gets
+// auto-added without the operator having to know the id.
+const destructiveKindIds = computed<string[]>(() =>
+  mcpKindOptions.value.filter((k) => k.danger === 'destructive').map((k) => k.id))
+
+// Phase 7.5+++ — disable Lock-all-destructive preset when every Destructive
+// kind is already in the picker. Prevents click-confusion (no-op feedback).
+const allDestructiveAlreadyLocked = computed<boolean>(() => {
+  if (destructiveKindIds.value.length === 0) return false
+  const current = new Set(mcpAlwaysConfirmKindsArr.value)
+  return destructiveKindIds.value.every((id) => current.has(id))
+})
+
+function lockAllDestructive(): void {
+  // Union with current selection so the operator's existing custom
+  // additions (e.g. plugin-specific kinds) aren't dropped.
+  const merged = new Set([...mcpAlwaysConfirmKindsArr.value, ...destructiveKindIds.value])
+  mcpAlwaysConfirmKindsArr.value = Array.from(merged)
+}
+
+// Phase 7.5+++ — operator-locale label for the kind. Shared lookup
+// pattern with McpKinds + McpConfirmBanner: localized i18n key first,
+// daemon-supplied label second, bare id last. Plugin-supplied kinds
+// without translation still render their daemon label.
+function humanKindLabel(opt: { id: string; label?: string }): string {
+  const key = `mcpKinds.labels.${opt.id}`
+  const localized = t(key)
+  return localized !== key ? localized : (opt.label || opt.id)
+}
+
+function clearAlwaysConfirm(): void {
+  mcpAlwaysConfirmKindsArr.value = []
+}
+// Phase 7.5+++ — janitor retention windows. Defaults match
+// GrantSweeperService.Default* constants (1 day, 30 days). Setting
+// either to 0 disables that branch (operator keeps everything).
+const mcpExpiredRetentionDays = ref(1)
+const mcpRevokedRetentionDays = ref(30)
+// Phase 7.1a — Deploy subsystem toggle. Default TRUE; mirrors daemon's
+// own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
+// /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
+const deployEnabled = ref(true)
+
+// #147 — OS notification per-channel toggles. Persist via the
+// osNotifications service (localStorage-backed) on flip so the change
+// takes effect immediately without a Save All step.
+const osNotifyDeploy = ref(isChannelEnabled('deploy'))
+const osNotifyMcp = ref(isChannelEnabled('mcp'))
+const osNotifySystem = ref(isChannelEnabled('system'))
+watch(osNotifyDeploy, (v) => setChannelEnabled('deploy', v))
+watch(osNotifyMcp,    (v) => setChannelEnabled('mcp', v))
+watch(osNotifySystem, (v) => setChannelEnabled('system', v))
+
+async function onTestOsNotify(): Promise<void> {
+  await osNotify({
+    title: t('settings.osNotify.testTitle'),
+    body: t('settings.osNotify.testBody'),
+    urgency: 'normal',
+    channel: 'system',
+  })
+}
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
@@ -1182,7 +1470,7 @@ const backupDir = ref('')
 const backupScheduleHours = ref(0)
 
 // Backup management
-import { fetchBackups, createBackup, downloadBackup, type BackupEntry } from '../../api/daemon'
+import { fetchBackups, createBackup, downloadBackup, listMcpKinds, type BackupEntry } from '../../api/daemon'
 const backupsList = ref<BackupEntry[]>([])
 const backupsLoading = ref(false)
 const backupCreating = ref(false)
@@ -1546,11 +1834,43 @@ async function loadPhpVersions() {
   } catch { /* keep defaults */ }
 }
 
+async function loadMcpKindOptions(): Promise<void> {
+  try {
+    const r = await listMcpKinds()
+    mcpKindOptions.value = r.entries.map((e) => ({
+      id: e.id,
+      label: e.label,
+      danger: e.danger,
+    }))
+  } catch {
+    mcpKindOptions.value = []
+  }
+}
+
 async function loadSettings() {
   try {
     const data = await fetchSettings()
     if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
     if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
+    // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
+    // accept "true"/"1" as truthy, default false when missing.
+    mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
+    // Phase 7.4e — strict_kinds (default false: lenient).
+    mcpStrictKinds.value = data['mcp.strict_kinds'] === 'true' || data['mcp.strict_kinds'] === '1'
+    // Phase 7.5+++ — always-confirm kinds (comma-separated).
+    mcpAlwaysConfirmKinds.value = data['mcp.always_confirm_kinds'] ?? ''
+    // Phase 7.5+++ — janitor retention windows. parseInt yields NaN on
+    // missing/empty; coalesce to defaults (1d/30d) so the inputs land
+    // on sensible numbers when settings haven't been touched.
+    {
+      const exp = parseInt(data['mcp.grant_expired_retention_days'] ?? '')
+      mcpExpiredRetentionDays.value = Number.isFinite(exp) && exp >= 0 ? exp : 1
+      const rev = parseInt(data['mcp.grant_revoked_retention_days'] ?? '')
+      mcpRevokedRetentionDays.value = Number.isFinite(rev) && rev >= 0 ? rev : 30
+    }
+    // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
+    // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
+    deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
@@ -2364,6 +2684,10 @@ onMounted(async () => {
   void loadPluginPorts()
   void loadMysqlRootStatus()
   void loadSnapshots()
+  // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
+  // multi-select. Best-effort: silent failure leaves the input as the
+  // free-text fallback, no toast (kinds endpoint may be MCP-disabled).
+  void loadMcpKindOptions()
   if (accountToken.value) {
     void loadDevicesAccount()
     // Mirror the renderer's accountToken into daemon SettingsStore so
@@ -2409,6 +2733,12 @@ async function save() {
       'ports.mysql':         String(ports.mysql),
       'ports.redis':         String(ports.redis),
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
+      'mcp.enabled':         String(mcpEnabled.value),
+      'mcp.strict_kinds':    String(mcpStrictKinds.value),
+      'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
+      'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
+      'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
+      'deploy.enabled':      String(deployEnabled.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),
       'paths.apache':   paths.apache,

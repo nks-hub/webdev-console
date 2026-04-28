@@ -16,4 +16,5 @@ public abstract class PluginBase : IWdcPlugin
     public virtual void Initialize(IServiceCollection services, IPluginContext context) { }
     public virtual Task StartAsync(IPluginContext context, CancellationToken ct) => Task.CompletedTask;
     public virtual Task StopAsync(CancellationToken ct) => Task.CompletedTask;
+    public virtual void RegisterEndpoints(EndpointRegistration registration) { }
 }

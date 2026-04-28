@@ -98,12 +98,12 @@
     <!-- Generate cert dialog -->
     <el-dialog v-model="showGenerateDialog" title="Generate SSL Certificate" width="440px">
       <el-form label-position="top" size="small">
-        <el-form-item label="Domain" required>
+        <el-form-item :label="$t('ssl.dialog.domain')" required>
           <el-select
             v-model="genDomain"
             filterable
             allow-create
-            placeholder="Select or type domain"
+            :placeholder="$t('ssl.dialog.domainPlaceholder')"
             style="width: 100%"
           >
             <el-option
@@ -114,14 +114,14 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Aliases (comma-separated)">
-          <el-input v-model="genAliases" placeholder="www.myapp.loc, api.myapp.loc" />
+        <el-form-item :label="$t('ssl.dialog.aliases')">
+          <el-input v-model="genAliases" :placeholder="$t('ssl.dialog.aliasesPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showGenerateDialog = false">Cancel</el-button>
+        <el-button @click="showGenerateDialog = false">{{ $t('ssl.dialog.cancel') }}</el-button>
         <el-button type="primary" :loading="generating" @click="generateCert" :disabled="!genDomain">
-          Generate
+          {{ $t('ssl.dialog.generateBtn') }}
         </el-button>
       </template>
     </el-dialog>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, Notification } from 'electron'
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
@@ -355,8 +355,15 @@ async function spawnDaemon() {
 
   if (isDev) {
     const projectDir = findDaemonProject()
-    log.info('[daemon] spawn (dev): dotnet run --project', projectDir)
-    daemon = spawn('dotnet', ['run', '--project', projectDir], {
+    // Dev mode: pass CiBuild=true so the daemon builds with app.ci.manifest
+    // (asInvoker, no requireAdministrator). Without this, `dotnet run`
+    // fails on Windows with "Požadovaná operace vyžaduje zvýšená oprávnění"
+    // because the prod manifest forces UAC and a non-elevated parent
+    // (`npm run dev`) can't satisfy that. Side effect: dev daemon cannot
+    // edit hosts/Apache, but UI iteration doesn't need that.
+    const dotnetArgs = ['run', '--project', projectDir, '-p:CiBuild=true']
+    log.info('[daemon] spawn (dev): dotnet', dotnetArgs.join(' '))
+    daemon = spawn('dotnet', dotnetArgs, {
       stdio: 'pipe',
       detached: false,
       env: daemonEnv,
@@ -1308,6 +1315,51 @@ ipcMain.handle('renderer-log', (_evt, payload: { level?: string; args?: unknown[
     fn('[renderer]', ...args)
     return true
   } catch {
+    return false
+  }
+})
+
+// #147 — cross-platform OS notifications via Electron's Notification class.
+// Uses native Win10/11 toast on Windows, NSUserNotificationCenter on macOS,
+// libnotify on Linux. Renderer hands us {title, body, urgency, channel} —
+// we map urgency to the platform-relevant flag (silent=info, normal=success,
+// critical=error). The optional `channel` is recorded for telemetry only;
+// platform notification grouping happens via the AppUserModelID on Windows
+// and the bundle id on macOS, both already set elsewhere.
+ipcMain.handle('os-notify', (_evt, payload: {
+  title?: string
+  body?: string
+  urgency?: 'low' | 'normal' | 'critical'
+  silent?: boolean
+  channel?: string
+}) => {
+  try {
+    if (!Notification.isSupported()) {
+      log.warn('[os-notify] not supported on this platform — skipping', { channel: payload?.channel })
+      return false
+    }
+    const n = new Notification({
+      title: (payload?.title ?? 'NKS WebDev Console').slice(0, 200),
+      body: (payload?.body ?? '').slice(0, 1000),
+      silent: payload?.silent ?? (payload?.urgency === 'low'),
+      urgency: payload?.urgency ?? 'normal',
+    })
+    // Clicking a notification should bring the main window forward so
+    // the operator can act on what triggered it. Best-effort — if no
+    // window exists (rare), the notification still fires fine.
+    n.on('click', () => {
+      const w = BrowserWindow.getAllWindows()[0]
+      if (w) {
+        if (w.isMinimized()) w.restore()
+        w.show()
+        w.focus()
+      }
+    })
+    n.show()
+    log.info('[os-notify] fired', { channel: payload?.channel, urgency: payload?.urgency })
+    return true
+  } catch (err) {
+    log.error('[os-notify] failed:', err)
     return false
   }
 })

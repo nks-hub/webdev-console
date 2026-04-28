@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Tomlyn;
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Core.Services;
 using NKS.WebDevConsole.Daemon.Config;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NKS.WebDevConsole.Daemon.Sites;
 
-public sealed class SiteManager
+public sealed class SiteManager : ISiteRegistry
 {
     private readonly ILogger<SiteManager> _logger;
     private readonly TemplateEngine _templateEngine;
@@ -28,6 +29,9 @@ public sealed class SiteManager
     }
 
     public IReadOnlyDictionary<string, SiteConfig> Sites => _sites;
+
+    public SiteConfig? GetSite(string domain) =>
+        _sites.TryGetValue(domain, out var s) ? s : null;
 
     public void LoadAll()
     {

@@ -144,6 +144,252 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 export const fetchStatus = (): Promise<StatusResponse> =>
   json('/api/status')
 
+// MCP intent confirmation (Mode A hybrid flow). The wdc GUI calls this
+// when the user clicks Approve on the McpConfirmBanner — flips
+// deploy_intents.confirmed_at so the destructive route can fire.
+// Returns 200 on success, 409 when already confirmed (banner double-click),
+// 404 when the intent vanished (expired + swept by IntentSweeperService).
+export interface ConfirmIntentResponse {
+  intentId: string
+  confirmedAt: string
+}
+export const confirmIntent = (intentId: string): Promise<ConfirmIntentResponse> =>
+  json(`/api/mcp/intents/${encodeURIComponent(intentId)}/confirm`, { method: 'POST' })
+
+/**
+ * Phase 6.11b — admin inventory of all MCP-signed intents (read-only).
+ * Returns newest-first up to `limit` (server caps at 500). Each entry
+ * carries a derived `state` field: consumed | expired | pending_confirmation | ready.
+ */
+export interface IntentInventoryEntry {
+  intentId: string
+  domain: string
+  host: string
+  releaseId: string | null
+  /**
+   * Phase 7.4a — open kind namespace; can be any plugin-defined id like
+   * "nksbackup:restore", not just the four legacy core kinds.
+   */
+  kind: string
+  /**
+   * Phase 7.5+ — registry-resolved label / danger / owning plugin id,
+   * surfaced by the inventory endpoint when the kind is registered.
+   * Null when the daemon's IDestructiveOperationKinds doesn't know
+   * the kind (post-uninstall, or pre-registration race).
+   */
+  kindLabel: string | null
+  kindDanger: 'reversible' | 'destructive' | null
+  kindPluginId: string | null
+  expiresAt: string
+  usedAt: string | null
+  confirmedAt: string | null
+  createdAt: string
+  // Phase 7.5+++ — id of the grant that auto-confirmed this intent,
+  // or null when the operator confirmed manually via the GUI banner
+  // (or used the allowUnconfirmed CI escape hatch).
+  matchedGrantId?: string | null
+  state: 'consumed' | 'expired' | 'pending_confirmation' | 'ready'
+}
+
+export interface IntentInventoryResponse {
+  count: number
+  entries: IntentInventoryEntry[]
+}
+
+export const fetchIntentInventory = (
+  limit = 100,
+  matchedGrantId?: string | null,
+): Promise<IntentInventoryResponse> => {
+  // Phase 7.5+++ — optional matchedGrantId filter for "show all
+  // intents this grant approved" drilldown from McpGrants → McpIntents.
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (matchedGrantId) params.set('matchedGrantId', matchedGrantId)
+  return json(`/api/mcp/intents?${params.toString()}`)
+}
+
+export interface RevokeIntentResponse {
+  intentId: string
+  revokedAt: string
+}
+
+/**
+ * Phase 6.12b — neuter an intent before an AI client fires it. Marks
+ * used_at server-side without actually consuming, so the intent moves
+ * to the consumed state and any subsequent ValidateAndConsumeAsync
+ * returns already_used.
+ */
+export const revokeIntent = (intentId: string): Promise<RevokeIntentResponse> =>
+  json(`/api/mcp/intents/${encodeURIComponent(intentId)}/revoke`, { method: 'POST' })
+
+// ----------------------------------------------------------------------------
+// Phase 7.3 — MCP grants (persistent trust). Banner buttons + admin page
+// hit these endpoints. Backend = /api/mcp/grants in Program.cs.
+// ----------------------------------------------------------------------------
+export type McpGrantScopeType = 'session' | 'instance' | 'api_key' | 'always'
+
+export interface McpGrantRow {
+  id: string
+  scopeType: McpGrantScopeType
+  scopeValue: string | null
+  kindPattern: string
+  targetPattern: string
+  grantedAt: string
+  expiresAt: string | null
+  grantedBy: string
+  revokedAt: string | null
+  note: string | null
+  // Phase 7.5+++ — match telemetry. matchCount=0 + lastMatchedAt=null
+  // means the grant has never auto-confirmed an intent.
+  matchCount?: number
+  lastMatchedAt?: string | null
+  // Phase 7.5+++ — rate limit. 0 = no cooldown (default behaviour).
+  // After a match, validator skips this grant for N seconds.
+  minCooldownSeconds?: number
+}
+
+export interface McpGrantCreateBody {
+  scopeType: McpGrantScopeType
+  scopeValue: string | null
+  kindPattern?: string
+  targetPattern?: string
+  expiresAt?: string | null
+  grantedBy?: string
+  note?: string
+  // Phase 7.5+++ — optional rate limit. 0 = no cooldown.
+  minCooldownSeconds?: number
+}
+
+export interface McpGrantsListResult {
+  count: number
+  total?: number
+  page?: number
+  pageSize?: number
+  totalPages?: number
+  entries: McpGrantRow[]
+}
+
+export const listMcpGrants = (
+  includeRevoked = false,
+  page?: number,
+  pageSize?: number,
+): Promise<McpGrantsListResult> => {
+  // Phase 7.5+++ — opt-in audit view + pagination. Defaults preserve
+  // backward compat (single un-paged response when page/pageSize omitted
+  // — daemon still applies its default 50-row page).
+  const params = new URLSearchParams()
+  if (includeRevoked) params.set('includeRevoked', 'true')
+  if (page !== undefined) params.set('page', String(page))
+  if (pageSize !== undefined) params.set('pageSize', String(pageSize))
+  const qs = params.toString()
+  return json(`/api/mcp/grants${qs ? `?${qs}` : ''}`)
+}
+
+export interface McpGrantUpdateBody {
+  minCooldownSeconds?: number
+  expiresAt?: string | null  // null = make permanent
+  note?: string
+}
+
+export const updateMcpGrant = (
+  id: string,
+  body: McpGrantUpdateBody,
+): Promise<{ id: string; status: string }> =>
+  json(`/api/mcp/grants/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
+// ----------------------------------------------------------------------------
+// Phase 7.4b — registered destructive op kinds (deploy/restore/+ plugin-defined).
+// Read-only discovery surface so the GUI + MCP clients see what they can mint.
+// ----------------------------------------------------------------------------
+export interface McpKindRow {
+  id: string
+  label: string
+  pluginId: string
+  danger: 'reversible' | 'destructive'
+  // Phase 7.5+++ — lifetime intent count for this kind (all states).
+  // Optional for backward compat with daemons that don't expose it yet.
+  intentCount?: number
+  // Phase 7.5+++ — true when this kind is in mcp.always_confirm_kinds,
+  // i.e. the validator skips grant auto-approval for it. Optional for
+  // backward compat with older daemons.
+  alwaysConfirm?: boolean
+}
+
+export const listMcpKinds = (): Promise<{ count: number; entries: McpKindRow[] }> =>
+  json('/api/mcp/kinds')
+
+export const createMcpGrant = (body: McpGrantCreateBody): Promise<{ id: string; status: string }> =>
+  json('/api/mcp/grants', { method: 'POST', body: JSON.stringify(body) })
+
+export const revokeMcpGrant = (id: string): Promise<{ id: string; status: string }> =>
+  json(`/api/mcp/grants/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+// Phase 7.5+++ — manual sweep trigger. Returns the count of grants
+// the janitor deleted (expired past grace OR revoked past audit window).
+export const sweepMcpGrantsNow = (): Promise<{ deleted: number }> =>
+  json('/api/mcp/grants/sweep-now', { method: 'POST' })
+
+// Phase 7.5+++ — bulk import from a previously-exported envelope.
+// Server skips dup ids; payload is the raw text the user uploaded
+// (we don't re-parse client-side so unknown fields pass through).
+export interface McpGrantsImportResult {
+  imported: number
+  skipped: number
+  errors: Array<{ index: number; error: string }>
+}
+
+export const importMcpGrants = (envelopeJson: string): Promise<McpGrantsImportResult> =>
+  json('/api/mcp/grants/import', { method: 'POST', body: envelopeJson })
+
+// Phase 7.5+++ — dry-run grant matching. Asks "would these caller
+// identity slots + kind + target match an existing active grant?"
+// without firing an intent. Returns the matching grant's metadata so
+// operators can see WHY (e.g. "matched scope=always with kind=*").
+export interface McpGrantTestMatchBody {
+  sessionId?: string | null
+  instanceId?: string | null
+  apiKeyId?: string | null
+  kind: string
+  target: string
+}
+
+export interface McpGrantTestMatchResult {
+  matched: boolean
+  grant?: {
+    id: string
+    scopeType: string
+    scopeValue: string | null
+    kindPattern: string
+    targetPattern: string
+    matchCount?: number
+    lastMatchedAt?: string | null
+  }
+}
+
+export const testMatchMcpGrant = (
+  body: McpGrantTestMatchBody,
+): Promise<McpGrantTestMatchResult> =>
+  json('/api/mcp/grants/test-match', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+// Phase 7.5+++ — server-side aggregate stats. Single call returns
+// counts the GUI would otherwise compute by walking the full grant
+// list. Useful for the McpHub badge + Settings snapshot.
+export interface McpGrantsStats {
+  total: number
+  active: number
+  deadweight: number
+  totalMatches: number
+  lastMatchAt: string | null
+}
+
+export const fetchMcpGrantsStats = (): Promise<McpGrantsStats> =>
+  json('/api/mcp/grants/stats')
+
 // System info (os tag, arch tag, daemon version, counts, catalog status)
 export interface SystemInfo {
   daemon: { version: string; uptime: number; pid: number }
@@ -931,20 +1177,17 @@ export const restoreHosts = (pathOrContent: { path?: string; content?: string })
   json('/api/hosts/restore', { method: 'POST', body: JSON.stringify(pathOrContent) })
 
 /**
- * Subscribe to SSE stream from daemon.
- * Returns a cleanup function — call it to close the EventSource.
+ * Map-shaped SSE subscription. Pass any number of named event handlers as
+ * key/value entries — added so `deploy:event` and other plugin-contributed
+ * SSE channels can attach without growing the named-parameter overload of
+ * <see cref="subscribeEvents"/> (per v2 audit fix #4: "subscribeEvents
+ * refactor to Map"). The 5 named-param overload below stays as a thin
+ * wrapper so existing callers keep compiling unchanged.
  *
- * Implements its own reconnect with exponential backoff because the built-in
- * EventSource reconnect uses the frozen initial URL. On daemon restart the
- * port/token change, so we must rebuild the URL from current location.search
- * (which Electron main refreshes on window reload) before each reconnect attempt.
+ * Returns a cleanup function — call it to close the EventSource.
  */
-export function subscribeEvents(
-  onService: (data: ServiceInfo) => void,
-  onProgress: (data: ProgressUpdate) => void,
-  onMetrics?: (data: MetricsUpdate) => void,
-  onLog?: (data: LogEntry) => void,
-  onValidation?: (data: ValidationUpdate) => void,
+export function subscribeEventsMap(
+  handlers: Record<string, (data: unknown) => void>,
 ): () => void {
   let es: EventSource | null = null
   let closed = false
@@ -975,25 +1218,15 @@ export function subscribeEvents(
       backoffMs = 1000
     })
 
-    es.addEventListener('service', (e: MessageEvent) => {
-      try { onService(JSON.parse(e.data) as ServiceInfo) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('progress', (e: MessageEvent) => {
-      try { onProgress(JSON.parse(e.data) as ProgressUpdate) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('metrics', (e: MessageEvent) => {
-      try { onMetrics?.(JSON.parse(e.data) as MetricsUpdate) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('log', (e: MessageEvent) => {
-      try { onLog?.(JSON.parse(e.data) as LogEntry) } catch { /* ignore */ }
-    })
-
-    es.addEventListener('validation', (e: MessageEvent) => {
-      try { onValidation?.(JSON.parse(e.data) as ValidationUpdate) } catch { /* ignore */ }
-    })
+    // Iterate the handler map so every registered event type wires into the
+    // single shared connection. Reusing the same EventSource for plugin
+    // events (e.g. deploy:event) avoids the previous 3-EventSource problem
+    // identified in the v2 audit.
+    for (const [eventName, handler] of Object.entries(handlers)) {
+      es.addEventListener(eventName, (e: MessageEvent) => {
+        try { handler(JSON.parse(e.data)) } catch { /* ignore malformed payload */ }
+      })
+    }
 
     es.onerror = () => {
       // EventSource would auto-reconnect with stale URL — we close and rebuild
@@ -1034,4 +1267,27 @@ export function subscribeEvents(
       es = null
     }
   }
+}
+
+/**
+ * Backwards-compatible 5-handler overload of <see cref="subscribeEventsMap"/>.
+ * Existing call sites (Sites view, ServiceCard, LogViewer, etc.) continue
+ * to use this signature; new plugins (deploy, future) attach via the Map
+ * variant. Implementation just builds a handler map and delegates.
+ */
+export function subscribeEvents(
+  onService: (data: ServiceInfo) => void,
+  onProgress: (data: ProgressUpdate) => void,
+  onMetrics?: (data: MetricsUpdate) => void,
+  onLog?: (data: LogEntry) => void,
+  onValidation?: (data: ValidationUpdate) => void,
+): () => void {
+  const handlers: Record<string, (data: unknown) => void> = {
+    service: (d) => onService(d as ServiceInfo),
+    progress: (d) => onProgress(d as ProgressUpdate),
+  }
+  if (onMetrics) handlers.metrics = (d) => onMetrics(d as MetricsUpdate)
+  if (onLog) handlers.log = (d) => onLog(d as LogEntry)
+  if (onValidation) handlers.validation = (d) => onValidation(d as ValidationUpdate)
+  return subscribeEventsMap(handlers)
 }

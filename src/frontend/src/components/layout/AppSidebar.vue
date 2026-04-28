@@ -180,6 +180,21 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Files /></el-icon></span>
         <span class="nav-label">Zálohy</span>
       </div>
+      <!-- Phase 6.11b — admin audit view of all signed MCP intents.
+           Phase 6.23 — gated by featureFlagsStore.mcpEnabled (default
+           false). Advanced-only AND mcp.enabled=true to render —
+           hidden by default for operators not running AI agents. -->
+      <!-- Phase 7.3 — single MCP hub entry; tabs inside the page split
+           between Intents (audit log) and Oprávnění (persistent grants). -->
+      <div
+        v-if="uiModeStore.isAdvanced && featureFlagsStore.showMcpSurface"
+        class="nav-item"
+        :class="{ active: isActive('/mcp/intents') || isActive('/mcp/grants') }"
+        @click="navigate('/mcp/intents')"
+      >
+        <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.mcp') }}</span>
+      </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
         <span class="nav-label">{{ $t('nav.settings') }}</span>
@@ -230,12 +245,13 @@
 <script setup lang="ts">
 import { computed, onMounted, markRaw, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useServicesStore } from '../../stores/services'
 import { useUiModeStore } from '../../stores/uiMode'
+import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -247,6 +263,7 @@ const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiModeStore = useUiModeStore()
+const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
 const authStore = useAuthStore()
 
