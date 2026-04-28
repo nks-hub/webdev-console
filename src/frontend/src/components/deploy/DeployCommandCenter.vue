@@ -73,7 +73,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useDeployStore } from '../../stores/deploy'
+import { useDeployStore, type DeployRunState } from '../../stores/deploy'
 
 const { t } = useI18n()
 import HostCard from './HostCard.vue'
@@ -167,8 +167,8 @@ const lastDeployByHost = computed<Map<string, DeployHistoryEntryDto>>(() => {
  * Reactive over deployStore.runs because Pinia's `runs` ref triggers
  * recomputation whenever events arrive via SSE → handleSseEvent.
  */
-const activeRunByHost = computed<Map<string, ReturnType<typeof Array.from<unknown>>[number] | null>>(() => {
-  const m = new Map<string, ReturnType<typeof Array.from<unknown>>[number] | null>()
+const activeRunByHost = computed<Map<string, DeployRunState | null>>(() => {
+  const m = new Map<string, DeployRunState | null>()
   for (const run of deployStore.runs.values()) {
     if (run.domain !== props.domain) continue
     if (run.isTerminal) continue

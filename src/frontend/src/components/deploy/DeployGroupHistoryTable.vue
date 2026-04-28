@@ -82,7 +82,7 @@
       <el-table-column prop="hosts" :label="t('deploy.groupHistory.col.hosts')" min-width="180">
         <template #default="{ row }">
           <span class="hosts-summary">
-            {{ t('deploy.groupHistory.hostsCount', row.hosts.length, { n: row.hosts.length }) }}:
+            {{ t('deploy.groupHistory.hostsCount', { n: row.hosts.length }, row.hosts.length) }}:
             <code class="mono">{{ row.hosts.join(', ') }}</code>
           </span>
         </template>

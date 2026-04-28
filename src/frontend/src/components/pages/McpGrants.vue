@@ -392,6 +392,7 @@ import {
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const grants = ref<McpGrantRow[]>([])
 
@@ -600,7 +601,8 @@ watch(scopeTypeFilter, (next) => {
 // where targetPattern is the exact target OR the wildcard '*' (which
 // applies to all domains). Two-way bound back to the URL so the
 // browser back/forward buttons work as expected.
-const route = useRoute()
+// (route hoisted to top of script — earlier code paths in this same
+// file referenced it before this declaration.)
 const targetFilter = ref<string>(
   typeof route.query.target === 'string' ? route.query.target : '',
 )

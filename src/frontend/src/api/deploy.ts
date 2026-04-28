@@ -64,6 +64,12 @@ export interface DeployHistoryEntryDto {
   // Phase 7.5+++ — surface the trigger source ('gui' | 'mcp' | 'cli' | …).
   // Optional because older daemons / older history rows may not include it.
   triggeredBy?: string
+  // Derived from finalPhase + error. Many UI components consume `success`
+  // directly; the API doesn't include it server-side so consumers either
+  // synthesize it (`finalPhase === 'done' && !error`) or fall back to
+  // checking `error` directly. Optional so daemons that already populate
+  // it server-side keep working.
+  success?: boolean
 }
 
 /** Response envelope from POST .../deploy. deployId may be null in the 1s
