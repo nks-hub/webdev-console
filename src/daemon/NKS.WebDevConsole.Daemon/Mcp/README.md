@@ -163,11 +163,43 @@ per second.
 
 ## Tests
 
-`tests/NKS.WebDevConsole.Daemon.Tests/McpToolCallsRepositoryTests.cs`
-covers 10 scenarios: insert round-trip, default fallbacks, danger /
-tool / session filters, paging, ordering, count, stats with percentiles,
-prune, by-tool aggregation. All hermetic — per-test SQLite file in
-`%TEMP%`, deleted in finally.
+Three-layer pyramid (27 tests):
+
+| Layer           | Suite                                                                       | Cases |
+|-----------------|-----------------------------------------------------------------------------|-------|
+| Daemon (C#)     | `tests/.../McpToolCallsRepositoryTests.cs`                                  | 13    |
+| MCP server (TS) | `services/mcp-server/src/auditLog.test.ts` (vitest)                         | 7     |
+| REST contract   | `src/frontend/tests/playwright/tests/mcp-tool-calls.spec.ts`                | 7     |
+
+Daemon tests cover insert round-trip, default fallbacks, filters,
+paging, ordering, count, stats with percentiles, prune, by-tool
+aggregation, search LIKE, search trim, timeline buckets. All hermetic —
+per-test SQLite file in `%TEMP%`, `File.Delete` wrapped in `try/catch`
+(SQLite connection pool can hold the handle past the using-block on Windows).
+
+MCP-server vitest covers `wrapHandler()`: result propagation, ok audit
+row, danger classification (read default + destructive/mutate overrides),
+error re-throw + audit, args truncation to 500 chars, audit-failure
+resilience (relay down does NOT break the wrapped handler).
+
+Playwright REST contract verifies all 6 new endpoints (`POST tool-calls`,
+`GET tool-calls`, `stats`, `timeline`, `by-tool`, `export.csv`) plus
+suggested-grants envelope shape and CSV header line.
+
+## Operations
+
+`tools/dev-daemon-rebuild.sh` is the local restart helper — `POST
+/api/admin/restart` then `dotnet build` then respawn. When a previously
+elevated daemon (or orphan crashed instance) holds bin DLL locks, the
+script falls back to `tools/remote-cmd.sh` to issue an elevated
+`Stop-Process` against the `wdc-restart-elevated` relay client. This
+avoids the UAC popup that local `taskkill /F` would trigger when the
+calling shell isn't admin.
+
+`tools/remote-cmd.sh` is a thin curl wrapper around the relay HTTP API
+at `https://localhost:7890`. The token is auto-discovered from the
+running relay's command line via `wmic`, so it stays in sync if the
+relay restarts with a different secret.
 
 ## What's deferred
 
