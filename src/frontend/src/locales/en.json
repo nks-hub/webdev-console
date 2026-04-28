@@ -915,7 +915,18 @@
     "subdomainUser": "= OS username",
     "subdomainExample": "Example for {domain}:",
     "savePathBtn": "Save path",
-    "saveTemplateBtn": "Save template"
+    "saveTemplateBtn": "Save template",
+    "exposedSites": "Exposed sites",
+    "exposedSitesHint": "Sites with Cloudflare Tunnel enabled in SiteEdit > Cloudflare tab",
+    "noSitesExposed": "No sites are exposed yet. Open a site in the Sites page, Cloudflare tab, toggle \"Enable tunnel for this site\", pick a zone, enter a subdomain, Save, then click \"Sync all sites\" below.",
+    "syncAllSites": "Sync all sites to Cloudflare ({n})",
+    "dnsRecords": "DNS records",
+    "pickZone": "Pick a zone",
+    "zoneSelect": "Zone",
+    "addDnsRecord": "Add DNS record",
+    "type": "Type",
+    "proxied": "Proxied",
+    "docs": "Docs"
   },
   "siteEdit": {
     "general": "General",

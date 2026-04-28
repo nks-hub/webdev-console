@@ -11,7 +11,7 @@
       <div class="header-actions">
         <el-button size="small" @click="openDocs">
           <el-icon><Link /></el-icon>
-          <span>Docs</span>
+          <span>{{ $t('cloudflare.docs') }}</span>
         </el-button>
         <el-button
           size="small"
@@ -220,17 +220,11 @@
         <div class="tab-content">
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Exposed sites</span>
-              <span class="edit-card-hint">
-                Sites with Cloudflare Tunnel enabled in SiteEdit &gt; Cloudflare tab
-              </span>
+              <span class="edit-card-title">{{ $t('cloudflare.exposedSites') }}</span>
+              <span class="edit-card-hint">{{ $t('cloudflare.exposedSitesHint') }}</span>
             </header>
             <div class="edit-card-body">
-              <div v-if="exposedSites.length === 0" class="hint">
-                No sites are exposed yet. Open a site in the Sites page,
-                Cloudflare tab, toggle "Enable tunnel for this site", pick a zone,
-                enter a subdomain, Save, then click "Sync all sites" below.
-              </div>
+              <div v-if="exposedSites.length === 0" class="hint">{{ $t('cloudflare.noSitesExposed') }}</div>
               <div v-else class="site-expose-list">
                 <div
                   v-for="s in exposedSites"
@@ -260,7 +254,7 @@
                   @click="syncAllSites"
                 >
                   <el-icon><Check /></el-icon>
-                  <span>Sync all sites to Cloudflare ({{ exposedSites.length }})</span>
+                  <span>{{ $t('cloudflare.syncAllSites', { n: exposedSites.length }) }}</span>
                 </el-button>
                 <span v-if="syncStatus" class="save-status" :class="syncStatus.kind">
                   {{ syncStatus.message }}
@@ -286,13 +280,13 @@
         <div class="tab-content">
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">DNS records</span>
-              <span class="edit-card-hint">{{ activeZone?.name || 'Pick a zone' }}</span>
+              <span class="edit-card-title">{{ $t('cloudflare.dnsRecords') }}</span>
+              <span class="edit-card-hint">{{ activeZone?.name || $t('cloudflare.pickZone') }}</span>
             </header>
             <div class="edit-card-body">
               <el-select
                 v-model="selectedDnsZoneId"
-                placeholder="Zone"
+                :placeholder="$t('cloudflare.zoneSelect')"
                 :loading="loadingZones"
                 filterable
                 @change="loadDns"
@@ -325,7 +319,7 @@
                 </el-table-column>
                 <el-table-column label="Proxied" width="90" align="center">
                   <template #default="{ row }">
-                    <el-tag v-if="row.proxied" size="small" type="warning" effect="dark">Proxied</el-tag>
+                    <el-tag v-if="row.proxied" size="small" type="warning" effect="dark">{{ $t('cloudflare.proxied') }}</el-tag>
                     <el-tag v-else size="small" effect="plain">DNS only</el-tag>
                   </template>
                 </el-table-column>
@@ -350,7 +344,7 @@
 
           <section class="edit-card">
             <header class="edit-card-header">
-              <span class="edit-card-title">Add DNS record</span>
+              <span class="edit-card-title">{{ $t('cloudflare.addDnsRecord') }}</span>
               <span class="edit-card-hint">
                 CNAME to <code>{{ tunnelCnameTarget }}</code> routes traffic through this tunnel
               </span>

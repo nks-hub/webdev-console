@@ -917,7 +917,18 @@
     "subdomainUser": "= uživatelské jméno OS",
     "subdomainExample": "Příklad pro {domain}:",
     "savePathBtn": "Uložit cestu",
-    "saveTemplateBtn": "Uložit šablonu"
+    "saveTemplateBtn": "Uložit šablonu",
+    "exposedSites": "Vystavené weby",
+    "exposedSitesHint": "Weby s povoleným Cloudflare tunelem v SiteEdit > Cloudflare tab",
+    "noSitesExposed": "Zatím nejsou vystaveny žádné weby. Otevři web ve Webech, Cloudflare tab, zapni „Povolit tunel pro tento web\", vyber zónu, zadej subdoménu, Ulož, pak klikni „Synchronizovat všechny weby\" níže.",
+    "syncAllSites": "Synchronizovat všechny weby do Cloudflare ({n})",
+    "dnsRecords": "DNS záznamy",
+    "pickZone": "Vyber zónu",
+    "zoneSelect": "Zóna",
+    "addDnsRecord": "Přidat DNS záznam",
+    "type": "Typ",
+    "proxied": "Proxied",
+    "docs": "Dokumentace"
   },
   "siteEdit": {
     "general": "Obecné",
