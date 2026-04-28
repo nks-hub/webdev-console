@@ -1,6 +1,5 @@
 import { h, type VNode } from 'vue'
 import { ElNotification, ElButton, ElMessage } from 'element-plus'
-import { useRouter } from 'vue-router'
 import { i18n } from '../i18n'
 import { confirmIntent, revokeIntent } from '../api/daemon'
 
@@ -134,8 +133,3 @@ export function closeMcpConfirmToast(intentId: string): void {
   }
 }
 
-// useRouter is imported to keep the file self-contained; if a future
-// caller needs router-aware navigation (e.g. open the intent detail
-// inside the active SPA tab without a hash flip) it can wrap this and
-// call useRouter() in setup().
-export { useRouter as _useRouter }
