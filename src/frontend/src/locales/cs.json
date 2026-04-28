@@ -1440,6 +1440,16 @@
     }
   },
   "logs": {
+    "viewer": {
+      "levelAll": "Vše",
+      "levelError": "Chyba",
+      "levelWarn": "Varování",
+      "levelInfo": "Info",
+      "search": "Hledat…",
+      "find": "Najít",
+      "copy": "Kopírovat",
+      "clear": "Vyčistit"
+    },
     "errors": {
       "timestamp": "Čas",
       "severity": "Závažnost",

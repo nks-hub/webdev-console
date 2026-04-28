@@ -1440,6 +1440,16 @@
     }
   },
   "logs": {
+    "viewer": {
+      "levelAll": "All",
+      "levelError": "Error",
+      "levelWarn": "Warning",
+      "levelInfo": "Info",
+      "search": "Search…",
+      "find": "Find",
+      "copy": "Copy",
+      "clear": "Clear"
+    },
     "errors": {
       "timestamp": "Timestamp",
       "severity": "Severity",

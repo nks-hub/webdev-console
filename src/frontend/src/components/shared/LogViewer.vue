@@ -2,22 +2,22 @@
   <div class="log-viewer">
     <div class="log-toolbar">
       <el-select v-model="logLevel" size="small" style="width: 100px">
-        <el-option label="All" value="all" />
-        <el-option label="Error" value="error" />
-        <el-option label="Warning" value="warn" />
-        <el-option label="Info" value="info" />
+        <el-option :label="t('logs.viewer.levelAll')" value="all" />
+        <el-option :label="t('logs.viewer.levelError')" value="error" />
+        <el-option :label="t('logs.viewer.levelWarn')" value="warn" />
+        <el-option :label="t('logs.viewer.levelInfo')" value="info" />
       </el-select>
       <el-input
         v-model="searchText"
         size="small"
-        placeholder="Search..."
+        :placeholder="t('logs.viewer.search')"
         clearable
         style="width: 160px"
         @keydown.enter="searchInTerminal"
       />
-      <el-button size="small" @click="searchInTerminal" :disabled="!searchText">Find</el-button>
-      <el-button size="small" @click="copyLogs">Copy</el-button>
-      <el-button size="small" @click="clearTerminal">Clear</el-button>
+      <el-button size="small" @click="searchInTerminal" :disabled="!searchText">{{ t('logs.viewer.find') }}</el-button>
+      <el-button size="small" @click="copyLogs">{{ t('logs.viewer.copy') }}</el-button>
+      <el-button size="small" @click="clearTerminal">{{ t('logs.viewer.clear') }}</el-button>
     </div>
     <div ref="terminalRef" class="terminal-container" />
   </div>
@@ -25,12 +25,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { daemonBaseUrl, daemonToken } from '../../api/daemon'
+
+const { t } = useI18n()
 
 // daemonApi is declared as non-optional in ../../api/daemon.ts; the local
 // redeclaration here used to mark it optional, which produced conflicting
