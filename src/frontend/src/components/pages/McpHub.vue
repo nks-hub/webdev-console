@@ -1,5 +1,16 @@
 <template>
   <div class="page mcp-hub-page">
+    <!-- Onboarding panel — first-time setup with preset profiles. Stays
+         at the very top of the page so the four trust-tier cards are
+         the first thing the operator sees, before any header chrome.
+         Auto-hides after a profile is picked or after the user dismisses it. -->
+    <McpOnboardingPanel />
+
+    <!-- Suggested grants — nudges based on repeated manual approvals.
+         Cross-tab so it surfaces regardless of which subview the user
+         is currently looking at. -->
+    <SuggestedGrantsBanner />
+
     <div class="hub-header">
       <h2>{{ t('mcpHub.title') }}</h2>
       <p class="muted">{{ t('mcpHub.description') }}</p>
@@ -47,17 +58,6 @@
         </span>
       </div>
     </div>
-
-    <!-- Onboarding panel — first-time setup with preset profiles. Stays
-         above the tab strip so the four trust-tier cards are the first
-         thing the operator sees in MCP. Auto-hides after a profile is
-         picked or after the user dismisses it. -->
-    <McpOnboardingPanel />
-
-    <!-- Suggested grants — nudges based on repeated manual approvals.
-         Cross-tab so it surfaces regardless of which subview the user
-         is currently looking at. -->
-    <SuggestedGrantsBanner />
 
     <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
       <!-- Activity — unified feed of every MCP tool call, including reads.
