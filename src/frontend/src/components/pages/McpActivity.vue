@@ -40,21 +40,44 @@
       </div>
     </div>
 
-    <!-- Stats banner — at-a-glance traffic overview for last 24h -->
+    <!-- Stats banner — at-a-glance traffic overview for last 24h. Tiles
+         are clickable: clicking a danger-level tile filters the feed
+         below to that level (or clears the filter when clicking the
+         already-active one). -->
     <div v-if="stats" class="activity-stats">
-      <div class="stat-tile">
+      <div
+        class="stat-tile clickable"
+        :class="{ active: !dangerFilter }"
+        @click="setDangerFilter(null)"
+        :title="t('mcpActivity.stats.clickToClear')"
+      >
         <div class="stat-num">{{ stats.total }}</div>
         <div class="stat-label">{{ t('mcpActivity.stats.totalCalls') }}</div>
       </div>
-      <div class="stat-tile read">
+      <div
+        class="stat-tile read clickable"
+        :class="{ active: dangerFilter === 'read' }"
+        @click="setDangerFilter('read')"
+        :title="t('mcpActivity.stats.clickToFilter')"
+      >
         <div class="stat-num">{{ stats.reads }}</div>
         <div class="stat-label">{{ t('mcpActivity.stats.reads') }}</div>
       </div>
-      <div class="stat-tile mutate">
+      <div
+        class="stat-tile mutate clickable"
+        :class="{ active: dangerFilter === 'mutate' }"
+        @click="setDangerFilter('mutate')"
+        :title="t('mcpActivity.stats.clickToFilter')"
+      >
         <div class="stat-num">{{ stats.mutates }}</div>
         <div class="stat-label">{{ t('mcpActivity.stats.mutates') }}</div>
       </div>
-      <div class="stat-tile destructive">
+      <div
+        class="stat-tile destructive clickable"
+        :class="{ active: dangerFilter === 'destructive' }"
+        @click="setDangerFilter('destructive')"
+        :title="t('mcpActivity.stats.clickToFilter')"
+      >
         <div class="stat-num">{{ stats.destructives }}</div>
         <div class="stat-label">{{ t('mcpActivity.stats.destructives') }}</div>
       </div>
@@ -424,6 +447,15 @@ function onToolSelect(toolName: string): void {
   toolFilter.value = toolName
 }
 
+function setDangerFilter(level: 'read' | 'mutate' | 'destructive' | null): void {
+  // Click on already-active level clears, click on inactive switches.
+  if (dangerFilter.value === level) {
+    dangerFilter.value = null
+  } else {
+    dangerFilter.value = level
+  }
+}
+
 async function exportCsv(): Promise<void> {
   // Stream from daemon directly; preserves Content-Disposition so the
   // browser saves it as `mcp-audit-{date}.csv`. Filters in URL match
@@ -561,6 +593,19 @@ onBeforeUnmount(() => {
 .stat-tile.mutate { border-left-color: var(--el-color-warning); }
 .stat-tile.destructive { border-left-color: var(--el-color-danger); }
 .stat-tile.error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
+.stat-tile.clickable {
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+.stat-tile.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--el-fill-color-darker);
+}
+.stat-tile.clickable.active {
+  background: var(--el-color-primary-light-9);
+  outline: 2px solid var(--el-color-primary-light-5);
+}
 .stat-num { font-size: 20px; font-weight: 600; }
 .stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .activity-filters {

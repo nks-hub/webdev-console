@@ -228,7 +228,9 @@
       "mutates": "Mutating",
       "destructives": "Destruktivní",
       "errors": "Chyby",
-      "sessions": "Session"
+      "sessions": "Session",
+      "clickToFilter": "Klikni pro filtr na tuto úroveň",
+      "clickToClear": "Klikni pro zrušení filtru"
     },
     "kpi": {
       "throughput": "throughput",

@@ -228,7 +228,9 @@
       "mutates": "Mutating",
       "destructives": "Destructive",
       "errors": "Errors",
-      "sessions": "Sessions"
+      "sessions": "Sessions",
+      "clickToFilter": "Click to filter by this level",
+      "clickToClear": "Click to clear filter"
     },
     "kpi": {
       "throughput": "throughput",
