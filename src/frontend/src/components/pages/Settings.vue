@@ -1042,32 +1042,26 @@
         <!-- Sync tab — cloud config sync + export/import -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.sync')" name="sync">
           <div class="tab-content">
-            <p class="tab-desc">
-              Synchronize your NKS WDC configuration with the cloud catalog
-              service, or export/import settings as a file for offline transfer.
-            </p>
+            <p class="tab-desc">{{ $t('settings.sync.topDesc') }}</p>
 
             <!-- Device identity -->
             <section class="settings-card">
               <header class="settings-card-header">
-                <span class="settings-card-title">Device</span>
+                <span class="settings-card-title">{{ $t('settings.sync.device') }}</span>
               </header>
               <div class="settings-card-body">
                 <el-form label-position="left" label-width="140px" size="small" style="max-width: 500px">
-                  <el-form-item label="Device ID">
+                  <el-form-item :label="$t('settings.sync.deviceId')">
                     <el-input :model-value="deviceId" disabled class="mono-input">
                       <template #append>
-                        <el-button @click="copyDeviceId" title="Copy to clipboard">Copy</el-button>
+                        <el-button @click="copyDeviceId" :title="$t('settings.sync.copy')">{{ $t('settings.sync.copy') }}</el-button>
                       </template>
                     </el-input>
-                    <div class="hint">
-                      Auto-generated unique identifier for this machine.
-                      Used as the key for cloud sync.
-                    </div>
+                    <div class="hint">{{ $t('settings.sync.deviceIdHint') }}</div>
                   </el-form-item>
-                  <el-form-item label="Device name">
-                    <el-input v-model="deviceName" placeholder="e.g. Work Laptop" />
-                    <div class="hint">Optional label to identify this device in the sync UI.</div>
+                  <el-form-item :label="$t('settings.sync.deviceName')">
+                    <el-input v-model="deviceName" :placeholder="$t('settings.sync.deviceNamePlaceholder')" />
+                    <div class="hint">{{ $t('settings.sync.deviceNameHint') }}</div>
                   </el-form-item>
                 </el-form>
               </div>
@@ -1076,17 +1070,13 @@
             <!-- Cloud sync -->
             <section class="settings-card">
               <header class="settings-card-header">
-                <span class="settings-card-title">Cloud sync</span>
+                <span class="settings-card-title">{{ $t('settings.sync.cloudSync') }}</span>
                 <span v-if="syncStatus" :class="['sync-badge', syncStatus.ok ? 'sync-ok' : 'sync-err']">
                   {{ syncStatus.message }}
                 </span>
               </header>
               <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 12px;">
-                  Push your current settings (sites, services, ports, paths, plugin
-                  toggles) to the catalog-api service so a fresh install can
-                  restore them with one click.
-                </p>
+                <p class="tab-desc" style="margin-bottom: 12px;">{{ $t('settings.sync.cloudSyncDesc') }}</p>
                 <div class="sync-actions">
                   <el-button
                     type="primary"
@@ -1096,7 +1086,7 @@
                     @click="pushToCloud"
                   >
                     <el-icon><Upload /></el-icon>
-                    <span>Push to cloud</span>
+                    <span>{{ $t('settings.sync.pushToCloud') }}</span>
                   </el-button>
                   <el-button
                     size="small"
@@ -1105,7 +1095,7 @@
                     @click="pullFromCloud"
                   >
                     <el-icon><Download /></el-icon>
-                    <span>Pull from cloud</span>
+                    <span>{{ $t('settings.sync.pullFromCloud') }}</span>
                   </el-button>
                   <el-button
                     size="small"
@@ -1113,11 +1103,11 @@
                     @click="checkCloudExists"
                     :loading="checkingCloud"
                   >
-                    Check status
+                    {{ $t('settings.sync.checkStatus') }}
                   </el-button>
                 </div>
                 <div class="hint" v-if="lastSyncTime">
-                  Last synced: {{ lastSyncDisplay }}
+                  {{ $t('settings.sync.lastSynced') }}: {{ lastSyncDisplay }}
                 </div>
               </div>
             </section>

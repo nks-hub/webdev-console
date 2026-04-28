@@ -1594,6 +1594,21 @@
       "binaries": "Binárky"
     },
     "sync": {
+      "topDesc": "Synchronizuj konfiguraci NKS WDC s cloudovou službou katalogu, nebo exportuj/importuj nastavení jako soubor pro offline přenos.",
+      "device": "Zařízení",
+      "deviceId": "ID zařízení",
+      "deviceIdHint": "Automaticky vygenerovaný jedinečný identifikátor tohoto počítače. Slouží jako klíč pro cloud sync.",
+      "deviceName": "Název zařízení",
+      "deviceNamePlaceholder": "např. Pracovní notebook",
+      "deviceNameHint": "Volitelný štítek pro identifikaci tohoto zařízení v sync UI.",
+      "copy": "Kopírovat",
+      "cloudSync": "Cloud sync",
+      "cloudSyncDesc": "Odešle aktuální nastavení (weby, služby, porty, cesty, přepínače pluginů) do služby catalog-api, aby se daly jedním kliknutím obnovit při čisté instalaci.",
+      "pushToCloud": "Odeslat do cloudu",
+      "pullFromCloud": "Stáhnout z cloudu",
+      "checkStatus": "Zkontrolovat stav",
+      "lastSynced": "Poslední synchronizace",
+      "exportImport": "Export / Import",
       "tabDesc": "Stáhne JSON soubor se všemi nastaveními nebo naimportuje dříve exportovaný soubor. Užitečné pro offline přenos nebo verzované týmové konfigurace.",
       "exportFile": "Exportovat do souboru",
       "importFile": "Importovat ze souboru"

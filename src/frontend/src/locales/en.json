@@ -1592,6 +1592,21 @@
       "binaries": "Binaries"
     },
     "sync": {
+      "topDesc": "Synchronize your NKS WDC configuration with the cloud catalog service, or export/import settings as a file for offline transfer.",
+      "device": "Device",
+      "deviceId": "Device ID",
+      "deviceIdHint": "Auto-generated unique identifier for this machine. Used as the key for cloud sync.",
+      "deviceName": "Device name",
+      "deviceNamePlaceholder": "e.g. Work Laptop",
+      "deviceNameHint": "Optional label to identify this device in the sync UI.",
+      "copy": "Copy",
+      "cloudSync": "Cloud sync",
+      "cloudSyncDesc": "Push your current settings (sites, services, ports, paths, plugin toggles) to the catalog-api service so a fresh install can restore them with one click.",
+      "pushToCloud": "Push to cloud",
+      "pullFromCloud": "Pull from cloud",
+      "checkStatus": "Check status",
+      "lastSynced": "Last synced",
+      "exportImport": "Export / Import",
       "tabDesc": "Download a JSON file of all settings, or import from a previously exported file. Useful for offline transfers or version-controlled team configs.",
       "exportFile": "Export to file",
       "importFile": "Import from file"
