@@ -30,15 +30,15 @@
       <el-alert
         v-if="!mkcertInstalled && !loadError"
         type="warning"
-        title="mkcert not installed"
-        description="Install mkcert via Binaries page to enable SSL certificate generation."
+        :title="$t('ssl.mkcertNotInstalledTitle')"
+        :description="$t('ssl.mkcertNotInstalledDesc')"
         show-icon
         :closable="false"
         style="margin-bottom: 16px"
       />
 
       <!-- Loading -->
-      <LoadingState v-if="loading && certs.length === 0" label="Reading SSL certificates…" />
+      <LoadingState v-if="loading && certs.length === 0" :label="$t('ssl.loading')" />
 
       <!-- Cert list -->
       <div v-else-if="certs.length > 0" class="cert-list">
@@ -48,23 +48,23 @@
               <el-icon class="cert-lock"><Lock /></el-icon>
               <span class="cert-name">{{ cert.domain }}</span>
               <!-- F81: status badges -->
-              <el-tag v-if="cert.expired" type="danger" size="small" effect="dark" class="cert-badge">Expired</el-tag>
-              <el-tag v-else-if="cert.expiring" type="warning" size="small" effect="dark" class="cert-badge">Expires in {{ cert.daysToExpiry }}d</el-tag>
-              <el-tag v-else-if="cert.daysToExpiry !== null && cert.daysToExpiry !== undefined" type="success" size="small" effect="plain" class="cert-badge">Valid {{ cert.daysToExpiry }}d</el-tag>
-              <el-tag v-if="cert.orphan" type="info" size="small" effect="plain" class="cert-badge" title="No site with this domain currently exists">Orphan</el-tag>
+              <el-tag v-if="cert.expired" type="danger" size="small" effect="dark" class="cert-badge">{{ $t('ssl.statusExpired') }}</el-tag>
+              <el-tag v-else-if="cert.expiring" type="warning" size="small" effect="dark" class="cert-badge">{{ $t('ssl.statusExpiring', { days: cert.daysToExpiry }) }}</el-tag>
+              <el-tag v-else-if="cert.daysToExpiry !== null && cert.daysToExpiry !== undefined" type="success" size="small" effect="plain" class="cert-badge">{{ $t('ssl.statusValid', { days: cert.daysToExpiry }) }}</el-tag>
+              <el-tag v-if="cert.orphan" type="info" size="small" effect="plain" class="cert-badge" :title="$t('ssl.orphanHint')">{{ $t('ssl.orphan') }}</el-tag>
             </div>
             <div class="cert-meta">
               <span class="cert-meta-item" v-if="cert.aliases?.length">
-                Aliases: {{ cert.aliases.join(', ') }}
+                {{ $t('ssl.metaAliases') }}: {{ cert.aliases.join(', ') }}
               </span>
               <span class="cert-meta-item">
-                Created: {{ formatDate(cert.createdUtc) }}
+                {{ $t('ssl.metaCreated') }}: {{ formatDate(cert.createdUtc) }}
               </span>
               <span v-if="cert.notAfterUtc" class="cert-meta-item">
-                Expires: {{ formatDate(cert.notAfterUtc) }}
+                {{ $t('ssl.metaExpires') }}: {{ formatDate(cert.notAfterUtc) }}
               </span>
               <span v-if="cert.issuer" class="cert-meta-item mono">
-                Issuer: {{ cert.issuer }}
+                {{ $t('ssl.metaIssuer') }}: {{ cert.issuer }}
               </span>
               <span v-if="cert.fingerprint" class="cert-meta-item mono cert-fingerprint">
                 SHA1: {{ cert.fingerprint }}
@@ -82,7 +82,7 @@
               @click="revokeCert(cert.domain)"
               :loading="revoking.has(cert.domain)"
             >
-              Revoke
+              {{ $t('ssl.revoke') }}
             </el-button>
           </div>
         </div>
@@ -90,13 +90,13 @@
 
       <el-empty
         v-else-if="!loading"
-        description="No SSL certificates. Generate one for your sites."
+        :description="$t('ssl.noCerts')"
         :image-size="64"
       />
     </div>
 
     <!-- Generate cert dialog -->
-    <el-dialog v-model="showGenerateDialog" title="Generate SSL Certificate" width="440px">
+    <el-dialog v-model="showGenerateDialog" :title="$t('ssl.dialog.title')" width="440px">
       <el-form label-position="top" size="small">
         <el-form-item :label="$t('ssl.dialog.domain')" required>
           <el-select
