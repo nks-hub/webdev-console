@@ -255,6 +255,11 @@ export interface McpToolCallStats {
   errors: number
   lastCalledAt: string | null
   distinctSessions: number
+  p50DurationMs: number
+  p95DurationMs: number
+  p99DurationMs: number
+  callsPerMinute: number
+  errorRatePercent: number
 }
 
 export const fetchMcpToolCalls = (

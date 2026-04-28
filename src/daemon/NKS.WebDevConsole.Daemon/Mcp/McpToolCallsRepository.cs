@@ -114,15 +114,21 @@ public sealed class McpToolCallsRepository
             $"SELECT COUNT(*) FROM mcp_tool_calls {whereSql}", p);
     }
 
-    /// <summary>Aggregate stats for the Activity header card.</summary>
+    /// <summary>
+    /// Aggregate stats for the Activity header card. Now includes
+    /// percentile latencies (p50/p95/p99) and calls-per-minute rate so
+    /// the Activity feed can render a "performance" KPI strip alongside
+    /// the count tiles.
+    /// </summary>
     public async Task<McpToolCallStats> GetStatsAsync(int withinMinutes, CancellationToken ct)
     {
         using var conn = _db.CreateConnection();
         await conn.OpenAsync(ct);
-        var since = DateTime.UtcNow.AddMinutes(-Math.Max(1, withinMinutes))
+        var minutes = Math.Max(1, withinMinutes);
+        var since = DateTime.UtcNow.AddMinutes(-minutes)
             .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
-        var row = await conn.QueryFirstOrDefaultAsync<McpToolCallStats>(
+        var basic = await conn.QueryFirstOrDefaultAsync<McpToolCallStats>(
             @"SELECT
                 COUNT(*) AS Total,
                 SUM(CASE WHEN danger_level = 'read' THEN 1 ELSE 0 END) AS Reads,
@@ -133,8 +139,40 @@ public sealed class McpToolCallsRepository
                 COUNT(DISTINCT session_id) AS DistinctSessions
               FROM mcp_tool_calls
               WHERE called_at >= @Since",
-            new { Since = since });
-        return row ?? new McpToolCallStats();
+            new { Since = since }) ?? new McpToolCallStats();
+
+        // Pull duration_ms ordered ASC; compute p50/p95/p99 in C# because
+        // SQLite has no native percentile_cont. The data set within a
+        // bounded time window is small (<=10k typical), and we already
+        // have an index on called_at to keep the scan cheap.
+        var durations = (await conn.QueryAsync<int>(
+            @"SELECT duration_ms FROM mcp_tool_calls
+              WHERE called_at >= @Since
+              ORDER BY duration_ms ASC",
+            new { Since = since })).AsList();
+
+        int p(double pct)
+        {
+            if (durations.Count == 0) return 0;
+            var idx = (int)Math.Floor(pct * (durations.Count - 1));
+            return durations[idx];
+        }
+
+        var perMinute = basic.Total > 0
+            ? Math.Round((double)basic.Total / minutes, 2)
+            : 0;
+        var errorRate = basic.Total > 0
+            ? Math.Round(100.0 * basic.Errors / basic.Total, 2)
+            : 0;
+
+        return basic with
+        {
+            P50DurationMs = p(0.50),
+            P95DurationMs = p(0.95),
+            P99DurationMs = p(0.99),
+            CallsPerMinute = perMinute,
+            ErrorRatePercent = errorRate,
+        };
     }
 
     /// <summary>
@@ -231,6 +269,11 @@ public sealed record McpToolCallStats
     public int Errors { get; init; }
     public string? LastCalledAt { get; init; }
     public int DistinctSessions { get; init; }
+    public int P50DurationMs { get; init; }
+    public int P95DurationMs { get; init; }
+    public int P99DurationMs { get; init; }
+    public double CallsPerMinute { get; init; }
+    public double ErrorRatePercent { get; init; }
 }
 
 public sealed record McpToolCallTimelineBucket

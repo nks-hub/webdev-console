@@ -230,6 +230,12 @@
       "errors": "Chyby",
       "sessions": "Session"
     },
+    "kpi": {
+      "throughput": "throughput",
+      "latency": "latency",
+      "errorRate": "error rate",
+      "callsPerMinHint": "Průměrná frekvence volání za posledních 24 h"
+    },
     "filter": {
       "allDanger": "Všechny úrovně",
       "toolName": "Filter podle nástroje…",

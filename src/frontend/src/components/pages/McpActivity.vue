@@ -11,6 +11,35 @@
       />
     </div>
 
+    <!-- Perf KPI strip — latency percentiles + throughput + error rate -->
+    <div v-if="stats && stats.total > 0" class="perf-kpis">
+      <div class="kpi" :title="t('mcpActivity.kpi.callsPerMinHint')">
+        <span class="kpi-num">{{ stats.callsPerMinute.toFixed(1) }}</span>
+        <span class="kpi-unit">/min</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.throughput') }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num">{{ stats.p50DurationMs }}</span>
+        <span class="kpi-unit">ms</span>
+        <span class="kpi-label">p50 {{ t('mcpActivity.kpi.latency') }}</span>
+      </div>
+      <div class="kpi" :class="{ warn: stats.p95DurationMs > 1000 }">
+        <span class="kpi-num">{{ stats.p95DurationMs }}</span>
+        <span class="kpi-unit">ms</span>
+        <span class="kpi-label">p95 {{ t('mcpActivity.kpi.latency') }}</span>
+      </div>
+      <div class="kpi" :class="{ warn: stats.p99DurationMs > 5000 }">
+        <span class="kpi-num">{{ stats.p99DurationMs }}</span>
+        <span class="kpi-unit">ms</span>
+        <span class="kpi-label">p99 {{ t('mcpActivity.kpi.latency') }}</span>
+      </div>
+      <div class="kpi" :class="{ warn: stats.errorRatePercent > 1, danger: stats.errorRatePercent > 5 }">
+        <span class="kpi-num">{{ stats.errorRatePercent.toFixed(1) }}</span>
+        <span class="kpi-unit">%</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.errorRate') }}</span>
+      </div>
+    </div>
+
     <!-- Stats banner — at-a-glance traffic overview for last 24h -->
     <div v-if="stats" class="activity-stats">
       <div class="stat-tile">
@@ -493,6 +522,33 @@ onBeforeUnmount(() => {
   .analytics-row { grid-template-columns: 1fr; }
 }
 .analytics-timeline, .analytics-toptools { min-width: 0; }
+.perf-kpis {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 6px 10px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+.kpi {
+  flex: 1 1 100px;
+  min-width: 90px;
+  padding: 4px 10px;
+  border-left: 2px solid var(--el-border-color);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.kpi.warn { border-left-color: var(--el-color-warning); }
+.kpi.danger { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
+.kpi-num { font-size: 18px; font-weight: 600; }
+.kpi-unit { font-size: 11px; color: var(--el-text-color-secondary); }
+.kpi-label {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--el-text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;

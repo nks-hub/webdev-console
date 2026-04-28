@@ -230,6 +230,12 @@
       "errors": "Errors",
       "sessions": "Sessions"
     },
+    "kpi": {
+      "throughput": "throughput",
+      "latency": "latency",
+      "errorRate": "error rate",
+      "callsPerMinHint": "Average call rate over the last 24h"
+    },
     "filter": {
       "allDanger": "All danger levels",
       "toolName": "Filter by tool…",
