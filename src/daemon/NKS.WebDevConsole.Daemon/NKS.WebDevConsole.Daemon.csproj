@@ -20,15 +20,15 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.6" />
     <PackageReference Include="NReco.Logging.File" Version="1.3.1" />
     <PackageReference Include="Scriban" Version="7.1.0" />
-    <PackageReference Include="Sentry" Version="4.13.0" />
+    <PackageReference Include="Sentry" Version="6.4.1" />
     <!-- ASP.NET Core integration: auto-captures HTTP request context,
          correlates exceptions with request path + method, adds SDK
          middleware for tracing. Built on top of the base Sentry package. -->
-    <PackageReference Include="Sentry.AspNetCore" Version="4.13.0" />
+    <PackageReference Include="Sentry.AspNetCore" Version="6.4.1" />
     <!-- ILogger → Sentry breadcrumb bridge: warn+ log messages become
          breadcrumbs on the next captured event so we see what the daemon
          was doing just before the crash. -->
-    <PackageReference Include="Sentry.Extensions.Logging" Version="4.13.0" />
+    <PackageReference Include="Sentry.Extensions.Logging" Version="6.4.1" />
     <PackageReference Include="SharpCompress" Version="0.47.4" />
     <PackageReference Include="Tomlyn" Version="2.3.0" />
   </ItemGroup>
