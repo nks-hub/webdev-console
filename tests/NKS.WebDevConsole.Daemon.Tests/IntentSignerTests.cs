@@ -58,8 +58,14 @@ public sealed class IntentSignerTests
         var signer = new IntentSigner();
         var canonical = MakeCanonical();
         var sig = signer.Sign(canonical);
-        // Flip the last character of the base64url signature
-        var tampered = sig[..^1] + (sig[^1] == 'A' ? 'B' : 'A');
+        // Flip a character near the START of the base64url signature.
+        // Tampering the LAST char is unreliable — base64url's final char
+        // encodes only the leftover bits of the last byte, with high
+        // "padding" bits that get discarded during decode. A flip there
+        // can change the encoded char while leaving decoded bytes
+        // identical → Verify still returns true (test was flaky on CI
+        // depending on what the last sig char randomly was).
+        var tampered = (sig[0] == 'A' ? 'B' : 'A') + sig[1..];
         Assert.False(signer.Verify(canonical, tampered));
     }
 
