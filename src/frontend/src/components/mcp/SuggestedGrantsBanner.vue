@@ -45,12 +45,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import {
   fetchMcpSuggestedGrants,
   createMcpGrant,
+  subscribeEventsMap,
   type McpGrantSuggestion,
 } from '../../api/daemon'
 
@@ -98,7 +99,22 @@ async function approve(s: McpGrantSuggestion, idx: number): Promise<void> {
   }
 }
 
-onMounted(() => { void refresh() })
+// Refresh on grant + intent changes anywhere in the app — a manual
+// approve-from-banner or a new destructive intent confirm changes the
+// pool of "manually approved" rows the suggestion engine reads.
+let unsubscribe: (() => void) | null = null
+
+onMounted(() => {
+  void refresh()
+  unsubscribe = subscribeEventsMap({
+    'mcp:grant-changed': () => { void refresh() },
+    'mcp:intent-changed': () => { void refresh() },
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unsubscribe) unsubscribe()
+})
 </script>
 
 <style scoped>
