@@ -136,10 +136,24 @@ export function getDeployStatus(domain: string, deployId: string): Promise<Deplo
   )
 }
 
-export function getDeployHistory(domain: string, limit = 50): Promise<{ domain: string; count: number; entries: DeployHistoryEntryDto[] }> {
-  return request(
+export async function getDeployHistory(
+  domain: string,
+  limit = 50,
+): Promise<{ domain: string; count: number; entries: DeployHistoryEntryDto[] }> {
+  const data = await request<{ domain: string; count: number; entries: DeployHistoryEntryDto[] }>(
     `${PREFIX}/sites/${encodeURIComponent(domain)}/history?limit=${limit}`,
   )
+  // Daemon doesn't currently emit `success` in the history payload — many
+  // components consume it directly (HostCard, DeployConfirmModal, etc.).
+  // Derive once here so every consumer gets the same definition: a deploy
+  // is successful when it ran to terminal phase 'Done' without error.
+  // Honour an existing `success` if a future daemon ever emits it.
+  for (const e of data.entries) {
+    if (typeof e.success !== 'boolean') {
+      e.success = e.finalPhase === 'Done' && !e.error
+    }
+  }
+  return data
 }
 
 export function rollbackDeploy(domain: string, deployId: string): Promise<{ sourceDeployId: string; status: string }> {
