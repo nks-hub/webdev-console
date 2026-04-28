@@ -123,7 +123,6 @@
       "intentId": "Intent ID",
       "matchedGrant": "Auto-via grant"
     },
-    "matchedGrantTooltip": "Auto-confirmed via grant {id}.",
     "matchedGrantClickHint": "Click to show all intents this grant approved ({id}).",
     "matchedGrantBanner": "Filtered: showing only intents approved by grant",
     "clearMatchedGrantFilter": "Clear filter",
@@ -233,10 +232,8 @@
     "config": "Config",
     "newSite": "+ New Site",
     "openMailpit": "Open Mailpit",
-    "sslManager": "SSL Manager",
     "binaries": "Binaries",
     "tunnel": "Tunnel",
-    "cpuUsage": "CPU Usage",
     "memory": "Memory",
     "uptime": "Uptime",
     "services": "Services",
@@ -729,6 +726,14 @@
     "mcpGrantsTooltip": "{n} active MCP grants let AI fire destructive actions on this site without confirmation. Click for details.",
     "backendBuiltInTooltip": "Deploys are served by the built-in daemon handler. Once the nks.wdc.deploy plugin is loaded the routes flip to plugin ownership.",
     "backendPluginTooltip": "Deploys are served by the nks.wdc.deploy plugin v{v}. Disable the plugin from the plugin manager to short-circuit every deploy endpoint to 404.",
+    "recheckReadiness": "Re-check",
+    "openGlobalSettings": "Open in Settings",
+    "readyToFlip": "Plugin parity proven — safe to flip useLegacyHostHandlers=false",
+    "stayOnBuiltIn": "Stay on built-in mode — {n} blocker(s) listed above",
+    "restartPendingTitle": "Daemon restart required",
+    "restartPendingDescription": "deploy.useLegacyHostHandlers was changed but handler authority only applies on the next daemon start.",
+    "restartPendingTooltip": "Setting flipped — restart daemon to apply",
+    "gatedEndpointsLabel": "Endpoints that will flip to plugin after restart ({n}):",
     "hostCardCmp": {
       "edit": "Edit",
       "remove": "Remove",
@@ -756,7 +761,6 @@
         "sshTarget": "SSH user@host",
         "remotePath": "Remote path",
         "branch": "Branch",
-        "autoDeploy": "Auto-deploy",
         "localPaths": "Local paths",
         "actions": "Actions"
       },
@@ -1028,8 +1032,7 @@
     },
     "preflight": {
       "title": "Pre-deploy checks",
-      "rerun": "Re-run",
-      "rerunning": "Re-running…"
+      "rerun": "Re-run"
     },
     "waterfall": {
       "ponrLabel": "POINT OF NO RETURN — symlink will switch · cancel disabled · only rollback after this",
@@ -1174,6 +1177,7 @@
       "branchPlaceholder": "branch (optional)",
       "branchAria": "Branch",
       "withSnapshot": "With DB snapshot",
+      "withSnapshotTip": "Before deploy, zips the current release directory as a fast rollback artifact — this is NOT a database dump.",
       "deployOne": "Deploy",
       "deployAll": "Deploy {n} hosts",
       "started": "Deploy started",
@@ -1181,6 +1185,7 @@
       "failed": "Deploy failed",
       "hint": "Skips the confirm dialog. Use the host card's Deploy button for full options.",
       "preview": "Preview",
+      "previewAllHostsTip": "Preview is per-host. Pick a specific host instead of \"— All hosts —\".",
       "previewTitle": "Deploy plan preview",
       "previewClose": "Close",
       "previewConfirm": "Deploy",
@@ -1201,6 +1206,8 @@
         "hooks": "Hooks",
         "noHooks": "none",
         "healthCheck": "Health check",
+        "soak": "Soak",
+        "soakSeconds": "{n}s before commit",
         "notifications": "Notifications",
         "slackEnabled": "Slack enabled",
         "slackDisabled": "Slack disabled"
@@ -1389,7 +1396,14 @@
     "deploySubsystem": {
       "title": "Deploy subsystem",
       "description": "Per-site Deploy tab + nksdeploy plugin endpoints. Disable when this WDC instance only manages local services and never pushes to remote hosts. History stays in the database (additive-only); turning back ON restores everything.",
-      "enableLabel": "Enable Deploy subsystem"
+      "enableLabel": "Enable Deploy subsystem",
+      "legacyHandlersLabel": "Built-in deploy backend",
+      "legacyHandlersHint": "Built-in (host-native) deploy handlers — default",
+      "legacyHandlersTooltip": "Planned switch for the Phase 7.4 cutover to the nks.wdc.deploy plugin. Locked in the ON position today (built-in Program.cs handlers own every deploy route). Unlocks once phase B/C lands (plugin endpoint parity + ZIP/SSE/Slack feature parity), at which point operators can flip to plugin-only mode.",
+      "legacyHandlersLocked": "Locked: {n} blocker(s)",
+      "modeBuiltIn": "Currently: built-in (Program.cs handlers)",
+      "modePlugin": "Currently: plugin v{v}",
+      "pluginLoadedNotActive": "plugin v{v} loaded but inactive (legacy handlers own the routes)"
     },
     "osNotify": {
       "title": "System notifications",

@@ -123,7 +123,6 @@
       "intentId": "ID intentu",
       "matchedGrant": "Auto-via grant"
     },
-    "matchedGrantTooltip": "Auto-confirmed přes oprávnění {id}.",
     "matchedGrantClickHint": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id}).",
     "matchedGrantBanner": "Filtrováno: zobrazují se jen intenty schválené oprávněním",
     "clearMatchedGrantFilter": "Zrušit filtr",
@@ -233,10 +232,8 @@
     "config": "Konfigurace",
     "newSite": "+ Nový web",
     "openMailpit": "Otevřít Mailpit",
-    "sslManager": "Správa SSL",
     "binaries": "Binárky",
     "tunnel": "Tunel",
-    "cpuUsage": "Vytížení CPU",
     "memory": "Paměť",
     "uptime": "Doba běhu",
     "services": "Služby",
@@ -729,6 +726,14 @@
     "mcpGrantsTooltip": "{n} aktivních MCP grantů umožňuje AI provést destruktivní akce na tomto webu bez potvrzení. Klikněte pro detail.",
     "backendBuiltInTooltip": "Deploy obsluhuje vestavěný handler v daemon procesu. Po nahrání nks.wdc.deploy pluginu se přepne na plugin-řízený deploy.",
     "backendPluginTooltip": "Deploy obsluhuje plugin nks.wdc.deploy verze {v}. Plugin lze deaktivovat ve správě pluginů — daemon pak vrátí 404 na všechny deploy endpointy.",
+    "recheckReadiness": "Znovu zkontrolovat",
+    "openGlobalSettings": "Otevřít v Nastavení",
+    "readyToFlip": "Plugin parita ověřena — flip useLegacyHostHandlers=false je bezpečný",
+    "stayOnBuiltIn": "Zůstaňte v built-in režimu — {n} blokátor(ů) výše",
+    "restartPendingTitle": "Vyžadován restart démona",
+    "restartPendingDescription": "Hodnota deploy.useLegacyHostHandlers byla změněna, ale autorita handleru se aplikuje až při dalším startu démona.",
+    "restartPendingTooltip": "Setting flipped — restart daemon to apply",
+    "gatedEndpointsLabel": "Endpointy které přejdou pod plugin po restartu ({n}):",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",
@@ -756,7 +761,6 @@
         "sshTarget": "SSH user@host",
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
-        "autoDeploy": "Auto-deploy",
         "localPaths": "Lokální cesty",
         "actions": "Akce"
       },
@@ -1028,8 +1032,7 @@
     },
     "preflight": {
       "title": "Pre-deploy kontroly",
-      "rerun": "Spustit znovu",
-      "rerunning": "Spouštím…"
+      "rerun": "Spustit znovu"
     },
     "waterfall": {
       "ponrLabel": "BOD ZE KTERÉHO NENÍ NÁVRATU — symlink se přepne · cancel zakázán · po tomto už jen rollback",
@@ -1174,6 +1177,7 @@
       "branchPlaceholder": "větev (volitelné)",
       "branchAria": "Větev",
       "withSnapshot": "Se snapshotem DB",
+      "withSnapshotTip": "Před deployem vytvoří .zip aktuálního release adresáře — slouží jako rychlý rollback artefakt, není to dump databáze.",
       "deployOne": "Deploy",
       "deployAll": "Deploy {n} hostů",
       "started": "Deploy spuštěn",
@@ -1181,6 +1185,7 @@
       "failed": "Deploy se nezdařil",
       "hint": "Přeskočí potvrzovací dialog. Pro plné nastavení použijte tlačítko Deploy na kartě hosta.",
       "preview": "Náhled",
+      "previewAllHostsTip": "Náhled je per-host. Vyberte konkrétního hosta místo „— Všichni hosti —“.",
       "previewTitle": "Náhled deploy plánu",
       "previewClose": "Zavřít",
       "previewConfirm": "Deploynout",
@@ -1201,6 +1206,8 @@
         "hooks": "Hooks",
         "noHooks": "žádné",
         "healthCheck": "Health check",
+        "soak": "Soak",
+        "soakSeconds": "{n} s před commitem",
         "notifications": "Notifikace",
         "slackEnabled": "Slack zapnutý",
         "slackDisabled": "Slack vypnutý"
@@ -1389,7 +1396,14 @@
     "deploySubsystem": {
       "title": "Deploy subsystém",
       "description": "Záložka Deploy u jednotlivých webů + endpointy pluginu nksdeploy. Vypněte, pokud tato instance WDC spravuje pouze lokální služby a nikdy nedeployuje na vzdálené hostitele. Historie zůstává v databázi (pouze přidávání); opětovným zapnutím se vše obnoví.",
-      "enableLabel": "Zapnout Deploy subsystém"
+      "enableLabel": "Zapnout Deploy subsystém",
+      "legacyHandlersLabel": "Built-in deploy backend",
+      "legacyHandlersHint": "Built-in (host-native) deploy handlers — výchozí",
+      "legacyHandlersTooltip": "Plánovaný přepínač pro Phase 7.4 cutover na nks.wdc.deploy plugin. Dnes je zamčený v poloze ON (built-in handlers v Program.cs vlastní všechny deploy routy). Po dokončení phase B/C (parita pluginových endpointů + ZIP/SSE/Slack feature parity) se přepínač odemkne a operátor může flipnout na plugin-only mode.",
+      "legacyHandlersLocked": "Uzamčeno: {n} blokátor(ů)",
+      "modeBuiltIn": "Aktuálně: built-in (Program.cs handlers)",
+      "modePlugin": "Aktuálně: plugin v{v}",
+      "pluginLoadedNotActive": "plugin v{v} načten, ale neaktivní (legacy handlers vlastní routy)"
     },
     "osNotify": {
       "title": "Systémové notifikace",

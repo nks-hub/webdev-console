@@ -34,28 +34,54 @@
         :aria-label="t('deploy.quickBar.branchAria')"
       />
 
-      <el-checkbox v-model="snapshot" size="default">
-        {{ t('deploy.quickBar.withSnapshot') }}
-      </el-checkbox>
-
-      <el-button
-        :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy"
-        :loading="previewBusy"
-        @click="onPreview"
+      <el-tooltip
+        :content="t('deploy.quickBar.withSnapshotTip')"
+        placement="top"
       >
-        {{ t('deploy.quickBar.preview') }}
-      </el-button>
+        <el-checkbox v-model="snapshot" size="default">
+          {{ t('deploy.quickBar.withSnapshot') }}
+        </el-checkbox>
+      </el-tooltip>
+
+      <el-tooltip
+        :content="t('deploy.quickBar.previewAllHostsTip')"
+        :disabled="targetHost !== '__all__'"
+        placement="top"
+      >
+        <span>
+          <el-button
+            :disabled="!targetHost || targetHost === '__all__' || busy || previewBusy || storeBusy"
+            :loading="previewBusy"
+            @click="onPreview"
+          >
+            {{ t('deploy.quickBar.preview') }}
+          </el-button>
+        </span>
+      </el-tooltip>
 
       <el-button
         type="primary"
-        :disabled="!targetHost || busy"
+        :disabled="!targetHost || busy || storeBusy"
         :loading="busy"
         @click="onFire"
       >
         {{ buttonLabel }}
       </el-button>
 
-      <span class="quick-hint muted">{{ t('deploy.quickBar.hint') }}</span>
+      <!-- Iter 73 — surface in-flight deploy from store so operator
+           sees what's blocking the fire button instead of a silently
+           grayed control. Click jumps to the running deploy's drawer. -->
+      <el-tag
+        v-if="storeBusy && activeRunSummary"
+        type="warning"
+        size="small"
+        effect="plain"
+        class="quick-running clickable-stat"
+        @click="onJumpToActive"
+      >
+        ⏵ {{ activeRunSummary }}
+      </el-tag>
+      <span v-else class="quick-hint muted">{{ t('deploy.quickBar.hint') }}</span>
     </div>
 
     <!-- Phase 7.5+++ — preview modal: shows the resolved deploy plan
@@ -79,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useDeployStore } from '../../stores/deploy'
@@ -93,7 +119,42 @@ const props = defineProps<{
 }>()
 
 const store = useDeployStore()
-const targetHost = ref<string>('')
+// Iter 73 — surface ANY in-flight deploy from the store (not just one
+// fired by this QuickBar). HostCard / drawer flows share the same store,
+// so this catches fan-out groups too. Active run is "in-flight" while
+// it's not in a terminal phase.
+const TERMINAL_PHASES = new Set(['Done', 'Failed', 'Cancelled', 'RolledBack'])
+const storeBusy = computed(() => {
+  const r = store.activeRun
+  return !!(r && !TERMINAL_PHASES.has(r.latestPhase))
+})
+const activeRunSummary = computed(() => {
+  const r = store.activeRun
+  if (!r || TERMINAL_PHASES.has(r.latestPhase)) return ''
+  return `${r.host || '?'} · ${r.latestPhase}`
+})
+function onJumpToActive(): void {
+  // Re-open the drawer for whatever's currently active. The store
+  // already exposes activeRunId; openDrawerFor is the tracking helper
+  // the rest of the UI uses.
+  if (store.activeRunId) store.openDrawerFor(store.activeRunId)
+}
+// Iter 72 — pre-select target host so operator doesn't need to click
+// the dropdown first. Single-host config (the common dev case) → that
+// host. Multi-host → "__all__" so operator can fan out in one click.
+// Operator can still re-pick from dropdown.
+const targetHost = ref<string>(
+  props.hosts.length === 1 ? props.hosts[0]
+  : props.hosts.length > 1 ? '__all__'
+  : ''
+)
+// Keep the auto-selection healthy if the host list changes mid-session
+// (e.g. operator adds a host in Settings without page reload).
+watch(() => props.hosts, (now) => {
+  if (!targetHost.value || (targetHost.value !== '__all__' && !now.includes(targetHost.value))) {
+    targetHost.value = now.length === 1 ? now[0] : now.length > 1 ? '__all__' : ''
+  }
+})
 const branch = ref<string>('')
 const snapshot = ref<boolean>(false)
 const busy = ref<boolean>(false)

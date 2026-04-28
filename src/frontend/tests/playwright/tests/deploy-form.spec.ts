@@ -25,6 +25,15 @@ test.describe('Deploy form (dry-run preview)', () => {
     expect(typeof j.alwaysConfirmKind).toBe('boolean')
     expect(Array.isArray(j.sharedDirs)).toBe(true)
     expect(Array.isArray(j.sharedFiles)).toBe(true)
+
+    // Iter 77 — DryRunPlanView renders a "Soak" row when soakSeconds > 0,
+    // so the contract for the field must hold (number, never undefined).
+    // healthCheckUrl is rendered next to it; it's nullable but the property
+    // must exist so the v-if doesn't throw on undefined.
+    expect(typeof j.soakSeconds).toBe('number')
+    expect(j.soakSeconds).toBeGreaterThanOrEqual(0)
+    expect(j).toHaveProperty('healthCheckUrl')
+    expect(j.healthCheckUrl === null || typeof j.healthCheckUrl === 'string').toBe(true)
   })
 
   test('dry-run plan exposes #188/#189 telemetry fields', async ({ authedRequest }) => {
@@ -132,6 +141,33 @@ test.describe('Deploy form (dry-run preview)', () => {
     // Don't pin the exact code (cross-platform variance).
     expect(['timeout', 'socket_error']).toContain(j.code)
     expect(typeof j.error).toBe('string')
+  })
+
+  // Iter 83 — directive "ověř ho i na shop.loc" wants both fixtures touched
+  // by the TS suite, not only by bash e2e. Dry-run is the cheapest assertion
+  // that proves the daemon side reads the fixture's deploy.local config and
+  // returns a coherent plan. If shop.loc's settings drift (host renamed,
+  // localPaths missing) this fails fast in Playwright instead of waiting
+  // for the bash run.
+  test('shop.loc dry-run also returns coherent plan', async ({ authedRequest }) => {
+    const r = await authedRequest.post('/api/nks.wdc.deploy/sites/shop.loc/deploy', {
+      data: { host: 'production', dryRun: true },
+    })
+    expect(r.status()).toBe(200)
+    const j = await r.json()
+    expect(j.dryRun).toBe(true)
+    expect(j.deployId).toBeNull()
+    expect(j.wouldRelease).toMatch(/^[0-9]{8}_[0-9]{6}$/)
+    expect(j.wouldExtractTo).toContain('releases')
+    // shop.loc fixture is independent of blog.loc — its release counters
+    // and existing release count must not bleed across.
+    expect(typeof j.existingReleaseCount).toBe('number')
+    expect(typeof j.keepReleases).toBe('number')
+    // Same shape contract as blog.loc — DryRunPlanView reads these fields
+    // for both fixtures, so per-fixture parity matters.
+    expect(typeof j.soakSeconds).toBe('number')
+    expect(j).toHaveProperty('healthCheckUrl')
+    expect(typeof j.alwaysConfirmKind).toBe('boolean')
   })
 
   test('test-host-connection rejects malformed body with 400', async ({ authedRequest }) => {

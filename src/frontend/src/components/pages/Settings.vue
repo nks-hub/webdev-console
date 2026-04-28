@@ -574,14 +574,125 @@
                  OFF hides Deploy tab in SiteEdit + plugin REST endpoints
                  return 404. Useful for installs that only use WDC as
                  local Apache/MySQL manager without remote deploys. -->
-            <div class="settings-section" style="margin-top: 16px">
+            <div id="deploy-subsystem" class="settings-section" style="margin-top: 16px">
               <h4 class="section-title">{{ $t('settings.deploySubsystem.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
               </p>
-              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+              <!-- Iter 13: backend mode status banner. Shows operator at a
+                   glance which deploy backend is currently authoritative,
+                   sourced from /api/admin/plugin-readiness. Today always
+                   built-in (Program.cs handlers), but the banner already
+                   reflects the live mode so a future flip is visible
+                   without leaving Settings. -->
+              <div
+                v-if="deployBackendMode"
+                class="hint"
+                style="margin-bottom: 12px; padding: 8px 12px; border-radius: 4px; background: var(--el-fill-color-light, #f5f7fa); display: inline-block"
+              >
+                <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
+                  🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
+                </span>
+                <span v-else style="color: var(--el-color-info)">
+                  ⚙ {{ $t('settings.deploySubsystem.modeBuiltIn') }}
+                </span>
+                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: 8px">
+                  ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
+                </span>
+              </div>
+              <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
+                </el-form-item>
+                <!-- Phase 7.4 #109-D1 — backend selector. Today the toggle
+                     is INFORMATIONAL only: useLegacyHostHandlers=true means
+                     Program.cs deploy handlers serve everything (current
+                     behaviour). The switch is disabled with a tooltip
+                     explaining the future flip needs plugin parity.
+                     Persisted setting round-trips through Settings save
+                     so when phase B/C land + tools/e2e proves parity,
+                     operators can flip without code changes. -->
+                <!-- Iter 58 (#258) — restart-pending banner: when the
+                     operator flipped this switch but the daemon hasn't
+                     restarted, the conditional handler registration still
+                     honours the boot value. Banner appears INLINE so the
+                     operator sees it the moment they save without having
+                     to open the per-site popover. -->
+                <el-alert
+                  v-if="deployRestartPending"
+                  :title="$t('deploySettings.restartPendingTitle')"
+                  :description="$t('deploySettings.restartPendingDescription')"
+                  type="warning"
+                  :closable="false"
+                  show-icon
+                  style="margin-bottom: 12px; max-width: 480px"
+                />
+                <el-form-item :label="$t('settings.deploySubsystem.legacyHandlersLabel')">
+                  <el-tooltip
+                    :content="$t('settings.deploySubsystem.legacyHandlersTooltip')"
+                    placement="right"
+                  >
+                    <el-switch v-model="deployUseLegacyHostHandlers" :disabled="!deployFlipUnlocked && !deployRestartPending" />
+                  </el-tooltip>
+                  <span class="hint" style="margin-left: 12px">
+                    {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
+                  </span>
+                  <el-popover
+                    v-if="!deployFlipUnlocked && deployFlipBlockers.length > 0"
+                    placement="right"
+                    :width="400"
+                    trigger="click"
+                  >
+                    <template #reference>
+                      <el-tag
+                        type="warning"
+                        size="small"
+                        effect="plain"
+                        style="margin-left: 12px; cursor: pointer"
+                      >
+                        🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
+                      </el-tag>
+                    </template>
+                    <!-- Iter 21: shared component renders blockerDetails
+                         phase tag + remediation. Same shape as the per-site
+                         DeploySettingsPanel popover so operator sees identical
+                         UI in both global + per-site contexts.
+                         Iter 24: localized recommendation header mirrors the
+                         per-site popover for visual symmetry. -->
+                    <div style="font-size: 12px">
+                      <div style="margin-bottom: 6px">
+                        <strong>
+                          {{ deployFlipUnlocked
+                            ? $t('deploySettings.readyToFlip')
+                            : $t('deploySettings.stayOnBuiltIn', { n: deployFlipBlockers.length }) }}
+                        </strong>
+                      </div>
+                      <ReadinessBlockerList
+                        :blockers="deployFlipBlockers"
+                        :blocker-details="deployFlipBlockerDetails"
+                      />
+                      <!-- Iter 64 — mirror DeploySettingsPanel's gatedEndpoints
+                           list so the global popover and per-site popover
+                           stay visually symmetric. Operator sees the same
+                           cutover scope from either entry point. -->
+                      <div
+                        v-if="deployFlipGatedEndpoints.length > 0"
+                        style="margin-top: 10px"
+                      >
+                        <div class="muted" style="margin-bottom: 4px; font-size: 11px">
+                          {{ $t('deploySettings.gatedEndpointsLabel', { n: deployFlipGatedEndpoints.length }) }}
+                        </div>
+                        <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+                          <li v-for="ep in deployFlipGatedEndpoints" :key="ep">
+                            <code class="mono">{{ ep }}</code>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="muted" style="margin-top: 8px; font-size: 11px">
+                        <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
+                      </div>
+                    </div>
+                  </el-popover>
                 </el-form-item>
               </el-form>
             </div>
@@ -1210,7 +1321,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -1222,11 +1333,13 @@ import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   daemonBaseUrl, daemonAuthHeaders as authHeaders,
   fetchPhpVersions, fetchSettings, saveSettings,
+  subscribeEventsMap,
   type DeviceInfo as CatalogDeviceInfo,
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
+import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import { compareSemver } from '../../utils/semver'
 
 const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined ?? '0.1.0'
@@ -1392,6 +1505,64 @@ const mcpRevokedRetentionDays = ref(30)
 // own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
 // /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
 const deployEnabled = ref(true)
+// Phase 7.4 #109-D1 — operator-controlled flag for the upcoming plugin
+// cutover. Default TRUE = current behaviour (host-native handlers in
+// Program.cs serve every deploy route, plugin endpoints get skipped by
+// the route-conflict guard). Switch is disabled in the UI today since
+// plugin parity isn't yet proven; the value still round-trips so once
+// phase B/C/D land the operator can flip without a redeploy.
+const deployUseLegacyHostHandlers = ref(true)
+// Phase 7.4 #109-D1+: toggle is enabled iff /api/admin/plugin-readiness
+// reports readyToFlip:true. Today always false (phase B/C/D blockers
+// surfaced through the readiness diagnostic). Once those phases ship
+// and the endpoint flips readyToFlip → the switch unlocks automatically
+// without a code change. Operator sees the lock state matches the live
+// daemon's view of plugin parity, not a hardcoded hint.
+//
+// #109-D1+ iter 10: store full readiness so the locked toggle can
+// surface blockers count inline — operator sees WHY at a glance without
+// having to open DeploySettings panel popover.
+// Iter 13: also store mode + pluginVersion + pluginLoaded so the section
+// header can render a status banner ("⚙ built-in" / "🔌 plugin v0.1.0").
+const deployFlipUnlocked = ref<boolean>(false)
+const deployFlipBlockers = ref<string[]>([])
+interface DeployBlockerDetail { summary: string; phase: string; remediation: string }
+const deployFlipBlockerDetails = ref<DeployBlockerDetail[]>([])
+const deployBackendMode = ref<'built-in' | 'plugin' | null>(null)
+const deployPluginVersion = ref<string | null>(null)
+const deployPluginLoaded = ref<boolean>(false)
+// Iter 56-58 (#258) — restartPending becomes true when the operator has
+// flipped useLegacyHostHandlers but the daemon still serves under the
+// boot-time value. The global toggle is the place where the operator
+// most commonly does this flip, so the banner here is even more
+// important than the per-site popover.
+const deployRestartPending = ref<boolean>(false)
+// Iter 64 — gatedEndpoints[] mirrored from per-site popover so both
+// surfaces show identical cutover scope. Empty when older daemon doesn't
+// expose the field (graceful degradation).
+const deployFlipGatedEndpoints = ref<string[]>([])
+async function loadDeployFlipReadiness(): Promise<void> {
+  try {
+    // Iter 19: fetch with ?explain=true so the locked-toggle popover can
+    // render per-blocker remediation. Older daemons return flat shape and
+    // blockerDetails stays empty → popover falls back to summary list.
+    const r = await fetch(`${daemonBaseUrl()}/api/admin/plugin-readiness?explain=true`, {
+      method: 'GET',
+      headers: authHeaders(),
+    })
+    if (r.ok) {
+      const j = await r.json()
+      deployFlipUnlocked.value = j.readyToFlip === true
+      deployFlipBlockers.value = Array.isArray(j.blockers) ? j.blockers : []
+      deployFlipBlockerDetails.value = Array.isArray(j.blockerDetails) ? j.blockerDetails : []
+      deployBackendMode.value = j.mode === 'plugin' || j.mode === 'built-in' ? j.mode : null
+      deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
+      deployPluginLoaded.value = j.pluginLoaded === true
+      deployRestartPending.value = j.restartPending === true
+      deployFlipGatedEndpoints.value = Array.isArray(j.gatedEndpoints) ? j.gatedEndpoints : []
+    }
+  } catch { /* keep locked on error */ }
+}
 
 // #147 — OS notification per-channel toggles. Persist via the
 // osNotifications service (localStorage-backed) on flip so the change
@@ -1871,6 +2042,10 @@ async function loadSettings() {
     // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
     // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
     deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
+    // Phase 7.4 #109-D1 — same boolean parsing convention as deploy.enabled.
+    // Default TRUE means current host-native behaviour stays in effect.
+    deployUseLegacyHostHandlers.value = !(data['deploy.useLegacyHostHandlers'] === 'false'
+      || data['deploy.useLegacyHostHandlers'] === '0')
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
@@ -2674,6 +2849,12 @@ function formatRelativeTime(iso: string): string {
   return `${Math.floor(h / 24)} d`
 }
 
+// Iter 29: live-refresh readiness on deploy.* settings save from another
+// tab. Mirrors the iter 28 wiring in DeploySettingsPanel — when operator
+// flips useLegacyHostHandlers via API or another open Settings page, the
+// locked-toggle popover reflects the new state without reload.
+let unsubscribeDeploySettingsSse: (() => void) | null = null
+
 onMounted(async () => {
   void loadSettings()
   void loadDatabases()
@@ -2682,6 +2863,10 @@ onMounted(async () => {
   void loadDeviceId()
   void loadPluginCatalogStatus()
   void loadPluginPorts()
+  void loadDeployFlipReadiness()
+  unsubscribeDeploySettingsSse = subscribeEventsMap({
+    'deploy:settings-changed': () => { void loadDeployFlipReadiness() },
+  })
   void loadMysqlRootStatus()
   void loadSnapshots()
   // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
@@ -2724,6 +2909,13 @@ onMounted(async () => {
   } catch { /* optional */ }
 })
 
+onBeforeUnmount(() => {
+  if (unsubscribeDeploySettingsSse) {
+    unsubscribeDeploySettingsSse()
+    unsubscribeDeploySettingsSse = null
+  }
+})
+
 async function save() {
   saving.value = true
   try {
@@ -2739,6 +2931,7 @@ async function save() {
       'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
       'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
       'deploy.enabled':      String(deployEnabled.value),
+      'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),
       'general.runOnStartup': String(runOnStartup.value),
       'paths.apache':   paths.apache,

@@ -952,6 +952,143 @@ app.MapGet("/healthz", () => Results.Ok(new
         ?? "unknown",
     timestamp = DateTime.UtcNow,
 }));
+// Phase D (#258) — capture legacyHostHandlers value at daemon boot. The
+// 3 conditional handler registrations (hooks/test, notifications/test,
+// test-host-connection) read this value once at startup. Operator
+// changes to the setting at runtime do NOT take effect until daemon
+// restart. Readiness diagnostic surfaces the drift via restartPending
+// so the GUI can show "restart to apply" hint when boot value differs
+// from current setting.
+var legacyHostHandlersAtBoot = app.Services.GetRequiredService<SettingsStore>()
+    .GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
+
+// Phase 7.4 #109-D1 — plugin migration readiness diagnostic. Operator
+// (or future automation) reads this before flipping
+// deploy.useLegacyHostHandlers=false to know whether the plugin has
+// feature parity. Returns a structured advisory:
+//   - mode: "built-in" | "plugin" — current authoritative backend
+//   - pluginLoaded: bool, pluginVersion: string|null
+//   - skippedRoutes: int — host-conflict-skipped plugin endpoints
+//     (these would activate after a flip)
+//   - readyToFlip: bool — true only when phase B (endpoint parity) +
+//     phase C (plugin-side ZIP/SSE/Slack) are observably done. For
+//     today: always false because plugin scaffold uses the obsolete
+//     PHP-CLI-via-CliWrap design and can't replace the live native
+//     LocalDeployBackend without phase B/C/D work.
+//   - blockers: string[] — human-readable reasons a flip would break
+//     things. Empty when readyToFlip=true.
+//   - bootLegacyHostHandlers: bool — value baked at daemon boot.
+//   - restartPending: bool — true when current setting differs from boot.
+app.MapGet("/api/admin/plugin-readiness", (
+    PluginLoader pl,
+    SettingsStore settings,
+    HttpContext ctx) =>
+{
+    var deployPlugin = pl.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.deploy");
+    var pluginLoaded = deployPlugin is not null;
+    var pluginVersion = deployPlugin?.Instance.Version;
+    var legacyHandlers = settings.GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
+    var mode = legacyHandlers ? "built-in" : "plugin";
+    // Today's static blockers for the flip — surfaced even when no
+    // plugin is loaded so operators see WHY they can't flip yet.
+    // Iter 17 #109-D1+: each blocker also gets a structured detail
+    // record (phase + remediation) used when ?explain=true. Keeping
+    // the flat blockers[] for back-compat with iter 5/6 consumers.
+    var blockerDetails = new List<(string Summary, string Phase, string Remediation)>();
+    if (!pluginLoaded)
+        blockerDetails.Add((
+            "nks.wdc.deploy plugin not loaded — DLL missing in build/plugins/ or plugin disabled",
+            "A",
+            "Stage NksDeploy plugin DLL into build/plugins/ and restart daemon. Verify via GET /api/plugins."));
+    // Phase B: complete in plugin@feature/nksdeploy-wdc-integration
+    // (commits 8958565, 51a1d19, 6f3c12e, c7b87ff, 74c61c8). All 5
+    // host-only endpoints — test-host-connection, sites/{domain}/deploy,
+    // rollback-to, hooks/test, notifications/test — now ship in
+    // NksDeployRoutes.cs. The route-conflict guard still defers to the
+    // daemon handlers while useLegacyHostHandlers=true.
+    // Phase C: test-hook executor + Slack dispatch shipped (commits
+    // 2893d0b, abf5090) — ZIP snapshot writer + SSE deploy:hook bridge
+    // remain.
+    // Phase C complete: ZIP snapshot service (commit 6cd22a5/6608838),
+    // test-hook executor (2893d0b), Slack dispatch (abf5090), SSE
+    // deploy:hook bridge (967c6ef) all shipped on plugin side.
+    blockerDetails.Add((
+        "phase D: plugin-only e2e on blog.loc + shop.loc not yet validated",
+        "D",
+        "Run tools/e2e-mcp-deploy.sh against a daemon with deploy.useLegacyHostHandlers=false; all 264 sections must pass."));
+    var blockers = blockerDetails.ConvertAll(b => b.Summary);
+    var readyToFlip = blockers.Count == 0;
+    // Phase D (#258) — operator flipped the setting but the daemon is
+    // still running with the boot-time value. The 3 conditional host
+    // handlers honour the boot value, so the GUI needs to know "restart
+    // to apply" and the readiness recommendation should reflect drift.
+    var restartPending = legacyHandlers != legacyHostHandlersAtBoot;
+    // Iter 62 — surface exactly which daemon endpoints are wrapped in
+    // `if (legacyHostHandlersAtBoot) { ... }` blocks. Operators reading
+    // the diagnostic see the cutover scope at a glance instead of having
+    // to grep Program.cs. Each entry pairs HTTP verb with the route. The
+    // list grows as more handlers join the gate; today's set covers the
+    // 11 handlers shipped via iter 55-66 (incl. the snapshot restore aliases).
+    var gatedEndpoints = new[]
+    {
+        "POST /test-host-connection",
+        "POST /sites/{domain}/hooks/test",
+        "POST /sites/{domain}/notifications/test",
+        "POST /sites/{domain}/snapshot-now",
+        "POST /sites/{domain}/restore",
+        "POST /sites/{domain}/snapshots/{snapshotId}/restore",
+        "GET /sites/{domain}/history",
+        "GET /sites/{domain}/deploys/{deployId}",
+        "GET /sites/{domain}/snapshots",
+        "GET /sites/{domain}/settings",
+        "GET /sites/{domain}/groups",
+    };
+    var explain = ctx.Request.Query["explain"].ToString() == "true";
+    var baseRecommendation = readyToFlip
+        ? "Plugin parity proven — safe to flip useLegacyHostHandlers=false"
+        : $"Stay on built-in mode — {blockers.Count} blocker(s) listed above";
+    var recommendation = restartPending
+        ? baseRecommendation + " — daemon restart required to apply current setting"
+        : baseRecommendation;
+    if (explain)
+    {
+        return Results.Ok(new
+        {
+            mode,
+            pluginLoaded,
+            pluginVersion,
+            useLegacyHostHandlers = legacyHandlers,
+            bootLegacyHostHandlers = legacyHostHandlersAtBoot,
+            restartPending,
+            readyToFlip,
+            blockers,
+            blockerDetails = blockerDetails.ConvertAll(b => new
+            {
+                summary = b.Summary,
+                phase = b.Phase,
+                remediation = b.Remediation,
+            }),
+            gatedEndpoints,
+            recommendation,
+        });
+    }
+    return Results.Ok(new
+    {
+        mode,
+        pluginLoaded,
+        pluginVersion,
+        useLegacyHostHandlers = legacyHandlers,
+        bootLegacyHostHandlers = legacyHostHandlersAtBoot,
+        restartPending,
+        readyToFlip,
+        blockers,
+        gatedEndpoints,
+        // Diagnostic: pretty-print this in the GUI so operators don't
+        // have to dig in /api/plugins separately.
+        recommendation,
+    });
+});
+
 app.MapPost("/api/admin/shutdown", (IHostApplicationLifetime lifetime) =>
 {
     _ = Task.Run(() => lifetime.StopApplication());
@@ -1141,6 +1278,21 @@ static bool IsMcpEnabled(HttpContext ctx) =>
 static bool IsDeployEnabled(HttpContext ctx) =>
     ctx.RequestServices.GetRequiredService<SettingsStore>()
         .GetBool("deploy", "enabled", defaultValue: true);
+
+// Phase 7.4 #109-D1 — operator-controlled flag for the upcoming plugin
+// cutover. Default TRUE (current behavior — host's Program.cs handlers
+// own /api/nks.wdc.deploy/* routes; plugin endpoints get skipped by the
+// PluginLoader.WireEndpoints route-conflict guard). Reserved for future
+// flip to FALSE once the sibling webdev-console-plugins repo grows the
+// 6 host-only endpoints currently missing (hooks/test, notifications/
+// test, test-host-connection, rollback-to, restore alias, deploy-without
+// -hosts segment) AND the plugin-side ZIP/SSE/Slack feature parity is
+// proven. Today the flag is read-only-from-the-perspective-of-behavior:
+// the value round-trips through Settings but no middleware acts on it
+// yet. Surfacing now so operators see the planned migration in the UI.
+static bool IsLegacyHostHandlers(HttpContext ctx) =>
+    ctx.RequestServices.GetRequiredService<SettingsStore>()
+        .GetBool("deploy", "useLegacyHostHandlers", defaultValue: true);
 
 app.MapPost("/api/mcp/intents", async (
     HttpContext ctx,
@@ -1967,6 +2119,23 @@ app.MapPost("/api/mcp/grants/import", async (
 // the Hooks settings card "Test" button so operator can validate a hook
 // works before relying on it. Body shape: { type, command, timeoutSeconds?,
 // description?, workingDir? }. Returns { ok, durationMs, error? }.
+//
+// Phase D (#109) — startup-time decision: when the operator has flipped
+// `deploy.useLegacyHostHandlers=false` we skip registering the 3
+// host-only daemon handlers below (hooks/test, notifications/test,
+// test-host-connection). Their plugin equivalents shipped in
+// webdev-console-plugins commits 8958565, c7b87ff, 74c61c8 and now win
+// the route table by default. Restart-required toggle (matches plugin
+// DLL load semantics — no hot reload).
+//
+// Real deploy/rollback still require phar; those handlers stay
+// daemon-authoritative until phase E rewrites the plugin's
+// NksDeployBackend to direct C#. This is the deliberate first slice of
+// the cutover so the toggle becomes meaningful without breaking anything.
+// Phase D (#258) — uses the captured legacyHostHandlersAtBoot from
+// near the top of this file so readiness can compute restartPending.
+if (legacyHostHandlersAtBoot)
+{
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/hooks/test", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Daemon.Deploy.LocalDeployBackend localBackend,
@@ -2143,9 +2312,17 @@ app.MapPost("/api/nks.wdc.deploy/test-host-connection", async (
         });
     }
 });
+} // end if (legacyHostHandlersAtBoot) — closes the 3 host-only daemon handler block
 
 // + DeploySiteTab's hasConfig probe (returns 404→empty when zero rows
 // would be returned, so frontend keeps showing the wizard CTA).
+//
+// Phase D (#109) — gated by legacyHostHandlersAtBoot. Plugin's history
+// route in NksDeployRoutes.cs reads the same IDeployRunsRepository
+// (cross-ALC shared) so the projection shape matches when plugin
+// authority kicks in. Pure read, no destructive surface.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
     string domain,
     int? limit,
@@ -2180,12 +2357,18 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/history", async (
     }).ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
+} // end if (legacyHostHandlersAtBoot) — history GET block
 
 // Snapshot list — pre-deploy DB snapshots that ran for this site.
 // Composed from deploy_runs rows with non-null pre_deploy_backup_path.
 // Real backend (when it ships) writes the snapshot path + size via
 // IDeployRunsRepository.UpdatePreDeployBackupAsync mid-run; this view
 // just projects those rows into the frontend's DeploySnapshotEntry shape.
+//
+// Phase D (#109) — gated, pure read, plugin's ListSnapshots handler
+// reads the same shared IDeployRunsRepository.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", async (
     string domain,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -2204,6 +2387,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/snapshots", async (
         .ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
+} // end if (legacyHostHandlersAtBoot) — snapshots list GET block
 
 // Deploy settings persistence — JSON file under
 // {WdcPaths.DataRoot}/deploy-settings/{domain}.json. Frontend's
@@ -2274,6 +2458,12 @@ static int PurgeOldSnapshots(string subfolder, string domain, int retentionDays)
     catch { return 0; }
 }
 
+// Phase D (#109) — gated, pure read of per-site deploy-settings.json.
+// PUT counterpart stays daemon-authoritative (intent-gated, mutates
+// state — gating it would also need plugin to honour the same intent
+// validator path; deferred to a future iter).
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
 {
     var path = DeploySettingsPath(domain);
@@ -2296,6 +2486,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/settings", (string domain) =>
         return Results.Json(new { error = "read_failed", message = ex.Message }, statusCode: 500);
     }
 });
+} // end if (legacyHostHandlersAtBoot) — settings GET block
 
 app.MapPut("/api/nks.wdc.deploy/sites/{domain}/settings", async (
     string domain, HttpContext ctx,
@@ -2341,6 +2532,10 @@ app.MapPut("/api/nks.wdc.deploy/sites/{domain}/settings", async (
 });
 
 // Single deploy status — used by the drawer's status polling fallback.
+// Phase D (#109) — gated, pure read, plugin's GetDeploy handler in
+// NksDeployRoutes.cs reads the same shared repository.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
     string domain,
     string deployId,
@@ -2364,6 +2559,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
         success    = row.Status == "completed",
     });
 });
+} // end if (legacyHostHandlersAtBoot) — deploys/{deployId} GET block
 
 // Phase 7.5+ — rollback a deploy. POST /sites/{domain}/deploys/{deployId}/rollback.
 // Real local-loopback rollback: when host has localTargetPath configured AND
@@ -2701,6 +2897,9 @@ app.MapDelete("/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}", async (
 });
 
 // GET /sites/{domain}/groups — list multi-host deploy groups for site.
+// Phase D (#109) — gated, pure read.
+if (legacyHostHandlersAtBoot)
+{
 app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     string domain, int? limit,
     NKS.WebDevConsole.Core.Interfaces.IDeployGroupsRepository groups,
@@ -2721,6 +2920,7 @@ app.MapGet("/api/nks.wdc.deploy/sites/{domain}/groups", async (
     }).ToList();
     return Results.Ok(new { domain, count = entries.Count, entries });
 });
+} // end if (legacyHostHandlersAtBoot) — groups list GET block
 
 // POST /sites/{domain}/groups — start a multi-host deploy group.
 // Phase 7.5+++ — REAL fan-out via LocalDeployBackend when each host has
@@ -3024,6 +3224,16 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback", asyn
 // records a synthetic deploy_runs row tagged backend_id='manual-snapshot'
 // so it surfaces in the snapshot list (which projects rows with
 // non-null pre_deploy_backup_path) without needing an actual deploy.
+//
+// Phase D (#109) — gated by legacyHostHandlersAtBoot. Plugin's
+// PostSnapshotNow ships an FS-ZIP-first path (commit 6cd22a5/6608838)
+// which captures the resolved host's current/ release directly without
+// shelling out to phar, so this endpoint is safe to delegate to plugin
+// authority when operator flips useLegacyHostHandlers=false. The DB
+// snapshotter fallback in plugin-mode handles sites without
+// localTargetPath the same way the daemon does.
+if (legacyHostHandlersAtBoot)
+{
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
     string domain, HttpContext ctx,
     NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -3179,6 +3389,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshot-now", async (
         host = hostName,
     });
 });
+} // end if (legacyHostHandlersAtBoot) — snapshot-now block
 
 // Phase 7.5+ — restore a previous snapshot. The kind on the intent token
 // MUST be 'restore' (validator enforces) which the registry tags as
@@ -3361,6 +3572,15 @@ static async Task<IResult> HandleRestoreAsync(
 }
 
 // Both routes alias HandleRestoreAsync.
+//
+// Phase D (#109) — gated by legacyHostHandlersAtBoot. Daemon's restore
+// is pure direct-C# (ZipFile.ExtractToDirectory + symlink swap) — no
+// phar dep — and the plugin ships an equivalent PostSnapshotRestore
+// (NksDeployRoutes.cs) that validates the same intent kind 'restore'
+// against the shared validator. Safe for plugin to take over in
+// plugin-mode boot. Both alias routes flip together for consistency.
+if (legacyHostHandlersAtBoot)
+{
 app.MapPost("/api/nks.wdc.deploy/sites/{domain}/restore",
     (string domain, HttpContext ctx,
      NKS.WebDevConsole.Core.Interfaces.IDeployRunsRepository runs,
@@ -3376,6 +3596,7 @@ app.MapPost("/api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore",
      NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
      CancellationToken ct) =>
         HandleRestoreAsync(domain, snapshotId, ctx, runs, intentValidator, eventsBus, ct));
+} // end if (legacyHostHandlersAtBoot) — restore alias block
 
 // Phase 7.5 dummy backend with realistic state-machine + optional MCP
 // intent gate. POST body:
@@ -3816,6 +4037,22 @@ app.Use(async (ctx, next) =>
             await ctx.Response.WriteAsJsonAsync(new { error = "deploy_disabled" });
             return;
         }
+        // Phase 7.4 #109-D1 — informational header surfacing which backend
+        // mode is in effect. Today always "built-in" because
+        // useLegacyHostHandlers defaults true. Operators (and the
+        // DeploySettings GUI badge / future alerting) can read this
+        // without parsing /api/settings, and downstream consumers can
+        // distinguish behaviour without round-tripping through the
+        // settings endpoint. No-op behaviorally.
+        ctx.Response.OnStarting(() =>
+        {
+            if (!ctx.Response.Headers.ContainsKey("X-Wdc-Backend-Mode"))
+            {
+                ctx.Response.Headers["X-Wdc-Backend-Mode"] =
+                    IsLegacyHostHandlers(ctx) ? "built-in" : "plugin";
+            }
+            return Task.CompletedTask;
+        });
     }
     await next();
 });
@@ -9126,6 +9363,18 @@ app.MapPut("/api/settings", async (
     if (mcpKeys.Count > 0)
     {
         try { await eventsBus.BroadcastAsync("mcp:settings-changed", new { keys = mcpKeys }); }
+        catch { /* best-effort SSE — never block the save path */ }
+    }
+
+    // Phase 7.4 #109-D1+ iter 28 — deploy.* settings changes broadcast
+    // their own SSE event so DeploySettingsPanel + Settings.vue popovers
+    // refresh readiness without polling. Today only useLegacyHostHandlers
+    // matters for popovers; future deploy.* keys (timeouts, default
+    // hooks, etc.) get the same live-refresh for free.
+    var deployKeys = settings.Keys.Where(k => k.StartsWith("deploy.", StringComparison.OrdinalIgnoreCase)).ToList();
+    if (deployKeys.Count > 0)
+    {
+        try { await eventsBus.BroadcastAsync("deploy:settings-changed", new { keys = deployKeys }); }
         catch { /* best-effort SSE — never block the save path */ }
     }
 

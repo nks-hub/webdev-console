@@ -10,8 +10,26 @@
 #   - deploy history + dummy deploy fire (Phase 7.5 stub)
 #
 # Run: bash tools/e2e-mcp-deploy.sh
-# Exits non-zero on first failure.
+# Runs all sections to completion and exits non-zero at the end if any
+# `step` failed (PASS/FAIL summary printed before exit).
 set -u
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    cat <<EOF
+Usage: tools/e2e-mcp-deploy.sh
+
+Full E2E test of MCP intent + grants + dummy deploy flow against
+blog.loc and shop.loc on a live daemon (port 17280, token from
+\$TEMP/nks-wdc-daemon.port). Runs all sections to completion and
+exits non-zero at the end if any step failed (PASS/FAIL summary
+printed before exit).
+
+Sections cover: settings, kinds, grants, intents, deploy history,
+real deploy fire, MCP gates, plugin readiness, gatedEndpoints[].
+EOF
+    exit 0
+fi
+
 PASS=0; FAIL=0
 RED=$'\033[31m'; GRN=$'\033[32m'; YEL=$'\033[33m'; END=$'\033[0m'
 
@@ -45,6 +63,16 @@ api() {
     local method="$1"; local path="$2"; shift 2
     curl -s -X "$method" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@" "$BASE$path"
 }
+
+# Iter 33-34 — defensive startup reset for settings that other tests
+# mutate-and-restore. If a previous run (this script OR Playwright) was
+# killed mid-test, the value stays in SQLite and poisons the next run.
+# Each entry below is the default-safe baseline; idempotent if already at default.
+# Why this exists: try/finally restore is fragile against signal kills;
+# pair with startup wipe (belt + suspenders). See bugfix_e2e_state_poisoning.md.
+api PUT /api/settings -d '{"mcp.always_confirm_kinds":""}' >/dev/null 2>&1 || true
+api PUT /api/settings -d '{"deploy.useLegacyHostHandlers":"true"}' >/dev/null 2>&1 || true
+api PUT /api/settings -d '{"deploy.enabled":"true"}' >/dev/null 2>&1 || true
 
 # Phase 7.5+++ — REAL deploy: helper builds the localPaths body. Real
 # git repos at C:\work\sites\{blog.loc,shop.loc} get copied into release
@@ -2039,6 +2067,116 @@ step "after reset + manual confirm → 202 queued" "$ZZ_FIRE2" '"status":"queued
 
 # Cleanup
 [ -n "$ZZ_GR_ID" ] && api DELETE /api/mcp/grants/$ZZ_GR_ID >/dev/null
+
+# ============================================================================
+echo ""; echo "${YEL}=== AAA. /api/admin/plugin-readiness contract + setting echo ===${END}"
+# ============================================================================
+# Phase 7.4 #109-D1+ — readiness diagnostic is the source-of-truth for the
+# Settings.vue locked toggle + DeploySettingsPanel popover. If the daemon
+# stops echoing useLegacyHostHandlers or silently flips readyToFlip without
+# shipping phase B/C/D, the UI lock breaks. This section asserts:
+#   1. envelope shape (mode, pluginLoaded, blockers[], readyToFlip)
+#   2. setting flip via PUT /api/settings round-trips through the diagnostic
+#   3. readyToFlip stays false even after manually flipping the setting
+#      (proves the lock can't be bypassed by writing the setting directly)
+# Restore original setting in cleanup so the suite is self-isolated.
+
+AAA_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
+AAA_R1=$(api GET /api/admin/plugin-readiness)
+step "readiness envelope has mode field" "$AAA_R1" '"mode":'
+step "readiness envelope has blockers array" "$AAA_R1" '"blockers":\['
+step "readiness envelope has readyToFlip:false today" "$AAA_R1" '"readyToFlip":false'
+step "readiness envelope echoes useLegacyHostHandlers:true (default)" "$AAA_R1" '"useLegacyHostHandlers":true'
+# Phase B + C cleared from blockers after plugin parity shipped (B:
+# 5 endpoints; C: ZIP/snapshot, test-hook, Slack, SSE bridge). Phase D
+# (plugin-only e2e) remains the only blocker for readyToFlip.
+step "blockers list includes phase D" "$AAA_R1" 'phase D'
+
+# Flip useLegacyHostHandlers to false via settings API
+api PUT /api/settings -d '{"deploy.useLegacyHostHandlers":"false"}' >/dev/null
+AAA_R2=$(api GET /api/admin/plugin-readiness)
+step "readiness echoes useLegacyHostHandlers:false after flip" "$AAA_R2" '"useLegacyHostHandlers":false'
+# CRITICAL: setting flip alone must NOT set readyToFlip → that requires phase B/C/D.
+step "readyToFlip stays false even after manual setting flip" "$AAA_R2" '"readyToFlip":false'
+
+# Restore
+api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$AAA_BEFORE\"}" >/dev/null
+AAA_R3=$(api GET /api/admin/plugin-readiness)
+step "readiness echoes restored useLegacyHostHandlers value" "$AAA_R3" "\"useLegacyHostHandlers\":$AAA_BEFORE"
+
+# Iter 17 — verbose ?explain=true mode adds blockerDetails[] with phase + remediation per blocker
+AAA_R4=$(api GET '/api/admin/plugin-readiness?explain=true')
+step "explain=true response includes blockerDetails array" "$AAA_R4" '"blockerDetails":\['
+# Phase B + C blockers cleared — only D remains in blockerDetails.
+step "explain=true blockerDetails has phase D remediation" "$AAA_R4" '"phase":"D"'
+step "explain=true remediation field present" "$AAA_R4" '"remediation":'
+# Default mode (no explain) must keep flat blockers shape for back-compat with iter 5/6 consumers
+AAA_R5=$(api GET /api/admin/plugin-readiness)
+step "default response still has blockers array" "$AAA_R5" '"blockers":\['
+# Negative check: default response must NOT include blockerDetails (back-compat guard)
+if echo "$AAA_R5" | grep -q '"blockerDetails"'; then
+    echo "  ${RED}✗${END} default response leaked blockerDetails (back-compat broken)"
+    FAIL=$((FAIL + 1))
+else
+    echo "  ${GRN}✓${END} default response omits blockerDetails (back-compat preserved)"
+    PASS=$((PASS + 1))
+fi
+
+# Iter 31 — assert deploy:settings-changed SSE fires on deploy.* save.
+# Open a background SSE stream, trigger a settings PUT, capture the
+# event line within 5s. Validates iter 28 broadcast wiring.
+AAA_SSE_LOG=$(mktemp)
+curl -N -s -m 8 -H "Authorization: Bearer $TOKEN" "$BASE/api/events" > "$AAA_SSE_LOG" 2>&1 &
+AAA_SSE_PID=$!
+sleep 1
+api PUT /api/settings -d '{"deploy.useLegacyHostHandlers":"true"}' >/dev/null
+sleep 2
+kill $AAA_SSE_PID 2>/dev/null
+wait $AAA_SSE_PID 2>/dev/null
+if grep -q "event: deploy:settings-changed" "$AAA_SSE_LOG"; then
+    echo "  ${GRN}✓${END} deploy:settings-changed SSE event fired on deploy.* save"
+    PASS=$((PASS + 1))
+else
+    echo "  ${RED}✗${END} deploy:settings-changed SSE event MISSING from /api/events stream"
+    echo "      captured: $(head -c 200 "$AAA_SSE_LOG")"
+    FAIL=$((FAIL + 1))
+fi
+rm -f "$AAA_SSE_LOG"
+
+# Iter 56 #258 — restart-pending hint: when current setting differs from
+# boot value, readiness must surface restartPending=true so the GUI can
+# show "restart to apply" hint instead of silently lying about authority.
+BBB_R0=$(api GET /api/admin/plugin-readiness)
+step "readiness surfaces bootLegacyHostHandlers field" "$BBB_R0" '"bootLegacyHostHandlers":'
+step "readiness surfaces restartPending field" "$BBB_R0" '"restartPending":'
+# Boot==current → restartPending must be false
+step "no flip → restartPending:false" "$BBB_R0" '"restartPending":false'
+# Iter 62/65 — gatedEndpoints[] surfaces the 11 conditional handlers so the
+# GUI can render an exact list instead of trusting hand-coded copy.
+step "readiness lists gatedEndpoints array" "$BBB_R0" '"gatedEndpoints":\['
+step "gatedEndpoints includes hooks/test" "$BBB_R0" 'POST /sites/{domain}/hooks/test'
+step "gatedEndpoints includes snapshot-now" "$BBB_R0" 'POST /sites/{domain}/snapshot-now'
+step "gatedEndpoints includes history GET" "$BBB_R0" 'GET /sites/{domain}/history'
+# Iter 65 added the snapshot restore aliases (#109-D2 follow-up) — pin one
+# so a regression that drops the snapshots/{id}/restore route gets caught.
+step "gatedEndpoints includes snapshot restore alias" "$BBB_R0" 'POST /sites/{domain}/snapshots/{snapshotId}/restore'
+# Iter 93 — recommendation field is always emitted (DeploySettingsPanel +
+# global Settings popover render it). Pin its presence so a refactor
+# that drops it breaks bash e2e instead of leaking through to GUI.
+step "readiness includes recommendation field even without drift" "$BBB_R0" '"recommendation":'
+
+BBB_BEFORE=$(api GET /api/settings | python3 -c "import sys,json; v=json.load(sys.stdin).get('deploy.useLegacyHostHandlers'); print('true' if v is None else str(v).lower())")
+# Toggle to opposite of boot value to force drift
+BBB_FLIP=$([ "$BBB_BEFORE" = "true" ] && echo "false" || echo "true")
+api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$BBB_FLIP\"}" >/dev/null
+BBB_R1=$(api GET /api/admin/plugin-readiness)
+step "after drift → restartPending:true" "$BBB_R1" '"restartPending":true'
+step "drift recommendation mentions restart" "$BBB_R1" 'restart required to apply'
+
+# Restore so the suite is self-isolated
+api PUT /api/settings -d "{\"deploy.useLegacyHostHandlers\":\"$BBB_BEFORE\"}" >/dev/null
+BBB_R2=$(api GET /api/admin/plugin-readiness)
+step "restored → restartPending:false" "$BBB_R2" '"restartPending":false'
 
 # ============================================================================
 echo ""; echo "${YEL}=== summary ===${END}"

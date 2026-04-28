@@ -41,10 +41,117 @@
              "plugin v<version>" so the migration progress is visible
              without reading the daemon log. Static text for now — a
              follow-up "Switch backend" CTA arrives in #109-D1. -->
-        <el-tooltip
-          :content="deployBackendTooltip"
+        <!-- #109-D1+: badge becomes a popover trigger when readiness
+             diagnostic is loaded. Click → see blockers + recommendation
+             from /api/admin/plugin-readiness inline. Falls back to plain
+             tooltip when readiness fetch failed (older daemons or net
+             error). -->
+        <el-popover
+          v-if="deployBackendReadiness"
           placement="bottom"
+          :width="380"
+          trigger="click"
         >
+          <template #reference>
+            <el-tag
+              :type="deployBackendIsPlugin ? 'success' : 'info'"
+              size="small"
+              effect="plain"
+              class="deploy-backend-tag clickable-stat"
+              :title="deployBackendTooltip"
+            >
+              {{ deployBackendBadge }}
+              <span v-if="deployBackendReadiness.blockers.length > 0" style="margin-left: 4px">
+                · {{ deployBackendReadiness.blockers.length }}⚠
+              </span>
+              <span v-else style="margin-left: 4px">· ✓</span>
+              <!-- Iter 56 (#258) — surface restart-pending so operator
+                   spots the "setting flipped but daemon hasn't restarted"
+                   drift without having to open the popover. -->
+              <span
+                v-if="deployBackendReadiness.restartPending"
+                style="margin-left: 4px"
+                :title="t('deploySettings.restartPendingTooltip')"
+              >· ↻</span>
+            </el-tag>
+          </template>
+          <div style="font-size: 12px">
+            <!-- Iter 56 (#258) — restart-pending banner appears when the
+                 operator has flipped useLegacyHostHandlers but the daemon
+                 still serves under the boot value. The conditional
+                 registration block honours bootLegacyHostHandlers, so the
+                 GUI must explicitly tell the operator a restart is
+                 required to apply the new authority. -->
+            <el-alert
+              v-if="deployBackendReadiness.restartPending"
+              :title="t('deploySettings.restartPendingTitle')"
+              :description="t('deploySettings.restartPendingDescription')"
+              type="warning"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 8px"
+            />
+            <div style="margin-bottom: 6px">
+              <!-- Iter 23: localize recommendation from the same structured
+                   fields (readyToFlip + blockers count) instead of relying
+                   on the server-side English-only string. Fallback to the
+                   server text if neither localization branch matches. -->
+              <strong>
+                {{ deployBackendReadiness.readyToFlip
+                  ? t('deploySettings.readyToFlip')
+                  : t('deploySettings.stayOnBuiltIn', { n: deployBackendReadiness.blockers.length }) }}
+              </strong>
+            </div>
+            <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
+              <div class="muted" style="margin-bottom: 4px">Blockers:</div>
+              <!-- Iter 21: shared component renders blockerDetails phase tag
+                   + remediation when ?explain=true payload available; falls
+                   back to summary-only rows for older daemons. -->
+              <ReadinessBlockerList
+                :blockers="deployBackendReadiness.blockers"
+                :blocker-details="deployBackendReadiness.blockerDetails"
+              />
+            </div>
+            <!-- Iter 63 (#258 followup) — gatedEndpoints[] list. Empty/missing
+                 on older daemons → block hidden. Shows operator EXACTLY
+                 which routes flip authority on next restart-with-legacy=false,
+                 paired with cs/en label so operator knows what's at stake. -->
+            <div
+              v-if="deployBackendReadiness.gatedEndpoints && deployBackendReadiness.gatedEndpoints.length > 0"
+              style="margin-top: 10px"
+            >
+              <div class="muted" style="margin-bottom: 4px">
+                {{ t('deploySettings.gatedEndpointsLabel', { n: deployBackendReadiness.gatedEndpoints.length }) }}
+              </div>
+              <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+                <li v-for="ep in deployBackendReadiness.gatedEndpoints" :key="ep">
+                  <code class="mono">{{ ep }}</code>
+                </li>
+              </ul>
+            </div>
+            <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+              <code class="mono">GET /api/admin/plugin-readiness</code>
+              <div style="display: flex; gap: 6px">
+                <el-button
+                  size="small"
+                  :loading="readinessRefreshing"
+                  @click="refreshDeployBackendInfo"
+                >
+                  {{ t('deploySettings.recheckReadiness') }}
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  link
+                  @click="openGlobalSettings"
+                >
+                  {{ t('deploySettings.openGlobalSettings') }} →
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </el-popover>
+        <el-tooltip v-else :content="deployBackendTooltip" placement="bottom">
           <el-tag
             :type="deployBackendIsPlugin ? 'success' : 'info'"
             size="small"
@@ -892,7 +999,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useDeploySettingsStore } from '../../stores/deploySettings'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import HostSettingsCard from './HostSettingsCard.vue'
-import { listMcpGrants, subscribeEventsMap, fetchPlugins } from '../../api/daemon'
+import ReadinessBlockerList from './ReadinessBlockerList.vue'
+import { listMcpGrants, subscribeEventsMap, fetchPlugins, daemonBaseUrl, daemonAuthHeaders } from '../../api/daemon'
 import { onBeforeUnmount } from 'vue'
 import {
   fetchDeploySnapshots,
@@ -1030,36 +1138,135 @@ function goToMcpGrants(): void {
   router.push({ path: '/mcp/grants', query: { target: props.domain } })
 }
 
-// #109 — deploy backend identity badge in the header. Reads /api/plugins
-// and surfaces whether the nks.wdc.deploy plugin is loaded. Today's
-// daemon serves /api/nks.wdc.deploy/* from Program.cs (built-in); once
-// the plugin extraction lands the same routes are owned by the plugin
-// DLL. Operators see the migration state without reading daemon logs.
+// #109 — deploy backend identity badge in the header. Two-source
+// detection so the badge reflects the EFFECTIVE backend, not just
+// plugin presence:
+//   1. X-Wdc-Backend-Mode response header (#109-D1) — authoritative
+//      "which handler ACTUALLY served this request" signal. Values:
+//      "built-in" (default, host's Program.cs handlers) or "plugin"
+//      (after the operator flips deploy.useLegacyHostHandlers=false
+//      and plugin parity is proven).
+//   2. /api/plugins — falls back to plugin-presence check if the header
+//      isn't available (older daemon binaries that predate D1).
 //
-// Best-effort: silently degrades to "built-in" if /api/plugins fails or
-// the response shape changes — never blocks the settings panel from
-// rendering.
+// `effectiveMode` wins — when both signals exist, the header is the
+// truth: a plugin can be LOADED in /api/plugins but still
+// host-handlers-win because of route-conflict guard, in which case the
+// badge correctly shows "built-in".
+//
+// Best-effort: silently degrades to "built-in" if both signals fail —
+// never blocks the settings panel from rendering.
 const deployBackendVersion = ref<string | null>(null)
-const deployBackendIsPlugin = computed<boolean>(() => deployBackendVersion.value !== null)
+const deployBackendEffectiveMode = ref<'built-in' | 'plugin' | null>(null)
+// #109-D1+: cached readiness payload from /api/admin/plugin-readiness.
+// When non-null, the badge becomes a popover trigger showing blockers +
+// recommendation inline. Null when fetch fails (old daemon binaries
+// pre-D1 don't expose this endpoint) — UI falls back to plain tooltip.
+interface DeployReadinessBlockerDetail {
+  summary: string
+  phase: string
+  remediation: string
+}
+interface DeployReadiness {
+  mode: 'built-in' | 'plugin'
+  pluginLoaded: boolean
+  pluginVersion: string | null
+  useLegacyHostHandlers: boolean
+  // Iter 56 (#258) — value baked at daemon boot. Conditional handler
+  // registration honours bootLegacyHostHandlers, not the live setting,
+  // so the GUI must show "restart pending" when these drift.
+  bootLegacyHostHandlers?: boolean
+  restartPending?: boolean
+  readyToFlip: boolean
+  blockers: string[]
+  blockerDetails?: DeployReadinessBlockerDetail[]
+  // Iter 62 — list of daemon endpoints wrapped in
+  // `if (legacyHostHandlersAtBoot)` blocks. Empty when older daemon
+  // doesn't expose the field (graceful degradation).
+  gatedEndpoints?: string[]
+  recommendation: string
+}
+const deployBackendReadiness = ref<DeployReadiness | null>(null)
+const readinessRefreshing = ref<boolean>(false)
+async function refreshDeployBackendInfo(): Promise<void> {
+  readinessRefreshing.value = true
+  try {
+    await loadDeployBackendInfo()
+  } finally {
+    readinessRefreshing.value = false
+  }
+}
+
+// Iter 16 — cross-navigation from per-site readiness popover to the
+// global Settings deploy-subsystem section. Same readyToFlip state is
+// authoritative on both pages; this saves the operator from having to
+// navigate manually after diagnosing the lock state from the per-site
+// popover. Anchor `deploy-subsystem` was added in Settings.vue alongside
+// this commit.
+function openGlobalSettings(): void {
+  void router.push({ path: '/settings', query: { tab: 'advanced', scroll: 'deploy-subsystem' } })
+}
+const deployBackendIsPlugin = computed<boolean>(() =>
+  // Header wins when present.
+  deployBackendEffectiveMode.value === 'plugin'
+  // Otherwise fall back to plugin-presence (legacy detection).
+  || (deployBackendEffectiveMode.value === null && deployBackendVersion.value !== null))
 const deployBackendBadge = computed<string>(() =>
   deployBackendIsPlugin.value
-    ? `🔌 plugin v${deployBackendVersion.value}`
+    ? (deployBackendVersion.value
+        ? `🔌 plugin v${deployBackendVersion.value}`
+        : '🔌 plugin')
     : '⚙ built-in')
 const deployBackendTooltip = computed<string>(() =>
   deployBackendIsPlugin.value
-    ? t('deploySettings.backendPluginTooltip', { v: deployBackendVersion.value })
+    ? t('deploySettings.backendPluginTooltip', { v: deployBackendVersion.value ?? '?' })
     : t('deploySettings.backendBuiltInTooltip'))
 
 async function loadDeployBackendInfo(): Promise<void> {
+  // Plugin presence check via /api/plugins — gives us the version when
+  // plugin is loaded (may or may not be the active backend).
   try {
     const plugins = await fetchPlugins()
     const deployPlugin = plugins.find((p) => p.id === 'nks.wdc.deploy')
     deployBackendVersion.value = deployPlugin?.version ?? null
   } catch {
-    // /api/plugins failed — assume built-in (the safer default since the
-    // daemon is currently the canonical handler for /api/nks.wdc.deploy/*).
     deployBackendVersion.value = null
   }
+  // Authoritative effective-mode probe via X-Wdc-Backend-Mode header.
+  // Cheap GET that the gate middleware always tags. Use raw fetch with
+  // daemon auth headers (the json() helper in api/daemon.ts parses body
+  // and discards Response — we need response.headers here). Falls back
+  // silently if header is missing (pre-D1 daemon binary) — the plugin-
+  // presence check above is the legacy signal.
+  try {
+    const probe = await fetch(
+      `${daemonBaseUrl()}/api/nks.wdc.deploy/sites/${encodeURIComponent(props.domain)}/history?limit=1`,
+      { method: 'GET', headers: daemonAuthHeaders() }
+    )
+    const mode = probe.headers.get('X-Wdc-Backend-Mode')
+    if (mode === 'built-in' || mode === 'plugin') {
+      deployBackendEffectiveMode.value = mode
+    }
+  } catch {
+    // Probe failed — leave effectiveMode null so the version-based
+    // fallback in deployBackendIsPlugin kicks in.
+  }
+  // Readiness diagnostic — feeds the click-popover with structured
+  // blockers + recommendation. Optional (older daemons return 404),
+  // graceful degrade leaves popover off and falls back to plain tooltip.
+  try {
+    // Iter 18: opt into ?explain=true so each blocker carries phase +
+    // remediation. Older daemons without the explain branch return the
+    // flat shape — type signature treats blockerDetails as optional so
+    // the popover falls back to just summary lines for old payloads.
+    const probe = await fetch(
+      `${daemonBaseUrl()}/api/admin/plugin-readiness?explain=true`,
+      { method: 'GET', headers: daemonAuthHeaders() }
+    )
+    if (probe.ok) {
+      deployBackendReadiness.value = await probe.json()
+    }
+  } catch { /* graceful degrade */ }
 }
 
 // Phase 7.5+++ — also live-refresh the badge when grants change
@@ -1077,6 +1284,11 @@ onMounted(async () => {
   void loadDeployBackendInfo()
   unsubscribeGrantSse = subscribeEventsMap({
     'mcp:grant-changed': () => { void loadMcpGrantsCount() },
+    // Iter 28: live-refresh readiness when deploy.* settings change in
+    // another tab (e.g. operator flips useLegacyHostHandlers in global
+    // Settings). Without this, popover info goes stale until manual
+    // re-check or page reload.
+    'deploy:settings-changed': () => { void loadDeployBackendInfo() },
   })
 })
 
