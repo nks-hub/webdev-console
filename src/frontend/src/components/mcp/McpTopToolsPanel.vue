@@ -85,6 +85,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (unsubscribe) unsubscribe()
   if (pollTimer) clearInterval(pollTimer)
+  if (pendingRefresh) clearTimeout(pendingRefresh)
 })
 </script>
 

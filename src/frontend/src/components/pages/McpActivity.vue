@@ -612,6 +612,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (unsubscribe) unsubscribe()
   if (pollTimer) clearInterval(pollTimer)
+  // Clear pending timeouts so they don't fire after unmount and try to
+  // mutate disposed reactive state.
+  if (searchDebounce) clearTimeout(searchDebounce)
+  if (pendingRefresh) clearTimeout(pendingRefresh)
 })
 </script>
 
