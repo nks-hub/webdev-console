@@ -222,6 +222,59 @@ export const revokeIntent = (intentId: string): Promise<RevokeIntentResponse> =>
   json(`/api/mcp/intents/${encodeURIComponent(intentId)}/revoke`, { method: 'POST' })
 
 // ----------------------------------------------------------------------------
+// Phase 8 — MCP tool call audit log. Records every MCP call (read + write),
+// not just signed intents. Powers the unified Activity feed in McpHub.
+// ----------------------------------------------------------------------------
+export interface McpToolCallEntry {
+  id: string
+  calledAt: string
+  sessionId: string | null
+  caller: string
+  toolName: string
+  argsSummary: string | null
+  argsHash: string | null
+  durationMs: number
+  resultCode: string
+  errorMessage: string | null
+  dangerLevel: 'read' | 'mutate' | 'destructive'
+  intentId: string | null
+}
+
+export interface McpToolCallList {
+  entries: McpToolCallEntry[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface McpToolCallStats {
+  total: number
+  reads: number
+  mutates: number
+  destructives: number
+  errors: number
+  lastCalledAt: string | null
+  distinctSessions: number
+}
+
+export const fetchMcpToolCalls = (
+  limit = 50,
+  offset = 0,
+  dangerLevel?: string | null,
+  toolName?: string | null,
+  sessionId?: string | null,
+): Promise<McpToolCallList> => {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  if (dangerLevel) params.set('dangerLevel', dangerLevel)
+  if (toolName) params.set('toolName', toolName)
+  if (sessionId) params.set('sessionId', sessionId)
+  return json(`/api/mcp/tool-calls?${params.toString()}`)
+}
+
+export const fetchMcpToolCallStats = (withinMinutes = 1440): Promise<McpToolCallStats> =>
+  json(`/api/mcp/tool-calls/stats?withinMinutes=${withinMinutes}`)
+
+// ----------------------------------------------------------------------------
 // Phase 7.3 — MCP grants (persistent trust). Banner buttons + admin page
 // hit these endpoints. Backend = /api/mcp/grants in Program.cs.
 // ----------------------------------------------------------------------------

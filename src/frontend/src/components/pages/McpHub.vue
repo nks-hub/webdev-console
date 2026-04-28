@@ -3,8 +3,10 @@
     <div class="hub-header">
       <h2>{{ t('mcpHub.title') }}</h2>
       <p class="muted">{{ t('mcpHub.description') }}</p>
-      <!-- Phase 7.5+++ — at-a-glance summary card. Telemetry that the
-           individual tabs would only surface after switching. -->
+
+      <!-- At-a-glance stats: actionable when something needs attention,
+           informational otherwise. Cleanup hint surfaces when grants are
+           dead-weight (granted but never matched). -->
       <div v-if="grantsStats" class="hub-stats">
         <span class="stat clickable-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
@@ -13,9 +15,10 @@
         <span
           v-if="grantsStats.deadweight > 0"
           class="stat warn clickable-stat"
+          :title="t('mcpHub.stats.deadweightHint')"
           @click="onDeadweightClick"
         >
-          <strong>{{ grantsStats.deadweight }}</strong>
+          <strong>⚠️ {{ grantsStats.deadweight }}</strong>
           <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
         </span>
         <span class="stat clickable-stat" @click="onTotalMatchesClick">
@@ -26,10 +29,6 @@
           <span class="muted">{{ t('mcpHub.stats.lastMatch') }}</span>
           <strong>{{ formatRelative(grantsStats.lastMatchAt) }}</strong>
         </span>
-        <!-- Phase 7.5+++ — always-confirm summary. Sourced from the same
-             listMcpKinds() refresh that powers the Kinds tab badge.
-             Click pulls operator into the Kinds tab where the 🔒 chips
-             live; from there one more click jumps to Settings. -->
         <span
           v-if="alwaysConfirmCount > 0"
           class="stat warn clickable-stat"
@@ -42,31 +41,49 @@
     </div>
 
     <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
+      <!-- Activity — unified feed of every MCP tool call, including reads.
+           Default tab because it answers "what is AI doing right now". -->
+      <el-tab-pane name="activity">
+        <template #label>
+          <span class="tab-label">
+            <el-icon><DataLine /></el-icon>
+            {{ t('mcpHub.tabs.activity') }}
+          </span>
+        </template>
+        <McpActivity />
+      </el-tab-pane>
+
+      <!-- Requests — formerly "Intents". Signed AI requests requiring
+           approval (destructive ops). -->
       <el-tab-pane name="intents">
         <template #label>
           <span class="tab-label">
             <el-icon><Lock /></el-icon>
-            {{ t('mcpHub.tabs.intents') }}
+            {{ t('mcpHub.tabs.requests') }}
             <el-badge v-if="counts.intents > 0" :value="counts.intents" type="warning" class="tab-badge" />
           </span>
         </template>
         <McpIntents />
       </el-tab-pane>
+
+      <!-- Rules — formerly "Grants". Auto-approve rules. -->
       <el-tab-pane name="grants">
         <template #label>
           <span class="tab-label">
             <el-icon><Key /></el-icon>
-            {{ t('mcpHub.tabs.grants') }}
+            {{ t('mcpHub.tabs.rules') }}
             <el-badge v-if="counts.grants > 0" :value="counts.grants" type="success" class="tab-badge" />
           </span>
         </template>
         <McpGrants />
       </el-tab-pane>
+
+      <!-- Catalog — formerly "Kinds". List of action types AI can request. -->
       <el-tab-pane name="kinds">
         <template #label>
           <span class="tab-label">
             <el-icon><Operation /></el-icon>
-            {{ t('mcpHub.tabs.kinds') }}
+            {{ t('mcpHub.tabs.catalog') }}
             <el-badge v-if="counts.kinds > 0" :value="counts.kinds" type="info" class="tab-badge" />
           </span>
         </template>
@@ -80,7 +97,8 @@
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Lock, Key, Operation } from '@element-plus/icons-vue'
+import { Lock, Key, Operation, DataLine } from '@element-plus/icons-vue'
+import McpActivity from './McpActivity.vue'
 import McpIntents from './McpIntents.vue'
 import McpGrants from './McpGrants.vue'
 import McpKinds from './McpKinds.vue'
@@ -97,72 +115,50 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
-type TabName = 'intents' | 'grants' | 'kinds'
+type TabName = 'activity' | 'intents' | 'grants' | 'kinds'
 
 const activeTab = ref<TabName>(parseTab())
 
 function parseTab(): TabName {
   if (route.path.endsWith('/kinds')) return 'kinds'
   if (route.path.endsWith('/grants')) return 'grants'
-  return 'intents'
+  if (route.path.endsWith('/intents')) return 'intents'
+  return 'activity'
 }
 
-// Keep tab state ↔ URL in sync so deep-links (`/mcp/grants`,
-// `/mcp/kinds`) land directly on the right tab and the browser back
-// button works.
 watch(() => route.path, () => { activeTab.value = parseTab() })
 
 function onTabChange(name: string | number): void {
-  const next = name === 'kinds'
-    ? '/mcp/kinds'
-    : name === 'grants'
-      ? '/mcp/grants'
-      : '/mcp/intents'
+  const next = name === 'kinds' ? '/mcp/kinds'
+    : name === 'grants' ? '/mcp/grants'
+      : name === 'intents' ? '/mcp/intents'
+        : '/mcp/activity'
   if (route.path !== next) router.push(next)
 }
 
-// Phase 7.5+++ — tab badges with active counts. Fetch lightweight
-// summaries (count only, full data lives in child components) and
-// auto-refresh on the existing SSE events. The badges give operators
-// at-a-glance visibility without forcing them to switch tabs.
 const counts = reactive({ intents: 0, grants: 0, kinds: 0 })
 const grantsStats = ref<McpGrantsStats | null>(null)
-// Phase 7.5+++ — count of kinds in mcp.always_confirm_kinds (those that
-// the operator has ring-fenced past grants). Refreshed from the same
-// listMcpKinds() call so no extra round-trip.
 const alwaysConfirmCount = ref<number>(0)
 let unsubscribeHubSse: (() => void) | null = null
 
 function onActiveClick(): void {
-  // Navigate to grants tab (no filter) so operator can review all live grants.
   void router.push({ path: '/mcp/grants' })
 }
 
 function onTotalMatchesClick(): void {
-  // Total matches counts auto-confirmed intents — go to intents tab.
   void router.push({ path: '/mcp/intents' })
 }
 
 function onDeadweightClick(): void {
-  // Phase 7.5+++ — go to /mcp/grants?usage=deadweight so the operator
-  // can review/revoke unused grants. Mirrors the always-confirm
-  // navigation pattern.
   void router.push({ path: '/mcp/grants', query: { usage: 'deadweight' } })
 }
 
 function onAlwaysConfirmClick(): void {
-  // Phase 7.5+++ — go to /mcp/kinds with danger filter pre-set to
-  // destructive (the kinds eligible for always-confirm). This narrows
-  // operator focus from the start instead of forcing them to pick the
-  // filter manually.
   void router.push({ path: '/mcp/kinds', query: { danger: 'destructive' } })
 }
 
 async function refreshCounts(): Promise<void> {
   try {
-    // ready + pending_confirmation = "live" intents (the rest are
-    // terminal: consumed/expired). Operators care about ones that
-    // could still fire.
     const [intents, grants, kinds, stats] = await Promise.all([
       fetchIntentInventory(200).catch(() => ({ entries: [] })),
       listMcpGrants().catch(() => ({ entries: [] })),
@@ -178,7 +174,6 @@ async function refreshCounts(): Promise<void> {
   } catch { /* badges stay stale rather than disrupt the page */ }
 }
 
-// Phase 7.5+++ — humanise lastMatchAt for the at-a-glance card.
 function formatRelative(iso: string): string {
   try {
     const dt = new Date(iso).getTime()
@@ -198,8 +193,6 @@ onMounted(() => {
     'mcp:intent-changed': () => { void refreshCounts() },
     'mcp:confirm-request': () => { void refreshCounts() },
     'mcp:grant-changed': () => { void refreshCounts() },
-    // Phase 7.5+++ — settings change refreshes the kinds list so the
-    // ring-fenced count chip stays accurate without manual reload.
     'mcp:settings-changed': () => { void refreshCounts() },
   })
 })
@@ -226,7 +219,6 @@ onBeforeUnmount(() => {
 .clickable-stat { cursor: pointer; user-select: none; }
 .clickable-stat:hover strong { filter: brightness(1.2); }
 .tab-badge { margin-left: 4px; }
-/* Push the badge counter inline rather than absolute-positioned. */
 .tab-badge :deep(.el-badge__content) {
   position: static;
   transform: none;

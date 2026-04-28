@@ -130,6 +130,10 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>();
 // pre-confirmation grant lookup.
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository,
     NKS.WebDevConsole.Daemon.Mcp.McpSessionGrantsRepository>();
+// Phase 8 — full audit log of MCP tool calls (read + write). Repository
+// is a singleton because each call creates its own SQLite connection
+// already; no shared state to protect, but DI prefers one instance.
+builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository>();
 // Phase 7.4b — registry of destructive operation kinds plugins can mint
 // MCP intents for. Singleton because plugin OnLoad hooks contribute to
 // it and the GUI snapshots it. Seeded with the legacy core kinds
@@ -2092,6 +2096,75 @@ app.MapPost("/api/mcp/grants/import", async (
     }
 
     return Results.Ok(new { imported, skipped, errors });
+});
+
+// ============================================================================
+// Phase 8 — MCP tool call audit log (every call, read + write).
+//
+// Endpoints:
+//   POST /api/mcp/tool-calls         — append a row (called by MCP server)
+//   GET  /api/mcp/tool-calls         — paginated read with filters
+//   GET  /api/mcp/tool-calls/stats   — aggregate counts for the Activity header
+//
+// All three share the same Bearer token used by every other /api/mcp/*
+// route. The POST is fire-and-forget from the MCP server's side —
+// failures are logged but never bubble up to the caller.
+// ============================================================================
+
+app.MapPost("/api/mcp/tool-calls", async (
+    HttpContext httpContext,
+    NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository repo,
+    CancellationToken ct) =>
+{
+    using var doc = await System.Text.Json.JsonDocument.ParseAsync(httpContext.Request.Body, cancellationToken: ct);
+    var root = doc.RootElement;
+    string? GetStr(string n) => root.TryGetProperty(n, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.String ? p.GetString() : null;
+    int GetInt(string n) => root.TryGetProperty(n, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? p.GetInt32() : 0;
+
+    var toolName = GetStr("toolName");
+    if (string.IsNullOrWhiteSpace(toolName))
+        return Results.BadRequest(new { error = "toolName is required" });
+
+    var row = new NKS.WebDevConsole.Daemon.Mcp.McpToolCallRow
+    {
+        SessionId = GetStr("sessionId"),
+        Caller = GetStr("caller") ?? "unknown",
+        ToolName = toolName!,
+        ArgsSummary = GetStr("argsSummary"),
+        ArgsHash = GetStr("argsHash"),
+        DurationMs = GetInt("durationMs"),
+        ResultCode = GetStr("resultCode") ?? "ok",
+        ErrorMessage = GetStr("errorMessage"),
+        DangerLevel = GetStr("dangerLevel") ?? "read",
+        IntentId = GetStr("intentId"),
+    };
+    var id = await repo.InsertAsync(row, ct);
+    return Results.Ok(new { id });
+});
+
+app.MapGet("/api/mcp/tool-calls", async (
+    NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository repo,
+    int? limit,
+    int? offset,
+    string? dangerLevel,
+    string? toolName,
+    string? sessionId,
+    CancellationToken ct) =>
+{
+    var l = limit ?? 50;
+    var o = offset ?? 0;
+    var entries = await repo.ListAsync(l, o, dangerLevel, toolName, sessionId, ct);
+    var total = await repo.CountAsync(dangerLevel, toolName, sessionId, ct);
+    return Results.Ok(new { entries, total, limit = l, offset = o });
+});
+
+app.MapGet("/api/mcp/tool-calls/stats", async (
+    NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository repo,
+    int? withinMinutes,
+    CancellationToken ct) =>
+{
+    var stats = await repo.GetStatsAsync(withinMinutes ?? 1440 /* 24h */, ct);
+    return Results.Ok(stats);
 });
 
 // Body record for the POST endpoint. Lives at file scope so the

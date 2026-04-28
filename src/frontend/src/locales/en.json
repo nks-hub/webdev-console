@@ -143,23 +143,53 @@
   },
   "mcpHub": {
     "title": "Model Context Protocol",
-    "description": "Audit trail of every signed AI request (Intents) plus persistent trust rules that pre-approve future requests (Grants). Kinds shows what destructive operations plugins have registered.",
+    "description": "Central management of AI communication. Activity shows full call audit, Requests pending signed requests, Rules auto-approval policy, and Catalog the available action types.",
     "tabs": {
-      "intents": "Intents (audit log)",
-      "grants": "Grants (trust policy)",
-      "kinds": "Kinds (registered ops)"
+      "activity": "Activity",
+      "requests": "Requests",
+      "rules": "Rules",
+      "catalog": "Catalog"
     },
     "stats": {
-      "active": "active grants",
-      "deadweight": "deadweight (revoke candidates)",
-      "totalMatches": "total matches",
-      "lastMatch": "last match:",
-      "alwaysConfirm": "kinds ring-fenced",
+      "active": "active rules",
+      "deadweight": "never matched (cleanup?)",
+      "deadweightHint": "Rules AI has never used — likely safe to remove",
+      "totalMatches": "total auto-approvals",
+      "lastMatch": "last auto-approval:",
+      "alwaysConfirm": "always-ask kinds",
       "justNow": "just now",
       "minutesAgo": "{n}m ago",
       "hoursAgo": "{n}h ago",
       "daysAgo": "{n}d ago"
     }
+  },
+  "mcpActivity": {
+    "stats": {
+      "totalCalls": "Total calls 24h",
+      "reads": "Reads",
+      "mutates": "Mutating",
+      "destructives": "Destructive",
+      "errors": "Errors",
+      "sessions": "Sessions"
+    },
+    "filter": {
+      "allDanger": "All danger levels",
+      "toolName": "Filter by tool…",
+      "collapseReads": "Collapse reads"
+    },
+    "danger": {
+      "read": "read",
+      "mutate": "mutate",
+      "destructive": "destructive"
+    },
+    "refresh": "Refresh",
+    "totalShown": "{n} of {total}",
+    "empty": "No MCP calls yet — no AI client has connected.",
+    "readsCollapsed": "{n}× read collapsed (click to expand)",
+    "justNow": "just now",
+    "minutesAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago"
   },
   "mcpKinds": {
     "title": "Registered destructive operation kinds",

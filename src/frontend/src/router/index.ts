@@ -54,8 +54,10 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', requiresAdvanced: true } },
   { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services', requiresAdvanced: true } },
   { path: '/backups', component: BackupsPage, meta: { title: 'Zálohy', titleKey: 'nav.backups' } },
-  // Phase 7.3 — single MCP hub page; child paths drive the active tab inside it.
-  { path: '/mcp', redirect: '/mcp/intents' },
+  // Phase 8 — single MCP hub with 4 tabs (Activity / Requests / Rules / Catalog).
+  // /mcp redirects to /mcp/activity (the new default — full audit feed).
+  { path: '/mcp', redirect: '/mcp/activity' },
+  { path: '/mcp/activity', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
   { path: '/mcp/intents', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
   { path: '/mcp/grants',  component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
   { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },

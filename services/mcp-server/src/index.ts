@@ -30,6 +30,7 @@ import { registerSettingsTools } from './tools/settings.js'
 import { registerCloudflareTools } from './tools/cloudflare.js'
 import { registerDeployTools } from './tools/deploy.js'
 import { daemonClient } from './daemonClient.js'
+import { wrapHandler } from './auditLog.js'
 
 export interface RegisterOptions {
   readonly: boolean
@@ -47,8 +48,26 @@ const READONLY = process.argv.includes('--readonly')
 
 const server = new McpServer({
   name: 'nks-wdc-mcp-server',
-  version: '0.2.0',
+  version: '0.3.0',
 })
+
+// Phase 8 — wrap registerTool ONCE so every subsequent registration
+// gets audit logging baked in. The wrapper inspects the third positional
+// argument (the handler in @modelcontextprotocol/sdk@0.6+) and replaces
+// it with `wrapHandler(name, handler)`. Reading the SDK source: the
+// signature is registerTool(name, schema, handler) — handler is the
+// function that fires when the AI client invokes the tool.
+{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const original = (server as any).registerTool.bind(server)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(server as any).registerTool = (name: string, schema: any, handler: any) => {
+    if (typeof handler === 'function') {
+      return original(name, schema, wrapHandler(name, handler))
+    }
+    return original(name, schema, handler)
+  }
+}
 
 // Pre-warm the connection so we can read the port file's scope line. Best-
 // effort: if the daemon is not running, fall back to `['*']` so the MCP

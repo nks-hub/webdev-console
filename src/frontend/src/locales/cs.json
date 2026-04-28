@@ -143,23 +143,53 @@
   },
   "mcpHub": {
     "title": "Model Context Protocol",
-    "description": "Audit log každého podepsaného AI požadavku (Intents) plus trvalá pravidla, která předem schvalují další požadavky (Oprávnění). Druhy ukazuje, jaké destruktivní operace pluginy zaregistrovaly.",
+    "description": "Centrální správa AI komunikace. Activity ukazuje kompletní audit volání, Žádosti čekající podepsané požadavky, Pravidla auto-schválení a Katalog dostupné druhy operací.",
     "tabs": {
-      "intents": "Intents (audit log)",
-      "grants": "Oprávnění (pravidla důvěry)",
-      "kinds": "Druhy (registrované operace)"
+      "activity": "Aktivita",
+      "requests": "Žádosti",
+      "rules": "Pravidla",
+      "catalog": "Katalog"
     },
     "stats": {
-      "active": "aktivní oprávnění",
-      "deadweight": "deadweight (kandidáti na revoke)",
-      "totalMatches": "celkem matchů",
-      "lastMatch": "poslední match:",
-      "alwaysConfirm": "druhů ring-fenced",
+      "active": "aktivní pravidla",
+      "deadweight": "nikdy nematchlo (smazat?)",
+      "deadweightHint": "Pravidla, která ještě nikdy AI nepoužila — pravděpodobně lze odstranit",
+      "totalMatches": "celkem auto-schválení",
+      "lastMatch": "poslední auto-schválení:",
+      "alwaysConfirm": "druhů vždy se ptát",
       "justNow": "právě teď",
       "minutesAgo": "před {n} m",
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d"
     }
+  },
+  "mcpActivity": {
+    "stats": {
+      "totalCalls": "Celkem volání 24h",
+      "reads": "Read",
+      "mutates": "Mutating",
+      "destructives": "Destruktivní",
+      "errors": "Chyby",
+      "sessions": "Session"
+    },
+    "filter": {
+      "allDanger": "Všechny úrovně",
+      "toolName": "Filter podle nástroje…",
+      "collapseReads": "Sbalit read volání"
+    },
+    "danger": {
+      "read": "read",
+      "mutate": "mutate",
+      "destructive": "destructive"
+    },
+    "refresh": "Obnovit",
+    "totalShown": "{n} z {total}",
+    "empty": "Žádná MCP volání zatím — AI klient se ještě nepřipojil.",
+    "readsCollapsed": "{n}× read sbaleno (klikni pro rozbalení)",
+    "justNow": "právě teď",
+    "minutesAgo": "před {n} m",
+    "hoursAgo": "před {n} h",
+    "daysAgo": "před {n} d"
   },
   "mcpKinds": {
     "title": "Registrované druhy destruktivních operací",
