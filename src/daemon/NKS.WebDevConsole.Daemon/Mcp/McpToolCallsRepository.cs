@@ -156,22 +156,29 @@ public sealed class McpToolCallsRepository
               WHERE called_at >= @Since",
             new { Since = since }) ?? new McpToolCallStats();
 
-        // Pull duration_ms ordered ASC; compute p50/p95/p99 in C# because
-        // SQLite has no native percentile_cont. The data set within a
-        // bounded time window is small (<=10k typical), and we already
-        // have an index on called_at to keep the scan cheap.
-        var durations = (await conn.QueryAsync<int>(
-            @"SELECT duration_ms FROM mcp_tool_calls
-              WHERE called_at >= @Since
-              ORDER BY duration_ms ASC",
-            new { Since = since })).AsList();
-
-        int p(double pct)
+        // SQLite has no native percentile_cont. Instead of materialising every
+        // duration_ms into a List<int> (could be 100k+ rows in a busy AI
+        // session, ~400KB+ allocation per stats refresh), use ORDER BY +
+        // LIMIT 1 OFFSET <position>. SQLite streams through the index until
+        // it reaches the offset row, then returns just that single value.
+        // The ORDER BY duration_ms isn't backed by an index right now, but
+        // for typical bounded windows it's still much cheaper than the
+        // full materialisation.
+        async Task<int> percentileAsync(double pct)
         {
-            if (durations.Count == 0) return 0;
-            var idx = (int)Math.Floor(pct * (durations.Count - 1));
-            return durations[idx];
+            if (basic.Total == 0) return 0;
+            var idx = (int)Math.Floor(pct * (basic.Total - 1));
+            var v = await conn.ExecuteScalarAsync<int?>(
+                @"SELECT duration_ms FROM mcp_tool_calls
+                  WHERE called_at >= @Since
+                  ORDER BY duration_ms ASC
+                  LIMIT 1 OFFSET @Offset",
+                new { Since = since, Offset = idx });
+            return v ?? 0;
         }
+        var p50 = await percentileAsync(0.50);
+        var p95 = await percentileAsync(0.95);
+        var p99 = await percentileAsync(0.99);
 
         var perMinute = basic.Total > 0
             ? Math.Round((double)basic.Total / minutes, 2)
@@ -182,9 +189,9 @@ public sealed class McpToolCallsRepository
 
         return basic with
         {
-            P50DurationMs = p(0.50),
-            P95DurationMs = p(0.95),
-            P99DurationMs = p(0.99),
+            P50DurationMs = p50,
+            P95DurationMs = p95,
+            P99DurationMs = p99,
             CallsPerMinute = perMinute,
             ErrorRatePercent = errorRate,
         };
