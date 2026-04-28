@@ -361,7 +361,8 @@
     "noSites": "Žádné weby nemají composer.json",
     "notInstalledTitle": "Composer nenalezen",
     "notInstalledHint": "Stáhněte oficiální composer.phar z getcomposer.org a uložte do spravovaných binárek.",
-    "installNow": "Nainstalovat Composer"
+    "installNow": "Nainstalovat Composer",
+    "missingLock": "chybí"
   },
   "sidebar": {
     "servicesOnline": "Služeb online"

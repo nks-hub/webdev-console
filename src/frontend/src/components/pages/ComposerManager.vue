@@ -65,7 +65,7 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="composer.json" width="120" align="center">
+          <el-table-column label="composer.json" min-width="160" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.status?.hasComposerJson" type="success" size="small">
                 <el-icon><Check /></el-icon>
@@ -74,12 +74,12 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="composer.lock" width="120" align="center">
+          <el-table-column label="composer.lock" min-width="160" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.status?.hasLock" type="success" size="small">
                 <el-icon><Check /></el-icon>
               </el-tag>
-              <el-tag v-else-if="row.status?.hasComposerJson" type="warning" size="small">missing</el-tag>
+              <el-tag v-else-if="row.status?.hasComposerJson" type="warning" size="small">{{ $t('composer.missingLock') }}</el-tag>
               <el-tag v-else type="info" size="small">—</el-tag>
             </template>
           </el-table-column>
