@@ -928,6 +928,12 @@
     "addDnsRecord": "Přidat DNS záznam",
     "type": "Typ",
     "proxied": "Proxied",
+    "dnsOnly": "Pouze DNS",
+    "name": "Název",
+    "content": "Obsah",
+    "noRecords": "V této zóně nejsou žádné záznamy.",
+    "addDnsHint": "CNAME na {target} směřuje provoz přes tento tunel",
+    "create": "Vytvořit",
     "docs": "Dokumentace"
   },
   "siteEdit": {

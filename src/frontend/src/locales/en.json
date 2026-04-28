@@ -926,6 +926,12 @@
     "addDnsRecord": "Add DNS record",
     "type": "Type",
     "proxied": "Proxied",
+    "dnsOnly": "DNS only",
+    "name": "Name",
+    "content": "Content",
+    "noRecords": "No records in this zone.",
+    "addDnsHint": "CNAME to {target} routes traffic through this tunnel",
+    "create": "Create",
     "docs": "Docs"
   },
   "siteEdit": {

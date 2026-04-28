@@ -306,21 +306,21 @@
                 class="dns-table"
                 style="margin-top: 14px"
               >
-                <el-table-column prop="type" label="Type" width="90">
+                <el-table-column prop="type" :label="$t('cloudflare.type')" width="90">
                   <template #default="{ row }">
                     <el-tag size="small" effect="dark">{{ row.type }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="name" label="Name" min-width="180" />
-                <el-table-column prop="content" label="Content" min-width="220">
+                <el-table-column prop="name" :label="$t('cloudflare.name')" min-width="180" />
+                <el-table-column prop="content" :label="$t('cloudflare.content')" min-width="220">
                   <template #default="{ row }">
                     <span class="mono">{{ row.content }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="Proxied" width="90" align="center">
+                <el-table-column :label="$t('cloudflare.proxied')" width="90" align="center">
                   <template #default="{ row }">
                     <el-tag v-if="row.proxied" size="small" type="warning" effect="dark">{{ $t('cloudflare.proxied') }}</el-tag>
-                    <el-tag v-else size="small" effect="plain">DNS only</el-tag>
+                    <el-tag v-else size="small" effect="plain">{{ $t('cloudflare.dnsOnly') }}</el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column :label="$t('common.actions')" width="100">
@@ -336,22 +336,18 @@
                   </template>
                 </el-table-column>
               </el-table>
-              <div v-else-if="selectedDnsZoneId && !loadingDns" class="hint">
-                No records in this zone.
-              </div>
+              <div v-else-if="selectedDnsZoneId && !loadingDns" class="hint">{{ $t('cloudflare.noRecords') }}</div>
             </div>
           </section>
 
           <section class="edit-card">
             <header class="edit-card-header">
               <span class="edit-card-title">{{ $t('cloudflare.addDnsRecord') }}</span>
-              <span class="edit-card-hint">
-                CNAME to <code>{{ tunnelCnameTarget }}</code> routes traffic through this tunnel
-              </span>
+              <span class="edit-card-hint">{{ $t('cloudflare.addDnsHint', { target: tunnelCnameTarget }) }}</span>
             </header>
             <div class="edit-card-body">
               <el-form :inline="true" size="default">
-                <el-form-item label="Type">
+                <el-form-item :label="$t('cloudflare.type')">
                   <el-select v-model="newDns.type" style="width: 100px">
                     <el-option label="CNAME" value="CNAME" />
                     <el-option label="A" value="A" />
@@ -359,10 +355,10 @@
                     <el-option label="TXT" value="TXT" />
                   </el-select>
                 </el-form-item>
-                <el-form-item label="Name">
+                <el-form-item :label="$t('cloudflare.name')">
                   <el-input v-model="newDns.name" placeholder="blog" style="width: 180px" />
                 </el-form-item>
-                <el-form-item label="Content">
+                <el-form-item :label="$t('cloudflare.content')">
                   <el-input
                     v-model="newDns.content"
                     :placeholder="newDns.type === 'CNAME' ? tunnelCnameTarget : '…'"
@@ -371,11 +367,11 @@
                   />
                 </el-form-item>
                 <el-form-item>
-                  <el-switch v-model="newDns.proxied" active-text="Proxied" />
+                  <el-switch v-model="newDns.proxied" :active-text="$t('cloudflare.proxied')" />
                 </el-form-item>
                 <el-form-item>
                   <el-button type="primary" :loading="creatingDns" @click="createDnsRecord">
-                    Create
+                    {{ $t('cloudflare.create') }}
                   </el-button>
                 </el-form-item>
               </el-form>
