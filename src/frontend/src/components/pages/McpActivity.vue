@@ -110,22 +110,51 @@
               <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
               <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
             </div>
-            <div v-else class="call-row" :class="`danger-${row.entry.dangerLevel}`">
-              <span class="dot" :class="`dot-${row.entry.dangerLevel}`" />
-              <code class="mono tool-name">{{ row.entry.toolName }}</code>
-              <el-tag v-if="row.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
-                {{ t('mcpActivity.danger.destructive') }}
-              </el-tag>
-              <el-tag v-else-if="row.entry.dangerLevel === 'mutate'" type="warning" size="small" effect="plain">
-                {{ t('mcpActivity.danger.mutate') }}
-              </el-tag>
-              <el-tag v-if="row.entry.resultCode !== 'ok'" type="danger" size="small">{{ row.entry.resultCode }}</el-tag>
-              <span class="muted dur">{{ row.entry.durationMs }}ms</span>
-              <span class="muted at">{{ formatRelative(row.entry.calledAt) }}</span>
-              <code v-if="row.entry.argsSummary && row.entry.argsSummary !== '{}'" class="mono args-preview" :title="row.entry.argsSummary">
-                {{ row.entry.argsSummary.length > 60 ? row.entry.argsSummary.slice(0, 57) + '…' : row.entry.argsSummary }}
-              </code>
-            </div>
+            <template v-else>
+              <div
+                class="call-row clickable-row"
+                :class="[`danger-${row.entry.dangerLevel}`, { expanded: expandedRows.has(row.entry.id) }]"
+                @click="toggleRow(row.entry.id)"
+              >
+                <span class="dot" :class="`dot-${row.entry.dangerLevel}`" />
+                <code class="mono tool-name">{{ row.entry.toolName }}</code>
+                <el-tag v-if="row.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
+                  {{ t('mcpActivity.danger.destructive') }}
+                </el-tag>
+                <el-tag v-else-if="row.entry.dangerLevel === 'mutate'" type="warning" size="small" effect="plain">
+                  {{ t('mcpActivity.danger.mutate') }}
+                </el-tag>
+                <el-tag v-if="row.entry.resultCode !== 'ok'" type="danger" size="small">{{ row.entry.resultCode }}</el-tag>
+                <span class="muted dur">{{ row.entry.durationMs }}ms</span>
+                <span class="muted at">{{ formatRelative(row.entry.calledAt) }}</span>
+                <code v-if="row.entry.argsSummary && row.entry.argsSummary !== '{}'" class="mono args-preview">
+                  {{ row.entry.argsSummary.length > 60 ? row.entry.argsSummary.slice(0, 57) + '…' : row.entry.argsSummary }}
+                </code>
+              </div>
+              <div v-if="expandedRows.has(row.entry.id)" class="row-detail">
+                <div class="detail-grid">
+                  <div class="detail-label">id</div>
+                  <code class="mono detail-value">{{ row.entry.id }}</code>
+                  <div class="detail-label">{{ t('mcpActivity.detail.calledAt') }}</div>
+                  <code class="mono detail-value">{{ row.entry.calledAt }}</code>
+                  <div class="detail-label">{{ t('mcpActivity.detail.argsHash') }}</div>
+                  <code class="mono detail-value">{{ row.entry.argsHash || '-' }}</code>
+                  <div v-if="row.entry.intentId" class="detail-label">{{ t('mcpActivity.detail.intentId') }}</div>
+                  <code v-if="row.entry.intentId" class="mono detail-value clickable" @click.stop="goToIntent(row.entry.intentId)">
+                    {{ row.entry.intentId }} →
+                  </code>
+                  <div v-if="row.entry.errorMessage" class="detail-label">error</div>
+                  <code v-if="row.entry.errorMessage" class="mono detail-value detail-error">{{ row.entry.errorMessage }}</code>
+                </div>
+                <div v-if="row.entry.argsSummary" class="detail-args">
+                  <div class="detail-label">{{ t('mcpActivity.detail.args') }}</div>
+                  <pre class="mono args-full">{{ row.entry.argsSummary }}</pre>
+                  <el-button size="small" link @click.stop="copyArgs(row.entry.argsSummary!)">
+                    {{ t('mcpActivity.detail.copy') }}
+                  </el-button>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -213,6 +242,21 @@ const collapsedSessions = ref<Set<string>>(new Set())
 
 // Track which collapsed-read groups the operator has expanded.
 const expandedReadGroups = ref<Set<string>>(new Set())
+
+// Click-to-expand per call row to show full args + intent link + error.
+const expandedRows = ref<Set<string>>(new Set())
+function toggleRow(id: string): void {
+  if (expandedRows.value.has(id)) expandedRows.value.delete(id)
+  else expandedRows.value.add(id)
+  expandedRows.value = new Set(expandedRows.value)
+}
+function goToIntent(intentId: string | null): void {
+  if (!intentId) return
+  window.location.hash = '/mcp/intents'
+}
+async function copyArgs(text: string): Promise<void> {
+  try { await navigator.clipboard.writeText(text) } catch { /* ignore */ }
+}
 
 function expandReads(key: string): void {
   if (expandedReadGroups.value.has(key)) {
@@ -533,6 +577,42 @@ onBeforeUnmount(() => {
 .session-body .call-row:first-child { border-top: none; }
 .call-row:hover { background: var(--el-fill-color-light); }
 .call-row.danger-destructive { background: var(--el-color-danger-light-9); }
+.call-row.clickable-row { cursor: pointer; }
+.call-row.expanded { background: var(--el-fill-color-darker); }
+.row-detail {
+  padding: 8px 16px 12px 28px;
+  background: var(--el-fill-color);
+  border-top: 1px dashed var(--el-border-color-lighter);
+  font-size: 12px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 4px 12px;
+}
+.detail-label {
+  color: var(--el-text-color-secondary);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding-top: 2px;
+}
+.detail-value { word-break: break-all; }
+.detail-value.clickable { cursor: pointer; color: var(--el-color-primary); }
+.detail-error { color: var(--el-color-danger); }
+.detail-args { margin-top: 8px; }
+.args-full {
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  padding: 8px;
+  margin: 4px 0;
+  font-size: 11px;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-read { background: var(--el-color-info); }
 .dot-mutate { background: var(--el-color-warning); }

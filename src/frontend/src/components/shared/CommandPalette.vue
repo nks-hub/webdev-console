@@ -48,7 +48,7 @@ import { useRouter } from 'vue-router'
 import {
   Monitor, DataAnalysis, Coin, Lock, Grid, Box, Connection,
   Setting, Share, Message, Plus, Refresh, VideoPlay, VideoPause,
-  Promotion, CircleClose, Edit, Link,
+  Promotion, CircleClose, Edit, Link, DataLine, Key, Operation,
 } from '@element-plus/icons-vue'
 import { useServicesStore } from '../../stores/services'
 import { useDaemonStore } from '../../stores/daemon'
@@ -88,6 +88,12 @@ const commands = computed<Command[]>(() => [
   { id: 'plugins', label: 'Go to Plugins', icon: Share, action: () => router.push('/plugins') },
   { id: 'settings', label: 'Go to Settings', icon: Setting, action: () => router.push('/settings') },
   { id: 'cloudflare', label: 'Go to Cloudflare Tunnel', icon: Connection, action: () => router.push('/cloudflare') },
+  // MCP shortcuts — Phase 8 redesign surfaces 4 quick jumps for the
+  // most common operator paths into the MCP module.
+  { id: 'mcp-activity', label: 'Go to MCP Activity', description: 'AI tool call audit feed', icon: DataLine, action: () => router.push('/mcp/activity') },
+  { id: 'mcp-requests', label: 'Go to MCP Requests', description: 'Pending signed AI requests', icon: Lock, action: () => router.push('/mcp/intents') },
+  { id: 'mcp-rules', label: 'Go to MCP Rules', description: 'Auto-approve rules', icon: Key, action: () => router.push('/mcp/grants') },
+  { id: 'mcp-catalog', label: 'Go to MCP Catalog', description: 'Available action types', icon: Operation, action: () => router.push('/mcp/kinds') },
   { id: 'mailpit-ui', label: 'Open Mailpit UI', icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
   { id: 'new-site', label: 'Create New Site', icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
   { id: 'refresh', label: 'Refresh Data', icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },

@@ -248,6 +248,13 @@
       "title": "Top nástroje 24h",
       "clickHint": "Filtrovat na {tool}"
     },
+    "detail": {
+      "calledAt": "called at",
+      "argsHash": "args hash",
+      "intentId": "intent",
+      "args": "args",
+      "copy": "Kopírovat"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

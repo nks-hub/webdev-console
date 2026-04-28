@@ -248,6 +248,13 @@
       "title": "Top tools 24h",
       "clickHint": "Filter to {tool}"
     },
+    "detail": {
+      "calledAt": "called at",
+      "argsHash": "args hash",
+      "intentId": "intent",
+      "args": "args",
+      "copy": "Copy"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",
