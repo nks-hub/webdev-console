@@ -246,6 +246,7 @@
       "destructive": "destructive"
     },
     "refresh": "Refresh",
+    "exportCsv": "Export CSV",
     "totalShown": "{n} of {total}",
     "empty": "No MCP calls yet — no AI client has connected.",
     "readsCollapsed": "{n}× read collapsed (click to expand)",

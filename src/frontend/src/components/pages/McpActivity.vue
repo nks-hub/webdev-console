@@ -50,6 +50,9 @@
       <el-button size="small" :loading="loading" @click="refresh">
         <el-icon><Refresh /></el-icon> {{ t('mcpActivity.refresh') }}
       </el-button>
+      <el-button size="small" @click="exportCsv">
+        <el-icon><Download /></el-icon> {{ t('mcpActivity.exportCsv') }}
+      </el-button>
       <span v-if="totalCount" class="muted total-count">
         {{ t('mcpActivity.totalShown', { n: entries.length, total: totalCount }) }}
       </span>
@@ -168,7 +171,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Refresh, ArrowRight, Lock } from '@element-plus/icons-vue'
+import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
 import {
   fetchMcpToolCalls,
   fetchMcpToolCallStats,
@@ -328,6 +331,36 @@ function formatDuration(startIso: string, endIso: string): string {
     if (s < 60) return `${s}s`
     return `${Math.round(s / 60)}m`
   } catch { return '' }
+}
+
+async function exportCsv(): Promise<void> {
+  // Stream from daemon directly; preserves Content-Disposition so the
+  // browser saves it as `mcp-audit-{date}.csv`. Filters in URL match
+  // current view so operator gets exactly what they're seeing.
+  const params = new URLSearchParams()
+  if (dangerFilter.value) params.set('dangerLevel', dangerFilter.value)
+  if (toolFilter.value) params.set('toolName', toolFilter.value)
+  if (sessionFilter.value) params.set('sessionId', sessionFilter.value)
+  const url = `/api/mcp/tool-calls/export.csv${params.toString() ? '?' + params.toString() : ''}`
+  // Use the same baseUrl + auth pattern as the json() helper. Easier to
+  // ask the api module for a URL we can fetch with a Bearer header and
+  // turn into a Blob → object URL → click.
+  try {
+    const { daemonBaseUrl, daemonAuthHeaders } = await import('../../api/daemon')
+    const res = await fetch(daemonBaseUrl() + url, { headers: daemonAuthHeaders() })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob = await res.blob()
+    const objUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objUrl
+    a.download = `mcp-audit-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(objUrl), 5_000)
+  } catch (err) {
+    console.warn('[McpActivity] CSV export failed:', err)
+  }
 }
 
 async function refresh(): Promise<void> {

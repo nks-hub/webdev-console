@@ -134,6 +134,8 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrant
 // is a singleton because each call creates its own SQLite connection
 // already; no shared state to protect, but DI prefers one instance.
 builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository>();
+// Phase 8 — hourly retention sweep for mcp_tool_calls (default 30d).
+builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.McpToolCallsSweeperService>();
 // Phase 7.4b — registry of destructive operation kinds plugins can mint
 // MCP intents for. Singleton because plugin OnLoad hooks contribute to
 // it and the GUI snapshots it. Seeded with the legacy core kinds
@@ -2185,6 +2187,43 @@ app.MapGet("/api/mcp/tool-calls/stats", async (
 {
     var stats = await repo.GetStatsAsync(withinMinutes ?? 1440 /* 24h */, ct);
     return Results.Ok(stats);
+});
+
+// CSV export — RFC 4180 with comma delimiter. Streams the FULL audit
+// trail respecting current filters; capped at 10k rows so a runaway
+// AI session can't OOM the daemon. Operator gets Content-Disposition
+// so the browser saves it as `mcp-audit-{date}.csv`.
+app.MapGet("/api/mcp/tool-calls/export.csv", async (
+    HttpContext httpCtx,
+    NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository repo,
+    string? dangerLevel,
+    string? toolName,
+    string? sessionId,
+    CancellationToken ct) =>
+{
+    var entries = await repo.ListAsync(10_000, 0, dangerLevel, toolName, sessionId, ct);
+    httpCtx.Response.ContentType = "text/csv; charset=utf-8";
+    httpCtx.Response.Headers.Append("Content-Disposition",
+        $"attachment; filename=\"mcp-audit-{DateTime.UtcNow:yyyy-MM-dd}.csv\"");
+    static string Esc(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        var needsQuote = s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r');
+        if (!needsQuote) return s;
+        return "\"" + s.Replace("\"", "\"\"") + "\"";
+    }
+    await using var writer = new StreamWriter(httpCtx.Response.Body);
+    await writer.WriteLineAsync("called_at,session_id,caller,tool_name,danger_level,duration_ms,result_code,error_message,intent_id,args_summary");
+    foreach (var e in entries)
+    {
+        await writer.WriteLineAsync(string.Join(',',
+            Esc(e.CalledAt), Esc(e.SessionId), Esc(e.Caller),
+            Esc(e.ToolName), Esc(e.DangerLevel),
+            e.DurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Esc(e.ResultCode), Esc(e.ErrorMessage), Esc(e.IntentId),
+            Esc(e.ArgsSummary)));
+    }
+    await writer.FlushAsync(ct);
 });
 
 // ============================================================================

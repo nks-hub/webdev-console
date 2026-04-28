@@ -246,6 +246,7 @@
       "destructive": "destructive"
     },
     "refresh": "Obnovit",
+    "exportCsv": "Export CSV",
     "totalShown": "{n} z {total}",
     "empty": "Žádná MCP volání zatím — AI klient se ještě nepřipojil.",
     "readsCollapsed": "{n}× read sbaleno (klikni pro rozbalení)",
