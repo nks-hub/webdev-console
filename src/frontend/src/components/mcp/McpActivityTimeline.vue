@@ -32,6 +32,17 @@
           :height="destructiveH(b)"
           class="bar-destructive"
         />
+        <!-- Error indicator — small red triangle above the bar when any
+             call in the bucket failed. Sits above the stacked bars in
+             the small reserved gap so it stays visible regardless of
+             stack height. -->
+        <polygon
+          v-if="b.errors > 0"
+          :points="errorMarker(idx)"
+          class="error-marker"
+        >
+          <title>{{ b.errors }} error{{ b.errors === 1 ? '' : 's' }} in {{ b.hour }}h</title>
+        </polygon>
         <!-- Hour label every 6th bar -->
         <text
           v-if="idx % 6 === 0"
@@ -113,6 +124,14 @@ function shortHour(hour: string): string {
   return hour.slice(11, 13) + 'h'
 }
 
+function errorMarker(idx: number): string {
+  // Small downward-pointing triangle centered above the bar.
+  const cx = idx * barWidth.value + barWidth.value / 2
+  const top = 2
+  const size = 4
+  return `${cx - size},${top} ${cx + size},${top} ${cx},${top + size + 1}`
+}
+
 function tooltipFor(b: McpToolCallTimelineBucket): string {
   return `${b.hour} — total: ${b.total}, read: ${b.reads}, mutate: ${b.mutates}, destructive: ${b.destructives}` +
     (b.errors > 0 ? `, errors: ${b.errors}` : '')
@@ -188,6 +207,7 @@ onBeforeUnmount(() => {
 .bar-read { fill: var(--el-color-info); opacity: 0.7; }
 .bar-mutate { fill: var(--el-color-warning); }
 .bar-destructive { fill: var(--el-color-danger); }
+.error-marker { fill: var(--el-color-danger); }
 .hour-label {
   font-size: 9px;
   fill: var(--el-text-color-secondary);
