@@ -1563,35 +1563,34 @@ onBeforeUnmount(() => {
    Scrollable fallback kicks in under 640px so narrow windows don't wrap
    into a 5-line tab header — horizontal scroll is the lesser evil. */
 .site-tabs :deep(.el-tabs__header) { margin-bottom: 0; }
-.site-tabs :deep(.el-tabs__nav-wrap) { width: 100%; padding: 0 4px; }
+.site-tabs :deep(.el-tabs__nav-wrap) {
+  width: 100%;
+  padding: 0 4px;
+  /* Horizontal scroll fallback whenever the 11 tabs (general / runtime /
+     deploy / cloudflare / ssl / composer / history / metrics / errors /
+     backup / danger) can't all fit at their natural width. Previously
+     `flex: 1 1 0` + `min-width: 0` + `text-overflow: ellipsis` cropped
+     labels to "Obecn", "Runtim", "Metrik" on common laptop widths. */
+  overflow-x: auto;
+}
 .site-tabs :deep(.el-tabs__nav-wrap::after) { background: var(--wdc-border); }
 .site-tabs :deep(.el-tabs__nav) {
   display: flex;
   width: 100%;
-  float: none; /* override Element Plus default float layout */
+  min-width: max-content; /* never shrink below the sum of tab natural widths */
+  float: none;            /* override Element Plus default float layout */
 }
 .site-tabs :deep(.el-tabs__active-bar) { /* keep the indicator aligned under full-width items */
   bottom: 0;
 }
 .site-tabs :deep(.el-tabs__item) {
   flex: 1 1 0;
-  min-width: 0;
-  padding: 0 6px;
+  min-width: max-content; /* keep label intact; fill only when extra space exists */
+  padding: 0 10px;
   text-align: center;
   justify-content: center;
   display: inline-flex;
   align-items: center;
-}
-@media (max-width: 640px) {
-  .site-tabs :deep(.el-tabs__nav-wrap) { overflow-x: auto; }
-  .site-tabs :deep(.el-tabs__nav) {
-    width: max-content;
-    min-width: 100%;
-  }
-  .site-tabs :deep(.el-tabs__item) {
-    flex: 0 0 auto;
-    padding: 0 14px;
-  }
 }
 
 .tab-label {
@@ -1600,9 +1599,6 @@ onBeforeUnmount(() => {
   gap: 6px;
   font-size: 0.88rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 .tab-label.danger-label {
   color: var(--wdc-status-error);
