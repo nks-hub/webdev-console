@@ -97,16 +97,16 @@
                 v-model="apiTokenInput"
                 type="password"
                 show-password
-                :placeholder="apiTokenMasked || 'cfut_… or 40-char token'"
+                :placeholder="apiTokenMasked || $t('cloudflare.tokenPlaceholder')"
                 class="mono"
               />
               <div class="hint">
-                Required scopes:
+                {{ $t('cloudflare.requiredScopes') }}
                 <code>Account &gt; Cloudflare Tunnel &gt; Edit</code>,
                 <code>Account &gt; Account Settings &gt; Read</code>,
                 <code>Zone &gt; Zone &gt; Read</code>,
                 <code>Zone &gt; DNS &gt; Edit</code>.
-                Create one at
+                {{ $t('cloudflare.createTokenAt') }}
                 <a href="#" @click.prevent="openTokenPage">dash.cloudflare.com/profile/api-tokens</a>.
               </div>
               <div class="card-actions">
@@ -128,10 +128,7 @@
                 </span>
               </div>
               <div class="hint" style="margin-top: 12px;">
-                Auto-setup will: verify the token, pick the first account, find or
-                create a tunnel named <code>NKS-WDC-Tunnel-{md5}</code>, fetch its
-                JWT, and save everything to
-                <code>~/.wdc/cloudflare/config.json</code>.
+                {{ $t('cloudflare.autoSetupExplain', { tunnel: 'NKS-WDC-Tunnel-{md5}', file: '~/.wdc/cloudflare/config.json' }) }}
               </div>
             </div>
           </section>
@@ -153,7 +150,7 @@
               </el-input>
               <div class="card-actions">
                 <el-button size="small" :loading="savingConfig" @click="saveBinaryPath">
-                  {{ $t('common.save') }} path
+                  {{ $t('cloudflare.savePathBtn') }}
                 </el-button>
               </div>
             </div>
@@ -171,16 +168,15 @@
                 placeholder="{stem}-dev"
               />
               <div class="hint">
-                Placeholders:
-                <code>{stem}</code> = local domain without
-                <code>.loc</code>/<code>.local</code>/<code>.test</code>,
-                <code>{user}</code> = OS username.
-                Example for <code>myapp.loc</code>:
+                {{ $t('cloudflare.subdomainPlaceholders') }}
+                <code>{stem}</code> {{ $t('cloudflare.subdomainStem', { loc: '.loc', local: '.local', test: '.test' }) }},
+                <code>{user}</code> {{ $t('cloudflare.subdomainUser') }}.
+                {{ $t('cloudflare.subdomainExample', { domain: 'myapp.loc' }) }}
                 <code>{{ previewTemplate }}</code>
               </div>
               <div class="card-actions">
                 <el-button size="small" :loading="savingConfig" @click="saveSubdomainTemplate">
-                  {{ $t('common.save') }} template
+                  {{ $t('cloudflare.saveTemplateBtn') }}
                 </el-button>
               </div>
             </div>

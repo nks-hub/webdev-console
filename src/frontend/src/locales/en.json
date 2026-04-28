@@ -904,7 +904,17 @@
       "browse": "Browse…",
       "savePath": "Save path",
       "saveTemplate": "Save template"
-    }
+    },
+    "tokenPlaceholder": "cfut_… or 40-char token",
+    "requiredScopes": "Required scopes:",
+    "createTokenAt": "Create one at",
+    "autoSetupExplain": "Auto-setup will: verify the token, pick the first account, find or create a tunnel named {tunnel}, fetch its JWT, and save everything to {file}.",
+    "subdomainPlaceholders": "Placeholders:",
+    "subdomainStem": "= local domain without {loc}/{local}/{test}",
+    "subdomainUser": "= OS username",
+    "subdomainExample": "Example for {domain}:",
+    "savePathBtn": "Save path",
+    "saveTemplateBtn": "Save template"
   },
   "siteEdit": {
     "general": "General",

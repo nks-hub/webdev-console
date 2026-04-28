@@ -906,7 +906,17 @@
       "browse": "Procházet…",
       "savePath": "Uložit cestu",
       "saveTemplate": "Uložit šablonu"
-    }
+    },
+    "tokenPlaceholder": "cfut_… nebo 40znakový token",
+    "requiredScopes": "Vyžadovaná oprávnění:",
+    "createTokenAt": "Vytvoř token na",
+    "autoSetupExplain": "Auto-nastavení provede: ověří token, vybere první účet, najde nebo vytvoří tunel pojmenovaný {tunnel}, stáhne jeho JWT a vše uloží do {file}.",
+    "subdomainPlaceholders": "Zástupné znaky:",
+    "subdomainStem": "= lokální doména bez {loc}/{local}/{test}",
+    "subdomainUser": "= uživatelské jméno OS",
+    "subdomainExample": "Příklad pro {domain}:",
+    "savePathBtn": "Uložit cestu",
+    "saveTemplateBtn": "Uložit šablonu"
   },
   "siteEdit": {
     "general": "Obecné",
