@@ -2171,12 +2171,13 @@ app.MapGet("/api/mcp/tool-calls", async (
     string? dangerLevel,
     string? toolName,
     string? sessionId,
+    string? q,
     CancellationToken ct) =>
 {
     var l = limit ?? 50;
     var o = offset ?? 0;
-    var entries = await repo.ListAsync(l, o, dangerLevel, toolName, sessionId, ct);
-    var total = await repo.CountAsync(dangerLevel, toolName, sessionId, ct);
+    var entries = await repo.ListAsync(l, o, dangerLevel, toolName, sessionId, ct, q);
+    var total = await repo.CountAsync(dangerLevel, toolName, sessionId, ct, q);
     return Results.Ok(new { entries, total, limit = l, offset = o });
 });
 

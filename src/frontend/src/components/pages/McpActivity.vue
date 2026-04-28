@@ -98,7 +98,10 @@
         <el-option :label="t('mcpActivity.danger.mutate')" value="mutate" />
         <el-option :label="t('mcpActivity.danger.destructive')" value="destructive" />
       </el-select>
-      <el-input v-model="toolFilter" size="small" :placeholder="t('mcpActivity.filter.toolName')" clearable style="width: 240px" />
+      <el-input v-model="toolFilter" size="small" :placeholder="t('mcpActivity.filter.toolName')" clearable style="width: 200px" />
+      <el-input v-model="searchQuery" size="small" :placeholder="t('mcpActivity.filter.search')" clearable style="width: 220px">
+        <template #prefix>🔍</template>
+      </el-input>
       <el-input v-if="sessionFilter" v-model="sessionFilter" size="small" disabled style="width: 180px">
         <template #prefix><el-icon><Lock /></el-icon></template>
         <template #append>
@@ -304,6 +307,7 @@ const pageSize = ref(50)
 const dangerFilter = ref<string | null>(null)
 const toolFilter = ref('')
 const sessionFilter = ref('')
+const searchQuery = ref('')
 const collapseReads = ref(true)
 const viewMode = ref<'sessions' | 'flat'>('sessions')
 
@@ -517,7 +521,7 @@ async function refresh(): Promise<void> {
   try {
     const offset = (currentPage.value - 1) * pageSize.value
     const [list, s] = await Promise.all([
-      fetchMcpToolCalls(pageSize.value, offset, dangerFilter.value, toolFilter.value || null, sessionFilter.value || null),
+      fetchMcpToolCalls(pageSize.value, offset, dangerFilter.value, toolFilter.value || null, sessionFilter.value || null, searchQuery.value || null),
       fetchMcpToolCallStats(1440),
     ])
     entries.value = list.entries
@@ -529,6 +533,16 @@ async function refresh(): Promise<void> {
     loading.value = false
   }
 }
+
+// Debounce search input by 300ms so typing doesn't burn requests.
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
+watch(searchQuery, () => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    currentPage.value = 1
+    void refresh()
+  }, 300)
+})
 
 watch([dangerFilter, toolFilter, sessionFilter], () => {
   currentPage.value = 1

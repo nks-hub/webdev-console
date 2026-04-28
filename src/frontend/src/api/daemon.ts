@@ -268,11 +268,13 @@ export const fetchMcpToolCalls = (
   dangerLevel?: string | null,
   toolName?: string | null,
   sessionId?: string | null,
+  searchQuery?: string | null,
 ): Promise<McpToolCallList> => {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
   if (dangerLevel) params.set('dangerLevel', dangerLevel)
   if (toolName) params.set('toolName', toolName)
   if (sessionId) params.set('sessionId', sessionId)
+  if (searchQuery) params.set('q', searchQuery)
   return json(`/api/mcp/tool-calls?${params.toString()}`)
 }
 

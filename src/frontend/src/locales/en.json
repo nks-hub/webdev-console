@@ -251,6 +251,7 @@
     "filter": {
       "allDanger": "All danger levels",
       "toolName": "Filter by tool…",
+      "search": "Search tools and args…",
       "collapseReads": "Collapse reads"
     },
     "view": {

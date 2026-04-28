@@ -55,7 +55,8 @@ public sealed class McpToolCallsRepository
         string? dangerLevel,
         string? toolName,
         string? sessionId,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? searchQuery = null)
     {
         var where = new List<string>();
         var p = new DynamicParameters();
@@ -76,6 +77,14 @@ public sealed class McpToolCallsRepository
         {
             where.Add("session_id = @SessionId");
             p.Add("SessionId", sessionId);
+        }
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            // Phase 8 — full-text-ish search. SQLite LIKE matches against
+            // tool_name OR args_summary so operator can find calls by
+            // either the tool they fired or the parameters they passed.
+            where.Add("(tool_name LIKE @SearchPattern OR args_summary LIKE @SearchPattern)");
+            p.Add("SearchPattern", "%" + searchQuery.Trim() + "%");
         }
 
         var whereSql = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
@@ -99,13 +108,19 @@ public sealed class McpToolCallsRepository
 
     /// <summary>Total count for paging.</summary>
     public async Task<int> CountAsync(
-        string? dangerLevel, string? toolName, string? sessionId, CancellationToken ct)
+        string? dangerLevel, string? toolName, string? sessionId, CancellationToken ct,
+        string? searchQuery = null)
     {
         var where = new List<string>();
         var p = new DynamicParameters();
         if (!string.IsNullOrEmpty(dangerLevel)) { where.Add("danger_level = @DangerLevel"); p.Add("DangerLevel", dangerLevel); }
         if (!string.IsNullOrEmpty(toolName)) { where.Add("tool_name = @ToolName"); p.Add("ToolName", toolName); }
         if (!string.IsNullOrEmpty(sessionId)) { where.Add("session_id = @SessionId"); p.Add("SessionId", sessionId); }
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            where.Add("(tool_name LIKE @SearchPattern OR args_summary LIKE @SearchPattern)");
+            p.Add("SearchPattern", "%" + searchQuery.Trim() + "%");
+        }
         var whereSql = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
 
         using var conn = _db.CreateConnection();

@@ -251,6 +251,7 @@
     "filter": {
       "allDanger": "Všechny úrovně",
       "toolName": "Filter podle nástroje…",
+      "search": "Hledat v nástrojích a argumentech…",
       "collapseReads": "Sbalit read volání"
     },
     "view": {
