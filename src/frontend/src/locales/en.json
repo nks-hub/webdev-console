@@ -273,6 +273,19 @@
       "args": "args",
       "copy": "Copy"
     },
+    "sessionDetail": {
+      "title": "Session detail",
+      "open": "Detail",
+      "openHint": "Open full session detail in side drawer",
+      "sessionId": "Session ID:",
+      "callCount": "Call count:",
+      "totalDuration": "Total duration:",
+      "errors": "Errors:",
+      "byTool": "Per-tool breakdown",
+      "allCalls": "All calls",
+      "copyJson": "Copy JSON",
+      "copied": "JSON copied to clipboard"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

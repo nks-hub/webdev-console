@@ -273,6 +273,19 @@
       "args": "args",
       "copy": "Kopírovat"
     },
+    "sessionDetail": {
+      "title": "Detail session",
+      "open": "Detail",
+      "openHint": "Otevřít detail session v drawer panelu",
+      "sessionId": "Session ID:",
+      "callCount": "Počet volání:",
+      "totalDuration": "Celková doba:",
+      "errors": "Chyby:",
+      "byTool": "Rozdělení podle nástroje",
+      "allCalls": "Všechna volání",
+      "copyJson": "Kopírovat JSON",
+      "copied": "JSON zkopírován do clipboardu"
+    },
     "danger": {
       "read": "read",
       "mutate": "mutate",

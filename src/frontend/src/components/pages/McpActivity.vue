@@ -153,6 +153,15 @@
             <span v-if="session.mutates > 0" class="count-pill mutate">{{ session.mutates }}m</span>
             <span v-if="session.destructives > 0" class="count-pill destructive">{{ session.destructives }}d</span>
             <span v-if="session.errors > 0" class="count-pill error">{{ session.errors }}!</span>
+            <el-button
+              v-if="session.sessionId"
+              size="small"
+              link
+              @click.stop="openSessionDetail(session.sessionId)"
+              :title="t('mcpActivity.sessionDetail.openHint')"
+            >
+              {{ t('mcpActivity.sessionDetail.open') }} →
+            </el-button>
           </div>
         </div>
         <div v-if="!collapsedSessions.has(session.key)" class="session-body">
@@ -243,6 +252,14 @@
       </div>
     </div>
 
+    <!-- Per-session detail drawer (right-side, 60% width). Loads up to
+         1000 entries for the chosen session id, breakdown by tool,
+         copy-to-clipboard JSON of the whole session. -->
+    <McpSessionDetailDrawer
+      v-model="detailDrawerOpen"
+      :session-id="detailSessionId"
+    />
+
     <!-- Pagination -->
     <div v-if="totalCount > pageSize" class="activity-pagination">
       <el-pagination
@@ -266,6 +283,7 @@ import { useI18n } from 'vue-i18n'
 import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
 import McpActivityTimeline from '../mcp/McpActivityTimeline.vue'
 import McpTopToolsPanel from '../mcp/McpTopToolsPanel.vue'
+import McpSessionDetailDrawer from '../mcp/McpSessionDetailDrawer.vue'
 import {
   fetchMcpToolCalls,
   fetchMcpToolCallStats,
@@ -454,6 +472,14 @@ function setDangerFilter(level: 'read' | 'mutate' | 'destructive' | null): void 
   } else {
     dangerFilter.value = level
   }
+}
+
+const detailDrawerOpen = ref(false)
+const detailSessionId = ref<string | null>(null)
+function openSessionDetail(sessionId: string | null): void {
+  if (!sessionId) return
+  detailSessionId.value = sessionId
+  detailDrawerOpen.value = true
 }
 
 async function exportCsv(): Promise<void> {
