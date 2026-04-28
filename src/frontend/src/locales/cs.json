@@ -1500,6 +1500,8 @@
       "expiredRetentionHint": "Po vypršení čeká janitor tolik dní, než řádek smaže. 0 = nikdy neexpirovaná oprávnění nemazat (jen revokovaná).",
       "revokedRetentionLabel": "Retence odvolaných oprávnění",
       "revokedRetentionHint": "Audit záznamy odvolaných oprávnění se mažou až po této době. 0 = mazat ihned po revoke (žádný audit log).",
+      "toolCallRetentionLabel": "Retence audit logu volání",
+      "toolCallRetentionHint": "Po této době se mažou řádky v mcp_tool_calls (Activity feed). Vyšší hodnota = více historie pro forensiku, ale zabírá disk. Hourly sweep, default 30.",
       "daysSuffix": "dní"
     },
     "deploySubsystem": {

@@ -566,6 +566,16 @@
                   <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
                   <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
                 </el-form-item>
+                <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
+                     hourly McpToolCallsSweeperService. Bumping this
+                     keeps history for forensics; lowering reclaims disk
+                     when traffic is heavy. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
+                  <el-input-number v-model="mcpToolCallRetentionDays"
+                    :min="1" :max="365" controls-position="right" style="width: 120px" />
+                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
+                </el-form-item>
               </el-form>
             </div>
 
@@ -1503,6 +1513,7 @@ function clearAlwaysConfirm(): void {
 // either to 0 disables that branch (operator keeps everything).
 const mcpExpiredRetentionDays = ref(1)
 const mcpRevokedRetentionDays = ref(30)
+const mcpToolCallRetentionDays = ref(30)
 // Phase 7.1a — Deploy subsystem toggle. Default TRUE; mirrors daemon's
 // own `deploy.enabled` setting. When false, SiteEdit Deploy tab hides and
 // /api/nks.wdc.deploy/* endpoints 404. History rows stay in DB (additive).
@@ -2040,6 +2051,9 @@ async function loadSettings() {
       mcpExpiredRetentionDays.value = Number.isFinite(exp) && exp >= 0 ? exp : 1
       const rev = parseInt(data['mcp.grant_revoked_retention_days'] ?? '')
       mcpRevokedRetentionDays.value = Number.isFinite(rev) && rev >= 0 ? rev : 30
+      // Phase 8 — mcp_tool_calls audit retention.
+      const tc = parseInt(data['mcp.toolCallRetentionDays'] ?? '')
+      mcpToolCallRetentionDays.value = Number.isFinite(tc) && tc >= 1 ? tc : 30
     }
     // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
     // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
@@ -2932,6 +2946,7 @@ async function save() {
       'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
       'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
       'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
+      'mcp.toolCallRetentionDays': String(mcpToolCallRetentionDays.value),
       'deploy.enabled':      String(deployEnabled.value),
       'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
       'ports.mailpitHttp':   String(ports.mailpitHttp),

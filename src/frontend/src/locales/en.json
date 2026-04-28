@@ -1500,6 +1500,8 @@
       "expiredRetentionHint": "After expiry, the janitor waits this many days before deleting the row. 0 = never delete naturally-expired grants (only explicitly revoked ones).",
       "revokedRetentionLabel": "Revoked-grant retention",
       "revokedRetentionHint": "Audit rows for revoked grants are deleted only after this many days. 0 = delete immediately on revoke (no audit trail).",
+      "toolCallRetentionLabel": "Tool-call audit retention",
+      "toolCallRetentionHint": "Rows in mcp_tool_calls (Activity feed) are pruned after this many days. Higher value = more forensic history, more disk. Hourly sweep, default 30.",
       "daysSuffix": "days"
     },
     "deploySubsystem": {
