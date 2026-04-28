@@ -239,6 +239,7 @@
       "sessions": "By session",
       "flat": "Flat"
     },
+    "filterBySession": "Filter to session {id}",
     "danger": {
       "read": "read",
       "mutate": "mutate",

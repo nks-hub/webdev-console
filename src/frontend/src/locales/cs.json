@@ -239,6 +239,7 @@
       "sessions": "Podle session",
       "flat": "Plochý"
     },
+    "filterBySession": "Filtrovat na session {id}",
     "danger": {
       "read": "read",
       "mutate": "mutate",

@@ -36,6 +36,12 @@
         <el-option :label="t('mcpActivity.danger.destructive')" value="destructive" />
       </el-select>
       <el-input v-model="toolFilter" size="small" :placeholder="t('mcpActivity.filter.toolName')" clearable style="width: 240px" />
+      <el-input v-if="sessionFilter" v-model="sessionFilter" size="small" disabled style="width: 180px">
+        <template #prefix><el-icon><Lock /></el-icon></template>
+        <template #append>
+          <el-button @click="sessionFilter = ''">✕</el-button>
+        </template>
+      </el-input>
       <el-radio-group v-model="viewMode" size="small">
         <el-radio-button value="sessions">{{ t('mcpActivity.view.sessions') }}</el-radio-button>
         <el-radio-button value="flat">{{ t('mcpActivity.view.flat') }}</el-radio-button>
@@ -63,7 +69,12 @@
         <div class="session-header" @click="toggleSession(session.key)">
           <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
           <code class="mono caller-pill">{{ session.caller }}</code>
-          <code v-if="session.sessionId" class="mono session-pill" :title="session.sessionId">
+          <code
+            v-if="session.sessionId"
+            class="mono session-pill clickable"
+            :title="t('mcpActivity.filterBySession', { id: session.sessionId.slice(0, 8) })"
+            @click.stop="sessionFilter = session.sessionId!"
+          >
             {{ session.sessionId.slice(0, 8) }}
           </code>
           <span class="muted at">{{ formatRelative(session.startedAt) }}</span>
@@ -157,7 +168,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Refresh, ArrowRight } from '@element-plus/icons-vue'
+import { Refresh, ArrowRight, Lock } from '@element-plus/icons-vue'
 import {
   fetchMcpToolCalls,
   fetchMcpToolCallStats,
@@ -177,6 +188,7 @@ const currentPage = ref(1)
 const pageSize = ref(50)
 const dangerFilter = ref<string | null>(null)
 const toolFilter = ref('')
+const sessionFilter = ref('')
 const collapseReads = ref(true)
 const viewMode = ref<'sessions' | 'flat'>('sessions')
 
@@ -323,7 +335,7 @@ async function refresh(): Promise<void> {
   try {
     const offset = (currentPage.value - 1) * pageSize.value
     const [list, s] = await Promise.all([
-      fetchMcpToolCalls(pageSize.value, offset, dangerFilter.value, toolFilter.value || null),
+      fetchMcpToolCalls(pageSize.value, offset, dangerFilter.value, toolFilter.value || null, sessionFilter.value || null),
       fetchMcpToolCallStats(1440),
     ])
     entries.value = list.entries
@@ -336,7 +348,7 @@ async function refresh(): Promise<void> {
   }
 }
 
-watch([dangerFilter, toolFilter], () => {
+watch([dangerFilter, toolFilter, sessionFilter], () => {
   currentPage.value = 1
   void refresh()
 })
@@ -344,13 +356,29 @@ watch([dangerFilter, toolFilter], () => {
 let unsubscribe: (() => void) | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
+// Throttle: SSE bursts during AI activity could fire 100+ events/s for
+// chains of read calls. Coalesce to at most one refresh per 600ms to
+// keep the page snappy without losing real-time feel.
+let pendingRefresh: ReturnType<typeof setTimeout> | null = null
+function throttledRefresh(): void {
+  if (pendingRefresh) return
+  pendingRefresh = setTimeout(() => {
+    pendingRefresh = null
+    void refresh()
+  }, 600)
+}
+
 onMounted(() => {
   void refresh()
   unsubscribe = subscribeEventsMap({
+    'mcp:tool-call': () => { throttledRefresh() },
     'mcp:intent-changed': () => { void refresh() },
     'mcp:confirm-request': () => { void refresh() },
   })
-  pollTimer = setInterval(() => { void refresh() }, 30_000)
+  // Slow safety-net poll (5min) in case SSE silently drops a connection
+  // — far less aggressive than the original 30s tick now that real
+  // updates flow through `mcp:tool-call`.
+  pollTimer = setInterval(() => { void refresh() }, 300_000)
 })
 
 onBeforeUnmount(() => {
@@ -456,6 +484,15 @@ onBeforeUnmount(() => {
   background: var(--el-fill-color-darker);
   border-radius: 3px;
   font-size: 10px;
+}
+.session-pill.clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.session-pill.clickable:hover {
+  background: var(--el-color-primary-light-7);
+  color: var(--el-color-primary);
 }
 .dur, .at, .dur-range { font-size: 11px; }
 .activity-pagination { display: flex; justify-content: flex-end; }

@@ -2114,6 +2114,7 @@ app.MapPost("/api/mcp/grants/import", async (
 app.MapPost("/api/mcp/tool-calls", async (
     HttpContext httpContext,
     NKS.WebDevConsole.Daemon.Mcp.McpToolCallsRepository repo,
+    NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
     CancellationToken ct) =>
 {
     using var doc = await System.Text.Json.JsonDocument.ParseAsync(httpContext.Request.Body, cancellationToken: ct);
@@ -2139,6 +2140,25 @@ app.MapPost("/api/mcp/tool-calls", async (
         IntentId = GetStr("intentId"),
     };
     var id = await repo.InsertAsync(row, ct);
+
+    // Phase 8 — broadcast SSE so the Activity feed updates in real time
+    // (replaces the 30s polling fallback). Best-effort: a broadcast
+    // failure must NOT fail the audit insert.
+    try
+    {
+        await eventsBus.BroadcastAsync("mcp:tool-call", new
+        {
+            id,
+            toolName = row.ToolName,
+            sessionId = row.SessionId,
+            caller = row.Caller,
+            dangerLevel = row.DangerLevel,
+            resultCode = row.ResultCode,
+            durationMs = row.DurationMs,
+        });
+    }
+    catch { /* SSE best-effort */ }
+
     return Results.Ok(new { id });
 });
 
