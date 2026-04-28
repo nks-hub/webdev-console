@@ -72,8 +72,15 @@ ok "restore clean"
 
 step "2/7  dotnet build ($CONFIG)"
 # Stop daemon first if running — its bin DLLs are locked otherwise.
-# Daemon API admin/restart triggers Environment.Exit(99) without UAC.
+# STRICT NO-UAC RULE: never use local taskkill/Stop-Process. Two paths:
+#   1. Graceful POST /api/admin/restart — daemon's own API, Bearer token,
+#      no admin needed (daemon runs as user normally).
+#   2. If that fails (daemon stuck / elevated / unresponsive), fall back
+#      to tools/remote-cmd.sh which forwards Stop-Process to the
+#      wdc-restart-elevated relay client. The relay client is itself
+#      elevated, so nothing pops UAC in this shell.
 PORT_FILE="/c/Users/LuRy/AppData/Local/Temp/nks-wdc-daemon.port"
+REMOTECMD="$(dirname "$0")/remote-cmd.sh"
 if [ -f "$PORT_FILE" ]; then
     PORT=$(awk 'NR==1' "$PORT_FILE")
     TOKEN=$(awk 'NR==2' "$PORT_FILE")
@@ -89,8 +96,24 @@ if [ -f "$PORT_FILE" ]; then
         sleep 1  # OS grace
     fi
 fi
-if ! dotnet build WebDevConsole.sln --no-restore -c "$CONFIG" --nologo --verbosity quiet 2>&1 | tail -10; then
-    err "build failed"
+build_with_relay_fallback() {
+    if dotnet build WebDevConsole.sln --no-restore -c "$CONFIG" --nologo --verbosity quiet 2>&1 | tail -10; then
+        return 0
+    fi
+    # Build failed — likely lingering daemon DLL lock. Use remote-cmd
+    # (no UAC popup) to elevated-kill the daemon, then retry once.
+    if [ -x "$REMOTECMD" ]; then
+        echo "  build failed — elevated kill via remote-cmd (no UAC popup)…"
+        "$REMOTECMD" exec "Get-Process dotnet -ErrorAction SilentlyContinue | Where-Object { try { \$_.MainModule.FileName -like '*WebDevConsole.Daemon*' } catch { \$false } } | Stop-Process -Force -ErrorAction SilentlyContinue; 'ok'" >/dev/null 2>&1 || true
+        sleep 2
+        if dotnet build WebDevConsole.sln --no-restore -c "$CONFIG" --nologo --verbosity quiet 2>&1 | tail -10; then
+            return 0
+        fi
+    fi
+    return 1
+}
+if ! build_with_relay_fallback; then
+    err "build failed (even after relay-elevated kill retry)"
     exit 1
 fi
 ok "build clean"
