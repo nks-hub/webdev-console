@@ -1,35 +1,34 @@
 <template>
-  <section class="settings-card">
-    <header class="settings-card-header">
-      <span class="settings-card-title">{{ t('settings.sso.title') }}</span>
+  <SettingsCard :title="t('settings.sso.title')">
+    <template #meta>
       <span v-if="isAuthenticated" class="sso-status">{{ t('settings.sso.signedIn') }}</span>
-    </header>
-    <div class="settings-card-body">
-      <div v-if="isAuthenticated" class="sync-actions sso-column">
-        <span class="tab-desc sso-description">
-          {{ displayName
-            ? t('settings.sso.signedInAs', { who: displayName })
-            : t('settings.sso.signedInAt', { url: t('settings.sso.configuredCatalog') }) }}
-        </span>
-        <el-button size="small" @click="emit('logout')">{{ t('settings.sso.signOut') }}</el-button>
-      </div>
-      <div v-else class="sync-actions sso-column">
-        <p class="tab-desc">{{ t('settings.sso.description') }}</p>
-        <div class="sso-actions">
-          <el-button
-            size="small"
-            type="primary"
-            :loading="loginPending"
-            @click="emit('login')"
-          >{{ t('settings.sso.signIn') }}</el-button>
-          <span v-if="loginError" class="sso-error">{{ loginError }}</span>
-        </div>
+    </template>
+    <div v-if="isAuthenticated" class="sync-actions sso-column">
+      <span class="tab-desc sso-description">
+        {{ displayName
+          ? t('settings.sso.signedInAs', { who: displayName })
+          : t('settings.sso.signedInAt', { url: t('settings.sso.configuredCatalog') }) }}
+      </span>
+      <el-button size="small" @click="emit('logout')">{{ t('settings.sso.signOut') }}</el-button>
+    </div>
+    <div v-else class="sync-actions sso-column">
+      <p class="tab-desc">{{ t('settings.sso.description') }}</p>
+      <div class="sso-actions">
+        <el-button
+          size="small"
+          type="primary"
+          :loading="loginPending"
+          @click="emit('login')"
+        >{{ t('settings.sso.signIn') }}</el-button>
+        <span v-if="loginError" class="sso-error">{{ loginError }}</span>
       </div>
     </div>
-  </section>
+  </SettingsCard>
 </template>
 
 <script setup lang="ts">
+import SettingsCard from '../shared/SettingsCard.vue'
+
 defineProps<{
   t: (key: string, params?: Record<string, unknown>) => string
   isAuthenticated: boolean
@@ -45,30 +44,6 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-.settings-card {
-  border: 1px solid var(--wdc-border);
-  border-radius: 8px;
-  background: var(--wdc-surface-2);
-  margin-bottom: 12px;
-}
-
-.settings-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--wdc-border);
-}
-
-.settings-card-title {
-  font-weight: 600;
-  color: var(--wdc-text-1);
-}
-
-.settings-card-body {
-  padding: 18px;
-}
-
 .sync-actions {
   display: flex;
   gap: 8px;
