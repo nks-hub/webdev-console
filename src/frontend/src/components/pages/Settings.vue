@@ -822,31 +822,11 @@
               @delete="deleteSnapshot"
             />
             <!-- File export / import -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">Export / Import</span>
-              </header>
-              <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 12px;">{{ $t('settings.sync.tabDesc') }}</p>
-                <div class="sync-actions">
-                  <el-button size="small" @click="exportSettings">
-                    <el-icon><Download /></el-icon>
-                    <span>{{ $t('settings.sync.exportFile') }}</span>
-                  </el-button>
-                  <el-button size="small" @click="triggerImport">
-                    <el-icon><Upload /></el-icon>
-                    <span>{{ $t('settings.sync.importFile') }}</span>
-                  </el-button>
-                  <input
-                    ref="importFileInput"
-                    type="file"
-                    accept=".json"
-                    style="display: none"
-                    @change="importSettings"
-                  />
-                </div>
-              </div>
-            </section>
+            <SyncExportImportCard
+              :t="$t"
+              @export="exportSettings"
+              @import="importSettings"
+            />
           </div>
         </el-tab-pane>
 
@@ -969,7 +949,6 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Download } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -993,6 +972,7 @@ import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
 import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
+import SyncExportImportCard from '../settings/sync/SyncExportImportCard.vue'
 import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
 import { compareSemver } from '../../utils/semver'
 import { useAppVersion } from '../../utils/appVersion'
@@ -2061,7 +2041,6 @@ const pulling = ref(false)
 const checkingCloud = ref(false)
 const syncStatus = ref<{ ok: boolean; message: string } | null>(null)
 const lastSyncTime = ref<string | null>(null)
-const importFileInput = ref<HTMLInputElement | null>(null)
 
 // Render lastSyncTime consistently regardless of whether it came from
 // sync.lastSyncTime in settings (ISO format) or a fresh push (toLocaleString
@@ -2361,12 +2340,9 @@ async function exportSettings() {
   }
 }
 
-function triggerImport() {
-  importFileInput.value?.click()
-}
-
 async function importSettings(event: Event) {
-  const file = (event.target as HTMLInputElement)?.files?.[0]
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
   try {
     const text = await file.text()
@@ -2400,7 +2376,7 @@ async function importSettings(event: Event) {
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(`Import failed: ${errorMessage(e)}`)
   }
-  if (importFileInput.value) importFileInput.value.value = ''
+  input.value = ''
 }
 
 // ── Update check ──────────────────────────────────────────────────────
