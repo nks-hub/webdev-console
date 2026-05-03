@@ -806,55 +806,21 @@
               @check="checkCloudExists"
             />
 
-            <!-- Task 03: Cloud snapshots — recent snapshot list from
+            <!-- Task 03: Cloud snapshots - recent snapshot list from
                  catalog-api /sync/snapshots with restore/delete actions.
                  Snapshots are auto-created by the cloud BEFORE each push
                  overwrites a device config (see catalog-api task 34). -->
-            <section v-if="accountToken" class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">Snapshots</span>
-                <el-button size="small" :loading="snapshotsLoading" @click="loadSnapshots">
-                  {{ $t('common.refresh') }}
-                </el-button>
-              </header>
-              <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 10px">
-                  Revert to a previous configuration. Cloud keeps the last
-                  10 snapshots per device — older ones are pruned automatically.
-                </p>
-                <el-table v-if="snapshots.length > 0" :data="snapshots" size="small" stripe>
-                  <el-table-column label="When" min-width="180">
-                    <template #default="{ row }">
-                      {{ formatDate(row.created_at) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="Device" min-width="140">
-                    <template #default="{ row }">
-                      <span class="mono">{{ row.device_id.slice(0, 12) }}…</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="Size" width="100">
-                    <template #default="{ row }">
-                      <span class="mono">{{ Math.round(row.size_bytes / 1024) }} KB</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="" width="180" align="right">
-                    <template #default="{ row }">
-                      <div style="display: flex; gap: 6px; justify-content: flex-end">
-                        <el-button size="small" plain @click="restoreSnapshot(row)" :loading="snapshotAction === row.id">
-                          Restore
-                        </el-button>
-                        <el-button size="small" type="danger" plain @click="deleteSnapshot(row)" :loading="snapshotAction === row.id">
-                          {{ $t('common.delete') }}
-                        </el-button>
-                      </div>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <el-empty v-else :description="snapshotsLoading ? $t('common.loading') : 'No snapshots yet — push to cloud first'" :image-size="48" />
-              </div>
-            </section>
-
+            <SyncSnapshotsCard
+              v-if="accountToken"
+              :t="$t"
+              :snapshots="snapshots"
+              :loading="snapshotsLoading"
+              :snapshot-action="snapshotAction"
+              :format-date="formatDate"
+              @refresh="loadSnapshots"
+              @restore="restoreSnapshot"
+              @delete="deleteSnapshot"
+            />
             <!-- File export / import -->
             <section class="settings-card">
               <header class="settings-card-header">
@@ -1027,6 +993,7 @@ import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
 import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
+import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
 import { compareSemver } from '../../utils/semver'
 import { useAppVersion } from '../../utils/appVersion'
 
