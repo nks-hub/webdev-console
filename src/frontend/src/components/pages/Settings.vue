@@ -698,29 +698,17 @@
                  /api/v1/auth/login directly. "Unified login" = one
                  Account tab hosting both, not one removed. -->
             <template v-if="uiModeStore.isSimple">
-              <section v-if="!accountToken" class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
-                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item :label="$t('settings.account.email')">
-                      <el-input v-model="authEmail" placeholder="you@example.com" />
-                    </el-form-item>
-                    <el-form-item :label="$t('settings.account.password')">
-                      <el-input v-model="authPassword" type="password" show-password />
-                    </el-form-item>
-                    <div class="sync-actions">
-                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
-                      <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
-                    </div>
-                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
-                      {{ authError }}
-                    </div>
-                  </el-form>
-                </div>
-              </section>
+              <AccountPasswordCard
+                v-if="!accountToken"
+                :t="$t"
+                :title="$t('settings.tabs.account')"
+                v-model:email="authEmail"
+                v-model:password="authPassword"
+                :loading="authLoading"
+                :error="authError"
+                @login="doLogin"
+                @register="doRegister"
+              />
               <section v-else class="settings-card">
                 <header class="settings-card-header">
                   <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
@@ -747,29 +735,17 @@
                  in. SSO card above is the other entry point; both write
                  the same authStore so switching between them is seamless. -->
             <template v-if="!uiModeStore.isSimple">
-              <section v-if="!accountToken" class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">{{ $t('settings.account.passwordTitle') }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
-                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item :label="$t('settings.account.email')">
-                      <el-input v-model="authEmail" placeholder="you@example.com" />
-                    </el-form-item>
-                    <el-form-item :label="$t('settings.account.password')">
-                      <el-input v-model="authPassword" type="password" show-password />
-                    </el-form-item>
-                    <div class="sync-actions">
-                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
-                      <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
-                    </div>
-                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
-                      {{ authError }}
-                    </div>
-                  </el-form>
-                </div>
-              </section>
+              <AccountPasswordCard
+                v-if="!accountToken"
+                :t="$t"
+                :title="$t('settings.account.passwordTitle')"
+                v-model:email="authEmail"
+                v-model:password="authPassword"
+                :loading="authLoading"
+                :error="authError"
+                @login="doLogin"
+                @register="doRegister"
+              />
               <section v-else class="settings-card">
                 <header class="settings-card-header">
                   <span class="settings-card-title">Account</span>
@@ -1170,6 +1146,7 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
+import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
