@@ -677,41 +677,20 @@
         <!-- Account & Devices tab -->
         <el-tab-pane :label="$t('settings.tabs.account')" name="account">
           <div class="tab-content">
-            <!-- F91.4: SSO (catalog-api OIDC) moved from About → Account
+            <!-- F91.4: SSO (catalog-api OIDC) moved from About -> Account
                  because signing in belongs with account management, not
                  with "what version is this" metadata. Shown in both
                  simple + advanced modes so simple users can still sign
                  in to their catalog identity. -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.sso.title') }}</span>
-                <span v-if="authStore.isAuthenticated" style="font-size: 0.78rem; color: var(--wdc-status-running);">{{ $t('settings.sso.signedIn') }}</span>
-              </header>
-              <div class="settings-card-body">
-                <div v-if="authStore.isAuthenticated" class="sync-actions" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-                  <span class="tab-desc" style="margin: 0;">
-                    <!-- F91.6: surface SSO identity (email/name/sub from JWT claims). -->
-                    {{ authStore.displayName
-                        ? $t('settings.sso.signedInAs', { who: authStore.displayName })
-                        : $t('settings.sso.signedInAt', { url: $t('settings.sso.configuredCatalog') }) }}
-                  </span>
-                  <el-button size="small" @click="authStore.logout()">{{ $t('settings.sso.signOut') }}</el-button>
-                </div>
-                <div v-else class="sync-actions" style="flex-direction: column; align-items: flex-start;">
-                  <p class="tab-desc">{{ $t('settings.sso.description') }}</p>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <el-button
-                      size="small"
-                      type="primary"
-                      :loading="authStore.loginPending"
-                      @click="ssoLogin"
-                    >{{ $t('settings.sso.signIn') }}</el-button>
-                    <span v-if="authStore.loginError" class="sso-error" style="color: var(--wdc-status-error); font-size: 0.78rem;">{{ authStore.loginError }}</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
+            <AccountSsoCard
+              :t="$t"
+              :is-authenticated="authStore.isAuthenticated"
+              :display-name="authStore.displayName"
+              :login-pending="authStore.loginPending"
+              :login-error="authStore.loginError"
+              @login="ssoLogin"
+              @logout="authStore.logout()"
+            />
             <!-- F91.15: password login restored alongside SSO. The two
                  paths write to the same authStore (token + displayName),
                  just through different entry points — SSO card above
@@ -1191,6 +1170,7 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
+import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import { compareSemver } from '../../utils/semver'
