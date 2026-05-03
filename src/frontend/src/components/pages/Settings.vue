@@ -792,49 +792,19 @@
             />
 
             <!-- Cloud sync -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.sync.cloudSync') }}</span>
-                <span v-if="syncStatus" :class="['sync-badge', syncStatus.ok ? 'sync-ok' : 'sync-err']">
-                  {{ syncStatus.message }}
-                </span>
-              </header>
-              <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 12px;">{{ $t('settings.sync.cloudSyncDesc') }}</p>
-                <div class="sync-actions">
-                  <el-button
-                    type="primary"
-                    size="small"
-                    :loading="syncing"
-                    :disabled="!catalogUrl && !deviceId"
-                    @click="pushToCloud"
-                  >
-                    <el-icon><Upload /></el-icon>
-                    <span>{{ $t('settings.sync.pushToCloud') }}</span>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    :loading="pulling"
-                    :disabled="!catalogUrl && !deviceId"
-                    @click="pullFromCloud"
-                  >
-                    <el-icon><Download /></el-icon>
-                    <span>{{ $t('settings.sync.pullFromCloud') }}</span>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    :disabled="!catalogUrl && !deviceId"
-                    @click="checkCloudExists"
-                    :loading="checkingCloud"
-                  >
-                    {{ $t('settings.sync.checkStatus') }}
-                  </el-button>
-                </div>
-                <div class="hint" v-if="lastSyncTime">
-                  {{ $t('settings.sync.lastSynced') }}: {{ lastSyncDisplay }}
-                </div>
-              </div>
-            </section>
+            <SyncCloudCard
+              :t="$t"
+              :sync-status="syncStatus"
+              :last-sync-time="lastSyncTime"
+              :last-sync-display="lastSyncDisplay"
+              :syncing="syncing"
+              :pulling="pulling"
+              :checking-cloud="checkingCloud"
+              :disabled="!catalogUrl && !deviceId"
+              @push="pushToCloud"
+              @pull="pullFromCloud"
+              @check="checkCloudExists"
+            />
 
             <!-- Task 03: Cloud snapshots — recent snapshot list from
                  catalog-api /sync/snapshots with restore/delete actions.
@@ -1055,6 +1025,7 @@ import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
+import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
 import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
 import { compareSemver } from '../../utils/semver'
 import { useAppVersion } from '../../utils/appVersion'
@@ -2960,14 +2931,6 @@ async function save() {
 }
 .settings-card-body { padding: 18px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.sync-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 10px;
-}
-.sync-ok { background: rgba(34, 197, 94, 0.15); color: var(--wdc-status-running); }
-.sync-err { background: rgba(255, 107, 107, 0.15); color: var(--wdc-status-error); }
 
 /* Update tab */
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; }
