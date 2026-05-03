@@ -748,91 +748,20 @@
               />
 
 
-              <!-- F91.15: devices list only when signed in — same gate
+              <!-- F91.15: devices list only when signed in - same gate
                    as the Account summary above. -->
-              <section v-if="accountToken" class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">My Devices</span>
-                  <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ accountDevices.length }} registered</span>
-                </header>
-                <div class="settings-card-body">
-                  <el-table v-if="accountDevices.length > 0" :data="accountDevices" size="small" stripe>
-                    <el-table-column label="Name" min-width="180">
-                      <template #default="{ row }">
-                        <div class="device-name-cell">
-                          <el-input
-                            v-if="editingDeviceName === row.device_id"
-                            v-model="editingDeviceValue"
-                            size="small"
-                            class="device-name-input"
-                            @blur="saveDeviceName(row)"
-                            @keydown.enter.prevent="saveDeviceName(row)"
-                            @keydown.escape.prevent="editingDeviceName = null"
-                          />
-                          <span
-                            v-else
-                            class="device-name-text mono"
-                            :style="row.is_current ? 'font-weight: 700' : ''"
-                            @dblclick="startEditDeviceName(row)"
-                            title="Double-click to rename"
-                          >
-                            {{ row.name || row.device_id.slice(0, 12) + '…' }}
-                          </span>
-                          <el-tag v-if="row.is_current" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
-                        </div>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="OS" width="120">
-                      <template #default="{ row }">
-                        <span class="mono">{{ (row.os ?? '') + '/' + (row.arch ?? '') }}</span>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="Sites" width="70" align="center">
-                      <template #default="{ row }">{{ row.site_count ?? '—' }}</template>
-                    </el-table-column>
-                    <el-table-column label="Status" width="90">
-                      <template #default="{ row }">
-                        <el-tag size="small" :type="row.online ? 'success' : 'info'" effect="dark">
-                          {{ row.online ? 'Online' : 'Offline' }}
-                        </el-tag>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="Last sync" width="150">
-                      <template #default="{ row }">
-                        <span style="font-size: 0.72rem; color: var(--wdc-text-3);">
-                          {{ row.last_seen_at ? new Date(row.last_seen_at).toLocaleString() : '—' }}
-                        </span>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="" width="200" align="right">
-                      <template #default="{ row }">
-                        <div style="display: flex; gap: 6px; justify-content: flex-end">
-                          <el-button
-                            v-if="!row.is_current"
-                            size="small"
-                            type="primary"
-                            plain
-                            @click="pushMyConfigTo(row.device_id)"
-                            :loading="pushingTo === row.device_id"
-                          >Push here</el-button>
-                          <!-- Task 07: unlink flow. Confirm before DELETE
-                               since removing a device from the account
-                               invalidates its tokens and forces re-login. -->
-                          <el-button
-                            v-if="!row.is_current"
-                            size="small"
-                            type="danger"
-                            plain
-                            @click="unlinkDevice(row)"
-                            :loading="unlinkingDevice === row.device_id"
-                          >Unlink</el-button>
-                        </div>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                  <el-empty v-else description="No devices registered yet. Push settings first." :image-size="48" />
-                </div>
-              </section>
+              <AccountDeviceTableCard
+                v-if="accountToken"
+                :devices="accountDevices"
+                v-model:editing-device-name="editingDeviceName"
+                v-model:editing-device-value="editingDeviceValue"
+                :pushing-to="pushingTo"
+                :unlinking-device="unlinkingDevice"
+                @start-edit-name="startEditDeviceName"
+                @save-name="saveDeviceName"
+                @push-config="pushMyConfigTo"
+                @unlink="unlinkDevice"
+              />
             </template>
           </div>
         </el-tab-pane>
@@ -1135,6 +1064,7 @@ import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
+import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
 import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
@@ -3052,11 +2982,6 @@ async function save() {
 }
 .sync-ok { background: rgba(34, 197, 94, 0.15); color: var(--wdc-status-running); }
 .sync-err { background: rgba(255, 107, 107, 0.15); color: var(--wdc-status-error); }
-
-.device-name-cell { display: flex; align-items: center; gap: 6px; }
-.device-name-text { cursor: pointer; }
-.device-name-text:hover { text-decoration: underline dashed var(--wdc-text-3); text-underline-offset: 3px; }
-.device-name-input { max-width: 160px; }
 
 /* Update tab */
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; }
