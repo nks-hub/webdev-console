@@ -709,25 +709,17 @@
                 @login="doLogin"
                 @register="doRegister"
               />
-              <section v-else class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
-                  <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <div class="sync-actions">
-                    <el-button size="small" type="primary" :loading="syncing" @click="pushToCloud">
-                      <el-icon><Upload /></el-icon>
-                      <span>Push</span>
-                    </el-button>
-                    <el-button size="small" :loading="pulling" @click="pullFromCloud">
-                      <el-icon><Download /></el-icon>
-                      <span>Pull</span>
-                    </el-button>
-                    <el-button size="small" type="danger" plain @click="doLogout">{{ $t('common.logout') }}</el-button>
-                  </div>
-                </div>
-              </section>
+              <AccountSimpleSyncCard
+                v-else
+                :t="$t"
+                :title="$t('settings.tabs.account')"
+                :email="accountEmail"
+                :syncing="syncing"
+                :pulling="pulling"
+                @push="pushToCloud"
+                @pull="pullFromCloud"
+                @logout="doLogout"
+              />
             </template>
 
             <!-- Advanced mode: full account UI. Shows password form when
@@ -1147,6 +1139,7 @@ import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
+import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
