@@ -96,82 +96,29 @@
 
         <!-- General tab -->
         <el-tab-pane :label="$t('settings.tabs.general')" name="general">
-          <div class="tab-content">
-            <p class="tab-desc">{{ $t('settings.general.tabDesc') }}</p>
-            <el-form label-position="left" label-width="180px" size="small" style="max-width: 500px">
-              <el-form-item :label="$t('settings.general.language')">
-                <el-select
-                  :model-value="locale"
-                  @update:model-value="onLocaleChange"
-                  style="width: 160px"
-                >
-                  <el-option label="English" value="en" />
-                  <el-option label="Čeština" value="cs" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="$t('settings.theme.label')">
-                <el-radio-group
-                  :model-value="themeStore.mode"
-                  @update:model-value="themeStore.setMode($event as ThemeMode)"
-                >
-                  <el-radio-button value="dark">{{ $t('settings.theme.dark') }}</el-radio-button>
-                  <el-radio-button value="light">{{ $t('settings.theme.light') }}</el-radio-button>
-                  <el-radio-button value="system">{{ $t('settings.theme.system') }}</el-radio-button>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item :label="$t('settings.mode.label')">
-                <el-switch
-                  :model-value="uiModeStore.isAdvanced"
-                  :active-text="$t('settings.mode.advanced')"
-                  :inactive-text="$t('settings.mode.simple')"
-                  @change="(val: boolean) => uiModeStore.setUiMode(val ? 'advanced' : 'simple')"
-                />
-                <div class="hint">{{ $t('settings.mode.description') }}</div>
-              </el-form-item>
-              <el-form-item :label="$t('settings.general.runOnStartup')">
-                <el-switch v-model="runOnStartup" />
-              </el-form-item>
-              <!-- Auto-start je per-plugin nastavení — najdeš ho na kartě
-                   jednotlivého pluginu v Plugin Manageru. Žádné duplicitní
-                   ovládání tady, aby nebyl zmatek „kde to vlastně zapnu“. -->
-              <el-form-item :label="$t('settings.general.defaultPhpVersion')">
-                <el-select v-model="defaultPhp" style="width: 160px" :placeholder="$t('settings.general.selectPlaceholder')">
-                  <el-option v-for="v in phpVersions" :key="v" :label="'PHP ' + v" :value="v" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="$t('settings.general.dnsCache')">
-                <el-button size="small" @click="flushDns" :loading="flushingDns">
-                  {{ $t('settings.general.flushDnsCache') }}
-                </el-button>
-              </el-form-item>
-              <!-- F73: Migrate MAMP moved here from Sites toolbar. It's a
-                   one-off import operation that belongs in settings, not in
-                   the day-to-day Sites page where the toolbar button was
-                   cluttering the primary site workflow. -->
-              <el-form-item :label="$t('settings.general.mampImport')">
-                <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" :title="$t('settings.general.mampHint')">
-                  {{ $t('settings.general.mampMigrate') }}
-                </el-button>
-                <div class="hint">{{ $t('settings.general.mampHint') }}</div>
-              </el-form-item>
-
-              <el-divider />
-
-              <el-form-item :label="$t('settings.general.telemetry')">
-                <el-switch v-model="telemetryEnabled" />
-                <div class="hint">{{ $t('settings.general.telemetryHint') }}</div>
-              </el-form-item>
-              <el-form-item :label="$t('settings.general.crashReports')" v-if="telemetryEnabled">
-                <el-switch v-model="telemetryCrashReports" />
-                <div class="hint">
-                  Send crash stack traces via Sentry when a daemon exception occurs.
-                  Disabled when telemetry is off.
-                </div>
-              </el-form-item>
-            </el-form>
-          </div>
+          <EasyGeneralSettings
+            :t="t"
+            :locale="locale"
+            :theme-mode="themeStore.mode"
+            :is-advanced="uiModeStore.isAdvanced"
+            :run-on-startup="runOnStartup"
+            :default-php="defaultPhp"
+            :php-versions="phpVersions"
+            :flushing-dns="flushingDns"
+            :mamp-discovering="mampDiscovering"
+            :telemetry-enabled="telemetryEnabled"
+            :telemetry-crash-reports="telemetryCrashReports"
+            @update:locale="onLocaleChange"
+            @update:theme-mode="themeStore.setMode"
+            @update:ui-mode="uiModeStore.setUiMode"
+            @update:run-on-startup="runOnStartup = $event"
+            @update:default-php="defaultPhp = $event"
+            @update:telemetry-enabled="telemetryEnabled = $event"
+            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @flush-dns="flushDns"
+            @discover-mamp="discoverMamp"
+          />
         </el-tab-pane>
-
         <!-- Paths tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.paths')" name="paths">
           <div class="tab-content">
@@ -1310,7 +1257,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download } from '@element-plus/icons-vue'
-import { useThemeStore, type ThemeMode } from '../../stores/theme'
+import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
 import {
@@ -1324,6 +1271,7 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
+import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import { compareSemver } from '../../utils/semver'
 import { useAppVersion } from '../../utils/appVersion'
 
