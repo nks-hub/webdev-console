@@ -738,18 +738,14 @@
                 @login="doLogin"
                 @register="doRegister"
               />
-              <section v-else class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">Account</span>
-                  <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <div class="sync-actions">
-                    <el-button size="small" @click="loadDevicesAccount" :loading="devicesLoading">{{ $t('common.refresh') }} devices</el-button>
-                    <el-button size="small" type="danger" plain @click="doLogout">Sign out</el-button>
-                  </div>
-                </div>
-              </section>
+              <AccountAdvancedSummaryCard
+                v-else
+                :t="$t"
+                :email="accountEmail"
+                :devices-loading="devicesLoading"
+                @refresh-devices="loadDevicesAccount"
+                @logout="doLogout"
+              />
 
 
               <!-- F91.15: devices list only when signed in — same gate
@@ -1138,6 +1134,7 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
+import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
