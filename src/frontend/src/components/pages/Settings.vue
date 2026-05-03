@@ -784,27 +784,12 @@
             <p class="tab-desc">{{ $t('settings.sync.topDesc') }}</p>
 
             <!-- Device identity -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.sync.device') }}</span>
-              </header>
-              <div class="settings-card-body">
-                <el-form label-position="left" label-width="140px" size="small" style="max-width: 500px">
-                  <el-form-item :label="$t('settings.sync.deviceId')">
-                    <el-input :model-value="deviceId" disabled class="mono-input">
-                      <template #append>
-                        <el-button @click="copyDeviceId" :title="$t('settings.sync.copy')">{{ $t('settings.sync.copy') }}</el-button>
-                      </template>
-                    </el-input>
-                    <div class="hint">{{ $t('settings.sync.deviceIdHint') }}</div>
-                  </el-form-item>
-                  <el-form-item :label="$t('settings.sync.deviceName')">
-                    <el-input v-model="deviceName" :placeholder="$t('settings.sync.deviceNamePlaceholder')" />
-                    <div class="hint">{{ $t('settings.sync.deviceNameHint') }}</div>
-                  </el-form-item>
-                </el-form>
-              </div>
-            </section>
+            <SyncDeviceIdentityCard
+              :t="$t"
+              :device-id="deviceId"
+              v-model:device-name="deviceName"
+              @copy="copyDeviceId"
+            />
 
             <!-- Cloud sync -->
             <section class="settings-card">
@@ -1070,6 +1055,7 @@ import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
+import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
 import { compareSemver } from '../../utils/semver'
 import { useAppVersion } from '../../utils/appVersion'
 
