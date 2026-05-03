@@ -45,6 +45,8 @@ jobs:
       - name: Start daemon in background
         shell: pwsh
         run: |
+          $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
+          Remove-Item -LiteralPath $portFile -Force -ErrorAction SilentlyContinue
           $proc = Start-Process -FilePath "dotnet" -ArgumentList @(
             "run","--no-build","-c","Release","--project",
             "src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj"
@@ -61,10 +63,16 @@ jobs:
           # taking 70-90s before healthz answers on the GitHub Windows
           # runner, 2026-04-19).
           $deadline = (Get-Date).AddSeconds(180)
+          $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
           while ((Get-Date) -lt $deadline) {
             try {
-              $res = Invoke-WebRequest -Uri "http://localhost:5146/healthz" -UseBasicParsing -TimeoutSec 2
-              if ($res.StatusCode -eq 200) { Write-Host "Daemon ready"; exit 0 }
+              if (Test-Path $portFile) {
+                $port = (Get-Content $portFile -First 1).Trim()
+                if ($port -match '^\d+$') {
+                  $res = Invoke-WebRequest -Uri "http://127.0.0.1:$port/healthz" -UseBasicParsing -TimeoutSec 2
+                  if ($res.StatusCode -eq 200) { Write-Host "Daemon ready on port $port"; exit 0 }
+                }
+              }
             } catch { Start-Sleep -Milliseconds 500 }
           }
           Write-Error "Daemon failed to start within 180s"
