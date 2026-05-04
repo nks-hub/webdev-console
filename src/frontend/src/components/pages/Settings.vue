@@ -11,92 +11,15 @@
       <el-tabs v-model="activeTab" class="settings-tabs">
         <!-- Ports tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.ports')" name="ports">
-          <div class="tab-content">
-            <p class="tab-desc">{{ $t('settings.ports.description') }}</p>
-
-            <!-- Task 15: plugin-owned ports. Pulled from GET /api/plugins/ports
-                 (IPortMetadata DI registrations per task 25). Only active
-                 plugins show up — inactive ones are hidden so the user
-                 doesn't see rows for services that aren't running. -->
-            <div v-if="pluginPorts.length > 0" class="settings-card" style="margin-bottom: 16px">
-              <header class="settings-card-header">
-                <span class="settings-card-title">Plugin ports</span>
-                <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ pluginPorts.length }} active</span>
-              </header>
-              <div class="settings-card-body">
-                <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
-                  <el-form-item
-                    v-for="p in pluginPorts"
-                    :key="p.pluginId + ':' + p.key"
-                    :label="p.label"
-                  >
-                    <el-input-number
-                      :model-value="p.currentPort"
-                      :min="1"
-                      :max="65535"
-                      style="width: 100%"
-                      disabled
-                    />
-                    <div class="hint">
-                      <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
-                    </div>
-                  </el-form-item>
-                </el-form>
-              </div>
-            </div>
-
-            <!-- Legacy hardcoded ports form — will migrate to IPortMetadata
-                 one plugin at a time. For now coexists so users can still
-                 edit the values that haven't been wired to plugins yet. -->
-            <!-- Phase 6.21 — explain what changing the webserver port
-                 actually does, since the consequence isn't obvious from
-                 the form alone. The daemon now bulk-regenerates every
-                 site's vhost on Apache port change (Phase 6.20a) AND
-                 self-heals stale ports on boot (Phase 6.20b), but the
-                 user still sees a brief window where the webserver
-                 reloads and existing browser connections drop. -->
-            <el-alert
-              type="info"
-              :closable="false"
-              show-icon
-              style="margin-bottom: 12px; max-width: 400px"
-            >
-              <template #title>Changing HTTP/HTTPS port reloads the webserver</template>
-              Every per-site vhost is regenerated to use the new port and
-              Apache (or nginx/caddy) is reloaded. In-flight browser
-              connections drop briefly. Check that the new port isn't
-              already used by another service before saving.
-            </el-alert>
-            <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
-              <el-form-item :label="$t('settings.ports.httpPort')">
-                <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.httpsPort')">
-                <el-input-number v-model="ports.https" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.mysqlPort')">
-                <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.postgresqlPort')">
-                <el-input-number v-model="ports.postgresql" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.redisPort')">
-                <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.mailpitSmtp')">
-                <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.mailpitHttp')">
-                <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.phpFpmBase')">
-                <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
-                <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
-              </el-form-item>
-            </el-form>
-          </div>
+          <AdvancedPortsSettings
+            :t="t"
+            :ports="ports"
+            :plugin-ports="pluginPorts"
+            :php-fpm-base-port="phpFpmBasePort"
+            @update:port="(key, value) => { ports[key] = value }"
+            @update:php-fpm-base-port="phpFpmBasePort = $event"
+          />
         </el-tab-pane>
-
         <!-- General tab -->
         <el-tab-pane :label="$t('settings.tabs.general')" name="general">
           <EasyGeneralSettings
@@ -882,6 +805,7 @@ import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountSettingsTab from '../settings/account/AccountSettingsTab.vue'
 import AdvancedBackupSettings from '../settings/advanced/AdvancedBackupSettings.vue'
 import AdvancedDatabaseSettings from '../settings/advanced/AdvancedDatabaseSettings.vue'
+import AdvancedPortsSettings from '../settings/advanced/AdvancedPortsSettings.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
