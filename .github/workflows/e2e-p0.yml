@@ -63,13 +63,6 @@ jobs:
           $proc = Start-Process -FilePath "dotnet" -ArgumentList @($daemonDll) -WorkingDirectory $daemonDir -PassThru -WindowStyle Hidden -RedirectStandardOutput "$PWD/daemon.out.log" -RedirectStandardError "$PWD/daemon.err.log"
           Write-Host "Daemon PID=$($proc.Id)"
           $proc.Id | Out-File -FilePath daemon.pid -Encoding ASCII
-          Start-Sleep -Seconds 5
-          $started = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
-          if (-not $started) {
-            Get-Content daemon.out.log -Tail 120 -ErrorAction SilentlyContinue
-            Get-Content daemon.err.log -Tail 120 -ErrorAction SilentlyContinue
-            throw "Daemon process exited during startup"
-          }
 
       - name: Wait for daemon /healthz
         shell: pwsh
@@ -84,20 +77,9 @@ jobs:
           $timeoutSeconds = 1800
           $deadline = (Get-Date).AddSeconds($timeoutSeconds)
           $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
-          $daemonPid = if (Test-Path daemon.pid) { (Get-Content daemon.pid).Trim() } else { '' }
           $lastError = 'port file not found'
           $lastDiagAt = Get-Date
           while ((Get-Date) -lt $deadline) {
-            if ($daemonPid) {
-              $proc = Get-Process -Id $daemonPid -ErrorAction SilentlyContinue
-              if (-not $proc) {
-                Get-Content daemon.out.log -Tail 120 -ErrorAction SilentlyContinue
-                Get-Content daemon.err.log -Tail 120 -ErrorAction SilentlyContinue
-                Write-Error "Daemon process exited before readiness. Last readiness error: $lastError"
-                exit 1
-              }
-            }
-
             if (Test-Path $portFile) {
               try {
                 $lines = @(Get-Content $portFile -ErrorAction Stop)
