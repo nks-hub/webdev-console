@@ -24,7 +24,7 @@
     <!-- ASP.NET Core integration: auto-captures HTTP request context,
          correlates exceptions with request path + method, adds SDK
          middleware for tracing. Built on top of the base Sentry package. -->
-    <PackageReference Include="Sentry.AspNetCore" Version="4.13.0" />
+    <PackageReference Include="Sentry.AspNetCore" Version="6.4.1" />
     <!-- ILogger → Sentry breadcrumb bridge: warn+ log messages become
          breadcrumbs on the next captured event so we see what the daemon
          was doing just before the crash. -->
