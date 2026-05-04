@@ -63,7 +63,7 @@ public sealed class CatalogClientTests
 
         var count = await client.RefreshAsync();
 
-        Assert.True(count >= 3); // at least the 3 cloudflared fallback entries
+        Assert.True(count >= 4); // cloudflared + PostgreSQL fallback entries
         Assert.NotEmpty(client.CachedReleases);
         Assert.NotEqual(DateTime.MinValue, client.LastFetch);
     }
@@ -81,6 +81,19 @@ public sealed class CatalogClientTests
         Assert.Single(windows);
         Assert.Single(linux);
         Assert.Single(macos);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_BuiltInFallback_IncludesPostgreSqlWindows()
+    {
+        var client = MakeClient(HttpStatusCode.InternalServerError);
+        await client.RefreshAsync();
+
+        var postgresql = client.ForApp("postgresql", os: "windows", arch: "x64").ToList();
+
+        Assert.Single(postgresql);
+        Assert.Equal("18.3", postgresql[0].Version);
+        Assert.Equal("zip", postgresql[0].ArchiveType);
     }
 
     [Fact]

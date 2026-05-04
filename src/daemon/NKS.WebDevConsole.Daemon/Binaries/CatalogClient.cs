@@ -230,6 +230,17 @@ public sealed class CatalogClient
             ArchiveType: "tgz",
             Source: "github",
             UserAgent: null);
+
+        yield return new BinaryRelease(
+            App: "postgresql",
+            Version: "18.3",
+            MajorMinor: "18",
+            Url: "https://get.enterprisedb.com/postgresql/postgresql-18.3-1-windows-x64-binaries.zip",
+            Os: "windows",
+            Arch: "x64",
+            ArchiveType: "zip",
+            Source: "enterprisedb",
+            UserAgent: null);
     }
 
     public IEnumerable<BinaryRelease> ForApp(string app, string? os = null, string? arch = null)

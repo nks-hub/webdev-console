@@ -77,6 +77,9 @@
               <el-form-item :label="$t('settings.ports.mysqlPort')">
                 <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
+              <el-form-item :label="$t('settings.ports.postgresqlPort')">
+                <el-input-number v-model="ports.postgresql" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
               <el-form-item :label="$t('settings.ports.redisPort')">
                 <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
@@ -1058,6 +1061,7 @@ const ports = reactive({
   http: 80,
   https: 443,
   mysql: 3306,
+  postgresql: 5432,
   redis: 6379,
   mailpitSmtp: 1025,
   mailpitHttp: 8025,
@@ -1687,6 +1691,7 @@ async function loadSettings() {
     deployUseLegacyHostHandlers.value = !(data['deploy.useLegacyHostHandlers'] === 'false'
       || data['deploy.useLegacyHostHandlers'] === '0')
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
+    if (data['ports.postgresql'])  ports.postgresql = parseInt(data['ports.postgresql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
     if (data['ports.mailpitHttp']) ports.mailpitHttp = parseInt(data['ports.mailpitHttp'])
@@ -2559,6 +2564,7 @@ async function save() {
       'ports.http':          String(ports.http),
       'ports.https':         String(ports.https),
       'ports.mysql':         String(ports.mysql),
+      'ports.postgresql':    String(ports.postgresql),
       'ports.redis':         String(ports.redis),
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'mcp.enabled':         String(mcpEnabled.value),

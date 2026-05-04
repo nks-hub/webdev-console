@@ -11,6 +11,7 @@ public sealed class BinaryCatalogTests
         Assert.Contains("apache", apps);
         Assert.Contains("php", apps);
         Assert.Contains("mysql", apps);
+        Assert.Contains("postgresql", apps);
         Assert.Contains("redis", apps);
         Assert.Contains("mailpit", apps);
         Assert.Contains("nginx", apps);
