@@ -207,39 +207,15 @@
               </el-form-item>
             </el-form>
 
-            <!-- Manual backup management -->
-            <div style="margin-top: 24px; border-top: 1px solid var(--wdc-border); padding-top: 16px">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
-                <span style="font-weight: 600; font-size: 0.95rem">Backups</span>
-                <div style="display: flex; gap: 8px">
-                  <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
-                    Create Backup
-                  </el-button>
-                  <el-button size="small" @click="loadBackups" :loading="backupsLoading">
-                    {{ $t('common.refresh') }}
-                  </el-button>
-                </div>
-              </div>
-              <div v-if="backupsLoading" class="hint">Loading backups...</div>
-              <div v-else-if="backupsList.length === 0" class="hint">No backups yet. Click "Create Backup" to create one.</div>
-              <el-table v-else :data="backupsList" size="small" stripe style="width: 100%">
-                <el-table-column label="Date" width="180">
-                  <template #default="{ row }">
-                    {{ new Date(row.createdUtc).toLocaleString() }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="Size" width="100">
-                  <template #default="{ row }">
-                    {{ (row.size / 1024 / 1024).toFixed(1) }} MB
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('common.actions')">
-                  <template #default="{ row }">
-                    <el-button size="small" @click="downloadBackupFile(row.path)">{{ $t('common.download') }}</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
+            <AdvancedBackupSettings
+              :t="t"
+              :backups="backupsList"
+              :loading="backupsLoading"
+              :creating="backupCreating"
+              @create="manualBackup"
+              @refresh="loadBackups"
+              @download="downloadBackupFile"
+            />
           </div>
         </el-tab-pane>
 
@@ -971,6 +947,7 @@ import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.v
 import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
+import AdvancedBackupSettings from '../settings/advanced/AdvancedBackupSettings.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
