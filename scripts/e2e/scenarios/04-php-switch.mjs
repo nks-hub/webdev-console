@@ -4,10 +4,9 @@
  * verifies the generated vhost references version B. Skips if the daemon does
  * not expose at least two PHP versions.
  */
-import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile } from '../harness.mjs'
+import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile, wdcDataDir } from '../harness.mjs'
 import { join } from 'node:path'
 import { readFileSync, existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 
 const DOMAIN = 'phpswitch-e2e.loc'
 
@@ -74,9 +73,7 @@ export default scenario('4', 'PHP version switch', 'P0', async (ctx) => {
   assert.statusOk(after, `GET /api/sites/${DOMAIN} after update`)
   assert.eq(after.body.phpVersion, b, `phpVersion after update should be ${b}`)
 
-  // Also verify the SiteManager-owned vhost under ~/.wdc/generated/ was
-  // regenerated (this is what the GUI config-history view displays).
-  const vhostPath = join(homedir(), '.wdc', 'generated', `${DOMAIN}.conf`)
+  const vhostPath = join(wdcDataDir(), 'generated', `${DOMAIN}.conf`)
   assert.ok(existsSync(vhostPath), `generated vhost exists at ${vhostPath}`)
   const vhost = readFileSync(vhostPath, 'utf-8')
   assert.contains(vhost, b, `generated vhost references PHP ${b} after switch`)

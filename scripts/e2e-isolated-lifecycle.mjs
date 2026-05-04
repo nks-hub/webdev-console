@@ -9,7 +9,7 @@
  * Intended for CI and local deep verification where no other daemon instance
  * should be running.
  */
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -148,6 +148,10 @@ async function main() {
   }
 
   let daemonPid = null
+  let daemonProcess = null
+  let daemonExit = null
+  let stdoutFd = null
+  let stderrFd = null
   try {
     if (!existsSync(daemonDll)) {
       throw new Error(`Release daemon DLL not found: ${daemonDll}. Build the daemon first with dotnet build -c Release.`)
@@ -157,35 +161,38 @@ async function main() {
       throw new Error('scripts/e2e-isolated-lifecycle.mjs currently supports Windows only.')
     }
 
-    const cmdChain = [
-      `set ASPNETCORE_URLS=http://127.0.0.1:${fixedDaemonPort}`,
-      `set NKS_WDC_SKIP_HOSTS_UAC=${process.env.NKS_WDC_SKIP_HOSTS_UAC ?? '1'}`,
-      `set NKS_WDC_SKIP_FIREWALL_RULES=${process.env.NKS_WDC_SKIP_FIREWALL_RULES ?? '1'}`,
-      `dotnet "${daemonDll}"`,
-    ].join(' && ')
-
-    const psCommand = [
-      `$proc = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', '${cmdChain.replace(/'/g, "''")}') -WorkingDirectory '${daemonProjectDir.replace(/'/g, "''")}' -PassThru -WindowStyle Hidden -RedirectStandardOutput '${daemonStdoutLog.replace(/'/g, "''")}' -RedirectStandardError '${daemonStderrLog.replace(/'/g, "''")}'`,
-      'Write-Output $proc.Id',
-    ].join('; ')
-
-    const start = spawnSync('powershell', ['-NoProfile', '-Command', psCommand], {
-      cwd: repoRoot,
-      encoding: 'utf-8',
+    stdoutFd = openSync(daemonStdoutLog, 'w')
+    stderrFd = openSync(daemonStderrLog, 'w')
+    daemonProcess = spawn('dotnet', [daemonDll], {
+      cwd: daemonProjectDir,
+      env: {
+        ...process.env,
+        ASPNETCORE_URLS: `http://127.0.0.1:${fixedDaemonPort}`,
+        NKS_WDC_SKIP_HOSTS_UAC: process.env.NKS_WDC_SKIP_HOSTS_UAC ?? '1',
+        NKS_WDC_SKIP_FIREWALL_RULES: process.env.NKS_WDC_SKIP_FIREWALL_RULES ?? '1',
+        WDC_SKIP_STARTUP_REAPPLY: process.env.WDC_SKIP_STARTUP_REAPPLY ?? '1',
+      },
+      stdio: ['ignore', stdoutFd, stderrFd],
+      windowsHide: true,
     })
-    if (start.status !== 0) {
-      throw new Error(start.stderr?.trim() || `Failed to start daemon via PowerShell (exit ${start.status})`)
-    }
 
-    daemonPid = Number((start.stdout ?? '').trim())
+    daemonProcess.on('exit', (code, signal) => {
+      daemonExit = { code, signal }
+    })
+
+    daemonPid = daemonProcess.pid
     if (!daemonPid) {
-      throw new Error(`PowerShell did not return a daemon PID. stdout=${JSON.stringify(start.stdout)}`)
+      throw new Error('Failed to start daemon process.')
     }
 
     writeFileSync(join(repoRoot, 'daemon.isolated.pid'), String(daemonPid), 'utf-8')
+    console.log(`[isolated-e2e] daemon pid ${daemonPid}`)
 
     try {
       await waitFor(async () => {
+        if (daemonExit) {
+          throw new Error(`daemon exited before readiness (code=${daemonExit.code ?? 'null'}, signal=${daemonExit.signal ?? 'null'})`)
+        }
         const info = readPortInfo()
         if (!info?.token) return false
         return await probeStatus(info)
@@ -211,6 +218,25 @@ async function main() {
     })
 
   } finally {
+    if (daemonPid) {
+      spawnSync('powershell', ['-NoProfile', '-Command', `try { Stop-Process -Id ${daemonPid} -Force } catch {}`], {
+        cwd: repoRoot,
+        encoding: 'utf-8',
+      })
+    }
+
+    if (daemonProcess && !daemonProcess.killed) {
+      daemonProcess.kill('SIGTERM')
+    }
+    if (stdoutFd !== null) {
+      closeSync(stdoutFd)
+      stdoutFd = null
+    }
+    if (stderrFd !== null) {
+      closeSync(stderrFd)
+      stderrFd = null
+    }
+
     rmSync(join(repoRoot, 'daemon.isolated.pid'), { force: true })
     rmSync(daemonStdoutLog, { force: true })
     rmSync(daemonStderrLog, { force: true })
@@ -221,12 +247,6 @@ async function main() {
       rmSync(backupPortFile, { force: true })
     }
 
-    if (daemonPid) {
-      spawnSync('powershell', ['-NoProfile', '-Command', `try { Stop-Process -Id ${daemonPid} -Force } catch {}`], {
-        cwd: repoRoot,
-        encoding: 'utf-8',
-      })
-    }
   }
 }
 

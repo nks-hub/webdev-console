@@ -4,10 +4,9 @@
  * SSL plugin endpoint, regenerates, verifies the file exists again with a
  * (likely) new mtime. Skips if mkcert is not installed.
  */
-import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile, sleep } from '../harness.mjs'
+import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile, sleep, wdcDataDir } from '../harness.mjs'
 import { join } from 'node:path'
-import { existsSync, statSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 
 const DOMAIN = 'ssl-regen-e2e.loc'
 
@@ -43,19 +42,16 @@ export default scenario('7', 'SSL certificate regeneration', 'P2', async (ctx) =
   // config-history view) must reference the canonical cert.pem / key.pem
   // paths under ~/.wdc/ssl/sites/{domain}/, not the obsolete
   // ~/.wdc/ssl/{domain}.crt that never existed.
-  const { readFileSync: rf, existsSync: ex } = await import('node:fs')
-  const { join: jp } = await import('node:path')
-  const { homedir: hd } = await import('node:os')
-  const vhostFile = jp(hd(), '.wdc', 'generated', `${DOMAIN}.conf`)
-  if (ex(vhostFile)) {
-    const vhost = rf(vhostFile, 'utf-8')
+  const vhostFile = join(wdcDataDir(), 'generated', `${DOMAIN}.conf`)
+  if (existsSync(vhostFile)) {
+    const vhost = readFileSync(vhostFile, 'utf-8')
     assert.contains(vhost, '/cert.pem', 'vhost references cert.pem (canonical path)')
     assert.contains(vhost, '/key.pem', 'vhost references key.pem (canonical path)')
     assert.notContains(vhost, '.crt', 'vhost does NOT reference obsolete .crt path')
   }
 
   // Cert path per the plugin convention.
-  const certDir = join(homedir(), '.wdc', 'ssl', 'sites', DOMAIN)
+  const certDir = join(wdcDataDir(), 'ssl', 'sites', DOMAIN)
   const certFile = join(certDir, 'cert.pem')
 
   // First cert may not exist if mkcert silently failed — tolerate that case

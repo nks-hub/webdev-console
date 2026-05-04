@@ -4,10 +4,9 @@
  * has no PHP directives and the index file is served. Hosts file touch is
  * skipped in this scenario (we don't verify 127.0.0.1 resolution).
  */
-import { scenario, api, assert, tmpDir, rmTree, writeFile } from '../harness.mjs'
+import { scenario, api, assert, tmpDir, rmTree, writeFile, wdcDataDir } from '../harness.mjs'
 import { join } from 'node:path'
 import { readFileSync, existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 
 const DOMAIN = 'static-e2e.loc'
 
@@ -35,8 +34,7 @@ export default scenario('3', 'Static HTML (no PHP)', 'P0', async (ctx) => {
   ctx.cleanup(() => api.delete(`/api/sites/${DOMAIN}`).catch(() => {}))
   assert.statusOk(create, 'POST /api/sites')
 
-  // Verify vhost generated under ~/.wdc/generated and contains no PHP directives.
-  const vhostPath = join(homedir(), '.wdc', 'generated', `${DOMAIN}.conf`)
+  const vhostPath = join(wdcDataDir(), 'generated', `${DOMAIN}.conf`)
   assert.ok(existsSync(vhostPath), `vhost file exists at ${vhostPath}`)
   const vhost = readFileSync(vhostPath, 'utf-8').toLowerCase()
   assert.notContains(vhost, 'fcgiwrapper', 'vhost must not contain FCGIWrapper')
