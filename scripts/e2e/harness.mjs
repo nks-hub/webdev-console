@@ -15,7 +15,7 @@
  */
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import http from 'node:http'
 
@@ -143,6 +143,10 @@ export function tmpDir(prefix) {
 export function writeFile(path, content) { writeFileSync(path, content) }
 export function rmTree(path) {
   try { rmSync(path, { recursive: true, force: true }) } catch { /* ignore */ }
+}
+
+export function wdcDataDir() {
+  return process.env.WDC_DATA_DIR || join(homedir(), '.wdc')
 }
 
 // ---------- Scenario definition ----------

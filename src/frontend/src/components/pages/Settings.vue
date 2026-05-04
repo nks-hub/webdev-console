@@ -96,82 +96,29 @@
 
         <!-- General tab -->
         <el-tab-pane :label="$t('settings.tabs.general')" name="general">
-          <div class="tab-content">
-            <p class="tab-desc">{{ $t('settings.general.tabDesc') }}</p>
-            <el-form label-position="left" label-width="180px" size="small" style="max-width: 500px">
-              <el-form-item :label="$t('settings.general.language')">
-                <el-select
-                  :model-value="locale"
-                  @update:model-value="onLocaleChange"
-                  style="width: 160px"
-                >
-                  <el-option label="English" value="en" />
-                  <el-option label="Čeština" value="cs" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="$t('settings.theme.label')">
-                <el-radio-group
-                  :model-value="themeStore.mode"
-                  @update:model-value="themeStore.setMode($event as ThemeMode)"
-                >
-                  <el-radio-button value="dark">{{ $t('settings.theme.dark') }}</el-radio-button>
-                  <el-radio-button value="light">{{ $t('settings.theme.light') }}</el-radio-button>
-                  <el-radio-button value="system">{{ $t('settings.theme.system') }}</el-radio-button>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item :label="$t('settings.mode.label')">
-                <el-switch
-                  :model-value="uiModeStore.isAdvanced"
-                  :active-text="$t('settings.mode.advanced')"
-                  :inactive-text="$t('settings.mode.simple')"
-                  @change="(val: boolean) => uiModeStore.setUiMode(val ? 'advanced' : 'simple')"
-                />
-                <div class="hint">{{ $t('settings.mode.description') }}</div>
-              </el-form-item>
-              <el-form-item :label="$t('settings.general.runOnStartup')">
-                <el-switch v-model="runOnStartup" />
-              </el-form-item>
-              <!-- Auto-start je per-plugin nastavení — najdeš ho na kartě
-                   jednotlivého pluginu v Plugin Manageru. Žádné duplicitní
-                   ovládání tady, aby nebyl zmatek „kde to vlastně zapnu“. -->
-              <el-form-item :label="$t('settings.general.defaultPhpVersion')">
-                <el-select v-model="defaultPhp" style="width: 160px" :placeholder="$t('settings.general.selectPlaceholder')">
-                  <el-option v-for="v in phpVersions" :key="v" :label="'PHP ' + v" :value="v" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="$t('settings.general.dnsCache')">
-                <el-button size="small" @click="flushDns" :loading="flushingDns">
-                  {{ $t('settings.general.flushDnsCache') }}
-                </el-button>
-              </el-form-item>
-              <!-- F73: Migrate MAMP moved here from Sites toolbar. It's a
-                   one-off import operation that belongs in settings, not in
-                   the day-to-day Sites page where the toolbar button was
-                   cluttering the primary site workflow. -->
-              <el-form-item :label="$t('settings.general.mampImport')">
-                <el-button size="small" @click="discoverMamp" :loading="mampDiscovering" :title="$t('settings.general.mampHint')">
-                  {{ $t('settings.general.mampMigrate') }}
-                </el-button>
-                <div class="hint">{{ $t('settings.general.mampHint') }}</div>
-              </el-form-item>
-
-              <el-divider />
-
-              <el-form-item :label="$t('settings.general.telemetry')">
-                <el-switch v-model="telemetryEnabled" />
-                <div class="hint">{{ $t('settings.general.telemetryHint') }}</div>
-              </el-form-item>
-              <el-form-item :label="$t('settings.general.crashReports')" v-if="telemetryEnabled">
-                <el-switch v-model="telemetryCrashReports" />
-                <div class="hint">
-                  Send crash stack traces via Sentry when a daemon exception occurs.
-                  Disabled when telemetry is off.
-                </div>
-              </el-form-item>
-            </el-form>
-          </div>
+          <EasyGeneralSettings
+            :t="t"
+            :locale="locale"
+            :theme-mode="themeStore.mode"
+            :is-advanced="uiModeStore.isAdvanced"
+            :run-on-startup="runOnStartup"
+            :default-php="defaultPhp"
+            :php-versions="phpVersions"
+            :flushing-dns="flushingDns"
+            :mamp-discovering="mampDiscovering"
+            :telemetry-enabled="telemetryEnabled"
+            :telemetry-crash-reports="telemetryCrashReports"
+            @update:locale="onLocaleChange"
+            @update:theme-mode="themeStore.setMode"
+            @update:ui-mode="uiModeStore.setUiMode"
+            @update:run-on-startup="runOnStartup = $event"
+            @update:default-php="defaultPhp = $event"
+            @update:telemetry-enabled="telemetryEnabled = $event"
+            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @flush-dns="flushDns"
+            @discover-mamp="discoverMamp"
+          />
         </el-tab-pane>
-
         <!-- Paths tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.paths')" name="paths">
           <div class="tab-content">
@@ -730,41 +677,20 @@
         <!-- Account & Devices tab -->
         <el-tab-pane :label="$t('settings.tabs.account')" name="account">
           <div class="tab-content">
-            <!-- F91.4: SSO (catalog-api OIDC) moved from About → Account
+            <!-- F91.4: SSO (catalog-api OIDC) moved from About -> Account
                  because signing in belongs with account management, not
                  with "what version is this" metadata. Shown in both
                  simple + advanced modes so simple users can still sign
                  in to their catalog identity. -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.sso.title') }}</span>
-                <span v-if="authStore.isAuthenticated" style="font-size: 0.78rem; color: var(--wdc-status-running);">{{ $t('settings.sso.signedIn') }}</span>
-              </header>
-              <div class="settings-card-body">
-                <div v-if="authStore.isAuthenticated" class="sync-actions" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-                  <span class="tab-desc" style="margin: 0;">
-                    <!-- F91.6: surface SSO identity (email/name/sub from JWT claims). -->
-                    {{ authStore.displayName
-                        ? $t('settings.sso.signedInAs', { who: authStore.displayName })
-                        : $t('settings.sso.signedInAt', { url: $t('settings.sso.configuredCatalog') }) }}
-                  </span>
-                  <el-button size="small" @click="authStore.logout()">{{ $t('settings.sso.signOut') }}</el-button>
-                </div>
-                <div v-else class="sync-actions" style="flex-direction: column; align-items: flex-start;">
-                  <p class="tab-desc">{{ $t('settings.sso.description') }}</p>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <el-button
-                      size="small"
-                      type="primary"
-                      :loading="authStore.loginPending"
-                      @click="ssoLogin"
-                    >{{ $t('settings.sso.signIn') }}</el-button>
-                    <span v-if="authStore.loginError" class="sso-error" style="color: var(--wdc-status-error); font-size: 0.78rem;">{{ authStore.loginError }}</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
+            <AccountSsoCard
+              :t="$t"
+              :is-authenticated="authStore.isAuthenticated"
+              :display-name="authStore.displayName"
+              :login-pending="authStore.loginPending"
+              :login-error="authStore.loginError"
+              @login="ssoLogin"
+              @logout="authStore.logout()"
+            />
             <!-- F91.15: password login restored alongside SSO. The two
                  paths write to the same authStore (token + displayName),
                  just through different entry points — SSO card above
@@ -772,48 +698,28 @@
                  /api/v1/auth/login directly. "Unified login" = one
                  Account tab hosting both, not one removed. -->
             <template v-if="uiModeStore.isSimple">
-              <section v-if="!accountToken" class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
-                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item :label="$t('settings.account.email')">
-                      <el-input v-model="authEmail" placeholder="you@example.com" />
-                    </el-form-item>
-                    <el-form-item :label="$t('settings.account.password')">
-                      <el-input v-model="authPassword" type="password" show-password />
-                    </el-form-item>
-                    <div class="sync-actions">
-                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
-                      <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
-                    </div>
-                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
-                      {{ authError }}
-                    </div>
-                  </el-form>
-                </div>
-              </section>
-              <section v-else class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">{{ $t('settings.tabs.account') }}</span>
-                  <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <div class="sync-actions">
-                    <el-button size="small" type="primary" :loading="syncing" @click="pushToCloud">
-                      <el-icon><Upload /></el-icon>
-                      <span>Push</span>
-                    </el-button>
-                    <el-button size="small" :loading="pulling" @click="pullFromCloud">
-                      <el-icon><Download /></el-icon>
-                      <span>Pull</span>
-                    </el-button>
-                    <el-button size="small" type="danger" plain @click="doLogout">{{ $t('common.logout') }}</el-button>
-                  </div>
-                </div>
-              </section>
+              <AccountPasswordCard
+                v-if="!accountToken"
+                :t="$t"
+                :title="$t('settings.tabs.account')"
+                v-model:email="authEmail"
+                v-model:password="authPassword"
+                :loading="authLoading"
+                :error="authError"
+                @login="doLogin"
+                @register="doRegister"
+              />
+              <AccountSimpleSyncCard
+                v-else
+                :t="$t"
+                :title="$t('settings.tabs.account')"
+                :email="accountEmail"
+                :syncing="syncing"
+                :pulling="pulling"
+                @push="pushToCloud"
+                @pull="pullFromCloud"
+                @logout="doLogout"
+              />
             </template>
 
             <!-- Advanced mode: full account UI. Shows password form when
@@ -821,372 +727,106 @@
                  in. SSO card above is the other entry point; both write
                  the same authStore so switching between them is seamless. -->
             <template v-if="!uiModeStore.isSimple">
-              <section v-if="!accountToken" class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">{{ $t('settings.account.passwordTitle') }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <p class="tab-desc">{{ $t('settings.account.passwordAlt') }}</p>
-                  <el-form label-position="top" size="small" style="max-width: 360px" @submit.prevent="doLogin">
-                    <el-form-item :label="$t('settings.account.email')">
-                      <el-input v-model="authEmail" placeholder="you@example.com" />
-                    </el-form-item>
-                    <el-form-item :label="$t('settings.account.password')">
-                      <el-input v-model="authPassword" type="password" show-password />
-                    </el-form-item>
-                    <div class="sync-actions">
-                      <el-button type="primary" size="small" :loading="authLoading" @click="doLogin">{{ $t('common.login') }}</el-button>
-                      <el-button size="small" :loading="authLoading" @click="doRegister">{{ $t('common.register') }}</el-button>
-                    </div>
-                    <div class="hint" v-if="authError" style="color: var(--wdc-status-error); margin-top: 8px;">
-                      {{ authError }}
-                    </div>
-                  </el-form>
-                </div>
-              </section>
-              <section v-else class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">Account</span>
-                  <span style="font-size: 0.78rem; color: var(--wdc-text-2);">{{ accountEmail }}</span>
-                </header>
-                <div class="settings-card-body">
-                  <div class="sync-actions">
-                    <el-button size="small" @click="loadDevicesAccount" :loading="devicesLoading">{{ $t('common.refresh') }} devices</el-button>
-                    <el-button size="small" type="danger" plain @click="doLogout">Sign out</el-button>
-                  </div>
-                </div>
-              </section>
+              <AccountPasswordCard
+                v-if="!accountToken"
+                :t="$t"
+                :title="$t('settings.account.passwordTitle')"
+                v-model:email="authEmail"
+                v-model:password="authPassword"
+                :loading="authLoading"
+                :error="authError"
+                @login="doLogin"
+                @register="doRegister"
+              />
+              <AccountAdvancedSummaryCard
+                v-else
+                :t="$t"
+                :email="accountEmail"
+                :devices-loading="devicesLoading"
+                @refresh-devices="loadDevicesAccount"
+                @logout="doLogout"
+              />
 
 
-              <!-- F91.15: devices list only when signed in — same gate
+              <!-- F91.15: devices list only when signed in - same gate
                    as the Account summary above. -->
-              <section v-if="accountToken" class="settings-card">
-                <header class="settings-card-header">
-                  <span class="settings-card-title">My Devices</span>
-                  <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ accountDevices.length }} registered</span>
-                </header>
-                <div class="settings-card-body">
-                  <el-table v-if="accountDevices.length > 0" :data="accountDevices" size="small" stripe>
-                    <el-table-column label="Name" min-width="180">
-                      <template #default="{ row }">
-                        <div class="device-name-cell">
-                          <el-input
-                            v-if="editingDeviceName === row.device_id"
-                            v-model="editingDeviceValue"
-                            size="small"
-                            class="device-name-input"
-                            @blur="saveDeviceName(row)"
-                            @keydown.enter.prevent="saveDeviceName(row)"
-                            @keydown.escape.prevent="editingDeviceName = null"
-                          />
-                          <span
-                            v-else
-                            class="device-name-text mono"
-                            :style="row.is_current ? 'font-weight: 700' : ''"
-                            @dblclick="startEditDeviceName(row)"
-                            title="Double-click to rename"
-                          >
-                            {{ row.name || row.device_id.slice(0, 12) + '…' }}
-                          </span>
-                          <el-tag v-if="row.is_current" size="small" type="success" effect="dark" style="margin-left: 6px">this</el-tag>
-                        </div>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="OS" width="120">
-                      <template #default="{ row }">
-                        <span class="mono">{{ (row.os ?? '') + '/' + (row.arch ?? '') }}</span>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="Sites" width="70" align="center">
-                      <template #default="{ row }">{{ row.site_count ?? '—' }}</template>
-                    </el-table-column>
-                    <el-table-column label="Status" width="90">
-                      <template #default="{ row }">
-                        <el-tag size="small" :type="row.online ? 'success' : 'info'" effect="dark">
-                          {{ row.online ? 'Online' : 'Offline' }}
-                        </el-tag>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="Last sync" width="150">
-                      <template #default="{ row }">
-                        <span style="font-size: 0.72rem; color: var(--wdc-text-3);">
-                          {{ row.last_seen_at ? new Date(row.last_seen_at).toLocaleString() : '—' }}
-                        </span>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="" width="200" align="right">
-                      <template #default="{ row }">
-                        <div style="display: flex; gap: 6px; justify-content: flex-end">
-                          <el-button
-                            v-if="!row.is_current"
-                            size="small"
-                            type="primary"
-                            plain
-                            @click="pushMyConfigTo(row.device_id)"
-                            :loading="pushingTo === row.device_id"
-                          >Push here</el-button>
-                          <!-- Task 07: unlink flow. Confirm before DELETE
-                               since removing a device from the account
-                               invalidates its tokens and forces re-login. -->
-                          <el-button
-                            v-if="!row.is_current"
-                            size="small"
-                            type="danger"
-                            plain
-                            @click="unlinkDevice(row)"
-                            :loading="unlinkingDevice === row.device_id"
-                          >Unlink</el-button>
-                        </div>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                  <el-empty v-else description="No devices registered yet. Push settings first." :image-size="48" />
-                </div>
-              </section>
+              <AccountDeviceTableCard
+                v-if="accountToken"
+                :devices="accountDevices"
+                v-model:editing-device-name="editingDeviceName"
+                v-model:editing-device-value="editingDeviceValue"
+                :pushing-to="pushingTo"
+                :unlinking-device="unlinkingDevice"
+                @start-edit-name="startEditDeviceName"
+                @save-name="saveDeviceName"
+                @push-config="pushMyConfigTo"
+                @unlink="unlinkDevice"
+              />
             </template>
           </div>
         </el-tab-pane>
 
         <!-- Update tab — visible in both Simple and Advanced -->
         <el-tab-pane :label="$t('settings.tabs.update')" name="update">
-          <div class="tab-content">
-            <el-descriptions :column="1" border size="small">
-              <el-descriptions-item :label="$t('settings.update.current')">
-                <span class="mono">v{{ currentVersion }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item :label="$t('settings.update.latest')">
-                <span v-if="updateCheck.loading">{{ $t('common.loading') }}</span>
-                <span v-else-if="updateCheck.latest" class="mono">
-                  v{{ updateCheck.latest }}
-                  <el-tag v-if="updateCheck.hasUpdate" type="warning" size="small" style="margin-left:8px">{{ $t('settings.update.available') }}</el-tag>
-                  <el-tag v-else type="success" size="small" style="margin-left:8px">{{ $t('settings.update.upToDate') }}</el-tag>
-                </span>
-                <span v-else class="text-muted">{{ $t('settings.update.notChecked') }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item v-if="updateCheck.lastCheckedIso" :label="$t('settings.update.lastChecked')">
-                <span class="text-muted">{{ formatRelativeTime(updateCheck.lastCheckedIso) }}</span>
-              </el-descriptions-item>
-            </el-descriptions>
-
-            <div class="update-actions">
-              <el-button size="small" :loading="updateCheck.loading" @click="runUpdateCheck">
-                {{ $t('settings.update.check') }}
-              </el-button>
-              <el-button
-                v-if="updateCheck.hasUpdate"
-                type="primary"
-                size="small"
-                :loading="updateCheck.downloading"
-                @click="downloadAndInstall"
-              >
-                {{ $t('settings.update.downloadInstall') }}
-              </el-button>
-              <el-link
-                v-if="updateCheck.downloadUrl"
-                :href="updateCheck.downloadUrl"
-                target="_blank"
-                type="primary"
-              >
-                {{ $t('settings.update.openRelease') }} →
-              </el-link>
-            </div>
-
-            <!-- Task 06: download progress bar. Shown while
-                 electron-updater is downloading the new bundle (IPC
-                 message sets progressPercent). -->
-            <div v-if="updateCheck.progressPercent !== null" class="update-progress">
-              <el-progress
-                :percentage="updateCheck.progressPercent"
-                :status="updateCheck.progressPercent >= 100 ? 'success' : undefined"
-                :stroke-width="10"
-              />
-              <div class="update-progress-meta">
-                <span>{{ updateCheck.progressPercent >= 100 ? 'Installing…' : 'Downloading…' }}</span>
-                <span v-if="updateCheck.progressBytes" class="mono">{{ updateCheck.progressBytes }}</span>
-              </div>
-            </div>
-
-            <!-- Task 06: changelog markdown — GitHub release body rendered
-                 as a conservative subset (headings, lists, inline code).
-                 Full release viewable via the "View on GitHub" link. -->
-            <section v-if="updateCheck.releaseNotes" class="settings-card" style="margin-top: 12px">
-              <header class="settings-card-header">
-                <span class="settings-card-title">
-                  {{ $t('settings.update.releaseNotesTitle') }} v{{ updateCheck.latest }}
-                </span>
-                <el-link
-                  v-if="updateCheck.releaseUrl"
-                  :href="updateCheck.releaseUrl"
-                  target="_blank"
-                  type="primary"
-                  style="font-size: 0.78rem"
-                >
-                  {{ $t('settings.update.viewOnGithub') }} →
-                </el-link>
-              </header>
-              <!-- eslint-disable-next-line vue/no-v-html — renderReleaseNotes escapes input first -->
-              <div class="release-notes settings-card-body" v-html="renderReleaseNotes(updateCheck.releaseNotes)" />
-            </section>
-
-            <el-alert
-              v-if="updateCheck.error"
-              type="error"
-              :closable="false"
-              style="margin-top: 12px"
-            >
-              {{ updateCheck.error }}
-            </el-alert>
-          </div>
+          <EasyUpdateSettings
+            :t="t"
+            :current-version="currentVersion"
+            :update-check="updateCheck"
+            :format-relative-time="formatRelativeTime"
+            :render-release-notes="renderReleaseNotes"
+            @check="runUpdateCheck"
+            @download="downloadAndInstall"
+          />
         </el-tab-pane>
-
         <!-- Sync tab — cloud config sync + export/import -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.sync')" name="sync">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.sync.topDesc') }}</p>
 
             <!-- Device identity -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.sync.device') }}</span>
-              </header>
-              <div class="settings-card-body">
-                <el-form label-position="left" label-width="140px" size="small" style="max-width: 500px">
-                  <el-form-item :label="$t('settings.sync.deviceId')">
-                    <el-input :model-value="deviceId" disabled class="mono-input">
-                      <template #append>
-                        <el-button @click="copyDeviceId" :title="$t('settings.sync.copy')">{{ $t('settings.sync.copy') }}</el-button>
-                      </template>
-                    </el-input>
-                    <div class="hint">{{ $t('settings.sync.deviceIdHint') }}</div>
-                  </el-form-item>
-                  <el-form-item :label="$t('settings.sync.deviceName')">
-                    <el-input v-model="deviceName" :placeholder="$t('settings.sync.deviceNamePlaceholder')" />
-                    <div class="hint">{{ $t('settings.sync.deviceNameHint') }}</div>
-                  </el-form-item>
-                </el-form>
-              </div>
-            </section>
+            <SyncDeviceIdentityCard
+              :t="$t"
+              :device-id="deviceId"
+              v-model:device-name="deviceName"
+              @copy="copyDeviceId"
+            />
 
             <!-- Cloud sync -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.sync.cloudSync') }}</span>
-                <span v-if="syncStatus" :class="['sync-badge', syncStatus.ok ? 'sync-ok' : 'sync-err']">
-                  {{ syncStatus.message }}
-                </span>
-              </header>
-              <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 12px;">{{ $t('settings.sync.cloudSyncDesc') }}</p>
-                <div class="sync-actions">
-                  <el-button
-                    type="primary"
-                    size="small"
-                    :loading="syncing"
-                    :disabled="!catalogUrl && !deviceId"
-                    @click="pushToCloud"
-                  >
-                    <el-icon><Upload /></el-icon>
-                    <span>{{ $t('settings.sync.pushToCloud') }}</span>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    :loading="pulling"
-                    :disabled="!catalogUrl && !deviceId"
-                    @click="pullFromCloud"
-                  >
-                    <el-icon><Download /></el-icon>
-                    <span>{{ $t('settings.sync.pullFromCloud') }}</span>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    :disabled="!catalogUrl && !deviceId"
-                    @click="checkCloudExists"
-                    :loading="checkingCloud"
-                  >
-                    {{ $t('settings.sync.checkStatus') }}
-                  </el-button>
-                </div>
-                <div class="hint" v-if="lastSyncTime">
-                  {{ $t('settings.sync.lastSynced') }}: {{ lastSyncDisplay }}
-                </div>
-              </div>
-            </section>
+            <SyncCloudCard
+              :t="$t"
+              :sync-status="syncStatus"
+              :last-sync-time="lastSyncTime"
+              :last-sync-display="lastSyncDisplay"
+              :syncing="syncing"
+              :pulling="pulling"
+              :checking-cloud="checkingCloud"
+              :disabled="!catalogUrl && !deviceId"
+              @push="pushToCloud"
+              @pull="pullFromCloud"
+              @check="checkCloudExists"
+            />
 
-            <!-- Task 03: Cloud snapshots — recent snapshot list from
+            <!-- Task 03: Cloud snapshots - recent snapshot list from
                  catalog-api /sync/snapshots with restore/delete actions.
                  Snapshots are auto-created by the cloud BEFORE each push
                  overwrites a device config (see catalog-api task 34). -->
-            <section v-if="accountToken" class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">Snapshots</span>
-                <el-button size="small" :loading="snapshotsLoading" @click="loadSnapshots">
-                  {{ $t('common.refresh') }}
-                </el-button>
-              </header>
-              <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 10px">
-                  Revert to a previous configuration. Cloud keeps the last
-                  10 snapshots per device — older ones are pruned automatically.
-                </p>
-                <el-table v-if="snapshots.length > 0" :data="snapshots" size="small" stripe>
-                  <el-table-column label="When" min-width="180">
-                    <template #default="{ row }">
-                      {{ formatDate(row.created_at) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="Device" min-width="140">
-                    <template #default="{ row }">
-                      <span class="mono">{{ row.device_id.slice(0, 12) }}…</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="Size" width="100">
-                    <template #default="{ row }">
-                      <span class="mono">{{ Math.round(row.size_bytes / 1024) }} KB</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="" width="180" align="right">
-                    <template #default="{ row }">
-                      <div style="display: flex; gap: 6px; justify-content: flex-end">
-                        <el-button size="small" plain @click="restoreSnapshot(row)" :loading="snapshotAction === row.id">
-                          Restore
-                        </el-button>
-                        <el-button size="small" type="danger" plain @click="deleteSnapshot(row)" :loading="snapshotAction === row.id">
-                          {{ $t('common.delete') }}
-                        </el-button>
-                      </div>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <el-empty v-else :description="snapshotsLoading ? $t('common.loading') : 'No snapshots yet — push to cloud first'" :image-size="48" />
-              </div>
-            </section>
-
+            <SyncSnapshotsCard
+              v-if="accountToken"
+              :t="$t"
+              :snapshots="snapshots"
+              :loading="snapshotsLoading"
+              :snapshot-action="snapshotAction"
+              :format-date="formatDate"
+              @refresh="loadSnapshots"
+              @restore="restoreSnapshot"
+              @delete="deleteSnapshot"
+            />
             <!-- File export / import -->
-            <section class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">Export / Import</span>
-              </header>
-              <div class="settings-card-body">
-                <p class="tab-desc" style="margin-bottom: 12px;">{{ $t('settings.sync.tabDesc') }}</p>
-                <div class="sync-actions">
-                  <el-button size="small" @click="exportSettings">
-                    <el-icon><Download /></el-icon>
-                    <span>{{ $t('settings.sync.exportFile') }}</span>
-                  </el-button>
-                  <el-button size="small" @click="triggerImport">
-                    <el-icon><Upload /></el-icon>
-                    <span>{{ $t('settings.sync.importFile') }}</span>
-                  </el-button>
-                  <input
-                    ref="importFileInput"
-                    type="file"
-                    accept=".json"
-                    style="display: none"
-                    @change="importSettings"
-                  />
-                </div>
-              </div>
-            </section>
+            <SyncExportImportCard
+              :t="$t"
+              @export="exportSettings"
+              @import="importSettings"
+            />
           </div>
         </el-tab-pane>
 
@@ -1309,8 +949,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Download } from '@element-plus/icons-vue'
-import { useThemeStore, type ThemeMode } from '../../stores/theme'
+import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
 import {
@@ -1324,6 +963,17 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
+import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
+import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
+import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
+import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
+import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
+import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
+import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
+import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
+import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
+import SyncExportImportCard from '../settings/sync/SyncExportImportCard.vue'
+import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
 import { compareSemver } from '../../utils/semver'
 import { useAppVersion } from '../../utils/appVersion'
 
@@ -2391,7 +2041,6 @@ const pulling = ref(false)
 const checkingCloud = ref(false)
 const syncStatus = ref<{ ok: boolean; message: string } | null>(null)
 const lastSyncTime = ref<string | null>(null)
-const importFileInput = ref<HTMLInputElement | null>(null)
 
 // Render lastSyncTime consistently regardless of whether it came from
 // sync.lastSyncTime in settings (ISO format) or a fresh push (toLocaleString
@@ -2691,12 +2340,9 @@ async function exportSettings() {
   }
 }
 
-function triggerImport() {
-  importFileInput.value?.click()
-}
-
 async function importSettings(event: Event) {
-  const file = (event.target as HTMLInputElement)?.files?.[0]
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
   try {
     const text = await file.text()
@@ -2730,7 +2376,7 @@ async function importSettings(event: Event) {
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(`Import failed: ${errorMessage(e)}`)
   }
-  if (importFileInput.value) importFileInput.value.value = ''
+  input.value = ''
 }
 
 // ── Update check ──────────────────────────────────────────────────────
@@ -3228,19 +2874,6 @@ async function save() {
 }
 .settings-card-body { padding: 18px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.sync-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 10px;
-}
-.sync-ok { background: rgba(34, 197, 94, 0.15); color: var(--wdc-status-running); }
-.sync-err { background: rgba(255, 107, 107, 0.15); color: var(--wdc-status-error); }
-
-.device-name-cell { display: flex; align-items: center; gap: 6px; }
-.device-name-text { cursor: pointer; }
-.device-name-text:hover { text-decoration: underline dashed var(--wdc-text-3); text-underline-offset: 3px; }
-.device-name-input { max-width: 160px; }
 
 /* Update tab */
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; }

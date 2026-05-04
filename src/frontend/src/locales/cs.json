@@ -865,6 +865,12 @@
     "configPending": "Backend endpoint zatím neexistuje",
     "configPendingHint": "Formulář konfigurace je pouze pro čtení, dokud není implementován /api/plugins/redis/config."
   },
+  "cloudflareSite": {
+    "title": "Cloudflare Tunnel",
+    "subtitle": "Veřejný hostname pro tento web",
+    "exposeTitle": "Vystavit přes tunel",
+    "exposeDesc": "Vytvoří proxied CNAME ve tvé Cloudflare zóně a přidá ingress pravidlo, aby byl web dostupný přes HTTPS bez port-forwardingu."
+  },
   "cloudflare": {
     "title": "Cloudflare Tunnel",
     "subtitle": "Zpřístupni lokální weby přes šifrovaný tunel",

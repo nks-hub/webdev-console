@@ -6,10 +6,9 @@
  * X509Certificate parser. Hosts file is expected to silently skip the
  * wildcard entry.
  */
-import { scenario, api, assert, tmpDir, rmTree, writeFile, SkipError } from '../harness.mjs'
+import { scenario, api, assert, tmpDir, rmTree, writeFile, SkipError, wdcDataDir } from '../harness.mjs'
 import { join } from 'node:path'
 import { readFileSync, existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { X509Certificate } from 'node:crypto'
 
 const DOMAIN = 'wcard-e2e.loc'
@@ -44,7 +43,7 @@ export default scenario('11', 'Wildcard alias site', 'P2', async (ctx) => {
   assert.statusOk(create, 'POST /api/sites with wildcard alias')
 
   // Vhost should contain ServerAlias with the wildcard.
-  const vhostPath = join(homedir(), '.wdc', 'generated', `${DOMAIN}.conf`)
+  const vhostPath = join(wdcDataDir(), 'generated', `${DOMAIN}.conf`)
   assert.ok(existsSync(vhostPath), `vhost exists at ${vhostPath}`)
   const vhost = readFileSync(vhostPath, 'utf-8')
   assert.contains(
@@ -67,7 +66,7 @@ export default scenario('11', 'Wildcard alias site', 'P2', async (ctx) => {
   // catches the class of bugs where wildcard aliases were accepted by the
   // API but dropped before being passed to mkcert.
   if (mkcertInstalled) {
-    const certPath = join(homedir(), '.wdc', 'ssl', 'sites', DOMAIN, 'cert.pem')
+    const certPath = join(wdcDataDir(), 'ssl', 'sites', DOMAIN, 'cert.pem')
     if (!existsSync(certPath)) {
       throw new SkipError(`SSL cert not generated at ${certPath} — mkcert likely misconfigured`)
     }

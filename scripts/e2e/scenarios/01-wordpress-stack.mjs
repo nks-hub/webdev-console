@@ -12,10 +12,9 @@
  *
  * Skips if no PHP version is installed.
  */
-import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile } from '../harness.mjs'
+import { scenario, api, assert, SkipError, tmpDir, rmTree, writeFile, wdcDataDir } from '../harness.mjs'
 import { join } from 'node:path'
 import { readFileSync, existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 
 const DOMAIN = 'wordpress-e2e.loc'
 
@@ -62,7 +61,7 @@ export default scenario('1', 'WordPress stack (PHP + SSL)', 'P1', async (ctx) =>
   assert.eq(detect.body?.framework, 'wordpress', 'detected framework is wordpress')
 
   // Vhost references the requested PHP version.
-  const vhostPath = join(homedir(), '.wdc', 'generated', `${DOMAIN}.conf`)
+  const vhostPath = join(wdcDataDir(), 'generated', `${DOMAIN}.conf`)
   assert.ok(existsSync(vhostPath), `vhost exists at ${vhostPath}`)
   const vhost = readFileSync(vhostPath, 'utf-8')
   assert.contains(vhost, phpVer, `vhost references PHP ${phpVer}`)

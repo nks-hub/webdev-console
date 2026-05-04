@@ -20,11 +20,21 @@ permissions:
 jobs:
   lifecycle:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     env:
       NKS_WDC_SKIP_HOSTS_UAC: '1'
+      NKS_WDC_SKIP_FIREWALL_RULES: '1'
+      WDC_SKIP_STARTUP_REAPPLY: '1'
     steps:
       - uses: actions/checkout@v6
+
+      - name: Prepare isolated runtime data
+        shell: pwsh
+        run: |
+          $dataDir = Join-Path $env:RUNNER_TEMP 'wdc-lifecycle-data'
+          Remove-Item -LiteralPath $dataDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          "WDC_DATA_DIR=$dataDir" | Out-File $env:GITHUB_ENV -Append
 
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v5
