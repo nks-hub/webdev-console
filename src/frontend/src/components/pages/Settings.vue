@@ -221,20 +221,12 @@
 
         <!-- Databases tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.databases')" name="databases">
-          <div class="tab-content">
-            <p class="tab-desc">MySQL databases managed by NKS WDC.</p>
-            <div class="db-list" v-if="databases.length > 0">
-              <div class="db-row" v-for="db in databases" :key="db">
-                <span class="db-name">{{ db }}</span>
-                <el-button size="small" type="danger" text @click="dropDatabase(db)">Drop</el-button>
-              </div>
-            </div>
-            <el-empty v-else description="No user databases" :image-size="48" />
-            <div class="db-create">
-              <el-input v-model="newDbName" placeholder="new_database" size="small" style="width: 200px" />
-              <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">Create</el-button>
-            </div>
-          </div>
+          <AdvancedDatabaseSettings
+            :databases="databases"
+            v-model:new-db-name="newDbName"
+            @create="createDatabase"
+            @drop="dropDatabase"
+          />
         </el-tab-pane>
 
         <!-- Advanced tab — integration endpoints -->
@@ -948,6 +940,7 @@ import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import AdvancedBackupSettings from '../settings/advanced/AdvancedBackupSettings.vue'
+import AdvancedDatabaseSettings from '../settings/advanced/AdvancedDatabaseSettings.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
@@ -2819,18 +2812,6 @@ async function save() {
   min-width: 0;
 }
 .about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
-
-.db-list { margin-bottom: 16px; }
-.db-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--wdc-border);
-}
-.db-row:last-child { border-bottom: none; }
-.db-name { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--wdc-text); }
-.db-create { display: flex; gap: 8px; margin-top: 12px; }
 
 /* Sync tab */
 .settings-card {
