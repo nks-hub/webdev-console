@@ -15,6 +15,23 @@ namespace NKS.WebDevConsole.Daemon.Tests;
 public class WindowsFirewallManagerTests
 {
     [Fact]
+    public async Task EnsureRulesRegisteredAsync_skips_when_firewall_env_escape_hatch_is_set()
+    {
+        var previous = Environment.GetEnvironmentVariable("NKS_WDC_SKIP_FIREWALL_UAC");
+        Environment.SetEnvironmentVariable("NKS_WDC_SKIP_FIREWALL_UAC", "1");
+        try
+        {
+            var manager = new WindowsFirewallManager(NullLogger<WindowsFirewallManager>.Instance);
+            var created = await manager.EnsureRulesRegisteredAsync();
+            Assert.Equal(0, created);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("NKS_WDC_SKIP_FIREWALL_UAC", previous);
+        }
+    }
+
+    [Fact]
     public async Task EnsureRulesRegisteredAsync_is_noop_without_admin()
     {
         var manager = new WindowsFirewallManager(NullLogger<WindowsFirewallManager>.Instance);

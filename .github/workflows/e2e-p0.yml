@@ -26,6 +26,7 @@ jobs:
       # won't have hosts entries, but we only assert on daemon API behaviour,
       # not actual DNS resolution.
       NKS_WDC_SKIP_HOSTS_UAC: '1'
+      NKS_WDC_SKIP_FIREWALL_UAC: '1'
     steps:
       - uses: actions/checkout@v6
 
