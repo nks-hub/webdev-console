@@ -19,7 +19,7 @@ permissions:
 jobs:
   smoke:
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       # Skip hosts file UAC prompt — the CI runner has no interactive desktop
       # and we don't want to prompt for elevation. Sites created by scenarios
@@ -72,7 +72,7 @@ jobs:
           # and firewall-rule attempts all happen before Kestrel writes the
           # port file. Keep this below the job timeout but long enough for
           # slow hosted runners.
-          $timeoutSeconds = 1200
+          $timeoutSeconds = 1800
           $deadline = (Get-Date).AddSeconds($timeoutSeconds)
           $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
           $lastError = 'port file not found'

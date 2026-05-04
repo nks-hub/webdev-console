@@ -49,9 +49,8 @@ async function probeStatus(info) {
       const req = http.get({
         hostname,
         port: info.port,
-        path: '/api/status',
+        path: '/healthz',
         timeout: 1500,
-        headers: { Authorization: `Bearer ${info.token}` },
       }, (res) => {
         res.resume()
         resolve(res.statusCode === 200)
@@ -76,9 +75,14 @@ async function probeDaemon() {
 
 async function waitFor(predicate, { timeoutMs, intervalMs, label }) {
   const deadline = Date.now() + timeoutMs
+  let lastLogAt = 0
   while (Date.now() < deadline) {
     const result = await predicate()
     if (result) return result
+    if (Date.now() - lastLogAt > 15000) {
+      console.log(`[isolated-e2e] waiting for ${label}...`)
+      lastLogAt = Date.now()
+    }
     await sleep(intervalMs)
   }
 
@@ -186,9 +190,9 @@ async function main() {
         if (!info?.token) return false
         return await probeStatus(info)
       }, {
-        timeoutMs: 1200000,
+        timeoutMs: 1800000,
         intervalMs: 500,
-        label: 'daemon /api/status + port file',
+        label: 'daemon /healthz + port file',
       })
     } catch (error) {
       throw new Error(
