@@ -865,6 +865,12 @@
     "configPending": "Backend endpoint pending",
     "configPendingHint": "Config form is read-only until /api/plugins/redis/config is implemented."
   },
+  "cloudflareSite": {
+    "title": "Cloudflare Tunnel",
+    "subtitle": "Per-site public hostname",
+    "exposeTitle": "Expose via tunnel",
+    "exposeDesc": "Creates a proxied CNAME on your Cloudflare zone and adds an ingress rule so the site is reachable over HTTPS without port-forwarding."
+  },
   "cloudflare": {
     "title": "Cloudflare Tunnel",
     "subtitle": "Expose local sites to the internet via an encrypted tunnel",

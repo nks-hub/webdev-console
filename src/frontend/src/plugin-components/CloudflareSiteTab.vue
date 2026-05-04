@@ -10,17 +10,14 @@
     <div class="tab-content">
       <section class="edit-card">
         <header class="edit-card-header">
-          <span class="edit-card-title">Cloudflare Tunnel</span>
-          <span class="edit-card-hint">Per-site public hostname</span>
+          <span class="edit-card-title">{{ $t('cloudflareSite.title') }}</span>
+          <span class="edit-card-hint">{{ $t('cloudflareSite.subtitle') }}</span>
         </header>
         <div class="edit-card-body">
           <div class="ssl-toggle-row">
             <div class="ssl-toggle-meta">
-              <div class="ssl-toggle-title">Expose via tunnel</div>
-              <div class="ssl-toggle-desc">
-                Creates a proxied CNAME on your Cloudflare zone and adds an ingress
-                rule so the site is reachable over HTTPS without port-forwarding.
-              </div>
+              <div class="ssl-toggle-title">{{ $t('cloudflareSite.exposeTitle') }}</div>
+              <div class="ssl-toggle-desc">{{ $t('cloudflareSite.exposeDesc') }}</div>
             </div>
             <el-switch
               :model-value="Boolean(site?.cloudflare?.enabled)"

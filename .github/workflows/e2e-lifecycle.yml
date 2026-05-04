@@ -20,9 +20,10 @@ permissions:
 jobs:
   lifecycle:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       NKS_WDC_SKIP_HOSTS_UAC: '1'
+      NKS_WDC_SKIP_FIREWALL_RULES: '1'
     steps:
       - uses: actions/checkout@v6
 

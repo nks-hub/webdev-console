@@ -33,6 +33,7 @@ namespace NKS.WebDevConsole.Daemon.Services;
 public sealed class WindowsFirewallManager
 {
     private readonly ILogger<WindowsFirewallManager> _logger;
+    private static readonly TimeSpan NetshTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// Ports managed by the daemon that need inbound firewall rules.
@@ -61,6 +62,14 @@ public sealed class WindowsFirewallManager
     /// </summary>
     public async Task<int> EnsureRulesRegisteredAsync(CancellationToken ct = default)
     {
+        if (EnvFlags.IsTruthy(Environment.GetEnvironmentVariable("NKS_WDC_SKIP_FIREWALL_RULES")))
+        {
+            _logger.LogWarning(
+                "NKS_WDC_SKIP_FIREWALL_RULES=1 is set - firewall rule registration skipped. " +
+                "This is intended for CI/e2e tests only.");
+            return 0;
+        }
+
         if (!OperatingSystem.IsWindows())
         {
             _logger.LogDebug("Not Windows — skipping firewall rule registration");
@@ -127,7 +136,7 @@ public sealed class WindowsFirewallManager
         };
         using var p = Process.Start(psi);
         if (p is null) return false;
-        await p.WaitForExitAsync(ct);
+        await WaitForNetshAsync(p, ruleName, ct);
         // Exit code 0 means the rule was found. Exit code 1 means
         // "No rules match the specified criteria." — both are expected.
         return p.ExitCode == 0;
@@ -156,7 +165,7 @@ public sealed class WindowsFirewallManager
         };
         using var p = Process.Start(psi);
         if (p is null) return false;
-        await p.WaitForExitAsync(ct);
+        await WaitForNetshAsync(p, ruleName, ct);
         if (p.ExitCode != 0)
         {
             var err = await p.StandardError.ReadToEndAsync(ct);
@@ -164,5 +173,29 @@ public sealed class WindowsFirewallManager
             return false;
         }
         return true;
+    }
+
+    private static async Task WaitForNetshAsync(Process process, string ruleName, CancellationToken ct)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(NetshTimeout);
+        try
+        {
+            await process.WaitForExitAsync(timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // Best-effort cleanup; the caller will treat the timeout as a skipped rule.
+            }
+
+            throw new TimeoutException($"netsh timed out after {NetshTimeout.TotalSeconds:n0}s while processing firewall rule '{ruleName}'.");
+        }
     }
 }

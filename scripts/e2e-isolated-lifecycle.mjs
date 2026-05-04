@@ -156,6 +156,7 @@ async function main() {
     const cmdChain = [
       `set ASPNETCORE_URLS=http://127.0.0.1:${fixedDaemonPort}`,
       `set NKS_WDC_SKIP_HOSTS_UAC=${process.env.NKS_WDC_SKIP_HOSTS_UAC ?? '1'}`,
+      `set NKS_WDC_SKIP_FIREWALL_RULES=${process.env.NKS_WDC_SKIP_FIREWALL_RULES ?? '1'}`,
       `dotnet "${daemonDll}"`,
     ].join(' && ')
 
@@ -185,7 +186,7 @@ async function main() {
         if (!info?.token) return false
         return await probeStatus(info)
       }, {
-        timeoutMs: 60000,
+        timeoutMs: 900000,
         intervalMs: 500,
         label: 'daemon /api/status + port file',
       })
