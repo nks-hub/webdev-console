@@ -19,7 +19,7 @@ permissions:
 jobs:
   smoke:
     runs-on: windows-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     env:
       # Skip hosts file UAC prompt — the CI runner has no interactive desktop
       # and we don't want to prompt for elevation. Sites created by scenarios
@@ -57,27 +57,59 @@ jobs:
         run: |
           # Cold Windows runners take longer to JIT the daemon + plugins +
           # the startup binary-catalog fetch (https://wdc.nks-hub.cz).
-          # 60s and later 180s were empirically too short on cold
+          # 60s, 180s, and 360s were empirically too short on cold
           # windows-2025 runners once first-run migrations, catalog fetch,
           # and firewall-rule attempts all happen before Kestrel writes the
           # port file. Keep this below the job timeout but long enough for
           # slow hosted runners.
-          $deadline = (Get-Date).AddSeconds(360)
+          $timeoutSeconds = 600
+          $deadline = (Get-Date).AddSeconds($timeoutSeconds)
           $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
+          $lastError = 'port file not found'
+          $lastDiagAt = Get-Date
           while ((Get-Date) -lt $deadline) {
-            try {
-              if (Test-Path $portFile) {
-                $port = (Get-Content $portFile -First 1).Trim()
+            if (Test-Path $portFile) {
+              try {
+                $lines = @(Get-Content $portFile -ErrorAction Stop)
+                $port = ($lines | Select-Object -First 1).Trim()
                 if ($port -match '^\d+$') {
-                  $res = Invoke-WebRequest -Uri "http://127.0.0.1:$port/healthz" -UseBasicParsing -TimeoutSec 2
-                  if ($res.StatusCode -eq 200) { Write-Host "Daemon ready on port $port"; exit 0 }
+                  try {
+                    $res = Invoke-WebRequest -Uri "http://127.0.0.1:$port/healthz" -UseBasicParsing -TimeoutSec 5
+                    if ($res.StatusCode -eq 200) { Write-Host "Daemon ready on /healthz port $port"; exit 0 }
+                    $lastError = "healthz returned HTTP $($res.StatusCode)"
+                  } catch {
+                    $lastError = "healthz probe failed: $($_.Exception.Message)"
+                  }
+
+                  $token = if ($lines.Count -gt 1) { $lines[1].Trim() } else { '' }
+                  if ($token) {
+                    try {
+                      $res = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/status" -Headers @{ Authorization = "Bearer $token" } -UseBasicParsing -TimeoutSec 5
+                      if ($res.StatusCode -eq 200) { Write-Host "Daemon ready on /api/status port $port"; exit 0 }
+                      $lastError = "status returned HTTP $($res.StatusCode)"
+                    } catch {
+                      $lastError = "status probe failed: $($_.Exception.Message)"
+                    }
+                  }
+                } else {
+                  $lastError = "port file contains invalid port '$port'"
                 }
+              } catch {
+                $lastError = "port file read failed: $($_.Exception.Message)"
               }
-            } catch { Start-Sleep -Milliseconds 500 }
+            } else {
+              $lastError = 'port file not found'
+            }
+
+            if ((Get-Date) -ge $lastDiagAt.AddSeconds(15)) {
+              Write-Host "Waiting for daemon: $lastError"
+              $lastDiagAt = Get-Date
+            }
+            Start-Sleep -Milliseconds 500
           }
-          Get-Content daemon.out.log -Tail 60
-          Get-Content daemon.err.log -Tail 60
-          Write-Error "Daemon failed to start within 180s"
+          Get-Content daemon.out.log -Tail 120
+          Get-Content daemon.err.log -Tail 120
+          Write-Error "Daemon failed to start within ${timeoutSeconds}s. Last readiness error: $lastError"
           exit 1
 
       - name: Run P0 e2e scenarios
