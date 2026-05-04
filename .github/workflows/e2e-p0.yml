@@ -57,10 +57,12 @@ jobs:
         run: |
           # Cold Windows runners take longer to JIT the daemon + plugins +
           # the startup binary-catalog fetch (https://wdc.nks-hub.cz).
-          # 60s was empirically too short; bumped to 180s (observed runs
-          # taking 70-90s before healthz answers on the GitHub Windows
-          # runner, 2026-04-19).
-          $deadline = (Get-Date).AddSeconds(180)
+          # 60s and later 180s were empirically too short on cold
+          # windows-2025 runners once first-run migrations, catalog fetch,
+          # and firewall-rule attempts all happen before Kestrel writes the
+          # port file. Keep this below the job timeout but long enough for
+          # slow hosted runners.
+          $deadline = (Get-Date).AddSeconds(360)
           $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
           while ((Get-Date) -lt $deadline) {
             try {
