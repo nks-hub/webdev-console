@@ -647,96 +647,41 @@
 
         <!-- Account & Devices tab -->
         <el-tab-pane :label="$t('settings.tabs.account')" name="account">
-          <div class="tab-content">
-            <!-- F91.4: SSO (catalog-api OIDC) moved from About -> Account
-                 because signing in belongs with account management, not
-                 with "what version is this" metadata. Shown in both
-                 simple + advanced modes so simple users can still sign
-                 in to their catalog identity. -->
-            <AccountSsoCard
-              :t="$t"
-              :is-authenticated="authStore.isAuthenticated"
-              :display-name="authStore.displayName"
-              :login-pending="authStore.loginPending"
-              :login-error="authStore.loginError"
-              @login="ssoLogin"
-              @logout="authStore.logout()"
-            />
-            <!-- F91.15: password login restored alongside SSO. The two
-                 paths write to the same authStore (token + displayName),
-                 just through different entry points — SSO card above
-                 opens Authentik, password form here hits
-                 /api/v1/auth/login directly. "Unified login" = one
-                 Account tab hosting both, not one removed. -->
-            <template v-if="uiModeStore.isSimple">
-              <AccountPasswordCard
-                v-if="!accountToken"
-                :t="$t"
-                :title="$t('settings.tabs.account')"
-                v-model:email="authEmail"
-                v-model:password="authPassword"
-                :loading="authLoading"
-                :error="authError"
-                @login="doLogin"
-                @register="doRegister"
-              />
-              <AccountSimpleSyncCard
-                v-else
-                :t="$t"
-                :title="$t('settings.tabs.account')"
-                :email="accountEmail"
-                :syncing="syncing"
-                :pulling="pulling"
-                @push="pushToCloud"
-                @pull="pullFromCloud"
-                @logout="doLogout"
-              />
-            </template>
-
-            <!-- Advanced mode: full account UI. Shows password form when
-                 not signed in, device management + push/pull when signed
-                 in. SSO card above is the other entry point; both write
-                 the same authStore so switching between them is seamless. -->
-            <template v-if="!uiModeStore.isSimple">
-              <AccountPasswordCard
-                v-if="!accountToken"
-                :t="$t"
-                :title="$t('settings.account.passwordTitle')"
-                v-model:email="authEmail"
-                v-model:password="authPassword"
-                :loading="authLoading"
-                :error="authError"
-                @login="doLogin"
-                @register="doRegister"
-              />
-              <AccountAdvancedSummaryCard
-                v-else
-                :t="$t"
-                :email="accountEmail"
-                :devices-loading="devicesLoading"
-                @refresh-devices="loadDevicesAccount"
-                @logout="doLogout"
-              />
-
-
-              <!-- F91.15: devices list only when signed in - same gate
-                   as the Account summary above. -->
-              <AccountDeviceTableCard
-                v-if="accountToken"
-                :devices="accountDevices"
-                v-model:editing-device-name="editingDeviceName"
-                v-model:editing-device-value="editingDeviceValue"
-                :pushing-to="pushingTo"
-                :unlinking-device="unlinkingDevice"
-                @start-edit-name="startEditDeviceName"
-                @save-name="saveDeviceName"
-                @push-config="pushMyConfigTo"
-                @unlink="unlinkDevice"
-              />
-            </template>
-          </div>
+          <AccountSettingsTab
+            :t="t"
+            :is-simple="uiModeStore.isSimple"
+            :sso-authenticated="authStore.isAuthenticated"
+            :sso-display-name="authStore.displayName"
+            :sso-login-pending="authStore.loginPending"
+            :sso-login-error="authStore.loginError"
+            :account-token="accountToken"
+            v-model:auth-email="authEmail"
+            v-model:auth-password="authPassword"
+            :auth-loading="authLoading"
+            :auth-error="authError"
+            :account-email="accountEmail"
+            :syncing="syncing"
+            :pulling="pulling"
+            :devices-loading="devicesLoading"
+            :account-devices="accountDevices"
+            v-model:editing-device-name="editingDeviceName"
+            v-model:editing-device-value="editingDeviceValue"
+            :pushing-to="pushingTo"
+            :unlinking-device="unlinkingDevice"
+            @sso-login="ssoLogin"
+            @sso-logout="authStore.logout()"
+            @login="doLogin"
+            @register="doRegister"
+            @push="pushToCloud"
+            @pull="pullFromCloud"
+            @logout="doLogout"
+            @refresh-devices="loadDevicesAccount"
+            @start-edit-name="startEditDeviceName"
+            @save-name="saveDeviceName"
+            @push-config="pushMyConfigTo"
+            @unlink="unlinkDevice"
+          />
         </el-tab-pane>
-
         <!-- Update tab — visible in both Simple and Advanced -->
         <el-tab-pane :label="$t('settings.tabs.update')" name="update">
           <EasyUpdateSettings
@@ -934,11 +879,7 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
-import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
-import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
-import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
-import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
-import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
+import AccountSettingsTab from '../settings/account/AccountSettingsTab.vue'
 import AdvancedBackupSettings from '../settings/advanced/AdvancedBackupSettings.vue'
 import AdvancedDatabaseSettings from '../settings/advanced/AdvancedDatabaseSettings.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
