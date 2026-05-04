@@ -9,7 +9,7 @@
  * Intended for CI and local deep verification where no other daemon instance
  * should be running.
  */
-import { closeSync, existsSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -24,6 +24,9 @@ const backupPortFile = `${portFile}.bak-isolated`
 const fixedDaemonPort = 5146
 const daemonStdoutLog = join(repoRoot, 'daemon.isolated.out.log')
 const daemonStderrLog = join(repoRoot, 'daemon.isolated.err.log')
+const runnerArgs = process.argv.slice(2).length ? process.argv.slice(2) : ['--only', '13,16']
+const ownsDataDir = !process.env.WDC_DATA_DIR
+const isolatedDataDir = process.env.WDC_DATA_DIR ?? join(tmpdir(), `nks-wdc-isolated-data-${process.pid}`)
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -45,7 +48,7 @@ async function probeStatus(info) {
   if (!info?.port || !info?.token) return false
 
   for (const hostname of ['127.0.0.1', 'localhost']) {
-    const ok = await new Promise((resolve) => {
+    const healthOk = await new Promise((resolve) => {
       const req = http.get({
         hostname,
         port: info.port,
@@ -62,7 +65,30 @@ async function probeStatus(info) {
       })
     })
 
-    if (ok) return true
+    if (!healthOk) continue
+
+    const statusOk = await new Promise((resolve) => {
+      const req = http.get({
+        hostname,
+        port: info.port,
+        path: '/api/status',
+        timeout: 1500,
+        headers: {
+          Authorization: `Bearer ${info.token}`,
+          Accept: 'application/json',
+        },
+      }, (res) => {
+        res.resume()
+        resolve(res.statusCode === 200)
+      })
+      req.on('error', () => resolve(false))
+      req.on('timeout', () => {
+        req.destroy()
+        resolve(false)
+      })
+    })
+
+    if (statusOk) return true
   }
 
   return false
@@ -153,6 +179,11 @@ async function main() {
   let stdoutFd = null
   let stderrFd = null
   try {
+    if (ownsDataDir) {
+      rmSync(isolatedDataDir, { recursive: true, force: true })
+      mkdirSync(isolatedDataDir, { recursive: true })
+    }
+
     if (!existsSync(daemonDll)) {
       throw new Error(`Release daemon DLL not found: ${daemonDll}. Build the daemon first with dotnet build -c Release.`)
     }
@@ -171,6 +202,7 @@ async function main() {
         NKS_WDC_SKIP_HOSTS_UAC: process.env.NKS_WDC_SKIP_HOSTS_UAC ?? '1',
         NKS_WDC_SKIP_FIREWALL_RULES: process.env.NKS_WDC_SKIP_FIREWALL_RULES ?? '1',
         WDC_SKIP_STARTUP_REAPPLY: process.env.WDC_SKIP_STARTUP_REAPPLY ?? '1',
+        WDC_DATA_DIR: isolatedDataDir,
       },
       stdio: ['ignore', stdoutFd, stderrFd],
       windowsHide: true,
@@ -199,7 +231,7 @@ async function main() {
       }, {
         timeoutMs: 1800000,
         intervalMs: 500,
-        label: 'daemon /healthz + port file',
+        label: 'daemon /api/status + port file',
       })
     } catch (error) {
       throw new Error(
@@ -207,7 +239,7 @@ async function main() {
       )
     }
 
-    await runNode(runnerScript, ['--only', '13,16'])
+    await runNode(runnerScript, runnerArgs, { WDC_DATA_DIR: isolatedDataDir })
 
     await requestShutdown()
 
@@ -240,6 +272,9 @@ async function main() {
     rmSync(join(repoRoot, 'daemon.isolated.pid'), { force: true })
     rmSync(daemonStdoutLog, { force: true })
     rmSync(daemonStderrLog, { force: true })
+    if (ownsDataDir) {
+      rmSync(isolatedDataDir, { recursive: true, force: true })
+    }
 
     if (existsSync(backupPortFile) && !existsSync(portFile)) {
       renameSync(backupPortFile, portFile)

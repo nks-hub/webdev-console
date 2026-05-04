@@ -6,7 +6,7 @@
  */
 import { scenario, api, assert, SkipError } from '../harness.mjs'
 
-export default scenario('17', 'Cloudflare config round-trip', 'P1', async (_ctx) => {
+export default scenario('17', 'Cloudflare config round-trip', 'P1', async (ctx) => {
   const pluginsRes = await api.get('/api/plugins')
   assert.statusOk(pluginsRes, 'GET /api/plugins')
   const plugins = Array.isArray(pluginsRes.body) ? pluginsRes.body : pluginsRes.body.plugins ?? []
@@ -22,6 +22,15 @@ export default scenario('17', 'Cloudflare config round-trip', 'P1', async (_ctx)
   for (const key of ['cloudflaredPath', 'tunnelToken', 'tunnelName', 'tunnelId', 'apiToken', 'accountId', 'subdomainTemplate']) {
     assert.ok(key in cfg, `config includes ${key}`)
   }
+  const originalConfig = {
+    tunnelName: cfg.tunnelName ?? null,
+    accountId: cfg.accountId ?? null,
+    subdomainTemplate: cfg.subdomainTemplate ?? '{stem}-{hash}',
+  }
+  ctx.cleanup(async () => {
+    const restore = await api.put('/api/cloudflare/config', { body: originalConfig })
+    assert.statusOk(restore, 'PUT /api/cloudflare/config cleanup restore')
+  })
 
   const putRes = await api.put('/api/cloudflare/config', {
     body: {
@@ -57,12 +66,4 @@ export default scenario('17', 'Cloudflare config round-trip', 'P1', async (_ctx)
   assert.statusOk(alpha, 'GET /api/cloudflare/suggest-subdomain alpha')
   assert.statusOk(bravo, 'GET /api/cloudflare/suggest-subdomain bravo')
   assert.ok(alpha.body.suggestion !== bravo.body.suggestion, 'different domains produce different suggestions')
-
-  await api.put('/api/cloudflare/config', {
-    body: {
-      tunnelName: null,
-      accountId: null,
-      subdomainTemplate: '{stem}-{hash}',
-    },
-  })
 })

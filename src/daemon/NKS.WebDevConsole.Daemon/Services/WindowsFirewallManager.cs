@@ -183,8 +183,9 @@ public sealed class WindowsFirewallManager
         {
             await process.WaitForExitAsync(timeoutCts.Token);
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
+            var timedOut = !ct.IsCancellationRequested;
             try
             {
                 if (!process.HasExited)
@@ -195,7 +196,12 @@ public sealed class WindowsFirewallManager
                 // Best-effort cleanup; the caller will treat the timeout as a skipped rule.
             }
 
-            throw new TimeoutException($"netsh timed out after {NetshTimeout.TotalSeconds:n0}s while processing firewall rule '{ruleName}'.");
+            if (timedOut)
+            {
+                throw new TimeoutException($"netsh timed out after {NetshTimeout.TotalSeconds:n0}s while processing firewall rule '{ruleName}'.");
+            }
+
+            throw;
         }
     }
 }
