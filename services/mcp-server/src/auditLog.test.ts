@@ -24,6 +24,18 @@ import { daemonClient } from './daemonClient.js'
 
 const mockPost = vi.mocked(daemonClient.post)
 
+interface AuditPostBody {
+  toolName: string
+  caller: string
+  dangerLevel: string
+  resultCode: string
+  argsSummary: string
+  argsHash: string
+  durationMs: number
+  sessionId: string
+  errorMessage?: string
+}
+
 beforeEach(() => {
   mockPost.mockClear()
   mockPost.mockImplementation(() => Promise.resolve({ id: 'mock-id' }))
@@ -33,6 +45,10 @@ beforeEach(() => {
 // `finally` has a chance to run before assertions.
 async function flush(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
+}
+
+function auditBody(callIndex = 0): AuditPostBody {
+  return mockPost.mock.calls[callIndex]![1] as AuditPostBody
 }
 
 describe('wrapHandler', () => {
@@ -53,7 +69,8 @@ describe('wrapHandler', () => {
     await flush()
 
     expect(mockPost).toHaveBeenCalledOnce()
-    const [path, body] = mockPost.mock.calls[0]
+    const [path] = mockPost.mock.calls[0]!
+    const body = auditBody()
     expect(path).toBe('/api/mcp/tool-calls')
     expect(body).toMatchObject({
       toolName: 'wdc_get_status',
@@ -77,7 +94,7 @@ describe('wrapHandler', () => {
     await wrapped({})
     await flush()
 
-    expect(mockPost.mock.calls[0][1]).toMatchObject({
+    expect(auditBody()).toMatchObject({
       toolName: 'wdc_deploy_site',
       dangerLevel: 'destructive',
     })
@@ -90,7 +107,7 @@ describe('wrapHandler', () => {
     await wrapped({})
     await flush()
 
-    expect(mockPost.mock.calls[0][1]).toMatchObject({
+    expect(auditBody()).toMatchObject({
       dangerLevel: 'mutate',
     })
   })
@@ -105,7 +122,7 @@ describe('wrapHandler', () => {
     await flush()
 
     expect(mockPost).toHaveBeenCalledOnce()
-    expect(mockPost.mock.calls[0][1]).toMatchObject({
+    expect(auditBody()).toMatchObject({
       toolName: 'wdc_smoke',
       resultCode: 'error',
       errorMessage: 'boom',
@@ -120,7 +137,7 @@ describe('wrapHandler', () => {
     await wrapped(huge)
     await flush()
 
-    const summary = mockPost.mock.calls[0][1].argsSummary
+    const summary = auditBody().argsSummary
     expect(summary.length).toBeLessThanOrEqual(500)
     expect(summary.endsWith('...')).toBe(true)
   })
