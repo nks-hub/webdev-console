@@ -47,10 +47,8 @@ jobs:
         run: |
           $portFile = Join-Path $env:TEMP 'nks-wdc-daemon.port'
           Remove-Item -LiteralPath $portFile -Force -ErrorAction SilentlyContinue
-          $proc = Start-Process -FilePath "dotnet" -ArgumentList @(
-            "run","--no-build","-c","Release","--project",
-            "src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj"
-          ) -PassThru -WindowStyle Hidden -RedirectStandardOutput "daemon.out.log" -RedirectStandardError "daemon.err.log"
+          $daemonDll = Join-Path $PWD 'src/daemon/NKS.WebDevConsole.Daemon/bin/Release/net9.0/NKS.WebDevConsole.Daemon.dll'
+          $proc = Start-Process -FilePath "dotnet" -ArgumentList @($daemonDll) -PassThru -WindowStyle Hidden -RedirectStandardOutput "daemon.out.log" -RedirectStandardError "daemon.err.log"
           Write-Host "Daemon PID=$($proc.Id)"
           $proc.Id | Out-File -FilePath daemon.pid -Encoding ASCII
 
@@ -75,9 +73,9 @@ jobs:
               }
             } catch { Start-Sleep -Milliseconds 500 }
           }
-          Write-Error "Daemon failed to start within 180s"
           Get-Content daemon.out.log -Tail 60
           Get-Content daemon.err.log -Tail 60
+          Write-Error "Daemon failed to start within 180s"
           exit 1
 
       - name: Run P0 e2e scenarios
