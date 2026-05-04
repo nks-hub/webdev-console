@@ -662,11 +662,12 @@ foreach (var p in pluginLoader.Plugins)
             {
                 "apache" or "caddy" or "nginx" =>
                     new[] { ("ports.http", "HttpPort"), ("ports.https", "HttpsPort") },
-                "mysql"   => new[] { ("ports.mysql",       "Port") },
-                "mariadb" => new[] { ("ports.mariadb",     "Port") },
-                "redis"   => new[] { ("ports.redis",       "Port") },
-                "mailpit" => new[] { ("ports.mailpitSmtp", "SmtpPort"),
-                                     ("ports.mailpitHttp", "HttpPort") },
+                "mysql"      => new[] { ("ports.mysql",      "Port") },
+                "mariadb"    => new[] { ("ports.mariadb",    "Port") },
+                "postgresql" => new[] { ("ports.postgresql", "Port") },
+                "redis"      => new[] { ("ports.redis",      "Port") },
+                "mailpit"    => new[] { ("ports.mailpitSmtp", "SmtpPort"),
+                                        ("ports.mailpitHttp", "HttpPort") },
                 _ => Array.Empty<(string, string)>(),
             };
             foreach (var (k, propName) in mapping)
@@ -9624,7 +9625,7 @@ app.MapPut("/api/settings", async (
         {
             // Heuristic: match `ports.<serviceId>` or any port key that
             // looks like it could belong to this module (http/https map
-            // to apache/caddy/nginx; mysql/redis/mariadb keys map 1:1).
+            // to apache/caddy/nginx; database/cache keys map 1:1).
             var moduleId = module.ServiceId.ToLowerInvariant();
             var relevant = portKeys.Any(k =>
             {
@@ -9668,6 +9669,7 @@ app.MapPut("/api/settings", async (
                             "https" when moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx" => "HttpsPort",
                             "mysql"       when moduleId == "mysql"        => "Port",
                             "mariadb"     when moduleId == "mariadb"      => "Port",
+                            "postgresql"  when moduleId == "postgresql"   => "Port",
                             "redis"       when moduleId == "redis"        => "Port",
                             "mailpitsmtp" when moduleId == "mailpit"      => "SmtpPort",
                             "mailpithttp" when moduleId == "mailpit"      => "HttpPort",

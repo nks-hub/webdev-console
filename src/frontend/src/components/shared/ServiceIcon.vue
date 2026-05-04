@@ -37,6 +37,7 @@ const SHORT_ID: Record<string, string> = {
   'nks.wdc.caddy': 'caddy',
   'nks.wdc.php': 'php',
   'nks.wdc.mysql': 'mysql',
+  'nks.wdc.postgresql': 'postgresql',
   'nks.wdc.redis': 'redis',
   'nks.wdc.mailpit': 'mailpit',
 }
@@ -58,7 +59,7 @@ const iconUrl = computed(() => {
   // headers, so pipe the token through the query string (the auth middleware
   // in Program.cs accepts `?token=` as a fallback to the Bearer header).
   // Without this every brand icon 401s and the sidebar fills up with "N".
-  const knownPlugin = ['apache', 'caddy', 'php', 'mysql', 'redis', 'mailpit'].includes(shortId)
+  const knownPlugin = ['apache', 'caddy', 'php', 'mysql', 'postgresql', 'redis', 'mailpit'].includes(shortId)
   if (knownPlugin) {
     const token = daemonToken()
     const suffix = token ? `?token=${encodeURIComponent(token)}` : ''

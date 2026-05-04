@@ -706,7 +706,7 @@ versionCommand.SetAction(async (parseResult, ct) =>
         try
         {
             var installed = await client.GetJsonAsync("/api/binaries/installed");
-            var keyApps = new[] { "apache", "php", "mysql", "node", "redis", "nginx", "mariadb" };
+            var keyApps = new[] { "apache", "php", "mysql", "mariadb", "postgresql", "node", "redis", "nginx" };
             foreach (var app in keyApps)
             {
                 var first = installed.EnumerateArray()
