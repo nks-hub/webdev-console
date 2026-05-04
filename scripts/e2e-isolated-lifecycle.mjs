@@ -34,7 +34,13 @@ function sleep(ms) {
 
 function readPortInfo() {
   if (!existsSync(portFile)) return null
-  const lines = readFileSync(portFile, 'utf-8').split('\n').filter(Boolean)
+  let lines
+  try {
+    lines = readFileSync(portFile, 'utf-8').split('\n').filter(Boolean)
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null
+    throw error
+  }
   if (lines.length < 2) return null
   return { port: Number(lines[0]), token: lines[1].trim() }
 }
