@@ -178,6 +178,7 @@ async function main() {
   let daemonExit = null
   let stdoutFd = null
   let stderrFd = null
+  let completed = false
   try {
     if (ownsDataDir) {
       rmSync(isolatedDataDir, { recursive: true, force: true })
@@ -248,6 +249,7 @@ async function main() {
       intervalMs: 500,
       label: 'daemon shutdown + port file cleanup',
     })
+    completed = true
 
   } finally {
     if (daemonPid) {
@@ -270,8 +272,10 @@ async function main() {
     }
 
     rmSync(join(repoRoot, 'daemon.isolated.pid'), { force: true })
-    rmSync(daemonStdoutLog, { force: true })
-    rmSync(daemonStderrLog, { force: true })
+    if (completed) {
+      rmSync(daemonStdoutLog, { force: true })
+      rmSync(daemonStderrLog, { force: true })
+    }
     if (ownsDataDir) {
       rmSync(isolatedDataDir, { recursive: true, force: true })
     }

@@ -49,6 +49,20 @@ jobs:
       - name: Build daemon
         run: dotnet build src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release --nologo
 
+      - name: Stage plugin DLLs for daemon smoke
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WDC_SKIP_PHAR_BUILD: '1'
+        run: |
+          node scripts/stage-plugins.mjs
+          $source = Join-Path $PWD 'src/frontend/resources/daemon/plugins'
+          $target = Join-Path $PWD 'build/plugins'
+          if (-not (Test-Path $source)) { throw "Plugin staging source missing: $source" }
+          Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+
       - name: Run isolated P0 e2e scenarios
         run: node scripts/e2e-isolated-lifecycle.mjs --priority P0
 
