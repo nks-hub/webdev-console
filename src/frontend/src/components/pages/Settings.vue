@@ -47,101 +47,24 @@
         </el-tab-pane>
         <!-- Paths tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.paths')" name="paths">
-          <div class="tab-content">
-            <p class="tab-desc">{{ $t('settings.paths.tabDesc') }}</p>
-            <!-- F79: Browse buttons open the native file/folder dialog via
-                 electronAPI.showOpenDialog. Falls back to manual typing when
-                 running outside Electron (dev browser, etc.). -->
-            <el-form label-position="top" size="small" style="max-width: 560px">
-              <el-form-item :label="$t('settings.paths.apache')">
-                <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
-                  <template #append>
-                    <el-button @click="browsePath('apache', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.mysql')">
-                <el-input v-model="paths.mysql" placeholder="C:\nks-wdc\binaries\mysql\8.0\bin\mysqld.exe">
-                  <template #append>
-                    <el-button @click="browsePath('mysql', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.php')">
-                <el-input v-model="paths.php" placeholder="C:\nks-wdc\binaries\php\8.4\php.exe">
-                  <template #append>
-                    <el-button @click="browsePath('php', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.redis')">
-                <el-input v-model="paths.redis" placeholder="C:\nks-wdc\binaries\redis\7.2\redis-server.exe">
-                  <template #append>
-                    <el-button @click="browsePath('redis', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.sitesDir')">
-                <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts">
-                  <template #append>
-                    <el-button @click="browsePath('sitesDir', 'folder')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.hostsFile')">
-                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts">
-                  <template #append>
-                    <el-button @click="browsePath('hostsFile', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-                <div class="hint">{{ $t('settings.paths.hostsHint') }}</div>
-              </el-form-item>
-
-              <el-divider />
-
-              <el-form-item :label="$t('settings.paths.dataDir')">
-                <el-input
-                  :model-value="systemInfo?.os?.machine ? `${systemInfo?.daemon?.pid ? '~/.wdc' : '~/.wdc'}` : '~/.wdc'"
-                  disabled
-                  class="mono-input"
-                />
-                <div class="hint">
-                  {{ $t('settings.paths.dataHint') }}
-                  Override with <code>WDC_DATA_DIR</code> environment variable or
-                  <code>portable.txt</code> next to the executable.
-                </div>
-              </el-form-item>
-              <el-form-item label="Backup directory">
-                <el-input v-model="backupDir" placeholder="~/.wdc/backups" />
-              </el-form-item>
-              <el-form-item label="Auto-backup interval">
-                <el-input-number
-                  v-model="backupScheduleHours"
-                  :min="0"
-                  :max="720"
-                  controls-position="right"
-                  style="width: 160px"
-                />
-                <span style="margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3)">hours</span>
-                <div class="hint">
-                  Set to 0 to disable. When &gt; 0, the daemon creates a
-                  timestamped backup every N hours and prunes old ones (keeps 10).
-                </div>
-              </el-form-item>
-            </el-form>
-
-            <AdvancedBackupSettings
-              :t="t"
-              :backups="backupsList"
-              :loading="backupsLoading"
-              :creating="backupCreating"
-              @create="manualBackup"
-              @refresh="loadBackups"
-              @download="downloadBackupFile"
-            />
-          </div>
+          <AdvancedPathsSettings
+            :t="t"
+            :paths="paths"
+            :system-info="systemInfo"
+            :backup-dir="backupDir"
+            :backup-schedule-hours="backupScheduleHours"
+            :backups="backupsList"
+            :backups-loading="backupsLoading"
+            :backup-creating="backupCreating"
+            @update:path="(key, value) => { paths[key] = value }"
+            @update:backup-dir="backupDir = $event"
+            @update:backup-schedule-hours="backupScheduleHours = $event"
+            @browse="browsePath"
+            @create-backup="manualBackup"
+            @refresh-backups="loadBackups"
+            @download-backup="downloadBackupFile"
+          />
         </el-tab-pane>
-
         <!-- Databases tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.databases')" name="databases">
           <AdvancedDatabaseSettings
@@ -806,6 +729,7 @@ import AccountSettingsTab from '../settings/account/AccountSettingsTab.vue'
 import AdvancedBackupSettings from '../settings/advanced/AdvancedBackupSettings.vue'
 import AdvancedDatabaseSettings from '../settings/advanced/AdvancedDatabaseSettings.vue'
 import AdvancedPortsSettings from '../settings/advanced/AdvancedPortsSettings.vue'
+import AdvancedPathsSettings from '../settings/advanced/AdvancedPathsSettings.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
