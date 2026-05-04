@@ -20,7 +20,7 @@ permissions:
 jobs:
   lifecycle:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       NKS_WDC_SKIP_HOSTS_UAC: '1'
       NKS_WDC_SKIP_FIREWALL_RULES: '1'

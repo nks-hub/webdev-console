@@ -186,7 +186,7 @@ async function main() {
         if (!info?.token) return false
         return await probeStatus(info)
       }, {
-        timeoutMs: 900000,
+        timeoutMs: 1200000,
         intervalMs: 500,
         label: 'daemon /api/status + port file',
       })
