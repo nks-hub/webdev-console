@@ -24,6 +24,8 @@ jobs:
     env:
       NKS_WDC_SKIP_HOSTS_UAC: '1'
       NKS_WDC_SKIP_FIREWALL_RULES: '1'
+      WDC_DATA_DIR: ${{ runner.temp }}\wdc-lifecycle-data
+      WDC_SKIP_STARTUP_REAPPLY: '1'
     steps:
       - uses: actions/checkout@v6
 
