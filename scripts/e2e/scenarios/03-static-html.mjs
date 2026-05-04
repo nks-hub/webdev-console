@@ -34,8 +34,11 @@ export default scenario('3', 'Static HTML (no PHP)', 'P0', async (ctx) => {
   ctx.cleanup(() => api.delete(`/api/sites/${DOMAIN}`).catch(() => {}))
   assert.statusOk(create, 'POST /api/sites')
 
-  const vhostPath = join(wdcDataDir(), 'generated', `${DOMAIN}.conf`)
-  assert.ok(existsSync(vhostPath), `vhost file exists at ${vhostPath}`)
+  const vhostPath = [
+    join(wdcDataDir(), 'generated', 'apache', 'sites-enabled', `${DOMAIN}.conf`),
+    join(wdcDataDir(), 'generated', `${DOMAIN}.conf`),
+  ].find((candidate) => existsSync(candidate))
+  assert.ok(vhostPath, 'vhost file exists')
   const vhost = readFileSync(vhostPath, 'utf-8').toLowerCase()
   assert.notContains(vhost, 'fcgiwrapper', 'vhost must not contain FCGIWrapper')
   assert.notContains(vhost, 'php-cgi', 'vhost must not contain php-cgi reference')
