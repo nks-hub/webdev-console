@@ -98,6 +98,14 @@ function which(cmd) {
   return null
 }
 
+function shellQuote(value) {
+  const s = String(value)
+  if (process.platform === 'win32') {
+    return `"${s.replace(/"/g, '\\"')}"`
+  }
+  return `'${s.replace(/'/g, `'\\''`)}'`
+}
+
 function resolveSourceTree() {
   if (process.env.NKSDEPLOY_SRC) {
     const explicit = process.env.NKSDEPLOY_SRC
@@ -124,8 +132,20 @@ function resolveSourceTree() {
   }
   // Last resort: clone fresh into tmpdir.
   const tmp = join(tmpdir(), `nksdeploy-${Date.now()}`)
-  log(`cloning https://github.com/nks-hub/nksdeploy → ${tmp}`)
-  execSync(`git clone --depth 1 https://github.com/nks-hub/nksdeploy ${tmp}`, { stdio: 'inherit' })
+  const token = process.env.NKSDEPLOY_GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+  const cloneEnv = { ...process.env }
+  if (token) {
+    const i = Number.parseInt(cloneEnv.GIT_CONFIG_COUNT ?? '0', 10) || 0
+    cloneEnv.GIT_CONFIG_COUNT = String(i + 1)
+    cloneEnv[`GIT_CONFIG_KEY_${i}`] = 'http.https://github.com/.extraheader'
+    const basic = Buffer.from(`x-access-token:${token}`).toString('base64')
+    cloneEnv[`GIT_CONFIG_VALUE_${i}`] = `Authorization: Basic ${basic}`
+  }
+  log(`cloning https://github.com/nks-hub/nksdeploy ${token ? '(authenticated)' : '(anonymous)'} → ${tmp}`)
+  execSync(`git clone --depth 1 https://github.com/nks-hub/nksdeploy ${shellQuote(tmp)}`, {
+    stdio: 'inherit',
+    env: cloneEnv,
+  })
   return tmp
 }
 
