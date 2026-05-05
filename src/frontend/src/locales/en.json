@@ -824,7 +824,7 @@
     "changePasswordBtn": "Change password",
     "resetPassword": "Reset root password",
     "resetWarning": "This is a destructive operation",
-    "resetDescription": "Stops MySQL, restarts in safe mode (--skip-grant-tables), resets all root@* accounts to the new password, then restarts normally.",
+    "resetDescription": "Stops MySQL, restarts in safe mode (--skip-grant-tables), resets all root accounts to the new password, then restarts normally.",
     "newRootPassword": "New root password",
     "resetPasswordBtn": "Reset root password",
     "tuningParams": "MySQL parameters",

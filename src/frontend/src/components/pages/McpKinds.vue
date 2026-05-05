@@ -173,7 +173,7 @@ import {
   type McpKindRow, type McpGrantRow,
 } from '../../api/daemon'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
@@ -186,10 +186,10 @@ const grants = ref<McpGrantRow[]>([])
 // overrides it via mcpKinds.labels.<id>. Falls back to the daemon
 // label, then the bare id, so plugin-supplied kinds without a frontend
 // translation degrade gracefully rather than rendering an empty cell.
-function humanLabel(row: { id: string; label: string }): string {
+function humanLabel(row: { id?: string; label: string }): string {
+  if (!row.id) return row.label || ''
   const key = `mcpKinds.labels.${row.id}`
-  const localized = t(key)
-  return localized !== key ? localized : (row.label || row.id)
+  return te(key) ? t(key) : (row.label || row.id)
 }
 
 function autoApproveCount(kindId: string): number {

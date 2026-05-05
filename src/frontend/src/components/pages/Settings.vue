@@ -1009,7 +1009,7 @@ queueMicrotask(() => {
     void authStore.refreshProfile(catalogUrl.value || 'https://wdc.nks-hub.cz')
   }
 })
-const { locale, t } = useI18n()
+const { locale, t, te } = useI18n()
 
 function onLocaleChange(v: string) {
   locale.value = v
@@ -1123,10 +1123,10 @@ function lockAllDestructive(): void {
 // pattern with McpKinds + McpConfirmBanner: localized i18n key first,
 // daemon-supplied label second, bare id last. Plugin-supplied kinds
 // without translation still render their daemon label.
-function humanKindLabel(opt: { id: string; label?: string }): string {
+function humanKindLabel(opt: { id?: string; label?: string }): string {
+  if (!opt.id) return opt.label || ''
   const key = `mcpKinds.labels.${opt.id}`
-  const localized = t(key)
-  return localized !== key ? localized : (opt.label || opt.id)
+  return te(key) ? t(key) : (opt.label || opt.id)
 }
 
 function clearAlwaysConfirm(): void {

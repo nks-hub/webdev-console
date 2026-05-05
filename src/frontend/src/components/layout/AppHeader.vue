@@ -223,6 +223,22 @@ function isActive(path: string) {
   gap: 10px;
 }
 
+.header-right :deep(.el-button) {
+  min-width: 36px !important;
+  height: 36px !important;
+}
+
+.header-right :deep(.el-button.is-circle) {
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+}
+
+.lang-btn {
+  min-width: 44px !important;
+  padding: 0 12px !important;
+}
+
 .conn-pill {
   display: flex;
   align-items: center;
@@ -234,6 +250,7 @@ function isActive(path: string) {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border: 1px solid;
+  min-height: 32px;
 }
 
 .conn-ok {
@@ -270,11 +287,12 @@ function isActive(path: string) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 0 12px;
+  min-height: 32px;
   border-radius: 999px;
-  border: 1px solid var(--wdc-warning, #f5a623);
+  border: 1px solid var(--wdc-warning);
   background: rgba(245, 166, 35, 0.08);
-  color: var(--wdc-warning, #f5a623);
+  color: var(--wdc-warning);
   font-size: 0.76rem;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
@@ -286,7 +304,7 @@ function isActive(path: string) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--wdc-warning, #f5a623);
+  background: var(--wdc-warning);
   animation: glow 2.2s ease-in-out infinite;
 }
 .update-label { letter-spacing: 0.02em; }

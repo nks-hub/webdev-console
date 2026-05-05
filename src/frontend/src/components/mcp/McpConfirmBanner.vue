@@ -132,7 +132,7 @@ import { ElMessage } from 'element-plus'
 import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
 import { createMcpGrant, revokeIntent, type McpGrantCreateBody } from '../../api/daemon'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const store = useMcpConfirmStore()
 
 // In-flight approval calls — keeps the user from double-clicking before the
@@ -286,8 +286,7 @@ async function decline(intentId: string): Promise<void> {
 function humanKindLabel(item: { kind?: string; kindLabel?: string }): string {
   if (!item.kind) return ''
   const key = `mcpKinds.labels.${item.kind}`
-  const localized = t(key)
-  return localized !== key ? localized : (item.kindLabel || item.kind)
+  return te(key) ? t(key) : (item.kindLabel || item.kind)
 }
 
 function shortId(id: string): string {

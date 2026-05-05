@@ -361,7 +361,7 @@ async function spawnDaemon() {
     // because the prod manifest forces UAC and a non-elevated parent
     // (`npm run dev`) can't satisfy that. Side effect: dev daemon cannot
     // edit hosts/Apache, but UI iteration doesn't need that.
-    const dotnetArgs = ['run', '--project', projectDir, '-p:CiBuild=true']
+    const dotnetArgs = ['run', '-p:CiBuild=true', '--project', projectDir]
     log.info('[daemon] spawn (dev): dotnet', dotnetArgs.join(' '))
     daemon = spawn('dotnet', dotnetArgs, {
       stdio: 'pipe',

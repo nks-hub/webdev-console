@@ -65,7 +65,10 @@ function stripQuery(raw: string): string {
   }
 }
 
+const sentryEnabled = VITE_SENTRY_DSN.length > 0
+
 try {
+  if (sentryEnabled) {
   // @sentry/electron/renderer re-exports from @sentry/browser which does
   // NOT ship vueIntegration — that one lives in @sentry/vue and we don't
   // pull it in to keep the renderer bundle lean. Vue component errors
@@ -143,6 +146,7 @@ try {
     Sentry.setTag('route', to.name?.toString() || to.path)
     Sentry.addBreadcrumb({ category: 'navigation', message: `→ ${to.fullPath}`, level: 'info' })
   })
+  }
 } catch (err) {
   // A broken Sentry init must never take down the UI.
   console.warn('[Sentry] renderer init skipped:', err)
@@ -171,6 +175,7 @@ if (rendererLog) {
 // Also funnels to Sentry (wrapped so a Sentry failure doesn't rethrow).
 app.config.errorHandler = (err, instance, info) => {
   console.error('[Vue Error]', info, err)
+  if (!sentryEnabled) return
   try {
     Sentry.withScope((scope) => {
       scope.setContext('vue', { lifecycleHook: info, componentName: instance?.$?.type?.name ?? '(anonymous)' })
@@ -185,6 +190,7 @@ app.config.errorHandler = (err, instance, info) => {
 // but Sentry does if we wire the window event.
 window.addEventListener('unhandledrejection', (e) => {
   bridge('error', '[unhandledrejection]', e.reason)
+  if (!sentryEnabled) return
   try { Sentry.captureException(e.reason) } catch { /* no-op */ }
 })
 

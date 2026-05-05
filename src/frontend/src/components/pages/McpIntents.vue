@@ -278,7 +278,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 import {
   fetchIntentInventory,
   revokeIntent,
@@ -507,20 +507,20 @@ function kindTagType(kind: string): 'danger' | 'warning' | 'info' {
 // (McpKinds table, McpConfirmBanner, Settings picker, McpGrants
 // tooltip). 3-level fallback: localized i18n key → daemon-supplied
 // kindLabel → bare wire id.
-function humanKindLabel(row: { kind: string; kindLabel?: string }): string {
+function humanKindLabel(row: { kind?: string; kindLabel?: string }): string {
+  if (!row.kind) return row.kindLabel || ''
   const key = `mcpKinds.labels.${row.kind}`
-  const localized = t(key)
-  return localized !== key ? localized : (row.kindLabel || row.kind)
+  return te(key) ? t(key) : (row.kindLabel || row.kind)
 }
 
 // Title attribute for the kind tag — surfaces daemon-supplied label
 // when our localization replaces it (so plugin authors verify their
 // shipped English carries through), plus pluginId for provenance.
-function kindTagTitle(row: { kind: string; kindLabel?: string; kindPluginId?: string }): string {
+function kindTagTitle(row: { kind?: string; kindLabel?: string; kindPluginId?: string }): string {
   const localized = humanKindLabel(row)
-  const daemon = row.kindLabel || row.kind
+  const daemon = row.kindLabel || row.kind || ''
   const provenance = row.kindPluginId ? ` (${row.kindPluginId})` : ''
-  return localized !== daemon ? `${daemon}${provenance}` : `${row.kind}${provenance}`
+  return localized !== daemon ? `${daemon}${provenance}` : `${daemon}${provenance}`
 }
 
 async function onRevoke(row: IntentInventoryEntry): Promise<void> {

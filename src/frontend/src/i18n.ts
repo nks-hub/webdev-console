@@ -26,6 +26,7 @@ export const i18n = createI18n({
   legacy: false,
   locale: detectInitialLocale(),
   fallbackLocale: DEFAULT_LOCALE,
+  warnHtmlMessage: false,
   messages: { en, cs },
 })
 
@@ -35,4 +36,3 @@ export function setLocale(locale: Locale) {
   try { localStorage.setItem(STORAGE_KEY, locale) } catch { /* ignore */ }
   document.documentElement.lang = locale
 }
-

@@ -9977,8 +9977,8 @@ app.MapPost("/api/plugins/mysql/change-password", async (
 {
     var log = lf.CreateLogger("MySqlChangePassword");
     var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
-    var currentPwd = body?.GetValueOrDefault("currentPwd") ?? body?.GetValueOrDefault("currentpwd") ?? "";
-    var newPwd = body?.GetValueOrDefault("newPwd") ?? body?.GetValueOrDefault("newpwd") ?? "";
+    var currentPwd = MySqlPasswordHelper.GetPayloadValue(body, "currentPwd", "currentPassword");
+    var newPwd = MySqlPasswordHelper.GetPayloadValue(body, "newPwd", "newPassword");
 
     var validationError = MySqlPasswordHelper.ValidatePassword(newPwd);
     if (validationError is not null)
@@ -9989,7 +9989,7 @@ app.MapPost("/api/plugins/mysql/change-password", async (
     if (stored is null)
         return Results.BadRequest(new { success = false, error = "No stored root password found. Use reset-password instead." });
     if (currentPwd != stored)
-        return Results.BadRequest(new { success = false, error = "currentPwd does not match the stored root password." });
+        return Results.BadRequest(new { success = false, error = "current password does not match the stored root password." });
 
     var mysql = bm.ListInstalled("mysql").FirstOrDefault();
     if (mysql?.Executable is null)
@@ -10080,7 +10080,7 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
 {
     var log = lf.CreateLogger("MySqlResetPassword");
     var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
-    var newPwd = body?.GetValueOrDefault("newPwd") ?? body?.GetValueOrDefault("newpwd") ?? "";
+    var newPwd = MySqlPasswordHelper.GetPayloadValue(body, "newPwd", "newPassword");
 
     var validationError = MySqlPasswordHelper.ValidatePassword(newPwd);
     if (validationError is not null)

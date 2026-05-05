@@ -320,7 +320,7 @@ async function changePassword() {
 async function resetPassword() {
   try {
     await ElMessageBox.confirm(
-      'This will stop MySQL, start it in safe mode, reset ALL root@* accounts, then restart. Continue?',
+      'This will stop MySQL, start it in safe mode, reset all root accounts, then restart. Continue?',
       'Reset root password',
       { type: 'warning', confirmButtonText: 'Reset', confirmButtonClass: 'el-button--danger' }
     )

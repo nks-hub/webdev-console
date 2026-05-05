@@ -30,6 +30,27 @@ internal static class MySqlPasswordHelper
         return null;
     }
 
+    public static string GetPayloadValue(
+        IReadOnlyDictionary<string, string>? body,
+        params string[] names)
+    {
+        if (body is null) return "";
+
+        foreach (var name in names)
+        {
+            if (body.TryGetValue(name, out var value))
+                return value ?? "";
+        }
+
+        foreach (var pair in body)
+        {
+            if (names.Any(name => string.Equals(pair.Key, name, StringComparison.OrdinalIgnoreCase)))
+                return pair.Value ?? "";
+        }
+
+        return "";
+    }
+
     /// <summary>
     /// Builds the SQL init-file content that sets the root password on all
     /// localhost variants. Uses single-quote escaping as a secondary safety

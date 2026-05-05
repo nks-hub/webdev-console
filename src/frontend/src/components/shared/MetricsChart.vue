@@ -1,6 +1,7 @@
 <template>
   <div class="metrics-chart" ref="chartContainer">
     <v-chart
+      v-if="chartReady"
       :option="chartOption"
       :autoresize="false"
       class="chart"
@@ -10,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -26,6 +27,24 @@ const props = defineProps<{
 }>()
 
 const chartHeight = computed(() => props.height ?? 80)
+const chartContainer = ref<HTMLElement | null>(null)
+const chartReady = ref(false)
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  const updateReady = () => {
+    const el = chartContainer.value
+    chartReady.value = !!el && el.clientWidth > 0 && el.clientHeight > 0
+  }
+  updateReady()
+  resizeObserver = new ResizeObserver(updateReady)
+  if (chartContainer.value) resizeObserver.observe(chartContainer.value)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+})
 
 const chartOption = computed(() => {
   const color = props.color ?? '#6366f1'

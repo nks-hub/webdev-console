@@ -71,6 +71,38 @@ public sealed class MySqlPasswordHelperTests
         Assert.Null(MySqlPasswordHelper.ValidatePassword("S3cur3-P@ss!word"));
     }
 
+    // ---- GetPayloadValue ----
+
+    [Fact]
+    public void GetPayloadValue_ReturnsCanonicalName()
+    {
+        var body = new Dictionary<string, string> { ["newPwd"] = "secret123" };
+
+        Assert.Equal("secret123", MySqlPasswordHelper.GetPayloadValue(body, "newPwd", "newPassword"));
+    }
+
+    [Fact]
+    public void GetPayloadValue_ReturnsFrontendAlias()
+    {
+        var body = new Dictionary<string, string> { ["newPassword"] = "secret123" };
+
+        Assert.Equal("secret123", MySqlPasswordHelper.GetPayloadValue(body, "newPwd", "newPassword"));
+    }
+
+    [Fact]
+    public void GetPayloadValue_IsCaseInsensitive()
+    {
+        var body = new Dictionary<string, string> { ["CurrentPassword"] = "old-secret" };
+
+        Assert.Equal("old-secret", MySqlPasswordHelper.GetPayloadValue(body, "currentPwd", "currentPassword"));
+    }
+
+    [Fact]
+    public void GetPayloadValue_Missing_ReturnsEmptyString()
+    {
+        Assert.Equal("", MySqlPasswordHelper.GetPayloadValue(new Dictionary<string, string>(), "newPwd"));
+    }
+
     // ---- BuildAlterUserSql ----
 
     [Fact]

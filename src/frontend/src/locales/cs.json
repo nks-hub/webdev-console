@@ -824,7 +824,7 @@
     "changePasswordBtn": "Změnit heslo",
     "resetPassword": "Reset root hesla",
     "resetWarning": "Toto je destruktivní operace",
-    "resetDescription": "Zastaví MySQL, spustí v safe módu (--skip-grant-tables), resetuje všechny root@* účty na nové heslo a poté normálně restartuje.",
+    "resetDescription": "Zastaví MySQL, spustí v safe módu (--skip-grant-tables), resetuje všechny root účty na nové heslo a poté normálně restartuje.",
     "newRootPassword": "Nové root heslo",
     "resetPasswordBtn": "Resetovat root heslo",
     "tuningParams": "MySQL parametry",

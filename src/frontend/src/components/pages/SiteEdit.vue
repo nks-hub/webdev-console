@@ -512,6 +512,7 @@
                   {{ $t('metrics.historical.emptyDay') }}
                 </div>
                 <v-chart
+                  v-if="activeTab === 'metrics'"
                   :option="historicalChartOption"
                   :autoresize="true"
                   style="width: 100%; height: 220px"
