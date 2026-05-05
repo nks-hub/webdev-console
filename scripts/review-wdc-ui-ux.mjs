@@ -160,11 +160,11 @@ async function currentMainPage(browser) {
 
 async function waitSettled(page) {
   await page.waitForLoadState('domcontentloaded').catch(() => {})
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(300)
 }
 
 async function setMode(page, mode) {
-  await page.goto('http://127.0.0.1:5190/#/sites')
+  await page.goto('http://127.0.0.1:5190/#/sites', { waitUntil: 'domcontentloaded', timeout: 5000 })
   await waitSettled(page)
   await page.evaluate((value) => localStorage.setItem('wdc-ui-mode', value), mode.includes('simple') ? 'simple' : 'advanced')
   await page.reload()
@@ -195,16 +195,19 @@ function grade(value) {
 
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9222')
 const page = await currentMainPage(browser)
+page.setDefaultTimeout(3000)
+page.setDefaultNavigationTimeout(5000)
 const screenReviews = []
 
-for (const routeEntry of uniqueRoutes(source.routes)) {
-  const checks = []
-  for (const vp of viewports) {
-    await page.setViewportSize({ width: vp.width, height: vp.height })
-    await setMode(page, routeEntry.mode)
-    await page.goto(`http://127.0.0.1:5190/#${routeEntry.route}`)
-    await waitSettled(page)
-    const metrics = await page.evaluate(() => {
+try {
+  for (const routeEntry of uniqueRoutes(source.routes)) {
+    const checks = []
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await setMode(page, routeEntry.mode)
+      await page.goto(`http://127.0.0.1:5190/#${routeEntry.route}`, { waitUntil: 'domcontentloaded', timeout: 5000 })
+      await waitSettled(page)
+      const metrics = await page.evaluate(() => {
       const parseColor = (raw) => {
         const match = String(raw).match(/rgba?\(([^)]+)\)/)
         if (!match) return null
@@ -286,24 +289,28 @@ for (const routeEntry of uniqueRoutes(source.routes)) {
         clipped: clipped.slice(0, 12),
       }
     })
-    checks.push({ viewport: vp.name, metrics, score: score(metrics), grade: grade(score(metrics)) })
+      checks.push({ viewport: vp.name, metrics, score: score(metrics), grade: grade(score(metrics)) })
+    }
+    const overall = Math.round(checks.reduce((n, x) => n + x.score, 0) / checks.length)
+    screenReviews.push({
+      mode: routeEntry.mode,
+      route: routeEntry.route,
+      title: routeEntry.title,
+      h1: routeEntry.h1,
+      screenshots: routeEntry.screenshots.map(rel),
+      tabs: routeEntry.visibleTabs,
+      info: routeInfo(routeEntry.route),
+      checks,
+      overall,
+      grade: grade(overall),
+    })
   }
-  const overall = Math.round(checks.reduce((n, x) => n + x.score, 0) / checks.length)
-  screenReviews.push({
-    mode: routeEntry.mode,
-    route: routeEntry.route,
-    title: routeEntry.title,
-    h1: routeEntry.h1,
-    screenshots: routeEntry.screenshots.map(rel),
-    tabs: routeEntry.visibleTabs,
-    info: routeInfo(routeEntry.route),
-    checks,
-    overall,
-    grade: grade(overall),
-  })
+} finally {
+  await page.setViewportSize({ width: 1440, height: 960 }).catch(() => {})
+  await setMode(page, 'advanced').catch(() => {})
+  await page.goto('http://127.0.0.1:5190/#/sites', { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => {})
+  await browser.close()
 }
-
-await browser.close()
 
 function findingsFor(review) {
   const findings = []

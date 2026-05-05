@@ -154,12 +154,12 @@ async function auditSafeInteractions(page, mode, route, entry) {
 
       const beforeUrl = page.url()
       try {
-        await item.click({ timeout: 1500 })
-        await page.waitForTimeout(500)
+        await item.click({ timeout: 1500, noWaitAfter: true })
+        await page.waitForTimeout(300)
         await closeTransientUi(page)
         const afterUrl = page.url()
         if (afterUrl !== beforeUrl && !afterUrl.includes(`#${route}`)) {
-          await page.goto(beforeUrl)
+          await page.goto(beforeUrl, { waitUntil: 'domcontentloaded', timeout: 3000 }).catch(() => {})
           await waitSettled(page)
         }
         const shot = await screenshot(page, `${mode}-${safeName(route)}-click-${clicked}-${safeName(name).slice(0, 42)}`)
@@ -185,17 +185,28 @@ async function currentMainPage(browser) {
 
 async function waitSettled(page) {
   await page.waitForLoadState('domcontentloaded').catch(() => {})
-  await page.waitForTimeout(900)
+  await page.waitForTimeout(450)
 }
 
 async function screenshot(page, name) {
   const file = path.join(outDir, `${name}.png`)
-  await page.screenshot({ path: file, fullPage: true })
+  try {
+    await page.screenshot({ path: file, fullPage: true, timeout: 15000 })
+  } catch (err) {
+    report.skippedInteractions.push({
+      mode: 'screenshot',
+      route: name,
+      kind: 'screenshot',
+      name,
+      reason: `full-page-fallback: ${err.message}`,
+    })
+    await page.screenshot({ path: file, fullPage: false, timeout: 10000 })
+  }
   return file
 }
 
 async function setMode(page, mode) {
-  await page.goto('http://127.0.0.1:5190/#/sites')
+  await page.goto('http://127.0.0.1:5190/#/sites', { waitUntil: 'domcontentloaded', timeout: 5000 })
   await waitSettled(page)
   await page.evaluate((value) => localStorage.setItem('wdc-ui-mode', value), mode)
   await page.reload()
@@ -214,7 +225,7 @@ async function auditRoute(page, mode, route) {
     issueTexts: [],
   }
 
-  await page.goto(`http://127.0.0.1:5190/#${route}`)
+  await page.goto(`http://127.0.0.1:5190/#${route}`, { waitUntil: 'domcontentloaded', timeout: 5000 })
   await waitSettled(page)
   entry.finalUrl = page.url()
   entry.title = await page.title().catch(() => null)
@@ -234,7 +245,7 @@ async function auditRoute(page, mode, route) {
     const label = (await tab.innerText().catch(() => `tab-${i}`)).trim().replace(/\s+/g, ' ')
     entry.visibleTabs.push(label)
     await tab.click().catch(() => {})
-    await page.waitForTimeout(450)
+    await page.waitForTimeout(250)
     entry.screenshots.push(await screenshot(page, `${mode}-${safeName(route)}-tab-${i}-${safeName(label).slice(0, 40)}`))
   }
 
@@ -299,36 +310,38 @@ async function safeApiChecks(page) {
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9222')
 const page = await currentMainPage(browser)
 
-page.on('console', (msg) => {
-  const type = msg.type()
-  if (['error', 'warning'].includes(type)) {
-    report.console.push({ type, text: msg.text(), url: page.url() })
+try {
+  page.on('console', (msg) => {
+    const type = msg.type()
+    if (['error', 'warning'].includes(type)) {
+      report.console.push({ type, text: msg.text(), url: page.url() })
+    }
+  })
+  page.on('pageerror', (err) => report.pageErrors.push({ message: err.message, stack: err.stack, url: page.url() }))
+  page.on('response', (res) => {
+    const status = res.status()
+    if (status >= 400) report.badResponses.push({ status, url: res.url(), page: page.url() })
+  })
+
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await setMode(page, 'advanced')
+  for (const route of advancedRoutes) await auditRoute(page, 'advanced', route)
+
+  await setMode(page, 'simple')
+  for (const route of simpleRoutes) await auditRoute(page, 'simple', route)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  for (const route of ['/sites', '/settings', '/plugins/mysql']) {
+    await auditRoute(page, 'mobile-simple', route)
   }
-})
-page.on('pageerror', (err) => report.pageErrors.push({ message: err.message, stack: err.stack, url: page.url() }))
-page.on('response', (res) => {
-  const status = res.status()
-  if (status >= 400) report.badResponses.push({ status, url: res.url(), page: page.url() })
-})
 
-await page.setViewportSize({ width: 1440, height: 960 })
-await setMode(page, 'advanced')
-for (const route of advancedRoutes) await auditRoute(page, 'advanced', route)
-
-await setMode(page, 'simple')
-for (const route of simpleRoutes) await auditRoute(page, 'simple', route)
-
-await page.setViewportSize({ width: 390, height: 844 })
-for (const route of ['/sites', '/settings', '/plugins/mysql']) {
-  await auditRoute(page, 'mobile-simple', route)
+  await safeApiChecks(page)
+  report.finishedAt = new Date().toISOString()
+} finally {
+  await page.setViewportSize({ width: 1440, height: 960 }).catch(() => {})
+  await setMode(page, 'advanced').catch(() => {})
+  await page.goto('http://127.0.0.1:5190/#/sites', { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => {})
+  await flushReport()
+  console.log(JSON.stringify({ outDir, routes: report.routes.length, interactions: report.interactions.length, skippedInteractions: report.skippedInteractions.length, console: report.console.length, pageErrors: report.pageErrors.length, badResponses: report.badResponses.length }, null, 2))
+  await browser.close()
 }
-
-await setMode(page, 'advanced')
-await page.setViewportSize({ width: 1440, height: 960 })
-await safeApiChecks(page)
-
-report.finishedAt = new Date().toISOString()
-await flushReport()
-
-console.log(JSON.stringify({ outDir, routes: report.routes.length, interactions: report.interactions.length, skippedInteractions: report.skippedInteractions.length, console: report.console.length, pageErrors: report.pageErrors.length, badResponses: report.badResponses.length }, null, 2))
-await browser.close()
