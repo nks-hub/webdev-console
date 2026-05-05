@@ -42,6 +42,9 @@ const cloudflaredRunning = computed(() =>
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  box-sizing: border-box;
+  min-height: 24px !important;
+  line-height: 18px;
   padding: 2px 8px;
   background: rgba(243, 128, 32, 0.12);
   color: #f38020;

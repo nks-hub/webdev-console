@@ -32,6 +32,73 @@
     </div>
 
     <div class="page-body">
+      <div class="sites-mobile-list">
+        <article
+          v-for="site in filteredSites"
+          :key="site.domain"
+          class="site-mobile-card"
+        >
+          <div class="site-mobile-main" @click="editSite(site)">
+            <div class="site-mobile-title-row">
+              <span class="site-mobile-title">{{ site.domain }}</span>
+              <el-tag
+                v-if="site.sslEnabled"
+                size="small"
+                type="success"
+                effect="dark"
+                class="cell-tag"
+              >SSL</el-tag>
+            </div>
+            <div class="site-mobile-meta mono" :title="site.documentRoot">
+              {{ site.documentRoot }}
+            </div>
+            <div class="site-mobile-badges">
+              <el-tag
+                v-if="rowRuntimeLabel(site)"
+                size="small"
+                effect="dark"
+                class="runtime-tag runtime-php"
+              >{{ rowRuntimeLabel(site) }}</el-tag>
+              <span v-if="site.aliases?.length" class="alias-dot">+{{ site.aliases.length }}</span>
+              <span v-if="site.aliases?.length" class="site-mobile-alias mono">
+                {{ site.aliases[0] }}
+              </span>
+            </div>
+          </div>
+          <div class="site-mobile-actions">
+            <el-switch
+              :model-value="site.enabled !== false"
+              :loading="togglingEnabled === site.domain"
+              size="small"
+              inline-prompt
+              :title="site.enabled !== false ? 'Povoleno' : 'Zakázáno'"
+              @change="(v: boolean | string | number) => toggleSiteEnabled(site, v)"
+              @click.stop
+            />
+            <el-button size="small" type="primary" @click.stop="editSite(site)">{{ $t('common.edit') }}</el-button>
+            <el-dropdown
+              trigger="click"
+              :teleported="true"
+              :popper-options="{ modifiers: [{ name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } }] }"
+              @command="(cmd: string) => handleRowAction(cmd, site)"
+            >
+              <el-button size="small" circle :aria-label="$t('sites.card.moreActions', { domain: site.domain })"><el-icon><MoreFilled /></el-icon></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="open">
+                    {{ $t('sites.open') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="detect">
+                    <el-icon><RefreshRight /></el-icon> {{ $t('sites.detect') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided class="danger-item">{{ $t('sites.delete') }}</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </article>
+      </div>
+
       <el-table
         :data="filteredSites"
         v-loading="sitesStore.loading"
@@ -304,7 +371,7 @@ import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo } from '../../api/types'
 import { fetchDockerComposeStatus, fetchPhpVersions, fetchSystem, daemonBaseUrl, daemonAuthHeaders as authHeaders, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { MoreFilled } from '@element-plus/icons-vue'
+import { MoreFilled, RefreshRight } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
 import siteTemplatesConfig from '../../config/site-templates.json'
@@ -383,6 +450,12 @@ const phpVersions = ref<PhpVersionOption[]>([])
 function phpFullLabel(stored: string): string {
   const match = phpVersions.value.find(p => p.value === stored)
   return match ? match.label : `PHP ${stored}`
+}
+
+function rowRuntimeLabel(site: SiteInfo): string {
+  if (site.nodeUpstreamPort && site.nodeUpstreamPort > 0) return `Node:${site.nodeUpstreamPort}`
+  if (site.phpVersion && site.phpVersion !== 'none') return phpFullLabel(site.phpVersion)
+  return 'Static'
 }
 // Native-looking Document Root placeholder. Windows keeps the legacy
 // C:\work\htdocs\<app> hint; macOS/Linux get a path rooted at the user's
@@ -778,6 +851,10 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   padding: 0 24px 24px;
 }
 
+.sites-mobile-list {
+  display: none;
+}
+
 .sites-table :deep(.el-table__header) {
   background: var(--wdc-surface-2);
 }
@@ -950,6 +1027,117 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   .sites-table :deep(th.el-table__cell):nth-child(3),
   .sites-table :deep(td.el-table__cell):nth-child(3) {
     display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 16px 0;
+    margin-bottom: 14px;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .header-actions :deep(.el-button) {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .header-actions :deep(.el-button--primary) {
+    grid-column: 1 / -1;
+  }
+
+  .search-bar,
+  .page-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .search-bar :deep(.el-input) {
+    max-width: none !important;
+    width: 100%;
+  }
+
+  .sites-table {
+    display: none;
+  }
+
+  .sites-mobile-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .site-mobile-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+    padding: 12px;
+    background: var(--wdc-surface);
+    border: 1px solid var(--wdc-border);
+    border-radius: 8px;
+  }
+
+  .site-mobile-main {
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .site-mobile-title-row,
+  .site-mobile-badges,
+  .site-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .site-mobile-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--wdc-text);
+    font-size: 0.96rem;
+    font-weight: 700;
+  }
+
+  .site-mobile-meta {
+    margin-top: 4px;
+    color: var(--wdc-text-3);
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .site-mobile-badges {
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .site-mobile-alias {
+    min-width: 0;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--wdc-text-2);
+    font-size: 0.72rem;
+  }
+
+  .site-mobile-actions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
   }
 }
 

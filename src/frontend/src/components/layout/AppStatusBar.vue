@@ -142,4 +142,34 @@ function formatMem(bytes: number): string {
   margin-left: auto;
   color: var(--wdc-text-3);
 }
+
+@media (max-width: 520px) {
+  .status-bar {
+    gap: 8px;
+    padding: 0 14px;
+  }
+
+  .status-bar:not(.status-bar-simple) {
+    gap: 7px;
+    overflow: hidden;
+  }
+
+  .status-bar:not(.status-bar-simple) .status-sep,
+  .status-bar:not(.status-bar-simple) .status-right {
+    display: none;
+  }
+
+  .status-bar-simple {
+    justify-content: center;
+  }
+
+  .status-bar-simple .status-item-center {
+    position: static;
+    transform: none;
+  }
+
+  .status-bar-simple .status-right {
+    display: none;
+  }
+}
 </style>

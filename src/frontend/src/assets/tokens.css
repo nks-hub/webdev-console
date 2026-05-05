@@ -462,7 +462,7 @@ html:not(.dark) .el-button {
 .el-button.is-disabled,
 .el-button.is-disabled:hover,
 .el-button.is-disabled:active {
-  opacity: 0.45 !important;
+  opacity: 0.72 !important;
   cursor: not-allowed !important;
   /* Preserve the variant's own colours — DO NOT override bg/border/color here
      or the disabled state becomes a uniform grey that hides the button's
@@ -501,6 +501,17 @@ html:not(.dark) .el-button {
   font-size: 0.82rem;
 }
 
+.el-input--small .el-input__wrapper,
+.el-select--small .el-select__wrapper,
+.el-input-number--small .el-input__wrapper {
+  min-height: 32px !important;
+}
+
+.el-radio-button__inner {
+  min-height: 32px !important;
+  line-height: 30px !important;
+}
+
 /* Tags */
 .el-tag {
   border-radius: 4px;
@@ -510,7 +521,8 @@ html:not(.dark) .el-button {
 }
 
 .el-tag--small {
-  height: 22px;
+  min-height: 24px;
+  height: 24px;
   padding: 0 6px;
 }
 
