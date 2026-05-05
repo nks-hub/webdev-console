@@ -382,4 +382,16 @@ onMounted(() => { /* services already loaded by daemon store poll */ })
 .save-status.err { color: var(--wdc-status-error); }
 .danger-card { border-color: var(--el-color-danger-light-5); }
 .danger-header { background: color-mix(in srgb, var(--el-color-danger) 8%, var(--wdc-surface-2)); border-bottom-color: var(--el-color-danger-light-5); }
+
+@media (max-width: 560px) {
+  .cf-tabs { padding-left: 14px; padding-right: 14px; }
+  .cf-tabs :deep(.el-tabs__item) { padding: 0 4px; }
+  .cf-tabs :deep(.el-tabs__nav-wrap.is-scrollable) { padding: 0; }
+  .cf-tabs :deep(.el-tabs__nav-prev),
+  .cf-tabs :deep(.el-tabs__nav-next) { display: none; }
+  .tab-label { gap: 0; font-size: 0.74rem; }
+  .tab-label :deep(.el-icon) { display: none; }
+  .edit-card-header { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .edit-card-body { padding: 16px 14px; }
+}
 </style>

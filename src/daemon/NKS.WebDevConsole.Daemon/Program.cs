@@ -6670,6 +6670,26 @@ int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, Pl
     }
 }
 
+int ResolvePostgreSqlPortWithFallback(SettingsStore settings, IServiceProvider sp, PluginLoader loader)
+{
+    if (settings.TryReadPostgreSqlPort(out var configured) && configured > 0)
+        return configured;
+
+    try
+    {
+        var plugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.postgresql");
+        var moduleType = plugin?.Assembly.GetType("NKS.WebDevConsole.Plugin.PostgreSQL.PostgreSqlModule");
+        var module = moduleType is null ? null : sp.GetService(moduleType);
+        var configField = moduleType?.GetField("_config", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var config = module is null ? null : configField?.GetValue(module);
+        var portVal = config?.GetType().GetProperty("Port")?.GetValue(config);
+        if (portVal is int port && port > 0) return port;
+    }
+    catch { /* plugin absent or not initialized; use default */ }
+
+    return 5432;
+}
+
 /// <summary>
 /// F77: resolve the per-site PHP binary path so composer.phar runs under
 /// the interpreter version the site has actually declared. Returns null
@@ -9868,6 +9888,106 @@ static IReadOnlyDictionary<string, string?> MysqlEnvVars()
         ? new Dictionary<string, string?>()
         : new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
 }
+
+// PostgreSQL plugin database tooling. The service plugin initializes local
+// clusters with trust auth for 127.0.0.1, so these operations never prompt.
+app.MapGet("/api/plugins/postgresql/databases", async (BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+{
+    var postgres = bm.ListInstalled("postgresql").FirstOrDefault();
+    if (postgres?.Executable is null)
+        return Results.Ok(new { error = "PostgreSQL not installed", databases = Array.Empty<string>() });
+
+    var psql = PostgreSqlHelper.ResolveSiblingTool(postgres.Executable, "psql");
+    if (psql is null)
+        return Results.Ok(new { error = "psql not found next to postgres", databases = Array.Empty<string>() });
+
+    var port = ResolvePostgreSqlPortWithFallback(settings, sp, pluginLoader);
+    var args = new[]
+    {
+        "-h", "127.0.0.1",
+        "-p", port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        "-U", "postgres",
+        "-d", "postgres",
+        "-At",
+        "-c", "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname"
+    };
+
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(psql)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        if (result.ExitCode != 0)
+            return Results.Ok(new { error = result.StandardError.Trim(), attemptedPort = port, databases = Array.Empty<string>() });
+
+        var dbs = result.StandardOutput
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(d => d.Trim())
+            .Where(d => d.Length > 0)
+            .ToList();
+        return Results.Ok(new { databases = dbs, attemptedPort = port });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { error = ex.Message, attemptedPort = port, databases = Array.Empty<string>() });
+    }
+});
+
+app.MapPost("/api/plugins/postgresql/reset-password", async (
+    HttpContext ctx,
+    BinaryManager bm,
+    SettingsStore settings,
+    IServiceProvider sp,
+    ILoggerFactory lf) =>
+{
+    var log = lf.CreateLogger("PostgreSqlResetPassword");
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var newPassword = PostgreSqlHelper.GetPayloadValue(body, "newPassword", "newPwd", "password");
+
+    var validationError = PostgreSqlHelper.ValidatePassword(newPassword);
+    if (validationError is not null)
+        return Results.BadRequest(new { success = false, error = validationError });
+
+    var postgres = bm.ListInstalled("postgresql").FirstOrDefault();
+    if (postgres?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "PostgreSQL not installed" });
+
+    var psql = PostgreSqlHelper.ResolveSiblingTool(postgres.Executable, "psql");
+    if (psql is null)
+        return Results.BadRequest(new { success = false, error = "psql not found next to postgres" });
+
+    var port = ResolvePostgreSqlPortWithFallback(settings, sp, pluginLoader);
+    var args = new[]
+    {
+        "-h", "127.0.0.1",
+        "-p", port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        "-U", "postgres",
+        "-d", "postgres",
+        "-v", "ON_ERROR_STOP=1",
+        "-c", PostgreSqlHelper.BuildAlterUserSql(newPassword)
+    };
+
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(psql)
+            .WithArguments(args)
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        if (result.ExitCode != 0)
+            return Results.BadRequest(new { success = false, error = result.StandardError.Trim(), attemptedPort = port });
+
+        log.LogInformation("PostgreSQL postgres user password reset on port {Port}", port);
+        return Results.Ok(new { success = true, attemptedPort = port });
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "PostgreSQL password reset failed");
+        return Results.Problem(title: "postgresql reset-password failed", detail: ex.Message, statusCode: 500);
+    }
+});
 
 // Databases — list MySQL databases via mysql CLI
 app.MapGet("/api/databases", async (BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>

@@ -138,6 +138,19 @@ public sealed class SettingsStore : IWdcSettings
         return false;
     }
 
+    public bool TryReadPostgreSqlPort(out int port)
+    {
+        port = 5432;
+        var raw = GetString("ports", "postgresql");
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        if (int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0)
+        {
+            port = parsed;
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Reads a boolean setting. Falsy: "false", "0", "off". Everything else is true.</summary>
     public bool GetBool(string category, string key, bool defaultValue = false)
     {

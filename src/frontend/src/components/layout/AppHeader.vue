@@ -312,6 +312,12 @@ function isActive(path: string) {
 }
 .update-label { letter-spacing: 0.02em; }
 .update-badge .update-label { color: #141006; }
+:global(html:not(.dark)) .update-badge {
+  background: #704d0c;
+  border-color: #704d0c;
+  color: #ffffff !important;
+}
+:global(html:not(.dark)) .update-badge .update-label { color: #ffffff !important; }
 
 @media (max-width: 760px) {
   .app-header {

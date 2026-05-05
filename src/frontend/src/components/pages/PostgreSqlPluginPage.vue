@@ -82,12 +82,68 @@
         <section class="edit-card">
           <header class="edit-card-header">
             <span class="edit-card-title">{{ $t('postgresPlugin.databaseTools') }}</span>
-            <el-button size="small" text @click="$router.push('/binaries')">
-              {{ $t('postgresPlugin.openBinaries') }}
+            <el-button size="small" text :loading="databasesLoading" @click="loadDatabases">
+              {{ $t('common.refresh') }}
             </el-button>
           </header>
           <div class="edit-card-body">
+            <el-alert
+              v-if="databasesError"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="databasesError"
+              class="section-alert"
+            />
+            <div v-if="postgresDatabases.length > 0" class="database-list">
+              <div v-for="db in postgresDatabases" :key="db" class="database-row">
+                <span class="database-name">{{ db }}</span>
+                <el-tag size="small" effect="plain">PostgreSQL</el-tag>
+              </div>
+            </div>
+            <el-empty
+              v-else
+              :description="databasesLoading ? $t('common.loading') : $t('postgresPlugin.noDatabases')"
+              :image-size="48"
+            />
             <div class="hint">{{ $t('postgresPlugin.databaseToolsHint') }}</div>
+          </div>
+        </section>
+
+        <section class="edit-card danger-card">
+          <header class="edit-card-header danger-header">
+            <span class="edit-card-title">{{ $t('postgresPlugin.resetPassword') }}</span>
+            <el-tag type="warning" size="small" effect="dark">{{ $t('postgresPlugin.localOnly') }}</el-tag>
+          </header>
+          <div class="edit-card-body">
+            <el-alert
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="$t('postgresPlugin.resetWarning')"
+              class="section-alert"
+            />
+            <el-form label-width="180px" size="default">
+              <el-form-item :label="$t('postgresPlugin.newPassword')">
+                <el-input v-model="resetPasswordForm.newPassword" type="password" show-password style="max-width: 340px" />
+              </el-form-item>
+              <el-form-item :label="$t('postgresPlugin.confirmPassword')">
+                <el-input v-model="resetPasswordForm.confirm" type="password" show-password style="max-width: 340px" />
+              </el-form-item>
+            </el-form>
+            <div class="card-actions">
+              <el-button
+                type="warning"
+                :loading="resettingPassword"
+                :disabled="!resetPasswordForm.newPassword || resetPasswordForm.newPassword !== resetPasswordForm.confirm"
+                @click="resetPostgresPassword"
+              >
+                {{ $t('postgresPlugin.resetPasswordBtn') }}
+              </el-button>
+              <span v-if="resetPasswordStatus" class="save-status" :class="resetPasswordStatus.kind">
+                {{ resetPasswordStatus.message }}
+              </span>
+            </div>
           </div>
         </section>
       </el-tab-pane>
@@ -135,11 +191,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { CircleCheckFilled, CircleClose, Connection, Monitor, Grid, Setting, Document, DataLine } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
-import { startService, stopService } from '../../api/daemon'
+import { daemonAuthHeaders as authHeaders, daemonBaseUrl, startService, stopService } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
@@ -147,10 +204,17 @@ import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 defineOptions({ name: 'PostgreSqlPluginPage' })
 
 const daemonStore = useDaemonStore()
+const { t } = useI18n()
 const activeTab = ref<'overview' | 'databases' | 'tuning' | 'logs'>('overview')
 const refreshing = ref(false)
 const toggling = ref(false)
 const isNarrow = ref(false)
+const postgresDatabases = ref<string[]>([])
+const databasesLoading = ref(false)
+const databasesError = ref('')
+const resetPasswordForm = reactive({ newPassword: '', confirm: '' })
+const resettingPassword = ref(false)
+const resetPasswordStatus = ref<{ kind: 'ok' | 'err'; message: string } | null>(null)
 
 const serviceInfo = computed(() => daemonStore.services.find(s => s.id === 'postgresql'))
 const serviceRunning = computed(() => serviceInfo.value?.state === 2 || serviceInfo.value?.status === 'running')
@@ -164,8 +228,65 @@ async function refresh() {
   refreshing.value = true
   try {
     await daemonStore.poll()
+    await loadDatabases()
   } finally {
     refreshing.value = false
+  }
+}
+
+async function loadDatabases() {
+  databasesLoading.value = true
+  databasesError.value = ''
+  try {
+    const response = await fetch(`${daemonBaseUrl()}/api/plugins/postgresql/databases`, {
+      headers: authHeaders(),
+    })
+    const data: { databases?: string[]; error?: string } = await response.json().catch(() => ({}))
+    postgresDatabases.value = data.databases ?? []
+    if (data.error) databasesError.value = data.error
+  } catch (e) {
+    postgresDatabases.value = []
+    databasesError.value = errorMessage(e)
+  } finally {
+    databasesLoading.value = false
+  }
+}
+
+async function resetPostgresPassword() {
+  if (resetPasswordForm.newPassword !== resetPasswordForm.confirm) {
+    ElMessage.warning('Passwords do not match')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      t('postgresPlugin.resetConfirm'),
+      t('postgresPlugin.resetPassword'),
+      { type: 'warning', confirmButtonText: t('postgresPlugin.resetPasswordBtn') }
+    )
+  } catch { return }
+
+  resettingPassword.value = true
+  resetPasswordStatus.value = null
+  try {
+    const response = await fetch(`${daemonBaseUrl()}/api/plugins/postgresql/reset-password`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword: resetPasswordForm.newPassword }),
+    })
+    if (!response.ok) {
+      const data: { error?: string; detail?: string } = await response.json().catch(() => ({}))
+      throw new Error(data.error || data.detail || `HTTP ${response.status}`)
+    }
+    resetPasswordStatus.value = { kind: 'ok', message: t('postgresPlugin.resetSuccess') }
+    ElMessage.success(t('postgresPlugin.resetSuccess'))
+    resetPasswordForm.newPassword = ''
+    resetPasswordForm.confirm = ''
+  } catch (e) {
+    resetPasswordStatus.value = { kind: 'err', message: errorMessage(e) }
+    ElMessage.error(`PostgreSQL password reset failed: ${errorMessage(e)}`)
+  } finally {
+    resettingPassword.value = false
   }
 }
 
@@ -185,6 +306,7 @@ async function toggleService() {
 onMounted(() => {
   updateNarrow()
   window.addEventListener('resize', updateNarrow)
+  void loadDatabases()
 })
 
 onBeforeUnmount(() => {
@@ -216,6 +338,17 @@ onBeforeUnmount(() => {
 .edit-card-body :deep(.el-descriptions__cell) { word-break: break-word; overflow-wrap: anywhere; }
 .log-body { padding: 0; }
 .hint { margin-top: 6px; font-size: 0.82rem; line-height: 1.55; color: var(--wdc-text-3); }
+.section-alert { margin-bottom: 14px; }
+.database-list { display: flex; flex-direction: column; border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius-sm); overflow: hidden; }
+.database-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--wdc-surface); border-bottom: 1px solid var(--wdc-border); }
+.database-row:last-child { border-bottom: 0; }
+.database-name { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.86rem; color: var(--wdc-text); overflow-wrap: anywhere; }
+.card-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.save-status { font-size: 0.82rem; font-weight: 600; overflow-wrap: anywhere; }
+.save-status.ok { color: var(--wdc-status-running); }
+.save-status.err { color: var(--wdc-status-error); }
+.danger-card { border-color: var(--wdc-warning); }
+.danger-header { background: color-mix(in srgb, var(--wdc-warning) 10%, var(--wdc-surface-2)); border-bottom-color: var(--wdc-warning); }
 
 @media (max-width: 860px) {
   .page-header { align-items: flex-start; flex-direction: column; }

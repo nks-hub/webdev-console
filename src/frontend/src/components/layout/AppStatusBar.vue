@@ -107,8 +107,9 @@ function formatMem(bytes: number): string {
 }
 
 .status-alert { color: var(--wdc-status-error); font-weight: 600; }
-.status-tunnel { color: #9a4a00; font-weight: 700; }
-:global(html.dark) .status-tunnel { color: #ffb15f; }
+.status-tunnel { color: #5c2f00; font-weight: 700; }
+:global(.dark) .status-tunnel,
+:global(html.dark) .status-tunnel { color: #fff2b3 !important; }
 
 .status-sep {
   width: 1px;

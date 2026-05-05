@@ -591,6 +591,45 @@ html:not(.dark) .el-button {
   color: #141006 !important;
 }
 
+html:not(.dark) .el-tag--success.el-tag--dark,
+html:not(.dark) .el-tag--warning.el-tag--dark {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .el-tag--warning.el-tag--dark {
+  background: #704d0c !important;
+  border-color: #704d0c !important;
+}
+
+html:not(.dark) .update-badge,
+html:not(.dark) .update-badge .update-label {
+  color: #ffffff !important;
+}
+
+.status-tunnel {
+  color: #5c2f00 !important;
+}
+
+html.dark .status-tunnel {
+  color: #fff2b3 !important;
+}
+
+html.dark .section-label,
+html.dark .sidebar-bottom .nav-item,
+html.dark .sidebar-bottom .nav-label {
+  color: #ffffff !important;
+}
+
+html.dark .nav-item.active {
+  background: #0e3a52 !important;
+  color: #ffffff !important;
+}
+
+html.dark .nav-item-tunnel,
+html.dark .nav-item-tunnel .nav-label {
+  color: #fff2b3 !important;
+}
+
 .el-tag--danger.is-plain,
 .el-tag--danger.el-tag--dark {
   background: rgba(239, 68, 68, 0.10) !important;

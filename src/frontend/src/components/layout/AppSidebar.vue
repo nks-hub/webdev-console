@@ -442,7 +442,7 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .workspace-subtitle {
-  color: #111827;
+  color: var(--wdc-text-2);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -528,7 +528,7 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .svc-meta {
-  color: var(--wdc-text-3);
+  color: var(--wdc-text-2);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -576,6 +576,11 @@ async function toggleSvc(svc: ServiceInfo) {
   border-left-color: var(--wdc-accent);
 }
 
+:global(html.dark) .nav-item.active {
+  background: #0e3a52;
+  color: #ffffff;
+}
+
 /* Tunnel entry — when cloudflared is actively running, tint the icon
    + border in the Cloudflare brand orange so users get a visual "live"
    indicator without hunting through the page. Overrides the accent blue
@@ -591,7 +596,7 @@ async function toggleSvc(svc: ServiceInfo) {
   background: rgba(243, 128, 32, 0.12);
   border-left-color: #f38020;
 }
-:global(html.dark) .nav-item-tunnel { color: #ffb15f; }
+:global(html.dark) .nav-item-tunnel { color: #fff2b3; }
 
 /* F83 SSO entry — subtle accent when signed in so the state is
    legible without crowding the bottom-nav visual weight. */
@@ -647,6 +652,7 @@ async function toggleSvc(svc: ServiceInfo) {
   text-align: center;
 }
 
+:global(html.dark) .workspace-subtitle,
 :global(html.dark) .section-label { color: #ffffff; }
 :global(html.dark) .nav-badge { background: #ffb15f; color: #141006; }
 
@@ -673,5 +679,15 @@ async function toggleSvc(svc: ServiceInfo) {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.sidebar-bottom .nav-item,
+.sidebar-bottom .nav-item .nav-label {
+  color: var(--wdc-text);
+}
+
+:global(html.dark) .sidebar-bottom .nav-item,
+:global(html.dark) .sidebar-bottom .nav-item .nav-label {
+  color: #ffffff !important;
 }
 </style>
