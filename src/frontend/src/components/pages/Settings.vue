@@ -11,15 +11,89 @@
       <el-tabs v-model="activeTab" class="settings-tabs">
         <!-- Ports tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.ports')" name="ports">
-          <AdvancedPortsSettings
-            :t="t"
-            :ports="ports"
-            :plugin-ports="pluginPorts"
-            :php-fpm-base-port="phpFpmBasePort"
-            @update:port="(key, value) => { ports[key] = value }"
-            @update:php-fpm-base-port="phpFpmBasePort = $event"
-          />
+          <div class="tab-content">
+            <p class="tab-desc">{{ $t('settings.ports.description') }}</p>
+
+            <!-- Task 15: plugin-owned ports. Pulled from GET /api/plugins/ports
+                 (IPortMetadata DI registrations per task 25). Only active
+                 plugins show up — inactive ones are hidden so the user
+                 doesn't see rows for services that aren't running. -->
+            <div v-if="pluginPorts.length > 0" class="settings-card" style="margin-bottom: 16px">
+              <header class="settings-card-header">
+                <span class="settings-card-title">Plugin ports</span>
+                <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ pluginPorts.length }} active</span>
+              </header>
+              <div class="settings-card-body">
+                <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
+                  <el-form-item
+                    v-for="p in pluginPorts"
+                    :key="p.pluginId + ':' + p.key"
+                    :label="p.label"
+                  >
+                    <el-input-number
+                      :model-value="p.currentPort"
+                      :min="1"
+                      :max="65535"
+                      style="width: 100%"
+                      disabled
+                    />
+                    <div class="hint">
+                      <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
+                    </div>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+
+            <!-- Legacy hardcoded ports form — will migrate to IPortMetadata
+                 one plugin at a time. For now coexists so users can still
+                 edit the values that haven't been wired to plugins yet. -->
+            <!-- Phase 6.21 — explain what changing the webserver port
+                 actually does, since the consequence isn't obvious from
+                 the form alone. The daemon now bulk-regenerates every
+                 site's vhost on Apache port change (Phase 6.20a) AND
+                 self-heals stale ports on boot (Phase 6.20b), but the
+                 user still sees a brief window where the webserver
+                 reloads and existing browser connections drop. -->
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 12px; max-width: 400px"
+            >
+              <template #title>Changing HTTP/HTTPS port reloads the webserver</template>
+              Every per-site vhost is regenerated to use the new port and
+              Apache (or nginx/caddy) is reloaded. In-flight browser
+              connections drop briefly. Check that the new port isn't
+              already used by another service before saving.
+            </el-alert>
+            <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
+              <el-form-item :label="$t('settings.ports.httpPort')">
+                <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item :label="$t('settings.ports.httpsPort')">
+                <el-input-number v-model="ports.https" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item :label="$t('settings.ports.mysqlPort')">
+                <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item :label="$t('settings.ports.redisPort')">
+                <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item :label="$t('settings.ports.mailpitSmtp')">
+                <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item :label="$t('settings.ports.mailpitHttp')">
+                <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item :label="$t('settings.ports.phpFpmBase')">
+                <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
+                <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
+              </el-form-item>
+            </el-form>
+          </div>
         </el-tab-pane>
+
         <!-- General tab -->
         <el-tab-pane :label="$t('settings.tabs.general')" name="general">
           <EasyGeneralSettings
@@ -47,32 +121,141 @@
         </el-tab-pane>
         <!-- Paths tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.paths')" name="paths">
-          <AdvancedPathsSettings
-            :t="t"
-            :paths="paths"
-            :system-info="systemInfo"
-            :backup-dir="backupDir"
-            :backup-schedule-hours="backupScheduleHours"
-            :backups="backupsList"
-            :backups-loading="backupsLoading"
-            :backup-creating="backupCreating"
-            @update:path="(key, value) => { paths[key] = value }"
-            @update:backup-dir="backupDir = $event"
-            @update:backup-schedule-hours="backupScheduleHours = $event"
-            @browse="browsePath"
-            @create-backup="manualBackup"
-            @refresh-backups="loadBackups"
-            @download-backup="downloadBackupFile"
-          />
+          <div class="tab-content">
+            <p class="tab-desc">{{ $t('settings.paths.tabDesc') }}</p>
+            <!-- F79: Browse buttons open the native file/folder dialog via
+                 electronAPI.showOpenDialog. Falls back to manual typing when
+                 running outside Electron (dev browser, etc.). -->
+            <el-form label-position="top" size="small" style="max-width: 560px">
+              <el-form-item :label="$t('settings.paths.apache')">
+                <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
+                  <template #append>
+                    <el-button @click="browsePath('apache', 'file')">{{ $t('settings.paths.browse') }}</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <el-form-item :label="$t('settings.paths.mysql')">
+                <el-input v-model="paths.mysql" placeholder="C:\nks-wdc\binaries\mysql\8.0\bin\mysqld.exe">
+                  <template #append>
+                    <el-button @click="browsePath('mysql', 'file')">{{ $t('settings.paths.browse') }}</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <el-form-item :label="$t('settings.paths.php')">
+                <el-input v-model="paths.php" placeholder="C:\nks-wdc\binaries\php\8.4\php.exe">
+                  <template #append>
+                    <el-button @click="browsePath('php', 'file')">{{ $t('settings.paths.browse') }}</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <el-form-item :label="$t('settings.paths.redis')">
+                <el-input v-model="paths.redis" placeholder="C:\nks-wdc\binaries\redis\7.2\redis-server.exe">
+                  <template #append>
+                    <el-button @click="browsePath('redis', 'file')">{{ $t('settings.paths.browse') }}</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <el-form-item :label="$t('settings.paths.sitesDir')">
+                <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts">
+                  <template #append>
+                    <el-button @click="browsePath('sitesDir', 'folder')">{{ $t('settings.paths.browse') }}</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+              <el-form-item :label="$t('settings.paths.hostsFile')">
+                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts">
+                  <template #append>
+                    <el-button @click="browsePath('hostsFile', 'file')">{{ $t('settings.paths.browse') }}</el-button>
+                  </template>
+                </el-input>
+                <div class="hint">{{ $t('settings.paths.hostsHint') }}</div>
+              </el-form-item>
+
+              <el-divider />
+
+              <el-form-item :label="$t('settings.paths.dataDir')">
+                <el-input
+                  :model-value="systemInfo?.os?.machine ? `${systemInfo?.daemon?.pid ? '~/.wdc' : '~/.wdc'}` : '~/.wdc'"
+                  disabled
+                  class="mono-input"
+                />
+                <div class="hint">
+                  {{ $t('settings.paths.dataHint') }}
+                  Override with <code>WDC_DATA_DIR</code> environment variable or
+                  <code>portable.txt</code> next to the executable.
+                </div>
+              </el-form-item>
+              <el-form-item label="Backup directory">
+                <el-input v-model="backupDir" placeholder="~/.wdc/backups" />
+              </el-form-item>
+              <el-form-item label="Auto-backup interval">
+                <el-input-number
+                  v-model="backupScheduleHours"
+                  :min="0"
+                  :max="720"
+                  controls-position="right"
+                  style="width: 160px"
+                />
+                <span style="margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3)">hours</span>
+                <div class="hint">
+                  Set to 0 to disable. When &gt; 0, the daemon creates a
+                  timestamped backup every N hours and prunes old ones (keeps 10).
+                </div>
+              </el-form-item>
+            </el-form>
+
+            <!-- Manual backup management -->
+            <div style="margin-top: 24px; border-top: 1px solid var(--wdc-border); padding-top: 16px">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+                <span style="font-weight: 600; font-size: 0.95rem">Backups</span>
+                <div style="display: flex; gap: 8px">
+                  <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
+                    Create Backup
+                  </el-button>
+                  <el-button size="small" @click="loadBackups" :loading="backupsLoading">
+                    {{ $t('common.refresh') }}
+                  </el-button>
+                </div>
+              </div>
+              <div v-if="backupsLoading" class="hint">Loading backups...</div>
+              <div v-else-if="backupsList.length === 0" class="hint">No backups yet. Click "Create Backup" to create one.</div>
+              <el-table v-else :data="backupsList" size="small" stripe style="width: 100%">
+                <el-table-column label="Date" width="180">
+                  <template #default="{ row }">
+                    {{ new Date(row.createdUtc).toLocaleString() }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="Size" width="100">
+                  <template #default="{ row }">
+                    {{ (row.size / 1024 / 1024).toFixed(1) }} MB
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('common.actions')">
+                  <template #default="{ row }">
+                    <el-button size="small" @click="downloadBackupFile(row.path)">{{ $t('common.download') }}</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
         </el-tab-pane>
+
         <!-- Databases tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.databases')" name="databases">
-          <AdvancedDatabaseSettings
-            :databases="databases"
-            v-model:new-db-name="newDbName"
-            @create="createDatabase"
-            @drop="dropDatabase"
-          />
+          <div class="tab-content">
+            <p class="tab-desc">MySQL databases managed by NKS WDC.</p>
+            <div class="db-list" v-if="databases.length > 0">
+              <div class="db-row" v-for="db in databases" :key="db">
+                <span class="db-name">{{ db }}</span>
+                <el-button size="small" type="danger" text @click="dropDatabase(db)">Drop</el-button>
+              </div>
+            </div>
+            <el-empty v-else description="No user databases" :image-size="48" />
+            <div class="db-create">
+              <el-input v-model="newDbName" placeholder="new_database" size="small" style="width: 200px" />
+              <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">Create</el-button>
+            </div>
+          </div>
         </el-tab-pane>
 
         <!-- Advanced tab — integration endpoints -->
@@ -493,41 +676,96 @@
 
         <!-- Account & Devices tab -->
         <el-tab-pane :label="$t('settings.tabs.account')" name="account">
-          <AccountSettingsTab
-            :t="t"
-            :is-simple="uiModeStore.isSimple"
-            :sso-authenticated="authStore.isAuthenticated"
-            :sso-display-name="authStore.displayName"
-            :sso-login-pending="authStore.loginPending"
-            :sso-login-error="authStore.loginError"
-            :account-token="accountToken"
-            v-model:auth-email="authEmail"
-            v-model:auth-password="authPassword"
-            :auth-loading="authLoading"
-            :auth-error="authError"
-            :account-email="accountEmail"
-            :syncing="syncing"
-            :pulling="pulling"
-            :devices-loading="devicesLoading"
-            :account-devices="accountDevices"
-            v-model:editing-device-name="editingDeviceName"
-            v-model:editing-device-value="editingDeviceValue"
-            :pushing-to="pushingTo"
-            :unlinking-device="unlinkingDevice"
-            @sso-login="ssoLogin"
-            @sso-logout="authStore.logout()"
-            @login="doLogin"
-            @register="doRegister"
-            @push="pushToCloud"
-            @pull="pullFromCloud"
-            @logout="doLogout"
-            @refresh-devices="loadDevicesAccount"
-            @start-edit-name="startEditDeviceName"
-            @save-name="saveDeviceName"
-            @push-config="pushMyConfigTo"
-            @unlink="unlinkDevice"
-          />
+          <div class="tab-content">
+            <!-- F91.4: SSO (catalog-api OIDC) moved from About -> Account
+                 because signing in belongs with account management, not
+                 with "what version is this" metadata. Shown in both
+                 simple + advanced modes so simple users can still sign
+                 in to their catalog identity. -->
+            <AccountSsoCard
+              :t="$t"
+              :is-authenticated="authStore.isAuthenticated"
+              :display-name="authStore.displayName"
+              :login-pending="authStore.loginPending"
+              :login-error="authStore.loginError"
+              @login="ssoLogin"
+              @logout="authStore.logout()"
+            />
+            <!-- F91.15: password login restored alongside SSO. The two
+                 paths write to the same authStore (token + displayName),
+                 just through different entry points — SSO card above
+                 opens Authentik, password form here hits
+                 /api/v1/auth/login directly. "Unified login" = one
+                 Account tab hosting both, not one removed. -->
+            <template v-if="uiModeStore.isSimple">
+              <AccountPasswordCard
+                v-if="!accountToken"
+                :t="$t"
+                :title="$t('settings.tabs.account')"
+                v-model:email="authEmail"
+                v-model:password="authPassword"
+                :loading="authLoading"
+                :error="authError"
+                @login="doLogin"
+                @register="doRegister"
+              />
+              <AccountSimpleSyncCard
+                v-else
+                :t="$t"
+                :title="$t('settings.tabs.account')"
+                :email="accountEmail"
+                :syncing="syncing"
+                :pulling="pulling"
+                @push="pushToCloud"
+                @pull="pullFromCloud"
+                @logout="doLogout"
+              />
+            </template>
+
+            <!-- Advanced mode: full account UI. Shows password form when
+                 not signed in, device management + push/pull when signed
+                 in. SSO card above is the other entry point; both write
+                 the same authStore so switching between them is seamless. -->
+            <template v-if="!uiModeStore.isSimple">
+              <AccountPasswordCard
+                v-if="!accountToken"
+                :t="$t"
+                :title="$t('settings.account.passwordTitle')"
+                v-model:email="authEmail"
+                v-model:password="authPassword"
+                :loading="authLoading"
+                :error="authError"
+                @login="doLogin"
+                @register="doRegister"
+              />
+              <AccountAdvancedSummaryCard
+                v-else
+                :t="$t"
+                :email="accountEmail"
+                :devices-loading="devicesLoading"
+                @refresh-devices="loadDevicesAccount"
+                @logout="doLogout"
+              />
+
+
+              <!-- F91.15: devices list only when signed in - same gate
+                   as the Account summary above. -->
+              <AccountDeviceTableCard
+                v-if="accountToken"
+                :devices="accountDevices"
+                v-model:editing-device-name="editingDeviceName"
+                v-model:editing-device-value="editingDeviceValue"
+                :pushing-to="pushingTo"
+                :unlinking-device="unlinkingDevice"
+                @start-edit-name="startEditDeviceName"
+                @save-name="saveDeviceName"
+                @push-config="pushMyConfigTo"
+                @unlink="unlinkDevice"
+              />
+            </template>
+          </div>
         </el-tab-pane>
+
         <!-- Update tab — visible in both Simple and Advanced -->
         <el-tab-pane :label="$t('settings.tabs.update')" name="update">
           <EasyUpdateSettings
@@ -725,11 +963,11 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
-import AccountSettingsTab from '../settings/account/AccountSettingsTab.vue'
-import AdvancedBackupSettings from '../settings/advanced/AdvancedBackupSettings.vue'
-import AdvancedDatabaseSettings from '../settings/advanced/AdvancedDatabaseSettings.vue'
-import AdvancedPortsSettings from '../settings/advanced/AdvancedPortsSettings.vue'
-import AdvancedPathsSettings from '../settings/advanced/AdvancedPathsSettings.vue'
+import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
+import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
+import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
+import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
+import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
 import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
@@ -820,7 +1058,6 @@ const ports = reactive({
   http: 80,
   https: 443,
   mysql: 3306,
-  postgresql: 5432,
   redis: 6379,
   mailpitSmtp: 1025,
   mailpitHttp: 8025,
@@ -1450,7 +1687,6 @@ async function loadSettings() {
     deployUseLegacyHostHandlers.value = !(data['deploy.useLegacyHostHandlers'] === 'false'
       || data['deploy.useLegacyHostHandlers'] === '0')
     if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
-    if (data['ports.postgresql'])  ports.postgresql = parseInt(data['ports.postgresql'])
     if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
     if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
     if (data['ports.mailpitHttp']) ports.mailpitHttp = parseInt(data['ports.mailpitHttp'])
@@ -2323,7 +2559,6 @@ async function save() {
       'ports.http':          String(ports.http),
       'ports.https':         String(ports.https),
       'ports.mysql':         String(ports.mysql),
-      'ports.postgresql':    String(ports.postgresql),
       'ports.redis':         String(ports.redis),
       'ports.mailpitSmtp':   String(ports.mailpitSmtp),
       'mcp.enabled':         String(mcpEnabled.value),
@@ -2601,6 +2836,18 @@ async function save() {
   min-width: 0;
 }
 .about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
+
+.db-list { margin-bottom: 16px; }
+.db-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--wdc-border);
+}
+.db-row:last-child { border-bottom: none; }
+.db-name { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--wdc-text); }
+.db-create { display: flex; gap: 8px; margin-top: 12px; }
 
 /* Sync tab */
 .settings-card {
