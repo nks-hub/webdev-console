@@ -475,13 +475,13 @@ onMounted(async () => {
 
 <style scoped>
 .simple-detail {
-  max-width: 520px;
-  margin: 32px auto;
-  padding: 28px 32px;
+  width: min(1120px, calc(100% - 48px));
+  margin: 24px auto;
+  padding: 22px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: 16px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  border-radius: var(--wdc-radius);
+  box-shadow: none;
 }
 
 .state-box {
@@ -492,6 +492,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -502,18 +503,23 @@ onMounted(async () => {
 }
 
 .sd-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(170px, 0.45fr) minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--wdc-border);
 }
 
 .sd-row-stack {
-  align-items: flex-start;
+  align-items: start;
 }
 
 .sd-status-row {
-  padding: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  background: var(--wdc-surface-2);
 }
 
 .sd-label-group {
@@ -525,7 +531,7 @@ onMounted(async () => {
 .sd-label {
   color: var(--el-text-color-secondary);
   font-size: 14px;
-  min-width: 140px;
+  min-width: 0;
 }
 
 .sd-status-row .sd-label {
@@ -550,10 +556,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  justify-content: flex-end;
 }
 
 .sd-bind-control {
-  width: min(260px, 100%);
+  width: 100%;
+}
+
+.sd-bind-control :deep(.el-select) {
+  width: min(460px, 100%);
 }
 
 .sd-status-dot {
@@ -596,15 +608,23 @@ onMounted(async () => {
   padding-top: 8px;
 }
 
-.sd-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--wdc-border); }
+.sd-section {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  background: var(--wdc-surface-2);
+}
 .sd-section-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--wdc-text-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .sd-service-row {
   display: grid;
-  grid-template-columns: 16px 1fr auto auto;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
-  padding: 8px 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--wdc-border);
 }
+.sd-service-row:last-child { border-bottom: 0; }
 .sd-service-name { font-size: 14px; font-weight: 500; }
 .sd-service-uptime { color: var(--el-text-color-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
 .dot-transition { background: var(--el-color-info); animation: dot-pulse 1.2s ease-in-out infinite; }
@@ -626,7 +646,11 @@ onMounted(async () => {
   transform: translateY(-4px);
 }
 
-.sd-activity-block { padding: 10px 0; }
+.sd-activity-block {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--wdc-border);
+}
+.sd-activity-block:last-child { border-bottom: 0; }
 .sd-activity-label { font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
 .sd-err-badge {
   display: inline-flex; align-items: center; justify-content: center;
@@ -643,4 +667,70 @@ onMounted(async () => {
 .sd-full-logs { margin-left: auto; }
 .sd-traffic-row { display: flex; align-items: center; gap: 12px; }
 .sd-traffic-count { color: var(--el-text-color-secondary); font-size: 12px; }
+
+@media (min-width: 900px) {
+  .simple-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(340px, 0.65fr);
+    gap: 0 18px;
+  }
+
+  .simple-detail > .sd-header,
+  .simple-detail > .sd-status-row,
+  .simple-detail > .el-divider,
+  .simple-detail > .sd-row,
+  .simple-detail > .sd-danger-row {
+    grid-column: 1;
+  }
+
+  .simple-detail > .sd-section {
+    grid-column: 2;
+  }
+
+  .simple-detail > .sd-section:first-of-type {
+    grid-row: 1 / span 5;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .simple-detail {
+    width: calc(100% - 32px);
+    margin: 18px auto;
+    padding: 16px;
+  }
+
+  .sd-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sd-header :deep(.el-button) {
+    width: 100%;
+    min-height: 36px;
+  }
+
+  .sd-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .sd-control-wrap {
+    justify-content: flex-start;
+  }
+
+  .sd-service-row {
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+  }
+
+  .sd-service-row :deep(.el-button) {
+    grid-column: 2 / -1;
+    justify-self: stretch;
+  }
+
+  .sd-traffic-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 </style>

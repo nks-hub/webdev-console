@@ -27,14 +27,17 @@
         shadow="hover"
       >
         <div class="card-body" @click="navigateToSite(site.domain)">
-          <div class="card-title">{{ site.domain }}</div>
-
-          <div class="card-status">
-            <span class="status-dot" :class="apacheRunning ? 'dot-green' : 'dot-red'" />
-            <span class="status-text">{{
-              apacheRunning ? $t('sites.card.running') : $t('sites.card.stopped')
-            }}</span>
+          <div class="card-title-row">
+            <div class="card-title">{{ site.domain }}</div>
+            <div class="card-status">
+              <span class="status-dot" :class="apacheRunning ? 'dot-green' : 'dot-red'" />
+              <span class="status-text">{{
+                apacheRunning ? $t('sites.card.running') : $t('sites.card.stopped')
+              }}</span>
+            </div>
           </div>
+
+          <div class="card-path mono" :title="site.documentRoot">{{ site.documentRoot }}</div>
 
           <div class="card-badges">
             <el-tag
@@ -454,6 +457,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -469,44 +473,58 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
 }
 
 .site-card {
   cursor: default;
-  border-radius: 12px !important;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: var(--wdc-radius) !important;
+  border-color: var(--wdc-border) !important;
+  background: var(--wdc-surface) !important;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  box-shadow: none;
 }
 
 .site-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-  transform: scale(1.02);
+  border-color: var(--wdc-border-strong) !important;
+  background: var(--wdc-hover) !important;
 }
 
 :deep(.el-card__body) {
-  padding: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 16px;
 }
 
 .card-body {
   cursor: pointer;
-  padding-bottom: 12px;
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .card-title {
-  font-size: 1.1rem;
+  min-width: 0;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--wdc-text);
-  margin-bottom: 8px;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .card-status {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
+  flex: 0 0 auto;
 }
 
 .status-dot {
@@ -528,14 +546,24 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 }
 
 .status-text {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: var(--wdc-text-2);
+}
+
+.card-path {
+  margin-top: 5px;
+  color: var(--wdc-text-2);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 10px;
 }
 
 .badge-php {
@@ -552,7 +580,8 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   gap: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  padding: 6px 0;
+  min-height: 32px;
+  padding: 8px 0 4px;
 }
 
 .card-hits {
@@ -577,10 +606,19 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 .card-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
   padding-top: 12px;
   border-top: 1px solid var(--wdc-border);
-  margin-top: 4px;
+  margin-top: 0;
+}
+
+.card-actions :deep(.el-button) {
+  min-height: 34px;
+}
+
+.card-actions :deep(.el-switch) {
+  min-width: 42px;
 }
 
 .empty-title {
@@ -598,5 +636,48 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 .danger-item {
   color: var(--el-color-danger) !important;
+}
+
+@media (max-width: 820px) {
+  .sites-simple {
+    padding: 18px 16px;
+  }
+
+  .simple-header {
+    align-items: stretch;
+    flex-direction: column;
+    margin-bottom: 16px;
+  }
+
+  .simple-header :deep(.el-button) {
+    width: 100%;
+    min-height: 38px;
+  }
+
+  .card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card-actions {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    width: 100%;
+  }
+
+  .card-actions :deep(.el-button:first-child) {
+    width: 100%;
+  }
+}
+
+@media (max-width: 460px) {
+  .card-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-actions {
+    grid-template-columns: 1fr 42px 46px 42px;
+  }
 }
 </style>

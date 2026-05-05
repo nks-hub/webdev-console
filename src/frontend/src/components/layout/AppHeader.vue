@@ -112,12 +112,15 @@ const allNavItems = [
   { path: '/dashboard', label: () => t('nav.services'), requiresAdvanced: true },
   { path: '/sites', label: () => t('nav.sites'), requiresAdvanced: false },
   { path: '/databases', label: () => t('nav.databases'), requiresAdvanced: true },
+  { path: '/plugins/mysql', label: () => 'MySQL', requiresAdvanced: true, pluginId: 'nks.wdc.mysql' },
+  { path: '/plugins/postgresql', label: () => 'PostgreSQL', requiresAdvanced: true, pluginId: 'nks.wdc.postgresql' },
   { path: '/ssl', label: () => t('nav.ssl'), requiresAdvanced: true },
   { path: '/settings', label: () => t('nav.settings'), requiresAdvanced: false },
 ]
 const navItems = computed(() =>
   allNavItems
     .filter(i => !i.requiresAdvanced || uiMode.isAdvanced)
+    .filter(i => !('pluginId' in i) || pluginsStore.manifests.some(p => p.id === i.pluginId && p.enabled))
     .filter(i => pluginsStore.isRouteVisible(i.path))
     .map(i => ({ path: i.path, label: i.label() }))
 )
@@ -291,23 +294,24 @@ function isActive(path: string) {
   min-height: 32px;
   border-radius: 999px;
   border: 1px solid var(--wdc-warning);
-  background: rgba(245, 166, 35, 0.08);
-  color: var(--wdc-warning);
+  background: var(--wdc-warning);
+  color: #141006;
   font-size: 0.78rem;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
   transition: background 0.2s ease;
 }
-.update-badge:hover { background: rgba(245, 166, 35, 0.18); }
+.update-badge:hover { filter: brightness(1.05); }
 .update-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--wdc-warning);
+  background: currentColor;
   animation: glow 2.2s ease-in-out infinite;
 }
 .update-label { letter-spacing: 0.02em; }
+.update-badge .update-label { color: #141006; }
 
 @media (max-width: 760px) {
   .app-header {
@@ -316,6 +320,7 @@ function isActive(path: string) {
   }
 
   .logo-copy,
+  .header-nav,
   .conn-pill {
     display: none;
   }

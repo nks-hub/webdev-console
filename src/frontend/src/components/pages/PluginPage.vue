@@ -158,6 +158,7 @@ const PLUGIN_CUSTOM_ROUTES: Record<string, string> = {
   'nks.wdc.apache': '/plugins/apache',
   'nks.wdc.php': '/plugins/php-custom',
   'nks.wdc.mysql': '/plugins/mysql',
+  'nks.wdc.postgresql': '/plugins/postgresql',
   'nks.wdc.mailpit': '/plugins/mailpit',
   'nks.wdc.redis': '/plugins/redis',
 }

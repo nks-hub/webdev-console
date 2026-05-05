@@ -8,7 +8,92 @@
     </div>
 
     <div class="page-body">
-      <el-tabs v-model="activeTab" class="settings-tabs">
+      <div v-if="uiModeStore.isSimple" class="simple-settings-grid">
+        <section class="simple-settings-panel simple-settings-panel-main">
+          <header class="simple-settings-panel-header">
+            <div>
+              <h2>{{ $t('settings.tabs.general') }}</h2>
+              <p>{{ $t('settings.general.tabDesc') }}</p>
+            </div>
+          </header>
+          <EasyGeneralSettings
+            :t="t"
+            :locale="locale"
+            :theme-mode="themeStore.mode"
+            :is-advanced="uiModeStore.isAdvanced"
+            :run-on-startup="runOnStartup"
+            :default-php="defaultPhp"
+            :php-versions="phpVersions"
+            :flushing-dns="flushingDns"
+            :mamp-discovering="mampDiscovering"
+            :telemetry-enabled="telemetryEnabled"
+            :telemetry-crash-reports="telemetryCrashReports"
+            @update:locale="onLocaleChange"
+            @update:theme-mode="themeStore.setMode"
+            @update:ui-mode="uiModeStore.setUiMode"
+            @update:run-on-startup="runOnStartup = $event"
+            @update:default-php="defaultPhp = $event"
+            @update:telemetry-enabled="telemetryEnabled = $event"
+            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @flush-dns="flushDns"
+            @discover-mamp="discoverMamp"
+          />
+        </section>
+
+        <section class="simple-settings-panel">
+          <header class="simple-settings-panel-header">
+            <div>
+              <h2>{{ $t('settings.tabs.update') }}</h2>
+              <p>{{ $t('settings.update.notChecked') }}</p>
+            </div>
+          </header>
+          <EasyUpdateSettings
+            :t="t"
+            :current-version="currentVersion"
+            :update-check="updateCheck"
+            :format-relative-time="formatRelativeTime"
+            :render-release-notes="renderReleaseNotes"
+            @check="runUpdateCheck"
+            @download="downloadAndInstall"
+          />
+        </section>
+
+        <section v-if="systemInfo" class="simple-settings-panel simple-runtime-panel">
+          <header class="simple-settings-panel-header">
+            <div>
+              <h2>{{ $t('settings.tabs.about') }}</h2>
+              <p>NKS WDC v{{ appVersion }}</p>
+            </div>
+          </header>
+          <div class="simple-runtime-grid">
+            <div class="about-sys-row">
+              <span class="sys-label">{{ $t('settings.about.services') }}</span>
+              <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }}</span>
+            </div>
+            <div class="about-sys-row">
+              <span class="sys-label">{{ $t('settings.about.sites') }}</span>
+              <span class="sys-value">{{ systemInfo.sites }}</span>
+            </div>
+            <div v-if="systemInfo.daemon?.version" class="about-sys-row">
+              <span class="sys-label">{{ $t('settings.about.daemonVersion') }}</span>
+              <span class="sys-value mono">{{ systemInfo.daemon.version }}</span>
+            </div>
+            <div v-if="systemInfo.daemon?.uptime !== undefined" class="about-sys-row">
+              <span class="sys-label">{{ $t('settings.about.daemonUptime') }}</span>
+              <span class="sys-value">{{ formatUptime(systemInfo.daemon.uptime) }}</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="settings-footer simple-settings-footer">
+          <el-button type="primary" size="small" :loading="saving" @click="save">
+            {{ $t('common.save') }} {{ $t('common.settings') }}
+          </el-button>
+          <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
+        </div>
+      </div>
+
+      <el-tabs v-else v-model="activeTab" class="settings-tabs">
         <!-- Ports tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.ports')" name="ports">
           <div class="tab-content">
@@ -934,7 +1019,7 @@
       </el-tabs>
 
       <!-- Save button (not shown on About or Update) -->
-      <div class="settings-footer" v-if="activeTab !== 'about' && activeTab !== 'update'">
+      <div class="settings-footer" v-if="uiModeStore.isAdvanced && activeTab !== 'about' && activeTab !== 'update'">
         <el-button type="primary" size="small" :loading="saving" @click="save">
           {{ $t('common.save') }} {{ $t('common.settings') }}
         </el-button>
@@ -2627,6 +2712,58 @@ async function save() {
   padding: 0 24px 24px;
 }
 
+.simple-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.simple-settings-panel {
+  min-width: 0;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 18px;
+}
+
+.simple-settings-panel-main {
+  grid-row: span 2;
+}
+
+.simple-settings-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--wdc-border);
+}
+
+.simple-settings-panel-header h2 {
+  margin: 0;
+  color: var(--wdc-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.simple-settings-panel-header p {
+  margin: 3px 0 0;
+  color: var(--wdc-text-2);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.simple-runtime-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.simple-settings-footer {
+  grid-column: 1 / -1;
+  margin-top: 0 !important;
+}
+
 .settings-tabs {
   --el-tabs-header-height: 40px;
 }
@@ -2722,6 +2859,40 @@ async function save() {
   border-top: 1px solid var(--el-border-color);
   display: flex;
   gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .simple-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .simple-settings-panel-main {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-header {
+    padding: 18px 16px 0;
+    margin-bottom: 14px;
+  }
+
+  .page-body {
+    padding: 0 16px 18px;
+  }
+
+  .simple-settings-panel {
+    padding: 14px;
+  }
+
+  .settings-footer {
+    flex-wrap: wrap;
+  }
+
+  .settings-footer :deep(.el-button) {
+    flex: 1 1 140px;
+    min-height: 36px;
+  }
 }
 
 /* About tab layout v2 — drops the giant bordered box, uses a two-column

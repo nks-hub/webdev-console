@@ -442,7 +442,7 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .workspace-subtitle {
-  color: var(--wdc-text-3);
+  color: #111827;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -482,8 +482,8 @@ async function toggleSvc(svc: ServiceInfo) {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--wdc-text-2);
+  background: #2563eb;
+  color: #ffffff;
   font-size: 0.72rem;
   letter-spacing: 0;
 }
@@ -582,6 +582,7 @@ async function toggleSvc(svc: ServiceInfo) {
    from .nav-item.active when both apply. */
 .nav-item-tunnel {
   border-left-color: #f38020;
+  color: #9a4a00;
 }
 .nav-item-tunnel .nav-icon-shell {
   color: #f38020;
@@ -590,6 +591,7 @@ async function toggleSvc(svc: ServiceInfo) {
   background: rgba(243, 128, 32, 0.12);
   border-left-color: #f38020;
 }
+:global(html.dark) .nav-item-tunnel { color: #ffb15f; }
 
 /* F83 SSO entry — subtle accent when signed in so the state is
    legible without crowding the bottom-nav visual weight. */
@@ -636,7 +638,7 @@ async function toggleSvc(svc: ServiceInfo) {
 .nav-badge {
   display: inline-block;
   padding: 1px 7px;
-  background: #f38020;
+  background: #9a4a00;
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -644,6 +646,9 @@ async function toggleSvc(svc: ServiceInfo) {
   min-width: 18px;
   text-align: center;
 }
+
+:global(html.dark) .section-label { color: #ffffff; }
+:global(html.dark) .nav-badge { background: #ffb15f; color: #141006; }
 
 .nav-icon-shell {
   width: 34px;

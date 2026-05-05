@@ -1,7 +1,7 @@
 <template>
   <div class="tab-content">
     <p class="tab-desc">{{ t('settings.general.tabDesc') }}</p>
-    <el-form label-position="left" label-width="180px" size="small" style="max-width: 500px">
+    <el-form class="easy-settings-form" label-position="top" size="small">
       <el-form-item :label="t('settings.general.language')">
         <el-select
           :model-value="locale"
@@ -116,3 +116,65 @@ const emit = defineEmits<{
   discoverMamp: []
 }>()
 </script>
+
+<style scoped>
+.tab-content {
+  min-width: 0;
+}
+
+.tab-desc {
+  margin: 0 0 14px;
+  color: var(--wdc-text-2);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.easy-settings-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 14px 18px;
+  width: 100%;
+}
+
+.easy-settings-form :deep(.el-form-item) {
+  align-content: start;
+  min-width: 0;
+  margin-bottom: 0;
+  padding: 12px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+}
+
+.easy-settings-form :deep(.el-form-item__label) {
+  color: var(--wdc-text);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.easy-settings-form :deep(.el-select),
+.easy-settings-form :deep(.el-button),
+.easy-settings-form :deep(.el-radio-group) {
+  max-width: 100%;
+}
+
+.hint {
+  width: 100%;
+  margin-top: 8px;
+  color: var(--wdc-text-2);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .easy-settings-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .easy-settings-form :deep(.el-radio-group) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+</style>

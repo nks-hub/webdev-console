@@ -22,6 +22,7 @@ const CloudflareTunnel = () => import('../components/pages/CloudflareTunnel.vue'
 const ApachePluginPage = () => import('../components/pages/ApachePluginPage.vue')
 const PhpPluginPage = () => import('../components/pages/PhpPluginPage.vue')
 const MySqlPluginPage = () => import('../components/pages/MySqlPluginPage.vue')
+const PostgreSqlPluginPage = () => import('../components/pages/PostgreSqlPluginPage.vue')
 const MailpitPluginPage = () => import('../components/pages/MailpitPluginPage.vue')
 const RedisPluginPage = () => import('../components/pages/RedisPluginPage.vue')
 const ComposerManager = () => import('../components/pages/ComposerManager.vue')
@@ -43,6 +44,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/plugins/apache', component: ApachePluginPage, meta: { title: 'Apache', titleKey: 'nav.webServer', requiresAdvanced: true } },
   { path: '/plugins/php-custom', component: PhpPluginPage, meta: { title: 'PHP', titleKey: 'nav.php', requiresAdvanced: true } },
   { path: '/plugins/mysql', component: MySqlPluginPage, meta: { title: 'MySQL', titleKey: 'nav.database', requiresAdvanced: true } },
+  { path: '/plugins/postgresql', component: PostgreSqlPluginPage, meta: { title: 'PostgreSQL', requiresAdvanced: true } },
   { path: '/plugins/mailpit', component: MailpitPluginPage, meta: { title: 'Mailpit', titleKey: 'nav.cacheMail', requiresAdvanced: true } },
   { path: '/plugins/redis', component: RedisPluginPage, meta: { title: 'Redis', titleKey: 'nav.cacheMail', requiresAdvanced: true } },
   { path: '/settings', component: Settings, meta: { title: 'Settings', titleKey: 'nav.settings' } },
