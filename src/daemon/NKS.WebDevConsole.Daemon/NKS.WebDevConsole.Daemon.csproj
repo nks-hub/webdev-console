@@ -59,7 +59,7 @@
          ignored on non-Windows RIDs. -->
     <ApplicationManifest Condition=" '$(CiBuild)' == 'true' ">app.ci.manifest</ApplicationManifest>
     <ApplicationManifest Condition=" '$(CiBuild)' != 'true' ">app.manifest</ApplicationManifest>
-    <UseAppHost Condition=" '$(CiBuild)' == 'true' ">false</UseAppHost>
+    <UseAppHost Condition=" '$(CiBuild)' == 'true' AND '$(SelfContained)' != 'true' ">false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>

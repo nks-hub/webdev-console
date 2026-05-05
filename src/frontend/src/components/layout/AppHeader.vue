@@ -179,9 +179,9 @@ function isActive(path: string) {
 }
 
 .logo-sub {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--wdc-text-3);
 }
@@ -245,10 +245,10 @@ function isActive(path: string) {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   border: 1px solid;
   min-height: 32px;
 }
@@ -293,7 +293,7 @@ function isActive(path: string) {
   border: 1px solid var(--wdc-warning);
   background: rgba(245, 166, 35, 0.08);
   color: var(--wdc-warning);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
   cursor: pointer;

@@ -443,9 +443,9 @@ async function toggleSvc(svc: ServiceInfo) {
 
 .workspace-subtitle {
   color: var(--wdc-text-3);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.04em;
 }
 
 .nav-cluster {
@@ -467,24 +467,24 @@ async function toggleSvc(svc: ServiceInfo) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   color: var(--wdc-text-3);
   padding: 12px 10px 8px;
 }
 
 .section-count {
-  min-width: 20px;
-  height: 20px;
+  min-width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--wdc-text-2);
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   letter-spacing: 0;
 }
 
@@ -529,9 +529,9 @@ async function toggleSvc(svc: ServiceInfo) {
 
 .svc-meta {
   color: var(--wdc-text-3);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
 }
 
 .svc-led {
@@ -603,10 +603,10 @@ async function toggleSvc(svc: ServiceInfo) {
   min-width: 0;
 }
 .nav-label-sso .sso-caption {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--wdc-text-3);
 }
 .nav-label-sso .sso-email {
@@ -638,7 +638,7 @@ async function toggleSvc(svc: ServiceInfo) {
   padding: 1px 7px;
   background: #f38020;
   color: #ffffff;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   border-radius: 10px;
   min-width: 18px;
@@ -646,8 +646,8 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .nav-icon-shell {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

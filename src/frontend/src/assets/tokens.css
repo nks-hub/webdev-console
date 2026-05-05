@@ -504,13 +504,13 @@ html:not(.dark) .el-button {
 /* Tags */
 .el-tag {
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .el-tag--small {
-  height: 18px;
+  height: 22px;
   padding: 0 6px;
 }
 
@@ -554,10 +554,10 @@ html:not(.dark) .el-button {
 .el-table__header-wrapper th.el-table__cell {
   background: var(--wdc-surface-2) !important;
   color: var(--wdc-text-2) !important;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   border-bottom: 1px solid var(--wdc-border) !important;
 }
 
@@ -608,8 +608,8 @@ html:not(.dark) .el-button {
   font-size: 0.82rem;
   font-weight: 500;
   padding: 0 16px !important;
-  height: 38px;
-  line-height: 38px;
+  height: 40px;
+  line-height: 40px;
   transition: color 0.15s;
 }
 
