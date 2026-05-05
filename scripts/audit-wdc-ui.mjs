@@ -227,6 +227,7 @@ async function auditRoute(page, mode, route) {
 
   await page.goto(`http://127.0.0.1:5190/#${route}`, { waitUntil: 'domcontentloaded', timeout: 5000 })
   await waitSettled(page)
+  await closeTransientUi(page)
   entry.finalUrl = page.url()
   entry.title = await page.title().catch(() => null)
   entry.h1 = await page.locator('h1').first().textContent({ timeout: 1000 }).catch(() => null)

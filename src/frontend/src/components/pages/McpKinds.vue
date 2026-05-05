@@ -322,9 +322,9 @@ async function refresh(): Promise<void> {
 
 <style scoped>
 .page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; }
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .page-header h2 { margin: 0; }
-.header-actions { display: flex; gap: 8px; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lock-count-badge {
   display: inline-block;
   margin-left: 6px;
@@ -346,10 +346,15 @@ async function refresh(): Promise<void> {
   background: var(--el-border-color); margin: 0 4px;
 }
 .filter-toolbar {
-  display: flex; gap: 8px; align-items: center;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
-.filter-toolbar .search-input { max-width: 280px; }
+.filter-toolbar .search-input { width: min(280px, 100%); }
 .filter-toolbar .plugin-select { width: 180px; }
+.filter-toolbar :deep(.el-input__wrapper),
+.filter-toolbar :deep(.el-select__wrapper),
+.filter-toolbar :deep(.el-radio-button__inner) {
+  min-height: 32px;
+}
 .auto-approve-tag {
   cursor: pointer;
   user-select: none;
@@ -359,7 +364,8 @@ async function refresh(): Promise<void> {
 }
 .quick-grant-btn {
   margin-left: 6px;
-  font-size: 11px;
+  min-height: 28px;
+  font-size: 0.76rem;
 }
 .always-confirm-tag {
   font-weight: 600;
@@ -368,5 +374,31 @@ async function refresh(): Promise<void> {
 }
 .always-confirm-tag:hover {
   filter: brightness(1.1);
+}
+
+@media (max-width: 900px) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+  }
+
+  .filter-toolbar .plugin-select,
+  .filter-toolbar :deep(.el-radio-group) {
+    width: 100%;
+  }
+
+  .filter-toolbar :deep(.el-radio-group) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .quick-grant-btn {
+    display: flex;
+    margin: 4px 0 0;
+  }
 }
 </style>

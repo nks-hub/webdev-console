@@ -163,6 +163,11 @@ async function waitSettled(page) {
   await page.waitForTimeout(300)
 }
 
+async function closeTransientUi(page) {
+  await page.keyboard.press('Escape').catch(() => {})
+  await page.waitForTimeout(120)
+}
+
 async function setMode(page, mode) {
   await page.goto('http://127.0.0.1:5190/#/sites', { waitUntil: 'domcontentloaded', timeout: 5000 })
   await waitSettled(page)
@@ -204,10 +209,11 @@ try {
     const checks = []
     for (const vp of viewports) {
       await page.setViewportSize({ width: vp.width, height: vp.height })
-      await setMode(page, routeEntry.mode)
-      await page.goto(`http://127.0.0.1:5190/#${routeEntry.route}`, { waitUntil: 'domcontentloaded', timeout: 5000 })
-      await waitSettled(page)
-      const metrics = await page.evaluate(() => {
+    await setMode(page, routeEntry.mode)
+    await page.goto(`http://127.0.0.1:5190/#${routeEntry.route}`, { waitUntil: 'domcontentloaded', timeout: 5000 })
+    await waitSettled(page)
+    await closeTransientUi(page)
+    const metrics = await page.evaluate(() => {
       const parseColor = (raw) => {
         const match = String(raw).match(/rgba?\(([^)]+)\)/)
         if (!match) return null

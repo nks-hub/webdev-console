@@ -498,8 +498,8 @@ onUnmounted(() => {
 }
 
 @media (max-width: 959px) {
-  .sidebar-desktop {
-    display: none;
+  .app-body > .sidebar-desktop {
+    display: none !important;
   }
   .hamburger-btn {
     display: flex;

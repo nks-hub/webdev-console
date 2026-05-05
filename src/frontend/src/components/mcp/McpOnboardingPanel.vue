@@ -4,7 +4,7 @@
       <div class="onboarding-title">
         🚀 {{ t('mcpOnboarding.title') }}
       </div>
-      <el-button size="small" link @click="dismissed = true">
+      <el-button size="small" text class="dismiss-btn" @click="dismissed = true">
         {{ t('mcpOnboarding.dismiss') }}
       </el-button>
     </div>
@@ -247,14 +247,40 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; gap: 8px;
 }
 .recommended-tag { font-size: 10px; }
-.profile-desc { font-size: 12px; }
+.profile-desc { font-size: 13px; line-height: 1.45; }
 .profile-bullets {
   margin: 4px 0 0;
   padding-left: 16px;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--el-text-color-secondary);
 }
 .profile-bullets li { margin-bottom: 2px; }
 .profile-cta { margin-top: auto; align-self: flex-start; }
 .muted { color: var(--el-text-color-secondary); }
+.dismiss-btn {
+  min-height: 32px;
+  color: var(--wdc-text-2) !important;
+  background: var(--wdc-surface-2) !important;
+  border: 1px solid var(--wdc-border) !important;
+}
+.recommended-tag {
+  min-height: 24px;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 640px) {
+  .mcp-onboarding-panel {
+    padding: 14px;
+  }
+
+  .onboarding-header {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .profile-cards {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

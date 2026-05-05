@@ -309,4 +309,40 @@ function isActive(path: string) {
 }
 .update-label { letter-spacing: 0.02em; }
 
+@media (max-width: 760px) {
+  .app-header {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .logo-copy,
+  .conn-pill {
+    display: none;
+  }
+
+  .header-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    padding: 7px 10px;
+    font-size: 0.78rem;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  .update-badge {
+    min-width: 40px;
+    padding: 0 8px;
+  }
+}
+
 </style>
