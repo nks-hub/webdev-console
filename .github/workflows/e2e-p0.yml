@@ -41,10 +41,10 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Setup Node 20
+      - name: Setup Node 24
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Build daemon
         run: dotnet build src/daemon/NKS.WebDevConsole.Daemon/NKS.WebDevConsole.Daemon.csproj -c Release --nologo
@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload daemon logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: daemon-logs
           path: |

@@ -59,6 +59,7 @@ credentials/
 # Electron build output
 release/
 out/
+output/
 
 # Temp/cache
 *.cache

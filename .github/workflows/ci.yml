@@ -35,7 +35,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
@@ -61,14 +61,14 @@ jobs:
         run: dotnet publish src/daemon/NKS.WebDevConsole.Cli -c Release -r win-x64 --self-contained -o publish/cli
 
       - name: Upload Daemon artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: daemon-win-x64
           path: publish/daemon/
           retention-days: 14
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cli-win-x64
           path: publish/cli/
@@ -83,13 +83,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Cache npm dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: src/frontend/node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('src/frontend/package-lock.json') }}
@@ -109,7 +109,7 @@ jobs:
         run: npm run build
 
       - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: frontend-out
           path: src/frontend/dist-electron/
@@ -128,13 +128,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Download daemon artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: daemon-win-x64
           path: src/frontend/resources/daemon
@@ -186,7 +186,7 @@ jobs:
         run: npm run smoke:packaged:win
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: installer-win-x64
           path: src/frontend/release/

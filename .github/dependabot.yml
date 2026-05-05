@@ -17,17 +17,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Major bumps on upload/download-artifact change Node runtime +
-    # hash-mismatch default behaviour. Needs coordinated upgrade with
-    # the release.yml + ci.yml steps that consume the artifacts, so
-    # auto-PRs on majors just churn the inbox. Patch/minor still land.
+    # Keep future major action bumps manual. Artifact and cache actions
+    # are coupled with CI packaging/smoke jobs, so they need a planned
+    # workflow sweep instead of isolated bot PRs.
     ignore:
       - dependency-name: actions/upload-artifact
         update-types: [version-update:semver-major]
       - dependency-name: actions/download-artifact
         update-types: [version-update:semver-major]
-      # v5 switches to Node 24 runtime. Group with the artifact majors
-      # above — ship as one Node-24 runner sweep ticket.
       - dependency-name: actions/cache
         update-types: [version-update:semver-major]
 
