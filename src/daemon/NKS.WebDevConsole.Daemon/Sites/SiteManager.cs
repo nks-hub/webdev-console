@@ -189,6 +189,36 @@ public sealed class SiteManager : ISiteRegistry
             throw new ArgumentException("BindAddress must be an IP address or '*'");
     }
 
+    public void ValidateBindConflicts(SiteConfig site, string? existingDomain = null)
+    {
+        var candidateHosts = HostnamesFor(site).ToArray();
+        var candidateHttpPort = site.HttpPort > 0 ? site.HttpPort : 80;
+        var candidateHttpsPort = site.HttpsPort > 0 ? site.HttpsPort : 443;
+        foreach (var other in Sites.Values)
+        {
+            if (!other.Enabled)
+                continue;
+            if (!string.IsNullOrWhiteSpace(existingDomain)
+                && string.Equals(other.Domain, existingDomain, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (!BindScopesOverlap(site.BindAddress, other.BindAddress))
+                continue;
+
+            var httpOverlaps = candidateHttpPort == (other.HttpPort > 0 ? other.HttpPort : 80);
+            var httpsOverlaps = site.SslEnabled && other.SslEnabled
+                && candidateHttpsPort == (other.HttpsPort > 0 ? other.HttpsPort : 443);
+            if (!httpOverlaps && !httpsOverlaps)
+                continue;
+
+            var duplicateHost = candidateHosts.FirstOrDefault(h => HostnamesFor(other).Contains(h, StringComparer.OrdinalIgnoreCase));
+            if (duplicateHost is not null)
+            {
+                throw new ArgumentException(
+                    $"Host '{duplicateHost}' already belongs to site '{other.Domain}' on an overlapping bind address and port.");
+            }
+        }
+    }
+
     public async Task<SiteConfig> CreateAsync(SiteConfig site)
     {
         ValidateDomain(site.Domain);
@@ -197,6 +227,7 @@ public sealed class SiteManager : ISiteRegistry
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
+        ValidateBindConflicts(site);
 
         var toml = TomlSerializer.Serialize(site);
 
@@ -230,6 +261,7 @@ public sealed class SiteManager : ISiteRegistry
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
+        ValidateBindConflicts(site, site.Domain);
 
         var toml = TomlSerializer.Serialize(site);
         var sitesRoot = Path.GetFullPath(_sitesDir);
@@ -443,6 +475,30 @@ public sealed class SiteManager : ISiteRegistry
         if (value.StartsWith('[') && value.EndsWith(']'))
             return value;
         return value.Contains(':') ? $"[{value}]" : value;
+    }
+
+    private static IEnumerable<string> HostnamesFor(SiteConfig site)
+    {
+        yield return site.Domain;
+        foreach (var alias in NormalizeAliases(site.Domain, site.Aliases))
+            yield return alias;
+    }
+
+    private static bool BindScopesOverlap(string? left, string? right)
+    {
+        var a = NormalizeBindScope(left);
+        var b = NormalizeBindScope(right);
+        return a == "*" || b == "*" || string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeBindScope(string? bindAddress)
+    {
+        if (string.IsNullOrWhiteSpace(bindAddress) || bindAddress.Trim() == "*")
+            return "*";
+        var value = bindAddress.Trim();
+        if (value.StartsWith('[') && value.EndsWith(']'))
+            value = value[1..^1];
+        return System.Net.IPAddress.TryParse(value, out var ip) ? ip.ToString() : value;
     }
 
     /// <summary>

@@ -292,7 +292,8 @@ async function isDaemonAlive(): Promise<boolean> {
       // option is to kill it and spawn the one bundled with this app.
       const appVersion = app.getVersion()
       const daemonVersion = (parsed.version || '').split('+')[0].trim()
-      if (daemonVersion && daemonVersion !== appVersion) {
+      const daemonBaseVersion = daemonVersion.split('-')[0].trim()
+      if (daemonBaseVersion && daemonBaseVersion !== appVersion) {
         console.warn(`[daemon] version skew — app=${appVersion} daemon=${daemonVersion} — stopping stale daemon`)
         try {
           await new Promise<void>((resolve) => {

@@ -530,6 +530,17 @@ export interface SystemInfo {
 }
 export const fetchSystem = (): Promise<SystemInfo> => json('/api/system')
 
+export interface BindAddressOption {
+  value: string
+  label: string
+  description: string
+  wildcard: boolean
+  loopback: boolean
+  interfaceName?: string | null
+}
+export const fetchBindAddressOptions = (): Promise<BindAddressOption[]> =>
+  json('/api/sites/bind-addresses')
+
 // Settings store — flat "category.key" → string map the daemon persists
 // in SQLite. Used by Settings.vue (read + write + sync compare) and by
 // Login.vue (read-only, to pre-fill the catalog URL). Several pages and

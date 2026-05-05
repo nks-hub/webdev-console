@@ -65,14 +65,21 @@
                     </el-input>
                   </el-form-item>
                   <el-form-item :label="$t('sites.bindIp')">
-                    <el-input
+                    <el-select
                       v-model="site.bindAddress"
-                      clearable
-                      placeholder="* or 127.0.0.1"
-                      @input="markDirty"
+                      style="width: 100%"
+                      filterable
+                      :loading="bindAddressOptionsLoading"
+                      :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
+                      @change="markDirty"
                     >
-                      <template #prepend><el-icon><Link /></el-icon></template>
-                    </el-input>
+                      <el-option
+                        v-for="opt in bindAddressOptions"
+                        :key="opt.value"
+                        :label="opt.label"
+                        :value="opt.value"
+                      />
+                    </el-select>
                     <div class="hint">{{ $t('sites.bindIpHint') }}</div>
                   </el-form-item>
                   <el-form-item :label="$t('sites.documentRoot')" required>
@@ -663,8 +670,10 @@ import {
   fetchDockerComposeStatus, type DockerComposeStatus,
   composeUp, composeDown, composeRestart, composePs,
   getHistoricalMetrics,
+  fetchBindAddressOptions,
   fetchPhpVersions,
   daemonBaseUrl,
+  type BindAddressOption,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { use } from 'echarts/core'
@@ -702,6 +711,8 @@ const renameNewDomain = ref('')
 const composeInfo = ref<DockerComposeStatus | null>(null)
 const composeLoading = ref(false)
 const composeOutput = ref('')
+const bindAddressOptions = ref<BindAddressOption[]>([])
+const bindAddressOptionsLoading = ref(false)
 
 async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
   if (!site.value) return
@@ -1053,6 +1064,7 @@ async function load() {
     await sitesStore.load()
     const found = sitesStore.sites.find(s => s.domain === domain.value)
     site.value = found ? { ...found, aliases: [...(found.aliases ?? [])] } : null
+    if (site.value && !site.value.bindAddress) site.value.bindAddress = '*'
     dirty.value = false
 
     // PHP versions — authoritative list from daemon. Leave the array
@@ -1072,6 +1084,25 @@ async function load() {
         }
       })
     } catch { phpVersions.value = [] }
+
+    bindAddressOptionsLoading.value = true
+    try {
+      bindAddressOptions.value = await fetchBindAddressOptions()
+      const current = site.value?.bindAddress || '*'
+      if (site.value && current && !bindAddressOptions.value.some(o => o.value === current)) {
+        bindAddressOptions.value.push({
+          value: current,
+          label: `${current} (saved, unavailable)`,
+          description: 'Saved site value that is not present on this device right now.',
+          wildcard: current === '*',
+          loopback: false,
+        })
+      }
+    } catch {
+      bindAddressOptions.value = []
+    } finally {
+      bindAddressOptionsLoading.value = false
+    }
 
     // history
     try {

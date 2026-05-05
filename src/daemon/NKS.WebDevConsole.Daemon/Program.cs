@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Net;
+using System.Net.NetworkInformation;
 using Dapper;
 using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
@@ -5760,6 +5762,8 @@ app.Services.GetRequiredService<BackupScheduler>().Start();
 
 app.MapGet("/api/sites", (SiteManager sm) => Results.Ok(sm.Sites.Values));
 
+app.MapGet("/api/sites/bind-addresses", () => Results.Ok(GetBindAddressOptions()));
+
 app.MapGet("/api/sites/{domain}", (string domain, SiteManager sm) =>
 {
     var site = sm.Get(domain);
@@ -10936,6 +10940,62 @@ try { pluginLoader.WireEndpoints(app); }
 catch (Exception ex) { app.Logger.LogError(ex, "Plugin endpoint wiring failed"); }
 
 await app.RunAsync();
+
+static IReadOnlyList<BindAddressOption> GetBindAddressOptions()
+{
+    var options = new List<BindAddressOption>
+    {
+        new("*", "*",
+            "Name-based virtual host on every Apache listener. Use only when hostnames are unique across all sites on the same ports.",
+            true, false, null),
+        new(IPAddress.Loopback.ToString(), IPAddress.Loopback.ToString(),
+            "Loopback-only. Good default for localhost and private local sites.",
+            false, true, "Loopback"),
+        new(IPAddress.IPv6Loopback.ToString(), IPAddress.IPv6Loopback.ToString(),
+            "IPv6 loopback-only. Use when the site should be reachable on ::1.",
+            false, true, "Loopback"),
+    };
+    var seen = new HashSet<string>(options.Select(o => o.Value), StringComparer.OrdinalIgnoreCase);
+
+    foreach (var ni in NetworkInterface.GetAllNetworkInterfaces()
+                 .Where(i => i.OperationalStatus == OperationalStatus.Up))
+    {
+        IPInterfaceProperties props;
+        try { props = ni.GetIPProperties(); }
+        catch { continue; }
+
+        foreach (var unicast in props.UnicastAddresses)
+        {
+            var ip = unicast.Address;
+            if (ip.AddressFamily is not (System.Net.Sockets.AddressFamily.InterNetwork
+                or System.Net.Sockets.AddressFamily.InterNetworkV6))
+                continue;
+            if (ip.IsIPv6LinkLocal || ip.IsIPv6Multicast || IPAddress.IsLoopback(ip))
+                continue;
+            var value = ip.ToString();
+            if (!seen.Add(value))
+                continue;
+
+            options.Add(new BindAddressOption(
+                value,
+                $"{value} - {ni.Name}",
+                "Bind this site only on this device address. Requests on other addresses cannot fall through to this vhost.",
+                false,
+                false,
+                ni.Name));
+        }
+    }
+
+    return options;
+}
+
+record BindAddressOption(
+    string Value,
+    string Label,
+    string Description,
+    bool Wildcard,
+    bool Loopback,
+    string? InterfaceName);
 
 record GrantCreateBody(
     string ScopeType,

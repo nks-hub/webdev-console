@@ -31,7 +31,9 @@ Recent history follows Conventional Commits, for example `fix(cloudflare): local
 
 ## Agent Workflow Notes
 
-Before cross-repo, infrastructure, CI, or architecture work, load MCP memory for WDC context and read `CLAUDE.md` if present; fall back to `C:\work\sources\CLAUDE.md`. The active master roadmap is `docs/plans/2026-05-04-wdc-master-refactor-redesign-plan.md`; related plans include `docs/plans/2026-05-04-ui-ux-refactor-redesign.md`, `docs/plans/2026-05-04-postgresql-platform-support.md`, and `docs/plans/2026-05-04-binaries-catalog-ci.md`. Do not run `tools/pre-push-check.sh` autonomously because prior WDC sessions observed interactive prompts; run the individual gates instead: `npx vue-tsc --noEmit`, `npx playwright test --reporter=line`, `npx electron-vite build`, plus relevant .NET tests. Do not start privileged daemon, hosts, firewall, certificate, or lifecycle checks as a normal local process; use CI or an approved noninteractive elevated path for admin-only verification.
+Before cross-repo, infrastructure, CI, or architecture work, load MCP memory for WDC context and read `CLAUDE.md` if present; fall back to `C:\work\sources\CLAUDE.md`. If a local roadmap exists under `docs/plans/`, read it before coding; do not recreate deleted plan artifacts unless explicitly requested. Do not run `tools/pre-push-check.sh` autonomously because prior WDC sessions observed interactive prompts; run the individual gates instead: `npx vue-tsc --noEmit`, `npx playwright test --reporter=line`, `npx electron-vite build`, plus relevant .NET tests. Do not start privileged daemon, hosts, firewall, certificate, or lifecycle checks as a normal local process; use CI or an approved noninteractive elevated path for admin-only verification.
+
+For UI changes, capture Playwright screenshots for every changed screen/state and review layout, readability, contrast, responsiveness, and visual regressions before signoff. Store temporary screenshots under `output/playwright/` and do not commit them.
 
 ## Security & Configuration Tips
 

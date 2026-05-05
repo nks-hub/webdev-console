@@ -429,7 +429,7 @@
     "ssl": "SSL",
     "aliases": "Aliases",
     "bindIp": "Bind IP",
-    "bindIpHint": "Leave empty to bind this vhost on every Apache listener. Use 127.0.0.1 for loopback-only.",
+    "bindIpHint": "Use * only for unique hostnames on shared ports. Pick a concrete device IP, such as 127.0.0.1, to isolate the site and prevent unmatched requests from falling through to another vhost.",
     "create": "New Site",
     "openHosts": "Open hosts",
     "additionalDomains": "{n} additional domains",

@@ -71,13 +71,21 @@
       <div class="sd-row sd-row-stack">
         <span class="sd-label">{{ $t('sites.bindIp') }}</span>
         <div class="sd-control-wrap sd-bind-control">
-          <el-input
+          <el-select
             v-model="bindAddress"
             size="small"
-            clearable
-            placeholder="* or 127.0.0.1"
+            filterable
+            :loading="bindAddressOptionsLoading"
+            :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
             @change="onBindAddressChange"
-          />
+          >
+            <el-option
+              v-for="opt in bindAddressOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
           <Transition name="flash">
             <span v-if="savedBind" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
           </Transition>
@@ -181,7 +189,7 @@ import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useI18n } from 'vue-i18n'
-import { daemonBaseUrl, fetchPhpVersions } from '../../api/daemon'
+import { daemonBaseUrl, fetchBindAddressOptions, fetchPhpVersions, type BindAddressOption } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
@@ -200,6 +208,8 @@ const site = computed(() => sitesStore.sites.find(s => s.domain === props.domain
 const phpVersion = ref('')
 const sslEnabled = ref(false)
 const bindAddress = ref('')
+const bindAddressOptions = ref<BindAddressOption[]>([])
+const bindAddressOptionsLoading = ref(false)
 const tunnelEnabled = ref(false)
 
 const savedPhp = ref(false)
@@ -324,7 +334,7 @@ watch(site, (s) => {
   if (!s) return
   phpVersion.value = s.phpVersion ?? ''
   sslEnabled.value = s.sslEnabled ?? false
-  bindAddress.value = s.bindAddress ?? ''
+  bindAddress.value = s.bindAddress || '*'
   tunnelEnabled.value = s.cloudflare?.enabled ?? false
 }, { immediate: true })
 
@@ -334,6 +344,27 @@ async function loadPhpVersions() {
     phpVersions.value = versions.map(v => v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version)
   } catch {
     phpVersions.value = ['8.4', '8.3', '8.2']
+  }
+}
+
+async function loadBindAddressOptions() {
+  bindAddressOptionsLoading.value = true
+  try {
+    bindAddressOptions.value = await fetchBindAddressOptions()
+    const current = bindAddress.value || '*'
+    if (!bindAddressOptions.value.some(o => o.value === current)) {
+      bindAddressOptions.value.push({
+        value: current,
+        label: `${current} (saved, unavailable)`,
+        description: 'Saved site value that is not present on this device right now.',
+        wildcard: current === '*',
+        loopback: false,
+      })
+    }
+  } catch {
+    bindAddressOptions.value = []
+  } finally {
+    bindAddressOptionsLoading.value = false
   }
 }
 
@@ -370,7 +401,7 @@ async function onBindAddressChange(v: string) {
     flashSaved(savedBind)
   } catch (e) {
     ElMessage.error(`Update failed: ${errorMessage(e)}`)
-    bindAddress.value = site.value.bindAddress ?? ''
+    bindAddress.value = site.value.bindAddress || '*'
   }
 }
 
@@ -434,6 +465,7 @@ onMounted(async () => {
   try {
     await sitesStore.load()
     await loadPhpVersions()
+    await loadBindAddressOptions()
     await loadRecentActivity()
   } finally {
     loading.value = false

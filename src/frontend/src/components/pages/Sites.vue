@@ -296,11 +296,21 @@
             </el-select>
           </el-form-item>
           <el-form-item :label="$t('sites.bindIp')">
-            <el-input
+            <el-select
               v-model="newSite.bindAddress"
-              clearable
-              placeholder="* or 127.0.0.1"
-            />
+              style="width: 100%"
+              filterable
+              :loading="bindAddressOptionsLoading"
+              :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
+            >
+              <el-option
+                v-for="opt in bindAddressOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </el-select>
+            <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
           </el-form-item>
           <!-- F91.2: new-site toggles hidden when their plugin is disabled. -->
           <el-form-item v-if="pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')" :label="$t('sites.simple.cloudflareTunnel')">
@@ -358,11 +368,20 @@
             <el-input v-model="newSite.aliases" placeholder="www.myapp.loc" />
           </el-form-item>
           <el-form-item :label="$t('sites.bindIp')">
-            <el-input
+            <el-select
               v-model="newSite.bindAddress"
-              clearable
-              placeholder="* or 127.0.0.1"
-            />
+              style="width: 100%"
+              filterable
+              :loading="bindAddressOptionsLoading"
+              :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
+            >
+              <el-option
+                v-for="opt in bindAddressOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
           </el-form-item>
           <el-form-item :label="$t('sites.ssl')">
@@ -397,7 +416,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo } from '../../api/types'
-import { fetchDockerComposeStatus, fetchPhpVersions, fetchSystem, daemonBaseUrl, daemonAuthHeaders as authHeaders, type DockerComposeStatus } from '../../api/daemon'
+import { fetchBindAddressOptions, fetchDockerComposeStatus, fetchPhpVersions, fetchSystem, daemonBaseUrl, daemonAuthHeaders as authHeaders, type BindAddressOption, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { MoreFilled, RefreshRight } from '@element-plus/icons-vue'
 import SitesListSimple from './SitesListSimple.vue'
@@ -468,6 +487,8 @@ const cloudflaredRunning = computed(() =>
 // ~/.wdc/binaries/php/.
 interface PhpVersionOption { value: string; label: string; isActive: boolean }
 const phpVersions = ref<PhpVersionOption[]>([])
+const bindAddressOptions = ref<BindAddressOption[]>([])
+const bindAddressOptionsLoading = ref(false)
 
 // Map the stored majorMinor (e.g. "8.5") back to the full version label
 // ("PHP 8.5.5") for table display so users see the exact installed patch
@@ -542,7 +563,7 @@ const newSite = reactive({
   // binds v-model to a non-existent option and renders blank.
   phpVersion: '',
   aliases: '',
-  bindAddress: '',
+  bindAddress: '*',
   createDb: false,
   dbName: '',
   // SSL on by default so users opting out is the conscious choice — fresh
@@ -633,11 +654,27 @@ async function loadPhpVersions() {
   } catch { phpVersions.value = [] }
 }
 
+async function loadBindAddressOptions() {
+  bindAddressOptionsLoading.value = true
+  try {
+    const options = await fetchBindAddressOptions()
+    bindAddressOptions.value = options
+    if (!bindAddressOptions.value.some(o => o.value === newSite.bindAddress)) {
+      newSite.bindAddress = '*'
+    }
+  } catch {
+    bindAddressOptions.value = []
+  } finally {
+    bindAddressOptionsLoading.value = false
+  }
+}
+
 onMounted(async () => {
   await sitesStore.load()
   void refreshComposeStatuses()
   void resolveDocRootPlaceholder()
   await loadPhpVersions()
+  await loadBindAddressOptions()
 })
 
 // Refresh PHP versions every time the create dialog opens — the user may
@@ -645,6 +682,7 @@ onMounted(async () => {
 // and forcing them to reload the Sites page to see it would surprise them.
 watch(showCreate, (open) => {
   if (open) void loadPhpVersions()
+  if (open) void loadBindAddressOptions()
 })
 
 // Re-scan compose status whenever the set of sites OR any site's
@@ -717,7 +755,7 @@ async function createSite() {
     // again (set once by loadPhpVersions on dialog open) instead of a
     // hardcoded literal that may not exist on this machine.
     const defaultPhp = phpVersions.value.find(p => p.isActive)?.value ?? phpVersions.value[0]?.value ?? ''
-    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', bindAddress: '', sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
+    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', bindAddress: '*', sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
   } catch (e) {
     ElMessage.error(`Create failed: ${errorMessage(e)}`)
   } finally {

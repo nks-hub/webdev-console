@@ -429,7 +429,7 @@
     "ssl": "SSL",
     "aliases": "Aliasy",
     "bindIp": "IP vazba",
-    "bindIpHint": "Prazdne pole navaze vhost na vsechny Apache listen adresy. Pro loopback-only pouzij 127.0.0.1.",
+    "bindIpHint": "Použij * jen pro unikátní hostname na sdílených portech. Konkrétní IP, například 127.0.0.1, web izoluje a brání propadu neodpovídajících požadavků do jiného vhostu.",
     "create": "Nový web",
     "openHosts": "Otevřít hosts",
     "additionalDomains": "{n} dalších domén",

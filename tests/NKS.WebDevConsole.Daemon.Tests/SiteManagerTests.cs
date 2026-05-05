@@ -708,6 +708,51 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_RejectsDuplicateHostOnOverlappingBind()
+    {
+        await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "first.loc",
+            DocumentRoot = "C:/htdocs/first",
+            BindAddress = "*",
+            Aliases = ["shared.loc"],
+            SslEnabled = true,
+        });
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "second.loc",
+            DocumentRoot = "C:/htdocs/second",
+            BindAddress = "127.0.0.1",
+            Aliases = ["shared.loc"],
+            SslEnabled = true,
+        }));
+        Assert.Contains("shared.loc", ex.Message);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AllowsSameHostOnDifferentBind()
+    {
+        await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "first.loc",
+            DocumentRoot = "C:/htdocs/first",
+            BindAddress = "127.0.0.1",
+            Aliases = ["shared.loc"],
+        });
+
+        var created = await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "second.loc",
+            DocumentRoot = "C:/htdocs/second",
+            BindAddress = "127.0.0.2",
+            Aliases = ["shared.loc"],
+        });
+
+        Assert.Equal("second.loc", created.Domain);
+    }
+
+    [Fact]
     public async Task GenerateVhostAsync_UsesBindAddress()
     {
         EnsureVhostTemplateForTests();
