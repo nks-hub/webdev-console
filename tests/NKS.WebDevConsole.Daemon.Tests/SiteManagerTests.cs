@@ -670,6 +670,94 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void LoadAll_PreservesBindAddress()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "loopback.loc",
+            DocumentRoot = "C:/htdocs/loopback",
+            BindAddress = "127.0.0.2",
+        };
+        File.WriteAllText(Path.Combine(_sitesDir, "loopback.loc.toml"), TomlSerializer.Serialize(site));
+
+        _manager.LoadAll();
+
+        var loaded = _manager.Get("loopback.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal("127.0.0.2", loaded!.BindAddress);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("*")]
+    [InlineData("127.0.0.1")]
+    [InlineData("::1")]
+    [InlineData("[::1]")]
+    public void ValidateBindAddress_AcceptsValidValues(string value)
+    {
+        SiteManager.ValidateBindAddress(value);
+    }
+
+    [Theory]
+    [InlineData("localhost")]
+    [InlineData("127.0.0.1 ServerName bad.loc")]
+    [InlineData("127.0.0.1;Include bad.conf")]
+    public void ValidateBindAddress_RejectsInvalidValues(string value)
+    {
+        Assert.Throws<ArgumentException>(() => SiteManager.ValidateBindAddress(value));
+    }
+
+    [Fact]
+    public async Task GenerateVhostAsync_UsesBindAddress()
+    {
+        EnsureVhostTemplateForTests();
+        var site = new SiteConfig
+        {
+            Domain = "bind.loc",
+            DocumentRoot = "C:/htdocs/bind",
+            BindAddress = "127.0.0.2",
+            HttpPort = 8080,
+        };
+
+        await _manager.GenerateVhostAsync(site);
+
+        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "bind.loc.conf"));
+        Assert.Contains("<VirtualHost 127.0.0.2:8080>", conf);
+    }
+
+    [Fact]
+    public async Task GenerateVhostAsync_AddsLoopbackAliasForLocalhost()
+    {
+        EnsureVhostTemplateForTests();
+        var site = new SiteConfig
+        {
+            Domain = "localhost",
+            DocumentRoot = "C:/htdocs/localhost",
+        };
+
+        await _manager.GenerateVhostAsync(site);
+
+        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "localhost.conf"));
+        Assert.Contains("ServerName localhost", conf);
+        Assert.Contains("ServerAlias 127.0.0.1", conf);
+    }
+
+    private static void EnsureVhostTemplateForTests()
+    {
+        var dir = Path.Combine(AppContext.BaseDirectory, "Templates");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "vhost.conf.scriban"),
+            """
+            <VirtualHost {{ site.bind_address }}:{{ port }}>
+                ServerName {{ site.domain }}
+                {{ if site.aliases && site.aliases.size > 0 -}}
+                ServerAlias {{ for a in site.aliases }}{{ a }} {{ end }}
+                {{- end }}
+            </VirtualHost>
+            """);
+    }
+
+    [Fact]
     public void LoadAll_NonDefaultPorts_Preserved()
     {
         var site = new SiteConfig

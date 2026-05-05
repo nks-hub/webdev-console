@@ -7343,6 +7343,7 @@ app.MapPost("/api/onboarding/complete", async (SiteManager siteManager, SiteOrch
                 PhpVersion = "",
                 SslEnabled = true,
                 Enabled = true,
+                Aliases = new[] { "127.0.0.1" },
             });
             await siteOrch.ApplyAsync(created, CancellationToken.None);
         }

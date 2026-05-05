@@ -8,6 +8,11 @@ public class SiteConfig
     public bool SslEnabled { get; set; }
     public int HttpPort { get; set; } = 80;
     public int HttpsPort { get; set; } = 443;
+    /// <summary>
+    /// Optional IP address used by generated per-site vhosts. Empty or "*"
+    /// means bind on every Apache listener address.
+    /// </summary>
+    public string BindAddress { get; set; } = "";
 
     /// <summary>
     /// Task 31: soft enable/disable flag. When false, the site's TOML

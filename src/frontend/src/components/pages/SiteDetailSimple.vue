@@ -67,6 +67,23 @@
         </div>
       </div>
 
+      <!-- Bind IP -->
+      <div class="sd-row sd-row-stack">
+        <span class="sd-label">{{ $t('sites.bindIp') }}</span>
+        <div class="sd-control-wrap sd-bind-control">
+          <el-input
+            v-model="bindAddress"
+            size="small"
+            clearable
+            placeholder="* or 127.0.0.1"
+            @change="onBindAddressChange"
+          />
+          <Transition name="flash">
+            <span v-if="savedBind" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
+          </Transition>
+        </div>
+      </div>
+
       <!-- Cloudflare tunnel switch -->
       <div class="sd-row">
         <span class="sd-label">{{ $t('sites.detail.simple.tunnel') }}</span>
@@ -182,10 +199,12 @@ const site = computed(() => sitesStore.sites.find(s => s.domain === props.domain
 
 const phpVersion = ref('')
 const sslEnabled = ref(false)
+const bindAddress = ref('')
 const tunnelEnabled = ref(false)
 
 const savedPhp = ref(false)
 const savedSsl = ref(false)
+const savedBind = ref(false)
 const savedTunnel = ref(false)
 
 const startStopLoading = ref(false)
@@ -305,6 +324,7 @@ watch(site, (s) => {
   if (!s) return
   phpVersion.value = s.phpVersion ?? ''
   sslEnabled.value = s.sslEnabled ?? false
+  bindAddress.value = s.bindAddress ?? ''
   tunnelEnabled.value = s.cloudflare?.enabled ?? false
 }, { immediate: true })
 
@@ -340,6 +360,17 @@ async function onSslChange(v: boolean) {
   } catch (e) {
     ElMessage.error(`Update failed: ${errorMessage(e)}`)
     sslEnabled.value = !v
+  }
+}
+
+async function onBindAddressChange(v: string) {
+  if (!site.value) return
+  try {
+    await sitesStore.update(props.domain, { ...site.value, bindAddress: v.trim() })
+    flashSaved(savedBind)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    bindAddress.value = site.value.bindAddress ?? ''
   }
 }
 
@@ -445,6 +476,10 @@ onMounted(async () => {
   padding: 10px 0;
 }
 
+.sd-row-stack {
+  align-items: flex-start;
+}
+
 .sd-status-row {
   padding: 12px 0;
 }
@@ -483,6 +518,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.sd-bind-control {
+  width: min(260px, 100%);
 }
 
 .sd-status-dot {

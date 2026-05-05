@@ -64,6 +64,17 @@
                       <template #prepend><el-icon><Link /></el-icon></template>
                     </el-input>
                   </el-form-item>
+                  <el-form-item :label="$t('sites.bindIp')">
+                    <el-input
+                      v-model="site.bindAddress"
+                      clearable
+                      placeholder="* or 127.0.0.1"
+                      @input="markDirty"
+                    >
+                      <template #prepend><el-icon><Link /></el-icon></template>
+                    </el-input>
+                    <div class="hint">{{ $t('sites.bindIpHint') }}</div>
+                  </el-form-item>
                   <el-form-item :label="$t('sites.documentRoot')" required>
                     <el-input
                       v-model="site.documentRoot"

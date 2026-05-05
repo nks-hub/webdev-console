@@ -175,10 +175,25 @@ public sealed class SiteManager : ISiteRegistry
                 throw new ArgumentException($"DocumentRoot contains forbidden character: '{c}'");
     }
 
+    public static void ValidateBindAddress(string? bindAddress)
+    {
+        if (string.IsNullOrWhiteSpace(bindAddress) || bindAddress.Trim() == "*")
+            return;
+        if (bindAddress.Length > 64)
+            throw new ArgumentException("BindAddress too long (max 64 chars)");
+        var value = bindAddress.Trim();
+        if (value.Any(c => char.IsWhiteSpace(c) || c is '"' or '\'' or ';' or '|' or '&' or '`' or '<' or '>' or '\0'))
+            throw new ArgumentException("BindAddress contains forbidden characters");
+        var unwrapped = value.StartsWith('[') && value.EndsWith(']') ? value[1..^1] : value;
+        if (!System.Net.IPAddress.TryParse(unwrapped, out _))
+            throw new ArgumentException("BindAddress must be an IP address or '*'");
+    }
+
     public async Task<SiteConfig> CreateAsync(SiteConfig site)
     {
         ValidateDomain(site.Domain);
         ValidateDocumentRoot(site.DocumentRoot);
+        ValidateBindAddress(site.BindAddress);
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
@@ -211,6 +226,7 @@ public sealed class SiteManager : ISiteRegistry
         // via crafted PUT body). Same treatment as Delete/Create.
         ValidateDomain(site.Domain);
         ValidateDocumentRoot(site.DocumentRoot);
+        ValidateBindAddress(site.BindAddress);
         if (site.Aliases is { Length: > 0 })
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
@@ -334,13 +350,15 @@ public sealed class SiteManager : ISiteRegistry
         catch { /* ignore */ }
 
         var apacheSettings = site.ApacheSettings;
+        var aliases = NormalizeAliases(site.Domain, site.Aliases);
 
         var model = new
         {
             site = new
             {
                 domain = site.Domain,
-                aliases = site.Aliases,
+                aliases = aliases,
+                bind_address = FormatApacheBindAddress(site.BindAddress),
                 root = site.DocumentRoot,
                 root_parent = rootParent,
                 php_ini_path = sitePhpIni,
@@ -397,6 +415,34 @@ public sealed class SiteManager : ISiteRegistry
         };
 
         return candidates.FirstOrDefault(File.Exists);
+    }
+
+    public static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases)
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var alias in aliases ?? Array.Empty<string>())
+        {
+            var value = alias.Trim();
+            if (!string.IsNullOrWhiteSpace(value) && seen.Add(value))
+                result.Add(value);
+        }
+        if (string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase)
+            && seen.Add("127.0.0.1"))
+        {
+            result.Add("127.0.0.1");
+        }
+        return result.ToArray();
+    }
+
+    public static string FormatApacheBindAddress(string? bindAddress)
+    {
+        if (string.IsNullOrWhiteSpace(bindAddress) || bindAddress.Trim() == "*")
+            return "*";
+        var value = bindAddress.Trim();
+        if (value.StartsWith('[') && value.EndsWith(']'))
+            return value;
+        return value.Contains(':') ? $"[{value}]" : value;
     }
 
     /// <summary>

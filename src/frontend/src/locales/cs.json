@@ -428,6 +428,8 @@
     "filterPlaceholder": "Filtrovat podle domény nebo docrootu…",
     "ssl": "SSL",
     "aliases": "Aliasy",
+    "bindIp": "IP vazba",
+    "bindIpHint": "Prazdne pole navaze vhost na vsechny Apache listen adresy. Pro loopback-only pouzij 127.0.0.1.",
     "create": "Nový web",
     "openHosts": "Otevřít hosts",
     "additionalDomains": "{n} dalších domén",

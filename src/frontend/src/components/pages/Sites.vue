@@ -59,6 +59,12 @@
                 effect="dark"
                 class="runtime-tag runtime-php"
               >{{ rowRuntimeLabel(site) }}</el-tag>
+              <el-tag
+                v-if="site.bindAddress"
+                size="small"
+                effect="plain"
+                class="cell-tag"
+              >{{ site.bindAddress }}</el-tag>
               <span v-if="site.aliases?.length" class="alias-dot">+{{ site.aliases.length }}</span>
               <span v-if="site.aliases?.length" class="site-mobile-alias mono">
                 {{ site.aliases[0] }}
@@ -122,6 +128,13 @@
                     ? `:${row.httpPort || 80}/:${row.httpsPort || 443}`
                     : `:${row.httpPort || 80}`
                 }}</span>
+                <el-tag
+                  v-if="row.bindAddress"
+                  size="small"
+                  effect="plain"
+                  class="cell-tag"
+                  :title="$t('sites.bindIp')"
+                >{{ row.bindAddress }}</el-tag>
                 <el-tag
                   v-if="row.sslEnabled"
                   size="small"
@@ -282,6 +295,13 @@
               <el-option :label="$t('sites.phpNone')" value="none" />
             </el-select>
           </el-form-item>
+          <el-form-item :label="$t('sites.bindIp')">
+            <el-input
+              v-model="newSite.bindAddress"
+              clearable
+              placeholder="* or 127.0.0.1"
+            />
+          </el-form-item>
           <!-- F91.2: new-site toggles hidden when their plugin is disabled. -->
           <el-form-item v-if="pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')" :label="$t('sites.simple.cloudflareTunnel')">
             <el-switch v-model="newSite.cloudflareTunnel" />
@@ -336,6 +356,14 @@
           </el-form-item>
           <el-form-item :label="$t('sites.aliases')">
             <el-input v-model="newSite.aliases" placeholder="www.myapp.loc" />
+          </el-form-item>
+          <el-form-item :label="$t('sites.bindIp')">
+            <el-input
+              v-model="newSite.bindAddress"
+              clearable
+              placeholder="* or 127.0.0.1"
+            />
+            <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
           </el-form-item>
           <el-form-item :label="$t('sites.ssl')">
             <el-switch v-model="newSite.sslEnabled" />
@@ -514,6 +542,7 @@ const newSite = reactive({
   // binds v-model to a non-existent option and renders blank.
   phpVersion: '',
   aliases: '',
+  bindAddress: '',
   createDb: false,
   dbName: '',
   // SSL on by default so users opting out is the conscious choice — fresh
@@ -645,6 +674,7 @@ async function createSite() {
       phpVersion: newSite.phpVersion,
       sslEnabled: newSite.sslEnabled,
       aliases: newSite.aliases ? newSite.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
+      bindAddress: newSite.bindAddress.trim(),
       ...(newSite.cloudflareTunnel ? { cloudflareTunnel: true } : {}),
     }
     const created = await sitesStore.create(payload)
@@ -687,7 +717,7 @@ async function createSite() {
     // again (set once by loadPhpVersions on dialog open) instead of a
     // hardcoded literal that may not exist on this machine.
     const defaultPhp = phpVersions.value.find(p => p.isActive)?.value ?? phpVersions.value[0]?.value ?? ''
-    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
+    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', bindAddress: '', sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
   } catch (e) {
     ElMessage.error(`Create failed: ${errorMessage(e)}`)
   } finally {
@@ -1254,6 +1284,13 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   color: var(--wdc-text-3);
   margin: 0 0 16px;
   line-height: 1.5;
+}
+
+.form-hint {
+  margin-top: 4px;
+  color: var(--wdc-text-3);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .simple-advanced-link {

@@ -428,6 +428,8 @@
     "filterPlaceholder": "Filter by domain or docroot…",
     "ssl": "SSL",
     "aliases": "Aliases",
+    "bindIp": "Bind IP",
+    "bindIpHint": "Leave empty to bind this vhost on every Apache listener. Use 127.0.0.1 for loopback-only.",
     "create": "New Site",
     "openHosts": "Open hosts",
     "additionalDomains": "{n} additional domains",
