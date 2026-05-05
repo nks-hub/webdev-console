@@ -93,7 +93,7 @@ html:not(.dark) {
   --wdc-status-running:  #0d5f24;  /* 7.3:1 — was #15803d (3.7:1 FAIL) */
   --wdc-status-stopped:  #5a6075;
   --wdc-status-error:    #a81a1a;  /* 7.0:1 — was #b91c1c (7.0:1, kept near edge) */
-  --wdc-status-starting: #704d0c;  /* 7.1:1 — was #b45309 (3.4:1 FAIL) */
+  --wdc-status-starting: #4f3508;  /* stronger contrast for warning badges on light surfaces */
   --wdc-warning:         var(--wdc-status-starting);
 
   color-scheme: light;
@@ -784,6 +784,8 @@ html:not(.dark) .el-button {
 .el-switch__core {
   background: var(--wdc-elevated) !important;
   border-color: var(--wdc-border-strong) !important;
+  min-width: 36px !important;
+  height: 26px !important;
 }
 
 .el-switch.is-checked .el-switch__core {

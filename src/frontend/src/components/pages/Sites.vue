@@ -107,7 +107,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column :label="$t('sites.framework')" width="130" class-name="col-framework-cell">
+        <el-table-column :label="$t('sites.framework')" width="150" class-name="col-framework-cell">
           <template #default="{ row }">
             <div class="framework-cell">
               <el-tag
@@ -139,7 +139,7 @@
              'Povoleno' switch lived in its own 100px column which pushed
              the total fixed width past 1060px and broke layout below
              ~1100px viewport. -->
-        <el-table-column :label="$t('common.actions')" width="180" fixed="right">
+        <el-table-column :label="$t('common.actions')" width="200" fixed="right">
           <template #default="{ row }">
             <div class="site-actions">
               <el-switch
@@ -748,11 +748,17 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 .site-count {
-  font-size: 0.72rem;
+  min-width: 32px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
   font-weight: 600;
-  background: var(--wdc-accent-dim);
-  color: var(--wdc-accent);
-  padding: 2px 8px;
+  background: var(--wdc-surface-2);
+  color: var(--wdc-text);
+  border: 1px solid var(--wdc-border-strong);
+  padding: 2px 9px;
   border-radius: 10px;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -779,9 +785,9 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   background: var(--wdc-surface-2) !important;
   color: var(--wdc-text-2) !important;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   border-bottom: 2px solid var(--wdc-border-strong) !important;
 }
 .sites-table :deep(.el-table__row) {
@@ -820,8 +826,8 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 .cell-tag {
   font-weight: 700 !important;
-  letter-spacing: 0.04em;
-  font-size: 0.68rem !important;
+  letter-spacing: 0;
+  font-size: 0.72rem !important;
 }
 
 .col-aliases {
@@ -845,8 +851,13 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: 999px;
-  padding: 1px 6px;
-  font-size: 0.66rem;
+  min-width: 32px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  font-size: 0.72rem;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -972,8 +983,8 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
 .runtime-tag {
   font-weight: 700 !important;
-  font-size: 0.7rem !important;
-  letter-spacing: 0.04em;
+  font-size: 0.72rem !important;
+  letter-spacing: 0;
 }
 .runtime-tag.runtime-php {
   /* PHP brand indigo, strong contrast white text — 7.2:1 AAA */

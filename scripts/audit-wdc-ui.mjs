@@ -95,7 +95,7 @@ function safeName(input) {
   return input.replace(/^\/+/, '').replace(/[^\w.-]+/g, '_') || 'root'
 }
 
-const blockedText = /\b(delete|drop|remove|reset|restore|factory|uninstall|wipe|revoke|clear|import|upload|download|install|browse|choose file|file|smazat|odstranit|reset|obnovit ze|továr|odinstal|vymazat|odvolat|import|nahrát|stáhnout|instal|vybrat soubor|soubor)\b/i
+const blockedText = /\b(delete|drop|remove|reset|restore|factory|uninstall|wipe|revoke|clear|import|upload|download|install|browse|choose file|file|new|create|edit|save|apply|start|stop|restart|default|open|smazat|odstranit|reset|obnovit ze|továr|odinstal|vymazat|odvolat|import|nahrát|stáhnout|instal|vybrat soubor|soubor|nový|nová|vytvořit|upravit|uložit|aplikovat|spustit|zastavit|restartovat|otevřít|výchozí)\b/i
 
 async function normalizedText(locator) {
   return (await locator.innerText().catch(() => '') || '')
