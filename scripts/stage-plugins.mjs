@@ -151,6 +151,13 @@ if (!sourceUsed && process.env.WDC_SKIP_PLUGIN_DOWNLOAD !== '1') {
       const zipPath = join(tmpdir(), `${pluginId}-${rel.version}.zip`)
       await downloadToFile(asset.browser_download_url, zipPath)
       execSync(`unzip -o -q "${zipPath}" -d "${destDir}"`)
+      if (pluginId === 'nks.wdc.deploy') {
+        const pharAsset = (rel.assets ?? []).find(a => a.name === 'nksdeploy.phar')
+        if (pharAsset) {
+          await downloadToFile(pharAsset.browser_download_url, join(destDir, 'nksdeploy.phar'))
+          console.log(`[stage-plugins] fetched bundled nksdeploy.phar from ${pluginId} ${rel.version}`)
+        }
+      }
       console.log(`[stage-plugins] fetched ${pluginId} ${rel.version} from release`)
     }
     sourceUsed = `${PLUGINS_REPO} GitHub Releases`
@@ -193,15 +200,19 @@ const hasNksDeployPlugin = listPluginDlls(destDir).some(n => n === 'NKS.WebDevCo
 if (hasNksDeployPlugin && process.env.WDC_SKIP_PHAR_BUILD !== '1') {
   const pharDest = join(destDir, 'nksdeploy.phar')
   const builderScript = join(__dirname, 'build-nksdeploy-phar.mjs')
-  console.log(`[stage-plugins] building nksdeploy.phar → ${pharDest}`)
-  try {
-    execSync(`node "${builderScript}" "${pharDest}"`, { stdio: 'inherit' })
-  } catch (err) {
-    console.warn(`[stage-plugins] phar build failed: ${err.message}`)
-    console.warn('[stage-plugins] plugin will fall back to PATH lookup at runtime; deploys may fail')
-    if (process.env.CI === 'true') {
-      console.error('[stage-plugins] CI=true and phar build failed — refusing to ship a broken plugin bundle.')
-      process.exit(1)
+  if (existsSync(pharDest)) {
+    console.log(`[stage-plugins] using staged nksdeploy.phar → ${pharDest}`)
+  } else {
+    console.log(`[stage-plugins] building nksdeploy.phar → ${pharDest}`)
+    try {
+      execSync(`node "${builderScript}" "${pharDest}"`, { stdio: 'inherit' })
+    } catch (err) {
+      console.warn(`[stage-plugins] phar build failed: ${err.message}`)
+      console.warn('[stage-plugins] plugin will fall back to PATH lookup at runtime; deploys may fail')
+      if (process.env.CI === 'true') {
+        console.error('[stage-plugins] CI=true and phar build failed — refusing to ship a broken plugin bundle.')
+        process.exit(1)
+      }
     }
   }
 }
