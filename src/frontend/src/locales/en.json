@@ -1714,7 +1714,6 @@
       "httpPort": "HTTP Port",
       "httpsPort": "HTTPS Port",
       "mysqlPort": "MySQL Port",
-      "postgresqlPort": "PostgreSQL Port",
       "redisPort": "Redis Port",
       "mailpitSmtp": "Mailpit SMTP",
       "mailpitHttp": "Mailpit HTTP",
