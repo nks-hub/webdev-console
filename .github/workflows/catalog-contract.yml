@@ -1,0 +1,41 @@
+name: Catalog API Contract Drift
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/daemon/NKS.WebDevConsole.Daemon/Binaries/CatalogClient.cs"
+      - "scripts/check-catalog-drift.mjs"
+      - ".github/workflows/catalog-contract.yml"
+  pull_request:
+    paths:
+      - "src/daemon/NKS.WebDevConsole.Daemon/Binaries/CatalogClient.cs"
+      - "scripts/check-catalog-drift.mjs"
+      - ".github/workflows/catalog-contract.yml"
+  workflow_dispatch:
+    inputs:
+      catalog_version:
+        description: "Pinned catalog-api version (e.g. 0.2.0)"
+        required: false
+
+concurrency:
+  group: catalog-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run drift check
+        env:
+          # Pin the catalog-api release whose openapi.json we validate
+          # the C# CatalogClient.cs against. Bump this whenever the
+          # catalog service ships a new contract version.
+          CATALOG_API_VERSION: ${{ inputs.catalog_version || '0.2.0' }}
+        run: node scripts/check-catalog-drift.mjs
