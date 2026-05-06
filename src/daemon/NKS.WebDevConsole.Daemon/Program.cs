@@ -10084,6 +10084,41 @@ static int? FindFreeTcpPort(int startPort)
     return null;
 }
 
+static async Task StopResidualMySqlProcessesAsync(string mysqldPath, List<string> steps, ILogger log)
+{
+    var expectedPath = Path.GetFullPath(mysqldPath);
+    foreach (var processName in new[] { "mysqld", "mariadbd" })
+    {
+        foreach (var process in System.Diagnostics.Process.GetProcessesByName(processName))
+        {
+            using (process)
+            {
+                try
+                {
+                    if (process.HasExited) continue;
+                    var modulePath = process.MainModule?.FileName;
+                    if (!string.Equals(
+                            Path.GetFullPath(modulePath ?? ""),
+                            expectedPath,
+                            StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var pid = process.Id;
+                    log.LogWarning("reset-password: killing residual {ProcessName} PID {Pid}", processName, pid);
+                    process.Kill(entireProcessTree: true);
+                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                    steps.Add($"Killed residual {processName} PID={pid}");
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "reset-password: failed to inspect/stop residual {ProcessName} PID {Pid}", processName, process.Id);
+                    steps.Add($"Warning: residual {processName} PID={process.Id} cleanup failed: {ex.Message}");
+                }
+            }
+        }
+    }
+}
+
 // MySQL root password management. GET reports whether a password is stored
 // (without ever returning it). POST accepts a new password + persists into
 // the DPAPI store. The caller is responsible for having run ALTER USER on
@@ -10243,8 +10278,6 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
     var steps = new List<string>();
     var initFile = "";
     System.Diagnostics.Process? safeProcess = null;
-    var tmpPidFile = Path.Combine(Path.GetTempPath(), $"wdc-mysql-reset-{Guid.NewGuid():N}.pid");
-    var tmpSocket = OperatingSystem.IsWindows() ? "" : "/tmp/wdc-mysql-reset.sock";
 
     // Find the MySQL IServiceModule so we can stop/start the managed service.
     var mysqlModule = sp.GetServices<IServiceModule>()
@@ -10260,86 +10293,75 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
             try { await mysqlModule.StopAsync(CancellationToken.None); }
             catch (Exception ex) { log.LogWarning(ex, "reset-password: StopAsync threw (continuing)"); }
         }
+        await StopResidualMySqlProcessesAsync(mysqldPath, steps, log);
         steps.Add("mysqld stopped");
 
-        // Step 2: spawn skip-grant-tables mysqld on a temporary free port.
-        steps.Add("Spawning skip-grant-tables mysqld");
-        log.LogInformation("reset-password: spawning skip-grant-tables mysqld");
-        var skipPort = FindFreeTcpPort(Math.Max(3307, port + 1))
-            ?? throw new InvalidOperationException("No free local port found for skip-grant-tables mysqld");
+        // Step 2: write an init-file. MySQL 8.4 disables TCP when
+        // --skip-grant-tables is used on Windows, so reset through the normal
+        // server bootstrap path instead of a skip-grant TCP session.
+        steps.Add("Writing reset init-file");
+        log.LogInformation("reset-password: writing reset init-file");
+        var sql = MySqlPasswordHelper.BuildAlterUserSql(newPwd);
+        initFile = MySqlPasswordHelper.WriteTempInitFile(sql);
         var dataDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "mysql");
 
-        var safeArgs = OperatingSystem.IsWindows()
-            ? $"--skip-grant-tables --skip-networking=OFF --port={skipPort} " +
-              $"--datadir=\"{dataDir}\" --pid-file=\"{tmpPidFile}\" --console"
-            : $"--skip-grant-tables --skip-networking=OFF --port={skipPort} " +
-              $"--datadir=\"{dataDir}\" --pid-file=\"{tmpPidFile}\" " +
-              $"--socket=\"{tmpSocket}\" --console";
+        // Step 3: start mysqld normally with --init-file. The init-file is
+        // executed during startup before external clients authenticate.
+        steps.Add("Starting init-file mysqld");
+        log.LogInformation("reset-password: starting init-file mysqld on port {Port}", port);
+        var safeArgs = $"--port={port} --datadir=\"{dataDir}\" --init-file=\"{initFile}\" --console";
 
         var safePsi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = mysqldPath,
             Arguments = safeArgs,
             UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
             CreateNoWindow = true
         };
         safeProcess = System.Diagnostics.Process.Start(safePsi)
-            ?? throw new InvalidOperationException("Failed to start skip-grant-tables mysqld");
+            ?? throw new InvalidOperationException("Failed to start init-file mysqld");
 
-        steps.Add($"skip-grant-tables mysqld PID={safeProcess.Id}");
+        steps.Add($"init-file mysqld PID={safeProcess.Id}");
 
-        // Step 3: wait for the skip-grant-tables mysqld to accept connections.
-        steps.Add($"Waiting for skip-grant-tables mysqld on port {skipPort}");
-        log.LogInformation("reset-password: waiting for skip-grant-tables mysqld on port {Port}", skipPort);
-        var ready = await MySqlPasswordHelper.WaitForTcpPortAsync(skipPort, TimeSpan.FromSeconds(30), CancellationToken.None);
+        steps.Add($"Waiting for init-file mysqld on port {port}");
+        var ready = await MySqlPasswordHelper.WaitForTcpPortAsync(port, TimeSpan.FromSeconds(60), CancellationToken.None);
         if (!ready)
-            throw new TimeoutException($"skip-grant-tables mysqld did not bind port {skipPort} within 30s");
-        steps.Add("skip-grant-tables mysqld ready");
+            throw new TimeoutException($"init-file mysqld did not bind port {port} within 60s");
+        steps.Add("init-file mysqld ready");
 
-        // Step 4: execute ALTER USER via init-file.
-        steps.Add("Executing ALTER USER");
-        log.LogInformation("reset-password: executing ALTER USER via mysql CLI on port {Port}", skipPort);
-        var sql = MySqlPasswordHelper.BuildAlterUserSql(newPwd);
-        initFile = MySqlPasswordHelper.WriteTempInitFile(sql);
-
-        // With --skip-grant-tables, FLUSH PRIVILEGES at the start re-enables grant checking
-        // so ALTER USER works correctly.
-        var alterArgs = new List<string>
+        // Step 4: verify the init-file changed the password, then shut this
+        // bootstrap instance down before starting the managed module normally.
+        steps.Add("Verifying init-file password");
+        var initVerifyArgs = new List<string>
         {
             "-h", "127.0.0.1",
-            "-P", skipPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-P", port.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "-u", "root",
-            "--connect-timeout=10",
-            "-e", $"source {initFile}"
+            "-N", "-e", "SELECT 1"
         };
-        var alterResult = await CliWrap.Cli.Wrap(mysqlCli)
-            .WithArguments(alterArgs)
-            .WithEnvironmentVariables(new Dictionary<string, string?>())
+        var initVerifyResult = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(initVerifyArgs)
+            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
+        if (initVerifyResult.ExitCode != 0)
+            throw new InvalidOperationException($"init-file password verification failed: {initVerifyResult.StandardError.Trim()}");
 
-        if (alterResult.ExitCode != 0)
-            throw new InvalidOperationException($"ALTER USER failed (exit {alterResult.ExitCode}): {alterResult.StandardError.Trim()}");
-        steps.Add("ALTER USER executed");
-
-        // Step 5: shut down the skip-grant-tables mysqld.
-        steps.Add("Shutting down skip-grant-tables mysqld");
-        log.LogInformation("reset-password: shutting down skip-grant-tables mysqld");
+        steps.Add("Shutting down init-file mysqld");
+        log.LogInformation("reset-password: shutting down init-file mysqld");
         if (mysqladmin is not null && File.Exists(mysqladmin))
         {
             try
             {
                 await CliWrap.Cli.Wrap(mysqladmin)
-                    .WithArguments(new[] { "-h", "127.0.0.1", "-P", skipPort.ToString(), "-u", "root", "shutdown" })
-                    .WithEnvironmentVariables(new Dictionary<string, string?>())
+                    .WithArguments(new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "shutdown" })
+                    .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
                     .WithValidation(CliWrap.CommandResultValidation.None)
                     .ExecuteAsync();
             }
             catch (Exception ex)
             {
-                log.LogWarning(ex, "reset-password: mysqladmin shutdown failed, killing process");
+                log.LogWarning(ex, "reset-password: init-file mysqladmin shutdown failed, killing process");
             }
         }
         if (safeProcess is not null && !safeProcess.HasExited)
@@ -10347,7 +10369,7 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
             safeProcess.Kill(entireProcessTree: true);
             await safeProcess.WaitForExitAsync();
         }
-        steps.Add("skip-grant-tables mysqld stopped");
+        steps.Add("init-file mysqld stopped");
 
         // Step 6: persist new password.
         NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(newPwd);
@@ -10420,9 +10442,6 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
     {
         if (!string.IsNullOrEmpty(initFile))
             try { File.Delete(initFile); } catch { /* best effort */ }
-        try { File.Delete(tmpPidFile); } catch { /* best effort */ }
-        if (!OperatingSystem.IsWindows() && !string.IsNullOrEmpty(tmpSocket))
-            try { File.Delete(tmpSocket); } catch { /* best effort */ }
         if (safeProcess is not null && !safeProcess.HasExited)
             try { safeProcess.Kill(entireProcessTree: true); } catch { /* best effort */ }
         safeProcess?.Dispose();

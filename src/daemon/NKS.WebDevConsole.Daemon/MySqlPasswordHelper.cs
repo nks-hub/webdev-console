@@ -122,18 +122,25 @@ internal static class MySqlPasswordHelper
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(timeout);
-        while (!cts.Token.IsCancellationRequested)
+        try
         {
-            try
+            while (!cts.Token.IsCancellationRequested)
             {
-                using var tcp = new System.Net.Sockets.TcpClient();
-                await tcp.ConnectAsync("127.0.0.1", port, cts.Token);
-                return true;
+                try
+                {
+                    using var tcp = new System.Net.Sockets.TcpClient();
+                    await tcp.ConnectAsync("127.0.0.1", port, cts.Token);
+                    return true;
+                }
+                catch when (!cts.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(500, cts.Token).ConfigureAwait(false);
+                }
             }
-            catch when (!cts.Token.IsCancellationRequested)
-            {
-                await Task.Delay(500, cts.Token).ConfigureAwait(false);
-            }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return false;
         }
         return false;
     }
