@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, Notification } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, Notification, clipboard } from 'electron'
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
@@ -583,43 +583,297 @@ async function createWindow() {
   win.on('unmaximize', schedulePersist)
 }
 
-interface ServiceEntry {
+type TrayIconColor = 'green' | 'red' | 'yellow' | 'gray'
+type TrayServiceAction = 'start' | 'stop' | 'restart'
+
+interface RawTrayService {
   id: string
-  name: string
-  status: string
+  name?: string
+  displayName?: string
+  status?: string
+  state?: number
+  pid?: number | null
+  uptime?: string | number | null
 }
 
-async function buildServiceSubmenu(): Promise<Electron.MenuItemConstructorOptions[]> {
-  try {
-    const services = await daemonGet<ServiceEntry[]>('/api/services')
-    if (!services || services.length === 0) {
-      return [{ label: 'No services', enabled: false }]
-    }
-    const items: Electron.MenuItemConstructorOptions[] = []
-    for (const svc of services) {
-      const running = svc.status === 'running'
-      items.push({
-        label: `${svc.name} (${svc.status})`,
-        submenu: [
-          {
-            label: 'Start',
-            enabled: !running,
-            click: () => { daemonPost(`/api/services/${svc.id}/start`).then(() => updateTray()) }
-          },
-          {
-            label: 'Stop',
-            enabled: running,
-            click: () => { daemonPost(`/api/services/${svc.id}/stop`).then(() => updateTray()) }
-          }
-        ]
-      })
-    }
-    items.push({ type: 'separator' })
-    items.push({ label: 'Manage...', click: () => { win?.show(); win?.focus() } })
-    return items
-  } catch {
-    return [{ label: 'Daemon offline', enabled: false }]
+interface TrayService {
+  id: string
+  label: string
+  state: number
+  stateLabel: string
+  running: boolean
+  transitioning: boolean
+  failed: boolean
+  disabled: boolean
+  pid?: number | null
+  uptime?: string | number | null
+}
+
+interface TraySnapshot {
+  connected: boolean
+  services: TrayService[]
+  running: number
+  failed: number
+  transitioning: number
+  stopped: number
+  disabled: number
+}
+
+const TRAY_CORE_SERVICES = ['apache', 'php', 'mysql', 'postgresql'] as const
+const TRAY_SERVICE_ORDER = ['apache', 'php', 'mysql', 'postgresql', 'redis', 'mailpit', 'cloudflare', 'nginx']
+
+function serviceOrder(id: string): number {
+  const index = TRAY_SERVICE_ORDER.indexOf(id)
+  return index === -1 ? 100 : index
+}
+
+function serviceStateLabel(state: number, fallback?: string): string {
+  switch (state) {
+    case 0: return 'Stopped'
+    case 1: return 'Starting'
+    case 2: return 'Running'
+    case 3: return 'Stopping'
+    case 4: return 'Crashed'
+    case 5: return 'Disabled'
+    default: return fallback ? fallback.replace(/^\w/, c => c.toUpperCase()) : 'Unknown'
   }
+}
+
+function serviceState(raw: RawTrayService): number {
+  if (typeof raw.state === 'number') return raw.state
+  switch ((raw.status || '').toLowerCase()) {
+    case 'starting': return 1
+    case 'running': return 2
+    case 'stopping': return 3
+    case 'crashed':
+    case 'error': return 4
+    case 'disabled': return 5
+    default: return 0
+  }
+}
+
+function normalizeTrayService(raw: RawTrayService): TrayService {
+  const state = serviceState(raw)
+  return {
+    id: raw.id,
+    label: raw.displayName || raw.name || raw.id,
+    state,
+    stateLabel: serviceStateLabel(state, raw.status),
+    running: state === 2,
+    transitioning: state === 1 || state === 3,
+    failed: state === 4,
+    disabled: state === 5,
+    pid: raw.pid,
+    uptime: raw.uptime,
+  }
+}
+
+async function loadTraySnapshot(): Promise<TraySnapshot> {
+  if (!daemonConnected) {
+    return { connected: false, services: [], running: 0, failed: 0, transitioning: 0, stopped: 0, disabled: 0 }
+  }
+
+  try {
+    const services = (await daemonGet<RawTrayService[]>('/api/services'))
+      .map(normalizeTrayService)
+      .sort((a, b) => serviceOrder(a.id) - serviceOrder(b.id) || a.label.localeCompare(b.label))
+
+    return {
+      connected: true,
+      services,
+      running: services.filter(s => s.running).length,
+      failed: services.filter(s => s.failed).length,
+      transitioning: services.filter(s => s.transitioning).length,
+      stopped: services.filter(s => s.state === 0).length,
+      disabled: services.filter(s => s.disabled).length,
+    }
+  } catch (error) {
+    log.warn('[tray] unable to load service snapshot:', error instanceof Error ? error.message : String(error))
+    return { connected: false, services: [], running: 0, failed: 0, transitioning: 0, stopped: 0, disabled: 0 }
+  }
+}
+
+function trayIconColor(snapshot: TraySnapshot): TrayIconColor {
+  if (!snapshot.connected) return 'gray'
+  if (snapshot.failed > 0) return 'red'
+  if (snapshot.running > 0 || snapshot.transitioning > 0) return 'green'
+  return 'yellow'
+}
+
+function showMainWindow(route?: string) {
+  if (!win || win.isDestroyed()) return
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+  if (route) {
+    const hash = route.startsWith('#') ? route : `#${route.startsWith('/') ? route : `/${route}`}`
+    void win.webContents.executeJavaScript(`window.location.hash = ${JSON.stringify(hash)}`, true)
+      .catch(error => log.warn('[tray] navigation failed:', error instanceof Error ? error.message : String(error)))
+  }
+}
+
+async function runTrayServiceAction(serviceId: string, action: TrayServiceAction) {
+  try {
+    if (action === 'restart') {
+      await daemonPost(`/api/services/${serviceId}/stop`)
+      await daemonPost(`/api/services/${serviceId}/start`)
+    } else {
+      await daemonPost(`/api/services/${serviceId}/${action}`)
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    log.warn(`[tray] service ${serviceId} ${action} failed: ${message}`)
+    void dialog.showMessageBox({
+      type: 'error',
+      title: 'Service action failed',
+      message: `${serviceId}: ${message}`,
+    })
+  } finally {
+    void updateTray()
+  }
+}
+
+async function runTrayServiceBatch(serviceIds: string[], action: TrayServiceAction) {
+  for (const serviceId of serviceIds) {
+    await runTrayServiceAction(serviceId, action)
+  }
+}
+
+function serviceActionItems(service: TrayService): Electron.MenuItemConstructorOptions[] {
+  const canStart = !service.running && !service.transitioning && !service.disabled
+  const canStop = service.running && !service.transitioning
+  const canRestart = service.running && !service.transitioning
+  return [
+    {
+      label: 'Start',
+      enabled: canStart,
+      click: () => { void runTrayServiceAction(service.id, 'start') },
+    },
+    {
+      label: 'Stop',
+      enabled: canStop,
+      click: () => { void runTrayServiceAction(service.id, 'stop') },
+    },
+    {
+      label: 'Restart',
+      enabled: canRestart,
+      click: () => { void runTrayServiceAction(service.id, 'restart') },
+    },
+  ]
+}
+
+function buildServiceMenuItems(snapshot: TraySnapshot): Electron.MenuItemConstructorOptions[] {
+  if (!snapshot.connected) return [{ label: 'Daemon offline', enabled: false }]
+  if (snapshot.services.length === 0) return [{ label: 'No services registered', enabled: false }]
+
+  const coreIds = new Set<string>(TRAY_CORE_SERVICES)
+  const coreServices = snapshot.services.filter(service => coreIds.has(service.id))
+  const runningCoreIds = coreServices.filter(service => service.running).map(service => service.id)
+  const stoppedCoreIds = coreServices.filter(service => !service.running && !service.transitioning && !service.disabled).map(service => service.id)
+
+  const items: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: `Core stack (${coreServices.filter(s => s.running).length}/${coreServices.length} running)`,
+      enabled: coreServices.length > 0,
+      submenu: [
+        {
+          label: 'Start stopped core services',
+          enabled: stoppedCoreIds.length > 0,
+          click: () => { void runTrayServiceBatch(stoppedCoreIds, 'start') },
+        },
+        {
+          label: 'Restart running core services',
+          enabled: runningCoreIds.length > 0,
+          click: () => { void runTrayServiceBatch(runningCoreIds, 'restart') },
+        },
+        {
+          label: 'Stop running core services',
+          enabled: runningCoreIds.length > 0,
+          click: () => { void runTrayServiceBatch(runningCoreIds, 'stop') },
+        },
+      ],
+    },
+    { type: 'separator' },
+  ]
+
+  for (const service of snapshot.services) {
+    items.push({
+      label: `${service.label} - ${service.stateLabel}`,
+      submenu: serviceActionItems(service),
+    })
+  }
+
+  return items
+}
+
+function copyTrayStatus(snapshot: TraySnapshot) {
+  const lines = [
+    `NKS WDC: ${snapshot.connected ? 'connected' : 'offline'}`,
+    `Services: ${snapshot.running}/${snapshot.services.length} running, ${snapshot.failed} failed, ${snapshot.transitioning} changing`,
+    '',
+    ...snapshot.services.map(service => {
+      const pid = service.pid ? ` pid=${service.pid}` : ''
+      const uptime = service.uptime ? ` uptime=${service.uptime}` : ''
+      return `${service.id}: ${service.stateLabel}${pid}${uptime}`
+    }),
+  ]
+  clipboard.writeText(lines.join('\n').trim())
+}
+
+function buildDiagnosticsMenuItems(snapshot: TraySnapshot): Electron.MenuItemConstructorOptions[] {
+  return [
+    {
+      label: 'Refresh tray',
+      click: () => { void updateTray() },
+    },
+    {
+      label: 'Copy service status',
+      enabled: snapshot.connected,
+      click: () => copyTrayStatus(snapshot),
+    },
+    {
+      label: 'Open logs folder',
+      click: async () => {
+        const result = await shell.openPath(join(process.env.WDC_DATA_DIR || join(homedir(), '.wdc'), 'logs'))
+        if (result) log.warn('[tray] open logs failed:', result)
+      },
+    },
+  ]
+}
+
+function buildUpdaterMenuItems(): Electron.MenuItemConstructorOptions[] {
+  if (!app.isPackaged || isPortable) {
+    return [{ label: 'Updates disabled in portable/dev mode', enabled: false }]
+  }
+
+  return [
+    {
+      label: checkingForUpdates ? 'Checking for updates...' : `Status: ${updaterStatus}`,
+      enabled: false,
+    },
+    {
+      label: updateDownloaded ? 'Install update and restart' : 'Check for updates',
+      enabled: !checkingForUpdates,
+      click: async () => {
+        if (updateDownloaded) {
+          isQuitting = true
+          try {
+            electronAutoUpdater.quitAndInstall(false, true)
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            void dialog.showMessageBox({
+              type: 'error',
+              title: 'Update failed',
+              message: `Unable to install the downloaded update: ${message}`,
+            })
+          }
+          return
+        }
+
+        void checkForAppUpdates(true)
+      },
+    },
+  ]
 }
 
 async function updateTray() {
@@ -632,97 +886,74 @@ async function updateTray() {
   // when the native object is genuinely gone.
   if (!tray || tray.isDestroyed()) return
 
-  // Dynamic icon color based on state
-  let iconColor: 'green' | 'red' | 'yellow' | 'gray' = 'gray'
-  if (daemonConnected) {
-    try {
-      // Minimal shape: tray only needs `state` to tint its icon. Full
-      // ServiceInfo isn't imported here because electron/main.ts is the
-      // backend side of the bridge and wants zero coupling to the src/api.
-      const services = await daemonGet<Array<{ state: number }>>('/api/services')
-      const crashed = services.filter(s => s.state === 4).length
-      const running = services.filter(s => s.state === 2).length
-      if (crashed > 0) iconColor = 'red'
-      else if (running > 0) iconColor = 'green'
-      else iconColor = 'yellow'
-    } catch {
-      iconColor = 'green' // connected but can't query — assume OK
-    }
-  }
-  tray.setImage(createTrayIcon(iconColor))
+  const activeTray = tray
+  const snapshot = await loadTraySnapshot()
+  if (!activeTray || activeTray.isDestroyed()) return
+  activeTray.setImage(createTrayIcon(trayIconColor(snapshot)))
 
-  const label = daemonConnected ? 'NKS WebDev Console (connected)' : 'NKS WebDev Console (disconnected)'
-  tray.setToolTip(`NKS WDC — ${daemonConnected ? 'Connected' : 'Offline'}`)
+  const trayMenuLabel = snapshot.connected ? 'NKS WebDev Console - Connected' : 'NKS WebDev Console - Offline'
+  const summary = snapshot.connected
+    ? `${snapshot.running}/${snapshot.services.length} services running`
+    : 'Daemon unavailable'
+  activeTray.setToolTip(`NKS WDC - ${summary}`)
 
-  const serviceItems = await buildServiceSubmenu()
-  const updaterItems: Electron.MenuItemConstructorOptions[] = app.isPackaged && !isPortable
-    ? [
-        {
-          label: checkingForUpdates ? 'Checking for updates...' : `Updates: ${updaterStatus}`,
-          enabled: false,
-        },
-        {
-          label: updateDownloaded ? 'Install Update and Restart' : 'Check for Updates',
-          enabled: !checkingForUpdates,
-          click: async () => {
-            if (updateDownloaded) {
-              isQuitting = true
-              try {
-                const autoUpdater = electronAutoUpdater
-                autoUpdater.quitAndInstall(false, true)
-              } catch (error) {
-                const message = error instanceof Error ? error.message : String(error)
-                void dialog.showMessageBox({
-                  type: 'error',
-                  title: 'Update failed',
-                  message: `Unable to install the downloaded update: ${message}`,
-                })
-              }
-              return
-            }
-
-            void checkForAppUpdates(true)
-          }
-        }
-      ]
-    : [{ label: 'Updates disabled in portable/dev mode', enabled: false }]
-
-  const menu = Menu.buildFromTemplate([
-    { label, enabled: false },
+  const trayMenu = Menu.buildFromTemplate([
+    { label: trayMenuLabel, enabled: false },
+    { label: summary, enabled: false },
     { type: 'separator' },
     {
-      label: win?.isVisible() ? 'Hide Window' : 'Show Window',
+      label: 'Open Dashboard',
+      click: () => showMainWindow('/dashboard'),
+    },
+    {
+      label: 'Open Sites',
+      click: () => showMainWindow('/sites'),
+    },
+    {
+      label: 'Open Databases',
+      click: () => showMainWindow('/databases'),
+    },
+    {
+      label: 'Open Settings',
+      click: () => showMainWindow('/settings'),
+    },
+    {
+      label: win?.isVisible() ? 'Hide window' : 'Show window',
       click: () => {
         if (win?.isVisible()) {
           win.hide()
         } else {
-          win?.show()
-          win?.focus()
+          showMainWindow()
         }
-        updateTray()
-      }
+        void updateTray()
+      },
     },
     { type: 'separator' },
     {
       label: 'Services',
-      submenu: serviceItems
+      submenu: buildServiceMenuItems(snapshot),
+    },
+    {
+      label: 'Diagnostics',
+      submenu: buildDiagnosticsMenuItems(snapshot),
     },
     { type: 'separator' },
     {
       label: 'Updates',
-      submenu: updaterItems
+      submenu: buildUpdaterMenuItems(),
     },
     { type: 'separator' },
     {
-      label: 'Quit',
+      label: 'Quit and stop daemon',
       click: async () => {
         isQuitting = true
         await shutdownDaemon()
         app.quit()
-      }
-    }
+      },
+    },
   ])
-  tray.setContextMenu(menu)
+  activeTray.setContextMenu(trayMenu)
+  return
 }
 
 // Task 16: tray icon now uses pre-rendered NKS logo + state-color corner
