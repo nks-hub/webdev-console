@@ -72,12 +72,15 @@
         <span class="sd-label">{{ $t('sites.bindIp') }}</span>
         <div class="sd-control-wrap sd-bind-control">
           <el-select
-            v-model="bindAddress"
+            v-model="bindAddresses"
             size="small"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
             filterable
             :loading="bindAddressOptionsLoading"
             :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
-            @change="onBindAddressChange"
+            @change="onBindAddressesChange"
           >
             <el-option
               v-for="opt in bindAddressOptions"
@@ -88,6 +91,17 @@
           </el-select>
           <Transition name="flash">
             <span v-if="savedBind" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
+          </Transition>
+        </div>
+      </div>
+
+      <!-- Localhost loopback policy -->
+      <div v-if="isLocalhostSite" class="sd-row">
+        <span class="sd-label">{{ $t('sites.localhostLoopback') }}</span>
+        <div class="sd-control-wrap">
+          <el-switch v-model="localhostLoopbackEnabled" @change="onLocalhostLoopbackChange" />
+          <Transition name="flash">
+            <span v-if="savedLoopback" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
           </Transition>
         </div>
       </div>
@@ -207,14 +221,16 @@ const site = computed(() => sitesStore.sites.find(s => s.domain === props.domain
 
 const phpVersion = ref('')
 const sslEnabled = ref(false)
-const bindAddress = ref('')
+const bindAddresses = ref<string[]>(['*'])
 const bindAddressOptions = ref<BindAddressOption[]>([])
 const bindAddressOptionsLoading = ref(false)
+const localhostLoopbackEnabled = ref(false)
 const tunnelEnabled = ref(false)
 
 const savedPhp = ref(false)
 const savedSsl = ref(false)
 const savedBind = ref(false)
+const savedLoopback = ref(false)
 const savedTunnel = ref(false)
 
 const startStopLoading = ref(false)
@@ -228,6 +244,7 @@ const hourlyHits = ref<number[]>([])
 const showAllErrors = ref(false)
 
 const totalHits = computed(() => hourlyHits.value.reduce((a, b) => a + b, 0))
+const isLocalhostSite = computed(() => site.value?.domain?.toLowerCase() === 'localhost')
 
 function formatErrorTime(iso: string): string {
   try {
@@ -334,7 +351,8 @@ watch(site, (s) => {
   if (!s) return
   phpVersion.value = s.phpVersion ?? ''
   sslEnabled.value = s.sslEnabled ?? false
-  bindAddress.value = s.bindAddress || '*'
+  bindAddresses.value = normalizeBindAddresses(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
+  localhostLoopbackEnabled.value = s.localhostLoopbackEnabled ?? false
   tunnelEnabled.value = s.cloudflare?.enabled ?? false
 }, { immediate: true })
 
@@ -351,15 +369,16 @@ async function loadBindAddressOptions() {
   bindAddressOptionsLoading.value = true
   try {
     bindAddressOptions.value = await fetchBindAddressOptions()
-    const current = bindAddress.value || '*'
-    if (!bindAddressOptions.value.some(o => o.value === current)) {
-      bindAddressOptions.value.push({
-        value: current,
-        label: `${current} (saved, unavailable)`,
-        description: 'Saved site value that is not present on this device right now.',
-        wildcard: current === '*',
-        loopback: false,
-      })
+    for (const current of bindAddresses.value) {
+      if (!bindAddressOptions.value.some(o => o.value === current)) {
+        bindAddressOptions.value.push({
+          value: current,
+          label: `${current} (saved, unavailable)`,
+          description: 'Saved site value that is not present on this device right now.',
+          wildcard: current === '*',
+          loopback: false,
+        })
+      }
     }
   } catch {
     bindAddressOptions.value = []
@@ -394,14 +413,38 @@ async function onSslChange(v: boolean) {
   }
 }
 
-async function onBindAddressChange(v: string) {
+function normalizeBindAddresses(values: string[] | undefined): string[] {
+  const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
+  if (selected.length === 0) return ['*']
+  if (selected.includes('*')) return ['*']
+  return selected
+}
+
+async function onBindAddressesChange(v: string[]) {
   if (!site.value) return
+  const normalized = normalizeBindAddresses(v)
+  bindAddresses.value = normalized
   try {
-    await sitesStore.update(props.domain, { ...site.value, bindAddress: v.trim() })
+    await sitesStore.update(props.domain, {
+      ...site.value,
+      bindAddress: normalized[0] ?? '*',
+      bindAddresses: normalized,
+    })
     flashSaved(savedBind)
   } catch (e) {
     ElMessage.error(`Update failed: ${errorMessage(e)}`)
-    bindAddress.value = site.value.bindAddress || '*'
+    bindAddresses.value = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
+  }
+}
+
+async function onLocalhostLoopbackChange(v: boolean) {
+  if (!site.value) return
+  try {
+    await sitesStore.update(props.domain, { ...site.value, localhostLoopbackEnabled: v })
+    flashSaved(savedLoopback)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    localhostLoopbackEnabled.value = site.value.localhostLoopbackEnabled ?? false
   }
 }
 

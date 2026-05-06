@@ -60,11 +60,11 @@
                 class="runtime-tag runtime-php"
               >{{ rowRuntimeLabel(site) }}</el-tag>
               <el-tag
-                v-if="site.bindAddress"
+                v-if="bindAddressLabel(site)"
                 size="small"
                 effect="plain"
                 class="cell-tag"
-              >{{ site.bindAddress }}</el-tag>
+              >{{ bindAddressLabel(site) }}</el-tag>
               <span v-if="site.aliases?.length" class="alias-dot">+{{ site.aliases.length }}</span>
               <span v-if="site.aliases?.length" class="site-mobile-alias mono">
                 {{ site.aliases[0] }}
@@ -129,12 +129,12 @@
                     : `:${row.httpPort || 80}`
                 }}</span>
                 <el-tag
-                  v-if="row.bindAddress"
+                  v-if="bindAddressLabel(row)"
                   size="small"
                   effect="plain"
                   class="cell-tag"
                   :title="$t('sites.bindIp')"
-                >{{ row.bindAddress }}</el-tag>
+                >{{ bindAddressLabel(row) }}</el-tag>
                 <el-tag
                   v-if="row.sslEnabled"
                   size="small"
@@ -297,11 +297,15 @@
           </el-form-item>
           <el-form-item :label="$t('sites.bindIp')">
             <el-select
-              v-model="newSite.bindAddress"
+              v-model="newSite.bindAddresses"
               style="width: 100%"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
               filterable
               :loading="bindAddressOptionsLoading"
               :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
+              @change="onNewSiteBindAddressesChange"
             >
               <el-option
                 v-for="opt in bindAddressOptions"
@@ -311,6 +315,10 @@
               />
             </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
+          </el-form-item>
+          <el-form-item v-if="isNewSiteLocalhost" :label="$t('sites.localhostLoopback')">
+            <el-switch v-model="newSite.localhostLoopbackEnabled" />
+            <div class="form-hint">{{ $t('sites.localhostLoopbackHint') }}</div>
           </el-form-item>
           <!-- F91.2: new-site toggles hidden when their plugin is disabled. -->
           <el-form-item v-if="pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')" :label="$t('sites.simple.cloudflareTunnel')">
@@ -369,11 +377,15 @@
           </el-form-item>
           <el-form-item :label="$t('sites.bindIp')">
             <el-select
-              v-model="newSite.bindAddress"
+              v-model="newSite.bindAddresses"
               style="width: 100%"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
               filterable
               :loading="bindAddressOptionsLoading"
               :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
+              @change="onNewSiteBindAddressesChange"
             >
               <el-option
                 v-for="opt in bindAddressOptions"
@@ -383,6 +395,10 @@
               />
             </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
+          </el-form-item>
+          <el-form-item v-if="isNewSiteLocalhost" :label="$t('sites.localhostLoopback')">
+            <el-switch v-model="newSite.localhostLoopbackEnabled" />
+            <div class="form-hint">{{ $t('sites.localhostLoopbackHint') }}</div>
           </el-form-item>
           <el-form-item :label="$t('sites.ssl')">
             <el-switch v-model="newSite.sslEnabled" />
@@ -564,6 +580,8 @@ const newSite = reactive({
   phpVersion: '',
   aliases: '',
   bindAddress: '*',
+  bindAddresses: ['*'],
+  localhostLoopbackEnabled: false,
   createDb: false,
   dbName: '',
   // SSL on by default so users opting out is the conscious choice — fresh
@@ -659,8 +677,9 @@ async function loadBindAddressOptions() {
   try {
     const options = await fetchBindAddressOptions()
     bindAddressOptions.value = options
-    if (!bindAddressOptions.value.some(o => o.value === newSite.bindAddress)) {
-      newSite.bindAddress = '*'
+    newSite.bindAddresses = normalizeBindAddresses(newSite.bindAddresses)
+    if (!newSite.bindAddresses.every(v => bindAddressOptions.value.some(o => o.value === v))) {
+      newSite.bindAddresses = ['*']
     }
   } catch {
     bindAddressOptions.value = []
@@ -676,6 +695,25 @@ onMounted(async () => {
   await loadPhpVersions()
   await loadBindAddressOptions()
 })
+
+const isNewSiteLocalhost = computed(() => newSite.domain.trim().toLowerCase() === 'localhost')
+
+function normalizeBindAddresses(values: string[] | undefined): string[] {
+  const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
+  if (selected.length === 0) return ['*']
+  if (selected.includes('*')) return ['*']
+  return selected
+}
+
+function onNewSiteBindAddressesChange(values: string[]) {
+  newSite.bindAddresses = normalizeBindAddresses(values)
+  newSite.bindAddress = newSite.bindAddresses[0] ?? '*'
+}
+
+function bindAddressLabel(site: SiteInfo): string {
+  const values = normalizeBindAddresses(site.bindAddresses?.length ? site.bindAddresses : [site.bindAddress || '*'])
+  return values.length > 2 ? `${values[0]}, +${values.length - 1}` : values.join(', ')
+}
 
 // Refresh PHP versions every time the create dialog opens — the user may
 // have installed a new binary via the Binaries page between app launches,
@@ -712,7 +750,9 @@ async function createSite() {
       phpVersion: newSite.phpVersion,
       sslEnabled: newSite.sslEnabled,
       aliases: newSite.aliases ? newSite.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
-      bindAddress: newSite.bindAddress.trim(),
+      bindAddress: newSite.bindAddresses[0] ?? '*',
+      bindAddresses: normalizeBindAddresses(newSite.bindAddresses),
+      localhostLoopbackEnabled: isNewSiteLocalhost.value ? newSite.localhostLoopbackEnabled : false,
       ...(newSite.cloudflareTunnel ? { cloudflareTunnel: true } : {}),
     }
     const created = await sitesStore.create(payload)
@@ -755,7 +795,7 @@ async function createSite() {
     // again (set once by loadPhpVersions on dialog open) instead of a
     // hardcoded literal that may not exist on this machine.
     const defaultPhp = phpVersions.value.find(p => p.isActive)?.value ?? phpVersions.value[0]?.value ?? ''
-    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', bindAddress: '*', sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
+    Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', bindAddress: '*', bindAddresses: ['*'], localhostLoopbackEnabled: false, sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
   } catch (e) {
     ElMessage.error(`Create failed: ${errorMessage(e)}`)
   } finally {

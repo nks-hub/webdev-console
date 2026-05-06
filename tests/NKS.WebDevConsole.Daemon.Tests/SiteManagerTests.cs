@@ -687,6 +687,25 @@ public class SiteManagerTests : IDisposable
         Assert.Equal("127.0.0.2", loaded!.BindAddress);
     }
 
+    [Fact]
+    public void LoadAll_PreservesBindAddresses()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "multi-bind.loc",
+            DocumentRoot = "C:/htdocs/multi-bind",
+            BindAddresses = ["127.0.0.2", "10.254.0.7"],
+        };
+        File.WriteAllText(Path.Combine(_sitesDir, "multi-bind.loc.toml"), TomlSerializer.Serialize(site));
+
+        _manager.LoadAll();
+
+        var loaded = _manager.Get("multi-bind.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal("127.0.0.2", loaded!.BindAddress);
+        Assert.Equal(["127.0.0.2", "10.254.0.7"], loaded.BindAddresses);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("*")]
@@ -708,13 +727,22 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public void ValidateBindAddresses_RejectsWildcardMixedWithSpecificIp()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            SiteManager.ValidateBindAddresses(["*", "127.0.0.1"]));
+
+        Assert.Contains("selected by itself", ex.Message);
+    }
+
+    [Fact]
     public async Task CreateAsync_RejectsDuplicateHostOnOverlappingBind()
     {
         await _manager.CreateAsync(new SiteConfig
         {
             Domain = "first.loc",
             DocumentRoot = "C:/htdocs/first",
-            BindAddress = "*",
+            BindAddress = "127.0.0.1",
             Aliases = ["shared.loc"],
             SslEnabled = true,
         });
@@ -753,6 +781,48 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_AllowsDifferentHostsOnSameExplicitBind()
+    {
+        await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "first.loc",
+            DocumentRoot = "C:/htdocs/first",
+            BindAddresses = ["127.0.0.1"],
+        });
+
+        var created = await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "second.loc",
+            DocumentRoot = "C:/htdocs/second",
+            BindAddresses = ["127.0.0.1"],
+        });
+
+        Assert.Equal("second.loc", created.Domain);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsWildcardAndSpecificBindMixOnSamePort()
+    {
+        await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "wildcard.loc",
+            DocumentRoot = "C:/htdocs/wildcard",
+            BindAddresses = ["*"],
+            SslEnabled = true,
+        });
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "specific.loc",
+            DocumentRoot = "C:/htdocs/specific",
+            BindAddresses = ["127.0.0.1"],
+            SslEnabled = true,
+        }));
+
+        Assert.Contains("Cannot mix wildcard bind", ex.Message);
+    }
+
+    [Fact]
     public async Task CreateAsync_RejectsDuplicateHostOnLocalhostLoopbackBind()
     {
         await _manager.CreateAsync(new SiteConfig
@@ -760,6 +830,7 @@ public class SiteManagerTests : IDisposable
             Domain = "localhost",
             DocumentRoot = "C:/htdocs/localhost",
             BindAddress = "10.254.0.7",
+            LocalhostLoopbackEnabled = true,
             SslEnabled = true,
         });
 
@@ -772,7 +843,7 @@ public class SiteManagerTests : IDisposable
             SslEnabled = true,
         }));
 
-        Assert.Contains("127.0.0.1", ex.Message);
+        Assert.Contains("Cannot mix wildcard bind", ex.Message);
     }
 
     [Fact]
@@ -794,6 +865,25 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateVhostAsync_UsesMultipleBindAddresses()
+    {
+        EnsureVhostTemplateForTests();
+        var site = new SiteConfig
+        {
+            Domain = "multi-bind.loc",
+            DocumentRoot = "C:/htdocs/multi-bind",
+            BindAddresses = ["127.0.0.2", "10.254.0.7"],
+            HttpPort = 8080,
+        };
+
+        await _manager.GenerateVhostAsync(site);
+
+        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "multi-bind.loc.conf"));
+        Assert.Contains("<VirtualHost 127.0.0.2:8080>", conf);
+        Assert.Contains("<VirtualHost 10.254.0.7:8080>", conf);
+    }
+
+    [Fact]
     public async Task GenerateVhostAsync_AddsLoopbackAliasForLocalhost()
     {
         EnsureVhostTemplateForTests();
@@ -801,6 +891,7 @@ public class SiteManagerTests : IDisposable
         {
             Domain = "localhost",
             DocumentRoot = "C:/htdocs/localhost",
+            LocalhostLoopbackEnabled = true,
         };
 
         await _manager.GenerateVhostAsync(site);
@@ -819,6 +910,7 @@ public class SiteManagerTests : IDisposable
             Domain = "localhost",
             DocumentRoot = "C:/htdocs/localhost",
             BindAddress = "10.254.0.7",
+            LocalhostLoopbackEnabled = true,
             HttpPort = 8080,
         };
 
@@ -830,6 +922,27 @@ public class SiteManagerTests : IDisposable
         Assert.DoesNotContain("<VirtualHost 127.0.0.1:8080>", conf);
         Assert.Contains("ServerAlias 127.0.0.1", conf);
         Assert.Contains("10.254.0.7", conf);
+    }
+
+    [Fact]
+    public async Task GenerateVhostAsync_DoesNotAddLoopbackFallbackWhenDisabled()
+    {
+        EnsureVhostTemplateForTests();
+        var site = new SiteConfig
+        {
+            Domain = "localhost",
+            DocumentRoot = "C:/htdocs/localhost",
+            BindAddress = "10.254.0.7",
+            LocalhostLoopbackEnabled = false,
+            HttpPort = 8080,
+        };
+
+        await _manager.GenerateVhostAsync(site);
+
+        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "localhost.conf"));
+        Assert.Contains("<VirtualHost 10.254.0.7:8080>", conf);
+        Assert.DoesNotContain("<VirtualHost *:8080>", conf);
+        Assert.DoesNotContain("ServerAlias 127.0.0.1", conf);
     }
 
     private static void EnsureVhostTemplateForTests()

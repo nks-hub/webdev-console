@@ -56,8 +56,12 @@ export interface SiteInfo {
   sslEnabled: boolean
   httpPort: number
   httpsPort: number
-  /** Empty or "*" binds on every Apache listener address; use an IP such as 127.0.0.1 for loopback-only sites. */
+  /** Legacy first bind address. Empty or "*" binds on every Apache listener address. */
   bindAddress?: string
+  /** Explicit bind addresses. "*" must be selected alone; concrete IPs can be combined. */
+  bindAddresses?: string[]
+  /** Localhost only: also route localhost/127.0.0.1 through a name-based loopback vhost. */
+  localhostLoopbackEnabled?: boolean
   aliases: string[]
   /** Task 31: soft enable/disable. When false, httpd vhosts are removed
    *  on apply; the TOML config stays on disk. Default true for backward

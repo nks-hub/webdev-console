@@ -9,10 +9,29 @@ public class SiteConfig
     public int HttpPort { get; set; } = 80;
     public int HttpsPort { get; set; } = 443;
     /// <summary>
-    /// Optional IP address used by generated per-site vhosts. Empty or "*"
-    /// means bind on every Apache listener address.
+    /// Legacy single IP address used by generated per-site vhosts. Empty or
+    /// "*" means bind on every Apache listener address. New callers should
+    /// use <see cref="BindAddresses"/>; this field is kept as the first
+    /// selected value for older TOML files, CLI clients, and plugins.
     /// </summary>
     public string BindAddress { get; set; } = "";
+
+    /// <summary>
+    /// Explicit per-site listener addresses. "*" must be used alone. Multiple
+    /// concrete IP addresses are allowed when the same vhost should be served
+    /// on several local interfaces.
+    /// </summary>
+    public string[] BindAddresses { get; set; } = [];
+
+    /// <summary>
+    /// Localhost-only routing policy. When true and the site domain is
+    /// localhost, Apache also emits a name-based wildcard vhost for
+    /// localhost/127.0.0.1 so the site remains reachable on loopback even
+    /// when BindAddress points at a LAN address. Kept separate from
+    /// Aliases because it is generated routing policy, not user-entered
+    /// alternate hostnames.
+    /// </summary>
+    public bool LocalhostLoopbackEnabled { get; set; }
 
     /// <summary>
     /// Task 31: soft enable/disable flag. When false, the site's TOML

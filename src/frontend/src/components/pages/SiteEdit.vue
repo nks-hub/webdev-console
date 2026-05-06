@@ -66,12 +66,15 @@
                   </el-form-item>
                   <el-form-item :label="$t('sites.bindIp')">
                     <el-select
-                      v-model="site.bindAddress"
+                      v-model="site.bindAddresses"
                       style="width: 100%"
+                      multiple
+                      collapse-tags
+                      collapse-tags-tooltip
                       filterable
                       :loading="bindAddressOptionsLoading"
                       :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
-                      @change="markDirty"
+                      @change="onBindAddressesChange"
                     >
                       <el-option
                         v-for="opt in bindAddressOptions"
@@ -81,6 +84,10 @@
                       />
                     </el-select>
                     <div class="hint">{{ $t('sites.bindIpHint') }}</div>
+                  </el-form-item>
+                  <el-form-item v-if="isLocalhostSite" :label="$t('sites.localhostLoopback')">
+                    <el-switch v-model="site.localhostLoopbackEnabled" @change="markDirty" />
+                    <div class="hint">{{ $t('sites.localhostLoopbackHint') }}</div>
                   </el-form-item>
                   <el-form-item :label="$t('sites.documentRoot')" required>
                     <el-input
@@ -713,6 +720,7 @@ const composeLoading = ref(false)
 const composeOutput = ref('')
 const bindAddressOptions = ref<BindAddressOption[]>([])
 const bindAddressOptionsLoading = ref(false)
+const isLocalhostSite = computed(() => site.value?.domain?.toLowerCase() === 'localhost')
 
 async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
   if (!site.value) return
@@ -1048,6 +1056,20 @@ async function detectFramework() {
 
 function markDirty() { dirty.value = true }
 
+function normalizeBindAddresses(values: string[] | undefined): string[] {
+  const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
+  if (selected.length === 0) return ['*']
+  if (selected.includes('*')) return ['*']
+  return selected
+}
+
+function onBindAddressesChange(values: string[]) {
+  if (!site.value) return
+  site.value.bindAddresses = normalizeBindAddresses(values)
+  site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
+  markDirty()
+}
+
 // F91.6: plugin-contributed tabs (SSL, Cloudflare) emit `update:site` when
 // they edit a subset of the site record (e.g. sslEnabled, cloudflare.*).
 // We merge the incoming partial into our reactive `site.value` so the save
@@ -1064,7 +1086,11 @@ async function load() {
     await sitesStore.load()
     const found = sitesStore.sites.find(s => s.domain === domain.value)
     site.value = found ? { ...found, aliases: [...(found.aliases ?? [])] } : null
-    if (site.value && !site.value.bindAddress) site.value.bindAddress = '*'
+    if (site.value) {
+      site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
+      site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
+    }
+    if (site.value && site.value.localhostLoopbackEnabled == null) site.value.localhostLoopbackEnabled = false
     dirty.value = false
 
     // PHP versions — authoritative list from daemon. Leave the array
@@ -1088,15 +1114,16 @@ async function load() {
     bindAddressOptionsLoading.value = true
     try {
       bindAddressOptions.value = await fetchBindAddressOptions()
-      const current = site.value?.bindAddress || '*'
-      if (site.value && current && !bindAddressOptions.value.some(o => o.value === current)) {
-        bindAddressOptions.value.push({
-          value: current,
-          label: `${current} (saved, unavailable)`,
-          description: 'Saved site value that is not present on this device right now.',
-          wildcard: current === '*',
-          loopback: false,
-        })
+      for (const current of site.value?.bindAddresses ?? ['*']) {
+        if (current && !bindAddressOptions.value.some(o => o.value === current)) {
+          bindAddressOptions.value.push({
+            value: current,
+            label: `${current} (saved, unavailable)`,
+            description: 'Saved site value that is not present on this device right now.',
+            wildcard: current === '*',
+            loopback: false,
+          })
+        }
       }
     } catch {
       bindAddressOptions.value = []
