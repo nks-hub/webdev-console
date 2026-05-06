@@ -753,6 +753,29 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_RejectsDuplicateHostOnLocalhostLoopbackBind()
+    {
+        await _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "localhost",
+            DocumentRoot = "C:/htdocs/localhost",
+            BindAddress = "10.254.0.7",
+            SslEnabled = true,
+        });
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _manager.CreateAsync(new SiteConfig
+        {
+            Domain = "other.loc",
+            DocumentRoot = "C:/htdocs/other",
+            BindAddress = "127.0.0.1",
+            Aliases = ["127.0.0.1"],
+            SslEnabled = true,
+        }));
+
+        Assert.Contains("127.0.0.1", ex.Message);
+    }
+
+    [Fact]
     public async Task GenerateVhostAsync_UsesBindAddress()
     {
         EnsureVhostTemplateForTests();
@@ -787,18 +810,42 @@ public class SiteManagerTests : IDisposable
         Assert.Contains("ServerAlias 127.0.0.1", conf);
     }
 
+    [Fact]
+    public async Task GenerateVhostAsync_AddsWildcardFallbackForLocalhostBoundToLan()
+    {
+        EnsureVhostTemplateForTests();
+        var site = new SiteConfig
+        {
+            Domain = "localhost",
+            DocumentRoot = "C:/htdocs/localhost",
+            BindAddress = "10.254.0.7",
+            HttpPort = 8080,
+        };
+
+        await _manager.GenerateVhostAsync(site);
+
+        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "localhost.conf"));
+        Assert.Contains("<VirtualHost 10.254.0.7:8080>", conf);
+        Assert.Contains("<VirtualHost *:8080>", conf);
+        Assert.DoesNotContain("<VirtualHost 127.0.0.1:8080>", conf);
+        Assert.Contains("ServerAlias 127.0.0.1", conf);
+        Assert.Contains("10.254.0.7", conf);
+    }
+
     private static void EnsureVhostTemplateForTests()
     {
         var dir = Path.Combine(AppContext.BaseDirectory, "Templates");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "vhost.conf.scriban"),
             """
-            <VirtualHost {{ site.bind_address }}:{{ port }}>
+            {{ for bind_address in site.bind_addresses -}}
+            <VirtualHost {{ bind_address }}:{{ port }}>
                 ServerName {{ site.domain }}
                 {{ if site.aliases && site.aliases.size > 0 -}}
                 ServerAlias {{ for a in site.aliases }}{{ a }} {{ end }}
                 {{- end }}
             </VirtualHost>
+            {{ end -}}
             """);
     }
 

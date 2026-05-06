@@ -49,11 +49,12 @@ Stages plugin DLLs and nksdeploy.phar into the packaged daemon layout
 at <repo>/src/frontend/resources/daemon/plugins/.
 
 Resolution order (first hit wins):
-  1. <repo>/build/plugins (escape hatch for manual drops)
+  1. <repo>/build/plugins when WDC_PLUGIN_STAGE_SOURCE=build
   2. <repo>/../webdev-console-plugins (sibling clone with bin/Release builds)
   3. nks-hub/webdev-console-plugins GitHub Releases (downloaded fresh)
 
 Environment variables:
+  WDC_PLUGIN_STAGE_SOURCE=build force <repo>/build/plugins manual override
   WDC_SKIP_PLUGIN_DOWNLOAD=1   skip GitHub release download (offline)
   WDC_SKIP_PHAR_BUILD=1        skip the chained nksdeploy.phar build
   GITHUB_TOKEN=<pat>           bump GitHub API rate limits (5000/hr vs 60/hr)
@@ -96,10 +97,10 @@ let sourceUsed = null
 // case a developer or CI job drops plugin DLLs here manually, but no
 // longer produced by the monorepo build — src/plugins/ was removed in
 // favour of the nks-hub/webdev-console-plugins repo. Expected to be
-// empty on normal checkouts. Runs first so if you DO want to override
-// the sibling/GH-release sources, dropping DLLs here still wins.
+// empty on normal checkouts. It is opt-in because stale files here can
+// otherwise mask a freshly-built sibling plugin checkout.
 const monorepoBuildDir = join(repoRoot, 'build', 'plugins')
-if (listPluginDlls(monorepoBuildDir).length > 0) {
+if (process.env.WDC_PLUGIN_STAGE_SOURCE === 'build' && listPluginDlls(monorepoBuildDir).length > 0) {
   copyRecursive(monorepoBuildDir, destDir)
   sourceUsed = monorepoBuildDir
 }

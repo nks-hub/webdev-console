@@ -192,6 +192,7 @@ public sealed class SiteManager : ISiteRegistry
     public void ValidateBindConflicts(SiteConfig site, string? existingDomain = null)
     {
         var candidateHosts = HostnamesFor(site).ToArray();
+        var candidateBindScopes = EffectiveBindScopesFor(site).ToArray();
         var candidateHttpPort = site.HttpPort > 0 ? site.HttpPort : 80;
         var candidateHttpsPort = site.HttpsPort > 0 ? site.HttpsPort : 443;
         foreach (var other in Sites.Values)
@@ -201,7 +202,8 @@ public sealed class SiteManager : ISiteRegistry
             if (!string.IsNullOrWhiteSpace(existingDomain)
                 && string.Equals(other.Domain, existingDomain, StringComparison.OrdinalIgnoreCase))
                 continue;
-            if (!BindScopesOverlap(site.BindAddress, other.BindAddress))
+            var otherBindScopes = EffectiveBindScopesFor(other).ToArray();
+            if (!candidateBindScopes.Any(left => otherBindScopes.Any(right => BindScopesOverlap(left, right))))
                 continue;
 
             var httpOverlaps = candidateHttpPort == (other.HttpPort > 0 ? other.HttpPort : 80);
@@ -382,7 +384,7 @@ public sealed class SiteManager : ISiteRegistry
         catch { /* ignore */ }
 
         var apacheSettings = site.ApacheSettings;
-        var aliases = NormalizeAliases(site.Domain, site.Aliases);
+        var aliases = NormalizeAliases(site);
 
         var model = new
         {
@@ -391,6 +393,7 @@ public sealed class SiteManager : ISiteRegistry
                 domain = site.Domain,
                 aliases = aliases,
                 bind_address = FormatApacheBindAddress(site.BindAddress),
+                bind_addresses = EffectiveApacheBindAddresses(site),
                 root = site.DocumentRoot,
                 root_parent = rootParent,
                 php_ini_path = sitePhpIni,
@@ -449,7 +452,13 @@ public sealed class SiteManager : ISiteRegistry
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    public static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases)
+    public static string[] NormalizeAliases(SiteConfig site) =>
+        NormalizeAliases(site.Domain, site.Aliases, site.BindAddress);
+
+    public static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases) =>
+        NormalizeAliases(domain, aliases, bindAddress: null);
+
+    private static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases, string? bindAddress)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -463,6 +472,14 @@ public sealed class SiteManager : ISiteRegistry
             && seen.Add("127.0.0.1"))
         {
             result.Add("127.0.0.1");
+        }
+        var primaryBind = NormalizeBindScope(bindAddress);
+        if (string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase)
+            && primaryBind != "*"
+            && !string.Equals(primaryBind, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            && seen.Add(primaryBind))
+        {
+            result.Add(primaryBind);
         }
         return result.ToArray();
     }
@@ -482,6 +499,30 @@ public sealed class SiteManager : ISiteRegistry
         yield return site.Domain;
         foreach (var alias in NormalizeAliases(site.Domain, site.Aliases))
             yield return alias;
+    }
+
+    public static string[] EffectiveApacheBindAddresses(SiteConfig site)
+    {
+        return EffectiveBindScopesFor(site)
+            .Select(scope => scope == "*" ? "*" : FormatApacheBindAddress(scope))
+            .ToArray();
+    }
+
+    private static IEnumerable<string> EffectiveBindScopesFor(SiteConfig site)
+    {
+        var primary = NormalizeBindScope(site.BindAddress);
+        yield return primary;
+
+        if (primary == "*")
+            yield break;
+
+        if (string.Equals(site.Domain, "localhost", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(primary, "127.0.0.1", StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep localhost reachable as https://127.0.0.1 without creating an
+            // exact 127.0.0.1 vhost group that would shadow wildcard-bound sites.
+            yield return "*";
+        }
     }
 
     private static bool BindScopesOverlap(string? left, string? right)
