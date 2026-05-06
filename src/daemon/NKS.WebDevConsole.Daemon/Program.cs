@@ -268,14 +268,25 @@ try
 {
     Directory.CreateDirectory(daemonLogDir);
     daemonLogPath = Path.Combine(daemonLogDir, $"daemon-{DateTime.Now:yyyy-MM-dd}.log");
-    NReco.Logging.File.FileLoggerExtensions.AddFile(builder.Logging, daemonLogPath, fileLoggerOpts =>
+    var skipFileLog = string.Equals(
+        Environment.GetEnvironmentVariable("WDC_SKIP_FILE_LOG"),
+        "1", StringComparison.Ordinal);
+    if (skipFileLog)
     {
-        fileLoggerOpts.Append = true;
-        fileLoggerOpts.FileSizeLimitBytes = 10 * 1024 * 1024;   // 10 MB per file
-        fileLoggerOpts.MaxRollingFiles = 7;                       // keep a week of rolled files
-        fileLoggerOpts.FormatLogEntry = msg =>
-            $"{DateTime.Now:HH:mm:ss.fff} {msg.LogLevel,-11} {msg.LogName} {msg.Message} {msg.Exception?.ToString() ?? ""}".Trim();
-    });
+        Console.WriteLine("[daemon] WDC_SKIP_FILE_LOG=1 - file logging disabled");
+        daemonLogPath = null;
+    }
+    else
+    {
+        NReco.Logging.File.FileLoggerExtensions.AddFile(builder.Logging, daemonLogPath, fileLoggerOpts =>
+        {
+            fileLoggerOpts.Append = true;
+            fileLoggerOpts.FileSizeLimitBytes = 10 * 1024 * 1024;   // 10 MB per file
+            fileLoggerOpts.MaxRollingFiles = 7;                       // keep a week of rolled files
+            fileLoggerOpts.FormatLogEntry = msg =>
+                $"{DateTime.Now:HH:mm:ss.fff} {msg.LogLevel,-11} {msg.LogName} {msg.Message} {msg.Exception?.ToString() ?? ""}".Trim();
+        });
+    }
 }
 catch (Exception ex)
 {
@@ -5700,7 +5711,14 @@ catch (Exception fwEx)
 //   module's StartAsync resolve its own dependencies. Task.WhenAll gives
 //   us wall-clock parallelism while per-task try/catch ensures one failing
 //   module doesn't abort the others.
-var autoStartEnabled = app.Services.GetRequiredService<SettingsStore>().AutoStartEnabled;
+var skipAutoStart = string.Equals(
+    Environment.GetEnvironmentVariable("WDC_SKIP_AUTO_START"),
+    "1", StringComparison.Ordinal);
+var autoStartEnabled = !skipAutoStart && app.Services.GetRequiredService<SettingsStore>().AutoStartEnabled;
+if (skipAutoStart)
+{
+    Console.WriteLine("[auto-start] WDC_SKIP_AUTO_START=1 - skipping service auto-start");
+}
 if (autoStartEnabled)
 {
     var modules = app.Services.GetServices<IServiceModule>().ToList();
