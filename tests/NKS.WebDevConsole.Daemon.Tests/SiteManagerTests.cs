@@ -801,7 +801,7 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_RejectsWildcardAndSpecificBindMixOnSamePort()
+    public async Task CreateAsync_AllowsWildcardAndSpecificBindMixForDifferentHosts()
     {
         await _manager.CreateAsync(new SiteConfig
         {
@@ -811,15 +811,15 @@ public class SiteManagerTests : IDisposable
             SslEnabled = true,
         });
 
-        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _manager.CreateAsync(new SiteConfig
+        var created = await _manager.CreateAsync(new SiteConfig
         {
             Domain = "specific.loc",
             DocumentRoot = "C:/htdocs/specific",
             BindAddresses = ["127.0.0.1"],
             SslEnabled = true,
-        }));
+        });
 
-        Assert.Contains("Cannot mix wildcard bind", ex.Message);
+        Assert.Equal("specific.loc", created.Domain);
     }
 
     [Fact]
@@ -843,7 +843,7 @@ public class SiteManagerTests : IDisposable
             SslEnabled = true,
         }));
 
-        Assert.Contains("Cannot mix wildcard bind", ex.Message);
+        Assert.Contains("already belongs to site 'localhost'", ex.Message);
     }
 
     [Fact]
@@ -899,6 +899,7 @@ public class SiteManagerTests : IDisposable
         var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "localhost.conf"));
         Assert.Contains("ServerName localhost", conf);
         Assert.Contains("ServerAlias 127.0.0.1", conf);
+        Assert.Contains("::1", conf);
     }
 
     [Fact]
@@ -917,10 +918,11 @@ public class SiteManagerTests : IDisposable
 
         var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "localhost.conf"));
         Assert.Contains("<VirtualHost 10.254.0.7:8080>", conf);
-        Assert.Contains("<VirtualHost *:8080>", conf);
-        Assert.DoesNotContain("<VirtualHost 127.0.0.1:8080>", conf);
+        Assert.Contains("<VirtualHost 127.0.0.1:8080>", conf);
+        Assert.Contains("<VirtualHost [::1]:8080>", conf);
+        Assert.DoesNotContain("<VirtualHost *:8080>", conf);
         Assert.Contains("ServerAlias 127.0.0.1", conf);
-        Assert.Contains("ServerAlias 127.0.0.1 10.254.0.7", conf);
+        Assert.Contains("::1", conf);
         Assert.Contains("10.254.0.7", conf);
     }
 

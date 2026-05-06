@@ -73,8 +73,10 @@
         <div class="sd-control-wrap sd-bind-control">
           <el-select
             v-model="bindAddresses"
+            class="bind-address-select"
             size="small"
             multiple
+            clearable
             collapse-tags
             collapse-tags-tooltip
             filterable
@@ -170,7 +172,7 @@
 
       <!-- Delete -->
       <div class="sd-danger-row">
-        <el-button type="danger" plain size="default" :icon="WarningIcon" @click="confirmDelete">
+        <el-button type="danger" size="default" :icon="WarningIcon" @click="confirmDelete">
           {{ $t('sites.detail.simple.delete') }}
         </el-button>
       </div>
@@ -400,8 +402,12 @@ async function onSslChange(v: boolean) {
 
 function normalizeBindAddresses(values: string[] | undefined): string[] {
   const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
-  if (selected.length === 0) return ['*']
-  if (selected.includes('*')) return ['*']
+  if (selected.length === 0) return []
+  if (selected.includes('*')) {
+    return selected[selected.length - 1] === '*'
+      ? ['*']
+      : selected.filter(v => v !== '*')
+  }
   return selected
 }
 
@@ -409,6 +415,10 @@ async function onBindAddressesChange(v: string[]) {
   if (!site.value) return
   const normalized = normalizeBindAddresses(v)
   bindAddresses.value = normalized
+  if (normalized.length === 0) {
+    ElMessage.warning('Select at least one IP binding, or choose * for all listener addresses.')
+    return
+  }
   try {
     await sitesStore.update(props.domain, {
       ...site.value,
@@ -585,6 +595,20 @@ onMounted(async () => {
   width: min(460px, 100%);
 }
 
+.sd-bind-control :deep(.bind-address-select .el-tag) {
+  background: var(--wdc-accent) !important;
+  border-color: var(--wdc-accent) !important;
+  color: var(--wdc-bg) !important;
+  font-weight: 700;
+  min-height: 32px;
+}
+
+.sd-bind-control :deep(.bind-address-select .el-tag__close) {
+  color: var(--wdc-bg) !important;
+  min-width: 32px;
+  min-height: 32px;
+}
+
 .sd-status-dot {
   width: 10px;
   height: 10px;
@@ -681,7 +705,10 @@ onMounted(async () => {
 .sd-err-msg { color: var(--el-text-color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sd-activity-empty { color: var(--el-text-color-secondary); font-size: 12px; padding: 4px 0; }
 .sd-activity-actions { display: flex; gap: 12px; margin-top: 6px; }
-.sd-full-logs { margin-left: auto; }
+.sd-full-logs {
+  margin-left: auto;
+  min-height: 32px;
+}
 .sd-traffic-row { display: flex; align-items: center; gap: 12px; }
 .sd-traffic-count { color: var(--el-text-color-secondary); font-size: 12px; }
 

@@ -506,6 +506,12 @@ html:not(.dark) .el-button {
   color: currentColor !important;
 }
 
+.el-switch {
+  min-height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
 /* Inputs */
 .el-input__wrapper {
   background: var(--wdc-surface-2) !important;
@@ -526,6 +532,13 @@ html:not(.dark) .el-button {
 .el-input__inner {
   color: var(--wdc-text) !important;
   font-size: 0.82rem;
+  min-height: 32px;
+  line-height: 32px;
+}
+
+.el-select__input {
+  min-height: 32px !important;
+  line-height: 32px !important;
 }
 
 .el-input--small .el-input__wrapper,
@@ -878,30 +891,50 @@ html.dark .nav-item-tunnel .nav-label {
 /* Switch */
 .el-switch {
   --el-switch-on-color: var(--wdc-accent);
-  --el-switch-off-color: var(--wdc-elevated);
-  min-height: 34px;
+  --el-switch-off-color: transparent;
+  --wdc-switch-width: 42px;
+  --wdc-switch-height: 24px;
+  --wdc-switch-knob: 18px;
+  --wdc-switch-pad: 3px;
+  min-height: var(--wdc-switch-height);
   vertical-align: middle;
 }
 
+.el-switch.el-switch--small {
+  --wdc-switch-width: 34px;
+  --wdc-switch-height: 20px;
+  --wdc-switch-knob: 14px;
+}
+
+.el-switch.el-switch--large {
+  --wdc-switch-width: 48px;
+  --wdc-switch-height: 28px;
+  --wdc-switch-knob: 22px;
+}
+
 .el-switch__core {
-  width: 48px !important;
-  min-width: 48px !important;
-  height: 28px !important;
-  background: var(--wdc-elevated) !important;
+  width: var(--wdc-switch-width) !important;
+  min-width: var(--wdc-switch-width) !important;
+  height: var(--wdc-switch-height) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--wdc-elevated) 88%, #fff 12%), var(--wdc-elevated)) !important;
   border-color: var(--wdc-border-strong) !important;
+  border-radius: 999px !important;
   box-shadow:
     inset 0 0 0 1px var(--wdc-border),
-    inset 0 2px 5px rgba(0, 0, 0, 0.22) !important;
+    inset 0 1px 3px rgba(0, 0, 0, 0.2) !important;
   transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
 .el-switch__core .el-switch__action {
-  width: 22px !important;
-  height: 22px !important;
-  left: 2px !important;
-  color: transparent !important;
+  width: var(--wdc-switch-knob) !important;
+  height: var(--wdc-switch-knob) !important;
+  left: var(--wdc-switch-pad) !important;
+  color: var(--wdc-accent) !important;
   background: var(--wdc-text) !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.32) !important;
+  transition: left 0.14s ease, background 0.14s ease, color 0.14s ease !important;
 }
 
 .el-switch.is-checked .el-switch__core {
@@ -913,12 +946,18 @@ html.dark .nav-item-tunnel .nav-label {
 }
 
 .el-switch.is-checked .el-switch__core .el-switch__action {
-  left: calc(100% - 24px) !important;
+  left: calc(100% - var(--wdc-switch-knob) - var(--wdc-switch-pad)) !important;
+  color: var(--wdc-accent) !important;
   background: #ffffff !important;
 }
 
 .el-switch.is-disabled {
   opacity: 0.58;
+}
+
+.el-switch:focus-visible .el-switch__core {
+  outline: 2px solid var(--wdc-accent);
+  outline-offset: 2px;
 }
 
 .el-switch__label {

@@ -300,6 +300,7 @@
               v-model="newSite.bindAddresses"
               style="width: 100%"
               multiple
+              clearable
               collapse-tags
               collapse-tags-tooltip
               filterable
@@ -376,6 +377,7 @@
               v-model="newSite.bindAddresses"
               style="width: 100%"
               multiple
+              clearable
               collapse-tags
               collapse-tags-tooltip
               filterable
@@ -692,8 +694,12 @@ const isNewSiteLocalhost = computed(() => newSite.domain.trim().toLowerCase() ==
 
 function normalizeBindAddresses(values: string[] | undefined): string[] {
   const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
-  if (selected.length === 0) return ['*']
-  if (selected.includes('*')) return ['*']
+  if (selected.length === 0) return []
+  if (selected.includes('*')) {
+    return selected[selected.length - 1] === '*'
+      ? ['*']
+      : selected.filter(v => v !== '*')
+  }
   return selected
 }
 
@@ -732,6 +738,11 @@ function selectSite(row: SiteInfo) {
 async function createSite() {
   if (!newSite.domain || !newSite.documentRoot) {
     ElMessage.warning('Domain and document root are required')
+    return
+  }
+  newSite.bindAddresses = normalizeBindAddresses(newSite.bindAddresses)
+  if (newSite.bindAddresses.length === 0) {
+    ElMessage.warning('Select at least one IP binding, or choose * for all listener addresses.')
     return
   }
   creating.value = true

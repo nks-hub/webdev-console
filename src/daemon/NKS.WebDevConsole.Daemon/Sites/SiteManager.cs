@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Tomlyn;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
@@ -222,12 +223,6 @@ public sealed class SiteManager : ISiteRegistry
             if (!httpOverlaps && !httpsOverlaps)
                 continue;
 
-            if (HasWildcardSpecificMix(candidateBindScopes, otherBindScopes))
-            {
-                throw new ArgumentException(
-                    $"Cannot mix wildcard bind '*' with specific bind addresses between sites '{site.Domain}' and '{other.Domain}' on the same port. Select explicit IPs for both sites, or wildcard for both, to prevent Apache vhost fallthrough.");
-            }
-
             var duplicateHost = candidateHosts.FirstOrDefault(h => HostnamesFor(other).Contains(h, StringComparer.OrdinalIgnoreCase));
             if (duplicateHost is not null)
             {
@@ -403,6 +398,7 @@ public sealed class SiteManager : ISiteRegistry
 
         var apacheSettings = site.ApacheSettings;
         var aliases = NormalizeAliases(site);
+        var hostGuardExpr = BuildLocalhostHostGuardExpr(site.Domain, aliases);
 
         var model = new
         {
@@ -410,6 +406,7 @@ public sealed class SiteManager : ISiteRegistry
             {
                 domain = site.Domain,
                 aliases = aliases,
+                host_guard_expr = hostGuardExpr,
                 bind_address = EffectiveApacheBindAddresses(site)[0],
                 bind_addresses = EffectiveApacheBindAddresses(site),
                 root = site.DocumentRoot,
@@ -492,10 +489,15 @@ public sealed class SiteManager : ISiteRegistry
         if (string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase))
         {
             AddAlias("127.0.0.1");
+            AddAlias("::1");
             foreach (var scope in configuredBindScopes)
             {
                 if (scope != "*")
+                {
                     AddAlias(scope);
+                    if (scope.StartsWith('[') && scope.EndsWith(']'))
+                        AddAlias(scope[1..^1]);
+                }
             }
         }
         return result.ToArray();
@@ -531,6 +533,34 @@ public sealed class SiteManager : ISiteRegistry
             .ToArray();
     }
 
+    private static string BuildLocalhostHostGuardExpr(string domain, IEnumerable<string> aliases)
+    {
+        if (!string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+
+        var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "[::1]",
+        };
+        foreach (var alias in aliases)
+        {
+            if (string.IsNullOrWhiteSpace(alias))
+                continue;
+            var value = alias.Trim();
+            hosts.Add(value);
+            if (value.StartsWith('[') && value.EndsWith(']'))
+                hosts.Add(value[1..^1]);
+            else if (value.Contains(':'))
+                hosts.Add($"[{value}]");
+        }
+
+        var pattern = string.Join("|", hosts.Select(Regex.Escape));
+        return $"%{{HTTP_HOST}} =~ m#^({pattern})(:[0-9]+)?$#";
+    }
+
     private static IEnumerable<string> EffectiveBindScopesFor(SiteConfig site)
     {
         var configured = NormalizeConfiguredBindScopes(site.BindAddresses, site.BindAddress);
@@ -543,9 +573,12 @@ public sealed class SiteManager : ISiteRegistry
         if (string.Equals(site.Domain, "localhost", StringComparison.OrdinalIgnoreCase)
             && !configured.Contains("127.0.0.1", StringComparer.OrdinalIgnoreCase))
         {
-            // Keep localhost reachable as https://127.0.0.1 without creating an
-            // exact 127.0.0.1 vhost group that would shadow wildcard-bound sites.
-            yield return "*";
+            yield return "127.0.0.1";
+        }
+        if (string.Equals(site.Domain, "localhost", StringComparison.OrdinalIgnoreCase)
+            && !configured.Contains("::1", StringComparer.OrdinalIgnoreCase))
+        {
+            yield return "::1";
         }
     }
 
@@ -554,15 +587,6 @@ public sealed class SiteManager : ISiteRegistry
         var a = NormalizeBindScope(left);
         var b = NormalizeBindScope(right);
         return a == "*" || b == "*" || string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool HasWildcardSpecificMix(string[] left, string[] right)
-    {
-        var leftWildcard = left.Contains("*", StringComparer.OrdinalIgnoreCase);
-        var rightWildcard = right.Contains("*", StringComparer.OrdinalIgnoreCase);
-        var leftSpecific = left.Any(s => s != "*");
-        var rightSpecific = right.Any(s => s != "*");
-        return (leftWildcard && rightSpecific) || (rightWildcard && leftSpecific);
     }
 
     private static void NormalizeSiteBindAddresses(SiteConfig site)

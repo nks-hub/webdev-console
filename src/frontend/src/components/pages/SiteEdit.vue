@@ -67,8 +67,10 @@
                   <el-form-item :label="$t('sites.bindIp')">
                     <el-select
                       v-model="site.bindAddresses"
+                      class="bind-address-select"
                       style="width: 100%"
                       multiple
+                      clearable
                       collapse-tags
                       collapse-tags-tooltip
                       filterable
@@ -1053,8 +1055,12 @@ function markDirty() { dirty.value = true }
 
 function normalizeBindAddresses(values: string[] | undefined): string[] {
   const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
-  if (selected.length === 0) return ['*']
-  if (selected.includes('*')) return ['*']
+  if (selected.length === 0) return []
+  if (selected.includes('*')) {
+    return selected[selected.length - 1] === '*'
+      ? ['*']
+      : selected.filter(v => v !== '*')
+  }
   return selected
 }
 
@@ -1148,6 +1154,12 @@ async function load() {
 
 async function save() {
   if (!site.value) return
+  site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses)
+  if (site.value.bindAddresses.length === 0) {
+    ElMessage.warning('Select at least one IP binding, or choose * for all listener addresses.')
+    return
+  }
+  site.value.bindAddress = site.value.bindAddresses[0]
   saving.value = true
   try {
     // Commit aliases from chip picker (no more comma-separated string)
@@ -1731,6 +1743,20 @@ onBeforeUnmount(() => {
   border-radius: 3px;
   color: var(--wdc-accent);
   font-size: 0.76rem;
+}
+
+.bind-address-select :deep(.el-tag) {
+  background: var(--wdc-accent) !important;
+  border-color: var(--wdc-accent) !important;
+  color: var(--wdc-bg) !important;
+  font-weight: 700;
+  min-height: 32px;
+}
+
+.bind-address-select :deep(.el-tag__close) {
+  color: var(--wdc-bg) !important;
+  min-width: 32px;
+  min-height: 32px;
 }
 
 /* ─── Card sections ──────────────────────────────────────────────────── */
