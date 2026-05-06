@@ -10262,10 +10262,11 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
         }
         steps.Add("mysqld stopped");
 
-        // Step 2: spawn skip-grant-tables mysqld on a temporary port (3307 avoids conflict).
+        // Step 2: spawn skip-grant-tables mysqld on a temporary free port.
         steps.Add("Spawning skip-grant-tables mysqld");
         log.LogInformation("reset-password: spawning skip-grant-tables mysqld");
-        var skipPort = 3307;
+        var skipPort = FindFreeTcpPort(Math.Max(3307, port + 1))
+            ?? throw new InvalidOperationException("No free local port found for skip-grant-tables mysqld");
         var dataDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "mysql");
 
         var safeArgs = OperatingSystem.IsWindows()

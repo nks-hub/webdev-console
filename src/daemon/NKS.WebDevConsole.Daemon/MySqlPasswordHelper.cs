@@ -61,6 +61,9 @@ internal static class MySqlPasswordHelper
         var escaped = password.Replace("'", "''");
         return
             "FLUSH PRIVILEGES;\n" +
+            $"CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY '{escaped}';\n" +
+            $"CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY '{escaped}';\n" +
+            $"CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '{escaped}';\n" +
             $"ALTER USER 'root'@'localhost' IDENTIFIED BY '{escaped}';\n" +
             $"ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY '{escaped}';\n" +
             $"ALTER USER 'root'@'%' IDENTIFIED BY '{escaped}';\n" +

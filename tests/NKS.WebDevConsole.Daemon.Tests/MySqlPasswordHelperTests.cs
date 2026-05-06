@@ -122,6 +122,19 @@ public sealed class MySqlPasswordHelperTests
     }
 
     [Fact]
+    public void BuildAlterUserSql_CreatesMissingRootHostsBeforeAlter()
+    {
+        var sql = MySqlPasswordHelper.BuildAlterUserSql("secret12");
+
+        Assert.Contains("CREATE USER IF NOT EXISTS 'root'@'localhost'", sql);
+        Assert.Contains("CREATE USER IF NOT EXISTS 'root'@'127.0.0.1'", sql);
+        Assert.Contains("CREATE USER IF NOT EXISTS 'root'@'%'", sql);
+        Assert.True(
+            sql.IndexOf("CREATE USER IF NOT EXISTS 'root'@'127.0.0.1'", StringComparison.Ordinal) <
+            sql.IndexOf("ALTER USER 'root'@'127.0.0.1'", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void BuildAlterUserSql_EscapesSingleQuoteInPassword()
     {
         // Even though ValidatePassword blocks quotes, BuildAlterUserSql still escapes them.
