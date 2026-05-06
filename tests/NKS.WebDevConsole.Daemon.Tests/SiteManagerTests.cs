@@ -902,7 +902,7 @@ public class SiteManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateVhostAsync_AddsWildcardFallbackForLocalhostBoundToLan()
+    public async Task GenerateVhostAsync_KeepsLocalhostReachableOnLoopbackWhenBoundToLan()
     {
         EnsureVhostTemplateForTests();
         var site = new SiteConfig
@@ -910,7 +910,6 @@ public class SiteManagerTests : IDisposable
             Domain = "localhost",
             DocumentRoot = "C:/htdocs/localhost",
             BindAddress = "10.254.0.7",
-            LocalhostLoopbackEnabled = true,
             HttpPort = 8080,
         };
 
@@ -921,28 +920,28 @@ public class SiteManagerTests : IDisposable
         Assert.Contains("<VirtualHost *:8080>", conf);
         Assert.DoesNotContain("<VirtualHost 127.0.0.1:8080>", conf);
         Assert.Contains("ServerAlias 127.0.0.1", conf);
+        Assert.Contains("ServerAlias 127.0.0.1 10.254.0.7", conf);
         Assert.Contains("10.254.0.7", conf);
     }
 
     [Fact]
-    public async Task GenerateVhostAsync_DoesNotAddLoopbackFallbackWhenDisabled()
+    public async Task GenerateVhostAsync_DoesNotAddLanIpAliasForNonLocalhostSite()
     {
         EnsureVhostTemplateForTests();
         var site = new SiteConfig
         {
-            Domain = "localhost",
-            DocumentRoot = "C:/htdocs/localhost",
+            Domain = "app.loc",
+            DocumentRoot = "C:/htdocs/app",
             BindAddress = "10.254.0.7",
-            LocalhostLoopbackEnabled = false,
             HttpPort = 8080,
         };
 
         await _manager.GenerateVhostAsync(site);
 
-        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "localhost.conf"));
+        var conf = await File.ReadAllTextAsync(Path.Combine(_generatedDir, "app.loc.conf"));
         Assert.Contains("<VirtualHost 10.254.0.7:8080>", conf);
         Assert.DoesNotContain("<VirtualHost *:8080>", conf);
-        Assert.DoesNotContain("ServerAlias 127.0.0.1", conf);
+        Assert.DoesNotContain("ServerAlias 10.254.0.7", conf);
     }
 
     private static void EnsureVhostTemplateForTests()

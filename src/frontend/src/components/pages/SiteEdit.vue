@@ -85,10 +85,6 @@
                     </el-select>
                     <div class="hint">{{ $t('sites.bindIpHint') }}</div>
                   </el-form-item>
-                  <el-form-item v-if="isLocalhostSite" :label="$t('sites.localhostLoopback')">
-                    <el-switch v-model="site.localhostLoopbackEnabled" @change="markDirty" />
-                    <div class="hint">{{ $t('sites.localhostLoopbackHint') }}</div>
-                  </el-form-item>
                   <el-form-item :label="$t('sites.documentRoot')" required>
                     <el-input
                       v-model="site.documentRoot"
@@ -720,7 +716,6 @@ const composeLoading = ref(false)
 const composeOutput = ref('')
 const bindAddressOptions = ref<BindAddressOption[]>([])
 const bindAddressOptionsLoading = ref(false)
-const isLocalhostSite = computed(() => site.value?.domain?.toLowerCase() === 'localhost')
 
 async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
   if (!site.value) return
@@ -1090,7 +1085,7 @@ async function load() {
       site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
       site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
     }
-    if (site.value && site.value.localhostLoopbackEnabled == null) site.value.localhostLoopbackEnabled = false
+    if (site.value?.domain?.toLowerCase() === 'localhost') site.value.localhostLoopbackEnabled = true
     dirty.value = false
 
     // PHP versions — authoritative list from daemon. Leave the array

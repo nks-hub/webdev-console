@@ -24,12 +24,9 @@ public class SiteConfig
     public string[] BindAddresses { get; set; } = [];
 
     /// <summary>
-    /// Localhost-only routing policy. When true and the site domain is
-    /// localhost, Apache also emits a name-based wildcard vhost for
-    /// localhost/127.0.0.1 so the site remains reachable on loopback even
-    /// when BindAddress points at a LAN address. Kept separate from
-    /// Aliases because it is generated routing policy, not user-entered
-    /// alternate hostnames.
+    /// Legacy localhost-only routing flag. The daemon now keeps the
+    /// localhost site reachable on localhost/127.0.0.1 unconditionally;
+    /// this property remains for older TOML/API clients.
     /// </summary>
     public bool LocalhostLoopbackEnabled { get; set; }
 

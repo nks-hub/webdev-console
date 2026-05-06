@@ -471,12 +471,15 @@ public sealed class SiteManager : ISiteRegistry
     }
 
     public static string[] NormalizeAliases(SiteConfig site) =>
-        NormalizeAliases(site.Domain, site.Aliases, site.LocalhostLoopbackEnabled);
+        NormalizeAliases(
+            site.Domain,
+            site.Aliases,
+            NormalizeConfiguredBindScopes(site.BindAddresses, site.BindAddress));
 
     public static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases) =>
-        NormalizeAliases(domain, aliases, localhostLoopbackEnabled: false);
+        NormalizeAliases(domain, aliases, configuredBindScopes: []);
 
-    private static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases, bool localhostLoopbackEnabled)
+    private static string[] NormalizeAliases(string domain, IEnumerable<string>? aliases, string[] configuredBindScopes)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -486,13 +489,22 @@ public sealed class SiteManager : ISiteRegistry
             if (!string.IsNullOrWhiteSpace(value) && seen.Add(value))
                 result.Add(value);
         }
-        if (localhostLoopbackEnabled
-            && string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase)
-            && seen.Add("127.0.0.1"))
+        if (string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase))
         {
-            result.Add("127.0.0.1");
+            AddAlias("127.0.0.1");
+            foreach (var scope in configuredBindScopes)
+            {
+                if (scope != "*")
+                    AddAlias(scope);
+            }
         }
         return result.ToArray();
+
+        void AddAlias(string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && seen.Add(value))
+                result.Add(value);
+        }
     }
 
     public static string FormatApacheBindAddress(string? bindAddress)
@@ -528,8 +540,7 @@ public sealed class SiteManager : ISiteRegistry
         if (configured.Contains("*", StringComparer.OrdinalIgnoreCase))
             yield break;
 
-        if (site.LocalhostLoopbackEnabled
-            && string.Equals(site.Domain, "localhost", StringComparison.OrdinalIgnoreCase)
+        if (string.Equals(site.Domain, "localhost", StringComparison.OrdinalIgnoreCase)
             && !configured.Contains("127.0.0.1", StringComparer.OrdinalIgnoreCase))
         {
             // Keep localhost reachable as https://127.0.0.1 without creating an
@@ -558,6 +569,8 @@ public sealed class SiteManager : ISiteRegistry
     {
         site.BindAddresses = NormalizeConfiguredBindScopes(site.BindAddresses, site.BindAddress);
         site.BindAddress = site.BindAddresses[0];
+        if (string.Equals(site.Domain, "localhost", StringComparison.OrdinalIgnoreCase))
+            site.LocalhostLoopbackEnabled = true;
     }
 
     private static string[] NormalizeConfiguredBindScopes(IEnumerable<string>? bindAddresses, string? fallback)

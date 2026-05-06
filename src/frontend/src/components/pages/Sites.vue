@@ -316,10 +316,6 @@
             </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
           </el-form-item>
-          <el-form-item v-if="isNewSiteLocalhost" :label="$t('sites.localhostLoopback')">
-            <el-switch v-model="newSite.localhostLoopbackEnabled" />
-            <div class="form-hint">{{ $t('sites.localhostLoopbackHint') }}</div>
-          </el-form-item>
           <!-- F91.2: new-site toggles hidden when their plugin is disabled. -->
           <el-form-item v-if="pluginsStore.isUiVisible('sites-badge:cloudflare-tunnel')" :label="$t('sites.simple.cloudflareTunnel')">
             <el-switch v-model="newSite.cloudflareTunnel" />
@@ -395,10 +391,6 @@
               />
             </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
-          </el-form-item>
-          <el-form-item v-if="isNewSiteLocalhost" :label="$t('sites.localhostLoopback')">
-            <el-switch v-model="newSite.localhostLoopbackEnabled" />
-            <div class="form-hint">{{ $t('sites.localhostLoopbackHint') }}</div>
           </el-form-item>
           <el-form-item :label="$t('sites.ssl')">
             <el-switch v-model="newSite.sslEnabled" />
@@ -752,7 +744,7 @@ async function createSite() {
       aliases: newSite.aliases ? newSite.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
       bindAddress: newSite.bindAddresses[0] ?? '*',
       bindAddresses: normalizeBindAddresses(newSite.bindAddresses),
-      localhostLoopbackEnabled: isNewSiteLocalhost.value ? newSite.localhostLoopbackEnabled : false,
+      localhostLoopbackEnabled: isNewSiteLocalhost.value,
       ...(newSite.cloudflareTunnel ? { cloudflareTunnel: true } : {}),
     }
     const created = await sitesStore.create(payload)

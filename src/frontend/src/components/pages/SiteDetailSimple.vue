@@ -95,17 +95,6 @@
         </div>
       </div>
 
-      <!-- Localhost loopback policy -->
-      <div v-if="isLocalhostSite" class="sd-row">
-        <span class="sd-label">{{ $t('sites.localhostLoopback') }}</span>
-        <div class="sd-control-wrap">
-          <el-switch v-model="localhostLoopbackEnabled" @change="onLocalhostLoopbackChange" />
-          <Transition name="flash">
-            <span v-if="savedLoopback" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
-          </Transition>
-        </div>
-      </div>
-
       <!-- Cloudflare tunnel switch -->
       <div class="sd-row">
         <span class="sd-label">{{ $t('sites.detail.simple.tunnel') }}</span>
@@ -224,13 +213,11 @@ const sslEnabled = ref(false)
 const bindAddresses = ref<string[]>(['*'])
 const bindAddressOptions = ref<BindAddressOption[]>([])
 const bindAddressOptionsLoading = ref(false)
-const localhostLoopbackEnabled = ref(false)
 const tunnelEnabled = ref(false)
 
 const savedPhp = ref(false)
 const savedSsl = ref(false)
 const savedBind = ref(false)
-const savedLoopback = ref(false)
 const savedTunnel = ref(false)
 
 const startStopLoading = ref(false)
@@ -244,7 +231,6 @@ const hourlyHits = ref<number[]>([])
 const showAllErrors = ref(false)
 
 const totalHits = computed(() => hourlyHits.value.reduce((a, b) => a + b, 0))
-const isLocalhostSite = computed(() => site.value?.domain?.toLowerCase() === 'localhost')
 
 function formatErrorTime(iso: string): string {
   try {
@@ -352,7 +338,6 @@ watch(site, (s) => {
   phpVersion.value = s.phpVersion ?? ''
   sslEnabled.value = s.sslEnabled ?? false
   bindAddresses.value = normalizeBindAddresses(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
-  localhostLoopbackEnabled.value = s.localhostLoopbackEnabled ?? false
   tunnelEnabled.value = s.cloudflare?.enabled ?? false
 }, { immediate: true })
 
@@ -434,17 +419,6 @@ async function onBindAddressesChange(v: string[]) {
   } catch (e) {
     ElMessage.error(`Update failed: ${errorMessage(e)}`)
     bindAddresses.value = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
-  }
-}
-
-async function onLocalhostLoopbackChange(v: boolean) {
-  if (!site.value) return
-  try {
-    await sitesStore.update(props.domain, { ...site.value, localhostLoopbackEnabled: v })
-    flashSaved(savedLoopback)
-  } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
-    localhostLoopbackEnabled.value = site.value.localhostLoopbackEnabled ?? false
   }
 }
 
