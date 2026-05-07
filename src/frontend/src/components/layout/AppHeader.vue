@@ -8,19 +8,18 @@
           <span class="logo-sub">{{ currentTitle }}</span>
         </span>
       </span>
+      <nav class="header-nav">
+        <router-link
+          v-for="item in navItems"
+          :key="item.path"
+          :to="item.path"
+          class="nav-tab"
+          :class="{ active: isActive(item.path) }"
+        >
+          {{ item.label }}
+        </router-link>
+      </nav>
     </div>
-
-    <nav class="header-nav" style="-webkit-app-region: no-drag">
-      <router-link
-        v-for="item in navItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-tab"
-        :class="{ active: isActive(item.path) }"
-      >
-        {{ item.label }}
-      </router-link>
-    </nav>
 
     <div class="header-right" style="-webkit-app-region: no-drag">
       <!-- F96: self-updater badge. Surfaces when a newer release is
@@ -132,26 +131,29 @@ function isActive(path: string) {
 
 <style scoped>
 /*
-  Header sits one elevation step above sidebar/content so it visually
-  detaches as a distinct top bar. Strong bottom border seals the
-  boundary against the page area below; subtle inset highlight at the
-  top adds depth. No more loud rgba 0.08 hairline (which used to be
-  the only thing separating header from content).
+  ─── Header redesign — flat shell, left-aligned nav ──────────────────
+  Was: gradient bg + center-floated pills + subtitle reading "PŘEHLED"
+  duplicating the page title underneath.
+  Now: flat bg matching surface, nav left-justified next to logo,
+  underline indicator instead of pill (consistent with content tabs),
+  drop subtitle, drop inset glow.
 */
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
-  padding: 0 20px;
-  background: var(--wdc-elevated);
-  border-bottom: 1px solid var(--wdc-border-strong);
+  height: 56px;
+  padding: 0 24px;
+  background: var(--wdc-surface);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  gap: 16px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.20);
+  gap: 24px;
 }
-html:not(.dark) .app-header {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(15, 23, 42, 0.06);
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
 .app-logo {
@@ -163,78 +165,70 @@ html:not(.dark) .app-header {
 }
 
 .logo-mark {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  /* Flat: solid fill, no gradient, no drop shadow */
+  border-radius: 6px;
   background: var(--wdc-accent);
-  color: var(--wdc-bg);
-  font-size: 0.74rem;
+  color: #ffffff;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .logo-copy {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
 }
 
 .logo-text {
-  font-size: 0.84rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--wdc-text);
-}
-
-.logo-sub {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--wdc-text-3);
+  color: var(--wdc-text);
+  line-height: 1.1;
 }
 
-/* Header nav tabs */
+/* Subtitle dropped — it duplicated the page title rendered below. */
+.logo-sub { display: none; }
+
+/*
+  Nav — left-aligned next to logo, underline indicator. Hover changes
+  text color only (no chip). Active tab shows a 2px accent underline
+  flush with the header's bottom border for a clean tab/page joint.
+*/
 .header-nav {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-  justify-content: center;
+  align-items: stretch;
+  height: 100%;
+  gap: 0;
 }
 
 .nav-tab {
-  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--wdc-text-3);
   text-decoration: none;
-  border-radius: 999px;
-  transition: color 0.12s, background 0.12s, box-shadow 0.12s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* overlap header bottom border */
+  transition: color 0.12s, border-color 0.12s;
   white-space: nowrap;
 }
 
 .nav-tab:hover {
   color: var(--wdc-text);
-  background: var(--wdc-hover);
 }
 
-/*
-  Active tab now has a solid accent-dim chip + accent text so it
-  reads as the obvious "current page" without the previous gradient
-  trick (which was barely visible against the surface bg).
-*/
 .nav-tab.active {
-  color: var(--wdc-accent);
-  background: var(--wdc-accent-dim);
-  box-shadow: inset 0 0 0 1px rgba(86, 194, 255, 0.30);
-}
-html:not(.dark) .nav-tab.active {
-  box-shadow: inset 0 0 0 1px rgba(0, 109, 125, 0.30);
+  color: var(--wdc-text);
+  border-bottom-color: var(--wdc-accent);
+  font-weight: 600;
 }
 
 .header-right {
@@ -259,44 +253,38 @@ html:not(.dark) .nav-tab.active {
   padding: 0 12px !important;
 }
 
+/*
+  Connection pill — minimal: just a colored dot + small label, no
+  fill, no border. Was a chunky filled pill that doubled as background
+  noise.
+*/
 .conn-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 0 6px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border: 1px solid;
-  min-height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--wdc-text-3);
 }
 
-/*
-  Connection pill — colored fill back, so the green/red status reads
-  at a glance.
-*/
-.conn-ok {
-  color: var(--wdc-status-running);
-  border-color: rgba(34, 197, 94, 0.32);
-  background: rgba(34, 197, 94, 0.10);
-}
-.conn-err {
-  color: var(--wdc-status-error);
-  border-color: rgba(239, 68, 68, 0.32);
-  background: rgba(239, 68, 68, 0.10);
-}
+.conn-ok { color: var(--wdc-status-running); }
+.conn-err { color: var(--wdc-status-error); }
 
 .conn-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: currentColor;
 }
 
 .conn-ok .conn-dot {
   animation: glow 2s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--wdc-status-running);
 }
 
 @keyframes glow {
