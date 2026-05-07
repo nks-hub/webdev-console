@@ -1,13 +1,11 @@
-/* NKS WDC Design System — pure CSS tokens + Element Plus overrides */
+/* NKS WDC Design System — SOFT VIBRANT (2026-05-08) */
 /*
-  Typography — switched to Helvetica/Arial stack at user request. No
-  webfont @import for the body sans-serif; we lean on the OS:
-  Helvetica Neue on macOS, Arial on Windows, fallback to system
-  sans on Linux. JetBrains Mono is still loaded for code surfaces
-  (paths, ports, SQL editor metadata) — it carries enough character
-  to stay distinct from the otherwise neutral chrome.
+  Typography — Inter for the body sans, JetBrains Mono for code.
+  Inter is the contemporary SaaS UI default (Linear, Notion, Stripe);
+  good rhythm at 14px UI sizes and pairs cleanly with rounded soft
+  cards.
 */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ─── Design Tokens (flat, high-contrast, WCAG AAA) ───────────────────────
  *
@@ -23,70 +21,56 @@
  */
 :root {
   /*
-    Dark surface elevation — 5 distinct steps, each visibly brighter
-    than the next so panels stack visually without shadows or thick
-    borders. Previous palette had bg near-black + bright borders at
-    38% alpha, which produced "outlined boxes everywhere" instead of
-    layered surfaces. New palette uses warmer navy base, larger
-    luminance gaps, and softer borders. Result: header, sidebar,
-    content area and cards feel like distinct elevations rather than
-    different sections of the same flat plane.
+    SOFT VIBRANT — dark mode
+    Warm dark base (subtle violet undertone, not navy/black) with cards
+    that visibly pop because surfaces step up in clear luminance jumps
+    AND ride on soft drop shadows. Indigo primary + teal secondary +
+    full-saturation Material status palette. Borders are very low alpha;
+    the heavy lifting is done by surface elevation + shadows.
   */
-  /*
-    High-contrast clean palette — pure dark grey/black, no purple,
-    no navy, no warm tint. Surface elevation stepped in pure grey
-    so the bg doesn't fight content. Accent is the only chromatic
-    voice in the chrome.
-  */
-  --wdc-bg:          #0a0a0a;
-  --wdc-surface:     #141414;
-  --wdc-surface-2:   #1c1c1c;
-  --wdc-elevated:    #262626;
-  --wdc-hover:       #1f1f1f;
+  --wdc-bg:          #1c1b22;  /* warm dark, lightly violet */
+  --wdc-surface:     #28272f;  /* cards / sidebar */
+  --wdc-surface-2:   #34333d;  /* nested fills, inputs */
+  --wdc-elevated:    #403e4b;  /* hover, popovers */
+  --wdc-hover:       #38363f;  /* row hover */
 
-  /*
-    Borders — drop from 38% (loud, "outlined boxes" effect) to 12%.
-    Use the surface elevation as the primary separator; borders only
-    underline that separation. Strong variant 28% for explicit
-    dividers (page-header bottom, sidebar right edge).
-  */
-  --wdc-border:          rgba(255, 255, 255, 0.12);
-  --wdc-border-strong:   rgba(255, 255, 255, 0.28);
+  /* Borders very subtle — shadows do the separation work */
+  --wdc-border:          rgba(255, 255, 255, 0.08);
+  --wdc-border-strong:   rgba(255, 255, 255, 0.16);
 
-  /* Text — neutral whites, no blue cast in --wdc-text-2 */
-  --wdc-text:        #f5f5f7;           /* off-white, AAA on bg */
-  --wdc-text-2:      #c8c8cd;           /* secondary, no cool tint */
-  --wdc-text-3:      #8b8b94;           /* tertiary / metadata */
+  /* Text — warm whites */
+  --wdc-text:        #f5f3f7;
+  --wdc-text-2:      #c4c0cc;
+  --wdc-text-3:      #8c8794;
 
-  /* Accent — electric blue (Stripe-style). High contrast on black. */
-  --wdc-accent:      #3b82f6;  /* blue-500 */
-  --wdc-accent-2:    #60a5fa;  /* blue-400 hover */
-  --wdc-accent-glow: rgba(59, 130, 246, 0.28);
-  --wdc-accent-dim:  rgba(59, 130, 246, 0.16);
+  /* Primary accent — Material 3 indigo, vibrant */
+  --wdc-accent:      #818cf8;  /* indigo-400, AAA on bg */
+  --wdc-accent-2:    #a5b4fc;  /* hover lift */
+  --wdc-accent-glow: rgba(129, 140, 248, 0.28);
+  --wdc-accent-dim:  rgba(129, 140, 248, 0.14);
 
-  /* Status palette — full saturation, max contrast on black. */
-  --wdc-status-running:  #22c55e;  /* green-500 */
-  --wdc-status-stopped:  #71717a;  /* zinc-500 */
-  --wdc-status-error:    #ef4444;  /* red-500 */
-  --wdc-status-starting: #f59e0b;  /* amber-500 */
+  /* Secondary accent — teal, paired with primary for callouts */
+  --wdc-accent-secondary:      #2dd4bf;
+  --wdc-accent-secondary-dim:  rgba(45, 212, 191, 0.14);
+
+  /* Status palette — Material 3 vibrant saturation */
+  --wdc-status-running:  #34d399;  /* emerald-400 */
+  --wdc-status-stopped:  #71717a;
+  --wdc-status-error:    #f87171;  /* red-400 */
+  --wdc-status-starting: #fbbf24;  /* amber-400 */
   --wdc-warning:         var(--wdc-status-starting);
 
-  /* Categorical accents — punchy hues that read at small sizes. */
-  --wdc-cat-web:       #f97316;  /* orange-500 — Apache, Nginx */
-  --wdc-cat-lang:      #8b5cf6;  /* violet-500 — PHP, Node */
-  --wdc-cat-db:        #06b6d4;  /* cyan-500 — MySQL, Postgres */
-  --wdc-cat-cache:     #10b981;  /* emerald-500 — Redis, Mailpit */
-  --wdc-cat-tunnel:    #f38020;  /* Cloudflare brand */
+  /* Categorical accents — Material You hue stops */
+  --wdc-cat-web:       #fb923c;
+  --wdc-cat-lang:      #c084fc;
+  --wdc-cat-db:        #38bdf8;
+  --wdc-cat-cache:     #34d399;
+  --wdc-cat-tunnel:    #fb923c;
 
-  /* Status glow */
-  --wdc-glow-running:  rgba(34, 197, 94, 0.28);
-  --wdc-glow-error:    rgba(239, 68, 68, 0.28);
+  --wdc-glow-running:  rgba(52, 211, 153, 0.28);
+  --wdc-glow-error:    rgba(248, 113, 113, 0.28);
 
-  /*
-    Spacing scale — 4px base. Use sparingly via utility classes; most
-    components inline px/rem still. Documented here as canonical
-    progression: 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64.
-  */
+  /* Spacing — strict 4px progression */
   --wdc-space-1: 4px;
   --wdc-space-2: 8px;
   --wdc-space-3: 12px;
@@ -96,83 +80,76 @@
   --wdc-space-7: 48px;
   --wdc-space-8: 64px;
 
-  /* Radius scale */
-  --wdc-radius-xs:   3px;
-  --wdc-radius-sm:   5px;
-  --wdc-radius:      8px;
-  --wdc-radius-lg:   12px;
-  --wdc-radius-xl:   16px;
+  /* Radius — Notion-soft cards, Material rounded buttons */
+  --wdc-radius-xs:   4px;
+  --wdc-radius-sm:   6px;
+  --wdc-radius:      8px;       /* buttons */
+  --wdc-radius-lg:   12px;      /* cards */
+  --wdc-radius-xl:   16px;      /* large containers / dialogs */
 
   /*
-    Shadow scale — 5 elevation tiers (xs/sm/md/lg/xl). Each is a
-    composite of a soft drop + a 1px hairline so panels read as
-    layered planes, not just outlined boxes. Replaces the previous
-    3-tier system whose tiers were too close together to feel
-    distinct.
+    Soft shadows — bigger / softer than typical "1px hairline" shadow.
+    Cards get a real shadow that lifts them off the page.
   */
-  --wdc-shadow-xs:   0 1px 0 rgba(0, 0, 0, 0.30);
-  --wdc-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.30), 0 0 0 1px var(--wdc-border);
-  --wdc-shadow:      0 2px 6px rgba(0, 0, 0, 0.36), 0 0 0 1px var(--wdc-border);
-  --wdc-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.40), 0 0 0 1px var(--wdc-border);
-  --wdc-shadow-pop:  0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--wdc-border-strong);
-  --wdc-shadow-lg:   0 24px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--wdc-border-strong);
+  --wdc-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.18);
+  --wdc-shadow-sm:   0 2px 4px rgba(0, 0, 0, 0.20);
+  --wdc-shadow:      0 4px 12px rgba(0, 0, 0, 0.24);
+  --wdc-shadow-card: 0 6px 20px rgba(0, 0, 0, 0.28);
+  --wdc-shadow-pop:  0 16px 36px rgba(0, 0, 0, 0.40);
+  --wdc-shadow-lg:   0 24px 64px rgba(0, 0, 0, 0.55);
 
   color-scheme: dark;
 }
 
 /*
-  Light mode — bg is a soft cool-grey (matches macOS / modern dashboards),
-  surface is pure white. Border alpha drops from 22% → 10% with strong
-  variant 20% — same pattern as dark mode (rely on surface contrast,
-  not borders). Card shadow uses navy-tinted black for depth on the
-  cool palette.
+  SOFT VIBRANT — light mode
+  Notion-warm cream bg + pure white cards. Deeper indigo + teal +
+  Material status colors retuned for AAA on warm surfaces.
 */
-/* Light mode — pure white surface, neutral grey hierarchy, deep blue accent. */
 html:not(.dark) {
-  --wdc-bg:          #f5f5f5;
+  --wdc-bg:          #faf8f5;  /* warm cream (Notion) */
   --wdc-surface:     #ffffff;
-  --wdc-surface-2:   #f0f0f0;
-  --wdc-elevated:    #e8e8e8;
-  --wdc-hover:       #e2e2e2;
+  --wdc-surface-2:   #f5f2ec;
+  --wdc-elevated:    #ede9e1;
+  --wdc-hover:       #f0ece4;
 
-  --wdc-border:          rgba(0, 0, 0, 0.10);
-  --wdc-border-strong:   rgba(0, 0, 0, 0.22);
+  --wdc-border:          rgba(28, 25, 23, 0.07);
+  --wdc-border-strong:   rgba(28, 25, 23, 0.16);
 
-  --wdc-text:        #0a0a0a;
-  --wdc-text-2:      #303030;
-  --wdc-text-3:      #5e5e5e;
+  --wdc-text:        #1a1819;
+  --wdc-text-2:      #44424a;
+  --wdc-text-3:      #6b6970;
 
-  /* Accent — deep blue, AAA on white */
-  --wdc-accent:      #1d4ed8;  /* blue-700 */
-  --wdc-accent-2:    #1e40af;
-  --wdc-accent-glow: rgba(29, 78, 216, 0.16);
-  --wdc-accent-dim:  rgba(29, 78, 216, 0.10);
+  /* Indigo, AAA on cream */
+  --wdc-accent:      #4338ca;  /* indigo-700 */
+  --wdc-accent-2:    #312e81;
+  --wdc-accent-glow: rgba(67, 56, 202, 0.14);
+  --wdc-accent-dim:  rgba(67, 56, 202, 0.08);
 
-  /* Status — light-mode AAA */
-  --wdc-status-running:  #15803d;
-  --wdc-status-stopped:  #5e5e5e;
+  --wdc-accent-secondary:      #0d9488;  /* teal-600 */
+  --wdc-accent-secondary-dim:  rgba(13, 148, 136, 0.08);
+
+  /* Status palette — AAA on cream */
+  --wdc-status-running:  #047857;  /* emerald-700 */
+  --wdc-status-stopped:  #6b6970;
   --wdc-status-error:    #b91c1c;
   --wdc-status-starting: #b45309;
   --wdc-warning:         var(--wdc-status-starting);
 
-  /* Categorical accents — darker AAA versions */
+  /* Categorical accents — AAA on cream */
   --wdc-cat-web:       #c2410c;
   --wdc-cat-lang:      #6d28d9;
-  --wdc-cat-db:        #0e7490;
+  --wdc-cat-db:        #0369a1;
   --wdc-cat-cache:     #047857;
   --wdc-cat-tunnel:    #c2410c;
 
-  /*
-    Light-mode shadow scale — same 5 tiers as dark, with cool-grey
-    tint instead of navy. Visibly subtler because shadows on light
-    surfaces don't read at the same alpha as on dark.
-  */
-  --wdc-shadow-xs:   0 1px 0 rgba(0, 0, 0, 0.04);
-  --wdc-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--wdc-border);
-  --wdc-shadow:      0 2px 6px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--wdc-border);
-  --wdc-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--wdc-border);
-  --wdc-shadow-pop:  0 12px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--wdc-border-strong);
-  --wdc-shadow-lg:   0 24px 48px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--wdc-border-strong);
+  /* Soft shadows on cream — slight warm tint */
+  --wdc-shadow-xs:   0 1px 2px rgba(28, 25, 23, 0.04);
+  --wdc-shadow-sm:   0 2px 4px rgba(28, 25, 23, 0.05);
+  --wdc-shadow:      0 4px 12px rgba(28, 25, 23, 0.06);
+  --wdc-shadow-card: 0 6px 20px rgba(28, 25, 23, 0.07);
+  --wdc-shadow-pop:  0 16px 36px rgba(28, 25, 23, 0.10);
+  --wdc-shadow-lg:   0 24px 64px rgba(28, 25, 23, 0.14);
 
   color-scheme: light;
 }
