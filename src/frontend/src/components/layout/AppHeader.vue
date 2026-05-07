@@ -275,21 +275,17 @@ function isActive(path: string) {
 .conn-ok { color: var(--wdc-status-running); }
 .conn-err { color: var(--wdc-status-error); }
 
+/*
+  Static dots — no opacity animation, no box-shadow glow. Both used
+  to pulse together (different periods produced an apparent fast
+  flicker), and the box-shadow forced a GPU repaint each frame even
+  when the page was idle.
+*/
 .conn-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: currentColor;
-}
-
-.conn-ok .conn-dot {
-  animation: glow 2s ease-in-out infinite;
-  box-shadow: 0 0 8px var(--wdc-status-running);
-}
-
-@keyframes glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 /*
@@ -317,12 +313,13 @@ function isActive(path: string) {
   color: #141006;
 }
 html:not(.dark) .update-badge:hover { color: #ffffff; }
+/* Static dot — was pulsing at 2.2s, paired with conn-dot's 2s pulse,
+   the offset cycles read as a fast flicker. */
 .update-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
-  animation: glow 2.2s ease-in-out infinite;
 }
 .update-label { letter-spacing: 0.02em; }
 
