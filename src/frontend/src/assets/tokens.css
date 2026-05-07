@@ -572,28 +572,36 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   align-items: center !important;
 }
 
-/* Inputs */
+/*
+  Inputs — SOFT VIBRANT. Bigger (36px), 8px radius, soft glow on
+  focus instead of accent border. Was 32px tight with sharper 5px
+  radius — too "form-y" for the warm card aesthetic.
+*/
 .el-input__wrapper {
   background: var(--wdc-surface-2) !important;
-  border-color: var(--wdc-border) !important;
-  border-radius: var(--wdc-radius-sm) !important;
+  border: 1px solid var(--wdc-border) !important;
+  border-radius: var(--wdc-radius) !important;
   box-shadow: none !important;
+  padding: 4px 12px !important;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .el-input__wrapper:hover {
   border-color: var(--wdc-border-strong) !important;
+  background: var(--wdc-elevated) !important;
 }
 
 .el-input__wrapper.is-focus {
   border-color: var(--wdc-accent) !important;
-  box-shadow: 0 0 0 2px var(--wdc-accent-dim) !important;
+  box-shadow: 0 0 0 4px var(--wdc-accent-dim) !important;
+  background: var(--wdc-surface) !important;
 }
 
 .el-input__inner {
   color: var(--wdc-text) !important;
-  font-size: 0.82rem;
-  min-height: 32px;
-  line-height: 32px;
+  font-size: 0.86rem;
+  min-height: 36px;
+  line-height: 36px;
 }
 
 .el-select__input {
@@ -612,18 +620,26 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   line-height: 30px !important;
 }
 
-/* Tags */
+/*
+  Tags / badges — SOFT VIBRANT. 999px pill radius (Material chips),
+  slightly bigger, weight bumped to 600. Small variant pills are 22px
+  tall with 8px horizontal padding.
+*/
 .el-tag {
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0;
+  border-radius: 999px !important;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0 10px !important;
+  height: 26px;
+  border-width: 1px !important;
 }
 
 .el-tag--small {
-  min-height: 24px;
-  height: 24px;
-  padding: 0 6px;
+  min-height: 22px;
+  height: 22px;
+  padding: 0 8px !important;
+  font-size: 0.7rem;
 }
 
 /*
@@ -766,7 +782,10 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
   display: none !important;
 }
 
-/* Tabs */
+/*
+  Tabs — SOFT VIBRANT. Bigger 44px tall, more horizontal padding,
+  3px accent bar (was 2px). Active item is bolder and full-text-color.
+*/
 .el-tabs__header {
   border-bottom: 1px solid var(--wdc-border) !important;
   margin-bottom: 0;
@@ -777,12 +796,12 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 .el-tabs__item {
-  color: var(--wdc-text-2) !important;
-  font-size: 0.82rem;
+  color: var(--wdc-text-3) !important;
+  font-size: 0.86rem;
   font-weight: 500;
-  padding: 0 16px !important;
-  height: 40px;
-  line-height: 40px;
+  padding: 0 20px !important;
+  height: 44px;
+  line-height: 44px;
   transition: color 0.15s;
 }
 
@@ -791,13 +810,14 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 .el-tabs__item.is-active {
-  color: var(--wdc-text) !important;
-  font-weight: 600;
+  color: var(--wdc-accent) !important;
+  font-weight: 700;
 }
 
 .el-tabs__active-bar {
   background: var(--wdc-accent) !important;
-  height: 2px !important;
+  height: 3px !important;
+  border-radius: 2px 2px 0 0;
 }
 
 /* Menu (sidebar) */
@@ -902,55 +922,67 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
   font-weight: 600;
 }
 
-/* Dialog */
+/*
+  Dialog — SOFT VIBRANT. Bigger 16px radius, generous padding,
+  surface bg (not elevated — feels lighter), soft shadow.
+*/
 .el-dialog {
-  background: var(--wdc-elevated) !important;
-  border: 1px solid var(--wdc-border) !important;
-  border-radius: var(--wdc-radius-lg) !important;
-  box-shadow: var(--wdc-shadow-lg) !important;
+  background: var(--wdc-surface) !important;
+  border: none !important;
+  border-radius: var(--wdc-radius-xl) !important;
+  box-shadow: var(--wdc-shadow-pop) !important;
+  overflow: hidden;
 }
 
 .el-dialog__header {
-  padding: 20px 24px 16px !important;
+  padding: 24px 28px 20px !important;
   border-bottom: 1px solid var(--wdc-border);
+  background: var(--wdc-surface);
 }
 
 .el-dialog__title {
   color: var(--wdc-text) !important;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .el-dialog__body {
-  padding: 20px 24px !important;
+  padding: 24px 28px !important;
   color: var(--wdc-text);
 }
 
 .el-dialog__footer {
-  padding: 16px 24px !important;
+  padding: 16px 28px 20px !important;
   border-top: 1px solid var(--wdc-border);
+  background: var(--wdc-surface-2);
 }
 
-/* Drawer */
+/*
+  Drawer — SOFT VIBRANT. Same surface treatment as dialog. Wider
+  feeling via more padding.
+*/
 .el-drawer {
-  background: var(--wdc-elevated) !important;
+  background: var(--wdc-surface) !important;
   border-left: 1px solid var(--wdc-border) !important;
+  box-shadow: var(--wdc-shadow-pop) !important;
 }
 
 .el-drawer__header {
-  padding: 20px 24px 16px !important;
+  padding: 24px 28px 20px !important;
   margin-bottom: 0 !important;
   border-bottom: 1px solid var(--wdc-border);
 }
 
 .el-drawer__title {
   color: var(--wdc-text) !important;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .el-drawer__body {
-  padding: 20px 24px !important;
+  padding: 24px 28px !important;
 }
 
 /* Switch */
