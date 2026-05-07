@@ -182,12 +182,15 @@
       </div>
       <!-- Phase 6.11b — admin audit view of all signed MCP intents.
            Phase 6.23 — gated by featureFlagsStore.mcpEnabled (default
-           false). Advanced-only AND mcp.enabled=true to render —
-           hidden by default for operators not running AI agents. -->
+           false). Once an operator explicitly flips mcp.enabled=true
+           in daemon settings the AI surface is opt-in regardless of
+           UI mode — hiding it again behind the Simple/Advanced toggle
+           silently buried the feature for operators who use Simple
+           but run an AI client (incident 2026-05-07). -->
       <!-- Phase 7.3 — single MCP hub entry; tabs inside the page split
            between Intents (audit log) and Oprávnění (persistent grants). -->
       <div
-        v-if="uiModeStore.isAdvanced && featureFlagsStore.showMcpSurface"
+        v-if="featureFlagsStore.showMcpSurface"
         class="nav-item"
         :class="{ active: isActive('/mcp/intents') || isActive('/mcp/grants') }"
         @click="navigate('/mcp/intents')"
@@ -380,15 +383,19 @@ async function toggleSvc(svc: ServiceInfo) {
 </script>
 
 <style scoped>
+/*
+  Sidebar uses --wdc-surface (one elevation step above bg) and a
+  strong right-edge border so the boundary against the content area
+  is unambiguous in both modes. Previous gradient hack added a faint
+  cyan smear at the top-left which was distracting and didn't
+  contribute to layered hierarchy.
+*/
 .sidebar {
   width: 256px;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at top left, rgba(86, 194, 255, 0.14), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%),
-    var(--wdc-surface);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--wdc-surface);
+  border-right: 1px solid var(--wdc-border-strong);
   flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -476,16 +483,19 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .section-count {
-  min-width: 24px;
-  height: 24px;
+  min-width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #2563eb;
-  color: #ffffff;
-  font-size: 0.72rem;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  color: var(--wdc-text-3);
+  font-size: 0.64rem;
+  font-weight: 800;
   letter-spacing: 0;
+  line-height: 1;
 }
 
 .service-item {
@@ -501,14 +511,15 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .service-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--wdc-hover);
+  border-color: var(--wdc-border);
 }
 
 .service-item.active {
-  background: linear-gradient(180deg, rgba(86, 194, 255, 0.14), rgba(86, 194, 255, 0.06));
-  border-color: rgba(86, 194, 255, 0.28);
+  background: var(--wdc-accent-dim);
+  border-color: rgba(86, 194, 255, 0.32);
 }
+html:not(.dark) .service-item.active { border-color: rgba(0, 109, 125, 0.30); }
 
 .svc-copy {
   min-width: 0;
@@ -570,15 +581,12 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .nav-item.active {
-  /* Flat: strong solid left indicator + subtle accent-tinted fill */
+  /* Solid left accent bar + tinted fill in both modes — unified, no
+     hardcoded hex per mode. */
   background: var(--wdc-accent-dim);
-  color: var(--wdc-text);
+  color: var(--wdc-accent);
   border-left-color: var(--wdc-accent);
-}
-
-:global(html.dark) .nav-item.active {
-  background: #0e3a52;
-  color: #ffffff;
+  font-weight: 700;
 }
 
 /* Tunnel entry — when cloudflared is actively running, tint the icon

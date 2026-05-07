@@ -131,18 +131,27 @@ function isActive(path: string) {
 </script>
 
 <style scoped>
+/*
+  Header sits one elevation step above sidebar/content so it visually
+  detaches as a distinct top bar. Strong bottom border seals the
+  boundary against the page area below; subtle inset highlight at the
+  top adds depth. No more loud rgba 0.08 hairline (which used to be
+  the only thing separating header from content).
+*/
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 48px;
-  padding: 0 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
-    var(--wdc-surface);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  height: 52px;
+  padding: 0 20px;
+  background: var(--wdc-elevated);
+  border-bottom: 1px solid var(--wdc-border-strong);
   flex-shrink: 0;
   gap: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.20);
+}
+html:not(.dark) .app-header {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 .app-logo {
@@ -200,12 +209,12 @@ function isActive(path: string) {
 
 .nav-tab {
   padding: 7px 14px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--wdc-text-2);
+  color: var(--wdc-text-3);
   text-decoration: none;
   border-radius: 999px;
-  transition: all 0.12s;
+  transition: color 0.12s, background 0.12s, box-shadow 0.12s;
   white-space: nowrap;
 }
 
@@ -214,10 +223,18 @@ function isActive(path: string) {
   background: var(--wdc-hover);
 }
 
+/*
+  Active tab now has a solid accent-dim chip + accent text so it
+  reads as the obvious "current page" without the previous gradient
+  trick (which was barely visible against the surface bg).
+*/
 .nav-tab.active {
-  color: var(--wdc-text);
-  background: linear-gradient(180deg, rgba(86, 194, 255, 0.16), rgba(86, 194, 255, 0.08));
-  font-weight: 600;
+  color: var(--wdc-accent);
+  background: var(--wdc-accent-dim);
+  box-shadow: inset 0 0 0 1px rgba(86, 194, 255, 0.30);
+}
+html:not(.dark) .nav-tab.active {
+  box-shadow: inset 0 0 0 1px rgba(0, 109, 125, 0.30);
 }
 
 .header-right {
