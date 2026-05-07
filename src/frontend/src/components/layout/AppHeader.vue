@@ -1,24 +1,17 @@
 <template>
   <header class="app-header" style="-webkit-app-region: drag;">
+    <!--
+      Top nav dropped — all routes already exist in AppSidebar
+      (Dashboard, Sites, Databases, MySQL, PostgreSQL, SSL, Settings).
+      Header is now just brand + page title context, freeing space and
+      removing dual-nav cognitive load.
+    -->
     <div class="header-left" style="-webkit-app-region: no-drag">
-      <span class="app-logo" @click="router.push('/sites')">
+      <span class="app-logo" @click="router.push('/dashboard')">
         <span class="logo-mark">NW</span>
-        <span class="logo-copy">
-          <span class="logo-text">NKS WDC</span>
-          <span class="logo-sub">{{ currentTitle }}</span>
-        </span>
+        <span class="logo-text">NKS WDC</span>
       </span>
-      <nav class="header-nav">
-        <router-link
-          v-for="item in navItems"
-          :key="item.path"
-          :to="item.path"
-          class="nav-tab"
-          :class="{ active: isActive(item.path) }"
-        >
-          {{ item.label }}
-        </router-link>
-      </nav>
+      <span class="page-context" v-if="currentTitle">{{ currentTitle }}</span>
     </div>
 
     <div class="header-right" style="-webkit-app-region: no-drag">
@@ -104,46 +97,22 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 // exploding as we add Node/Go/Python/etc.
 // F91: /ssl is plugin-owned (nks.wdc.ssl). If the SSL plugin is disabled the
 // tab disappears — the shared pluginsStore.isRouteVisible check hides any
-// plugin-owned route whose plugin is currently off, so we never render a
-// broken nav link. Non-plugin core routes (/dashboard, /sites, /databases,
-// /settings) always bypass the check.
-const allNavItems = [
-  { path: '/dashboard', label: () => t('nav.services'), requiresAdvanced: true },
-  { path: '/sites', label: () => t('nav.sites'), requiresAdvanced: false },
-  { path: '/databases', label: () => t('nav.databases'), requiresAdvanced: true },
-  { path: '/plugins/mysql', label: () => 'MySQL', requiresAdvanced: true, pluginId: 'nks.wdc.mysql' },
-  { path: '/plugins/postgresql', label: () => 'PostgreSQL', requiresAdvanced: true, pluginId: 'nks.wdc.postgresql' },
-  { path: '/ssl', label: () => t('nav.ssl'), requiresAdvanced: true },
-  { path: '/settings', label: () => t('nav.settings'), requiresAdvanced: false },
-]
-const navItems = computed(() =>
-  allNavItems
-    .filter(i => !i.requiresAdvanced || uiMode.isAdvanced)
-    .filter(i => !('pluginId' in i) || pluginsStore.manifests.some(p => p.id === i.pluginId && p.enabled))
-    .filter(i => pluginsStore.isRouteVisible(i.path))
-    .map(i => ({ path: i.path, label: i.label() }))
-)
-
-function isActive(path: string) {
-  return route.path === path || route.path.startsWith(path + '/')
-}
+// Top nav dropped in SOFT VIBRANT — sidebar owns all routing now.
 </script>
 
 <style scoped>
 /*
-  ─── Header redesign — flat shell, left-aligned nav ──────────────────
-  Was: gradient bg + center-floated pills + subtitle reading "PŘEHLED"
-  duplicating the page title underneath.
-  Now: flat bg matching surface, nav left-justified next to logo,
-  underline indicator instead of pill (consistent with content tabs),
-  drop subtitle, drop inset glow.
+  ─── Header — SOFT VIBRANT shell ──────────────────────────────────
+  Slim 52px bar, surface bg, soft 1px border-bottom. Logo + page
+  context on the left, action chips on the right. No top nav (it
+  duplicated the sidebar).
 */
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
-  padding: 0 24px;
+  height: 52px;
+  padding: 0 20px;
   background: var(--wdc-surface);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
@@ -153,7 +122,17 @@ function isActive(path: string) {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
+}
+
+.page-context {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--wdc-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-left: 16px;
+  border-left: 1px solid var(--wdc-border);
 }
 
 .app-logo {
@@ -178,57 +157,12 @@ function isActive(path: string) {
   letter-spacing: 0.06em;
 }
 
-.logo-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
+/* Logo text inline next to mark. */
 .logo-text {
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--wdc-text);
-  line-height: 1.1;
-}
-
-/* Subtitle dropped — it duplicated the page title rendered below. */
-.logo-sub { display: none; }
-
-/*
-  Nav — left-aligned next to logo, underline indicator. Hover changes
-  text color only (no chip). Active tab shows a 2px accent underline
-  flush with the header's bottom border for a clean tab/page joint.
-*/
-.header-nav {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-  gap: 0;
-}
-
-.nav-tab {
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--wdc-text-3);
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px; /* overlap header bottom border */
-  transition: color 0.12s, border-color 0.12s;
-  white-space: nowrap;
-}
-
-.nav-tab:hover {
-  color: var(--wdc-text);
-}
-
-.nav-tab.active {
-  color: var(--wdc-text);
-  border-bottom-color: var(--wdc-accent);
-  font-weight: 600;
 }
 
 .header-right {

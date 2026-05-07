@@ -302,16 +302,14 @@ body {
   background: var(--wdc-bg);
   color: var(--wdc-text);
   /*
-    Helvetica/Arial — neutral classic sans. macOS gets Helvetica
-    Neue, Windows gets Arial, Linux falls back to Liberation Sans /
-    DejaVu / system sans. Tabular figures kept for tables/metrics;
-    Inter-specific stylistic alternates (cv11/ss01) dropped because
-    they don't apply outside Inter.
+    Inter — modern UI sans for SOFT VIBRANT. cv11 enables the
+    straight-sided single-story `a` (cleaner at small sizes), tnum
+    aligns numerals in tables, ss01 is a stylistic-set tweak.
   */
-  font-family: 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
-  font-feature-settings: 'tnum';
-  letter-spacing: 0;
+  font-feature-settings: 'cv11', 'tnum', 'ss01';
+  letter-spacing: -0.01em;
 }
 
 code, pre, .mono, .metric-value, .meta-val, .stat-value {

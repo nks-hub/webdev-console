@@ -1,14 +1,11 @@
 <template>
   <nav class="sidebar">
-    <div class="sidebar-top">
-      <div class="workspace-card">
-        <div class="workspace-mark">NW</div>
-        <div class="workspace-copy">
-          <span class="workspace-title">NKS WebDev Console</span>
-          <span class="workspace-subtitle">{{ runningCount }}/{{ services.length }} {{ $t('sidebar.servicesOnline') }}</span>
-        </div>
-      </div>
-    </div>
+    <!--
+      Workspace card removed — it duplicated the header (NW logo +
+      "NKS WDC"). Service-count summary lives in the bottom status
+      bar already, so no information is lost. Sidebar now starts
+      directly with the nav cluster, saving ~70px vertical space.
+    -->
 
     <div class="nav-cluster">
       <div class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
