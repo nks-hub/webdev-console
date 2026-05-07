@@ -45,7 +45,7 @@
                 v-if="site.sslEnabled"
                 size="small"
                 type="success"
-                effect="dark"
+                effect="plain"
                 class="cell-tag"
               >SSL</el-tag>
             </div>
@@ -139,7 +139,7 @@
                   v-if="row.sslEnabled"
                   size="small"
                   type="success"
-                  effect="dark"
+                  effect="plain"
                   class="cell-tag"
                   title="HTTPS enabled"
                 >SSL</el-tag>
@@ -193,8 +193,8 @@
               <el-tag
                 v-if="row.framework"
                 size="small"
-                type="warning"
-                effect="dark"
+                type="info"
+                effect="plain"
                 class="cell-tag"
               >{{ row.framework }}</el-tag>
               <el-tag
