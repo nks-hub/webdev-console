@@ -105,18 +105,19 @@ const activeTab = ref<'columns' | 'indexes'>('columns')
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
+  background: var(--wdc-surface);
 }
 
 .toolbar-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   color: var(--wdc-text);
 }
 
@@ -125,7 +126,8 @@ const activeTab = ref<'columns' | 'indexes'>('columns')
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 0 14px;
+  padding: 0 16px;
+  background: var(--wdc-bg);
 }
 
 .structure-tabs :deep(.el-tabs__content) { flex: 1; overflow: auto; padding-bottom: 14px; }

@@ -119,33 +119,38 @@ function formatBytes(bytes: number): string {
 </script>
 
 <style scoped>
+/*
+  Tree pane sits on --wdc-surface, one luminance step above the page
+  bg. The right pane sits on --wdc-bg, so the vertical seam between
+  them is always visible without needing a heavy shadow or bevel.
+*/
 .db-tree {
   display: flex;
   flex-direction: column;
   height: 100%;
   background: var(--wdc-surface);
-  border-right: 1px solid var(--wdc-border);
 }
 
 .tree-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
+  background: var(--wdc-surface-2);
 }
 
 .tree-title {
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--wdc-text-3);
+  letter-spacing: 0.1em;
+  color: var(--wdc-text-2);
 }
 
 .tree-search {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
 }
@@ -157,7 +162,7 @@ function formatBytes(bytes: number): string {
 }
 
 .tree-empty {
-  padding: 20px 14px;
+  padding: 24px 14px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -179,26 +184,53 @@ function formatBytes(bytes: number): string {
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: 8px;
+  padding: 7px 12px 7px 14px;
   cursor: pointer;
-  transition: background 0.1s;
-  font-size: 0.82rem;
+  transition: background 0.1s, border-color 0.1s;
+  font-size: 0.84rem;
+  border-left: 3px solid transparent;
 }
-.tree-row:hover { background: var(--wdc-bg); }
-.tree-db.selected > .tree-row { background: var(--wdc-accent-dim); color: var(--wdc-accent); }
+.tree-row:hover {
+  background: var(--wdc-elevated);
+  color: var(--wdc-text);
+}
+/*
+  Selected row gets the accent left bar + accent-dim fill so it pops
+  without inverting fg/bg (which made adjacent rows look "missing").
+*/
+.tree-db.selected > .tree-row {
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent);
+  border-left-color: var(--wdc-accent);
+}
+.tree-db.selected > .tree-row .db-name { color: var(--wdc-accent); }
 
 .caret { transition: transform 0.15s; color: var(--wdc-text-3); font-size: 0.8rem; }
-.tree-db.expanded .caret { transform: rotate(90deg); }
+.tree-db.expanded .caret { transform: rotate(90deg); color: var(--wdc-text-2); }
 
 .kind-icon { color: var(--wdc-text-3); font-size: 0.95rem; }
-.db-name { font-family: 'JetBrains Mono', monospace; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.db-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--wdc-text);
+}
 .db-meta {
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   color: var(--wdc-text-3);
   font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
 }
 
+/*
+  Nested table list visually inset by sitting on --wdc-bg (one step
+  darker than the parent surface), creating an obvious "drawer
+  expanded" look.
+*/
 .table-list {
   background: var(--wdc-bg);
   border-top: 1px solid var(--wdc-border);
@@ -208,24 +240,40 @@ function formatBytes(bytes: number): string {
 .tree-table {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 4px 32px;
+  gap: 8px;
+  padding: 5px 12px 5px 36px;
   cursor: pointer;
-  font-size: 0.78rem;
-  transition: background 0.1s;
+  font-size: 0.79rem;
+  transition: background 0.1s, border-color 0.1s;
+  border-left: 3px solid transparent;
 }
-.tree-table:hover { background: var(--wdc-surface); }
-.tree-table.selected { background: var(--wdc-accent-dim); color: var(--wdc-accent); }
+.tree-table:hover {
+  background: var(--wdc-surface);
+  color: var(--wdc-text);
+}
+.tree-table.selected {
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent);
+  border-left-color: var(--wdc-accent);
+}
+.tree-table.selected .table-name { color: var(--wdc-accent); font-weight: 600; }
 
-.table-name { font-family: 'JetBrains Mono', monospace; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.table-name {
+  font-family: 'JetBrains Mono', monospace;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--wdc-text-2);
+}
 .table-rows {
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   color: var(--wdc-text-3);
   font-family: 'JetBrains Mono', monospace;
 }
 
 .tree-loading {
-  padding: 6px 12px 6px 32px;
+  padding: 7px 12px 7px 36px;
   font-size: 0.74rem;
   color: var(--wdc-text-3);
   display: flex;

@@ -39,6 +39,14 @@
 
     <el-alert v-if="error" type="error" :closable="false" :title="error" show-icon />
 
+    <!--
+      Browser-grid uses position:relative + the el-table is absolutely
+      pinned to it. This is the only way to keep height="100%" stable in
+      a flex chain — without it, an empty result set lets the el-table
+      empty placeholder grow unboundedly past the pager. The absolute
+      anchoring also lets el-table's body-wrapper own its own
+      horizontal/vertical scroll.
+    -->
     <div class="browser-grid">
       <el-table
         v-if="columns.length > 0"
@@ -48,7 +56,9 @@
         border
         height="100%"
         v-loading="loading"
+        :empty-text="loading ? t('common.loading') : t('databases.browse.empty')"
         @sort-change="onSortChange"
+        class="browse-grid-table"
       >
         <el-table-column
           v-for="col in columns"
@@ -57,7 +67,7 @@
           :label="col.name"
           :sortable="'custom'"
           :sort-orders="['ascending', 'descending', null]"
-          min-width="120"
+          :width="columnWidth(col)"
           show-overflow-tooltip
         >
           <template #header>
@@ -74,11 +84,13 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-else-if="!loading && !error" :image-size="48">
-        <template #description>
-          <p>{{ t('databases.browse.empty') }}</p>
-        </template>
-      </el-empty>
+      <div v-else-if="!loading && !error" class="empty-pane">
+        <el-empty :image-size="48">
+          <template #description>
+            <p>{{ t('databases.browse.empty') }}</p>
+          </template>
+        </el-empty>
+      </div>
     </div>
 
     <div class="browser-pager">
@@ -166,6 +178,25 @@ function formatBlob(hex: string): string {
   if (hex.length <= 18) return hex
   return hex.slice(0, 18) + '…'
 }
+
+/*
+  Pick a fixed pixel width per column so the table's total width can
+  exceed the visible body-wrapper, which is what makes el-table emit a
+  horizontal scrollbar instead of squeezing every column to ~70px and
+  hiding everything behind ellipsis. The width is heuristic — wider for
+  text/blob types, narrower for ints/booleans — and never below 120 so
+  the column header (name + type tag) stays legible.
+*/
+function columnWidth(col: DataColumn): number {
+  const t = (col.type || '').toLowerCase()
+  if (t.includes('text') || t.includes('blob') || t.includes('json')) return 280
+  if (t.includes('varchar') || t.includes('char')) return 220
+  if (t.includes('datetime') || t.includes('timestamp')) return 180
+  if (t.includes('date') || t.includes('time')) return 140
+  if (t.includes('decimal') || t.includes('double') || t.includes('float')) return 140
+  if (t.includes('int') || t.includes('bool') || t.includes('bit')) return 120
+  return 160
+}
 </script>
 
 <style scoped>
@@ -180,10 +211,11 @@ function formatBlob(hex: string): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   gap: 12px;
+  background: var(--wdc-surface);
 }
 
 .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 10px; }
@@ -191,42 +223,80 @@ function formatBlob(hex: string): string {
 .toolbar-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   color: var(--wdc-text);
 }
 
 .browser-filter {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 10px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
+  background: var(--wdc-surface-2);
 }
 
 .filter-hint {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--wdc-text-3);
   font-family: 'JetBrains Mono', monospace;
 }
 
 .browser-grid {
-  flex: 1;
-  overflow: hidden;
-  padding: 0;
+  flex: 1 1 0;
   min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/*
+  Pin the el-table to the relative parent. Without absolute positioning
+  the body-wrapper grows past the visible viewport when the result set
+  is empty (el-table's "no data" placeholder is auto-height in a fluid
+  flex parent), and horizontal scroll is suppressed because the table
+  silently widens its parent. inset:0 + width/height 100% confines the
+  table so its own body-wrapper owns both scroll axes.
+*/
+.browse-grid-table {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+}
+
+/*
+  Force horizontal scroll on the table body and ensure the empty state
+  fills its row instead of expanding the table. Element Plus emits
+  overflow-x:auto by default but it gets overridden by our scoped
+  parent's overflow:hidden in some flex layouts.
+*/
+.browser-grid :deep(.el-table__body-wrapper) {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+.browser-grid :deep(.el-table__empty-block) {
+  min-height: 80px;
+}
+
+.empty-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .browser-pager {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-top: 1px solid var(--wdc-border);
   flex-shrink: 0;
+  background: var(--wdc-surface);
 }
 
 .pager-time {

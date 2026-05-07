@@ -675,32 +675,44 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px 10px;
+  padding: 14px 20px 12px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--wdc-border);
+  background: var(--wdc-surface);
 }
 
-.header-left { display: flex; align-items: center; gap: 10px; }
-.page-title { font-size: 1.1rem; font-weight: 700; color: var(--wdc-text); margin: 0; }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
-.page-alert { margin: 0 18px 10px; }
+.page-alert { margin: 12px 20px 0; }
 .alert-body { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 
+/*
+  3-pane layout: tree (surface) | right pane (bg). The two-step bg
+  contrast (surface vs bg) plus a strong vertical separator makes
+  the panes visually independent without needing shadows or a card
+  outline. Border-bottom of the page-header anchors the whole grid.
+*/
 .page-body {
   flex: 1;
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 0;
-  margin: 0 18px 18px;
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  overflow: hidden;
   min-height: 0;
+  background: var(--wdc-bg);
 }
 
 .left-pane {
   min-height: 0;
   overflow: hidden;
+  border-right: 1px solid var(--wdc-border-strong);
 }
 
 .right-pane {
@@ -710,44 +722,57 @@ onMounted(() => { void loadDatabases() })
   background: var(--wdc-bg);
 }
 
+/*
+  Tab strip — flat surface bar. Active tab paints itself onto the
+  page bg below it (so it visually merges with its content panel),
+  while inactive tabs sit on the surface-2 chip strip. The 2px
+  accent under-bar reinforces selection without competing with text.
+*/
 .right-tabs {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--wdc-surface);
-  border-bottom: 1px solid var(--wdc-border);
+  background: var(--wdc-surface-2);
+  border-bottom: 1px solid var(--wdc-border-strong);
   flex-shrink: 0;
-  padding: 0 8px 0 0;
+  padding: 0 12px 0 8px;
+  height: 44px;
 }
 
 .tab-strip {
   display: flex;
+  align-items: stretch;
+  height: 100%;
 }
 
 .tab-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 14px;
+  padding: 0 16px;
   border: none;
   background: transparent;
   cursor: pointer;
   color: var(--wdc-text-3);
   font-size: 0.82rem;
+  font-weight: 500;
   border-bottom: 2px solid transparent;
-  transition: all 0.15s;
+  transition: all 0.12s;
   font-family: inherit;
+  position: relative;
+  margin-bottom: -1px; /* overlap right-tabs border-bottom for a clean joint */
 }
 .tab-btn:hover:not(:disabled) {
   color: var(--wdc-text);
-  background: var(--wdc-bg);
+  background: var(--wdc-elevated);
 }
 .tab-btn.active {
   color: var(--wdc-accent);
   border-bottom-color: var(--wdc-accent);
   background: var(--wdc-bg);
+  font-weight: 600;
 }
-.tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tab-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .tab-actions { display: flex; gap: 6px; padding-right: 6px; }
 
@@ -760,31 +785,37 @@ onMounted(() => { void loadDatabases() })
 
 .empty-state, .overview-pane {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow: auto;
+  background: var(--wdc-bg);
 }
 
 .empty-state { display: flex; align-items: center; justify-content: center; }
 
-.empty-title { font-size: 0.95rem; color: var(--wdc-text-2); margin: 0 0 4px; }
-.empty-hint { font-size: 0.8rem; color: var(--wdc-text-3); margin: 0; }
+.empty-title { font-size: 1rem; color: var(--wdc-text); margin: 0 0 6px; font-weight: 600; }
+.empty-hint { font-size: 0.85rem; color: var(--wdc-text-3); margin: 0; max-width: 480px; }
 
 .overview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
 }
 .overview-title {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--wdc-text);
   margin: 0;
+  letter-spacing: -0.005em;
 }
 .overview-meta { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .overview-table { cursor: pointer; }
-.overview-table :deep(.el-table__row):hover { background: var(--wdc-accent-dim); }
+.overview-table :deep(.el-table__row):hover { background: var(--wdc-accent-dim) !important; }
 
 .mono { font-family: 'JetBrains Mono', monospace; }
 .muted { color: var(--wdc-text-3); }

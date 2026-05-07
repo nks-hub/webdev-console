@@ -226,10 +226,11 @@ void _unused
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   gap: 12px;
+  background: var(--wdc-surface);
 }
 
 .toolbar-title {
