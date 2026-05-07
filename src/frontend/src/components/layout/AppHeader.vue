@@ -273,16 +273,19 @@ html:not(.dark) .nav-tab.active {
   min-height: 32px;
 }
 
+/*
+  Connection pill — colored fill back, so the green/red status reads
+  at a glance.
+*/
 .conn-ok {
   color: var(--wdc-status-running);
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.06);
+  border-color: rgba(34, 197, 94, 0.32);
+  background: rgba(34, 197, 94, 0.10);
 }
-
 .conn-err {
   color: var(--wdc-status-error);
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.32);
+  background: rgba(239, 68, 68, 0.10);
 }
 
 .conn-dot {
@@ -301,8 +304,10 @@ html:not(.dark) .nav-tab.active {
   50% { opacity: 0.4; }
 }
 
-/* F96 update badge — amber accent so it reads as distinct from the
-   green/red connection pill. Hides when hasUpdate is false. */
+/*
+  Update badge — solid amber pill so a fresh release pops in the
+  header. Mono label keeps the version readable.
+*/
 .update-badge {
   display: inline-flex;
   align-items: center;
@@ -310,16 +315,20 @@ html:not(.dark) .nav-tab.active {
   padding: 0 12px;
   min-height: 32px;
   border-radius: 999px;
-  border: 1px solid var(--wdc-warning);
-  background: var(--wdc-warning);
-  color: #141006;
+  border: 1px solid var(--wdc-status-starting);
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--wdc-status-starting);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.update-badge:hover { filter: brightness(1.05); }
+.update-badge:hover {
+  background: var(--wdc-status-starting);
+  color: #141006;
+}
+html:not(.dark) .update-badge:hover { color: #ffffff; }
 .update-dot {
   width: 6px;
   height: 6px;
@@ -328,13 +337,6 @@ html:not(.dark) .nav-tab.active {
   animation: glow 2.2s ease-in-out infinite;
 }
 .update-label { letter-spacing: 0.02em; }
-.update-badge .update-label { color: #141006; }
-:global(html:not(.dark)) .update-badge {
-  background: #704d0c;
-  border-color: #704d0c;
-  color: #ffffff !important;
-}
-:global(html:not(.dark)) .update-badge .update-label { color: #ffffff !important; }
 
 @media (max-width: 760px) {
   .app-header {

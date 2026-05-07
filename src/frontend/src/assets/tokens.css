@@ -1,9 +1,13 @@
 /* NKS WDC Design System — pure CSS tokens + Element Plus overrides */
-/* Inter: the de-facto UI sans for 2020s web apps. Crisp on Windows ClearType,
-   gorgeous on Retina, ships tight hinting at every weight. Replaces Space
-   Grotesk which felt too display-y for dense dashboard UIs.
-   JetBrains Mono stays as the monospace for paths / ports / version numbers. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+/*
+  Typography — switched to Helvetica/Arial stack at user request. No
+  webfont @import for the body sans-serif; we lean on the OS:
+  Helvetica Neue on macOS, Arial on Windows, fallback to system
+  sans on Linux. JetBrains Mono is still loaded for code surfaces
+  (paths, ports, SQL editor metadata) — it carries enough character
+  to stay distinct from the otherwise neutral chrome.
+*/
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ─── Design Tokens (flat, high-contrast, WCAG AAA) ───────────────────────
  *
@@ -28,11 +32,18 @@
     content area and cards feel like distinct elevations rather than
     different sections of the same flat plane.
   */
-  --wdc-bg:          #0a0e1c;  /* page base — warmer than #04060c, less "black hole" */
-  --wdc-surface:     #131a2e;  /* sidebars, cards — clear step above bg */
-  --wdc-surface-2:   #1c243d;  /* nested fills, toolbars, inputs */
-  --wdc-elevated:    #2a3354;  /* popovers, hover, focus backing */
-  --wdc-hover:       #232b48;  /* row hover */
+  /*
+    Neutral grey palette (A+B+C feedback) — no navy/blue tint, just
+    warm-neutral charcoal stepping. Surface elevation is preserved
+    (5 distinct steps) but the chromatic identity is gone, so nothing
+    in the chrome competes for attention with content. The cyan
+    accent is the ONLY color that should appear in the chrome.
+  */
+  --wdc-bg:          #0e0f12;  /* charcoal, no blue cast */
+  --wdc-surface:     #16181c;
+  --wdc-surface-2:   #1d2027;
+  --wdc-elevated:    #272a32;
+  --wdc-hover:       #21242b;
 
   /*
     Borders — drop from 38% (loud, "outlined boxes" effect) to 12%.
@@ -43,27 +54,43 @@
   --wdc-border:          rgba(255, 255, 255, 0.12);
   --wdc-border-strong:   rgba(255, 255, 255, 0.28);
 
-  /* Text — all WCAG AAA with extra margin */
-  --wdc-text:        #ffffff;           /* 19.5:1 on bg */
-  --wdc-text-2:      #e8ecff;           /* 17.0:1 on bg, 13.5:1 on surface */
-  --wdc-text-3:      #aab1cc;           /* 8.5:1 on bg — slightly cooler */
+  /* Text — neutral whites, no blue cast in --wdc-text-2 */
+  --wdc-text:        #f5f5f7;           /* off-white, AAA on bg */
+  --wdc-text-2:      #c8c8cd;           /* secondary, no cool tint */
+  --wdc-text-3:      #8b8b94;           /* tertiary / metadata */
 
-  /* Accent — keep the cyan identity, ensure AAA on both bg and surface */
-  --wdc-accent:      #56c2ff;  /* 9.0:1 on bg */
+  /* Accent — single chromatic identity, used sparingly */
+  --wdc-accent:      #56c2ff;
   --wdc-accent-2:    #7cffa5;
-  --wdc-accent-glow: rgba(86, 194, 255, 0.24);
-  --wdc-accent-dim:  rgba(86, 194, 255, 0.16);
+  --wdc-accent-glow: rgba(86, 194, 255, 0.20);
+  --wdc-accent-dim:  rgba(86, 194, 255, 0.12);
 
-  /* Status — green/yellow were already AAA; red bumped for AAA */
-  --wdc-status-running:  #22c55e;  /* 8.3:1 on bg */
-  --wdc-status-stopped:  #5a6078;  /* 4.6:1 — muted but readable */
-  --wdc-status-error:    #ff6b6b;  /* 7.1:1 */
-  --wdc-status-starting: #f59e0b;  /* 9.0:1 on bg */
+  /*
+    Vivid status palette — full saturation so green/red/amber read
+    instantly across the chrome. Earlier muted variant felt flat.
+    These show up as: LED dots in service list, fill of success/danger
+    el-tag, connection pill colored fill, status text in service rows.
+  */
+  --wdc-status-running:  #22c55e;
+  --wdc-status-stopped:  #6a6d76;
+  --wdc-status-error:    #ef4444;
+  --wdc-status-starting: #f59e0b;
   --wdc-warning:         var(--wdc-status-starting);
 
-  /* Status glow — for focus rings */
+  /*
+    Categorical accents — distinct colors used by service cards,
+    sidebar section LEDs, and tag fills. Five hues span enough of
+    the wheel to feel rich without slipping into rainbow chaos.
+  */
+  --wdc-cat-web:       #f97316;  /* Apache, Nginx, Caddy — orange */
+  --wdc-cat-lang:      #a78bfa;  /* PHP, Node — violet */
+  --wdc-cat-db:        #06b6d4;  /* MySQL, Postgres — cyan */
+  --wdc-cat-cache:     #10b981;  /* Redis, Mailpit — green */
+  --wdc-cat-tunnel:    #f38020;  /* Cloudflare brand orange */
+
+  /* Status glow */
   --wdc-glow-running:  rgba(34, 197, 94, 0.28);
-  --wdc-glow-error:    rgba(255, 107, 107, 0.28);
+  --wdc-glow-error:    rgba(239, 68, 68, 0.28);
 
   /* Radius */
   --wdc-radius-sm:   4px;
@@ -92,33 +119,43 @@
   not borders). Card shadow uses navy-tinted black for depth on the
   cool palette.
 */
+/*
+  Light mode — pure neutral grey, no blue. Off-white surfaces with
+  warm grey page bg. Same desaturated status palette as dark mode.
+*/
 html:not(.dark) {
-  --wdc-bg:          #eef1f7;  /* cool light grey */
+  --wdc-bg:          #f1f1f3;
   --wdc-surface:     #ffffff;
-  --wdc-surface-2:   #f5f7fb;
-  --wdc-elevated:    #e6eaf2;
-  --wdc-hover:       #dfe3ec;
+  --wdc-surface-2:   #f6f6f9;
+  --wdc-elevated:    #e9eaee;
+  --wdc-hover:       #e2e3e8;
 
-  --wdc-border:          rgba(15, 23, 42, 0.10);
-  --wdc-border-strong:   rgba(15, 23, 42, 0.20);
+  --wdc-border:          rgba(0, 0, 0, 0.08);
+  --wdc-border-strong:   rgba(0, 0, 0, 0.16);
 
-  /* Text — already AAA, kept */
-  --wdc-text:        #0b0c14;  /* 18.5:1 on white */
-  --wdc-text-2:      #2d3044;  /* 12.5:1 */
-  --wdc-text-3:      #4a4d62;  /* 9.4:1 */
+  --wdc-text:        #14151a;
+  --wdc-text-2:      #3a3b42;
+  --wdc-text-3:      #6a6b72;
 
   /* Accent — darkened cyan-teal AAA */
   --wdc-accent:      #006d7d;
   --wdc-accent-2:    #005260;
-  --wdc-accent-glow: rgba(0, 109, 125, 0.18);
-  --wdc-accent-dim:  rgba(0, 109, 125, 0.10);
+  --wdc-accent-glow: rgba(0, 109, 125, 0.16);
+  --wdc-accent-dim:  rgba(0, 109, 125, 0.08);
 
-  /* Status — all AAA */
-  --wdc-status-running:  #0d5f24;
-  --wdc-status-stopped:  #5a6075;
-  --wdc-status-error:    #a81a1a;
-  --wdc-status-starting: #704d0c;
+  /* Vivid status — light-mode AAA versions of the dark palette */
+  --wdc-status-running:  #15803d;
+  --wdc-status-stopped:  #6a6b72;
+  --wdc-status-error:    #b91c1c;
+  --wdc-status-starting: #b45309;
   --wdc-warning:         var(--wdc-status-starting);
+
+  /* Categorical accents — light-mode AAA hues */
+  --wdc-cat-web:       #c2410c;
+  --wdc-cat-lang:      #6d28d9;
+  --wdc-cat-db:        #0e7490;
+  --wdc-cat-cache:     #047857;
+  --wdc-cat-tunnel:    #c2410c;
 
   /* Light-mode shadows: navy-tinted, much subtler. */
   --wdc-shadow-sm:   0 1px 2px rgba(15, 23, 42, 0.06), 0 0 0 1px var(--wdc-border);
@@ -275,13 +312,17 @@ html {
 body {
   background: var(--wdc-bg);
   color: var(--wdc-text);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /*
+    Helvetica/Arial — neutral classic sans. macOS gets Helvetica
+    Neue, Windows gets Arial, Linux falls back to Liberation Sans /
+    DejaVu / system sans. Tabular figures kept for tables/metrics;
+    Inter-specific stylistic alternates (cv11/ss01) dropped because
+    they don't apply outside Inter.
+  */
+  font-family: 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif;
   line-height: 1.5;
-  /* Enable Inter's stylistic alternates + tabular figures. `cv11` is the
-     straight-sided single-story `a` that reads cleaner at small UI sizes;
-     `tnum` lines numerals up in tables / metrics. */
-  font-feature-settings: 'cv11', 'tnum', 'ss01';
-  letter-spacing: -0.005em;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0;
 }
 
 code, pre, .mono, .metric-value, .meta-val, .stat-value {
@@ -597,38 +638,39 @@ html:not(.dark) .el-button {
   padding: 0 6px;
 }
 
+/*
+  Coloured tag fills — each semantic variant carries a real tinted
+  background + matching border so it reads as a status chip, not a
+  generic chip. Plain variants use a soft 12% fill; dark variants
+  use solid color with high-contrast text.
+*/
 .el-tag--info.is-plain {
-  background: rgba(139, 143, 168, 0.10) !important;
-  border-color: rgba(139, 143, 168, 0.20) !important;
+  background: rgba(139, 143, 168, 0.12) !important;
+  border-color: rgba(139, 143, 168, 0.30) !important;
   color: var(--wdc-text-2) !important;
 }
-
 .el-tag--info.el-tag--dark {
   background: #64748b !important;
   border-color: #64748b !important;
   color: #ffffff !important;
 }
 
-.el-tag--success.is-plain,
-.el-tag--success.el-tag--dark {
-  background: rgba(34, 197, 94, 0.10) !important;
-  border-color: rgba(34, 197, 94, 0.25) !important;
+.el-tag--success.is-plain {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border-color: rgba(34, 197, 94, 0.32) !important;
   color: var(--wdc-status-running) !important;
 }
-
 .el-tag--success.el-tag--dark {
   background: var(--wdc-status-running) !important;
   border-color: var(--wdc-status-running) !important;
   color: #04110a !important;
 }
 
-.el-tag--warning.is-plain,
-.el-tag--warning.el-tag--dark {
-  background: rgba(245, 158, 11, 0.10) !important;
-  border-color: rgba(245, 158, 11, 0.25) !important;
+.el-tag--warning.is-plain {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.32) !important;
   color: var(--wdc-status-starting) !important;
 }
-
 .el-tag--warning.el-tag--dark {
   background: var(--wdc-status-starting) !important;
   border-color: var(--wdc-status-starting) !important;
@@ -640,46 +682,42 @@ html:not(.dark) .el-tag--warning.el-tag--dark {
   color: #ffffff !important;
 }
 
+html:not(.dark) .el-tag--success.el-tag--dark,
 html:not(.dark) .el-tag--warning.el-tag--dark {
-  background: #704d0c !important;
-  border-color: #704d0c !important;
-}
-
-html:not(.dark) .update-badge,
-html:not(.dark) .update-badge .update-label {
   color: #ffffff !important;
 }
 
-.status-tunnel {
-  color: #5c2f00 !important;
-}
+/*
+  Tunnel tags previously yellow/amber/orange to "highlight running
+  Cloudflare". In the muted palette we keep only the muted-amber text
+  color so it still reads as different-from-default but no longer
+  shouts. Dark/light parity via tokens.
+*/
+.status-tunnel { color: var(--wdc-status-starting) !important; }
+html.dark .status-tunnel { color: var(--wdc-status-starting) !important; }
 
-html.dark .status-tunnel {
-  color: #fff2b3 !important;
-}
-
-html.dark .section-label,
-html.dark .sidebar-bottom .nav-item,
-html.dark .sidebar-bottom .nav-label {
-  color: #ffffff !important;
-}
-
-html.dark .nav-item.active {
-  background: #0e3a52 !important;
-  color: #ffffff !important;
-}
-
+/*
+  nav-item.active in the sidebar-bottom area was previously hardcoded
+  to navy-blue #0e3a52 in dark mode. Unified to the standard
+  accent-dim treatment used everywhere else, so the highlight color
+  is consistent across the chrome.
+*/
 html.dark .nav-item-tunnel,
 html.dark .nav-item-tunnel .nav-label {
-  color: #fff2b3 !important;
+  color: var(--wdc-status-starting) !important;
 }
 
-.el-tag--danger.is-plain,
-.el-tag--danger.el-tag--dark {
-  background: rgba(239, 68, 68, 0.10) !important;
-  border-color: rgba(239, 68, 68, 0.25) !important;
+.el-tag--danger.is-plain {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.32) !important;
   color: var(--wdc-status-error) !important;
 }
+.el-tag--danger.el-tag--dark {
+  background: var(--wdc-status-error) !important;
+  border-color: var(--wdc-status-error) !important;
+  color: #1a0606 !important;
+}
+html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 /* Table */
 .el-table {

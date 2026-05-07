@@ -589,20 +589,17 @@ html:not(.dark) .service-item.active { border-color: rgba(0, 109, 125, 0.30); }
   font-weight: 700;
 }
 
-/* Tunnel entry — when cloudflared is actively running, tint the icon
-   + border in the Cloudflare brand orange so users get a visual "live"
-   indicator without hunting through the page. Overrides the accent blue
-   from .nav-item.active when both apply. */
-.nav-item-tunnel {
-  border-left-color: #f38020;
-  color: #9a4a00;
-}
-.nav-item-tunnel .nav-icon-shell {
-  color: #f38020;
-}
+/*
+  Tunnel entry — Cloudflare brand orange when cloudflared is live.
+  The colored icon + border-left signals running status without
+  forcing the user to scan the sidebar.
+*/
+.nav-item-tunnel { color: var(--wdc-cat-tunnel); }
+.nav-item-tunnel .nav-icon-shell { color: var(--wdc-cat-tunnel); }
 .nav-item-tunnel.active {
-  background: rgba(243, 128, 32, 0.12);
-  border-left-color: #f38020;
+  background: rgba(243, 128, 32, 0.14);
+  border-left-color: var(--wdc-cat-tunnel);
+  color: var(--wdc-cat-tunnel);
 }
 :global(html.dark) .nav-item-tunnel { color: #fff2b3; }
 
