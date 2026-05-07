@@ -384,75 +384,75 @@ async function toggleSvc(svc: ServiceInfo) {
 
 <style scoped>
 /*
-  Sidebar uses --wdc-surface (one elevation step above bg) and a
-  strong right-edge border so the boundary against the content area
-  is unambiguous in both modes. Previous gradient hack added a faint
-  cyan smear at the top-left which was distracting and didn't
-  contribute to layered hierarchy.
+  Sidebar redesign — flat surface, single right-edge separator. Was
+  decorated with a radial cyan gradient + status texts in every
+  service row. Now: wider but breathes more, drop meta text under
+  each service name, tighten vertical rhythm.
 */
 .sidebar {
-  width: 256px;
+  width: 240px;
   display: flex;
   flex-direction: column;
   background: var(--wdc-surface);
-  border-right: 1px solid var(--wdc-border-strong);
+  border-right: 1px solid var(--wdc-border);
   flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px 10px 10px;
+  padding: 16px 12px 12px;
 }
 
+/*
+  Workspace card — slimmer, no border, fits inline as a status block
+  rather than a "branded card". Saves ~20px vertical so the nav
+  cluster + sections are visible without scrolling.
+*/
 .sidebar-top {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .workspace-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 12px;
-  border-radius: var(--wdc-radius);
-  /* Flat: solid border, solid fill — no gradient, no inner glow */
-  border: 1px solid var(--wdc-border);
-  background: var(--wdc-surface-2);
+  gap: 10px;
+  padding: 8px 8px 12px;
+  border-bottom: 1px solid var(--wdc-border);
 }
 
 .workspace-mark {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  /* Flat: solid accent tile */
+  border-radius: 6px;
   background: var(--wdc-accent);
-  color: var(--wdc-bg);
-  font-size: 0.82rem;
+  color: #ffffff;
+  font-size: 0.74rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .workspace-copy {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  gap: 2px;
 }
 
 .workspace-title {
   color: var(--wdc-text);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
+  line-height: 1.2;
 }
 
 .workspace-subtitle {
-  color: var(--wdc-text-2);
-  font-size: 0.75rem;
+  color: var(--wdc-text-3);
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 .nav-cluster {
@@ -467,83 +467,72 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .sidebar-section {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
+/*
+  Section labels — drop the count chip (was visually competing with
+  service item LEDs). Smaller, looser tracking, more whitespace.
+*/
 .section-label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 0.76rem;
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.10em;
   color: var(--wdc-text-3);
-  padding: 12px 10px 8px;
+  padding: 16px 10px 6px;
 }
 
-.section-count {
-  min-width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  color: var(--wdc-text-3);
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1;
-}
+.section-count { display: none; }
 
+/*
+  Service item redesign — single-row, drop meta text. Just icon +
+  name + LED + switch. Was 48px tall with two stacked text rows;
+  now 36px with one row, tighter vertical rhythm.
+*/
 .service-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  transition: background 0.1s, border-color 0.1s;
-  min-height: 48px;
-  border: 1px solid transparent;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.1s;
+  min-height: 36px;
+  border: none;
   cursor: pointer;
 }
 
-.service-item:hover {
-  background: var(--wdc-hover);
-  border-color: var(--wdc-border);
-}
-
+.service-item:hover { background: var(--wdc-hover); }
 .service-item.active {
   background: var(--wdc-accent-dim);
-  border-color: rgba(86, 194, 255, 0.32);
+  color: var(--wdc-accent);
 }
-html:not(.dark) .service-item.active { border-color: rgba(0, 109, 125, 0.30); }
+.service-item.active .svc-name { color: var(--wdc-accent); }
 
 .svc-copy {
   min-width: 0;
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
 }
 
 .svc-name {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--wdc-text);
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--wdc-text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.svc-meta {
-  color: var(--wdc-text-2);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+/*
+  Meta text dropped — status is conveyed by the LED dot color, no
+  need to spell "RUNNING" / "READY" / "OFFLINE" under every name.
+  Was the single biggest source of sidebar noise.
+*/
+.svc-meta { display: none; }
 
 .svc-led {
   width: 8px;
