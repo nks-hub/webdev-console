@@ -8,19 +8,18 @@
           <span class="logo-sub">{{ currentTitle }}</span>
         </span>
       </span>
+      <nav class="header-nav">
+        <router-link
+          v-for="item in navItems"
+          :key="item.path"
+          :to="item.path"
+          class="nav-tab"
+          :class="{ active: isActive(item.path) }"
+        >
+          {{ item.label }}
+        </router-link>
+      </nav>
     </div>
-
-    <nav class="header-nav" style="-webkit-app-region: no-drag">
-      <router-link
-        v-for="item in navItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-tab"
-        :class="{ active: isActive(item.path) }"
-      >
-        {{ item.label }}
-      </router-link>
-    </nav>
 
     <div class="header-right" style="-webkit-app-region: no-drag">
       <!-- F96: self-updater badge. Surfaces when a newer release is
@@ -131,18 +130,30 @@ function isActive(path: string) {
 </script>
 
 <style scoped>
+/*
+  ─── Header redesign — flat shell, left-aligned nav ──────────────────
+  Was: gradient bg + center-floated pills + subtitle reading "PŘEHLED"
+  duplicating the page title underneath.
+  Now: flat bg matching surface, nav left-justified next to logo,
+  underline indicator instead of pill (consistent with content tabs),
+  drop subtitle, drop inset glow.
+*/
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 48px;
-  padding: 0 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
-    var(--wdc-surface);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  height: 56px;
+  padding: 0 24px;
+  background: var(--wdc-surface);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  gap: 16px;
+  gap: 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
 .app-logo {
@@ -154,69 +165,69 @@ function isActive(path: string) {
 }
 
 .logo-mark {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  /* Flat: solid fill, no gradient, no drop shadow */
+  border-radius: 6px;
   background: var(--wdc-accent);
-  color: var(--wdc-bg);
-  font-size: 0.74rem;
+  color: #ffffff;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .logo-copy {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
 }
 
 .logo-text {
-  font-size: 0.84rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--wdc-text);
-}
-
-.logo-sub {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--wdc-text-3);
+  color: var(--wdc-text);
+  line-height: 1.1;
 }
 
-/* Header nav tabs */
+/* Subtitle dropped — it duplicated the page title rendered below. */
+.logo-sub { display: none; }
+
+/*
+  Nav — left-aligned next to logo, underline indicator. Hover changes
+  text color only (no chip). Active tab shows a 2px accent underline
+  flush with the header's bottom border for a clean tab/page joint.
+*/
 .header-nav {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-  justify-content: center;
+  align-items: stretch;
+  height: 100%;
+  gap: 0;
 }
 
 .nav-tab {
-  padding: 7px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--wdc-text-2);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--wdc-text-3);
   text-decoration: none;
-  border-radius: 999px;
-  transition: all 0.12s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* overlap header bottom border */
+  transition: color 0.12s, border-color 0.12s;
   white-space: nowrap;
 }
 
 .nav-tab:hover {
   color: var(--wdc-text);
-  background: var(--wdc-hover);
 }
 
 .nav-tab.active {
   color: var(--wdc-text);
-  background: linear-gradient(180deg, rgba(86, 194, 255, 0.16), rgba(86, 194, 255, 0.08));
+  border-bottom-color: var(--wdc-accent);
   font-weight: 600;
 }
 
@@ -242,50 +253,45 @@ function isActive(path: string) {
   padding: 0 12px !important;
 }
 
+/*
+  Connection pill — minimal: just a colored dot + small label, no
+  fill, no border. Was a chunky filled pill that doubled as background
+  noise.
+*/
 .conn-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 0 6px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border: 1px solid;
-  min-height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--wdc-text-3);
 }
 
-.conn-ok {
-  color: var(--wdc-status-running);
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.06);
-}
+.conn-ok { color: var(--wdc-status-running); }
+.conn-err { color: var(--wdc-status-error); }
 
-.conn-err {
-  color: var(--wdc-status-error);
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.06);
-}
-
+/*
+  Static dots — no opacity animation, no box-shadow glow. Both used
+  to pulse together (different periods produced an apparent fast
+  flicker), and the box-shadow forced a GPU repaint each frame even
+  when the page was idle.
+*/
 .conn-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: currentColor;
 }
 
-.conn-ok .conn-dot {
-  animation: glow 2s ease-in-out infinite;
-}
-
-@keyframes glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-/* F96 update badge — amber accent so it reads as distinct from the
-   green/red connection pill. Hides when hasUpdate is false. */
+/*
+  Update badge — solid amber pill so a fresh release pops in the
+  header. Mono label keeps the version readable.
+*/
 .update-badge {
   display: inline-flex;
   align-items: center;
@@ -293,31 +299,29 @@ function isActive(path: string) {
   padding: 0 12px;
   min-height: 32px;
   border-radius: 999px;
-  border: 1px solid var(--wdc-warning);
-  background: var(--wdc-warning);
-  color: #141006;
+  border: 1px solid var(--wdc-status-starting);
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--wdc-status-starting);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.update-badge:hover { filter: brightness(1.05); }
+.update-badge:hover {
+  background: var(--wdc-status-starting);
+  color: #141006;
+}
+html:not(.dark) .update-badge:hover { color: #ffffff; }
+/* Static dot — was pulsing at 2.2s, paired with conn-dot's 2s pulse,
+   the offset cycles read as a fast flicker. */
 .update-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
-  animation: glow 2.2s ease-in-out infinite;
 }
 .update-label { letter-spacing: 0.02em; }
-.update-badge .update-label { color: #141006; }
-:global(html:not(.dark)) .update-badge {
-  background: #704d0c;
-  border-color: #704d0c;
-  color: #ffffff !important;
-}
-:global(html:not(.dark)) .update-badge .update-label { color: #ffffff !important; }
 
 @media (max-width: 760px) {
   .app-header {

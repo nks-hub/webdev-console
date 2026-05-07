@@ -342,6 +342,12 @@ onUnmounted(() => {
 </script>
 
 <style>
+/*
+  Shell — flat charcoal bg, no decorative gradients. Previous
+  radial-gradient backdrop bled cyan/green smears across the top
+  corners (contributed to "noisy" feel). Removed entirely; surface
+  elevation carries hierarchy.
+*/
 .app-root {
   display: flex;
   flex-direction: column;
@@ -352,15 +358,7 @@ onUnmounted(() => {
   background: var(--wdc-bg);
 }
 
-.app-backdrop {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at top left, rgba(86, 194, 255, 0.13), transparent 24%),
-    radial-gradient(circle at 80% 10%, rgba(124, 255, 165, 0.06), transparent 20%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
-}
+.app-backdrop { display: none; }
 
 .app-body {
   display: flex;
@@ -374,11 +372,9 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background: transparent;
+  background: var(--wdc-bg);
   scroll-behavior: smooth;
-  /* 24px top — breathing room between AppHeader nav and page content.
-     User feedback: previous padding-top 0 felt cramped. */
-  padding: 24px 0 18px;
+  padding: 0;
 }
 
 /* ═══ Splash overlay — shown until backend first connects ════════════════ */
