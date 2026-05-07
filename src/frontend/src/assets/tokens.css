@@ -300,13 +300,15 @@ html:not(.dark) {
 }
 
 html {
-  /* Bumped from 15px after repeated "větší písmo" feedback. Every rem-based
-     class scales proportionally: .svc-name 0.95rem → 15.2px, nav tab
-     0.8rem → 12.8px, metrics mono 0.82rem → 13.1px. Tested: no wrapping
-     breaks in header / sidebar / el-table at minimum 900×600 window. */
-  font-size: 16px;
+  /*
+    Helvetica/Arial render slightly larger optical-size than Inter at
+    the same px size, so root drops 16 → 15. Every rem class scales
+    proportionally and stays readable at 900×600 minimum window.
+  */
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
