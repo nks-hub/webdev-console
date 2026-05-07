@@ -10830,6 +10830,149 @@ app.MapPost("/api/databases/{name}/import", async (
     }
 });
 
+// ── Database explorer v2 (MySqlConnector-backed) ──────────────────────────
+// Engine-agnostic surface for the new Databases page: rich table metadata,
+// paged data browse, structure (columns + indexes), structured multi-result
+// SQL execution. The legacy /api/databases/* shell-out endpoints above are
+// preserved for back-compat with MCP and the prior UI.
+
+NKS.WebDevConsole.Daemon.Data.MySqlDriver MakeMySqlDriverV2(
+    SettingsStore settings, IServiceProvider sp, BinaryManager bm) =>
+        NKS.WebDevConsole.Daemon.Data.DbDriverFactory.CreateMySql(
+            ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+
+app.MapGet("/api/databases/v2", async (
+    BinaryManager bm, SettingsStore settings, IServiceProvider sp, CancellationToken ct) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.Ok(new { error = "MySQL not installed", databases = Array.Empty<object>() });
+    try
+    {
+        var driver = MakeMySqlDriverV2(settings, sp, bm);
+        var dbs = await driver.ListDatabasesAsync(ct);
+        return Results.Ok(new { engine = driver.Engine, databases = dbs });
+    }
+    catch (MySqlConnector.MySqlException mex)
+    {
+        var port = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+        var hint = mex.Number == 1045
+            ? $"Port {port} accepted the connection but rejected the WDC root password. Likely an external mysqld (MAMP/XAMPP/system service) on this port."
+            : null;
+        int? suggestedPort = mex.Number == 1045 ? FindFreeTcpPort(port + 1) : null;
+        return Results.Ok(new { error = mex.Message, code = mex.Number, hint, suggestedPort, databases = Array.Empty<object>() });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { error = ex.Message, databases = Array.Empty<object>() });
+    }
+});
+
+app.MapGet("/api/databases/v2/{db}/tables", async (
+    string db, BinaryManager bm, SettingsStore settings, IServiceProvider sp, CancellationToken ct) =>
+{
+    if (!IsValidDatabaseName(db))
+        return Results.BadRequest(new { error = "Invalid database name" });
+    try
+    {
+        var tables = await MakeMySqlDriverV2(settings, sp, bm).ListTablesAsync(db, ct);
+        return Results.Ok(new { tables });
+    }
+    catch (Exception ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
+app.MapGet("/api/databases/v2/{db}/tables/{table}/columns", async (
+    string db, string table, BinaryManager bm, SettingsStore settings, IServiceProvider sp, CancellationToken ct) =>
+{
+    if (!IsValidDatabaseName(db) || !IsValidDatabaseName(table))
+        return Results.BadRequest(new { error = "Invalid identifier" });
+    try
+    {
+        var cols = await MakeMySqlDriverV2(settings, sp, bm).ListColumnsAsync(db, table, ct);
+        return Results.Ok(new { columns = cols });
+    }
+    catch (Exception ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
+app.MapGet("/api/databases/v2/{db}/tables/{table}/indexes", async (
+    string db, string table, BinaryManager bm, SettingsStore settings, IServiceProvider sp, CancellationToken ct) =>
+{
+    if (!IsValidDatabaseName(db) || !IsValidDatabaseName(table))
+        return Results.BadRequest(new { error = "Invalid identifier" });
+    try
+    {
+        var idx = await MakeMySqlDriverV2(settings, sp, bm).ListIndexesAsync(db, table, ct);
+        return Results.Ok(new { indexes = idx });
+    }
+    catch (Exception ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
+app.MapGet("/api/databases/v2/{db}/tables/{table}/data", async (
+    string db, string table, HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp,
+    int? page, int? pageSize, string? orderBy, string? orderDir, string? where, CancellationToken ct) =>
+{
+    if (!IsValidDatabaseName(db) || !IsValidDatabaseName(table))
+        return Results.BadRequest(new { error = "Invalid identifier" });
+    try
+    {
+        var opts = new NKS.WebDevConsole.Daemon.Data.BrowseOptions
+        {
+            Page = page ?? 1,
+            PageSize = pageSize ?? 50,
+            OrderBy = orderBy,
+            OrderDir = orderDir ?? "asc",
+            WhereClause = where,
+        };
+        var result = await MakeMySqlDriverV2(settings, sp, bm).BrowseTableAsync(db, table, opts, ct);
+        return Results.Ok(result);
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (Exception ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
+app.MapPost("/api/databases/v2/{db}/query", async (
+    string db, HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator, CancellationToken ct) =>
+{
+    if (!IsValidDatabaseName(db))
+        return Results.BadRequest(new { error = "Invalid database name" });
+
+    // MCP intent gate parity with /api/databases/{name}/query (kind=database_query).
+    var dbqIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(dbqIntentToken))
+    {
+        var dbqAllowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var dbqVerdict = await intentValidator.ValidateAndConsumeAsync(
+            dbqIntentToken, "database_query", domain: db, host: "*db*", dbqAllowUnconfirmed, ct);
+        if (!dbqVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
+                statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+    var sql = body?.GetValueOrDefault("sql") ?? "";
+    if (string.IsNullOrWhiteSpace(sql))
+        return Results.BadRequest(new { error = "sql required" });
+
+    try
+    {
+        var result = await MakeMySqlDriverV2(settings, sp, bm).ExecuteQueryAsync(db, sql, ct);
+        return Results.Ok(result);
+    }
+    catch (MySqlConnector.MySqlException mex)
+    {
+        return Results.BadRequest(new { error = mex.Message, code = mex.Number, sqlState = mex.SqlState });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 // ── Binary catalog + installation management ──────────────────────────────
 // GET /api/binaries/catalog          → all known releases
 // GET /api/binaries/catalog/{app}    → releases for one app
