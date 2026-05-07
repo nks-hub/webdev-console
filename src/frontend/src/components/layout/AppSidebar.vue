@@ -18,12 +18,111 @@
       </div>
     </div>
 
-    <!--
-      Service sections (Apache/PHP/MySQL/Postgres/Redis/Mailpit) removed
-      from the sidebar — Dashboard already lists every service with
-      LED + toggle + port + metrics, so the sidebar version was a
-      duplicate. Sidebar now contains only routing entries.
-    -->
+    <template v-if="!uiModeStore.isSimple">
+    <div class="sidebar-section">
+      <div class="section-label">
+        <span>{{ $t('nav.webServer') }}</span>
+        <span class="section-count">{{ webServices.length }}</span>
+      </div>
+      <template v-for="svc in webServices" :key="svc.id">
+        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+          </el-tooltip>
+          <div class="svc-copy">
+            <span class="svc-name">{{ shortName(svc) }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Stopped' }}</span>
+          </div>
+          <span class="svc-led" :class="{ on: svc.state === 2 }" />
+          <el-switch
+            :model-value="svc.state === 2"
+            :loading="servicesStore.isBusy(svc.id)"
+            size="small"
+            @click.stop
+            @change="toggleSvc(svc)"
+          />
+        </div>
+      </template>
+    </div>
+
+    <div class="sidebar-section" v-if="langServices.length">
+      <div class="section-label">
+        <span>{{ $t('nav.languages') }}</span>
+        <span class="section-count">{{ langServices.length }}</span>
+      </div>
+      <template v-for="svc in langServices" :key="svc.id">
+        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+          </el-tooltip>
+          <div class="svc-copy">
+            <span class="svc-name">{{ shortName(svc) }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? 'Ready' : 'Idle' }}</span>
+          </div>
+          <span class="svc-led" :class="{ on: svc.state === 2 }" />
+          <el-switch
+            :model-value="svc.state === 2"
+            :loading="servicesStore.isBusy(svc.id)"
+            size="small"
+            @click.stop
+            @change="toggleSvc(svc)"
+          />
+        </div>
+      </template>
+    </div>
+
+    <div class="sidebar-section" v-if="dbServices.length">
+      <div class="section-label">
+        <span>{{ $t('nav.database') }}</span>
+        <span class="section-count">{{ dbServices.length }}</span>
+      </div>
+      <template v-for="svc in dbServices" :key="svc.id">
+        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+          </el-tooltip>
+          <div class="svc-copy">
+            <span class="svc-name">{{ shortName(svc) }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Offline' }}</span>
+          </div>
+          <span class="svc-led" :class="{ on: svc.state === 2 }" />
+          <el-switch
+            :model-value="svc.state === 2"
+            :loading="servicesStore.isBusy(svc.id)"
+            size="small"
+            @click.stop
+            @change="toggleSvc(svc)"
+          />
+        </div>
+      </template>
+    </div>
+
+    <div class="sidebar-section" v-if="cacheServices.length">
+      <div class="section-label">
+        <span>{{ $t('nav.cacheMail') }}</span>
+        <span class="section-count">{{ cacheServices.length }}</span>
+      </div>
+      <template v-for="svc in cacheServices" :key="svc.id">
+        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+          </el-tooltip>
+          <div class="svc-copy">
+            <span class="svc-name">{{ shortName(svc) }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Standby' }}</span>
+          </div>
+          <span class="svc-led" :class="{ on: svc.state === 2 }" />
+          <el-switch
+            :model-value="svc.state === 2"
+            :loading="servicesStore.isBusy(svc.id)"
+            size="small"
+            @click.stop
+            @change="toggleSvc(svc)"
+          />
+        </div>
+      </template>
+    </div>
+    </template><!-- /advanced service sections -->
 
     <template v-if="!uiModeStore.isSimple">
     <div class="sidebar-section tools-section">
