@@ -2132,10 +2132,10 @@ defineExpose({ saveSettings })
   gap: 6px;
   align-items: center;
   min-height: 36px;
-  padding: 4px 6px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-fill-color-blank);
+  padding: 6px 10px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+  background: var(--wdc-surface);
 }
 
 .email-chip {
@@ -2205,8 +2205,10 @@ defineExpose({ saveSettings })
 /* Phase 7.5+++ — TCP probe row in host edit dialog. */
 .test-conn-row {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-top: 8px; padding: 8px 12px;
-  background: var(--el-fill-color-light); border-radius: 4px;
+  margin-top: 10px; padding: 10px 14px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
 }
 .test-conn-result {
   display: inline-flex; align-items: center; gap: 6px;
