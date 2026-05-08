@@ -986,28 +986,11 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   display: none;
 }
 
-.sites-table :deep(.el-table__header) {
-  background: var(--wdc-surface-2);
-}
-.sites-table :deep(.el-table__header th) {
-  background: var(--wdc-surface-2) !important;
-  color: var(--wdc-text-2) !important;
-  font-weight: 700;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border-bottom: 2px solid var(--wdc-border-strong) !important;
-}
-.sites-table :deep(.el-table__row) {
-  transition: background 0.12s;
-}
-.sites-table :deep(.el-table__row:hover > td) {
-  background: var(--wdc-hover) !important;
-}
-.sites-table :deep(td) {
-  padding: 14px 12px !important;
-  border-bottom: 1px solid var(--wdc-border) !important;
-}
+/*
+  Sites table — let global tokens.css drive header/row/hover styling.
+  Removed per-page overrides that fought the new accent uppercase
+  header + accent left-bar hover treatment.
+*/
 
 .cell-domain {
   display: flex;
