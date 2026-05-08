@@ -114,9 +114,9 @@
         row-class-name="cursor-pointer"
         table-layout="auto"
       >
-        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="200">
+        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="240">
           <template #default="{ row }">
-            <div class="cell-domain">
+            <div class="cell-domain" :title="row.documentRoot">
               <div class="cell-domain-row">
                 <span class="col-domain">{{ row.domain }}</span>
                 <!-- Port badge. SSL-enabled sites advertise both :80→:443
@@ -157,11 +157,12 @@
           </template>
         </el-table-column>
 
-        <el-table-column :label="$t('sites.documentRoot')" min-width="220" class-name="col-docroot-cell">
-          <template #default="{ row }">
-            <span class="col-mono" :title="row.documentRoot">{{ row.documentRoot }}</span>
-          </template>
-        </el-table-column>
+        <!--
+          Document Root column dropped — shown as a tooltip on the
+          domain cell (hover the row's first column to see the path).
+          Frees up ~220px of horizontal space and removes the longest
+          line of text noise from the table.
+        -->
 
         <el-table-column :label="$t('sites.phpVersion')" width="110">
           <template #default="{ row }">
