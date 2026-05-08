@@ -135,18 +135,18 @@ function formatBytes(bytes: number): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
   flex-shrink: 0;
-  background: var(--wdc-surface-2);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
 }
 
 .tree-title {
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--wdc-text-2);
+  letter-spacing: 0.14em;
+  color: var(--wdc-accent);
 }
 
 .tree-search {
@@ -203,8 +203,9 @@ function formatBytes(bytes: number): string {
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
   border-left-color: var(--wdc-accent);
+  box-shadow: inset 0 0 0 1px var(--wdc-accent-glow), 0 2px 12px var(--wdc-accent-glow);
 }
-.tree-db.selected > .tree-row .db-name { color: var(--wdc-accent); }
+.tree-db.selected > .tree-row .db-name { color: var(--wdc-accent); font-weight: 700; }
 
 .caret { transition: transform 0.15s; color: var(--wdc-text-3); font-size: 0.8rem; }
 .tree-db.expanded .caret { transform: rotate(90deg); color: var(--wdc-text-2); }
