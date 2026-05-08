@@ -627,13 +627,14 @@ onMounted(async () => {
   cursor: text;
   display: inline-block;
   min-width: 40px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  transition: background 0.15s;
+  padding: 2px 6px;
+  border-radius: var(--wdc-radius-sm);
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
 .editable:hover {
-  background: var(--el-fill-color-light, #f5f7fa);
+  background: var(--wdc-surface-2);
+  box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 
 .comment-text {
