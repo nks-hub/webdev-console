@@ -134,8 +134,8 @@ function formatRelative(iso: string): string {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--wdc-border);
 }
 .plan-row:last-child { border-bottom: none; }
 .plan-key {

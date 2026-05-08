@@ -728,7 +728,7 @@ onBeforeUnmount(() => {
   box-shadow: var(--wdc-shadow-sm);
 }
 .session-card {
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--wdc-border);
   border-left: 3px solid transparent;
 }
 .session-card:last-child { border-bottom: none; }
