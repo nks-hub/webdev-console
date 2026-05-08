@@ -78,11 +78,12 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 600;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--wdc-border);
+  background: var(--wdc-surface-2);
 }
 .hb--healthy { color: var(--el-color-success); border-color: var(--el-color-success-light-5); }
 .hb--degraded { color: var(--el-color-warning); border-color: var(--el-color-warning-light-5); }
