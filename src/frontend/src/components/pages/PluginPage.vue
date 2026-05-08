@@ -206,7 +206,7 @@ onMounted(async () => {
 
 <style scoped>
 .plugin-page {
-  padding: 24px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -218,7 +218,13 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
+.plugin-page > *:not(.plugin-page-header) { padding: 0 24px; }
+.plugin-page > *:last-child { padding-bottom: 24px; }
+
 .plugin-page-identity {
   display: flex;
   flex-direction: column;
@@ -226,10 +232,10 @@ onMounted(async () => {
 }
 .plugin-page-title {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--wdc-text);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 .plugin-page-id {
   font-size: 0.78rem;
