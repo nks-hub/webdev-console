@@ -866,16 +866,25 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
   overflow: hidden;
 }
 
-.el-table__header-wrapper th.el-table__cell {
+.el-table .el-table__header-wrapper th.el-table__cell,
+.el-table thead th.el-table__cell,
+.el-table th.el-table__cell {
   background: var(--wdc-surface-2) !important;
   color: var(--wdc-accent) !important;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.10em;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.10em !important;
   border-bottom: 2px solid var(--wdc-accent-glow) !important;
   padding: 14px 16px !important;
   height: auto !important;
+}
+.el-table th.el-table__cell .cell {
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  letter-spacing: inherit !important;
+  text-transform: inherit !important;
 }
 
 .el-table__body tr.el-table__row td {
