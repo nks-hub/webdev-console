@@ -324,7 +324,7 @@ async function onCancel(): Promise<void> {
   font-size: 12px;
   flex-wrap: wrap;
 }
-.hook-row.hook-failed { background: var(--el-color-danger-light-9); padding-left: 4px; border-radius: 3px; }
+.hook-row.hook-failed { background: var(--el-color-danger-light-9); border: 1px solid var(--el-color-danger-light-5); padding: 6px 10px; border-radius: var(--wdc-radius-sm); margin: 4px 0; }
 .hook-status { font-weight: 700; width: 14px; text-align: center; }
 .hook-status.ok { color: var(--el-color-success); }
 .hook-status.fail { color: var(--el-color-danger); }
