@@ -1726,11 +1726,13 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  padding: 14px 20px;
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface));
+  border-bottom: 1px solid var(--wdc-accent-glow);
   margin-bottom: 16px;
   gap: 12px;
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
 .settings-header-left {
   display: flex;
