@@ -370,10 +370,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 8px;
+  padding: 8px 10px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--wdc-radius-sm);
   color: var(--wdc-text);
   font-size: 0.8rem;
   font-weight: 600;
@@ -409,10 +409,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 5px 10px;
+  padding: 6px 12px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--wdc-radius-sm);
   color: var(--wdc-text-2);
   font-size: 0.82rem;
   text-align: left;
@@ -544,8 +544,9 @@ onMounted(() => {
 
 .help-prose :deep(code) {
   background: var(--wdc-surface-2);
-  padding: 2px 6px;
-  border-radius: 4px;
+  border: 1px solid var(--wdc-border);
+  padding: 2px 7px;
+  border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   color: var(--wdc-accent);
