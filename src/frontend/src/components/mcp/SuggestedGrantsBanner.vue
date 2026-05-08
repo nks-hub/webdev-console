@@ -151,8 +151,9 @@ onBeforeUnmount(() => {
 .kind { font-weight: 600; }
 .target { color: var(--el-text-color-secondary); }
 .occurrences {
-  color: var(--el-color-warning); font-weight: 600;
-  background: var(--el-color-warning-light-7); padding: 1px 6px; border-radius: 3px;
+  color: var(--el-color-warning); font-weight: 700;
+  background: var(--el-color-warning-light-7); padding: 1px 8px; border-radius: 999px;
+  font-size: 10px;
 }
 .muted { color: var(--el-text-color-secondary); }
 </style>
