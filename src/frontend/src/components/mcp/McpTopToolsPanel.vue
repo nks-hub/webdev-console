@@ -109,13 +109,13 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(160px, 1fr) 2fr auto auto auto;
   gap: 10px;
   align-items: center;
-  padding: 4px 6px;
-  border-radius: 3px;
+  padding: 6px 10px;
+  border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   font-size: 12px;
   transition: background 0.15s;
 }
-.tool-row:hover { background: var(--el-fill-color-darker); }
+.tool-row:hover { background: var(--wdc-surface-2); }
 .tool-row:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
@@ -123,13 +123,14 @@ onBeforeUnmount(() => {
 .tool-name { font-weight: 600; font-size: 11px; }
 .bar-track {
   height: 8px;
-  background: var(--el-fill-color);
-  border-radius: 4px;
+  background: var(--wdc-elevated);
+  border-radius: 999px;
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 .bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 999px;
   transition: width 0.3s;
 }
 .fill-read { background: var(--el-color-info); opacity: 0.7; }
