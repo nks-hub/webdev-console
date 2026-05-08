@@ -241,11 +241,12 @@ defineExpose({ open, close, hasSeen })
 .gsw-tip :deep(kbd) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 0 4px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   color: var(--wdc-text-2);
+  box-shadow: 0 1px 0 var(--wdc-border-strong);
 }
 
 .gsw-footer {
