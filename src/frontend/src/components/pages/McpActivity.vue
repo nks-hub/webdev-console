@@ -692,8 +692,9 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 .stat-tile.clickable:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--el-fill-color-darker);
+  transform: translateY(-2px);
+  box-shadow: var(--wdc-shadow-card), 0 0 0 1px var(--wdc-accent-glow);
+  border-color: var(--wdc-accent-glow);
 }
 .stat-tile.clickable.active {
   background: var(--el-color-primary-light-9);
