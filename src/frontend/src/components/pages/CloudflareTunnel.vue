@@ -931,14 +931,21 @@ async function autoVerifyToken() {
 .status-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 18px 20px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
+  border-radius: var(--wdc-radius-lg);
+  box-shadow: var(--wdc-shadow-sm);
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+}
+.status-card:hover {
+  box-shadow: var(--wdc-shadow-card);
+  transform: translateY(-1px);
 }
 .status-card.status-active {
   border-color: var(--wdc-status-running);
+  box-shadow: var(--wdc-shadow-card), 0 0 0 1px rgba(52, 211, 153, 0.20);
 }
 .status-icon {
   font-size: 1.4rem;
