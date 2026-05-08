@@ -880,16 +880,19 @@ onMounted(() => {
 }
 
 .output-pre {
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
-  padding: 10px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 14px 16px;
   margin: 0;
   max-height: 300px;
   overflow-y: auto;
+  line-height: 1.55;
+  box-shadow: var(--wdc-shadow-sm);
 }
 
 .output-pre--err {
