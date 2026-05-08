@@ -120,8 +120,8 @@ function formatMs(ms: number): string {
   box-shadow: var(--wdc-shadow-sm);
 }
 .ponr-banner--cruising {
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color);
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
   border-left: 3px solid var(--el-color-warning);
   color: var(--el-text-color-regular);
 }
