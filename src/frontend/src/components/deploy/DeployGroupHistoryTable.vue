@@ -515,8 +515,9 @@ watch(() => props.domain, () => refresh())
   vertical-align: -2px;
 }
 .group-children {
-  padding: 8px 24px 12px;
-  background: var(--el-fill-color-light);
+  padding: 12px 24px 14px;
+  background: var(--wdc-surface-2);
+  border-top: 1px solid var(--wdc-border);
 }
 .group-children-title {
   font-weight: 600;
@@ -525,11 +526,11 @@ watch(() => props.domain, () => refresh())
   color: var(--el-text-color-regular);
 }
 .group-error {
-  margin-top: 8px;
-  padding: 6px 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
   background: var(--el-color-danger-light-9, #fef0f0);
   border-left: 3px solid var(--el-color-danger);
-  border-radius: 3px;
+  border-radius: var(--wdc-radius-sm);
   font-size: 12px;
 }
 </style>
