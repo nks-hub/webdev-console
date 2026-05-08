@@ -364,22 +364,19 @@ onBeforeUnmount(() => {
 .mcp-confirm-banner {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 12px;
+  gap: 14px;
   align-items: start;
-  padding: 12px 14px;
-  background: var(--el-color-warning-light-9, #fdf6ec);
-  border: 1px solid var(--el-color-warning, #e6a23c);
-  border-left-width: 4px;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  /* Use a non-color signal too — WCAG 1.4.1 Use of Color */
+  padding: 14px 16px;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid var(--wdc-status-starting);
+  border-left-width: 5px;
+  border-radius: var(--wdc-radius-lg);
+  box-shadow: var(--wdc-shadow-card);
+  /* Non-color signal too — WCAG 1.4.1 Use of Color */
 }
-/* Phase 7.4c — destructive kinds get a danger-colored border + heavier
-   left rule. The icon is already a Warning glyph so screen readers still
-   announce "warning"; only the visual treatment escalates here. */
 .mcp-confirm-banner--destructive {
-  background: var(--el-color-danger-light-9, #fef0f0);
-  border-color: var(--el-color-danger, #f56c6c);
+  background: rgba(248, 113, 113, 0.10);
+  border-color: var(--wdc-status-error);
   border-left-width: 6px;
 }
 
