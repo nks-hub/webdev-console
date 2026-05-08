@@ -986,27 +986,49 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   display: none;
 }
 
-.sites-table :deep(.el-table__header) {
-  background: var(--wdc-surface-2);
+/*
+  Compact density — 6px row padding (≈32px row height) + force the
+  domain cell into a single horizontal flow so aliases / port / SSL /
+  bind-IP / plugin badges don't break onto a 2nd line. Doesn't touch
+  Element Plus's `.cell` flex internals (those broke the centering
+  fix earlier).
+*/
+.sites-table :deep(td.el-table__cell) {
+  padding: 6px 12px !important;
 }
-.sites-table :deep(.el-table__header th) {
-  background: var(--wdc-surface-2) !important;
-  color: var(--wdc-text-2) !important;
-  font-weight: 700;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border-bottom: 2px solid var(--wdc-border-strong) !important;
+.sites-table :deep(th.el-table__cell) {
+  padding: 8px 12px !important;
 }
-.sites-table :deep(.el-table__row) {
-  transition: background 0.12s;
+.sites-table :deep(.cell-domain) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
-.sites-table :deep(.el-table__row:hover > td) {
-  background: var(--wdc-hover) !important;
+.sites-table :deep(.cell-domain-row) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
-.sites-table :deep(td) {
-  padding: 14px 12px !important;
-  border-bottom: 1px solid var(--wdc-border) !important;
+.sites-table :deep(.col-aliases) {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  margin: 0 !important;
+}
+.sites-table :deep(.col-tunnel) {
+  display: inline-flex !important;
+  align-items: center;
+  margin: 0 !important;
+}
+.sites-table :deep(.el-tag) {
+  height: 20px !important;
+  padding: 0 7px !important;
+  font-size: 0.66rem !important;
+  line-height: 18px !important;
 }
 
 .cell-domain {
