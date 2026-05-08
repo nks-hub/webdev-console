@@ -177,8 +177,9 @@ defineExpose({ open, close, hasSeen })
 .gsw-step-desc :deep(strong) { color: var(--wdc-text); font-weight: 600; }
 .gsw-step-desc :deep(code) {
   background: var(--wdc-surface-2);
-  padding: 1px 5px;
-  border-radius: 4px;
+  border: 1px solid var(--wdc-border);
+  padding: 1px 6px;
+  border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   color: var(--wdc-accent);
@@ -186,11 +187,12 @@ defineExpose({ open, close, hasSeen })
 .gsw-step-desc :deep(kbd) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
   color: var(--wdc-text);
+  box-shadow: 0 1px 0 var(--wdc-border-strong);
 }
 
 .gsw-codeblock {
