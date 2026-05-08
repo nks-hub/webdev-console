@@ -768,9 +768,11 @@ onBeforeUnmount(() => {
 /* Flat view & shared rows */
 .activity-timeline {
   display: flex; flex-direction: column;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
   overflow: hidden;
+  background: var(--wdc-surface);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .activity-group { border-bottom: 1px solid var(--el-border-color-lighter); }
 .activity-group:last-child { border-bottom: none; }
@@ -817,16 +819,17 @@ onBeforeUnmount(() => {
 .detail-error { color: var(--el-color-danger); }
 .detail-args { margin-top: 8px; }
 .args-full {
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-  padding: 8px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
+  padding: 10px 12px;
   margin: 4px 0;
   font-size: 11px;
   max-height: 200px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
+  font-family: 'JetBrains Mono', monospace;
 }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-read { background: var(--el-color-info); }
@@ -835,10 +838,12 @@ onBeforeUnmount(() => {
 .tool-name { font-weight: 600; }
 .args-preview { color: var(--el-text-color-secondary); }
 .session-pill, .caller-pill {
-  padding: 1px 6px;
-  background: var(--el-fill-color-darker);
-  border-radius: 3px;
+  padding: 2px 8px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: 999px;
   font-size: 10px;
+  font-weight: 500;
 }
 .session-pill.clickable {
   cursor: pointer;
