@@ -2042,7 +2042,7 @@ defineExpose({ saveSettings })
 }
 .hook-card.hook-disabled {
   opacity: 0.6;
-  background: var(--el-fill-color-lighter);
+  background: var(--wdc-surface-2);
 }
 .hook-card-header {
   display: flex;
@@ -2099,7 +2099,7 @@ defineExpose({ saveSettings })
    readable so operators can see WHAT they disabled. */
 .hook-row.hook-disabled {
   opacity: 0.55;
-  background: var(--el-fill-color-lighter);
+  background: var(--wdc-surface-2);
 }
 .hook-row.hook-disabled .hook-form {
   filter: grayscale(0.5);
