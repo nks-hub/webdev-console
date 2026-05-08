@@ -201,11 +201,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mcp-onboarding-panel {
-  border: 2px solid var(--el-color-primary-light-5);
-  background: linear-gradient(135deg, var(--el-color-primary-light-9), var(--el-fill-color-light));
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 12px;
+  border: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
+  border-radius: var(--wdc-radius-lg);
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  box-shadow: var(--wdc-shadow-card);
 }
 .onboarding-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -219,19 +220,20 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 .profile-card {
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-  padding: 14px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
   display: flex; flex-direction: column; gap: 6px;
   position: relative;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .profile-card:hover {
-  border-color: var(--el-color-primary);
+  border-color: var(--wdc-accent);
   transform: translateY(-2px);
-  box-shadow: 0 2px 8px var(--el-color-primary-light-7);
+  box-shadow: var(--wdc-shadow-card), 0 0 0 1px var(--wdc-accent-glow);
 }
 .profile-card:focus-visible {
   outline: 2px solid var(--el-color-primary);
