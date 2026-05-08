@@ -194,16 +194,22 @@ defineExpose({ open })
 .command-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--wdc-radius-sm);
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--wdc-radius);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.1s, box-shadow 0.1s;
+  border-left: 3px solid transparent;
 }
-.command-item:hover,
-.command-item.selected {
+.command-item:hover {
   background: var(--wdc-hover);
 }
+.command-item.selected {
+  background: var(--wdc-accent-dim);
+  border-left-color: var(--wdc-accent);
+  box-shadow: 0 0 0 1px var(--wdc-accent-glow);
+}
+.command-item.selected .cmd-label { color: var(--wdc-accent); font-weight: 600; }
 
 .cmd-icon {
   font-size: 1rem;
