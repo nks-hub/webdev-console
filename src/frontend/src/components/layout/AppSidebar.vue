@@ -669,7 +669,7 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .sidebar-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--wdc-border-strong);
   padding-top: 8px;
   margin-top: 10px;
   display: flex;

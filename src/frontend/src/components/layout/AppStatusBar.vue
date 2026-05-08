@@ -114,7 +114,7 @@ function formatMem(bytes: number): string {
 .status-sep {
   width: 1px;
   height: 12px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--wdc-border-strong);
 }
 
 .dot {

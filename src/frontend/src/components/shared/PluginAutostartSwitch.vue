@@ -117,8 +117,8 @@ watch(() => resolvedPlugin.value?.serviceId, () => { void loadCurrent() })
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  background: var(--wdc-surface-2, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--wdc-border, rgba(255, 255, 255, 0.08));
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
   border-radius: 8px;
   margin: 10px 0;
 }

@@ -114,7 +114,7 @@ watch(() => props.service, () => { loadError.value = false })
   filter: saturate(0.2) brightness(0.98);
 }
 .svc-icon:not(.inactive) {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--wdc-border-strong);
   transform: translateY(-0.5px);
 }
 .fallback {
