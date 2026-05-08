@@ -120,10 +120,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .suggested-grants-banner {
   border: 1px solid var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
-  border-radius: 6px;
-  padding: 10px 14px;
-  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--el-color-warning-light-9), var(--wdc-surface));
+  border-radius: var(--wdc-radius);
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .banner-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -136,9 +137,10 @@ onBeforeUnmount(() => {
 .suggestion-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
-  padding: 6px 8px;
-  background: var(--el-bg-color);
-  border-radius: 4px;
+  padding: 8px 12px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
   font-size: 12px;
 }
 .suggestion-row.pending { opacity: 0.7; }
