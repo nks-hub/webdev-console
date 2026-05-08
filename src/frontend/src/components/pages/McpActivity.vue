@@ -766,7 +766,7 @@ onBeforeUnmount(() => {
 .count-pill.mutate { background: var(--el-color-warning-light-7); color: var(--el-color-warning); }
 .count-pill.destructive { background: var(--el-color-danger-light-7); color: var(--el-color-danger); }
 .count-pill.error { background: var(--el-color-danger); color: white; }
-.session-body { background: var(--el-bg-color); }
+.session-body { background: var(--wdc-surface); }
 
 /* Flat view & shared rows */
 .activity-timeline {
@@ -781,12 +781,13 @@ onBeforeUnmount(() => {
 .activity-group:last-child { border-bottom: none; }
 .collapsed-reads-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 6px 12px;
-  background: var(--el-fill-color);
+  padding: 8px 14px;
+  background: var(--wdc-surface-2);
   cursor: pointer;
   font-size: 12px;
+  transition: background 0.12s;
 }
-.collapsed-reads-row:hover { background: var(--el-fill-color-darker); }
+.collapsed-reads-row:hover { background: var(--wdc-hover); }
 .collapsed-reads-row .chev { font-size: 10px; }
 .call-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
