@@ -989,19 +989,27 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 /*
-  Sites table — ULTRA compact density. Was 16px+ row padding + 2nd
-  line for aliases. Now: 6px row padding (single text line at 32px
-  row height), aliases collapsed to a single +N chip on the same
-  line as domain (full alias list lives in the chip's title tooltip).
+  Sites table — ULTRA compact density + LEFT alignment fix.
+  Element Plus default centers `cell` content; force left + flex-start
+  so domain + tags + alias chip all sit flush against the cell's left
+  edge instead of floating in the middle of the column.
 */
 .sites-table :deep(.el-table__body tr.el-table__row td) {
   padding: 6px 12px !important;
   font-size: 0.8rem;
   height: 32px;
   vertical-align: middle;
+  text-align: left !important;
 }
 .sites-table :deep(.el-table__header-wrapper th.el-table__cell) {
   padding: 8px 12px !important;
+  text-align: left !important;
+}
+.sites-table :deep(.el-table .cell) {
+  text-align: left !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 .sites-table :deep(.el-tag) {
   height: 20px !important;
@@ -1013,15 +1021,25 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .sites-table :deep(.cell-domain-row) {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
   flex-wrap: nowrap;
   min-height: 0;
   padding: 0;
+  width: 100%;
 }
-/* Make domain cell single-row: aliases inline + plugin badges inline. */
+/* Inline children — keep plugin badges (Cloudflare tunnel, etc.) on the same row */
 .sites-table :deep(.cell-domain) > * {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+}
+/* Plugin slot badges (e.g. CloudflareTunnelBadge) used to break onto
+   their own line — pin them inline with the rest of the row. */
+.sites-table :deep(.cell-domain .col-tunnel),
+.sites-table :deep(.cell-domain [data-plugin-badge]) {
+  margin-top: 0 !important;
+  margin-left: 6px;
 }
 
 .cell-domain {
