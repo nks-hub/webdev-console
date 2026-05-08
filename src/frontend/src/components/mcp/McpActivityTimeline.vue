@@ -214,16 +214,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .timeline-chart {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-  padding: 10px 14px 6px;
-  background: var(--el-fill-color-light);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-lg);
+  padding: 14px 16px 10px;
+  background: var(--wdc-surface);
+  box-shadow: var(--wdc-shadow-sm);
   display: flex;
   flex-direction: column;
-  /* Fill grid cell — was 60px-fixed which left huge empty space when
-     placed in a tall card; now the SVG flexes with the parent. */
   height: 100%;
-  min-height: 140px;
+  min-height: 160px;
 }
 .timeline-title {
   display: flex; align-items: center; gap: 8px;
