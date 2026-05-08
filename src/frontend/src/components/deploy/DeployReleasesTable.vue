@@ -250,7 +250,7 @@ function formatDuration(e: DeployHistoryEntryDto): string {
 .refresh-btn { margin-left: auto; }
 .releases-empty { padding: 32px 0; }
 .releases-table { width: 100%; }
-.releases-detail { padding: 8px 32px; background: var(--el-fill-color-lighter); }
+.releases-detail { padding: 14px 32px; background: var(--wdc-surface-2); border-top: 1px solid var(--wdc-border); }
 .releases-detail-table { width: 100%; }
 .host-pill { margin-right: 4px; margin-bottom: 2px; }
 .muted { color: var(--el-text-color-secondary); }
