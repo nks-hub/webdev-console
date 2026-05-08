@@ -987,10 +987,29 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 /*
-  Sites table — let global tokens.css drive header/row/hover styling.
-  Removed per-page overrides that fought the new accent uppercase
-  header + accent left-bar hover treatment.
+  Sites table — compact density. Smaller row padding + tighter
+  cells + inline aliases on the same row as the domain (was
+  breaking onto a 2nd line and doubling row height).
 */
+.sites-table :deep(.el-table__body tr.el-table__row td) {
+  padding: 10px 14px !important;
+  font-size: 0.82rem;
+}
+.sites-table :deep(.el-table__header-wrapper th.el-table__cell) {
+  padding: 10px 14px !important;
+}
+.sites-table :deep(.el-tag) {
+  height: 22px !important;
+  padding: 0 8px !important;
+  font-size: 0.68rem !important;
+}
+.sites-table :deep(.col-aliases) {
+  margin-top: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
 
 .cell-domain {
   display: flex;
