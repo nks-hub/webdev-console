@@ -415,17 +415,18 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--el-color-warning-dark-2);
   background: var(--el-color-warning-light-9);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: var(--wdc-radius-sm);
   margin: 4px 0;
   border-left: 3px solid var(--el-color-warning);
 }
 
 .mcp-confirm-meta code {
   font-family: var(--el-font-family-monospace, monospace);
-  background: var(--el-fill-color-light);
-  padding: 1px 4px;
-  border-radius: 3px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  padding: 1px 6px;
+  border-radius: var(--wdc-radius-sm);
 }
 .mcp-confirm-expiry {
   font-variant-numeric: tabular-nums;
