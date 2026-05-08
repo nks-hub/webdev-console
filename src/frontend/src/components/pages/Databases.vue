@@ -664,30 +664,35 @@ onMounted(() => { void loadDatabases() })
 </script>
 
 <style scoped>
+/*
+  Databases page — colorful redesign. Hero header with big title,
+  accent-tinted page-header strip, content area in card with
+  generous padding.
+*/
 .databases-page {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--wdc-bg);
+  background: transparent;
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px 12px;
+  padding: 20px 24px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--wdc-border);
-  background: var(--wdc-surface);
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
-.header-left { display: flex; align-items: center; gap: 12px; }
+.header-left { display: flex; align-items: center; gap: 16px; }
 .page-title {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--wdc-text);
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
@@ -732,11 +737,11 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--wdc-surface-2);
-  border-bottom: 1px solid var(--wdc-border-strong);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  border-bottom: 2px solid var(--wdc-accent-glow);
   flex-shrink: 0;
-  padding: 0 12px 0 8px;
-  height: 44px;
+  padding: 0 16px 0 12px;
+  height: 52px;
 }
 
 .tab-strip {
@@ -748,31 +753,31 @@ onMounted(() => { void loadDatabases() })
 .tab-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 16px;
+  gap: 8px;
+  padding: 0 20px;
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--wdc-text-3);
-  font-size: 0.82rem;
-  font-weight: 500;
-  border-bottom: 2px solid transparent;
+  color: var(--wdc-text-2);
+  font-size: 0.86rem;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
   transition: all 0.12s;
   font-family: inherit;
   position: relative;
-  margin-bottom: -1px; /* overlap right-tabs border-bottom for a clean joint */
+  margin-bottom: -2px;
 }
 .tab-btn:hover:not(:disabled) {
-  color: var(--wdc-text);
-  background: var(--wdc-elevated);
+  color: var(--wdc-accent);
 }
 .tab-btn.active {
   color: var(--wdc-accent);
   border-bottom-color: var(--wdc-accent);
-  background: var(--wdc-bg);
-  font-weight: 600;
+  background: var(--wdc-accent-dim);
+  font-weight: 700;
+  box-shadow: inset 0 -1px 0 var(--wdc-accent), 0 -2px 12px var(--wdc-accent-glow);
 }
-.tab-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .tab-actions { display: flex; gap: 6px; padding-right: 6px; }
 
