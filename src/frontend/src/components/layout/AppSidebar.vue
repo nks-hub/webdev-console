@@ -417,17 +417,18 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .workspace-mark {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  background: var(--wdc-accent);
+  border-radius: var(--wdc-radius-sm);
+  background: var(--wdc-gradient-accent);
   color: #ffffff;
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.06em;
+  box-shadow: var(--wdc-shadow-sm);
 }
 
 .workspace-copy {
@@ -494,9 +495,9 @@ async function toggleSvc(svc: ServiceInfo) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  transition: background 0.1s;
+  padding: 7px 12px;
+  border-radius: var(--wdc-radius-sm);
+  transition: background 0.12s, color 0.12s;
   min-height: 36px;
   border: none;
   cursor: pointer;
