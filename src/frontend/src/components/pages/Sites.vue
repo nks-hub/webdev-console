@@ -987,25 +987,34 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 /*
-  Compact density — 6px row padding (≈32px row height) + force the
-  domain cell into a single horizontal flow so aliases / port / SSL /
-  bind-IP / plugin badges don't break onto a 2nd line. Doesn't touch
-  Element Plus's `.cell` flex internals (those broke the centering
-  fix earlier).
+  TRULY compact — force ~30px row height. Padding 4/10, font 0.78rem,
+  tags 18px tall, line-height 1.2. Plus single-row flex on the domain
+  cell so aliases / port / SSL / bind / plugin badges stay inline.
 */
+.sites-table :deep(.el-table__row) {
+  height: 30px !important;
+}
 .sites-table :deep(td.el-table__cell) {
-  padding: 6px 12px !important;
+  padding: 0 12px !important;
+  font-size: 0.78rem;
+  line-height: 1.2;
 }
 .sites-table :deep(th.el-table__cell) {
-  padding: 8px 12px !important;
+  padding: 6px 12px !important;
+}
+.sites-table :deep(.el-table .cell) {
+  padding: 0 !important;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .sites-table :deep(.cell-domain) {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  line-height: 1.2;
 }
 .sites-table :deep(.cell-domain-row) {
   display: inline-flex;
@@ -1016,7 +1025,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .sites-table :deep(.col-aliases) {
   display: inline-flex !important;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin: 0 !important;
 }
 .sites-table :deep(.col-tunnel) {
@@ -1025,10 +1034,23 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   margin: 0 !important;
 }
 .sites-table :deep(.el-tag) {
-  height: 20px !important;
-  padding: 0 7px !important;
-  font-size: 0.66rem !important;
-  line-height: 18px !important;
+  height: 18px !important;
+  padding: 0 6px !important;
+  font-size: 0.62rem !important;
+  line-height: 16px !important;
+}
+.sites-table :deep(.alias-dot) {
+  height: 18px !important;
+  min-width: 22px;
+  padding: 0 6px;
+  font-size: 0.62rem;
+}
+.sites-table :deep(.col-domain) {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+.sites-table :deep(.col-mono) {
+  font-size: 0.74rem;
 }
 
 .cell-domain {
