@@ -671,13 +671,14 @@ function closeConfig() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
   /*
-    Was hardcoded white-alpha — invisible in light mode. Switch to
-    design tokens (visible in both themes).
+    Unified accent-dim gradient strip across every page. Was a flat
+    surface-2 stripe; the gradient ties pages to the global accent
+    identity.
   */
-  border-bottom: 1px solid var(--wdc-border-strong);
-  background: var(--wdc-surface-2);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
 .header-title-block {
@@ -687,10 +688,11 @@ function closeConfig() {
 }
 
 .page-title {
-  font-size: 1.18rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--wdc-text);
   letter-spacing: -0.02em;
+  margin: 0;
 }
 
 .page-count {
