@@ -257,9 +257,22 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.hub-header h2 { margin: 0 0 4px; }
-.hub-header .muted { color: var(--el-text-color-secondary); margin: 0 0 8px; font-size: 13px; }
+.page { padding: 0; display: flex; flex-direction: column; gap: 0; }
+.hub-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+}
+.hub-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wdc-text);
+}
+.hub-header .muted { color: var(--wdc-text-3); margin: 4px 0 0; font-size: 0.85rem; }
+.hub-tabs { padding: 0 24px; }
+.hub-stats { margin: 16px 24px 4px !important; }
 .hub-tabs :deep(.el-tabs__content) { padding-top: 8px; }
 .tab-label { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats {
