@@ -93,14 +93,25 @@ function cancelSwitch() {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--el-border-color);
+  padding: 8px 16px;
+  border-radius: var(--wdc-radius-sm);
+  border: 1px solid var(--wdc-border);
+  background: var(--wdc-surface);
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
+  box-shadow: var(--wdc-shadow-sm);
 }
-.version-tile:hover { border-color: var(--el-color-primary); background: var(--el-color-primary-light-9); }
-.version-tile.active { border-color: var(--el-color-success); background: var(--el-color-success-light-9); }
+.version-tile:hover {
+  border-color: var(--wdc-accent-glow);
+  background: var(--wdc-hover);
+  box-shadow: var(--wdc-shadow-card);
+  transform: translateY(-1px);
+}
+.version-tile.active {
+  border-color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
+  box-shadow: 0 0 0 1px var(--el-color-success-light-5), var(--wdc-shadow-sm);
+}
 .ver-label { font-weight: 600; font-size: 0.9rem; }
 .switch-error { color: var(--el-color-danger); font-size: 0.82rem; }
 </style>
