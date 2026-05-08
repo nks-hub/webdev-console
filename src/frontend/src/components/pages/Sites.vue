@@ -1153,11 +1153,11 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 1px 6px;
+  padding: 1px 8px;
   background: var(--wdc-surface-2);
   color: var(--wdc-text-3);
   border: 1px solid var(--wdc-border);
-  border-radius: 6px;
+  border-radius: 999px;
   margin-left: 4px;
 }
 
