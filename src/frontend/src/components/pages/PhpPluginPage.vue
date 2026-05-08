@@ -269,11 +269,18 @@ onMounted(() => { void loadVersions() })
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: var(--wdc-bg); padding: 0; }
-.page-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid var(--wdc-border); }
+.cf-page { min-height: 100%; background: transparent; padding: 0; }
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+}
 .page-autostart-row { padding: 10px 24px 0; max-width: 720px; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
-.page-title { font-size: 1.25rem; font-weight: 800; color: var(--wdc-text); margin: 0; }
+.page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
 .page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }
 .header-actions { display: flex; gap: 8px; }
 .status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 24px 4px; }
