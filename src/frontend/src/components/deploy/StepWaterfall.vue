@@ -101,8 +101,10 @@ function formatMs(ms: number): string {
 }
 .step-status {
   font-size: 0.7em; letter-spacing: 0.05em;
-  padding: 1px 6px; border-radius: 3px;
-  background: var(--el-fill-color-light);
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  font-weight: 600;
 }
 .step-duration { font-size: 0.85em; color: var(--el-text-color-secondary); }
 
@@ -111,10 +113,11 @@ function formatMs(ms: number): string {
 .ponr-banner {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 10px;
-  margin: 8px 0; padding: 8px 14px;
-  border-radius: 4px;
+  margin: 10px 0; padding: 10px 16px;
+  border-radius: var(--wdc-radius);
   font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
   font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .ponr-banner--cruising {
   background: var(--el-fill-color-light);
