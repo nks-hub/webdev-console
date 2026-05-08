@@ -790,19 +790,20 @@ onBeforeUnmount(() => {
 .collapsed-reads-row .chev { font-size: 10px; }
 .call-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: 1px solid var(--wdc-border);
+  transition: background 0.12s;
 }
 .session-body .call-row:first-child { border-top: none; }
-.call-row:hover { background: var(--el-fill-color-light); }
+.call-row:hover { background: var(--wdc-hover); }
 .call-row.danger-destructive { background: var(--el-color-danger-light-9); }
 .call-row.clickable-row { cursor: pointer; }
-.call-row.expanded { background: var(--el-fill-color-darker); }
+.call-row.expanded { background: var(--wdc-accent-dim); }
 .row-detail {
-  padding: 8px 16px 12px 28px;
-  background: var(--el-fill-color);
-  border-top: 1px dashed var(--el-border-color-lighter);
+  padding: 12px 18px 14px 32px;
+  background: var(--wdc-surface-2);
+  border-top: 1px dashed var(--wdc-border);
   font-size: 12px;
 }
 .detail-grid {
