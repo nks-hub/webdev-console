@@ -70,11 +70,11 @@ function onRedirectChange(v: unknown) {
 
 <style scoped>
 .tab-content { padding: 16px 0; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); margin-bottom: 16px; }
-.edit-card-header { padding: 12px 16px; border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; }
-.edit-card-title { font-weight: 700; color: var(--wdc-text); }
+.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius-lg); margin-bottom: 16px; box-shadow: var(--wdc-shadow-sm); }
+.edit-card-header { padding: 14px 18px; border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; background: linear-gradient(180deg, var(--wdc-accent-dim), transparent); border-radius: var(--wdc-radius-lg) var(--wdc-radius-lg) 0 0; }
+.edit-card-title { font-weight: 700; color: var(--wdc-text); font-size: 0.95rem; }
 .edit-card-hint { font-size: 0.78rem; color: var(--wdc-text-3); }
-.edit-card-body { padding: 12px 16px; }
+.edit-card-body { padding: 14px 18px; }
 .ssl-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--wdc-border); }
 .ssl-toggle-row:last-child { border-bottom: none; }
 .ssl-toggle-title { font-weight: 600; color: var(--wdc-text); }
