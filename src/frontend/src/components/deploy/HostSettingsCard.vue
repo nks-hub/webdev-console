@@ -132,14 +132,16 @@ const envHint = computed(() => {
 .host-settings-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--el-border-color-lighter);
-  transition: border-color 0.2s ease;
+  border: 1px solid var(--wdc-border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .host-settings-card.host-prod {
   border-left: 3px solid var(--el-color-danger);
 }
 .host-settings-card:hover {
-  border-color: var(--el-color-primary-light-5);
+  border-color: var(--wdc-accent-glow);
+  box-shadow: var(--wdc-shadow-card);
 }
 
 .card-header {
