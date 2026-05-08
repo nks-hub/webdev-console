@@ -295,6 +295,17 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+}
+.help-page-header h1,
+.help-page-header h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wdc-text);
+  margin: 0;
 }
 
 /* Breadcrumb */
