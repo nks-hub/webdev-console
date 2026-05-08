@@ -190,12 +190,12 @@ onMounted(loadCatalogUrl)
   max-width: 460px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: 14px;
-  padding: 36px 32px;
+  border-radius: var(--wdc-radius-xl);
+  padding: 40px 36px;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--wdc-shadow-pop);
 }
 .login-brand {
   display: flex;

@@ -507,10 +507,10 @@ onMounted(() => {
 .pm-card--disabled:hover { opacity: 0.75; }
 
 .pm-card:hover {
-  border-color: var(--wdc-border-strong);
+  border-color: var(--wdc-accent-glow);
   background: var(--wdc-surface-2);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  transform: translateY(-1px);
+  box-shadow: var(--wdc-shadow-card);
+  transform: translateY(-2px);
 }
 .pm-card--enabled:hover { border-left-color: var(--wdc-accent); }
 

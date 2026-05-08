@@ -53,8 +53,8 @@ const iconComponent = computed(() => {
 }
 .metric-tile:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  border-color: var(--el-color-primary-light-3);
+  box-shadow: var(--wdc-shadow-card);
+  border-color: var(--wdc-accent-glow);
 }
 .metric-tile:focus-visible {
   outline: 2px solid var(--el-color-primary);
