@@ -578,13 +578,15 @@ onMounted(() => {
 
 .pm-version {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--wdc-text-muted);
   background: var(--wdc-surface-2);
-  padding: 1px 6px;
-  border-radius: 4px;
+  border: 1px solid var(--wdc-border);
+  padding: 1px 8px;
+  border-radius: 999px;
   text-transform: none;
   letter-spacing: 0;
+  font-weight: 500;
 }
 
 .pm-author {
