@@ -134,8 +134,8 @@ html:not(.dark) {
   --wdc-elevated:    #ede9e1;
   --wdc-hover:       #f0ece4;
 
-  --wdc-border:          rgba(28, 25, 23, 0.07);
-  --wdc-border-strong:   rgba(28, 25, 23, 0.16);
+  --wdc-border:          rgba(28, 25, 23, 0.12);
+  --wdc-border-strong:   rgba(28, 25, 23, 0.22);
 
   --wdc-text:        #1a1819;
   --wdc-text-2:      #44424a;
@@ -889,7 +889,13 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 .el-table__body tr.el-table__row td {
   background: var(--wdc-surface) !important;
-  border-bottom: 1px solid var(--wdc-border) !important;
+  /*
+    Stronger row hairline — was --wdc-border at 7% alpha in light
+    mode which made row separators invisible. Now uses
+    --wdc-border-strong (22% in light, 16% in dark) so row edges
+    always read against any surface bg.
+  */
+  border-bottom: 1px solid var(--wdc-border-strong) !important;
   color: var(--wdc-text);
   font-size: 0.86rem;
   padding: 16px !important;
