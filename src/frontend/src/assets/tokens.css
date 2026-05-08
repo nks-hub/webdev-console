@@ -888,15 +888,15 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 .el-table__body tr.el-table__row {
-  height: 38px !important;
+  height: 44px !important;
 }
 .el-table__body tr.el-table__row td {
   background: var(--wdc-surface) !important;
   border-bottom: 1px solid var(--wdc-border-strong) !important;
   color: var(--wdc-text);
-  font-size: 0.8rem;
-  /* Compact-but-comfortable: 38px row height. */
-  padding: 6px 12px !important;
+  font-size: 0.82rem;
+  /* Comfortable compact: 44px row height. */
+  padding: 8px 12px !important;
   line-height: 1.3;
   position: relative;
   transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
