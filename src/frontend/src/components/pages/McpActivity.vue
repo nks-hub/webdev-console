@@ -645,11 +645,12 @@ onBeforeUnmount(() => {
 }
 .analytics-timeline, .analytics-toptools { min-width: 0; }
 .perf-kpis {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  padding: 6px 10px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 12px 16px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .kpi {
   flex: 1 1 100px;
@@ -674,10 +675,12 @@ onBeforeUnmount(() => {
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;
-  padding: 10px 14px;
-  background: var(--el-fill-color-light);
-  border-radius: 6px;
-  border-left: 3px solid var(--el-border-color);
+  padding: 14px 18px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  border-left: 3px solid var(--wdc-border-strong);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .stat-tile.read { border-left-color: var(--el-color-info); }
 .stat-tile.mutate { border-left-color: var(--el-color-warning); }
@@ -717,9 +720,11 @@ onBeforeUnmount(() => {
 .sessions-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
   overflow: hidden;
+  background: var(--wdc-surface);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .session-card {
   border-bottom: 1px solid var(--el-border-color-lighter);
