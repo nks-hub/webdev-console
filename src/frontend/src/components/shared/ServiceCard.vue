@@ -286,19 +286,20 @@ function formatUptime(seconds: number): string {
   flex: 1;
   height: 8px;
   background: var(--wdc-elevated);
-  border-radius: 4px;
+  border-radius: 999px;
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 
 .metric-bar {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .metric-bar-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 999px;
   transition: width 0.4s ease;
 }
 
