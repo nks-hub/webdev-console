@@ -1319,13 +1319,26 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
 /* Row actions: keep switch + edit + overflow on one line, prevent
    wrapping into 2 rows which collides with the fixed-right column
-   border. */
+   border. Adds 8px right gap so the Edit button doesn't slam against
+   the table's right edge / scrollbar.
+*/
 .site-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 8px;
   flex-wrap: nowrap;
   white-space: nowrap;
+  padding-right: 8px;
+}
+/*
+  Action column inner cell — Element Plus's `.cell` adds 10px on each
+  side of every td. Add explicit right-padding on the last (fixed)
+  column so the Edit button doesn't sit flush with the table edge.
+*/
+.sites-table :deep(.el-table-fixed-right .cell),
+.sites-table :deep(td.el-table-fixed-column--right .cell) {
+  padding-right: 16px !important;
 }
 
 .col-empty {
