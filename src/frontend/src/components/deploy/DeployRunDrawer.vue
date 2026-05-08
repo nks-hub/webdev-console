@@ -294,10 +294,10 @@ async function onCancel(): Promise<void> {
 .drawer-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
 }
-.drawer-title { margin: 0; font-size: 1.05rem; }
-.drawer-title small { color: var(--el-text-color-secondary); margin-left: 8px; font-weight: normal; font-size: 0.85em; }
-.drawer-subline { color: var(--el-text-color-secondary); font-size: 12px; margin-top: 2px; }
-.drawer-actions { display: flex; align-items: center; gap: 8px; }
+.drawer-title { margin: 0; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; color: var(--wdc-text); }
+.drawer-title small { color: var(--wdc-text-3); margin-left: 8px; font-weight: 500; font-size: 0.7em; }
+.drawer-subline { color: var(--wdc-text-3); font-size: 0.78rem; margin-top: 4px; }
+.drawer-actions { display: flex; align-items: center; gap: 10px; }
 
 .drawer-body { display: flex; flex-direction: column; gap: 16px; }
 .drawer-collapse { border: none; }
@@ -307,10 +307,11 @@ async function onCancel(): Promise<void> {
 
 /* Phase 7.5+++ — hook execution panel */
 .hook-panel {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-  padding: 8px 12px;
-  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 12px 14px;
+  background: var(--wdc-surface-2);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .hook-panel-header {
   display: flex; align-items: center; gap: 8px;
