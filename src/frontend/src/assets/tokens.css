@@ -1292,22 +1292,34 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
   border-color: rgba(245, 158, 11, 0.25) !important;
 }
 
-/* Collapse */
+/*
+  Collapse — SOFT VIBRANT card panel. Active header gets the accent
+  gradient ribbon, inactive sits on plain surface.
+*/
 .el-collapse {
-  border-color: var(--wdc-border) !important;
+  border: 1px solid var(--wdc-border) !important;
+  border-radius: var(--wdc-radius-lg) !important;
+  overflow: hidden;
+  box-shadow: var(--wdc-shadow-sm);
 }
 
 .el-collapse-item__header {
   background: var(--wdc-surface) !important;
   border-bottom-color: var(--wdc-border) !important;
   color: var(--wdc-text) !important;
-  font-size: 0.85rem;
-  height: 44px;
-  padding: 0 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  height: 48px;
+  padding: 0 20px;
+  transition: background 0.15s, color 0.15s;
 }
 
+.el-collapse-item__header:hover { background: var(--wdc-hover) !important; }
+
 .el-collapse-item__header.is-active {
-  color: var(--wdc-text) !important;
+  color: var(--wdc-accent) !important;
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface)) !important;
+  border-bottom-color: var(--wdc-accent-glow) !important;
 }
 
 .el-collapse-item__wrap {
@@ -1316,14 +1328,19 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
 }
 
 .el-collapse-item__content {
-  padding-bottom: 0 !important;
+  padding: 16px 20px !important;
   color: var(--wdc-text);
 }
 
-/* Progress */
+/* Progress — bigger radius, smoother fill */
 .el-progress-bar__outer {
-  background: var(--wdc-elevated) !important;
-  border-radius: 4px !important;
+  background: var(--wdc-surface-2) !important;
+  border-radius: 6px !important;
+  height: 8px !important;
+}
+.el-progress-bar__inner {
+  border-radius: 6px !important;
+  background: var(--wdc-gradient-accent) !important;
 }
 
 .el-progress-bar__inner {
