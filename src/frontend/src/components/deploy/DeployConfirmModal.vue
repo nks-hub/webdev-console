@@ -284,11 +284,13 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
 .confirm-hint code { font-family: ui-monospace, monospace; font-size: 11px; padding: 0 3px; background: var(--el-fill-color-light); border-radius: 2px; }
 .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .confirm-context {
-  display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 12px; font-size: 13px;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 16px; font-size: 13px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
   border-left: 3px solid var(--el-color-info-light-3);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .confirm-context.warn-recent {
   border-left-color: var(--el-color-warning);
