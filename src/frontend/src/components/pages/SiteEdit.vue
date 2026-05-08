@@ -2354,10 +2354,10 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 .series-toggle {
-  font-size: 0.72rem !important;
+  font-size: 0.7rem !important;
   font-weight: 600 !important;
-  padding: 2px 8px !important;
-  border-radius: 4px !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
   cursor: pointer;
 }
 .historical-chart-wrap {
