@@ -672,8 +672,12 @@ function closeConfig() {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+  /*
+    Was hardcoded white-alpha — invisible in light mode. Switch to
+    design tokens (visible in both themes).
+  */
+  border-bottom: 1px solid var(--wdc-border-strong);
+  background: var(--wdc-surface-2);
 }
 
 .header-title-block {
@@ -739,7 +743,12 @@ function closeConfig() {
   gap: 14px;
   padding: 0 24px;
   height: 58px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  /*
+    Was hardcoded rgba(255,255,255,0.06) — invisible in light mode.
+    Switch to the design-token border-strong (22% in light, 16% in
+    dark) so row separators are visible on either surface.
+  */
+  border-bottom: 1px solid var(--wdc-border-strong);
   transition: background 0.1s, border-color 0.1s;
   cursor: default;
 }
@@ -749,7 +758,7 @@ function closeConfig() {
 }
 
 .service-row:hover {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--wdc-hover);
 }
 
 /* ─── Status dot ──────────────────────────────────────────────────────────── */
