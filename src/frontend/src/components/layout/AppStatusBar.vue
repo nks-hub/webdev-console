@@ -82,7 +82,9 @@ function formatMem(bytes: number): string {
   gap: 14px;
   height: 30px;
   padding: 0 16px;
-  background: var(--wdc-surface);
+  background: color-mix(in srgb, var(--wdc-surface) 78%, transparent);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
   border-top: 1px solid var(--wdc-border);
   font-size: 0.78rem;
   color: var(--wdc-text-2);
