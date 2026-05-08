@@ -188,10 +188,12 @@ async function copyJson(): Promise<void> {
 <style scoped>
 .session-detail { display: flex; flex-direction: column; gap: 16px; padding: 0 8px; }
 .detail-summary {
-  background: var(--el-fill-color-light);
-  border-radius: 6px;
-  padding: 10px 12px;
-  display: flex; flex-direction: column; gap: 4px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .summary-row {
   display: flex; gap: 12px; align-items: baseline;
@@ -207,19 +209,21 @@ async function copyJson(): Promise<void> {
 .by-tool { display: flex; flex-direction: column; gap: 2px; }
 .tool-line {
   display: flex; gap: 10px;
-  padding: 4px 8px;
-  background: var(--el-fill-color);
-  border-radius: 3px;
+  padding: 6px 10px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-sm);
   font-size: 12px;
 }
 .detail-actions { display: flex; gap: 8px; }
 .call-list { display: flex; flex-direction: column; gap: 2px; }
 .full-call-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-size: 12px;
-  border-radius: 3px;
-  background: var(--el-fill-color);
+  border-radius: var(--wdc-radius-sm);
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
 }
 .full-call-row.danger-destructive { background: var(--el-color-danger-light-9); }
 .full-call-row.danger-mutate { border-left: 2px solid var(--el-color-warning); }
