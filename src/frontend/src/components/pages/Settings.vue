@@ -621,7 +621,7 @@
               <div
                 v-if="deployBackendMode"
                 class="hint"
-                style="margin-bottom: 12px; padding: 8px 12px; border-radius: 4px; background: var(--el-fill-color-light, #f5f7fa); display: inline-block"
+                style="margin-bottom: 12px; padding: 10px 14px; border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
               >
                 <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
                   🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
