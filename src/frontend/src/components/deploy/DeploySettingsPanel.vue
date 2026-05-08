@@ -1801,10 +1801,10 @@ defineExpose({ saveSettings })
   grid-template-columns: 1fr;
 }
 .hosts-empty {
-  padding: 32px 16px;
-  background: var(--el-fill-color-lighter);
-  border: 1px dashed var(--el-border-color-lighter);
-  border-radius: 8px;
+  padding: 36px 20px;
+  background: var(--wdc-surface-2);
+  border: 1px dashed var(--wdc-border-strong);
+  border-radius: var(--wdc-radius);
   text-align: center;
 }
 .empty-title {
