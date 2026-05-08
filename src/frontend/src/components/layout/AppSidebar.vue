@@ -557,7 +557,7 @@ async function toggleSvc(svc: ServiceInfo) {
   color: var(--wdc-text-2);
   font-size: 0.92rem;
   font-weight: 600;
-  transition: background 0.1s, color 0.1s, border-left-color 0.1s;
+  transition: background 0.12s, color 0.12s, border-left-color 0.12s;
   /* Flat: 3px left edge that becomes accent when active */
   border-left: 3px solid transparent;
 }
