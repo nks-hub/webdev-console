@@ -1068,21 +1068,23 @@ function cooldownActiveSec(g: McpGrantRow): number {
 .expires-soon-badge {
   display: inline-block;
   margin-left: 6px;
-  padding: 0 6px;
-  font-size: 11px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 600;
   background: var(--el-color-warning-light-9);
   border: 1px solid var(--el-color-warning-light-5);
-  border-radius: 3px;
+  border-radius: 999px;
   color: var(--el-color-warning-dark-2);
 }
 .cooldown-badge {
   display: inline-block;
   margin-left: 6px;
-  padding: 0 6px;
-  font-size: 11px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 600;
   background: var(--el-color-info-light-9);
   border: 1px solid var(--el-color-info-light-5);
-  border-radius: 3px;
+  border-radius: 999px;
   color: var(--el-color-info-dark-2);
 }
 .test-match-result {
