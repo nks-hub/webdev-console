@@ -668,10 +668,16 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 .page-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wdc-text);
 }
 .muted {
   color: var(--el-text-color-secondary);

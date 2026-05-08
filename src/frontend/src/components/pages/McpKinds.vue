@@ -321,9 +321,25 @@ async function refresh(): Promise<void> {
 </script>
 
 <style scoped>
-.page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.page-header h2 { margin: 0; }
+.page { padding: 0; display: flex; flex-direction: column; gap: 0; }
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+}
+.page-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wdc-text);
+}
+.page > *:not(.page-header) { padding: 0 24px; }
+.page > .page-header + * { padding-top: 16px; }
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lock-count-badge {
   display: inline-block;

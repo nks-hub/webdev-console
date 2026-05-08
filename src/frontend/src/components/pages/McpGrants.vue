@@ -1028,10 +1028,25 @@ function cooldownActiveSec(g: McpGrantRow): number {
 </script>
 
 <style scoped>
-.page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; }
-.page-header h2 { margin: 0; }
+.page { padding: 0; display: flex; flex-direction: column; gap: 0; }
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+}
+.page-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wdc-text);
+}
 .page-header .actions { display: flex; gap: 8px; }
+.page > *:not(.page-header) { padding: 0 24px; }
+.page > .page-header + * { padding-top: 16px; }
 .muted { color: var(--el-text-color-secondary); }
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
