@@ -253,9 +253,11 @@ void _unused
   font-size: 0.66rem;
   margin-left: 6px;
   color: var(--wdc-text-3);
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 3px;
-  padding: 0 4px;
+  border-radius: var(--wdc-radius-sm);
+  padding: 1px 6px;
+  box-shadow: 0 1px 0 var(--wdc-border-strong);
 }
 
 .console-editor {
