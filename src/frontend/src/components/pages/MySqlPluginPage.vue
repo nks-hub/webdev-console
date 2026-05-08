@@ -1125,12 +1125,12 @@ watch(() => route.query.tab, value => {
 .database-loading { padding: 18px 0; }
 .database-workspace { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .database-list { display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow: auto; padding-right: 4px; }
-.database-list-item { width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border: 1px solid var(--wdc-border); background: var(--wdc-bg); color: var(--wdc-text); border-radius: 6px; padding: 10px 12px; text-align: left; cursor: pointer; }
-.database-list-item:hover { border-color: var(--wdc-border-strong); }
-.database-list-item.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); }
+.database-list-item { width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border: 1px solid var(--wdc-border); background: var(--wdc-surface); color: var(--wdc-text); border-radius: var(--wdc-radius-sm); padding: 10px 14px; text-align: left; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s, background 0.15s; }
+.database-list-item:hover { border-color: var(--wdc-accent-glow); box-shadow: var(--wdc-shadow-sm); }
+.database-list-item.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); box-shadow: 0 0 0 1px var(--wdc-accent-glow); }
 .database-name { min-width: 0; overflow-wrap: anywhere; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700; }
 .database-meta { flex: 0 0 auto; color: var(--wdc-text-3); font-size: 0.72rem; white-space: nowrap; }
-.database-detail { min-width: 0; border: 1px solid var(--wdc-border); border-radius: 6px; background: var(--wdc-bg); padding: 14px; }
+.database-detail { min-width: 0; border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius-lg); background: var(--wdc-surface); padding: 18px; box-shadow: var(--wdc-shadow-sm); }
 .database-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .database-detail-title { margin: 0; color: var(--wdc-text); font-family: 'JetBrains Mono', monospace; font-size: 1rem; overflow-wrap: anywhere; }
 .database-detail-subtitle { margin-top: 4px; color: var(--wdc-text-3); font-size: 0.75rem; }
@@ -1144,7 +1144,7 @@ watch(() => route.query.tab, value => {
 .query-input :deep(textarea) { font-family: 'JetBrains Mono', monospace !important; font-size: 0.82rem; }
 .query-actions { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .query-time { color: var(--wdc-text-3); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
-.query-output { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0; padding: 12px; border: 1px solid var(--wdc-border); border-radius: 6px; background: var(--wdc-surface); color: var(--wdc-text-2); font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; line-height: 1.5; }
+.query-output { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0; padding: 14px 16px; border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); background: var(--wdc-surface-2); color: var(--wdc-text-2); font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; line-height: 1.55; box-shadow: var(--wdc-shadow-sm); }
 .user-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
