@@ -178,11 +178,12 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
 }
 .status-host-pill {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 4px 10px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
-  font-size: 13px;
+  padding: 4px 12px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
 }
 .pill-failed {
   border-color: var(--el-color-danger-light-5);
