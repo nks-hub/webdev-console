@@ -1088,8 +1088,10 @@ function cooldownActiveSec(g: McpGrantRow): number {
   color: var(--el-color-info-dark-2);
 }
 .test-match-result {
-  margin-top: 12px; padding: 8px 12px; border-radius: 4px;
+  margin-top: 12px; padding: 12px 16px;
+  border-radius: var(--wdc-radius-sm);
   font-size: 13px;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .test-match-result.ok {
   background: var(--el-color-success-light-9);
@@ -1101,9 +1103,11 @@ function cooldownActiveSec(g: McpGrantRow): number {
 }
 .bulk-toolbar {
   display: flex; align-items: center; gap: 12px;
-  padding: 8px 12px; margin-top: 4px;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
+  padding: 12px 16px; margin-top: 8px;
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .usage-toolbar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
