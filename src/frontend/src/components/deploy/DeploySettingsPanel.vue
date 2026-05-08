@@ -1901,7 +1901,7 @@ defineExpose({ saveSettings })
   top: 8px;
   bottom: 8px;
   width: 2px;
-  background: var(--el-border-color-lighter);
+  background: var(--wdc-border);
 }
 .timeline-item {
   position: relative;

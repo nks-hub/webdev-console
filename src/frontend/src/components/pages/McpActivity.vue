@@ -777,7 +777,7 @@ onBeforeUnmount(() => {
   background: var(--wdc-surface);
   box-shadow: var(--wdc-shadow-sm);
 }
-.activity-group { border-bottom: 1px solid var(--el-border-color-lighter); }
+.activity-group { border-bottom: 1px solid var(--wdc-border); }
 .activity-group:last-child { border-bottom: none; }
 .collapsed-reads-row {
   display: flex; align-items: center; gap: 10px;
