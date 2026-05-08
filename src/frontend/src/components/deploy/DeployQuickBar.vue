@@ -220,10 +220,10 @@ async function onFire(): Promise<void> {
 
 <style scoped>
 .quick-bar {
-  padding: 12px 16px;
-  background: var(--el-fill-color-lighter);
-  border: 1px dashed var(--el-border-color-lighter);
-  border-radius: 6px;
+  padding: 14px 18px;
+  background: var(--wdc-surface-2);
+  border: 1px dashed var(--wdc-border-strong);
+  border-radius: var(--wdc-radius);
 }
 .quick-bar-row {
   display: flex;
