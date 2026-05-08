@@ -993,7 +993,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   cell so aliases / port / SSL / bind / plugin badges stay inline.
 */
 .sites-table :deep(.el-table__row) {
-  height: 30px !important;
+  height: 44px !important;
 }
 .sites-table :deep(td.el-table__cell) {
   padding: 0 12px !important;
