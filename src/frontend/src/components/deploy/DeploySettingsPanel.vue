@@ -1967,14 +1967,15 @@ defineExpose({ saveSettings })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
+  width: 28px;
+  height: 28px;
+  background: var(--wdc-accent-dim);
+  border: 1px solid var(--wdc-accent-glow);
   border-radius: 50%;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 12px;
-  color: var(--el-color-primary);
+  color: var(--wdc-accent);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .adv-card-lead {
   margin: 0 0 12px;
@@ -2012,14 +2013,15 @@ defineExpose({ saveSettings })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
+  width: 28px;
+  height: 28px;
+  background: var(--wdc-accent-dim);
+  border: 1px solid var(--wdc-accent-glow);
   border-radius: 50%;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 12px;
-  color: var(--el-color-primary);
+  color: var(--wdc-accent);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .notify-card-lead {
   margin: 0 0 12px;
