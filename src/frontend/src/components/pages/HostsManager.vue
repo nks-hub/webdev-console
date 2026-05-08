@@ -150,6 +150,29 @@
           </el-table-column>
         </el-table>
 
+        <!-- Hosts file empty corruption banner — Windows always ships
+             with at least the localhost entries, so 0 parsed entries
+             practically always means the file got truncated by an
+             external process (e.g. a botched manual edit).
+             Incident 2026-05-07: prior session left the file 0-byte
+             after a failed Set-Content/revert; UI showed the bland
+             "no entries" placeholder and gave the operator no idea
+             anything was wrong. -->
+        <el-alert
+          v-else-if="isPlatformWindows"
+          :title="$t('hosts.emptyHostsCorruptionTitle')"
+          type="error"
+          :closable="false"
+          show-icon
+          style="margin-top: 16px"
+        >
+          <div>{{ $t('hosts.emptyHostsCorruptionBody') }}</div>
+          <div style="margin-top: 8px; display: flex; gap: 8px">
+            <el-button size="small" :loading="reapplying" @click="reapply">
+              {{ $t('hosts.reapplyFromSites') }}
+            </el-button>
+          </div>
+        </el-alert>
         <el-empty v-else :image-size="64" :description="$t('hosts.emptyTitle')" />
       </el-card>
     </div>
@@ -214,6 +237,11 @@ function makeId() { return `row-${++_idCounter}` }
 
 const rows = ref<Row[]>([])
 const loading = ref(false)
+// Windows always ships hosts with default localhost entries — 0 entries
+// after parse on Windows is a corruption signal. On macOS/Linux the
+// default file is also non-empty but the empty case is plausibly a
+// fresh install, so we keep the gentle placeholder there.
+const isPlatformWindows = navigator.userAgent.toLowerCase().includes('windows')
 const applying = ref(false)
 const reapplying = ref(false)
 const backing = ref(false)
@@ -364,7 +392,35 @@ async function confirmApply() {
   } catch (e) {
     const msg: string = errorMessage(e)
     if (msg.includes('administrator') || msg.includes('403')) {
-      ElMessage.error(t('hosts.adminRequired'))
+      // Surface the admin-required failure with an inline "Restart as
+      // admin" CTA — clicking it raises a UAC prompt and re-spawns the
+      // daemon elevated, after which the renderer reconnects to the new
+      // port. Without this users were stuck on a toast they couldn't act
+      // on (incident 2026-05-07: hosts file empty, daemon non-elevated,
+      // no path forward in the UI).
+      ElMessageBox.confirm(
+        t('hosts.adminRequiredPrompt'),
+        t('hosts.adminRequired'),
+        {
+          confirmButtonText: t('hosts.restartAsAdmin'),
+          cancelButtonText: t('common.cancel'),
+          type: 'warning',
+        }
+      ).then(async () => {
+        const api = (window as unknown as {
+          electronAPI?: { elevateDaemon?: () => Promise<{ ok: boolean; error?: string }> }
+        }).electronAPI
+        if (!api?.elevateDaemon) {
+          ElMessage.error(t('hosts.elevateUnavailable'))
+          return
+        }
+        const r = await api.elevateDaemon()
+        if (r.ok) {
+          ElMessage.success(t('hosts.elevateDispatched'))
+        } else {
+          ElMessage.error(t('hosts.elevateFailed') + ': ' + (r.error ?? 'unknown'))
+        }
+      }).catch(() => { /* user dismissed */ })
     } else {
       ElMessage.error(t('hosts.applyError') + ': ' + msg)
     }
@@ -486,8 +542,9 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
   flex-shrink: 0;
   gap: 12px;
   flex-wrap: wrap;
@@ -500,10 +557,11 @@ onMounted(async () => {
 }
 
 .page-title {
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--wdc-text);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {

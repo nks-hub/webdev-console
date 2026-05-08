@@ -472,16 +472,20 @@ function formatDate(iso: string): string {
 </script>
 
 <style scoped>
-.backups-page { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+.backups-page { max-width: 1100px; margin: 0 auto; padding: 0; }
 
 .page-header {
   margin-bottom: 24px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--wdc-text);
   margin: 0 0 4px;
+  letter-spacing: -0.02em;
 }
 .page-subtitle {
   color: var(--wdc-text-3);

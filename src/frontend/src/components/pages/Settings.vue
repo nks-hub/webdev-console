@@ -2685,31 +2685,35 @@ async function save() {
 <style scoped>
 .settings-page {
   min-height: 100%;
-  background: var(--wdc-bg);
+  background: transparent;
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 0;
-  margin-bottom: 20px;
+  padding: 20px 24px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
 .page-title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--wdc-text);
+  margin: 0;
 }
 
 .page-subtitle {
-  font-size: 0.82rem;
-  color: var(--wdc-text-2);
-  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--wdc-text-3);
+  margin-top: 4px;
 }
 
 .page-body {
-  padding: 0 24px 24px;
+  padding: 24px;
 }
 
 .simple-settings-grid {
