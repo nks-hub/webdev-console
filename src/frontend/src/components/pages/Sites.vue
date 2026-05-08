@@ -906,60 +906,80 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 </script>
 
 <style scoped>
+/*
+  Sites page — full rewrite. Hero page-header, filter card, table
+  card. Generous 32px padding, big 32px title, accent count chip.
+*/
 .sites-page {
   min-height: 100%;
-  background: var(--wdc-bg);
+  background: transparent;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 24px 24px 0;
-  margin-bottom: 20px;
+  padding: 0;
+  margin: 0;
+  gap: 24px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
 }
 
 .page-title {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--wdc-text);
+  line-height: 1.1;
+  margin: 0;
 }
 
 .site-count {
-  min-width: 32px;
-  min-height: 26px;
+  min-width: 40px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.76rem;
-  font-weight: 600;
-  background: var(--wdc-surface-2);
-  color: var(--wdc-text);
-  border: 1px solid var(--wdc-border-strong);
-  padding: 2px 9px;
-  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent);
+  border: 1px solid var(--wdc-accent-glow);
+  padding: 4px 12px;
+  border-radius: 999px;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
+/*
+  Search bar wrapped in a surface card so it visually anchors above
+  the table card.
+*/
 .search-bar {
-  padding: 0 24px;
-  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-lg);
+  box-shadow: var(--wdc-shadow-sm);
+  margin: 0;
 }
 
 .page-body {
-  padding: 0 24px 24px;
+  padding: 0;
 }
 
 .sites-mobile-list {
