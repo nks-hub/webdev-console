@@ -245,8 +245,9 @@ onMounted(loadCatalogUrl)
 .mono { font-family: 'JetBrains Mono', monospace; }
 .login-catalog-hint .url {
   background: var(--wdc-surface-2);
-  padding: 4px 8px;
-  border-radius: 4px;
+  border: 1px solid var(--wdc-border);
+  padding: 6px 10px;
+  border-radius: var(--wdc-radius-sm);
   color: var(--wdc-text);
   font-size: 0.78rem;
   word-break: break-all;
