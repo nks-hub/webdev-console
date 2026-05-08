@@ -256,11 +256,12 @@ async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  margin-bottom: 14px;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .cmd-group-count {
   font-size: 13px;
