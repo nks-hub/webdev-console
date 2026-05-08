@@ -888,24 +888,15 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 .el-table__body tr.el-table__row {
-  height: 32px !important;
+  height: 38px !important;
 }
 .el-table__body tr.el-table__row td {
   background: var(--wdc-surface) !important;
-  /*
-    Stronger row hairline — was --wdc-border at 7% alpha in light
-    mode which made row separators invisible. Now uses
-    --wdc-border-strong (22% in light, 16% in dark) so row edges
-    always read against any surface bg.
-  */
   border-bottom: 1px solid var(--wdc-border-strong) !important;
   color: var(--wdc-text);
-  font-size: 0.78rem;
-  /*
-    Compact density — was 16px padding (=58px row height). Now 4px
-    vertical / 12px horizontal so rows hit ~32px target.
-  */
-  padding: 4px 12px !important;
+  font-size: 0.8rem;
+  /* Compact-but-comfortable: 38px row height. */
+  padding: 6px 12px !important;
   line-height: 1.3;
   position: relative;
   transition: background 0.15s, box-shadow 0.15s, transform 0.15s;

@@ -144,10 +144,11 @@
                   title="HTTPS enabled"
                 >SSL</el-tag>
               </div>
-              <div v-if="row.aliases?.length" class="col-aliases" :title="row.aliases.join(', ')">
-                <span class="alias-dot">+{{ row.aliases.length }}</span>
-                <span class="alias-preview">{{ row.aliases[0] }}<template v-if="row.aliases.length > 1">, …</template></span>
-              </div>
+              <span
+                v-if="row.aliases?.length"
+                class="alias-dot"
+                :title="row.aliases.join(', ')"
+              >+{{ row.aliases.length }}</span>
               <!-- F91.6: plugin-contributed per-row badges.
                    Cloudflare plugin registers CloudflareTunnelBadge here via
                    ContributeSitesBadge(). Disabling the plugin removes its
