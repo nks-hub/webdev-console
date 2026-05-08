@@ -226,21 +226,23 @@ void _unused
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
   flex-shrink: 0;
   gap: 12px;
-  background: var(--wdc-surface);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
 .toolbar-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 0.86rem;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.05rem;
   color: var(--wdc-text);
+  letter-spacing: -0.01em;
 }
+.toolbar-title :deep(.el-icon) { color: var(--wdc-accent); }
 
 .db-tag { font-family: 'JetBrains Mono', monospace; }
 
