@@ -202,10 +202,12 @@ const envHint = computed(() => {
 
 .branch-pill {
   display: inline-block;
-  padding: 2px 8px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  padding: 3px 10px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .local-paths {
