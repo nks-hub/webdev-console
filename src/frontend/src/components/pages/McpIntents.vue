@@ -690,10 +690,11 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 .domain-stats {
-  padding: 10px 12px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
+  padding: 14px 16px;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .domain-stats-title {
   font-size: 12px;
@@ -712,10 +713,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 8px;
-  background: var(--el-bg-color);
-  border-radius: 3px;
-  border: 1px solid var(--el-border-color-lighter);
+  padding: 8px 12px;
+  background: var(--wdc-surface-2);
+  border-radius: var(--wdc-radius-sm);
+  border: 1px solid var(--wdc-border);
 }
 .domain-name {
   font-weight: 600;
@@ -735,10 +736,11 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .filter-count {
   margin-left: auto;
@@ -748,12 +750,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 12px 16px;
   background: var(--el-color-warning-light-9, #fdf6ec);
   border: 1px solid var(--el-color-warning, #e6a23c);
   border-left-width: 4px;
-  border-radius: 4px;
-  margin-bottom: 4px;
+  border-radius: var(--wdc-radius);
+  margin-bottom: 8px;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .intent-table {
   width: 100%;
