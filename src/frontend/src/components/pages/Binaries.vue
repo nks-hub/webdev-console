@@ -628,9 +628,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 0;
-  margin-bottom: 16px;
+  padding: 20px 24px;
+  margin-bottom: 0;
   gap: 12px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
 .header-title-block {
@@ -640,10 +642,10 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--wdc-text);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 

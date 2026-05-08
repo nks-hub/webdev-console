@@ -904,15 +904,17 @@ async function autoVerifyToken() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 14px;
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title {
-  font-size: 1.25rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--wdc-text);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 .page-subtitle {
   font-size: 0.78rem;
