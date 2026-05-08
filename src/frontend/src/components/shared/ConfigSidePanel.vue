@@ -344,7 +344,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   flex-direction: column;
   background: var(--wdc-surface);
   border-left: 1px solid var(--wdc-border);
-  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--wdc-shadow-pop);
   overflow: hidden;
 }
 
