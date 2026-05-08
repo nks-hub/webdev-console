@@ -98,17 +98,18 @@ async function copyAll(): Promise<void> {
 .raw-output-text,
 .raw-output-ansi {
   margin: 0;
-  padding: 12px;
-  background: var(--el-fill-color-darker);
+  padding: 14px 16px;
+  background: var(--wdc-surface-2);
   color: var(--el-text-color-primary);
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
   max-height: 360px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.55;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .raw-output-text:focus,
 .raw-output-ansi:focus {
