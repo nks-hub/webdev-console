@@ -240,9 +240,11 @@ defineExpose({ open })
   font-size: 0.68rem;
   color: var(--wdc-text-3);
   background: var(--wdc-surface-2);
-  padding: 2px 6px;
-  border-radius: 3px;
+  border: 1px solid var(--wdc-border);
+  padding: 2px 7px;
+  border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 1px 0 var(--wdc-border-strong);
 }
 
 .command-empty {
