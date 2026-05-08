@@ -736,13 +736,14 @@ onBeforeUnmount(() => {
 .session-card.has-error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
 .session-header {
   display: flex; align-items: center; gap: 10px;
-  padding: 6px 12px;
-  background: var(--el-fill-color-light);
+  padding: 8px 14px;
+  background: var(--wdc-surface-2);
   cursor: pointer;
   user-select: none;
   font-size: 12px;
+  transition: background 0.12s;
 }
-.session-header:hover { background: var(--el-fill-color-darker); }
+.session-header:hover { background: var(--wdc-hover); }
 .session-header .chev { transition: transform 0.15s; font-size: 12px; flex-shrink: 0; }
 .session-header .chev.rotated { transform: rotate(90deg); }
 .session-header .at { flex-shrink: 0; }
@@ -754,11 +755,12 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 .count-pill {
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
-  background: var(--el-fill-color-darker);
+  font-weight: 700;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
 }
 .count-pill.read { background: var(--el-color-info-light-7); color: var(--el-color-info); }
 .count-pill.mutate { background: var(--el-color-warning-light-7); color: var(--el-color-warning); }
