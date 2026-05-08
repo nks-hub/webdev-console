@@ -2081,11 +2081,17 @@ defineExpose({ saveSettings })
 .hook-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 6px;
-  transition: opacity 0.15s ease;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  transition: opacity 0.15s ease, box-shadow 0.15s, border-color 0.15s;
+  box-shadow: var(--wdc-shadow-sm);
+  background: var(--wdc-surface);
+}
+.hook-row:hover {
+  border-color: var(--wdc-accent-glow);
+  box-shadow: var(--wdc-shadow-card);
 }
 /* Phase 7.5+++ — visually de-emphasize disabled hooks but keep them
    readable so operators can see WHAT they disabled. */
