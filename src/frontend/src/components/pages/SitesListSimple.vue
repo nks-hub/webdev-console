@@ -479,16 +479,18 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 .site-card {
   cursor: default;
-  border-radius: var(--wdc-radius) !important;
+  border-radius: var(--wdc-radius-lg) !important;
   border-color: var(--wdc-border) !important;
   background: var(--wdc-surface) !important;
-  transition: border-color 0.15s ease, background 0.15s ease;
-  box-shadow: none;
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s, background 0.15s;
+  box-shadow: var(--wdc-shadow-sm);
 }
 
 .site-card:hover {
-  border-color: var(--wdc-border-strong) !important;
+  border-color: var(--wdc-accent-glow) !important;
   background: var(--wdc-hover) !important;
+  box-shadow: var(--wdc-shadow-card), 0 0 0 1px var(--wdc-accent-glow);
+  transform: translateY(-1px);
 }
 
 :deep(.el-card__body) {
