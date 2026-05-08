@@ -281,7 +281,7 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
 .confirm-label { font-size: 13px; color: var(--el-text-color-regular); }
 .confirm-mismatch { color: var(--el-color-danger); font-size: 12px; }
 .confirm-hint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.4; }
-.confirm-hint code { font-family: ui-monospace, monospace; font-size: 11px; padding: 0 3px; background: var(--el-fill-color-light); border-radius: 2px; }
+.confirm-hint code { font-family: ui-monospace, monospace; font-size: 11px; padding: 1px 6px; background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius-sm); }
 .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .confirm-context {
   display: flex; flex-direction: column; gap: 6px;
