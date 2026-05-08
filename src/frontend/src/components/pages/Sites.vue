@@ -144,10 +144,11 @@
                   title="HTTPS enabled"
                 >SSL</el-tag>
               </div>
-              <div v-if="row.aliases?.length" class="col-aliases" :title="row.aliases.join(', ')">
-                <span class="alias-dot">+{{ row.aliases.length }}</span>
-                <span class="alias-preview">{{ row.aliases[0] }}<template v-if="row.aliases.length > 1">, …</template></span>
-              </div>
+              <span
+                v-if="row.aliases?.length"
+                class="alias-dot"
+                :title="row.aliases.join(', ')"
+              >+{{ row.aliases.length }}</span>
               <!-- F91.6: plugin-contributed per-row badges.
                    Cloudflare plugin registers CloudflareTunnelBadge here via
                    ContributeSitesBadge(). Disabling the plugin removes its
@@ -988,28 +989,39 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 /*
-  Sites table — compact density. Smaller row padding + tighter
-  cells + inline aliases on the same row as the domain (was
-  breaking onto a 2nd line and doubling row height).
+  Sites table — ULTRA compact density. Was 16px+ row padding + 2nd
+  line for aliases. Now: 6px row padding (single text line at 32px
+  row height), aliases collapsed to a single +N chip on the same
+  line as domain (full alias list lives in the chip's title tooltip).
 */
 .sites-table :deep(.el-table__body tr.el-table__row td) {
-  padding: 10px 14px !important;
-  font-size: 0.82rem;
+  padding: 6px 12px !important;
+  font-size: 0.8rem;
+  height: 32px;
+  vertical-align: middle;
 }
 .sites-table :deep(.el-table__header-wrapper th.el-table__cell) {
-  padding: 10px 14px !important;
+  padding: 8px 12px !important;
 }
 .sites-table :deep(.el-tag) {
-  height: 22px !important;
-  padding: 0 8px !important;
-  font-size: 0.68rem !important;
+  height: 20px !important;
+  padding: 0 7px !important;
+  font-size: 0.66rem !important;
+  line-height: 18px !important;
 }
-.sites-table :deep(.col-aliases) {
-  margin-top: 0 !important;
-  display: inline-flex;
+.sites-table :deep(.cell-domain),
+.sites-table :deep(.cell-domain-row) {
+  display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: 8px;
+  flex-wrap: nowrap;
+  min-height: 0;
+  padding: 0;
+}
+/* Make domain cell single-row: aliases inline + plugin badges inline. */
+.sites-table :deep(.cell-domain) > * {
+  display: inline-flex;
+  align-items: center;
 }
 
 .cell-domain {
@@ -1041,40 +1053,25 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   font-size: 0.72rem !important;
 }
 
-.col-aliases {
-  font-size: 0.76rem;
-  color: var(--wdc-text-2);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  /* F71: don't let the alias list grow the row vertically when there are
-     many aliases — truncate to a single line and show the full list via
-     the title tooltip on hover. The +N counter next to the first alias
-     tells the user how many there are. */
-  max-width: 320px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/*
+  Alias chip — single +N pill, full list in the title tooltip.
+  Was a multi-element row that wrapped onto a 2nd line.
+*/
 .alias-dot {
   color: var(--wdc-accent);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
+  background: var(--wdc-accent-dim);
+  border: 1px solid var(--wdc-accent-glow);
   border-radius: 999px;
-  min-width: 32px;
-  min-height: 24px;
+  min-width: 24px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 7px;
-  font-size: 0.72rem;
-  font-weight: 600;
+  padding: 0 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
   flex-shrink: 0;
-}
-.alias-preview {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: help;
 }
 
 .col-tunnel {
