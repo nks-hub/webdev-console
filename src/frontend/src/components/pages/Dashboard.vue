@@ -950,28 +950,37 @@ function closeConfig() {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 18px;
+  padding: 18px 20px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  transition: border-color 0.12s, transform 0.1s;
+  border-radius: var(--wdc-radius-lg);
+  box-shadow: var(--wdc-shadow-sm);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 .stat-card.stat-clickable { cursor: pointer; }
 .stat-card.stat-clickable:hover {
-  border-color: var(--wdc-accent);
-  transform: translateY(-1px);
+  border-color: var(--wdc-accent-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--wdc-shadow-card);
 }
 
 .stat-icon {
-  font-size: 1.8rem;
-  color: var(--wdc-text-3);
+  font-size: 1.4rem;
+  color: var(--wdc-accent);
   line-height: 1;
-  width: 34px;
+  width: 40px;
+  height: 40px;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wdc-accent-dim);
+  border-radius: var(--wdc-radius);
 }
 .stat-icon-running {
   color: var(--wdc-status-running);
   font-size: 1rem;
+  background: rgba(52, 211, 153, 0.14);
 }
 
 .stat-content {
@@ -983,18 +992,18 @@ function closeConfig() {
 }
 
 .stat-value {
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--wdc-text);
   line-height: 1.1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .stat-label {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   color: var(--wdc-text-3);
 }
 
