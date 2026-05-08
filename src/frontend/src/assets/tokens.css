@@ -849,7 +849,13 @@ html.dark .nav-item-tunnel .nav-label {
 html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 /*
-  Table — SOFT VIBRANT card with bigger radius + dramatic shadow.
+  ═════════════════════════════════════════════════════════════════
+  TABLE — completely new look
+  • 20px outer radius card with gradient hairline
+  • Header strip in surface-2 with accent-coloured uppercase labels
+  • Tall rows (16-18px padding) with explicit hairline between
+  • Hover state: accent left-bar + bg lift, no scale
+  ═════════════════════════════════════════════════════════════════
 */
 .el-table {
   background: var(--wdc-surface) !important;
@@ -862,36 +868,46 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 .el-table__header-wrapper th.el-table__cell {
   background: var(--wdc-surface-2) !important;
-  color: var(--wdc-text-2) !important;
-  font-size: 0.74rem;
-  font-weight: 600;
+  color: var(--wdc-accent) !important;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--wdc-border) !important;
-  padding: 10px 12px !important;
+  letter-spacing: 0.10em;
+  border-bottom: 2px solid var(--wdc-accent-glow) !important;
+  padding: 14px 16px !important;
+  height: auto !important;
 }
 
 .el-table__body tr.el-table__row td {
   background: var(--wdc-surface) !important;
   border-bottom: 1px solid var(--wdc-border) !important;
   color: var(--wdc-text);
-  font-size: 0.85rem;
-  padding: 12px !important;
+  font-size: 0.86rem;
+  padding: 16px !important;
+  position: relative;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 
 .el-table__body tr.el-table__row:last-child td {
   border-bottom: none !important;
 }
 
-/* Drop striped rows — clean alternating disrupts the SOFT VIBRANT
-   feel; rely on row border-bottom + soft hover lift. */
+/* Drop striped rows. */
 .el-table--striped .el-table__body tr.el-table__row--striped td {
   background: var(--wdc-surface) !important;
 }
 
+/*
+  Hover row — accent left-bar via inset box-shadow on first cell.
+  Replaces flat bg-only hover with a more present "selected" state.
+*/
 .el-table__body tr.el-table__row:hover td,
 .el-table--striped .el-table__body tr.el-table__row--striped:hover td {
   background: var(--wdc-hover) !important;
+}
+.el-table__body tr.el-table__row:hover td:first-child,
+.el-table--striped .el-table__body tr.el-table__row--striped:hover td:first-child {
+  box-shadow: inset 4px 0 0 var(--wdc-accent);
 }
 
 .el-table__body-wrapper {
@@ -900,6 +916,47 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 .el-table__inner-wrapper::before {
   display: none !important;
+}
+
+/*
+  ═════════════════════════════════════════════════════════════════
+  CARD — completely new look
+  • 20px radius (bigger), 28px padding (more breathing room)
+  • Subtle gradient hairline border (1px) plus dramatic shadow
+  • Hover: lift translateY(-2px) + larger shadow
+  ═════════════════════════════════════════════════════════════════
+*/
+:where(.wdc-card),
+.el-card {
+  background: var(--wdc-surface) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--wdc-radius-xl) !important;
+  box-shadow:
+    var(--wdc-shadow-card),
+    inset 0 0 0 1px var(--wdc-border) !important;
+  padding: 0 !important;
+  transition: transform 0.18s, box-shadow 0.18s !important;
+}
+.el-card.is-hoverable:hover,
+.wdc-card.is-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    var(--wdc-shadow-pop),
+    inset 0 0 0 1px var(--wdc-accent-glow) !important;
+}
+.el-card__header {
+  padding: 20px 28px !important;
+  border-bottom: 1px solid var(--wdc-border) !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--wdc-text-2) !important;
+  background: var(--wdc-surface-2);
+  border-radius: var(--wdc-radius-xl) var(--wdc-radius-xl) 0 0;
+}
+.el-card__body {
+  padding: 28px !important;
 }
 
 /*
