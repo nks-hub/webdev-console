@@ -616,7 +616,7 @@ function formatDate(iso: string): string {
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid var(--wdc-border);
-  background: rgba(255,255,255,0.03);
+  background: var(--wdc-surface-2);
 }
 .settings-card-title {
   font-size: 0.88rem;

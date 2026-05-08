@@ -577,7 +577,7 @@ onMounted(() => {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.75rem;
   color: var(--wdc-text-muted);
-  background: var(--wdc-surface-3, rgba(255,255,255,0.04));
+  background: var(--wdc-surface-2);
   padding: 1px 6px;
   border-radius: 4px;
   text-transform: none;
