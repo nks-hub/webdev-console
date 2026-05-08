@@ -295,7 +295,7 @@ onBeforeUnmount(() => {
 .tier-chip.tier-sandbox { background: var(--el-color-info-light-9); color: var(--el-color-info); border-color: var(--el-color-info-light-7); }
 .tier-chip.tier-balanced { background: var(--el-color-success-light-9); color: var(--el-color-success); border-color: var(--el-color-success-light-7); }
 .tier-chip.tier-fullTrust { background: var(--el-color-warning-light-9); color: var(--el-color-warning); border-color: var(--el-color-warning-light-7); }
-.tier-chip.tier-custom { background: var(--el-fill-color); color: var(--el-text-color-secondary); }
+.tier-chip.tier-custom { background: var(--wdc-surface-2); color: var(--el-text-color-secondary); border-color: var(--wdc-border); }
 .clickable-stat { cursor: pointer; user-select: none; }
 .clickable-stat:hover strong { filter: brightness(1.2); }
 .tab-badge { margin-left: 4px; }

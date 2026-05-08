@@ -1118,7 +1118,7 @@ function cooldownActiveSec(g: McpGrantRow): number {
 /* Phase 7.5+++ — revoked rows visually de-emphasized in audit view. */
 .grants-table :deep(.grant-row-revoked) {
   opacity: 0.5;
-  background: var(--el-fill-color-lighter);
+  background: var(--wdc-surface-2);
   text-decoration: line-through;
   text-decoration-color: var(--el-color-danger);
 }
