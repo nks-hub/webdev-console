@@ -101,10 +101,11 @@ defineExpose({ startValidation, setResult, reset })
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid currentColor;
 }
 
 .phase-validating {
