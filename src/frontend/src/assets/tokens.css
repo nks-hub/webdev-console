@@ -348,6 +348,98 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace !important;
 }
 
+/*
+  ═══════════════════════════════════════════════════════════════════
+  GLOBAL UTILITY CLASSES (applied via :where() so page-level rules
+  can still override).
+  ═══════════════════════════════════════════════════════════════════
+*/
+
+/* Generic page wrapper. Standard 32px padding + 24px vertical gap. */
+:where(.wdc-page, .sites-page, .dashboard-page, .databases-page, .settings-page, .plugin-page) {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: transparent;
+  min-height: 100%;
+}
+
+/* Hero page header — big title left, action buttons right. */
+.wdc-page-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.wdc-page-hero h1,
+:where(.sites-page, .dashboard-page, .databases-page, .settings-page) > .page-header h1,
+:where(.sites-page, .dashboard-page, .databases-page, .settings-page) > .page-header .page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--wdc-text);
+  margin: 0;
+}
+
+.wdc-page-hero .subtitle {
+  font-size: 0.9rem;
+  color: var(--wdc-text-3);
+  margin-top: 4px;
+}
+
+/* Card primitive — every "section box" should look like this. */
+:where(.wdc-card) {
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-lg);
+  box-shadow: var(--wdc-shadow-card);
+  padding: 24px;
+}
+
+/* Every Element Plus card gets the card primitive treatment. */
+.el-card {
+  border-radius: var(--wdc-radius-lg) !important;
+  border: 1px solid var(--wdc-border) !important;
+  background: var(--wdc-surface) !important;
+  box-shadow: var(--wdc-shadow-card) !important;
+}
+.el-card__header {
+  padding: 20px 24px !important;
+  border-bottom: 1px solid var(--wdc-border) !important;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.el-card__body { padding: 24px !important; }
+
+/*
+  Status bar (bottom) — flat translucent strip. Complements the
+  glass header at the top.
+*/
+.app-status-bar,
+.wdc-statusbar {
+  background: color-mix(in srgb, var(--wdc-surface) 78%, transparent) !important;
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border-top: 1px solid var(--wdc-border);
+}
+
+/*
+  Subtle entry animation — 200ms fade-in on route change. Each page
+  feels alive without being noisy.
+*/
+.content-area > * {
+  animation: wdc-page-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes wdc-page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ─── Element Plus Component Refinements ─────────────────────────────────── */
 
 /* ═══════════════════════════════════════════════════════════════════════════
