@@ -91,10 +91,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .top-tools-panel {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-  padding: 10px 12px;
-  background: var(--el-fill-color-light);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-lg);
+  padding: 14px 16px;
+  background: var(--wdc-surface);
+  box-shadow: var(--wdc-shadow-sm);
 }
 .panel-title {
   font-size: 11px;
