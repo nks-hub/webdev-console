@@ -276,17 +276,20 @@ onBeforeUnmount(() => {
 .hub-tabs :deep(.el-tabs__content) { padding-top: 8px; }
 .tab-label { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats {
-  display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 4px;
-  padding: 8px 12px; background: var(--el-fill-color-light);
-  border-radius: 4px; font-size: 13px;
+  display: flex; flex-wrap: wrap; gap: 18px; margin: 12px 0 8px;
+  padding: 14px 18px; background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius); font-size: 13px;
+  box-shadow: var(--wdc-shadow-sm);
 }
 .hub-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats .stat strong { font-weight: 600; }
 .hub-stats .stat.warn strong { color: var(--el-color-warning); }
 .tier-chip {
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
   border: 1px solid transparent;
 }
 .tier-chip.tier-sandbox { background: var(--el-color-info-light-9); color: var(--el-color-info); border-color: var(--el-color-info-light-7); }
