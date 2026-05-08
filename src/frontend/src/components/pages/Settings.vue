@@ -2841,8 +2841,9 @@ async function save() {
 .hint code {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
-  padding: 1px 6px;
-  border-radius: 3px;
+  border: 1px solid var(--wdc-border);
+  padding: 1px 7px;
+  border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.74rem;
 }
