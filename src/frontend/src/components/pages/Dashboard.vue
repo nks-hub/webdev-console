@@ -1022,10 +1022,16 @@ function closeConfig() {
 .metric-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  padding: 14px 16px;
-  height: 140px;
+  border-radius: var(--wdc-radius-lg);
+  padding: 18px 20px;
+  height: 160px;
   overflow: hidden;
+  box-shadow: var(--wdc-shadow-sm);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.metric-card:hover {
+  box-shadow: var(--wdc-shadow-card);
+  transform: translateY(-1px);
 }
 
 /* ─── Services panel ─────────────────────────────────────────────────────── */
@@ -1033,25 +1039,26 @@ function closeConfig() {
   margin: 0 24px 16px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
+  border-radius: var(--wdc-radius-lg);
   overflow: hidden;
+  box-shadow: var(--wdc-shadow-card);
 }
 
 .panel-header {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--wdc-border);
-  background: var(--wdc-surface-2);
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
 }
 
 .panel-title {
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--wdc-text);
+  letter-spacing: 0.12em;
+  color: var(--wdc-accent);
 }
 
 .panel-count {
