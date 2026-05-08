@@ -102,18 +102,19 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 
 <style scoped>
 /*
-  ─── Header — SOFT VIBRANT shell ──────────────────────────────────
-  Slim 52px bar, surface bg, soft 1px border-bottom. Logo + page
-  context on the left, action chips on the right. No top nav (it
-  duplicated the sidebar).
+  ─── Header — GLASSMORPHISM shell ─────────────────────────────────
+  Translucent backdrop-filter blur over the page mesh. Bigger 60px
+  bar, larger logo, dramatic page context badge.
 */
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
-  padding: 0 20px;
-  background: var(--wdc-surface);
+  height: 60px;
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--wdc-surface) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   gap: 24px;
@@ -122,17 +123,19 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
 .page-context {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--wdc-text-3);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--wdc-accent);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding-left: 16px;
-  border-left: 1px solid var(--wdc-border);
+  letter-spacing: 0.16em;
+  padding: 4px 12px;
+  background: var(--wdc-accent-dim);
+  border-radius: 999px;
+  border: 1px solid var(--wdc-accent-glow);
 }
 
 .app-logo {
@@ -144,24 +147,25 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 }
 
 .logo-mark {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  background: var(--wdc-accent);
+  border-radius: 10px;
+  background: var(--wdc-gradient-accent);
   color: #ffffff;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.06em;
+  box-shadow: var(--wdc-shadow-sm), 0 0 24px var(--wdc-accent-glow);
 }
 
-/* Logo text inline next to mark. */
+/* Logo text inline next to mark — bigger, bolder. */
 .logo-text {
-  font-size: 0.86rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
   color: var(--wdc-text);
 }
 

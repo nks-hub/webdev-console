@@ -80,23 +80,44 @@
   --wdc-space-7: 48px;
   --wdc-space-8: 64px;
 
-  /* Radius — Notion-soft cards, Material rounded buttons */
-  --wdc-radius-xs:   4px;
-  --wdc-radius-sm:   6px;
-  --wdc-radius:      8px;       /* buttons */
-  --wdc-radius-lg:   12px;      /* cards */
-  --wdc-radius-xl:   16px;      /* large containers / dialogs */
+  /* Radius — bigger, more pillowy */
+  --wdc-radius-xs:   6px;
+  --wdc-radius-sm:   8px;
+  --wdc-radius:      10px;       /* buttons */
+  --wdc-radius-lg:   16px;      /* cards */
+  --wdc-radius-xl:   20px;      /* large containers / dialogs */
 
   /*
-    Soft shadows — bigger / softer than typical "1px hairline" shadow.
-    Cards get a real shadow that lifts them off the page.
+    Dramatic shadows — bigger drops, layered with subtle accent glow
+    on cards. Lifts every surface off the page.
   */
-  --wdc-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.18);
-  --wdc-shadow-sm:   0 2px 4px rgba(0, 0, 0, 0.20);
-  --wdc-shadow:      0 4px 12px rgba(0, 0, 0, 0.24);
-  --wdc-shadow-card: 0 6px 20px rgba(0, 0, 0, 0.28);
-  --wdc-shadow-pop:  0 16px 36px rgba(0, 0, 0, 0.40);
-  --wdc-shadow-lg:   0 24px 64px rgba(0, 0, 0, 0.55);
+  --wdc-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.20);
+  --wdc-shadow-sm:   0 4px 8px rgba(0, 0, 0, 0.24);
+  --wdc-shadow:      0 8px 24px rgba(0, 0, 0, 0.30);
+  --wdc-shadow-card: 0 12px 32px rgba(0, 0, 0, 0.36);
+  --wdc-shadow-pop:  0 24px 56px rgba(0, 0, 0, 0.48);
+  --wdc-shadow-lg:   0 32px 80px rgba(0, 0, 0, 0.60);
+
+  /* Glow shadows — colored ambient light around accent / status surfaces */
+  --wdc-glow-accent: 0 0 0 1px var(--wdc-accent), 0 8px 24px var(--wdc-accent-glow);
+  --wdc-glow-success: 0 0 24px var(--wdc-glow-running);
+  --wdc-glow-error:   0 0 24px var(--wdc-glow-error);
+
+  /*
+    Background mesh — radial accent + secondary at low alpha. Two soft
+    light sources baked into the page so the chrome feels alive instead
+    of being a flat dark block. Used by .app-root::before.
+  */
+  --wdc-mesh-bg: radial-gradient(circle at 12% 8%, rgba(129, 140, 248, 0.18), transparent 36%),
+                 radial-gradient(circle at 88% 92%, rgba(45, 212, 191, 0.14), transparent 38%),
+                 radial-gradient(circle at 60% 50%, rgba(192, 132, 252, 0.06), transparent 60%);
+
+  /*
+    Gradient fills — used on primary buttons + key surfaces so the
+    accent isn't a flat tile.
+  */
+  --wdc-gradient-accent: linear-gradient(135deg, #818cf8, #c084fc);
+  --wdc-gradient-secondary: linear-gradient(135deg, #2dd4bf, #818cf8);
 
   color-scheme: dark;
 }
@@ -143,13 +164,24 @@ html:not(.dark) {
   --wdc-cat-cache:     #047857;
   --wdc-cat-tunnel:    #c2410c;
 
-  /* Soft shadows on cream — slight warm tint */
-  --wdc-shadow-xs:   0 1px 2px rgba(28, 25, 23, 0.04);
-  --wdc-shadow-sm:   0 2px 4px rgba(28, 25, 23, 0.05);
-  --wdc-shadow:      0 4px 12px rgba(28, 25, 23, 0.06);
-  --wdc-shadow-card: 0 6px 20px rgba(28, 25, 23, 0.07);
-  --wdc-shadow-pop:  0 16px 36px rgba(28, 25, 23, 0.10);
-  --wdc-shadow-lg:   0 24px 64px rgba(28, 25, 23, 0.14);
+  /* Dramatic shadows on cream — bigger drops, warm tint */
+  --wdc-shadow-xs:   0 1px 2px rgba(28, 25, 23, 0.06);
+  --wdc-shadow-sm:   0 4px 8px rgba(28, 25, 23, 0.08);
+  --wdc-shadow:      0 8px 24px rgba(28, 25, 23, 0.10);
+  --wdc-shadow-card: 0 12px 32px rgba(28, 25, 23, 0.12);
+  --wdc-shadow-pop:  0 24px 56px rgba(28, 25, 23, 0.16);
+  --wdc-shadow-lg:   0 32px 80px rgba(28, 25, 23, 0.20);
+
+  --wdc-glow-accent: 0 0 0 1px var(--wdc-accent), 0 8px 24px var(--wdc-accent-glow);
+  --wdc-glow-success: 0 0 24px rgba(4, 120, 87, 0.22);
+  --wdc-glow-error:   0 0 24px rgba(185, 28, 28, 0.22);
+
+  --wdc-mesh-bg: radial-gradient(circle at 12% 8%, rgba(67, 56, 202, 0.10), transparent 36%),
+                 radial-gradient(circle at 88% 92%, rgba(13, 148, 136, 0.08), transparent 38%),
+                 radial-gradient(circle at 60% 50%, rgba(192, 132, 252, 0.04), transparent 60%);
+
+  --wdc-gradient-accent: linear-gradient(135deg, #4338ca, #7c3aed);
+  --wdc-gradient-secondary: linear-gradient(135deg, #0d9488, #4338ca);
 
   color-scheme: light;
 }
@@ -403,15 +435,16 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   background: var(--wdc-hover) !important;
 }
 
-/* ── Primary (solid) ────────────────────────────────────────────────────── */
+/* ── Primary (gradient solid) ─────────────────────────────────────────── */
 .el-button--primary {
-  background: var(--wdc-accent) !important;
-  border-color: var(--wdc-accent) !important;
-  color: var(--wdc-bg) !important; /* dark text on bright accent — ~12:1 */
+  background: var(--wdc-gradient-accent) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
 }
 .el-button--primary:hover:not(.is-disabled) {
-  background: var(--wdc-accent-2) !important;
-  border-color: var(--wdc-accent-2) !important;
+  background: var(--wdc-gradient-accent) !important;
+  filter: brightness(1.08) saturate(1.1);
+  border-color: transparent !important;
 }
 
 /* ── Success (solid) ────────────────────────────────────────────────────── */
@@ -724,18 +757,13 @@ html.dark .nav-item-tunnel .nav-label {
 html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 /*
-  Table — SOFT VIBRANT
-  Card-style container with soft shadow + 12px radius. Each row keeps
-  an explicit border-bottom (per user constraint) — last row's border
-  drops so it doesn't double up against the card edge. Headers use
-  surface-2 for a subtle ribbon, body uses surface (white in light
-  mode, dark card in dark mode).
+  Table — SOFT VIBRANT card with bigger radius + dramatic shadow.
 */
 .el-table {
   background: var(--wdc-surface) !important;
   color: var(--wdc-text);
-  border-radius: var(--wdc-radius-lg) !important;
-  border: none !important;
+  border-radius: var(--wdc-radius-xl) !important;
+  border: 1px solid var(--wdc-border) !important;
   box-shadow: var(--wdc-shadow-card);
   overflow: hidden;
 }

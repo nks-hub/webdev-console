@@ -343,10 +343,10 @@ onUnmounted(() => {
 
 <style>
 /*
-  Shell — flat charcoal bg, no decorative gradients. Previous
-  radial-gradient backdrop bled cyan/green smears across the top
-  corners (contributed to "noisy" feel). Removed entirely; surface
-  elevation carries hierarchy.
+  Shell — base bg + radial gradient mesh. Two soft light sources
+  (accent + secondary) bake an ambient warmth into the chrome so it
+  doesn't read as a flat dark block. Mesh sits on top of the bg via
+  a fixed pseudo-element so it doesn't scroll with content.
 */
 .app-root {
   display: flex;
@@ -358,7 +358,21 @@ onUnmounted(() => {
   background: var(--wdc-bg);
 }
 
+.app-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--wdc-mesh-bg);
+  z-index: 0;
+}
+
 .app-backdrop { display: none; }
+
+/* Lift app shell above the mesh */
+.app-header,
+.app-body,
+.app-status-bar { position: relative; z-index: 1; }
 
 .app-body {
   display: flex;

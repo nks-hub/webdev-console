@@ -381,16 +381,17 @@ async function toggleSvc(svc: ServiceInfo) {
 
 <style scoped>
 /*
-  Sidebar redesign — flat surface, single right-edge separator. Was
-  decorated with a radial cyan gradient + status texts in every
-  service row. Now: wider but breathes more, drop meta text under
-  each service name, tighten vertical rhythm.
+  Sidebar — translucent glass panel that sits over the page mesh.
+  Backdrop-filter blur + low-opacity surface so the ambient gradient
+  shows through subtly. Single right-edge separator.
 */
 .sidebar {
   width: 240px;
   display: flex;
   flex-direction: column;
-  background: var(--wdc-surface);
+  background: color-mix(in srgb, var(--wdc-surface) 78%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-right: 1px solid var(--wdc-border);
   flex-shrink: 0;
   overflow-y: auto;
@@ -567,13 +568,17 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .nav-item.active {
-  /* Solid left accent bar + tinted fill in both modes — unified, no
-     hardcoded hex per mode. */
+  /*
+    Active nav item — gradient fill + ambient accent glow. Strong
+    visual anchor that matches the logo's gradient.
+  */
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
   border-left-color: var(--wdc-accent);
   font-weight: 700;
+  box-shadow: 0 0 0 1px var(--wdc-accent-glow), 0 4px 16px var(--wdc-accent-glow);
 }
+.nav-item.active .nav-icon-shell { color: var(--wdc-accent); }
 
 /*
   Tunnel entry — Cloudflare brand orange when cloudflared is live.
