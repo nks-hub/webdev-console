@@ -114,9 +114,9 @@
         row-class-name="cursor-pointer"
         table-layout="auto"
       >
-        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="240">
+        <el-table-column prop="domain" :label="$t('sites.domain')" min-width="200">
           <template #default="{ row }">
-            <div class="cell-domain" :title="row.documentRoot">
+            <div class="cell-domain">
               <div class="cell-domain-row">
                 <span class="col-domain">{{ row.domain }}</span>
                 <!-- Port badge. SSL-enabled sites advertise both :80→:443
@@ -144,11 +144,10 @@
                   title="HTTPS enabled"
                 >SSL</el-tag>
               </div>
-              <span
-                v-if="row.aliases?.length"
-                class="alias-dot"
-                :title="row.aliases.join(', ')"
-              >+{{ row.aliases.length }}</span>
+              <div v-if="row.aliases?.length" class="col-aliases" :title="row.aliases.join(', ')">
+                <span class="alias-dot">+{{ row.aliases.length }}</span>
+                <span class="alias-preview">{{ row.aliases[0] }}<template v-if="row.aliases.length > 1">, …</template></span>
+              </div>
               <!-- F91.6: plugin-contributed per-row badges.
                    Cloudflare plugin registers CloudflareTunnelBadge here via
                    ContributeSitesBadge(). Disabling the plugin removes its
@@ -158,12 +157,11 @@
           </template>
         </el-table-column>
 
-        <!--
-          Document Root column dropped — shown as a tooltip on the
-          domain cell (hover the row's first column to see the path).
-          Frees up ~220px of horizontal space and removes the longest
-          line of text noise from the table.
-        -->
+        <el-table-column :label="$t('sites.documentRoot')" min-width="220" class-name="col-docroot-cell">
+          <template #default="{ row }">
+            <span class="col-mono" :title="row.documentRoot">{{ row.documentRoot }}</span>
+          </template>
+        </el-table-column>
 
         <el-table-column :label="$t('sites.phpVersion')" width="110">
           <template #default="{ row }">
@@ -988,58 +986,27 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   display: none;
 }
 
-/*
-  Sites table — ULTRA compact density + LEFT alignment fix.
-  Element Plus default centers `cell` content; force left + flex-start
-  so domain + tags + alias chip all sit flush against the cell's left
-  edge instead of floating in the middle of the column.
-*/
-.sites-table :deep(.el-table__body tr.el-table__row td) {
-  padding: 6px 12px !important;
-  font-size: 0.8rem;
-  height: 32px;
-  vertical-align: middle;
-  text-align: left !important;
+.sites-table :deep(.el-table__header) {
+  background: var(--wdc-surface-2);
 }
-.sites-table :deep(.el-table__header-wrapper th.el-table__cell) {
-  padding: 8px 12px !important;
-  text-align: left !important;
+.sites-table :deep(.el-table__header th) {
+  background: var(--wdc-surface-2) !important;
+  color: var(--wdc-text-2) !important;
+  font-weight: 700;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--wdc-border-strong) !important;
 }
-.sites-table :deep(.el-table .cell) {
-  text-align: left !important;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+.sites-table :deep(.el-table__row) {
+  transition: background 0.12s;
 }
-.sites-table :deep(.el-tag) {
-  height: 20px !important;
-  padding: 0 7px !important;
-  font-size: 0.66rem !important;
-  line-height: 18px !important;
+.sites-table :deep(.el-table__row:hover > td) {
+  background: var(--wdc-hover) !important;
 }
-.sites-table :deep(.cell-domain),
-.sites-table :deep(.cell-domain-row) {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  flex-wrap: nowrap;
-  min-height: 0;
-  padding: 0;
-  width: 100%;
-}
-/* Inline children — keep plugin badges (Cloudflare tunnel, etc.) on the same row */
-.sites-table :deep(.cell-domain) > * {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-/* Plugin slot badges (e.g. CloudflareTunnelBadge) used to break onto
-   their own line — pin them inline with the rest of the row. */
-.sites-table :deep(.cell-domain .col-tunnel),
-.sites-table :deep(.cell-domain [data-plugin-badge]) {
-  margin-top: 0 !important;
-  margin-left: 6px;
+.sites-table :deep(td) {
+  padding: 14px 12px !important;
+  border-bottom: 1px solid var(--wdc-border) !important;
 }
 
 .cell-domain {
@@ -1071,25 +1038,40 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   font-size: 0.72rem !important;
 }
 
-/*
-  Alias chip — single +N pill, full list in the title tooltip.
-  Was a multi-element row that wrapped onto a 2nd line.
-*/
+.col-aliases {
+  font-size: 0.76rem;
+  color: var(--wdc-text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  /* F71: don't let the alias list grow the row vertically when there are
+     many aliases — truncate to a single line and show the full list via
+     the title tooltip on hover. The +N counter next to the first alias
+     tells the user how many there are. */
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .alias-dot {
   color: var(--wdc-accent);
-  background: var(--wdc-accent-dim);
-  border: 1px solid var(--wdc-accent-glow);
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--wdc-border);
   border-radius: 999px;
-  min-width: 24px;
-  height: 20px;
+  min-width: 32px;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
-  font-size: 0.66rem;
-  font-weight: 700;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
   flex-shrink: 0;
-  cursor: help;
+}
+.alias-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .col-tunnel {
