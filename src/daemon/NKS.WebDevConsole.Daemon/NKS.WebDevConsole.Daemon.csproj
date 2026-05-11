@@ -29,7 +29,7 @@
          breadcrumbs on the next captured event so we see what the daemon
          was doing just before the crash. -->
     <PackageReference Include="Sentry.Extensions.Logging" Version="6.4.1" />
-    <PackageReference Include="SharpCompress" Version="0.47.4" />
+    <PackageReference Include="SharpCompress" Version="0.48.0" />
     <PackageReference Include="Tomlyn" Version="2.3.2" />
   </ItemGroup>
 
