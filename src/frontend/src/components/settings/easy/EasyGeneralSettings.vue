@@ -1,6 +1,11 @@
 <template>
   <div class="tab-content">
-    <p class="tab-desc">{{ t('settings.general.tabDesc') }}</p>
+    <!-- Simple-mode panel header already renders settings.general.tabDesc
+         as its subtitle (Settings.vue), so duplicating it inside the
+         component produced the same sentence twice. The advanced tab is
+         a separate tab-pane without that wrapper, so we render the
+         description only when used standalone. -->
+    <p v-if="standalone" class="tab-desc">{{ t('settings.general.tabDesc') }}</p>
 
     <h4 class="section-heading">{{ t('settings.general.sectionAppearance') }}</h4>
     <el-form class="easy-settings-form" label-position="top" size="small">
@@ -101,7 +106,7 @@
 <script setup lang="ts">
 import type { ThemeMode } from '../../../stores/theme'
 
-defineProps<{
+withDefaults(defineProps<{
   t: (key: string) => string
   locale: string
   themeMode: ThemeMode
@@ -113,7 +118,11 @@ defineProps<{
   mampDiscovering: boolean
   telemetryEnabled: boolean
   telemetryCrashReports: boolean
-}>()
+  /** Render the in-card tab description. Defaults to true for the
+   *  Advanced tab. The Simple-mode panel passes false because the
+   *  surrounding SettingsCard header already shows the description. */
+  standalone?: boolean
+}>(), { standalone: true })
 
 const emit = defineEmits<{
   'update:locale': [value: string]

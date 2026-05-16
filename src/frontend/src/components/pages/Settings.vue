@@ -28,6 +28,7 @@
             :mamp-discovering="mampDiscovering"
             :telemetry-enabled="telemetryEnabled"
             :telemetry-crash-reports="telemetryCrashReports"
+            :standalone="false"
             @update:locale="onLocaleChange"
             @update:theme-mode="themeStore.setMode"
             @update:ui-mode="uiModeStore.setUiMode"
