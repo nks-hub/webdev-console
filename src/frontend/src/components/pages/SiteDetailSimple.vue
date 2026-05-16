@@ -39,8 +39,11 @@
       <el-divider />
 
       <!-- PHP version -->
-      <div class="sd-row">
-        <span class="sd-label">{{ $t('sites.detail.simple.phpVersion') }}</span>
+      <div class="sd-row sd-row-stack">
+        <div class="sd-label-stack">
+          <span class="sd-label">{{ $t('sites.detail.simple.phpVersion') }}</span>
+          <span class="sd-hint">{{ $t('sites.detail.simple.phpVersionHint') }}</span>
+        </div>
         <div class="sd-control-wrap">
           <el-select
             v-model="phpVersion"
@@ -57,8 +60,11 @@
       </div>
 
       <!-- SSL switch -->
-      <div class="sd-row">
-        <span class="sd-label">{{ $t('sites.detail.simple.ssl') }}</span>
+      <div class="sd-row sd-row-stack">
+        <div class="sd-label-stack">
+          <span class="sd-label">{{ $t('sites.detail.simple.ssl') }}</span>
+          <span class="sd-hint">{{ $t('sites.detail.simple.sslHint') }}</span>
+        </div>
         <div class="sd-control-wrap">
           <el-switch v-model="sslEnabled" @change="onSslChange" />
           <Transition name="flash">
@@ -69,7 +75,10 @@
 
       <!-- Bind IP -->
       <div class="sd-row sd-row-stack">
-        <span class="sd-label">{{ $t('sites.bindIp') }}</span>
+        <div class="sd-label-stack">
+          <span class="sd-label">{{ $t('sites.bindIp') }}</span>
+          <span class="sd-hint">{{ $t('sites.detail.simple.bindIpHint') }}</span>
+        </div>
         <div class="sd-control-wrap sd-bind-control">
           <el-select
             v-model="bindAddresses"
@@ -98,8 +107,11 @@
       </div>
 
       <!-- Cloudflare tunnel switch -->
-      <div class="sd-row">
-        <span class="sd-label">{{ $t('sites.detail.simple.tunnel') }}</span>
+      <div class="sd-row sd-row-stack">
+        <div class="sd-label-stack">
+          <span class="sd-label">{{ $t('sites.detail.simple.tunnel') }}</span>
+          <span class="sd-hint">{{ $t('sites.detail.simple.tunnelHint') }}</span>
+        </div>
         <div class="sd-control-wrap">
           <el-switch v-model="tunnelEnabled" @change="onTunnelChange" />
           <Transition name="flash">
@@ -211,7 +223,7 @@ const phpVersions = ref<string[]>([])
 const site = computed(() => sitesStore.sites.find(s => s.domain === props.domain) ?? null)
 
 const phpVersion = ref('')
-const sslEnabled = ref(false)
+const sslEnabled = ref(true)
 const bindAddresses = ref<string[]>(['*'])
 const bindAddressOptions = ref<BindAddressOption[]>([])
 const bindAddressOptionsLoading = ref(false)
@@ -559,6 +571,25 @@ onMounted(async () => {
   color: var(--el-text-color-secondary);
   font-size: 14px;
   min-width: 0;
+}
+
+.sd-label-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sd-label-stack .sd-label {
+  color: var(--wdc-text);
+  font-weight: 600;
+}
+
+.sd-hint {
+  color: var(--wdc-text-2);
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 56ch;
 }
 
 .sd-status-row .sd-label {

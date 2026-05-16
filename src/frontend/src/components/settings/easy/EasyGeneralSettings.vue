@@ -1,6 +1,8 @@
 <template>
   <div class="tab-content">
     <p class="tab-desc">{{ t('settings.general.tabDesc') }}</p>
+
+    <h4 class="section-heading">{{ t('settings.general.sectionAppearance') }}</h4>
     <el-form class="easy-settings-form" label-position="top" size="small">
       <el-form-item :label="t('settings.general.language')">
         <el-select
@@ -31,11 +33,16 @@
         />
         <div class="hint">{{ t('settings.mode.description') }}</div>
       </el-form-item>
+    </el-form>
+
+    <h4 class="section-heading">{{ t('settings.general.sectionStartup') }}</h4>
+    <el-form class="easy-settings-form" label-position="top" size="small">
       <el-form-item :label="t('settings.general.runOnStartup')">
         <el-switch
           :model-value="runOnStartup"
           @update:model-value="(value: boolean) => emit('update:runOnStartup', value)"
         />
+        <div class="hint">{{ t('settings.general.runOnStartupHint') }}</div>
       </el-form-item>
       <el-form-item :label="t('settings.general.defaultPhpVersion')">
         <el-select
@@ -46,11 +53,17 @@
         >
           <el-option v-for="version in phpVersions" :key="version" :label="'PHP ' + version" :value="version" />
         </el-select>
+        <div class="hint">{{ t('settings.general.defaultPhpHint') }}</div>
       </el-form-item>
+    </el-form>
+
+    <h4 class="section-heading">{{ t('settings.general.sectionTools') }}</h4>
+    <el-form class="easy-settings-form" label-position="top" size="small">
       <el-form-item :label="t('settings.general.dnsCache')">
         <el-button size="small" :loading="flushingDns" @click="emit('flushDns')">
           {{ t('settings.general.flushDnsCache') }}
         </el-button>
+        <div class="hint">{{ t('settings.general.dnsCacheHint') }}</div>
       </el-form-item>
       <el-form-item :label="t('settings.general.mampImport')">
         <el-button
@@ -63,9 +76,10 @@
         </el-button>
         <div class="hint">{{ t('settings.general.mampHint') }}</div>
       </el-form-item>
+    </el-form>
 
-      <el-divider />
-
+    <h4 class="section-heading">{{ t('settings.general.sectionPrivacy') }}</h4>
+    <el-form class="easy-settings-form" label-position="top" size="small">
       <el-form-item :label="t('settings.general.telemetry')">
         <el-switch
           :model-value="telemetryEnabled"
@@ -78,10 +92,7 @@
           :model-value="telemetryCrashReports"
           @update:model-value="(value: boolean) => emit('update:telemetryCrashReports', value)"
         />
-        <div class="hint">
-          Send crash stack traces via Sentry when a daemon exception occurs.
-          Disabled when telemetry is off.
-        </div>
+        <div class="hint">{{ t('settings.general.crashReportsHint') }}</div>
       </el-form-item>
     </el-form>
   </div>
@@ -127,6 +138,19 @@ const emit = defineEmits<{
   color: var(--wdc-text-2);
   font-size: 0.86rem;
   line-height: 1.45;
+}
+
+.section-heading {
+  margin: 18px 0 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wdc-text-2);
+}
+
+.section-heading:first-of-type {
+  margin-top: 4px;
 }
 
 .easy-settings-form {
