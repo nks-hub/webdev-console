@@ -277,17 +277,11 @@ defineExpose({ reload: loadAggregates })
 }
 .simple-tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
   max-width: none;
   width: 100%;
   margin: 0 auto;
-}
-@media (max-width: 880px) {
-  .simple-tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width: 480px;
-  }
 }
 .simple-apache-banner {
   display: flex;
