@@ -72,6 +72,24 @@
       </el-button>
     </div>
 
+    <!-- First-run empty state — guides users with zero sites toward the
+         create-first-site flow rather than leaving the dashboard sparse. -->
+    <div v-if="sitesCount === 0" class="simple-empty-card" role="button" tabindex="0"
+      :aria-label="t('dashboard.simple.empty.cta')"
+      @click="router.push('/sites?create=1')"
+      @keydown.enter.prevent="router.push('/sites?create=1')"
+      @keydown.space.prevent="router.push('/sites?create=1')"
+    >
+      <div class="simple-empty-icon">
+        <el-icon><Plus /></el-icon>
+      </div>
+      <div class="simple-empty-body">
+        <strong>{{ t('dashboard.simple.empty.title') }}</strong>
+        <span>{{ t('dashboard.simple.empty.subtitle') }}</span>
+      </div>
+      <el-icon class="simple-empty-arrow"><ArrowRight /></el-icon>
+    </div>
+
     <!-- Recent sites — capped at 5 in insertion order so the dashboard
          answers "what was I working on?" without a click through. -->
     <div v-if="recentSimpleSites.length > 0" class="simple-recent">
@@ -124,7 +142,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowRight, WarningFilled, Plus } from '@element-plus/icons-vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
@@ -313,6 +331,58 @@ defineExpose({ reload: loadAggregates })
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
+}
+
+.simple-empty-card {
+  max-width: 720px;
+  margin: 18px auto 0;
+  padding: 24px 22px;
+  border: 1.5px dashed color-mix(in oklab, var(--wdc-accent) 40%, var(--wdc-border));
+  border-radius: var(--wdc-radius);
+  background: color-mix(in oklab, var(--wdc-accent) 6%, var(--wdc-surface));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.simple-empty-card:hover,
+.simple-empty-card:focus-visible {
+  border-color: var(--wdc-accent);
+  background: color-mix(in oklab, var(--wdc-accent) 10%, var(--wdc-surface));
+  outline: none;
+  transform: translateY(-1px);
+}
+.simple-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--wdc-accent) 20%, transparent);
+  color: var(--wdc-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.simple-empty-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.simple-empty-body strong {
+  font-size: 1rem;
+  color: var(--wdc-text);
+}
+.simple-empty-body span {
+  font-size: 0.85rem;
+  color: var(--wdc-text-2);
+}
+.simple-empty-arrow {
+  color: var(--wdc-accent);
+  font-size: 20px;
+  flex-shrink: 0;
 }
 .simple-recent-header {
   display: flex;
