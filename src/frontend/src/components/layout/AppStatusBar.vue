@@ -3,7 +3,10 @@
     <!-- Simple mode: centered daemon status only -->
     <template v-if="uiMode.isSimple">
       <span class="status-item status-item-center">
-        <span class="dot" :class="daemonStore.connected ? 'dot-ok dot-ok-pulse' : 'dot-err'" />
+        <HealthStatusDot
+          :level="daemonStore.connected ? 'ok' : 'err'"
+          :pulse="daemonStore.connected"
+        />
         <span>{{ daemonStore.connected ? t('footer.daemonRunning') : t('footer.daemonOffline') }}</span>
       </span>
       <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
@@ -12,7 +15,7 @@
     <!-- Advanced mode: full status bar -->
     <template v-else>
       <span class="status-item">
-        <span class="dot" :class="daemonStore.connected ? 'dot-ok' : 'dot-err'" />
+        <HealthStatusDot :level="daemonStore.connected ? 'ok' : 'err'" />
         <span>{{ t('footer.daemon') }}</span>
       </span>
 
@@ -50,6 +53,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useAppVersion } from '../../utils/appVersion'
 
 const { t } = useI18n()
@@ -119,23 +123,9 @@ function formatMem(bytes: number): string {
   background: var(--wdc-border-strong);
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dot-ok  { background: var(--wdc-status-running); }
-.dot-err { background: var(--wdc-status-error); }
-
-.dot-ok-pulse {
-  animation: dot-pulse 2s ease-in-out infinite;
-}
-
-@keyframes dot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
-  50%       { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
-}
+/* Daemon connection dot moved to HealthStatusDot shared primitive
+   (plan §6). Old .dot/.dot-ok/.dot-err rules deleted; the pulse
+   animation now lives inside HealthStatusDot. */
 
 .mono {
   font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
