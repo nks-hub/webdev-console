@@ -578,6 +578,11 @@
         "title": "Vytvoř svůj první web",
         "subtitle": "Pár klikem rozjedi lokální web — doména, document root, PHP verze.",
         "cta": "Vytvořit nový web"
+      },
+      "updateAvailable": {
+        "title": "Dostupná aktualizace",
+        "subtitle": "Nová verze {version} je připravena k instalaci.",
+        "openBtn": "Aktualizovat"
       }
     }
   },

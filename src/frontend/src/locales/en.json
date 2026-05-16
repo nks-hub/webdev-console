@@ -578,6 +578,11 @@
         "title": "Create your first site",
         "subtitle": "Spin up a local site in a few clicks — domain, doc root, PHP version.",
         "cta": "Create new site"
+      },
+      "updateAvailable": {
+        "title": "Update available",
+        "subtitle": "Version {version} is ready to install.",
+        "openBtn": "Update"
       }
     }
   },

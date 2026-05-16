@@ -60,6 +60,24 @@
       </el-button>
     </div>
 
+    <!-- Plan §4 (item 478): readiness signal — update available banner.
+         Surfaces pending updates without forcing user to navigate to
+         Settings → Aktualizace to discover them. -->
+    <div v-if="updatesStore.hasUpdate" class="simple-update-banner">
+      <el-icon class="simple-update-banner-icon"><Download /></el-icon>
+      <div class="simple-update-banner-text">
+        <strong>{{ t('dashboard.simple.updateAvailable.title') }}</strong>
+        <span>{{ t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion }) }}</span>
+      </div>
+      <el-button
+        type="primary"
+        size="default"
+        @click="router.push('/settings?tab=update')"
+      >
+        {{ t('dashboard.simple.updateAvailable.openBtn') }}
+      </el-button>
+    </div>
+
     <div class="simple-quick-actions">
       <el-button type="primary" size="large" @click="router.push('/sites?create=1')">
         + {{ t('dashboard.simple.quickActions.newSite') }}
@@ -142,11 +160,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, WarningFilled, Plus } from '@element-plus/icons-vue'
+import { ArrowRight, WarningFilled, Plus, Download } from '@element-plus/icons-vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
+import { useUpdatesStore } from '../../stores/updates'
 import { daemonBaseUrl } from '../../api/daemon'
 
 defineOptions({ name: 'DashboardSimple' })
@@ -156,6 +175,7 @@ const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
+const updatesStore = useUpdatesStore()
 
 // Tiles + summary
 const sitesCount = computed(() => sitesStore.sites.length)
@@ -303,6 +323,35 @@ defineExpose({ reload: loadAggregates })
 }
 .simple-apache-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
 .simple-apache-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
+
+/* Update-available banner — same shape as apache-banner but uses the
+   accent color so it reads as "informational nudge" rather than
+   "something is broken right now". */
+.simple-update-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  margin: 4px auto 0;
+  max-width: none;
+  width: 100%;
+  background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--el-color-primary) 40%, transparent);
+  border-radius: var(--wdc-radius);
+}
+.simple-update-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.simple-update-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
+.simple-update-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
+.simple-update-banner-icon {
+  color: var(--el-color-primary);
+  font-size: 28px;
+  flex-shrink: 0;
+}
 
 /* Pulsing warning icon — draws the eye so the user notices that the
    web server is down and they should act, rather than treating the
