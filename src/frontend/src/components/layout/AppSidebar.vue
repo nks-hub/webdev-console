@@ -18,6 +18,41 @@
       </div>
     </div>
 
+    <!-- Simple-mode services rail: a single compact section with just
+         the runtimes a beginner needs to flip (web server + active PHP
+         + database). The full categorised view stays advanced-only. -->
+    <template v-if="uiModeStore.isSimple">
+      <div class="sidebar-section">
+        <div class="section-label">
+          <span>{{ $t('nav.services') }}</span>
+          <span class="section-count">{{ essentialServices.length }}</span>
+        </div>
+        <template v-for="svc in essentialServices" :key="svc.id">
+          <div
+            class="service-item"
+            :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }"
+            @click="openService(svc.id)"
+          >
+            <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+              <ServiceIcon :service="svc.id" :active="svc.state === 2" />
+            </el-tooltip>
+            <div class="svc-copy">
+              <span class="svc-name">{{ shortName(svc) }}</span>
+              <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Stopped' }}</span>
+            </div>
+            <span class="svc-led" :class="{ on: svc.state === 2 }" />
+            <el-switch
+              :model-value="svc.state === 2"
+              :loading="servicesStore.isBusy(svc.id)"
+              size="small"
+              @click.stop
+              @change="toggleSvc(svc)"
+            />
+          </div>
+        </template>
+      </div>
+    </template>
+
     <template v-if="!uiModeStore.isSimple">
     <div class="sidebar-section">
       <div class="section-label">
@@ -357,6 +392,21 @@ const webServices = computed(() => servicesInCategory('web'))
 const langServices = computed(() => servicesInCategory('lang'))
 const dbServices = computed(() => servicesInCategory('db'))
 const cacheServices = computed(() => servicesInCategory('cache'))
+
+// Simple-mode rail: only the runtimes a beginner cares about — web
+// server + database + a single PHP entry (preferring an active version
+// if multiple are installed). Mail/cache/cloudflare are advanced-only.
+const essentialServices = computed(() => {
+  const out: ServiceInfo[] = []
+  const web = webServices.value
+  if (web.length) out.push(web[0])
+  const langs = langServices.value
+  const activePhp = langs.find(s => s.state === 2) ?? langs[0]
+  if (activePhp) out.push(activePhp)
+  const db = dbServices.value
+  if (db.length) out.push(db[0])
+  return out
+})
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')
