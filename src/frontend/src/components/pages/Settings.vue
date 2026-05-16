@@ -11,6 +11,9 @@
       <div v-if="uiModeStore.isSimple" class="simple-settings-grid">
         <section class="simple-settings-panel simple-settings-panel-main">
           <header class="simple-settings-panel-header">
+            <span class="simple-settings-panel-icon">
+              <el-icon><Setting /></el-icon>
+            </span>
             <div>
               <h2>{{ $t('settings.tabs.general') }}</h2>
               <p>{{ $t('settings.general.tabDesc') }}</p>
@@ -43,6 +46,9 @@
 
         <section class="simple-settings-panel">
           <header class="simple-settings-panel-header">
+            <span class="simple-settings-panel-icon">
+              <el-icon><Download /></el-icon>
+            </span>
             <div>
               <h2>{{ $t('settings.tabs.update') }}</h2>
               <p>{{ $t('settings.update.notChecked') }}</p>
@@ -65,6 +71,9 @@
              leaving Simple. -->
         <section class="simple-settings-panel">
           <header class="simple-settings-panel-header">
+            <span class="simple-settings-panel-icon">
+              <el-icon><Connection /></el-icon>
+            </span>
             <div>
               <h2>{{ $t('settings.simple.network.title') }}</h2>
               <p>{{ $t('settings.simple.network.subtitle') }}</p>
@@ -118,6 +127,9 @@
 
         <section v-if="systemInfo" class="simple-settings-panel simple-runtime-panel">
           <header class="simple-settings-panel-header">
+            <span class="simple-settings-panel-icon">
+              <el-icon><InfoFilled /></el-icon>
+            </span>
             <div>
               <h2>{{ $t('settings.tabs.about') }}</h2>
               <p>NKS WDC v{{ appVersion }}</p>
@@ -1092,6 +1104,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Setting, Download, Connection, FolderOpened, InfoFilled } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -2803,11 +2816,27 @@ async function save() {
 
 .simple-settings-panel-header {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 14px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--wdc-border);
+}
+
+.simple-settings-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--wdc-accent) 14%, transparent);
+  color: var(--wdc-accent);
+  flex-shrink: 0;
+}
+
+.simple-settings-panel-icon .el-icon {
+  font-size: 18px;
 }
 
 .simple-settings-panel-header h2 {
