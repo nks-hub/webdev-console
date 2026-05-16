@@ -329,6 +329,9 @@
       "flat": "Plochý"
     },
     "filterBySession": "Filtrovat na session {id}",
+    "session": {
+      "toggle": "Rozbalit/sbalit session — {caller}"
+    },
     "timeline": {
       "title": "Aktivita za posledních {hours} h",
       "empty": "(žádná aktivita)"
@@ -1804,7 +1807,9 @@
       "lines": "Řádků",
       "since": "Od",
       "empty": "Žádné záznamy chyb pro aktuální filtr",
-      "refresh": "Obnovit"
+      "refresh": "Obnovit",
+      "expandRow": "Rozbalit zprávu",
+      "collapseRow": "Sbalit zprávu"
     }
   },
   "services": {

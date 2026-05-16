@@ -329,6 +329,9 @@
       "flat": "Flat"
     },
     "filterBySession": "Filter to session {id}",
+    "session": {
+      "toggle": "Expand/collapse session — {caller}"
+    },
     "timeline": {
       "title": "Activity for last {hours}h",
       "empty": "(no activity)"
@@ -1804,7 +1807,9 @@
       "lines": "Lines",
       "since": "Since",
       "empty": "No error log entries for current filter",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "expandRow": "Expand message",
+      "collapseRow": "Collapse message"
     }
   },
   "services": {

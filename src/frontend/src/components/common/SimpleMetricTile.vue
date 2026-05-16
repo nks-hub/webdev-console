@@ -1,5 +1,14 @@
 <template>
-  <div class="metric-tile" :class="`tile-${variant}`" @click="$emit('click')" role="button" tabindex="0">
+  <div
+    class="metric-tile"
+    :class="`tile-${variant}`"
+    role="button"
+    tabindex="0"
+    :aria-label="`${label}: ${value}`"
+    @click="$emit('click')"
+    @keydown.enter.prevent="$emit('click')"
+    @keydown.space.prevent="$emit('click')"
+  >
     <div class="tile-header">
       <el-icon v-if="iconComponent" class="tile-icon"><component :is="iconComponent" /></el-icon>
       <span class="tile-label">{{ label }}</span>
