@@ -17,11 +17,11 @@
         v-if="open"
         class="config-side-panel"
         role="complementary"
-        :aria-label="`${displayName} configuration`"
+        :aria-label="$t('serviceConfig.panelAria', { service: displayName })"
       >
         <div class="csp-header">
           <div class="csp-title-block">
-            <span class="csp-eyebrow">Configuration</span>
+            <span class="csp-eyebrow">{{ $t('serviceConfig.panelTitle') }}</span>
             <span class="csp-title">{{ displayName }}</span>
           </div>
           <div class="csp-header-actions">
@@ -29,9 +29,9 @@
               size="small"
               :loading="loading"
               @click="reload"
-              :title="'Reload files from disk'"
+              :title="$t('serviceConfig.reloadTip')"
             >
-              Reload
+              {{ $t('serviceConfig.reload') }}
             </el-button>
             <el-button
               type="primary"
@@ -40,13 +40,13 @@
               :disabled="!dirty || !activeFile"
               @click="saveCurrent"
             >
-              Save &amp; Apply
+              {{ $t('serviceConfig.saveApply') }}
             </el-button>
             <el-button
               size="small"
               text
               class="csp-close-btn"
-              :title="'Close (Esc)'"
+              :title="$t('serviceConfig.closeTip')"
               @click="$emit('close')"
             >
               <el-icon><Close /></el-icon>
@@ -59,7 +59,7 @@
         </div>
 
         <div v-else-if="files.length === 0" class="csp-state-box">
-          <el-empty description="No config files found for this service." :image-size="60" />
+          <el-empty :description="$t('serviceConfig.noFiles')" :image-size="60" />
         </div>
 
         <div v-else class="csp-body">
@@ -84,7 +84,7 @@
                 {{ shortPath(activeFile.path) }}
               </span>
               <span class="csp-meta-item mono">{{ contentSize }}</span>
-              <span class="csp-meta-item mono">{{ lineCount }} lines</span>
+              <span class="csp-meta-item mono">{{ lineCount }} {{ $t('serviceConfig.linesSuffix') }}</span>
               <el-tag size="small" effect="plain" class="csp-meta-tag">{{ fileFormat }}</el-tag>
             </div>
 
@@ -97,31 +97,31 @@
                 v-if="validation.state === 'idle'"
                 size="small"
                 type="info"
-              >Ready</el-tag>
+              >{{ $t('serviceConfig.status.ready') }}</el-tag>
               <el-tag
                 v-else-if="validation.state === 'validating'"
                 size="small"
                 type="warning"
                 effect="plain"
-              >Validating…</el-tag>
+              >{{ $t('serviceConfig.status.validating') }}</el-tag>
               <el-tag
                 v-else-if="validation.state === 'passed'"
                 size="small"
                 type="success"
-              >Passed</el-tag>
+              >{{ $t('serviceConfig.status.passed') }}</el-tag>
               <el-tag
                 v-else-if="validation.state === 'failed'"
                 size="small"
                 type="danger"
-              >{{ validation.error || 'Failed' }}</el-tag>
+              >{{ validation.error || $t('serviceConfig.status.failed') }}</el-tag>
               <div class="csp-val-spacer" />
-              <el-button size="small" :disabled="!dirty" @click="revert">Revert</el-button>
+              <el-button size="small" :disabled="!dirty" @click="revert">{{ $t('serviceConfig.revert') }}</el-button>
               <el-button
                 size="small"
                 @click="validateOnly"
                 :loading="validation.state === 'validating'"
               >
-                Validate
+                {{ $t('serviceConfig.validate') }}
               </el-button>
             </div>
           </div>
