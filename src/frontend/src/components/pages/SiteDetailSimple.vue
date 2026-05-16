@@ -41,7 +41,10 @@
       <!-- Document root -->
       <div class="sd-row sd-row-stack">
         <div class="sd-label-stack">
-          <span class="sd-label">{{ $t('sites.documentRoot') }}</span>
+          <span class="sd-label">
+            <el-icon class="sd-row-icon"><FolderOpened /></el-icon>
+            {{ $t('sites.documentRoot') }}
+          </span>
           <span class="sd-hint">{{ $t('sites.detail.simple.docRootHint') }}</span>
         </div>
         <div class="sd-control-wrap sd-control-wide">
@@ -64,7 +67,10 @@
       <!-- PHP version -->
       <div class="sd-row sd-row-stack">
         <div class="sd-label-stack">
-          <span class="sd-label">{{ $t('sites.detail.simple.phpVersion') }}</span>
+          <span class="sd-label">
+            <el-icon class="sd-row-icon"><Cpu /></el-icon>
+            {{ $t('sites.detail.simple.phpVersion') }}
+          </span>
           <span class="sd-hint">{{ $t('sites.detail.simple.phpVersionHint') }}</span>
         </div>
         <div class="sd-control-wrap">
@@ -85,7 +91,10 @@
       <!-- SSL switch -->
       <div class="sd-row sd-row-stack">
         <div class="sd-label-stack">
-          <span class="sd-label">{{ $t('sites.detail.simple.ssl') }}</span>
+          <span class="sd-label">
+            <el-icon class="sd-row-icon"><Lock /></el-icon>
+            {{ $t('sites.detail.simple.ssl') }}
+          </span>
           <span class="sd-hint">{{ $t('sites.detail.simple.sslHint') }}</span>
         </div>
         <div class="sd-control-wrap">
@@ -99,7 +108,10 @@
       <!-- Bind IP -->
       <div class="sd-row sd-row-stack">
         <div class="sd-label-stack">
-          <span class="sd-label">{{ $t('sites.bindIp') }}</span>
+          <span class="sd-label">
+            <el-icon class="sd-row-icon"><Connection /></el-icon>
+            {{ $t('sites.bindIp') }}
+          </span>
           <span class="sd-hint">{{ $t('sites.detail.simple.bindIpHint') }}</span>
         </div>
         <div class="sd-control-wrap sd-bind-control">
@@ -138,7 +150,10 @@
       <!-- Cloudflare tunnel switch -->
       <div class="sd-row sd-row-stack">
         <div class="sd-label-stack">
-          <span class="sd-label">{{ $t('sites.detail.simple.tunnel') }}</span>
+          <span class="sd-label">
+            <el-icon class="sd-row-icon"><Link /></el-icon>
+            {{ $t('sites.detail.simple.tunnel') }}
+          </span>
           <span class="sd-hint">{{ $t('sites.detail.simple.tunnelHint') }}</span>
         </div>
         <div class="sd-control-wrap">
@@ -179,6 +194,7 @@ import SimpleSiteActivityCard from './SimpleSiteActivityCard.vue'
 import SimpleSiteServicesCard from './SimpleSiteServicesCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { FolderOpened, Cpu, Lock, Connection, Link } from '@element-plus/icons-vue'
 
 const WarningIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }), h('line', { x1: '12', y1: '9', x2: '12', y2: '13' }), h('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })]  ) }
 import { useSitesStore } from '../../stores/sites'
@@ -502,6 +518,17 @@ onMounted(async () => {
 .sd-label-stack .sd-label {
   color: var(--wdc-text);
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Settings-row icon — tinted to the accent color so each row gets a
+   little visual anchor and the 6 rows don't read as a uniform list. */
+.sd-row-icon {
+  color: var(--wdc-accent);
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
 .sd-hint {
