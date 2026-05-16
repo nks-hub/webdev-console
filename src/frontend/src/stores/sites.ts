@@ -11,6 +11,7 @@ export const useSitesStore = defineStore('sites', () => {
   // to the caller without changing the create() return type.
   const lastCreateWarnings = ref<string[]>([])
   const lastCreateHints = ref<string[]>([])
+  const lastUpdateWarnings = ref<string[]>([])
 
   async function load() {
     loading.value = true
@@ -41,7 +42,14 @@ export const useSitesStore = defineStore('sites', () => {
   }
 
   async function update(domain: string, data: Partial<SiteInfo>) {
-    const updated = await updateSite(domain, data)
+    // Daemon's PUT /api/sites/{domain} mirrors POST: returns the raw
+    // SiteConfig when no warnings, or `{ site, warnings }` when bind-IP
+    // NIC sanity flags something. Unwrap the same way and expose the
+    // warnings via lastUpdateWarnings for the caller to toast.
+    const raw = await updateSite(domain, data) as unknown as SiteInfo
+      | { site: SiteInfo; warnings?: string[] }
+    const updated = (raw as { site?: SiteInfo }).site ?? (raw as SiteInfo)
+    lastUpdateWarnings.value = (raw as { warnings?: string[] }).warnings ?? []
     const idx = sites.value.findIndex(s => s.domain === domain)
     if (idx >= 0) sites.value[idx] = updated
     return updated
@@ -61,5 +69,6 @@ export const useSitesStore = defineStore('sites', () => {
   return {
     sites, loading, load, create, update, remove, authHeaders,
     lastCreateWarnings, lastCreateHints,
+    lastUpdateWarnings,
   }
 })

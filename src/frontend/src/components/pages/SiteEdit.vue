@@ -1187,6 +1187,13 @@ async function save() {
     }
     await sitesStore.update(site.value.domain, site.value)
     ElMessage.success('Site updated')
+    // Surface daemon's bind-IP / NIC warnings the same way Sites.vue
+    // createSite does — without this, an operator flipping bind to a
+    // bogus IP in advanced mode would see only success while Apache
+    // silently fails to bind at next restart.
+    for (const w of sitesStore.lastUpdateWarnings) {
+      ElMessage.warning({ message: w, duration: 8000, showClose: true })
+    }
     dirty.value = false
     // After apply, the orchestrator may have started/stopped a Node process.
     // Refresh the status pill so the UI reflects the current state.

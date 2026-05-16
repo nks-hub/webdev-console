@@ -352,6 +352,12 @@ async function onBindAddressesChange(v: string[]) {
       bindAddresses: normalized,
     })
     flashSaved(savedBind)
+    // Surface daemon NIC sanity warnings — operator picking an IP that
+    // isn't on any active interface gets a clear message instead of
+    // discovering it at Apache restart time.
+    for (const w of sitesStore.lastUpdateWarnings) {
+      ElMessage.warning({ message: w, duration: 8000, showClose: true })
+    }
   } catch (e) {
     ElMessage.error(`Update failed: ${errorMessage(e)}`)
     bindAddresses.value = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
