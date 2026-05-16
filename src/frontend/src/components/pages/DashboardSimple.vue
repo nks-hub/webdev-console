@@ -95,7 +95,7 @@
     <div v-if="recentSimpleSites.length > 0" class="simple-recent">
       <div class="simple-recent-header">
         <span class="simple-recent-title">{{ t('dashboard.simple.recent.title') }}</span>
-        <el-button text size="small" @click="router.push('/sites')">
+        <el-button text size="default" @click="router.push('/sites')">
           {{ t('dashboard.simple.recent.viewAll') }} →
         </el-button>
       </div>
@@ -416,7 +416,8 @@ defineExpose({ reload: loadAggregates })
   grid-template-columns: 10px minmax(0, 1fr) auto 16px;
   gap: 10px;
   align-items: center;
-  padding: 10px 4px;
+  padding: 12px 6px;
+  min-height: 48px;
   border-bottom: 1px solid var(--wdc-border);
   cursor: pointer;
   transition: background 0.12s;
