@@ -26,6 +26,35 @@ test.describe('Daemon warnings wrapper contract', () => {
     expect(source).toMatch(/return\s*{[\s\S]*lastCreateWarnings[\s\S]*lastCreateHints[\s\S]*}/)
   })
 
+  test('sitesStore.update unwraps { site, warnings } too', () => {
+    const source = readFileSync(join(srcRoot, 'stores', 'sites.ts'), 'utf-8')
+    // PUT response uses the same wrapper shape on warning. The update()
+    // function must mirror create()'s unwrap pattern + expose
+    // lastUpdateWarnings side-channel.
+    expect(source).toMatch(/async\s+function\s+update[\s\S]*?\.site\s*\?\?\s*\(raw as SiteInfo\)/)
+    expect(source).toMatch(/lastUpdateWarnings\s*=\s*ref/)
+    expect(source).toMatch(/return\s*{[\s\S]*lastUpdateWarnings[\s\S]*}/)
+  })
+
+  test('SiteEdit.vue Save toasts lastUpdateWarnings', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteEdit.vue'), 'utf-8')
+    expect(source).toMatch(/for\s*\(const\s+w\s+of\s+sitesStore\.lastUpdateWarnings\)/)
+  })
+
+  test('SiteDetailSimple.vue bind change toasts lastUpdateWarnings', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteDetailSimple.vue'), 'utf-8')
+    expect(source).toMatch(/for\s*\(const\s+w\s+of\s+sitesStore\.lastUpdateWarnings\)/)
+  })
+
+  test('Daemon Program.cs PUT /api/sites/{domain} wraps response on warnings', () => {
+    const programPath = resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Program.cs')
+    const source = readFileSync(programPath, 'utf-8')
+    // The PUT handler must do the same CollectBindAddressWarnings call
+    // and Results.Ok wrap that the POST handler does.
+    expect(source).toMatch(/MapPut\("\/api\/sites\/\{domain\}"[\s\S]*?CollectBindAddressWarnings\(updated\)/)
+    expect(source).toMatch(/Results\.Ok\(new\s*\{\s*site\s*=\s*updated\s*,\s*warnings\s*\}\)/)
+  })
+
   test('Sites.vue createSite toasts each warning + hint', () => {
     const source = readFileSync(join(srcRoot, 'components', 'pages', 'Sites.vue'), 'utf-8')
     // The loop over lastCreateWarnings must call ElMessage.warning
