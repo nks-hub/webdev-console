@@ -825,7 +825,10 @@
     "title": "PHP Versions",
     "extensions": "Extensions",
     "setDefault": "Set Default",
-    "noVersions": "No PHP versions installed"
+    "noVersions": "No PHP versions installed",
+    "refreshConfig": "Refresh Config",
+    "extensionsCount": "Extensions ({enabled}/{total} enabled)",
+    "default": "default"
   },
   "ssl": {
     "title": "SSL Certificates",

@@ -37,30 +37,30 @@
         >
           <div class="ver-header">
             <span class="ver-number">PHP {{ ver.majorMinor }}</span>
-            <el-tag v-if="ver.isDefault" type="success" size="small" effect="plain">default</el-tag>
+            <el-tag v-if="ver.isDefault" type="success" size="small" effect="plain">{{ $t('php.default') }}</el-tag>
           </div>
           <div class="ver-full">{{ ver.version }}</div>
           <div class="ver-path mono">{{ ver.path }}</div>
           <div class="ver-actions" v-if="!ver.isDefault">
-            <el-button size="small" text @click.stop="setDefault(ver.version)">Set Default</el-button>
+            <el-button size="small" text @click.stop="setDefault(ver.version)">{{ $t('php.setDefault') }}</el-button>
           </div>
         </div>
       </div>
 
-      <el-empty v-else-if="!loading" description="No PHP versions installed" :image-size="64" />
+      <el-empty v-else-if="!loading" :description="$t('php.noVersions')" :image-size="64" />
 
       <!-- Selected version detail -->
       <div v-if="selectedVersion && selectedConfig" class="php-detail">
         <div class="detail-header">
           <h2 class="detail-title">PHP {{ selectedVersion }}</h2>
           <div class="detail-actions">
-            <el-button size="small" @click="loadConfig(selectedVersion)">Refresh Config</el-button>
+            <el-button size="small" @click="loadConfig(selectedVersion)">{{ $t('php.refreshConfig') }}</el-button>
           </div>
         </div>
 
         <!-- Extensions -->
         <div class="extensions-section" v-if="extensions.length > 0">
-          <div class="section-label">Extensions ({{ enabledCount }}/{{ extensions.length }} enabled)</div>
+          <div class="section-label">{{ $t('php.extensionsCount', { enabled: enabledCount, total: extensions.length }) }}</div>
           <div class="ext-grid">
             <div
               v-for="ext in extensions"

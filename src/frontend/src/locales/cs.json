@@ -825,7 +825,10 @@
     "title": "Verze PHP",
     "extensions": "Rozšíření",
     "setDefault": "Nastavit výchozí",
-    "noVersions": "Žádné verze PHP nainstalovány"
+    "noVersions": "Žádné verze PHP nainstalovány",
+    "refreshConfig": "Obnovit konfiguraci",
+    "extensionsCount": "Rozšíření ({enabled}/{total} povoleno)",
+    "default": "výchozí"
   },
   "ssl": {
     "title": "SSL certifikáty",
