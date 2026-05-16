@@ -7,17 +7,35 @@
 
     <div v-if="sitesStore.loading" v-loading="true" class="loading-wrap" />
 
-    <el-empty
-      v-else-if="sitesStore.sites.length === 0"
-      :description="$t('sites.card.welcomeSubtext')"
-      :image-size="80"
-    >
-      <template #description>
-        <p class="empty-title">{{ $t('sites.card.welcomeTitle') }}</p>
-        <p class="empty-sub">{{ $t('sites.card.welcomeSubtext') }}</p>
-      </template>
-      <el-button type="primary" size="large" @click="emit('create')">{{ $t('sites.create') }}</el-button>
-    </el-empty>
+    <!-- Fresh-install hero: replaces the default el-empty drawing with a
+         branded welcome card. Operators landing on a clean install
+         see what the app does, not a placeholder. -->
+    <div v-else-if="sitesStore.sites.length === 0" class="welcome-hero">
+      <div class="welcome-mark">
+        <el-icon><Link /></el-icon>
+      </div>
+      <h1 class="welcome-title">{{ $t('sites.card.welcomeTitle') }}</h1>
+      <p class="welcome-sub">{{ $t('sites.card.welcomeSubtext') }}</p>
+      <div class="welcome-cta">
+        <el-button type="primary" size="large" @click="emit('create')">
+          + {{ $t('sites.card.newSite') }}
+        </el-button>
+      </div>
+      <ul class="welcome-features">
+        <li>
+          <el-icon><Cpu /></el-icon>
+          <span>{{ $t('sites.simple.welcomeFeaturePhp') }}</span>
+        </li>
+        <li>
+          <el-icon><Lock /></el-icon>
+          <span>{{ $t('sites.simple.welcomeFeatureSsl') }}</span>
+        </li>
+        <li>
+          <el-icon><Connection /></el-icon>
+          <span>{{ $t('sites.simple.welcomeFeatureBind') }}</span>
+        </li>
+      </ul>
+    </div>
 
     <div v-else class="card-grid">
       <SimpleSiteCard
@@ -70,6 +88,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { Link, Cpu, Lock, Connection } from '@element-plus/icons-vue'
 import SimpleSiteCard from './SimpleSiteCard.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
@@ -393,17 +412,67 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   font-family: var(--el-font-family-mono, monospace);
 }
 
-.empty-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--wdc-text);
-  margin-bottom: 4px;
+/* Fresh-install welcome hero — replaces the default el-empty drawing
+   with a branded splash. First impression for an operator who just
+   installed the app sees the value proposition + a single big CTA. */
+.welcome-hero {
+  max-width: 560px;
+  margin: 48px auto;
+  padding: 40px 32px;
+  text-align: center;
+  background: var(--wdc-surface);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-lg);
+  box-shadow: var(--wdc-shadow-card);
 }
-
-.empty-sub {
-  font-size: 0.85rem;
+.welcome-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent);
+  font-size: 32px;
+}
+.welcome-title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--wdc-text);
+}
+.welcome-sub {
+  margin: 0 0 24px;
   color: var(--wdc-text-2);
-  margin-bottom: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.welcome-cta {
+  margin-bottom: 28px;
+}
+.welcome-features {
+  list-style: none;
+  margin: 0;
+  padding: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--wdc-border);
+  text-align: left;
+}
+.welcome-features li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--wdc-text-2);
+  font-size: 0.86rem;
+}
+.welcome-features li .el-icon {
+  color: var(--wdc-accent);
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .danger-item {

@@ -467,6 +467,9 @@
       "cloudflareTunnel": "Cloudflare Tunel",
       "submit": "Vytvořit web",
       "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami",
+      "welcomeFeaturePhp": "PHP 8.5 / 8.4 / 8.3 / 8.2 / 7.4 přepínání",
+      "welcomeFeatureSsl": "Automatický HTTPS přes mkcert",
+      "welcomeFeatureBind": "Bind na konkrétní IP rozhraní",
       "noPhpInstalledTitle": "Žádná PHP verze není nainstalovaná",
       "noPhpInstalledHint": "Pokud děláš statický web, ponech 'none'. Pro PHP weby si nejdřív nainstaluj verzi v PHP Manageru.",
       "noPhpInstalledCta": "Otevřít PHP Manager →"
