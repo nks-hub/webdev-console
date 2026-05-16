@@ -659,7 +659,10 @@ public class SiteManagerTests : IDisposable
         var loaded = _manager.Get("minimal.loc");
         Assert.NotNull(loaded);
         Assert.Equal("8.4", loaded!.PhpVersion);
-        Assert.False(loaded.SslEnabled);
+        // SSL is the default — see SiteConfig.SslEnabled. A minimal TOML
+        // therefore loads as HTTPS-enabled, matching the operator-friendly
+        // "https-by-default" behaviour wired in 2026-04.
+        Assert.True(loaded.SslEnabled);
         Assert.Equal(80, loaded.HttpPort);
         Assert.Equal(443, loaded.HttpsPort);
         Assert.Empty(loaded.Aliases);
@@ -1039,5 +1042,183 @@ public class SiteManagerTests : IDisposable
         Assert.Equal("none", loaded!.PhpVersion);
         Assert.Equal(3000, loaded.NodeUpstreamPort);
         Assert.Equal("npm run dev", loaded.NodeStartCommand);
+    }
+
+    // ── Bind IP / vhost generation end-to-end ────────────────────────────
+    // These tests exercise the full SiteManager.CreateAsync path including
+    // bind-address normalization, TOML round-trip and vhost rendering, so
+    // that a fresh install can host sites on a specific NIC IP, on every
+    // listener (the * default), or on several IPs at once without the
+    // operator having to apply post-install corrections.
+
+    [Fact]
+    public async Task CreateAsync_BindWildcard_DefaultsToStarWhenUnset()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "bind-default.loc",
+            DocumentRoot = "C:/htdocs/bind-default",
+            PhpVersion = "8.4",
+        };
+
+        await _manager.CreateAsync(site);
+
+        var loaded = _manager.Get("bind-default.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal(new[] { "*" }, loaded!.BindAddresses);
+        Assert.Equal("*", loaded.BindAddress);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BindSingleIp_PersistsAndRendersExactScope()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "lan-only.loc",
+            DocumentRoot = "C:/htdocs/lan-only",
+            BindAddresses = new[] { "192.168.1.20" },
+        };
+
+        await _manager.CreateAsync(site);
+
+        var listeners = SiteManager.EffectiveApacheBindAddresses(site);
+        Assert.Equal(new[] { "192.168.1.20" }, listeners);
+
+        var tomlPath = Path.Combine(_sitesDir, "lan-only.loc.toml");
+        var toml = await File.ReadAllTextAsync(tomlPath);
+        Assert.Contains("192.168.1.20", toml);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BindMultipleIps_PersistsAllOfThem()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "multi-bind.loc",
+            DocumentRoot = "C:/htdocs/multi-bind",
+            BindAddresses = new[] { "192.168.1.20", "10.0.0.5" },
+        };
+
+        await _manager.CreateAsync(site);
+
+        var loaded = _manager.Get("multi-bind.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal(new[] { "192.168.1.20", "10.0.0.5" }, loaded!.BindAddresses);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BindIpv6_PersistsWithBracketRendering()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "v6-only.loc",
+            DocumentRoot = "C:/htdocs/v6-only",
+            BindAddresses = new[] { "fe80::a" },
+        };
+
+        await _manager.CreateAsync(site);
+
+        var listeners = SiteManager.EffectiveApacheBindAddresses(site);
+        Assert.Single(listeners);
+        Assert.StartsWith("[", listeners[0]);
+        Assert.EndsWith("]", listeners[0]);
+    }
+
+    [Fact]
+    public async Task CreateAsync_TwoSitesDifferentDomainsNonOverlappingIps_BothCoexist()
+    {
+        var siteA = new SiteConfig
+        {
+            Domain = "a.loc",
+            DocumentRoot = "C:/htdocs/a",
+            BindAddresses = new[] { "192.168.1.20" },
+        };
+        var siteB = new SiteConfig
+        {
+            Domain = "b.loc",
+            DocumentRoot = "C:/htdocs/b",
+            BindAddresses = new[] { "10.0.0.5" },
+        };
+
+        await _manager.CreateAsync(siteA);
+        await _manager.CreateAsync(siteB);
+
+        Assert.Contains("a.loc", _manager.Sites.Keys);
+        Assert.Contains("b.loc", _manager.Sites.Keys);
+        Assert.Equal(new[] { "192.168.1.20" }, _manager.Get("a.loc")!.BindAddresses);
+        Assert.Equal(new[] { "10.0.0.5" }, _manager.Get("b.loc")!.BindAddresses);
+    }
+
+    [Fact]
+    public async Task CreateAsync_TwoSitesSameDomainOverlappingIps_Throws()
+    {
+        var siteA = new SiteConfig
+        {
+            Domain = "collide.loc",
+            DocumentRoot = "C:/htdocs/a",
+            BindAddresses = new[] { "*" },
+        };
+        var siteB = new SiteConfig
+        {
+            Domain = "collide.loc",
+            DocumentRoot = "C:/htdocs/duplicate",
+            BindAddresses = new[] { "192.168.1.20" },
+        };
+
+        await _manager.CreateAsync(siteA);
+
+        // Same hostname plus an overlapping wildcard listener must surface
+        // a duplicate-host conflict rather than silently superseding the
+        // existing vhost.
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _manager.CreateAsync(siteB));
+    }
+
+    [Fact]
+    public async Task CreateAsync_BindWildcardWithExtraIp_RejectedAsInvalid()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "broken.loc",
+            DocumentRoot = "C:/htdocs/broken",
+            BindAddresses = new[] { "*", "192.168.1.20" },
+        };
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _manager.CreateAsync(site));
+    }
+
+    [Fact]
+    public async Task CreateAsync_BindGarbageInput_RejectedAsInvalid()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "garbage.loc",
+            DocumentRoot = "C:/htdocs/garbage",
+            BindAddresses = new[] { "not-an-ip-at-all" },
+        };
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _manager.CreateAsync(site));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_FlipFromWildcardToSpecificIp_RewritesPersistedScope()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "flip.loc",
+            DocumentRoot = "C:/htdocs/flip",
+            BindAddresses = new[] { "*" },
+        };
+        await _manager.CreateAsync(site);
+
+        site.BindAddresses = new[] { "192.168.1.30" };
+        await _manager.UpdateAsync(site);
+
+        var loaded = _manager.Get("flip.loc");
+        Assert.NotNull(loaded);
+        Assert.Equal(new[] { "192.168.1.30" }, loaded!.BindAddresses);
+
+        var toml = await File.ReadAllTextAsync(Path.Combine(_sitesDir, "flip.loc.toml"));
+        Assert.Contains("192.168.1.30", toml);
+        Assert.DoesNotContain("\"*\"", toml.Split('\n').FirstOrDefault(l => l.Contains("BindAddresses", StringComparison.OrdinalIgnoreCase)) ?? "");
     }
 }
