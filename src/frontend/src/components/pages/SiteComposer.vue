@@ -161,7 +161,7 @@
                       @click.stop="openPackagist(row.raw)"
                     >{{ row.name }}</span>
                   </template>
-                  <div v-if="pkgInfoLoading[row.name]" class="pkg-info-loading">Načítám…</div>
+                  <div v-if="pkgInfoLoading[row.name]" class="pkg-info-loading">{{ $t('common.loading') }}</div>
                   <div v-else-if="pkgInfoCache[row.name]" class="pkg-info">
                     <div class="pkg-info-header mono">{{ row.name }}</div>
                     <div v-if="pkgInfoCache[row.name].abandoned" class="pkg-abandoned">
