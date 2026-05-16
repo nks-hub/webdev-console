@@ -317,7 +317,7 @@
                     <span class="mono">{{ row.content }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column :label="$t('cloudflare.proxied')" width="90" align="center">
+                <el-table-column :label="$t('cloudflare.proxied')" width="120" align="center">
                   <template #default="{ row }">
                     <el-tag v-if="row.proxied" size="small" type="warning" effect="dark">{{ $t('cloudflare.proxied') }}</el-tag>
                     <el-tag v-else size="small" effect="plain">{{ $t('cloudflare.dnsOnly') }}</el-tag>
