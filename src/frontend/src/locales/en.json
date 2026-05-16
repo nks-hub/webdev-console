@@ -39,7 +39,8 @@
     "installing": "Installing…",
     "register": "Register",
     "justNow": "just now",
-    "warning": "Warning"
+    "warning": "Warning",
+    "danger": "Danger"
   },
   "header": {
     "connected": "Connected",

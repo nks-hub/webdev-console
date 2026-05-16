@@ -377,7 +377,7 @@
           <section class="edit-card danger-card">
             <header class="edit-card-header danger-header">
               <span class="edit-card-title">{{ $t('mysqlPlugin.resetPassword') }}</span>
-              <el-tag type="danger" size="small" effect="dark">DANGER</el-tag>
+              <el-tag type="danger" size="small" effect="dark">{{ $t('common.danger') }}</el-tag>
             </header>
             <div class="edit-card-body">
               <el-alert

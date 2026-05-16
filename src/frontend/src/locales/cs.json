@@ -39,7 +39,8 @@
     "installing": "Instalace…",
     "register": "Registrovat",
     "justNow": "právě teď",
-    "warning": "Upozornění"
+    "warning": "Upozornění",
+    "danger": "Nebezpečí"
   },
   "header": {
     "connected": "Připojeno",
