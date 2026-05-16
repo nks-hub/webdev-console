@@ -34,7 +34,7 @@
       {{ t('settings.advancedPorts.portAlertDesc') }}
     </el-alert>
 
-    <el-form label-position="left" label-width="160px" size="small" class="ports-form">
+    <el-form label-position="left" label-width="200px" size="small" class="ports-form">
       <el-form-item :label="t('settings.ports.httpPort')">
         <el-input-number
           :model-value="ports.http"

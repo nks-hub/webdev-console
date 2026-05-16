@@ -184,7 +184,7 @@
       width="420px"
       :close-on-click-modal="false"
     >
-      <el-form :model="addForm" label-width="120px" @submit.prevent="submitAdd">
+      <el-form :model="addForm" label-width="200px" @submit.prevent="submitAdd">
         <el-form-item :label="$t('hosts.addDialogIp')" required>
           <el-input v-model="addForm.ip" placeholder="127.0.0.1" />
         </el-form-item>

@@ -131,7 +131,7 @@
                 <span class="settings-card-title">{{ $t('backupsPage.schedule.cardTitle') }}</span>
               </header>
               <div class="settings-card-body">
-                <el-form label-position="left" label-width="220px" size="small" style="max-width: 500px">
+                <el-form label-position="left" label-width="290px" size="small" style="max-width: 560px">
                   <el-form-item :label="$t('backupsPage.schedule.intervalLabel')">
                     <el-input-number
                       v-model="scheduleHours"

@@ -219,7 +219,7 @@
               <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
               {{ $t('settings.advancedPorts.portAlertDesc') }}
             </el-alert>
-            <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
+            <el-form label-position="left" label-width="200px" size="small" style="max-width: 440px">
               <el-form-item :label="$t('settings.ports.httpPort')">
                 <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
@@ -559,7 +559,7 @@
                 {{ $t('settings.mcp.description') }}
                 <strong>{{ $t('settings.mcp.warning') }}</strong>
               </p>
-              <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
+              <el-form label-position="left" label-width="320px" size="small" style="max-width: 580px">
                 <el-form-item :label="$t('settings.mcp.enableLabel')">
                   <el-switch v-model="mcpEnabled" />
                 </el-form-item>
@@ -693,7 +693,7 @@
                   ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
                 </span>
               </div>
-              <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
+              <el-form label-position="left" label-width="240px" size="small" style="max-width: 520px">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
                 </el-form-item>
@@ -799,7 +799,7 @@
             <div class="settings-section" style="margin-top: 16px">
               <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
               <p class="hint">{{ $t('settings.osNotify.description') }}</p>
-              <el-form label-position="left" label-width="200px" size="small" style="max-width: 400px">
+              <el-form label-position="left" label-width="240px" size="small" style="max-width: 440px">
                 <el-form-item :label="$t('settings.osNotify.deployLabel')">
                   <el-switch v-model="osNotifyDeploy" />
                 </el-form-item>

@@ -232,7 +232,7 @@
               <span class="edit-card-hint">{{ $t('mysqlPlugin.createUserHint') }}</span>
             </header>
             <div class="edit-card-body">
-              <el-form label-width="150px" class="user-form-grid">
+              <el-form label-width="200px" class="user-form-grid">
                 <el-form-item :label="$t('mysqlPlugin.userName')">
                   <el-input v-model="userForm.userName" maxlength="64" />
                 </el-form-item>
