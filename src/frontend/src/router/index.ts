@@ -58,11 +58,14 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/backups', component: BackupsPage, meta: { title: 'Zálohy', titleKey: 'nav.backups' } },
   // Phase 8 — single MCP hub with 4 tabs (Activity / Requests / Rules / Catalog).
   // /mcp redirects to /mcp/activity (the new default — full audit feed).
+  // MCP visibility is driven by featureFlagsStore.showMcpSurface, not the
+  // Simple/Advanced toggle — operators on Simple who run an AI client
+  // need to reach the audit log too (incident 2026-05-07).
   { path: '/mcp', redirect: '/mcp/activity' },
-  { path: '/mcp/activity', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
-  { path: '/mcp/intents', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
-  { path: '/mcp/grants',  component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
-  { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp', requiresAdvanced: true } },
+  { path: '/mcp/activity', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
+  { path: '/mcp/intents', component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
+  { path: '/mcp/grants',  component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
+  { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
   { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
 ]
