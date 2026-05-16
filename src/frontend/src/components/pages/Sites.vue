@@ -77,7 +77,7 @@
               :loading="togglingEnabled === site.domain"
               size="small"
               inline-prompt
-              :title="site.enabled !== false ? 'Povoleno' : 'Zakázáno'"
+              :title="site.enabled !== false ? $t('common.enabled') : $t('common.disabled')"
               @change="(v: boolean | string | number) => toggleSiteEnabled(site, v)"
               @click.stop
             />
@@ -228,7 +228,7 @@
                 :loading="togglingEnabled === row.domain"
                 size="small"
                 inline-prompt
-                :title="row.enabled !== false ? 'Povoleno' : 'Zakázáno'"
+                :title="row.enabled !== false ? $t('common.enabled') : $t('common.disabled')"
                 @change="(v: boolean | string | number) => toggleSiteEnabled(row, v)"
                 @click.stop
               />
