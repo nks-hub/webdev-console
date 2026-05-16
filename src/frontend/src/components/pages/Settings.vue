@@ -1145,7 +1145,7 @@ async function ssoLogin() {
       ? `Signed in as ${authStore.displayName}`
       : 'Signed in')
   } catch (err) {
-    ElMessage.error(`SSO failed: ${errorMessage(err)}`)
+    ElMessage.error(t('settingsToast.ssoFailed', { err: errorMessage(err) }))
   }
 }
 
@@ -1383,7 +1383,7 @@ const mampDiscovering = ref(false)
 async function browsePath(key: keyof typeof paths, kind: 'file' | 'folder'): Promise<void> {
   const api = window.electronAPI
   if (!api?.showOpenDialog) {
-    ElMessage.warning('Native file dialog is only available in the packaged app')
+    ElMessage.warning(t('settingsToast.filePickerDesktopOnly'))
     return
   }
   const result = await api.showOpenDialog({
@@ -1446,10 +1446,10 @@ async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(`Backup created: ${result.files} files, ${(result.size / 1024 / 1024).toFixed(1)} MB`)
+    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: (result.size / 1024 / 1024).toFixed(1) }))
     void loadBackups()
   } catch (e) {
-    ElMessage.error(`Backup failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
     backupCreating.value = false
   }
@@ -1515,7 +1515,7 @@ async function confirmResetSettings() {
   try {
     await doReset('settings', 'Reset nastavení')
   } catch (e) {
-    ElMessage.error(`Reset selhal: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.resetFailed', { err: errorMessage(e) }))
   } finally {
     resettingSettings.value = false
   }
@@ -1535,7 +1535,7 @@ async function confirmFactoryReset() {
   try {
     await doReset('factory', 'Tovární reset')
   } catch (e) {
-    ElMessage.error(`Reset selhal: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.resetFailed', { err: errorMessage(e) }))
   } finally {
     resettingFactory.value = false
   }
@@ -1572,9 +1572,9 @@ async function saveMysqlRootPassword() {
     if (!r.ok) throw new Error(await r.text().catch(() => `HTTP ${r.status}`))
     mysqlRootPassword.value = ''
     mysqlRootExists.value = true
-    ElMessage.success('MySQL root password saved (DPAPI-encrypted)')
+    ElMessage.success(t('settingsToast.mysqlRootSaved'))
   } catch (e) {
-    ElMessage.error(`Save failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
   } finally {
     mysqlRootSaving.value = false
   }
@@ -1621,7 +1621,7 @@ async function loadSnapshots() {
     const data = await r.json() as { snapshots: SyncSnapshot[] }
     snapshots.value = data.snapshots ?? []
   } catch (e) {
-    ElMessage.error(`Failed to load snapshots: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.loadSnapshotsFailed', { err: errorMessage(e) }))
   } finally {
     snapshotsLoading.value = false
   }
@@ -1650,9 +1650,9 @@ async function restoreSnapshot(row: SyncSnapshot) {
       await saveSettings(data.payload.settings as Record<string, string>)
       await loadSettings()
     }
-    ElMessage.success('Snapshot restored')
+    ElMessage.success(t('settingsToast.snapshotRestored'))
   } catch (e) {
-    ElMessage.error(`Restore failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.restoreFailed', { err: errorMessage(e) }))
   } finally {
     snapshotAction.value = null
   }
@@ -1675,9 +1675,9 @@ async function deleteSnapshot(row: SyncSnapshot) {
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     snapshots.value = snapshots.value.filter(s => s.id !== row.id)
-    ElMessage.success('Snapshot deleted')
+    ElMessage.success(t('settingsToast.snapshotDeleted'))
   } catch (e) {
-    ElMessage.error(`Delete failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.deleteFailed', { err: errorMessage(e) }))
   } finally {
     snapshotAction.value = null
   }
@@ -1734,29 +1734,29 @@ async function createDatabase() {
       body: JSON.stringify({ name: newDbName.value }),
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(`Database ${newDbName.value} created`)
+    ElMessage.success(t('settingsToast.databaseCreated', { name: newDbName.value }))
     newDbName.value = ''
     await loadDatabases()
-  } catch (e) { ElMessage.error(`Create failed: ${errorMessage(e)}`) }
+  } catch (e) { ElMessage.error(t('settingsToast.createFailed', { err: errorMessage(e) })) }
 }
 
 async function dropDatabase(name: string) {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(`Database ${name} dropped`)
+    ElMessage.success(t('settingsToast.databaseDropped', { name }))
     await loadDatabases()
-  } catch (e) { ElMessage.error(`Drop failed: ${errorMessage(e)}`) }
+  } catch (e) { ElMessage.error(t('settingsToast.dropFailed', { err: errorMessage(e) })) }
 }
 
 async function flushDns() {
   flushingDns.value = true
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/dns/flush`, { method: 'POST', headers: authHeaders() })
-    if (r.ok) ElMessage.success('DNS cache flushed')
-    else ElMessage.warning('DNS flush may require admin privileges')
+    if (r.ok) ElMessage.success(t('settingsToast.dnsFlushed'))
+    else ElMessage.warning(t('settingsToast.dnsFlushAdmin'))
   } catch {
-    ElMessage.warning('DNS flush endpoint not available')
+    ElMessage.warning(t('settingsToast.dnsFlushUnavailable'))
   } finally {
     flushingDns.value = false
   }
@@ -1772,7 +1772,7 @@ async function discoverMamp() {
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const data: { count?: number; sites?: Array<{ domain?: string; Domain?: string }> } = await r.json()
     if (!data.count || data.count === 0) {
-      ElMessage.info('No MAMP PRO sites found on this machine')
+      ElMessage.info(t('settingsToast.noMampSites'))
       return
     }
     const confirmed = await ElMessageBox.confirm(
@@ -1784,10 +1784,10 @@ async function discoverMamp() {
       const ir = await fetch(`${daemonBaseUrl()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
       if (!ir.ok) throw new Error((await ir.text().catch(() => '')) || `HTTP ${ir.status}`)
       const result = await ir.json()
-      ElMessage.success(`Imported ${result.count} site(s) from MAMP`)
+      ElMessage.success(t('settingsToast.mampImported', { count: result.count }))
     }
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error(`MAMP migration: ${errorMessage(e)}`)
+    if (e !== 'cancel') ElMessage.error(t('settingsToast.mampFailed', { err: errorMessage(e) }))
   } finally {
     mampDiscovering.value = false
   }
@@ -1884,7 +1884,7 @@ async function syncPluginsNow() {
   } catch (e) {
     const msg = errorMessage(e)
     pluginSyncStatus.value = { ok: false, message: msg }
-    ElMessage.error(`Plugin sync failed: ${msg}`)
+    ElMessage.error(t('settingsToast.pluginSyncFailed', { err: msg }))
   } finally {
     syncingPlugins.value = false
   }
@@ -1908,11 +1908,11 @@ async function refreshCatalog() {
       ok: true,
       message: `Refreshed: ${result.count ?? 0} releases · ${result.lastFetch ?? 'now'}`,
     }
-    ElMessage.success(`Catalog refreshed: ${result.count ?? 0} releases`)
+    ElMessage.success(t('settingsToast.catalogRefreshed', { count: result.count ?? 0 }))
   } catch (e) {
     const msg = errorMessage(e)
     catalogStatus.value = { ok: false, message: `Refresh failed: ${msg}` }
-    ElMessage.error(`Refresh failed: ${msg}`)
+    ElMessage.error(t('settingsToast.refreshFailed', { err: msg }))
   } finally {
     refreshingCatalog.value = false
   }
@@ -2009,10 +2009,10 @@ async function unlinkDevice(row: CatalogDeviceInfo) {
       const body = await r.json().catch(() => null) as { detail?: string } | null
       throw new Error(body?.detail || `HTTP ${r.status}`)
     }
-    ElMessage.success('Device unlinked')
+    ElMessage.success(t('settingsToast.deviceUnlinked'))
     await loadDevicesAccount()
   } catch (e) {
-    ElMessage.error(`Unlink failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.unlinkFailed', { err: errorMessage(e) }))
   } finally {
     unlinkingDevice.value = null
   }
@@ -2042,9 +2042,9 @@ async function saveDeviceName(row: CatalogDeviceInfo) {
       throw new Error(body?.detail || `HTTP ${r.status}`)
     }
     row.name = newName
-    ElMessage.success('Device renamed')
+    ElMessage.success(t('settingsToast.deviceRenamed'))
   } catch (e) {
-    ElMessage.error(`Rename failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.renameFailed', { err: errorMessage(e) }))
   }
 }
 
@@ -2072,7 +2072,7 @@ async function doLogin() {
     })
     await authStore.refreshProfile(getCatalogUrl())
     authPassword.value = ''
-    ElMessage.success(`Signed in as ${result.email}`)
+    ElMessage.success(t('settingsToast.signedInAs', { email: result.email }))
 
     // Auto-register this device in the catalog: catalog-api creates a
     // DeviceConfig row lazily on the first /sync/push, so without this
@@ -2131,7 +2131,7 @@ async function doRegister() {
     localStorage.setItem('nks-wdc-catalog-email', result.email)
     await authStore.refreshProfile(getCatalogUrl())
     authPassword.value = ''
-    ElMessage.success(`Account created: ${result.email}`)
+    ElMessage.success(t('settingsToast.accountCreated', { email: result.email }))
   } catch (e) {
     authError.value = errorMessage(e)
   } finally {
@@ -2152,7 +2152,7 @@ async function doLogout() {
   try {
     await saveSettings({ 'sync.accountToken': '', 'sync.accountEmail': '' })
   } catch { /* daemon unreachable, heartbeat will just retry 401 once */ }
-  ElMessage.success('Signed out')
+  ElMessage.success(t('settingsToast.signedOut'))
 }
 
 async function loadDevicesAccount() {
@@ -2166,7 +2166,7 @@ async function loadDevicesAccount() {
     )
   } catch (e) {
     const msg = errorMessage(e)
-    ElMessage.error(`Load devices failed: ${msg}`)
+    ElMessage.error(t('settingsToast.loadDevicesFailed', { err: msg }))
     // Auto-logout on auth failure — use case-insensitive match and
     // check for common catalog-api auth wording so a 403 / "Not
     // authenticated" / "token expired" message all trigger cleanup.
@@ -2183,9 +2183,9 @@ async function pushMyConfigTo(targetDeviceId: string) {
   pushingTo.value = targetDeviceId
   try {
     await pushConfigToDevice(getCatalogUrl(), accountToken.value, targetDeviceId, deviceId.value)
-    ElMessage.success(`Config pushed to device ${targetDeviceId.slice(0, 8)}…`)
+    ElMessage.success(t('settingsToast.configPushedToDevice', { id: targetDeviceId.slice(0, 8) }))
   } catch (e) {
-    ElMessage.error(`Push failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.pushFailed', { err: errorMessage(e) }))
   } finally {
     pushingTo.value = null
   }
@@ -2230,8 +2230,8 @@ async function loadDeviceId() {
 
 function copyDeviceId() {
   navigator.clipboard.writeText(deviceId.value)
-    .then(() => ElMessage.success('Device ID copied'))
-    .catch(() => ElMessage.warning('Cannot access clipboard'))
+    .then(() => ElMessage.success(t('settingsToast.deviceIdCopied')))
+    .catch(() => ElMessage.warning(t('settingsToast.cannotAccessClipboard')))
 }
 
 async function buildSyncPayload(): Promise<Record<string, unknown>> {
@@ -2305,11 +2305,11 @@ async function pushToCloud() {
     }
     lastSyncTime.value = new Date().toISOString()
     syncStatus.value = { ok: true, message: 'Pushed successfully' }
-    ElMessage.success('Configuration pushed to cloud')
+    ElMessage.success(t('settingsToast.configPushedToCloud'))
   } catch (e) {
     const msg = errorMessage(e)
     syncStatus.value = { ok: false, message: `Push failed: ${msg}` }
-    ElMessage.error(`Push failed: ${msg}`)
+    ElMessage.error(t('settingsToast.pushFailed', { err: msg }))
   } finally {
     syncing.value = false
   }
@@ -2359,7 +2359,7 @@ async function pullFromCloud() {
     if (!r.ok) {
       if (r.status === 404) {
         syncStatus.value = { ok: false, message: 'No cloud snapshot found for this device' }
-        ElMessage.info('No cloud snapshot found — push first')
+        ElMessage.info(t('settingsToast.noCloudSnapshot'))
         return
       }
       const text = await r.text().catch(() => r.statusText)
@@ -2437,17 +2437,17 @@ async function pullFromCloud() {
       }
 
       if (newSiteCount > 0) {
-        ElMessage.info(`${newSiteCount} new site(s) imported — set their document root in Sites`)
+        ElMessage.info(t('settingsToast.newSitesImported', { count: newSiteCount }))
       }
     }
 
     syncStatus.value = { ok: true, message: `Pulled from cloud (${data.updated_at ?? 'unknown'})` }
-    ElMessage.success('Configuration synced from cloud')
+    ElMessage.success(t('settingsToast.configSynced'))
     await loadSettings()
   } catch (e) {
     const msg = errorMessage(e)
     syncStatus.value = { ok: false, message: `Pull failed: ${msg}` }
-    ElMessage.error(`Pull failed: ${msg}`)
+    ElMessage.error(t('settingsToast.pullFailed', { err: msg }))
   } finally {
     pulling.value = false
   }
@@ -2492,9 +2492,9 @@ async function exportSettings() {
     a.download = `nks-wdc-settings-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
-    ElMessage.success('Settings exported')
+    ElMessage.success(t('settingsToast.settingsExported'))
   } catch (e) {
-    ElMessage.error(`Export failed: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.exportFailed', { err: errorMessage(e) }))
   }
 }
 
@@ -2529,10 +2529,10 @@ async function importSettings(event: Event) {
     if (Object.keys(merged).length > 0) {
       await saveSettings(merged)
     }
-    ElMessage.success(`Imported ${Object.keys(merged).length} sync settings from ${file.name}`)
+    ElMessage.success(t('settingsToast.syncImported', { count: Object.keys(merged).length, file: file.name }))
     await loadSettings()
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error(`Import failed: ${errorMessage(e)}`)
+    if (e !== 'cancel') ElMessage.error(t('settingsToast.importFailed', { err: errorMessage(e) }))
   }
   input.value = ''
 }
@@ -2746,9 +2746,9 @@ async function save() {
     // saveSettings throws on non-ok with the daemon's error message extracted,
     // giving better feedback than the previous raw-HTTP-status fallback.
     await saveSettings(payload)
-    ElMessage.success('Settings saved')
+    ElMessage.success(t('settingsToast.settingsSaved'))
   } catch (e) {
-    ElMessage.error(`Failed to save: ${errorMessage(e)}`)
+    ElMessage.error(t('settingsToast.failedToSave', { err: errorMessage(e) }))
   } finally {
     saving.value = false
   }
