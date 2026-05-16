@@ -83,6 +83,21 @@
           />
         </div>
 
+        <div v-if="sitesCount > 0 && !simpleApacheRunning" class="simple-apache-banner">
+          <div class="simple-apache-banner-text">
+            <strong>{{ $t('dashboard.simple.apacheStopped.title') }}</strong>
+            <span>{{ $t('dashboard.simple.apacheStopped.subtitle') }}</span>
+          </div>
+          <el-button
+            type="success"
+            size="default"
+            :loading="startingApache"
+            @click="startApacheFromSimple"
+          >
+            {{ $t('dashboard.simple.apacheStopped.startBtn') }}
+          </el-button>
+        </div>
+
         <div class="simple-quick-actions">
           <el-button type="primary" size="large" @click="router.push('/sites?create=1')">
             + {{ $t('dashboard.simple.quickActions.newSite') }}
@@ -577,6 +592,24 @@ async function toggleService(id: string, value: boolean | string | number) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     ElNotification({ title: `${name} — action failed`, message, type: 'error', duration: 5000 })
+  }
+}
+
+// Simple-mode Apache status: signal "site won't load" condition to the
+// user front-and-centre so the first-run flow doesn't end on a dead URL.
+const simpleApacheRunning = computed(() => {
+  const apache = daemonStore.services.find(s => s.id === 'apache' || s.id === 'httpd')
+  return apache?.state === 2 || apache?.status === 'running'
+})
+const startingApache = ref(false)
+async function startApacheFromSimple() {
+  const apache = daemonStore.services.find(s => s.id === 'apache' || s.id === 'httpd')
+  if (!apache) return
+  startingApache.value = true
+  try {
+    await servicesStore.start(apache.id)
+  } finally {
+    startingApache.value = false
   }
 }
 
@@ -1179,6 +1212,37 @@ function closeConfig() {
   justify-content: center;
   flex-wrap: wrap;
   padding-top: 8px;
+}
+
+.simple-apache-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  margin: 16px auto;
+  max-width: 720px;
+  background: var(--wdc-surface-2);
+  border: 1px solid var(--el-color-warning-light-5);
+  border-left: 3px solid var(--el-color-warning);
+  border-radius: var(--wdc-radius);
+}
+
+.simple-apache-banner-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.simple-apache-banner-text strong {
+  color: var(--wdc-text);
+  font-weight: 600;
+}
+
+.simple-apache-banner-text span {
+  color: var(--wdc-text-2);
 }
 
 /* Recent activity timeline (Phase 4) */

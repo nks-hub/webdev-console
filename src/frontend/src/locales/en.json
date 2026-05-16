@@ -410,6 +410,11 @@
         "newSite": "New site",
         "mailpit": "Open Mailpit",
         "backup": "Backup"
+      },
+      "apacheStopped": {
+        "title": "Web server is stopped",
+        "subtitle": "Sites won't load until Apache is running.",
+        "startBtn": "Start Apache"
       }
     }
   },

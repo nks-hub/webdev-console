@@ -410,6 +410,11 @@
         "newSite": "Nový web",
         "mailpit": "Otevřít Mailpit",
         "backup": "Zálohování"
+      },
+      "apacheStopped": {
+        "title": "Web server je zastavený",
+        "subtitle": "Weby se nenačtou, dokud Apache neběží.",
+        "startBtn": "Spustit Apache"
       }
     }
   },
