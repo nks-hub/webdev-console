@@ -60,7 +60,7 @@
 
     <div class="card-actions" @click.stop>
       <el-button
-        size="small"
+        size="large"
         type="primary"
         :icon="ExternalLinkIcon"
         @click="emit('open', site)"
@@ -68,7 +68,7 @@
 
       <el-button
         v-if="apacheRunning"
-        size="small"
+        size="large"
         circle
         :icon="StopIcon"
         :loading="toggling"
@@ -77,7 +77,7 @@
       />
       <el-button
         v-else
-        size="small"
+        size="large"
         circle
         type="success"
         :icon="PlayIcon"
@@ -95,7 +95,7 @@
         <el-switch
           :model-value="site.enabled !== false"
           :loading="togglingEnabled === site.domain"
-          size="small"
+          size="large"
           @change="(v: boolean | string | number) => emit('toggle-enabled', site, Boolean(v))"
         />
       </el-tooltip>
@@ -109,7 +109,7 @@
         @command="(cmd: string) => emit('command', cmd, site)"
       >
         <el-button
-          size="small"
+          size="large"
           circle
           :aria-label="t('sites.card.moreActions', { domain: site.domain })"
         >
@@ -253,13 +253,14 @@ void computed(() => props.site.domain)
   min-width: 0;
 }
 .card-title {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--wdc-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  letter-spacing: -0.01em;
 }
 .card-status {
   display: flex;
@@ -280,7 +281,7 @@ void computed(() => props.site.domain)
 .dot-red { background: var(--el-color-danger); }
 .card-path {
   color: var(--wdc-text-3);
-  font-size: 0.74rem;
+  font-size: 0.8125rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
