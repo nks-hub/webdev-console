@@ -645,6 +645,8 @@
     "openHosts": "Otevřít hosts",
     "openHostsTitle": "Otevřít systémový hosts soubor",
     "httpsEnabled": "HTTPS zapnuto",
+    "runtimeStatic": "Statický",
+    "composeBadge": "Compose",
     "additionalDomains": "{n} dalších domén",
     "reapplyAll": "Znovu aplikovat",
     "reapplyAllHint": "Znovu vygenerovat všechny vhosts",

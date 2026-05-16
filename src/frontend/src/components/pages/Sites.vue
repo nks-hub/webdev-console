@@ -184,7 +184,7 @@
               size="small"
               effect="plain"
               class="runtime-tag runtime-static"
-            >Static</el-tag>
+            >{{ $t('sites.runtimeStatic') }}</el-tag>
           </template>
         </el-table-column>
 
@@ -205,7 +205,7 @@
                 effect="plain"
                 class="cell-tag compose-tag"
                 :title="composeStatus[row.domain]?.composeFile || ''"
-              >Compose</el-tag>
+              >{{ $t('sites.composeBadge') }}</el-tag>
               <span
                 v-if="!row.framework && !composeStatus[row.domain]?.hasCompose"
                 class="col-empty"

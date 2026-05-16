@@ -645,6 +645,8 @@
     "openHosts": "Open hosts",
     "openHostsTitle": "Open system hosts file",
     "httpsEnabled": "HTTPS enabled",
+    "runtimeStatic": "Static",
+    "composeBadge": "Compose",
     "additionalDomains": "{n} additional domains",
     "reapplyAll": "Reapply All",
     "reapplyAllHint": "Regenerate all vhosts",
