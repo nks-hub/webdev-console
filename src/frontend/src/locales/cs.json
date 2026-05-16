@@ -1532,6 +1532,7 @@
     "saveAll": "Uložit všechna nastavení",
     "saveSuccess": "Nastavení uloženo",
     "saveLocalOnly": "Nastavení uloženo lokálně (backend persistence v Phase 6.3)",
+    "saveFailed": "Uložení selhalo",
     "discard": "Zahodit",
     "discardConfirmTitle": "Zahodit změny?",
     "discardConfirmMessage": "Všechny neuložené změny v tomto formuláři budou zahozeny. Pokračovat?",
@@ -2285,7 +2286,17 @@
       "catalogNeverSynced": "dosud nesynchronizováno"
     },
     "advanced": {
-      "refreshCatalog": "Synchronizovat nyní"
+      "tabDesc": "Externí služby, se kterými démon komunikuje. Nech prázdné pro použití zabudovaných výchozích. Změny se projeví po restartu nebo obnovení katalogu.",
+      "catalogUrl": "URL katalogu API",
+      "binaryReleases": "Binární releases",
+      "testConnection": "Test připojení",
+      "mysqlRoot": "Heslo MySQL root",
+      "mysqlRootPlaceholderStored": "•••••••• (uloženo)",
+      "mysqlRootPlaceholderEnter": "Zadej heslo root pro synchronizaci s mysqld",
+      "save": "Uložit",
+      "pluginAutoSync": "Auto-synchronizace pluginů",
+      "syncNow": "Synchronizovat teď",
+      "refreshCatalog": "Synchronizovat katalog"
     },
     "language": "Jazyk",
     "languageEn": "English",
@@ -2342,19 +2353,6 @@
       "tabDesc": "Stáhne JSON soubor se všemi nastaveními nebo naimportuje dříve exportovaný soubor. Užitečné pro offline přenos nebo verzované týmové konfigurace.",
       "exportFile": "Exportovat do souboru",
       "importFile": "Importovat ze souboru"
-    },
-    "advanced": {
-      "tabDesc": "Externí služby, se kterými démon komunikuje. Nech prázdné pro použití zabudovaných výchozích. Změny se projeví po restartu nebo obnovení katalogu.",
-      "catalogUrl": "URL katalogu API",
-      "binaryReleases": "Binární releases",
-      "testConnection": "Test připojení",
-      "mysqlRoot": "Heslo MySQL root",
-      "mysqlRootPlaceholderStored": "•••••••• (uloženo)",
-      "mysqlRootPlaceholderEnter": "Zadej heslo root pro synchronizaci s mysqld",
-      "save": "Uložit",
-      "pluginAutoSync": "Auto-synchronizace pluginů",
-      "syncNow": "Synchronizovat teď",
-      "refreshCatalog": "Synchronizovat katalog"
     },
     "paths": {
       "tabDesc": "Přepiš cesty k binárkám. Nech prázdné pro použití auto-detekovaných výchozích.",

@@ -1532,6 +1532,7 @@
     "saveAll": "Save all settings",
     "saveSuccess": "Settings saved",
     "saveLocalOnly": "Settings saved locally (backend persistence in Phase 6.3)",
+    "saveFailed": "Save failed",
     "discard": "Discard",
     "discardConfirmTitle": "Discard changes?",
     "discardConfirmMessage": "All unsaved changes in this form will be discarded. Continue?",
@@ -2285,7 +2286,17 @@
       "catalogNeverSynced": "never synced"
     },
     "advanced": {
-      "refreshCatalog": "Sync now"
+      "tabDesc": "External services the daemon talks to. Leave blank to use built-in defaults. Changes take effect after restart or a catalog refresh.",
+      "catalogUrl": "Catalog API URL",
+      "binaryReleases": "Binary releases",
+      "testConnection": "Test connection",
+      "mysqlRoot": "MySQL root password",
+      "mysqlRootPlaceholderStored": "•••••••• (stored)",
+      "mysqlRootPlaceholderEnter": "Enter root password to sync with mysqld",
+      "save": "Save",
+      "pluginAutoSync": "Plugin auto-sync",
+      "syncNow": "Sync now",
+      "refreshCatalog": "Refresh catalog"
     },
     "language": "Language",
     "languageEn": "English",
@@ -2342,19 +2353,6 @@
       "tabDesc": "Download a JSON file of all settings, or import from a previously exported file. Useful for offline transfers or version-controlled team configs.",
       "exportFile": "Export to file",
       "importFile": "Import from file"
-    },
-    "advanced": {
-      "tabDesc": "External services the daemon talks to. Leave blank to use built-in defaults. Changes take effect after restart or a catalog refresh.",
-      "catalogUrl": "Catalog API URL",
-      "binaryReleases": "Binary releases",
-      "testConnection": "Test connection",
-      "mysqlRoot": "MySQL root password",
-      "mysqlRootPlaceholderStored": "•••••••• (stored)",
-      "mysqlRootPlaceholderEnter": "Enter root password to sync with mysqld",
-      "save": "Save",
-      "pluginAutoSync": "Plugin auto-sync",
-      "syncNow": "Sync now",
-      "refreshCatalog": "Refresh catalog"
     },
     "paths": {
       "tabDesc": "Override binary paths. Leave blank to use auto-detected defaults.",
