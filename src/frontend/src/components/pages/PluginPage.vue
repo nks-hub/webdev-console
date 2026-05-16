@@ -9,16 +9,16 @@
     </div>
 
     <div v-else-if="loadError" class="page-empty">
-      <el-empty description="Failed to load plugin">
+      <el-empty :description="$t('plugins.page.loadFailed')">
         <template #default>
           <div style="color: var(--el-color-danger); margin-bottom: 12px">{{ loadError }}</div>
-          <el-button type="primary" @click="$router.push('/dashboard')">Back to Dashboard</el-button>
+          <el-button type="primary" @click="$router.push('/dashboard')">{{ $t('plugins.page.backToDashboard') }}</el-button>
         </template>
       </el-empty>
     </div>
 
     <div v-else-if="!manifest" class="page-empty">
-      <el-empty :description="`Plugin '${id}' not found.`" />
+      <el-empty :description="$t('plugins.page.notFound', { id })" />
     </div>
 
     <template v-else>
@@ -34,7 +34,7 @@
             size="small"
             :type="manifest.enabled ? 'success' : 'info'"
             effect="dark"
-          >{{ manifest.enabled ? 'Enabled' : 'Disabled' }}</el-tag>
+          >{{ manifest.enabled ? $t('plugins.page.enabled') : $t('plugins.page.disabled') }}</el-tag>
           <el-tag
             v-if="uiDef?.category"
             size="small"
@@ -47,25 +47,25 @@
            schema-driven UI. This is the primary UX for "what does this
            plugin do" without forcing users to hunt through docs. -->
       <div class="plugin-desc-card">
-        <div class="plugin-desc-title">About</div>
+        <div class="plugin-desc-title">{{ $t('plugins.page.about') }}</div>
         <p class="plugin-desc-body">
-          {{ manifest.description || 'No description provided.' }}
+          {{ manifest.description || $t('plugins.page.noDescription') }}
         </p>
         <div class="plugin-desc-meta">
           <span v-if="manifest.author">
-            <span class="meta-label">Author</span>
+            <span class="meta-label">{{ $t('plugins.page.author') }}</span>
             <span class="meta-val">{{ manifest.author }}</span>
           </span>
           <span v-if="manifest.license">
-            <span class="meta-label">License</span>
+            <span class="meta-label">{{ $t('plugins.page.license') }}</span>
             <span class="meta-val">{{ manifest.license }}</span>
           </span>
           <span v-if="manifest.capabilities?.length">
-            <span class="meta-label">Capabilities</span>
+            <span class="meta-label">{{ $t('plugins.page.capabilities') }}</span>
             <span class="meta-val">{{ manifest.capabilities.join(', ') }}</span>
           </span>
           <span v-if="manifest.supportedPlatforms?.length">
-            <span class="meta-label">Platforms</span>
+            <span class="meta-label">{{ $t('plugins.page.platforms') }}</span>
             <span class="meta-val">{{ manifest.supportedPlatforms.join(', ') }}</span>
           </span>
         </div>
@@ -86,8 +86,8 @@
       <div v-else-if="pluginPageError" class="plugin-page-body">
         <el-alert
           type="warning"
-          :title="`Plugin UI bundle failed to load: ${pluginPageError}`"
-          :description="'Falling back to schema-driven panels.'"
+          :title="$t('plugins.page.bundleFailed', { error: pluginPageError })"
+          :description="$t('plugins.page.fallback')"
           :closable="false"
           show-icon
         />
@@ -99,7 +99,7 @@
       </div>
       <div v-else class="plugin-page-body-empty">
         <el-empty
-          description="This plugin does not expose a custom UI panel."
+          :description="$t('plugins.page.noPanel')"
           :image-size="60"
         />
       </div>

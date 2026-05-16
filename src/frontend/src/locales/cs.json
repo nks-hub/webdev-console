@@ -894,7 +894,23 @@
     "installConfirm": "Instalovat {name} v{version} z {url}? Po instalaci bude nutný restart démona.",
     "installSuccess": "{name} nainstalován",
     "installFailed": "Instalace selhala",
-    "restartRequired": "Restartuj démona pro načtení nového pluginu."
+    "restartRequired": "Restartuj démona pro načtení nového pluginu.",
+    "page": {
+      "loadFailed": "Načtení pluginu selhalo",
+      "backToDashboard": "Zpět na přehled",
+      "notFound": "Plugin „{id}\" nenalezen.",
+      "enabled": "Zapnuto",
+      "disabled": "Vypnuto",
+      "about": "O pluginu",
+      "noDescription": "Žádný popis.",
+      "author": "Autor",
+      "license": "Licence",
+      "capabilities": "Schopnosti",
+      "platforms": "Platformy",
+      "bundleFailed": "Nepodařilo se načíst UI bundle pluginu: {error}",
+      "fallback": "Použiji schema-driven panely.",
+      "noPanel": "Tento plugin neposkytuje vlastní UI panel."
+    }
   },
   "hosts": {
     "title": "Hosts soubor",

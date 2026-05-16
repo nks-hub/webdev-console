@@ -894,7 +894,23 @@
     "installConfirm": "Install {name} v{version} from {url}? A daemon restart will be required after installation.",
     "installSuccess": "{name} installed",
     "installFailed": "Install failed",
-    "restartRequired": "Restart the daemon to load the new plugin."
+    "restartRequired": "Restart the daemon to load the new plugin.",
+    "page": {
+      "loadFailed": "Failed to load plugin",
+      "backToDashboard": "Back to Dashboard",
+      "notFound": "Plugin '{id}' not found.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "about": "About",
+      "noDescription": "No description provided.",
+      "author": "Author",
+      "license": "License",
+      "capabilities": "Capabilities",
+      "platforms": "Platforms",
+      "bundleFailed": "Plugin UI bundle failed to load: {error}",
+      "fallback": "Falling back to schema-driven panels.",
+      "noPanel": "This plugin does not expose a custom UI panel."
+    }
   },
   "hosts": {
     "title": "Hosts file",
