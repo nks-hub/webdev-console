@@ -98,7 +98,12 @@
     "backups": "Backups",
     "help": "Help",
     "signedIn": "Signed in",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "signOutConfirm": "Sign out of the catalog?",
+    "signOutTitle": "Sign out",
+    "signedOutToast": "Signed out",
+    "serviceStarted": "{name} started",
+    "serviceStopped": "{name} stopped"
   },
   "versions": {
     "active": "Active",

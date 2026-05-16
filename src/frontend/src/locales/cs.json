@@ -98,7 +98,12 @@
     "backups": "Zálohy",
     "help": "Nápověda",
     "signedIn": "Přihlášen",
-    "signIn": "Přihlásit se"
+    "signIn": "Přihlásit se",
+    "signOutConfirm": "Odhlásit z katalogu?",
+    "signOutTitle": "Odhlásit",
+    "signedOutToast": "Odhlášeno",
+    "serviceStarted": "{name} spuštěno",
+    "serviceStopped": "{name} zastaveno"
   },
   "versions": {
     "active": "Aktivní",

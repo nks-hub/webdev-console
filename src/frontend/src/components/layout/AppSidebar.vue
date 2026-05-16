@@ -308,6 +308,9 @@ import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import type { ServiceInfo } from '../../api/types'
 
 const router = useRouter()
@@ -323,9 +326,9 @@ const authStore = useAuthStore()
 async function toggleSso() {
   if (authStore.isAuthenticated) {
     try {
-      await ElMessageBox.confirm('Sign out of the catalog?', 'Sign out', { type: 'warning' })
+      await ElMessageBox.confirm(t('nav.signOutConfirm'), t('nav.signOutTitle'), { type: 'warning' })
       authStore.logout()
-      ElMessage.success('Signed out')
+      ElMessage.success(t('nav.signedOutToast'))
     } catch { /* user cancelled */ }
     return
   }
@@ -436,10 +439,10 @@ async function toggleSvc(svc: ServiceInfo) {
   try {
     if (svc.state === 2) {
       await servicesStore.stop(svc.id)
-      ElMessage.success(`${name} stopped`)
+      ElMessage.success(t('nav.serviceStopped', { name }))
     } else {
       await servicesStore.start(svc.id)
-      ElMessage.success(`${name} started`)
+      ElMessage.success(t('nav.serviceStarted', { name }))
     }
   } catch (err) {
     ElMessage.error(`${name}: ${err instanceof Error ? err.message : String(err)}`)
