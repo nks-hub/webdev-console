@@ -464,9 +464,9 @@ onMounted(async () => {
 
 <style scoped>
 .simple-detail {
-  width: min(1500px, calc(100% - 48px));
-  margin: 24px auto;
-  padding: 22px;
+  width: 100%;
+  margin: 0;
+  padding: 22px 24px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
