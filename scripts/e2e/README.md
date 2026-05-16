@@ -80,3 +80,30 @@ the matching status code.
 | 19 | Bind IP vhost | wildcard, 127.0.0.1, round-trip, options endpoint |
 | 20 | IPv6 bind vhost | `::1` rendering with `[…]` wrap, bracket normalization |
 | 21 | Multi-IP bind vhost | dual-stack loopback ordering + mixed-scope rejection |
+| 22 | Bind NIC warning | `{site, warnings}` wrapper for bogus IP (RFC5737), surfaces "not assigned" message |
+| 23 | Bind × SSL combo | HTTP + HTTPS VirtualHost pair per explicit bind + wildcard fall-through |
+| 24 | Fresh-install first-site (P0) | minimum-viable POST without bindAddresses → defaults to `["*"]` + vhost present |
+| 25 | Bind × SSL edge cases | multi-IP+SSL, flip-back to wildcard, bogus IP + SSL still wraps |
+| 26 | Bind × custom port | wildcard / explicit + custom httpPort/httpsPort round-trip |
+| 27 | Bind × ServerAlias | aliases land inside the IP-bound VirtualHost block, not wildcard |
+| 28 | IPv6 link-local | `fe80::*` bracket wrap + round-trip |
+| 29 | Localhost auto-loopback | `Domain="localhost" + bindAddresses=["127.0.0.1"]` → daemon auto-appends |
+| 30 | Bind API rejection (P1) | mixed wildcard+specific / shell-injection / garbage / oversize → 4xx |
+| 31 | Bind survives toggle | PATCH /enabled cycle preserves bindAddresses + vhost re-renders correctly |
+| 32 | Bind persists across reload | TOML serializer uses array form; `POST /api/admin/reload-sites` round-trips |
+| 33 | Bind delete-recreate cycle | DELETE prunes vhost; recreate with different bind has no stale blocks |
+
+## Bind-IP coverage matrix (scenarios 19–33)
+
+Every dimension of vhost generation across bind addresses is regression-locked. Total bind-IP related assertions across the test suite:
+
+- **15 bash e2e scenarios** (this directory)
+- **37 unit tests** in `tests/NKS.WebDevConsole.Daemon.Tests/BindAddressNormalizationTests.cs`
+- **8 Playwright API specs** in `src/frontend/tests/playwright/tests/bind-ip-api.spec.ts` + `warnings-wrapper-contract.spec.ts`
+- **8 source-level cross-stack contracts** in `src/frontend/tests/playwright/tests/warnings-wrapper-contract.spec.ts`
+
+For a new bind-IP scenario, follow these patterns:
+1. Use `readApacheVhost(domain)` to read live vhost from `sites-enabled/` (not `generated/` history)
+2. Pick RFC test-net IPs for stable cross-host bogus-IP cases: `198.51.100.x`, `192.0.2.x`, `203.0.113.x`, `2001:db8::*`
+3. Always `await api.delete(...)` in `ctx.cleanup` so a failed run doesn't leave fixtures behind
+4. Use `api.patch(...)` for PATCH endpoints (added in commit 7c9a76d)
