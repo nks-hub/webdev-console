@@ -122,4 +122,51 @@ test.describe('Bind IP API contract', () => {
 
     await authedRequest.delete(`/api/sites/${domain}`)
   })
+
+  test('PUT /api/sites/{domain} flip to bogus IP returns wrapped warning', async ({ authedRequest }) => {
+    // PUT mirrors POST's warning-wrapper response shape. This live check
+    // pairs with the source-level contract in warnings-wrapper-contract
+    // to detect drift between contract and runtime behavior.
+    const domain = 'pw-update-warn.e2e.loc'
+    await authedRequest.delete(`/api/sites/${domain}`).catch(() => {})
+
+    const create = await authedRequest.post('/api/sites', {
+      data: {
+        domain,
+        documentRoot: 'C:\\tmp\\pw-update-warn',
+        phpVersion: 'none',
+        sslEnabled: false,
+        httpPort: 80,
+        httpsPort: 443,
+        aliases: [],
+        bindAddresses: ['127.0.0.1'],
+        environment: {},
+      },
+    })
+    expect(create.status()).toBe(201)
+
+    const put = await authedRequest.put(`/api/sites/${domain}`, {
+      data: {
+        domain,
+        documentRoot: 'C:\\tmp\\pw-update-warn',
+        phpVersion: 'none',
+        sslEnabled: false,
+        httpPort: 80,
+        httpsPort: 443,
+        aliases: [],
+        // Flip to bogus IP — daemon should wrap response with warning.
+        bindAddresses: ['198.51.100.99'],
+        environment: {},
+      },
+    })
+    expect(put.status()).toBe(200)
+    const body = await put.json() as { site?: unknown; warnings?: string[] }
+    expect(body.site).toBeDefined()
+    expect(Array.isArray(body.warnings)).toBe(true)
+    expect(body.warnings!.length).toBeGreaterThan(0)
+    const hit = body.warnings!.find(w => /198\.51\.100\.99/.test(w) && /not assigned/i.test(w))
+    expect(hit, `expected warning naming bogus IP; got ${JSON.stringify(body.warnings)}`).toBeDefined()
+
+    await authedRequest.delete(`/api/sites/${domain}`)
+  })
 })
