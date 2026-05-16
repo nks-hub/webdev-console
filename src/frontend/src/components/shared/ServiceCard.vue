@@ -61,9 +61,9 @@
     </div>
 
     <div v-else class="svc-offline">
-      <span v-if="statusText === 'crashed'" class="offline-crashed">Process crashed</span>
-      <span v-else-if="statusText === 'starting'" class="offline-starting">Starting...</span>
-      <span v-else class="offline-stopped">Service not running</span>
+      <span v-if="statusText === 'crashed'" class="offline-crashed">{{ $t('services.card.crashed') }}</span>
+      <span v-else-if="statusText === 'starting'" class="offline-starting">{{ $t('services.card.starting') }}</span>
+      <span v-else class="offline-stopped">{{ $t('services.card.notRunning') }}</span>
       <span class="meta-item" v-if="service.version" style="margin-top: 4px;">
         <span class="meta-label">v</span>
         <span class="meta-val">{{ service.version }}</span>

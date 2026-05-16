@@ -282,12 +282,12 @@
         </span>
         <span class="nav-label nav-label-sso">
           <template v-if="authStore.isAuthenticated">
-            <span class="sso-caption">Signed in</span>
+            <span class="sso-caption">{{ $t('nav.signedIn') }}</span>
             <span class="sso-email mono" :title="authStore.displayName || ''">
               {{ authStore.displayName || '…' }}
             </span>
           </template>
-          <template v-else>Sign in</template>
+          <template v-else>{{ $t('nav.signIn') }}</template>
         </span>
         <span v-if="authStore.loginPending" class="sso-spinner" />
       </div>

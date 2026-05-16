@@ -91,7 +91,13 @@
     "mcpGrants": "MCP oprávnění",
     "mcp": "MCP",
     "backups": "Zálohy",
-    "help": "Nápověda"
+    "help": "Nápověda",
+    "signedIn": "Přihlášen",
+    "signIn": "Přihlásit se"
+  },
+  "versions": {
+    "active": "Aktivní",
+    "default": "Výchozí"
   },
   "backupsPage": {
     "subtitle": "Správa záloh konfigurace a dat",
@@ -1847,6 +1853,11 @@
     "back": "Zpět",
     "title": "Konfigurace služby",
     "reload": "Obnovit",
+    "card": {
+      "crashed": "Proces spadl",
+      "starting": "Spouštění…",
+      "notRunning": "Služba neběží"
+    },
     "configlessSummary": "{name} se konfiguruje jinak",
     "noConfigSummary": "Žádný konfigurační soubor pro {name}",
     "configless": {

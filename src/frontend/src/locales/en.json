@@ -91,7 +91,13 @@
     "mcpGrants": "MCP Grants",
     "mcp": "MCP",
     "backups": "Backups",
-    "help": "Help"
+    "help": "Help",
+    "signedIn": "Signed in",
+    "signIn": "Sign in"
+  },
+  "versions": {
+    "active": "Active",
+    "default": "Default"
   },
   "backupsPage": {
     "subtitle": "Manage configuration and data backups",
@@ -1847,6 +1853,11 @@
     "back": "Back",
     "title": "Service Configuration",
     "reload": "Reload",
+    "card": {
+      "crashed": "Process crashed",
+      "starting": "Starting…",
+      "notRunning": "Service not running"
+    },
     "configlessSummary": "{name} is configured differently",
     "noConfigSummary": "No config file found for {name}",
     "configless": {

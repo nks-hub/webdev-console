@@ -14,8 +14,8 @@
         @click="requestSwitch(v.version)"
       >
         <span class="ver-label">{{ v.version }}</span>
-        <el-tag v-if="v.version === activeVersion" type="success" size="small" effect="dark">Active</el-tag>
-        <el-tag v-if="v.version === defaultVersion" type="info" size="small" effect="plain">Default</el-tag>
+        <el-tag v-if="v.version === activeVersion" type="success" size="small" effect="dark">{{ $t('versions.active') }}</el-tag>
+        <el-tag v-if="v.version === defaultVersion" type="info" size="small" effect="plain">{{ $t('versions.default') }}</el-tag>
       </div>
     </div>
 
