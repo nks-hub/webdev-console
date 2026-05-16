@@ -23,9 +23,9 @@ export const useSitesStore = defineStore('sites', () => {
     // wrapper `{ site, warnings, hints }` when soft validations fire
     // (bind IP not on any active NIC, framework detection hints, etc.).
     // Normalize here so callers always get the SiteInfo and the wrapper
-    // payload as a side-channel they can surface to the user.
-    const raw = await createSite(data) as unknown as SiteInfo
-      | { site: SiteInfo; warnings?: string[]; hints?: string[] }
+    // payload as a side-channel they can surface to the user. The
+    // SiteCreateResponse union in api/daemon.ts captures both shapes.
+    const raw = await createSite(data)
     const site = (raw as { site?: SiteInfo }).site ?? (raw as SiteInfo)
     lastCreateWarnings.value = (raw as { warnings?: string[] }).warnings ?? []
     lastCreateHints.value = (raw as { hints?: string[] }).hints ?? []
@@ -44,10 +44,9 @@ export const useSitesStore = defineStore('sites', () => {
   async function update(domain: string, data: Partial<SiteInfo>) {
     // Daemon's PUT /api/sites/{domain} mirrors POST: returns the raw
     // SiteConfig when no warnings, or `{ site, warnings }` when bind-IP
-    // NIC sanity flags something. Unwrap the same way and expose the
-    // warnings via lastUpdateWarnings for the caller to toast.
-    const raw = await updateSite(domain, data) as unknown as SiteInfo
-      | { site: SiteInfo; warnings?: string[] }
+    // NIC sanity flags something. SiteUpdateResponse captures both
+    // shapes — unwrap then propagate warnings via the side-channel.
+    const raw = await updateSite(domain, data)
     const updated = (raw as { site?: SiteInfo }).site ?? (raw as SiteInfo)
     lastUpdateWarnings.value = (raw as { warnings?: string[] }).warnings ?? []
     const idx = sites.value.findIndex(s => s.domain === domain)

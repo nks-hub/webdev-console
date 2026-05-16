@@ -569,14 +569,24 @@ export const restartService = (id: string) =>
 export const fetchSites = (): Promise<SiteInfo[]> =>
   json('/api/sites')
 
+/**
+ * Wrapper shape POST/PUT /api/sites may return when soft validations
+ * fire (bind-IP not on any active NIC, framework auto-detect hint).
+ * The daemon emits the raw SiteInfo on the happy path and the wrapper
+ * only when warnings/hints exist — consumers must unwrap before using
+ * `.domain` / `.bindAddresses` / etc.
+ */
+export type SiteCreateResponse = SiteInfo | { site: SiteInfo; warnings?: string[]; hints?: string[] }
+export type SiteUpdateResponse = SiteInfo | { site: SiteInfo; warnings?: string[] }
+
 export const createSite = (data: Partial<SiteInfo>) =>
-  json<SiteInfo>('/api/sites', { method: 'POST', body: JSON.stringify(data) })
+  json<SiteCreateResponse>('/api/sites', { method: 'POST', body: JSON.stringify(data) })
 
 export const deleteSite = (id: string) =>
   json<void>(`/api/sites/${id}`, { method: 'DELETE' })
 
 export const updateSite = (id: string, data: Partial<SiteInfo>) =>
-  json<SiteInfo>(`/api/sites/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+  json<SiteUpdateResponse>(`/api/sites/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 
 // Docker Compose detection — returns whether the site's document root
 // contains a compose file. Phase 11 foothold (commit 2a92687).
