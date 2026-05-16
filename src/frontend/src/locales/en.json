@@ -824,6 +824,9 @@
     "query": "SQL Query",
     "execute": "Execute",
     "tables": "Tables",
+    "tableCol": "Table",
+    "rowsCol": "Rows",
+    "sizeCol": "Size",
     "noTables": "No tables in this database.",
     "noDatabases": "No user databases. Create one to get started.",
     "emptyTitle": "No user databases",
@@ -1157,6 +1160,7 @@
     "selectVersionHint": "Select a PHP version in the Versions tab first.",
     "noExtensions": "No extensions found in php.ini."
   },
+  "mysqlPluginAuthCol": "Authentication",
   "mysqlPlugin": {
     "title": "MySQL Server",
     "subtitle": "Databases, root password, and tuning",
@@ -2220,7 +2224,10 @@
     "advancedBackups": {
       "title": "Backups",
       "create": "Create Backup",
-      "loading": "Loading backups…"
+      "loading": "Loading backups…",
+      "empty": "No backups yet. Click \"Create Backup\" to create one.",
+      "colDate": "Date",
+      "colSize": "Size"
     },
     "advancedPorts": {
       "pluginPorts": "Plugin ports",

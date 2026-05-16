@@ -14,15 +14,15 @@
 
     <div v-if="loading" class="hint">{{ t('settings.advancedBackups.loading') }}</div>
     <div v-else-if="backups.length === 0" class="hint">
-      No backups yet. Click "Create Backup" to create one.
+      {{ t('settings.advancedBackups.empty') }}
     </div>
     <el-table v-else :data="backups" size="small" stripe style="width: 100%">
-      <el-table-column label="Date" width="180">
+      <el-table-column :label="t('settings.advancedBackups.colDate')" width="180">
         <template #default="{ row }">
           {{ formatBackupDate(row.createdUtc) }}
         </template>
       </el-table-column>
-      <el-table-column label="Size" width="100">
+      <el-table-column :label="t('settings.advancedBackups.colSize')" width="100">
         <template #default="{ row }">
           {{ formatBackupSize(row.size) }}
         </template>

@@ -824,6 +824,9 @@
     "query": "SQL dotaz",
     "execute": "Spustit",
     "tables": "Tabulky",
+    "tableCol": "Tabulka",
+    "rowsCol": "Řádky",
+    "sizeCol": "Velikost",
     "noTables": "V této databázi nejsou žádné tabulky.",
     "noDatabases": "Žádné uživatelské databáze. Vytvoř první.",
     "emptyTitle": "Žádné uživatelské databáze",
@@ -1157,6 +1160,7 @@
     "selectVersionHint": "Nejprve vyberte PHP verzi na záložce Verze.",
     "noExtensions": "V php.ini nenalezena žádná rozšíření."
   },
+  "mysqlPluginAuthCol": "Autentizace",
   "mysqlPlugin": {
     "title": "MySQL Server",
     "subtitle": "Databáze, root heslo a ladění",
@@ -2220,7 +2224,10 @@
     "advancedBackups": {
       "title": "Zálohy",
       "create": "Vytvořit zálohu",
-      "loading": "Načítám zálohy…"
+      "loading": "Načítám zálohy…",
+      "empty": "Žádné zálohy. Klikni na „Vytvořit zálohu\" pro vytvoření.",
+      "colDate": "Datum",
+      "colSize": "Velikost"
     },
     "advancedPorts": {
       "pluginPorts": "Porty pluginů",

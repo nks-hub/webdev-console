@@ -170,17 +170,17 @@
                     <div class="tables-section">
                       <div class="section-label">{{ $t('databases.tables') }}</div>
                       <el-table :data="currentDatabaseTables" size="small" stripe v-loading="tablesLoading" class="tables-table">
-                        <el-table-column prop="name" label="Table" min-width="180">
+                        <el-table-column prop="name" :label="$t('databases.tableCol')" min-width="180">
                           <template #default="{ row }">
                             <span class="mono">{{ row.name || row }}</span>
                           </template>
                         </el-table-column>
-                        <el-table-column prop="rows" label="Rows" width="110" align="right">
+                        <el-table-column prop="rows" :label="$t('databases.rowsCol')" width="110" align="right">
                           <template #default="{ row }">
                             <span class="mono">{{ row.rows ?? '—' }}</span>
                           </template>
                         </el-table-column>
-                        <el-table-column prop="size" label="Size" width="110" align="right">
+                        <el-table-column prop="size" :label="$t('databases.sizeCol')" width="110" align="right">
                           <template #default="{ row }">
                             <span class="mono">{{ row.size ?? '—' }}</span>
                           </template>
@@ -301,7 +301,7 @@
               <el-table :data="users" size="small" stripe class="users-table" v-loading="usersLoading">
                 <el-table-column prop="userName" :label="$t('mysqlPlugin.userName')" min-width="160" />
                 <el-table-column prop="host" :label="$t('mysqlPlugin.host')" min-width="150" />
-                <el-table-column prop="plugin" label="Auth" min-width="160" />
+                <el-table-column prop="plugin" :label="$t('mysqlPluginAuthCol')" min-width="160" />
                 <el-table-column :label="$t('mysqlPlugin.flags')" width="170">
                   <template #default="{ row }">
                     <el-tag v-if="row.accountLocked" type="warning" size="small">{{ $t('mysqlPlugin.locked') }}</el-tag>

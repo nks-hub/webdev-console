@@ -372,15 +372,15 @@
                   </el-button>
                 </div>
               </div>
-              <div v-if="backupsLoading" class="hint">Loading backups...</div>
-              <div v-else-if="backupsList.length === 0" class="hint">No backups yet. Click "Create Backup" to create one.</div>
+              <div v-if="backupsLoading" class="hint">{{ $t('settings.advancedBackups.loading') }}</div>
+              <div v-else-if="backupsList.length === 0" class="hint">{{ $t('settings.advancedBackups.empty') }}</div>
               <el-table v-else :data="backupsList" size="small" stripe style="width: 100%">
-                <el-table-column label="Date" width="180">
+                <el-table-column :label="$t('settings.advancedBackups.colDate')" width="180">
                   <template #default="{ row }">
                     {{ new Date(row.createdUtc).toLocaleString() }}
                   </template>
                 </el-table-column>
-                <el-table-column label="Size" width="100">
+                <el-table-column :label="$t('settings.advancedBackups.colSize')" width="100">
                   <template #default="{ row }">
                     {{ (row.size / 1024 / 1024).toFixed(1) }} MB
                   </template>
