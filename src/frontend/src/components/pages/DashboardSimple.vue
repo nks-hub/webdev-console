@@ -60,6 +60,29 @@
       </el-button>
     </div>
 
+    <!-- Plan §4/478 — readiness signal: no recent backup. Soft prompt
+         when (a) zero backups stored or (b) newest backup > 7 days old.
+         Shown only when user has sites — empty install doesn't need a
+         backup nag. -->
+    <div v-if="sitesCount > 0 && backupStale" class="simple-backup-banner">
+      <el-icon class="simple-backup-banner-icon"><FolderChecked /></el-icon>
+      <div class="simple-backup-banner-text">
+        <strong>{{ t('dashboard.simple.backupStale.title') }}</strong>
+        <span>
+          {{ lastBackupAgeMs === null
+            ? t('dashboard.simple.backupStale.never')
+            : t('dashboard.simple.backupStale.olderThanDays', { days: 7 }) }}
+        </span>
+      </div>
+      <el-button
+        type="primary"
+        size="default"
+        @click="router.push('/backups')"
+      >
+        {{ t('dashboard.simple.backupStale.openBtn') }}
+      </el-button>
+    </div>
+
     <!-- Plan §4 (item 478): readiness signal — update available banner.
          Surfaces pending updates without forcing user to navigate to
          Settings → Aktualizace to discover them. -->
@@ -159,7 +182,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, WarningFilled, Plus, Download } from '@element-plus/icons-vue'
+import { ArrowRight, WarningFilled, Plus, Download, FolderChecked } from '@element-plus/icons-vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useSitesStore } from '../../stores/sites'
@@ -263,8 +286,33 @@ async function loadAggregates() {
   aggregatesLoading.value = false
 }
 
+// Plan §4/478 — backup age readiness signal. Surfaces a "no recent
+// backup" banner when (a) backups feature is set up but nothing is
+// stored, or (b) the newest backup is older than 7 days. Soft warning
+// — informational, not alarmist.
+const BACKUP_STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
+const lastBackupAgeMs = ref<number | null>(null)
+const backupStale = computed(() => {
+  if (lastBackupAgeMs.value === null) return true // never backed up
+  return lastBackupAgeMs.value > BACKUP_STALE_THRESHOLD_MS
+})
+async function loadLastBackupAge() {
+  try {
+    const { fetchBackups } = await import('../../api/daemon')
+    const data = await fetchBackups()
+    if (data.backups.length > 0) {
+      lastBackupAgeMs.value = Date.now() - new Date(data.backups[0].createdUtc).getTime()
+    } else {
+      lastBackupAgeMs.value = null
+    }
+  } catch {
+    // Daemon offline / endpoint missing — silence; the banner just won't show.
+  }
+}
+
 onMounted(() => {
   void loadAggregates()
+  void loadLastBackupAge()
 })
 
 defineExpose({ reload: loadAggregates })
@@ -349,6 +397,34 @@ defineExpose({ reload: loadAggregates })
 .simple-update-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
 .simple-update-banner-icon {
   color: var(--el-color-primary);
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+/* Stale-backup banner — soft warning (info color, not warning) so it
+   reads as "you should do this" rather than "something is broken". */
+.simple-backup-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  margin: 4px auto 0;
+  max-width: none;
+  width: 100%;
+  background: color-mix(in srgb, var(--el-color-info) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--el-color-info) 40%, transparent);
+  border-radius: var(--wdc-radius);
+}
+.simple-backup-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.simple-backup-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
+.simple-backup-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
+.simple-backup-banner-icon {
+  color: var(--el-color-info);
   font-size: 28px;
   flex-shrink: 0;
 }

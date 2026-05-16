@@ -583,6 +583,12 @@
         "title": "Dostupná aktualizace",
         "subtitle": "Nová verze {version} je připravena k instalaci.",
         "openBtn": "Aktualizovat"
+      },
+      "backupStale": {
+        "title": "Doporučujeme zálohu",
+        "never": "Zatím nebyla vytvořena žádná záloha.",
+        "olderThanDays": "Poslední záloha je starší než {days} dní.",
+        "openBtn": "Otevřít zálohy"
       }
     }
   },

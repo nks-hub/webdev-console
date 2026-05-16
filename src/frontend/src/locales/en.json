@@ -583,6 +583,12 @@
         "title": "Update available",
         "subtitle": "Version {version} is ready to install.",
         "openBtn": "Update"
+      },
+      "backupStale": {
+        "title": "Backup recommended",
+        "never": "No backup has been created yet.",
+        "olderThanDays": "Last backup is older than {days} days.",
+        "openBtn": "Open backups"
       }
     }
   },
