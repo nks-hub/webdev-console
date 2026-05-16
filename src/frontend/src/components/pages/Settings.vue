@@ -58,6 +58,63 @@
           />
         </section>
 
+        <!-- Simple Network panel — read-only port snapshot + DNS flush
+             shortcut. The full per-plugin port editor stays in Advanced;
+             beginners just need to see "what listens where" without
+             leaving Simple. -->
+        <section class="simple-settings-panel">
+          <header class="simple-settings-panel-header">
+            <div>
+              <h2>{{ $t('settings.simple.network.title') }}</h2>
+              <p>{{ $t('settings.simple.network.subtitle') }}</p>
+            </div>
+          </header>
+          <div class="simple-runtime-grid">
+            <div class="about-sys-row">
+              <span class="sys-label">Apache HTTP</span>
+              <span class="sys-value mono">:{{ httpPort }}</span>
+            </div>
+            <div class="about-sys-row">
+              <span class="sys-label">Apache HTTPS</span>
+              <span class="sys-value mono">:{{ httpsPort }}</span>
+            </div>
+            <div class="about-sys-row">
+              <span class="sys-label">MySQL</span>
+              <span class="sys-value mono">:{{ mysqlPort }}</span>
+            </div>
+          </div>
+          <div class="simple-settings-actions">
+            <el-button size="small" @click="uiModeStore.setUiMode('advanced')">
+              {{ $t('settings.simple.network.editInAdvanced') }} →
+            </el-button>
+          </div>
+        </section>
+
+        <!-- Simple Backup panel — one-click "create a backup now". The
+             retention + scheduler controls live in Advanced; Simple just
+             surfaces the safety net. -->
+        <section class="simple-settings-panel">
+          <header class="simple-settings-panel-header">
+            <div>
+              <h2>{{ $t('settings.simple.backup.title') }}</h2>
+              <p>{{ $t('settings.simple.backup.subtitle') }}</p>
+            </div>
+          </header>
+          <div class="simple-settings-actions">
+            <el-button
+              type="primary"
+              size="small"
+              :loading="creatingBackup"
+              @click="createBackupFromSimple"
+            >
+              {{ $t('settings.simple.backup.create') }}
+            </el-button>
+            <el-button size="small" @click="$router.push('/backups')">
+              {{ $t('settings.simple.backup.openManager') }} →
+            </el-button>
+          </div>
+        </section>
+
         <section v-if="systemInfo" class="simple-settings-panel simple-runtime-panel">
           <header class="simple-settings-panel-header">
             <div>
@@ -1389,6 +1446,14 @@ async function manualBackup() {
     backupCreating.value = false
   }
 }
+
+// Simple-mode aliases — same backing state as the advanced surface so a
+// backup triggered from Simple Settings shows up in Advanced too.
+const creatingBackup = backupCreating
+const createBackupFromSimple = manualBackup
+const httpPort = computed(() => ports.http)
+const httpsPort = computed(() => ports.https)
+const mysqlPort = computed(() => ports.mysql)
 
 function downloadBackupFile(path: string) {
   downloadBackup(path)
@@ -2761,6 +2826,13 @@ async function save() {
 .simple-runtime-grid {
   display: grid;
   gap: 4px;
+}
+
+.simple-settings-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .simple-settings-footer {

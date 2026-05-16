@@ -1784,6 +1784,19 @@
       "update": "Update",
       "about": "About"
     },
+    "simple": {
+      "network": {
+        "title": "Network & ports",
+        "subtitle": "Live snapshot of the ports your services listen on.",
+        "editInAdvanced": "Change in Advanced"
+      },
+      "backup": {
+        "title": "Backup",
+        "subtitle": "Create a manual backup of configs and databases in one click.",
+        "create": "Create backup now",
+        "openManager": "Open backup manager"
+      }
+    },
     "account": {
       "passwordTitle": "Sign in with email + password",
       "passwordAlt": "Alternative to SSO — sign in with an email and password registered directly in the NKS WDC Cloud catalog.",

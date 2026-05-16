@@ -1786,6 +1786,19 @@
       "update": "Aktualizace",
       "about": "O aplikaci"
     },
+    "simple": {
+      "network": {
+        "title": "Síť a porty",
+        "subtitle": "Aktuální porty, na kterých služby naslouchají.",
+        "editInAdvanced": "Změnit v pokročilých"
+      },
+      "backup": {
+        "title": "Záloha",
+        "subtitle": "Vytvoř ruční zálohu konfigurace a databází jedním klikem.",
+        "create": "Vytvořit zálohu teď",
+        "openManager": "Otevřít správce záloh"
+      }
+    },
     "account": {
       "passwordTitle": "Přihlášení e-mailem a heslem",
       "passwordAlt": "Alternativa k SSO — přihlášení e-mailem a heslem registrovaným přímo v katalogu NKS WDC Cloud.",
