@@ -618,6 +618,7 @@
     "title": "Sites",
     "domain": "Domain",
     "documentRoot": "Document Root",
+    "pickFolder": "Pick folder",
     "phpVersion": "PHP Version",
     "phpVersionPlaceholder": "Select PHP version",
     "phpNone": "None",

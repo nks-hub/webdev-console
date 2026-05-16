@@ -618,6 +618,7 @@
     "title": "Weby",
     "domain": "Doména",
     "documentRoot": "Document Root",
+    "pickFolder": "Vybrat složku",
     "phpVersion": "Verze PHP",
     "phpVersionPlaceholder": "Vyberte verzi PHP",
     "phpNone": "Žádná",

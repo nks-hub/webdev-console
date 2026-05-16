@@ -270,7 +270,7 @@
     <!-- Site edit is a full-view route at /sites/:domain/edit (no drawer). -->
 
     <!-- Create dialog -->
-    <el-dialog v-model="showCreate" :title="$t('sites.create')" width="520px">
+    <el-dialog v-model="showCreate" :title="$t('sites.create')" :width="uiModeStore.isAdvanced ? '600px' : '520px'">
 
       <!-- Simple mode form -->
       <div v-if="uiModeStore.isSimple">
@@ -286,7 +286,9 @@
           <el-form-item :label="$t('sites.documentRoot')" required>
             <el-input v-model="newSite.documentRoot" :placeholder="docRootPlaceholder">
               <template #append>
-                <el-button @click="pickDocumentRoot">…</el-button>
+                <el-button :title="$t('sites.pickFolder')" @click="pickDocumentRoot">
+                  <el-icon><FolderOpened /></el-icon>
+                </el-button>
               </template>
             </el-input>
           </el-form-item>
@@ -386,7 +388,9 @@
           <el-form-item :label="$t('sites.documentRoot')" required>
             <el-input v-model="newSite.documentRoot" :placeholder="docRootPlaceholder">
               <template #append>
-                <el-button @click="pickDocumentRoot">…</el-button>
+                <el-button :title="$t('sites.pickFolder')" @click="pickDocumentRoot">
+                  <el-icon><FolderOpened /></el-icon>
+                </el-button>
               </template>
             </el-input>
           </el-form-item>
@@ -462,7 +466,7 @@ import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo } from '../../api/types'
 import { fetchBindAddressOptions, fetchDockerComposeStatus, fetchPhpVersions, fetchSystem, daemonBaseUrl, daemonAuthHeaders as authHeaders, type BindAddressOption, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { MoreFilled, RefreshRight } from '@element-plus/icons-vue'
+import { MoreFilled, RefreshRight, FolderOpened } from '@element-plus/icons-vue'
 // Lazy-load the simple-mode sites list (and its 4 sub-components +
 // MiniSparkline). Advanced users land on the table view, never need
 // the card grid — keep it out of the Sites chunk's cold-start cost.
