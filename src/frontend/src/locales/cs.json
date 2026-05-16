@@ -519,7 +519,6 @@
     "card": {
       "running": "Běží",
       "stopped": "Zastaveno",
-      "error": "Chyba",
       "open": "Otevřít",
       "start": "Spustit",
       "stop": "Zastavit",
@@ -536,9 +535,6 @@
       "minutesAgo": "před {n} min",
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d",
-      "lastHit": "poslední návštěva",
-      "hitsToday": "{n} hitů",
-      "errorsToday": "{n} chyb",
       "revealFolder": "Otevřít ve správci souborů",
       "duplicate": "Duplikovat",
       "duplicateTitle": "Duplikovat web",

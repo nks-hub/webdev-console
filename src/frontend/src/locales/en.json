@@ -519,7 +519,6 @@
     "card": {
       "running": "Running",
       "stopped": "Stopped",
-      "error": "Error",
       "open": "Open",
       "start": "Start",
       "stop": "Stop",
@@ -536,9 +535,6 @@
       "minutesAgo": "{n} min ago",
       "hoursAgo": "{n} h ago",
       "daysAgo": "{n} d ago",
-      "lastHit": "last visit",
-      "hitsToday": "{n} hits",
-      "errorsToday": "{n} errors",
       "revealFolder": "Reveal in file manager",
       "duplicate": "Duplicate",
       "duplicateTitle": "Duplicate site",
