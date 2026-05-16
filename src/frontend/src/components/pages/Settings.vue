@@ -589,24 +589,24 @@
               </el-form-item>
             </el-form>
 
-            <!-- Danger zone — destructive reset operations. Kept at the
-                 bottom so accidental scroll-past doesn't hit it first, and
-                 every button requires an explicit confirm before doing
-                 anything. Scope tiers:
-                 • Settings reset → wipes only the `settings` table (ports,
-                   paths, catalog URL, autostart flags, sync tokens). Sites,
-                   databases, installed binaries, plugins, SSL certs are
-                   preserved.
-                 • Full factory reset → also wipes sites/databases via
-                   manager delete calls. Does NOT touch ~/.wdc/binaries so a
-                   full re-download isn't forced.
-                 Nuclear option (delete ~/.wdc entirely) stays CLI-only. -->
-            <div class="danger-zone">
-              <h3 class="danger-title">{{ $t('settings.danger.title') }}</h3>
-              <p class="danger-desc">
-                {{ $t('settings.danger.desc') }}
-              </p>
-              <div class="danger-row">
+            <!-- Plan §5.advanced (item 486) — rare/destructive controls
+                 behind explicit progressive disclosure. The danger zone
+                 was previously always-expanded which encouraged accidental
+                 scroll-past; now requires explicit toggle to reveal both
+                 reset and factory-reset actions. -->
+            <el-collapse v-model="dangerZoneExpanded" class="danger-collapse">
+              <el-collapse-item name="danger">
+                <template #title>
+                  <span class="danger-collapse-title">
+                    <el-icon><Warning /></el-icon>
+                    {{ $t('settings.danger.title') }}
+                  </span>
+                </template>
+                <div class="danger-zone">
+                  <p class="danger-desc">
+                    {{ $t('settings.danger.desc') }}
+                  </p>
+                  <div class="danger-row">
                 <div class="danger-info">
                   <strong>{{ $t('settings.danger.resetSettings') }}</strong>
                   <span class="hint">
@@ -631,8 +631,10 @@
                   :loading="resettingFactory"
                   @click="confirmFactoryReset"
                 >{{ $t('settings.danger.factoryReset') }}</el-button>
-              </div>
-            </div>
+                </div>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
 
             <!-- Phase 6.23 — MCP integration toggle. Default OFF: hides
                  the AI agent confirmation banner + MCP Intents sidebar
@@ -1180,7 +1182,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -1554,6 +1556,9 @@ function downloadBackupFile(path: string) {
 // ── Danger-zone reset operations ──────────────────────────────────────
 const resettingSettings = ref(false)
 const resettingFactory = ref(false)
+// Plan §5/486 — danger zone behind progressive disclosure. Default
+// collapsed so destructive actions require explicit reveal.
+const dangerZoneExpanded = ref<string[]>([])
 
 // Shared reset runner: POST the scope, surface HTTP/JSON errors clearly,
 // then force a full window reload once the daemon-respawn has had time to
