@@ -55,7 +55,9 @@
             @change="onDocRootChange"
           >
             <template #append>
-              <el-button :title="$t('sites.edit.browseDocRoot')" @click="pickDocRoot">…</el-button>
+              <el-button :title="$t('sites.edit.browseDocRoot')" @click="pickDocRoot">
+                <el-icon><FolderOpened /></el-icon>
+              </el-button>
             </template>
           </el-input>
           <Transition name="flash">
