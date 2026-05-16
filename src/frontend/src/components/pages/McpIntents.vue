@@ -213,7 +213,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('mcpIntents.col.matchedGrant')" width="130">
+      <el-table-column :label="t('mcpIntents.col.matchedGrant')" width="170">
         <template #default="{ row }">
           <code v-if="row.matchedGrantId" class="mono auto-grant"
             :title="t('mcpIntents.matchedGrantClickHint', { id: row.matchedGrantId })"
