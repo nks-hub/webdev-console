@@ -10,7 +10,7 @@
       <span class="sd-service-name">{{ svc.label }}</span>
       <span class="sd-service-uptime">{{ uptimeLabel(svc) }}</span>
       <el-button
-        size="default"
+        size="large"
         :loading="restartLoading[svc.id]"
         :disabled="isTransitioning(svc)"
         @click="restartService(svc)"

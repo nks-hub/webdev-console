@@ -12,7 +12,7 @@
       <!-- Header row -->
       <div class="sd-header">
         <div class="sd-domain">{{ domain }}</div>
-        <el-button size="default" @click="openInBrowser">
+        <el-button size="large" @click="openInBrowser">
           {{ $t('sites.detail.simple.open') }}
         </el-button>
       </div>
@@ -27,7 +27,7 @@
           </span>
         </div>
         <el-button
-          size="default"
+          size="large"
           :type="apacheRunning ? 'warning' : 'success'"
           :loading="startStopLoading"
           @click="toggleApache"
@@ -50,7 +50,7 @@
         <div class="sd-control-wrap sd-control-wide">
           <el-input
             v-model="documentRoot"
-            size="default"
+            size="large"
             :placeholder="$t('sites.detail.simple.docRootPlaceholder')"
             @change="onDocRootChange"
           >
@@ -78,11 +78,24 @@
         <div class="sd-control-wrap">
           <el-select
             v-model="phpVersion"
-            size="default"
+            size="large"
             class="sd-control-medium"
             @change="onPhpChange"
           >
-            <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
+            <el-option
+              v-if="phpVersion && phpVersion !== 'none' && !phpVersions.includes(phpVersion)"
+              :key="phpVersion"
+              :label="`${phpVersion} (nenainstalována!)`"
+              :value="phpVersion"
+              disabled
+            />
+            <el-option
+              v-for="v in phpVersions"
+              :key="v"
+              :label="v"
+              :value="v"
+            />
+            <el-option :label="$t('sites.phpNone')" value="none" />
           </el-select>
           <Transition name="flash">
             <span v-if="savedPhp" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
@@ -120,7 +133,7 @@
           <el-select
             v-model="bindAddresses"
             class="bind-address-select"
-            size="default"
+            size="large"
             multiple
             clearable
             collapse-tags
@@ -180,7 +193,7 @@
 
       <!-- Delete -->
       <div class="sd-danger-row">
-        <el-button type="danger" size="default" :icon="WarningIcon" @click="confirmDelete">
+        <el-button type="danger" size="large" :icon="WarningIcon" @click="confirmDelete">
           {{ $t('sites.detail.simple.delete') }}
         </el-button>
       </div>
