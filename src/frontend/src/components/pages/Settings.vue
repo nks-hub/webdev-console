@@ -121,10 +121,9 @@
               class="about-sys-row"
             >
               <span class="sys-label">
-                <span
-                  class="status-dot"
-                  :class="(svc.state === 2 || svc.status === 'running') ? 'ok' : 'err'"
-                ></span>
+                <HealthStatusDot
+                  :level="(svc.state === 2 || svc.status === 'running') ? 'ok' : 'err'"
+                />
                 {{ svc.id }}
               </span>
               <span class="sys-value mono">
@@ -1197,6 +1196,7 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
