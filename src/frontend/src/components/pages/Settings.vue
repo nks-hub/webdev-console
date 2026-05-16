@@ -2857,60 +2857,11 @@ async function save() {
   align-items: start;
 }
 
-.simple-settings-panel {
-  min-width: 0;
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  padding: 18px;
-}
-
+/* Panel chrome moved to SettingsPanel shared primitive (plan §6).
+   Only the panel-main grid-span modifier remains, plus markup-driven
+   helpers (.simple-runtime-grid, .simple-settings-actions, footer). */
 .simple-settings-panel-main {
   grid-row: span 2;
-}
-
-.simple-settings-panel-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--wdc-border);
-}
-
-.simple-settings-panel-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: color-mix(in oklab, var(--wdc-accent) 14%, transparent);
-  color: var(--wdc-accent);
-  flex-shrink: 0;
-}
-
-.simple-settings-panel-icon .el-icon {
-  font-size: 18px;
-}
-
-.simple-settings-panel-header h2 {
-  margin: 0;
-  color: var(--wdc-text);
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.simple-settings-panel-header p {
-  margin: 3px 0 0;
-  color: var(--wdc-text-2);
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.simple-runtime-grid {
-  display: grid;
-  gap: 4px;
 }
 
 .simple-settings-actions {
@@ -2918,6 +2869,11 @@ async function save() {
   gap: 8px;
   margin-top: 10px;
   flex-wrap: wrap;
+}
+
+.simple-runtime-grid {
+  display: grid;
+  gap: 4px;
 }
 
 .simple-settings-footer {
