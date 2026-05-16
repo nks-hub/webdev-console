@@ -1457,6 +1457,7 @@
   "siteEdit": {
     "composeUp": "Up",
     "composeDown": "Down",
+    "historical": "Historical",
     "general": "General",
     "runtime": "Runtime",
     "cloudflare": "Cloudflare",
@@ -2190,6 +2191,8 @@
       "about": "About"
     },
     "simple": {
+      "apacheHttp": "Apache HTTP",
+      "apacheHttps": "Apache HTTPS",
       "network": {
         "title": "Network & ports",
         "subtitle": "Live snapshot of the ports your services listen on.",
@@ -2619,6 +2622,7 @@
   },
   "help": {
     "title": "Help",
+    "jumpTo": "Jump to",
     "searchPlaceholder": "Search help…",
     "startGettingStarted": "Getting Started",
     "comingSoonVideo": "Video coming soon",

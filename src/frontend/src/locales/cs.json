@@ -1457,6 +1457,7 @@
   "siteEdit": {
     "composeUp": "Up",
     "composeDown": "Down",
+    "historical": "Historie",
     "general": "Obecné",
     "runtime": "Runtime",
     "cloudflare": "Cloudflare",
@@ -2190,6 +2191,8 @@
       "about": "O aplikaci"
     },
     "simple": {
+      "apacheHttp": "Apache HTTP",
+      "apacheHttps": "Apache HTTPS",
       "network": {
         "title": "Síť a porty",
         "subtitle": "Aktuální porty, na kterých služby naslouchají.",
@@ -2619,6 +2622,7 @@
   },
   "help": {
     "title": "Nápověda",
+    "jumpTo": "Přejít na",
     "searchPlaceholder": "Hledat v nápovědě…",
     "startGettingStarted": "Rychlý start",
     "comingSoonVideo": "Video brzy k dispozici",

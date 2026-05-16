@@ -472,7 +472,7 @@
             <!-- Historical data section -->
             <div class="historical-section">
               <div class="historical-header">
-                <span class="historical-title">Historical</span>
+                <span class="historical-title">{{ $t('siteEdit.historical') }}</span>
                 <div class="historical-controls">
                   <div class="historical-control-item">
                     <label class="historical-label">{{ $t('metrics.historical.dateLabel') }}</label>

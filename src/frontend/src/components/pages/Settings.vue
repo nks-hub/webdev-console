@@ -81,11 +81,11 @@
           </header>
           <div class="simple-runtime-grid">
             <div class="about-sys-row">
-              <span class="sys-label">Apache HTTP</span>
+              <span class="sys-label">{{ $t('settings.simple.apacheHttp') }}</span>
               <span class="sys-value mono">:{{ httpPort }}</span>
             </div>
             <div class="about-sys-row">
-              <span class="sys-label">Apache HTTPS</span>
+              <span class="sys-label">{{ $t('settings.simple.apacheHttps') }}</span>
               <span class="sys-value mono">:{{ httpsPort }}</span>
             </div>
             <div class="about-sys-row">
@@ -175,8 +175,8 @@
                  doesn't see rows for services that aren't running. -->
             <div v-if="pluginPorts.length > 0" class="settings-card" style="margin-bottom: 16px">
               <header class="settings-card-header">
-                <span class="settings-card-title">Plugin ports</span>
-                <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ pluginPorts.length }} active</span>
+                <span class="settings-card-title">{{ $t('settings.advancedPorts.pluginPorts') }}</span>
+                <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ $t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
               </header>
               <div class="settings-card-body">
                 <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">

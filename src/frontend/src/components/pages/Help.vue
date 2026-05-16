@@ -92,8 +92,8 @@
           </div>
 
           <!-- In-page anchor nav for long topics -->
-          <nav v-if="contentAnchors.length > 1" class="help-anchor-nav" aria-label="Jump to">
-            <span class="anchor-nav-label">Jump to:</span>
+          <nav v-if="contentAnchors.length > 1" class="help-anchor-nav" :aria-label="$t('help.jumpTo')">
+            <span class="anchor-nav-label">{{ $t('help.jumpTo') }}:</span>
             <a
               v-for="anchor in contentAnchors"
               :key="anchor.id"
