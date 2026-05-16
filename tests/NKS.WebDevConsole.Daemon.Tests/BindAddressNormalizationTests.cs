@@ -204,4 +204,80 @@ public class BindAddressNormalizationTests
 
         Assert.Equal(new[] { "*" }, listeners);
     }
+
+    // ── CollectBindAddressWarnings ─────────────────────────────────────────
+    // Soft sanity check: detect bind IPs that aren't currently assigned to
+    // any Up NIC. The check skips wildcard and the universally-present
+    // loopback addresses (which are always available even on offline hosts)
+    // so it only flags real misconfigurations, not transient network state.
+
+    [Fact]
+    public void CollectBindAddressWarnings_Wildcard_NoWarnings()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "wild.loc",
+            DocumentRoot = @"C:\sites\wild",
+            BindAddresses = new[] { "*" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Empty(warnings);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_LoopbackV4_NoWarnings()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "loop.loc",
+            DocumentRoot = @"C:\sites\loop",
+            BindAddresses = new[] { "127.0.0.1" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Empty(warnings);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_LoopbackV6_NoWarnings()
+    {
+        var site = new SiteConfig
+        {
+            Domain = "loop6.loc",
+            DocumentRoot = @"C:\sites\loop6",
+            BindAddresses = new[] { "::1" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Empty(warnings);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_BogusIpNotOnAnyNic_ReturnsWarning()
+    {
+        // 198.51.100.99 is in TEST-NET-2 (RFC 5737) — guaranteed not assigned
+        // to any real NIC, so this is a stable cross-environment failure case.
+        var site = new SiteConfig
+        {
+            Domain = "bogus.loc",
+            DocumentRoot = @"C:\sites\bogus",
+            BindAddresses = new[] { "198.51.100.99" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Single(warnings);
+        Assert.Contains("198.51.100.99", warnings[0]);
+        Assert.Contains("not assigned", warnings[0]);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_NullSite_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => SiteManager.CollectBindAddressWarnings(null!));
+    }
 }

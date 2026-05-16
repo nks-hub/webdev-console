@@ -533,6 +533,65 @@ public sealed class SiteManager : ISiteRegistry
             .ToArray();
     }
 
+    /// <summary>
+    /// Returns human-readable warnings about a site's configured bind addresses
+    /// based on the host's current network state. NOT a hard error path —
+    /// callers should propagate as advisory warnings (response body, log) so
+    /// the operator can decide to fix the config or accept the situation
+    /// (e.g., they may be temporarily on a different LAN / VPN off).
+    ///
+    /// Currently checks: explicit (non-wildcard, non-loopback) IP must be
+    /// assigned to an Up NIC, otherwise Apache will fail to bind at start.
+    /// </summary>
+    public static IReadOnlyList<string> CollectBindAddressWarnings(SiteConfig site)
+    {
+        if (site is null) throw new ArgumentNullException(nameof(site));
+        var configured = NormalizeConfiguredBindScopes(site.BindAddresses, site.BindAddress);
+        // Only check explicit addresses — wildcard always binds, loopback
+        // is always present on Windows/Mac/Linux.
+        var explicitTargets = configured
+            .Where(s => s != "*"
+                && !string.Equals(s, "127.0.0.1", StringComparison.Ordinal)
+                && !string.Equals(s, "::1", StringComparison.Ordinal))
+            .ToArray();
+        if (explicitTargets.Length == 0)
+            return Array.Empty<string>();
+
+        var localIps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up)
+                    continue;
+                System.Net.NetworkInformation.IPInterfaceProperties props;
+                try { props = ni.GetIPProperties(); } catch { continue; }
+                foreach (var unicast in props.UnicastAddresses)
+                    localIps.Add(unicast.Address.ToString());
+            }
+        }
+        catch
+        {
+            // Couldn't enumerate — skip the check rather than spam warnings
+            // on a host where NIC enumeration is restricted (rare; sandboxed
+            // CI runners sometimes deny this). Apache will still report its
+            // own bind error if any.
+            return Array.Empty<string>();
+        }
+
+        var warnings = new List<string>();
+        foreach (var target in explicitTargets)
+        {
+            if (!localIps.Contains(target))
+            {
+                warnings.Add(
+                    $"Bind address {target} is not assigned to any active network interface. " +
+                    "Apache will fail to bind when this site is enabled — verify the IP is correct or use \"*\".");
+            }
+        }
+        return warnings;
+    }
+
     private static string BuildLocalhostHostGuardExpr(string domain, IEnumerable<string> aliases)
     {
         if (!string.Equals(domain, "localhost", StringComparison.OrdinalIgnoreCase))

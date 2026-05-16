@@ -6338,6 +6338,14 @@ app.MapPost("/api/sites", async (HttpContext ctx, SiteManager sm, SiteOrchestrat
         }
         catch { /* non-fatal — docroot may not exist yet */ }
 
+        // Bind-IP NIC sanity: surface (don't reject) if the operator configured
+        // an explicit IP that isn't currently assigned to any Up interface.
+        foreach (var w in SiteManager.CollectBindAddressWarnings(created))
+        {
+            warnings.Add(w);
+            log.LogWarning("Site {Domain} bind warning: {Warning}", created.Domain, w);
+        }
+
         if (warnings.Count > 0 || hints.Count > 0)
         {
             return Results.Created($"/api/sites/{created.Domain}", new
@@ -6509,7 +6517,7 @@ static void DuplicateSiteCopyRecursive(string source, string target)
         DuplicateSiteCopyRecursive(dir, Path.Combine(target, Path.GetFileName(dir)));
 }
 
-app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator) =>
+app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteManager sm, SiteOrchestrator orchestrator, ILoggerFactory lf) =>
 {
     if (sm.Get(domain) is null)
         return Results.NotFound();
@@ -6518,6 +6526,14 @@ app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteMan
     {
         var updated = await sm.UpdateAsync(site);
         await orchestrator.ApplyAsync(updated);
+        var warnings = SiteManager.CollectBindAddressWarnings(updated);
+        if (warnings.Count > 0)
+        {
+            var log = lf.CreateLogger("SiteUpdate");
+            foreach (var w in warnings)
+                log.LogWarning("Site {Domain} bind warning: {Warning}", updated.Domain, w);
+            return Results.Ok(new { site = updated, warnings });
+        }
         return Results.Ok(updated);
     }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
