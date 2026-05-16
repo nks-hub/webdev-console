@@ -80,7 +80,7 @@
         :loading="busy && pendingAction === 'start'"
         @click="act('start')"
       >
-        Start
+        {{ $t('common.start') }}
       </el-button>
       <el-button
         size="small"
@@ -90,7 +90,7 @@
         :loading="busy && pendingAction === 'stop'"
         @click="act('stop')"
       >
-        Stop
+        {{ $t('common.stop') }}
       </el-button>
       <el-button
         size="small"
@@ -99,7 +99,7 @@
         :loading="busy && pendingAction === 'restart'"
         @click="act('restart')"
       >
-        Restart
+        {{ $t('common.restart') }}
       </el-button>
     </div>
   </div>

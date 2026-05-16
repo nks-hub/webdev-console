@@ -362,10 +362,10 @@
             <!-- Manual backup management -->
             <div style="margin-top: 24px; border-top: 1px solid var(--wdc-border); padding-top: 16px">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
-                <span style="font-weight: 600; font-size: 0.95rem">Backups</span>
+                <span style="font-weight: 600; font-size: 0.95rem">{{ $t('settings.advancedBackups.title') }}</span>
                 <div style="display: flex; gap: 8px">
                   <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
-                    Create Backup
+                    {{ $t('settings.advancedBackups.create') }}
                   </el-button>
                   <el-button size="small" @click="loadBackups" :loading="backupsLoading">
                     {{ $t('common.refresh') }}
@@ -402,13 +402,13 @@
             <div class="db-list" v-if="databases.length > 0">
               <div class="db-row" v-for="db in databases" :key="db">
                 <span class="db-name">{{ db }}</span>
-                <el-button size="small" type="danger" text @click="dropDatabase(db)">Drop</el-button>
+                <el-button size="small" type="danger" text @click="dropDatabase(db)">{{ $t('settingsDb.drop') }}</el-button>
               </div>
             </div>
             <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
             <div class="db-create">
-              <el-input v-model="newDbName" placeholder="new_database" size="small" style="width: 200px" />
-              <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">Create</el-button>
+              <el-input v-model="newDbName" :placeholder="$t('settingsDb.newPlaceholder')" size="small" style="width: 200px" />
+              <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">{{ $t('settingsDb.create') }}</el-button>
             </div>
           </div>
         </el-tab-pane>

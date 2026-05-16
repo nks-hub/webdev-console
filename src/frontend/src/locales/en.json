@@ -66,7 +66,11 @@
     "open": "Open",
     "actions": "Actions",
     "run": "Run",
+    "start": "Start",
     "stop": "Stop",
+    "restart": "Restart",
+    "restore": "Restore",
+    "status": "Status",
     "download": "Download",
     "settings": "Settings",
     "reset": "Reset",
@@ -1451,6 +1455,8 @@
     "docs": "Docs"
   },
   "siteEdit": {
+    "composeUp": "Up",
+    "composeDown": "Down",
     "general": "General",
     "runtime": "Runtime",
     "cloudflare": "Cloudflare",

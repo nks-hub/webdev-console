@@ -19,7 +19,7 @@
         @update:model-value="$emit('update:newDbName', String($event))"
       />
       <el-button size="small" type="primary" :disabled="!newDbName" @click="$emit('create')">
-        Create
+        {{ $t('settingsDb.create') }}
       </el-button>
     </div>
   </div>

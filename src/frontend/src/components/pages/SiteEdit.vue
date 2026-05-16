@@ -189,16 +189,16 @@
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
                   <el-tag size="small" type="info" effect="plain">{{ composeInfo.fileName }}</el-tag>
                   <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
-                    Up
+                    {{ $t('siteEdit.composeUp') }}
                   </el-button>
                   <el-button size="small" type="danger" plain @click="runCompose('down')" :loading="composeLoading">
-                    Down
+                    {{ $t('siteEdit.composeDown') }}
                   </el-button>
                   <el-button size="small" @click="runCompose('restart')" :loading="composeLoading">
-                    Restart
+                    {{ $t('common.restart') }}
                   </el-button>
                   <el-button size="small" @click="runCompose('ps')" :loading="composeLoading">
-                    Status
+                    {{ $t('common.status') }}
                   </el-button>
                 </div>
                 <div v-if="composeOutput" class="compose-output">
@@ -438,7 +438,7 @@
                   <span v-else class="version-hint">config snapshot</span>
                 </div>
                 <el-button size="small" text type="primary" @click="rollback(h.timestamp)">
-                  Restore
+                  {{ $t('common.restore') }}
                 </el-button>
               </div>
             </div>
