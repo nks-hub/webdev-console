@@ -138,47 +138,11 @@
         </div>
       </div>
 
-      <!-- Recent activity -->
-      <div class="sd-section">
-        <h3 class="sd-section-title">{{ $t('sites.detail.simple.activity.title') }}</h3>
+      <!-- Recent activity (errors + traffic) — extracted to a dedicated
+           card component so the activity widget can be reused by other
+           dashboards without duplicating its fetch logic. -->
+      <SimpleSiteActivityCard :domain="domain" />
 
-        <!-- Errors block -->
-        <div class="sd-activity-block">
-          <div class="sd-activity-label">
-            {{ $t('sites.detail.simple.activity.errors.countLabel', { count: errorLines.length }) }}
-            <span v-if="errorLines.length > 0" class="sd-err-badge">{{ errorLines.length }}</span>
-          </div>
-          <ul v-if="errorLines.length > 0" class="sd-err-list">
-            <li v-for="(line, idx) in errorLines.slice(0, showAllErrors ? 5 : 3)" :key="idx" class="sd-err-line">
-              <span class="sd-err-ts mono">{{ formatErrorTime(line.timestamp) }}</span>
-              <span class="sd-err-msg">{{ line.message }}</span>
-            </li>
-          </ul>
-          <div v-else class="sd-activity-empty">{{ $t('sites.detail.simple.activity.errors.none') }}</div>
-          <div class="sd-activity-actions">
-            <el-button v-if="errorLines.length > 3 && !showAllErrors" size="small" link @click="showAllErrors = true">
-              {{ $t('sites.detail.simple.activity.errors.showAll') }}
-            </el-button>
-            <el-button size="small" link class="sd-full-logs" @click="openFullLogs">
-              {{ $t('sites.detail.simple.activity.fullLogs') }}
-              <el-icon style="margin-left:4px"><ArrowRight /></el-icon>
-            </el-button>
-          </div>
-        </div>
-
-        <!-- Traffic sparkline -->
-        <div class="sd-activity-block">
-          <div class="sd-activity-label">
-            {{ $t('sites.detail.simple.activity.traffic.last24h') }}
-          </div>
-          <div class="sd-traffic-row">
-            <MiniSparkline :values="hourlyHits" :width="200" :height="32" />
-            <span class="sd-traffic-count mono">
-              {{ $t('sites.detail.simple.activity.traffic.hits', { count: totalHits }) }}
-            </span>
-          </div>
-        </div>
-      </div>
 
       <el-divider />
 
@@ -196,10 +160,9 @@
 defineOptions({ name: 'SiteDetailSimple' })
 
 import { computed, h, onMounted, reactive, ref, watch } from 'vue'
-import MiniSparkline from '../common/MiniSparkline.vue'
+import SimpleSiteActivityCard from './SimpleSiteActivityCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowRight } from '@element-plus/icons-vue'
 
 const WarningIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }), h('line', { x1: '12', y1: '9', x2: '12', y2: '13' }), h('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })]  ) }
 import { useSitesStore } from '../../stores/sites'
@@ -237,51 +200,8 @@ const savedTunnel = ref(false)
 const startStopLoading = ref(false)
 const restartLoading = reactive<Record<string, boolean>>({})
 
-interface ErrorLine { timestamp: string; message: string }
-interface MetricSample { timestamp: string; requests: number }
-
-const errorLines = ref<ErrorLine[]>([])
-const hourlyHits = ref<number[]>([])
-const showAllErrors = ref(false)
-
-const totalHits = computed(() => hourlyHits.value.reduce((a, b) => a + b, 0))
-
-function formatErrorTime(iso: string): string {
-  try {
-    const d = new Date(iso)
-    const hh = String(d.getHours()).padStart(2, '0')
-    const mm = String(d.getMinutes()).padStart(2, '0')
-    return `${hh}:${mm}`
-  } catch { return iso.slice(0, 5) }
-}
-
-function openFullLogs() {
-  router.push(`/sites/${encodeURIComponent(props.domain)}/edit?tab=errors`)
-}
-
-async function loadRecentActivity() {
-  if (!site.value) return
-  const domain = encodeURIComponent(props.domain)
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/logs/errors?limit=5`, {
-      headers: sitesStore.authHeaders(),
-    })
-    if (r.ok) {
-      const data = await r.json() as { entries?: Array<{ timestamp: string; message: string }> }
-      errorLines.value = (data.entries ?? []).slice(0, 5)
-    }
-  } catch { /* silent */ }
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/metrics/history?minutes=1440&limit=24`, {
-      headers: sitesStore.authHeaders(),
-    })
-    if (r.ok) {
-      const data = await r.json() as MetricSample[] | { samples?: MetricSample[] }
-      const samples = Array.isArray(data) ? data : (data.samples ?? [])
-      hourlyHits.value = samples.map(s => s.requests ?? 0)
-    }
-  } catch { /* silent */ }
-}
+// Recent activity (errors + sparkline) lives in <SimpleSiteActivityCard>
+// — that component owns its own fetch + render lifecycle.
 
 const visibleServices = computed(() => {
   const svcs = daemonStore.services
@@ -505,7 +425,6 @@ onMounted(async () => {
     await sitesStore.load()
     await loadPhpVersions()
     await loadBindAddressOptions()
-    await loadRecentActivity()
   } finally {
     loading.value = false
   }
@@ -718,30 +637,7 @@ onMounted(async () => {
   transform: translateY(-4px);
 }
 
-.sd-activity-block {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--wdc-border);
-}
-.sd-activity-block:last-child { border-bottom: 0; }
-.sd-activity-label { font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-.sd-err-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 20px; padding: 0 6px; height: 18px;
-  background: var(--el-color-danger); color: white;
-  border-radius: 9px; font-size: 11px; font-weight: 600;
-}
-.sd-err-list { list-style: none; padding: 0; margin: 0; max-height: 160px; overflow-y: auto; }
-.sd-err-line { display: flex; gap: 8px; padding: 4px 0; font-size: 12px; line-height: 1.4; }
-.sd-err-ts { color: var(--el-text-color-secondary); flex-shrink: 0; }
-.sd-err-msg { color: var(--el-text-color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sd-activity-empty { color: var(--el-text-color-secondary); font-size: 12px; padding: 4px 0; }
-.sd-activity-actions { display: flex; gap: 12px; margin-top: 6px; }
-.sd-full-logs {
-  margin-left: auto;
-  min-height: 32px;
-}
-.sd-traffic-row { display: flex; align-items: center; gap: 12px; }
-.sd-traffic-count { color: var(--el-text-color-secondary); font-size: 12px; }
+/* Recent activity styles moved to SimpleSiteActivityCard.vue. */
 
 @media (min-width: 900px) {
   .simple-detail {
@@ -801,11 +697,6 @@ onMounted(async () => {
   .sd-service-row :deep(.el-button) {
     grid-column: 2 / -1;
     justify-self: stretch;
-  }
-
-  .sd-traffic-row {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 </style>
