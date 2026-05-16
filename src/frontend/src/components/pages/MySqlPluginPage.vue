@@ -180,7 +180,7 @@
                             <span class="mono">{{ row.rows ?? '—' }}</span>
                           </template>
                         </el-table-column>
-                        <el-table-column prop="size" :label="$t('databases.sizeCol')" width="110" align="right">
+                        <el-table-column prop="size" :label="$t('databases.sizeCol')" width="130" align="right">
                           <template #default="{ row }">
                             <span class="mono">{{ row.size ?? '—' }}</span>
                           </template>

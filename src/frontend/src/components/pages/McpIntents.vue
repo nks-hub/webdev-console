@@ -201,7 +201,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('mcpIntents.col.intentId')" width="130">
+      <el-table-column :label="t('mcpIntents.col.intentId')" width="150">
         <template #default="{ row }">
           <code
             class="mono intent-id"

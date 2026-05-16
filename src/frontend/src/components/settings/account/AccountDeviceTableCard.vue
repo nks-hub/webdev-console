@@ -35,7 +35,7 @@
           <span class="mono">{{ (row.os ?? '') + '/' + (row.arch ?? '') }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('settings.devices.colSites')" width="70" align="center">
+      <el-table-column :label="$t('settings.devices.colSites')" width="100" align="center">
         <template #default="{ row }">{{ row.site_count ?? '—' }}</template>
       </el-table-column>
       <el-table-column :label="$t('settings.devices.colStatus')" width="90">
@@ -45,7 +45,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('settings.devices.colLastSync')" width="150">
+      <el-table-column :label="$t('settings.devices.colLastSync')" width="200">
         <template #default="{ row }">
           <span class="last-sync">
             {{ row.last_seen_at ? new Date(row.last_seen_at).toLocaleString() : '—' }}

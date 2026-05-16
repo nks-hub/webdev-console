@@ -22,7 +22,7 @@
           {{ formatBackupDate(row.createdUtc) }}
         </template>
       </el-table-column>
-      <el-table-column :label="t('settings.advancedBackups.colSize')" width="100">
+      <el-table-column :label="t('settings.advancedBackups.colSize')" width="130">
         <template #default="{ row }">
           {{ formatBackupSize(row.size) }}
         </template>

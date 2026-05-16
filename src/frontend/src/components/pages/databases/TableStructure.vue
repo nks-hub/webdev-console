@@ -57,7 +57,7 @@
           <el-table-column prop="columns" :label="t('databases.structure.idxColumns')" min-width="220">
             <template #default="{ row }"><span class="mono">{{ row.columns.join(', ') }}</span></template>
           </el-table-column>
-          <el-table-column prop="unique" :label="t('databases.structure.idxUnique')" width="100">
+          <el-table-column prop="unique" :label="t('databases.structure.idxUnique')" width="130">
             <template #default="{ row }">
               <el-tag size="small" :type="row.unique ? 'success' : 'info'" effect="plain">
                 {{ row.unique ? 'UNIQUE' : '—' }}

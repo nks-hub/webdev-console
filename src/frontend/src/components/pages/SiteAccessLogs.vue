@@ -93,7 +93,7 @@
         <el-table-column
           :label="$t('sites.access.method')"
           prop="method"
-          width="80"
+          width="120"
           align="center"
         >
           <template #default="{ row }">
@@ -149,7 +149,7 @@
         <el-table-column
           :label="$t('sites.access.bytes')"
           prop="bytes"
-          width="90"
+          width="130"
           align="right"
         >
           <template #default="{ row }">

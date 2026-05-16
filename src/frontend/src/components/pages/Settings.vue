@@ -376,7 +376,7 @@
                     {{ new Date(row.createdUtc).toLocaleString() }}
                   </template>
                 </el-table-column>
-                <el-table-column :label="$t('settings.advancedBackups.colSize')" width="100">
+                <el-table-column :label="$t('settings.advancedBackups.colSize')" width="130">
                   <template #default="{ row }">
                     {{ (row.size / 1024 / 1024).toFixed(1) }} MB
                   </template>

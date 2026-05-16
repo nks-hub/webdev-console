@@ -19,7 +19,7 @@
           <span class="mono">{{ row.device_id.slice(0, 12) }}…</span>
         </template>
       </el-table-column>
-      <el-table-column :label="t('settings.sync.colSize')" width="100">
+      <el-table-column :label="t('settings.sync.colSize')" width="130">
         <template #default="{ row }">
           <span class="mono">{{ Math.round(row.size_bytes / 1024) }} KB</span>
         </template>

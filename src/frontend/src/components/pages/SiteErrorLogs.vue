@@ -76,7 +76,7 @@
       <el-table-column
         :label="$t('logs.errors.severity')"
         prop="severity"
-        width="110"
+        width="140"
       >
         <template #default="{ row }">
           <el-tag

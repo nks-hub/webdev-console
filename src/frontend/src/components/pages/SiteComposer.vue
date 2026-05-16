@@ -190,14 +190,14 @@
           </el-table-column>
 
           <!-- Required constraint -->
-          <el-table-column :label="$t('sites.composer.colRequired')" width="120" prop="required" sortable>
+          <el-table-column :label="$t('sites.composer.colRequired')" width="160" prop="required" sortable>
             <template #default="{ row }">
               <span class="mono">{{ row.constraint }}</span>
             </template>
           </el-table-column>
 
           <!-- Installed version -->
-          <el-table-column :label="$t('sites.composer.colInstalled')" width="130" prop="installed" sortable>
+          <el-table-column :label="$t('sites.composer.colInstalled')" width="180" prop="installed" sortable>
             <template #default="{ row }">
               <span
                 class="mono"

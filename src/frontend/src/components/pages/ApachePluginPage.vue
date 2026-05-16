@@ -112,7 +112,7 @@
                     <span class="mono">{{ row.domain }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="phpVersion" :label="$t('sites.phpVersion')" width="110" />
+                <el-table-column prop="phpVersion" :label="$t('sites.phpVersion')" width="140" />
                 <el-table-column label="HTTPS" width="80" align="center">
                   <template #default="{ row }">
                     <el-tag v-if="row.ssl" size="small" type="success" effect="dark">SSL</el-tag>

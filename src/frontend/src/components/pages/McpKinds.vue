@@ -114,7 +114,7 @@
            When the kind is also in always-confirm, render a 🔒 chip to
            make clear the operator has overridden auto-approval — those
            grants will NOT actually fire for this kind. -->
-      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="220">
+      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="270">
         <template #default="{ row }">
           <el-tooltip
             v-if="row.alwaysConfirm === true"

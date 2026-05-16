@@ -167,7 +167,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column :label="$t('sites.phpVersion')" width="110">
+        <el-table-column :label="$t('sites.phpVersion')" width="140">
           <template #default="{ row }">
             <el-tag
               v-if="row.nodeUpstreamPort && row.nodeUpstreamPort > 0"
