@@ -29,6 +29,9 @@
         style="max-width: 320px"
         prefix-icon="Search"
       />
+      <span v-if="search && filteredSites.length > 0" class="search-results-count">
+        {{ $t('sites.filterMatches', { matches: filteredSites.length, total: sitesStore.sites.length }) }}
+      </span>
     </div>
 
     <div class="page-body">
@@ -261,7 +264,7 @@
 
       <el-empty
         v-if="filteredSites.length === 0 && !sitesStore.loading"
-        :description="search ? `No sites matching '${search}'` : 'No sites configured yet'"
+        :description="search ? $t('sites.noMatching', { q: search }) : $t('sites.noSitesYet')"
         :image-size="80"
       />
     </div>
@@ -1041,6 +1044,14 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   border-radius: var(--wdc-radius-lg);
   box-shadow: var(--wdc-shadow-sm);
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.search-results-count {
+  font-size: 0.82rem;
+  color: var(--wdc-text-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .page-body {
