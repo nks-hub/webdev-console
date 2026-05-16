@@ -254,7 +254,7 @@ async function loadDatabases() {
 
 async function resetPostgresPassword() {
   if (resetPasswordForm.newPassword !== resetPasswordForm.confirm) {
-    ElMessage.warning('Passwords do not match')
+    ElMessage.warning(t('postgresPlugin.toast.passwordsDontMatch'))
     return
   }
 
@@ -284,7 +284,7 @@ async function resetPostgresPassword() {
     resetPasswordForm.confirm = ''
   } catch (e) {
     resetPasswordStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`PostgreSQL password reset failed: ${errorMessage(e)}`)
+    ElMessage.error(t('postgresPlugin.toast.resetFailed', { err: errorMessage(e) }))
   } finally {
     resettingPassword.value = false
   }
@@ -297,7 +297,7 @@ async function toggleService() {
     else await startService('postgresql')
     await daemonStore.poll()
   } catch (e) {
-    ElMessage.error(`PostgreSQL ${serviceRunning.value ? 'stop' : 'start'} failed: ${errorMessage(e)}`)
+    ElMessage.error(t(serviceRunning.value ? 'postgresPlugin.toast.stopFailed' : 'postgresPlugin.toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }

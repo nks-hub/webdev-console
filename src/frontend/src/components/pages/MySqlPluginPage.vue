@@ -672,7 +672,7 @@ async function toggleService() {
     if (serviceRunning.value) await stopService('mysql')
     else await startService('mysql')
   } catch (e) {
-    ElMessage.error(`${serviceRunning.value ? 'Stop' : 'Start'} failed: ${errorMessage(e)}`)
+    ElMessage.error(t(serviceRunning.value ? 'mysqlPlugin.toast.stopFailed' : 'mysqlPlugin.toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }
@@ -684,7 +684,7 @@ async function changePassword() {
     changePwd.confirm = ''
   }
   if (changePwd.newPwd !== changePwd.confirm) {
-    ElMessage.warning('Passwords do not match')
+    ElMessage.warning(t('mysqlPlugin.toast.passwordsDontMatch'))
     return
   }
   changingPwd.value = true
@@ -720,7 +720,7 @@ async function changePassword() {
   } catch (e) {
     if (e === 'cancel') return
     changePwdStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`Change password failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.changePasswordFailed', { err: errorMessage(e) }))
   } finally {
     changingPwd.value = false
   }
@@ -731,10 +731,10 @@ async function resetPassword() {
   try {
     await ElMessageBox.confirm(
       resetPwd.passwordless
-        ? 'This will reset all root accounts to an empty password. Continue?'
-        : 'This will stop MySQL, reset all root accounts, then restart. Continue?',
-      'Reset root password',
-      { type: 'warning', confirmButtonText: 'Reset', confirmButtonClass: 'el-button--danger' }
+        ? t('mysqlPlugin.toast.rootResetConfirmEmpty')
+        : t('mysqlPlugin.toast.rootResetConfirm'),
+      t('mysqlPlugin.toast.rootResetTitle'),
+      { type: 'warning', confirmButtonText: t('mysqlPlugin.toast.rootResetBtn'), confirmButtonClass: 'el-button--danger' }
     )
   } catch { return }
 
@@ -750,13 +750,13 @@ async function resetPassword() {
       const err: { error?: string } = await r.json().catch(() => ({}))
       throw new Error(err.error || `HTTP ${r.status}`)
     }
-    resetPwdStatus.value = { kind: 'ok', message: 'Root password reset successfully' }
-    ElMessage.success('MySQL root password reset')
+    resetPwdStatus.value = { kind: 'ok', message: t('mysqlPlugin.toast.rootResetStatus') }
+    ElMessage.success(t('mysqlPlugin.toast.rootResetSuccess'))
     resetPwd.newPwd = ''
     resetPwd.passwordless = false
   } catch (e) {
     resetPwdStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`Reset failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.rootResetFailed', { err: errorMessage(e) }))
   } finally {
     resettingPwd.value = false
   }
@@ -821,7 +821,7 @@ async function createDatabase() {
     await loadDatabases()
     await selectDatabase(name)
   } catch (e) {
-    ElMessage.error(`Create failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.createFailed', { err: errorMessage(e) }))
   } finally {
     creatingDatabase.value = false
   }
@@ -850,7 +850,7 @@ async function loadDatabaseTables(db: string) {
       throw await httpError(r)
     }
   } catch (e) {
-    ElMessage.error(`Load tables failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.loadTablesFailed', { err: errorMessage(e) }))
   }
 
   try {
@@ -902,7 +902,7 @@ async function exportDatabase() {
     a.click()
     URL.revokeObjectURL(url)
   } catch (e) {
-    ElMessage.error(`Export failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.exportFailed', { err: errorMessage(e) }))
   } finally {
     exportingDatabase.value = false
   }
@@ -935,7 +935,7 @@ async function confirmDropDatabase(db: string) {
     selectedDatabase.value = ''
     await loadDatabases()
   } catch (e) {
-    ElMessage.error(`Drop failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.dropFailed', { err: errorMessage(e) }))
   } finally {
     droppingDatabase.value = false
   }
@@ -961,15 +961,15 @@ async function createUser() {
       const err: { error?: string } = await r.json().catch(() => ({}))
       throw new Error(err.error || `HTTP ${r.status}`)
     }
-    usersStatus.value = { kind: 'ok', message: 'User created' }
-    ElMessage.success('MySQL user created')
+    usersStatus.value = { kind: 'ok', message: t('mysqlPlugin.toast.userCreatedStatus') }
+    ElMessage.success(t('mysqlPlugin.toast.userCreated'))
     userForm.userName = ''
     userForm.password = ''
     userForm.passwordless = false
     await loadUsers()
   } catch (e) {
     usersStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`Create user failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.createUserFailed', { err: errorMessage(e) }))
   } finally {
     creatingUser.value = false
   }
@@ -1004,10 +1004,10 @@ async function updateUserPassword() {
       throw new Error(err.error || `HTTP ${r.status}`)
     }
     passwordDialog.visible = false
-    ElMessage.success('MySQL user password updated')
+    ElMessage.success(t('mysqlPlugin.toast.userPasswordUpdated'))
     await loadUsers()
   } catch (e) {
-    ElMessage.error(`Password update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.userPasswordUpdateFailed', { err: errorMessage(e) }))
   } finally {
     updatingUserPassword.value = false
   }
@@ -1040,9 +1040,9 @@ async function grantUser() {
       throw new Error(err.error || `HTTP ${r.status}`)
     }
     grantDialog.visible = false
-    ElMessage.success('MySQL grant applied')
+    ElMessage.success(t('mysqlPlugin.toast.grantApplied'))
   } catch (e) {
-    ElMessage.error(`Grant failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.grantFailed', { err: errorMessage(e) }))
   } finally {
     grantingUser.value = false
   }
@@ -1051,9 +1051,9 @@ async function grantUser() {
 async function dropUser(row: MySqlUser) {
   try {
     await ElMessageBox.confirm(
-      `Delete MySQL user ${row.userName}@${row.host}? Databases are not deleted.`,
-      'Delete MySQL user',
-      { type: 'warning', confirmButtonText: 'Delete', confirmButtonClass: 'el-button--danger' }
+      t('mysqlPlugin.toast.dropUserConfirmMessage', { user: row.userName, host: row.host }),
+      t('mysqlPlugin.toast.dropUserConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('mysqlPlugin.toast.dropUserConfirmBtn'), confirmButtonClass: 'el-button--danger' }
     )
   } catch { return }
 
@@ -1067,10 +1067,10 @@ async function dropUser(row: MySqlUser) {
       const err: { error?: string } = await r.json().catch(() => ({}))
       throw new Error(err.error || `HTTP ${r.status}`)
     }
-    ElMessage.success('MySQL user deleted')
+    ElMessage.success(t('mysqlPlugin.toast.userDeleted'))
     await loadUsers()
   } catch (e) {
-    ElMessage.error(`Delete user failed: ${errorMessage(e)}`)
+    ElMessage.error(t('mysqlPlugin.toast.deleteUserFailed', { err: errorMessage(e) }))
   }
 }
 
