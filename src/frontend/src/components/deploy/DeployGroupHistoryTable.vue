@@ -104,7 +104,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="triggeredBy" :label="t('deploy.groupHistory.col.by')" width="80">
+      <el-table-column prop="triggeredBy" :label="t('deploy.groupHistory.col.by')" width="120">
         <template #default="{ row }">
           <el-tag size="small" effect="plain" type="info">{{ row.triggeredBy }}</el-tag>
         </template>

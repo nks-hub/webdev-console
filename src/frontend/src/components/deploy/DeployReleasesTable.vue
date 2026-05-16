@@ -115,13 +115,13 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('deploy.releases.col.deploys')" width="90" align="center">
+      <el-table-column :label="t('deploy.releases.col.deploys')" width="120" align="center">
         <template #default="{ row }">
           <el-badge :value="row.entries.length" type="info" />
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('deploy.releases.col.successRate')" width="120" align="center">
+      <el-table-column :label="t('deploy.releases.col.successRate')" width="150" align="center">
         <template #default="{ row }">
           <span :class="successClass(row.successRate)">{{ row.successRate }}%</span>
         </template>
