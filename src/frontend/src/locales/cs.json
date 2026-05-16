@@ -526,6 +526,7 @@
       "delete": "Smazat",
       "more": "Více akcí",
       "moreActions": "Více akcí pro {domain}",
+      "openSiteAria": "Otevřít detail webu {domain}",
       "deleteConfirm": "Opravdu smazat web {domain}?",
       "newSite": "+ Nový web",
       "welcomeTitle": "Vítejte",

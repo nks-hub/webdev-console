@@ -1,6 +1,18 @@
 <template>
   <el-card class="site-card" shadow="hover">
-    <div class="card-body" @click="emit('navigate', site.domain)">
+    <!-- card-body is the primary click target for navigation. Without
+         role + tabindex + keyboard handlers, screen-reader and
+         keyboard-only users couldn't reach the site edit page (the
+         dropdown action menu is the only kbd-navigable surface today). -->
+    <div
+      class="card-body"
+      role="button"
+      tabindex="0"
+      :aria-label="t('sites.card.openSiteAria', { domain: site.domain })"
+      @click="emit('navigate', site.domain)"
+      @keydown.enter.prevent="emit('navigate', site.domain)"
+      @keydown.space.prevent="emit('navigate', site.domain)"
+    >
       <div class="card-title-row">
         <div class="card-title">{{ site.domain }}</div>
         <div class="card-status">
@@ -221,6 +233,15 @@ void computed(() => props.site.domain)
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  cursor: pointer;
+  outline-offset: 4px;
+  border-radius: var(--wdc-radius-sm);
+}
+/* Show focus ring on keyboard navigation but not on mouse click to
+   avoid the persistent halo after clicking a card (common Element
+   Plus card UX expectation). */
+.card-body:focus-visible {
+  outline: 2px solid var(--wdc-accent);
 }
 .card-title-row {
   display: flex;

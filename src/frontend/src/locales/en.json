@@ -526,6 +526,7 @@
       "delete": "Delete",
       "more": "More actions",
       "moreActions": "More actions for {domain}",
+      "openSiteAria": "Open site detail for {domain}",
       "deleteConfirm": "Really delete site {domain}?",
       "newSite": "+ New site",
       "welcomeTitle": "Welcome",
