@@ -12,7 +12,7 @@
       <!-- Header row -->
       <div class="sd-header">
         <div class="sd-domain">{{ domain }}</div>
-        <el-button size="small" @click="openInBrowser">
+        <el-button size="default" @click="openInBrowser">
           {{ $t('sites.detail.simple.open') }}
         </el-button>
       </div>
@@ -27,7 +27,7 @@
           </span>
         </div>
         <el-button
-          size="small"
+          size="default"
           :type="apacheRunning ? 'warning' : 'success'"
           :loading="startStopLoading"
           @click="toggleApache"
@@ -50,7 +50,7 @@
         <div class="sd-control-wrap sd-control-wide">
           <el-input
             v-model="documentRoot"
-            size="small"
+            size="default"
             :placeholder="$t('sites.detail.simple.docRootPlaceholder')"
             @change="onDocRootChange"
           >
@@ -78,7 +78,7 @@
         <div class="sd-control-wrap">
           <el-select
             v-model="phpVersion"
-            size="small"
+            size="default"
             class="sd-control-medium"
             @change="onPhpChange"
           >
@@ -120,7 +120,7 @@
           <el-select
             v-model="bindAddresses"
             class="bind-address-select"
-            size="small"
+            size="default"
             multiple
             clearable
             collapse-tags
