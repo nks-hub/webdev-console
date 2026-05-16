@@ -233,7 +233,7 @@
            has been recorded yet (first-run). -->
       <div class="activity-section" v-if="activity.length > 0">
         <div class="section-header">
-          <span class="section-title">Recent activity</span>
+          <span class="section-title">{{ $t('dashboard.recentActivity') }}</span>
           <el-button size="small" text @click="loadActivity" :loading="activityLoading">{{ $t('common.refresh') }}</el-button>
         </div>
         <el-timeline class="activity-timeline">

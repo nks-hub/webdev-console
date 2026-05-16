@@ -464,6 +464,7 @@
     "subtitle": "System overview & service health",
     "startAll": "Start All",
     "stopAll": "Stop All",
+    "recentActivity": "Recent activity",
     "logs": "Logs",
     "config": "Config",
     "newSite": "+ New Site",
