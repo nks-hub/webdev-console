@@ -216,11 +216,8 @@
               show-icon
               style="margin-bottom: 12px; max-width: 400px"
             >
-              <template #title>Changing HTTP/HTTPS port reloads the webserver</template>
-              Every per-site vhost is regenerated to use the new port and
-              Apache (or nginx/caddy) is reloaded. In-flight browser
-              connections drop briefly. Check that the new port isn't
-              already used by another service before saving.
+              <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
+              {{ $t('settings.advancedPorts.portAlertDesc') }}
             </el-alert>
             <el-form label-position="left" label-width="160px" size="small" style="max-width: 400px">
               <el-form-item :label="$t('settings.ports.httpPort')">

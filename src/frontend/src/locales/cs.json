@@ -2261,7 +2261,9 @@
     },
     "advancedPorts": {
       "pluginPorts": "Porty pluginů",
-      "active": "{n} aktivní"
+      "active": "{n} aktivní",
+      "portAlertTitle": "Změna HTTP/HTTPS portu znovu načte webserver",
+      "portAlertDesc": "Každý per-site vhost je regenerován s novým portem a Apache (nebo nginx/caddy) se znovu načte. Aktuální browser spojení krátce odpadnou. Před uložením zkontroluj, že nový port není používaný jinou službou."
     },
     "sso": {
       "title": "Přihlášení přes SSO",

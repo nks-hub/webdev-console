@@ -2261,7 +2261,9 @@
     },
     "advancedPorts": {
       "pluginPorts": "Plugin ports",
-      "active": "{n} active"
+      "active": "{n} active",
+      "portAlertTitle": "Changing HTTP/HTTPS port reloads the webserver",
+      "portAlertDesc": "Every per-site vhost is regenerated to use the new port and Apache (or nginx/caddy) is reloaded. In-flight browser connections drop briefly. Check that the new port isn't already used by another service before saving."
     },
     "sso": {
       "title": "Sign in with SSO",

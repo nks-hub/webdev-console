@@ -30,10 +30,8 @@
     </div>
 
     <el-alert type="info" :closable="false" show-icon class="port-alert">
-      <template #title>Changing HTTP/HTTPS port reloads the webserver</template>
-      Every per-site vhost is regenerated to use the new port and Apache
-      (or nginx/caddy) is reloaded. In-flight browser connections drop briefly.
-      Check that the new port is free before saving.
+      <template #title>{{ t('settings.advancedPorts.portAlertTitle') }}</template>
+      {{ t('settings.advancedPorts.portAlertDesc') }}
     </el-alert>
 
     <el-form label-position="left" label-width="160px" size="small" class="ports-form">
