@@ -9,19 +9,41 @@
 import { scenario, api, assert } from '../harness.mjs'
 
 export default scenario('15', 'Config validate + rollback contracts', 'P2', async (_ctx) => {
-  // 1. Validate a minimal, well-formed vhost config.
-  const valid = await api.post('/api/config/validate', {
-    body: {
-      configType: 'apache',
-      content: '<VirtualHost *:80>\n  ServerName test.loc\n  DocumentRoot "C:/tmp"\n</VirtualHost>\n',
-    },
-  })
-  // The endpoint may return 200 with {isValid:true} or {valid:true} —
-  // accept either key name to avoid coupling to the exact response shape.
-  assert.statusOk(valid, 'POST /api/config/validate (good)')
-  const isValid = valid.body?.isValid ?? valid.body?.valid
-  assert.ok(isValid === true || typeof valid.body?.output === 'string',
-    `valid config reports success or provides output: ${JSON.stringify(valid.body).slice(0, 200)}`)
+  // 1. /api/config/validate evolved to require a `configPath` pointing at
+  //    a daemon-managed config file (the Monaco editor only validates
+  //    files the daemon already owns — pasted strings without a target
+  //    path are rejected on purpose). Look up an apache managed file
+  //    first; if the host hasn't installed Apache yet, accept the 400
+  //    response shape as "endpoint reachable" instead of failing.
+  const files = await api.get('/api/config/files?service=apache')
+  const apachePath = Array.isArray(files.body)
+    ? files.body.find((f) => /httpd\.conf$/i.test(f.path ?? ''))?.path
+    : (files.body?.files ?? []).find((f) => /httpd\.conf$/i.test(f.path ?? ''))?.path
+
+  if (apachePath) {
+    const valid = await api.post('/api/config/validate', {
+      body: {
+        serviceId: 'apache',
+        configPath: apachePath,
+      },
+    })
+    assert.statusOk(valid, 'POST /api/config/validate (managed apache config)')
+    const isValid = valid.body?.isValid ?? valid.body?.valid
+    assert.ok(
+      isValid === true || typeof valid.body?.output === 'string',
+      `validate response reports a result: ${JSON.stringify(valid.body).slice(0, 200)}`,
+    )
+  } else {
+    // Apache not installed — at least confirm the endpoint is reachable
+    // and rejects an obviously invalid path with a 400, not a 500.
+    const probe = await api.post('/api/config/validate', {
+      body: { serviceId: 'apache', configPath: '/nonexistent/httpd.conf' },
+    })
+    assert.ok(
+      probe.status === 400,
+      `validate without apache install returns 400; got ${probe.status} body=${JSON.stringify(probe.body).slice(0, 120)}`,
+    )
+  }
 
   // 2. Rollback endpoint contract — a non-existent timestamp should return
   //    a 4xx error, not a crash. We pick a definitely-nonexistent timestamp
