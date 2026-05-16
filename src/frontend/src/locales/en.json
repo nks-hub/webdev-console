@@ -536,6 +536,25 @@
       }
     }
   },
+  "siteEditToast": {
+    "composeNonZero": "Compose {action} returned non-zero exit code",
+    "composeFailed": "Compose {action} failed: {err}",
+    "nodeStartFailed": "Failed to start Node: {err}",
+    "nodeStopFailed": "Failed to stop Node: {err}",
+    "nodeRestartFailed": "Failed to restart Node: {err}",
+    "cloudflareZonesFailed": "Cannot load Cloudflare zones: {err}. Open the Cloudflare Tunnel page first to configure the API token.",
+    "detected": "Detected: {framework}",
+    "noFramework": "No framework detected",
+    "detectFailed": "Detection failed: {err}",
+    "bindRequired": "Select at least one IP binding, or choose * for all listener addresses.",
+    "updated": "Site updated",
+    "updateFailed": "Update failed: {err}",
+    "configRestored": "Config restored",
+    "restoreFailed": "Restore failed: {err}",
+    "deleted": "Site deleted",
+    "historicalMetricsFailed": "Historical metrics failed: {err}",
+    "folderPickerDesktopOnly": "Folder picker only available in the desktop app"
+  },
   "sitesToast": {
     "enabled": "Site {domain} enabled",
     "disabled": "Site {domain} disabled",

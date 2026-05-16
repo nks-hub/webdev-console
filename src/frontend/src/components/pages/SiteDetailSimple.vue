@@ -296,7 +296,7 @@ async function onPhpChange(v: string) {
     await sitesStore.update(props.domain, { ...site.value, phpVersion: v })
     flashSaved(savedPhp)
   } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
   }
 }
 
@@ -308,7 +308,7 @@ async function onDocRootChange(v: string) {
     await sitesStore.update(props.domain, { ...site.value, documentRoot: trimmed })
     flashSaved(savedDocRoot)
   } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
     documentRoot.value = site.value.documentRoot
   }
 }
@@ -318,7 +318,7 @@ async function pickDocRoot() {
     electronAPI?: { showOpenDialog: (o: unknown) => Promise<{ canceled: boolean; filePaths: string[] }> }
   }).electronAPI
   if (!api?.showOpenDialog) {
-    ElMessage.info('Folder picker only available in the desktop app')
+    ElMessage.info(t('siteEditToast.folderPickerDesktopOnly'))
     return
   }
   const result = await api.showOpenDialog({
@@ -337,7 +337,7 @@ async function onSslChange(v: boolean) {
     await sitesStore.update(props.domain, { ...site.value, sslEnabled: v })
     flashSaved(savedSsl)
   } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
     sslEnabled.value = !v
   }
 }
@@ -358,7 +358,7 @@ async function onBindAddressesChange(v: string[]) {
   const normalized = normalizeBindAddresses(v)
   bindAddresses.value = normalized
   if (normalized.length === 0) {
-    ElMessage.warning('Select at least one IP binding, or choose * for all listener addresses.')
+    ElMessage.warning(t('siteEditToast.bindRequired'))
     return
   }
   try {
@@ -375,7 +375,7 @@ async function onBindAddressesChange(v: string[]) {
       ElMessage.warning({ message: w, duration: 8000, showClose: true })
     }
   } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
     bindAddresses.value = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
   }
 }
@@ -387,7 +387,7 @@ async function onTunnelChange(v: boolean) {
     await sitesStore.update(props.domain, { ...site.value, cloudflare: { ...existing, enabled: v } })
     flashSaved(savedTunnel)
   } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
     tunnelEnabled.value = !v
   }
 }

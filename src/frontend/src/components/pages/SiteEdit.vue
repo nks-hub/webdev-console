@@ -656,6 +656,7 @@ import {
 } from '@element-plus/icons-vue'
 import DeploySiteTab from '../deploy/DeploySiteTab.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
@@ -691,6 +692,7 @@ import VChart from 'vue-echarts'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent])
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
@@ -732,11 +734,11 @@ async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
       : composePs
     const result = await fn(site.value.domain)
     composeOutput.value = result.output || (result.ok ? 'Done' : 'Failed')
-    if (!result.ok) ElMessage.warning(`Compose ${action} returned non-zero exit code`)
+    if (!result.ok) ElMessage.warning(t('siteEditToast.composeNonZero', { action }))
   } catch (e) {
     const msg = errorMessage(e)
     composeOutput.value = msg
-    ElMessage.error(`Compose ${action} failed: ${msg}`)
+    ElMessage.error(t('siteEditToast.composeFailed', { action, err: msg }))
   } finally {
     composeLoading.value = false
   }
@@ -823,7 +825,7 @@ async function startNodeProcess() {
     nodeProcessState.value = result.state
     nodeProcessPid.value = result.pid
   } catch (e) {
-    ElMessage.error(`Failed to start Node: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.nodeStartFailed', { err: errorMessage(e) }))
   } finally {
     nodeProcessLoading.value = false
   }
@@ -837,7 +839,7 @@ async function stopNodeProcess() {
     nodeProcessState.value = 0
     nodeProcessPid.value = null
   } catch (e) {
-    ElMessage.error(`Failed to stop Node: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.nodeStopFailed', { err: errorMessage(e) }))
   } finally {
     nodeProcessLoading.value = false
   }
@@ -851,7 +853,7 @@ async function restartNodeProcess() {
     nodeProcessState.value = result.state
     nodeProcessPid.value = result.pid
   } catch (e) {
-    ElMessage.error(`Failed to restart Node: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.nodeRestartFailed', { err: errorMessage(e) }))
   } finally {
     nodeProcessLoading.value = false
   }
@@ -927,7 +929,7 @@ async function loadCfZones() {
     const res = await fetchCloudflareZones()
     cfZones.value = res?.result ?? []
   } catch (e) {
-    ElMessage.error(`Cannot load Cloudflare zones: ${errorMessage(e)}. Open the Cloudflare Tunnel page first to configure the API token.`)
+    ElMessage.error(t('siteEditToast.cloudflareZonesFailed', { err: errorMessage(e) }))
   } finally {
     loadingCfZones.value = false
   }
@@ -1041,13 +1043,13 @@ async function detectFramework() {
     const data = await res.json()
     if (data.framework) {
       site.value.framework = data.framework
-      ElMessage.success(`Detected: ${data.framework}`)
+      ElMessage.success(t('siteEditToast.detected', { framework: data.framework }))
       markDirty()
     } else {
-      ElMessage.info('No framework detected')
+      ElMessage.info(t('siteEditToast.noFramework'))
     }
   } catch (e) {
-    ElMessage.error(`Detection failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.detectFailed', { err: errorMessage(e) }))
   } finally {
     detecting.value = false
   }
@@ -1158,7 +1160,7 @@ async function save() {
   if (!site.value) return
   site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses)
   if (site.value.bindAddresses.length === 0) {
-    ElMessage.warning('Select at least one IP binding, or choose * for all listener addresses.')
+    ElMessage.warning(t('siteEditToast.bindRequired'))
     return
   }
   site.value.bindAddress = site.value.bindAddresses[0]
@@ -1186,7 +1188,7 @@ async function save() {
       protocol: cloudflareProtocol.value,
     }
     await sitesStore.update(site.value.domain, site.value)
-    ElMessage.success('Site updated')
+    ElMessage.success(t('siteEditToast.updated'))
     // Surface daemon's bind-IP / NIC warnings the same way Sites.vue
     // createSite does — without this, an operator flipping bind to a
     // bogus IP in advanced mode would see only success while Apache
@@ -1201,7 +1203,7 @@ async function save() {
       void refreshNodeStatus()
     }
   } catch (e) {
-    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
   } finally {
     saving.value = false
   }
@@ -1222,10 +1224,10 @@ async function rollback(timestamp: string) {
       body: JSON.stringify({ timestamp }),
     })
     if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
-    ElMessage.success('Config restored')
+    ElMessage.success(t('siteEditToast.configRestored'))
     await load()
   } catch (e) {
-    ElMessage.error(`Restore failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.restoreFailed', { err: errorMessage(e) }))
   }
 }
 
@@ -1238,7 +1240,7 @@ async function confirmDelete() {
       { type: 'warning', confirmButtonText: 'Delete', confirmButtonClass: 'el-button--danger' }
     )
     await sitesStore.remove(site.value.domain)
-    ElMessage.success('Site deleted')
+    ElMessage.success(t('siteEditToast.deleted'))
     router.push('/sites')
   } catch { /* user cancelled */ }
 }
@@ -1434,7 +1436,7 @@ async function loadHistoricalMetrics() {
       granularity: historicalGranularity.value,
     })
   } catch (e) {
-    ElMessage.error(`Historical metrics failed: ${errorMessage(e)}`)
+    ElMessage.error(t('siteEditToast.historicalMetricsFailed', { err: errorMessage(e) }))
     historicalData.value = null
   } finally {
     historicalLoading.value = false

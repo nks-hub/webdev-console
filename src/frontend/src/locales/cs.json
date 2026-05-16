@@ -536,6 +536,25 @@
       }
     }
   },
+  "siteEditToast": {
+    "composeNonZero": "Compose {action} skončil s nenulovým exit code",
+    "composeFailed": "Compose {action} selhal: {err}",
+    "nodeStartFailed": "Spuštění Node selhalo: {err}",
+    "nodeStopFailed": "Zastavení Node selhalo: {err}",
+    "nodeRestartFailed": "Restart Node selhal: {err}",
+    "cloudflareZonesFailed": "Nelze načíst Cloudflare zóny: {err}. Otevři nejdřív Cloudflare Tunnel stránku a nakonfiguruj API token.",
+    "detected": "Rozpoznáno: {framework}",
+    "noFramework": "Žádný framework nerozpoznán",
+    "detectFailed": "Rozpoznání selhalo: {err}",
+    "bindRequired": "Vyber alespoň jednu IP nebo zvol * pro všechny listener adresy.",
+    "updated": "Web aktualizován",
+    "updateFailed": "Aktualizace selhala: {err}",
+    "configRestored": "Konfigurace obnovena",
+    "restoreFailed": "Obnovení selhalo: {err}",
+    "deleted": "Web smazán",
+    "historicalMetricsFailed": "Historické metriky selhaly: {err}",
+    "folderPickerDesktopOnly": "Výběr složky je dostupný jen v desktopové aplikaci"
+  },
   "sitesToast": {
     "enabled": "Web {domain} povolen",
     "disabled": "Web {domain} zakázán",
