@@ -170,13 +170,13 @@
           stripe
           row-key="version"
         >
-          <el-table-column label="Version" prop="version" min-width="140">
+          <el-table-column :label="$t('binaries.col.version')" prop="version" min-width="140">
             <template #default="{ row }">
               <span class="mono col-version">{{ row.version }}</span>
-              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">default</el-tag>
+              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">{{ $t('binaries.default') }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Platforms" min-width="200">
+          <el-table-column :label="$t('binaries.col.platforms')" min-width="200">
             <template #default="{ row }">
               <el-tag
                 v-for="p in row.platforms"
@@ -190,36 +190,36 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Source" width="140">
+          <el-table-column :label="$t('binaries.col.source')" width="140">
             <template #default="{ row }">
               <span class="mono col-muted">{{ row.source || '—' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="Status" width="120">
+          <el-table-column :label="$t('binaries.col.status')" width="120">
             <template #default="{ row }">
               <el-tag
                 v-if="row.installed"
                 size="small"
                 type="success"
                 effect="plain"
-              >installed</el-tag>
+              >{{ $t('binaries.installed') }}</el-tag>
               <el-tag
                 v-else
                 size="small"
                 type="info"
                 effect="plain"
-              >available</el-tag>
+              >{{ $t('binaries.available') }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column :label="$t('common.actions')" width="220" align="right">
             <template #default="{ row }">
               <el-tooltip
                 v-if="!row.installed && nativePlatform && row.platforms.length && !row.platforms.includes(nativePlatform)"
-                :content="`No ${nativePlatform} build in this release`"
+                :content="$t('binaries.noBuildInRelease', { platform: nativePlatform })"
                 placement="left"
               >
                 <el-button size="small" type="info" plain disabled>
-                  Not available
+                  {{ $t('binaries.notAvailable') }}
                 </el-button>
               </el-tooltip>
               <el-button
@@ -230,7 +230,7 @@
                 :loading="installing.has(`${selectedApp}-${row.version}`)"
                 @click="install(selectedApp!, row.version)"
               >
-                Install
+                {{ $t('binaries.install') }}
               </el-button>
               <el-button
                 v-else
@@ -240,18 +240,18 @@
                 :loading="uninstalling.has(`${selectedApp}-${row.version}`)"
                 @click="uninstall(selectedApp!, row.version)"
               >
-                Remove
+                {{ $t('binaries.remove') }}
               </el-button>
             </template>
           </el-table-column>
         </el-table>
 
-        <el-empty v-else description="No versions in catalog for this module." :image-size="80" />
+        <el-empty v-else :description="$t('binaries.noVersionsInCatalog')" :image-size="80" />
       </div>
     </template>
 
     <!-- Install progress dialog -->
-    <el-dialog v-model="progressVisible" title="Installing binary" width="420px" :close-on-click-modal="false">
+    <el-dialog v-model="progressVisible" :title="$t('binaries.progressTitle')" width="420px" :close-on-click-modal="false">
       <div class="progress-content">
         <p class="progress-msg">{{ progressMessage }}</p>
         <el-progress :percentage="progressPercent" :status="progressError ? 'exception' : (progressDone ? 'success' : undefined)" />

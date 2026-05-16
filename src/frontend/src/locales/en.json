@@ -812,6 +812,17 @@
     "metricAvailable": "available",
     "metricDefault": "default",
     "builtIn": "Built-in",
+    "default": "default",
+    "col": {
+      "version": "Version",
+      "platforms": "Platforms",
+      "source": "Source",
+      "status": "Status"
+    },
+    "notAvailable": "Not available",
+    "noBuildInRelease": "No {platform} build in this release",
+    "noVersionsInCatalog": "No versions in catalog for this module.",
+    "progressTitle": "Installing binary",
     "composer": {
       "name": "Composer",
       "description": "PHP dependency manager — downloads the latest composer.phar from getcomposer.org into managed binaries.",

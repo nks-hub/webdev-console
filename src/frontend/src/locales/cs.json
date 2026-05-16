@@ -812,6 +812,17 @@
     "metricAvailable": "dostupné",
     "metricDefault": "výchozí",
     "builtIn": "Vestavěný",
+    "default": "výchozí",
+    "col": {
+      "version": "Verze",
+      "platforms": "Platformy",
+      "source": "Zdroj",
+      "status": "Stav"
+    },
+    "notAvailable": "Není dostupné",
+    "noBuildInRelease": "V tomto release není build pro {platform}",
+    "noVersionsInCatalog": "V katalogu nejsou pro tento modul žádné verze.",
+    "progressTitle": "Instalace binárky",
     "composer": {
       "name": "Composer",
       "description": "PHP dependency manager — stáhne nejnovější composer.phar z getcomposer.org do spravovaných binárek.",
