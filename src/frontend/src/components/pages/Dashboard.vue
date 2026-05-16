@@ -37,107 +37,12 @@
     </div>
 
     <!-- Simple mode: metric tiles + quick actions -->
+    <!-- Simple-mode hero + tiles + apache banner + quick actions + recent
+         sites live in DashboardSimple.vue. Keeps this parent focused on
+         the much larger Advanced surface (services grid, command palette,
+         runtime widgets). -->
     <template v-if="uiMode.isSimple">
-      <div class="simple-dashboard">
-        <div class="simple-hero">
-          <h1 class="hero-title">{{ $t('dashboard.simple.welcomeTitle') }}</h1>
-          <p class="hero-summary">
-            {{ $t('dashboard.simple.summary', {
-              sites: sitesCount,
-              running: runningServices,
-              total: totalServices,
-              hits: totalHits,
-              errors: totalErrors
-            }) }}
-          </p>
-        </div>
-
-        <div v-if="aggregatesLoading" v-loading="true" style="height: 80px; margin-bottom: 12px;" />
-
-        <div class="simple-tiles">
-          <SimpleMetricTile
-            :label="$t('dashboard.simple.tiles.sites')"
-            :value="sitesCount"
-            icon="Link"
-            @click="router.push('/sites')"
-          />
-          <SimpleMetricTile
-            :label="$t('dashboard.simple.tiles.services')"
-            :value="`${runningServices}/${totalServices}`"
-            icon="Monitor"
-            :variant="runningServices < totalServices ? 'warning' : 'success'"
-            @click="router.push('/services')"
-          />
-          <SimpleMetricTile
-            :label="$t('dashboard.simple.tiles.hits')"
-            :value="totalHits"
-            icon="DataLine"
-            @click="router.push('/sites')"
-          />
-          <SimpleMetricTile
-            :label="$t('dashboard.simple.tiles.errors')"
-            :value="totalErrors"
-            icon="WarningFilled"
-            :variant="totalErrors > 0 ? 'danger' : 'default'"
-            @click="router.push('/sites')"
-          />
-        </div>
-
-        <div v-if="sitesCount > 0 && !simpleApacheRunning" class="simple-apache-banner">
-          <div class="simple-apache-banner-text">
-            <strong>{{ $t('dashboard.simple.apacheStopped.title') }}</strong>
-            <span>{{ $t('dashboard.simple.apacheStopped.subtitle') }}</span>
-          </div>
-          <el-button
-            type="success"
-            size="default"
-            :loading="startingApache"
-            @click="startApacheFromSimple"
-          >
-            {{ $t('dashboard.simple.apacheStopped.startBtn') }}
-          </el-button>
-        </div>
-
-        <div class="simple-quick-actions">
-          <el-button type="primary" size="large" @click="router.push('/sites?create=1')">
-            + {{ $t('dashboard.simple.quickActions.newSite') }}
-          </el-button>
-          <el-button size="large" @click="openMailpit">
-            {{ $t('dashboard.simple.quickActions.mailpit') }}
-          </el-button>
-          <el-button size="large" @click="router.push('/settings?tab=backup')">
-            {{ $t('dashboard.simple.quickActions.backup') }}
-          </el-button>
-        </div>
-
-        <!-- Recent sites — last 5 by lastHit (or last-edited fallback) so
-             the dashboard answers "what was I working on?" without a click
-             through to /sites. -->
-        <div v-if="recentSimpleSites.length > 0" class="simple-recent">
-          <div class="simple-recent-header">
-            <span class="simple-recent-title">{{ $t('dashboard.simple.recent.title') }}</span>
-            <el-button text size="small" @click="router.push('/sites')">
-              {{ $t('dashboard.simple.recent.viewAll') }} →
-            </el-button>
-          </div>
-          <ul class="simple-recent-list">
-            <li
-              v-for="s in recentSimpleSites"
-              :key="s.domain"
-              class="simple-recent-item"
-              @click="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-            >
-              <span class="simple-recent-dot" :class="s.enabled === false ? 'dot-disabled' : 'dot-enabled'" />
-              <span class="simple-recent-domain">{{ s.domain }}</span>
-              <span class="simple-recent-meta mono">
-                <template v-if="s.phpVersion && s.phpVersion !== 'none'">PHP {{ s.phpVersion }}</template>
-                <template v-else>{{ $t('sites.phpNone') }}</template>
-              </span>
-              <el-icon class="simple-recent-arrow"><ArrowRight /></el-icon>
-            </li>
-          </ul>
-        </div>
-      </div>
+      <DashboardSimple />
     </template>
 
     <template v-else>
@@ -380,7 +285,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu, ArrowRight } from '@element-plus/icons-vue'
+import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu } from '@element-plus/icons-vue'
+import DashboardSimple from './DashboardSimple.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
@@ -393,7 +299,6 @@ import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
-import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
 import { useAppVersion } from '../../utils/appVersion'
 
@@ -422,56 +327,12 @@ const runningCount = computed(() => services.value.filter(s => s.state === 2 || 
 const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
 const noneRunning = computed(() => runningCount.value === 0)
 
-// Simple mode metrics
+// Advanced-mode summary numbers — sitesCount + runningServices are
+// also used by header chips. Simple-mode aggregates (hits, errors,
+// loading state) live in DashboardSimple.vue.
 const sitesCount = computed(() => sitesStore.sites.length)
 const runningServices = computed(() => services.value.filter(s => s.state === 2).length)
 const totalServices = computed(() => services.value.length)
-const totalHits = ref(0)
-const totalErrors = ref(0)
-const aggregatesLoading = ref(false)
-
-// Recent sites for the simple dashboard — capped at 5 in insertion
-// order (sitesStore loads them in domain order today; the daemon owns
-// the canonical "last modified" timestamp but doesn't expose it on
-// SiteInfo yet, so we keep things deterministic for now).
-const recentSimpleSites = computed(() => sitesStore.sites.slice(0, 5))
-
-async function loadAggregates() {
-  aggregatesLoading.value = true
-  const domains = sitesStore.sites.map(s => s.domain)
-  const results = await Promise.allSettled(domains.map(async (domain: string) => {
-    try {
-      const [metricsR, errorsR] = await Promise.allSettled([
-        fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`, { headers: sitesStore.authHeaders() }),
-        fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`, { headers: sitesStore.authHeaders() }),
-      ])
-      let hits = 0, errs = 0
-      if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
-        const data: unknown = await metricsR.value.json()
-        const samples: Array<{ requests?: number; hits?: number }> = Array.isArray(data)
-          ? data
-          : ((data as { samples?: Array<{ requests?: number; hits?: number }> })?.samples ?? [])
-        hits = samples.reduce((sum, s) => sum + (s.requests ?? s.hits ?? 0), 0)
-      }
-      if (errorsR.status === 'fulfilled' && errorsR.value.ok) {
-        const data: unknown = await errorsR.value.json()
-        const entries: Array<{ timestamp?: string }> = Array.isArray(data)
-          ? data
-          : ((data as { entries?: Array<{ timestamp?: string }> })?.entries ?? [])
-        const cutoff = Date.now() - 24 * 60 * 60 * 1000
-        errs = entries.filter(e => {
-          if (!e.timestamp) return true
-          const t = new Date(e.timestamp).getTime()
-          return !isNaN(t) && t > cutoff
-        }).length
-      }
-      return { hits, errs }
-    } catch { return { hits: 0, errs: 0 } }
-  }))
-  totalHits.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.hits : sum, 0)
-  totalErrors.value = results.reduce((sum, r) => r.status === 'fulfilled' ? sum + r.value.errs : sum, 0)
-  aggregatesLoading.value = false
-}
 const totalCpu = computed(() => services.value.reduce((s, x) => s + (x.cpuPercent ?? 0), 0))
 const totalRamMB = computed(() => Math.round(services.value.reduce((s, x) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
 
@@ -546,7 +407,8 @@ onMounted(async () => {
   void loadActivity()
   void loadNodeProcessCount()
   void loadLastBackup()
-  if (uiMode.isSimple) void loadAggregates()
+  // Simple-mode aggregates (hits, errors) are loaded by DashboardSimple
+  // on its own onMounted — no need to duplicate the fetch from here.
 })
 
 const stateLabels: Record<number, string> = {
@@ -629,23 +491,7 @@ async function toggleService(id: string, value: boolean | string | number) {
   }
 }
 
-// Simple-mode Apache status: signal "site won't load" condition to the
-// user front-and-centre so the first-run flow doesn't end on a dead URL.
-const simpleApacheRunning = computed(() => {
-  const apache = daemonStore.services.find(s => s.id === 'apache' || s.id === 'httpd')
-  return apache?.state === 2 || apache?.status === 'running'
-})
-const startingApache = ref(false)
-async function startApacheFromSimple() {
-  const apache = daemonStore.services.find(s => s.id === 'apache' || s.id === 'httpd')
-  if (!apache) return
-  startingApache.value = true
-  try {
-    await servicesStore.start(apache.id)
-  } finally {
-    startingApache.value = false
-  }
-}
+// Simple-mode apache-stopped banner + start button moved to DashboardSimple.
 
 async function startAll() {
   startingAll.value = true
@@ -1206,141 +1052,6 @@ function closeConfig() {
   border-radius: var(--wdc-radius-sm);
   max-height: 500px;
   overflow: auto;
-}
-
-/* ─── Simple mode dashboard ──────────────────────────────────────────────── */
-.simple-dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 32px;
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-.simple-hero {
-  text-align: center;
-}
-
-.hero-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-
-.hero-summary {
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
-  margin: 0;
-}
-
-.simple-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.simple-quick-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-  padding-top: 8px;
-}
-
-.simple-recent {
-  max-width: 720px;
-  margin: 18px auto 0;
-  padding: 16px 18px;
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  background: var(--wdc-surface-2);
-}
-.simple-recent-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.simple-recent-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--wdc-text-2);
-}
-.simple-recent-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.simple-recent-item {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto 16px;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--wdc-border);
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.simple-recent-item:last-child { border-bottom: 0; }
-.simple-recent-item:hover { background: var(--wdc-surface); }
-.simple-recent-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-.simple-recent-dot.dot-enabled {
-  background: var(--el-color-success);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 25%, transparent);
-}
-.simple-recent-dot.dot-disabled { background: var(--el-color-info); }
-.simple-recent-domain {
-  font-weight: 600;
-  color: var(--wdc-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.simple-recent-meta {
-  color: var(--wdc-text-2);
-  font-size: 0.78rem;
-}
-.simple-recent-arrow {
-  color: var(--wdc-text-2);
-  font-size: 14px;
-}
-
-.simple-apache-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  margin: 16px auto;
-  max-width: 720px;
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--el-color-warning-light-5);
-  border-left: 3px solid var(--el-color-warning);
-  border-radius: var(--wdc-radius);
-}
-
-.simple-apache-banner-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 2px;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.simple-apache-banner-text strong {
-  color: var(--wdc-text);
-  font-weight: 600;
-}
-
-.simple-apache-banner-text span {
-  color: var(--wdc-text-2);
 }
 
 /* Recent activity timeline (Phase 4) */
