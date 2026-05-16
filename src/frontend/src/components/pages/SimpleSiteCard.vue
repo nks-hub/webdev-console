@@ -46,14 +46,16 @@
         >{{ t('sites.simple.cloudflareTunnel') }}</el-tag>
       </div>
 
-      <div v-if="activity" class="card-activity">
+      <!-- Activity only when there's traffic - removes "0 hits / zatím
+           nenavštíveno" noise from every fresh card. -->
+      <div v-if="activity && activity.totalHits > 0" class="card-activity">
         <MiniSparkline :values="activity.hourlyHits" :width="120" :height="24" />
         <span class="card-hits mono">{{ activity.totalHits }} hits</span>
         <span v-if="activity.errorCount > 0" class="card-errors mono">
           · {{ activity.errorCount }} err
         </span>
       </div>
-      <div class="card-lasthit">{{ relativeLabel }}</div>
+      <div v-if="activity && activity.totalHits > 0" class="card-lasthit">{{ relativeLabel }}</div>
     </div>
 
     <div class="card-actions" @click.stop>
