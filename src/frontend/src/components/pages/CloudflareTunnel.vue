@@ -191,10 +191,10 @@
               <div class="ssl-toggle-row">
                 <div class="ssl-toggle-meta">
                   <div class="ssl-toggle-title">
-                    {{ serviceRunning ? 'Tunnel is running' : 'Tunnel is stopped' }}
+                    {{ serviceRunning ? t('cloudflare.tunnelRunning') : t('cloudflare.tunnelStopped') }}
                   </div>
                   <div class="ssl-toggle-desc">
-                    Uses the JWT fetched in Step 1 and connects to Cloudflare's edge.
+                    {{ t('cloudflare.tunnelHint') }}
                   </div>
                 </div>
                 <el-button

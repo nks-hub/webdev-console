@@ -86,8 +86,8 @@
 
       <el-tooltip
         :content="site.enabled === false
-          ? 'Site disabled — vhost removed, config preserved'
-          : 'Site enabled'"
+          ? t('sites.card.disabledTooltip')
+          : t('sites.card.enabledTooltip')"
         placement="top"
       >
         <el-switch

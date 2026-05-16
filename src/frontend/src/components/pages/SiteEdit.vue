@@ -298,7 +298,7 @@
                         :class="nodeProcessState === 2 ? 'running' : nodeProcessState === 4 ? 'crashed' : 'stopped'"
                       />
                       <span style="font-size: 0.85rem; color: var(--wdc-text-2)">
-                        {{ nodeProcessState === 2 ? 'Running' : nodeProcessState === 4 ? 'Crashed' : nodeProcessState === 1 ? 'Starting...' : 'Stopped' }}
+                        {{ nodeProcessState === 2 ? t('common.running') : nodeProcessState === 4 ? t('common.crashed') : nodeProcessState === 1 ? t('common.starting') : t('common.stopped') }}
                         <template v-if="nodeProcessPid"> (PID {{ nodeProcessPid }})</template>
                       </span>
                       <el-button

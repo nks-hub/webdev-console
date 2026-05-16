@@ -722,6 +722,8 @@
       "open": "Open",
       "start": "Start",
       "stop": "Stop",
+      "enabledTooltip": "Site enabled",
+      "disabledTooltip": "Site disabled — vhost removed, config preserved",
       "delete": "Delete",
       "more": "More actions",
       "moreActions": "More actions for {domain}",
@@ -1362,6 +1364,9 @@
   "cloudflare": {
     "title": "Cloudflare Tunnel",
     "subtitle": "Expose local sites to the internet via an encrypted tunnel",
+    "tunnelRunning": "Tunnel is running",
+    "tunnelStopped": "Tunnel is stopped",
+    "tunnelHint": "Uses the JWT fetched in Step 1 and connects to Cloudflare's edge.",
     "toast": {
       "settingsSaved": "Cloudflare settings saved",
       "binaryPathSaved": "Binary path saved",

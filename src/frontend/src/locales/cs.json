@@ -722,6 +722,8 @@
       "open": "Otevřít",
       "start": "Spustit",
       "stop": "Zastavit",
+      "enabledTooltip": "Web zapnutý",
+      "disabledTooltip": "Web vypnutý — vhost odebrán, konfigurace zachována",
       "delete": "Smazat",
       "more": "Více akcí",
       "moreActions": "Více akcí pro {domain}",
@@ -1362,6 +1364,9 @@
   "cloudflare": {
     "title": "Cloudflare Tunnel",
     "subtitle": "Zpřístupni lokální weby přes šifrovaný tunel",
+    "tunnelRunning": "Tunel běží",
+    "tunnelStopped": "Tunel je zastavený",
+    "tunnelHint": "Používá JWT získaný v Kroku 1 a připojuje se k Cloudflare edge.",
     "toast": {
       "settingsSaved": "Cloudflare nastavení uloženo",
       "binaryPathSaved": "Cesta k binárce uložena",
