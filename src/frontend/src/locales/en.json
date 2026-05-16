@@ -536,7 +536,10 @@
       "duplicated": "Duplicated: {name}",
       "restart": "Restart Apache",
       "restartConfirm": "Restarts Apache — affects all sites.",
-      "restarted": "Apache restarted"
+      "restarted": "Apache restarted",
+      "stopApacheTitle": "Stop Apache",
+      "stopApacheConfirm": "Stopping Apache will take down ALL sites, not just this one. Proceed?",
+      "stopApacheTooltip": "Stop Apache — disables every site"
     },
     "edit": {
       "browseDocRoot": "Select document root folder"

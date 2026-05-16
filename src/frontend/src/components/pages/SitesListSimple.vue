@@ -79,7 +79,7 @@
             circle
             :icon="StopIcon"
             :loading="toggling"
-            :title="$t('sites.card.stop')"
+            :title="$t('sites.card.stopApacheTooltip')"
             @click="stopApache"
           />
           <el-button
@@ -382,6 +382,18 @@ async function startApache() {
 }
 
 async function stopApache() {
+  // Stopping Apache from a per-site card is misleading — it actually takes
+  // down EVERY site on the host. The confirm dialog forces an acknowledgment
+  // so an absent-minded click doesn't break unrelated work.
+  try {
+    await ElMessageBox.confirm(
+      $t('sites.card.stopApacheConfirm'),
+      $t('sites.card.stopApacheTitle'),
+      { type: 'warning', confirmButtonText: $t('sites.card.stop') }
+    )
+  } catch {
+    return
+  }
   toggling.value = true
   try {
     await stopService('apache')

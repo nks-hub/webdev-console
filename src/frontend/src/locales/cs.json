@@ -536,7 +536,10 @@
       "duplicated": "Duplikováno: {name}",
       "restart": "Restartovat Apache",
       "restartConfirm": "Restartuje Apache — ovlivní všechny weby.",
-      "restarted": "Apache restartován"
+      "restarted": "Apache restartován",
+      "stopApacheTitle": "Zastavit Apache",
+      "stopApacheConfirm": "Zastavením Apache se přestanou načítat VŠECHNY weby, ne jen tento. Opravdu pokračovat?",
+      "stopApacheTooltip": "Zastaví Apache — vypne všechny weby"
     },
     "edit": {
       "browseDocRoot": "Vybrat složku document root"
