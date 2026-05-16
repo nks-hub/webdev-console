@@ -647,7 +647,7 @@
 // this page — SiteEdit is parametric by :domain and MUST refresh state on
 // every navigation, unlike Dashboard/Sites/Binaries which benefit from cache.
 defineOptions({ name: 'SiteEdit' })
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
@@ -666,7 +666,9 @@ import FolderBrowser from '../shared/FolderBrowser.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
 import SiteAccessLogs from './SiteAccessLogs.vue'
 import SiteComposer from './SiteComposer.vue'
-import SiteDetailSimple from './SiteDetailSimple.vue'
+// Lazy-load — SiteDetailSimple + its two sub-cards (Services, Activity)
+// only render in simple mode. Advanced users open the full tabbed editor.
+const SiteDetailSimple = defineAsyncComponent(() => import('./SiteDetailSimple.vue'))
 import PluginSlot from '../shared/PluginSlot.vue'
 import {
   fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,

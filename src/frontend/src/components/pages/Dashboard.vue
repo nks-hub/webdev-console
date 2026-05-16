@@ -283,10 +283,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu } from '@element-plus/icons-vue'
-import DashboardSimple from './DashboardSimple.vue'
+
+// Lazy-load the simple-mode dashboard. Advanced users (default for
+// developers) never render the simple surface, so its 4 KPI tiles +
+// recent-sites widget shouldn't sit in the Dashboard chunk that
+// every cold start pays for. defineAsyncComponent emits a separate
+// chunk that loads only when uiMode flips to 'simple'.
+const DashboardSimple = defineAsyncComponent(() => import('./DashboardSimple.vue'))
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'

@@ -451,7 +451,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useSitesStore } from '../../stores/sites'
@@ -462,7 +462,10 @@ import type { SiteInfo } from '../../api/types'
 import { fetchBindAddressOptions, fetchDockerComposeStatus, fetchPhpVersions, fetchSystem, daemonBaseUrl, daemonAuthHeaders as authHeaders, type BindAddressOption, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { MoreFilled, RefreshRight } from '@element-plus/icons-vue'
-import SitesListSimple from './SitesListSimple.vue'
+// Lazy-load the simple-mode sites list (and its 4 sub-components +
+// MiniSparkline). Advanced users land on the table view, never need
+// the card grid — keep it out of the Sites chunk's cold-start cost.
+const SitesListSimple = defineAsyncComponent(() => import('./SitesListSimple.vue'))
 import PluginSlot from '../shared/PluginSlot.vue'
 import siteTemplatesConfig from '../../config/site-templates.json'
 
