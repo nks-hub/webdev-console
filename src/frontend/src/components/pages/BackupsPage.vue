@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">
-          {{ $t('backups') }}
+          {{ $t('nav.backups') }}
           <span v-if="stats.count > 0" class="page-title-count">{{ stats.count }}</span>
         </h1>
         <p class="page-subtitle">{{ $t('backupsPage.subtitle') }}</p>
