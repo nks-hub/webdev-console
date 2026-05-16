@@ -1165,6 +1165,7 @@
     "noExtensions": "No extensions found in php.ini."
   },
   "mysqlPluginAuthCol": "Authentication",
+  "mysqlPluginDatabasesAria": "MySQL databases",
   "mysqlPlugin": {
     "title": "MySQL Server",
     "subtitle": "Databases, root password, and tuning",

@@ -133,7 +133,7 @@
               </el-empty>
 
               <div v-else class="database-workspace">
-                <aside class="database-list" aria-label="MySQL databases">
+                <aside class="database-list" :aria-label="$t('mysqlPluginDatabasesAria')">
                   <button
                     v-for="db in databases"
                     :key="db"

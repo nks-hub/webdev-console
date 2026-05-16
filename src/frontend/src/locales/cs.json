@@ -1165,6 +1165,7 @@
     "noExtensions": "V php.ini nenalezena žádná rozšíření."
   },
   "mysqlPluginAuthCol": "Autentizace",
+  "mysqlPluginDatabasesAria": "MySQL databáze",
   "mysqlPlugin": {
     "title": "MySQL Server",
     "subtitle": "Databáze, root heslo a ladění",
