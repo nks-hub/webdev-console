@@ -2241,7 +2241,11 @@
       "loading": "Načítám zálohy…",
       "empty": "Žádné zálohy. Klikni na „Vytvořit zálohu\" pro vytvoření.",
       "colDate": "Datum",
-      "colSize": "Velikost"
+      "colSize": "Velikost",
+      "backupDir": "Adresář záloh",
+      "schedule": "Interval automatické zálohy",
+      "hours": "hodin",
+      "scheduleHint": "Nastav 0 pro vypnutí. Když > 0, démon vytvoří časově označenou zálohu každých N hodin a maže staré (zachovává 10)."
     },
     "advancedPorts": {
       "pluginPorts": "Porty pluginů",

@@ -2241,7 +2241,11 @@
       "loading": "Loading backups…",
       "empty": "No backups yet. Click \"Create Backup\" to create one.",
       "colDate": "Date",
-      "colSize": "Size"
+      "colSize": "Size",
+      "backupDir": "Backup directory",
+      "schedule": "Auto-backup interval",
+      "hours": "hours",
+      "scheduleHint": "Set to 0 to disable. When > 0, the daemon creates a timestamped backup every N hours and prunes old ones (keeps 10)."
     },
     "advancedPorts": {
       "pluginPorts": "Plugin ports",

@@ -81,14 +81,14 @@
           <code>portable.txt</code> next to the executable.
         </div>
       </el-form-item>
-      <el-form-item label="Backup directory">
+      <el-form-item :label="$t('settings.advancedBackups.backupDir')">
         <el-input
           :model-value="backupDir"
           placeholder="~/.wdc/backups"
           @update:model-value="$emit('update:backupDir', String($event))"
         />
       </el-form-item>
-      <el-form-item label="Auto-backup interval">
+      <el-form-item :label="$t('settings.advancedBackups.schedule')">
         <el-input-number
           :model-value="backupScheduleHours"
           :min="0"
@@ -97,10 +97,9 @@
           class="schedule-control"
           @update:model-value="$emit('update:backupScheduleHours', Number($event ?? 0))"
         />
-        <span class="schedule-unit">hours</span>
+        <span class="schedule-unit">{{ $t('settings.advancedBackups.hours') }}</span>
         <div class="hint">
-          Set to 0 to disable. When &gt; 0, the daemon creates a timestamped
-          backup every N hours and prunes old ones (keeps 10).
+          {{ $t('settings.advancedBackups.scheduleHint') }}
         </div>
       </el-form-item>
     </el-form>
