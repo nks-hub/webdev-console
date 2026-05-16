@@ -162,7 +162,7 @@ function emitPath(key: keyof AdvancedPathValues, value: string | number): void {
 
 <style scoped>
 .paths-form {
-  max-width: 560px;
+  /* responsive: removed fixed cap */
 }
 
 .schedule-control {

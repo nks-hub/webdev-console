@@ -1817,7 +1817,7 @@ defineExpose({ saveSettings })
   margin: 0 0 16px;
   color: var(--el-text-color-secondary);
   font-size: 13px;
-  max-width: 480px;
+  /* responsive: removed fixed cap */
 }
 
 /* Left-tab layout overrides */
@@ -1830,7 +1830,6 @@ defineExpose({ saveSettings })
   flex-direction: column;
   gap: 20px;
   padding: 0 24px 24px;
-  max-width: 820px;
 }
 
 .section-header {
@@ -1851,7 +1850,7 @@ defineExpose({ saveSettings })
 }
 
 .settings-form {
-  max-width: 600px;
+  /* responsive: removed fixed cap */
 }
 
 .field-hint {
@@ -1876,7 +1875,7 @@ defineExpose({ saveSettings })
 
 /* Snapshot section */
 .snapshot-notice {
-  max-width: 600px;
+  /* responsive: removed fixed cap */
 }
 
 /* Phase 7.5+++ — snapshots timeline */
@@ -2169,7 +2168,7 @@ defineExpose({ saveSettings })
   flex-direction: column;
   gap: 8px;
   width: 100%;
-  max-width: 600px;
+  /* responsive: removed fixed cap */
 }
 
 .env-var-row {

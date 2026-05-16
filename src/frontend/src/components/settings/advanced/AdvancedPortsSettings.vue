@@ -159,7 +159,7 @@ function emitPort(key: keyof AdvancedPortValues, value: number | undefined): voi
 }
 
 .ports-form {
-  max-width: 480px;
+  /* responsive: removed fixed cap */
 }
 
 .full-control {
@@ -168,6 +168,6 @@ function emitPort(key: keyof AdvancedPortValues, value: number | undefined): voi
 
 .port-alert {
   margin-bottom: 12px;
-  max-width: 560px;
+  /* responsive: removed fixed cap */
 }
 </style>

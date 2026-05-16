@@ -40,7 +40,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .device-form {
-  max-width: 500px;
+  /* responsive: removed fixed cap */
 }
 
 .mono-input :deep(.el-input__inner) {
