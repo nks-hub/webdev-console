@@ -38,6 +38,29 @@
 
       <el-divider />
 
+      <!-- Document root -->
+      <div class="sd-row sd-row-stack">
+        <div class="sd-label-stack">
+          <span class="sd-label">{{ $t('sites.documentRoot') }}</span>
+          <span class="sd-hint">{{ $t('sites.detail.simple.docRootHint') }}</span>
+        </div>
+        <div class="sd-control-wrap sd-control-wide">
+          <el-input
+            v-model="documentRoot"
+            size="small"
+            :placeholder="$t('sites.detail.simple.docRootPlaceholder')"
+            @change="onDocRootChange"
+          >
+            <template #append>
+              <el-button :title="$t('sites.edit.browseDocRoot')" @click="pickDocRoot">…</el-button>
+            </template>
+          </el-input>
+          <Transition name="flash">
+            <span v-if="savedDocRoot" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
+          </Transition>
+        </div>
+      </div>
+
       <!-- PHP version -->
       <div class="sd-row sd-row-stack">
         <div class="sd-label-stack">
@@ -48,7 +71,7 @@
           <el-select
             v-model="phpVersion"
             size="small"
-            style="width: 110px"
+            class="sd-control-medium"
             @change="onPhpChange"
           >
             <el-option v-for="v in phpVersions" :key="v" :label="v" :value="v" />
@@ -178,11 +201,13 @@ const bindAddresses = ref<string[]>(['*'])
 const bindAddressOptions = ref<BindAddressOption[]>([])
 const bindAddressOptionsLoading = ref(false)
 const tunnelEnabled = ref(false)
+const documentRoot = ref('')
 
 const savedPhp = ref(false)
 const savedSsl = ref(false)
 const savedBind = ref(false)
 const savedTunnel = ref(false)
+const savedDocRoot = ref(false)
 
 const startStopLoading = ref(false)
 
@@ -204,6 +229,7 @@ watch(site, (s) => {
   sslEnabled.value = s.sslEnabled ?? false
   bindAddresses.value = normalizeBindAddresses(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
   tunnelEnabled.value = s.cloudflare?.enabled ?? false
+  documentRoot.value = s.documentRoot ?? ''
 }, { immediate: true })
 
 async function loadPhpVersions() {
@@ -249,6 +275,37 @@ async function onPhpChange(v: string) {
     flashSaved(savedPhp)
   } catch (e) {
     ElMessage.error(`Update failed: ${errorMessage(e)}`)
+  }
+}
+
+async function onDocRootChange(v: string) {
+  if (!site.value) return
+  const trimmed = (v ?? '').trim()
+  if (!trimmed || trimmed === site.value.documentRoot) return
+  try {
+    await sitesStore.update(props.domain, { ...site.value, documentRoot: trimmed })
+    flashSaved(savedDocRoot)
+  } catch (e) {
+    ElMessage.error(`Update failed: ${errorMessage(e)}`)
+    documentRoot.value = site.value.documentRoot
+  }
+}
+
+async function pickDocRoot() {
+  const api = (window as unknown as {
+    electronAPI?: { showOpenDialog: (o: unknown) => Promise<{ canceled: boolean; filePaths: string[] }> }
+  }).electronAPI
+  if (!api?.showOpenDialog) {
+    ElMessage.info('Folder picker only available in the desktop app')
+    return
+  }
+  const result = await api.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Select document root',
+  })
+  if (!result.canceled && result.filePaths[0]) {
+    documentRoot.value = result.filePaths[0]
+    await onDocRootChange(result.filePaths[0])
   }
 }
 
@@ -468,12 +525,27 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+/* All edit controls share a single width budget so the column lines up
+   across PHP/SSL/Bind IP/Cloudflare/docroot rows. Was a mix of 110px
+   (PHP) and 460px (bind IP) — visually ragged. */
+.sd-control-medium {
+  width: min(320px, 100%);
+}
+
+.sd-control-wide {
+  width: 100%;
+}
+
+.sd-control-wide :deep(.el-input) {
+  width: min(360px, 100%);
+}
+
 .sd-bind-control {
   width: 100%;
 }
 
 .sd-bind-control :deep(.el-select) {
-  width: min(460px, 100%);
+  width: min(360px, 100%);
 }
 
 .sd-bind-control :deep(.bind-address-select .el-tag) {

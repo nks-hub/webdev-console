@@ -470,6 +470,8 @@
       "simple": {
         "phpVersion": "PHP verze",
         "phpVersionHint": "Změna verze znovu načte Apache a přegeneruje vhost. Pro statické weby zvol 'none'.",
+        "docRootHint": "Složka s public_html / public / index.php. Změna překreslí vhost.",
+        "docRootPlaceholder": "C:\\work\\htdocs\\moje-app",
         "ssl": "HTTPS (SSL)",
         "sslHint": "Při uložení vygeneruje mkcert dev certifikát a přidá přesměrování z HTTP na HTTPS.",
         "bindIpHint": "Vyber * pro všechny listenery (výchozí) nebo jednu či více konkrétních IP, aby vhost odpovídal jen na daných rozhraních.",

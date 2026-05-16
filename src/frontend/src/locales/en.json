@@ -470,6 +470,8 @@
       "simple": {
         "phpVersion": "PHP version",
         "phpVersionHint": "Switching version reloads Apache and re-renders the vhost. Choose 'none' for static sites.",
+        "docRootHint": "Folder with public_html / public / index.php. Editing it re-renders the vhost.",
+        "docRootPlaceholder": "C:\\work\\htdocs\\my-app",
         "ssl": "HTTPS (SSL)",
         "sslHint": "Issues a mkcert-signed dev certificate and adds an HTTP→HTTPS redirect on save.",
         "bindIpHint": "Pick * for every listener (default) or one+ specific IPs so the vhost only answers on those interfaces.",
