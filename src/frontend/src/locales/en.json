@@ -1075,6 +1075,8 @@
       "tokenStored": "API token stored",
       "tokenMissing": "API token missing",
       "tokenVerified": "Token verified",
+      "tokenStoredUnverified": "Token stored (not verified)",
+      "tokenInvalid": "Token invalid",
       "noTunnel": "No tunnel selected",
       "configureBelow": "Configure below",
       "zoneCount": "{n} zones",
