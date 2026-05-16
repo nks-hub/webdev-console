@@ -94,7 +94,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('deploy.releases.col.firstSeen')" min-width="160">
+      <el-table-column :label="t('deploy.releases.col.firstSeen')" min-width="200">
         <template #default="{ row }">
           {{ new Date(row.firstSeen).toLocaleString() }}
         </template>

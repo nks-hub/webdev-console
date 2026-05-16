@@ -156,12 +156,12 @@
       @selection-change="onSelectionChange"
     >
       <el-table-column type="selection" width="40" />
-      <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="100">
+      <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="130">
         <template #default="{ row }">
           <el-tag :type="scopeTagType(row.scopeType)" size="small">{{ row.scopeType }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="scopeValue" :label="t('mcpGrants.col.scopeValue')" min-width="180">
+      <el-table-column prop="scopeValue" :label="t('mcpGrants.col.scopeValue')" min-width="210">
         <template #default="{ row }">
           <code v-if="row.scopeValue" class="mono">{{ truncate(row.scopeValue, 22) }}</code>
           <span v-else class="muted">—</span>
