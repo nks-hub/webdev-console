@@ -2227,6 +2227,11 @@
         "subtitle": "Create a manual backup of configs and databases in one click.",
         "create": "Create backup now",
         "openManager": "Open backup manager"
+      },
+      "services": {
+        "title": "Services",
+        "subtitle": "Local service state (Apache, MySQL, PHP, ...)",
+        "manageOnDashboard": "Manage on dashboard"
       }
     },
     "account": {

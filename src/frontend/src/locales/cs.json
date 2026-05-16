@@ -2227,6 +2227,11 @@
         "subtitle": "Vytvoř ruční zálohu konfigurace a databází jedním klikem.",
         "create": "Vytvořit zálohu teď",
         "openManager": "Otevřít správce záloh"
+      },
+      "services": {
+        "title": "Služby",
+        "subtitle": "Stav místních služeb (Apache, MySQL, PHP, ...)",
+        "manageOnDashboard": "Spravovat na přehledu"
       }
     },
     "account": {

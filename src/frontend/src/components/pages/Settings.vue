@@ -100,6 +100,45 @@
           </div>
         </section>
 
+        <!-- Plan §4 (Easy Settings IA): Services — addresses user
+             feedback "kde stav sluzeb". Lists running/stopped state per
+             service with link to the per-service plugin page for full
+             control. Full start/stop UX stays on Dashboard. -->
+        <section v-if="daemonStore.services.length > 0" class="simple-settings-panel">
+          <header class="simple-settings-panel-header">
+            <span class="simple-settings-panel-icon">
+              <el-icon><Operation /></el-icon>
+            </span>
+            <div>
+              <h2>{{ $t('settings.simple.services.title') }}</h2>
+              <p>{{ $t('settings.simple.services.subtitle') }}</p>
+            </div>
+          </header>
+          <div class="simple-runtime-grid">
+            <div
+              v-for="svc in daemonStore.services"
+              :key="svc.id"
+              class="about-sys-row"
+            >
+              <span class="sys-label">
+                <span
+                  class="status-dot"
+                  :class="(svc.state === 2 || svc.status === 'running') ? 'ok' : 'err'"
+                ></span>
+                {{ svc.id }}
+              </span>
+              <span class="sys-value mono">
+                {{ (svc.state === 2 || svc.status === 'running') ? $t('common.running') : $t('common.stopped') }}
+              </span>
+            </div>
+          </div>
+          <div class="simple-settings-actions">
+            <el-button size="small" @click="$router.push('/dashboard')">
+              {{ $t('settings.simple.services.manageOnDashboard') }} →
+            </el-button>
+          </div>
+        </section>
+
         <!-- Simple Backup panel — one-click "create a backup now". The
              retention + scheduler controls live in Advanced; Simple just
              surfaces the safety net. -->
@@ -1141,10 +1180,11 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
+import { useDaemonStore } from '../../stores/daemon'
 import {
   catalogRegister, catalogLogin, fetchDevices, pushConfigToDevice,
   daemonBaseUrl, daemonAuthHeaders as authHeaders,
@@ -1175,6 +1215,7 @@ const appVersion = computed(() => versionRef.value.full)
 const themeStore = useThemeStore()
 const uiModeStore = useUiModeStore()
 const authStore = useAuthStore()
+const daemonStore = useDaemonStore()
 
 async function ssoLogin() {
   const url = catalogUrl.value || 'https://wdc.nks-hub.cz'
