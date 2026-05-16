@@ -134,7 +134,7 @@
           </el-table-column>
 
           <!-- Actions -->
-          <el-table-column :label="$t('hosts.tableActions')" width="80" align="center">
+          <el-table-column :label="$t('hosts.tableActions')" width="100" align="center">
             <template #default="{ row }">
               <el-popconfirm
                 :title="$t('hosts.confirmRemove')"
