@@ -62,7 +62,7 @@
               plain
               :loading="pushingTo === row.device_id"
               @click="emit('pushConfig', row.device_id)"
-            >Push here</el-button>
+            >{{ $t('settings.devices.pushHere') }}</el-button>
             <el-button
               v-if="!row.is_current"
               size="small"
@@ -70,12 +70,12 @@
               plain
               :loading="unlinkingDevice === row.device_id"
               @click="emit('unlink', row)"
-            >Unlink</el-button>
+            >{{ $t('settings.devices.unlink') }}</el-button>
           </div>
         </template>
       </el-table-column>
     </el-table>
-    <el-empty v-else description="No devices registered yet. Push settings first." :image-size="48" />
+    <el-empty v-else :description="$t('settings.devices.noDevices')" :image-size="48" />
   </SettingsCard>
 </template>
 

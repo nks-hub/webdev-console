@@ -1,13 +1,13 @@
 <template>
-  <SettingsCard title="Account">
+  <SettingsCard :title="t('settings.account.cardTitle')">
     <template #meta>
       <span class="account-email">{{ email }}</span>
     </template>
     <div class="sync-actions">
       <el-button size="small" :loading="devicesLoading" @click="emit('refreshDevices')">
-        {{ t('common.refresh') }} devices
+        {{ t('settings.account.refreshDevices') }}
       </el-button>
-      <el-button size="small" type="danger" plain @click="emit('logout')">Sign out</el-button>
+      <el-button size="small" type="danger" plain @click="emit('logout')">{{ t('settings.account.signOut') }}</el-button>
     </div>
   </SettingsCard>
 </template>

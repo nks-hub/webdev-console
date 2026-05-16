@@ -1942,7 +1942,24 @@
       "passwordTitle": "Sign in with email + password",
       "passwordAlt": "Alternative to SSO — sign in with an email and password registered directly in the NKS WDC Cloud catalog.",
       "email": "Email",
-      "password": "Password"
+      "password": "Password",
+      "cardTitle": "Account",
+      "refreshDevices": "Refresh devices",
+      "signOut": "Sign out"
+    },
+    "devices": {
+      "pushHere": "Push here",
+      "unlink": "Unlink",
+      "noDevices": "No devices registered yet. Push settings first."
+    },
+    "advancedBackups": {
+      "title": "Backups",
+      "create": "Create Backup",
+      "loading": "Loading backups…"
+    },
+    "advancedPorts": {
+      "pluginPorts": "Plugin ports",
+      "active": "{n} active"
     },
     "sso": {
       "title": "Sign in with SSO",

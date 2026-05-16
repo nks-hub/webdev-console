@@ -1942,7 +1942,24 @@
       "passwordTitle": "Přihlášení e-mailem a heslem",
       "passwordAlt": "Alternativa k SSO — přihlášení e-mailem a heslem registrovaným přímo v katalogu NKS WDC Cloud.",
       "email": "E-mail",
-      "password": "Heslo"
+      "password": "Heslo",
+      "cardTitle": "Účet",
+      "refreshDevices": "Obnovit zařízení",
+      "signOut": "Odhlásit"
+    },
+    "devices": {
+      "pushHere": "Pushnout sem",
+      "unlink": "Odpojit",
+      "noDevices": "Žádná zařízení zatím nejsou registrována. Nejdřív pushni nastavení."
+    },
+    "advancedBackups": {
+      "title": "Zálohy",
+      "create": "Vytvořit zálohu",
+      "loading": "Načítám zálohy…"
+    },
+    "advancedPorts": {
+      "pluginPorts": "Porty pluginů",
+      "active": "{n} aktivní"
     },
     "sso": {
       "title": "Přihlášení přes SSO",

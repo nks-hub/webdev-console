@@ -1,10 +1,10 @@
 <template>
   <div class="advanced-backups">
     <div class="advanced-backups-header">
-      <span class="advanced-backups-title">Backups</span>
+      <span class="advanced-backups-title">{{ t('settings.advancedBackups.title') }}</span>
       <div class="advanced-backups-actions">
         <el-button size="small" type="primary" :loading="creating" @click="$emit('create')">
-          Create Backup
+          {{ t('settings.advancedBackups.create') }}
         </el-button>
         <el-button size="small" :loading="loading" @click="$emit('refresh')">
           {{ t('common.refresh') }}
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="hint">Loading backups...</div>
+    <div v-if="loading" class="hint">{{ t('settings.advancedBackups.loading') }}</div>
     <div v-else-if="backups.length === 0" class="hint">
       No backups yet. Click "Create Backup" to create one.
     </div>

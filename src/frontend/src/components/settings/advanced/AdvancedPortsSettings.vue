@@ -4,8 +4,8 @@
 
     <div v-if="pluginPorts.length > 0" class="settings-card plugin-ports">
       <header class="settings-card-header">
-        <span class="settings-card-title">Plugin ports</span>
-        <span class="settings-card-meta">{{ pluginPorts.length }} active</span>
+        <span class="settings-card-title">{{ t('settings.advancedPorts.pluginPorts') }}</span>
+        <span class="settings-card-meta">{{ t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
       </header>
       <div class="settings-card-body">
         <el-form label-position="left" label-width="200px" size="small" class="ports-form">
