@@ -51,7 +51,7 @@
           :row-class-name="rowClass"
         >
           <!-- Enabled toggle -->
-          <el-table-column :label="$t('hosts.tableEnabled')" width="62" align="center">
+          <el-table-column :label="$t('hosts.tableEnabled')" width="80" align="center">
             <template #default="{ row }">
               <el-switch
                 :model-value="row.enabled"
@@ -134,7 +134,7 @@
           </el-table-column>
 
           <!-- Actions -->
-          <el-table-column :label="$t('hosts.tableActions')" width="56" align="center">
+          <el-table-column :label="$t('hosts.tableActions')" width="80" align="center">
             <template #default="{ row }">
               <el-popconfirm
                 :title="$t('hosts.confirmRemove')"
