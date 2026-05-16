@@ -4,6 +4,11 @@
     "cancel": "Zrušit",
     "delete": "Smazat",
     "edit": "Upravit",
+    "discard": "Zahodit",
+    "revert": "Vrátit",
+    "saveApply": "Uložit a použít",
+    "none": "(žádný)",
+    "selected": "Vybráno",
     "create": "Vytvořit",
     "refresh": "Obnovit",
     "search": "Hledat",
@@ -98,6 +103,15 @@
   "versions": {
     "active": "Aktivní",
     "default": "Výchozí"
+  },
+  "folderBrowser": {
+    "title": "Vybrat složku",
+    "parent": "Nadřazený adresář",
+    "drivesHome": "Disky / Domů",
+    "pathPlaceholder": "Zadej cestu a stiskni Enter…",
+    "go": "Přejít",
+    "emptyDir": "(prázdný adresář)",
+    "selectThis": "Vybrat tuto složku"
   },
   "backupsPage": {
     "subtitle": "Správa záloh konfigurace a dat",

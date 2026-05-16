@@ -4,6 +4,11 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "discard": "Discard",
+    "revert": "Revert",
+    "saveApply": "Save & Apply",
+    "none": "(none)",
+    "selected": "Selected",
     "create": "Create",
     "refresh": "Refresh",
     "search": "Search",
@@ -98,6 +103,15 @@
   "versions": {
     "active": "Active",
     "default": "Default"
+  },
+  "folderBrowser": {
+    "title": "Choose a folder",
+    "parent": "Parent directory",
+    "drivesHome": "Drives / home",
+    "pathPlaceholder": "Type a path and press Enter…",
+    "go": "Go",
+    "emptyDir": "(empty directory)",
+    "selectThis": "Select this folder"
   },
   "backupsPage": {
     "subtitle": "Manage configuration and data backups",

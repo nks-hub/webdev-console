@@ -19,7 +19,7 @@
         plain
         class="revert-btn"
         @click="emit('revert')"
-      >Revert</el-button>
+      >{{ $t('common.revert') }}</el-button>
     </div>
   </transition>
 </template>

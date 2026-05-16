@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    title="Choose a folder"
+    :title="$t('folderBrowser.title')"
     width="720px"
     top="6vh"
     :close-on-click-modal="false"
@@ -15,29 +15,29 @@
           size="small"
           :disabled="!current?.parent || loading"
           @click="navigate(current?.parent ?? undefined)"
-          title="Parent directory"
+          :title="$t('folderBrowser.parent')"
         >
           <el-icon><Back /></el-icon>
         </el-button>
-        <el-button size="small" :disabled="loading" @click="navigate(undefined)" title="Drives / home">
+        <el-button size="small" :disabled="loading" @click="navigate(undefined)" :title="$t('folderBrowser.drivesHome')">
           <el-icon><HomeFilled /></el-icon>
         </el-button>
         <el-input
           v-model="pathInput"
           size="small"
-          placeholder="Type a path and press Enter…"
+          :placeholder="$t('folderBrowser.pathPlaceholder')"
           class="fb-path-input"
           @keydown.enter="navigate(pathInput)"
         />
         <el-button size="small" type="primary" :disabled="loading" @click="navigate(pathInput)">
-          Go
+          {{ $t('folderBrowser.go') }}
         </el-button>
       </div>
 
       <!-- Entry list -->
       <div class="fb-list" v-loading="loading">
         <div v-if="!loading && entries.length === 0" class="fb-empty">
-          (empty directory)
+          {{ $t('folderBrowser.emptyDir') }}
         </div>
         <div
           v-for="entry in entries"
@@ -58,19 +58,19 @@
 
       <!-- Selection row -->
       <div class="fb-selection">
-        <span class="fb-selection-label">Selected:</span>
-        <code class="fb-selection-path">{{ selectedPath || current?.path || '(none)' }}</code>
+        <span class="fb-selection-label">{{ $t('common.selected') }}:</span>
+        <code class="fb-selection-path">{{ selectedPath || current?.path || $t('common.none') }}</code>
       </div>
     </div>
 
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">{{ $t('common.cancel') }}</el-button>
       <el-button
         type="primary"
         :disabled="!canConfirm"
         @click="confirm"
       >
-        Select this folder
+        {{ $t('folderBrowser.selectThis') }}
       </el-button>
     </template>
   </el-dialog>

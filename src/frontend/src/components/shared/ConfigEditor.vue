@@ -15,9 +15,9 @@
           @revert="revertEdit"
         />
         <el-button size="small" type="primary" :disabled="!dirty || validating" @click="validateAndApply">
-          Save &amp; Apply
+          {{ $t('common.saveApply') }}
         </el-button>
-        <el-button size="small" :disabled="!dirty" @click="revertEdit">Discard</el-button>
+        <el-button size="small" :disabled="!dirty" @click="revertEdit">{{ $t('common.discard') }}</el-button>
       </div>
     </div>
 
