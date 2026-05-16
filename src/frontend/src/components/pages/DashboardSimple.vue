@@ -277,11 +277,17 @@ defineExpose({ reload: loadAggregates })
 }
 .simple-tiles {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  max-width: 720px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 960px;
   width: 100%;
   margin: 0 auto;
+}
+@media (max-width: 880px) {
+  .simple-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 480px;
+  }
 }
 .simple-apache-banner {
   display: flex;
@@ -289,7 +295,8 @@ defineExpose({ reload: loadAggregates })
   gap: 16px;
   padding: 14px 18px;
   margin: 4px auto 0;
-  max-width: 720px;
+  max-width: 960px;
+  width: 100%;
   background: color-mix(in srgb, var(--el-color-warning) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--el-color-warning) 40%, transparent);
   border-radius: var(--wdc-radius);
@@ -325,7 +332,8 @@ defineExpose({ reload: loadAggregates })
 }
 
 .simple-recent {
-  max-width: 720px;
+  max-width: 960px;
+  width: 100%;
   margin: 18px auto 0;
   padding: 16px 18px;
   border: 1px solid var(--wdc-border);
@@ -334,7 +342,8 @@ defineExpose({ reload: loadAggregates })
 }
 
 .simple-empty-card {
-  max-width: 720px;
+  max-width: 960px;
+  width: 100%;
   margin: 18px auto 0;
   padding: 24px 22px;
   border: 1.5px dashed color-mix(in oklab, var(--wdc-accent) 40%, var(--wdc-border));
