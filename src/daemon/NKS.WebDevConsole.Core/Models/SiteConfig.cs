@@ -5,7 +5,12 @@ public class SiteConfig
     public string Domain { get; set; } = "";
     public string DocumentRoot { get; set; } = "";
     public string PhpVersion { get; set; } = "8.4";
-    public bool SslEnabled { get; set; }
+    // SSL is the default — operators almost always want HTTPS for local
+    // dev (matches mkcert + browser HSTS muscle memory). The few "static
+    // HTTP-only" sites can flip this off explicitly. Was previously C#
+    // default false, which silently shipped HTTP-only sites whenever
+    // a TOML or PUT body forgot the field.
+    public bool SslEnabled { get; set; } = true;
     public int HttpPort { get; set; } = 80;
     public int HttpsPort { get; set; } = 443;
     /// <summary>

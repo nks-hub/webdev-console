@@ -8,17 +8,17 @@ using System.Text.RegularExpressions;
 /// </summary>
 internal static class MySqlPasswordHelper
 {
-    private static readonly Regex SafePasswordRegex =
-        new(@"^[^\x00""'\\]{8,128}$", RegexOptions.Compiled);
-
     /// <summary>
     /// Validates a candidate root password.
+    /// Empty string is valid and means passwordless local root auth.
     /// Returns null on success, or an error string describing the problem.
     /// </summary>
     public static string? ValidatePassword(string? password)
     {
-        if (string.IsNullOrEmpty(password))
+        if (password is null)
             return "newPwd is required";
+        if (password.Length == 0)
+            return null;
         if (password.Length < 8)
             return "newPwd must be at least 8 characters";
         if (password.Contains('\0'))

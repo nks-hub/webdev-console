@@ -104,7 +104,7 @@ async function run() {
     // 2. tools/list
     const list = await client.send('tools/list', {})
     const tools = list.result?.tools ?? []
-    assert(tools.length === 47, `tools/list returns 47 tools`, `got ${tools.length}`)
+    assert(tools.length === 71, `tools/list returns 71 tools`, `got ${tools.length}`)
 
     // All tools have required MCP fields
     const badTools = tools.filter((t) => !t.name || !t.description || !t.inputSchema)
@@ -282,6 +282,58 @@ async function run() {
     assert(upper.result !== undefined,
       'wdc_get_site accepts uppercase domain (lowercased by schema)',
       upper.result?.content?.[0]?.text?.slice(0, 80))
+
+    console.log('\n=== MYSQL USER MGMT ===')
+
+    // 18. wdc_list_mysql_users — live read against daemon
+    const mysqlUsers = await client.send('tools/call', {
+      name: 'wdc_list_mysql_users', arguments: {},
+    })
+    assert(mysqlUsers.result && !mysqlUsers.result.isError,
+      'wdc_list_mysql_users succeeds',
+      mysqlUsers.result?.content?.[0]?.text?.slice(0, 80))
+
+    // 19. wdc_drop_mysql_user without confirm — schema must reject
+    const dropNoConfirm = await client.send('tools/call', {
+      name: 'wdc_drop_mysql_user',
+      arguments: { userName: 'phantom', host: 'localhost' },
+    })
+    assert(dropNoConfirm.result?.isError === true || dropNoConfirm.error,
+      'wdc_drop_mysql_user rejects missing confirm')
+
+    // 20. wdc_drop_mysql_user with confirm=yes (lowercase) — schema literal 'YES'
+    const dropBadConfirm = await client.send('tools/call', {
+      name: 'wdc_drop_mysql_user',
+      arguments: { userName: 'phantom', host: 'localhost', confirm: 'yes' },
+    })
+    assert(dropBadConfirm.result?.isError === true || dropBadConfirm.error,
+      'wdc_drop_mysql_user rejects confirm=yes (lowercase)')
+
+    // 21. Invalid userName (contains '@') — Zod regex should reject
+    const dropBadUser = await client.send('tools/call', {
+      name: 'wdc_drop_mysql_user',
+      arguments: { userName: 'bad@name', host: 'localhost', confirm: 'YES' },
+    })
+    assert(dropBadUser.result?.isError === true || dropBadUser.error,
+      'wdc_drop_mysql_user rejects invalid userName')
+
+    // 22. wdc_reset_mysql_root_password without confirm — schema must reject
+    const resetNoConfirm = await client.send('tools/call', {
+      name: 'wdc_reset_mysql_root_password',
+      arguments: { newPwd: 'whatever' },
+    })
+    assert(resetNoConfirm.result?.isError === true || resetNoConfirm.error,
+      'wdc_reset_mysql_root_password rejects missing confirm')
+
+    // 23. Invalid privilege preset — Zod enum should reject
+    const grantBadPriv = await client.send('tools/call', {
+      name: 'wdc_grant_mysql_user_database',
+      arguments: {
+        userName: 'phantom', host: 'localhost', database: 'whatever', privileges: 'superuser',
+      },
+    })
+    assert(grantBadPriv.result?.isError === true || grantBadPriv.error,
+      'wdc_grant_mysql_user_database rejects invalid privilege preset')
 
     console.log('\n=== SUMMARY ===')
     console.log(`${passed} passed, ${failed} failed`)

@@ -42,10 +42,16 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_deploy_lock: 'mutate',
   wdc_deploy_unlock: 'mutate',
   wdc_deploy_create_intent: 'mutate',
+  wdc_create_mysql_user: 'mutate',
+  wdc_set_mysql_user_password: 'mutate',
+  wdc_grant_mysql_user_database: 'mutate',
+  wdc_change_mysql_root_password: 'mutate',
 
   // Destructive — irreversible or affects production
   wdc_delete_site: 'destructive',
   wdc_drop_database: 'destructive',
+  wdc_drop_mysql_user: 'destructive',
+  wdc_reset_mysql_root_password: 'destructive',
   wdc_delete_cloudflare_dns: 'destructive',
   wdc_uninstall_binary: 'destructive',
   wdc_revoke_cert: 'destructive',
@@ -100,6 +106,27 @@ export function wrapHandler<TArgs extends Record<string, unknown>, TResult>(
     let errorMessage: string | undefined
     try {
       const result = await handler(args, extra)
+      // safe() in formatting.ts catches every thrown daemon error and
+      // returns toolError({isError:true}) instead of rethrowing — so
+      // every failure that flows through it would otherwise be logged
+      // as resultCode='ok'. Inspect the MCP-protocol-level isError
+      // flag and downgrade the audit row when it's set, and lift the
+      // error text out of content[0].text into errorMessage so the
+      // audit feed shows what actually went wrong.
+      // Incident 2026-05-07: every MCP daemon error was logged as ok.
+      const r = result as unknown as {
+        isError?: boolean
+        content?: { type?: string; text?: string }[]
+      } | null | undefined
+      if (r && r.isError === true) {
+        resultCode = 'error'
+        const text = r.content?.[0]?.text
+        if (typeof text === 'string') {
+          errorMessage = text.slice(0, 500)
+        } else {
+          errorMessage = 'tool returned isError without text body'
+        }
+      }
       return result
     } catch (err) {
       resultCode = 'error'

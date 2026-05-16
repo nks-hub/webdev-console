@@ -134,4 +134,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // in (it's tied to the artifact identity) and returned alongside.
   getAppVersion: (): Promise<{ version: string; gitSha: string; full: string }> =>
     ipcRenderer.invoke('app-get-version'),
+
+  // Self-elevation: kill the running daemon and re-spawn it under UAC.
+  // Wired to the "Restart as admin" button shown when an admin-required
+  // daemon endpoint (hosts apply, hosts restore, etc.) returns 403.
+  // Returns { ok: true } once the elevated child has started; the renderer
+  // is responsible for waiting on the new daemon port file to appear.
+  elevateDaemon: (): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('elevate-daemon'),
 })

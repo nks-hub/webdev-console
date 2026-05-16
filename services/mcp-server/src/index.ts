@@ -21,6 +21,7 @@ import { registerSitesTools } from './tools/sites.js'
 import { registerServicesTools } from './tools/services.js'
 import { registerSystemTools } from './tools/system.js'
 import { registerDatabasesTools } from './tools/databases.js'
+import { registerMysqlUsersTools } from './tools/mysqlUsers.js'
 import { registerSslTools } from './tools/ssl.js'
 import { registerPhpTools } from './tools/php.js'
 import { registerBinariesTools } from './tools/binaries.js'
@@ -90,6 +91,7 @@ registerSitesTools(server, opts)
 registerServicesTools(server, opts)
 registerSystemTools(server, opts)
 registerDatabasesTools(server, opts)
+registerMysqlUsersTools(server, opts)
 registerSslTools(server, opts)
 registerPhpTools(server, opts)
 registerBinariesTools(server, opts)

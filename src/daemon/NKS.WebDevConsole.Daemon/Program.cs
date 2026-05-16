@@ -9926,6 +9926,19 @@ static IReadOnlyDictionary<string, string?> MysqlEnvVars()
         : new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
 }
 
+static IReadOnlyDictionary<string, string?> MysqlEnvVarsForPassword(string? password) =>
+    string.IsNullOrEmpty(password)
+        ? new Dictionary<string, string?>()
+        : new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
+
+static void PersistMysqlRootPassword(string password)
+{
+    if (string.IsNullOrEmpty(password))
+        NKS.WebDevConsole.Core.Services.MySqlRootPassword.Clear();
+    else
+        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(password);
+}
+
 // PostgreSQL plugin database tooling. The service plugin initializes local
 // clusters with trust auth for 127.0.0.1, so these operations never prompt.
 app.MapGet("/api/plugins/postgresql/databases", async (BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
@@ -10143,18 +10156,20 @@ static async Task StopResidualMySqlProcessesAsync(string mysqldPath, List<string
 // the DPAPI store. The caller is responsible for having run ALTER USER on
 // mysqld itself — this endpoint only syncs WDC's stored copy.
 app.MapGet("/api/databases/root-password", () =>
-    Results.Ok(new { exists = NKS.WebDevConsole.Core.Services.MySqlRootPassword.Exists() }));
+    Results.Ok(new
+    {
+        exists = NKS.WebDevConsole.Core.Services.MySqlRootPassword.Exists(),
+        passwordless = !NKS.WebDevConsole.Core.Services.MySqlRootPassword.Exists()
+    }));
 
 app.MapPost("/api/databases/root-password", async (HttpContext ctx) =>
 {
     var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
     var password = body?.GetValueOrDefault("password") ?? "";
-    if (string.IsNullOrEmpty(password))
-        return Results.BadRequest(new { error = "password is required" });
     try
     {
-        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(password);
-        return Results.Ok(new { stored = true });
+        PersistMysqlRootPassword(password);
+        return Results.Ok(new { stored = !string.IsNullOrEmpty(password), passwordless = string.IsNullOrEmpty(password) });
     }
     catch (Exception ex)
     {
@@ -10182,9 +10197,7 @@ app.MapPost("/api/plugins/mysql/change-password", async (
         return Results.BadRequest(new { success = false, error = validationError });
 
     // Verify currentPwd matches stored password.
-    var stored = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
-    if (stored is null)
-        return Results.BadRequest(new { success = false, error = "No stored root password found. Use reset-password instead." });
+    var stored = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead() ?? "";
     if (currentPwd != stored)
         return Results.BadRequest(new { success = false, error = "current password does not match the stored root password." });
 
@@ -10215,7 +10228,7 @@ app.MapPost("/api/plugins/mysql/change-password", async (
         log.LogInformation("change-password: executing ALTER USER via mysql CLI");
         var changeResult = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(changeArgs)
-            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = currentPwd })
+            .WithEnvironmentVariables(MysqlEnvVarsForPassword(currentPwd))
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
 
@@ -10231,7 +10244,7 @@ app.MapPost("/api/plugins/mysql/change-password", async (
         }
 
         log.LogInformation("change-password: ALTER USER succeeded, persisting new password");
-        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(newPwd);
+        PersistMysqlRootPassword(newPwd);
 
         // Verify connectivity with new password.
         log.LogInformation("change-password: verifying new password via SELECT 1");
@@ -10244,7 +10257,7 @@ app.MapPost("/api/plugins/mysql/change-password", async (
         };
         var verifyResult = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(verifyArgs)
-            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
+            .WithEnvironmentVariables(MysqlEnvVarsForPassword(newPwd))
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
 
@@ -10360,7 +10373,7 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
         };
         var initVerifyResult = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(initVerifyArgs)
-            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
+            .WithEnvironmentVariables(MysqlEnvVarsForPassword(newPwd))
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
         if (initVerifyResult.ExitCode != 0)
@@ -10374,7 +10387,7 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
             {
                 await CliWrap.Cli.Wrap(mysqladmin)
                     .WithArguments(new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "shutdown" })
-                    .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
+                    .WithEnvironmentVariables(MysqlEnvVarsForPassword(newPwd))
                     .WithValidation(CliWrap.CommandResultValidation.None)
                     .ExecuteAsync();
             }
@@ -10391,8 +10404,8 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
         steps.Add("init-file mysqld stopped");
 
         // Step 6: persist new password.
-        NKS.WebDevConsole.Core.Services.MySqlRootPassword.SetPlaintext(newPwd);
-        steps.Add("Password persisted to DPAPI store");
+        PersistMysqlRootPassword(newPwd);
+        steps.Add(string.IsNullOrEmpty(newPwd) ? "Password store cleared for passwordless root" : "Password persisted to DPAPI store");
 
         // Step 7: start normal mysqld.
         steps.Add("Starting normal mysqld");
@@ -10420,7 +10433,7 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
         };
         var verifyResult = await CliWrap.Cli.Wrap(mysqlCli)
             .WithArguments(verifyArgs)
-            .WithEnvironmentVariables(new Dictionary<string, string?> { ["MYSQL_PWD"] = newPwd })
+            .WithEnvironmentVariables(MysqlEnvVarsForPassword(newPwd))
             .WithValidation(CliWrap.CommandResultValidation.None)
             .ExecuteBufferedAsync();
 
@@ -10465,6 +10478,229 @@ app.MapPost("/api/plugins/mysql/reset-password", async (
             try { safeProcess.Kill(entireProcessTree: true); } catch { /* best effort */ }
         safeProcess?.Dispose();
     }
+});
+
+// MySQL user management. These endpoints intentionally use narrow
+// privilege presets and validated account/database names; arbitrary GRANT
+// SQL belongs in the database query console, not the user-management UI.
+app.MapGet("/api/plugins/mysql/users", async (BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+{
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.Ok(new { error = "MySQL not installed", users = Array.Empty<object>() });
+
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysql.Executable);
+    if (mysqlCli is null)
+        return Results.Ok(new { error = "mysql CLI not found next to mysqld", users = Array.Empty<object>() });
+
+    var port = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+    var args = MysqlBaseArgs(port);
+    args.Add("-B");
+    args.Add("-N");
+    args.Add("-e");
+    args.Add(MySqlUserHelper.BuildListUsersSql());
+
+    try
+    {
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        if (result.ExitCode != 0)
+            return Results.Ok(new { error = result.StandardError.Trim(), attemptedPort = port, users = Array.Empty<object>() });
+
+        var users = result.StandardOutput
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => line.Length > 0)
+            .Select(line =>
+            {
+                var parts = line.Split('\t');
+                return new
+                {
+                    userName = parts.ElementAtOrDefault(0) ?? "",
+                    host = parts.ElementAtOrDefault(1) ?? "",
+                    plugin = parts.ElementAtOrDefault(2) ?? "",
+                    accountLocked = string.Equals(parts.ElementAtOrDefault(3), "Y", StringComparison.OrdinalIgnoreCase),
+                    passwordExpired = string.Equals(parts.ElementAtOrDefault(4), "Y", StringComparison.OrdinalIgnoreCase)
+                };
+            })
+            .ToList();
+
+        return Results.Ok(new { users, attemptedPort = port });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { error = ex.Message, attemptedPort = port, users = Array.Empty<object>() });
+    }
+});
+
+app.MapPost("/api/plugins/mysql/users", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
+    var host = MySqlPasswordHelper.GetPayloadValue(body, "host");
+    var password = MySqlPasswordHelper.GetPayloadValue(body, "password", "newPassword", "newPwd");
+    var database = MySqlPasswordHelper.GetPayloadValue(body, "database", "databaseName");
+    var privileges = MySqlPasswordHelper.GetPayloadValue(body, "privileges", "preset");
+
+    if (MySqlUserHelper.ValidateUserName(userName) is { } userError)
+        return Results.BadRequest(new { success = false, error = userError });
+    if (MySqlUserHelper.ValidateHost(host) is { } hostError)
+        return Results.BadRequest(new { success = false, error = hostError });
+    if (MySqlPasswordHelper.ValidatePassword(password) is { } passwordError)
+        return Results.BadRequest(new { success = false, error = passwordError });
+    if (!string.IsNullOrWhiteSpace(database) && MySqlUserHelper.ValidateDatabaseName(database) is { } dbError)
+        return Results.BadRequest(new { success = false, error = dbError });
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "MySQL not installed" });
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysql.Executable);
+    if (mysqlCli is null)
+        return Results.BadRequest(new { success = false, error = "mysql CLI not found next to mysqld" });
+
+    try
+    {
+        var sql = MySqlUserHelper.BuildCreateUserSql(userName, host, password);
+        if (!string.IsNullOrWhiteSpace(database))
+            sql += MySqlUserHelper.BuildGrantDatabaseSql(userName, host, database, string.IsNullOrWhiteSpace(privileges) ? "readWrite" : privileges);
+
+        var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+        args.Add("-e");
+        args.Add(sql);
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        return result.ExitCode == 0
+            ? Results.Created("/api/plugins/mysql/users", new { success = true, userName, host })
+            : Results.BadRequest(new { success = false, error = result.StandardError.Trim() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { success = false, error = ex.Message });
+    }
+});
+
+app.MapPost("/api/plugins/mysql/users/password", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
+    var host = MySqlPasswordHelper.GetPayloadValue(body, "host");
+    var password = MySqlPasswordHelper.GetPayloadValue(body, "password", "newPassword", "newPwd");
+
+    if (string.Equals(userName, "root", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { success = false, error = "Use the root password tab for root accounts." });
+    if (MySqlUserHelper.ValidateUserName(userName) is { } userError)
+        return Results.BadRequest(new { success = false, error = userError });
+    if (MySqlUserHelper.ValidateHost(host) is { } hostError)
+        return Results.BadRequest(new { success = false, error = hostError });
+    if (MySqlPasswordHelper.ValidatePassword(password) is { } passwordError)
+        return Results.BadRequest(new { success = false, error = passwordError });
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "MySQL not installed" });
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysql.Executable);
+    if (mysqlCli is null)
+        return Results.BadRequest(new { success = false, error = "mysql CLI not found next to mysqld" });
+
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+    args.Add("-e");
+    args.Add(MySqlUserHelper.BuildAlterPasswordSql(userName, host, password));
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments(args)
+        .WithEnvironmentVariables(MysqlEnvVars())
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+
+    return result.ExitCode == 0
+        ? Results.Ok(new { success = true, userName, host })
+        : Results.BadRequest(new { success = false, error = result.StandardError.Trim() });
+});
+
+app.MapPost("/api/plugins/mysql/users/grants", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
+    var host = MySqlPasswordHelper.GetPayloadValue(body, "host");
+    var database = MySqlPasswordHelper.GetPayloadValue(body, "database", "databaseName");
+    var privileges = MySqlPasswordHelper.GetPayloadValue(body, "privileges", "preset");
+
+    if (MySqlUserHelper.ValidateUserName(userName) is { } userError)
+        return Results.BadRequest(new { success = false, error = userError });
+    if (MySqlUserHelper.ValidateHost(host) is { } hostError)
+        return Results.BadRequest(new { success = false, error = hostError });
+    if (MySqlUserHelper.ValidateDatabaseName(database) is { } dbError)
+        return Results.BadRequest(new { success = false, error = dbError });
+    if (string.IsNullOrWhiteSpace(privileges))
+        privileges = "readWrite";
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "MySQL not installed" });
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysql.Executable);
+    if (mysqlCli is null)
+        return Results.BadRequest(new { success = false, error = "mysql CLI not found next to mysqld" });
+
+    try
+    {
+        var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+        args.Add("-e");
+        args.Add(MySqlUserHelper.BuildGrantDatabaseSql(userName, host, database, privileges));
+        var result = await CliWrap.Cli.Wrap(mysqlCli)
+            .WithArguments(args)
+            .WithEnvironmentVariables(MysqlEnvVars())
+            .WithValidation(CliWrap.CommandResultValidation.None)
+            .ExecuteBufferedAsync();
+
+        return result.ExitCode == 0
+            ? Results.Ok(new { success = true, userName, host, database, privileges })
+            : Results.BadRequest(new { success = false, error = result.StandardError.Trim() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { success = false, error = ex.Message });
+    }
+});
+
+app.MapPost("/api/plugins/mysql/users/drop", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
+    var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
+    var host = MySqlPasswordHelper.GetPayloadValue(body, "host");
+
+    if (string.Equals(userName, "root", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { success = false, error = "Root accounts cannot be deleted from user management." });
+    if (MySqlUserHelper.ValidateUserName(userName) is { } userError)
+        return Results.BadRequest(new { success = false, error = userError });
+    if (MySqlUserHelper.ValidateHost(host) is { } hostError)
+        return Results.BadRequest(new { success = false, error = hostError });
+
+    var mysql = bm.ListInstalled("mysql").FirstOrDefault();
+    if (mysql?.Executable is null)
+        return Results.BadRequest(new { success = false, error = "MySQL not installed" });
+    var mysqlCli = MySqlPasswordHelper.ResolveMysqlCli(mysql.Executable);
+    if (mysqlCli is null)
+        return Results.BadRequest(new { success = false, error = "mysql CLI not found next to mysqld" });
+
+    var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+    args.Add("-e");
+    args.Add(MySqlUserHelper.BuildDropUserSql(userName, host));
+    var result = await CliWrap.Cli.Wrap(mysqlCli)
+        .WithArguments(args)
+        .WithEnvironmentVariables(MysqlEnvVars())
+        .WithValidation(CliWrap.CommandResultValidation.None)
+        .ExecuteBufferedAsync();
+
+    return result.ExitCode == 0
+        ? Results.Ok(new { success = true, userName, host })
+        : Results.BadRequest(new { success = false, error = result.StandardError.Trim() });
 });
 
 // Auto-heal flow: when /api/databases returns a 1045 + suggestedPort, the

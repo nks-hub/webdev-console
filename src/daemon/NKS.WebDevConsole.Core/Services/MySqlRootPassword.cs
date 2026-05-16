@@ -19,12 +19,13 @@ namespace NKS.WebDevConsole.Core.Services;
 /// </summary>
 public static class MySqlRootPassword
 {
-    private static readonly string StorePath = Path.Combine(
-        WdcPaths.DataRoot, "mysql-root.dpapi");
+    private static string StorePath =>
+        Environment.GetEnvironmentVariable("WDC_MYSQL_ROOT_PASSWORD_STORE")
+        ?? Path.Combine(WdcPaths.DataRoot, "mysql-root.dpapi");
 
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("NKS.WebDevConsole.MySqlRoot.v1");
 
-    /// <summary>Returns true if a password has been generated and persisted.</summary>
+    /// <summary>Returns true if a non-empty password has been generated and persisted.</summary>
     public static bool Exists() => File.Exists(StorePath);
 
     /// <summary>
@@ -114,6 +115,24 @@ public static class MySqlRootPassword
                 fi.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             }
             catch { /* best effort */ }
+        }
+    }
+
+    /// <summary>
+    /// Clears the stored password. WDC treats a missing store file as
+    /// passwordless local root auth and therefore does not set MYSQL_PWD.
+    /// </summary>
+    public static void Clear()
+    {
+        try
+        {
+            if (File.Exists(StorePath))
+                File.Delete(StorePath);
+        }
+        catch
+        {
+            // The calling endpoint verifies actual MySQL connectivity and
+            // will surface auth failures; deletion is best-effort here.
         }
     }
 

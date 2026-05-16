@@ -142,6 +142,31 @@ describe('wrapHandler', () => {
     expect(summary.endsWith('...')).toBe(true)
   })
 
+  it('records error when handler returns isError=true (no throw)', async () => {
+    // Regression for the 2026-05-07 audit gap: safe() in formatting.ts
+    // catches every thrown daemon error and returns
+    //   { isError: true, content: [{ type:'text', text:'Error: …' }] }
+    // without rethrowing. Pre-fix this surfaced as resultCode='ok' in
+    // the audit log, hiding every failure from operators.
+    const original = vi.fn(async () => ({
+      isError: true,
+      content: [{ type: 'text', text: 'Error: Daemon request failed: 404 not found' }],
+    }))
+    const wrapped = wrapHandler('wdc_get_site', original)
+
+    const result = await wrapped({ domain: 'phantom.loc' })
+    // Result is still passed through unchanged — only the audit row downgrades.
+    expect((result as { isError?: boolean }).isError).toBe(true)
+    await flush()
+
+    expect(mockPost).toHaveBeenCalledOnce()
+    expect(auditBody()).toMatchObject({
+      toolName: 'wdc_get_site',
+      resultCode: 'error',
+      errorMessage: expect.stringContaining('404'),
+    })
+  })
+
   it('does not break when audit POST fails', async () => {
     mockPost.mockImplementation(() => Promise.reject(new Error('relay down')))
     const original = vi.fn(async () => ({ content: [{ type: 'text', text: 'ok' }] }))

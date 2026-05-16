@@ -140,7 +140,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
           .string()
           .default('')
           .describe('PHP major.minor (e.g. "8.3"). Empty for static or Node sites'),
-        sslEnabled: z.boolean().default(false),
+        sslEnabled: z.boolean().default(true),
         aliases: z
           .array(z.string())
           .optional()

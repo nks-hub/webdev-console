@@ -87,6 +87,9 @@
     "backups": "Backups",
     "help": "Help"
   },
+  "backupsPage": {
+    "subtitle": "Manage configuration and data backups"
+  },
   "mcpIntents": {
     "title": "MCP Intent Inventory",
     "refresh": "Refresh",

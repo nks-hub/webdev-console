@@ -2,8 +2,11 @@
   <div class="backups-page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Zálohy</h1>
-        <p class="page-subtitle">Správa záloh konfigurace a dat</p>
+        <h1 class="page-title">
+          {{ $t('backups') }}
+          <span v-if="stats.count > 0" class="page-title-count">{{ stats.count }}</span>
+        </h1>
+        <p class="page-subtitle">{{ $t('backupsPage.subtitle') }}</p>
       </div>
     </div>
 
@@ -486,6 +489,22 @@ function formatDate(iso: string): string {
   color: var(--wdc-text);
   margin: 0 0 4px;
   letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-title-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--wdc-accent) 18%, transparent);
+  color: var(--wdc-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 .page-subtitle {
   color: var(--wdc-text-3);

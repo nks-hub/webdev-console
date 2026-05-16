@@ -11,9 +11,9 @@ public sealed class MySqlPasswordHelperTests
     }
 
     [Fact]
-    public void ValidatePassword_Empty_ReturnsError()
+    public void ValidatePassword_Empty_ReturnsNull()
     {
-        Assert.NotNull(MySqlPasswordHelper.ValidatePassword(""));
+        Assert.Null(MySqlPasswordHelper.ValidatePassword(""));
     }
 
     [Fact]
@@ -149,6 +149,16 @@ public sealed class MySqlPasswordHelperTests
         const string pwd = "MySecure99";
         var sql = MySqlPasswordHelper.BuildAlterUserSql(pwd);
         Assert.Contains($"IDENTIFIED BY '{pwd}'", sql);
+    }
+
+    [Fact]
+    public void BuildAlterUserSql_EmptyPassword_SetsPasswordlessRoot()
+    {
+        var sql = MySqlPasswordHelper.BuildAlterUserSql("");
+
+        Assert.Contains("ALTER USER 'root'@'localhost' IDENTIFIED BY '';", sql);
+        Assert.Contains("ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY '';", sql);
+        Assert.Contains("ALTER USER 'root'@'%' IDENTIFIED BY '';", sql);
     }
 
     // ---- WriteTempInitFile ----

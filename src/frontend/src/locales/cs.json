@@ -87,6 +87,9 @@
     "backups": "Zálohy",
     "help": "Nápověda"
   },
+  "backupsPage": {
+    "subtitle": "Správa záloh konfigurace a dat"
+  },
   "mcpIntents": {
     "title": "Inventář MCP intentů",
     "refresh": "Obnovit",
