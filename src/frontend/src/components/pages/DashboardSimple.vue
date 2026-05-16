@@ -45,6 +45,7 @@
     </div>
 
     <div v-if="sitesCount > 0 && !simpleApacheRunning" class="simple-apache-banner">
+      <el-icon class="simple-apache-banner-icon"><WarningFilled /></el-icon>
       <div class="simple-apache-banner-text">
         <strong>{{ t('dashboard.simple.apacheStopped.title') }}</strong>
         <span>{{ t('dashboard.simple.apacheStopped.subtitle') }}</span>
@@ -123,7 +124,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, WarningFilled } from '@element-plus/icons-vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
@@ -283,6 +284,20 @@ defineExpose({ reload: loadAggregates })
 }
 .simple-apache-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
 .simple-apache-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
+
+/* Pulsing warning icon — draws the eye so the user notices that the
+   web server is down and they should act, rather than treating the
+   banner as decorative chrome. */
+.simple-apache-banner-icon {
+  color: var(--el-color-warning);
+  font-size: 28px;
+  flex-shrink: 0;
+  animation: wdc-apache-banner-pulse 1.8s ease-in-out infinite;
+}
+@keyframes wdc-apache-banner-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.1); }
+}
 .simple-quick-actions {
   display: flex;
   gap: 12px;
