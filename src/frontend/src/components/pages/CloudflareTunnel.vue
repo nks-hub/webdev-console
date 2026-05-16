@@ -467,10 +467,10 @@ async function saveConfig() {
     apiTokenInput.value = ''
     tunnelTokenInput.value = ''
     saveStatus.value = { kind: 'ok', message: 'Settings saved' }
-    ElMessage.success('Cloudflare settings saved')
+    ElMessage.success(t('cloudflare.toast.settingsSaved'))
   } catch (e) {
     saveStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`Save failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.saveFailed', { err: errorMessage(e) }))
   } finally {
     savingConfig.value = false
   }
@@ -480,9 +480,9 @@ async function saveBinaryPath() {
   savingConfig.value = true
   try {
     await saveCloudflareConfig({ cloudflaredPath: config.cloudflaredPath || null })
-    ElMessage.success('Binary path saved')
+    ElMessage.success(t('cloudflare.toast.binaryPathSaved'))
   } catch (e) {
-    ElMessage.error(`Save failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.saveFailed', { err: errorMessage(e) }))
   } finally {
     savingConfig.value = false
   }
@@ -492,9 +492,9 @@ async function saveSubdomainTemplate() {
   savingConfig.value = true
   try {
     await saveCloudflareConfig({ subdomainTemplate: config.subdomainTemplate || '{stem}-dev' })
-    ElMessage.success('Subdomain template saved')
+    ElMessage.success(t('cloudflare.toast.subdomainTemplateSaved'))
   } catch (e) {
-    ElMessage.error(`Save failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.saveFailed', { err: errorMessage(e) }))
   } finally {
     savingConfig.value = false
   }
@@ -526,18 +526,18 @@ async function runAutoSetup() {
     // wants to re-run setup without re-typing)
     const token = apiTokenInput.value || ''
     if (!token) {
-      ElMessage.warning('Paste your Cloudflare API token first')
+      ElMessage.warning(t('cloudflare.toast.pasteTokenFirst'))
       return
     }
     autoSetupResult.value = await cloudflareAutoSetup(token)
     apiTokenInput.value = ''
     await loadConfig() // reload to see redacted token + populated account/tunnel IDs
     tokenVerdict.value = 'ok'
-    ElMessage.success(`Auto-setup complete: tunnel "${autoSetupResult.value.tunnel.name}"`)
+    ElMessage.success(t('cloudflare.toast.autoSetupComplete', { name: autoSetupResult.value.tunnel.name }))
     void loadZones()
   } catch (e) {
     saveStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`Auto-setup failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.autoSetupFailed', { err: errorMessage(e) }))
   } finally {
     autoSettingUp.value = false
   }
@@ -566,10 +566,10 @@ async function syncAllSites() {
       kind: 'ok',
       message: `Synced ${res.synced} site${res.synced === 1 ? '' : 's'} to Cloudflare`,
     }
-    ElMessage.success(`Synced ${res.synced} sites`)
+    ElMessage.success(t('cloudflare.toast.synced', { n: res.synced }))
   } catch (e) {
     syncStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(`Sync failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.syncFailed', { err: errorMessage(e) }))
   } finally {
     syncing.value = false
   }
@@ -601,7 +601,7 @@ async function verifyToken() {
     const res = await verifyCloudflareToken()
     tokenVerdict.value = res?.success ? 'ok' : 'fail'
     if (res?.success) {
-      ElMessage.success('Cloudflare API token is valid')
+      ElMessage.success(t('cloudflare.toast.tokenValid'))
     } else {
       // Cloudflare returns { success: false, errors: [{ code, message }, ...] }
       // Surface the actual rejection reason instead of a generic toast so the
@@ -613,7 +613,7 @@ async function verifyToken() {
     }
   } catch (e) {
     tokenVerdict.value = 'fail'
-    ElMessage.error(`Verify failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.verifyFailed', { err: errorMessage(e) }))
   } finally {
     verifying.value = false
   }
@@ -635,7 +635,7 @@ async function loadZones() {
     const res = await fetchCloudflareZones()
     zones.value = res?.result ?? []
   } catch (e) {
-    ElMessage.error(`List zones failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.listZonesFailed', { err: errorMessage(e) }))
   } finally {
     loadingZones.value = false
   }
@@ -660,7 +660,7 @@ async function loadTunnels() {
     const res = await fetchCloudflareTunnels()
     tunnels.value = res?.result ?? []
   } catch (e) {
-    ElMessage.error(`List tunnels failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.listTunnelsFailed', { err: errorMessage(e) }))
   } finally {
     loadingTunnels.value = false
   }
@@ -691,7 +691,7 @@ async function toggleTunnel() {
     if (action === 'start') await startService('cloudflare')
     else await stopService('cloudflare')
   } catch (e) {
-    ElMessage.error(`${serviceRunning.value ? 'Stop' : 'Start'} failed: ${errorMessage(e)}`)
+    ElMessage.error(t(serviceRunning.value ? 'cloudflare.toast.stopFailed' : 'cloudflare.toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }
@@ -704,7 +704,7 @@ const applyingIngress = ref(false)
 
 async function loadIngress() {
   if (!config.tunnelId) {
-    ElMessage.warning('Configure tunnel ID first')
+    ElMessage.warning(t('cloudflare.toast.configureTunnelFirst'))
     return
   }
   loadingTunnelConfig.value = true
@@ -715,7 +715,7 @@ async function loadIngress() {
       .filter(r => typeof r.hostname === 'string' && r.hostname.length > 0) // strip catch-all 404 rule
       .map(r => ({ hostname: r.hostname ?? '', service: r.service ?? '' }))
   } catch (e) {
-    ElMessage.error(`Load ingress failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.loadIngressFailed', { err: errorMessage(e) }))
   } finally {
     loadingTunnelConfig.value = false
   }
@@ -742,7 +742,7 @@ function addRuleFromSite(site: SiteInfo) {
   } else {
     ingressRules.value.push({ hostname, service })
   }
-  ElMessage.success(`Added rule: ${hostname} -> ${service}`)
+  ElMessage.success(t('cloudflare.toast.ruleAdded', { hostname, service }))
 }
 
 async function applyIngress() {
@@ -751,9 +751,9 @@ async function applyIngress() {
   try {
     const rules = ingressRules.value.filter(r => r.hostname && r.service)
     await updateCloudflareTunnelIngress(config.tunnelId, rules)
-    ElMessage.success(`Applied ${rules.length} ingress rule${rules.length === 1 ? '' : 's'} to tunnel`)
+    ElMessage.success(t('cloudflare.toast.ingressApplied', { n: rules.length }))
   } catch (e) {
-    ElMessage.error(`Apply failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.ingressApplyFailed', { err: errorMessage(e) }))
   } finally {
     applyingIngress.value = false
   }
@@ -793,7 +793,7 @@ async function loadDns() {
     const res = await fetchCloudflareDns(selectedDnsZoneId.value)
     dnsRecords.value = res?.result ?? []
   } catch (e) {
-    ElMessage.error(`Load DNS failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.loadDnsFailed', { err: errorMessage(e) }))
   } finally {
     loadingDns.value = false
   }
@@ -801,7 +801,7 @@ async function loadDns() {
 
 async function createDnsRecord() {
   if (!selectedDnsZoneId.value) {
-    ElMessage.warning('Pick a zone first')
+    ElMessage.warning(t('cloudflare.toast.pickZoneFirst'))
     return
   }
   creatingDns.value = true
@@ -813,12 +813,12 @@ async function createDnsRecord() {
       content,
       proxied: newDns.proxied,
     })
-    ElMessage.success(`${newDns.type} ${newDns.name} created`)
+    ElMessage.success(t('cloudflare.toast.dnsCreated', { type: newDns.type, name: newDns.name }))
     newDns.name = ''
     newDns.content = ''
     await loadDns()
   } catch (e) {
-    ElMessage.error(`Create failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.dnsCreateFailed', { err: errorMessage(e) }))
   } finally {
     creatingDns.value = false
   }
@@ -827,9 +827,9 @@ async function createDnsRecord() {
 async function deleteDnsRecord(row: CfDnsRecord) {
   try {
     await ElMessageBox.confirm(
-      `Delete ${row.type} record "${row.name}"?`,
-      'Confirm delete',
-      { type: 'warning', confirmButtonText: 'Delete' }
+      t('cloudflare.toast.dnsDeleteConfirmMessage', { type: row.type, name: row.name }),
+      t('cloudflare.toast.dnsDeleteConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('cloudflare.toast.dnsDeleteBtn') }
     )
   } catch {
     // ElMessageBox rejects with 'cancel'/'close' when dismissed — that's fine.
@@ -837,10 +837,10 @@ async function deleteDnsRecord(row: CfDnsRecord) {
   }
   try {
     await deleteCloudflareDns(selectedDnsZoneId.value, row.id)
-    ElMessage.success('Record deleted')
+    ElMessage.success(t('cloudflare.toast.dnsDeleted'))
     await loadDns()
   } catch (e) {
-    ElMessage.error(`Delete failed: ${errorMessage(e)}`)
+    ElMessage.error(t('cloudflare.toast.dnsDeleteFailed', { err: errorMessage(e) }))
   }
 }
 
