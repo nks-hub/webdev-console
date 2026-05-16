@@ -547,7 +547,7 @@ async function toggleSvc(svc: ServiceInfo) {
 .section-label {
   display: flex;
   align-items: center;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.10em;

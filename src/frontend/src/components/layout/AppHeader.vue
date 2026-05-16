@@ -127,7 +127,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 }
 
 .page-context {
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--wdc-accent);
   text-transform: uppercase;
@@ -201,7 +201,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   align-items: center;
   gap: 6px;
   padding: 0 6px;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
