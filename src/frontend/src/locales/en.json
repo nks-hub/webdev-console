@@ -2230,6 +2230,7 @@
       }
     },
     "account": {
+      "simpleSubtitle": "Sign-in and cross-device sync",
       "passwordTitle": "Sign in with email + password",
       "passwordAlt": "Alternative to SSO — sign in with an email and password registered directly in the NKS WDC Cloud catalog.",
       "email": "Email",

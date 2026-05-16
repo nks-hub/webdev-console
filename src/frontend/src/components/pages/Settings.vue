@@ -125,6 +125,53 @@
           </div>
         </section>
 
+        <!-- Plan §4 (Easy Settings IA): Account & Sync — was previously
+             advanced-only, blocking simple-mode users from signing in.
+             Wraps the same SSO/password/sync cards Advanced uses, just
+             scoped to the simple-settings-grid. -->
+        <section class="simple-settings-panel">
+          <header class="simple-settings-panel-header">
+            <span class="simple-settings-panel-icon">
+              <el-icon><User /></el-icon>
+            </span>
+            <div>
+              <h2>{{ $t('settings.tabs.account') }}</h2>
+              <p>{{ $t('settings.account.simpleSubtitle') }}</p>
+            </div>
+          </header>
+          <AccountSsoCard
+            :t="$t"
+            :is-authenticated="authStore.isAuthenticated"
+            :display-name="authStore.displayName"
+            :login-pending="authStore.loginPending"
+            :login-error="authStore.loginError"
+            @login="ssoLogin"
+            @logout="authStore.logout()"
+          />
+          <AccountPasswordCard
+            v-if="!accountToken"
+            :t="$t"
+            :title="$t('settings.tabs.account')"
+            v-model:email="authEmail"
+            v-model:password="authPassword"
+            :loading="authLoading"
+            :error="authError"
+            @login="doLogin"
+            @register="doRegister"
+          />
+          <AccountSimpleSyncCard
+            v-else
+            :t="$t"
+            :title="$t('settings.tabs.account')"
+            :email="accountEmail"
+            :syncing="syncing"
+            :pulling="pulling"
+            @push="pushToCloud"
+            @pull="pullFromCloud"
+            @logout="doLogout"
+          />
+        </section>
+
         <section v-if="systemInfo" class="simple-settings-panel simple-runtime-panel">
           <header class="simple-settings-panel-header">
             <span class="simple-settings-panel-icon">
@@ -1094,7 +1141,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'

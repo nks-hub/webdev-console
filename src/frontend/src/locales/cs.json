@@ -2230,6 +2230,7 @@
       }
     },
     "account": {
+      "simpleSubtitle": "Přihlášení a synchronizace mezi zařízeními",
       "passwordTitle": "Přihlášení e-mailem a heslem",
       "passwordAlt": "Alternativa k SSO — přihlášení e-mailem a heslem registrovaným přímo v katalogu NKS WDC Cloud.",
       "email": "E-mail",
