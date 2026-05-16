@@ -519,7 +519,7 @@
                   versions or leave blank for the default.
                 </div>
                 <div class="hint" v-if="catalogStatus">
-                  <span :class="['status-dot', catalogStatus.ok ? 'ok' : 'err']"></span>
+                  <HealthStatusDot :level="catalogStatus.ok ? 'ok' : 'err'" />
                   {{ catalogStatus.message }}
                 </div>
               </el-form-item>
@@ -577,7 +577,7 @@
                   <code>NKS_WDC_PLUGIN_AUTOSYNC=1</code> still wins when set.
                 </div>
                 <div v-if="pluginSyncStatus" class="hint">
-                  <span :class="['status-dot', pluginSyncStatus.ok ? 'ok' : 'err']"></span>
+                  <HealthStatusDot :level="pluginSyncStatus.ok ? 'ok' : 'err'" />
                   {{ pluginSyncStatus.message }}
                 </div>
                 <div v-if="pluginCatalogStatus" class="hint">
@@ -1092,7 +1092,7 @@
               <!-- F91.4: SSO login moved to Account tab (was here pre-F91.4).
                    Catalog status row stays — it's runtime info, not auth. -->
               <div v-if="pluginCatalogStatus" class="about-sso-status">
-                <span :class="['status-dot', pluginCatalogStatus.lastFetch ? 'ok' : 'err']"></span>
+                <HealthStatusDot :level="pluginCatalogStatus.lastFetch ? 'ok' : 'err'" />
                 <span class="sys-label">{{ $t('settings.sso.catalog') }}</span>
                 <span class="sys-value">
                   {{ pluginCatalogStatus.lastFetch
@@ -3044,16 +3044,8 @@ async function save() {
   color: var(--wdc-accent);
   font-size: 0.74rem;
 }
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-.status-dot.ok { background: var(--wdc-status-running); }
-.status-dot.err { background: var(--wdc-status-error); }
+/* .status-dot CSS removed — all 4 usages migrated to HealthStatusDot
+   shared primitive (plan §6). */
 
 .settings-footer {
   margin-top: 24px;
