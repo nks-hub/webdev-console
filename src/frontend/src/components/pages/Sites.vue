@@ -291,6 +291,26 @@
             </el-input>
           </el-form-item>
           <el-form-item :label="$t('sites.phpVersion')">
+            <!-- F92: when no PHP versions are installed the user is dropped
+                 into a dead-end select with only "none" — frustrating for
+                 a "create my first site" beginner. Surface a one-tap link
+                 to the PHP Manager (which auto-flips them into Advanced)
+                 so the path forward is obvious. -->
+            <el-alert
+              v-if="phpVersions.length === 0"
+              type="info"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 8px"
+            >
+              <template #title>{{ $t('sites.simple.noPhpInstalledTitle') }}</template>
+              <div>
+                {{ $t('sites.simple.noPhpInstalledHint') }}
+                <a class="simple-inline-link" @click="openPhpManagerFromSimple">
+                  {{ $t('sites.simple.noPhpInstalledCta') }}
+                </a>
+              </div>
+            </el-alert>
             <el-select v-model="newSite.phpVersion" style="width: 100%" :placeholder="$t('sites.phpVersionPlaceholder')">
               <el-option v-for="v in phpVersions" :key="v.value" :label="v.label" :value="v.value" />
               <el-option :label="$t('sites.phpNone')" value="none" />
@@ -551,6 +571,16 @@ async function pickDocumentRoot(): Promise<void> {
   if (!result.canceled && result.filePaths[0]) {
     newSite.documentRoot = result.filePaths[0]
   }
+}
+
+// F92: simple-mode escape hatch when no PHP version is installed yet.
+// Flips the user into Advanced so the PHP route un-gates, then navigates
+// to the PHP Manager. The create-site dialog stays open in advanced view
+// so they can return to it after installing a version.
+function openPhpManagerFromSimple(): void {
+  uiModeStore.setUiMode('advanced')
+  showCreate.value = false
+  void router.push('/php')
 }
 // Docker Compose detection map: domain -> status. Lazy-populated after
 // sites load so the Compose badge in the Framework column reflects what
@@ -1468,6 +1498,18 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 .simple-advanced-link span:hover {
+  opacity: 0.8;
+}
+
+.simple-inline-link {
+  cursor: pointer;
+  color: var(--wdc-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin-left: 4px;
+}
+.simple-inline-link:hover {
   opacity: 0.8;
 }
 </style>

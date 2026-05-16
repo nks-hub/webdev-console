@@ -457,7 +457,10 @@
     "simple": {
       "cloudflareTunnel": "Cloudflare Tunel",
       "submit": "Vytvořit web",
-      "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami"
+      "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami",
+      "noPhpInstalledTitle": "Žádná PHP verze není nainstalovaná",
+      "noPhpInstalledHint": "Pokud děláš statický web, ponech 'none'. Pro PHP weby si nejdřív nainstaluj verzi v PHP Manageru.",
+      "noPhpInstalledCta": "Otevřít PHP Manager →"
     },
     "detail": {
       "simple": {

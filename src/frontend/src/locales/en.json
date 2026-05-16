@@ -457,7 +457,10 @@
     "simple": {
       "cloudflareTunnel": "Cloudflare Tunnel",
       "submit": "Create Site",
-      "hint": "Quick site creation with smart defaults"
+      "hint": "Quick site creation with smart defaults",
+      "noPhpInstalledTitle": "No PHP version installed",
+      "noPhpInstalledHint": "For a static site, leave this as 'none'. For PHP sites, install a version in PHP Manager first.",
+      "noPhpInstalledCta": "Open PHP Manager →"
     },
     "detail": {
       "simple": {
