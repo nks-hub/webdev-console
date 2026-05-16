@@ -57,5 +57,8 @@
     "vue-echarts": "^8.0.1",
     "vue-i18n": "^11.4.0",
     "vue-router": "^4.6.4"
+  },
+  "overrides": {
+    "dompurify": "^3.4.3"
   }
 }
