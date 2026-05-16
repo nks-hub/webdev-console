@@ -55,6 +55,19 @@ test.describe('Daemon warnings wrapper contract', () => {
     expect(source).toMatch(/Results\.Ok\(new\s*\{\s*site\s*=\s*updated\s*,\s*warnings\s*\}\)/)
   })
 
+  test('api/daemon.ts exports SiteCreateResponse + SiteUpdateResponse union types', () => {
+    const source = readFileSync(join(srcRoot, 'api', 'daemon.ts'), 'utf-8')
+    // Single source of truth for the wrapper shape — exported so any
+    // consumer (sitesStore, tests, future React refactor) inherits the
+    // dual shape and TypeScript catches drift instead of silent casts.
+    expect(source).toMatch(/export\s+type\s+SiteCreateResponse\s*=\s*SiteInfo\s*\|\s*\{\s*site:\s*SiteInfo[\s\S]*?warnings\?:\s*string\[\][\s\S]*?hints\?:\s*string\[\]/)
+    expect(source).toMatch(/export\s+type\s+SiteUpdateResponse\s*=\s*SiteInfo\s*\|\s*\{\s*site:\s*SiteInfo[\s\S]*?warnings\?:\s*string\[\]/)
+    // The wrappers must be the actual return type of the API helpers,
+    // not just declared and unused.
+    expect(source).toMatch(/createSite[\s\S]*?json<SiteCreateResponse>/)
+    expect(source).toMatch(/updateSite[\s\S]*?json<SiteUpdateResponse>/)
+  })
+
   test('Sites.vue createSite toasts each warning + hint', () => {
     const source = readFileSync(join(srcRoot, 'components', 'pages', 'Sites.vue'), 'utf-8')
     // The loop over lastCreateWarnings must call ElMessage.warning
