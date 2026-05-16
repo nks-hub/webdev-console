@@ -121,7 +121,13 @@
               :key="opt.value"
               :label="opt.label"
               :value="opt.value"
-            />
+            >
+              <span class="bind-opt-label">{{ opt.label }}</span>
+              <span
+                v-if="opt.wildcard || opt.loopback"
+                class="bind-opt-badge"
+              >{{ $t('sites.bindIpRecommended') }}</span>
+            </el-option>
           </el-select>
           <Transition name="flash">
             <span v-if="savedBind" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>

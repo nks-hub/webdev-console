@@ -443,6 +443,7 @@
     "ssl": "SSL",
     "aliases": "Aliases",
     "bindIp": "Bind IPs",
+    "bindIpRecommended": "recommended",
     "bindIpHint": "Select * by itself for name-based vhosts on every listener, or select one or more concrete device IPs. Localhost always works on localhost/127.0.0.1; added localhost IPs also work as direct IP URLs. Other domains must arrive with that Host header, for example through a hosts entry.",
     "localhostLoopback": "Localhost loopback",
     "localhostLoopbackHint": "Localhost is always available through localhost/127.0.0.1; add extra IPs in Bind IPs.",

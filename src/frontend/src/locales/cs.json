@@ -443,6 +443,7 @@
     "ssl": "SSL",
     "aliases": "Aliasy",
     "bindIp": "IP vazby",
+    "bindIpRecommended": "doporučeno",
     "bindIpHint": "Vyber * samostatně pro name-based vhosty na všech listenerech, nebo jednu či více konkrétních IP zařízení. Localhost vždy funguje přes localhost/127.0.0.1; přidané IP u localhostu fungují i jako přímá IP URL. Ostatní domény musí přijít s daným Hostem, například přes hosts záznam.",
     "localhostLoopback": "Localhost loopback",
     "localhostLoopbackHint": "Localhost je vždy dostupný přes localhost/127.0.0.1; další IP přidej v poli IP vazby.",

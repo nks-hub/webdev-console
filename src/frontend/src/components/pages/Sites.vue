@@ -334,7 +334,13 @@
                 :key="opt.value"
                 :label="opt.label"
                 :value="opt.value"
-              />
+              >
+                <span class="bind-opt-label">{{ opt.label }}</span>
+                <span
+                  v-if="opt.wildcard || opt.loopback"
+                  class="bind-opt-badge"
+                >{{ $t('sites.bindIpRecommended') }}</span>
+              </el-option>
             </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
           </el-form-item>
@@ -411,7 +417,13 @@
                 :key="opt.value"
                 :label="opt.label"
                 :value="opt.value"
-              />
+              >
+                <span class="bind-opt-label">{{ opt.label }}</span>
+                <span
+                  v-if="opt.wildcard || opt.loopback"
+                  class="bind-opt-badge"
+                >{{ $t('sites.bindIpRecommended') }}</span>
+              </el-option>
             </el-select>
             <div class="form-hint">{{ $t('sites.bindIpHint') }}</div>
           </el-form-item>

@@ -1479,3 +1479,23 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
   color: var(--wdc-text-2) !important;
   font-size: 0.85rem !important;
 }
+
+/* Bind IP options badge — beginner-friendly "recommended" tag next to
+   the wildcard + loopback entries in the bind-address picker. Lives in
+   global CSS because el-option content renders via the Element Plus
+   tooltip slot which sits outside any component's scoped boundary. */
+.bind-opt-label {
+  flex: 1;
+  min-width: 0;
+}
+.bind-opt-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wdc-accent) 18%, transparent);
+  color: var(--wdc-accent);
+}
