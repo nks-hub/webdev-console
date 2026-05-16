@@ -1955,6 +1955,15 @@
       "releaseNotesTitle": "Release notes",
       "viewOnGithub": "View on GitHub"
     },
+    "danger": {
+      "title": "Danger zone",
+      "desc": "Irreversible operations. After a reset, WDC restarts and re-opens the welcome wizard. If you are signed in to the catalog, the session token is wiped and you will have to sign in again.",
+      "resetSettings": "Reset settings",
+      "resetSettingsHint": "Clears the settings table (ports, paths, catalogUrl, autoStart toggles, sync.accountToken). Sites, databases, downloaded binaries and plugins are kept.",
+      "factoryReset": "Factory reset",
+      "factoryResetHeading": "Full factory reset",
+      "factoryResetHint": "Reset settings + delete all sites, databases and plugin state. Keeps binaries under ~/.wdc/binaries/ so Apache/PHP/MySQL do not need to be re-downloaded."
+    },
     "mcp": {
       "title": "Model Context Protocol (MCP)",
       "description": "Optional integration for AI agents (Claude, Cursor, …) connecting via MCP. When enabled, AI deploy/restore requests prompt for confirmation in a banner; signed intent tokens are auditable under the \"MCP Intents\" sidebar entry.",

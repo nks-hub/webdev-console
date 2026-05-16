@@ -1955,6 +1955,15 @@
       "releaseNotesTitle": "Poznámky k vydání",
       "viewOnGithub": "Zobrazit na GitHubu"
     },
+    "danger": {
+      "title": "Nebezpečná zóna",
+      "desc": "Nevratné operace. WDC se po resetu restartuje a znovu otevře uvítacího průvodce. Pokud jsi přihlášený ke katalogu, session token se smaže a budeš se muset přihlásit znovu.",
+      "resetSettings": "Reset nastavení",
+      "resetSettingsHint": "Smaže tabulku settings (porty, cesty, catalogUrl, autoStart přepínače, sync.accountToken). Weby, databáze, stažené binárky a pluginy zůstanou.",
+      "factoryReset": "Tovární reset",
+      "factoryResetHeading": "Kompletní tovární reset",
+      "factoryResetHint": "Reset nastavení + smazání všech webů, databází a pluginových stavů. Binárky pod ~/.wdc/binaries/ zachovává, aby se nemuselo znovu stahovat Apache/PHP/MySQL."
+    },
     "mcp": {
       "title": "Model Context Protocol (MCP)",
       "description": "Volitelná integrace pro AI agenty (Claude, Cursor, …) připojující se přes MCP. Pokud je zapnuto, AI požadavky na deploy/restore vyžadují potvrzení v banneru; podepsané intent tokeny lze auditovat v sekci „MCP Intents“ v postranní liště.",

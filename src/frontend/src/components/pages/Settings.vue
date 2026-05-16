@@ -520,41 +520,35 @@
                    full re-download isn't forced.
                  Nuclear option (delete ~/.wdc entirely) stays CLI-only. -->
             <div class="danger-zone">
-              <h3 class="danger-title">Danger zone</h3>
+              <h3 class="danger-title">{{ $t('settings.danger.title') }}</h3>
               <p class="danger-desc">
-                Nevratné operace. WDC se po resetu restartuje a znovu otevře
-                uvítacího průvodce. Pokud jsi přihlášený ke katalogu, session
-                token se smaže a budeš se muset přihlásit znovu.
+                {{ $t('settings.danger.desc') }}
               </p>
               <div class="danger-row">
                 <div class="danger-info">
-                  <strong>Reset nastavení</strong>
+                  <strong>{{ $t('settings.danger.resetSettings') }}</strong>
                   <span class="hint">
-                    Smaže tabulku <code>settings</code> (porty, cesty, catalogUrl,
-                    autoStart přepínače, sync.accountToken). Weby, databáze,
-                    stažené binárky a pluginy zůstanou.
+                    {{ $t('settings.danger.resetSettingsHint') }}
                   </span>
                 </div>
                 <el-button
                   type="warning"
                   :loading="resettingSettings"
                   @click="confirmResetSettings"
-                >Reset nastavení</el-button>
+                >{{ $t('settings.danger.resetSettings') }}</el-button>
               </div>
               <div class="danger-row">
                 <div class="danger-info">
-                  <strong>Kompletní tovární reset</strong>
+                  <strong>{{ $t('settings.danger.factoryResetHeading') }}</strong>
                   <span class="hint">
-                    Reset nastavení + smazání všech webů, databází a
-                    pluginových stavů. Binárky pod <code>~/.wdc/binaries/</code>
-                    zachovává, aby se nemuselo znovu stahovat Apache/PHP/MySQL.
+                    {{ $t('settings.danger.factoryResetHint') }}
                   </span>
                 </div>
                 <el-button
                   type="danger"
                   :loading="resettingFactory"
                   @click="confirmFactoryReset"
-                >Tovární reset</el-button>
+                >{{ $t('settings.danger.factoryReset') }}</el-button>
               </div>
             </div>
 
