@@ -14,6 +14,12 @@ export default scenario('18', 'Node.js proxy site lifecycle', 'P1', async (ctx) 
   ctx.cleanup(() => api.delete(`/api/sites/${domain}`))
 
   const created = await api.post('/api/sites', {
+    // SiteOrchestrator probes the upstream (port 9999) during apply; on a
+    // host without a listener there the probe waits for a TCP error rather
+    // than completing instantly. Bump the request timeout so the probe's
+    // cumulative time doesn't trip the harness default before the daemon
+    // returns the persisted site config.
+    timeoutMs: 90000,
     body: {
       domain,
       documentRoot: root,
