@@ -12,7 +12,13 @@
           <span style="margin-left: 4px">{{ t('databases.console.execute') }}</span>
           <span class="kbd">Ctrl+↵</span>
         </el-button>
-        <el-button size="small" @click="clearSql" :disabled="running">
+        <el-button
+          size="small"
+          :disabled="running"
+          :aria-label="t('databases.console.clearSql')"
+          :title="t('databases.console.clearSql')"
+          @click="clearSql"
+        >
           <el-icon><Delete /></el-icon>
         </el-button>
         <el-dropdown size="small" trigger="click" @command="loadHistory">

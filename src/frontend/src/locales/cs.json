@@ -805,6 +805,7 @@
       "title": "SQL konzole",
       "noDb": "není vybrána databáze",
       "execute": "Spustit",
+      "clearSql": "Vyčistit SQL",
       "history": "Historie ({count})",
       "clearHistory": "Vymazat historii",
       "runHint": "Napiš SQL nahoře a stiskni Ctrl+Enter pro spuštění. Více příkazů odděluj středníkem.",

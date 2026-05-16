@@ -805,6 +805,7 @@
       "title": "SQL Console",
       "noDb": "no database selected",
       "execute": "Execute",
+      "clearSql": "Clear SQL",
       "history": "History ({count})",
       "clearHistory": "Clear history",
       "runHint": "Type SQL above and press Ctrl+Enter to execute. Multiple statements separated by ; are supported.",

@@ -2,7 +2,14 @@
   <div class="db-tree">
     <div class="tree-header">
       <span class="tree-title">{{ t('databases.tree.title') }}</span>
-      <el-button size="small" text :loading="loading" @click="$emit('refresh')">
+      <el-button
+        size="small"
+        text
+        :loading="loading"
+        :aria-label="t('common.refresh')"
+        :title="t('common.refresh')"
+        @click="$emit('refresh')"
+      >
         <el-icon><Refresh /></el-icon>
       </el-button>
     </div>
