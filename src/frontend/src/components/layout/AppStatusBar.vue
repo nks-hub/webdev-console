@@ -4,7 +4,7 @@
     <template v-if="uiMode.isSimple">
       <span class="status-item status-item-center">
         <span class="dot" :class="daemonStore.connected ? 'dot-ok dot-ok-pulse' : 'dot-err'" />
-        <span>{{ daemonStore.connected ? 'Daemon běží' : 'Daemon offline' }}</span>
+        <span>{{ daemonStore.connected ? t('footer.daemonRunning') : t('footer.daemonOffline') }}</span>
       </span>
       <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
     </template>
@@ -13,7 +13,7 @@
     <template v-else>
       <span class="status-item">
         <span class="dot" :class="daemonStore.connected ? 'dot-ok' : 'dot-err'" />
-        <span>Daemon</span>
+        <span>{{ t('footer.daemon') }}</span>
       </span>
 
       <span class="status-sep" />
@@ -23,13 +23,13 @@
       </span>
 
       <span class="status-item status-alert" v-if="crashedCount > 0">
-        {{ crashedCount }} crashed
+        {{ t('footer.crashed', { n: crashedCount }) }}
       </span>
 
       <span
         v-if="tunnelRunning"
         class="status-item status-tunnel"
-        title="Cloudflare Tunnel is running — exposed sites are publicly reachable"
+        :title="t('footer.tunnelTitle')"
       >
         <svg viewBox="0 0 20 14" fill="currentColor" width="13" height="13" style="vertical-align: middle; margin-right: 3px"><path d="M16 6a4 4 0 0 0-7.74-1.32A3.5 3.5 0 1 0 3.5 11H16a3 3 0 0 0 0-6z"/></svg>{{ t('footer.tunnel') }}
       </span>

@@ -45,7 +45,11 @@
     "connected": "Připojeno",
     "offline": "Odpojeno",
     "darkMode": "Tmavý režim",
-    "lightMode": "Světlý režim"
+    "lightMode": "Světlý režim",
+    "newVersionAvailable": "Nová verze v{version} je dostupná"
+  },
+  "autostart": {
+    "label": "Auto-start při spuštění WDC"
   },
   "login": {
     "subtitle": "Místní vývojová konzole",
@@ -2235,7 +2239,12 @@
   },
   "footer": {
     "servicesRunning": "služeb běží",
-    "tunnel": "Tunel"
+    "tunnel": "Tunel",
+    "daemon": "Daemon",
+    "daemonRunning": "Daemon běží",
+    "daemonOffline": "Daemon offline",
+    "crashed": "{n} spadlo",
+    "tunnelTitle": "Cloudflare Tunnel běží — exponované weby jsou veřejně dostupné"
   },
   "help": {
     "title": "Nápověda",

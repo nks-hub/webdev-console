@@ -21,7 +21,7 @@
       <button
         v-if="updatesStore.hasUpdate"
         class="update-badge"
-        :title="`Nová verze v${updatesStore.latestVersion} je dostupná`"
+        :title="$t('header.newVersionAvailable', { version: updatesStore.latestVersion })"
         @click="openUpdateTab"
       >
         <span class="update-dot" />

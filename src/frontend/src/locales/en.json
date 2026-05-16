@@ -45,7 +45,11 @@
     "connected": "Connected",
     "offline": "Offline",
     "darkMode": "Dark mode",
-    "lightMode": "Light mode"
+    "lightMode": "Light mode",
+    "newVersionAvailable": "New version v{version} is available"
+  },
+  "autostart": {
+    "label": "Auto-start when WDC launches"
   },
   "login": {
     "subtitle": "Local development console",
@@ -2235,7 +2239,12 @@
   },
   "footer": {
     "servicesRunning": "services running",
-    "tunnel": "Tunnel"
+    "tunnel": "Tunnel",
+    "daemon": "Daemon",
+    "daemonRunning": "Daemon running",
+    "daemonOffline": "Daemon offline",
+    "crashed": "{n} crashed",
+    "tunnelTitle": "Cloudflare Tunnel is running — exposed sites are publicly reachable"
   },
   "help": {
     "title": "Help",

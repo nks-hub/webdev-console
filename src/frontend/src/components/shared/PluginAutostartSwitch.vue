@@ -17,7 +17,7 @@
   >
     <span class="plugin-autostart-label">
       <el-icon class="plugin-autostart-icon"><VideoPlay /></el-icon>
-      Auto-start při spuštění WDC
+      {{ $t('autostart.label') }}
     </span>
     <el-switch
       :model-value="currentValue"

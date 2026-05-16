@@ -210,7 +210,7 @@
       </div>
       <div class="nav-item" :class="{ active: isActive('/backups') }" @click="navigate('/backups')">
         <span class="nav-icon-shell"><el-icon :size="18"><Files /></el-icon></span>
-        <span class="nav-label">Zálohy</span>
+        <span class="nav-label">{{ $t('nav.backups') }}</span>
       </div>
       <!-- Phase 6.11b — admin audit view of all signed MCP intents.
            Phase 6.23 — gated by featureFlagsStore.mcpEnabled (default
