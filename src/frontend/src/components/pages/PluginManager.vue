@@ -229,6 +229,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { usePluginsStore } from '../../stores/plugins'
 import ServiceIcon from '../shared/ServiceIcon.vue'
@@ -245,6 +246,7 @@ import {
 } from '../../api/daemon'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const pluginsStore = usePluginsStore()
 const search = ref('')
@@ -283,9 +285,9 @@ async function reloadMarketplace() {
 async function copyDownloadUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url)
-    ElMessage.success('Download URL copied to clipboard')
+    ElMessage.success(t('plugins.toast.urlCopied'))
   } catch {
-    ElMessage.warning('Could not access clipboard')
+    ElMessage.warning(t('plugins.toast.clipboardFailed'))
   }
 }
 
@@ -295,9 +297,9 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
   if (!mp.downloadUrl) return
   try {
     await ElMessageBox.confirm(
-      `Install ${mp.name} v${mp.version} from ${mp.downloadUrl}?\n\nA daemon restart will be required after installation.`,
-      'Confirm install',
-      { confirmButtonText: 'Install', cancelButtonText: 'Cancel', type: 'info' }
+      t('plugins.toast.installConfirmMessage', { name: mp.name, version: mp.version, url: mp.downloadUrl }),
+      t('plugins.toast.installConfirmTitle'),
+      { confirmButtonText: t('plugins.toast.installBtn'), cancelButtonText: t('common.cancel'), type: 'info' }
     )
   } catch { return }
 
@@ -305,10 +307,10 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
   try {
     const result = await installPluginFromMarketplace(mp.id, mp.downloadUrl)
     ElNotification({
-      title: `${mp.name} installed`,
+      title: t('plugins.toast.installedNotification', { name: mp.name }),
       message: result.restartRequired
-        ? 'Restart the daemon to load the new plugin.'
-        : 'Plugin loaded.',
+        ? t('plugins.restartRequired')
+        : t('plugins.toast.loadedAfterInstall'),
       type: 'success',
       duration: 6000,
     })
@@ -317,8 +319,8 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
     void reloadMarketplace()
   } catch (e) {
     ElNotification({
-      title: 'Install failed',
-      message: errorMessage(e) || 'Unknown error',
+      title: t('plugins.installFailed'),
+      message: errorMessage(e) || t('common.unknownError'),
       type: 'error',
       duration: 0,
     })
@@ -347,7 +349,7 @@ async function toggle(id: string) {
   try {
     await pluginsStore.toggleEnable(id)
   } catch (e) {
-    ElMessage.error(`Plugin toggle failed: ${errorMessage(e)}`)
+    ElMessage.error(t('plugins.toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value.delete(id)
   }
@@ -367,7 +369,7 @@ async function doRestore(id: string) {
     const res = await restorePlugin(id)
     if (res.rebuildRequired) {
       ElNotification.warning({
-        title: 'Plugin potřebuje rebuild',
+        title: t('plugins.toast.rebuildTitle'),
         message: res.message,
         duration: 8000,
       })
@@ -375,18 +377,18 @@ async function doRestore(id: string) {
     }
     if (res.restartRequired) {
       ElNotification.info({
-        title: 'Obnovuji plugin',
+        title: t('plugins.toast.restoringTitle'),
         message: res.message,
         duration: 3000,
       })
       const ready = await waitForDaemon(15000)
-      if (!ready) ElMessage.warning('Daemon se po restartu neozývá — zkus Ctrl+R')
+      if (!ready) ElMessage.warning(t('plugins.toast.restartTimeout'))
       await pluginsStore.loadAll()
       await reloadMarketplace()
-      ElMessage.success(`Plugin ${id} obnoven`)
+      ElMessage.success(t('plugins.toast.restored', { id }))
     }
   } catch (e) {
-    ElMessage.error(`Obnovení selhalo: ${errorMessage(e)}`)
+    ElMessage.error(t('plugins.toast.restoreFailed', { err: errorMessage(e) }))
   } finally {
     restoring.value.delete(id)
   }
@@ -395,9 +397,9 @@ async function doRestore(id: string) {
 async function confirmUninstall(id: string, name: string) {
   try {
     await ElMessageBox.confirm(
-      `Opravdu odinstalovat „${name}"? Soubory pluginu budou smazány.`,
-      'Odinstalovat plugin',
-      { type: 'warning', confirmButtonText: 'Odinstalovat', cancelButtonText: 'Zrušit' }
+      t('plugins.toast.uninstallConfirmMessage', { name }),
+      t('plugins.toast.uninstallConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('plugins.toast.uninstallBtn'), cancelButtonText: t('common.cancel') }
     )
   } catch { return /* user cancelled */ }
 
@@ -408,8 +410,8 @@ async function confirmUninstall(id: string, name: string) {
     // daemon on exit code 99 so the user doesn't have to do anything.
     if (res.restartRequired && (res.lockedFiles ?? 0) > 0) {
       ElNotification.info({
-        title: 'Odinstalováno',
-        message: `${res.message ?? 'Plugin smazán.'} Restartuji daemon…`,
+        title: t('plugins.toast.uninstalledNotificationTitle'),
+        message: t('plugins.toast.uninstalledRestarting', { msg: res.message ?? t('plugins.toast.fileDeleted') }),
         duration: 4000,
       })
       try { await restartDaemon() } catch { /* daemon already closing the socket */ }
@@ -418,16 +420,16 @@ async function confirmUninstall(id: string, name: string) {
       // when the new daemon took longer to boot.
       const ready = await waitForDaemon(15000)
       if (!ready) {
-        ElMessage.warning('Daemon se po restartu neozývá do 15 s — zkus Ctrl+R')
+        ElMessage.warning(t('plugins.toast.restartTimeoutLong'))
       }
       await pluginsStore.loadAll()
-      ElMessage.success('Plugin odinstalován a daemon restartován')
+      ElMessage.success(t('plugins.toast.uninstalledRestart'))
     } else {
-      ElMessage.success('Plugin odinstalován')
+      ElMessage.success(t('plugins.toast.uninstalled'))
       await pluginsStore.loadAll()
     }
   } catch (e) {
-    ElMessage.error(`Odinstalace selhala: ${errorMessage(e)}`)
+    ElMessage.error(t('plugins.toast.uninstallFailed', { err: errorMessage(e) }))
   } finally {
     uninstalling.value.delete(id)
   }
