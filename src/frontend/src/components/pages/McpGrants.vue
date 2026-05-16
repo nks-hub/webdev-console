@@ -276,7 +276,7 @@
          (or that none would). -->
     <el-dialog v-model="testMatchDialogOpen" :title="t('mcpGrants.testMatch.title')" width="520">
       <p class="muted" style="margin-top: 0">{{ t('mcpGrants.testMatch.description') }}</p>
-      <el-form :model="testMatchForm" label-width="120px" size="small">
+      <el-form :model="testMatchForm" label-width="200px" size="small">
         <el-form-item :label="t('mcpGrants.testMatch.sessionId')">
           <el-input v-model="testMatchForm.sessionId"
             :placeholder="t('mcpGrants.testMatch.sessionIdPlaceholder')" clearable />
@@ -330,7 +330,7 @@
 
     <!-- Create grant dialog -->
     <el-dialog v-model="createDialogOpen" :title="t('mcpGrants.dialog.title')" width="520">
-      <el-form :model="form" label-width="120px" size="small">
+      <el-form :model="form" label-width="200px" size="small">
         <el-form-item :label="t('mcpGrants.dialog.scopeType')">
           <el-select v-model="form.scopeType" @change="onScopeTypeChange">
             <el-option label="session" value="session" />
