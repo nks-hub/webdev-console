@@ -597,6 +597,7 @@
     "localhostLoopbackHint": "Localhost is always available through localhost/127.0.0.1; add extra IPs in Bind IPs.",
     "create": "New Site",
     "openHosts": "Open hosts",
+    "openHostsTitle": "Open system hosts file",
     "additionalDomains": "{n} additional domains",
     "reapplyAll": "Reapply All",
     "reapplyAllHint": "Regenerate all vhosts",
@@ -2216,6 +2217,7 @@
     },
     "sync": {
       "topDesc": "Synchronize your NKS WDC configuration with the cloud catalog service, or export/import settings as a file for offline transfer.",
+      "exportImportTitle": "Export / Import",
       "device": "Device",
       "deviceId": "Device ID",
       "deviceIdHint": "Auto-generated unique identifier for this machine. Used as the key for cloud sync.",

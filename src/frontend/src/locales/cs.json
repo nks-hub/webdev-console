@@ -597,6 +597,7 @@
     "localhostLoopbackHint": "Localhost je vždy dostupný přes localhost/127.0.0.1; další IP přidej v poli IP vazby.",
     "create": "Nový web",
     "openHosts": "Otevřít hosts",
+    "openHostsTitle": "Otevřít systémový hosts soubor",
     "additionalDomains": "{n} dalších domén",
     "reapplyAll": "Znovu aplikovat",
     "reapplyAllHint": "Znovu vygenerovat všechny vhosts",
@@ -2216,6 +2217,7 @@
     },
     "sync": {
       "topDesc": "Synchronizuj konfiguraci NKS WDC s cloudovou službou katalogu, nebo exportuj/importuj nastavení jako soubor pro offline přenos.",
+      "exportImportTitle": "Export / Import",
       "device": "Zařízení",
       "deviceId": "ID zařízení",
       "deviceIdHint": "Automaticky vygenerovaný jedinečný identifikátor tohoto počítače. Slouží jako klíč pro cloud sync.",

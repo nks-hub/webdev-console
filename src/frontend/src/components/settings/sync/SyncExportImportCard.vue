@@ -1,5 +1,5 @@
 <template>
-  <SettingsCard title="Export / Import">
+  <SettingsCard :title="t('settings.sync.exportImportTitle')">
     <p class="tab-desc">{{ t('settings.sync.tabDesc') }}</p>
     <div class="sync-actions">
       <el-button size="small" @click="emit('export')">

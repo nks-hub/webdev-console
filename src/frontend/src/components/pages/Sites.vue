@@ -9,7 +9,7 @@
         <span class="site-count">{{ sitesStore.sites.length }}</span>
       </div>
       <div class="header-actions">
-        <el-button size="small" @click="openHostsFile" title="Open hosts file">
+        <el-button size="small" @click="openHostsFile" :title="$t('sites.openHostsTitle')">
           {{ $t('sites.openHosts') }}
         </el-button>
         <el-button size="small" @click="reapplyAll" :loading="reapplying" :title="$t('sites.reapplyAllHint')">
