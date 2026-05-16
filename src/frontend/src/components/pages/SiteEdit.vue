@@ -230,7 +230,7 @@
                   >
                     <div class="runtime-card-icon runtime-static">HTML</div>
                     <div class="runtime-card-title">{{ $t('siteEdit.static') }}</div>
-                    <div class="runtime-card-desc">Plain HTML / assets. No language runtime.</div>
+                    <div class="runtime-card-desc">{{ $t('siteEdit.staticDesc') }}</div>
                   </button>
                   <button
                     class="runtime-card"
@@ -240,7 +240,7 @@
                   >
                     <div class="runtime-card-icon runtime-php">PHP</div>
                     <div class="runtime-card-title">PHP</div>
-                    <div class="runtime-card-desc">Pick an installed PHP version below.</div>
+                    <div class="runtime-card-desc">{{ $t('siteEdit.phpDesc') }}</div>
                   </button>
                   <button
                     class="runtime-card"
@@ -250,7 +250,7 @@
                   >
                     <div class="runtime-card-icon runtime-node">N</div>
                     <div class="runtime-card-title">Node.js</div>
-                    <div class="runtime-card-desc">Reverse-proxy to your app's HTTP listener.</div>
+                    <div class="runtime-card-desc">{{ $t('siteEdit.nodeDesc') }}</div>
                   </button>
                 </div>
 
@@ -460,8 +460,8 @@
               </span>
             </div>
             <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">
-              <span v-if="metricsLoading">Loading metrics...</span>
-              <span v-else>No access log data found for this site. Start Apache with the generated vhost and make some requests.</span>
+              <span v-if="metricsLoading">{{ $t('siteEdit.metricsLoading') }}</span>
+              <span v-else>{{ $t('siteEdit.metricsEmpty') }}</span>
             </div>
 
             <!-- F74 layout: historical chart FIRST (dominant visual), then

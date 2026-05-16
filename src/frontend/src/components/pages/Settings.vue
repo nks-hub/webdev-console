@@ -398,7 +398,7 @@
         <!-- Databases tab -->
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.databases')" name="databases">
           <div class="tab-content">
-            <p class="tab-desc">MySQL databases managed by NKS WDC.</p>
+            <p class="tab-desc">{{ $t('settingsDb.tabDesc') }}</p>
             <div class="db-list" v-if="databases.length > 0">
               <div class="db-row" v-for="db in databases" :key="db">
                 <span class="db-name">{{ db }}</span>
