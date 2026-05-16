@@ -6,7 +6,7 @@
       :key="svc.id"
       class="sd-service-row"
     >
-      <span class="sd-status-dot" :class="stateClass(svc)" />
+      <HealthStatusDot :level="stateToLevel(svc)" :pulse="isTransitioning(svc)" />
       <span class="sd-service-name">{{ svc.label }}</span>
       <span class="sd-service-uptime">{{ uptimeLabel(svc) }}</span>
       <el-button
@@ -26,6 +26,7 @@ import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { errorMessage } from '../../utils/errors'
@@ -99,10 +100,10 @@ function isRunning(svc: { state: number | string }): boolean {
 function isTransitioning(svc: { state: number | string }): boolean {
   return svc.state === 1 || svc.state === 3
 }
-function stateClass(svc: { state: number | string }): string {
-  if (isRunning(svc)) return 'dot-running'
-  if (isTransitioning(svc)) return 'dot-transition'
-  return 'dot-stopped'
+function stateToLevel(svc: { state: number | string }): 'ok' | 'warn' | 'err' | 'muted' {
+  if (isRunning(svc)) return 'ok'
+  if (isTransitioning(svc)) return 'warn'
+  return 'muted'
 }
 function uptimeLabel(svc: { state: number | string; startedAt?: string }): string {
   // Three distinct states — the prior version flattened "running with
@@ -169,22 +170,8 @@ async function restartService(svc: ServiceRow) {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-.sd-status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dot-running {
-  background: var(--el-color-success);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 25%, transparent);
-}
-.dot-stopped { background: var(--el-color-info); }
-.dot-transition {
-  background: var(--el-color-info);
-  animation: dot-pulse 1.2s ease-in-out infinite;
-}
-@keyframes dot-pulse { 0%, 100% { opacity: 0.5 } 50% { opacity: 1 } }
+/* Per-service dot delegated to HealthStatusDot shared primitive
+   (plan §6). State→level mapping kept in stateToLevel() above. */
 
 @media (max-width: 760px) {
   .sd-service-row {
