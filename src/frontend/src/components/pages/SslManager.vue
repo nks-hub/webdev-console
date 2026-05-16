@@ -202,7 +202,7 @@ async function installCA() {
       headers: authHeaders(),
     })
     const data = await r.json()
-    if (data.ok) ElMessage.success('CA installed successfully')
+    if (data.ok) ElMessage.success(t('ssl.caInstalled'))
     else ElMessage.error(data.message || 'CA install failed')
   } catch (e) {
     ElMessage.error(`CA install failed: ${errorMessage(e)}`)

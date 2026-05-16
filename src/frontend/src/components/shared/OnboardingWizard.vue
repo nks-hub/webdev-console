@@ -263,7 +263,7 @@ async function installCa() {
     // under the daemon's global auth middleware and also couldn't resolve
     // the base URL correctly in packaged Electron (file:// origin).
     await installSslCa()
-    ElMessage.success('Local CA trusted')
+    ElMessage.success(t('ssl.caTrusted'))
     await refreshState()
   } catch (e) {
     ElMessage.error(`mkcert CA install failed: ${errorMessage(e)}`)
