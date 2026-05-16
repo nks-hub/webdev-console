@@ -221,7 +221,7 @@
                 :class="[`danger-${row.entry.dangerLevel}`, { expanded: expandedRows.has(row.entry.id) }]"
                 @click="toggleRow(row.entry.id)"
               >
-                <span class="dot" :class="`dot-${row.entry.dangerLevel}`" />
+                <HealthStatusDot :level="dangerToDotLevel(row.entry.dangerLevel)" />
                 <code class="mono tool-name">{{ row.entry.toolName }}</code>
                 <el-tag v-if="row.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
                   {{ t('mcpActivity.danger.destructive') }}
@@ -274,7 +274,7 @@
           <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
         </div>
         <div v-else class="call-row" :class="`danger-${row.entry.dangerLevel}`">
-          <span class="dot" :class="`dot-${row.entry.dangerLevel}`" />
+          <HealthStatusDot :level="dangerToDotLevel(row.entry.dangerLevel)" />
           <code class="mono tool-name">{{ row.entry.toolName }}</code>
           <el-tag v-if="row.entry.dangerLevel === 'destructive'" type="danger" size="small" effect="plain">
             {{ t('mcpActivity.danger.destructive') }}
@@ -328,6 +328,7 @@ import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
 import McpActivityTimeline from '../mcp/McpActivityTimeline.vue'
 import McpTopToolsPanel from '../mcp/McpTopToolsPanel.vue'
 import McpSessionDetailDrawer from '../mcp/McpSessionDetailDrawer.vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import {
   fetchMcpToolCalls,
   fetchMcpToolCallStats,
@@ -360,6 +361,14 @@ const expandedReadGroups = ref<Set<string>>(new Set())
 
 // Click-to-expand per call row to show full args + intent link + error.
 const expandedRows = ref<Set<string>>(new Set())
+// Map MCP danger level → HealthStatusDot 4-level vocabulary.
+// read = informational, mutate = warning, destructive = danger.
+function dangerToDotLevel(level: string | undefined): 'ok' | 'warn' | 'err' | 'muted' {
+  if (level === 'destructive') return 'err'
+  if (level === 'mutate') return 'warn'
+  return 'muted'
+}
+
 function toggleRow(id: string): void {
   if (expandedRows.value.has(id)) expandedRows.value.delete(id)
   else expandedRows.value.add(id)
@@ -842,10 +851,7 @@ onBeforeUnmount(() => {
   word-break: break-all;
   font-family: 'JetBrains Mono', monospace;
 }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-read { background: var(--el-color-info); }
-.dot-mutate { background: var(--el-color-warning); }
-.dot-destructive { background: var(--el-color-danger); }
+/* Dot moved to HealthStatusDot shared primitive (plan §6). */
 .tool-name { font-weight: 600; }
 .args-preview { color: var(--el-text-color-secondary); }
 .session-pill, .caller-pill {

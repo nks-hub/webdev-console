@@ -48,7 +48,7 @@
       <div class="call-list">
         <div class="muted section-label">{{ t('mcpActivity.sessionDetail.allCalls') }}</div>
         <div v-for="e in entries" :key="e.id" class="full-call-row" :class="`danger-${e.dangerLevel}`">
-          <span class="dot" :class="`dot-${e.dangerLevel}`" />
+          <HealthStatusDot :level="dangerToDotLevel(e.dangerLevel)" />
           <code class="mono tool">{{ e.toolName }}</code>
           <span class="muted dur">{{ e.durationMs }}ms</span>
           <el-tag v-if="e.resultCode !== 'ok'" type="danger" size="small">{{ e.resultCode }}</el-tag>
@@ -65,6 +65,13 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { fetchMcpToolCalls, subscribeEventsMap, type McpToolCallEntry } from '../../api/daemon'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
+
+function dangerToDotLevel(level: string | undefined): 'ok' | 'warn' | 'err' | 'muted' {
+  if (level === 'destructive') return 'err'
+  if (level === 'mutate') return 'warn'
+  return 'muted'
+}
 
 const props = defineProps<{
   modelValue: boolean
@@ -227,10 +234,7 @@ async function copyJson(): Promise<void> {
 }
 .full-call-row.danger-destructive { background: var(--el-color-danger-light-9); }
 .full-call-row.danger-mutate { border-left: 2px solid var(--el-color-warning); }
-.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-read { background: var(--el-color-info); }
-.dot-mutate { background: var(--el-color-warning); }
-.dot-destructive { background: var(--el-color-danger); }
+/* Dot moved to HealthStatusDot shared primitive (plan §6). */
 .tool { font-weight: 600; }
 .args { color: var(--el-text-color-secondary); flex: 1 1 200px; }
 .dur, .at { font-size: 11px; }
