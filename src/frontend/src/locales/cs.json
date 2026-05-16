@@ -680,6 +680,7 @@
       "simple": {
         "phpVersion": "PHP verze",
         "phpVersionHint": "Změna verze znovu načte Apache a přegeneruje vhost. Pro statické weby zvol 'none'.",
+        "phpNotInstalled": "{v} (nenainstalována!)",
         "docRootHint": "Složka s public_html / public / index.php. Změna překreslí vhost.",
         "docRootPlaceholder": "C:\\work\\htdocs\\moje-app",
         "ssl": "HTTPS (SSL)",

@@ -85,7 +85,7 @@
             <el-option
               v-if="phpVersion && phpVersion !== 'none' && !phpVersions.includes(phpVersion)"
               :key="phpVersion"
-              :label="`${phpVersion} (nenainstalována!)`"
+              :label="$t('sites.detail.simple.phpNotInstalled', { v: phpVersion })"
               :value="phpVersion"
               disabled
             />

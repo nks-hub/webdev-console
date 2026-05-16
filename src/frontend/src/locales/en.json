@@ -680,6 +680,7 @@
       "simple": {
         "phpVersion": "PHP version",
         "phpVersionHint": "Switching version reloads Apache and re-renders the vhost. Choose 'none' for static sites.",
+        "phpNotInstalled": "{v} (not installed!)",
         "docRootHint": "Folder with public_html / public / index.php. Editing it re-renders the vhost.",
         "docRootPlaceholder": "C:\\work\\htdocs\\my-app",
         "ssl": "HTTPS (SSL)",
