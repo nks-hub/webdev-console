@@ -52,7 +52,7 @@
         :stroke-width="10"
       />
       <div class="update-progress-meta">
-        <span>{{ updateCheck.progressPercent >= 100 ? 'Installing…' : 'Downloading…' }}</span>
+        <span>{{ updateCheck.progressPercent >= 100 ? t('common.installing') : t('common.downloading') }}</span>
         <span v-if="updateCheck.progressBytes" class="mono">{{ updateCheck.progressBytes }}</span>
       </div>
     </div>

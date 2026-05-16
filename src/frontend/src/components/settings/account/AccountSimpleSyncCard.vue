@@ -6,11 +6,11 @@
     <div class="sync-actions">
       <el-button size="small" type="primary" :loading="syncing" @click="emit('push')">
         <el-icon><Upload /></el-icon>
-        <span>Push</span>
+        <span>{{ t('common.push') }}</span>
       </el-button>
       <el-button size="small" :loading="pulling" @click="emit('pull')">
         <el-icon><Download /></el-icon>
-        <span>Pull</span>
+        <span>{{ t('common.pull') }}</span>
       </el-button>
       <el-button size="small" type="danger" plain @click="emit('logout')">
         {{ t('common.logout') }}

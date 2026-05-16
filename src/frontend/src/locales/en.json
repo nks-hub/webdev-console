@@ -32,6 +32,10 @@
     "reset": "Reset",
     "login": "Sign in",
     "logout": "Sign out",
+    "push": "Push",
+    "pull": "Pull",
+    "downloading": "Downloading…",
+    "installing": "Installing…",
     "register": "Register",
     "justNow": "just now",
     "warning": "Warning"

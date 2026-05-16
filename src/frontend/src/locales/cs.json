@@ -32,6 +32,10 @@
     "reset": "Reset",
     "login": "Přihlásit se",
     "logout": "Odhlásit se",
+    "push": "Nahrát",
+    "pull": "Stáhnout",
+    "downloading": "Stahování…",
+    "installing": "Instalace…",
     "register": "Registrovat",
     "justNow": "právě teď",
     "warning": "Upozornění"
