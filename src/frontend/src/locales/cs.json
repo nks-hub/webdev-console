@@ -467,6 +467,7 @@
       "cloudflareTunnel": "Cloudflare Tunel",
       "submit": "Vytvořit web",
       "hint": "Rychlé vytvoření webu s rozumnými výchozími hodnotami",
+      "subtitle": "{running} z {total} webů běží",
       "welcomeFeaturePhp": "PHP 8.5 / 8.4 / 8.3 / 8.2 / 7.4 přepínání",
       "welcomeFeatureSsl": "Automatický HTTPS přes mkcert",
       "welcomeFeatureBind": "Bind na konkrétní IP rozhraní",

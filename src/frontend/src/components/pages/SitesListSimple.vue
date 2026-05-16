@@ -1,8 +1,23 @@
 <template>
   <div class="sites-simple">
     <div class="simple-header">
-      <h1 class="page-title">{{ $t('sites.title') }}</h1>
-      <el-button type="primary" size="small" @click="emit('create')">{{ $t('sites.card.newSite') }}</el-button>
+      <div class="simple-header-title">
+        <h1 class="page-title">
+          {{ $t('sites.title') }}
+          <span v-if="sitesStore.sites.length > 0" class="page-title-count">
+            {{ sitesStore.sites.length }}
+          </span>
+        </h1>
+        <p v-if="sitesStore.sites.length > 0" class="page-subtitle">
+          {{ $t('sites.simple.subtitle', {
+            running: runningSites,
+            total: sitesStore.sites.length,
+          }) }}
+        </p>
+      </div>
+      <el-button type="primary" size="small" @click="emit('create')">
+        + {{ $t('sites.card.newSite') }}
+      </el-button>
     </div>
 
     <div v-if="sitesStore.loading" v-loading="true" class="loading-wrap" />
@@ -137,6 +152,15 @@ const apacheRunning = computed(() =>
     s => s.id === 'apache' && (s.state === 2 || s.status === 'running')
   )
 )
+
+// Number of enabled sites — used by the simple-header subtitle.
+// A site is "running" when Apache is up AND the site itself is enabled
+// (soft-disable via PATCH /enabled doesn't stop Apache but the vhost
+// is removed from sites-enabled/, so the site doesn't actually serve).
+const runningSites = computed(() => {
+  if (!apacheRunning.value) return 0
+  return sitesStore.sites.filter(s => s.enabled !== false).length
+})
 
 // ── Activity / sparkline ─────────────────────────────────────────────
 
@@ -390,10 +414,39 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   margin-bottom: 24px;
 }
 
+.simple-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .page-title {
-  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--wdc-text);
+}
+.page-title-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--wdc-accent);
+  background: var(--wdc-accent-dim);
+  border-radius: 999px;
+}
+.page-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
 }
 
 .loading-wrap {

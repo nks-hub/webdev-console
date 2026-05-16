@@ -467,6 +467,7 @@
       "cloudflareTunnel": "Cloudflare Tunnel",
       "submit": "Create Site",
       "hint": "Quick site creation with smart defaults",
+      "subtitle": "{running} of {total} sites running",
       "welcomeFeaturePhp": "Switch PHP 8.5 / 8.4 / 8.3 / 8.2 / 7.4",
       "welcomeFeatureSsl": "Automatic HTTPS via mkcert",
       "welcomeFeatureBind": "Bind to a specific NIC IP",
