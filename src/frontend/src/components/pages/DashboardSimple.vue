@@ -85,7 +85,12 @@
           v-for="s in recentSimpleSites"
           :key="s.domain"
           class="simple-recent-item"
+          role="button"
+          tabindex="0"
+          :aria-label="t('sites.card.openSiteAria', { domain: s.domain })"
           @click="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
+          @keydown.enter.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
+          @keydown.space.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
         >
           <span
             class="simple-recent-dot"
@@ -324,6 +329,10 @@ defineExpose({ reload: loadAggregates })
 }
 .simple-recent-item:last-child { border-bottom: 0; }
 .simple-recent-item:hover { background: var(--wdc-surface); }
+.simple-recent-item:focus-visible {
+  outline: 2px solid var(--wdc-accent);
+  outline-offset: -2px;
+}
 .simple-recent-dot {
   width: 10px;
   height: 10px;
