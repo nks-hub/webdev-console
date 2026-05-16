@@ -10,7 +10,7 @@
       <el-input
         ref="inputRef"
         v-model="query"
-        placeholder="Type a command..."
+        :placeholder="t('commandPalette.placeholder')"
         size="large"
         clearable
         @keydown.enter.prevent="executeFirst"
@@ -36,7 +36,7 @@
         </div>
       </div>
       <div class="command-empty" v-else-if="query">
-        No matching commands
+        {{ t('commandPalette.empty') }}
       </div>
     </div>
   </el-dialog>
@@ -44,7 +44,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+
+const { t } = useI18n()
 import {
   Monitor, DataAnalysis, Coin, Lock, Grid, Box, Connection,
   Setting, Share, Message, Plus, Refresh, VideoPlay, VideoPause,
@@ -79,48 +82,48 @@ interface Command {
 }
 
 const commands = computed<Command[]>(() => [
-  { id: 'sites', label: 'Go to Sites', icon: Monitor, shortcut: '', action: () => router.push('/sites') },
-  { id: 'dashboard', label: 'Go to Services', icon: DataAnalysis, action: () => router.push('/dashboard') },
-  { id: 'databases', label: 'Go to Databases', icon: Coin, action: () => router.push('/databases') },
-  { id: 'ssl', label: 'Go to SSL Manager', icon: Lock, action: () => router.push('/ssl') },
-  { id: 'php', label: 'Go to PHP Manager', icon: Grid, action: () => router.push('/php') },
-  { id: 'binaries', label: 'Go to Binaries', icon: Box, action: () => router.push('/binaries') },
-  { id: 'plugins', label: 'Go to Plugins', icon: Share, action: () => router.push('/plugins') },
-  { id: 'settings', label: 'Go to Settings', icon: Setting, action: () => router.push('/settings') },
-  { id: 'cloudflare', label: 'Go to Cloudflare Tunnel', icon: Connection, action: () => router.push('/cloudflare') },
+  { id: 'sites', label: t('commandPalette.gotoSites'), icon: Monitor, shortcut: '', action: () => router.push('/sites') },
+  { id: 'dashboard', label: t('commandPalette.gotoDashboard'), icon: DataAnalysis, action: () => router.push('/dashboard') },
+  { id: 'databases', label: t('commandPalette.gotoDatabases'), icon: Coin, action: () => router.push('/databases') },
+  { id: 'ssl', label: t('commandPalette.gotoSsl'), icon: Lock, action: () => router.push('/ssl') },
+  { id: 'php', label: t('commandPalette.gotoPhp'), icon: Grid, action: () => router.push('/php') },
+  { id: 'binaries', label: t('commandPalette.gotoBinaries'), icon: Box, action: () => router.push('/binaries') },
+  { id: 'plugins', label: t('commandPalette.gotoPlugins'), icon: Share, action: () => router.push('/plugins') },
+  { id: 'settings', label: t('commandPalette.gotoSettings'), icon: Setting, action: () => router.push('/settings') },
+  { id: 'cloudflare', label: t('commandPalette.gotoCloudflare'), icon: Connection, action: () => router.push('/cloudflare') },
   // MCP shortcuts — Phase 8 redesign surfaces 4 quick jumps for the
   // most common operator paths into the MCP module.
-  { id: 'mcp-activity', label: 'Go to MCP Activity', description: 'AI tool call audit feed', icon: DataLine, action: () => router.push('/mcp/activity') },
-  { id: 'mcp-requests', label: 'Go to MCP Requests', description: 'Pending signed AI requests', icon: Lock, action: () => router.push('/mcp/intents') },
-  { id: 'mcp-rules', label: 'Go to MCP Rules', description: 'Auto-approve rules', icon: Key, action: () => router.push('/mcp/grants') },
-  { id: 'mcp-catalog', label: 'Go to MCP Catalog', description: 'Available action types', icon: Operation, action: () => router.push('/mcp/kinds') },
-  { id: 'mailpit-ui', label: 'Open Mailpit UI', icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
-  { id: 'new-site', label: 'Create New Site', icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
-  { id: 'refresh', label: 'Refresh Data', icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },
+  { id: 'mcp-activity', label: t('commandPalette.gotoMcpActivity'), description: t('commandPalette.gotoMcpActivityDesc'), icon: DataLine, action: () => router.push('/mcp/activity') },
+  { id: 'mcp-requests', label: t('commandPalette.gotoMcpRequests'), description: t('commandPalette.gotoMcpRequestsDesc'), icon: Lock, action: () => router.push('/mcp/intents') },
+  { id: 'mcp-rules', label: t('commandPalette.gotoMcpRules'), description: t('commandPalette.gotoMcpRulesDesc'), icon: Key, action: () => router.push('/mcp/grants') },
+  { id: 'mcp-catalog', label: t('commandPalette.gotoMcpCatalog'), description: t('commandPalette.gotoMcpCatalogDesc'), icon: Operation, action: () => router.push('/mcp/kinds') },
+  { id: 'mailpit-ui', label: t('commandPalette.openMailpit'), icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
+  { id: 'new-site', label: t('commandPalette.newSite'), icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
+  { id: 'refresh', label: t('commandPalette.refresh'), icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },
   ...daemonStore.services.map(svc => ({
     id: `start-${svc.id}`,
-    label: `Start ${svc.displayName || svc.id}`,
-    description: svc.state === 2 ? 'Already running' : '',
+    label: t('commandPalette.startService', { name: svc.displayName || svc.id }),
+    description: svc.state === 2 ? t('commandPalette.alreadyRunning') : '',
     icon: VideoPlay,
     action: () => { if (svc.state !== 2) servicesStore.start(svc.id) },
   })),
   ...daemonStore.services.map(svc => ({
     id: `stop-${svc.id}`,
-    label: `Stop ${svc.displayName || svc.id}`,
-    description: svc.state === 0 ? 'Already stopped' : '',
+    label: t('commandPalette.stopService', { name: svc.displayName || svc.id }),
+    description: svc.state === 0 ? t('commandPalette.alreadyStopped') : '',
     icon: VideoPause,
     action: () => { if (svc.state === 2) servicesStore.stop(svc.id) },
   })),
-  { id: 'start-all', label: 'Start All Services', icon: Promotion, action: () => {
+  { id: 'start-all', label: t('commandPalette.startAll'), icon: Promotion, action: () => {
     daemonStore.services.filter(s => s.state === 0).forEach(s => servicesStore.start(s.id))
   }},
-  { id: 'stop-all', label: 'Stop All Services', icon: CircleClose, action: () => {
+  { id: 'stop-all', label: t('commandPalette.stopAll'), icon: CircleClose, action: () => {
     daemonStore.services.filter(s => s.state === 2).forEach(s => servicesStore.stop(s.id))
   }},
   // Dynamic per-site commands — open in browser + edit
   ...sitesStore.sites.map(site => ({
     id: `open-site-${site.domain}`,
-    label: `Open ${site.domain}`,
+    label: t('commandPalette.openSite', { domain: site.domain }),
     icon: Link,
     action: () => {
       const proto = site.sslEnabled ? 'https' : 'http'
@@ -131,7 +134,7 @@ const commands = computed<Command[]>(() => [
   })),
   ...sitesStore.sites.map(site => ({
     id: `edit-site-${site.domain}`,
-    label: `Edit ${site.domain}`,
+    label: t('commandPalette.editSite', { domain: site.domain }),
     icon: Edit,
     action: () => router.push(`/sites/${site.domain}/edit`),
   })),
