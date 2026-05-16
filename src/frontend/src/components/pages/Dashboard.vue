@@ -147,7 +147,10 @@
           :class="[`row-${statusText(service)}`]"
         >
           <ServiceIcon :service="service.id" :active="isRunning(service)" />
-          <span class="status-dot" :class="`dot-${statusText(service)}`" />
+          <HealthStatusDot
+            :level="statusToDotLevel(service)"
+            :pulse="statusIsTransitional(service)"
+          />
 
           <!-- Name + version -->
           <div class="svc-identity">
@@ -286,6 +289,7 @@
 import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu } from '@element-plus/icons-vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 
 // Lazy-load the simple-mode dashboard. Advanced users (default for
 // developers) never render the simple surface, so its 4 KPI tiles +
@@ -430,6 +434,22 @@ function getPort(svc: ServiceInfo & { port?: number }): number | null {
 
 function statusText(service: ServiceInfo): string {
   return stateLabels[service.state ?? 0] ?? service.status ?? 'unknown'
+}
+
+// Maps the 6-way service state to the 4-level HealthStatusDot
+// vocabulary so the shared primitive can be reused without invading
+// its semantics with service-specific edge states.
+type DotLevel = 'ok' | 'warn' | 'err' | 'muted'
+function statusToDotLevel(service: ServiceInfo): DotLevel {
+  const s = statusText(service)
+  if (s === 'running') return 'ok'
+  if (s === 'crashed') return 'err'
+  if (s === 'starting' || s === 'stopping') return 'warn'
+  return 'muted'
+}
+function statusIsTransitional(service: ServiceInfo): boolean {
+  const s = statusText(service)
+  return s === 'starting' || s === 'stopping'
 }
 
 function isRunning(service: ServiceInfo): boolean {
@@ -682,26 +702,10 @@ function closeConfig() {
   background: var(--wdc-hover);
 }
 
-/* ─── Status dot ──────────────────────────────────────────────────────────── */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* Flat: no glow, pure saturated dots */
-.dot-running { background: var(--wdc-status-running); }
-.dot-stopped { background: var(--wdc-status-stopped); }
-
-.dot-starting,
-.dot-stopping {
-  background: var(--wdc-status-starting);
-  animation: svc-pulse 1s ease-in-out infinite;
-}
-
-.dot-crashed { background: var(--wdc-status-error); }
-
+/* Status dot moved to HealthStatusDot shared primitive (plan §6).
+   Old service-row .status-dot rules deleted; CSS variables for the
+   .status-label color states remain so the *text* color stays nuanced
+   beyond the 4-level dot mapping. */
 .dot-disabled,
 .dot-unknown {
   background: var(--wdc-border-strong);
