@@ -520,6 +520,68 @@ async function createWindow() {
   win.setMenuBarVisibility(false)
   win.setAutoHideMenuBar(true)
 
+  // Even with the menu bar hidden the application Menu still owns
+  // the keyboard accelerators (Ctrl+C/V/X/A, Ctrl+Z/Y, etc.). Without
+  // this template these shortcuts are inert in inputs because we
+  // never call Menu.setApplicationMenu, so Electron falls back to "no
+  // menu" which silently disables the roles. Incident 2026-05-07:
+  // user reported copy/paste and right-click did nothing in WDC.
+  const editMenu = Menu.buildFromTemplate([
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+      ],
+    },
+  ])
+  Menu.setApplicationMenu(editMenu)
+
+  // Right-click context menu — Electron does NOT ship one by default.
+  // We render a minimal Copy/Cut/Paste/Select-All menu so users can
+  // operate inputs and copy text from anywhere in the app. Items are
+  // enabled/disabled based on the focused element's editFlags so the
+  // menu only offers actions that make sense at the click target.
+  win.webContents.on('context-menu', (_evt, params) => {
+    const hasSelection = Boolean(params.selectionText && params.selectionText.length > 0)
+    const isEditable = params.isEditable === true
+    const template: Electron.MenuItemConstructorOptions[] = []
+    if (params.linkURL) {
+      template.push({
+        label: 'Open Link',
+        click: () => { void shell.openExternal(params.linkURL) },
+      })
+      template.push({
+        label: 'Copy Link',
+        click: () => { clipboard.writeText(params.linkURL) },
+      })
+      template.push({ type: 'separator' })
+    }
+    template.push({ role: 'cut', enabled: isEditable && hasSelection })
+    template.push({ role: 'copy', enabled: hasSelection || isEditable })
+    template.push({ role: 'paste', enabled: isEditable })
+    template.push({ type: 'separator' })
+    template.push({ role: 'selectAll' })
+    Menu.buildFromTemplate(template).popup({ window: win ?? undefined })
+  })
+
   // Hard-deny `window.open` and target=_blank links — the renderer never
   // legitimately opens new BrowserWindows. Anything that asks goes through
   // the explicit electronAPI.openExternal IPC (allowlisted to https/mailto)
@@ -1608,6 +1670,60 @@ ipcMain.handle('restart-renderer', async (_evt) => {
   } catch (err) {
     console.error('[restart-renderer] failed:', err)
     return false
+  }
+})
+
+// Self-elevation: stop the current (asInvoker) daemon and re-spawn it
+// under UAC. Triggered by the "Restart as admin" button surfaced when
+// the renderer hits a 403 from an admin-required endpoint (hosts apply,
+// hosts restore). PowerShell's `Start-Process -Verb RunAs` raises the
+// UAC consent prompt; on accept we get an elevated daemon process whose
+// IsElevated() check passes. On dev, we re-launch `dotnet run --project
+// <daemon>` elevated — which loses the CiBuild=true asInvoker manifest
+// override and gives us the real prod manifest with admin rights.
+ipcMain.handle('elevate-daemon', async () => {
+  if (process.platform !== 'win32') {
+    return { ok: false, error: 'Self-elevation is only supported on Windows' }
+  }
+  try {
+    log.info('[elevate-daemon] requested — killing current daemon pid=' + (daemon?.pid ?? 'none'))
+    if (daemon && !daemon.killed) {
+      try { daemon.kill() } catch (e) { log.warn('[elevate-daemon] kill failed', e) }
+    }
+    // Best-effort port-file wipe so the renderer doesn't latch onto the
+    // stale token while the elevated daemon comes up.
+    try {
+      if (existsSync(PORT_FILE)) unlinkSync(PORT_FILE)
+    } catch (e) { log.warn('[elevate-daemon] port-file unlink failed', e) }
+
+    let psArgs: string
+    // Re-derive isDev here — the const on line 336 lives inside another
+    // function's scope. Without this redeclaration vue-tsc errored
+    // TS2304 ("Cannot find name 'isDev'") on every type-check across
+    // the session.
+    const isDev = !app.isPackaged
+    if (isDev) {
+      const projectDir = findDaemonProject()
+      // -p:CiBuild=false forces the prod manifest (requireAdministrator),
+      // matching what packaged WDC ships with.
+      psArgs =
+        `Start-Process -Verb RunAs -FilePath 'dotnet' ` +
+        `-ArgumentList 'run','-p:CiBuild=false','--project','${projectDir.replace(/'/g, "''")}'`
+    } else {
+      const daemonExe = findPackagedDaemonExecutable()
+      psArgs = `Start-Process -Verb RunAs -FilePath '${daemonExe.replace(/'/g, "''")}'`
+    }
+    const ps = spawn('powershell.exe', ['-NoProfile', '-Command', psArgs], {
+      detached: true,
+      stdio: 'ignore',
+    })
+    ps.unref()
+    log.info('[elevate-daemon] UAC prompt dispatched via powershell pid=' + ps.pid)
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    log.error('[elevate-daemon] failed', msg)
+    return { ok: false, error: msg }
   }
 })
 
