@@ -60,6 +60,28 @@
     </div>
 
     <template v-else>
+      <!-- Plan §4/478 — update-available banner mirrored from Easy
+           Dashboard. Surfaces pending updates without forcing nav to
+           Settings → Update. -->
+      <el-alert
+        v-if="updatesStore.hasUpdate"
+        type="info"
+        show-icon
+        :closable="false"
+        style="margin: 0 16px 12px"
+      >
+        <template #title>
+          <strong>{{ $t('dashboard.simple.updateAvailable.title') }}</strong>
+          —
+          {{ $t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion }) }}
+        </template>
+        <template #default>
+          <el-button size="small" type="primary" @click="$router.push('/settings?tab=update')">
+            {{ $t('dashboard.simple.updateAvailable.openBtn') }}
+          </el-button>
+        </template>
+      </el-alert>
+
       <!-- 1. Quick stats strip (top) — at-a-glance counters -->
       <div class="stats-grid">
         <div class="stat-card stat-clickable" @click="$router.push('/sites')">
@@ -299,6 +321,7 @@ import HealthStatusDot from '../shared/HealthStatusDot.vue'
 const DashboardSimple = defineAsyncComponent(() => import('./DashboardSimple.vue'))
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
+import { useUpdatesStore } from '../../stores/updates'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
@@ -318,6 +341,7 @@ const versionRef = useAppVersion()
 const appVersion = computed(() => versionRef.value.full)
 
 const daemonStore = useDaemonStore()
+const updatesStore = useUpdatesStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiMode = useUiModeStore()
