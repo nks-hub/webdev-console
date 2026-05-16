@@ -89,6 +89,7 @@ export const api = {
   get: (path, opts) => doRequest('GET', path, opts),
   post: (path, opts) => doRequest('POST', path, opts),
   put: (path, opts) => doRequest('PUT', path, opts),
+  patch: (path, opts) => doRequest('PATCH', path, opts),
   delete: (path, opts) => doRequest('DELETE', path, opts),
   // Unauthenticated — for /healthz probing during crash recovery.
   healthz: () =>
