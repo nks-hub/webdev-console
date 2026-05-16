@@ -105,7 +105,11 @@ function stateClass(svc: { state: number | string }): string {
   return 'dot-stopped'
 }
 function uptimeLabel(svc: { state: number | string; startedAt?: string }): string {
-  if (!isRunning(svc) || !svc.startedAt) return t('common.stopped')
+  // Three distinct states — the prior version flattened "running with
+  // unknown uptime" into the same "Zastaveno" label as a genuinely
+  // stopped service, which contradicted the green dot beside it.
+  if (!isRunning(svc)) return t('common.stopped')
+  if (!svc.startedAt) return t('common.running')
   const ms = Date.now() - new Date(svc.startedAt).getTime()
   const min = Math.floor(ms / 60_000)
   const h = Math.floor(min / 60)
