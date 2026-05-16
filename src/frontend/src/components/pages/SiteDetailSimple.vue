@@ -695,6 +695,9 @@ onMounted(async () => {
   .simple-detail > .sd-section:first-of-type {
     grid-row: 1 / span 5;
     margin-top: 0;
+    position: sticky;
+    top: 18px;
+    align-self: start;
   }
 }
 
