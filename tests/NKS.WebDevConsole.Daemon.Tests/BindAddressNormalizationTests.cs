@@ -280,4 +280,105 @@ public class BindAddressNormalizationTests
     {
         Assert.Throws<ArgumentNullException>(() => SiteManager.CollectBindAddressWarnings(null!));
     }
+
+    // ── Additional edge cases ──────────────────────────────────────────────
+
+    [Fact]
+    public void CollectBindAddressWarnings_MixedValidAndBogus_OnlyBogusWarns()
+    {
+        // 127.0.0.1 is a loopback (skipped from the check entirely).
+        // 192.0.2.5 is RFC 5737 TEST-NET-1 — definitely not on any NIC.
+        // Expectation: one warning, naming only the bogus IP.
+        var site = new SiteConfig
+        {
+            Domain = "mixed.loc",
+            DocumentRoot = @"C:\sites\mixed",
+            BindAddresses = new[] { "127.0.0.1", "192.0.2.5" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Single(warnings);
+        Assert.Contains("192.0.2.5", warnings[0]);
+        Assert.DoesNotContain("127.0.0.1", warnings[0]);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_EmptyAndEmptyLegacy_NoWarnings()
+    {
+        // No bind addresses configured → daemon defaults to wildcard
+        // listener (NormalizeConfiguredBindScopes returns ["*"]). The
+        // wildcard is always reachable, so the warning collector must
+        // not flag anything.
+        var site = new SiteConfig
+        {
+            Domain = "empty.loc",
+            DocumentRoot = @"C:\sites\empty",
+            BindAddresses = Array.Empty<string>(),
+            BindAddress = string.Empty,
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Empty(warnings);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_LegacyBindAddressOnly_HonorsFallback()
+    {
+        // Pre-multi-bind sites only set the singular BindAddress. If that
+        // value is bogus, the warning still has to fire so operators see
+        // the misconfiguration after upgrading from old TOML.
+        var site = new SiteConfig
+        {
+            Domain = "legacy.loc",
+            DocumentRoot = @"C:\sites\legacy",
+            BindAddresses = Array.Empty<string>(),
+            BindAddress = "192.0.2.42",
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Single(warnings);
+        Assert.Contains("192.0.2.42", warnings[0]);
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_TwoBogusIPs_TwoWarnings()
+    {
+        // Each unreachable IP produces its own warning so the operator
+        // can fix them independently rather than chasing a single message.
+        var site = new SiteConfig
+        {
+            Domain = "doublebogus.loc",
+            DocumentRoot = @"C:\sites\doublebogus",
+            BindAddresses = new[] { "192.0.2.10", "203.0.113.20" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Equal(2, warnings.Count);
+        Assert.Contains(warnings, w => w.Contains("192.0.2.10", StringComparison.Ordinal));
+        Assert.Contains(warnings, w => w.Contains("203.0.113.20", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CollectBindAddressWarnings_BracketedIPv6Bogus_Warns()
+    {
+        // Bracket form is canonicalized to bare ::1-style address. Bogus
+        // IPv6 (2001:db8 documentation prefix per RFC 3849) is guaranteed
+        // not on any NIC, so the warning must fire whether the operator
+        // typed [2001:db8::1] or 2001:db8::1.
+        var site = new SiteConfig
+        {
+            Domain = "v6bogus.loc",
+            DocumentRoot = @"C:\sites\v6bogus",
+            BindAddresses = new[] { "[2001:db8::1]" },
+        };
+
+        var warnings = SiteManager.CollectBindAddressWarnings(site);
+
+        Assert.Single(warnings);
+        Assert.Contains("2001:db8", warnings[0]);
+    }
 }
