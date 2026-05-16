@@ -164,7 +164,7 @@ const emit = defineEmits<{
 
 .easy-settings-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px 18px;
   width: 100%;
 }
