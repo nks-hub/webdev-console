@@ -292,7 +292,7 @@ async function loadAll() {
       stats.value = await statsRes.json()
     }
   } catch (e) {
-    errorMsg.value = `Chyba načítání: ${e instanceof Error ? e.message : String(e)}`
+    errorMsg.value = t('backupsPage.toast.loadError', { err: e instanceof Error ? e.message : String(e) })
   } finally {
     loading.value = false
   }
@@ -332,11 +332,11 @@ async function runBackupNow() {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ title: 'Záloha selhala' }))
-      throw new Error(err.title ?? err.error ?? 'Záloha selhala')
+      throw new Error(err.title ?? err.error ?? t('backupsPage.snapshots.backupFailed'))
     }
     backupResult.value = await res.json()
     await loadAll()
-    ElMessage.success('Záloha dokončena')
+    ElMessage.success(t('backupsPage.toast.completed'))
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : String(e)
     ElMessage.error(errorMsg.value)
@@ -369,9 +369,9 @@ function downloadBackup(path: string) {
 async function restoreBackup(b: BackupEntry) {
   try {
     await ElMessageBox.confirm(
-      `Obnovit zálohu z ${formatDate(b.createdUtc)}? Aktuální stav bude před obnovením automaticky uložen jako bezpečnostní záloha.`,
-      'Obnovit zálohu',
-      { type: 'warning', confirmButtonText: 'Obnovit', cancelButtonText: 'Zrušit' }
+      t('backupsPage.snapshots.restoreConfirmMessage', { date: formatDate(b.createdUtc) }),
+      t('backupsPage.snapshots.restoreConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('backupsPage.snapshots.restore'), cancelButtonText: t('common.cancel') }
     )
   } catch { return }
 
@@ -382,11 +382,11 @@ async function restoreBackup(b: BackupEntry) {
       headers: daemonAuthHeaders(),
     })
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ title: 'Obnovení selhalo' }))
-      throw new Error(err.title ?? err.error ?? 'Obnovení selhalo')
+      const err = await res.json().catch(() => ({ title: t('backupsPage.snapshots.restoreFailed') }))
+      throw new Error(err.title ?? err.error ?? t('backupsPage.snapshots.restoreFailed'))
     }
     const data = await res.json()
-    ElMessage.success(`Obnoveno ${data.restored} souborů. Bezpečnostní záloha: ${fileName(data.safetyBackup)}`)
+    ElMessage.success(t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }))
     await loadAll()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e))
@@ -396,9 +396,9 @@ async function restoreBackup(b: BackupEntry) {
 async function deleteBackup(b: BackupEntry) {
   try {
     await ElMessageBox.confirm(
-      `Smazat zálohu ${fileName(b.path)}?`,
-      'Smazat zálohu',
-      { type: 'warning', confirmButtonText: 'Smazat', cancelButtonText: 'Zrušit' }
+      t('backupsPage.snapshots.deleteConfirmMessage', { name: fileName(b.path) }),
+      t('backupsPage.snapshots.deleteConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('backupsPage.snapshots.delete'), cancelButtonText: t('common.cancel') }
     )
   } catch { return }
 
@@ -408,8 +408,8 @@ async function deleteBackup(b: BackupEntry) {
       method: 'DELETE',
       headers: daemonAuthHeaders(),
     })
-    if (!res.ok) throw new Error('Smazání selhalo')
-    ElMessage.success('Záloha smazána')
+    if (!res.ok) throw new Error(t('backupsPage.snapshots.deleteFailed'))
+    ElMessage.success(t('backupsPage.toast.deleted'))
     await loadAll()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e))
@@ -423,7 +423,7 @@ async function saveSchedule() {
       putSetting('backup', 'scheduleHours', String(scheduleHours.value)),
       putSetting('backup', 'retainCount', String(retainCount.value)),
     ])
-    ElMessage.success('Plánování uloženo')
+    ElMessage.success(t('backupsPage.toast.scheduleSaved'))
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e))
   } finally {
@@ -439,7 +439,7 @@ async function saveContent() {
         putSetting('backup', `content.${f.key}`, contentFlags.value[f.key] ? 'true' : 'false')
       )
     )
-    ElMessage.success('Výběr obsahu uložen')
+    ElMessage.success(t('backupsPage.toast.contentSaved'))
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e))
   } finally {
@@ -453,7 +453,7 @@ async function putSetting(category: string, key: string, value: string) {
     headers: { ...daemonAuthHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ category, key, value }),
   })
-  if (!res.ok) throw new Error(`Uložení nastavení selhalo: ${category}.${key}`)
+  if (!res.ok) throw new Error(t('backupsPage.toast.settingsSaveFailed', { key: `${category}.${key}` }))
 }
 
 // ── utils ──────────────────────────────────────────────────────────────────

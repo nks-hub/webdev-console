@@ -142,7 +142,23 @@
       "empty": "No backups. Run the first one from the Overview tab.",
       "download": "Download",
       "restore": "Restore",
-      "delete": "Delete"
+      "delete": "Delete",
+      "restoreConfirmTitle": "Restore backup",
+      "restoreConfirmMessage": "Restore backup from {date}? Current state will be saved as a safety backup first.",
+      "deleteConfirmTitle": "Delete backup",
+      "deleteConfirmMessage": "Delete backup {name}?",
+      "backupFailed": "Backup failed",
+      "restoreFailed": "Restore failed",
+      "deleteFailed": "Delete failed"
+    },
+    "toast": {
+      "completed": "Backup completed",
+      "restored": "Restored {files} files. Safety backup: {safety}",
+      "deleted": "Backup deleted",
+      "scheduleSaved": "Schedule saved",
+      "contentSaved": "Content selection saved",
+      "loadError": "Load error: {err}",
+      "settingsSaveFailed": "Failed to save setting: {key}"
     },
     "schedule": {
       "cardTitle": "Auto-backup interval",

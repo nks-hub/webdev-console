@@ -142,7 +142,23 @@
       "empty": "Žádné zálohy. Spusťte první zálohu přes záložku Přehled.",
       "download": "Stáhnout",
       "restore": "Obnovit",
-      "delete": "Smazat"
+      "delete": "Smazat",
+      "restoreConfirmTitle": "Obnovit zálohu",
+      "restoreConfirmMessage": "Obnovit zálohu z {date}? Aktuální stav bude před obnovením automaticky uložen jako bezpečnostní záloha.",
+      "deleteConfirmTitle": "Smazat zálohu",
+      "deleteConfirmMessage": "Smazat zálohu {name}?",
+      "backupFailed": "Záloha selhala",
+      "restoreFailed": "Obnovení selhalo",
+      "deleteFailed": "Smazání selhalo"
+    },
+    "toast": {
+      "completed": "Záloha dokončena",
+      "restored": "Obnoveno {files} souborů. Bezpečnostní záloha: {safety}",
+      "deleted": "Záloha smazána",
+      "scheduleSaved": "Plánování uloženo",
+      "contentSaved": "Výběr obsahu uložen",
+      "loadError": "Chyba načítání: {err}",
+      "settingsSaveFailed": "Uložení nastavení selhalo: {key}"
     },
     "schedule": {
       "cardTitle": "Interval automatické zálohy",
