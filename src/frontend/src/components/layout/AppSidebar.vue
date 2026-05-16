@@ -195,6 +195,24 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
         <span class="nav-label">{{ $t('nav.mcp') }}</span>
       </div>
+      <div
+        class="nav-item nav-item-mode"
+        :title="$t('settings.mode.description')"
+        @click="uiModeStore.toggleMode()"
+      >
+        <span class="nav-icon-shell">
+          <el-icon :size="18"><component :is="uiModeStore.isAdvanced ? Operation : MagicStick" /></el-icon>
+        </span>
+        <span class="nav-label">
+          {{ uiModeStore.isAdvanced ? $t('settings.mode.advanced') : $t('settings.mode.simple') }}
+        </span>
+        <el-switch
+          :model-value="uiModeStore.isAdvanced"
+          size="small"
+          @click.stop
+          @change="(v: boolean) => uiModeStore.setUiMode(v ? 'advanced' : 'simple')"
+        />
+      </div>
       <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
         <span class="nav-label">{{ $t('nav.settings') }}</span>
@@ -245,7 +263,7 @@
 <script setup lang="ts">
 import { computed, onMounted, markRaw, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key, Operation, MagicStick } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
@@ -599,6 +617,20 @@ async function toggleSvc(svc: ServiceInfo) {
    legible without crowding the bottom-nav visual weight. */
 .nav-item-sso.signedin .nav-icon-shell { color: #16a34a; }
 .nav-item-sso.signedin { border-left-color: #16a34a; }
+
+/* Mode toggle — discoverable sidebar entry so users don't have to
+   drill into Settings → General to flip Simple/Advanced. Switch sits
+   to the right (like service rows). Label updates with mode. */
+.nav-item-mode {
+  justify-content: flex-start;
+}
+.nav-item-mode .nav-label {
+  flex: 1;
+  min-width: 0;
+}
+.nav-item-mode :deep(.el-switch) {
+  margin-left: auto;
+}
 .nav-label-sso {
   display: flex;
   flex-direction: column;
