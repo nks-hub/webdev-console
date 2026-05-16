@@ -806,6 +806,19 @@ async function createSite() {
     }
     const created = await sitesStore.create(payload)
 
+    // Surface daemon's soft warnings (e.g. bind IP not assigned to any
+    // active NIC — Apache will fail to bind at start). Previously the
+    // create() return type was just SiteInfo so these warnings dropped
+    // silently. The sites store now exposes lastCreateWarnings + Hints
+    // as a side-channel; toast each one as its own warning so the
+    // operator sees what to fix.
+    for (const w of sitesStore.lastCreateWarnings) {
+      ElMessage.warning({ message: w, duration: 8000, showClose: true })
+    }
+    for (const h of sitesStore.lastCreateHints) {
+      ElMessage.info({ message: h, duration: 6000, showClose: true })
+    }
+
     // Surface silent SSL failure — if the user asked for HTTPS but the
     // daemon's mkcert step didn't produce a cert (binary missing, CA
     // not installed, permission denied), SiteOrchestrator just logs a

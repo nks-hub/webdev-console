@@ -6,6 +6,11 @@ import type { SiteInfo } from '../api/types'
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<SiteInfo[]>([])
   const loading = ref(false)
+  // Side-channel for the last create() — surfaces daemon's soft warnings
+  // (bind IP not on any active NIC) and hints (framework auto-detect)
+  // to the caller without changing the create() return type.
+  const lastCreateWarnings = ref<string[]>([])
+  const lastCreateHints = ref<string[]>([])
 
   async function load() {
     loading.value = true
@@ -13,7 +18,16 @@ export const useSitesStore = defineStore('sites', () => {
   }
 
   async function create(data: Partial<SiteInfo>) {
-    const site = await createSite(data)
+    // The daemon may return either the raw SiteConfig (happy path) or a
+    // wrapper `{ site, warnings, hints }` when soft validations fire
+    // (bind IP not on any active NIC, framework detection hints, etc.).
+    // Normalize here so callers always get the SiteInfo and the wrapper
+    // payload as a side-channel they can surface to the user.
+    const raw = await createSite(data) as unknown as SiteInfo
+      | { site: SiteInfo; warnings?: string[]; hints?: string[] }
+    const site = (raw as { site?: SiteInfo }).site ?? (raw as SiteInfo)
+    lastCreateWarnings.value = (raw as { warnings?: string[] }).warnings ?? []
+    lastCreateHints.value = (raw as { hints?: string[] }).hints ?? []
     // Optimistic push so the table updates instantly…
     sites.value.push(site)
     // …and an immediate refetch so any daemon-side enrichment (framework
@@ -44,5 +58,8 @@ export const useSitesStore = defineStore('sites', () => {
   // bigger churn than is warranted for this refactor.
   const authHeaders = daemonAuthHeaders
 
-  return { sites, loading, load, create, update, remove, authHeaders }
+  return {
+    sites, loading, load, create, update, remove, authHeaders,
+    lastCreateWarnings, lastCreateHints,
+  }
 })
