@@ -9,16 +9,12 @@
 
     <div class="page-body">
       <div v-if="uiModeStore.isSimple" class="simple-settings-grid">
-        <section class="simple-settings-panel simple-settings-panel-main">
-          <header class="simple-settings-panel-header">
-            <span class="simple-settings-panel-icon">
-              <el-icon><Setting /></el-icon>
-            </span>
-            <div>
-              <h2>{{ $t('settings.tabs.general') }}</h2>
-              <p>{{ $t('settings.general.tabDesc') }}</p>
-            </div>
-          </header>
+        <SettingsPanel
+          panel-class="simple-settings-panel-main"
+          :title="$t('settings.tabs.general')"
+          :subtitle="$t('settings.general.tabDesc')"
+          :icon="Setting"
+        >
           <EasyGeneralSettings
             :t="t"
             :locale="locale"
@@ -42,18 +38,13 @@
             @flush-dns="flushDns"
             @discover-mamp="discoverMamp"
           />
-        </section>
+        </SettingsPanel>
 
-        <section class="simple-settings-panel">
-          <header class="simple-settings-panel-header">
-            <span class="simple-settings-panel-icon">
-              <el-icon><Download /></el-icon>
-            </span>
-            <div>
-              <h2>{{ $t('settings.tabs.update') }}</h2>
-              <p>{{ $t('settings.update.notChecked') }}</p>
-            </div>
-          </header>
+        <SettingsPanel
+          :title="$t('settings.tabs.update')"
+          :subtitle="$t('settings.update.notChecked')"
+          :icon="Download"
+        >
           <EasyUpdateSettings
             :t="t"
             :current-version="currentVersion"
@@ -63,22 +54,17 @@
             @check="runUpdateCheck"
             @download="downloadAndInstall"
           />
-        </section>
+        </SettingsPanel>
 
         <!-- Simple Network panel — read-only port snapshot + DNS flush
              shortcut. The full per-plugin port editor stays in Advanced;
              beginners just need to see "what listens where" without
              leaving Simple. -->
-        <section class="simple-settings-panel">
-          <header class="simple-settings-panel-header">
-            <span class="simple-settings-panel-icon">
-              <el-icon><Connection /></el-icon>
-            </span>
-            <div>
-              <h2>{{ $t('settings.simple.network.title') }}</h2>
-              <p>{{ $t('settings.simple.network.subtitle') }}</p>
-            </div>
-          </header>
+        <SettingsPanel
+          :title="$t('settings.simple.network.title')"
+          :subtitle="$t('settings.simple.network.subtitle')"
+          :icon="Connection"
+        >
           <div class="simple-runtime-grid">
             <div class="about-sys-row">
               <span class="sys-label">{{ $t('settings.simple.apacheHttp') }}</span>
@@ -93,27 +79,23 @@
               <span class="sys-value mono">:{{ mysqlPort }}</span>
             </div>
           </div>
-          <div class="simple-settings-actions">
+          <template #actions>
             <el-button size="small" @click="uiModeStore.setUiMode('advanced')">
               {{ $t('settings.simple.network.editInAdvanced') }} →
             </el-button>
-          </div>
-        </section>
+          </template>
+        </SettingsPanel>
 
         <!-- Plan §4 (Easy Settings IA): Services — addresses user
              feedback "kde stav sluzeb". Lists running/stopped state per
              service with link to the per-service plugin page for full
              control. Full start/stop UX stays on Dashboard. -->
-        <section v-if="daemonStore.services.length > 0" class="simple-settings-panel">
-          <header class="simple-settings-panel-header">
-            <span class="simple-settings-panel-icon">
-              <el-icon><Operation /></el-icon>
-            </span>
-            <div>
-              <h2>{{ $t('settings.simple.services.title') }}</h2>
-              <p>{{ $t('settings.simple.services.subtitle') }}</p>
-            </div>
-          </header>
+        <SettingsPanel
+          v-if="daemonStore.services.length > 0"
+          :title="$t('settings.simple.services.title')"
+          :subtitle="$t('settings.simple.services.subtitle')"
+          :icon="Operation"
+        >
           <div class="simple-runtime-grid">
             <div
               v-for="svc in daemonStore.services"
@@ -131,24 +113,21 @@
               </span>
             </div>
           </div>
-          <div class="simple-settings-actions">
+          <template #actions>
             <el-button size="small" @click="$router.push('/dashboard')">
               {{ $t('settings.simple.services.manageOnDashboard') }} →
             </el-button>
-          </div>
-        </section>
+          </template>
+        </SettingsPanel>
 
         <!-- Simple Backup panel — one-click "create a backup now". The
              retention + scheduler controls live in Advanced; Simple just
              surfaces the safety net. -->
-        <section class="simple-settings-panel">
-          <header class="simple-settings-panel-header">
-            <div>
-              <h2>{{ $t('settings.simple.backup.title') }}</h2>
-              <p>{{ $t('settings.simple.backup.subtitle') }}</p>
-            </div>
-          </header>
-          <div class="simple-settings-actions">
+        <SettingsPanel
+          :title="$t('settings.simple.backup.title')"
+          :subtitle="$t('settings.simple.backup.subtitle')"
+        >
+          <template #actions>
             <el-button
               type="primary"
               size="small"
@@ -160,23 +139,18 @@
             <el-button size="small" @click="$router.push('/backups')">
               {{ $t('settings.simple.backup.openManager') }} →
             </el-button>
-          </div>
-        </section>
+          </template>
+        </SettingsPanel>
 
         <!-- Plan §4 (Easy Settings IA): Account & Sync — was previously
              advanced-only, blocking simple-mode users from signing in.
              Wraps the same SSO/password/sync cards Advanced uses, just
              scoped to the simple-settings-grid. -->
-        <section class="simple-settings-panel">
-          <header class="simple-settings-panel-header">
-            <span class="simple-settings-panel-icon">
-              <el-icon><User /></el-icon>
-            </span>
-            <div>
-              <h2>{{ $t('settings.tabs.account') }}</h2>
-              <p>{{ $t('settings.account.simpleSubtitle') }}</p>
-            </div>
-          </header>
+        <SettingsPanel
+          :title="$t('settings.tabs.account')"
+          :subtitle="$t('settings.account.simpleSubtitle')"
+          :icon="User"
+        >
           <AccountSsoCard
             :t="$t"
             :is-authenticated="authStore.isAuthenticated"
@@ -208,18 +182,15 @@
             @pull="pullFromCloud"
             @logout="doLogout"
           />
-        </section>
+        </SettingsPanel>
 
-        <section v-if="systemInfo" class="simple-settings-panel simple-runtime-panel">
-          <header class="simple-settings-panel-header">
-            <span class="simple-settings-panel-icon">
-              <el-icon><InfoFilled /></el-icon>
-            </span>
-            <div>
-              <h2>{{ $t('settings.tabs.about') }}</h2>
-              <p>NKS WDC v{{ appVersion }}</p>
-            </div>
-          </header>
+        <SettingsPanel
+          v-if="systemInfo"
+          panel-class="simple-runtime-panel"
+          :title="$t('settings.tabs.about')"
+          :subtitle="`NKS WDC v${appVersion}`"
+          :icon="InfoFilled"
+        >
           <div class="simple-runtime-grid">
             <div class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.services') }}</span>
@@ -238,7 +209,7 @@
               <span class="sys-value">{{ formatUptime(systemInfo.daemon.uptime) }}</span>
             </div>
           </div>
-        </section>
+        </SettingsPanel>
 
         <div class="settings-footer simple-settings-footer">
           <el-button type="primary" size="small" :loading="saving" @click="save">
@@ -1197,6 +1168,7 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
+import SettingsPanel from '../shared/SettingsPanel.vue'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
