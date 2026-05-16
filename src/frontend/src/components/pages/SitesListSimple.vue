@@ -20,122 +20,23 @@
     </el-empty>
 
     <div v-else class="card-grid">
-      <el-card
+      <SimpleSiteCard
         v-for="site in sitesStore.sites"
         :key="site.domain"
-        class="site-card"
-        shadow="hover"
-      >
-        <div class="card-body" @click="navigateToSite(site.domain)">
-          <div class="card-title-row">
-            <div class="card-title">{{ site.domain }}</div>
-            <div class="card-status">
-              <span class="status-dot" :class="apacheRunning ? 'dot-green' : 'dot-red'" />
-              <span class="status-text">{{
-                apacheRunning ? $t('sites.card.running') : $t('sites.card.stopped')
-              }}</span>
-            </div>
-          </div>
-
-          <div class="card-path mono" :title="site.documentRoot">{{ site.documentRoot }}</div>
-
-          <div class="card-badges">
-            <el-tag
-              v-if="site.phpVersion && site.phpVersion !== 'none'"
-              size="small"
-              effect="dark"
-              class="badge-php"
-            >PHP {{ site.phpVersion }}</el-tag>
-            <el-tag
-              v-if="site.sslEnabled"
-              size="small"
-              type="success"
-              effect="dark"
-            >HTTPS</el-tag>
-            <el-tag
-              v-if="site.cloudflare?.enabled"
-              size="small"
-              type="warning"
-              effect="dark"
-            >{{ $t('sites.simple.cloudflareTunnel') }}</el-tag>
-          </div>
-
-          <div v-if="activityMap[site.domain]" class="card-activity">
-            <MiniSparkline :values="activityMap[site.domain].hourlyHits" :width="120" :height="24" />
-            <span class="card-hits mono">{{ activityMap[site.domain].totalHits }} hits</span>
-            <span v-if="activityMap[site.domain].errorCount > 0" class="card-errors mono">
-              · {{ activityMap[site.domain].errorCount }} err
-            </span>
-          </div>
-          <div class="card-lasthit">{{ relativeTime(activityMap[site.domain]?.lastHitIso ?? null) }}</div>
-        </div>
-
-        <div class="card-actions" @click.stop>
-          <el-button size="small" type="primary" :icon="ExternalLinkIcon" @click="openSite(site)">{{ $t('sites.card.open') }}</el-button>
-
-          <el-button
-            v-if="apacheRunning"
-            size="small"
-            circle
-            :icon="StopIcon"
-            :loading="toggling"
-            :title="$t('sites.card.stopApacheTooltip')"
-            @click="stopApache"
-          />
-          <el-button
-            v-else
-            size="small"
-            circle
-            type="success"
-            :icon="PlayIcon"
-            :loading="toggling"
-            :title="$t('sites.card.start')"
-            @click="startApache"
-          />
-
-          <!-- Task 01: enable/disable toggle. Rests next to the three-dots
-               menu so the user gets one-click on/off without the menu. -->
-          <el-tooltip
-            :content="site.enabled === false ? 'Site disabled — vhost removed, config preserved' : 'Site enabled'"
-            placement="top"
-          >
-            <el-switch
-              :model-value="site.enabled !== false"
-              :loading="togglingEnabled === site.domain"
-              size="small"
-              @change="toggleSiteEnabled(site, $event)"
-            />
-          </el-tooltip>
-
-          <!-- Task 01: teleported=true + preventOverflow popper options so
-               the dropdown never clips at viewport edges (previously the
-               menu opened off-screen on narrow viewports / mobile). -->
-          <el-dropdown
-            trigger="click"
-            :teleported="true"
-            :popper-options="{ modifiers: [{ name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } }] }"
-            @command="(cmd: string) => handleCommand(cmd, site)"
-          >
-            <el-button size="small" circle :aria-label="$t('sites.card.moreActions', { domain: site.domain })"><el-icon><MoreFilled /></el-icon></el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="reveal">
-                  <el-icon><FolderOpened /></el-icon> {{ $t('sites.card.revealFolder') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="duplicate">
-                  <el-icon><CopyDocument /></el-icon> {{ $t('sites.card.duplicate') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="restart" :disabled="restarting">
-                  <el-icon v-if="restarting" class="is-loading"><RefreshRight /></el-icon>
-                  <el-icon v-else><RefreshRight /></el-icon>
-                  {{ $t('sites.card.restart') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="delete" divided class="danger-item">{{ $t('sites.card.delete') }}</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-card>
+        :site="site"
+        :apache-running="apacheRunning"
+        :toggling="toggling"
+        :toggling-enabled="togglingEnabled"
+        :restarting="restarting"
+        :activity="activityMap[site.domain] ?? null"
+        :relative-label="relativeTime(activityMap[site.domain]?.lastHitIso ?? null)"
+        @navigate="(d) => navigateToSite(d)"
+        @open="openSite"
+        @start-apache="startApache"
+        @stop-apache="stopApache"
+        @toggle-enabled="toggleSiteEnabled"
+        @command="(cmd, s) => handleCommand(cmd, s)"
+      />
     </div>
   </div>
 
@@ -165,21 +66,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-plus/icons-vue'
+import SimpleSiteCard from './SimpleSiteCard.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { startService, stopService, duplicateSite, daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import type { SiteInfo } from '../../api/types'
-import MiniSparkline from '../common/MiniSparkline.vue'
 
-const ExternalLinkIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' }), h('polyline', { points: '15 3 21 3 21 9' }), h('line', { x1: '10', y1: '14', x2: '21', y2: '3' })]) }
-const PlayIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'currentColor' }, [h('polygon', { points: '5 3 19 12 5 21 5 3' })]) }
-const StopIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'currentColor' }, [h('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' })]) }
+// Per-card icon set moved into SimpleSiteCard.vue.
 
 const { t: $t } = useI18n()
 
@@ -489,150 +387,10 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   gap: 14px;
 }
 
-.site-card {
-  cursor: default;
-  border-radius: var(--wdc-radius-lg) !important;
-  border-color: var(--wdc-border) !important;
-  background: var(--wdc-surface) !important;
-  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s, background 0.15s;
-  box-shadow: var(--wdc-shadow-sm);
-}
-
-.site-card:hover {
-  border-color: var(--wdc-accent-glow) !important;
-  background: var(--wdc-hover) !important;
-  box-shadow: var(--wdc-shadow-card), 0 0 0 1px var(--wdc-accent-glow);
-  transform: translateY(-1px);
-}
-
-:deep(.el-card__body) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
-  padding: 16px;
-}
-
-.card-body {
-  cursor: pointer;
-  min-width: 0;
-  padding-bottom: 0;
-}
-
-.card-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.card-title {
-  min-width: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  overflow-wrap: anywhere;
-}
-
-.card-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot-green {
-  background: #22c55e;
-  animation: pulse-green 2s ease-in-out infinite;
-}
-.dot-red { background: #ef4444; }
-
-@keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
-  50%       { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
-}
-
-.status-text {
-  font-size: 0.76rem;
-  color: var(--wdc-text-2);
-}
-
-.card-path {
-  margin-top: 5px;
-  color: var(--wdc-text-2);
-  font-size: 0.78rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.badge-php {
-  background: #4f5b93 !important;
-  border-color: #4f5b93 !important;
-  color: #fff !important;
-  font-weight: 700 !important;
-  font-size: 0.68rem !important;
-}
-
-.card-activity {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  min-height: 32px;
-  padding: 8px 0 4px;
-}
-
-.card-hits {
-  color: var(--el-text-color-primary);
-  font-weight: 500;
-}
-
-.card-errors {
-  color: var(--el-color-danger);
-}
-
-.card-lasthit {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-  margin-bottom: 8px;
-}
+/* Per-card styles moved to SimpleSiteCard.vue. */
 
 .mono {
   font-family: var(--el-font-family-mono, monospace);
-}
-
-.card-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  padding-top: 12px;
-  border-top: 1px solid var(--wdc-border);
-  margin-top: 0;
-}
-
-.card-actions :deep(.el-button) {
-  min-height: 34px;
-}
-
-.card-actions :deep(.el-switch) {
-  min-width: 42px;
 }
 
 .empty-title {
