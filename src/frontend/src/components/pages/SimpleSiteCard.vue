@@ -16,7 +16,7 @@
       <div class="card-title-row">
         <div class="card-title">{{ site.domain }}</div>
         <div class="card-status">
-          <span class="status-dot" :class="apacheRunning ? 'dot-green' : 'dot-red'" />
+          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" />
           <span class="status-text">
             {{ apacheRunning ? t('sites.card.running') : t('sites.card.stopped') }}
           </span>
@@ -143,6 +143,7 @@ import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-plus/icons-vue'
 import MiniSparkline from '../common/MiniSparkline.vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import type { SiteInfo } from '../../api/types'
 
 defineOptions({ name: 'SimpleSiteCard' })
@@ -269,16 +270,7 @@ void computed(() => props.site.domain)
   font-size: 0.78rem;
   color: var(--wdc-text-2);
 }
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.dot-green {
-  background: var(--el-color-success);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 25%, transparent);
-}
-.dot-red { background: var(--el-color-danger); }
+/* Status dot delegated to HealthStatusDot shared primitive (plan §6). */
 .card-path {
   color: var(--wdc-text-3);
   font-size: 0.8125rem;
