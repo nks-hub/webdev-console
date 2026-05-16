@@ -2868,6 +2868,7 @@ async function save() {
   padding: 20px 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  grid-auto-flow: dense;
   gap: 20px 24px;
   align-items: start;
 }
