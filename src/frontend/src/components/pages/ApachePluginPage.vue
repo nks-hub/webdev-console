@@ -303,7 +303,7 @@ onMounted(async () => {
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
-.page-autostart-row { padding: 10px 24px 0; max-width: 720px; }
+.page-autostart-row { padding: 10px 24px 0; width: 100%; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
 .page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }

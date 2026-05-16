@@ -447,7 +447,7 @@ onMounted(() => {
 .pm-page {
   min-height: 100%;
   background: var(--wdc-bg);
-  max-width: 1400px;
+  max-width: none;
   margin: 0 auto;
 }
 

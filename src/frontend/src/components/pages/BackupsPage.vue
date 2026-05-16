@@ -478,7 +478,7 @@ function formatDate(iso: string): string {
 </script>
 
 <style scoped>
-.backups-page { max-width: 1100px; margin: 0 auto; padding: 0; }
+.backups-page { width: 100%; margin: 0 auto; padding: 0; }
 
 .page-header {
   margin-bottom: 24px;

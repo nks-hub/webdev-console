@@ -179,7 +179,7 @@
                 <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ $t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
               </header>
               <div class="settings-card-body">
-                <el-form label-position="left" label-width="200px" size="small" style="max-width: 480px">
+                <el-form label-position="left" label-width="200px" size="small">
                   <el-form-item
                     v-for="p in pluginPorts"
                     :key="p.pluginId + ':' + p.key"
@@ -219,7 +219,7 @@
               <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
               {{ $t('settings.advancedPorts.portAlertDesc') }}
             </el-alert>
-            <el-form label-position="left" label-width="200px" size="small" style="max-width: 440px">
+            <el-form label-position="left" label-width="200px" size="small">
               <el-form-item :label="$t('settings.ports.httpPort')">
                 <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
@@ -278,7 +278,7 @@
             <!-- F79: Browse buttons open the native file/folder dialog via
                  electronAPI.showOpenDialog. Falls back to manual typing when
                  running outside Electron (dev browser, etc.). -->
-            <el-form label-position="top" size="small" style="max-width: 560px">
+            <el-form label-position="top" size="small">
               <el-form-item :label="$t('settings.paths.apache')">
                 <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
                   <template #append>
@@ -413,7 +413,7 @@
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.advanced')" name="advanced">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.advanced.tabDesc') }}</p>
-            <el-form label-position="top" size="small" style="max-width: 560px">
+            <el-form label-position="top" size="small">
               <el-form-item :label="$t('settings.advanced.catalogUrl')">
                 <el-input
                   v-model="catalogUrl"
@@ -559,7 +559,7 @@
                 {{ $t('settings.mcp.description') }}
                 <strong>{{ $t('settings.mcp.warning') }}</strong>
               </p>
-              <el-form label-position="left" label-width="320px" size="small" style="max-width: 580px">
+              <el-form label-position="left" label-width="320px" size="small">
                 <el-form-item :label="$t('settings.mcp.enableLabel')">
                   <el-switch v-model="mcpEnabled" />
                 </el-form-item>
@@ -693,7 +693,7 @@
                   ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
                 </span>
               </div>
-              <el-form label-position="left" label-width="240px" size="small" style="max-width: 520px">
+              <el-form label-position="left" label-width="240px" size="small">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
                 </el-form-item>
@@ -799,7 +799,7 @@
             <div class="settings-section" style="margin-top: 16px">
               <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
               <p class="hint">{{ $t('settings.osNotify.description') }}</p>
-              <el-form label-position="left" label-width="240px" size="small" style="max-width: 440px">
+              <el-form label-position="left" label-width="240px" size="small">
                 <el-form-item :label="$t('settings.osNotify.deployLabel')">
                   <el-switch v-model="osNotifyDeploy" />
                 </el-form-item>
@@ -2866,6 +2866,17 @@ async function save() {
 
 .tab-content {
   padding: 20px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  gap: 20px 24px;
+  align-items: start;
+}
+.tab-content > .tab-desc,
+.tab-content > .settings-footer {
+  grid-column: 1 / -1;
+}
+.tab-content > .danger-zone {
+  grid-column: 1 / -1;
 }
 
 .tab-desc {
@@ -2892,7 +2903,7 @@ async function save() {
   background: color-mix(in srgb, var(--el-color-danger) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--el-color-danger) 30%, transparent);
   border-radius: 8px;
-  max-width: 720px;
+  max-width: none;
 }
 .danger-title {
   margin: 0 0 4px 0;

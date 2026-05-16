@@ -256,7 +256,7 @@ defineExpose({ reload: loadAggregates })
   flex-direction: column;
   gap: 16px;
   padding: 20px;
-  max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
 }
 .simple-hero {
@@ -279,7 +279,7 @@ defineExpose({ reload: loadAggregates })
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
-  max-width: 960px;
+  max-width: none;
   width: 100%;
   margin: 0 auto;
 }
@@ -295,7 +295,7 @@ defineExpose({ reload: loadAggregates })
   gap: 16px;
   padding: 14px 18px;
   margin: 4px auto 0;
-  max-width: 960px;
+  max-width: none;
   width: 100%;
   background: color-mix(in srgb, var(--el-color-warning) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--el-color-warning) 40%, transparent);
@@ -332,7 +332,7 @@ defineExpose({ reload: loadAggregates })
 }
 
 .simple-recent {
-  max-width: 960px;
+  max-width: none;
   width: 100%;
   margin: 18px auto 0;
   padding: 16px 18px;
@@ -342,7 +342,7 @@ defineExpose({ reload: loadAggregates })
 }
 
 .simple-empty-card {
-  max-width: 960px;
+  max-width: none;
   width: 100%;
   margin: 18px auto 0;
   padding: 24px 22px;
