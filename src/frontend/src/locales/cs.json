@@ -520,6 +520,9 @@
     "startAll": "Spustit vše",
     "stopAll": "Zastavit vše",
     "recentActivity": "Nedávná aktivita",
+    "connectingTitle": "Připojování k démonu…",
+    "connectingDesc": "Čekání na připojení NKS WDC démona…",
+    "noServices": "Žádné registrované služby. Zkontroluj konfiguraci démona.",
     "logs": "Logy",
     "config": "Konfigurace",
     "newSite": "+ Nový web",
@@ -631,6 +634,7 @@
     "create": "Nový web",
     "openHosts": "Otevřít hosts",
     "openHostsTitle": "Otevřít systémový hosts soubor",
+    "httpsEnabled": "HTTPS zapnuto",
     "additionalDomains": "{n} dalších domén",
     "reapplyAll": "Znovu aplikovat",
     "reapplyAllHint": "Znovu vygenerovat všechny vhosts",
@@ -2104,6 +2108,13 @@
       "reload": "Znovu načíst"
     }
   },
+  "settingsDb": {
+    "tabDesc": "MySQL databáze spravované NKS WDC.",
+    "noUserDatabases": "Žádné uživatelské databáze",
+    "drop": "Smazat",
+    "create": "Vytvořit",
+    "newPlaceholder": "nova_databaze"
+  },
   "settingsToast": {
     "ssoFailed": "SSO selhalo: {err}",
     "filePickerDesktopOnly": "Nativní výběr souboru je dostupný jen v desktopové aplikaci",
@@ -2193,7 +2204,18 @@
     "devices": {
       "pushHere": "Pushnout sem",
       "unlink": "Odpojit",
-      "noDevices": "Žádná zařízení zatím nejsou registrována. Nejdřív pushni nastavení."
+      "noDevices": "Žádná zařízení zatím nejsou registrována. Nejdřív pushni nastavení.",
+      "cardTitle": "Moje zařízení",
+      "registered": "{n} registrováno",
+      "doubleClickRename": "Dvojklik pro přejmenování",
+      "thisTag": "toto",
+      "colName": "Název",
+      "colOs": "OS",
+      "colSites": "Weby",
+      "colStatus": "Stav",
+      "colLastSync": "Poslední synchr.",
+      "online": "Online",
+      "offline": "Offline"
     },
     "advancedBackups": {
       "title": "Zálohy",
@@ -2251,6 +2273,13 @@
     "sync": {
       "topDesc": "Synchronizuj konfiguraci NKS WDC s cloudovou službou katalogu, nebo exportuj/importuj nastavení jako soubor pro offline přenos.",
       "exportImportTitle": "Export / Import",
+      "snapshotsTitle": "Snapshoty",
+      "snapshotsDesc": "Vrať se k předchozí konfiguraci. Cloud uchovává posledních 10 snapshotů na zařízení — starší jsou automaticky mazány.",
+      "snapshotsEmpty": "Žádné snapshoty — nejdřív pushni do cloudu",
+      "colWhen": "Kdy",
+      "colDevice": "Zařízení",
+      "colSize": "Velikost",
+      "restore": "Obnovit",
       "device": "Zařízení",
       "deviceId": "ID zařízení",
       "deviceIdHint": "Automaticky vygenerovaný jedinečný identifikátor tohoto počítače. Slouží jako klíč pro cloud sync.",

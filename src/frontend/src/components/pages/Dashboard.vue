@@ -51,8 +51,8 @@
       <el-skeleton :rows="5" animated style="padding: 0 16px;" />
       <el-alert
         type="warning"
-        title="Connecting to daemon..."
-        description="Waiting for NKS WDC daemon connection..."
+        :title="$t('dashboard.connectingTitle')"
+        :description="$t('dashboard.connectingDesc')"
         :closable="false"
         show-icon
         style="margin: 16px;"
@@ -209,7 +209,7 @@
           <!-- Empty state -->
           <el-empty
             v-if="services.length === 0"
-            description="No services registered. Check daemon configuration."
+            :description="$t('dashboard.noServices')"
             :image-size="64"
             class="empty-state"
           />

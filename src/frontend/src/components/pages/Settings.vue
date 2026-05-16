@@ -405,7 +405,7 @@
                 <el-button size="small" type="danger" text @click="dropDatabase(db)">Drop</el-button>
               </div>
             </div>
-            <el-empty v-else description="No user databases" :image-size="48" />
+            <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
             <div class="db-create">
               <el-input v-model="newDbName" placeholder="new_database" size="small" style="width: 200px" />
               <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">Create</el-button>

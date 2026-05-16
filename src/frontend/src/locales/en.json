@@ -520,6 +520,9 @@
     "startAll": "Start All",
     "stopAll": "Stop All",
     "recentActivity": "Recent activity",
+    "connectingTitle": "Connecting to daemon…",
+    "connectingDesc": "Waiting for NKS WDC daemon connection…",
+    "noServices": "No services registered. Check daemon configuration.",
     "logs": "Logs",
     "config": "Config",
     "newSite": "+ New Site",
@@ -631,6 +634,7 @@
     "create": "New Site",
     "openHosts": "Open hosts",
     "openHostsTitle": "Open system hosts file",
+    "httpsEnabled": "HTTPS enabled",
     "additionalDomains": "{n} additional domains",
     "reapplyAll": "Reapply All",
     "reapplyAllHint": "Regenerate all vhosts",
@@ -2104,6 +2108,13 @@
       "reload": "Reload"
     }
   },
+  "settingsDb": {
+    "tabDesc": "MySQL databases managed by NKS WDC.",
+    "noUserDatabases": "No user databases",
+    "drop": "Drop",
+    "create": "Create",
+    "newPlaceholder": "new_database"
+  },
   "settingsToast": {
     "ssoFailed": "SSO failed: {err}",
     "filePickerDesktopOnly": "Native file dialog is only available in the packaged app",
@@ -2193,7 +2204,18 @@
     "devices": {
       "pushHere": "Push here",
       "unlink": "Unlink",
-      "noDevices": "No devices registered yet. Push settings first."
+      "noDevices": "No devices registered yet. Push settings first.",
+      "cardTitle": "My Devices",
+      "registered": "{n} registered",
+      "doubleClickRename": "Double-click to rename",
+      "thisTag": "this",
+      "colName": "Name",
+      "colOs": "OS",
+      "colSites": "Sites",
+      "colStatus": "Status",
+      "colLastSync": "Last sync",
+      "online": "Online",
+      "offline": "Offline"
     },
     "advancedBackups": {
       "title": "Backups",
@@ -2251,6 +2273,13 @@
     "sync": {
       "topDesc": "Synchronize your NKS WDC configuration with the cloud catalog service, or export/import settings as a file for offline transfer.",
       "exportImportTitle": "Export / Import",
+      "snapshotsTitle": "Snapshots",
+      "snapshotsDesc": "Revert to a previous configuration. Cloud keeps the last 10 snapshots per device — older ones are pruned automatically.",
+      "snapshotsEmpty": "No snapshots yet — push to cloud first",
+      "colWhen": "When",
+      "colDevice": "Device",
+      "colSize": "Size",
+      "restore": "Restore",
       "device": "Device",
       "deviceId": "Device ID",
       "deviceIdHint": "Auto-generated unique identifier for this machine. Used as the key for cloud sync.",

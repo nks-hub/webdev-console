@@ -1,10 +1,10 @@
 <template>
-  <SettingsCard title="My Devices">
+  <SettingsCard :title="$t('settings.devices.cardTitle')">
     <template #meta>
-      <span class="device-count">{{ devices.length }} registered</span>
+      <span class="device-count">{{ $t('settings.devices.registered', { n: devices.length }) }}</span>
     </template>
     <el-table v-if="devices.length > 0" :data="devices" size="small" stripe>
-      <el-table-column label="Name" min-width="180">
+      <el-table-column :label="$t('settings.devices.colName')" min-width="180">
         <template #default="{ row }">
           <div class="device-name-cell">
             <el-input
@@ -21,31 +21,31 @@
               v-else
               class="device-name-text mono"
               :style="row.is_current ? 'font-weight: 700' : ''"
-              title="Double-click to rename"
+              :title="$t('settings.devices.doubleClickRename')"
               @dblclick="emit('startEditName', row)"
             >
               {{ deviceLabel(row) }}
             </span>
-            <el-tag v-if="row.is_current" size="small" type="success" effect="dark" class="current-tag">this</el-tag>
+            <el-tag v-if="row.is_current" size="small" type="success" effect="dark" class="current-tag">{{ $t('settings.devices.thisTag') }}</el-tag>
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="OS" width="120">
+      <el-table-column :label="$t('settings.devices.colOs')" width="120">
         <template #default="{ row }">
           <span class="mono">{{ (row.os ?? '') + '/' + (row.arch ?? '') }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="Sites" width="70" align="center">
+      <el-table-column :label="$t('settings.devices.colSites')" width="70" align="center">
         <template #default="{ row }">{{ row.site_count ?? '—' }}</template>
       </el-table-column>
-      <el-table-column label="Status" width="90">
+      <el-table-column :label="$t('settings.devices.colStatus')" width="90">
         <template #default="{ row }">
           <el-tag size="small" :type="row.online ? 'success' : 'info'" effect="dark">
-            {{ row.online ? 'Online' : 'Offline' }}
+            {{ row.online ? $t('settings.devices.online') : $t('settings.devices.offline') }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="Last sync" width="150">
+      <el-table-column :label="$t('settings.devices.colLastSync')" width="150">
         <template #default="{ row }">
           <span class="last-sync">
             {{ row.last_seen_at ? new Date(row.last_seen_at).toLocaleString() : '—' }}

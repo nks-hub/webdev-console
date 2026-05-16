@@ -1,19 +1,19 @@
 <template>
   <div class="tab-content">
-    <p class="tab-desc">MySQL databases managed by NKS WDC.</p>
+    <p class="tab-desc">{{ $t('settingsDb.tabDesc') }}</p>
     <div v-if="databases.length > 0" class="db-list">
       <div v-for="db in databases" :key="db" class="db-row">
         <span class="db-name">{{ db }}</span>
         <el-button size="small" type="danger" text @click="$emit('drop', db)">
-          Drop
+          {{ $t('settingsDb.drop') }}
         </el-button>
       </div>
     </div>
-    <el-empty v-else description="No user databases" :image-size="48" />
+    <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
     <div class="db-create">
       <el-input
         :model-value="newDbName"
-        placeholder="new_database"
+        :placeholder="$t('settingsDb.newPlaceholder')"
         size="small"
         style="width: 200px"
         @update:model-value="$emit('update:newDbName', String($event))"

@@ -141,7 +141,7 @@
                   type="success"
                   effect="plain"
                   class="cell-tag"
-                  title="HTTPS enabled"
+                  :title="$t('sites.httpsEnabled')"
                 >SSL</el-tag>
               </div>
               <span

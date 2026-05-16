@@ -1,26 +1,25 @@
 <template>
-  <SettingsCard title="Snapshots">
+  <SettingsCard :title="t('settings.sync.snapshotsTitle')">
     <template #meta>
       <el-button size="small" :loading="loading" @click="emit('refresh')">
         {{ t('common.refresh') }}
       </el-button>
     </template>
     <p class="tab-desc">
-      Revert to a previous configuration. Cloud keeps the last
-      10 snapshots per device — older ones are pruned automatically.
+      {{ t('settings.sync.snapshotsDesc') }}
     </p>
     <el-table v-if="snapshots.length > 0" :data="snapshots" size="small" stripe>
-      <el-table-column label="When" min-width="180">
+      <el-table-column :label="t('settings.sync.colWhen')" min-width="180">
         <template #default="{ row }">
           {{ formatDate(row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="Device" min-width="140">
+      <el-table-column :label="t('settings.sync.colDevice')" min-width="140">
         <template #default="{ row }">
           <span class="mono">{{ row.device_id.slice(0, 12) }}…</span>
         </template>
       </el-table-column>
-      <el-table-column label="Size" width="100">
+      <el-table-column :label="t('settings.sync.colSize')" width="100">
         <template #default="{ row }">
           <span class="mono">{{ Math.round(row.size_bytes / 1024) }} KB</span>
         </template>
@@ -29,7 +28,7 @@
         <template #default="{ row }">
           <div class="row-actions">
             <el-button size="small" plain :loading="snapshotAction === row.id" @click="emit('restore', row)">
-              Restore
+              {{ t('settings.sync.restore') }}
             </el-button>
             <el-button size="small" type="danger" plain :loading="snapshotAction === row.id" @click="emit('delete', row)">
               {{ t('common.delete') }}
@@ -40,7 +39,7 @@
     </el-table>
     <el-empty
       v-else
-      :description="loading ? t('common.loading') : 'No snapshots yet — push to cloud first'"
+      :description="loading ? t('common.loading') : t('settings.sync.snapshotsEmpty')"
       :image-size="48"
     />
   </SettingsCard>

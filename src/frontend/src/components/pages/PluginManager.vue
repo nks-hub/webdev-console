@@ -61,7 +61,7 @@
         <el-skeleton :rows="3" animated />
       </div>
       <div v-else-if="marketplace.plugins.length === 0" class="pm-empty">
-        <el-empty description="No plugins available in marketplace" :image-size="60" />
+        <el-empty :description="$t('plugins.noMarketplaceItems')" :image-size="60" />
       </div>
       <div v-else class="pm-grid">
         <div
