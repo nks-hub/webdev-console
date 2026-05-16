@@ -40,9 +40,17 @@ try {
   await scenario.run(ctx)
   console.log(`[pass] ${scenario.name} in ${Date.now() - start}ms`)
 } catch (err) {
-  exitCode = 1
-  console.error(`[fail] ${scenario.name}: ${err?.message ?? err}`)
-  if (err?.stack) console.error(err.stack)
+  // SkipError is raised by scenarios that detect a missing prerequisite
+  // (binary not installed, plugin disabled). Treat as skip, not failure —
+  // the harness exit code stays 0 so CI doesn't mark optional scenarios
+  // red on environments that intentionally omit Caddy / nginx / etc.
+  if (err?.name === 'SkipError' || /SkipError/.test(err?.constructor?.name ?? '')) {
+    console.log(`[skip] ${scenario.name}: ${err.message}`)
+  } else {
+    exitCode = 1
+    console.error(`[fail] ${scenario.name}: ${err?.message ?? err}`)
+    if (err?.stack) console.error(err.stack)
+  }
 } finally {
   for (const fn of cleanups.reverse()) {
     try { await fn() } catch (e) { console.warn(`[cleanup] ${e?.message ?? e}`) }
