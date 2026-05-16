@@ -132,9 +132,12 @@
 import { ref, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Lock } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchSites } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+
+const { t } = useI18n()
 
 interface CertInfo {
   domain: string

@@ -345,7 +345,7 @@ function submitAdd() {
   const ip = addForm.value.ip.trim()
   const hostname = addForm.value.hostname.trim()
   if (!ip || !hostname) {
-    ElMessage.warning('IP and hostname are required')
+    ElMessage.warning(t('hosts.ipHostnameRequired'))
     return
   }
   const newRow: Row = {
@@ -458,7 +458,7 @@ async function doBackup() {
   backing.value = true
   try {
     const { path } = await backupHosts()
-    ElMessage.success(`Backed up to ${path}`)
+    ElMessage.success(t('hosts.backedUpTo', { path }))
   } catch (e) {
     ElMessage.error(errorMessage(e))
   } finally {
@@ -475,7 +475,7 @@ async function onRestoreFile(evt: Event) {
   if (!file) return
   try {
     await ElMessageBox.confirm(
-      `Restore hosts file from "${file.name}"? This will overwrite the current file.`,
+      t('hosts.restoreConfirm', { file: file.name }),
       t('hosts.restore'),
       { type: 'warning' }
     )
@@ -485,7 +485,7 @@ async function onRestoreFile(evt: Event) {
   try {
     const content = await file.text()
     await restoreHosts({ content })
-    ElMessage.success('Hosts file restored')
+    ElMessage.success(t('hosts.restored'))
     await load()
   } catch (e) {
     const msg: string = errorMessage(e)
