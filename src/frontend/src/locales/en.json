@@ -535,6 +535,25 @@
       }
     }
   },
+  "sitesToast": {
+    "enabled": "Site {domain} enabled",
+    "disabled": "Site {domain} disabled",
+    "toggleFailed": "Toggle failed: {err}",
+    "folderPickerDesktopOnly": "Folder picker only available in the desktop app",
+    "domainRequired": "Domain and document root are required",
+    "bindRequired": "Select at least one IP binding, or choose * for all listener addresses.",
+    "createdWithDb": "Site {domain} + database {db} created",
+    "createdDbFailed": "Site {domain} created (database creation failed)",
+    "created": "Site {domain} created",
+    "createFailed": "Create failed: {err}",
+    "detected": "Detected: {framework}",
+    "noFramework": "No framework detected",
+    "detectFailed": "Detection failed: {err}",
+    "deleted": "Site deleted",
+    "deleteFailed": "Delete failed: {err}",
+    "deleteConfirm": "Delete site \"{domain}\"? This cannot be undone.",
+    "deleteConfirmTitle": "Warning"
+  },
   "sites": {
     "title": "Sites",
     "domain": "Domain",

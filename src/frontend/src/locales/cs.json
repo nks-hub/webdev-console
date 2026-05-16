@@ -535,6 +535,25 @@
       }
     }
   },
+  "sitesToast": {
+    "enabled": "Web {domain} povolen",
+    "disabled": "Web {domain} zakázán",
+    "toggleFailed": "Přepnutí selhalo: {err}",
+    "folderPickerDesktopOnly": "Výběr složky je dostupný jen v desktopové aplikaci",
+    "domainRequired": "Doména a document root jsou povinné",
+    "bindRequired": "Vyber alespoň jednu IP nebo zvol * pro všechny listener adresy.",
+    "createdWithDb": "Web {domain} + databáze {db} vytvořen",
+    "createdDbFailed": "Web {domain} vytvořen (vytvoření databáze selhalo)",
+    "created": "Web {domain} vytvořen",
+    "createFailed": "Vytvoření selhalo: {err}",
+    "detected": "Rozpoznáno: {framework}",
+    "noFramework": "Žádný framework nerozpoznán",
+    "detectFailed": "Rozpoznání selhalo: {err}",
+    "deleted": "Web smazán",
+    "deleteFailed": "Smazání selhalo: {err}",
+    "deleteConfirm": "Smazat web „{domain}\"? Akci nelze vrátit.",
+    "deleteConfirmTitle": "Upozornění"
+  },
   "sites": {
     "title": "Weby",
     "domain": "Doména",

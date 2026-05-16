@@ -454,6 +454,7 @@
 import { ref, reactive, computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
@@ -488,6 +489,7 @@ interface SiteTemplate {
 }
 const siteTemplates: SiteTemplate[] = (siteTemplatesConfig.templates || []) as SiteTemplate[]
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
@@ -507,10 +509,10 @@ async function toggleSiteEnabled(site: { domain: string; enabled?: boolean }, va
       body: JSON.stringify({ enabled }),
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(enabled ? `Site ${site.domain} enabled` : `Site ${site.domain} disabled`)
+    ElMessage.success(t(enabled ? 'sitesToast.enabled' : 'sitesToast.disabled', { domain: site.domain }))
     await sitesStore.load()
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${e instanceof Error ? e.message : e}`)
+    ElMessage.error(t('sitesToast.toggleFailed', { err: e instanceof Error ? e.message : String(e) }))
   } finally {
     togglingEnabled.value = null
   }
@@ -576,7 +578,7 @@ async function resolveDocRootPlaceholder() {
 async function pickDocumentRoot(): Promise<void> {
   const api = (window as unknown as { electronAPI?: { showOpenDialog: (o: unknown) => Promise<{ canceled: boolean; filePaths: string[] }> } }).electronAPI
   if (!api?.showOpenDialog) {
-    ElMessage.info('Folder picker only available in the desktop app')
+    ElMessage.info(t('sitesToast.folderPickerDesktopOnly'))
     return
   }
   const result = await api.showOpenDialog({
@@ -783,12 +785,12 @@ function selectSite(row: SiteInfo) {
 
 async function createSite() {
   if (!newSite.domain || !newSite.documentRoot) {
-    ElMessage.warning('Domain and document root are required')
+    ElMessage.warning(t('sitesToast.domainRequired'))
     return
   }
   newSite.bindAddresses = normalizeBindAddresses(newSite.bindAddresses)
   if (newSite.bindAddresses.length === 0) {
-    ElMessage.warning('Select at least one IP binding, or choose * for all listener addresses.')
+    ElMessage.warning(t('sitesToast.bindRequired'))
     return
   }
   creating.value = true
@@ -844,12 +846,12 @@ async function createSite() {
           body: JSON.stringify({ name: dbName }),
         })
         if (!dbRes.ok) throw new Error(`DB create HTTP ${dbRes.status}`)
-        ElMessage.success(`Site ${newSite.domain} + database ${dbName} created`)
+        ElMessage.success(t('sitesToast.createdWithDb', { domain: newSite.domain, db: dbName }))
       } catch {
-        ElMessage.success(`Site ${newSite.domain} created (database creation failed)`)
+        ElMessage.success(t('sitesToast.createdDbFailed', { domain: newSite.domain }))
       }
     } else {
-      ElMessage.success(`Site ${newSite.domain} created`)
+      ElMessage.success(t('sitesToast.created', { domain: newSite.domain }))
     }
 
     showCreate.value = false
@@ -859,7 +861,7 @@ async function createSite() {
     const defaultPhp = phpVersions.value.find(p => p.isActive)?.value ?? phpVersions.value[0]?.value ?? ''
     Object.assign(newSite, { domain: '', documentRoot: '', phpVersion: defaultPhp, aliases: '', bindAddress: '*', bindAddresses: ['*'], localhostLoopbackEnabled: false, sslEnabled: true, createDb: false, dbName: '', cloudflareTunnel: false, template: '' })
   } catch (e) {
-    ElMessage.error(`Create failed: ${errorMessage(e)}`)
+    ElMessage.error(t('sitesToast.createFailed', { err: errorMessage(e) }))
   } finally {
     creating.value = false
   }
@@ -877,19 +879,19 @@ async function detectFramework(domain: string) {
     }
     const data = await res.json() as { framework?: string }
     if (data.framework) {
-      ElMessage.success(`Detected: ${data.framework}`)
+      ElMessage.success(t('sitesToast.detected', { framework: data.framework }))
     } else {
-      ElMessage.info('No framework detected')
+      ElMessage.info(t('sitesToast.noFramework'))
     }
     await sitesStore.load()
   } catch (e) {
-    ElMessage.error(`Detection failed: ${errorMessage(e)}`)
+    ElMessage.error(t('sitesToast.detectFailed', { err: errorMessage(e) }))
   }
 }
 
 async function confirmDelete(domain: string) {
   try {
-    await ElMessageBox.confirm(`Delete site "${domain}"? This cannot be undone.`, 'Warning', {
+    await ElMessageBox.confirm(t('sitesToast.deleteConfirm', { domain }), t('sitesToast.deleteConfirmTitle'), {
       type: 'warning',
       confirmButtonText: 'Delete',
       confirmButtonClass: 'el-button--danger',
@@ -900,9 +902,9 @@ async function confirmDelete(domain: string) {
   }
   try {
     await sitesStore.remove(domain)
-    ElMessage.success('Site deleted')
+    ElMessage.success(t('sitesToast.deleted'))
   } catch (e) {
-    ElMessage.error(`Delete failed: ${errorMessage(e)}`)
+    ElMessage.error(t('sitesToast.deleteFailed', { err: errorMessage(e) }))
   }
 }
 
