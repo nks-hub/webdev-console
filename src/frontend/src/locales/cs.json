@@ -89,7 +89,62 @@
     "help": "Nápověda"
   },
   "backupsPage": {
-    "subtitle": "Správa záloh konfigurace a dat"
+    "subtitle": "Správa záloh konfigurace a dat",
+    "tabs": {
+      "overview": "Přehled",
+      "snapshots": "Snímky",
+      "schedule": "Plánování",
+      "content": "Obsah"
+    },
+    "overview": {
+      "totalSize": "Celková velikost",
+      "count": "Počet záloh",
+      "lastCreated": "Poslední záloha",
+      "next": "Příští záloha",
+      "none": "Žádná",
+      "off": "Vypnuto",
+      "soon": "Brzy",
+      "inHours": "za {h} h {m} min",
+      "inMinutes": "za {m} min",
+      "backupNow": "Zálohovat nyní",
+      "openFolder": "Otevřít složku záloh",
+      "refresh": "Obnovit",
+      "createdToast": "Záloha vytvořena: {files} souborů, {size}"
+    },
+    "snapshots": {
+      "count": "{n} záloh",
+      "loading": "Načítám…",
+      "empty": "Žádné zálohy. Spusťte první zálohu přes záložku Přehled.",
+      "download": "Stáhnout",
+      "restore": "Obnovit",
+      "delete": "Smazat"
+    },
+    "schedule": {
+      "cardTitle": "Interval automatické zálohy",
+      "intervalLabel": "Interval (hodiny, 0 = vypnuto)",
+      "retainLabel": "Počet uchovávaných záloh",
+      "hintOff": "Automatická záloha je vypnuta",
+      "hintEvery": "Záloha každých {h} h",
+      "save": "Uložit plánování"
+    },
+    "content": {
+      "cardTitle": "Co zahrnout do zálohy",
+      "tagDefault": "Výchozí",
+      "tagOptional": "Volitelné",
+      "save": "Uložit výběr obsahu",
+      "flags": {
+        "vhostsLabel": "Vhosts (konfigurace stránek)",
+        "vhostsDesc": "TOML soubory stránek z ~/.wdc/sites/",
+        "pluginConfigsLabel": "Konfigurace pluginů",
+        "pluginConfigsDesc": "Caddy config, plugin config.json soubory",
+        "sslLabel": "SSL certifikáty",
+        "sslDesc": "mkcert certifikáty z ~/.wdc/ssl/sites/",
+        "databasesLabel": "Databáze (mysqldump)",
+        "databasesDesc": "Dump všech MySQL databází — může být velký",
+        "docrootsLabel": "Document roots (soubory stránek)",
+        "docrootsDesc": "Fyzické soubory webu — může být velmi velký"
+      }
+    }
   },
   "mcpIntents": {
     "title": "Inventář MCP intentů",

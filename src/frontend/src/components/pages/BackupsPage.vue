@@ -14,23 +14,23 @@
       <el-tabs v-model="activeTab" class="backup-tabs">
 
         <!-- ═══ OVERVIEW ════════════════════════════════════════════════════ -->
-        <el-tab-pane label="Přehled" name="overview">
+        <el-tab-pane :label="$t('backupsPage.tabs.overview')" name="overview">
           <div class="tab-content">
             <div class="overview-grid">
               <div class="stat-card">
-                <div class="stat-label">Celková velikost</div>
+                <div class="stat-label">{{ $t('backupsPage.overview.totalSize') }}</div>
                 <div class="stat-value">{{ formatSize(stats.totalSize) }}</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Počet záloh</div>
+                <div class="stat-label">{{ $t('backupsPage.overview.count') }}</div>
                 <div class="stat-value">{{ stats.count }}</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Poslední záloha</div>
-                <div class="stat-value">{{ stats.lastCreatedUtc ? formatDate(stats.lastCreatedUtc) : 'Žádná' }}</div>
+                <div class="stat-label">{{ $t('backupsPage.overview.lastCreated') }}</div>
+                <div class="stat-value">{{ stats.lastCreatedUtc ? formatDate(stats.lastCreatedUtc) : $t('backupsPage.overview.none') }}</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Příští záloha</div>
+                <div class="stat-label">{{ $t('backupsPage.overview.next') }}</div>
                 <div class="stat-value">{{ nextScheduledLabel }}</div>
               </div>
             </div>
@@ -41,20 +41,20 @@
                 :loading="backingUp"
                 @click="runBackupNow"
               >
-                Zálohovat nyní
+                {{ $t('backupsPage.overview.backupNow') }}
               </el-button>
               <el-button @click="openBackupFolder">
-                Otevřít složku záloh
+                {{ $t('backupsPage.overview.openFolder') }}
               </el-button>
               <el-button @click="loadAll" :loading="loading">
-                Obnovit
+                {{ $t('backupsPage.overview.refresh') }}
               </el-button>
             </div>
 
             <el-alert
               v-if="backupResult"
               type="success"
-              :title="`Záloha vytvořena: ${backupResult.files} souborů, ${formatSize(backupResult.size)}`"
+              :title="$t('backupsPage.overview.createdToast', { files: backupResult.files, size: formatSize(backupResult.size) })"
               :description="backupResult.path"
               closable
               show-icon
@@ -74,20 +74,20 @@
         </el-tab-pane>
 
         <!-- ═══ SNAPSHOTS ═══════════════════════════════════════════════════ -->
-        <el-tab-pane label="Snímky" name="snapshots">
+        <el-tab-pane :label="$t('backupsPage.tabs.snapshots')" name="snapshots">
           <div class="tab-content">
             <div class="snapshots-header">
-              <span class="snapshots-count" v-if="backups.length">{{ backups.length }} záloh</span>
-              <el-button size="small" @click="loadAll" :loading="loading">Obnovit</el-button>
+              <span class="snapshots-count" v-if="backups.length">{{ $t('backupsPage.snapshots.count', { n: backups.length }) }}</span>
+              <el-button size="small" @click="loadAll" :loading="loading">{{ $t('backupsPage.overview.refresh') }}</el-button>
             </div>
 
             <div v-if="loading && backups.length === 0" class="empty-state">
               <el-icon class="is-loading"><Loading /></el-icon>
-              <span>Načítám…</span>
+              <span>{{ $t('backupsPage.snapshots.loading') }}</span>
             </div>
 
             <div v-else-if="backups.length === 0" class="empty-state">
-              Žádné zálohy. Spusťte první zálohu přes záložku Přehled.
+              {{ $t('backupsPage.snapshots.empty') }}
             </div>
 
             <div v-else class="snapshots-list">
@@ -106,17 +106,17 @@
                   <el-button
                     size="small"
                     @click="downloadBackup(b.path)"
-                  >Stáhnout</el-button>
+                  >{{ $t('backupsPage.snapshots.download') }}</el-button>
                   <el-button
                     size="small"
                     type="warning"
                     @click="restoreBackup(b)"
-                  >Obnovit</el-button>
+                  >{{ $t('backupsPage.snapshots.restore') }}</el-button>
                   <el-button
                     size="small"
                     type="danger"
                     @click="deleteBackup(b)"
-                  >Smazat</el-button>
+                  >{{ $t('backupsPage.snapshots.delete') }}</el-button>
                 </div>
               </div>
             </div>
@@ -124,25 +124,25 @@
         </el-tab-pane>
 
         <!-- ═══ SCHEDULE ════════════════════════════════════════════════════ -->
-        <el-tab-pane label="Plánování" name="schedule">
+        <el-tab-pane :label="$t('backupsPage.tabs.schedule')" name="schedule">
           <div class="tab-content">
             <div class="settings-card">
               <header class="settings-card-header">
-                <span class="settings-card-title">Interval automatické zálohy</span>
+                <span class="settings-card-title">{{ $t('backupsPage.schedule.cardTitle') }}</span>
               </header>
               <div class="settings-card-body">
                 <el-form label-position="left" label-width="220px" size="small" style="max-width: 500px">
-                  <el-form-item label="Interval (hodiny, 0 = vypnuto)">
+                  <el-form-item :label="$t('backupsPage.schedule.intervalLabel')">
                     <el-input-number
                       v-model="scheduleHours"
                       :min="0"
                       :max="168"
                       style="width: 160px"
                     />
-                    <span class="form-hint" v-if="scheduleHours === 0">Automatická záloha je vypnuta</span>
-                    <span class="form-hint" v-else>Záloha každých {{ scheduleHours }} h</span>
+                    <span class="form-hint" v-if="scheduleHours === 0">{{ $t('backupsPage.schedule.hintOff') }}</span>
+                    <span class="form-hint" v-else>{{ $t('backupsPage.schedule.hintEvery', { h: scheduleHours }) }}</span>
                   </el-form-item>
-                  <el-form-item label="Počet uchovávaných záloh">
+                  <el-form-item :label="$t('backupsPage.schedule.retainLabel')">
                     <el-input-number
                       v-model="retainCount"
                       :min="1"
@@ -152,7 +152,7 @@
                   </el-form-item>
                 </el-form>
                 <el-button type="primary" size="small" @click="saveSchedule" :loading="saving">
-                  Uložit plánování
+                  {{ $t('backupsPage.schedule.save') }}
                 </el-button>
               </div>
             </div>
@@ -160,26 +160,26 @@
         </el-tab-pane>
 
         <!-- ═══ CONTENT ══════════════════════════════════════════════════════ -->
-        <el-tab-pane label="Obsah" name="content">
+        <el-tab-pane :label="$t('backupsPage.tabs.content')" name="content">
           <div class="tab-content">
             <div class="settings-card">
               <header class="settings-card-header">
-                <span class="settings-card-title">Co zahrnout do zálohy</span>
+                <span class="settings-card-title">{{ $t('backupsPage.content.cardTitle') }}</span>
               </header>
               <div class="settings-card-body">
                 <div class="content-flags">
                   <div v-for="flag in contentFlagDefs" :key="flag.key" class="flag-row">
                     <el-switch v-model="contentFlags[flag.key]" />
                     <div class="flag-copy">
-                      <span class="flag-name">{{ flag.label }}</span>
-                      <span class="flag-desc">{{ flag.desc }}</span>
-                      <el-tag v-if="flag.default" size="small" type="success">Výchozí</el-tag>
-                      <el-tag v-else size="small" type="info">Volitelné</el-tag>
+                      <span class="flag-name">{{ $t(flag.labelKey) }}</span>
+                      <span class="flag-desc">{{ $t(flag.descKey) }}</span>
+                      <el-tag v-if="flag.default" size="small" type="success">{{ $t('backupsPage.content.tagDefault') }}</el-tag>
+                      <el-tag v-else size="small" type="info">{{ $t('backupsPage.content.tagOptional') }}</el-tag>
                     </div>
                   </div>
                 </div>
                 <el-button type="primary" size="small" @click="saveContent" :loading="saving" style="margin-top: 16px">
-                  Uložit výběr obsahu
+                  {{ $t('backupsPage.content.save') }}
                 </el-button>
               </div>
             </div>
@@ -193,9 +193,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders } from '../../api/daemon'
+
+const { t } = useI18n()
 
 // ── types ─────────────────────────────────────────────────────────────────
 
@@ -235,11 +238,11 @@ const scheduleHours = ref(24)
 const retainCount = ref(10)
 
 const contentFlagDefs = [
-  { key: 'vhosts',       label: 'Vhosts (konfigurace stránek)', desc: 'TOML soubory stránek z ~/.wdc/sites/', default: true },
-  { key: 'pluginConfigs',label: 'Konfigurace pluginů',          desc: 'Caddy config, plugin config.json soubory', default: true },
-  { key: 'ssl',          label: 'SSL certifikáty',              desc: 'mkcert certifikáty z ~/.wdc/ssl/sites/', default: true },
-  { key: 'databases',    label: 'Databáze (mysqldump)',         desc: 'Dump všech MySQL databází — může být velký', default: false },
-  { key: 'docroots',     label: 'Document roots (soubory stránek)', desc: 'Fyzické soubory webu — může být velmi velký', default: false },
+  { key: 'vhosts',        labelKey: 'backupsPage.content.flags.vhostsLabel',        descKey: 'backupsPage.content.flags.vhostsDesc',        default: true },
+  { key: 'pluginConfigs', labelKey: 'backupsPage.content.flags.pluginConfigsLabel', descKey: 'backupsPage.content.flags.pluginConfigsDesc', default: true },
+  { key: 'ssl',           labelKey: 'backupsPage.content.flags.sslLabel',           descKey: 'backupsPage.content.flags.sslDesc',           default: true },
+  { key: 'databases',     labelKey: 'backupsPage.content.flags.databasesLabel',     descKey: 'backupsPage.content.flags.databasesDesc',     default: false },
+  { key: 'docroots',      labelKey: 'backupsPage.content.flags.docrootsLabel',      descKey: 'backupsPage.content.flags.docrootsDesc',      default: false },
 ]
 
 const contentFlags = ref<Record<string, boolean>>({
@@ -253,15 +256,15 @@ const contentFlags = ref<Record<string, boolean>>({
 // ── computed ───────────────────────────────────────────────────────────────
 
 const nextScheduledLabel = computed(() => {
-  if (scheduleHours.value === 0) return 'Vypnuto'
-  if (!stats.value.lastCreatedUtc) return 'Brzy'
+  if (scheduleHours.value === 0) return t('backupsPage.overview.off')
+  if (!stats.value.lastCreatedUtc) return t('backupsPage.overview.soon')
   const last = new Date(stats.value.lastCreatedUtc).getTime()
   const nextMs = last + scheduleHours.value * 3600 * 1000
   const diff = nextMs - Date.now()
-  if (diff <= 0) return 'Brzy'
+  if (diff <= 0) return t('backupsPage.overview.soon')
   const hours = Math.floor(diff / 3600000)
   const mins = Math.floor((diff % 3600000) / 60000)
-  return hours > 0 ? `za ${hours} h ${mins} min` : `za ${mins} min`
+  return hours > 0 ? t('backupsPage.overview.inHours', { h: hours, m: mins }) : t('backupsPage.overview.inMinutes', { m: mins })
 })
 
 // ── lifecycle ──────────────────────────────────────────────────────────────

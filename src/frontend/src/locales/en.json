@@ -89,7 +89,62 @@
     "help": "Help"
   },
   "backupsPage": {
-    "subtitle": "Manage configuration and data backups"
+    "subtitle": "Manage configuration and data backups",
+    "tabs": {
+      "overview": "Overview",
+      "snapshots": "Snapshots",
+      "schedule": "Schedule",
+      "content": "Content"
+    },
+    "overview": {
+      "totalSize": "Total size",
+      "count": "Backup count",
+      "lastCreated": "Last backup",
+      "next": "Next backup",
+      "none": "None",
+      "off": "Off",
+      "soon": "Soon",
+      "inHours": "in {h} h {m} min",
+      "inMinutes": "in {m} min",
+      "backupNow": "Back up now",
+      "openFolder": "Open backup folder",
+      "refresh": "Refresh",
+      "createdToast": "Backup created: {files} files, {size}"
+    },
+    "snapshots": {
+      "count": "{n} backups",
+      "loading": "Loading…",
+      "empty": "No backups. Run the first one from the Overview tab.",
+      "download": "Download",
+      "restore": "Restore",
+      "delete": "Delete"
+    },
+    "schedule": {
+      "cardTitle": "Auto-backup interval",
+      "intervalLabel": "Interval (hours, 0 = off)",
+      "retainLabel": "Retain count",
+      "hintOff": "Auto-backup is off",
+      "hintEvery": "Backup every {h} h",
+      "save": "Save schedule"
+    },
+    "content": {
+      "cardTitle": "What to include in backup",
+      "tagDefault": "Default",
+      "tagOptional": "Optional",
+      "save": "Save content selection",
+      "flags": {
+        "vhostsLabel": "Vhosts (site configs)",
+        "vhostsDesc": "Site TOML files from ~/.wdc/sites/",
+        "pluginConfigsLabel": "Plugin configs",
+        "pluginConfigsDesc": "Caddy config, plugin config.json files",
+        "sslLabel": "SSL certificates",
+        "sslDesc": "mkcert certificates from ~/.wdc/ssl/sites/",
+        "databasesLabel": "Databases (mysqldump)",
+        "databasesDesc": "Dump of all MySQL databases — may be large",
+        "docrootsLabel": "Document roots (site files)",
+        "docrootsDesc": "Physical site files — may be very large"
+      }
+    }
   },
   "mcpIntents": {
     "title": "MCP Intent Inventory",
