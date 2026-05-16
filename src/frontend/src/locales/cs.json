@@ -2270,6 +2270,8 @@
     "pickVersion": "Verze",
     "installMkcert": "Instalovat mkcert",
     "installMkcertCa": "Důvěřovat lokální CA",
+    "labelMkcertBinary": "mkcert binárka",
+    "labelLocalCaTrust": "Důvěra lokální CA",
     "installed": "Nainstalováno",
     "notInstalled": "Nenainstalováno",
     "skip": "Přeskočit průvodce",

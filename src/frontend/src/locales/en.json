@@ -2268,6 +2268,8 @@
     "pickVersion": "Version",
     "installMkcert": "Install mkcert",
     "installMkcertCa": "Trust local CA",
+    "labelMkcertBinary": "mkcert binary",
+    "labelLocalCaTrust": "Local CA trust",
     "installed": "Installed",
     "notInstalled": "Not installed",
     "skip": "Skip wizard",

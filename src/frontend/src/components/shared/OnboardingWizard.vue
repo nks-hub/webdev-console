@@ -67,14 +67,14 @@
         <p class="ob-step-desc">{{ t('onboarding.step2Desc') }}</p>
         <div class="ob-actions-grid">
           <div class="ob-row">
-            <span class="ob-label">mkcert binary</span>
+            <span class="ob-label">{{ t('onboarding.labelMkcertBinary') }}</span>
             <el-tag v-if="state?.prerequisites.mkcertBinaryInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
             <el-button v-else size="small" :loading="installing.has('mkcert')" @click="doInstall('mkcert')">
               {{ t('onboarding.installMkcert') }}
             </el-button>
           </div>
           <div class="ob-row">
-            <span class="ob-label">Local CA trust</span>
+            <span class="ob-label">{{ t('onboarding.labelLocalCaTrust') }}</span>
             <el-tag v-if="state?.prerequisites.mkcertCaInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
             <el-button
               v-else
