@@ -1765,6 +1765,12 @@
     "saveApply": "Uložit a použít",
     "revert": "Vrátit",
     "validate": "Ověřit",
+    "meta": {
+      "path": "Cesta",
+      "size": "Velikost",
+      "lines": "Řádky",
+      "format": "Formát"
+    },
     "status": {
       "ready": "Připraveno",
       "validating": "Ověřování…",

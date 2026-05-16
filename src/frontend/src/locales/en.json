@@ -1765,6 +1765,12 @@
     "saveApply": "Save & Apply",
     "revert": "Revert",
     "validate": "Validate",
+    "meta": {
+      "path": "Path",
+      "size": "Size",
+      "lines": "Lines",
+      "format": "Format"
+    },
     "status": {
       "ready": "Ready",
       "validating": "Validating…",

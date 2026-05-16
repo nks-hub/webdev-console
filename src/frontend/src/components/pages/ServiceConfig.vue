@@ -76,19 +76,19 @@
         <!-- File meta row -->
         <div class="file-meta">
           <div class="meta-row">
-            <span class="meta-label">Path</span>
+            <span class="meta-label">{{ $t('serviceConfig.meta.path') }}</span>
             <code class="meta-value mono">{{ activeFile.path }}</code>
           </div>
           <div class="meta-row">
-            <span class="meta-label">Size</span>
+            <span class="meta-label">{{ $t('serviceConfig.meta.size') }}</span>
             <span class="meta-value mono">{{ contentSize }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-label">Lines</span>
+            <span class="meta-label">{{ $t('serviceConfig.meta.lines') }}</span>
             <span class="meta-value mono">{{ lineCount }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-label">Format</span>
+            <span class="meta-label">{{ $t('serviceConfig.meta.format') }}</span>
             <el-tag size="small" effect="plain">{{ fileFormat }}</el-tag>
           </div>
         </div>
