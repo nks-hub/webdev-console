@@ -419,6 +419,10 @@
         "title": "Web server is stopped",
         "subtitle": "Sites won't load until Apache is running.",
         "startBtn": "Start Apache"
+      },
+      "recent": {
+        "title": "Recent sites",
+        "viewAll": "View all"
       }
     }
   },

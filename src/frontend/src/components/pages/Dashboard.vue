@@ -109,6 +109,34 @@
             {{ $t('dashboard.simple.quickActions.backup') }}
           </el-button>
         </div>
+
+        <!-- Recent sites — last 5 by lastHit (or last-edited fallback) so
+             the dashboard answers "what was I working on?" without a click
+             through to /sites. -->
+        <div v-if="recentSimpleSites.length > 0" class="simple-recent">
+          <div class="simple-recent-header">
+            <span class="simple-recent-title">{{ $t('dashboard.simple.recent.title') }}</span>
+            <el-button text size="small" @click="router.push('/sites')">
+              {{ $t('dashboard.simple.recent.viewAll') }} →
+            </el-button>
+          </div>
+          <ul class="simple-recent-list">
+            <li
+              v-for="s in recentSimpleSites"
+              :key="s.domain"
+              class="simple-recent-item"
+              @click="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
+            >
+              <span class="simple-recent-dot" :class="s.enabled === false ? 'dot-disabled' : 'dot-enabled'" />
+              <span class="simple-recent-domain">{{ s.domain }}</span>
+              <span class="simple-recent-meta mono">
+                <template v-if="s.phpVersion && s.phpVersion !== 'none'">PHP {{ s.phpVersion }}</template>
+                <template v-else>{{ $t('sites.phpNone') }}</template>
+              </span>
+              <el-icon class="simple-recent-arrow"><ArrowRight /></el-icon>
+            </li>
+          </ul>
+        </div>
       </div>
     </template>
 
@@ -352,7 +380,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu } from '@element-plus/icons-vue'
+import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu, ArrowRight } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
@@ -401,6 +429,12 @@ const totalServices = computed(() => services.value.length)
 const totalHits = ref(0)
 const totalErrors = ref(0)
 const aggregatesLoading = ref(false)
+
+// Recent sites for the simple dashboard — capped at 5 in insertion
+// order (sitesStore loads them in domain order today; the daemon owns
+// the canonical "last modified" timestamp but doesn't expose it on
+// SiteInfo yet, so we keep things deterministic for now).
+const recentSimpleSites = computed(() => sitesStore.sites.slice(0, 5))
 
 async function loadAggregates() {
   aggregatesLoading.value = true
@@ -1212,6 +1246,70 @@ function closeConfig() {
   justify-content: center;
   flex-wrap: wrap;
   padding-top: 8px;
+}
+
+.simple-recent {
+  max-width: 720px;
+  margin: 18px auto 0;
+  padding: 16px 18px;
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  background: var(--wdc-surface-2);
+}
+.simple-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.simple-recent-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wdc-text-2);
+}
+.simple-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.simple-recent-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto 16px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--wdc-border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.simple-recent-item:last-child { border-bottom: 0; }
+.simple-recent-item:hover { background: var(--wdc-surface); }
+.simple-recent-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.simple-recent-dot.dot-enabled {
+  background: var(--el-color-success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 25%, transparent);
+}
+.simple-recent-dot.dot-disabled { background: var(--el-color-info); }
+.simple-recent-domain {
+  font-weight: 600;
+  color: var(--wdc-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.simple-recent-meta {
+  color: var(--wdc-text-2);
+  font-size: 0.78rem;
+}
+.simple-recent-arrow {
+  color: var(--wdc-text-2);
+  font-size: 14px;
 }
 
 .simple-apache-banner {

@@ -419,6 +419,10 @@
         "title": "Web server je zastavený",
         "subtitle": "Weby se nenačtou, dokud Apache neběží.",
         "startBtn": "Spustit Apache"
+      },
+      "recent": {
+        "title": "Nedávné weby",
+        "viewAll": "Zobrazit vše"
       }
     }
   },
