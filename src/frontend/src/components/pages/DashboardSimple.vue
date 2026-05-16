@@ -129,9 +129,8 @@
           @keydown.enter.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
           @keydown.space.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
         >
-          <span
-            class="simple-recent-dot"
-            :class="s.enabled === false ? 'dot-disabled' : 'dot-enabled'"
+          <HealthStatusDot
+            :level="s.enabled === false ? 'muted' : 'ok'"
           />
           <span class="simple-recent-domain">{{ s.domain }}</span>
           <span class="simple-recent-meta mono">
@@ -162,6 +161,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, WarningFilled, Plus, Download } from '@element-plus/icons-vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
@@ -471,16 +471,8 @@ defineExpose({ reload: loadAggregates })
   outline: 2px solid var(--wdc-accent);
   outline-offset: -2px;
 }
-.simple-recent-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-.simple-recent-dot.dot-enabled {
-  background: var(--el-color-success);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 25%, transparent);
-}
-.simple-recent-dot.dot-disabled { background: var(--el-color-info); }
+/* Per-site dot now uses HealthStatusDot shared primitive; the old
+   .simple-recent-dot rules are removed. */
 .simple-recent-domain {
   font-weight: 600;
   color: var(--wdc-text);
