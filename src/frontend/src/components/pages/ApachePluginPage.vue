@@ -59,37 +59,26 @@
           <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('apache.tabOverview') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('apache.statusCard') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-descriptions :column="2" border size="small">
-                <el-descriptions-item :label="$t('apache.status')">
-                  <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
-                    {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
-                  </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="$t('apache.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="HTTP">
-                  <a v-if="serviceRunning" class="local-url" :href="localUrl" @click.prevent="openLocalUrl">{{ localUrl }}</a>
-                  <span v-else>:{{ httpPort }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item label="HTTPS">:{{ httpsPort }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('apache.vhostsActive')">{{ sitesStore.sites.length }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('apache.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
-              </el-descriptions>
-            </div>
-          </section>
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('apache.recentErrors') }}</span>
-              <span class="edit-card-hint">{{ $t('apache.recentErrorsHint') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <LogViewer :service-id="'apache'" style="height: 200px" />
-            </div>
-          </section>
+          <EditCard :title="$t('apache.statusCard')">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item :label="$t('apache.status')">
+                <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
+                  {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('apache.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="HTTP">
+                <a v-if="serviceRunning" class="local-url" :href="localUrl" @click.prevent="openLocalUrl">{{ localUrl }}</a>
+                <span v-else>:{{ httpPort }}</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="HTTPS">:{{ httpsPort }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('apache.vhostsActive')">{{ sitesStore.sites.length }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('apache.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
+            </el-descriptions>
+          </EditCard>
+          <EditCard :title="$t('apache.recentErrors')" :hint="$t('apache.recentErrorsHint')">
+            <LogViewer :service-id="'apache'" style="height: 200px" />
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -99,36 +88,33 @@
           <span class="tab-label"><el-icon><Share /></el-icon> {{ $t('apache.tabVhosts') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('apache.enabledSites') }}</span>
-              <span class="edit-card-hint">{{ sitesStore.sites.length }} {{ $t('apache.vhostsActive') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-empty v-if="sitesStore.sites.length === 0" :description="$t('apache.noVhosts')" :image-size="48" />
-              <el-table v-else :data="sitesStore.sites" size="small">
-                <el-table-column prop="domain" :label="$t('sites.domain')" min-width="200">
-                  <template #default="{ row }">
-                    <span class="mono">{{ row.domain }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="phpVersion" :label="$t('sites.phpVersion')" width="140" />
-                <el-table-column label="HTTPS" width="80" align="center">
-                  <template #default="{ row }">
-                    <el-tag v-if="row.ssl" size="small" type="success" effect="dark">SSL</el-tag>
-                    <el-tag v-else size="small" effect="plain">HTTP</el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('common.actions')" width="100" align="center">
-                  <template #default="{ row }">
-                    <el-button size="small" text @click="$router.push(`/sites/${row.domain}/edit`)">
-                      {{ $t('common.edit') }}
-                    </el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-          </section>
+          <EditCard
+            :title="$t('apache.enabledSites')"
+            :hint="`${sitesStore.sites.length} ${$t('apache.vhostsActive')}`"
+          >
+            <el-empty v-if="sitesStore.sites.length === 0" :description="$t('apache.noVhosts')" :image-size="48" />
+            <el-table v-else :data="sitesStore.sites" size="small">
+              <el-table-column prop="domain" :label="$t('sites.domain')" min-width="200">
+                <template #default="{ row }">
+                  <span class="mono">{{ row.domain }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="phpVersion" :label="$t('sites.phpVersion')" width="140" />
+              <el-table-column label="HTTPS" width="80" align="center">
+                <template #default="{ row }">
+                  <el-tag v-if="row.ssl" size="small" type="success" effect="dark">SSL</el-tag>
+                  <el-tag v-else size="small" effect="plain">HTTP</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('common.actions')" width="100" align="center">
+                <template #default="{ row }">
+                  <el-button size="small" text @click="$router.push(`/sites/${row.domain}/edit`)">
+                    {{ $t('common.edit') }}
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -145,37 +131,32 @@
             :title="$t('apache.tuningPending')"
             style="margin-bottom: 16px"
           />
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('apache.mpm') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form label-width="200px" size="default">
-                <el-form-item :label="$t('apache.mpmModule')">
-                  <el-select v-model="tuning.mpm" disabled style="width: 200px">
-                    <el-option label="prefork" value="prefork" />
-                    <el-option label="worker" value="worker" />
-                    <el-option label="event" value="event" />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="MaxRequestWorkers">
-                  <el-input-number v-model="tuning.maxRequestWorkers" disabled :min="1" />
-                </el-form-item>
-                <el-form-item label="KeepAlive">
-                  <el-switch v-model="tuning.keepAlive" disabled />
-                </el-form-item>
-                <el-form-item label="KeepAliveTimeout">
-                  <el-input-number v-model="tuning.keepAliveTimeout" disabled :min="1" style="width: 120px" />
-                  <span class="hint-inline">s</span>
-                </el-form-item>
-                <el-form-item label="Timeout">
-                  <el-input-number v-model="tuning.timeout" disabled :min="1" style="width: 120px" />
-                  <span class="hint-inline">s</span>
-                </el-form-item>
-              </el-form>
-              <div class="hint">{{ $t('apache.tuningPendingHint') }}</div>
-            </div>
-          </section>
+          <EditCard :title="$t('apache.mpm')">
+            <el-form label-width="200px" size="default">
+              <el-form-item :label="$t('apache.mpmModule')">
+                <el-select v-model="tuning.mpm" disabled style="width: 200px">
+                  <el-option label="prefork" value="prefork" />
+                  <el-option label="worker" value="worker" />
+                  <el-option label="event" value="event" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="MaxRequestWorkers">
+                <el-input-number v-model="tuning.maxRequestWorkers" disabled :min="1" />
+              </el-form-item>
+              <el-form-item label="KeepAlive">
+                <el-switch v-model="tuning.keepAlive" disabled />
+              </el-form-item>
+              <el-form-item label="KeepAliveTimeout">
+                <el-input-number v-model="tuning.keepAliveTimeout" disabled :min="1" style="width: 120px" />
+                <span class="hint-inline">s</span>
+              </el-form-item>
+              <el-form-item label="Timeout">
+                <el-input-number v-model="tuning.timeout" disabled :min="1" style="width: 120px" />
+                <span class="hint-inline">s</span>
+              </el-form-item>
+            </el-form>
+            <div class="hint">{{ $t('apache.tuningPendingHint') }}</div>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -185,14 +166,9 @@
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('apache.tabLogs') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('apache.tabLogs') }}</span>
-            </header>
-            <div class="edit-card-body" style="padding: 0">
-              <LogViewer :service-id="'apache'" />
-            </div>
-          </section>
+          <EditCard :title="$t('apache.tabLogs')" flush-body>
+            <LogViewer :service-id="'apache'" />
+          </EditCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -209,6 +185,7 @@ import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, stopServ
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import EditCard from '../shared/EditCard.vue'
 
 defineOptions({ name: 'ApachePluginPage' })
 
@@ -318,11 +295,7 @@ onMounted(async () => {
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
 .cf-tabs { padding: 16px 24px; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); overflow: hidden; }
-.edit-card-header { padding: 14px 20px; background: var(--wdc-surface-2); border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; }
-.edit-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wdc-text); }
-.edit-card-hint { font-size: 0.75rem; color: var(--wdc-text-3); }
-.edit-card-body { padding: 18px 20px; }
+/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
 .hint-inline { margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3); }
 .mono { font-family: 'JetBrains Mono', monospace; }
