@@ -55,12 +55,8 @@
           <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('mysqlPlugin.tabOverview') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.tabOverview') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-descriptions :column="2" border size="small">
+          <EditCard :title="$t('mysqlPlugin.tabOverview')">
+            <el-descriptions :column="2" border size="small">
                 <el-descriptions-item :label="$t('mysqlPlugin.status')">
                   <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
                     {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
@@ -70,10 +66,9 @@
                 <el-descriptions-item :label="$t('mysqlPlugin.port')">{{ mysqlPort }}</el-descriptions-item>
                 <el-descriptions-item :label="$t('mysqlPlugin.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
                 <el-descriptions-item :label="$t('mysqlPlugin.dataDir')">{{ $t('mysqlPlugin.dataDirUnknown') }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('mysqlPlugin.connections')">—</el-descriptions-item>
-              </el-descriptions>
-            </div>
-          </section>
+              <el-descriptions-item :label="$t('mysqlPlugin.connections')">—</el-descriptions-item>
+            </el-descriptions>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -83,16 +78,13 @@
           <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('mysqlPlugin.tabDatabases') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.tabDatabases') }}</span>
-              <span class="edit-card-hint">
-                <el-button size="small" text @click="$router.push('/databases')">
-                  {{ $t('mysqlPlugin.openDatabasesPage') }}
-                </el-button>
-              </span>
-            </header>
-            <div class="edit-card-body mysql-databases-panel">
+          <EditCard :title="$t('mysqlPlugin.tabDatabases')">
+            <template #hint>
+              <el-button size="small" text @click="$router.push('/databases')">
+                {{ $t('mysqlPlugin.openDatabasesPage') }}
+              </el-button>
+            </template>
+            <div class="mysql-databases-panel">
               <el-alert
                 v-if="databasesError"
                 type="error"
@@ -216,7 +208,7 @@
 
               <div class="hint">{{ $t('mysqlPlugin.databasesEmbedHint') }}</div>
             </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -226,13 +218,8 @@
           <span class="tab-label"><el-icon><User /></el-icon> {{ $t('mysqlPlugin.tabUsers') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.createUser') }}</span>
-              <span class="edit-card-hint">{{ $t('mysqlPlugin.createUserHint') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form label-width="200px" class="user-form-grid">
+          <EditCard :title="$t('mysqlPlugin.createUser')" :hint="$t('mysqlPlugin.createUserHint')">
+            <el-form label-width="200px" class="user-form-grid">
                 <el-form-item :label="$t('mysqlPlugin.userName')">
                   <el-input v-model="userForm.userName" maxlength="64" />
                 </el-form-item>
@@ -281,15 +268,13 @@
                   {{ usersStatus.message }}
                 </span>
               </div>
-            </div>
-          </section>
+          </EditCard>
 
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.usersList') }}</span>
+          <EditCard :title="$t('mysqlPlugin.usersList')">
+            <template #hint>
               <el-button size="small" :loading="usersLoading" @click="loadUsers">{{ $t('common.refresh') }}</el-button>
-            </header>
-            <div class="edit-card-body table-body">
+            </template>
+            <div class="table-body">
               <el-alert
                 v-if="usersError"
                 type="error"
@@ -326,7 +311,7 @@
                 </el-table-column>
               </el-table>
             </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -337,13 +322,8 @@
         </template>
         <div class="tab-content">
           <!-- Change password -->
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.changePassword') }}</span>
-              <span class="edit-card-hint">{{ $t('mysqlPlugin.changePasswordHint') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form label-width="180px" size="default">
+          <EditCard :title="$t('mysqlPlugin.changePassword')" :hint="$t('mysqlPlugin.changePasswordHint')">
+            <el-form label-width="180px" size="default">
                 <el-form-item :label="$t('mysqlPlugin.currentPassword')">
                   <el-input v-model="changePwd.current" type="password" show-password :placeholder="$t('mysqlPlugin.currentPasswordOptional')" style="max-width: 340px" />
                 </el-form-item>
@@ -370,16 +350,13 @@
                   {{ changePwdStatus.message }}
                 </span>
               </div>
-            </div>
-          </section>
+          </EditCard>
 
           <!-- Reset password (danger) -->
-          <section class="edit-card danger-card">
-            <header class="edit-card-header danger-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.resetPassword') }}</span>
+          <EditCard :title="$t('mysqlPlugin.resetPassword')">
+            <template #hint>
               <el-tag type="danger" size="small" effect="dark">{{ $t('common.danger') }}</el-tag>
-            </header>
-            <div class="edit-card-body">
+            </template>
               <el-alert
                 type="warning"
                 :closable="false"
@@ -411,8 +388,7 @@
                   {{ resetPwdStatus.message }}
                 </span>
               </div>
-            </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -429,25 +405,20 @@
             :title="$t('mysqlPlugin.tuningPending')"
             style="margin-bottom: 16px"
           />
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.tuningParams') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form label-width="240px" size="default">
-                <el-form-item label="max_connections">
-                  <el-input-number v-model="tuning.maxConnections" disabled :min="1" />
-                </el-form-item>
-                <el-form-item label="innodb_buffer_pool_size">
-                  <el-input v-model="tuning.innodbBufferPoolSize" disabled style="width: 180px" />
-                </el-form-item>
-                <el-form-item label="query_cache_size">
-                  <el-input v-model="tuning.queryCacheSize" disabled style="width: 180px" />
-                </el-form-item>
-              </el-form>
-              <div class="hint">{{ $t('mysqlPlugin.tuningPendingHint') }}</div>
-            </div>
-          </section>
+          <EditCard :title="$t('mysqlPlugin.tuningParams')">
+            <el-form label-width="240px" size="default">
+              <el-form-item label="max_connections">
+                <el-input-number v-model="tuning.maxConnections" disabled :min="1" />
+              </el-form-item>
+              <el-form-item label="innodb_buffer_pool_size">
+                <el-input v-model="tuning.innodbBufferPoolSize" disabled style="width: 180px" />
+              </el-form-item>
+              <el-form-item label="query_cache_size">
+                <el-input v-model="tuning.queryCacheSize" disabled style="width: 180px" />
+              </el-form-item>
+            </el-form>
+            <div class="hint">{{ $t('mysqlPlugin.tuningPendingHint') }}</div>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -457,14 +428,9 @@
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('mysqlPlugin.tabLogs') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mysqlPlugin.tabLogs') }}</span>
-            </header>
-            <div class="edit-card-body" style="padding: 0">
-              <LogViewer :service-id="'mysql'" />
-            </div>
-          </section>
+          <EditCard :title="$t('mysqlPlugin.tabLogs')" flush-body>
+            <LogViewer :service-id="'mysql'" />
+          </EditCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -528,6 +494,7 @@ import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, stopServ
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import EditCard from '../shared/EditCard.vue'
 
 defineOptions({ name: 'MySqlPluginPage' })
 
@@ -1109,11 +1076,7 @@ watch(() => route.query.tab, value => {
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
 .cf-tabs { padding: 16px 24px; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); overflow: hidden; }
-.edit-card-header { padding: 14px 20px; background: var(--wdc-surface-2); border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: center; }
-.edit-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wdc-text); }
-.edit-card-hint { font-size: 0.75rem; color: var(--wdc-text-3); }
-.edit-card-body { padding: 18px 20px; }
+/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
 .card-actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
 .table-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
