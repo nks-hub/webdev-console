@@ -52,12 +52,7 @@
           </template>
           <div class="tab-content">
             <!-- Identity card -->
-            <section class="edit-card">
-              <header class="edit-card-header">
-                <span class="edit-card-title">{{ $t('siteEdit.identity') }}</span>
-                <span class="edit-card-hint">{{ $t('siteEdit.identityHint') }}</span>
-              </header>
-              <div class="edit-card-body">
+            <EditCard :title="$t('siteEdit.identity')" :hint="$t('siteEdit.identityHint')">
                 <el-form :model="site" label-position="top" size="default">
                   <el-form-item :label="$t('sites.domain')">
                     <el-input :model-value="site.domain" disabled>
@@ -111,17 +106,14 @@
                     </div>
                   </el-form-item>
                 </el-form>
-              </div>
-            </section>
+            </EditCard>
 
             <!-- Alias picker card -->
-            <section class="edit-card">
-              <header class="edit-card-header">
-                <span class="edit-card-title">{{ $t('siteEdit.aliasesCard') }}</span>
-                <span class="edit-card-hint">{{ $t('sites.additionalDomains', { n: aliases.length }) }}</span>
-              </header>
-              <div class="edit-card-body">
-                <div class="alias-chips">
+            <EditCard
+              :title="$t('siteEdit.aliasesCard')"
+              :hint="$t('sites.additionalDomains', { n: aliases.length })"
+            >
+              <div class="alias-chips">
                   <el-tag
                     v-for="alias in aliases"
                     :key="alias"
@@ -154,16 +146,10 @@
                 <div class="hint">
                   Wildcards supported: <code>*.myapp.loc</code> catches every subdomain.
                 </div>
-              </div>
-            </section>
+            </EditCard>
 
             <!-- Framework detection card -->
-            <section class="edit-card">
-              <header class="edit-card-header">
-                <span class="edit-card-title">{{ $t('siteEdit.frameworkCard') }}</span>
-                <span class="edit-card-hint">{{ $t('siteEdit.frameworkHint') }}</span>
-              </header>
-              <div class="edit-card-body">
+            <EditCard :title="$t('siteEdit.frameworkCard')" :hint="$t('siteEdit.frameworkHint')">
                 <div class="framework-row">
                   <el-input
                     v-model="site.framework"
@@ -176,17 +162,15 @@
                     <span>Auto-detect</span>
                   </el-button>
                 </div>
-              </div>
-            </section>
+            </EditCard>
 
             <!-- Docker Compose detection + lifecycle card -->
-            <section v-if="composeInfo" class="edit-card">
-              <header class="edit-card-header">
-                <span class="edit-card-title">{{ $t('siteEdit.dockerCard') }}</span>
-                <span class="edit-card-hint">{{ composeInfo.fileName }}</span>
-              </header>
-              <div class="edit-card-body">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+            <EditCard
+              v-if="composeInfo"
+              :title="$t('siteEdit.dockerCard')"
+              :hint="composeInfo.fileName ?? undefined"
+            >
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
                   <el-tag size="small" type="info" effect="plain">{{ composeInfo.fileName }}</el-tag>
                   <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
                     {{ $t('siteEdit.composeUp') }}
@@ -204,8 +188,7 @@
                 <div v-if="composeOutput" class="compose-output">
                   <pre>{{ composeOutput }}</pre>
                 </div>
-              </div>
-            </section>
+            </EditCard>
           </div>
         </el-tab-pane>
 
@@ -215,12 +198,7 @@
             <span class="tab-label"><el-icon><Cpu /></el-icon> {{ $t('siteEdit.runtime') }}</span>
           </template>
           <div class="tab-content">
-            <section class="edit-card">
-              <header class="edit-card-header">
-                <span class="edit-card-title">{{ $t('siteEdit.runtimeCard') }}</span>
-                <span class="edit-card-hint">{{ $t('siteEdit.runtimeHint') }}</span>
-              </header>
-              <div class="edit-card-body">
+            <EditCard :title="$t('siteEdit.runtimeCard')" :hint="$t('siteEdit.runtimeHint')">
                 <div class="runtime-picker">
                   <button
                     class="runtime-card"
@@ -345,16 +323,13 @@
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
+            </EditCard>
 
-            <section class="edit-card">
-              <header class="edit-card-header">
-                <span class="edit-card-title">{{ $t('siteEdit.ports') }}</span>
-                <span class="edit-card-hint">Default: 80 (HTTP) and 443 (HTTPS)</span>
-              </header>
-              <div class="edit-card-body">
-                <div class="port-grid">
+            <EditCard
+              :title="$t('siteEdit.ports')"
+              hint="Default: 80 (HTTP) and 443 (HTTPS)"
+            >
+              <div class="port-grid">
                   <div class="port-item">
                     <label class="sub-label">HTTP Port</label>
                     <el-input-number
@@ -378,8 +353,7 @@
                     />
                   </div>
                 </div>
-              </div>
-            </section>
+            </EditCard>
           </div>
         </el-tab-pane>
 
@@ -664,6 +638,7 @@ import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
+import EditCard from '../shared/EditCard.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
 import SiteAccessLogs from './SiteAccessLogs.vue'
 import SiteComposer from './SiteComposer.vue'
@@ -1771,36 +1746,10 @@ onBeforeUnmount(() => {
   min-height: 32px;
 }
 
-/* ─── Card sections ──────────────────────────────────────────────────── */
-.edit-card {
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  overflow: hidden;
-}
-.edit-card-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 14px 20px;
-  background: var(--wdc-surface-2);
-  border-bottom: 1px solid var(--wdc-border);
-}
-.edit-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--wdc-text);
-}
-.edit-card-hint {
-  font-size: 0.75rem;
-  color: var(--wdc-text-3);
-  font-weight: 500;
-}
-.edit-card-body {
-  padding: 20px;
-}
+/* Card sections moved to EditCard shared primitive (plan §6).
+   Note: SiteEdit uses 20px body padding (vs 18px 20px in primitive);
+   slight visual variance acceptable since primitive's 18px is closer
+   to el-card defaults. */
 
 /* ─── Path input + Browse ────────────────────────────────────────────── */
 .path-input {
