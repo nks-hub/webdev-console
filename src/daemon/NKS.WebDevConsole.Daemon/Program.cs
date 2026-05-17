@@ -278,6 +278,30 @@ try
     }
     else
     {
+        // Pre-flight: NReco opens the log with FileShare.Read by default,
+        // so a second daemon instance on the same machine crashes during
+        // host build with "file is being used by another process" before
+        // any logger try/catch can trigger. We probe the file ourselves
+        // and, if it's locked, fall back to a PID-suffixed path so two
+        // daemons can coexist without bringing each other down.
+        try
+        {
+            using var probe = new FileStream(
+                daemonLogPath,
+                FileMode.Append,
+                FileAccess.Write,
+                FileShare.Read);
+        }
+        catch (IOException)
+        {
+            var fallback = Path.Combine(
+                daemonLogDir,
+                $"daemon-{DateTime.Now:yyyy-MM-dd}.{Environment.ProcessId}.log");
+            Console.Error.WriteLine(
+                $"[daemon] log '{daemonLogPath}' locked by another process — using '{fallback}'");
+            daemonLogPath = fallback;
+        }
+
         NReco.Logging.File.FileLoggerExtensions.AddFile(builder.Logging, daemonLogPath, fileLoggerOpts =>
         {
             fileLoggerOpts.Append = true;
