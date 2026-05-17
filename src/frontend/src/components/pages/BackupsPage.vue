@@ -126,12 +126,8 @@
         <!-- ═══ SCHEDULE ════════════════════════════════════════════════════ -->
         <el-tab-pane :label="$t('backupsPage.tabs.schedule')" name="schedule">
           <div class="tab-content">
-            <div class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('backupsPage.schedule.cardTitle') }}</span>
-              </header>
-              <div class="settings-card-body">
-                <el-form label-position="left" label-width="290px" size="small">
+            <SettingsCard :title="$t('backupsPage.schedule.cardTitle')">
+              <el-form label-position="left" label-width="290px" size="small">
                   <el-form-item :label="$t('backupsPage.schedule.intervalLabel')">
                     <el-input-number
                       v-model="scheduleHours"
@@ -151,23 +147,18 @@
                     />
                   </el-form-item>
                 </el-form>
-                <el-button type="primary" size="small" @click="saveSchedule" :loading="saving">
-                  {{ $t('backupsPage.schedule.save') }}
-                </el-button>
-              </div>
-            </div>
+              <el-button type="primary" size="small" @click="saveSchedule" :loading="saving">
+                {{ $t('backupsPage.schedule.save') }}
+              </el-button>
+            </SettingsCard>
           </div>
         </el-tab-pane>
 
         <!-- ═══ CONTENT ══════════════════════════════════════════════════════ -->
         <el-tab-pane :label="$t('backupsPage.tabs.content')" name="content">
           <div class="tab-content">
-            <div class="settings-card">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('backupsPage.content.cardTitle') }}</span>
-              </header>
-              <div class="settings-card-body">
-                <div class="content-flags">
+            <SettingsCard :title="$t('backupsPage.content.cardTitle')">
+              <div class="content-flags">
                   <div v-for="flag in contentFlagDefs" :key="flag.key" class="flag-row">
                     <el-switch v-model="contentFlags[flag.key]" />
                     <div class="flag-copy">
@@ -178,11 +169,10 @@
                     </div>
                   </div>
                 </div>
-                <el-button type="primary" size="small" @click="saveContent" :loading="saving" style="margin-top: 16px">
-                  {{ $t('backupsPage.content.save') }}
-                </el-button>
-              </div>
-            </div>
+              <el-button type="primary" size="small" @click="saveContent" :loading="saving" style="margin-top: 16px">
+                {{ $t('backupsPage.content.save') }}
+              </el-button>
+            </SettingsCard>
           </div>
         </el-tab-pane>
 
@@ -197,6 +187,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders } from '../../api/daemon'
+import SettingsCard from '../settings/shared/SettingsCard.vue'
 
 const { t } = useI18n()
 
@@ -629,29 +620,7 @@ function formatDate(iso: string): string {
   gap: 6px;
 }
 
-/* ── Settings cards ── */
-.settings-card {
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  overflow: hidden;
-}
-.settings-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--wdc-border);
-  background: var(--wdc-surface-2);
-}
-.settings-card-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-}
-.settings-card-body {
-  padding: 16px;
-}
+/* Settings cards moved to settings/shared/SettingsCard.vue primitive. */
 
 .form-hint {
   margin-left: 10px;
