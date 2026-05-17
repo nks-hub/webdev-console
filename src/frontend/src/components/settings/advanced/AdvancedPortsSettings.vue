@@ -2,32 +2,33 @@
   <div class="tab-content">
     <p class="tab-desc">{{ t('settings.ports.description') }}</p>
 
-    <div v-if="pluginPorts.length > 0" class="settings-card plugin-ports">
-      <header class="settings-card-header">
-        <span class="settings-card-title">{{ t('settings.advancedPorts.pluginPorts') }}</span>
+    <SettingsCard
+      v-if="pluginPorts.length > 0"
+      :title="t('settings.advancedPorts.pluginPorts')"
+      class="plugin-ports"
+    >
+      <template #meta>
         <span class="settings-card-meta">{{ t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
-      </header>
-      <div class="settings-card-body">
-        <el-form label-position="left" label-width="200px" size="small" class="ports-form">
-          <el-form-item
-            v-for="p in pluginPorts"
-            :key="p.pluginId + ':' + p.key"
-            :label="p.label"
-          >
-            <el-input-number
-              :model-value="p.currentPort"
-              :min="1"
-              :max="65535"
-              class="full-control"
-              disabled
-            />
-            <div class="hint">
-              <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
-            </div>
-          </el-form-item>
-        </el-form>
-      </div>
-    </div>
+      </template>
+      <el-form label-position="left" label-width="200px" size="small" class="ports-form">
+        <el-form-item
+          v-for="p in pluginPorts"
+          :key="p.pluginId + ':' + p.key"
+          :label="p.label"
+        >
+          <el-input-number
+            :model-value="p.currentPort"
+            :min="1"
+            :max="65535"
+            class="full-control"
+            disabled
+          />
+          <div class="hint">
+            <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
+          </div>
+        </el-form-item>
+      </el-form>
+    </SettingsCard>
 
     <el-alert type="info" :closable="false" show-icon class="port-alert">
       <template #title>{{ t('settings.advancedPorts.portAlertTitle') }}</template>
@@ -113,6 +114,8 @@
 </template>
 
 <script setup lang="ts">
+import SettingsCard from '../shared/SettingsCard.vue'
+
 export interface AdvancedPortValues {
   http: number
   https: number
