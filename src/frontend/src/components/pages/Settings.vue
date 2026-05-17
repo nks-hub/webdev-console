@@ -337,6 +337,7 @@
             <!-- F79: Browse buttons open the native file/folder dialog via
                  electronAPI.showOpenDialog. Falls back to manual typing when
                  running outside Electron (dev browser, etc.). -->
+            <SettingsCard :title="$t('settings.tabs.paths')">
             <el-form label-position="top" size="small">
               <el-form-item :label="$t('settings.paths.apache')">
                 <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
@@ -447,6 +448,7 @@
                 </el-table-column>
               </el-table>
             </div>
+            </SettingsCard>
           </div>
         </el-tab-pane>
 
