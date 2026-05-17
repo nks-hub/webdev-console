@@ -54,137 +54,118 @@
         <template #label>
           <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('postgresPlugin.tabOverview') }}</span>
         </template>
-        <section class="edit-card">
-          <header class="edit-card-header">
-            <span class="edit-card-title">{{ $t('postgresPlugin.runtime') }}</span>
-          </header>
-          <div class="edit-card-body">
-            <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
-              <el-descriptions-item :label="$t('postgresPlugin.status')">
-                <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
-                  {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item :label="$t('postgresPlugin.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
-              <el-descriptions-item :label="$t('postgresPlugin.port')">{{ postgresPort }}</el-descriptions-item>
-              <el-descriptions-item :label="$t('postgresPlugin.pid')">{{ serviceInfo?.pid ?? '-' }}</el-descriptions-item>
-              <el-descriptions-item :label="$t('postgresPlugin.dataDir')">~/.wdc/data/postgresql</el-descriptions-item>
-              <el-descriptions-item :label="$t('postgresPlugin.logFile')">~/.wdc/logs/postgresql/postgresql.log</el-descriptions-item>
-            </el-descriptions>
-          </div>
-        </section>
+        <EditCard :title="$t('postgresPlugin.runtime')">
+          <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
+            <el-descriptions-item :label="$t('postgresPlugin.status')">
+              <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
+                {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('postgresPlugin.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('postgresPlugin.port')">{{ postgresPort }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('postgresPlugin.pid')">{{ serviceInfo?.pid ?? '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('postgresPlugin.dataDir')">~/.wdc/data/postgresql</el-descriptions-item>
+            <el-descriptions-item :label="$t('postgresPlugin.logFile')">~/.wdc/logs/postgresql/postgresql.log</el-descriptions-item>
+          </el-descriptions>
+        </EditCard>
       </el-tab-pane>
 
       <el-tab-pane name="databases">
         <template #label>
           <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('postgresPlugin.tabDatabases') }}</span>
         </template>
-        <section class="edit-card">
-          <header class="edit-card-header">
-            <span class="edit-card-title">{{ $t('postgresPlugin.databaseTools') }}</span>
+        <EditCard :title="$t('postgresPlugin.databaseTools')">
+          <template #hint>
             <el-button size="small" text :loading="databasesLoading" @click="loadDatabases">
               {{ $t('common.refresh') }}
             </el-button>
-          </header>
-          <div class="edit-card-body">
-            <el-alert
-              v-if="databasesError"
-              type="warning"
-              :closable="false"
-              show-icon
-              :title="databasesError"
-              class="section-alert"
-            />
-            <div v-if="postgresDatabases.length > 0" class="database-list">
-              <div v-for="db in postgresDatabases" :key="db" class="database-row">
-                <span class="database-name">{{ db }}</span>
-                <el-tag size="small" effect="plain">PostgreSQL</el-tag>
-              </div>
+          </template>
+          <el-alert
+            v-if="databasesError"
+            type="warning"
+            :closable="false"
+            show-icon
+            :title="databasesError"
+            class="section-alert"
+          />
+          <div v-if="postgresDatabases.length > 0" class="database-list">
+            <div v-for="db in postgresDatabases" :key="db" class="database-row">
+              <span class="database-name">{{ db }}</span>
+              <el-tag size="small" effect="plain">PostgreSQL</el-tag>
             </div>
-            <el-empty
-              v-else
-              :description="databasesLoading ? $t('common.loading') : $t('postgresPlugin.noDatabases')"
-              :image-size="48"
-            />
-            <div class="hint">{{ $t('postgresPlugin.databaseToolsHint') }}</div>
           </div>
-        </section>
+          <el-empty
+            v-else
+            :description="databasesLoading ? $t('common.loading') : $t('postgresPlugin.noDatabases')"
+            :image-size="48"
+          />
+          <div class="hint">{{ $t('postgresPlugin.databaseToolsHint') }}</div>
+        </EditCard>
 
-        <section class="edit-card danger-card">
-          <header class="edit-card-header danger-header">
-            <span class="edit-card-title">{{ $t('postgresPlugin.resetPassword') }}</span>
+        <EditCard :title="$t('postgresPlugin.resetPassword')">
+          <template #hint>
             <el-tag type="warning" size="small" effect="dark">{{ $t('postgresPlugin.localOnly') }}</el-tag>
-          </header>
-          <div class="edit-card-body">
-            <el-alert
+          </template>
+          <el-alert
+            type="warning"
+            :closable="false"
+            show-icon
+            :title="$t('postgresPlugin.resetWarning')"
+            class="section-alert"
+          />
+          <el-form label-width="180px" size="default">
+            <el-form-item :label="$t('postgresPlugin.newPassword')">
+              <el-input v-model="resetPasswordForm.newPassword" type="password" show-password style="max-width: 340px" />
+            </el-form-item>
+            <el-form-item :label="$t('postgresPlugin.confirmPassword')">
+              <el-input v-model="resetPasswordForm.confirm" type="password" show-password style="max-width: 340px" />
+            </el-form-item>
+          </el-form>
+          <div class="card-actions">
+            <el-button
               type="warning"
-              :closable="false"
-              show-icon
-              :title="$t('postgresPlugin.resetWarning')"
-              class="section-alert"
-            />
-            <el-form label-width="180px" size="default">
-              <el-form-item :label="$t('postgresPlugin.newPassword')">
-                <el-input v-model="resetPasswordForm.newPassword" type="password" show-password style="max-width: 340px" />
-              </el-form-item>
-              <el-form-item :label="$t('postgresPlugin.confirmPassword')">
-                <el-input v-model="resetPasswordForm.confirm" type="password" show-password style="max-width: 340px" />
-              </el-form-item>
-            </el-form>
-            <div class="card-actions">
-              <el-button
-                type="warning"
-                :loading="resettingPassword"
-                :disabled="!resetPasswordForm.newPassword || resetPasswordForm.newPassword !== resetPasswordForm.confirm"
-                @click="resetPostgresPassword"
-              >
-                {{ $t('postgresPlugin.resetPasswordBtn') }}
-              </el-button>
-              <span v-if="resetPasswordStatus" class="save-status" :class="resetPasswordStatus.kind">
-                {{ resetPasswordStatus.message }}
-              </span>
-            </div>
+              :loading="resettingPassword"
+              :disabled="!resetPasswordForm.newPassword || resetPasswordForm.newPassword !== resetPasswordForm.confirm"
+              @click="resetPostgresPassword"
+            >
+              {{ $t('postgresPlugin.resetPasswordBtn') }}
+            </el-button>
+            <span v-if="resetPasswordStatus" class="save-status" :class="resetPasswordStatus.kind">
+              {{ resetPasswordStatus.message }}
+            </span>
           </div>
-        </section>
+        </EditCard>
       </el-tab-pane>
 
       <el-tab-pane name="tuning">
         <template #label>
           <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('postgresPlugin.tabTuning') }}</span>
         </template>
-        <section class="edit-card">
-          <header class="edit-card-header">
-            <span class="edit-card-title">{{ $t('postgresPlugin.tuningParams') }}</span>
-          </header>
-          <div class="edit-card-body">
-            <el-form label-width="220px" size="default">
-              <el-form-item label="listen_addresses">
-                <el-input model-value="127.0.0.1" disabled />
-              </el-form-item>
-              <el-form-item label="port">
-                <el-input-number :model-value="postgresPort" disabled :min="1" :max="65535" />
-              </el-form-item>
-              <el-form-item label="max_connections">
-                <el-input-number :model-value="100" disabled :min="1" />
-              </el-form-item>
-            </el-form>
-            <div class="hint">{{ $t('postgresPlugin.tuningHint') }}</div>
-          </div>
-        </section>
+        <EditCard :title="$t('postgresPlugin.tuningParams')">
+          <el-form label-width="220px" size="default">
+            <el-form-item label="listen_addresses">
+              <el-input model-value="127.0.0.1" disabled />
+            </el-form-item>
+            <el-form-item label="port">
+              <el-input-number :model-value="postgresPort" disabled :min="1" :max="65535" />
+            </el-form-item>
+            <el-form-item label="max_connections">
+              <el-input-number :model-value="100" disabled :min="1" />
+            </el-form-item>
+          </el-form>
+          <div class="hint">{{ $t('postgresPlugin.tuningHint') }}</div>
+        </EditCard>
       </el-tab-pane>
 
       <el-tab-pane name="logs">
         <template #label>
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('postgresPlugin.tabLogs') }}</span>
         </template>
-        <section class="edit-card">
-          <header class="edit-card-header">
-            <span class="edit-card-title">{{ $t('postgresPlugin.tabLogs') }}</span>
-          </header>
-          <div class="edit-card-body log-body">
+        <EditCard :title="$t('postgresPlugin.tabLogs')" flush-body>
+          <div class="log-body">
             <LogViewer :service-id="'postgresql'" />
           </div>
-        </section>
+        </EditCard>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -200,6 +181,7 @@ import { daemonAuthHeaders as authHeaders, daemonBaseUrl, startService, stopServ
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import EditCard from '../shared/EditCard.vue'
 
 defineOptions({ name: 'PostgreSqlPluginPage' })
 
@@ -339,11 +321,9 @@ onBeforeUnmount(() => {
 .status-title { font-size: 0.92rem; font-weight: 700; color: var(--wdc-text); overflow-wrap: anywhere; }
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); overflow-wrap: anywhere; }
 .db-tabs { padding: 16px 24px; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); overflow: hidden; }
-.edit-card-header { padding: 14px 20px; background: var(--wdc-surface-2); border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.edit-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wdc-text); }
-.edit-card-body { padding: 18px 20px; }
-.edit-card-body :deep(.el-descriptions__cell) { word-break: break-word; overflow-wrap: anywhere; }
+/* .edit-card CSS lives in EditCard shared primitive (plan §6).
+   Postgres also has descriptions cell word-break override, kept here. */
+:deep(.edit-card-body .el-descriptions__cell) { word-break: break-word; overflow-wrap: anywhere; }
 .log-body { padding: 0; }
 .hint { margin-top: 6px; font-size: 0.82rem; line-height: 1.55; color: var(--wdc-text-3); }
 .section-alert { margin-bottom: 14px; }
