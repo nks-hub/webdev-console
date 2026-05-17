@@ -51,4 +51,16 @@ test.describe('Plan §6 shared primitives — source contract', () => {
     expect(source).toMatch(/name="title"/)
     expect(source).toMatch(/name="hint"/)
   })
+
+  test('SettingsCard exposes title + meta slot', () => {
+    const source = readFileSync(
+      resolve(srcRoot, 'components', 'settings', 'shared', 'SettingsCard.vue'),
+      'utf-8',
+    )
+    expect(source).toMatch(/title:\s*string/)
+    expect(source).toMatch(/name="meta"/)
+    // settings-card classes remain in css for consumers using static class.
+    expect(source).toMatch(/settings-card-title/)
+    expect(source).toMatch(/settings-card-body/)
+  })
 })
