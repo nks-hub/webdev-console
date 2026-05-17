@@ -271,9 +271,9 @@
                       and restart the daemon to enable per-site process management.
                     </div>
                     <div v-else style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
-                      <span
-                        class="status-dot"
-                        :class="nodeProcessState === 2 ? 'running' : nodeProcessState === 4 ? 'crashed' : 'stopped'"
+                      <HealthStatusDot
+                        :level="nodeProcessState === 2 ? 'ok' : nodeProcessState === 4 ? 'err' : nodeProcessState === 1 ? 'warn' : 'muted'"
+                        :pulse="nodeProcessState === 1"
                       />
                       <span style="font-size: 0.85rem; color: var(--wdc-text-2)">
                         {{ nodeProcessState === 2 ? t('common.running') : nodeProcessState === 4 ? t('common.crashed') : nodeProcessState === 1 ? t('common.starting') : t('common.stopped') }}
@@ -639,6 +639,7 @@ import { usePluginsStore } from '../../stores/plugins'
 import type { SiteInfo, HistoricalMetrics } from '../../api/types'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import EditCard from '../shared/EditCard.vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SiteErrorLogs from './SiteErrorLogs.vue'
 import SiteAccessLogs from './SiteAccessLogs.vue'
 import SiteComposer from './SiteComposer.vue'
@@ -1950,17 +1951,7 @@ onBeforeUnmount(() => {
   line-height: 1.4;
 }
 
-/* ─── Node process status dot ───────────────────────────────────────── */
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--wdc-text-3);
-}
-.status-dot.running { background: var(--el-color-success); }
-.status-dot.crashed { background: var(--el-color-danger); }
-.status-dot.stopped { background: var(--wdc-text-3); }
+/* Node process status dot moved to HealthStatusDot primitive (plan §6). */
 
 /* ─── PHP version sub-picker ─────────────────────────────────────────── */
 .php-version-picker {
