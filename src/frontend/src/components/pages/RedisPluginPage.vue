@@ -54,12 +54,8 @@
           <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('redisPlugin.tabOverview') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('redisPlugin.tabOverview') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-descriptions :column="2" border size="small">
+          <EditCard :title="$t('redisPlugin.tabOverview')">
+            <el-descriptions :column="2" border size="small">
                 <el-descriptions-item :label="$t('redisPlugin.status')">
                   <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
                     {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
@@ -70,9 +66,8 @@
                 <el-descriptions-item :label="$t('redisPlugin.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
                 <el-descriptions-item :label="$t('redisPlugin.usedMemory')">—</el-descriptions-item>
                 <el-descriptions-item :label="$t('redisPlugin.clients')">—</el-descriptions-item>
-              </el-descriptions>
-            </div>
-          </section>
+            </el-descriptions>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -89,12 +84,8 @@
             :title="$t('redisPlugin.configPending')"
             style="margin-bottom: 16px"
           />
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('redisPlugin.configParams') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form label-width="200px" size="default">
+          <EditCard :title="$t('redisPlugin.configParams')">
+            <el-form label-width="200px" size="default">
                 <el-form-item label="port">
                   <el-input-number :model-value="redisPort" disabled style="width: 140px" />
                 </el-form-item>
@@ -109,13 +100,12 @@
                     <el-option label="volatile-lru" value="volatile-lru" />
                   </el-select>
                 </el-form-item>
-                <el-form-item label="appendonly">
-                  <el-switch :model-value="false" disabled />
-                </el-form-item>
-              </el-form>
-              <div class="hint">{{ $t('redisPlugin.configPendingHint') }}</div>
-            </div>
-          </section>
+              <el-form-item label="appendonly">
+                <el-switch :model-value="false" disabled />
+              </el-form-item>
+            </el-form>
+            <div class="hint">{{ $t('redisPlugin.configPendingHint') }}</div>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -125,14 +115,9 @@
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('redisPlugin.tabLogs') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('redisPlugin.tabLogs') }}</span>
-            </header>
-            <div class="edit-card-body" style="padding: 0">
-              <LogViewer :service-id="'redis'" />
-            </div>
-          </section>
+          <EditCard :title="$t('redisPlugin.tabLogs')" flush-body>
+            <LogViewer :service-id="'redis'" />
+          </EditCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -148,6 +133,7 @@ import { startService, stopService } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import EditCard from '../shared/EditCard.vue'
 
 defineOptions({ name: 'RedisPluginPage' })
 
@@ -197,11 +183,7 @@ async function toggleService() {
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
 .cf-tabs { padding: 16px 24px; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); overflow: hidden; }
-.edit-card-header { padding: 14px 20px; background: var(--wdc-surface-2); border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; }
-.edit-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wdc-text); }
-.edit-card-hint { font-size: 0.75rem; color: var(--wdc-text-3); }
-.edit-card-body { padding: 18px 20px; }
+/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
 .hint-inline { margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3); }
 </style>
