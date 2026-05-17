@@ -87,12 +87,7 @@
         </template>
 
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.steps.step1Title') }}</span>
-              <span class="edit-card-hint">{{ $t('cloudflare.steps.step1Hint') }}</span>
-            </header>
-            <div class="edit-card-body">
+          <EditCard :title="$t('cloudflare.steps.step1Title')" :hint="$t('cloudflare.steps.step1Hint')">
               <el-input
                 v-model="apiTokenInput"
                 type="password"
@@ -130,15 +125,9 @@
               <div class="hint" style="margin-top: 12px;">
                 {{ $t('cloudflare.autoSetupExplain', { tunnel: 'NKS-WDC-Tunnel-{md5}', file: '~/.wdc/cloudflare/config.json' }) }}
               </div>
-            </div>
-          </section>
+          </EditCard>
 
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.steps.step2Title') }}</span>
-              <span class="edit-card-hint">{{ $t('cloudflare.steps.step2Hint') }}</span>
-            </header>
-            <div class="edit-card-body">
+          <EditCard :title="$t('cloudflare.steps.step2Title')" :hint="$t('cloudflare.steps.step2Hint')">
               <el-input
                 v-model="config.cloudflaredPath"
                 placeholder="C:\Users\...\cloudflared.exe"
@@ -153,15 +142,9 @@
                   {{ $t('cloudflare.savePathBtn') }}
                 </el-button>
               </div>
-            </div>
-          </section>
+          </EditCard>
 
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.steps.subdomainTemplate') }}</span>
-              <span class="edit-card-hint">{{ $t('cloudflare.steps.subdomainTemplateHint') }}</span>
-            </header>
-            <div class="edit-card-body">
+          <EditCard :title="$t('cloudflare.steps.subdomainTemplate')" :hint="$t('cloudflare.steps.subdomainTemplateHint')">
               <el-input
                 v-model="config.subdomainTemplate"
                 class="mono"
@@ -179,15 +162,9 @@
                   {{ $t('cloudflare.saveTemplateBtn') }}
                 </el-button>
               </div>
-            </div>
-          </section>
+          </EditCard>
 
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.steps.step3Title') }}</span>
-              <span class="edit-card-hint">{{ $t('cloudflare.steps.step3Hint') }}</span>
-            </header>
-            <div class="edit-card-body">
+          <EditCard :title="$t('cloudflare.steps.step3Title')" :hint="$t('cloudflare.steps.step3Hint')">
               <div class="ssl-toggle-row">
                 <div class="ssl-toggle-meta">
                   <div class="ssl-toggle-title">
@@ -207,8 +184,7 @@
                   {{ serviceRunning ? $t('common.stop') : $t('common.run') }} cloudflared
                 </el-button>
               </div>
-            </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -218,12 +194,7 @@
           <span class="tab-label"><el-icon><Share /></el-icon> {{ $t('cloudflare.tabs.sites') }} ({{ exposedSites.length }})</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.exposedSites') }}</span>
-              <span class="edit-card-hint">{{ $t('cloudflare.exposedSitesHint') }}</span>
-            </header>
-            <div class="edit-card-body">
+          <EditCard :title="$t('cloudflare.exposedSites')" :hint="$t('cloudflare.exposedSitesHint')">
               <div v-if="exposedSites.length === 0" class="hint">{{ $t('cloudflare.noSitesExposed') }}</div>
               <div v-else class="site-expose-list">
                 <div
@@ -267,8 +238,7 @@
                 <code>httpHostHeader</code> override per site so Apache matches
                 the correct local vhost. Safe to run repeatedly — it's idempotent.
               </div>
-            </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -278,12 +248,7 @@
           <span class="tab-label"><el-icon><Postcard /></el-icon> {{ $t('cloudflare.tabs.dns') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.dnsRecords') }}</span>
-              <span class="edit-card-hint">{{ activeZone?.name || $t('cloudflare.pickZone') }}</span>
-            </header>
-            <div class="edit-card-body">
+          <EditCard :title="$t('cloudflare.dnsRecords')" :hint="activeZone?.name || $t('cloudflare.pickZone')">
               <el-select
                 v-model="selectedDnsZoneId"
                 :placeholder="$t('cloudflare.zoneSelect')"
@@ -337,16 +302,13 @@
                 </el-table-column>
               </el-table>
               <div v-else-if="selectedDnsZoneId && !loadingDns" class="hint">{{ $t('cloudflare.noRecords') }}</div>
-            </div>
-          </section>
+          </EditCard>
 
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('cloudflare.addDnsRecord') }}</span>
-              <span class="edit-card-hint">{{ $t('cloudflare.addDnsHint', { target: tunnelCnameTarget }) }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form :inline="true" size="default">
+          <EditCard
+            :title="$t('cloudflare.addDnsRecord')"
+            :hint="$t('cloudflare.addDnsHint', { target: tunnelCnameTarget })"
+          >
+            <el-form :inline="true" size="default">
                 <el-form-item :label="$t('cloudflare.type')">
                   <el-select v-model="newDns.type" style="width: 100px">
                     <el-option label="CNAME" value="CNAME" />
@@ -375,8 +337,7 @@
                   </el-button>
                 </el-form-item>
               </el-form>
-            </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -405,6 +366,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import LoadingState from '../shared/LoadingState.vue'
+import EditCard from '../shared/EditCard.vue'
 import {
   fetchCloudflareConfig, saveCloudflareConfig,
   verifyCloudflareToken, fetchCloudflareZones,
@@ -985,34 +947,7 @@ async function autoVerifyToken() {
      width, matching Services/Sites/Databases pages. */
 }
 
-.edit-card {
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  overflow: hidden;
-}
-.edit-card-header {
-  padding: 14px 20px;
-  background: var(--wdc-surface-2);
-  border-bottom: 1px solid var(--wdc-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-.edit-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--wdc-text);
-}
-.edit-card-hint {
-  font-size: 0.75rem;
-  color: var(--wdc-text-3);
-}
-.edit-card-body {
-  padding: 18px 20px;
-}
+/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 
 .hint {
   margin-top: 6px;
