@@ -456,17 +456,19 @@
         <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.databases')" name="databases">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settingsDb.tabDesc') }}</p>
-            <div class="db-list" v-if="databases.length > 0">
-              <div class="db-row" v-for="db in databases" :key="db">
-                <span class="db-name">{{ db }}</span>
-                <el-button size="small" type="danger" text @click="dropDatabase(db)">{{ $t('settingsDb.drop') }}</el-button>
+            <SettingsCard :title="$t('settings.tabs.databases')">
+              <div class="db-list" v-if="databases.length > 0">
+                <div class="db-row" v-for="db in databases" :key="db">
+                  <span class="db-name">{{ db }}</span>
+                  <el-button size="small" type="danger" text @click="dropDatabase(db)">{{ $t('settingsDb.drop') }}</el-button>
+                </div>
               </div>
-            </div>
-            <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
-            <div class="db-create">
-              <el-input v-model="newDbName" :placeholder="$t('settingsDb.newPlaceholder')" size="small" style="width: 200px" />
-              <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">{{ $t('settingsDb.create') }}</el-button>
-            </div>
+              <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
+              <div class="db-create">
+                <el-input v-model="newDbName" :placeholder="$t('settingsDb.newPlaceholder')" size="small" style="width: 200px" />
+                <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">{{ $t('settingsDb.create') }}</el-button>
+              </div>
+            </SettingsCard>
           </div>
         </el-tab-pane>
 
