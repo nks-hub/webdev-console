@@ -267,39 +267,41 @@
                  self-heals stale ports on boot (Phase 6.20b), but the
                  user still sees a brief window where the webserver
                  reloads and existing browser connections drop. -->
-            <el-alert
-              type="info"
-              :closable="false"
-              show-icon
-              style="margin-bottom: 12px; max-width: 400px"
-            >
-              <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
-              {{ $t('settings.advancedPorts.portAlertDesc') }}
-            </el-alert>
-            <el-form label-position="left" label-width="200px" size="small">
-              <el-form-item :label="$t('settings.ports.httpPort')">
-                <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.httpsPort')">
-                <el-input-number v-model="ports.https" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.mysqlPort')">
-                <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.redisPort')">
-                <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.mailpitSmtp')">
-                <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.mailpitHttp')">
-                <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.ports.phpFpmBase')">
-                <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
-                <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
-              </el-form-item>
-            </el-form>
+            <SettingsCard :title="$t('settings.tabs.ports')">
+              <el-alert
+                type="info"
+                :closable="false"
+                show-icon
+                style="margin-bottom: 12px"
+              >
+                <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
+                {{ $t('settings.advancedPorts.portAlertDesc') }}
+              </el-alert>
+              <el-form label-position="left" label-width="200px" size="small">
+                <el-form-item :label="$t('settings.ports.httpPort')">
+                  <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.httpsPort')">
+                  <el-input-number v-model="ports.https" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.mysqlPort')">
+                  <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.redisPort')">
+                  <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.mailpitSmtp')">
+                  <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.mailpitHttp')">
+                  <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.phpFpmBase')">
+                  <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
+                  <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
+                </el-form-item>
+              </el-form>
+            </SettingsCard>
           </div>
         </el-tab-pane>
 
