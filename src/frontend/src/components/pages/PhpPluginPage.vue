@@ -44,23 +44,18 @@
           <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('phpPlugin.tabOverview') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('phpPlugin.tabOverview') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-descriptions :column="2" border size="small">
-                <el-descriptions-item :label="$t('phpPlugin.defaultVersion')">
-                  <span class="mono">{{ defaultVersion || '—' }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item :label="$t('phpPlugin.versionsInstalled')">{{ versions.length }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('phpPlugin.fpmStatus')">
-                  <el-tag size="small" type="info" effect="plain">{{ $t('phpPlugin.fpmUnknown') }}</el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="$t('phpPlugin.extensionsLoaded')">{{ enabledExtCount }}</el-descriptions-item>
-              </el-descriptions>
-            </div>
-          </section>
+          <EditCard :title="$t('phpPlugin.tabOverview')">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item :label="$t('phpPlugin.defaultVersion')">
+                <span class="mono">{{ defaultVersion || '—' }}</span>
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('phpPlugin.versionsInstalled')">{{ versions.length }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('phpPlugin.fpmStatus')">
+                <el-tag size="small" type="info" effect="plain">{{ $t('phpPlugin.fpmUnknown') }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('phpPlugin.extensionsLoaded')">{{ enabledExtCount }}</el-descriptions-item>
+            </el-descriptions>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -100,35 +95,32 @@
           <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('phpPlugin.tabExtensions') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('phpPlugin.tabExtensions') }}</span>
-              <span class="edit-card-hint">{{ selectedVersion ? `PHP ${selectedVersion}` : $t('phpPlugin.selectVersion') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <div v-if="!selectedVersion" class="hint">{{ $t('phpPlugin.selectVersionHint') }}</div>
-              <div v-else-if="extensions.length === 0" class="hint">{{ $t('phpPlugin.noExtensions') }}</div>
-              <div v-else class="ext-grid">
-                <div
-                  v-for="ext in extensions"
-                  :key="ext.name"
-                  class="ext-item"
-                  :class="{ enabled: ext.enabled }"
-                >
-                  <span class="ext-name">{{ ext.name }}</span>
-                  <el-switch
-                    :model-value="ext.enabled"
-                    :loading="togglingExt === ext.name"
-                    size="small"
-                    inline-prompt
-                    active-text="ON"
-                    inactive-text="OFF"
-                    @change="(val: boolean) => toggleExtension(ext.name, val)"
-                  />
-                </div>
+          <EditCard
+            :title="$t('phpPlugin.tabExtensions')"
+            :hint="selectedVersion ? `PHP ${selectedVersion}` : $t('phpPlugin.selectVersion')"
+          >
+            <div v-if="!selectedVersion" class="hint">{{ $t('phpPlugin.selectVersionHint') }}</div>
+            <div v-else-if="extensions.length === 0" class="hint">{{ $t('phpPlugin.noExtensions') }}</div>
+            <div v-else class="ext-grid">
+              <div
+                v-for="ext in extensions"
+                :key="ext.name"
+                class="ext-item"
+                :class="{ enabled: ext.enabled }"
+              >
+                <span class="ext-name">{{ ext.name }}</span>
+                <el-switch
+                  :model-value="ext.enabled"
+                  :loading="togglingExt === ext.name"
+                  size="small"
+                  inline-prompt
+                  active-text="ON"
+                  inactive-text="OFF"
+                  @change="(val: boolean) => toggleExtension(ext.name, val)"
+                />
               </div>
             </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -138,16 +130,14 @@
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('phpPlugin.tabIni') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">php.ini</span>
-              <span class="edit-card-hint">{{ selectedVersion ? `PHP ${selectedVersion}` : $t('phpPlugin.selectVersion') }}</span>
-            </header>
-            <div class="edit-card-body" style="padding: 0">
-              <div v-if="!selectedConfig" class="hint" style="padding: 18px 20px">{{ $t('phpPlugin.selectVersionHint') }}</div>
-              <pre v-else class="config-pre">{{ selectedConfig }}</pre>
-            </div>
-          </section>
+          <EditCard
+            title="php.ini"
+            :hint="selectedVersion ? `PHP ${selectedVersion}` : $t('phpPlugin.selectVersion')"
+            flush-body
+          >
+            <div v-if="!selectedConfig" class="hint" style="padding: 18px 20px">{{ $t('phpPlugin.selectVersionHint') }}</div>
+            <pre v-else class="config-pre">{{ selectedConfig }}</pre>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -157,14 +147,9 @@
           <span class="tab-label"><el-icon><Files /></el-icon> {{ $t('phpPlugin.tabLogs') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('phpPlugin.tabLogs') }}</span>
-            </header>
-            <div class="edit-card-body" style="padding: 0">
-              <LogViewer :service-id="'php'" />
-            </div>
-          </section>
+          <EditCard :title="$t('phpPlugin.tabLogs')" flush-body>
+            <LogViewer :service-id="'php'" />
+          </EditCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -180,6 +165,7 @@ import type { PhpVersion } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import EditCard from '../shared/EditCard.vue'
 
 defineOptions({ name: 'PhpPluginPage' })
 
@@ -291,11 +277,7 @@ onMounted(() => { void loadVersions() })
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
 .cf-tabs { padding: 16px 24px; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); overflow: hidden; }
-.edit-card-header { padding: 14px 20px; background: var(--wdc-surface-2); border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; }
-.edit-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wdc-text); }
-.edit-card-hint { font-size: 0.75rem; color: var(--wdc-text-3); }
-.edit-card-body { padding: 18px 20px; }
+/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
 .mono { font-family: 'JetBrains Mono', monospace; }
 .version-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
