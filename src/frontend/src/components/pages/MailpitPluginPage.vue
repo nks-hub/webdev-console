@@ -58,29 +58,24 @@
           <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('mailpitPlugin.tabOverview') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mailpitPlugin.tabOverview') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-descriptions :column="2" border size="small">
-                <el-descriptions-item :label="$t('mailpitPlugin.status')">
-                  <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
-                    {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
-                  </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="$t('mailpitPlugin.smtpPort')">{{ smtpPort }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('mailpitPlugin.httpPort')">{{ httpPort }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('mailpitPlugin.messages')">—</el-descriptions-item>
-              </el-descriptions>
-              <div class="card-actions" style="margin-top: 16px">
-                <el-button type="primary" @click="openUi">
-                  <el-icon><Link /></el-icon>
-                  {{ $t('mailpitPlugin.openUi') }} (http://localhost:{{ httpPort }})
-                </el-button>
-              </div>
+          <EditCard :title="$t('mailpitPlugin.tabOverview')">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item :label="$t('mailpitPlugin.status')">
+                <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
+                  {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('mailpitPlugin.smtpPort')">{{ smtpPort }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('mailpitPlugin.httpPort')">{{ httpPort }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('mailpitPlugin.messages')">—</el-descriptions-item>
+            </el-descriptions>
+            <div class="card-actions" style="margin-top: 16px">
+              <el-button type="primary" @click="openUi">
+                <el-icon><Link /></el-icon>
+                {{ $t('mailpitPlugin.openUi') }} (http://localhost:{{ httpPort }})
+              </el-button>
             </div>
-          </section>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -97,25 +92,20 @@
             :title="$t('mailpitPlugin.configPending')"
             style="margin-bottom: 16px"
           />
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mailpitPlugin.configParams') }}</span>
-            </header>
-            <div class="edit-card-body">
-              <el-form label-width="200px" size="default">
-                <el-form-item :label="$t('mailpitPlugin.smtpPort')">
-                  <el-input-number :model-value="smtpPort" disabled style="width: 140px" />
-                </el-form-item>
-                <el-form-item :label="$t('mailpitPlugin.httpPort')">
-                  <el-input-number :model-value="httpPort" disabled style="width: 140px" />
-                </el-form-item>
-                <el-form-item :label="$t('mailpitPlugin.maxMessages')">
-                  <el-input-number :model-value="500" disabled style="width: 140px" />
-                </el-form-item>
-              </el-form>
-              <div class="hint">{{ $t('mailpitPlugin.configPendingHint') }}</div>
-            </div>
-          </section>
+          <EditCard :title="$t('mailpitPlugin.configParams')">
+            <el-form label-width="200px" size="default">
+              <el-form-item :label="$t('mailpitPlugin.smtpPort')">
+                <el-input-number :model-value="smtpPort" disabled style="width: 140px" />
+              </el-form-item>
+              <el-form-item :label="$t('mailpitPlugin.httpPort')">
+                <el-input-number :model-value="httpPort" disabled style="width: 140px" />
+              </el-form-item>
+              <el-form-item :label="$t('mailpitPlugin.maxMessages')">
+                <el-input-number :model-value="500" disabled style="width: 140px" />
+              </el-form-item>
+            </el-form>
+            <div class="hint">{{ $t('mailpitPlugin.configPendingHint') }}</div>
+          </EditCard>
         </div>
       </el-tab-pane>
 
@@ -125,14 +115,9 @@
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('mailpitPlugin.tabLogs') }}</span>
         </template>
         <div class="tab-content">
-          <section class="edit-card">
-            <header class="edit-card-header">
-              <span class="edit-card-title">{{ $t('mailpitPlugin.tabLogs') }}</span>
-            </header>
-            <div class="edit-card-body" style="padding: 0">
-              <LogViewer :service-id="'mailpit'" />
-            </div>
-          </section>
+          <EditCard :title="$t('mailpitPlugin.tabLogs')" flush-body>
+            <LogViewer :service-id="'mailpit'" />
+          </EditCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -148,6 +133,7 @@ import { startService, stopService } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import EditCard from '../shared/EditCard.vue'
 
 defineOptions({ name: 'MailpitPluginPage' })
 
@@ -202,11 +188,7 @@ function openUi() {
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
 .cf-tabs { padding: 16px 24px; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
-.edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); overflow: hidden; }
-.edit-card-header { padding: 14px 20px; background: var(--wdc-surface-2); border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; }
-.edit-card-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wdc-text); }
-.edit-card-hint { font-size: 0.75rem; color: var(--wdc-text-3); }
-.edit-card-body { padding: 18px 20px; }
+/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
 .card-actions { display: flex; gap: 8px; align-items: center; }
 </style>
