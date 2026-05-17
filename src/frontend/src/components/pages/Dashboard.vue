@@ -60,27 +60,23 @@
     </div>
 
     <template v-else>
-      <!-- Plan §4/478 — update-available banner mirrored from Easy
-           Dashboard. Surfaces pending updates without forcing nav to
-           Settings → Update. -->
-      <el-alert
+      <!-- Plan §4/478 — update-available banner. Same BannerCallout
+           primitive as Easy Dashboard so the readiness signal looks
+           identical across modes. -->
+      <BannerCallout
         v-if="updatesStore.hasUpdate"
-        type="info"
-        show-icon
-        :closable="false"
+        tone="info"
+        :title="$t('dashboard.simple.updateAvailable.title')"
+        :subtitle="$t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion })"
         style="margin: 0 16px 12px"
       >
-        <template #title>
-          <strong>{{ $t('dashboard.simple.updateAvailable.title') }}</strong>
-          —
-          {{ $t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion }) }}
-        </template>
-        <template #default>
+        <template #icon><el-icon><Download /></el-icon></template>
+        <template #action>
           <el-button size="small" type="primary" @click="$router.push('/settings?tab=update')">
             {{ $t('dashboard.simple.updateAvailable.openBtn') }}
           </el-button>
         </template>
-      </el-alert>
+      </BannerCallout>
 
       <!-- 1. Quick stats strip (top) — at-a-glance counters -->
       <div class="stats-grid">
@@ -310,8 +306,9 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu } from '@element-plus/icons-vue'
+import { Monitor, VideoPlay, Grid, Timer, ChromeFilled, Cpu, Download } from '@element-plus/icons-vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
+import BannerCallout from '../shared/BannerCallout.vue'
 
 // Lazy-load the simple-mode dashboard. Advanced users (default for
 // developers) never render the simple surface, so its 4 KPI tiles +
