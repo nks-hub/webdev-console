@@ -44,62 +44,52 @@
       />
     </div>
 
-    <div v-if="sitesCount > 0 && !simpleApacheRunning" class="simple-apache-banner">
-      <el-icon class="simple-apache-banner-icon"><WarningFilled /></el-icon>
-      <div class="simple-apache-banner-text">
-        <strong>{{ t('dashboard.simple.apacheStopped.title') }}</strong>
-        <span>{{ t('dashboard.simple.apacheStopped.subtitle') }}</span>
-      </div>
-      <el-button
-        type="success"
-        size="default"
-        :loading="startingApache"
-        @click="startApache"
-      >
-        {{ t('dashboard.simple.apacheStopped.startBtn') }}
-      </el-button>
-    </div>
+    <BannerCallout
+      v-if="sitesCount > 0 && !simpleApacheRunning"
+      tone="warning"
+      :title="t('dashboard.simple.apacheStopped.title')"
+      :subtitle="t('dashboard.simple.apacheStopped.subtitle')"
+      icon-pulse
+    >
+      <template #icon><el-icon><WarningFilled /></el-icon></template>
+      <template #action>
+        <el-button type="success" size="default" :loading="startingApache" @click="startApache">
+          {{ t('dashboard.simple.apacheStopped.startBtn') }}
+        </el-button>
+      </template>
+    </BannerCallout>
 
-    <!-- Plan §4/478 — readiness signal: no recent backup. Soft prompt
-         when (a) zero backups stored or (b) newest backup > 7 days old.
-         Shown only when user has sites — empty install doesn't need a
-         backup nag. -->
-    <div v-if="sitesCount > 0 && backupStale" class="simple-backup-banner">
-      <el-icon class="simple-backup-banner-icon"><FolderChecked /></el-icon>
-      <div class="simple-backup-banner-text">
-        <strong>{{ t('dashboard.simple.backupStale.title') }}</strong>
-        <span>
-          {{ lastBackupAgeMs === null
-            ? t('dashboard.simple.backupStale.never')
-            : t('dashboard.simple.backupStale.olderThanDays', { days: 7 }) }}
-        </span>
-      </div>
-      <el-button
-        type="primary"
-        size="default"
-        @click="router.push('/backups')"
-      >
-        {{ t('dashboard.simple.backupStale.openBtn') }}
-      </el-button>
-    </div>
+    <!-- Plan §4/478 — readiness signal: no recent backup. -->
+    <BannerCallout
+      v-if="sitesCount > 0 && backupStale"
+      tone="neutral"
+      :title="t('dashboard.simple.backupStale.title')"
+      :subtitle="lastBackupAgeMs === null
+        ? t('dashboard.simple.backupStale.never')
+        : t('dashboard.simple.backupStale.olderThanDays', { days: 7 })"
+    >
+      <template #icon><el-icon><FolderChecked /></el-icon></template>
+      <template #action>
+        <el-button type="primary" size="default" @click="router.push('/backups')">
+          {{ t('dashboard.simple.backupStale.openBtn') }}
+        </el-button>
+      </template>
+    </BannerCallout>
 
-    <!-- Plan §4 (item 478): readiness signal — update available banner.
-         Surfaces pending updates without forcing user to navigate to
-         Settings → Aktualizace to discover them. -->
-    <div v-if="updatesStore.hasUpdate" class="simple-update-banner">
-      <el-icon class="simple-update-banner-icon"><Download /></el-icon>
-      <div class="simple-update-banner-text">
-        <strong>{{ t('dashboard.simple.updateAvailable.title') }}</strong>
-        <span>{{ t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion }) }}</span>
-      </div>
-      <el-button
-        type="primary"
-        size="default"
-        @click="router.push('/settings?tab=update')"
-      >
-        {{ t('dashboard.simple.updateAvailable.openBtn') }}
-      </el-button>
-    </div>
+    <!-- Plan §4 (item 478): update available banner. -->
+    <BannerCallout
+      v-if="updatesStore.hasUpdate"
+      tone="info"
+      :title="t('dashboard.simple.updateAvailable.title')"
+      :subtitle="t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion })"
+    >
+      <template #icon><el-icon><Download /></el-icon></template>
+      <template #action>
+        <el-button type="primary" size="default" @click="router.push('/settings?tab=update')">
+          {{ t('dashboard.simple.updateAvailable.openBtn') }}
+        </el-button>
+      </template>
+    </BannerCallout>
 
     <div class="simple-quick-actions">
       <el-button type="primary" size="large" @click="router.push('/sites?create=1')">
@@ -185,6 +175,7 @@ import { useI18n } from 'vue-i18n'
 import { ArrowRight, WarningFilled, Plus, Download, FolderChecked } from '@element-plus/icons-vue'
 import SimpleMetricTile from '../common/SimpleMetricTile.vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
+import BannerCallout from '../shared/BannerCallout.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
@@ -351,97 +342,9 @@ defineExpose({ reload: loadAggregates })
   width: 100%;
   margin: 0 auto;
 }
-.simple-apache-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  margin: 4px auto 0;
-  max-width: none;
-  width: 100%;
-  background: color-mix(in srgb, var(--el-color-warning) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--el-color-warning) 40%, transparent);
-  border-radius: var(--wdc-radius);
-}
-.simple-apache-banner-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.simple-apache-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
-.simple-apache-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
-
-/* Update-available banner — same shape as apache-banner but uses the
-   accent color so it reads as "informational nudge" rather than
-   "something is broken right now". */
-.simple-update-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  margin: 4px auto 0;
-  max-width: none;
-  width: 100%;
-  background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--el-color-primary) 40%, transparent);
-  border-radius: var(--wdc-radius);
-}
-.simple-update-banner-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.simple-update-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
-.simple-update-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
-.simple-update-banner-icon {
-  color: var(--el-color-primary);
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-/* Stale-backup banner — soft warning (info color, not warning) so it
-   reads as "you should do this" rather than "something is broken". */
-.simple-backup-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  margin: 4px auto 0;
-  max-width: none;
-  width: 100%;
-  background: color-mix(in srgb, var(--el-color-info) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--el-color-info) 40%, transparent);
-  border-radius: var(--wdc-radius);
-}
-.simple-backup-banner-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.simple-backup-banner-text strong { color: var(--wdc-text); font-size: 0.95rem; }
-.simple-backup-banner-text span { color: var(--wdc-text-2); font-size: 0.84rem; }
-.simple-backup-banner-icon {
-  color: var(--el-color-info);
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-/* Pulsing warning icon — draws the eye so the user notices that the
-   web server is down and they should act, rather than treating the
-   banner as decorative chrome. */
-.simple-apache-banner-icon {
-  color: var(--el-color-warning);
-  font-size: 28px;
-  flex-shrink: 0;
-  animation: wdc-apache-banner-pulse 1.8s ease-in-out infinite;
-}
-@keyframes wdc-apache-banner-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.1); }
-}
+/* 3 banner CSS blocks (apache / update / backup) consolidated into
+   BannerCallout shared primitive (plan §6). Apache's pulsing icon is
+   now opt-in via :icon-pulse prop. */
 .simple-quick-actions {
   display: flex;
   gap: 12px;
