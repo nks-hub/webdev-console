@@ -21,7 +21,7 @@
       <div class="sd-row sd-status-row">
         <div class="sd-label-group">
           <span class="sd-label">{{ $t('sites.detail.simple.serverLabel') }}</span>
-          <span class="sd-status-dot" :class="apacheRunning ? 'dot-running' : 'dot-stopped'" />
+          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" />
           <span class="sd-status-text" :class="apacheRunning ? 'text-running' : 'text-stopped'">
             {{ apacheRunning ? $t('sites.detail.simple.status.running') : $t('sites.detail.simple.status.stopped') }}
           </span>
@@ -207,6 +207,7 @@ defineOptions({ name: 'SiteDetailSimple' })
 import { computed, h, onMounted, ref, watch } from 'vue'
 import SimpleSiteActivityCard from './SimpleSiteActivityCard.vue'
 import SimpleSiteServicesCard from './SimpleSiteServicesCard.vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { FolderOpened, Cpu, Lock, Connection, Link } from '@element-plus/icons-vue'
@@ -616,21 +617,7 @@ onMounted(async () => {
   min-height: 32px;
 }
 
-.sd-status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot-running {
-  background: var(--el-color-success);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 25%, transparent);
-}
-
-.dot-stopped {
-  background: var(--el-color-info);
-}
+/* Status dot moved to HealthStatusDot shared primitive (plan §6). */
 
 .sd-status-text {
   font-size: 14px;
