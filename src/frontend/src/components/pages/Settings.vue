@@ -229,32 +229,33 @@
                  (IPortMetadata DI registrations per task 25). Only active
                  plugins show up — inactive ones are hidden so the user
                  doesn't see rows for services that aren't running. -->
-            <div v-if="pluginPorts.length > 0" class="settings-card" style="margin-bottom: 16px">
-              <header class="settings-card-header">
-                <span class="settings-card-title">{{ $t('settings.advancedPorts.pluginPorts') }}</span>
+            <SettingsCard
+              v-if="pluginPorts.length > 0"
+              :title="$t('settings.advancedPorts.pluginPorts')"
+              style="margin-bottom: 16px"
+            >
+              <template #meta>
                 <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ $t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
-              </header>
-              <div class="settings-card-body">
-                <el-form label-position="left" label-width="200px" size="small">
-                  <el-form-item
-                    v-for="p in pluginPorts"
-                    :key="p.pluginId + ':' + p.key"
-                    :label="p.label"
-                  >
-                    <el-input-number
-                      :model-value="p.currentPort"
-                      :min="1"
-                      :max="65535"
-                      style="width: 100%"
-                      disabled
-                    />
-                    <div class="hint">
-                      <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
-                    </div>
-                  </el-form-item>
-                </el-form>
-              </div>
-            </div>
+              </template>
+              <el-form label-position="left" label-width="200px" size="small">
+                <el-form-item
+                  v-for="p in pluginPorts"
+                  :key="p.pluginId + ':' + p.key"
+                  :label="p.label"
+                >
+                  <el-input-number
+                    :model-value="p.currentPort"
+                    :min="1"
+                    :max="65535"
+                    style="width: 100%"
+                    disabled
+                  />
+                  <div class="hint">
+                    <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
+                  </div>
+                </el-form-item>
+              </el-form>
+            </SettingsCard>
 
             <!-- Legacy hardcoded ports form — will migrate to IPortMetadata
                  one plugin at a time. For now coexists so users can still
@@ -1169,6 +1170,7 @@ import { errorMessage } from '../../utils/errors'
 import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
+import SettingsCard from '../settings/shared/SettingsCard.vue'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'

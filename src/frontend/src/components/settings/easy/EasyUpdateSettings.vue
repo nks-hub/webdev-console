@@ -57,11 +57,12 @@
       </div>
     </div>
 
-    <section v-if="updateCheck.releaseNotes" class="settings-card" style="margin-top: 12px">
-      <header class="settings-card-header">
-        <span class="settings-card-title">
-          {{ t('settings.update.releaseNotesTitle') }} v{{ updateCheck.latest }}
-        </span>
+    <SettingsCard
+      v-if="updateCheck.releaseNotes"
+      :title="`${t('settings.update.releaseNotesTitle')} v${updateCheck.latest}`"
+      style="margin-top: 12px"
+    >
+      <template #meta>
         <el-link
           v-if="updateCheck.releaseUrl"
           :href="updateCheck.releaseUrl"
@@ -71,10 +72,10 @@
         >
           {{ t('settings.update.viewOnGithub') }} →
         </el-link>
-      </header>
+      </template>
       <!-- eslint-disable-next-line vue/no-v-html — renderReleaseNotes escapes input first -->
-      <div class="release-notes settings-card-body" v-html="renderReleaseNotes(updateCheck.releaseNotes)" />
-    </section>
+      <div class="release-notes" v-html="renderReleaseNotes(updateCheck.releaseNotes)" />
+    </SettingsCard>
 
     <el-alert
       v-if="updateCheck.error"
@@ -88,6 +89,8 @@
 </template>
 
 <script setup lang="ts">
+import SettingsCard from '../shared/SettingsCard.vue'
+
 export interface EasyUpdateCheck {
   loading: boolean
   downloading: boolean
