@@ -28,9 +28,18 @@ export const useUpdatesStore = defineStore('updates', () => {
   const LS_KEY = 'wdc-updates-last-check'
   const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 hours
 
+  // Builds are stamped `0.4.1-<gitsha>` (short SHA after `-`), which semver
+  // treats as a pre-release — so compareSemver ranks a plain `0.4.1` release
+  // ABOVE the running `0.4.1-<gitsha>` and lights a false update badge.
+  // The git SHA is build metadata, irrelevant to "is there a newer release":
+  // strip everything after the numeric X.Y.Z core before comparing.
+  function versionCore(v: string): string {
+    return v.match(/^\d+\.\d+\.\d+/)?.[0] ?? v
+  }
+
   const hasUpdate = computed(() => {
     if (!currentVersion.value || !latestVersion.value) return false
-    return compareSemver(latestVersion.value, currentVersion.value) > 0
+    return compareSemver(versionCore(latestVersion.value), versionCore(currentVersion.value)) > 0
   })
 
   function readCurrent(): string {
