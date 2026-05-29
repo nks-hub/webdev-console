@@ -5647,13 +5647,20 @@ var skipStartupReapply = string.Equals(
     "1", StringComparison.Ordinal);
 var startupOrchestrator = app.Services.GetRequiredService<SiteOrchestrator>();
 var startupSitesSnapshot = siteManager.Sites.Values.ToList();
+// F-stability: capture the re-apply as a deferred delegate instead of
+// firing it here. It is invoked from the single ApplicationStarted
+// background task below, AFTER service auto-start completes — so the two
+// never drive an Apache restart concurrently, and neither blocks the HTTP
+// bind. (Previously this Task.Run fired eagerly and raced the synchronous
+// service auto-start over the shared Apache module.)
+Func<Task> reapplySitesAsync = () => Task.CompletedTask;
 if (skipStartupReapply)
 {
     Console.WriteLine($"[startup-bg] WDC_SKIP_STARTUP_REAPPLY=1 — skipping re-apply of {startupSitesSnapshot.Count} site(s); use UI to re-apply if needed");
 }
 else
 {
-    _ = Task.Run(async () =>
+    reapplySitesAsync = async () =>
     {
         foreach (var siteToApply in startupSitesSnapshot)
         {
@@ -5677,7 +5684,7 @@ else
             }
         }
         Console.WriteLine("[startup-bg] all site re-apply complete");
-    });
+    };
 }
 
 // Sweep orphan *.tmp files left over from a previous daemon crash or taskkill
@@ -5743,6 +5750,10 @@ if (skipAutoStart)
 {
     Console.WriteLine("[auto-start] WDC_SKIP_AUTO_START=1 - skipping service auto-start");
 }
+// F-stability: capture auto-start as a deferred delegate; it is awaited in
+// the ApplicationStarted background task below (after Kestrel binds), never
+// on the boot thread.
+Func<Task> autoStartServicesAsync = () => Task.CompletedTask;
 if (autoStartEnabled)
 {
     var modules = app.Services.GetServices<IServiceModule>().ToList();
@@ -5771,6 +5782,8 @@ if (autoStartEnabled)
             }
         }
     }
+    autoStartServicesAsync = async () =>
+    {
     var startTasks = modules.Select(async module =>
     {
         var pid = serviceIdToPluginId.GetValueOrDefault(module.ServiceId);
@@ -5796,7 +5809,27 @@ if (autoStartEnabled)
         }
     });
     await Task.WhenAll(startTasks);
+    };
 }
+
+// F-stability (bind-first): run service auto-start + startup site re-apply
+// in a single background task fired AFTER Kestrel is listening, serialized
+// so they never drive an Apache restart concurrently. Previously auto-start
+// was awaited on the boot thread — a stalled service StartAsync blocked the
+// HTTP bind, so the port file was never written and the frontend splash
+// polled forever ("Daemon stále odpovídá pomalu… pokus N").
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = Task.Run(async () =>
+    {
+        var bgLogger = app.Services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("StartupBackground");
+        try { await autoStartServicesAsync(); }
+        catch (Exception ex) { bgLogger.LogError(ex, "Background service auto-start failed"); }
+        try { await reapplySitesAsync(); }
+        catch (Exception ex) { bgLogger.LogError(ex, "Background startup site re-apply failed"); }
+    });
+});
 
 // Start the backup scheduler — reads backup.scheduleHours from SettingsStore
 // and creates timestamped zip backups on a timer. Dormant when set to 0.
