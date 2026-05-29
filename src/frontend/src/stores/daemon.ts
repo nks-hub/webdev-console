@@ -23,6 +23,13 @@ export const useDaemonStore = defineStore('daemon', () => {
   const pollAttempts = ref(0)
   const consecutiveFailuresPublic = ref(0)
   const lastErrorKind = ref<'network' | 'auth' | 'server' | 'unknown' | null>(null)
+  // Terminal boot-failure state: flips true when the FIRST connection never
+  // succeeds within BOOT_DEADLINE_MS. Lets the splash stop the infinite
+  // spinner and show an actionable error card instead of polling forever
+  // (the "pokus 584 / 74 min" hang). Resets on any successful poll so a
+  // daemon that eventually binds still recovers the UI automatically.
+  const bootFailed = ref(false)
+  const BOOT_DEADLINE_MS = 75_000
   // Per-service validation state broadcast by the daemon on /api/config/validate
   // so ValidationBadge can show Validating/Passed/Failed without the parent
   // component needing to imperatively call startValidation()/setResult().
@@ -66,6 +73,7 @@ export const useDaemonStore = defineStore('daemon', () => {
       consecutiveFailures = 0
       consecutiveFailuresPublic.value = 0
       lastErrorKind.value = null
+      bootFailed.value = false
       // Fire onConnect listeners: either on the very first successful poll
       // OR on any transition from offline→online (daemon restart scenario).
       if (!hasEverConnected.value || !wasConnected) {
@@ -100,6 +108,13 @@ export const useDaemonStore = defineStore('daemon', () => {
         lastErrorKind.value = 'server'
       } else {
         lastErrorKind.value = 'unknown'
+      }
+      // Terminal boot deadline: if the very first connection still hasn't
+      // landed after BOOT_DEADLINE_MS, stop pretending and let the splash
+      // surface an actionable error instead of an endless spinner.
+      if (!hasEverConnected.value && bootStartedAt.value !== null
+          && Date.now() - bootStartedAt.value > BOOT_DEADLINE_MS) {
+        bootFailed.value = true
       }
       // Only flip to Offline after the retry cascade actually exhausts itself.
       // Until then the badge STAYS in its last state (almost always
@@ -195,12 +210,25 @@ export const useDaemonStore = defineStore('daemon', () => {
     reloadReason.value = ''
   }
 
+  // Re-arm the boot sequence after a terminal failure. The splash error
+  // card calls this instead of forcing a full window reload, so polling +
+  // SSE keep their existing subscriptions.
+  function retryBoot() {
+    bootFailed.value = false
+    bootStartedAt.value = Date.now()
+    pollAttempts.value = 0
+    consecutiveFailuresPublic.value = 0
+    retryCount = 0
+    consecutiveFailures = 0
+    void poll()
+  }
+
   return {
     status, services, connected, hasEverConnected, validation,
     runningServices, allRunning, cpuHistory, ramHistory,
-    bootStartedAt, pollAttempts,
+    bootStartedAt, pollAttempts, bootFailed,
     consecutiveFailures: consecutiveFailuresPublic, lastErrorKind,
     isReloading, reloadReason, beginReload, endReload,
-    startPolling, stopPolling, poll, onConnect,
+    startPolling, stopPolling, poll, onConnect, retryBoot,
   }
 })

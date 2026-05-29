@@ -67,13 +67,29 @@
         <div class="splash-card">
           <div class="splash-logo">NKS</div>
           <div class="splash-title">WebDev Console</div>
-          <div class="splash-spinner" :class="{ 'splash-spinner--warn': splashWarn }" aria-hidden="true"></div>
-          <div class="splash-status">{{ splashStatus }}</div>
-          <div class="splash-hint">
-            <span class="splash-hint-label">{{ splashHint }}</span>
-            <span class="splash-hint-sep">·</span>
-            <span class="splash-hint-elapsed">{{ splashElapsed }}</span>
-          </div>
+          <!-- Terminal boot-failure state (F-stability). Replaces the
+               infinite spinner once the first connection misses the boot
+               deadline, so the user always gets an actionable error instead
+               of polling forever. -->
+          <template v-if="daemonStore.bootFailed">
+            <div class="splash-error-icon" aria-hidden="true">⚠</div>
+            <div class="splash-status splash-status--error">Daemon se nepodařilo spustit</div>
+            <div class="splash-hint">{{ splashFailHint }}</div>
+            <div class="splash-actions">
+              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">Zkusit znovu</button>
+              <button class="splash-btn" @click="reloadApp">Restartovat aplikaci</button>
+            </div>
+            <div class="splash-loghint">Log daemona: ~/.wdc/logs/daemon</div>
+          </template>
+          <template v-else>
+            <div class="splash-spinner" :class="{ 'splash-spinner--warn': splashWarn }" aria-hidden="true"></div>
+            <div class="splash-status">{{ splashStatus }}</div>
+            <div class="splash-hint">
+              <span class="splash-hint-label">{{ splashHint }}</span>
+              <span class="splash-hint-sep">·</span>
+              <span class="splash-hint-elapsed">{{ splashElapsed }}</span>
+            </div>
+          </template>
         </div>
       </div>
     </Transition>
@@ -225,7 +241,8 @@ const splashStatus = computed(() => {
     // or the socket is not bound. Normal during first few seconds of boot.
     if (splashElapsedSec.value < 8) return 'Daemon se spouští…'
     if (splashElapsedSec.value < 20) return 'Daemon startuje pluginy…'
-    return 'Daemon stále odpovídá pomalu…'
+    if (splashElapsedSec.value < 45) return 'Daemon stále odpovídá pomalu…'
+    return 'Daemon dlouho nereaguje — chystám diagnostiku…'
   }
   if (kind === 'auth') return 'Daemon běží, synchronizuji token…'
   if (kind === 'server') return 'Daemon hlásí chybu — opakuji…'
@@ -250,6 +267,22 @@ const splashWarn = computed(() =>
   daemonStore.lastErrorKind !== null && splashElapsedSec.value > 15
 )
 
+// Plain-language explanation shown on the terminal boot-failure card so the
+// user knows what to try (vs an opaque spinner).
+const splashFailHint = computed(() => {
+  const kind = daemonStore.lastErrorKind
+  const n = daemonStore.pollAttempts
+  const s = splashElapsedSec.value
+  if (kind === 'network') return `Daemon neodpovídá (port file / socket) — ${n} pokusů za ${s}s.`
+  if (kind === 'auth') return `Daemon běží, ale token se nepodařilo sesynchronizovat — ${n} pokusů.`
+  if (kind === 'server') return `Daemon vrací chybu (5xx) — ${n} pokusů za ${s}s.`
+  return `Backend se neozval za ${s}s (${n} pokusů).`
+})
+
+function reloadApp() {
+  window.location.reload()
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault()
@@ -257,7 +290,7 @@ function handleKeydown(e: KeyboardEvent) {
   }
   if (e.key === 'F5') {
     e.preventDefault()
-    daemonStore.poll()
+    daemonStore.retryBoot()
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
     e.preventDefault()
@@ -466,6 +499,46 @@ onUnmounted(() => {
   font-weight: 500;
   min-height: 1.2em;
 }
+
+.splash-error-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--wdc-warning, #f5a623);
+  margin: 2px 0;
+}
+.splash-status--error {
+  color: var(--wdc-text);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+.splash-loghint {
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--wdc-text-3);
+}
+.splash-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.splash-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--wdc-border-strong);
+  background: var(--wdc-surface-2, var(--wdc-surface));
+  color: var(--wdc-text);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.splash-btn:hover { border-color: var(--wdc-accent); }
+.splash-btn--primary {
+  background: var(--wdc-accent);
+  border-color: var(--wdc-accent);
+  color: #fff;
+}
+.splash-btn--primary:hover { filter: brightness(1.08); }
 
 .splash-fade-enter-active,
 .splash-fade-leave-active {
