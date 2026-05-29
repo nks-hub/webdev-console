@@ -5799,7 +5799,21 @@ if (autoStartEnabled)
         }
         try
         {
-            await module.StartAsync(CancellationToken.None);
+            // Mirror the plugin-start dual-guard (F51f): a module whose
+            // StartAsync never returns (MySQL pid-file wait, Redis PONG,
+            // Cloudflared tunnel-ready) must not wedge Task.WhenAll and
+            // orphan the subsequent site re-apply. 20s cooperative token +
+            // 22s wall-clock race; an orphaned start task keeps running.
+            using var moduleCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var startTask = module.StartAsync(moduleCts.Token);
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(22), CancellationToken.None);
+            if (await Task.WhenAny(startTask, timeoutTask) == timeoutTask)
+            {
+                moduleCts.Cancel();
+                Console.WriteLine($"[auto-start] {module.ServiceId}: timed out after 22s — continuing");
+                return;
+            }
+            await startTask;
             var status = await module.GetStatusAsync(CancellationToken.None);
             Console.WriteLine($"[auto-start] {status.Id}: {status.State}");
         }
