@@ -53,7 +53,7 @@
     "element-plus": "^2.13.7",
     "monaco-editor": "^0.55.1",
     "pinia": "^2.2.0",
-    "vue": "^3.5.33",
+    "vue": "^3.5.35",
     "vue-echarts": "^8.0.1",
     "vue-i18n": "^11.4.0",
     "vue-router": "^4.6.4"
