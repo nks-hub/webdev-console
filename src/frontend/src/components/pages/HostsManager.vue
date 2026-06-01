@@ -150,10 +150,31 @@
           </el-table-column>
         </el-table>
 
-        <!-- Hosts file empty corruption banner — Windows always ships
-             with at least the localhost entries, so 0 parsed entries
-             practically always means the file got truncated by an
-             external process (e.g. a botched manual edit).
+        <!-- Load-failure state — the fetch threw (daemon unreachable /
+             error), so we have NO knowledge of the file's real contents.
+             Must NOT be reported as corruption: the file is very likely
+             intact and the only safe action is to retry, not re-apply. -->
+        <el-alert
+          v-else-if="loadError"
+          :title="$t('hosts.loadFailedTitle')"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-top: 16px"
+        >
+          <div>{{ $t('hosts.loadFailedBody') }}</div>
+          <div style="margin-top: 8px; display: flex; gap: 8px">
+            <el-button size="small" :loading="loading" @click="load">
+              {{ $t('hosts.retry') }}
+            </el-button>
+          </div>
+        </el-alert>
+
+        <!-- Hosts file empty corruption banner — only after a SUCCESSFUL
+             load that returned 0 entries. Windows always ships with at
+             least the localhost entries, so 0 parsed entries practically
+             always means the file got truncated by an external process
+             (e.g. a botched manual edit).
              Incident 2026-05-07: prior session left the file 0-byte
              after a failed Set-Content/revert; UI showed the bland
              "no entries" placeholder and gave the operator no idea
@@ -237,6 +258,12 @@ function makeId() { return `row-${++_idCounter}` }
 
 const rows = ref<Row[]>([])
 const loading = ref(false)
+// Distinguishes "the fetch failed" (daemon unreachable / error) from "the
+// file genuinely parsed to 0 entries". Without this, any load failure left
+// rows empty and the template fired the scary Windows "corrupted" banner —
+// a false alarm that pushed operators toward a destructive re-apply when the
+// real hosts file was intact (the daemon was just unreachable).
+const loadError = ref(false)
 // Windows always ships hosts with default localhost entries — 0 entries
 // after parse on Windows is a corruption signal. On macOS/Linux the
 // default file is also non-empty but the empty case is plausibly a
@@ -282,6 +309,7 @@ function siteExists(hostname: string): boolean {
 
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
     const entries = await fetchHosts()
     rows.value = entries.map(e => ({
@@ -292,6 +320,10 @@ async function load() {
       _added: false,
     }))
   } catch (e) {
+    // Mark the failure so the template shows a "could not load / retry"
+    // state instead of misreading empty rows as a corrupted hosts file.
+    loadError.value = true
+    rows.value = []
     ElMessage.error(errorMessage(e))
   } finally {
     loading.value = false
