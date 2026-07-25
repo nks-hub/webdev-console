@@ -13,11 +13,11 @@
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.10.1" />
-    <PackageReference Include="Dapper" Version="2.1.72" />
+    <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="dbup-core" Version="6.1.1" />
     <PackageReference Include="dbup-sqlite" Version="6.0.4" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.15" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.16" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <!-- Native MySQL/MariaDB client for the database explorer.
          Replaces shell-out to mysql.exe for browse/paging/structure
          operations: streamed binary-safe row reads, parameterised
@@ -36,7 +36,7 @@
          was doing just before the crash. -->
     <PackageReference Include="Sentry.Extensions.Logging" Version="6.4.1" />
     <PackageReference Include="SharpCompress" Version="1.0.0" />
-    <PackageReference Include="Tomlyn" Version="2.3.2" />
+    <PackageReference Include="Tomlyn" Version="2.4.1" />
   </ItemGroup>
 
   <PropertyGroup>
