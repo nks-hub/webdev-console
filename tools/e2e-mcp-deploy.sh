@@ -59,6 +59,21 @@ step() {
     fi
 }
 
+# Inverse of step(): passes when the pattern is ABSENT. grep -E has no
+# negative lookahead, so "this value must not appear" needs its own helper.
+step_not() {
+    local name="$1"; local got="$2"; local unwanted="$3"
+    if echo "$got" | grep -qE "$unwanted"; then
+        echo "  ${RED}✗${END} $name"
+        echo "      got:      ${got:0:200}"
+        echo "      unwanted: $unwanted"
+        FAIL=$((FAIL + 1))
+    else
+        echo "  ${GRN}✓${END} $name"
+        PASS=$((PASS + 1))
+    fi
+}
+
 api() {
     local method="$1"; local path="$2"; shift 2
     curl -s -X "$method" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@" "$BASE$path"
@@ -120,7 +135,9 @@ echo ""; echo "${YEL}=== A. preconditions ===${END}"
 # ============================================================================
 HEALTH=$(curl -s --max-time 3 "$BASE/healthz")
 step "daemon healthz" "$HEALTH" '"ok":true'
-step "version > 0.2.25" "$HEALTH" '"version":"0\.2\.25'
+# Guards the csproj regression where InformationalVersion was hardcoded to
+# 0.2.25 while <Version> had moved on, so /healthz under-reported the build.
+step_not "version is not the stale hardcoded 0.2.25" "$HEALTH" '"version":"0\.2\.25'
 
 # Enable everything we need
 api PUT /api/settings -d '{"mcp.enabled":"true","deploy.enabled":"true","mcp.strict_kinds":"false"}' >/dev/null
