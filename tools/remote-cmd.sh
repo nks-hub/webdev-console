@@ -22,17 +22,23 @@ URL="${REMOTECMD_URL:-https://localhost:7890}"
 DEFAULT_CLIENT="${REMOTECMD_DEFAULT_CLIENT:-}"
 
 # Discover the live token from the running relay's command line so we
-# don't have to hard-code it. Falls back to the env var if the wmic
+# don't have to hard-code it. Falls back to the env var if the process
 # probe fails (non-Windows, unprivileged shell, etc.).
 discover_token() {
     if [ -n "${REMOTECMD_TOKEN:-}" ]; then
         echo "$REMOTECMD_TOKEN"
         return 0
     fi
-    # wmic prints headers + a trailing blank line — grep the token shape.
     local cmd
-    cmd=$(wmic process where "Name='RemoteCmd.Server.exe'" get CommandLine 2>/dev/null \
+    # wmic was removed in Windows 11 24H2, so try CIM via PowerShell first
+    # and only fall back to wmic for older hosts that still ship it.
+    cmd=$(powershell -NoProfile -NonInteractive -Command \
+        "(Get-CimInstance Win32_Process -Filter \"Name='RemoteCmd.Server.exe'\").CommandLine" 2>/dev/null \
         | grep -oE 'rcmd-[a-z0-9-]+' | head -1)
+    if [ -z "$cmd" ]; then
+        cmd=$(wmic process where "Name='RemoteCmd.Server.exe'" get CommandLine 2>/dev/null \
+            | grep -oE 'rcmd-[a-z0-9-]+' | head -1)
+    fi
     if [ -z "$cmd" ]; then
         echo "ERROR: unable to discover RemoteCmd token (relay not running?)" >&2
         return 1
