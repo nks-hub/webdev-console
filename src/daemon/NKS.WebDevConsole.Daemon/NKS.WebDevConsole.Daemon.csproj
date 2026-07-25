@@ -55,8 +55,8 @@
          returns "0.2.25-abc1234". MSBuild $(SourceRevisionId) is set by
          the SourceLink/CI props; falls back to a Target below for
          local builds without SourceLink wired. -->
-    <InformationalVersion Condition=" '$(SourceRevisionId)' != '' ">0.2.25-$(SourceRevisionId.Substring(0,7))</InformationalVersion>
-    <InformationalVersion Condition=" '$(SourceRevisionId)' == '' ">0.2.25</InformationalVersion>
+    <InformationalVersion Condition=" '$(SourceRevisionId)' != '' ">$(Version)-$(SourceRevisionId.Substring(0,7))</InformationalVersion>
+    <InformationalVersion Condition=" '$(SourceRevisionId)' == '' ">$(Version)</InformationalVersion>
     <!-- Default release manifest: requireAdministrator (one UAC at
          launch, every child op inherits elevation). CI smoke test
          jobs pass -p:CiBuild=true to swap in app.ci.manifest which
