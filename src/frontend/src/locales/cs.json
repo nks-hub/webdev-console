@@ -271,7 +271,7 @@
       "state": "Stav",
       "expires": "Vyprší",
       "intentId": "ID intentu",
-      "matchedGrant": "Auto-via grant"
+      "matchedGrant": "Automaticky přes grant"
     },
     "matchedGrantClickHint": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id}).",
     "matchedGrantBanner": "Filtrováno: zobrazují se jen intenty schválené oprávněním",
@@ -393,9 +393,9 @@
       "clickToClear": "Klikni pro zrušení filtru"
     },
     "kpi": {
-      "throughput": "throughput",
-      "latency": "latency",
-      "errorRate": "error rate",
+      "throughput": "propustnost",
+      "latency": "odezva",
+      "errorRate": "chybovost",
       "callsPerMinHint": "Průměrná frekvence volání za posledních 24 h"
     },
     "filter": {
@@ -421,10 +421,10 @@
       "clickHint": "Filtrovat na {tool}"
     },
     "detail": {
-      "calledAt": "called at",
-      "argsHash": "args hash",
-      "intentId": "intent",
-      "args": "args",
+      "calledAt": "voláno",
+      "argsHash": "hash argumentů",
+      "intentId": "záměr",
+      "args": "argumenty",
       "copy": "Kopírovat"
     },
     "sessionDetail": {
@@ -441,9 +441,9 @@
       "copied": "JSON zkopírován do clipboardu"
     },
     "danger": {
-      "read": "read",
-      "mutate": "mutate",
-      "destructive": "destructive"
+      "read": "čtení",
+      "mutate": "změna",
+      "destructive": "destruktivní"
     },
     "refresh": "Obnovit",
     "exportCsv": "Export CSV",
@@ -706,7 +706,7 @@
         "delete": "Smazat web",
         "deleteConfirm": "Opravdu smazat web {domain}?",
         "saved": "Uloženo",
-        "serverLabel": "Web server",
+        "serverLabel": "Webový server",
         "status": {
           "running": "Běží",
           "stopped": "Zastaveno"
@@ -1563,7 +1563,7 @@
     "stayOnBuiltIn": "Zůstaňte v built-in režimu — {n} blokátor(ů) výše",
     "restartPendingTitle": "Vyžadován restart démona",
     "restartPendingDescription": "Hodnota deploy.useLegacyHostHandlers byla změněna, ale autorita handleru se aplikuje až při dalším startu démona.",
-    "restartPendingTooltip": "Setting flipped — restart daemon to apply",
+    "restartPendingTooltip": "Nastavení změněno — restartuj daemona, aby se projevilo",
     "gatedEndpointsLabel": "Endpointy které přejdou pod plugin po restartu ({n}):",
     "hostCardCmp": {
       "edit": "Upravit",
@@ -1575,7 +1575,7 @@
       "localPathsNotSet": "nenastavené (vyžaduje localPaths v body deploye)",
       "flags": "Volby",
       "soak": "soak {n} s",
-      "healthUrl": "Health check",
+      "healthUrl": "Kontrola dostupnosti",
       "phpPath": "PHP binárka"
     },
     "hosts": {
@@ -1664,7 +1664,7 @@
         "sshHost": "SSH host",
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
-        "healthCheck": "Health check",
+        "healthCheck": "Kontrola dostupnosti",
         "healthCheckNone": "žádný",
         "keepReleases": "Ponechat releasů"
       },
@@ -1700,7 +1700,7 @@
       "filterPreDeploy": "Pre-deploy",
       "filterManual": "Ruční",
       "filterNoMatch": "Žádný snapshot v této kategorii.",
-      "kindPreDeploy": "pre-deploy",
+      "kindPreDeploy": "před nasazením",
       "kindManual": "ruční",
       "restoreOkTitle": "Snapshot obnoven",
       "restoreOkBody": "Symlink current přepnut na release {release} ({size}).",
@@ -1708,7 +1708,7 @@
       "restoreFailed": "Obnova snapshotu selhala: {error}"
     },
     "hooks": {
-      "title": "Lifecycle hooks",
+      "title": "Hooky životního cyklu",
       "addHook": "Přidat hook",
       "intro": "Hooks se spouští v daných lifecycle eventech. Šipkami nahoru/dolů změníte pořadí spouštění v rámci jednoho eventu.",
       "empty": "Žádné hooks nakonfigurované.",
@@ -1925,7 +1925,7 @@
       "tabText": "Text (a11y)",
       "tabAnsi": "ANSI",
       "copy": "Kopírovat",
-      "logAria": "Deploy log (text)",
+      "logAria": "Log nasazení (text)",
       "copySuccess": "Zkopírováno do schránky",
       "copyFail": "Kopírování selhalo — schránka odepřena"
     },
@@ -2036,7 +2036,7 @@
         "retentionValue": "Ponechat {keep} z {existing} (smaže {prune})",
         "hooks": "Hooks",
         "noHooks": "žádné",
-        "healthCheck": "Health check",
+        "healthCheck": "Kontrola dostupnosti",
         "soak": "Soak",
         "soakSeconds": "{n} s před commitem",
         "notifications": "Notifikace",
@@ -2363,7 +2363,7 @@
       "deviceNamePlaceholder": "např. Pracovní notebook",
       "deviceNameHint": "Volitelný štítek pro identifikaci tohoto zařízení v sync UI.",
       "copy": "Kopírovat",
-      "cloudSync": "Cloud sync",
+      "cloudSync": "Cloudová synchronizace",
       "cloudSyncDesc": "Odešle aktuální nastavení (weby, služby, porty, cesty, přepínače pluginů) do služby catalog-api, aby se daly jedním kliknutím obnovit při čisté instalaci.",
       "pushToCloud": "Odeslat do cloudu",
       "pullFromCloud": "Stáhnout z cloudu",
@@ -2469,7 +2469,7 @@
       "title": "Deploy subsystém",
       "description": "Záložka Deploy u jednotlivých webů + endpointy pluginu nksdeploy. Vypněte, pokud tato instance WDC spravuje pouze lokální služby a nikdy nedeployuje na vzdálené hostitele. Historie zůstává v databázi (pouze přidávání); opětovným zapnutím se vše obnoví.",
       "enableLabel": "Zapnout Deploy subsystém",
-      "legacyHandlersLabel": "Built-in deploy backend",
+      "legacyHandlersLabel": "Vestavěný deploy backend",
       "legacyHandlersHint": "Built-in (host-native) deploy handlers — výchozí",
       "legacyHandlersTooltip": "Plánovaný přepínač pro Phase 7.4 cutover na nks.wdc.deploy plugin. Dnes je zamčený v poloze ON (built-in handlers v Program.cs vlastní všechny deploy routy). Po dokončení phase B/C (parita pluginových endpointů + ZIP/SSE/Slack feature parity) se přepínač odemkne a operátor může flipnout na plugin-only mode.",
       "legacyHandlersLocked": "Uzamčeno: {n} blokátor(ů)",
@@ -2638,7 +2638,7 @@
       "onTarget": "na {domain} → {host}",
       "noDescription": "Bez popisu.",
       "alwaysConfirmExplain": "Operátor označil tento druh jako vždy-potvrdit — stávající trust granty byly přeskočeny.",
-      "intent": "intent",
+      "intent": "záměr",
       "expiresIn": "vyprší za {seconds} s",
       "approve": "Schválit",
       "decline": "Odmítnout",
