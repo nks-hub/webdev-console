@@ -11,7 +11,13 @@
 #   tools/remote-cmd.sh list
 #   tools/remote-cmd.sh exec <command...>
 #   tools/remote-cmd.sh exec --client <name> <command...>
+#   tools/remote-cmd.sh exec --timeout <seconds> <command...>
 #   tools/remote-cmd.sh status
+#
+# Use --timeout for anything slower than the 60s default — the test and
+# verification scripts (pre-push-check, e2e-mcp-deploy, playwright) restart the
+# requireAdministrator daemon, so they have to run through this relay rather
+# than a plain shell, and they take minutes.
 #
 # The token is read from the running relay process via wmic, so this
 # stays in sync if the relay restarts with a different secret.
@@ -60,10 +66,14 @@ cmd_status() {
 
 cmd_exec() {
     local client="$DEFAULT_CLIENT"
-    if [ "${1:-}" = "--client" ]; then
-        client="$2"
-        shift 2
-    fi
+    local timeout=55
+    while true; do
+        case "${1:-}" in
+            --client)  client="$2";  shift 2 ;;
+            --timeout) timeout="$2"; shift 2 ;;
+            *) break ;;
+        esac
+    done
     if [ -z "$client" ]; then
         # Auto-pick if exactly one client is connected.
         client=$(curl -k -s "$URL/api/clients?token=$TOKEN" --max-time 5 \
@@ -80,9 +90,12 @@ cmd_exec() {
     fi
     # JSON-escape the command body via python (handles quotes, newlines).
     local body
-    body=$(python -c "import json,sys; print(json.dumps({'client':sys.argv[1],'command':sys.argv[2]}))" "$client" "$command")
+    body=$(python -c "import json,sys; print(json.dumps({'client':sys.argv[1],'command':sys.argv[2],'timeoutSeconds':int(sys.argv[3])}))" \
+        "$client" "$command" "$timeout")
+    # Give curl a little more than the relay so a command that hits its own
+    # timeout still returns the relay's error instead of a bare curl abort.
     curl -k -s -X POST -H "Content-Type: application/json" \
-        -d "$body" "$URL/api/exec?token=$TOKEN" --max-time 60
+        -d "$body" "$URL/api/exec?token=$TOKEN" --max-time "$((timeout + 15))"
     echo ""
 }
 

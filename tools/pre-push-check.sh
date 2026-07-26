@@ -74,7 +74,11 @@ step "2/7  dotnet build ($CONFIG)"
 # Stop daemon first if running — its bin DLLs are locked otherwise.
 # STRICT NO-UAC RULE: never use local taskkill/Stop-Process. Two paths:
 #   1. Graceful POST /api/admin/restart — daemon's own API, Bearer token,
-#      no admin needed (daemon runs as user normally).
+#      no admin needed to *ask* it to stop. Note the daemon itself is meant
+#      to run ELEVATED: a non-elevated one cannot write the hosts file and
+#      falls back to spawning powershell.exe with Verb=runas, which pops a
+#      UAC dialog on every site create. dev-daemon-rebuild.sh respawns it
+#      through the relay for exactly that reason.
 #   2. If that fails (daemon stuck / elevated / unresponsive), fall back
 #      to tools/remote-cmd.sh which forwards Stop-Process to the
 #      wdc-restart-elevated relay client. The relay client is itself

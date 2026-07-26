@@ -116,11 +116,26 @@ if $DO_RESPAWN; then
         err "daemon binary missing at $DAEMON_BIN — build must have failed"
         exit 1
     fi
-    log "spawning daemon in background: dotnet $DAEMON_BIN"
-    cd "$DAEMON_DIR"
-    nohup dotnet "$DAEMON_BIN" >/c/Users/LuRy/AppData/Local/Temp/nks-wdc-daemon.log 2>&1 &
-    DAEMON_PID=$!
-    log "daemon PID $DAEMON_PID — waiting for port file to refresh (max 15s)"
+    # STRICT NO-UAC RULE: respawn through the elevated relay, not `nohup` from
+    # this shell. A daemon started non-elevated cannot write the hosts file
+    # directly — SiteOrchestrator falls back to spawning powershell.exe with
+    # Verb=runas, so every site create in a later test run pops a UAC dialog at
+    # the operator. Going through the already-elevated relay client inherits
+    # elevation and keeps the whole verify loop prompt-free.
+    WIN_BIN=$(cygpath -w "$DAEMON_BIN" 2>/dev/null || echo "$DAEMON_BIN")
+    WIN_DIR=$(cygpath -w "$DAEMON_DIR/bin/Debug/net9.0" 2>/dev/null || echo "$DAEMON_DIR")
+    if [ -x "$REMOTECMD" ] && "$REMOTECMD" exec --timeout 30 \
+        "Start-Process -FilePath 'dotnet' -ArgumentList '$WIN_BIN' -WorkingDirectory '$WIN_DIR' -WindowStyle Hidden; 'spawned'" \
+        2>/dev/null | grep -q spawned; then
+        log "daemon respawned elevated via remote-cmd"
+    else
+        err "relay respawn failed — falling back to a NON-ELEVATED daemon."
+        err "Hosts-file writes will pop UAC until it is restarted via the relay."
+        cd "$DAEMON_DIR"
+        nohup dotnet "$DAEMON_BIN" >/c/Users/LuRy/AppData/Local/Temp/nks-wdc-daemon.log 2>&1 &
+        log "daemon PID $! (non-elevated fallback)"
+    fi
+    log "waiting for port file to refresh (max 15s)"
     for i in $(seq 1 15); do
         if [ -f "$PORT_FILE" ]; then
             NEW_PORT=$(awk 'NR==1' "$PORT_FILE")
