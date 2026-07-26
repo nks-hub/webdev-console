@@ -1,3 +1,4 @@
+import * as fs from 'fs'
 import { defineConfig } from 'playwright/test'
 
 // Phase 7.7 — Playwright E2E for grants/deploy flow on blog.loc.
@@ -6,10 +7,20 @@ import { defineConfig } from 'playwright/test'
 // in a structured TypeScript test format with proper assertions and
 // a JUnit-compatible report.
 //
-// Daemon must be running at http://localhost:17280 with the Bearer
-// token from C:\Users\LuRy\AppData\Local\Temp\nks-wdc-daemon.port.
-// Tests read the token at setup time so a fresh daemon restart still
-// works without code changes.
+// The daemon's port and Bearer token both come from
+// %TEMP%\nks-wdc-daemon.port. The port used to be hardcoded to 17280 here
+// while the token was read from that file — when the daemon lands on a
+// different port (it scans 17280-17299 for a free one) every authenticated
+// call then went somewhere we had no token for and the suite failed with
+// "Unauthorized". Read both from the same source.
+function daemonPort(): number {
+  const portFile = `${process.env.TEMP ?? ''}\\nks-wdc-daemon.port`
+  try {
+    return Number(fs.readFileSync(portFile, 'utf-8').split('\n')[0]) || 17280
+  } catch {
+    return 17280
+  }
+}
 export default defineConfig({
   // Iter 40 fix — config moved from tests/playwright/playwright.config.ts
   // to src/frontend/playwright.config.ts so `npx playwright test` from
@@ -28,7 +39,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['junit', { outputFile: 'tests/playwright/results/junit.xml' }]],
   use: {
-    baseURL: 'http://localhost:17280',
+    baseURL: `http://localhost:${daemonPort()}`,
     extraHTTPHeaders: {
       // Token resolved per-test via the auth fixture in tests/_fixtures.ts.
       // Configured here as fallback so plain `request.get(...)` calls also

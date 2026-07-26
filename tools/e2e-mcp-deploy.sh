@@ -34,7 +34,12 @@ PASS=0; FAIL=0
 RED=$'\033[31m'; GRN=$'\033[32m'; YEL=$'\033[33m'; END=$'\033[0m'
 
 TOKEN=$(powershell -Command "(Get-Content \$env:TEMP\nks-wdc-daemon.port)[1]" 2>/dev/null | tr -d '\r')
-BASE="http://localhost:17280"
+# Read the port from the same file as the token. The daemon scans 17280-17299
+# and lands on the first free one, so it is not always 17280 — hardcoding it
+# meant every authenticated call went to a port whose token we did not have and
+# the whole suite failed with "Unauthorized".
+DAEMON_PORT=$(powershell -Command "(Get-Content \$env:TEMP\nks-wdc-daemon.port)[0]" 2>/dev/null | tr -d '\r')
+BASE="http://localhost:${DAEMON_PORT:-17280}"
 
 # Detect sqlite client + WDC db path early so any section can use them.
 SQLITE_BIN=""
