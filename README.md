@@ -9,28 +9,28 @@
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883)](https://vuejs.org/)
 [![Cross-platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)](https://github.com/nks-hub/webdev-console/releases)
 
-> Local development environment for **Windows, macOS, and Linux** — manages Apache, PHP, MySQL/MariaDB, SSL, mail catching, Redis, Node, Cloudflare tunnels and DNS for `.local` / `.test` domains. A modern replacement for MAMP PRO, XAMPP, WampServer, Laragon and similar tools.
+> Local development environment for **Windows, macOS, and Linux** that manages Apache, PHP, MySQL/MariaDB, SSL, mail catching, Redis, Node, Cloudflare tunnels and DNS for `.local` / `.test` domains. An alternative to MAMP PRO, XAMPP, WampServer and Laragon.
 
 ## Features
 
-- 🖥️ **Cross-platform** — Windows (NSIS + portable), macOS (DMG + ZIP, Apple Silicon), Linux (AppImage)
-- 🧩 **One daemon, many plugins** — Apache, PHP, MySQL, MariaDB, SSL (mkcert), Mailpit, Redis, Node, Caddy, Cloudflare and Hosts editor loaded as isolated `.NET 9` plugin DLLs
-- 🐘 **Per-site PHP** — each site can pin its own PHP version, INI overrides (memory, timeouts, upload limits, Xdebug, OPcache, extensions) and Apache Fcgid timeouts
-- 🚚 **MAMP PRO migration** — built-in importer reads MAMP PRO's SQLite database, recreates vhosts, copies SSL certs and migrates databases (verified on 17 sites + 66 databases)
-- 🎛️ **Three interfaces** — Electron GUI, `wdc` CLI, or REST API with Bearer-token auth
-- 🤖 **MCP server** — 67 tools that let Claude Code (or any MCP client) manage your local stack: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Full audit trail of every tool call surfaces in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
-- ☁️ **Cloudflare integration** — built-in tunnel management, DNS records, route configuration via `cloudflared`
-- 🔐 **Elevated by default on Windows** — single UAC prompt at launch, no per-operation prompts for hosts-file edits
-- 📦 **Self-contained daemon** — .NET 9 published with `--self-contained`, no separate runtime install needed
-- 🧪 **Type-safe** — strict TypeScript on the frontend, `nullable enable` on the backend, 595+ xUnit tests
+- 🖥️ **Cross-platform** - Windows (NSIS + portable), macOS (DMG + ZIP, Apple Silicon), Linux (AppImage)
+- 🧩 **Plugin daemon** - Apache, PHP, MySQL, MariaDB, SSL (mkcert), Mailpit, Redis, Node, Caddy, Cloudflare and Hosts editor loaded as isolated `.NET 9` plugin DLLs
+- 🐘 **Per-site PHP** - each site can pin its own PHP version, INI overrides (memory, timeouts, upload limits, Xdebug, OPcache, extensions) and Apache Fcgid timeouts
+- 🚚 **MAMP PRO migration** - importer reads MAMP PRO's SQLite database, recreates vhosts, copies SSL certs and migrates databases (verified on 17 sites + 66 databases)
+- 🎛️ **Three interfaces** - Electron GUI, `wdc` CLI and REST API with Bearer-token auth
+- 🤖 **MCP server** - 67 tools for Claude Code or any MCP client: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Every tool call is logged and shown in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
+- ☁️ **Cloudflare** - tunnels, DNS records and routes via `cloudflared`
+- 🔐 **Elevated on Windows** - one UAC prompt at launch, no per-operation prompts for hosts-file edits
+- 📦 **Self-contained daemon** - .NET 9 published with `--self-contained`, no separate runtime install needed
+- 🧪 **Type checking** - strict TypeScript on the frontend, `nullable enable` on the backend, 595+ xUnit tests
 
 ## Requirements
 
 ### Running the pre-built app
 
-- **Windows** 10 / 11 (x64) — administrator rights for hosts-file editing
+- **Windows** 10 / 11 (x64), administrator rights for hosts-file editing
 - **macOS** 14+ (Apple Silicon, arm64)
-- **Linux** — any glibc 2.28+ distribution (Ubuntu 22.04+, Debian 12+, Fedora 38+)
+- **Linux**: any glibc 2.28+ distribution (Ubuntu 22.04+, Debian 12+, Fedora 38+)
 
 ### Building from source
 
@@ -38,7 +38,7 @@
 | -------- | ------- | ---------------------------------------------------- |
 | .NET SDK | 9.0+    | macOS: `brew install dotnet@9`                       |
 | Node.js  | 20 LTS+ | Tested with 22 (CI) and 23.x                         |
-| Python   | 3.11+   | Optional — only for running the catalog-api locally  |
+| Python   | 3.11+   | Optional, only for running the catalog-api locally   |
 | Git      | any     |                                                      |
 
 ## Installation
@@ -93,7 +93,7 @@ wdc site create --name my-app --php 8.3 --domain my-app.local --ssl
 wdc service start apache
 ```
 
-Open `https://my-app.local/` — the site is served from `~/wdc/sites/my-app/` with PHP 8.3 through Apache + mod_fcgid and a mkcert-signed SSL certificate.
+Open `https://my-app.local/`. The site is served from `~/wdc/sites/my-app/` with PHP 8.3 through Apache + mod_fcgid and a mkcert-signed SSL certificate.
 
 ## Usage
 
@@ -163,7 +163,7 @@ Destructive tools (`drop_database`, `delete_site`, `revoke_cert`, `restore_backu
 
 ```bash
 wdc migrate mamp --port 3308              # dry-run
-wdc migrate mamp --port 3308 --apply      # actually migrate
+wdc migrate mamp --port 3308 --apply      # migrate
 ```
 
 Reads `%APPDATA%\Appsolute\MAMPPRO\userdb\mamp.db` and rebuilds sites + databases in WDC.
@@ -193,7 +193,7 @@ NKS WebDev Console ships as four co-operating public repositories:
 
 | Repo | Purpose |
 |------|---------|
-| [`nks-hub/webdev-console`](https://github.com/nks-hub/webdev-console) | This repo — daemon, CLI, Electron frontend, Plugin SDK |
+| [`nks-hub/webdev-console`](https://github.com/nks-hub/webdev-console) | This repo: daemon, CLI, Electron frontend, Plugin SDK |
 | [`nks-hub/webdev-console-plugins`](https://github.com/nks-hub/webdev-console-plugins) | 13 official plugins (Apache, PHP, MySQL, …) |
 | [`nks-hub/webdev-console-binaries`](https://github.com/nks-hub/webdev-console-binaries) | Versioned runtime binaries (PHP, Apache, Nginx, Caddy, …) |
 | [`nks-hub/wdc-catalog-api`](https://github.com/nks-hub/wdc-catalog-api) | FastAPI catalog + config-sync service |
