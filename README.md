@@ -1,3 +1,5 @@
+# NKS WebDev Console
+
 [![Build & Release](https://github.com/nks-hub/webdev-console/actions/workflows/build.yml/badge.svg)](https://github.com/nks-hub/webdev-console/actions/workflows/build.yml)
 [![CI](https://github.com/nks-hub/webdev-console/actions/workflows/ci.yml/badge.svg)](https://github.com/nks-hub/webdev-console/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/nks-hub/webdev-console?label=release)](https://github.com/nks-hub/webdev-console/releases)
@@ -7,22 +9,20 @@
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883)](https://vuejs.org/)
 [![Cross-platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)](https://github.com/nks-hub/webdev-console/releases)
 
-# NKS WebDev Console
-
-Local development environment for **Windows, macOS, and Linux** — manages Apache, PHP, MySQL/MariaDB, SSL, mail catching, Redis, Node, Cloudflare tunnels and DNS for `.local` / `.test` domains. A modern replacement for MAMP PRO, XAMPP, WampServer, Laragon and similar tools.
+> Local development environment for **Windows, macOS, and Linux** — manages Apache, PHP, MySQL/MariaDB, SSL, mail catching, Redis, Node, Cloudflare tunnels and DNS for `.local` / `.test` domains. A modern replacement for MAMP PRO, XAMPP, WampServer, Laragon and similar tools.
 
 ## Features
 
-- ✅ **Cross-platform** — Windows (NSIS + portable), macOS (DMG + ZIP, Apple Silicon), Linux (AppImage)
-- ✅ **One daemon, many plugins** — Apache, PHP, MySQL, MariaDB, SSL (mkcert), Mailpit, Redis, Node, Caddy, Cloudflare and Hosts editor loaded as isolated `.NET 9` plugin DLLs
-- ✅ **Per-site PHP** — each site can pin its own PHP version, INI overrides (memory, timeouts, upload limits, Xdebug, OPcache, extensions) and Apache Fcgid timeouts
-- ✅ **MAMP PRO migration** — built-in importer reads MAMP PRO's SQLite database, recreates vhosts, copies SSL certs and migrates databases (verified on 17 sites + 66 databases)
-- ✅ **Three interfaces** — Electron GUI, `wdc` CLI, or REST API with Bearer-token auth
-- ✅ **MCP server** — 67 tools that let Claude Code (or any MCP client) manage your local stack: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Full audit trail of every tool call surfaces in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
-- ✅ **Cloudflare integration** — built-in tunnel management, DNS records, route configuration via `cloudflared`
-- ✅ **Elevated by default on Windows** — single UAC prompt at launch, no per-operation prompts for hosts-file edits
-- ✅ **Self-contained daemon** — .NET 9 published with `--self-contained`, no separate runtime install needed
-- ✅ **Type-safe** — strict TypeScript on the frontend, `nullable enable` on the backend, 595+ xUnit tests
+- 🖥️ **Cross-platform** — Windows (NSIS + portable), macOS (DMG + ZIP, Apple Silicon), Linux (AppImage)
+- 🧩 **One daemon, many plugins** — Apache, PHP, MySQL, MariaDB, SSL (mkcert), Mailpit, Redis, Node, Caddy, Cloudflare and Hosts editor loaded as isolated `.NET 9` plugin DLLs
+- 🐘 **Per-site PHP** — each site can pin its own PHP version, INI overrides (memory, timeouts, upload limits, Xdebug, OPcache, extensions) and Apache Fcgid timeouts
+- 🚚 **MAMP PRO migration** — built-in importer reads MAMP PRO's SQLite database, recreates vhosts, copies SSL certs and migrates databases (verified on 17 sites + 66 databases)
+- 🎛️ **Three interfaces** — Electron GUI, `wdc` CLI, or REST API with Bearer-token auth
+- 🤖 **MCP server** — 67 tools that let Claude Code (or any MCP client) manage your local stack: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Full audit trail of every tool call surfaces in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
+- ☁️ **Cloudflare integration** — built-in tunnel management, DNS records, route configuration via `cloudflared`
+- 🔐 **Elevated by default on Windows** — single UAC prompt at launch, no per-operation prompts for hosts-file edits
+- 📦 **Self-contained daemon** — .NET 9 published with `--self-contained`, no separate runtime install needed
+- 🧪 **Type-safe** — strict TypeScript on the frontend, `nullable enable` on the backend, 595+ xUnit tests
 
 ## Requirements
 
@@ -229,19 +229,18 @@ GitHub Actions builds all three platforms and uploads to Releases. macOS code-si
 
 ## Contributing
 
-Contributions are welcome! For major changes please open an issue first.
+Contributions are welcome! For major changes, please open an issue first. Keep `dotnet test` and the frontend build green; CI runs the matrix build for all three platforms.
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feat/amazing-feature`)
-3. Keep `dotnet test` + frontend build green
-4. Commit your changes — one-line conventional commit messages, no AI attribution
-5. Open a Pull Request — CI runs the matrix build for all three platforms
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: description'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## Support
 
 - 📧 **Email:** dev@nks-hub.cz
 - 🐛 **Bug reports:** [GitHub Issues](https://github.com/nks-hub/webdev-console/issues)
-- 💬 **Discussions:** [GitHub Discussions](https://github.com/nks-hub/webdev-console/discussions)
 
 ## License
 
