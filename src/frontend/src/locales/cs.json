@@ -1128,6 +1128,7 @@
     "confirmRemove": "Odebrat tento záznam?",
     "confirmApply": "Použít {count} změnu/y do hosts souboru?",
     "applySuccess": "Hosts soubor aktualizován",
+    "externalNotApplied": "Změny u záznamů mimo blok WDC ({count}) se nezapsaly. Tyto řádky upravte přímo v souboru hosts.",
     "applyError": "Nepodařilo se použít změny",
     "adminRequired": "Vyžaduje administrátora — restartujte WDC jako správce",
     "adminRequiredPrompt": "WDC daemon nemá administrátorská práva. Restartovat ho jako správce? Windows zobrazí UAC dialog.",

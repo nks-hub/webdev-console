@@ -1308,7 +1308,7 @@ export interface HostApplyEntry {
 export const fetchHosts = (): Promise<HostEntry[]> =>
   json('/api/hosts')
 
-export const applyHosts = (entries: HostApplyEntry[]): Promise<{ applied: boolean; entryCount: number }> =>
+export const applyHosts = (entries: HostApplyEntry[]): Promise<{ applied: boolean; entryCount: number; added?: number; notApplied?: number }> =>
   json('/api/hosts/apply', { method: 'POST', body: JSON.stringify({ entries }) })
 
 export const backupHosts = (): Promise<{ path: string; timestamp: string }> =>

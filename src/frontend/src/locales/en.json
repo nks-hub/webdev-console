@@ -1128,6 +1128,7 @@
     "confirmRemove": "Remove this entry?",
     "confirmApply": "Apply {count} change(s) to the hosts file?",
     "applySuccess": "Hosts file updated",
+    "externalNotApplied": "{count} change(s) to entries outside the WDC block were not written. Edit those lines in the hosts file directly.",
     "applyError": "Failed to apply changes",
     "adminRequired": "Requires administrator — restart WDC as admin",
     "adminRequiredPrompt": "WDC daemon is not elevated. Restart it as administrator now? Windows will show a UAC consent prompt.",
