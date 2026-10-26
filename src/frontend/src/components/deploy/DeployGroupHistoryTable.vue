@@ -353,7 +353,7 @@ async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
     await refresh()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Replay failed to start: ${msg}`)
+    ElMessage.error(t('toast.replayFailed', { err: msg }))
   } finally {
     replayingId.value = null
   }
@@ -377,12 +377,12 @@ async function onRollbackGroup(row: DeployGroupEntry): Promise<void> {
   rollingBackId.value = row.id
   try {
     await rollbackDeployGroup(props.domain, row.id)
-    ElMessage.success(`Group rollback dispatched (${hostCount} hosts)`)
+    ElMessage.success(t('toast.groupRollbackDispatched', { n: hostCount }))
     // Refresh to reflect rolling_back_all → rolled_back/partial_failure
     await refresh()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Group rollback failed: ${msg}`)
+    ElMessage.error(t('toast.groupRollbackFailed', { err: msg }))
   } finally {
     rollingBackId.value = null
   }
@@ -395,7 +395,7 @@ async function onOpenHostRun(host: string, deployId: string): Promise<void> {
     await deployStore.loadAndOpenHistorical(props.domain, deployId, host)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Could not open run: ${msg}`)
+    ElMessage.error(t('toast.openRunFailed', { err: msg }))
   } finally {
     openingDeployId.value = null
   }

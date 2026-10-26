@@ -421,7 +421,7 @@ async function refresh(): Promise<void> {
     entries.value = result.entries
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Failed to load intents: ${msg}`)
+    ElMessage.error(t('toast.loadIntentsFailed', { err: msg }))
   } finally {
     loading.value = false
   }

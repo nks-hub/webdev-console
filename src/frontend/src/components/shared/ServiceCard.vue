@@ -110,6 +110,9 @@ import { computed, ref } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { useServicesStore } from '../../stores/services'
 import type { ServiceInfo } from '../../api/types'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{ service: ServiceInfo }>()
 const servicesStore = useServicesStore()
@@ -162,7 +165,7 @@ async function act(action: 'start' | 'stop' | 'restart') {
   try {
     await servicesStore[action](svc.id)
     const svcName = svc.displayName || svc.id
-    ElMessage.success(`${svcName}: ${action} succeeded`)
+    ElMessage.success(t(action === 'start' ? 'toast.serviceStarted' : action === 'stop' ? 'toast.serviceStopped' : 'toast.serviceRestarted', { name: svcName }))
   } catch (err: unknown) {
     const svcName = svc.displayName || svc.id
     const message = err instanceof Error ? err.message : String(err)

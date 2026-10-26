@@ -1165,9 +1165,10 @@ async function save() {
 async function rollback(timestamp: string, createdAt?: string) {
   if (!site.value) return
   try {
-    await ElMessageBox.confirm(`Restore config from ${formatDate(createdAt ?? timestamp)}?`, 'Restore', {
+    await ElMessageBox.confirm(t('toast.restoreConfigConfirm', { when: formatDate(createdAt ?? timestamp) }), t('toast.restoreTitle'), {
       type: 'warning',
-      confirmButtonText: 'Restore',
+      confirmButtonText: t('toast.restoreTitle'),
+      cancelButtonText: t('common.cancel'),
     })
   } catch { return }
   try {

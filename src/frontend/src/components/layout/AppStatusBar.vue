@@ -15,7 +15,7 @@
     <!-- Advanced mode: full status bar -->
     <template v-else>
       <span class="status-item">
-        <HealthStatusDot :level="daemonStore.connected ? 'ok' : 'err'" />
+        <HealthStatusDot :level="daemonStore.connected ? 'ok' : 'err'" :title="daemonStore.connected ? $t('header.connected') : $t('header.offline')" />
         <span>{{ t('footer.daemon') }}</span>
       </span>
 

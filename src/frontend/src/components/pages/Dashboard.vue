@@ -5,7 +5,7 @@
       <div class="header-title-block">
         <span class="page-title">{{ $t('dashboard.title') }}</span>
         <span class="page-subtitle">
-          <template v-if="uiMode.isAdvanced">v{{ appVersion }} · </template>{{ daemonStore.connected ? $t('header.connected') : 'Connecting...' }}
+          <template v-if="uiMode.isAdvanced">v{{ appVersion }} · </template>{{ daemonStore.connected ? $t('header.connected') : $t('header.connecting') }}
         </span>
       </div>
       <div class="header-actions">
@@ -80,7 +80,7 @@
 
       <!-- 1. Quick stats strip (top) — at-a-glance counters -->
       <div class="stats-grid">
-        <div class="stat-card stat-clickable" @click="$router.push('/sites')">
+        <div v-activate:link class="stat-card stat-clickable" @click="$router.push('/sites')">
           <el-icon class="stat-icon"><Monitor /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ sitesStore.sites.length }}</div>
@@ -95,7 +95,7 @@
           </div>
         </div>
         <!-- F91.6: show enabled/total so disabling plugins reflects here. -->
-        <div class="stat-card stat-clickable" @click="$router.push('/plugins')">
+        <div v-activate:link class="stat-card stat-clickable" @click="$router.push('/plugins')">
           <el-icon class="stat-icon"><Grid /></el-icon>
           <div class="stat-content">
             <div class="stat-value mono">{{ pluginsStore.enabledPlugins.length }} / {{ pluginsStore.manifests.length || (daemonStore.status?.plugins ?? 0) }}</div>
@@ -331,6 +331,9 @@ import ServiceIcon from '../shared/ServiceIcon.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
 import { useAppVersion } from '../../utils/appVersion'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const router = useRouter()
 
@@ -527,10 +530,10 @@ async function toggleService(id: string, value: boolean | string | number) {
   try {
     if (on) {
       await servicesStore.start(id)
-      ElMessage.success(`${name}: started`)
+      ElMessage.success(t('toast.serviceStarted', { name }))
     } else {
       await servicesStore.stop(id)
-      ElMessage.success(`${name}: stopped`)
+      ElMessage.success(t('toast.serviceStopped', { name }))
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)

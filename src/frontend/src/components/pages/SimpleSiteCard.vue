@@ -16,7 +16,7 @@
       <div class="card-title-row">
         <div class="card-title">{{ site.domain }}</div>
         <div class="card-status">
-          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" />
+          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" :title="apacheRunning ? t('common.running') : t('common.stopped')" />
           <span class="status-text">
             {{ apacheRunning ? t('sites.card.running') : t('sites.card.stopped') }}
           </span>
@@ -72,7 +72,7 @@
         circle
         :icon="StopIcon"
         :loading="toggling"
-        :title="t('sites.card.stopApacheTooltip')"
+        :title="t('sites.card.stopApacheTooltip')" :aria-label="t('sites.card.stopApacheTooltip')"
         @click="emit('stop-apache')"
       />
       <el-button
@@ -82,7 +82,7 @@
         type="success"
         :icon="PlayIcon"
         :loading="toggling"
-        :title="t('sites.card.start')"
+        :title="t('sites.card.start')" :aria-label="t('sites.card.start')"
         @click="emit('start-apache')"
       />
 

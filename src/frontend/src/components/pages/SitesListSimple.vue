@@ -141,7 +141,7 @@ async function toggleSiteEnabled(site: { domain: string; enabled?: boolean }, va
     ElMessage.success(enabled ? `Site ${site.domain} enabled` : `Site ${site.domain} disabled`)
     await sitesStore.load()
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${e instanceof Error ? e.message : e}`)
+    ElMessage.error($t('toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     togglingEnabled.value = null
   }
@@ -316,7 +316,7 @@ async function startApache() {
   try {
     await startService('apache')
   } catch (e) {
-    ElMessage.error(`Start failed: ${errorMessage(e)}`)
+    ElMessage.error($t('toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }
@@ -339,7 +339,7 @@ async function stopApache() {
   try {
     await stopService('apache')
   } catch (e) {
-    ElMessage.error(`Stop failed: ${errorMessage(e)}`)
+    ElMessage.error($t('toast.stopFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }
@@ -372,7 +372,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
       await startService('apache')
       ElMessage.success($t('sites.card.restarted'))
     } catch (e) {
-      ElMessage.error(`Restart failed: ${errorMessage(e)}`)
+      ElMessage.error($t('toast.restartFailed', { err: errorMessage(e) }))
     } finally {
       restarting.value = false
     }
@@ -391,9 +391,9 @@ async function handleCommand(cmd: string, site: SiteInfo) {
     }
     try {
       await sitesStore.remove(site.domain)
-      ElMessage.success(`${site.domain} deleted`)
+      ElMessage.success($t('toast.deleted', { name: site.domain }))
     } catch (e) {
-      ElMessage.error(`Delete failed: ${errorMessage(e)}`)
+      ElMessage.error($t('toast.deleteFailed', { err: errorMessage(e) }))
     }
   }
 }

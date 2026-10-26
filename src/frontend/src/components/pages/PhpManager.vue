@@ -98,6 +98,9 @@ import { ElMessage } from 'element-plus'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchPhpVersions } from '../../api/daemon'
 import type { PhpVersion } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface ExtInfo {
   name: string
@@ -189,18 +192,18 @@ async function toggleExtension(name: string, enabled: boolean) {
     )
     if (!r.ok) {
       const text = await r.text().catch(() => r.statusText)
-      ElMessage.error(`Failed to toggle ${name}: ${text}`)
+      ElMessage.error(t('toast.extToggleFailed', { name, err: text }))
       return
     }
     // Optimistically update local state; daemon also restarted PHP so a
     // follow-up config reload picks up the real result.
     const ext = extensions.value.find((e) => e.name === name)
     if (ext) ext.enabled = enabled
-    ElMessage.success(`${name} ${enabled ? 'enabled' : 'disabled'} — PHP restarted`)
+    ElMessage.success(t(enabled ? 'toast.extEnabledRestarted' : 'toast.extDisabledRestarted', { name }))
     // Reload config after a brief pause so the ini content matches the new state.
     setTimeout(() => { void loadConfig(selectedVersion.value) }, 400)
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     togglingExt.value = ''
   }
@@ -214,17 +217,17 @@ async function setDefault(version: string) {
       body: JSON.stringify({ version }),
     })
     if (r.ok) {
-      ElMessage.success(`PHP ${version} set as default`)
+      ElMessage.success(t('toast.phpDefaultSet', { version }))
       await loadVersions()
     } else {
       // Surface the daemon's response body so the user can see WHY the
       // operation failed (permission denied, invalid version, file locked…)
       // instead of a generic "Failed to set default" dead-end.
       const text = await r.text().catch(() => r.statusText)
-      ElMessage.error(`Failed to set default: ${text || `HTTP ${r.status}`}`)
+      ElMessage.error(t('toast.setDefaultFailed', { err: text || `HTTP ${r.status}` }))
     }
   } catch (e) {
-    ElMessage.error(`Cannot set default: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.setDefaultFailed', { err: errorMessage(e) }))
   }
 }
 

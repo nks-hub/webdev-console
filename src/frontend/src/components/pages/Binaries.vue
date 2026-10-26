@@ -496,7 +496,7 @@ async function refresh() {
     // above via fire-and-forget — no need to block the UI on it.
     void loadSystemInfo()
   } catch (e) {
-    ElMessage.error(`Failed to load: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.loadFailed', { err: errorMessage(e) }))
   } finally {
     loading.value = false
   }
@@ -525,13 +525,13 @@ async function install(app: string, version: string) {
     progressPercent.value = 100
     progressDone.value = true
     progressMessage.value = `${app} ${version} installed successfully`
-    ElMessage.success(`${app} ${version} installed`)
+    ElMessage.success(t('toast.installedVersion', { app, version }))
     await refresh()
   } catch (e) {
     const msg = errorMessage(e)
     progressError.value = true
     progressMessage.value = `Error: ${msg}`
-    ElMessage.error(`Install failed: ${msg}`)
+    ElMessage.error(t('toast.installFailed', { err: msg }))
   } finally {
     installing.value.delete(key)
   }
@@ -551,10 +551,10 @@ async function uninstall(app: string, version: string) {
   uninstalling.value.add(key)
   try {
     await uninstallBinary(app, version)
-    ElMessage.success(`${app} ${version} removed`)
+    ElMessage.success(t('toast.removedVersion', { app, version }))
     await refresh()
   } catch (e) {
-    ElMessage.error(`Remove failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.removeFailed', { err: errorMessage(e) }))
   } finally {
     uninstalling.value.delete(key)
   }

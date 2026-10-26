@@ -83,6 +83,9 @@ import { ElMessage } from 'element-plus'
 import { browseFolder } from '../../api/daemon'
 import type { FsBrowseResponse, FsEntry } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -110,7 +113,7 @@ async function navigate(path?: string) {
     pathInput.value = res.path
     selectedPath.value = ''
   } catch (e) {
-    ElMessage.error(`Cannot open path: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.openPathFailed', { err: errorMessage(e) }))
   } finally {
     loading.value = false
   }
