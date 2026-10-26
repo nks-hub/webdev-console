@@ -404,14 +404,14 @@
               <div v-for="(h, i) in history" :key="h.timestamp" class="history-row">
                 <div class="history-when">
                   <el-icon><Clock /></el-icon>
-                  <span>{{ formatDate(h.timestamp) }}</span>
+                  <span>{{ formatDate(h.createdAt ?? h.timestamp) }}</span>
                 </div>
                 <div class="history-label">
                   <span class="version-badge">v{{ history.length - i }}</span>
                   <span v-if="h.label">{{ h.label }}</span>
                   <span v-else class="version-hint">config snapshot</span>
                 </div>
-                <el-button size="small" text type="primary" @click="rollback(h.timestamp)">
+                <el-button size="small" text type="primary" @click="rollback(h.timestamp, h.createdAt)">
                   {{ $t('common.restore') }}
                 </el-button>
               </div>
@@ -666,7 +666,7 @@ const activeTab = ref('general')
 // majorMinor; `label` shows the full patch + active flag.
 interface PhpVersionOption { value: string; label: string; isActive: boolean }
 const phpVersions = ref<PhpVersionOption[]>([])
-const history = ref<Array<{ timestamp: string; label?: string }>>([])
+const history = ref<Array<{ timestamp: string; createdAt?: string; label?: string }>>([])
 // Task 28: Danger-tab rename input. Kept reactive so a future rename
 // backend can wire up immediately without a template change.
 const renameNewDomain = ref('')
@@ -1094,7 +1094,7 @@ async function load() {
       const res = await fetch(`${daemonBaseUrl()}/api/sites/${domain.value}/history`, {
         headers: sitesStore.authHeaders(),
       })
-      if (res.ok) history.value = await res.json() as Array<{ timestamp: string; label?: string }>
+      if (res.ok) history.value = await res.json() as Array<{ timestamp: string; createdAt?: string; label?: string }>
     } catch { /* optional */ }
 
     // Docker Compose detection (non-blocking)
@@ -1162,10 +1162,10 @@ async function save() {
   }
 }
 
-async function rollback(timestamp: string) {
+async function rollback(timestamp: string, createdAt?: string) {
   if (!site.value) return
   try {
-    await ElMessageBox.confirm(`Restore config from ${formatDate(timestamp)}?`, 'Restore', {
+    await ElMessageBox.confirm(`Restore config from ${formatDate(createdAt ?? timestamp)}?`, 'Restore', {
       type: 'warning',
       confirmButtonText: 'Restore',
     })
