@@ -4,7 +4,7 @@
 // next line the per-session Bearer token. Token rotates every daemon restart
 // — on 401 we re-read the file and retry once.
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -37,6 +37,16 @@ class DaemonNotRunningError extends Error {
   }
 }
 
+function isTrustedPortFile(path: string): boolean {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return true
+  try {
+    const st = statSync(path)
+    return st.uid === process.getuid() && (st.mode & 0o077) === 0
+  } catch {
+    return false
+  }
+}
+
 class DaemonClient {
   private current: PortFile | null = null
 
@@ -54,6 +64,9 @@ class DaemonClient {
     ]
     for (const path of candidates) {
       if (!existsSync(path)) continue
+      // In the shared temp dir another local user could pre-create this file
+      // and point us at their own listener; trust only our own 0600 file.
+      if (!isTrustedPortFile(path)) continue
       try {
         const lines = readFileSync(path, 'utf8').trim().split('\n')
         if (lines.length < 2) continue
