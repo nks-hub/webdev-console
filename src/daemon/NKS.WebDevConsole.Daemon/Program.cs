@@ -86,6 +86,7 @@ builder.Services.AddSingleton<WebSocketLogStreamer>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddSingleton<ShutdownCoordinator>();
 builder.Services.AddHostedService<HealthMonitor>();
+builder.Services.AddHostedService<ServiceLogTailer>();
 builder.Services.AddHostedService<MetricsHistoryService>();
 builder.Services.AddSingleton<TemplateEngine>();
 builder.Services.AddSingleton<ConfigValidator>();
