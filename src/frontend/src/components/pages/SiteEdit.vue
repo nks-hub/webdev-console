@@ -533,29 +533,6 @@
           </div>
         </el-tab-pane>
 
-        <!-- ── Per-site Backup (task 29) ─────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="backup">
-          <template #label>
-            <span class="tab-label"><el-icon><FolderOpened /></el-icon> {{ $t('siteEdit.backup') }}</span>
-          </template>
-          <div class="tab-content">
-            <div class="history-banner">
-              <el-icon><InfoFilled /></el-icon>
-              <span>
-                Per-site backup snapshots (vhost + optional docroot). Backed
-                by the global Backups tab (Zálohy) — filtered to only show
-                snapshots that contain this site's files. Global backup
-                schedule + content selection lives in
-                <el-link type="primary" @click="$router.push('/backups')">Backups</el-link>.
-              </span>
-            </div>
-            <el-empty
-              description="Backup list surfaces here after the Backups top-level tab ships (task 14)"
-              :image-size="64"
-            />
-          </div>
-        </el-tab-pane>
-
         <!-- ── Danger ───────────────────────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="danger">
           <template #label>
