@@ -66,6 +66,9 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
+// DNS-rebinding defence: answer only Host localhost / 127.0.0.1 / [::1].
+builder.Services.AddDaemonHostFiltering();
+
 // OpenAPI metadata so /openapi/v1.json can be consumed by NSwag/swagger-typescript-api
 // to generate TS types in CI (prevents contract drift between daemon and frontend).
 builder.Services.AddEndpointsApiExplorer();
