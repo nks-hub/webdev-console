@@ -13,7 +13,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe, toolError } from '../formatting.js'
-import { ConfirmYesSchema, DatabaseNameSchema } from '../schemas.js'
+import { ConfirmYesSchema, DatabaseNameSchema, capabilityNote } from '../schemas.js'
 
 // Allowed leading verbs for wdc_query. Anything else goes through wdc_execute.
 const READ_ONLY_VERBS = /^(SELECT|SHOW|EXPLAIN|DESC(RIBE)?|WITH)\b/i
@@ -134,6 +134,9 @@ const TableNameSchema = z
 
 /** Largest SQL dump wdc_import_database sends (the daemon buffers it). */
 export const MAX_IMPORT_BYTES = 64 * 1024 * 1024
+
+/** Imports and exports to a file are in the daemon's database_admin capability group. */
+const DATABASE_ADMIN = capabilityNote('Database server administration')
 
 const AbsolutePathSchema = z
   .string()
@@ -329,7 +332,8 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         'size is returned; without it the SQL text is returned (cut off when large).\n\n' +
         'Args:\n' +
         '  database: Database name.\n' +
-        '  outputPath: Absolute path of a new .sql file to write (refuses to overwrite unless overwrite is true).\n' +
+        '  outputPath: Absolute path of a new .sql file to write (refuses to overwrite unless overwrite is true). ' +
+        `Writing to a file: ${DATABASE_ADMIN}\n` +
         '  overwrite: Replace an existing outputPath.\n\n' +
         'Returns: { database, path, bytes } with outputPath, otherwise the SQL text.',
       inputSchema: {
@@ -344,7 +348,10 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         if (outputPath && !overwrite && existsSync(outputPath)) {
           throw new Error(`${outputPath} already exists; pass overwrite: true to replace it.`)
         }
-        const dump = await daemonClient.get<string>(`/api/databases/${encodeURIComponent(database)}/export`)
+        // The daemon allows an export to a file only with the database_admin
+        // capability, so the target path goes along for it to check.
+        const qs = outputPath ? new URLSearchParams({ outputPath }).toString() : ''
+        const dump = await daemonClient.get<string>(`/api/databases/${encodeURIComponent(database)}/export?${qs}`)
         const text = typeof dump === 'string' ? dump : JSON.stringify(dump)
         if (!outputPath) return text
         writeFileSync(outputPath, text, 'utf8')
@@ -438,7 +445,8 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
       description:
         'DESTRUCTIVE: Run a SQL dump against a database with the mysql client. Tables in the dump ' +
         'replace existing ones. Export the database first if its data matters.\n\n' +
-        'Needs the user\'s approval: wdc_request_confirmation(operation: "database_import", target: database).\n\n' +
+        `${DATABASE_ADMIN} Each import needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "database_import", target: database).\n\n' +
         'Args:\n' +
         '  database: Target database (must exist; see wdc_create_database).\n' +
         '  sql: The SQL text, or\n' +

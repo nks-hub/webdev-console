@@ -23,8 +23,65 @@ public static class McpEndpoints
         ctx.RequestServices.GetRequiredService<SettingsStore>()
             .GetBool("mcp", "enabled", defaultValue: false);
 
+    /// <summary>Body of GET /api/mcp/capabilities (contract in MapMcpEndpoints).</summary>
+    internal static object CapabilitiesResponse(Func<string, bool> isEnabled) => new
+    {
+        settingPrefix = McpCapabilities.SettingPrefix,
+        capabilities = McpCapabilities.All.Select(c => new
+        {
+            id = c.Id,
+            settingKey = c.SettingKey,
+            title = c.Title,
+            description = c.Description,
+            enabled = isEnabled(c.Id),
+            defaultEnabled = c.DefaultEnabled,
+            routes = c.Routes.Select(r => new
+            {
+                method = r.Method,
+                pattern = r.Pattern,
+                intentKind = r.IntentKind,
+                intentBy = r.IntentKind is null ? null : r.IntentByEndpoint ? "endpoint" : "daemon",
+            }),
+            bodyFields = c.BodyFields.Select(f => new
+            {
+                method = f.Method,
+                pattern = f.Pattern,
+                fields = f.Fields,
+                intentKind = f.IntentKind,
+            }),
+            tools = c.Tools,
+        }),
+        alwaysAllowed = McpCapabilities.AlwaysAllowed.Select(r => new { method = r.Method, pattern = r.Pattern }),
+        neverAllowed = McpTokenPolicy.NeverAllowed.Select(r => new { method = r.Method, pattern = r.Pattern }),
+        neverAllowedSettings = "mcp.*",
+    };
+
     public static void MapMcpEndpoints(this WebApplication app)
     {
+        // GET /api/mcp/capabilities — what the MCP token may do, for the
+        // Settings → MCP panel (and for agents, which may read it too).
+        // Not gated by mcp.enabled: the panel needs it to turn MCP on.
+        //
+        // {
+        //   "settingPrefix": "mcp.capabilities.",
+        //   "capabilities": [{
+        //     "id", "settingKey", "title", "description",
+        //     "enabled", "defaultEnabled",
+        //     "routes":     [{ "method", "pattern", "intentKind"?, "intentBy": "daemon"|"endpoint"|null }],
+        //     "bodyFields": [{ "method", "pattern", "fields": [..], "intentKind"? }],
+        //     "tools":      ["wdc_..."]
+        //   }],
+        //   "alwaysAllowed": [{ "method", "pattern" }],
+        //   "neverAllowed":  [{ "method", "pattern" }],
+        //   "neverAllowedSettings": "mcp.*"
+        // }
+        //
+        // A capability is switched with PUT /api/settings
+        // { "mcp.capabilities.<id>": "true" | "false" } using the GUI token;
+        // the MCP token can never write mcp.* settings.
+        app.MapGet("/api/mcp/capabilities", (SettingsStore settings) =>
+            Results.Ok(CapabilitiesResponse(id => McpCapabilities.IsEnabled(settings, id))));
+
         app.MapPost("/api/mcp/intents", async (
             HttpContext ctx,
             NKS.WebDevConsole.Daemon.Data.Database db,
@@ -190,8 +247,8 @@ public static class McpEndpoints
             }
 
             // Best-effort: the SSE bus is the GUI's notification channel. Failure
-            // to broadcast (no subscribers, etc.) is not fatal — the AI can still
-            // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
+            // to broadcast (no subscribers, etc.) is not fatal — the operator can
+            // still approve the intent from the MCP Intents page.
             await broadcaster.BroadcastAsync("mcp:confirm-request",
                 new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host, alwaysConfirm });
             return Results.Accepted();
@@ -262,7 +319,7 @@ public static class McpEndpoints
 
             var now = DateTimeOffset.UtcNow.ToString("o");
             var rows = await Dapper.SqlMapper.ExecuteAsync(conn,
-                "UPDATE deploy_intents SET used_at = @Now WHERE id = @Id AND used_at IS NULL",
+                "UPDATE deploy_intents SET used_at = @Now, revoked_at = @Now WHERE id = @Id AND used_at IS NULL",
                 new { Id = intentId, Now = now });
             if (rows == 0)
             {
@@ -338,6 +395,41 @@ public static class McpEndpoints
                 };
             }).ToList();
             return Results.Ok(new { count = entries.Count, entries });
+        });
+
+        // State of one intent, for the MCP agent waiting on the user's approval
+        // (wdc_get_confirmation_status). Same data as a row of the list above
+        // plus `revoked`, without the signature or nonce.
+        app.MapGet("/api/mcp/intents/{intentId}", async (
+            string intentId,
+            HttpContext ctx,
+            NKS.WebDevConsole.Daemon.Data.Database db,
+            NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry) =>
+        {
+            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (string.IsNullOrWhiteSpace(intentId))
+                return Results.BadRequest(new { error = "intentId is required" });
+            using var conn = db.CreateConnection();
+            await conn.OpenAsync();
+            var intent = await NKS.WebDevConsole.Daemon.Mcp.McpIntentStatus.LoadAsync(conn, intentId, DateTimeOffset.UtcNow);
+            if (intent is null) return Results.NotFound(new { error = "intent_not_found", intentId });
+            var registered = kindsRegistry.Get(intent.Kind);
+            return Results.Ok(new
+            {
+                intent.IntentId,
+                intent.Kind,
+                kindLabel = registered?.Label,
+                intent.Domain,
+                intent.Host,
+                intent.ReleaseId,
+                intent.State,
+                intent.ExpiresAt,
+                intent.ConfirmedAt,
+                intent.UsedAt,
+                intent.RevokedAt,
+                intent.CreatedAt,
+                intent.MatchedGrantId,
+            });
         });
 
         static string ComputeIntentState(string? usedAt, string? confirmedAt, string expiresAtRaw)

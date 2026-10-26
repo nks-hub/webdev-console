@@ -488,7 +488,16 @@
       "plugin_install": "Install a new plugin DLL",
       "plugin_uninstall": "Uninstall a plugin",
       "binary_install": "Install a new binary (PHP, MySQL, …)",
-      "service_restart": "Stop or restart a managed service"
+      "service_restart": "Stop or restart a managed service",
+      "service_config_write": "Rewrite a service config file (httpd.conf, php.ini, …)",
+      "hosts_write": "Rewrite or restore the system hosts file",
+      "node_process": "Set or run a site's Node.js start command",
+      "cloudflare_credentials": "Change Cloudflare credentials or tunnel routing",
+      "daemon_admin": "Restart, shut down, reset or uninstall the daemon",
+      "mysql_root_reset": "Reset the MySQL root password",
+      "mysql_user_drop": "Drop a MySQL user account",
+      "postgres_root_reset": "Reset the PostgreSQL superuser password",
+      "backup_delete": "Delete a WDC backup"
     },
     "empty": "No kinds registered",
     "col": {

@@ -6,7 +6,10 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
-import { ConfirmYesSchema } from '../schemas.js'
+import { ConfirmYesSchema, capabilityNote } from '../schemas.js'
+
+// Restoring and deleting backups are the daemon's backup_restore capability.
+const BACKUP_RESTORE = capabilityNote('Backup restore and delete')
 
 export function registerBackupTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -87,7 +90,10 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       description:
         'DESTRUCTIVE: Restore a backup zip file, overwriting current state. The daemon ' +
         'creates a safety pre-restore backup automatically.\n\n' +
-        'Args:\n  path: Absolute path to a backup zip under the backup root.\n  confirm: Must be "YES".\n\n' +
+        `${BACKUP_RESTORE} Each restore needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "backup_restore").\n\n' +
+        'Args:\n  path: Absolute path to a backup zip under the backup root.\n  confirm: Must be "YES".\n' +
+        '  intentToken: Approved intent.\n\n' +
         'You MUST show the user the backup path + timestamp before passing confirm="YES".',
       inputSchema: {
         path: BackupPathSchema,
@@ -111,16 +117,22 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       title: 'Delete backup (destructive)',
       description:
         'DESTRUCTIVE: Delete a backup zip from the backup directory. It cannot be recovered.\n\n' +
-        'Args:\n  name: File name of the backup (or its path from wdc_list_backups).\n  confirm: Must be "YES".\n\n' +
+        `${BACKUP_RESTORE} Each delete needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "backup_delete", target: the backup file name), then pass the ' +
+        'approved intentToken.\n\n' +
+        'Args:\n  name: File name of the backup (or its path from wdc_list_backups).\n  confirm: Must be "YES".\n' +
+        '  intentToken: Approved intent.\n\n' +
         'You MUST show the user which backup (name and date) will be deleted before passing confirm="YES".\n\n' +
         'Returns: { deleted }.',
       inputSchema: {
         name: BackupPathSchema.describe('Backup file name like wdc-backup-2026-01-01-10-00-00.zip, or its path'),
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async ({ name }) => safe(() => daemonClient.delete(`/api/backup/${encodeURIComponent(backupFileName(name))}`)),
+    async ({ name, intentToken }) =>
+      safe(() => daemonClient.delete(`/api/backup/${encodeURIComponent(backupFileName(name))}`, intentHeaders(intentToken))),
   )
 
   server.registerTool(
@@ -130,7 +142,8 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       description:
         'DESTRUCTIVE: Restore a backup from the backup directory, by file name, over the current state ' +
         '(sites, certificates, state.db). The daemon makes a safety backup first.\n\n' +
-        'Needs the user\'s approval: wdc_request_confirmation(operation: "backup_restore").\n\n' +
+        `${BACKUP_RESTORE} Each restore needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "backup_restore").\n\n' +
         'Args:\n  id: File name of the backup (or its path from wdc_list_backups).\n  confirm: Must be "YES".\n' +
         '  intentToken: Approved intent.\n\n' +
         'You MUST show the user the backup name and date before passing confirm="YES".\n\n' +

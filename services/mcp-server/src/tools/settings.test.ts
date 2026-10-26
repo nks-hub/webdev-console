@@ -13,28 +13,23 @@ describe('protectedSettingKeys', () => {
     expect(protectedSettingKeys(['ports.http', 'general.theme', 'backup.scheduleHours'])).toEqual([])
   })
 
-  it('blocks keys that change what the daemon trusts or where it writes', () => {
+  it('blocks mcp.* keys, which decide what the agent may do', () => {
     expect(
       protectedSettingKeys([
-        'daemon.catalogUrl',
         'mcp.always_confirm_kinds',
-        'deploy.enabled',
-        'plugins.autoSyncEnabled',
-        'paths.hostsFile',
+        'mcp.capabilities.service_config',
+        'daemon.catalogUrl',
         'backup.dir',
         'ports.http',
       ]),
-    ).toEqual([
-      'daemon.catalogUrl',
-      'mcp.always_confirm_kinds',
-      'deploy.enabled',
-      'plugins.autoSyncEnabled',
-      'paths.hostsFile',
-      'backup.dir',
-    ])
+    ).toEqual(['mcp.always_confirm_kinds', 'mcp.capabilities.service_config'])
+  })
+
+  it('leaves other operator settings to the daemon capability check', () => {
+    expect(protectedSettingKeys(['daemon.catalogUrl', 'deploy.enabled', 'paths.hostsFile', 'backup.dir'])).toEqual([])
   })
 
   it('is not fooled by case or surrounding whitespace', () => {
-    expect(protectedSettingKeys([' Daemon.CatalogUrl ', 'MCP.enabled'])).toEqual([' Daemon.CatalogUrl ', 'MCP.enabled'])
+    expect(protectedSettingKeys([' MCP.Capabilities.hosts_file ', 'MCP.enabled'])).toEqual([' MCP.Capabilities.hosts_file ', 'MCP.enabled'])
   })
 })

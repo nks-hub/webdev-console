@@ -114,7 +114,7 @@ const SAMPLE_ARGS: Record<string, Record<string, unknown>> = {
   wdc_create_backup: {},
   wdc_restore_backup: { path: '/home/u/.wdc/backups/wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN },
   wdc_restore_backup_by_id: { id: 'wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN },
-  wdc_delete_backup: { name: '/home/u/.wdc/backups/wdc-backup-1.zip', confirm: 'YES' },
+  wdc_delete_backup: { name: '/home/u/.wdc/backups/wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN },
   // settings
   wdc_get_settings: {},
   wdc_update_settings: { settings: { 'ports.http': 8080 } },
@@ -130,6 +130,7 @@ const SAMPLE_ARGS: Record<string, Record<string, unknown>> = {
   wdc_delete_cloudflare_dns: { zoneId: ZONE, recordId: REC, confirm: 'YES', intentToken: TOKEN },
   // confirmation
   wdc_request_confirmation: { operation: 'service_restart', target: 'apache', reason: 'apply new php.ini' },
+  wdc_get_confirmation_status: { intentId: 'iid' },
   // composer
   wdc_composer_status: { domain: 'shop.loc' },
   wdc_composer_outdated: { domain: 'shop.loc' },
@@ -138,9 +139,9 @@ const SAMPLE_ARGS: Record<string, Record<string, unknown>> = {
   wdc_composer_remove: { domain: 'shop.loc', package: 'monolog/monolog' },
   // node
   wdc_list_node_sites: {},
-  wdc_start_node_site: { domain: 'app.loc' },
+  wdc_start_node_site: { domain: 'app.loc', intentToken: TOKEN },
   wdc_stop_node_site: { domain: 'app.loc' },
-  wdc_restart_node_site: { domain: 'app.loc' },
+  wdc_restart_node_site: { domain: 'app.loc', intentToken: TOKEN },
 }
 
 /** Responses some tools need to get past their first call. */
@@ -148,7 +149,7 @@ function respond(call: RecordedCall): unknown {
   if (call.method === 'POST' && call.path === '/api/mcp/intents') return { intentId: 'iid', intentToken: TOKEN, expiresAt: 'x' }
   if (call.method === 'GET' && call.path === '/api/sites/shop.loc') return { domain: 'shop.loc', documentRoot: '/srv/shop', phpVersion: '8.2' }
   if (call.path === '/api/sites/reapply-all') return []
-  if (call.path.endsWith('/export')) return '-- dump'
+  if (call.path.split('?')[0]!.endsWith('/export')) return '-- dump'
   return {}
 }
 
@@ -200,9 +201,11 @@ describe('new tools send what the daemon reads', () => {
     ['wdc_composer_remove', { domain: 'shop.loc', package: 'a/b' },
       { method: 'POST', path: '/api/sites/shop.loc/composer/remove', body: { package: 'a/b' } }],
     ['wdc_list_node_sites', {}, { method: 'GET', path: '/api/node/sites' }],
-    ['wdc_start_node_site', { domain: 'app.loc' }, { method: 'POST', path: '/api/node/sites/app.loc/start' }],
+    ['wdc_start_node_site', { domain: 'app.loc', intentToken: TOKEN },
+      { method: 'POST', path: '/api/node/sites/app.loc/start', headers: intent }],
     ['wdc_stop_node_site', { domain: 'app.loc' }, { method: 'POST', path: '/api/node/sites/app.loc/stop' }],
-    ['wdc_restart_node_site', { domain: 'app.loc' }, { method: 'POST', path: '/api/node/sites/app.loc/restart' }],
+    ['wdc_restart_node_site', { domain: 'app.loc', intentToken: TOKEN },
+      { method: 'POST', path: '/api/node/sites/app.loc/restart', headers: intent }],
     ['wdc_database_size', { database: 'shop' }, { method: 'GET', path: '/api/databases/shop/size' }],
     ['wdc_table_columns', { database: 'shop', table: 'orders' }, { method: 'GET', path: '/api/databases/v2/shop/tables/orders/columns' }],
     ['wdc_table_indexes', { database: 'shop', table: 'orders' }, { method: 'GET', path: '/api/databases/v2/shop/tables/orders/indexes' }],
@@ -215,8 +218,9 @@ describe('new tools send what the daemon reads', () => {
     ['wdc_uninstall_plugin', { id: 'nks.wdc.redis', confirm: 'YES', intentToken: TOKEN },
       { method: 'DELETE', path: '/api/plugins/nks.wdc.redis', headers: intent }],
     ['wdc_backup_stats', {}, { method: 'GET', path: '/api/backup/stats' }],
-    ['wdc_delete_backup', { name: 'C:\\Users\\u\\.wdc\\backups\\wdc-backup-1.zip', confirm: 'YES' },
-      { method: 'DELETE', path: '/api/backup/wdc-backup-1.zip' }],
+    ['wdc_delete_backup', { name: 'C:\\Users\\u\\.wdc\\backups\\wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN },
+      { method: 'DELETE', path: '/api/backup/wdc-backup-1.zip', headers: intent }],
+    ['wdc_export_database', { database: 'shop' }, { method: 'GET', path: '/api/databases/shop/export?' }],
     ['wdc_restore_backup_by_id', { id: 'wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN },
       { method: 'POST', path: '/api/backup/wdc-backup-1.zip/restore', headers: intent }],
   ]
@@ -242,8 +246,14 @@ describe('new tools send what the daemon reads', () => {
       environment: { NODE_ENV: 'development' },
       phpSettings: { memoryLimit: '512M', xdebugEnabled: true },
     }
-    await allTools().call('wdc_create_site', args)
-    expect(recorder.calls[0]).toMatchObject({ method: 'POST', path: '/api/sites', body: { ...args, sslEnabled: true, phpVersion: '', framework: '' } })
+    await allTools().call('wdc_create_site', { ...args, intentToken: TOKEN })
+    expect(recorder.calls[0]).toMatchObject({
+      method: 'POST',
+      path: '/api/sites',
+      body: { ...args, sslEnabled: true, phpVersion: '', framework: '' },
+      headers: intent,
+    })
+    expect(recorder.calls[0]!.body).not.toHaveProperty('intentToken')
   })
 
   it('wdc_create_site rejects unknown phpSettings keys and bad env names', async () => {
@@ -289,6 +299,8 @@ describe('intents for the new gated tools', () => {
     ['database_import', 'shop', { kind: 'database_import', domain: 'shop', host: '*db*' }],
     ['plugin_uninstall', 'nks.wdc.redis', { kind: 'plugin_uninstall', domain: 'nks.wdc.redis', host: '*plugin*' }],
     ['backup_restore', 'x', { kind: 'backup_restore', domain: '*backup*', host: '*backup*' }],
+    ['backup_delete', 'wdc-backup-1.zip', { kind: 'backup_delete', domain: 'wdc-backup-1.zip', host: '*backup*' }],
+    ['node_process', 'app.loc', { kind: 'node_process', domain: 'app.loc', host: '*mcp*' }],
   ] as const)('%s', (op, target, expected) => {
     expect(intentFor(op, target)).toEqual(expected)
   })
@@ -417,6 +429,8 @@ describe('helpers', () => {
       const f = join(dir, 'out.sql')
       recorder.reset(() => '-- dump\nCREATE TABLE t (id INT);\n')
       const body = resultBody(await allTools().call('wdc_export_database', { database: 'shop', outputPath: f }))
+      // The daemon allows an export to a file only with the database_admin capability.
+      expect(recorder.calls[0]!.path).toBe(`/api/databases/shop/export?outputPath=${encodeURIComponent(f)}`)
       expect(body).toEqual({ database: 'shop', path: f, bytes: Buffer.byteLength('-- dump\nCREATE TABLE t (id INT);\n') })
       expect(readFileSync(f, 'utf8')).toContain('CREATE TABLE t')
       const again = await allTools().call('wdc_export_database', { database: 'shop', outputPath: f })

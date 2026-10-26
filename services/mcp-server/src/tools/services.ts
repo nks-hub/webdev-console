@@ -6,7 +6,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
-import { ConfirmYesSchema } from '../schemas.js'
+import { ConfirmYesSchema, capabilityNote } from '../schemas.js'
 
 // Mirror the PluginIdSchema shape — service ids live in a URL path segment,
 // so accepting arbitrary characters risks traversal-style payloads reaching
@@ -61,7 +61,8 @@ export function registerServicesTools(server: McpServer, opts: RegisterOptions):
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ serviceId, lines }) =>
-      safe(() => daemonClient.get(`/api/services/${encodeURIComponent(serviceId)}/logs?lines=${lines}`)),
+      // Lines run oldest → newest; an oversized result keeps the newest.
+      safe(() => daemonClient.get(`/api/services/${encodeURIComponent(serviceId)}/logs?lines=${lines}`), { keep: 'tail' }),
   )
 
   server.registerTool(
@@ -185,8 +186,9 @@ export function registerServicesTools(server: McpServer, opts: RegisterOptions):
         'DESTRUCTIVE: Replace a service config file managed by WDC and restart the service if it is ' +
         'running. A broken config can stop the service from starting, so validate the content with ' +
         'wdc_validate_config first.\n\n' +
-        'Needs the user\'s approval: wdc_request_confirmation(operation: "service_config_write", ' +
-        'target: serviceId), then pass the approved intentToken.\n\n' +
+        `${capabilityNote('Service configuration files')} Each write needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "service_config_write", target: serviceId), then pass the ' +
+        'approved intentToken.\n\n' +
         'Args:\n' +
         '  serviceId: e.g. "apache", "php", "mysql".\n' +
         '  path: Path of the file, as wdc_get_service_config lists it.\n' +

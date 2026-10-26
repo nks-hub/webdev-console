@@ -6,7 +6,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
-import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
+import { ConfirmYesSchema, DomainSchema, capabilityNote } from '../schemas.js'
 
 const AccessLogLimitSchema = z
   .number()
@@ -40,6 +40,12 @@ const PhpSettingsSchema = z
   })
   .strict()
   .describe('Per-site php.ini overrides; omitted keys inherit the PHP version defaults')
+
+// Site fields beyond domain, documentRoot, phpVersion, sslEnabled, aliases and
+// framework are the daemon's site_advanced_fields capability; a
+// nodeStartCommand also needs node_process and an approved intent.
+const ADVANCED_FIELDS = capabilityNote('Advanced site fields')
+const NODE_PROCESS = capabilityNote('Node.js start commands')
 
 const HistoryTimestampSchema = z
   .string()
@@ -167,7 +173,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         'Args:\n' +
         '  domain: Local site domain.\n' +
         '  limit: Number of most-recent entries to return (1-1000, default 100).\n\n' +
-        'Returns: { domain, count, topClients, entries } sorted oldest → newest.\n\n' +
+        'Returns: { domain, count, topClients, entries } sorted oldest → newest. If the result ' +
+        'is too large, the oldest entries are dropped and truncation says how many.\n\n' +
         'Use this for diagnosing traffic spikes, spotting scrapers, verifying ' +
         'that a deployment is actually serving requests, or auditing who just ' +
         'visited a specific site.',
@@ -185,8 +192,10 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
     async ({ domain, limit }) => {
       const qs = new URLSearchParams()
       if (limit !== undefined) qs.set('limit', String(limit))
-      const path = `/api/sites/${encodeURIComponent(domain)}/access-log${qs.toString() ? '?' + qs.toString() : ''}`
-      return safe(() => daemonClient.get(path))
+      // Entries run oldest → newest; an oversized result keeps the newest.
+      return safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}/access-log?${qs.toString()}`), {
+        keep: 'tail',
+      })
     },
   )
 
@@ -275,7 +284,12 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         '  nodeUpstreamPort: Port of the Node.js app the vhost proxies to (Node sites; 0 = not a Node site).\n' +
         '  nodeStartCommand: Command WDC runs to start the Node.js app (e.g. "npm run start").\n' +
         '  environment: Environment variables for the site (Node process / PHP env).\n' +
-        '  phpSettings: Per-site php.ini overrides (memoryLimit, maxExecutionTime, xdebugEnabled, ...).\n\n' +
+        '  phpSettings: Per-site php.ini overrides (memoryLimit, maxExecutionTime, xdebugEnabled, ...).\n' +
+        '  intentToken: Approved intent, only with a nodeStartCommand.\n\n' +
+        `httpPort, httpsPort, nodeUpstreamPort, environment and phpSettings: ${ADVANCED_FIELDS} ` +
+        `nodeStartCommand (a shell command the daemon runs): ${NODE_PROCESS} It also needs the user's ` +
+        'approval: wdc_request_confirmation(operation: "node_process", target: domain). Without them, ' +
+        'create the site with the basic fields only.\n\n' +
         'Returns: the created SiteInfo, or { site: SiteInfo, warnings: string[], hints: string[] } when ' +
         'some apply step failed (warnings, e.g. "ssl: mkcert missing") or WDC has a suggestion (hints, ' +
         'e.g. run composer install). Report warnings to the user; the site exists either way.',
@@ -313,6 +327,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
           .optional()
           .describe('Environment variables for the site'),
         phpSettings: PhpSettingsSchema.optional(),
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -321,7 +336,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         openWorldHint: false,
       },
     },
-    async (args) => safe(() => daemonClient.post('/api/sites', args)),
+    async ({ intentToken, ...site }) => safe(() => daemonClient.post('/api/sites', site, intentHeaders(intentToken))),
   )
 
   server.registerTool(
@@ -365,6 +380,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         '  domain: Site to change.\n' +
         '  documentRoot, phpVersion, aliases (replaces the list), sslEnabled, httpPort, httpsPort, framework, ' +
         'phpSettings (replaces the overrides): new values.\n\n' +
+        `Changing httpPort, httpsPort or phpSettings: ${ADVANCED_FIELDS}\n\n` +
         'Returns: the updated SiteInfo, or { site, warnings } when an apply step failed.',
       inputSchema: {
         domain: DomainSchema,

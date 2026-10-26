@@ -10,18 +10,18 @@ import { safe, toolError } from '../formatting.js'
 // string | number | boolean and coerces to string for convenience.
 const SettingsValueSchema = z.union([z.string(), z.number(), z.boolean()])
 
-// Settings an AI client must not change on its own: they decide what the
-// daemon trusts or where it reads and writes. Through them a prompt-injected
-// agent could point daemon.catalogUrl at its own catalog and install a binary
-// from it, clear mcp.always_confirm_kinds, or turn on the deploy surface.
-// Operators change these in the GUI or with `wdc settings`.
-const PROTECTED_SETTING_PREFIXES = ['mcp.', 'deploy.', 'daemon.', 'plugins.', 'sync.', 'paths.', 'telemetry.']
-const PROTECTED_SETTING_KEYS = new Set(['backup.dir'])
+// mcp.* settings decide what the MCP token may do (capabilities, always-
+// confirm kinds, …): an agent must never change them, and the daemon refuses
+// them for the MCP token too. Other operator settings (daemon.*, deploy.*,
+// paths.*, …) are refused by the daemon unless the operator enabled the
+// "Operator settings" capability in WDC → Settings → MCP; its error carries
+// a hint the agent should relay to the user.
+const PROTECTED_SETTING_PREFIXES = ['mcp.']
 
 export function protectedSettingKeys(keys: string[]): string[] {
   return keys.filter((k) => {
     const key = k.trim().toLowerCase()
-    return PROTECTED_SETTING_KEYS.has(key) || PROTECTED_SETTING_PREFIXES.some((p) => key.startsWith(p))
+    return PROTECTED_SETTING_PREFIXES.some((p) => key.startsWith(p))
   })
 }
 
@@ -52,9 +52,9 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
       title: 'Update daemon settings',
       description:
         'Update one or more daemon settings atomically (single SQLite transaction). ' +
-        'Pass a partial dict — keys not in the body are untouched. Keys under ' +
-        PROTECTED_SETTING_PREFIXES.map((p) => `${p}*`).join(', ') +
-        ' and backup.dir are operator-only and are rejected.\n\n' +
+        'Pass a partial dict — keys not in the body are untouched. mcp.* keys are never ' +
+        'writable by an AI client. deploy.*, daemon.*, plugins.*, sync.*, paths.*, telemetry.* ' +
+        'and backup.dir need the operator to enable "Operator settings" in WDC → Settings → MCP.\n\n' +
         'Args:\n  settings: Map of "category.key" → string/number/boolean.',
       inputSchema: {
         settings: z
@@ -72,7 +72,7 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
       const blocked = protectedSettingKeys(Object.keys(settings))
       if (blocked.length > 0) {
         return toolError(
-          `These settings can only be changed by the operator in the WDC app: ${blocked.join(', ')}. ` +
+          `mcp.* settings can only be changed by the operator in the WDC app: ${blocked.join(', ')}. ` +
             'Nothing was written.',
         )
       }
