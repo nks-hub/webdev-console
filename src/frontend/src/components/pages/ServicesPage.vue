@@ -34,7 +34,7 @@
       <div v-for="svc in visible" :key="svc.id" class="svc-row">
         <ServiceCard :service="svc" />
 
-        <!-- A stopped or crashed service gets the tail of its own log and
+        <!-- A crashed service gets the tail of its own log and
              the two usual ways out, instead of a bare red badge. -->
         <div v-if="isProblem(svc)" class="svc-diagnose">
           <div class="diag-head">
@@ -89,7 +89,12 @@ const loadingLogs = ref<Set<string>>(new Set())
 // state: 0=Stopped, 1=Starting, 2=Running, 3=Stopping, 4=Crashed, 5=Disabled
 const services = computed(() => daemonStore.services as ServiceInfo[])
 const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
-const isProblem = (s: ServiceInfo) => s.state === 4 || s.state === 0
+// Only a crash is a problem. Stopped (0) is the normal state of a service
+// the user never started or stopped on purpose; ServiceInfo carries no
+// signal that a stopped service was expected to run (per-service
+// auto-start defaults to on, so it can't tell either). Same rule as the
+// status bar's crashed counter.
+const isProblem = (s: ServiceInfo) => s.state === 4 || s.status === 'crashed'
 const problemCount = computed(() => services.value.filter(isProblem).length)
 
 const visible = computed(() => {

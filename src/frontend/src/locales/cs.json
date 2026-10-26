@@ -2933,7 +2933,7 @@
       "problems": "Vyžaduje pozornost"
     },
     "empty": "Zatím nejsou registrované žádné služby",
-    "noProblems": "Všechny služby běží",
+    "noProblems": "Žádná služba nespadla",
     "whyTitle": "Proč neběží?",
     "showLog": "Zobrazit log",
     "logEmpty": "Log služby je prázdný.",
