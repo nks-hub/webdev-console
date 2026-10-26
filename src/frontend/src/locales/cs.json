@@ -89,7 +89,8 @@
     "register": "Registrovat",
     "justNow": "právě teď",
     "warning": "Upozornění",
-    "danger": "Nebezpečí"
+    "danger": "Nebezpečí",
+    "working": "Pracuji…"
   },
   "header": {
     "connected": "Připojeno",
@@ -2951,5 +2952,61 @@
     "logEmpty": "Log služby je prázdný.",
     "fixRestart": "Spustit znovu",
     "fixConfig": "Upravit konfiguraci"
+  },
+  "overview": {
+    "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",
+    "summaryNoServices": "Zatím žádná nainstalovaná služba · {sites} web | Zatím žádná nainstalovaná služba · {sites} weby | Zatím žádná nainstalovaná služba · {sites} webů",
+    "summaryCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
+    "restarted": "{name} restartováno",
+    "actionFailed": "{name}: akce se nezdařila",
+    "attention": {
+      "title": "Vyžaduje pozornost",
+      "none": "Teď nic nevyžaduje vaši pozornost.",
+      "crashed": "spadla. Důvod obvykle najdete v logu.",
+      "showWhy": "Zobrazit proč",
+      "applyFailed": "Při posledním použití selhal krok {step}. | při posledním použití selhaly kroky: {step}. | při posledním použití selhaly kroky: {step}.",
+      "openSite": "Otevřít web",
+      "apacheStopped": "Webový server je zastavený, weby se nenačtou.",
+      "startApache": "Spustit Apache",
+      "backupNever": "Zatím neexistuje žádná záloha.",
+      "backupOld": "Poslední záloha je starší než {days} dní.",
+      "openBackups": "Otevřít zálohy",
+      "update": "Verze {version} je připravená k instalaci.",
+      "openUpdate": "Otevřít aktualizaci"
+    },
+    "stack": {
+      "title": "Stack",
+      "all": "Všechny služby",
+      "caption": "Stav služeb",
+      "loading": "Načítám stav služeb",
+      "service": "Služba",
+      "status": "Stav",
+      "port": "Port",
+      "version": "Verze",
+      "usage": "CPU · RAM",
+      "actions": "Akce",
+      "empty": "Zatím nemáte nainstalovanou žádnou službu.",
+      "emptyHint": "Weby potřebují webový server a PHP. Doporučené verze stáhnete v sekci Binárky.",
+      "openBinaries": "Otevřít Binárky"
+    },
+    "status": {
+      "running": "Běží",
+      "stopped": "Zastaveno",
+      "starting": "Spouští se",
+      "stopping": "Zastavuje se",
+      "crashed": "Spadla",
+      "disabled": "Vypnuto"
+    },
+    "actions": {
+      "start": "Spustit",
+      "restart": "Restartovat",
+      "why": "Proč?",
+      "logs": "Logy",
+      "config": "Konfigurace",
+      "more": "Další akce pro {name}"
+    },
+    "figures": {
+      "title": "Přehled čísel"
+    }
   }
 }

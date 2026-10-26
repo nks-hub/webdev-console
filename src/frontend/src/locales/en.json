@@ -89,7 +89,8 @@
     "register": "Register",
     "justNow": "just now",
     "warning": "Warning",
-    "danger": "Danger"
+    "danger": "Danger",
+    "working": "Working…"
   },
   "header": {
     "connected": "Connected",
@@ -2951,5 +2952,61 @@
     "logEmpty": "The service log is empty.",
     "fixRestart": "Start again",
     "fixConfig": "Edit configuration"
+  },
+  "overview": {
+    "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",
+    "summaryNoServices": "No services installed yet · {sites} site | No services installed yet · {sites} sites",
+    "summaryCrashed": "{n} service crashed | {n} services crashed",
+    "restarted": "{name} restarted",
+    "actionFailed": "{name}: the action failed",
+    "attention": {
+      "title": "Needs attention",
+      "none": "Nothing needs your attention right now.",
+      "crashed": "crashed. The log usually says why.",
+      "showWhy": "Show why",
+      "applyFailed": "The {step} step failed on the last apply. | these steps failed on the last apply: {step}.",
+      "openSite": "Open site",
+      "apacheStopped": "The web server is stopped, so your sites do not load.",
+      "startApache": "Start Apache",
+      "backupNever": "No backup has been made yet.",
+      "backupOld": "The last backup is more than {days} days old.",
+      "openBackups": "Open backups",
+      "update": "Version {version} is ready to install.",
+      "openUpdate": "Open update"
+    },
+    "stack": {
+      "title": "Stack",
+      "all": "All services",
+      "caption": "Service status",
+      "loading": "Loading service status",
+      "service": "Service",
+      "status": "Status",
+      "port": "Port",
+      "version": "Version",
+      "usage": "CPU · RAM",
+      "actions": "Actions",
+      "empty": "No services installed yet.",
+      "emptyHint": "Sites need a web server and PHP. Binaries downloads the recommended versions.",
+      "openBinaries": "Open Binaries"
+    },
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "starting": "Starting",
+      "stopping": "Stopping",
+      "crashed": "Crashed",
+      "disabled": "Disabled"
+    },
+    "actions": {
+      "start": "Start",
+      "restart": "Restart",
+      "why": "Why?",
+      "logs": "Logs",
+      "config": "Config",
+      "more": "More actions for {name}"
+    },
+    "figures": {
+      "title": "At a glance"
+    }
   }
 }
