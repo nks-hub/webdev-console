@@ -1051,18 +1051,89 @@ function onPluginSiteUpdate(updated: SiteInfo) {
   markDirty()
 }
 
+// ── Store sync ────────────────────────────────────────────────────────
+// The Overview tab (SiteDetailSimple) saves straight through the sites
+// store, while this page edits its own copy and PUTs the whole record on
+// Save & Apply. Without syncing, an Overview change (PHP version, tunnel,
+// SSL, document root, bind) followed by a save from another tab sent the
+// stale copy back and silently reverted it. `storeBaseline` is the store
+// entry this copy was last synced from, so a later store change can be
+// diffed against it to find exactly what changed elsewhere.
+let storeBaseline: SiteInfo | null = null
+
+function cloneSite(s: SiteInfo): SiteInfo {
+  return JSON.parse(JSON.stringify(s)) as SiteInfo
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function normalizeSiteCopy(s: SiteInfo) {
+  s.bindAddresses = normalizeBindAddresses(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
+  s.bindAddress = s.bindAddresses[0] ?? '*'
+  if (s.domain?.toLowerCase() === 'localhost') s.localhostLoopbackEnabled = true
+}
+
+function seedFromStore(found: SiteInfo | undefined) {
+  storeBaseline = found ? cloneSite(found) : null
+  const copy = found ? cloneSite(found) : null
+  if (copy) normalizeSiteCopy(copy)
+  site.value = copy
+  dirty.value = false
+}
+
+// Apply only the fields that changed in the store since the last sync,
+// leaving the user's unsaved edits on other fields untouched. Cloudflare
+// is merged per sub-field on top of the tunnel refs, which are what
+// save() actually sends.
+function mergeStoreChanges(next: SiteInfo) {
+  if (!site.value || !storeBaseline) return
+  const prev = storeBaseline as unknown as Record<string, unknown>
+  const incoming = next as unknown as Record<string, unknown>
+  const local = site.value as unknown as Record<string, unknown>
+  const keys = new Set([...Object.keys(prev), ...Object.keys(incoming)])
+  for (const key of keys) {
+    if (sameValue(prev[key], incoming[key])) continue
+    if (key === 'cloudflare') {
+      const before = (prev.cloudflare ?? {}) as Record<string, unknown>
+      const after = (next.cloudflare ?? {}) as Record<string, unknown>
+      const merged: Record<string, unknown> = {
+        enabled: cloudflareEnabled.value,
+        subdomain: cloudflareSubdomain.value,
+        zoneId: cloudflareZoneId.value,
+        zoneName: cloudflareZoneName.value,
+        localService: cloudflareLocalService.value,
+        protocol: cloudflareProtocol.value,
+      }
+      for (const sub of new Set([...Object.keys(before), ...Object.keys(after)])) {
+        if (!sameValue(before[sub], after[sub])) merged[sub] = after[sub]
+      }
+      site.value.cloudflare = merged as unknown as SiteInfo['cloudflare']
+    } else {
+      local[key] = incoming[key] === undefined ? undefined : JSON.parse(JSON.stringify(incoming[key]))
+    }
+  }
+  normalizeSiteCopy(site.value)
+  storeBaseline = cloneSite(next)
+}
+
+const storeEntry = computed(() => sitesStore.sites.find(s => s.domain === domain.value))
+watch(storeEntry, (next) => {
+  // Not loaded yet, site deleted, or a domain switch in progress — load()
+  // seeds those cases itself.
+  if (!next || !site.value || !storeBaseline) return
+  if (storeBaseline.domain !== next.domain || site.value.domain !== next.domain) return
+  if (sameValue(storeBaseline, next)) return
+  if (dirty.value) mergeStoreChanges(next)
+  else seedFromStore(next)
+}, { deep: true })
+
 async function load() {
   loading.value = true
   try {
     await sitesStore.load()
-    const found = sitesStore.sites.find(s => s.domain === domain.value)
-    site.value = found ? { ...found, aliases: [...(found.aliases ?? [])] } : null
-    if (site.value) {
-      site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
-      site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
-    }
-    if (site.value?.domain?.toLowerCase() === 'localhost') site.value.localhostLoopbackEnabled = true
-    dirty.value = false
+    seedFromStore(sitesStore.sites.find(s => s.domain === domain.value))
 
     // PHP versions — authoritative list from daemon. Leave the array
     // empty on failure so the template's "no versions installed" hint
