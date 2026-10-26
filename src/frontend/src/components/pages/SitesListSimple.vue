@@ -428,7 +428,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: var(--wdc-space-4);
 }
 

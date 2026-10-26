@@ -541,8 +541,9 @@ h1, h2, h3, h4,
   border: 1px solid var(--wdc-border-strong) !important;
   border-radius: var(--wdc-radius) !important;
   box-shadow: none !important;
-  padding: 4px 12px !important;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  padding: 0 var(--wdc-space-3) !important;
+  min-height: 36px;
+  transition: border-color var(--wdc-dur-micro) var(--wdc-ease-out), box-shadow var(--wdc-dur-micro) var(--wdc-ease-out);
 }
 
 .el-input__wrapper:hover {
@@ -558,9 +559,47 @@ h1, h2, h3, h4,
 
 .el-input__inner {
   color: var(--wdc-text) !important;
-  font-size: 0.86rem;
-  min-height: 36px;
-  line-height: 36px;
+  font-size: 0.87rem;
+  min-height: 34px;
+  line-height: 34px;
+}
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder { color: var(--wdc-text-3) !important; }
+
+/* Selects match the text inputs: same height, ground, edge and focus. */
+.el-select__wrapper {
+  min-height: 36px !important;
+  padding: var(--wdc-space-1) var(--wdc-space-3) !important;
+  background: var(--wdc-surface) !important;
+  border-radius: var(--wdc-radius) !important;
+  box-shadow: 0 0 0 1px var(--wdc-border-strong) inset !important;
+  font-size: 0.87rem;
+}
+.el-select__wrapper:hover { box-shadow: 0 0 0 1px var(--wdc-text-3) inset !important; }
+.el-select__wrapper.is-focused { box-shadow: 0 0 0 2px var(--wdc-accent) inset !important; }
+.el-select--small .el-select__wrapper { min-height: 32px !important; }
+.el-select__placeholder.is-transparent { color: var(--wdc-text-3) !important; }
+
+/* Input group add-ons (e.g. the folder picker) sit flush as a key. */
+.el-input-group__append,
+.el-input-group__prepend {
+  background: var(--wdc-key-face) !important;
+  border: 1px solid var(--wdc-border-strong) !important;
+  box-shadow: none !important;
+  color: var(--wdc-text-2) !important;
+  padding: 0 var(--wdc-space-3) !important;
+}
+.el-input-group__append { border-left: 0 !important; border-radius: 0 var(--wdc-radius) var(--wdc-radius) 0 !important; }
+.el-input-group__prepend { border-right: 0 !important; border-radius: var(--wdc-radius) 0 0 var(--wdc-radius) !important; }
+.el-input-group--append > .el-input__wrapper { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; }
+.el-input-group--prepend > .el-input__wrapper { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
+.el-input-group__append .el-button,
+.el-input-group__prepend .el-button {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .el-select__input {
@@ -885,7 +924,7 @@ html.dark .nav-item-tunnel .nav-label {
 
 /* Select */
 .el-select .el-input__wrapper {
-  background: var(--wdc-surface-2) !important;
+  background: var(--wdc-surface) !important;
 }
 
 .el-select-dropdown {
@@ -1085,16 +1124,36 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
   box-shadow: var(--wdc-shadow-key-press) !important;
 }
 
-/* Alert */
+/* Alert — a tinted strip with a status-coloured edge; text at body size. */
 .el-alert {
-  border-radius: var(--wdc-radius) !important;
-  border: 1px solid;
+  --wdc-alert: var(--wdc-accent);
+  border-radius: var(--wdc-radius-md) !important;
+  border: 1px solid color-mix(in oklab, var(--wdc-alert) 30%, transparent) !important;
+  background: color-mix(in oklab, var(--wdc-alert) 8%, var(--wdc-bg)) !important;
+  padding: var(--wdc-space-3) var(--wdc-space-4) !important;
+  align-items: flex-start !important;
 }
+.el-alert--info { --wdc-alert: var(--wdc-accent); }
+.el-alert--success { --wdc-alert: var(--wdc-status-running); }
+.el-alert--warning { --wdc-alert: var(--wdc-status-starting); }
+.el-alert--error { --wdc-alert: var(--wdc-status-error); }
+.el-alert .el-alert__icon { color: var(--wdc-alert) !important; font-size: 16px !important; width: 16px !important; margin-top: var(--wdc-space-0-5); }
+.el-alert .el-alert__title {
+  font-family: var(--wdc-font-display);
+  font-size: 0.93rem !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  color: var(--wdc-text) !important;
+}
+.el-alert .el-alert__description {
+  font-size: 0.87rem !important;
+  line-height: 1.5 !important;
+  margin: var(--wdc-space-1) 0 0 !important;
+  color: var(--wdc-text-2) !important;
+}
+.el-alert .el-alert__close-btn { color: var(--wdc-text-3) !important; }
 
-.el-alert--warning {
-  background: color-mix(in oklab, var(--wdc-status-starting) 8%, transparent) !important;
-  border-color: color-mix(in oklab, var(--wdc-status-starting) 30%, transparent) !important;
-}
+
 
 /* Collapse — hairline panel; the open item's title turns ink-bold. */
 .el-collapse {
