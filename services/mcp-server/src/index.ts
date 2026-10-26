@@ -32,8 +32,8 @@ import { registerCloudflareTools } from './tools/cloudflare.js'
 import { registerDeployTools } from './tools/deploy.js'
 import { registerConfirmationTools } from './tools/confirmation.js'
 import { daemonClient } from './daemonClient.js'
-import { wrapHandler } from './auditLog.js'
 import { setClientName } from './callerIdentity.js'
+import { wrapHandler } from './auditLog.js'
 
 export interface RegisterOptions {
   readonly: boolean
