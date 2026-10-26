@@ -46,8 +46,8 @@ test.describe('Daemon warnings wrapper contract', () => {
     expect(source).toMatch(/for\s*\(const\s+w\s+of\s+sitesStore\.lastUpdateWarnings\)/)
   })
 
-  test('Daemon Program.cs PUT /api/sites/{domain} wraps response on warnings', () => {
-    const programPath = resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Program.cs')
+  test('Daemon SiteEndpoints.cs PUT /api/sites/{domain} wraps response on warnings', () => {
+    const programPath = resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs')
     const source = readFileSync(programPath, 'utf-8')
     // The PUT handler must do the same CollectBindAddressWarnings call
     // and Results.Ok wrap that the POST handler does.
@@ -79,13 +79,13 @@ test.describe('Daemon warnings wrapper contract', () => {
     expect(source).toMatch(/ElMessage\.info\(\{\s*message:\s*h/)
   })
 
-  test('Daemon Program.cs emits wrapper for POST /api/sites with warnings', () => {
-    // Read the daemon Program.cs from the workspace root (one up from
-    // src/frontend/). The contract: the wrapped shape `Results.Created(
+  test('Daemon SiteEndpoints.cs emits wrapper for POST /api/sites with warnings', () => {
+    // Read the site endpoints (moved out of Program.cs) from the workspace
+    // root (one up from src/frontend/). The contract: the wrapped shape `Results.Created(
     // ..., new { site, warnings, hints })` is emitted when warnings or
     // hints exist. Source-level check keeps the API surface stable so
     // the frontend unwrap above doesn't need to change.
-    const programPath = resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Program.cs')
+    const programPath = resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs')
     const source = readFileSync(programPath, 'utf-8')
     // Look for the wrapped Results.Created call with `site`, `warnings`,
     // and `hints` keys.
