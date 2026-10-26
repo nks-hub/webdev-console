@@ -128,7 +128,7 @@ const activeTab = ref<'columns' | 'indexes'>('columns')
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 0 16px;
+  padding: 0 var(--wdc-space-4);
   background: var(--wdc-bg);
 }
 

@@ -140,13 +140,13 @@ defineExpose({ reload: load })
 <style scoped>
 .sd-section {
   margin-top: 18px;
-  padding: 16px;
+  padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
 }
 .sd-section-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 14px;
   font-weight: 600;
   color: var(--wdc-text-2);
@@ -154,7 +154,7 @@ defineExpose({ reload: load })
   letter-spacing: 0.04em;
 }
 .sd-activity-block {
-  padding: 12px 0;
+  padding: var(--wdc-space-3) 0;
   border-bottom: 1px solid var(--wdc-border);
 }
 .sd-activity-block:last-child { border-bottom: 0; }
@@ -164,7 +164,7 @@ defineExpose({ reload: load })
   margin-bottom: 6px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .sd-err-badge {
   display: inline-flex;
@@ -188,8 +188,8 @@ defineExpose({ reload: load })
 }
 .sd-err-line {
   display: flex;
-  gap: 8px;
-  padding: 4px 0;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1) 0;
   font-size: 12px;
   line-height: 1.4;
 }
@@ -203,7 +203,7 @@ defineExpose({ reload: load })
 .sd-activity-empty {
   color: var(--el-text-color-secondary);
   font-size: 12px;
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
 }
 .sd-activity-actions { display: flex; gap: 12px; margin-top: 6px; }
 .sd-full-logs { margin-left: auto; min-height: 32px; }

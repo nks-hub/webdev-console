@@ -50,7 +50,7 @@ onBeforeUnmount(() => {
 .elapsed {
   opacity: 0.6;
   font-size: 12px;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .mono {
   font-family: 'JetBrains Mono', monospace;

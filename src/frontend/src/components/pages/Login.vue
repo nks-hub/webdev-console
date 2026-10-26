@@ -200,14 +200,14 @@ onMounted(loadCatalogUrl)
 .login-brand {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   align-items: flex-start;
 }
 .brand-mark {
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: 0.06em;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: var(--wdc-brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -220,12 +220,12 @@ onMounted(loadCatalogUrl)
 .login-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   color: var(--el-text-color-secondary);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin: 4px 0;
+  margin: var(--wdc-space-1) 0;
 }
 .login-divider::before,
 .login-divider::after {
@@ -237,7 +237,7 @@ onMounted(loadCatalogUrl)
 .login-catalog-hint {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   font-size: 0.78rem;
   color: var(--el-text-color-secondary);
 }

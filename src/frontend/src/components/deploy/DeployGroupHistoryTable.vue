@@ -491,15 +491,15 @@ watch(() => props.domain, () => refresh())
 .group-history-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-2);
 }
 .group-history-header .group-history-title {
   margin-right: auto;
 }
 .rate-pct {
   font-variant-numeric: tabular-nums;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .group-success-rate {
   display: inline-flex;
@@ -521,11 +521,11 @@ watch(() => props.domain, () => refresh())
   font-size: 13px;
 }
 .phase-icon {
-  margin-right: 4px;
+  margin-right: var(--wdc-space-1);
   vertical-align: -2px;
 }
 .group-children {
-  padding: 12px 24px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-5) 14px;
   background: var(--wdc-surface-2);
   border-top: 1px solid var(--wdc-border);
 }
@@ -537,7 +537,7 @@ watch(() => props.domain, () => refresh())
 }
 .group-error {
   margin-top: 10px;
-  padding: 8px 12px;
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   background: var(--el-color-danger-light-9, #fef0f0);
   border-left: 3px solid var(--el-color-danger);
   border-radius: var(--wdc-radius-sm);

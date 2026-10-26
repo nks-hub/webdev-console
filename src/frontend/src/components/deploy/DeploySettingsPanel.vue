@@ -1731,15 +1731,15 @@ defineExpose({ saveSettings })
   padding: 14px 20px;
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface));
   border-bottom: 1px solid var(--wdc-accent-glow);
-  margin-bottom: 16px;
-  gap: 12px;
+  margin-bottom: var(--wdc-space-4);
+  gap: var(--wdc-space-3);
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
 .settings-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .settings-domain {
@@ -1753,7 +1753,7 @@ defineExpose({ saveSettings })
 }
 .dirty-tag { margin-left: 4px; }
 .mcp-grants-tag {
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
   cursor: pointer;
   user-select: none;
 }
@@ -1763,18 +1763,18 @@ defineExpose({ saveSettings })
 /* #109 — backend identity badge sits next to grants tag in the header.
    Static (no click), default cursor distinguishes it from clickable tags. */
 .deploy-backend-tag {
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .settings-header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .section-intro {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: var(--wdc-space-1);
+  margin-bottom: var(--wdc-space-1);
 }
 .section-h2 {
   margin: 0;
@@ -1793,13 +1793,13 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin-bottom: var(--wdc-space-3);
+  gap: var(--wdc-space-3);
 }
 .hosts-count { font-size: 13px; }
 .hosts-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   grid-template-columns: 1fr;
 }
 .hosts-empty {
@@ -1810,13 +1810,13 @@ defineExpose({ saveSettings })
   text-align: center;
 }
 .empty-title {
-  margin: 0 0 4px;
+  margin: 0 0 var(--wdc-space-1);
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 .empty-lead {
-  margin: 0 0 16px;
+  margin: 0 0 var(--wdc-space-4);
   color: var(--el-text-color-secondary);
   font-size: 13px;
   /* responsive: removed fixed cap */
@@ -1831,14 +1831,14 @@ defineExpose({ saveSettings })
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 0 24px 24px;
+  padding: 0 var(--wdc-space-5) var(--wdc-space-5);
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .section-title {
@@ -1848,7 +1848,7 @@ defineExpose({ saveSettings })
 }
 
 .section-footer {
-  padding-top: 8px;
+  padding-top: var(--wdc-space-2);
 }
 
 .settings-form {
@@ -1856,7 +1856,7 @@ defineExpose({ saveSettings })
 }
 
 .field-hint {
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
@@ -1885,13 +1885,13 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .snapshots-filter { margin-left: auto; }
 .snapshots-summary { font-size: 12px; }
 .snapshots-timeline {
   list-style: none;
-  margin: 12px 0 0;
+  margin: var(--wdc-space-3) 0 0;
   padding: 0;
   position: relative;
 }
@@ -1906,7 +1906,7 @@ defineExpose({ saveSettings })
 }
 .timeline-item {
   position: relative;
-  padding: 8px 0 8px 24px;
+  padding: var(--wdc-space-2) 0 var(--wdc-space-2) var(--wdc-space-5);
 }
 .timeline-dot {
   position: absolute;
@@ -1928,7 +1928,7 @@ defineExpose({ saveSettings })
 .timeline-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .timeline-when { font-size: 13px; }
@@ -1938,7 +1938,7 @@ defineExpose({ saveSettings })
 .subsection {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .subsection-header {
@@ -1949,19 +1949,19 @@ defineExpose({ saveSettings })
 /* Advanced redesign #171 — Lifecycle + Env cards */
 .advanced-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   grid-template-columns: 1fr;
 }
 .adv-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .adv-card-title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-weight: 600;
 }
 .adv-icon {
@@ -1979,19 +1979,19 @@ defineExpose({ saveSettings })
   box-shadow: var(--wdc-shadow-sm);
 }
 .adv-card-lead {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 12px;
   line-height: 1.5;
 }
 .env-empty {
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
   font-size: 12px;
 }
 
 /* Notifications redesign #156 — per-channel cards */
 .notify-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   grid-template-columns: 1fr 1fr;
 }
 @media (max-width: 720px) {
@@ -2002,12 +2002,12 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .notify-card-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-weight: 600;
 }
 .notify-channel-icon {
@@ -2025,13 +2025,13 @@ defineExpose({ saveSettings })
   box-shadow: var(--wdc-shadow-sm);
 }
 .notify-card-lead {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 12px;
   line-height: 1.5;
 }
 .notify-triggers-group {
   display: flex;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   flex-wrap: wrap;
 }
 
@@ -2039,7 +2039,7 @@ defineExpose({ saveSettings })
 .hooks-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .hook-card.hook-disabled {
   opacity: 0.6;
@@ -2048,13 +2048,13 @@ defineExpose({ saveSettings })
 .hook-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 .hook-card-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
   flex: 1;
   min-width: 0;
@@ -2070,13 +2070,13 @@ defineExpose({ saveSettings })
 .hook-card-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .hook-card-body { padding-top: 4px; }
 .hook-row-flex {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   align-items: flex-start;
 }
 
@@ -2085,7 +2085,7 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 14px var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   transition: opacity 0.15s ease, box-shadow 0.15s, border-color 0.15s;
@@ -2110,13 +2110,13 @@ defineExpose({ saveSettings })
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-top: 24px;
+  padding-top: var(--wdc-space-5);
 }
 
 .hook-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex: 1;
 }
 
@@ -2129,7 +2129,7 @@ defineExpose({ saveSettings })
 }
 
 .empty-state {
-  padding: 24px 0;
+  padding: var(--wdc-space-5) 0;
   color: var(--el-text-color-secondary);
   font-size: 13px;
 }
@@ -2161,14 +2161,14 @@ defineExpose({ saveSettings })
 .chip-input :deep(.el-input__wrapper) {
   box-shadow: none !important;
   background: transparent;
-  padding: 0 4px;
+  padding: 0 var(--wdc-space-1);
 }
 
 /* Advanced - env vars */
 .env-vars-wrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   width: 100%;
   /* responsive: removed fixed cap */
 }
@@ -2176,7 +2176,7 @@ defineExpose({ saveSettings })
 .env-var-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .env-key {
@@ -2195,7 +2195,7 @@ defineExpose({ saveSettings })
 /* Form row helper */
 .form-row {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
   align-items: flex-start;
 }
@@ -2207,7 +2207,7 @@ defineExpose({ saveSettings })
 /* Phase 7.5+++ — snapshots disk-impact summary. */
 .snapshots-summary {
   font-size: 13px;
-  margin: 4px 0 8px;
+  margin: var(--wdc-space-1) 0 var(--wdc-space-2);
 }
 .snapshots-oldest { margin-left: 6px; }
 

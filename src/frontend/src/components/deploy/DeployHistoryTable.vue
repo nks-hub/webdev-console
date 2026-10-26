@@ -188,7 +188,7 @@ function phaseTagType(phase: string): 'success' | 'danger' | 'warning' | 'info' 
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
 }
 .history-summary-tag {
   display: inline-flex;

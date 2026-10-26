@@ -458,7 +458,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   margin-bottom: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -479,13 +479,13 @@ onMounted(() => {
 }
 
 .page-body-pad {
-  padding: 16px 24px 24px;
+  padding: var(--wdc-space-4) var(--wdc-space-5) var(--wdc-space-5);
 }
 
 .pm-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
-  gap: 12px;
+  gap: var(--wdc-space-3);
   justify-content: start;
 }
 
@@ -493,10 +493,10 @@ onMounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
   border-left-width: 3px;
   border-left-style: solid;
@@ -549,7 +549,7 @@ onMounted(() => {
   padding: 0 6px;
   height: 18px;
   line-height: 18px;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 
 .pm-card-desc {
@@ -574,7 +574,7 @@ onMounted(() => {
 .pm-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-size: 0.75rem;
   color: var(--wdc-text-muted);
   text-transform: uppercase;
@@ -587,8 +587,8 @@ onMounted(() => {
   color: var(--wdc-text-muted);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 8px;
-  border-radius: 999px;
+  padding: 1px var(--wdc-space-2);
+  border-radius: var(--wdc-radius-full);
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
@@ -602,15 +602,15 @@ onMounted(() => {
 .pm-perms {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .pm-card-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   justify-content: flex-end;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
 }
 

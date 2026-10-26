@@ -290,7 +290,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 0;
+  padding: var(--wdc-space-5) var(--wdc-space-5) 0;
   margin-bottom: 20px;
 }
 
@@ -313,7 +313,7 @@ onMounted(() => {
 .cert-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .cert-card {
@@ -323,7 +323,7 @@ onMounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 16px 20px;
+  padding: var(--wdc-space-4) 20px;
   transition: border-color 0.15s;
 }
 
@@ -334,8 +334,8 @@ onMounted(() => {
 .cert-domain {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--wdc-space-2);
+  margin-bottom: var(--wdc-space-1);
 }
 
 .cert-lock { font-size: 1rem; }
@@ -348,8 +348,8 @@ onMounted(() => {
 
 .cert-meta {
   display: flex;
-  gap: 16px;
-  margin-bottom: 4px;
+  gap: var(--wdc-space-4);
+  margin-bottom: var(--wdc-space-1);
 }
 
 .cert-meta-item {

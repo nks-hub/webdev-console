@@ -54,7 +54,7 @@ defineProps<{
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .edit-card-title {
   font-size: 0.78rem;

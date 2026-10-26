@@ -19,9 +19,9 @@ defineProps<{
 <style scoped>
 .settings-card {
   border: 1px solid var(--wdc-border);
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
   background: var(--wdc-surface-2);
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
 }
 
 .settings-card-header {

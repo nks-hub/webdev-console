@@ -65,14 +65,14 @@ const emit = defineEmits<{
 
 <style scoped>
 .tab-desc {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   color: var(--wdc-text-3);
   font-size: 0.85rem;
 }
 
 .sync-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 
@@ -80,7 +80,7 @@ const emit = defineEmits<{
   font-size: 0.72rem;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: 10px;
+  border-radius: var(--wdc-radius);
 }
 
 .sync-ok {
@@ -96,6 +96,6 @@ const emit = defineEmits<{
 .hint {
   color: var(--wdc-text-3);
   font-size: 0.78rem;
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
 }
 </style>

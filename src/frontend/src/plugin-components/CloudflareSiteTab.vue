@@ -440,6 +440,6 @@ async function copyPublicUrl() {
 .mono { font-family: 'Cascadia Code', 'Consolas', monospace; }
 .setup-warning { padding: 8px 0; }
 .apply-status { font-size: 0.82rem; }
-.apply-status.success { color: #36c290; }
-.apply-status.error { color: #ef6e6e; }
+.apply-status.success { color: var(--wdc-status-running); }
+.apply-status.error { color: var(--wdc-status-error); }
 </style>

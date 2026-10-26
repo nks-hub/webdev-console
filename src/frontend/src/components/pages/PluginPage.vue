@@ -216,9 +216,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   flex-wrap: wrap;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -273,7 +273,7 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 14px 28px;
-  padding-top: 12px;
+  padding-top: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
 }
 .plugin-desc-meta > span {

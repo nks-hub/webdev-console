@@ -93,7 +93,7 @@ function cancelSwitch() {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: var(--wdc-space-2) var(--wdc-space-4);
   border-radius: var(--wdc-radius-sm);
   border: 1px solid var(--wdc-border);
   background: var(--wdc-surface);

@@ -637,9 +637,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   margin-bottom: 0;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -647,7 +647,7 @@ onMounted(() => {
 .header-title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .page-title {
@@ -679,7 +679,7 @@ onMounted(() => {
   gap: 6px;
   margin-top: 6px;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: help;
@@ -710,7 +710,7 @@ onMounted(() => {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .back-btn {
@@ -720,7 +720,7 @@ onMounted(() => {
 }
 
 .page-body-pad {
-  padding: 0 24px 24px;
+  padding: 0 var(--wdc-space-5) var(--wdc-space-5);
 }
 
 /* Grid of module cards */
@@ -735,7 +735,7 @@ onMounted(() => {
   border: 1px solid var(--wdc-border);
   border-left: 3px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 16px 18px;
+  padding: var(--wdc-space-4) 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -758,7 +758,7 @@ onMounted(() => {
 .bin-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .bin-card-title {
@@ -790,7 +790,7 @@ onMounted(() => {
 
 .bin-card-metrics {
   display: flex;
-  gap: 24px;
+  gap: var(--wdc-space-5);
 }
 
 .metric {
@@ -814,7 +814,7 @@ onMounted(() => {
 }
 
 .bin-card-actions {
-  padding-top: 4px;
+  padding-top: var(--wdc-space-1);
   border-top: 1px solid var(--wdc-border);
   margin-top: auto;
 }
@@ -835,7 +835,7 @@ onMounted(() => {
 }
 
 .col-tag {
-  margin-left: 8px;
+  margin-left: var(--wdc-space-2);
 }
 
 .col-muted {
@@ -843,7 +843,7 @@ onMounted(() => {
 }
 
 .platform-tag {
-  margin-right: 4px;
+  margin-right: var(--wdc-space-1);
   margin-bottom: 2px;
   font-size: 0.68rem !important;
   font-weight: 600 !important;
@@ -851,12 +851,12 @@ onMounted(() => {
 }
 
 .progress-content {
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
 }
 
 .progress-msg {
   font-size: 0.86rem;
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
   color: var(--wdc-text);
 }
 

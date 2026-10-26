@@ -228,7 +228,7 @@ async function onFire(): Promise<void> {
 .quick-bar-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 .quick-label {

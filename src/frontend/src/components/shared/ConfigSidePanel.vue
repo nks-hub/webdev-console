@@ -392,11 +392,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .csp-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .csp-close-btn {
   min-width: 28px;
-  padding: 4px 10px !important;
+  padding: var(--wdc-space-1) 10px !important;
   font-size: 1rem !important;
   font-weight: 600;
   color: var(--wdc-text-2) !important;
@@ -406,7 +406,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .csp-state-box {
-  padding: 24px 18px;
+  padding: var(--wdc-space-5) 18px;
 }
 
 .csp-body {
@@ -444,7 +444,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) 14px;
   gap: 10px;
 }
 
@@ -453,7 +453,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   background: var(--wdc-bg);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -486,8 +486,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .csp-validation-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--wdc-space-2);
+  padding: 10px var(--wdc-space-3);
   background: var(--wdc-bg);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

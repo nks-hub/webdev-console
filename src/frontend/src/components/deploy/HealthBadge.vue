@@ -79,7 +79,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 600;
   border: 1px solid var(--wdc-border);

@@ -93,12 +93,12 @@ async function copyAll(): Promise<void> {
 .raw-output { display: flex; flex-direction: column; gap: 6px; }
 .raw-output-toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .raw-output-text,
 .raw-output-ansi {
   margin: 0;
-  padding: 14px 16px;
+  padding: 14px var(--wdc-space-4);
   background: var(--wdc-surface-2);
   color: var(--el-text-color-primary);
   border: 1px solid var(--wdc-border);

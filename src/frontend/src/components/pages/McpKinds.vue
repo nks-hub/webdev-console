@@ -326,8 +326,8 @@ async function refresh(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 20px 24px;
+  gap: var(--wdc-space-3);
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -414,7 +414,7 @@ async function refresh(): Promise<void> {
 
   .quick-grant-btn {
     display: flex;
-    margin: 4px 0 0;
+    margin: var(--wdc-space-1) 0 0;
   }
 }
 </style>

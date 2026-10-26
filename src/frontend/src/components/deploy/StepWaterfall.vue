@@ -84,7 +84,7 @@ function formatMs(ms: number): string {
   grid-template-columns: 24px 1fr auto auto;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
+  padding: 6px var(--wdc-space-3);
   border-left: 3px solid transparent;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -101,7 +101,7 @@ function formatMs(ms: number): string {
 }
 .step-status {
   font-size: 0.7em; letter-spacing: 0.05em;
-  padding: 2px 8px; border-radius: 999px;
+  padding: 2px var(--wdc-space-2); border-radius: 999px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   font-weight: 600;

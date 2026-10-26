@@ -132,9 +132,9 @@ function formatRelative(iso: string): string {
 }
 .plan-row {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   align-items: flex-start;
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
   border-bottom: 1px solid var(--wdc-border);
 }
 .plan-row:last-child { border-bottom: none; }
@@ -152,16 +152,16 @@ function formatRelative(iso: string): string {
   font-size: 12px;
 }
 .plan-tag {
-  margin-right: 4px;
-  margin-bottom: 4px;
+  margin-right: var(--wdc-space-1);
+  margin-bottom: var(--wdc-space-1);
 }
 .plan-iso-hint {
-  margin-left: 8px;
+  margin-left: var(--wdc-space-2);
   font-size: 11px;
   font-family: var(--el-font-family-monospace, ui-monospace, monospace);
 }
 .stale-source-alert {
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 .muted { color: var(--el-text-color-secondary); }
 </style>

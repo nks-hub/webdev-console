@@ -128,7 +128,7 @@ defineExpose({ open, close, hasSeen })
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 4px 0 0;
+  padding: var(--wdc-space-1) 0 0;
   outline: none;
 }
 
@@ -202,7 +202,7 @@ defineExpose({ open, close, hasSeen })
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) 14px;
 }
 
 .gsw-codeblock code {
@@ -213,12 +213,12 @@ defineExpose({ open, close, hasSeen })
 
 .gsw-tip {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: flex-start;
   font-size: 0.82rem;
   color: var(--wdc-text-3);
   line-height: 1.5;
-  padding-top: 4px;
+  padding-top: var(--wdc-space-1);
   border-top: 1px solid var(--wdc-border);
 }
 
@@ -257,6 +257,6 @@ defineExpose({ open, close, hasSeen })
 
 .gsw-nav {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 </style>

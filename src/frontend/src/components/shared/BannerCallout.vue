@@ -38,9 +38,9 @@ defineProps<{
 .banner-callout {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   padding: 14px 18px;
-  margin: 4px auto 0;
+  margin: var(--wdc-space-1) auto 0;
   width: 100%;
   border-radius: var(--wdc-radius);
 }

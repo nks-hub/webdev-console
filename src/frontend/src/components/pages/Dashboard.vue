@@ -634,7 +634,7 @@ function closeConfig() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   /*
     Unified accent-dim gradient strip across every page. Was a flat
@@ -693,7 +693,7 @@ function closeConfig() {
 
 /* ─── Offline banner ──────────────────────────────────────────────────────── */
 .offline-banner {
-  padding: 16px 20px;
+  padding: var(--wdc-space-4) 20px;
 }
 
 /* ─── Service list ────────────────────────────────────────────────────────── */
@@ -706,7 +706,7 @@ function closeConfig() {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 24px;
+  padding: 0 var(--wdc-space-5);
   height: 58px;
   /*
     Was hardcoded rgba(255,255,255,0.06) — invisible in light mode.
@@ -744,7 +744,7 @@ function closeConfig() {
 .svc-identity {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   min-width: 0;
   flex: 1;
 }
@@ -790,7 +790,7 @@ function closeConfig() {
 .svc-metrics {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-shrink: 0;
   width: 240px;
   justify-content: flex-start;
@@ -834,7 +834,7 @@ function closeConfig() {
 .action-btn {
   font-size: 0.75rem !important;
   color: var(--wdc-text-3) !important;
-  padding: 0 8px !important;
+  padding: 0 var(--wdc-space-2) !important;
   height: 26px !important;
   line-height: 26px !important;
 }
@@ -844,7 +844,7 @@ function closeConfig() {
 }
 
 .svc-toggle {
-  margin-left: 8px;
+  margin-left: var(--wdc-space-2);
 }
 
 /* ─── Mono util ───────────────────────────────────────────────────────────── */
@@ -854,7 +854,7 @@ function closeConfig() {
 
 /* ─── Empty state ─────────────────────────────────────────────────────────── */
 .empty-state {
-  padding: 48px 0;
+  padding: var(--wdc-space-7) 0;
 }
 
 /* ─── Log drawer ──────────────────────────────────────────────────────────── */
@@ -875,7 +875,7 @@ function closeConfig() {
 .log-loading {
   color: var(--wdc-text-3);
   font-size: 0.82rem;
-  padding: 16px 0;
+  padding: var(--wdc-space-4) 0;
 }
 
 /* ─── Dashboard subtitle ────────────────────────────────────────────────── */
@@ -889,8 +889,8 @@ function closeConfig() {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 18px 24px 8px;
+  gap: var(--wdc-space-3);
+  padding: 18px var(--wdc-space-5) var(--wdc-space-2);
 }
 
 .stat-card {
@@ -956,14 +956,14 @@ function closeConfig() {
 
 /* ─── Metrics charts row ─────────────────────────────────────────────────── */
 .metrics-section {
-  padding: 8px 24px 16px;
+  padding: var(--wdc-space-2) var(--wdc-space-5) var(--wdc-space-4);
   flex-shrink: 0;
 }
 
 .metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .metric-card {
@@ -983,7 +983,7 @@ function closeConfig() {
 
 /* ─── Services panel ─────────────────────────────────────────────────────── */
 .services-panel {
-  margin: 0 24px 16px;
+  margin: 0 var(--wdc-space-5) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -994,8 +994,8 @@ function closeConfig() {
 .panel-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 16px 22px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-4) 22px;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
 }
@@ -1019,8 +1019,8 @@ function closeConfig() {
 /* ─── Quick actions ──────────────────────────────────────────────────────── */
 .quick-actions {
   display: flex;
-  gap: 8px;
-  padding: 4px 24px 20px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1) var(--wdc-space-5) 20px;
   flex-wrap: wrap;
 }
 
@@ -1028,7 +1028,7 @@ function closeConfig() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 
 .metric-card-title {
@@ -1081,7 +1081,7 @@ function closeConfig() {
   color: var(--wdc-text-2);
   white-space: pre-wrap;
   word-break: break-all;
-  padding: 12px;
+  padding: var(--wdc-space-3);
   background: var(--wdc-bg);
   border-radius: var(--wdc-radius-sm);
   max-height: 500px;
@@ -1090,14 +1090,14 @@ function closeConfig() {
 
 /* Recent activity timeline (Phase 4) */
 .activity-section {
-  margin-top: 24px;
-  padding: 0 24px 24px;
+  margin-top: var(--wdc-space-5);
+  padding: 0 var(--wdc-space-5) var(--wdc-space-5);
 }
 .activity-section .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
 }
 .activity-section .section-title {
   font-size: 0.8rem;
@@ -1107,7 +1107,7 @@ function closeConfig() {
   color: var(--wdc-text-3);
 }
 .activity-timeline {
-  padding-left: 4px;
+  padding-left: var(--wdc-space-1);
 }
 .activity-row {
   display: flex;

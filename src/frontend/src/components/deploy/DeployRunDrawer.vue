@@ -309,7 +309,7 @@ async function onCancel(): Promise<void> {
 .hook-panel {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) 14px;
   background: var(--wdc-surface-2);
   box-shadow: var(--wdc-shadow-sm);
 }
@@ -320,7 +320,7 @@ async function onCancel(): Promise<void> {
 .hook-list { list-style: none; padding: 0; margin: 0; }
 .hook-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
   font-size: 12px;
   flex-wrap: wrap;
 }

@@ -285,7 +285,7 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
 .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .confirm-context {
   display: flex; flex-direction: column; gap: 6px;
-  padding: 12px 16px; font-size: 13px;
+  padding: var(--wdc-space-3) var(--wdc-space-4); font-size: 13px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -299,7 +299,7 @@ watch(() => props.modelValue, (v) => { if (v) now.value = Date.now() })
 .confirm-context-empty { font-style: italic; }
 .confirm-context-row { display: flex; align-items: center; gap: 8px; }
 .confirm-context-warn {
-  margin-top: 4px; font-size: 12px;
+  margin-top: var(--wdc-space-1); font-size: 12px;
   color: var(--el-color-warning-dark-2);
   font-weight: 500;
 }

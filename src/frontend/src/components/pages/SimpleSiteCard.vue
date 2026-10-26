@@ -226,7 +226,7 @@ void computed(() => props.site.domain)
   transform: translateY(-1px);
 }
 .site-card :deep(.el-card__body) {
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -250,7 +250,7 @@ void computed(() => props.site.domain)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   min-width: 0;
 }
 .card-title {
@@ -291,7 +291,7 @@ void computed(() => props.site.domain)
 .card-activity {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   margin-top: 6px;
   font-size: 0.74rem;
   color: var(--wdc-text-2);
@@ -306,7 +306,7 @@ void computed(() => props.site.domain)
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .danger-item { color: var(--el-color-danger); }

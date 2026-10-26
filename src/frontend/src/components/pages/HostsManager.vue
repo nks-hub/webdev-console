@@ -576,18 +576,18 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
   flex-shrink: 0;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 
 .header-title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .page-title {
@@ -606,7 +606,7 @@ onMounted(async () => {
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -615,7 +615,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 24px;
+  padding: var(--wdc-space-2) var(--wdc-space-5);
   background: var(--el-color-warning-light-9, #fdf6ec);
   border-bottom: 1px solid var(--el-color-warning-light-5, #f5dab1);
   flex-shrink: 0;
@@ -631,16 +631,16 @@ onMounted(async () => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .entry-count {
@@ -685,10 +685,10 @@ onMounted(async () => {
   height: 16px;
   border-radius: 50%;
   background: var(--el-color-warning);
-  color: #fff;
+  color: var(--wdc-on-accent);
   font-size: 10px;
   font-weight: 700;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
   cursor: help;
   vertical-align: middle;
 }

@@ -50,6 +50,6 @@ const emit = defineEmits<{
 .hint {
   color: var(--wdc-text-3);
   font-size: 0.78rem;
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 </style>

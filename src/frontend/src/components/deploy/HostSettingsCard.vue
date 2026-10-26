@@ -148,12 +148,12 @@ const envHint = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .host-name {
   font-weight: 700;
@@ -162,7 +162,7 @@ const envHint = computed(() => {
 }
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .card-grid {
@@ -174,7 +174,7 @@ const envHint = computed(() => {
 .info-row {
   display: grid;
   grid-template-columns: 130px 1fr;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   align-items: baseline;
   font-size: 13px;
 }
@@ -207,7 +207,7 @@ const envHint = computed(() => {
   padding: 3px 10px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -215,7 +215,7 @@ const envHint = computed(() => {
 .local-paths {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .local-path-line {
   display: inline-flex;

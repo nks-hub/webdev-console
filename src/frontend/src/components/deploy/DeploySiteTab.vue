@@ -165,6 +165,6 @@ function onWizardDone(_form: unknown): void {
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
 
 .deploy-sub-tabs :deep(.el-tabs__content) {
-  padding: 16px 0 0;
+  padding: var(--wdc-space-4) 0 0;
 }
 </style>

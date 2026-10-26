@@ -471,8 +471,8 @@ function formatDate(iso: string): string {
 .backups-page { width: 100%; margin: 0 auto; padding: 0; }
 
 .page-header {
-  margin-bottom: 24px;
-  padding: 20px 24px;
+  margin-bottom: var(--wdc-space-5);
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -480,7 +480,7 @@ function formatDate(iso: string): string {
   font-size: 1.6rem;
   font-weight: 800;
   color: var(--wdc-text);
-  margin: 0 0 4px;
+  margin: 0 0 var(--wdc-space-1);
   letter-spacing: -0.02em;
   display: inline-flex;
   align-items: center;
@@ -492,8 +492,8 @@ function formatDate(iso: string): string {
   justify-content: center;
   min-width: 28px;
   height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
+  padding: 0 var(--wdc-space-2);
+  border-radius: var(--wdc-radius-full);
   background: color-mix(in oklab, var(--wdc-accent) 18%, transparent);
   color: var(--wdc-accent);
   font-size: 0.78rem;
@@ -510,14 +510,14 @@ function formatDate(iso: string): string {
 }
 
 .tab-content {
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
 }
 
 /* ── Overview ── */
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
+  gap: var(--wdc-space-3);
   margin-bottom: 20px;
 }
 
@@ -525,7 +525,7 @@ function formatDate(iso: string): string {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 16px 18px;
+  padding: var(--wdc-space-4) 18px;
 }
 .stat-label {
   font-size: 0.72rem;
@@ -552,7 +552,7 @@ function formatDate(iso: string): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
 }
 .snapshots-count {
   font-size: 0.82rem;
@@ -563,7 +563,7 @@ function formatDate(iso: string): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 32px 0;
+  padding: var(--wdc-space-6) 0;
   color: var(--wdc-text-3);
   font-size: 0.9rem;
 }
@@ -571,14 +571,14 @@ function formatDate(iso: string): string {
 .snapshots-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .snapshot-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 14px;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-3) 14px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -586,7 +586,7 @@ function formatDate(iso: string): string {
 }
 .snapshot-info {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   align-items: center;
   flex: 1;
   flex-wrap: wrap;

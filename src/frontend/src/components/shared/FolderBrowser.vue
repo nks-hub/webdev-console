@@ -155,7 +155,7 @@ watch(() => props.modelValue, (open) => {
 .fb-root {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .fb-pathbar {
@@ -180,7 +180,7 @@ watch(() => props.modelValue, (open) => {
 }
 
 .fb-empty {
-  padding: 40px 16px;
+  padding: 40px var(--wdc-space-4);
   text-align: center;
   color: var(--wdc-text-3);
   font-size: 0.85rem;
@@ -190,7 +190,7 @@ watch(() => props.modelValue, (open) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  padding: var(--wdc-space-2) 14px;
   cursor: pointer;
   border-bottom: 1px solid var(--wdc-border);
   transition: background 0.08s;
@@ -228,7 +228,7 @@ watch(() => props.modelValue, (open) => {
 .fb-selection {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   padding: 10px 14px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);

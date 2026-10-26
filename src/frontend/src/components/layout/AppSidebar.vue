@@ -485,7 +485,7 @@ async function toggleSvc(svc: ServiceInfo) {
   flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 12px 12px;
+  padding: var(--wdc-space-4) var(--wdc-space-3) var(--wdc-space-3);
 }
 
 /*
@@ -494,14 +494,14 @@ async function toggleSvc(svc: ServiceInfo) {
   cluster + sections are visible without scrolling.
 */
 .sidebar-top {
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
 }
 
 .workspace-card {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px 12px;
+  padding: var(--wdc-space-2) var(--wdc-space-2) var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
 }
 
@@ -513,7 +513,7 @@ async function toggleSvc(svc: ServiceInfo) {
   justify-content: center;
   border-radius: var(--wdc-radius-sm);
   background: var(--wdc-gradient-accent);
-  color: #ffffff;
+  color: var(--wdc-on-accent);
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -555,7 +555,7 @@ async function toggleSvc(svc: ServiceInfo) {
 }
 
 .sidebar-section {
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 
 /*
@@ -570,7 +570,7 @@ async function toggleSvc(svc: ServiceInfo) {
   text-transform: uppercase;
   letter-spacing: 0.10em;
   color: var(--wdc-text-3);
-  padding: 16px 10px 6px;
+  padding: var(--wdc-space-4) 10px 6px;
 }
 
 .section-count { display: none; }
@@ -584,7 +584,7 @@ async function toggleSvc(svc: ServiceInfo) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 12px;
+  padding: 7px var(--wdc-space-3);
   border-radius: var(--wdc-radius-sm);
   transition: background 0.12s, color 0.12s;
   min-height: 36px;
@@ -626,7 +626,7 @@ async function toggleSvc(svc: ServiceInfo) {
   width: 8px;
   height: 8px;
   flex-shrink: 0;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   /* Flat: use token for "off" state so it's visible in both modes */
   background: var(--wdc-status-stopped);
 }
@@ -639,8 +639,8 @@ async function toggleSvc(svc: ServiceInfo) {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
+  gap: var(--wdc-space-3);
+  padding: 11px var(--wdc-space-3);
   border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   color: var(--wdc-text-2);
@@ -682,12 +682,12 @@ async function toggleSvc(svc: ServiceInfo) {
   border-left-color: var(--wdc-cat-tunnel);
   color: var(--wdc-cat-tunnel);
 }
-:global(html.dark) .nav-item-tunnel { color: #fff2b3; }
+:global(html.dark) .nav-item-tunnel { color: var(--wdc-tunnel-text); }
 
 /* F83 SSO entry — subtle accent when signed in so the state is
    legible without crowding the bottom-nav visual weight. */
-.nav-item-sso.signedin .nav-icon-shell { color: #16a34a; }
-.nav-item-sso.signedin { border-left-color: #16a34a; }
+.nav-item-sso.signedin .nav-icon-shell { color: var(--wdc-status-running); }
+.nav-item-sso.signedin { border-left-color: var(--wdc-status-running); }
 
 /* Mode toggle — discoverable sidebar entry so users don't have to
    drill into Settings → General to flip Simple/Advanced. Switch sits
@@ -743,18 +743,18 @@ async function toggleSvc(svc: ServiceInfo) {
 .nav-badge {
   display: inline-block;
   padding: 1px 7px;
-  background: #9a4a00;
-  color: #ffffff;
+  background: var(--wdc-badge-bg);
+  color: var(--wdc-badge-fg);
   font-size: 0.72rem;
   font-weight: 700;
-  border-radius: 10px;
+  border-radius: var(--wdc-radius);
   min-width: 18px;
   text-align: center;
 }
 
 :global(html.dark) .workspace-subtitle,
-:global(html.dark) .section-label { color: #ffffff; }
-:global(html.dark) .nav-badge { background: #ffb15f; color: #141006; }
+:global(html.dark) .section-label { color: var(--wdc-text); }
+
 
 .nav-icon-shell {
   width: 34px;
@@ -774,7 +774,7 @@ async function toggleSvc(svc: ServiceInfo) {
 
 .sidebar-bottom {
   border-top: 1px solid var(--wdc-border-strong);
-  padding-top: 8px;
+  padding-top: var(--wdc-space-2);
   margin-top: 10px;
   display: flex;
   flex-direction: column;
@@ -788,6 +788,6 @@ async function toggleSvc(svc: ServiceInfo) {
 
 :global(html.dark) .sidebar-bottom .nav-item,
 :global(html.dark) .sidebar-bottom .nav-item .nav-label {
-  color: #ffffff !important;
+  color: var(--wdc-text) !important;
 }
 </style>

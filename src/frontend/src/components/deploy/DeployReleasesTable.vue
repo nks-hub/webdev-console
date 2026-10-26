@@ -244,7 +244,7 @@ function formatDuration(e: DeployHistoryEntryDto): string {
 .releases-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .releases-title { margin: 0; font-size: 16px; }
 .refresh-btn { margin-left: auto; }

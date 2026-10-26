@@ -118,22 +118,22 @@ watch(() => resolvedPlugin.value?.serviceId, () => { void loadCurrent() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: var(--wdc-space-3);
+  padding: 10px var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
   margin: 10px 0;
 }
 .plugin-autostart--compact {
   padding: 6px 10px;
-  margin: 8px 0;
+  margin: var(--wdc-space-2) 0;
   font-size: 0.82rem;
 }
 .plugin-autostart-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--wdc-text-2);
   font-weight: 500;
   line-height: 1.2;

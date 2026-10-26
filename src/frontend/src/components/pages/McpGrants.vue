@@ -1033,7 +1033,7 @@ function cooldownActiveSec(g: McpGrantRow): number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -1068,27 +1068,27 @@ function cooldownActiveSec(g: McpGrantRow): number {
 .expires-soon-badge {
   display: inline-block;
   margin-left: 6px;
-  padding: 1px 8px;
+  padding: 1px var(--wdc-space-2);
   font-size: 10px;
   font-weight: 600;
   background: var(--el-color-warning-light-9);
   border: 1px solid var(--el-color-warning-light-5);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   color: var(--el-color-warning-dark-2);
 }
 .cooldown-badge {
   display: inline-block;
   margin-left: 6px;
-  padding: 1px 8px;
+  padding: 1px var(--wdc-space-2);
   font-size: 10px;
   font-weight: 600;
   background: var(--el-color-info-light-9);
   border: 1px solid var(--el-color-info-light-5);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   color: var(--el-color-info-dark-2);
 }
 .test-match-result {
-  margin-top: 12px; padding: 12px 16px;
+  margin-top: var(--wdc-space-3); padding: 12px 16px;
   border-radius: var(--wdc-radius-sm);
   font-size: 13px;
   box-shadow: var(--wdc-shadow-sm);
@@ -1103,7 +1103,7 @@ function cooldownActiveSec(g: McpGrantRow): number {
 }
 .bulk-toolbar {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; margin-top: 8px;
+  padding: var(--wdc-space-3) var(--wdc-space-4); margin-top: 8px;
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);

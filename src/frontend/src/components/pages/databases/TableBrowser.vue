@@ -214,7 +214,7 @@ function columnWidth(col: DataColumn): number {
   padding: 14px 20px;
   border-bottom: 1px solid var(--wdc-accent-glow);
   flex-shrink: 0;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
@@ -236,7 +236,7 @@ function columnWidth(col: DataColumn): number {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
+  padding: 10px var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   background: var(--wdc-surface-2);
@@ -295,7 +295,7 @@ function columnWidth(col: DataColumn): number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 10px var(--wdc-space-4);
   border-top: 1px solid var(--wdc-border);
   flex-shrink: 0;
   background: var(--wdc-surface);
@@ -310,7 +310,7 @@ function columnWidth(col: DataColumn): number {
 .col-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   flex-wrap: nowrap;
 }
 .col-name { font-weight: 600; font-family: 'JetBrains Mono', monospace; }

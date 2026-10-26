@@ -313,14 +313,14 @@ defineExpose({ reload: loadAggregates })
 .simple-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   padding: 20px;
   width: 100%;
   margin: 0 auto;
 }
 .simple-hero {
   text-align: center;
-  padding: 24px 0 8px;
+  padding: var(--wdc-space-5) 0 var(--wdc-space-2);
 }
 .hero-title {
   margin: 0;
@@ -330,7 +330,7 @@ defineExpose({ reload: loadAggregates })
   letter-spacing: -0.01em;
 }
 .hero-summary {
-  margin: 8px 0 0;
+  margin: var(--wdc-space-2) 0 0;
   color: var(--wdc-text-2);
   font-size: 0.95rem;
 }
@@ -347,17 +347,17 @@ defineExpose({ reload: loadAggregates })
    now opt-in via :icon-pulse prop. */
 .simple-quick-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   justify-content: center;
   flex-wrap: wrap;
-  padding-top: 8px;
+  padding-top: var(--wdc-space-2);
 }
 
 .simple-recent {
   max-width: none;
   width: 100%;
   margin: 18px auto 0;
-  padding: 16px 18px;
+  padding: var(--wdc-space-4) 18px;
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
@@ -367,13 +367,13 @@ defineExpose({ reload: loadAggregates })
   max-width: none;
   width: 100%;
   margin: 18px auto 0;
-  padding: 24px 22px;
+  padding: var(--wdc-space-5) 22px;
   border: 1.5px dashed color-mix(in oklab, var(--wdc-accent) 40%, var(--wdc-border));
   border-radius: var(--wdc-radius);
   background: color-mix(in oklab, var(--wdc-accent) 6%, var(--wdc-surface));
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -400,7 +400,7 @@ defineExpose({ reload: loadAggregates })
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .simple-empty-body strong {
   font-size: 1rem;
@@ -419,7 +419,7 @@ defineExpose({ reload: loadAggregates })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 .simple-recent-title {
   font-size: 0.78rem;
@@ -438,7 +438,7 @@ defineExpose({ reload: loadAggregates })
   grid-template-columns: 10px minmax(0, 1fr) auto 16px;
   gap: 10px;
   align-items: center;
-  padding: 12px 6px;
+  padding: var(--wdc-space-3) 6px;
   min-height: 48px;
   border-bottom: 1px solid var(--wdc-border);
   cursor: pointer;

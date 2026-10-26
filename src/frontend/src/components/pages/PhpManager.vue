@@ -244,7 +244,7 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   margin-bottom: 20px;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -266,8 +266,8 @@ onMounted(() => { void loadVersions() })
   font-weight: 600;
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px var(--wdc-space-2);
+  border-radius: var(--wdc-radius);
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -298,7 +298,7 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 
 .ver-number {
@@ -316,7 +316,7 @@ onMounted(() => { void loadVersions() })
 .ver-path {
   font-size: 0.7rem;
   color: var(--wdc-text-3);
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -336,7 +336,7 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
 }
 
 .detail-title {
@@ -360,7 +360,7 @@ onMounted(() => { void loadVersions() })
 .ext-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .ext-item {

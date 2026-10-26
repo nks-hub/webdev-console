@@ -205,25 +205,25 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
   border-radius: var(--wdc-radius-lg);
   padding: 18px 22px;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
   box-shadow: var(--wdc-shadow-card);
 }
 .onboarding-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 .onboarding-title { font-size: 16px; font-weight: 600; }
 .onboarding-hint { margin: 0 0 16px 0; font-size: 13px; }
 .profile-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .profile-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 16px;
+  padding: var(--wdc-space-4);
   cursor: pointer;
   transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
   display: flex; flex-direction: column; gap: 6px;
@@ -251,8 +251,8 @@ onBeforeUnmount(() => {
 .recommended-tag { font-size: 10px; }
 .profile-desc { font-size: 13px; line-height: 1.45; }
 .profile-bullets {
-  margin: 4px 0 0;
-  padding-left: 16px;
+  margin: var(--wdc-space-1) 0 0;
+  padding-left: var(--wdc-space-4);
   font-size: 12px;
   line-height: 1.4;
   color: var(--el-text-color-secondary);
@@ -278,7 +278,7 @@ onBeforeUnmount(() => {
 
   .onboarding-header {
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--wdc-space-2);
   }
 
   .profile-cards {

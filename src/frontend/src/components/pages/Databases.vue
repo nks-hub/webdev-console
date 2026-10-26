@@ -686,7 +686,7 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   flex-shrink: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -746,7 +746,7 @@ onMounted(() => { void loadDatabases() })
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
   border-bottom: 2px solid var(--wdc-accent-glow);
   flex-shrink: 0;
-  padding: 0 16px 0 12px;
+  padding: 0 var(--wdc-space-4) 0 var(--wdc-space-3);
   height: 52px;
 }
 
@@ -759,7 +759,7 @@ onMounted(() => { void loadDatabases() })
 .tab-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   padding: 0 20px;
   border: none;
   background: transparent;
@@ -796,7 +796,7 @@ onMounted(() => { void loadDatabases() })
 
 .empty-state, .overview-pane {
   flex: 1;
-  padding: 24px;
+  padding: var(--wdc-space-5);
   overflow: auto;
   background: var(--wdc-bg);
 }
@@ -810,7 +810,7 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
   padding: 14px 18px;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);

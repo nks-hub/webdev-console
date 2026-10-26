@@ -368,7 +368,7 @@ onMounted(() => { void load() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
   flex-shrink: 0;
@@ -377,13 +377,13 @@ onMounted(() => { void load() })
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 
 .title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .title-label {
   font-size: 0.7rem;
@@ -401,11 +401,11 @@ onMounted(() => { void load() })
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .state-box {
-  padding: 32px 24px;
+  padding: var(--wdc-space-6) var(--wdc-space-5);
 }
 
 .config-body {
@@ -437,7 +437,7 @@ onMounted(() => { void load() })
   height: 7px;
   border-radius: 50%;
   background: var(--wdc-status-starting);
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 
 .editor-wrap {
@@ -446,7 +446,7 @@ onMounted(() => { void load() })
   flex: 1;
   min-height: 0;
   padding: 14px 20px;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .file-meta {
@@ -497,7 +497,7 @@ onMounted(() => { void load() })
 .val-left, .val-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .mono {

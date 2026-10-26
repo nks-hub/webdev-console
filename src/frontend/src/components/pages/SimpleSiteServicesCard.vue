@@ -142,13 +142,13 @@ async function restartService(svc: ServiceRow) {
 <style scoped>
 .sd-section {
   margin-top: 18px;
-  padding: 16px;
+  padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
 }
 .sd-section-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 14px;
   font-weight: 600;
   color: var(--wdc-text-2);

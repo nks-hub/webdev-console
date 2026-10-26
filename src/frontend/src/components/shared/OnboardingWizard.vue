@@ -432,22 +432,22 @@ defineExpose({ open })
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 4px 0 0;
+  padding: var(--wdc-space-1) 0 0;
 }
 .ob-subtitle {
   font-size: 0.92rem;
   color: var(--wdc-text-2);
-  margin: 0 0 4px;
+  margin: 0 0 var(--wdc-space-1);
   text-align: center;
 }
 .ob-step {
   min-height: 180px;
-  padding: 16px 8px 4px;
+  padding: var(--wdc-space-4) var(--wdc-space-2) var(--wdc-space-1);
 }
 .ob-step-desc {
   font-size: 0.88rem;
   color: var(--wdc-text-2);
-  margin: 0 0 16px;
+  margin: 0 0 var(--wdc-space-4);
 }
 .ob-step-final {
   text-align: center;
@@ -455,7 +455,7 @@ defineExpose({ open })
 }
 .ob-final-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -481,7 +481,7 @@ defineExpose({ open })
 .ob-row :deep(.ob-version-select) {
   width: 140px;
   margin-left: auto;
-  margin-right: 8px;
+  margin-right: var(--wdc-space-2);
 }
 .ob-footer {
   display: flex;
@@ -491,13 +491,13 @@ defineExpose({ open })
 .ob-footer-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .ob-dontshow {
   color: var(--wdc-text-3);
 }
 .ob-nav {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 </style>

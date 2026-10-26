@@ -54,7 +54,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .tab-desc {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   color: var(--wdc-text-3);
   font-size: 0.85rem;
 }
@@ -65,12 +65,12 @@ const emit = defineEmits<{
 
 .sync-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 
 .auth-error {
   color: var(--wdc-status-error);
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
 }
 </style>

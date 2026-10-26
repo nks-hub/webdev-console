@@ -93,13 +93,13 @@ onBeforeUnmount(() => {
 .top-tools-panel {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  padding: 14px 16px;
+  padding: 14px var(--wdc-space-4);
   background: var(--wdc-surface);
   box-shadow: var(--wdc-shadow-sm);
 }
 .panel-title {
   font-size: 11px;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -124,13 +124,13 @@ onBeforeUnmount(() => {
 .bar-track {
   height: 8px;
   background: var(--wdc-elevated);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 .bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   transition: width 0.3s;
 }
 .fill-read { background: var(--el-color-info); opacity: 0.7; }
@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
   background: var(--el-color-danger);
   color: white;
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: var(--wdc-radius);
   font-size: 10px;
   font-weight: 600;
 }

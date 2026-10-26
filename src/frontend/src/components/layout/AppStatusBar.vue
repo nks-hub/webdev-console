@@ -85,7 +85,7 @@ function formatMem(bytes: number): string {
   align-items: center;
   gap: 14px;
   height: 30px;
-  padding: 0 16px;
+  padding: 0 var(--wdc-space-4);
   background: color-mix(in srgb, var(--wdc-surface) 78%, transparent);
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
@@ -113,9 +113,9 @@ function formatMem(bytes: number): string {
 }
 
 .status-alert { color: var(--wdc-status-error); font-weight: 600; }
-.status-tunnel { color: #5c2f00; font-weight: 700; }
+.status-tunnel { color: var(--wdc-tunnel-text); font-weight: 700; }
 :global(.dark) .status-tunnel,
-:global(html.dark) .status-tunnel { color: #fff2b3 !important; }
+:global(html.dark) .status-tunnel { color: var(--wdc-tunnel-text) !important; }
 
 .status-sep {
   width: 1px;
@@ -139,7 +139,7 @@ function formatMem(bytes: number): string {
 
 @media (max-width: 520px) {
   .status-bar {
-    gap: 8px;
+    gap: var(--wdc-space-2);
     padding: 0 14px;
   }
 

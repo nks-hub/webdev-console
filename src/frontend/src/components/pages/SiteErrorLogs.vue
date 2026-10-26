@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
 .logs-toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   flex-wrap: wrap;
 }
 

@@ -216,7 +216,7 @@ onBeforeUnmount(() => {
 .timeline-chart {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  padding: 14px 16px 10px;
+  padding: 14px var(--wdc-space-4) 10px;
   background: var(--wdc-surface);
   box-shadow: var(--wdc-shadow-sm);
   display: flex;

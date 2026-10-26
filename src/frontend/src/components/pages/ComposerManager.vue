@@ -262,7 +262,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   flex-shrink: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -271,7 +271,7 @@ onMounted(() => {
 .header-title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .page-title {
@@ -290,7 +290,7 @@ onMounted(() => {
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
 }
 
@@ -300,11 +300,11 @@ onMounted(() => {
   padding: 0 28px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 
 .cm-card {
-  border-radius: 10px;
+  border-radius: var(--wdc-radius);
 }
 
 .cm-card-header {
@@ -328,8 +328,8 @@ onMounted(() => {
 }
 
 .scan-progress {
-  margin-top: 12px;
-  padding: 0 4px;
+  margin-top: var(--wdc-space-3);
+  padding: 0 var(--wdc-space-1);
 }
 
 .composer-not-installed {
@@ -337,7 +337,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 32px 16px;
+  padding: var(--wdc-space-6) var(--wdc-space-4);
   text-align: center;
 }
 .composer-not-installed h3 { margin: 4px 0 0; font-size: 1rem; font-weight: 600; }

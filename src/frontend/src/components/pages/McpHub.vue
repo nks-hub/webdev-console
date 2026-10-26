@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .page { padding: 0; display: flex; flex-direction: column; gap: 0; }
 .hub-header {
-  padding: 20px 24px;
+  padding: 20px var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -286,8 +286,8 @@ onBeforeUnmount(() => {
 .hub-stats .stat strong { font-weight: 600; }
 .hub-stats .stat.warn strong { color: var(--el-color-warning); }
 .tier-chip {
-  padding: 3px 12px;
-  border-radius: 999px;
+  padding: 3px var(--wdc-space-3);
+  border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 600;
   border: 1px solid transparent;

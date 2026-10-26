@@ -41,13 +41,13 @@ const cloudflaredRunning = computed(() =>
 .col-tunnel {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   box-sizing: border-box;
   min-height: 24px !important;
   line-height: 18px;
-  padding: 2px 8px;
+  padding: 2px var(--wdc-space-2);
   background: rgba(243, 128, 32, 0.12);
-  color: #f38020;
+  color: var(--wdc-brand-cloudflare);
   border: 1px solid rgba(243, 128, 32, 0.3);
   border-radius: 12px;
   font-size: 0.72rem;
@@ -56,9 +56,9 @@ const cloudflaredRunning = computed(() =>
 .col-tunnel a { color: inherit; text-decoration: none; }
 .col-tunnel a:hover { text-decoration: underline; }
 .tunnel-badge-offline {
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
   padding: 0 6px;
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
   background: rgba(239, 68, 68, 0.2);
   color: var(--wdc-status-error);
   font-size: 0.64rem;

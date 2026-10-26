@@ -84,7 +84,7 @@ const iconComponent = computed(() => {
 .tile-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--el-text-color-secondary);
 }
 .tile-icon { font-size: 16px; }

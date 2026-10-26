@@ -235,7 +235,7 @@ void _unused
   padding: 14px 20px;
   border-bottom: 1px solid var(--wdc-accent-glow);
   flex-shrink: 0;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
 
@@ -270,13 +270,13 @@ void _unused
   height: 35%;
   min-height: 180px;
   flex-shrink: 0;
-  padding: 8px 14px 0;
+  padding: var(--wdc-space-2) 14px 0;
 }
 
 .console-results {
   flex: 1;
   min-height: 0;
-  padding: 8px 14px 14px;
+  padding: var(--wdc-space-2) 14px 14px;
   display: flex;
   flex-direction: column;
 }
@@ -290,7 +290,7 @@ void _unused
   font-size: 0.85rem;
   border: 1px dashed var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
 }
 
 .result-tabs { flex: 1; display: flex; flex-direction: column; min-height: 0; }
@@ -303,9 +303,9 @@ void _unused
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 6px 0 8px;
+  padding: 6px 0 var(--wdc-space-2);
   border-bottom: 1px solid var(--wdc-border);
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
   flex-shrink: 0;
 }
 
@@ -337,7 +337,7 @@ void _unused
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--el-color-success);
   font-size: 0.9rem;
 }

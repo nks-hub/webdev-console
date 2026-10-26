@@ -401,7 +401,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 <style scoped>
 .sites-simple {
-  padding: 24px;
+  padding: var(--wdc-space-5);
   min-height: 100%;
   background: var(--wdc-bg);
 }
@@ -410,14 +410,14 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--wdc-space-4);
+  margin-bottom: var(--wdc-space-5);
 }
 
 .simple-header-title {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   min-width: 0;
 }
 
@@ -436,12 +436,12 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   justify-content: center;
   min-width: 28px;
   height: 22px;
-  padding: 0 8px;
+  padding: 0 var(--wdc-space-2);
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--wdc-accent);
   background: var(--wdc-accent-dim);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
 }
 .page-subtitle {
   margin: 0;
@@ -470,8 +470,8 @@ async function handleCommand(cmd: string, site: SiteInfo) {
    installed the app sees the value proposition + a single big CTA. */
 .welcome-hero {
   max-width: 560px;
-  margin: 48px auto;
-  padding: 40px 32px;
+  margin: var(--wdc-space-7) auto;
+  padding: 40px var(--wdc-space-6);
   text-align: center;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
@@ -484,20 +484,20 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   justify-content: center;
   width: 64px;
   height: 64px;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
   border-radius: 50%;
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
   font-size: 32px;
 }
 .welcome-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--wdc-space-2);
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--wdc-text);
 }
 .welcome-sub {
-  margin: 0 0 24px;
+  margin: 0 0 var(--wdc-space-5);
   color: var(--wdc-text-2);
   font-size: 0.95rem;
   line-height: 1.5;
@@ -508,17 +508,17 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 .welcome-features {
   list-style: none;
   margin: 0;
-  padding: 16px 0 0;
+  padding: var(--wdc-space-4) 0 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
   text-align: left;
 }
 .welcome-features li {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   color: var(--wdc-text-2);
   font-size: 0.86rem;
 }
@@ -534,13 +534,13 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 @media (max-width: 820px) {
   .sites-simple {
-    padding: 18px 16px;
+    padding: 18px var(--wdc-space-4);
   }
 
   .simple-header {
     align-items: stretch;
     flex-direction: column;
-    margin-bottom: 16px;
+    margin-bottom: var(--wdc-space-4);
   }
 
   .simple-header :deep(.el-button) {
@@ -567,7 +567,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   .card-title-row {
     align-items: flex-start;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--wdc-space-1);
   }
 
   .card-actions {
