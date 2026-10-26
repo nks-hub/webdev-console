@@ -118,7 +118,9 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
           'Args:\n  domain: Local domain like "myapp.loc".\n\n' +
           'Returns: { domain, configured, count, hosts: [{ name, branch, sshHost, sshUser, sshPort, remotePath, ' +
           'localSourcePath, localTargetPath, healthCheckUrl, soakSeconds }] }. configured is false when no ' +
-          'deploy settings were saved for the site yet (configure hosts in WDC → site → Deploy).',
+          'deploy settings were saved for the site yet (configure hosts in WDC → site → Deploy).\n\n' +
+          'The deploy settings file also holds hooks, notification webhooks and env vars, so reading it needs ' +
+          'the "Deploy configuration" capability enabled in WDC → Settings → AI clients (MCP).',
         inputSchema: { domain: DomainSchema },
         annotations: ANNOTATIONS_READ,
       },

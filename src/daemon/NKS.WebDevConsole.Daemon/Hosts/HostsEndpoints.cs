@@ -14,6 +14,38 @@ internal static class HostsEndpoints
     // lines (e.g. Czech comments) into '?', and a BOM can break the first line.
     private static readonly System.Text.Encoding HostsEncoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
+    /// <summary>Where <c>POST /api/hosts/backup</c> writes its <c>hosts-*.bak</c> copies.</summary>
+    internal static string HostsBackupsDir =>
+        Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "hosts");
+
+    /// <summary>
+    /// Resolves the <c>path</c> of a hosts restore request. Only a
+    /// <c>hosts-*.bak</c> file directly inside <paramref name="backupsDir"/> is
+    /// accepted; anything else (another folder, a traversal, a different file
+    /// name) returns null so the hosts file can never be overwritten with an
+    /// arbitrary file the daemon can read.
+    /// </summary>
+    internal static string? ResolveBackupPath(string path, string backupsDir)
+    {
+        string full;
+        try { full = Path.GetFullPath(path, backupsDir); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return null; }
+
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(backupsDir, full))
+            return null;
+        var dir = Path.GetDirectoryName(full);
+        if (dir is null || !string.Equals(
+                Path.TrimEndingDirectorySeparator(dir),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(backupsDir)),
+                OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            return null;
+        var name = Path.GetFileName(full);
+        return name.StartsWith("hosts-", StringComparison.OrdinalIgnoreCase)
+               && name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)
+            ? full
+            : null;
+    }
+
     public static void MapHostsEndpoints(this WebApplication app)
     {
         static string GetHostsPath() =>
@@ -307,7 +339,7 @@ internal static class HostsEndpoints
             if (!File.Exists(hostsPath))
                 return Results.NotFound(new { error = "Hosts file not found" });
 
-            var backupsDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "hosts");
+            var backupsDir = HostsBackupsDir;
             Directory.CreateDirectory(backupsDir);
 
             var ts = DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmssZ");
@@ -348,12 +380,17 @@ internal static class HostsEndpoints
                 string newContent;
                 if (!string.IsNullOrWhiteSpace(req.Path))
                 {
-                    if (!File.Exists(req.Path))
+                    var backupPath = ResolveBackupPath(req.Path, HostsBackupsDir);
+                    if (backupPath is null)
+                        return Results.BadRequest(new { error = "path must name a hosts backup (hosts-*.bak) in the WDC hosts backup folder" });
+                    if (!File.Exists(backupPath))
                         return Results.NotFound(new { error = $"Backup file not found: {req.Path}" });
-                    var fi = new FileInfo(req.Path);
+                    var fi = new FileInfo(backupPath);
+                    if (fi.LinkTarget is not null)
+                        return Results.BadRequest(new { error = "Backup file must not be a link" });
                     if (fi.Length > MaxHostsBytes)
                         return Results.BadRequest(new { error = $"Backup file too large ({fi.Length} bytes, max {MaxHostsBytes})" });
-                    newContent = await File.ReadAllTextAsync(req.Path);
+                    newContent = await File.ReadAllTextAsync(backupPath);
                 }
                 else
                 {

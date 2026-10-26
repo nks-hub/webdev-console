@@ -36,6 +36,128 @@ class DaemonNotRunningError extends Error {
   }
 }
 
+/**
+ * What the agent should do next for a structured daemon refusal, keyed by
+ * the intent-gate `reason` or the top-level `error` code.
+ */
+const NEXT_STEPS: Record<string, string> = {
+  missing_token:
+    'This operation needs the user\'s approval: call wdc_request_confirmation first, ' +
+    'then retry this tool with the returned intentToken.',
+  pending_confirmation:
+    'The user has not approved yet; ask them to approve the request in WDC, then retry with the ' +
+    'same intentToken. wdc_get_confirmation_status shows whether it has been approved.',
+  expired: 'The approval expired; request a new confirmation with wdc_request_confirmation.',
+  already_used:
+    'The intentToken was already used or revoked; request a new confirmation with wdc_request_confirmation.',
+  kind_mismatch:
+    'The intentToken was approved for a different operation; request a new confirmation for this exact operation.',
+  domain_mismatch:
+    'The intentToken was approved for a different target; request a new confirmation for this exact target.',
+  host_mismatch:
+    'The intentToken was approved for a different host; request a new confirmation for this exact host.',
+  kind_unknown:
+    'WDC only accepts registered operation kinds (strict kinds mode); ask the user to check MCP settings in WDC.',
+  not_found: 'The intent does not exist (it may have been cleaned up); request a new confirmation.',
+  nonce_mismatch: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
+  malformed_token: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
+  signature_mismatch: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
+  mcp_disabled: 'MCP is turned off in WDC; ask the user to enable MCP in WDC → Settings.',
+  mcp_forbidden: 'The MCP token may not do this; the user has to do it in the WDC app.',
+  mcp_capability_disabled:
+    'This capability is turned off for MCP in WDC; ask the user to enable it in WDC → Settings if they want you to do this.',
+}
+
+function str(v: unknown): string | undefined {
+  if (typeof v === 'string') return v.trim() || undefined
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+  return undefined
+}
+
+/**
+ * Structured daemon refusal. The message is composed from every field the
+ * daemon sends (error, reason, detail, hint, message, ProblemDetails title),
+ * the MCP capability the operator has to enable (with its setting key), the
+ * intent kind/target to request via wdc_request_confirmation, plus a
+ * next-step sentence, so the agent can act on it without guessing.
+ */
+export class DaemonRequestError extends Error {
+  readonly status: number
+  /** Top-level `error` code, e.g. `intent_rejected`, `mcp_forbidden`. */
+  readonly code?: string
+  /** Intent-gate `reason`, e.g. `pending_confirmation`. */
+  readonly reason?: string
+  readonly detail?: string
+  readonly hint?: string
+  readonly capability?: string
+  /** Setting that turns the capability on, e.g. `mcp.capabilities.database_admin`. */
+  readonly settingKey?: string
+  /** Intent kind and target the daemon expects an approved intent for. */
+  readonly intentKind?: string
+  readonly intentDomain?: string
+  readonly nextStep?: string
+  readonly body: unknown
+
+  constructor(status: number, text: string) {
+    let body: unknown = text
+    try {
+      body = text ? JSON.parse(text) : undefined
+    } catch {
+      /* plain-text body */
+    }
+    const obj = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : undefined
+    const code = str(obj?.error)
+    const reason = str(obj?.reason) ?? (status === 425 ? 'pending_confirmation' : undefined)
+    const rawDetail = str(obj?.detail)
+    // The intent gate's only detail code: the operator requires a fresh
+    // approval for this kind every time, so trust grants were skipped.
+    const detail =
+      rawDetail === 'always_confirm'
+        ? 'WDC requires the user to approve this kind of operation every time (trust grants do not apply)'
+        : rawDetail
+    const hint = str(obj?.hint)
+    const capability = str(obj?.capability)
+    const settingKey = str(obj?.settingKey)
+    const intentKind = str(obj?.intentKind)
+    const intentDomain = str(obj?.intentDomain)
+    const extra = [str(obj?.message), str(obj?.title)]
+
+    const parts: string[] = []
+    const push = (s: string | undefined) => {
+      if (s && !parts.some(p => p.includes(s))) parts.push(s)
+    }
+    push(code)
+    if (reason) push(`reason: ${reason}`)
+    if (capability) push(`capability: ${capability}${settingKey ? ` (${settingKey})` : ''}`)
+    if (intentKind) push(`intent: kind ${intentKind} on ${intentDomain ?? '?'}`)
+    push(detail)
+    for (const e of extra) push(e)
+    if (!obj) {
+      const plain = typeof body === 'string' ? body.trim() : ''
+      push(plain.length > 300 ? plain.slice(0, 300) + '…' : plain || undefined)
+    }
+    if (parts.length === 0) parts.push(`HTTP ${status}`)
+
+    const nextStep = (reason && NEXT_STEPS[reason]) ?? (code && NEXT_STEPS[code]) ?? undefined
+    let message = `Daemon request failed: ${status} ${parts.join(' — ')}`
+    if (hint) message += `\nHint: ${hint}`
+    if (nextStep && !(code === 'mcp_capability_disabled' && hint)) message += `\nNext step: ${nextStep}`
+    super(message)
+    this.name = 'DaemonRequestError'
+    this.status = status
+    this.code = code
+    this.reason = reason
+    this.detail = detail
+    this.hint = hint
+    this.capability = capability
+    this.settingKey = settingKey
+    this.intentKind = intentKind
+    this.intentDomain = intentDomain
+    this.nextStep = nextStep
+    this.body = body
+  }
+}
+
 function isTrustedPortFile(path: string): boolean {
   if (process.platform === 'win32' || typeof process.getuid !== 'function') return true
   try {
@@ -46,8 +168,11 @@ function isTrustedPortFile(path: string): boolean {
   }
 }
 
-class DaemonClient {
+export class DaemonClient {
   private current: PortFile | null = null
+
+  /** @param portFiles Port file locations to try, in order (tests pass their own). */
+  constructor(private readonly portFiles?: string[]) {}
 
   /**
    * Locate the daemon's port + token. The wdc daemon writes this file to
@@ -61,7 +186,7 @@ class DaemonClient {
     // with it must present GUI-confirmed intents for destructive operations
     // and cannot approve intents themselves. The GUI port file is only a
     // fallback for daemons that predate the MCP token.
-    const candidates = [
+    const candidates = this.portFiles ?? [
       join(tmpdir(), 'nks-wdc-mcp.port'),
       join(tmpdir(), 'nks-wdc-daemon.port'),
       join(homedir(), '.wdc', 'daemon.port'),
@@ -173,19 +298,8 @@ class DaemonClient {
       }
     }
     if (!res.ok) {
-      // Surface the daemon's structured error body. All daemon endpoints
-      // return JSON with `error` or `detail` per the recent robustness sweep.
       const text = await res.text().catch(() => '')
-      let detail = `HTTP ${res.status}`
-      if (text) {
-        try {
-          const obj = JSON.parse(text)
-          detail = String(obj.error ?? obj.detail ?? obj.message ?? text)
-        } catch {
-          detail = text.length > 300 ? text.slice(0, 300) + '…' : text
-        }
-      }
-      throw new Error(`Daemon request failed: ${res.status} ${detail}`)
+      throw new DaemonRequestError(res.status, text)
     }
     if (res.status === 204) return null
     const ct = res.headers.get('content-type') ?? ''
