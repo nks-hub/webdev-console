@@ -56,8 +56,12 @@ import {
 import { useServicesStore } from '../../stores/services'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
+import { useUiModeStore } from '../../stores/uiMode'
+import { useFeatureFlagsStore } from '../../stores/featureFlags'
 
 const router = useRouter()
+const uiModeStore = useUiModeStore()
+const featureFlagsStore = useFeatureFlagsStore()
 const servicesStore = useServicesStore()
 const daemonStore = useDaemonStore()
 const sitesStore = useSitesStore()
@@ -78,25 +82,39 @@ interface Command {
   description?: string
   icon: Component
   shortcut?: string
+  /** Route the command navigates to; used to hide entries the current mode cannot open. */
+  route?: string
   action: () => void
 }
 
-const commands = computed<Command[]>(() => [
-  { id: 'sites', label: t('commandPalette.gotoSites'), icon: Monitor, shortcut: '', action: () => router.push('/sites') },
-  { id: 'dashboard', label: t('commandPalette.gotoDashboard'), icon: DataAnalysis, action: () => router.push('/dashboard') },
-  { id: 'databases', label: t('commandPalette.gotoDatabases'), icon: Coin, action: () => router.push('/databases') },
-  { id: 'ssl', label: t('commandPalette.gotoSsl'), icon: Lock, action: () => router.push('/ssl') },
-  { id: 'php', label: t('commandPalette.gotoPhp'), icon: Grid, action: () => router.push('/php') },
-  { id: 'binaries', label: t('commandPalette.gotoBinaries'), icon: Box, action: () => router.push('/binaries') },
-  { id: 'plugins', label: t('commandPalette.gotoPlugins'), icon: Share, action: () => router.push('/plugins') },
-  { id: 'settings', label: t('commandPalette.gotoSettings'), icon: Setting, action: () => router.push('/settings') },
-  { id: 'cloudflare', label: t('commandPalette.gotoCloudflare'), icon: Connection, action: () => router.push('/cloudflare') },
+// Hide commands whose route the router guard would refuse (Advanced-only
+// pages in Simple mode) and MCP shortcuts when MCP is turned off; they used
+// to bounce silently to /sites.
+function isAvailable(cmd: Command): boolean {
+  if (!cmd.route) return true
+  if (cmd.route.startsWith('/mcp') && !featureFlagsStore.showMcpSurface) return false
+  const target = router.resolve(cmd.route)
+  return !(target.meta.requiresAdvanced && uiModeStore.isSimple)
+}
+
+const commands = computed<Command[]>(() => allCommands.value.filter(isAvailable))
+
+const allCommands = computed<Command[]>(() => [
+  { id: 'sites', label: t('commandPalette.gotoSites'), icon: Monitor, shortcut: '', route: '/sites', action: () => router.push('/sites') },
+  { id: 'dashboard', label: t('commandPalette.gotoDashboard'), icon: DataAnalysis, route: '/dashboard', action: () => router.push('/dashboard') },
+  { id: 'databases', label: t('commandPalette.gotoDatabases'), icon: Coin, route: '/databases', action: () => router.push('/databases') },
+  { id: 'ssl', label: t('commandPalette.gotoSsl'), icon: Lock, route: '/ssl', action: () => router.push('/ssl') },
+  { id: 'php', label: t('commandPalette.gotoPhp'), icon: Grid, route: '/php', action: () => router.push('/php') },
+  { id: 'binaries', label: t('commandPalette.gotoBinaries'), icon: Box, route: '/binaries', action: () => router.push('/binaries') },
+  { id: 'plugins', label: t('commandPalette.gotoPlugins'), icon: Share, route: '/plugins', action: () => router.push('/plugins') },
+  { id: 'settings', label: t('commandPalette.gotoSettings'), icon: Setting, route: '/settings', action: () => router.push('/settings') },
+  { id: 'cloudflare', label: t('commandPalette.gotoCloudflare'), icon: Connection, route: '/cloudflare', action: () => router.push('/cloudflare') },
   // MCP shortcuts — Phase 8 redesign surfaces 4 quick jumps for the
   // most common operator paths into the MCP module.
-  { id: 'mcp-activity', label: t('commandPalette.gotoMcpActivity'), description: t('commandPalette.gotoMcpActivityDesc'), icon: DataLine, action: () => router.push('/mcp/activity') },
-  { id: 'mcp-requests', label: t('commandPalette.gotoMcpRequests'), description: t('commandPalette.gotoMcpRequestsDesc'), icon: Lock, action: () => router.push('/mcp/intents') },
-  { id: 'mcp-rules', label: t('commandPalette.gotoMcpRules'), description: t('commandPalette.gotoMcpRulesDesc'), icon: Key, action: () => router.push('/mcp/grants') },
-  { id: 'mcp-catalog', label: t('commandPalette.gotoMcpCatalog'), description: t('commandPalette.gotoMcpCatalogDesc'), icon: Operation, action: () => router.push('/mcp/kinds') },
+  { id: 'mcp-activity', label: t('commandPalette.gotoMcpActivity'), description: t('commandPalette.gotoMcpActivityDesc'), icon: DataLine, route: '/mcp/activity', action: () => router.push('/mcp/activity') },
+  { id: 'mcp-requests', label: t('commandPalette.gotoMcpRequests'), description: t('commandPalette.gotoMcpRequestsDesc'), icon: Lock, route: '/mcp/intents', action: () => router.push('/mcp/intents') },
+  { id: 'mcp-rules', label: t('commandPalette.gotoMcpRules'), description: t('commandPalette.gotoMcpRulesDesc'), icon: Key, route: '/mcp/grants', action: () => router.push('/mcp/grants') },
+  { id: 'mcp-catalog', label: t('commandPalette.gotoMcpCatalog'), description: t('commandPalette.gotoMcpCatalogDesc'), icon: Operation, route: '/mcp/kinds', action: () => router.push('/mcp/kinds') },
   { id: 'mailpit-ui', label: t('commandPalette.openMailpit'), icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
   { id: 'new-site', label: t('commandPalette.newSite'), icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
   { id: 'refresh', label: t('commandPalette.refresh'), icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },

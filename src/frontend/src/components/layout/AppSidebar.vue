@@ -224,8 +224,8 @@
       <div
         v-if="featureFlagsStore.showMcpSurface"
         class="nav-item"
-        :class="{ active: isActive('/mcp/intents') || isActive('/mcp/grants') }"
-        @click="navigate('/mcp/intents')"
+        :class="{ active: isActive('/mcp') }"
+        @click="navigate('/mcp')"
       >
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
         <span class="nav-label">{{ $t('nav.mcp') }}</span>
@@ -424,6 +424,10 @@ function navigate(path: string) {
 }
 
 function openService(id: string) {
+  // Service config pages are Advanced-only; in Simple mode the router guard
+  // used to bounce the click to /sites, which looked like a broken link. The
+  // row's switch still starts/stops the service.
+  if (uiModeStore.isSimple) return
   // Cloudflare has a dedicated configuration page — the generic service
   // config drawer expects file-based configs and 500s for API-driven
   // services. Route directly to the Cloudflare Tunnel management page.

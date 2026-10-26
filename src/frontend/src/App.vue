@@ -115,6 +115,7 @@ import { useAuthStore } from './stores/auth'
 import { useDeployStore } from './stores/deploy'
 import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { useFeatureFlagsStore } from './stores/featureFlags'
+import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
 import { osNotify } from './services/osNotifications'
@@ -134,6 +135,7 @@ const authStore = useAuthStore()
 const deployStore = useDeployStore()
 const mcpConfirmStore = useMcpConfirmStore()
 const featureFlagsStore = useFeatureFlagsStore()
+const uiMode = useUiModeStore()
 useThemeStore()
 
 // Single SSE subscription that fans the daemon's "deploy:event" channel
@@ -313,7 +315,11 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     const routes = ['/dashboard', '/sites', '/databases', '/ssl', '/php', '/binaries', '/settings']
     const idx = parseInt(e.key) - 1
-    if (idx < routes.length) router.push(routes[idx])
+    // Skip Advanced-only pages in Simple mode instead of letting the router
+    // guard bounce the shortcut to /sites.
+    if (idx < routes.length && !(router.resolve(routes[idx]).meta.requiresAdvanced && uiMode.isSimple)) {
+      router.push(routes[idx])
+    }
   }
 }
 

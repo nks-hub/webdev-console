@@ -1522,7 +1522,14 @@ const historicalChartOption = computed(() => {
   }
 })
 
-watch(domain, () => { void load() })
+watch(domain, () => {
+  // The request-rate chart computes deltas against the previous sample; a
+  // sample from the previous site would show a spike or a dip.
+  requestRateHistory.value = []
+  lastRequestCount = null
+  lastPollTimestamp = null
+  void load()
+})
 
 // Simple mode: redirect to 'general' if the active tab is one that is
 // hidden in simple mode (e.g. a user deep-links to #danger or #history).
