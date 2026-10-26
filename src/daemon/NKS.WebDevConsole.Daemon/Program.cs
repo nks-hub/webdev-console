@@ -415,13 +415,36 @@ if (!migrationRunner.Run(database.ConnectionString))
 // service while our Kestrel listens happily on 127.0.0.1:PORT.
 const int PORT_BASE = 17280;
 const int PORT_COUNT = 20;
+// Hosts with IPv6 disabled (some Linux installs, containers, WSL configs)
+// cannot bind ::1 at all. Requiring it made every candidate port look
+// taken, and the unconditional [::1] Kestrel URL then aborted startup with
+// SocketException 97 (address family not supported). Probe once and only
+// use the IPv6 loopback when the host has one.
+var ipv6LoopbackAvailable = IsIpv6LoopbackAvailable();
 int chosenPort = PORT_BASE;
 for (int p = PORT_BASE; p < PORT_BASE + PORT_COUNT; p++)
 {
     if (!IsLoopbackPortFree(System.Net.IPAddress.Loopback, p)) continue;
-    if (!IsLoopbackPortFree(System.Net.IPAddress.IPv6Loopback, p)) continue;
+    if (ipv6LoopbackAvailable && !IsLoopbackPortFree(System.Net.IPAddress.IPv6Loopback, p)) continue;
     chosenPort = p;
     break;
+}
+static bool IsIpv6LoopbackAvailable()
+{
+    if (!System.Net.Sockets.Socket.OSSupportsIPv6) return false;
+    try
+    {
+        using var s = new System.Net.Sockets.Socket(
+            System.Net.Sockets.AddressFamily.InterNetworkV6,
+            System.Net.Sockets.SocketType.Stream,
+            System.Net.Sockets.ProtocolType.Tcp);
+        s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.IPv6Loopback, 0));
+        return true;
+    }
+    catch (System.Net.Sockets.SocketException)
+    {
+        return false;
+    }
 }
 static bool IsLoopbackPortFree(System.Net.IPAddress addr, int port)
 {
@@ -439,7 +462,10 @@ static bool IsLoopbackPortFree(System.Net.IPAddress addr, int port)
 }
 // Bind to BOTH families so `localhost` (→ ::1) and `127.0.0.1` both hit
 // the daemon. Kestrel accepts multiple --urls values.
-builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}", $"http://[::1]:{chosenPort}");
+if (ipv6LoopbackAvailable)
+    builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}", $"http://[::1]:{chosenPort}");
+else
+    builder.WebHost.UseUrls($"http://127.0.0.1:{chosenPort}");
 
 // Sentry ASP.NET Core wiring — idempotent when SENTRY_DSN is empty
 // (UseSentry reads the same env itself). Separately from the manual
