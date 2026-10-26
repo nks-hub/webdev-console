@@ -32,7 +32,7 @@
         </el-button>
         <el-button size="small" link class="sd-full-logs" @click="openFullLogs">
           {{ t('sites.detail.simple.activity.fullLogs') }}
-          <el-icon style="margin-left:4px"><ArrowRight /></el-icon>
+          <el-icon style="margin-left:var(--wdc-space-1)"><ArrowRight /></el-icon>
         </el-button>
       </div>
     </div>
@@ -139,7 +139,7 @@ defineExpose({ reload: load })
 
 <style scoped>
 .sd-section {
-  margin-top: 18px;
+  margin-top: var(--wdc-space-4-5);
   padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -161,7 +161,7 @@ defineExpose({ reload: load })
 .sd-activity-label {
   font-size: 13px;
   color: var(--el-text-color-regular);
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2);
@@ -171,11 +171,11 @@ defineExpose({ reload: load })
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   height: 18px;
   background: var(--el-color-danger);
   color: white;
-  border-radius: 9px;
+  border-radius: var(--wdc-radius);
   font-size: 11px;
   font-weight: 600;
 }

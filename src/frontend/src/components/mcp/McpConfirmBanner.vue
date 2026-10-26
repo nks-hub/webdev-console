@@ -368,9 +368,9 @@ onBeforeUnmount(() => {
 .mcp-confirm-banner {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   align-items: start;
-  padding: 14px var(--wdc-space-4);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   background: rgba(245, 158, 11, 0.10);
   border: 1px solid var(--wdc-status-starting);
   border-left-width: 5px;
@@ -386,7 +386,7 @@ onBeforeUnmount(() => {
 
 .mcp-confirm-icon {
   color: var(--el-color-warning, #e6a23c);
-  padding-top: 2px;
+  padding-top: var(--wdc-space-0-5);
 }
 
 .mcp-confirm-body {
@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--el-color-warning-dark-2);
   background: var(--el-color-warning-light-9);
-  padding: 6px var(--wdc-space-3);
+  padding: var(--wdc-space-1-5) var(--wdc-space-3);
   border-radius: var(--wdc-radius-sm);
   margin: var(--wdc-space-1) 0;
   border-left: 3px solid var(--el-color-warning);
@@ -429,7 +429,7 @@ onBeforeUnmount(() => {
   font-family: var(--el-font-family-monospace, monospace);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
 }
 .mcp-confirm-expiry {
@@ -443,7 +443,7 @@ onBeforeUnmount(() => {
 .mcp-confirm-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   justify-self: end;
 }
 

@@ -135,7 +135,7 @@
           :data="tableRows"
           class="pkg-table"
           size="small"
-          style="margin-top: 16px"
+          style="margin-top: var(--wdc-space-4)"
         >
           <!-- Name -->
           <el-table-column :label="$t('sites.composer.colName')" min-width="260" prop="name" sortable>
@@ -768,7 +768,7 @@ onMounted(() => {
 .composer-loading-label {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-size: 14px;
 }
 .composer-loading-label .el-icon {
@@ -780,7 +780,7 @@ onMounted(() => {
 }
 
 .composer-empty {
-  padding: 40px 0;
+  padding: var(--wdc-space-6-5) 0;
   text-align: center;
 }
 
@@ -848,7 +848,7 @@ onMounted(() => {
 .pkg-name-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .pkg-outdated-dot {
@@ -887,7 +887,7 @@ onMounted(() => {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 14px var(--wdc-space-4);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   margin: 0;
   max-height: 300px;
   overflow-y: auto;
@@ -925,7 +925,7 @@ onMounted(() => {
 .pkg-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .pkg-info-header {
@@ -938,7 +938,7 @@ onMounted(() => {
 .pkg-abandoned {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 12px;
   color: var(--el-color-danger);
 }
@@ -981,8 +981,8 @@ onMounted(() => {
 .suggestion-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 2px 0;
+  gap: var(--wdc-space-0-5);
+  padding: var(--wdc-space-0-5) 0;
 }
 
 .suggestion-name {
@@ -1021,7 +1021,7 @@ onMounted(() => {
 .diagnose-line {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 13px;
   padding: var(--wdc-space-1) 0;
   line-height: 1.4;

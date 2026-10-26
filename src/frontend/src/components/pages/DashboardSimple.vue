@@ -13,7 +13,7 @@
       </p>
     </div>
 
-    <div v-if="aggregatesLoading" v-loading="true" style="height: 80px; margin-bottom: 12px;" />
+    <div v-if="aggregatesLoading" v-loading="true" style="height: 80px; margin-bottom: var(--wdc-space-3);" />
 
     <div class="simple-tiles">
       <SimpleMetricTile
@@ -314,7 +314,7 @@ defineExpose({ reload: loadAggregates })
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-4);
-  padding: 20px;
+  padding: var(--wdc-space-4-5);
   width: 100%;
   margin: 0 auto;
 }
@@ -337,7 +337,7 @@ defineExpose({ reload: loadAggregates })
 .simple-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   max-width: none;
   width: 100%;
   margin: 0 auto;
@@ -356,8 +356,8 @@ defineExpose({ reload: loadAggregates })
 .simple-recent {
   max-width: none;
   width: 100%;
-  margin: 18px auto 0;
-  padding: var(--wdc-space-4) 18px;
+  margin: var(--wdc-space-4-5) auto 0;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
@@ -366,8 +366,8 @@ defineExpose({ reload: loadAggregates })
 .simple-empty-card {
   max-width: none;
   width: 100%;
-  margin: 18px auto 0;
-  padding: var(--wdc-space-5) 22px;
+  margin: var(--wdc-space-4-5) auto 0;
+  padding: var(--wdc-space-5) var(--wdc-space-5);
   border: 1.5px dashed color-mix(in oklab, var(--wdc-accent) 40%, var(--wdc-border));
   border-radius: var(--wdc-radius);
   background: color-mix(in oklab, var(--wdc-accent) 6%, var(--wdc-surface));
@@ -436,9 +436,9 @@ defineExpose({ reload: loadAggregates })
 .simple-recent-item {
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr) auto 16px;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: center;
-  padding: var(--wdc-space-3) 6px;
+  padding: var(--wdc-space-3) var(--wdc-space-1-5);
   min-height: 48px;
   border-bottom: 1px solid var(--wdc-border);
   cursor: pointer;

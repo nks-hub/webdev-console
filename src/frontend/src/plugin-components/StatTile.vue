@@ -44,8 +44,8 @@ function onClick() {
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -61,7 +61,7 @@ function onClick() {
 .stat-icon {
   width: 40px;
   height: 40px;
-  padding: 10px;
+  padding: var(--wdc-space-2-5);
   border-radius: var(--wdc-radius);
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);

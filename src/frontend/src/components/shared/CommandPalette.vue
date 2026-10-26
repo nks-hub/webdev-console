@@ -217,7 +217,7 @@ defineExpose({ open })
   display: flex;
   align-items: center;
   gap: var(--wdc-space-3);
-  padding: var(--wdc-space-3) 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   border-radius: var(--wdc-radius);
   cursor: pointer;
   transition: background 0.1s, box-shadow 0.1s;
@@ -263,7 +263,7 @@ defineExpose({ open })
   color: var(--wdc-text-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 2px 7px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   box-shadow: 0 1px 0 var(--wdc-border-strong);

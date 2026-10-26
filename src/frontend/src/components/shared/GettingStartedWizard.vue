@@ -127,7 +127,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-wrap {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--wdc-space-4-5);
   padding: var(--wdc-space-1) 0 0;
   outline: none;
 }
@@ -147,10 +147,10 @@ defineExpose({ open, close, hasSeen })
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 18px 20px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 
 .gsw-step-indicator {
@@ -178,7 +178,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-step-desc :deep(code) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
@@ -187,7 +187,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-step-desc :deep(kbd) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 2px 7px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
@@ -198,11 +198,11 @@ defineExpose({ open, close, hasSeen })
 .gsw-codeblock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: var(--wdc-space-3) 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
 }
 
 .gsw-codeblock code {
@@ -241,7 +241,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-tip :deep(kbd) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;

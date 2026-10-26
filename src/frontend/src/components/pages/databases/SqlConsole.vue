@@ -9,7 +9,7 @@
       <div class="toolbar-actions">
         <el-button size="small" type="primary" :loading="running" :disabled="!database || !sql.trim()" @click="run">
           <el-icon><VideoPlay /></el-icon>
-          <span style="margin-left: 4px">{{ t('databases.console.execute') }}</span>
+          <span style="margin-left: var(--wdc-space-1)">{{ t('databases.console.execute') }}</span>
           <span class="kbd">Ctrl+↵</span>
         </el-button>
         <el-button
@@ -24,7 +24,7 @@
         <el-dropdown size="small" trigger="click" @command="loadHistory">
           <el-button size="small" :disabled="history.length === 0">
             <el-icon><Clock /></el-icon>
-            <span style="margin-left: 4px">{{ t('databases.console.history', { count: history.length }) }}</span>
+            <span style="margin-left: var(--wdc-space-1)">{{ t('databases.console.history', { count: history.length }) }}</span>
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -33,7 +33,7 @@
               </el-dropdown-item>
               <el-dropdown-item v-if="history.length > 0" divided command="-1">
                 <el-icon><Delete /></el-icon>
-                <span style="margin-left: 4px">{{ t('databases.console.clearHistory') }}</span>
+                <span style="margin-left: var(--wdc-space-1)">{{ t('databases.console.clearHistory') }}</span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -232,7 +232,7 @@ void _unused
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   flex-shrink: 0;
   gap: var(--wdc-space-3);
@@ -242,7 +242,7 @@ void _unused
 .toolbar-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-weight: 700;
   font-size: 1.05rem;
   color: var(--wdc-text);
@@ -257,12 +257,12 @@ void _unused
 .kbd {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.66rem;
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
   color: var(--wdc-text-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   box-shadow: 0 1px 0 var(--wdc-border-strong);
 }
 
@@ -270,13 +270,13 @@ void _unused
   height: 35%;
   min-height: 180px;
   flex-shrink: 0;
-  padding: var(--wdc-space-2) 14px 0;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5) 0;
 }
 
 .console-results {
   flex: 1;
   min-height: 0;
-  padding: var(--wdc-space-2) 14px 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5) var(--wdc-space-3-5);
   display: flex;
   flex-direction: column;
 }
@@ -302,8 +302,8 @@ void _unused
 .result-meta {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 6px 0 var(--wdc-space-2);
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-1-5) 0 var(--wdc-space-2);
   border-bottom: 1px solid var(--wdc-border);
   margin-bottom: var(--wdc-space-2);
   flex-shrink: 0;

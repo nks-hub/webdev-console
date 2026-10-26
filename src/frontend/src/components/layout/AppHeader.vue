@@ -123,7 +123,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--wdc-space-4-5);
 }
 
 .page-context {
@@ -141,7 +141,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .app-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   cursor: pointer;
   user-select: none;
 }
@@ -172,7 +172,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .header-right :deep(.el-button) {
@@ -199,8 +199,8 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .conn-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 6px;
+  gap: var(--wdc-space-1-5);
+  padding: 0 var(--wdc-space-1-5);
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -233,7 +233,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .update-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   padding: 0 var(--wdc-space-3);
   min-height: 32px;
   border-radius: var(--wdc-radius-full);
@@ -284,12 +284,12 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   }
 
   .nav-tab {
-    padding: 7px 10px;
+    padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
     font-size: 0.78rem;
   }
 
   .header-right {
-    gap: 6px;
+    gap: var(--wdc-space-1-5);
   }
 
   .update-badge {

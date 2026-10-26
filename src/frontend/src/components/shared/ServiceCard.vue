@@ -64,7 +64,7 @@
       <span v-if="statusText === 'crashed'" class="offline-crashed">{{ $t('services.card.crashed') }}</span>
       <span v-else-if="statusText === 'starting'" class="offline-starting">{{ $t('services.card.starting') }}</span>
       <span v-else class="offline-stopped">{{ $t('services.card.notRunning') }}</span>
-      <span class="meta-item" v-if="service.version" style="margin-top: 4px;">
+      <span class="meta-item" v-if="service.version" style="margin-top: var(--wdc-space-1);">
         <span class="meta-label">v</span>
         <span class="meta-val">{{ service.version }}</span>
       </span>
@@ -200,10 +200,10 @@ function formatUptime(seconds: number): string {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 20px;
+  padding: var(--wdc-space-4-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   transition: border-color 0.12s, background 0.12s;
   border-left-width: 4px;
   border-left-style: solid;

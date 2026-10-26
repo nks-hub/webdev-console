@@ -44,7 +44,7 @@
     </div>
 
     <!-- Loading skeleton -->
-    <el-skeleton v-if="loading && entries.length === 0" :rows="8" animated style="padding: 16px 0" />
+    <el-skeleton v-if="loading && entries.length === 0" :rows="8" animated style="padding: var(--wdc-space-4) 0" />
 
     <!-- Empty state -->
     <el-empty
@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
 .error-logs-wrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 
 .logs-toolbar {
@@ -304,7 +304,7 @@ onBeforeUnmount(() => {
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .toolbar-label {

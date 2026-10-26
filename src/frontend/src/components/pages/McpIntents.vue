@@ -668,7 +668,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -687,10 +687,10 @@ onBeforeUnmount(() => {
 .state-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .domain-stats {
-  padding: 14px var(--wdc-space-4);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -699,7 +699,7 @@ onBeforeUnmount(() => {
 .domain-stats-title {
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -767,7 +767,7 @@ onBeforeUnmount(() => {
   margin-top: var(--wdc-space-3);
 }
 .kind-id-mono {
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
   font-size: 11px;
   color: var(--el-text-color-secondary);
   opacity: 0.7;

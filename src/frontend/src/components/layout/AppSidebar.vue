@@ -500,7 +500,7 @@ async function toggleSvc(svc: ServiceInfo) {
 .workspace-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   padding: var(--wdc-space-2) var(--wdc-space-2) var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
 }
@@ -524,7 +524,7 @@ async function toggleSvc(svc: ServiceInfo) {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 
 .workspace-title {
@@ -546,8 +546,8 @@ async function toggleSvc(svc: ServiceInfo) {
 .nav-cluster {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--wdc-space-1-5);
+  margin-bottom: var(--wdc-space-2-5);
 }
 
 .sites-btn {
@@ -570,7 +570,7 @@ async function toggleSvc(svc: ServiceInfo) {
   text-transform: uppercase;
   letter-spacing: 0.10em;
   color: var(--wdc-text-3);
-  padding: var(--wdc-space-4) 10px 6px;
+  padding: var(--wdc-space-4) var(--wdc-space-2-5) var(--wdc-space-1-5);
 }
 
 .section-count { display: none; }
@@ -583,8 +583,8 @@ async function toggleSvc(svc: ServiceInfo) {
 .service-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px var(--wdc-space-3);
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-1-5) var(--wdc-space-3);
   border-radius: var(--wdc-radius-sm);
   transition: background 0.12s, color 0.12s;
   min-height: 36px;
@@ -640,7 +640,7 @@ async function toggleSvc(svc: ServiceInfo) {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-3);
-  padding: 11px var(--wdc-space-3);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
   border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   color: var(--wdc-text-2);
@@ -742,7 +742,7 @@ async function toggleSvc(svc: ServiceInfo) {
 
 .nav-badge {
   display: inline-block;
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   background: var(--wdc-badge-bg);
   color: var(--wdc-badge-fg);
   font-size: 0.72rem;
@@ -775,10 +775,10 @@ async function toggleSvc(svc: ServiceInfo) {
 .sidebar-bottom {
   border-top: 1px solid var(--wdc-border-strong);
   padding-top: var(--wdc-space-2);
-  margin-top: 10px;
+  margin-top: var(--wdc-space-2-5);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .sidebar-bottom .nav-item,

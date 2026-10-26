@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
 .top-tools-panel {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  padding: 14px var(--wdc-space-4);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   background: var(--wdc-surface);
   box-shadow: var(--wdc-shadow-sm);
 }
@@ -107,9 +107,9 @@ onBeforeUnmount(() => {
 .tool-row {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) 2fr auto auto auto;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: center;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   font-size: 12px;
@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
 .errors {
   background: var(--el-color-danger);
   color: white;
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius);
   font-size: 10px;
   font-weight: 600;

@@ -28,7 +28,7 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   border-bottom: 1px solid var(--wdc-border);
 }
 
@@ -38,6 +38,6 @@ defineProps<{
 }
 
 .settings-card-body {
-  padding: 18px;
+  padding: var(--wdc-space-4-5);
 }
 </style>

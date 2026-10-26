@@ -122,7 +122,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--el-color-warning-light-5);
   background: linear-gradient(135deg, var(--el-color-warning-light-9), var(--wdc-surface));
   border-radius: var(--wdc-radius);
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   margin-bottom: var(--wdc-space-3);
   box-shadow: var(--wdc-shadow-sm);
 }

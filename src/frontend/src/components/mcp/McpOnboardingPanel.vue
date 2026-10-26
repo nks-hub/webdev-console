@@ -204,7 +204,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
   border-radius: var(--wdc-radius-lg);
-  padding: 18px 22px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   margin-bottom: var(--wdc-space-4);
   box-shadow: var(--wdc-shadow-card);
 }
@@ -273,7 +273,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
   .mcp-onboarding-panel {
-    padding: 14px;
+    padding: var(--wdc-space-3-5);
   }
 
   .onboarding-header {

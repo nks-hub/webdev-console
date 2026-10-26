@@ -34,7 +34,7 @@
       <el-tab-pane name="marketplace">
         <template #label>
           <span>{{ $t('plugins.marketplace') }}</span>
-          <el-tag v-if="marketplace.reachable" size="small" type="success" effect="plain" style="margin-left:6px">
+          <el-tag v-if="marketplace.reachable" size="small" type="success" effect="plain" style="margin-left:var(--wdc-space-1-5)">
             {{ marketplace.plugins.length }}
           </el-tag>
         </template>
@@ -55,7 +55,7 @@
         show-icon
         :title="`Marketplace unreachable: ${marketplace.error}`"
         :description="`Source: ${marketplace.source}`"
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
       <div v-if="loadingMarketplace" class="page-body-pad">
         <el-skeleton :rows="3" animated />
@@ -458,7 +458,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   margin-bottom: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -475,7 +475,7 @@ onMounted(() => {
 .page-subtitle {
   font-size: 0.76rem;
   color: var(--wdc-text-3);
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
 }
 
 .page-body-pad {
@@ -493,7 +493,7 @@ onMounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: var(--wdc-space-3) 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-3);
@@ -523,13 +523,13 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .pm-card-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -546,7 +546,7 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.7rem;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   height: 18px;
   line-height: 18px;
   margin-left: var(--wdc-space-1);
@@ -567,7 +567,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 
@@ -624,12 +624,12 @@ onMounted(() => {
   grid-column: 1 / -1;
   display: flex;
   justify-content: center;
-  padding: 40px 0;
+  padding: var(--wdc-space-6-5) 0;
 }
 
 .pm-mp-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
 }
 </style>

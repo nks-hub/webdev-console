@@ -18,11 +18,11 @@
         :closable="true"
         @close="loadError = ''"
         show-icon
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
 
       <!-- Loading skeleton -->
-      <div v-if="loading && versions.length === 0" style="padding: 24px">
+      <div v-if="loading && versions.length === 0" style="padding: var(--wdc-space-5)">
         <el-skeleton :rows="3" animated />
       </div>
 
@@ -244,8 +244,8 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
-  margin-bottom: 20px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  margin-bottom: var(--wdc-space-4-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -266,7 +266,7 @@ onMounted(() => { void loadVersions() })
   font-weight: 600;
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
-  padding: 2px var(--wdc-space-2);
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
   border-radius: var(--wdc-radius);
   font-family: 'JetBrains Mono', monospace;
 }
@@ -277,15 +277,15 @@ onMounted(() => { void loadVersions() })
 .version-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: var(--wdc-space-2-5);
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .version-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -329,7 +329,7 @@ onMounted(() => { void loadVersions() })
 /* Detail */
 .php-detail {
   border-top: 1px solid var(--wdc-border);
-  padding-top: 20px;
+  padding-top: var(--wdc-space-4-5);
 }
 
 .detail-header {
@@ -351,7 +351,7 @@ onMounted(() => { void loadVersions() })
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--wdc-text-3);
-  margin-bottom: 10px;
+  margin-bottom: var(--wdc-space-2-5);
 }
 
 /* Extensions grid */
@@ -367,7 +367,7 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-sm);
   font-size: 0.78rem;
   background: var(--wdc-surface);
@@ -405,7 +405,7 @@ onMounted(() => { void loadVersions() })
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 14px;
+  padding: var(--wdc-space-3-5);
   max-height: 500px;
   overflow: auto;
   white-space: pre-wrap;

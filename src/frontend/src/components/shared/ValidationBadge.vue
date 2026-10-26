@@ -101,7 +101,7 @@ defineExpose({ startValidation, setResult, reset })
   display: inline-flex;
   align-items: center;
   gap: var(--wdc-space-2);
-  padding: 6px 14px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-3-5);
   border-radius: var(--wdc-radius-full);
   font-size: 0.8rem;
   font-weight: 600;

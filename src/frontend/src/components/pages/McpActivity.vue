@@ -672,7 +672,7 @@ onBeforeUnmount(() => {
 .kpi {
   flex: 1 1 100px;
   min-width: 90px;
-  padding: var(--wdc-space-1) 10px;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
   border-left: 2px solid var(--el-border-color);
   display: flex;
   align-items: baseline;
@@ -692,7 +692,7 @@ onBeforeUnmount(() => {
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -753,7 +753,7 @@ onBeforeUnmount(() => {
 .session-card.has-error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
 .session-header {
   display: flex; align-items: center; gap: 10px;
-  padding: var(--wdc-space-2) 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   cursor: pointer;
   user-select: none;
@@ -772,7 +772,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 .count-pill {
-  padding: 2px 10px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 700;
@@ -798,7 +798,7 @@ onBeforeUnmount(() => {
 .activity-group:last-child { border-bottom: none; }
 .collapsed-reads-row {
   display: flex; align-items: center; gap: 10px;
-  padding: var(--wdc-space-2) 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   cursor: pointer;
   font-size: 12px;
@@ -808,7 +808,7 @@ onBeforeUnmount(() => {
 .collapsed-reads-row .chev { font-size: 10px; }
 .call-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   font-size: 12px;
   border-top: 1px solid var(--wdc-border);
   transition: background 0.12s;
@@ -819,7 +819,7 @@ onBeforeUnmount(() => {
 .call-row.clickable-row { cursor: pointer; }
 .call-row.expanded { background: var(--wdc-accent-dim); }
 .row-detail {
-  padding: var(--wdc-space-3) 18px 14px var(--wdc-space-6);
+  padding: var(--wdc-space-3) var(--wdc-space-4-5) var(--wdc-space-3-5) var(--wdc-space-6);
   background: var(--wdc-surface-2);
   border-top: 1px dashed var(--wdc-border);
   font-size: 12px;
@@ -834,7 +834,7 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.5px;
-  padding-top: 2px;
+  padding-top: var(--wdc-space-0-5);
 }
 .detail-value { word-break: break-all; }
 .detail-value.clickable { cursor: pointer; color: var(--el-color-primary); }
@@ -844,7 +844,7 @@ onBeforeUnmount(() => {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 10px var(--wdc-space-3);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
   margin: var(--wdc-space-1) 0;
   font-size: 11px;
   max-height: 200px;
@@ -857,7 +857,7 @@ onBeforeUnmount(() => {
 .tool-name { font-weight: 600; }
 .args-preview { color: var(--el-text-color-secondary); }
 .session-pill, .caller-pill {
-  padding: 2px var(--wdc-space-2);
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-full);

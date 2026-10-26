@@ -45,11 +45,11 @@ const cloudflaredRunning = computed(() =>
   box-sizing: border-box;
   min-height: 24px !important;
   line-height: 18px;
-  padding: 2px var(--wdc-space-2);
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
   background: rgba(243, 128, 32, 0.12);
   color: var(--wdc-brand-cloudflare);
   border: 1px solid rgba(243, 128, 32, 0.3);
-  border-radius: 12px;
+  border-radius: var(--wdc-radius-md);
   font-size: 0.72rem;
 }
 .col-tunnel-offline { opacity: 0.55; }
@@ -57,7 +57,7 @@ const cloudflaredRunning = computed(() =>
 .col-tunnel a:hover { text-decoration: underline; }
 .tunnel-badge-offline {
   margin-left: var(--wdc-space-1);
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   background: rgba(239, 68, 68, 0.2);
   color: var(--wdc-status-error);

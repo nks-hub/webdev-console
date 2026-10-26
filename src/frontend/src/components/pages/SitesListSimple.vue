@@ -424,7 +424,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 .page-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   margin: 0;
   font-size: 1.4rem;
   font-weight: 700;
@@ -456,7 +456,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 
 /* Per-card styles moved to SimpleSiteCard.vue. */
@@ -471,7 +471,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 .welcome-hero {
   max-width: 560px;
   margin: var(--wdc-space-7) auto;
-  padding: 40px var(--wdc-space-6);
+  padding: var(--wdc-space-6-5) var(--wdc-space-6);
   text-align: center;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
@@ -503,7 +503,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   line-height: 1.5;
 }
 .welcome-cta {
-  margin-bottom: 28px;
+  margin-bottom: var(--wdc-space-5-5);
 }
 .welcome-features {
   list-style: none;
@@ -534,7 +534,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 @media (max-width: 820px) {
   .sites-simple {
-    padding: 18px var(--wdc-space-4);
+    padding: var(--wdc-space-4-5) var(--wdc-space-4);
   }
 
   .simple-header {

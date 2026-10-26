@@ -134,7 +134,7 @@
               {{ applyStatus.message }}
             </span>
           </div>
-          <div class="hint" style="margin-top: 8px">
+          <div class="hint" style="margin-top: var(--wdc-space-2)">
             {{ $t('cloudflareSite.applyHint') }}
           </div>
         </div>

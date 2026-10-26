@@ -115,7 +115,7 @@ function revertEdit() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px var(--wdc-space-2);
+  padding: var(--wdc-space-1-5) var(--wdc-space-2);
   border-bottom: 1px solid var(--el-border-color);
   flex-shrink: 0;
   flex-wrap: wrap;

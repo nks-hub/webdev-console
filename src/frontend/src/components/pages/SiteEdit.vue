@@ -181,7 +181,7 @@
               :title="$t('siteEdit.dockerCard')"
               :hint="composeInfo.fileName ?? undefined"
             >
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+              <div style="display: flex; align-items: center; gap: var(--wdc-space-2); flex-wrap: wrap">
                   <el-tag size="small" type="info" effect="plain">{{ composeInfo.fileName }}</el-tag>
                   <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
                     {{ $t('siteEdit.composeUp') }}
@@ -254,11 +254,11 @@
                     style="width: 180px"
                     @change="markDirty"
                   />
-                  <div class="hint" style="margin-top: 8px">
+                  <div class="hint" style="margin-top: var(--wdc-space-2)">
                     Port your Node.js app listens on. Apache will <code>ProxyPass</code> all requests to it.
                   </div>
 
-                  <label class="sub-label" style="margin-top: 16px">{{ $t('siteEdit.startCommand') }}</label>
+                  <label class="sub-label" style="margin-top: var(--wdc-space-4)">{{ $t('siteEdit.startCommand') }}</label>
                   <el-input
                     v-model="nodeStartCommand"
                     placeholder="npm start"
@@ -266,22 +266,22 @@
                     style="width: 320px"
                     @input="markDirty"
                   />
-                  <div class="hint" style="margin-top: 4px">
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">
                     Command to start your app (e.g. <code>npm start</code>, <code>npm run dev</code>, <code>node server.js</code>).
                     Empty defaults to <code>npm start</code>.
                   </div>
 
                   <!-- Per-site Node process controls -->
-                  <div class="node-process-controls" style="margin-top: 16px">
+                  <div class="node-process-controls" style="margin-top: var(--wdc-space-4)">
                     <label class="sub-label">{{ $t('siteEdit.process') }}</label>
-                    <div v-if="!nodePluginAvailable" class="hint" style="margin-top: 4px">
+                    <div v-if="!nodePluginAvailable" class="hint" style="margin-top: var(--wdc-space-1)">
                       <el-icon style="color: var(--el-color-warning)"><WarningFilled /></el-icon>
                       Node.js plugin not loaded in daemon. Apache will still reverse-proxy
                       to <code>localhost:{{ nodeUpstreamPort }}</code>, but you must start
                       the Node process yourself. Install <code>NKS.WebDevConsole.Plugin.Node</code>
                       and restart the daemon to enable per-site process management.
                     </div>
-                    <div v-else style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
+                    <div v-else style="display: flex; align-items: center; gap: var(--wdc-space-2-5); margin-top: var(--wdc-space-1)">
                       <HealthStatusDot
                         :level="nodeProcessState === 2 ? 'ok' : nodeProcessState === 4 ? 'err' : nodeProcessState === 1 ? 'warn' : 'muted'"
                         :pulse="nodeProcessState === 1"
@@ -444,7 +444,7 @@
                 Last updated {{ metricsAgeDisplay }}
               </span>
             </div>
-            <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">
+            <div v-if="!siteMetrics" class="hint" style="padding: var(--wdc-space-5) 0">
               <span v-if="metricsLoading">{{ $t('siteEdit.metricsLoading') }}</span>
               <span v-else>{{ $t('siteEdit.metricsEmpty') }}</span>
             </div>
@@ -553,7 +553,7 @@
             <!-- Task 28: rename-domain section. Backend endpoint not
                  wired yet — disabled with tooltip explaining the reason
                  until PATCH /api/sites/{domain}/rename is implemented. -->
-            <div class="danger-box" style="margin-bottom: 16px">
+            <div class="danger-box" style="margin-bottom: var(--wdc-space-4)">
               <div class="danger-title">
                 <el-icon><Setting /></el-icon>
                 Rename domain
@@ -567,7 +567,7 @@
                 v-model="renameNewDomain"
                 :placeholder="site.domain"
                 size="default"
-                style="max-width: 320px; margin-bottom: 8px"
+                style="max-width: 320px; margin-bottom: var(--wdc-space-2)"
                 disabled
               />
               <el-tooltip content="Backend PATCH /api/sites/{domain}/rename not yet implemented" placement="top">
@@ -1574,7 +1574,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
   flex-shrink: 0;
@@ -1582,12 +1582,12 @@ onBeforeUnmount(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 .title-block {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 .title-label {
   font-size: 0.7rem;
@@ -1612,7 +1612,7 @@ onBeforeUnmount(() => {
 
 .edit-body {
   flex: 1;
-  padding: 0 20px;
+  padding: 0 var(--wdc-space-4-5);
 }
 
 .site-tabs {
@@ -1649,7 +1649,7 @@ onBeforeUnmount(() => {
 .site-tabs :deep(.el-tabs__item) {
   flex: 1 1 0;
   min-width: max-content; /* keep label intact; fill only when extra space exists */
-  padding: 0 10px;
+  padding: 0 var(--wdc-space-2-5);
   text-align: center;
   justify-content: center;
   display: inline-flex;
@@ -1659,7 +1659,7 @@ onBeforeUnmount(() => {
 .tab-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 0.88rem;
   white-space: nowrap;
 }
@@ -1668,10 +1668,10 @@ onBeforeUnmount(() => {
 }
 
 .tab-content {
-  padding: var(--wdc-space-5) var(--wdc-space-1) 28px;
+  padding: var(--wdc-space-5) var(--wdc-space-1) var(--wdc-space-5-5);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--wdc-space-4-5);
   max-width: 100%; /* F91.8: tab content fills container — no 960px cap */
   box-sizing: border-box;
 }
@@ -1693,11 +1693,11 @@ onBeforeUnmount(() => {
    scroll when container narrows. */
 .metrics-toolbar {
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .historical-controls {
   flex-wrap: wrap;
-  gap: 10px var(--wdc-space-4);
+  gap: var(--wdc-space-2-5) var(--wdc-space-4);
 }
 
 /* SiteEdit page shell: cap total width but let content reflow below
@@ -1715,18 +1715,18 @@ onBeforeUnmount(() => {
 }
 
 .hint {
-  margin-top: 6px;
+  margin-top: var(--wdc-space-1-5);
   font-size: 0.78rem;
   color: var(--wdc-text-3);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .hint code {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.76rem;
@@ -1778,7 +1778,7 @@ onBeforeUnmount(() => {
   color: var(--wdc-accent) !important;
   font-weight: 700 !important;
   height: 100% !important;
-  padding: 0 14px !important;
+  padding: 0 var(--wdc-space-3-5) !important;
   box-shadow: none !important;
   white-space: nowrap;
   /* Icon + label sit flush; earlier CSS only gave the button 12px side
@@ -1788,7 +1788,7 @@ onBeforeUnmount(() => {
      the full label inside every Element Plus theme. */
   display: inline-flex !important;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   min-width: fit-content;
 }
 .browse-append-btn > span {
@@ -1855,7 +1855,7 @@ onBeforeUnmount(() => {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 0.78rem !important;
   font-weight: 600 !important;
-  padding: var(--wdc-space-1) 10px !important;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5) !important;
   height: 28px !important;
   background: var(--wdc-accent) !important;
   border-color: var(--wdc-accent) !important;
@@ -1892,8 +1892,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 18px 20px;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 2px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -1954,8 +1954,8 @@ onBeforeUnmount(() => {
 
 /* ─── PHP version sub-picker ─────────────────────────────────────────── */
 .php-version-picker {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: var(--wdc-space-4-5);
+  padding-top: var(--wdc-space-4-5);
   border-top: 1px solid var(--wdc-border);
 }
 .sub-label {
@@ -1965,7 +1965,7 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-2);
-  margin-bottom: 10px;
+  margin-bottom: var(--wdc-space-2-5);
 }
 .php-version-grid {
   display: flex;
@@ -1974,7 +1974,7 @@ onBeforeUnmount(() => {
 }
 .php-version-btn {
   min-width: 76px;
-  padding: 10px 18px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -2012,8 +2012,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 14px 18px;
+  gap: var(--wdc-space-4-5);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   margin-top: var(--wdc-space-4);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
@@ -2028,12 +2028,12 @@ onBeforeUnmount(() => {
 }
 .tunnel-pill {
   display: inline-block;
-  padding: 2px 10px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
 }
 .tunnel-pill-on {
   background: var(--wdc-status-running);
@@ -2047,7 +2047,7 @@ onBeforeUnmount(() => {
 .tunnel-shared-count {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
-  margin-left: 2px;
+  margin-left: var(--wdc-space-0-5);
 }
 .tunnel-status-desc {
   font-size: 0.8rem;
@@ -2058,7 +2058,7 @@ onBeforeUnmount(() => {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.76rem;
@@ -2081,7 +2081,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--wdc-space-5);
-  padding: 14px 0;
+  padding: var(--wdc-space-3-5) 0;
 }
 .ssl-toggle-row + .ssl-toggle-row {
   border-top: 1px solid var(--wdc-border);
@@ -2103,9 +2103,9 @@ onBeforeUnmount(() => {
 
 .history-banner {
   display: flex;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: flex-start;
-  padding: var(--wdc-space-3) 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -2116,7 +2116,7 @@ onBeforeUnmount(() => {
 }
 .history-banner .el-icon {
   color: var(--wdc-accent);
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
   flex-shrink: 0;
 }
 .history-list {
@@ -2147,12 +2147,12 @@ onBeforeUnmount(() => {
   color: var(--wdc-text);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .version-badge {
   background: var(--wdc-accent);
   color: white;
-  padding: 2px var(--wdc-space-2);
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
   border-radius: var(--wdc-radius);
   font-size: 0.72rem;
   font-weight: 700;
@@ -2182,7 +2182,7 @@ onBeforeUnmount(() => {
   margin-bottom: var(--wdc-space-4);
 }
 .metrics-chart-wrap {
-  margin-top: 18px;
+  margin-top: var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border-radius: var(--wdc-radius-sm);
   padding: var(--wdc-space-3) var(--wdc-space-4);
@@ -2198,7 +2198,7 @@ onBeforeUnmount(() => {
 .metric-card {
   background: var(--wdc-surface-2);
   border-radius: var(--wdc-radius-sm);
-  padding: 20px;
+  padding: var(--wdc-space-4-5);
   text-align: center;
 }
 .metric-value {
@@ -2232,7 +2232,7 @@ onBeforeUnmount(() => {
 }
 
 .danger-box {
-  padding: var(--wdc-space-5) 28px;
+  padding: var(--wdc-space-5) var(--wdc-space-5-5);
   background: rgba(239, 68, 68, 0.06);
   border: 2px solid rgba(239, 68, 68, 0.32);
   border-radius: var(--wdc-radius);
@@ -2250,7 +2250,7 @@ onBeforeUnmount(() => {
 .danger-desc {
   font-size: 0.85rem;
   color: var(--wdc-text-2);
-  margin-bottom: 14px;
+  margin-bottom: var(--wdc-space-3-5);
 }
 
 /* ─── Historical metrics section ─────────────────────────────────────── */
@@ -2283,12 +2283,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .historical-control-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .historical-label {
   font-size: 0.72rem;
@@ -2300,13 +2300,13 @@ onBeforeUnmount(() => {
 }
 .historical-series-toggles {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
 }
 .series-toggle {
   font-size: 0.7rem !important;
   font-weight: 600 !important;
-  padding: 3px 10px !important;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5) !important;
   border-radius: var(--wdc-radius-full) !important;
   cursor: pointer;
 }

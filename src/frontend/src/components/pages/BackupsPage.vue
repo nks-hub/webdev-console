@@ -58,7 +58,7 @@
               :description="backupResult.path"
               closable
               show-icon
-              style="margin-top: 16px"
+              style="margin-top: var(--wdc-space-4)"
               @close="backupResult = null"
             />
             <el-alert
@@ -67,7 +67,7 @@
               :title="errorMsg"
               closable
               show-icon
-              style="margin-top: 16px"
+              style="margin-top: var(--wdc-space-4)"
               @close="errorMsg = ''"
             />
           </div>
@@ -169,7 +169,7 @@
                     </div>
                   </div>
                 </div>
-              <el-button type="primary" size="small" @click="saveContent" :loading="saving" style="margin-top: 16px">
+              <el-button type="primary" size="small" @click="saveContent" :loading="saving" style="margin-top: var(--wdc-space-4)">
                 {{ $t('backupsPage.content.save') }}
               </el-button>
             </SettingsCard>
@@ -472,7 +472,7 @@ function formatDate(iso: string): string {
 
 .page-header {
   margin-bottom: var(--wdc-space-5);
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -484,7 +484,7 @@ function formatDate(iso: string): string {
   letter-spacing: -0.02em;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .page-title-count {
   display: inline-flex;
@@ -506,7 +506,7 @@ function formatDate(iso: string): string {
 }
 
 .backup-tabs :deep(.el-tabs__header) {
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .tab-content {
@@ -518,14 +518,14 @@ function formatDate(iso: string): string {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--wdc-space-3);
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .stat-card {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: var(--wdc-space-4) 18px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
 }
 .stat-label {
   font-size: 0.72rem;
@@ -533,7 +533,7 @@ function formatDate(iso: string): string {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-3);
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
 }
 .stat-value {
   font-size: 1.1rem;
@@ -543,7 +543,7 @@ function formatDate(iso: string): string {
 
 .overview-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 
@@ -562,7 +562,7 @@ function formatDate(iso: string): string {
 .empty-state {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   padding: var(--wdc-space-6) 0;
   color: var(--wdc-text-3);
   font-size: 0.9rem;
@@ -578,7 +578,7 @@ function formatDate(iso: string): string {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-4);
-  padding: var(--wdc-space-3) 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -616,13 +616,13 @@ function formatDate(iso: string): string {
 }
 .snapshot-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 /* Settings cards moved to settings/shared/SettingsCard.vue primitive. */
 
 .form-hint {
-  margin-left: 10px;
+  margin-left: var(--wdc-space-2-5);
   font-size: 0.8rem;
   color: var(--wdc-text-3);
 }
@@ -631,17 +631,17 @@ function formatDate(iso: string): string {
 .content-flags {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 .flag-row {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 .flag-copy {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--wdc-space-1);
 }
 .flag-name {
   font-size: 0.9rem;

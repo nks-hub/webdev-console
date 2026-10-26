@@ -467,10 +467,10 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: var(--wdc-space-4);
-  padding: 44px 64px;
+  padding: var(--wdc-space-7) var(--wdc-space-8);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border-strong);
-  border-radius: 14px;
+  border-radius: var(--wdc-radius-md);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
   min-width: 360px;
 }
@@ -530,7 +530,7 @@ onUnmounted(() => {
   font-size: 2.4rem;
   line-height: 1;
   color: var(--wdc-warning, #f5a623);
-  margin: 2px 0;
+  margin: var(--wdc-space-0-5) 0;
 }
 .splash-status--error {
   color: var(--wdc-text);
@@ -544,7 +544,7 @@ onUnmounted(() => {
 }
 .splash-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   margin-top: var(--wdc-space-1);
 }
 .splash-btn {
@@ -583,7 +583,7 @@ onUnmounted(() => {
   left: 12px;
   z-index: 200;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--wdc-space-1);
   padding: var(--wdc-space-2);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
@@ -595,7 +595,7 @@ onUnmounted(() => {
   width: 20px;
   height: 2px;
   background: var(--wdc-text);
-  border-radius: 2px;
+  border-radius: var(--wdc-radius-2xs);
 }
 
 .sidebar-drawer :deep(.el-drawer__body) {

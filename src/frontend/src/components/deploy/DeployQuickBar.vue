@@ -220,7 +220,7 @@ async function onFire(): Promise<void> {
 
 <style scoped>
 .quick-bar {
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 1px dashed var(--wdc-border-strong);
   border-radius: var(--wdc-radius);

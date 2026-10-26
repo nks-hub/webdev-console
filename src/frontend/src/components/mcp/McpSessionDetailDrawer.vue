@@ -198,7 +198,7 @@ async function copyJson(): Promise<void> {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 14px var(--wdc-space-4);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   display: flex; flex-direction: column; gap: 6px;
   box-shadow: var(--wdc-shadow-sm);
 }
@@ -211,12 +211,12 @@ async function copyJson(): Promise<void> {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
 }
 .by-tool { display: flex; flex-direction: column; gap: 2px; }
 .tool-line {
   display: flex; gap: 10px;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

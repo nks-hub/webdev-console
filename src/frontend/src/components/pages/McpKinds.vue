@@ -327,7 +327,7 @@ async function refresh(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: var(--wdc-space-3);
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -343,11 +343,11 @@ async function refresh(): Promise<void> {
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lock-count-badge {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
+  margin-left: var(--wdc-space-1-5);
+  padding: 1px var(--wdc-space-1-5);
   background: var(--el-color-warning);
   color: white;
-  border-radius: 9px;
+  border-radius: var(--wdc-radius);
   font-size: 11px;
   font-weight: 700;
 }
@@ -379,7 +379,7 @@ async function refresh(): Promise<void> {
   background: var(--el-color-warning-light-7);
 }
 .quick-grant-btn {
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
   min-height: 28px;
   font-size: 0.76rem;
 }

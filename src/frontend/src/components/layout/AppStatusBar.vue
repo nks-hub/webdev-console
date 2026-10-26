@@ -34,7 +34,7 @@
         class="status-item status-tunnel"
         :title="t('footer.tunnelTitle')"
       >
-        <svg viewBox="0 0 20 14" fill="currentColor" width="13" height="13" style="vertical-align: middle; margin-right: 3px"><path d="M16 6a4 4 0 0 0-7.74-1.32A3.5 3.5 0 1 0 3.5 11H16a3 3 0 0 0 0-6z"/></svg>{{ t('footer.tunnel') }}
+        <svg viewBox="0 0 20 14" fill="currentColor" width="13" height="13" style="vertical-align: middle; margin-right: var(--wdc-space-1)"><path d="M16 6a4 4 0 0 0-7.74-1.32A3.5 3.5 0 1 0 3.5 11H16a3 3 0 0 0 0-6z"/></svg>{{ t('footer.tunnel') }}
       </span>
 
       <template v-if="daemonStore.connected && totalRam > 0">
@@ -83,7 +83,7 @@ function formatMem(bytes: number): string {
 .status-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   height: 30px;
   padding: 0 var(--wdc-space-4);
   background: color-mix(in srgb, var(--wdc-surface) 78%, transparent);
@@ -108,7 +108,7 @@ function formatMem(bytes: number): string {
 .status-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--wdc-space-1);
   white-space: nowrap;
 }
 
@@ -140,11 +140,11 @@ function formatMem(bytes: number): string {
 @media (max-width: 520px) {
   .status-bar {
     gap: var(--wdc-space-2);
-    padding: 0 14px;
+    padding: 0 var(--wdc-space-3-5);
   }
 
   .status-bar:not(.status-bar-simple) {
-    gap: 7px;
+    gap: var(--wdc-space-1-5);
     overflow: hidden;
   }
 

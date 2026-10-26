@@ -92,7 +92,7 @@ function cancelSwitch() {
 .version-tile {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   padding: var(--wdc-space-2) var(--wdc-space-4);
   border-radius: var(--wdc-radius-sm);
   border: 1px solid var(--wdc-border);

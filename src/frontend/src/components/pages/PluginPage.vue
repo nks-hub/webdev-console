@@ -11,7 +11,7 @@
     <div v-else-if="loadError" class="page-empty">
       <el-empty :description="$t('plugins.page.loadFailed')">
         <template #default>
-          <div style="color: var(--el-color-danger); margin-bottom: 12px">{{ loadError }}</div>
+          <div style="color: var(--el-color-danger); margin-bottom: var(--wdc-space-3)">{{ loadError }}</div>
           <el-button type="primary" @click="$router.push('/dashboard')">{{ $t('plugins.page.backToDashboard') }}</el-button>
         </template>
       </el-empty>
@@ -209,7 +209,7 @@ onMounted(async () => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--wdc-space-4-5);
 }
 
 .plugin-page-header {
@@ -218,7 +218,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: var(--wdc-space-4);
   flex-wrap: wrap;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -228,7 +228,7 @@ onMounted(async () => {
 .plugin-page-identity {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 .plugin-page-title {
   margin: 0;
@@ -244,7 +244,7 @@ onMounted(async () => {
 }
 .plugin-page-badges {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   flex-wrap: wrap;
 }
 
@@ -253,7 +253,7 @@ onMounted(async () => {
   border: 1px solid var(--wdc-border);
   border-left: 3px solid var(--wdc-accent);
   border-radius: var(--wdc-radius);
-  padding: 18px 22px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
 }
 .plugin-desc-title {
   font-size: 0.72rem;
@@ -261,10 +261,10 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-3);
-  margin-bottom: 10px;
+  margin-bottom: var(--wdc-space-2-5);
 }
 .plugin-desc-body {
-  margin: 0 0 14px 0;
+  margin: 0 0 var(--wdc-space-3-5) 0;
   font-size: 0.95rem;
   line-height: 1.55;
   color: var(--wdc-text);
@@ -272,14 +272,14 @@ onMounted(async () => {
 .plugin-desc-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px 28px;
+  gap: var(--wdc-space-3-5) var(--wdc-space-5-5);
   padding-top: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
 }
 .plugin-desc-meta > span {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 0.8rem;
 }
 .meta-label {
@@ -297,10 +297,10 @@ onMounted(async () => {
 .plugin-page-body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 .plugin-page-body-empty {
-  padding: 20px 0;
+  padding: var(--wdc-space-4-5) 0;
 }
 .page-loading { padding: 32px; }
 .page-empty { padding: 32px; }

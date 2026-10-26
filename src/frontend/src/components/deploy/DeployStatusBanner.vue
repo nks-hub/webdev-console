@@ -140,8 +140,8 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
 .deploy-status-banner {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 22px;
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);

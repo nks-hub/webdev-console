@@ -238,7 +238,7 @@
             <SettingsCard
               v-if="pluginPorts.length > 0"
               :title="$t('settings.advancedPorts.pluginPorts')"
-              style="margin-bottom: 16px"
+              style="margin-bottom: var(--wdc-space-4)"
             >
               <template #meta>
                 <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ $t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
@@ -278,7 +278,7 @@
                 type="info"
                 :closable="false"
                 show-icon
-                style="margin-bottom: 12px"
+                style="margin-bottom: var(--wdc-space-3)"
               >
                 <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
                 {{ $t('settings.advancedPorts.portAlertDesc') }}
@@ -414,7 +414,7 @@
                   controls-position="right"
                   style="width: 160px"
                 />
-                <span style="margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3)">{{ $t('settings.advancedBackups.hours') }}</span>
+                <span style="margin-left: var(--wdc-space-2); font-size: 0.82rem; color: var(--wdc-text-3)">{{ $t('settings.advancedBackups.hours') }}</span>
                 <div class="hint">
                   {{ $t('settings.advancedBackups.scheduleHint') }}
                 </div>
@@ -422,10 +422,10 @@
             </el-form>
 
             <!-- Manual backup management -->
-            <div style="margin-top: 24px; border-top: 1px solid var(--wdc-border); padding-top: 16px">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+            <div style="margin-top: var(--wdc-space-5); border-top: 1px solid var(--wdc-border); padding-top: var(--wdc-space-4)">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--wdc-space-3)">
                 <span style="font-weight: 600; font-size: 0.95rem">{{ $t('settings.advancedBackups.title') }}</span>
-                <div style="display: flex; gap: 8px">
+                <div style="display: flex; gap: var(--wdc-space-2)">
                   <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
                     {{ $t('settings.advancedBackups.create') }}
                   </el-button>
@@ -547,7 +547,7 @@
                 <el-switch v-model="pluginAutoSync" />
                 <el-button
                   size="small"
-                  style="margin-left: 12px"
+                  style="margin-left: var(--wdc-space-3)"
                   :loading="syncingPlugins"
                   @click="syncPluginsNow"
                 >{{ $t('settings.advanced.syncNow') }}</el-button>
@@ -624,7 +624,7 @@
                  entry + makes the daemon's /api/mcp/intents endpoints
                  return 404. Operators not running an AI client see no
                  trace of the subsystem. -->
-            <div class="settings-section" id="mcp-section" style="margin-top: 16px">
+            <div class="settings-section" id="mcp-section" style="margin-top: var(--wdc-space-4)">
               <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.mcp.description') }}
@@ -639,7 +639,7 @@
                      any kind not registered via IDestructiveOperationKinds. -->
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
                   <el-switch v-model="mcpStrictKinds" />
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.strictKindsHint') }}</div>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.strictKindsHint') }}</div>
                 </el-form-item>
                 <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
                      separated list (e.g. "restore,cancel") of kind ids
@@ -671,7 +671,7 @@
                       :value="opt.id"
                     >
                       <span>{{ humanKindLabel(opt) }}</span>
-                      <span class="muted" style="margin-left: 8px; font-size: 11px">
+                      <span class="muted" style="margin-left: var(--wdc-space-2); font-size: 11px">
                         {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
                       </span>
                     </el-option>
@@ -686,7 +686,7 @@
                        fills the picker with every kind tagged Destructive
                        (restore, test_hook, settings_write, plus any plugin-
                        contributed dangerous kinds). "Clear" resets. -->
-                  <div v-if="mcpKindOptions.length > 0" style="margin-top: 6px">
+                  <div v-if="mcpKindOptions.length > 0" style="margin-top: var(--wdc-space-1-5)">
                     <el-button
                       size="small"
                       :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
@@ -703,7 +703,7 @@
                       {{ $t('settings.mcp.clearAlwaysConfirm') }}
                     </el-button>
                   </div>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
                 </el-form-item>
                 <!-- Phase 7.5+++ — operator-tunable janitor retention.
                      Defaults match GrantSweeperService.Default* (1d/30d).
@@ -711,14 +711,14 @@
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
                   <el-input-number v-model="mcpExpiredRetentionDays"
                     :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
                 </el-form-item>
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
                   <el-input-number v-model="mcpRevokedRetentionDays"
                     :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
                 </el-form-item>
                 <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
                      hourly McpToolCallsSweeperService. Bumping this
@@ -727,8 +727,8 @@
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
                   <el-input-number v-model="mcpToolCallRetentionDays"
                     :min="1" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
                 </el-form-item>
               </el-form>
             </div>
@@ -738,7 +738,7 @@
                  OFF hides Deploy tab in SiteEdit + plugin REST endpoints
                  return 404. Useful for installs that only use WDC as
                  local Apache/MySQL manager without remote deploys. -->
-            <div id="deploy-subsystem" class="settings-section" style="margin-top: 16px">
+            <div id="deploy-subsystem" class="settings-section" style="margin-top: var(--wdc-space-4)">
               <h4 class="section-title">{{ $t('settings.deploySubsystem.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
@@ -752,7 +752,7 @@
               <div
                 v-if="deployBackendMode"
                 class="hint"
-                style="margin-bottom: 12px; padding: 10px 14px; border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
+                style="margin-bottom: var(--wdc-space-3); padding: var(--wdc-space-2-5) var(--wdc-space-3-5); border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
               >
                 <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
                   🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
@@ -760,7 +760,7 @@
                 <span v-else style="color: var(--el-color-info)">
                   ⚙ {{ $t('settings.deploySubsystem.modeBuiltIn') }}
                 </span>
-                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: 8px">
+                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: var(--wdc-space-2)">
                   ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
                 </span>
               </div>
@@ -789,7 +789,7 @@
                   type="warning"
                   :closable="false"
                   show-icon
-                  style="margin-bottom: 12px; max-width: 480px"
+                  style="margin-bottom: var(--wdc-space-3); max-width: 480px"
                 />
                 <el-form-item :label="$t('settings.deploySubsystem.legacyHandlersLabel')">
                   <el-tooltip
@@ -798,7 +798,7 @@
                   >
                     <el-switch v-model="deployUseLegacyHostHandlers" :disabled="!deployFlipUnlocked && !deployRestartPending" />
                   </el-tooltip>
-                  <span class="hint" style="margin-left: 12px">
+                  <span class="hint" style="margin-left: var(--wdc-space-3)">
                     {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
                   </span>
                   <el-popover
@@ -812,7 +812,7 @@
                         type="warning"
                         size="small"
                         effect="plain"
-                        style="margin-left: 12px; cursor: pointer"
+                        style="margin-left: var(--wdc-space-3); cursor: pointer"
                       >
                         🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
                       </el-tag>
@@ -824,7 +824,7 @@
                          Iter 24: localized recommendation header mirrors the
                          per-site popover for visual symmetry. -->
                     <div style="font-size: 12px">
-                      <div style="margin-bottom: 6px">
+                      <div style="margin-bottom: var(--wdc-space-1-5)">
                         <strong>
                           {{ deployFlipUnlocked
                             ? $t('deploySettings.readyToFlip')
@@ -841,18 +841,18 @@
                            cutover scope from either entry point. -->
                       <div
                         v-if="deployFlipGatedEndpoints.length > 0"
-                        style="margin-top: 10px"
+                        style="margin-top: var(--wdc-space-2-5)"
                       >
-                        <div class="muted" style="margin-bottom: 4px; font-size: 11px">
+                        <div class="muted" style="margin-bottom: var(--wdc-space-1); font-size: 11px">
                           {{ $t('deploySettings.gatedEndpointsLabel', { n: deployFlipGatedEndpoints.length }) }}
                         </div>
-                        <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+                        <ul style="font-size: 11px; margin: 0; padding-left: var(--wdc-space-4-5); max-height: 140px; overflow-y: auto">
                           <li v-for="ep in deployFlipGatedEndpoints" :key="ep">
                             <code class="mono">{{ ep }}</code>
                           </li>
                         </ul>
                       </div>
-                      <div class="muted" style="margin-top: 8px; font-size: 11px">
+                      <div class="muted" style="margin-top: var(--wdc-space-2); font-size: 11px">
                         <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
                       </div>
                     </div>
@@ -867,7 +867,7 @@
                  be turned off independently so an operator who lives in
                  the WDC window all day can mute deploy toasts but keep
                  the louder MCP confirm requests. -->
-            <div class="settings-section" style="margin-top: 16px">
+            <div class="settings-section" style="margin-top: var(--wdc-space-4)">
               <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
               <p class="hint">{{ $t('settings.osNotify.description') }}</p>
               <el-form label-position="left" label-width="240px" size="small">
@@ -1092,7 +1092,7 @@
                   type="primary"
                   plain
                   :loading="refreshingCatalog"
-                  style="margin-left: 8px"
+                  style="margin-left: var(--wdc-space-2)"
                   @click="refreshCatalogNow"
                 >{{ $t('settings.advanced.refreshCatalog') }}</el-button>
               </div>
@@ -1130,7 +1130,7 @@
                   <span class="sys-label">{{ $t('settings.about.binaries') }}</span>
                   <span class="sys-value">{{ systemInfo.binaries }}</span>
                 </div>
-                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: 12px">{{ $t('settings.about.installedVersions') }}</div>
+                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: var(--wdc-space-3)">{{ $t('settings.about.installedVersions') }}</div>
                 <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
                   <span class="sys-label">{{ bin.app }}</span>
                   <span class="sys-value">{{ bin.version }}</span>
@@ -2871,7 +2871,7 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   margin-bottom: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -2912,7 +2912,7 @@ async function save() {
 .simple-settings-actions {
   display: flex;
   gap: var(--wdc-space-2);
-  margin-top: 10px;
+  margin-top: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 
@@ -2931,11 +2931,11 @@ async function save() {
 }
 
 .tab-content {
-  padding: 20px 0;
+  padding: var(--wdc-space-4-5) 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
   grid-auto-flow: dense;
-  gap: 20px var(--wdc-space-5);
+  gap: var(--wdc-space-4-5) var(--wdc-space-5);
   align-items: start;
 }
 .tab-content > .tab-desc,
@@ -2949,7 +2949,7 @@ async function save() {
 .tab-desc {
   font-size: 0.82rem;
   color: var(--el-text-color-secondary);
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
   line-height: 1.5;
 }
 
@@ -2966,7 +2966,7 @@ async function save() {
 }
 .danger-zone {
   margin-top: var(--wdc-space-6);
-  padding: 18px 20px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: color-mix(in srgb, var(--el-color-danger) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--el-color-danger) 30%, transparent);
   border-radius: var(--wdc-radius-sm);
@@ -2979,7 +2979,7 @@ async function save() {
   color: var(--el-color-danger);
 }
 .danger-desc {
-  margin: 0 0 18px 0;
+  margin: 0 0 var(--wdc-space-4-5) 0;
   font-size: 0.82rem;
   color: var(--wdc-text-3);
 }
@@ -3012,7 +3012,7 @@ async function save() {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.74rem;
@@ -3040,16 +3040,16 @@ async function save() {
 
 @media (max-width: 640px) {
   .page-header {
-    padding: 18px var(--wdc-space-4) 0;
-    margin-bottom: 14px;
+    padding: var(--wdc-space-4-5) var(--wdc-space-4) 0;
+    margin-bottom: var(--wdc-space-3-5);
   }
 
   .page-body {
-    padding: 0 var(--wdc-space-4) 18px;
+    padding: 0 var(--wdc-space-4) var(--wdc-space-4-5);
   }
 
   .simple-settings-panel {
-    padding: 14px;
+    padding: var(--wdc-space-3-5);
   }
 
   .settings-footer {
@@ -3069,7 +3069,7 @@ async function save() {
 .about-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 28px 36px;
+  gap: var(--wdc-space-5-5) var(--wdc-space-6-5);
   padding: var(--wdc-space-2) var(--wdc-space-1);
 }
 @media (max-width: 820px) {
@@ -3133,8 +3133,8 @@ async function save() {
 .about-stack {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 2px;
+  gap: var(--wdc-space-1);
+  margin-top: var(--wdc-space-0-5);
 }
 
 .about-system { font-size: 0.85rem; }
@@ -3144,12 +3144,12 @@ async function save() {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-3);
-  margin: 0 0 6px;
+  margin: 0 0 var(--wdc-space-1-5);
 }
 .about-sys-row {
   display: flex;
   justify-content: space-between;
-  padding: 3px 0;
+  padding: var(--wdc-space-1) 0;
   font-size: 0.82rem;
   border-bottom: 1px dashed var(--wdc-border);
 }
@@ -3199,7 +3199,7 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border-bottom: 1px solid var(--wdc-border);
 }

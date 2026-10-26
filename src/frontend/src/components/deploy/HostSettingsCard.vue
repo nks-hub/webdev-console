@@ -168,7 +168,7 @@ const envHint = computed(() => {
 .card-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .info-row {
@@ -204,7 +204,7 @@ const envHint = computed(() => {
 
 .branch-pill {
   display: inline-block;
-  padding: 3px 10px;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-full);
@@ -220,7 +220,7 @@ const envHint = computed(() => {
 .local-path-line {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .local-path-arrow {
   color: var(--el-color-primary);
@@ -230,11 +230,11 @@ const envHint = computed(() => {
 .flags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .flag-icon {
   font-size: 12px;
-  margin-right: 2px;
+  margin-right: var(--wdc-space-0-5);
   vertical-align: -2px;
 }
 </style>

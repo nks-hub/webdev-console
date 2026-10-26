@@ -69,7 +69,7 @@
               <el-descriptions-item :label="$t('mailpitPlugin.httpPort')">{{ httpPort }}</el-descriptions-item>
               <el-descriptions-item :label="$t('mailpitPlugin.messages')">—</el-descriptions-item>
             </el-descriptions>
-            <div class="card-actions" style="margin-top: 16px">
+            <div class="card-actions" style="margin-top: var(--wdc-space-4)">
               <el-button type="primary" @click="openUi">
                 <el-icon><Link /></el-icon>
                 {{ $t('mailpitPlugin.openUi') }} (http://localhost:{{ httpPort }})
@@ -90,7 +90,7 @@
             :closable="false"
             show-icon
             :title="$t('mailpitPlugin.configPending')"
-            style="margin-bottom: 16px"
+            style="margin-bottom: var(--wdc-space-4)"
           />
           <EditCard :title="$t('mailpitPlugin.configParams')">
             <el-form label-width="200px" size="default">
@@ -172,7 +172,7 @@ function openUi() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }

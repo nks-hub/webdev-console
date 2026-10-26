@@ -141,7 +141,7 @@ async function restartService(svc: ServiceRow) {
 
 <style scoped>
 .sd-section {
-  margin-top: 18px;
+  margin-top: var(--wdc-space-4-5);
   padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -158,9 +158,9 @@ async function restartService(svc: ServiceRow) {
 .sd-service-row {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto auto;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: center;
-  padding: 10px 0;
+  padding: var(--wdc-space-2-5) 0;
   border-bottom: 1px solid var(--wdc-border);
 }
 .sd-service-row:last-child { border-bottom: 0; }

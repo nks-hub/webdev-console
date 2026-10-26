@@ -72,7 +72,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .tab-desc {
-  margin: 0 0 10px;
+  margin: 0 0 var(--wdc-space-2-5);
   color: var(--wdc-text-3);
   font-size: 0.85rem;
 }
@@ -84,7 +84,7 @@ const emit = defineEmits<{
 
 .row-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   justify-content: flex-end;
 }
 </style>

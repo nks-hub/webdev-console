@@ -52,14 +52,14 @@ defineProps<{
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 18px;
+  padding: var(--wdc-space-4-5);
 }
 
 .settings-panel-header {
   display: flex;
   align-items: flex-start;
   gap: var(--wdc-space-3);
-  margin-bottom: 14px;
+  margin-bottom: var(--wdc-space-3-5);
   padding-bottom: var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
 }
@@ -93,7 +93,7 @@ defineProps<{
 }
 
 .settings-panel-subtitle {
-  margin: 3px 0 0;
+  margin: var(--wdc-space-1) 0 0;
   color: var(--wdc-text-2);
   font-size: 0.82rem;
   line-height: 1.4;
@@ -106,7 +106,7 @@ defineProps<{
 .settings-panel-actions {
   display: flex;
   gap: var(--wdc-space-2);
-  margin-top: 10px;
+  margin-top: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 </style>

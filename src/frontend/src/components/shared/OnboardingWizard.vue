@@ -431,7 +431,7 @@ defineExpose({ open })
 .ob-wrap {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--wdc-space-4-5);
   padding: var(--wdc-space-1) 0 0;
 }
 .ob-subtitle {
@@ -451,7 +451,7 @@ defineExpose({ open })
 }
 .ob-step-final {
   text-align: center;
-  padding-top: 36px;
+  padding-top: var(--wdc-space-6-5);
 }
 .ob-final-actions {
   display: flex;
@@ -462,13 +462,13 @@ defineExpose({ open })
 .ob-actions-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .ob-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

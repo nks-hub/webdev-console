@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .page { padding: 0; display: flex; flex-direction: column; gap: 0; }
 .hub-header {
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
 .tab-label { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats {
   display: flex; flex-wrap: wrap; gap: 18px; margin: 12px 0 8px;
-  padding: 14px 18px; background: var(--wdc-surface);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5); background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius); font-size: 13px;
   box-shadow: var(--wdc-shadow-sm);
@@ -286,7 +286,7 @@ onBeforeUnmount(() => {
 .hub-stats .stat strong { font-weight: 600; }
 .hub-stats .stat.warn strong { color: var(--el-color-warning); }
 .tier-chip {
-  padding: 3px var(--wdc-space-3);
+  padding: var(--wdc-space-1) var(--wdc-space-3);
   border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 600;
@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
   vertical-align: middle;
   height: 16px;
   line-height: 14px;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   font-size: 10px;
   border: none;
 }

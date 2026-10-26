@@ -306,7 +306,7 @@
               type="info"
               :closable="false"
               show-icon
-              style="margin-bottom: 8px"
+              style="margin-bottom: var(--wdc-space-2)"
             >
               <template #title>{{ $t('sites.simple.noPhpInstalledTitle') }}</template>
               <div>
@@ -443,7 +443,7 @@
               v-if="newSite.createDb"
               v-model="newSite.dbName"
               :placeholder="$t('sites.createDatabasePlaceholder')"
-              style="margin-top: 8px"
+              style="margin-top: var(--wdc-space-2)"
             />
           </el-form-item>
         </el-form>
@@ -1034,7 +1034,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 /*
@@ -1042,7 +1042,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   the table card.
 */
 .search-bar {
-  padding: var(--wdc-space-4) 20px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -1080,7 +1080,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   line-height: 1.2;
 }
 .sites-table :deep(th.el-table__cell) {
-  padding: 6px var(--wdc-space-3) !important;
+  padding: var(--wdc-space-1-5) var(--wdc-space-3) !important;
 }
 .sites-table :deep(.el-table .cell) {
   padding: 0 !important;
@@ -1092,14 +1092,14 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   min-width: 0;
   line-height: 1.2;
 }
 .sites-table :deep(.cell-domain-row) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   flex-wrap: nowrap;
 }
 .sites-table :deep(.col-aliases) {
@@ -1115,14 +1115,14 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 .sites-table :deep(.el-tag) {
   height: 18px !important;
-  padding: 0 6px !important;
+  padding: 0 var(--wdc-space-1-5) !important;
   font-size: 0.62rem !important;
   line-height: 16px !important;
 }
 .sites-table :deep(.alias-dot) {
   height: 18px !important;
   min-width: 22px;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   font-size: 0.62rem;
 }
 .sites-table :deep(.col-domain) {
@@ -1167,7 +1167,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   color: var(--wdc-text-2);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-family: 'JetBrains Mono', monospace;
   /* F71: don't let the alias list grow the row vertically when there are
      many aliases — truncate to a single line and show the full list via
@@ -1188,7 +1188,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   font-size: 0.72rem;
   font-weight: 600;
   flex-shrink: 0;
@@ -1201,7 +1201,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .col-tunnel {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   margin-top: var(--wdc-space-1);
   font-size: 0.76rem;
   font-family: 'JetBrains Mono', monospace;
@@ -1290,8 +1290,8 @@ function handleRowAction(cmd: string, row: SiteInfo) {
     align-items: flex-start;
     flex-direction: column;
     gap: var(--wdc-space-3);
-    padding: 18px var(--wdc-space-4) 0;
-    margin-bottom: 14px;
+    padding: var(--wdc-space-4-5) var(--wdc-space-4) 0;
+    margin-bottom: var(--wdc-space-3-5);
   }
 
   .header-actions {
@@ -1327,7 +1327,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
   .sites-mobile-list {
     display: grid;
-    gap: 10px;
+    gap: var(--wdc-space-2-5);
   }
 
   .site-mobile-card {
@@ -1352,7 +1352,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   .site-mobile-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--wdc-space-1-5);
     min-width: 0;
   }
 
@@ -1461,7 +1461,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
 .site-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
   flex-wrap: nowrap;
   overflow: hidden;

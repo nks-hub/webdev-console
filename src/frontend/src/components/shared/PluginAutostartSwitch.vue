@@ -119,14 +119,14 @@ watch(() => resolvedPlugin.value?.serviceId, () => { void loadCurrent() })
   align-items: center;
   justify-content: space-between;
   gap: var(--wdc-space-3);
-  padding: 10px var(--wdc-space-3);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  margin: 10px 0;
+  margin: var(--wdc-space-2-5) 0;
 }
 .plugin-autostart--compact {
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   margin: var(--wdc-space-2) 0;
   font-size: 0.82rem;
 }

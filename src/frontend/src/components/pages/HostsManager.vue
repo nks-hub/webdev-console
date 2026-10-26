@@ -160,10 +160,10 @@
           type="warning"
           :closable="false"
           show-icon
-          style="margin-top: 16px"
+          style="margin-top: var(--wdc-space-4)"
         >
           <div>{{ $t('hosts.loadFailedBody') }}</div>
-          <div style="margin-top: 8px; display: flex; gap: 8px">
+          <div style="margin-top: var(--wdc-space-2); display: flex; gap: var(--wdc-space-2)">
             <el-button size="small" :loading="loading" @click="load">
               {{ $t('hosts.retry') }}
             </el-button>
@@ -185,10 +185,10 @@
           type="error"
           :closable="false"
           show-icon
-          style="margin-top: 16px"
+          style="margin-top: var(--wdc-space-4)"
         >
           <div>{{ $t('hosts.emptyHostsCorruptionBody') }}</div>
-          <div style="margin-top: 8px; display: flex; gap: 8px">
+          <div style="margin-top: var(--wdc-space-2); display: flex; gap: var(--wdc-space-2)">
             <el-button size="small" :loading="reapplying" @click="reapply">
               {{ $t('hosts.reapplyFromSites') }}
             </el-button>
@@ -576,7 +576,7 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
   flex-shrink: 0;
@@ -614,7 +614,7 @@ onMounted(async () => {
 .staging-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   padding: var(--wdc-space-2) var(--wdc-space-5);
   background: var(--el-color-warning-light-9, #fdf6ec);
   border-bottom: 1px solid var(--el-color-warning-light-5, #f5dab1);
@@ -631,7 +631,7 @@ onMounted(async () => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-3);
@@ -661,7 +661,7 @@ onMounted(async () => {
   cursor: text;
   display: inline-block;
   min-width: 40px;
-  padding: 2px 6px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   transition: background 0.15s, box-shadow 0.15s;
 }

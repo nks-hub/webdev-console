@@ -182,7 +182,7 @@ onMounted(loadCatalogUrl)
   align-items: center;
   justify-content: center;
   min-height: 100%;
-  padding: 40px 20px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-4-5);
   box-sizing: border-box;
 }
 .login-card {
@@ -191,10 +191,10 @@ onMounted(loadCatalogUrl)
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-xl);
-  padding: 40px 36px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-6-5);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--wdc-space-4-5);
   box-shadow: var(--wdc-shadow-pop);
 }
 .login-brand {
@@ -246,7 +246,7 @@ onMounted(loadCatalogUrl)
 .login-catalog-hint .url {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-text);
   font-size: 0.78rem;
@@ -255,7 +255,7 @@ onMounted(loadCatalogUrl)
 .login-skip {
   font-size: 0.82rem;
   text-align: center;
-  padding-top: 6px;
+  padding-top: var(--wdc-space-1-5);
   border-top: 1px dashed var(--wdc-border);
 }
 .login-skip a { color: var(--wdc-accent); text-decoration: none; }

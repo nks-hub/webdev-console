@@ -471,7 +471,7 @@ onMounted(async () => {
 .simple-detail {
   width: 100%;
   margin: 0;
-  padding: 22px var(--wdc-space-5);
+  padding: var(--wdc-space-5) var(--wdc-space-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -479,7 +479,7 @@ onMounted(async () => {
 }
 
 .state-box {
-  padding: 40px 0;
+  padding: var(--wdc-space-6-5) 0;
 }
 
 .sd-header {
@@ -487,7 +487,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: var(--wdc-space-4);
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .sd-domain {
@@ -510,7 +510,7 @@ onMounted(async () => {
 }
 
 .sd-status-row {
-  padding: 14px;
+  padding: var(--wdc-space-3-5);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
@@ -579,7 +579,7 @@ onMounted(async () => {
 .sd-control-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   min-width: 0;
   justify-content: flex-end;
 }
@@ -648,7 +648,7 @@ onMounted(async () => {
 }
 
 .sd-section {
-  margin-top: 18px;
+  margin-top: var(--wdc-space-4-5);
   padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -690,7 +690,7 @@ onMounted(async () => {
   .simple-detail:not(.embedded) {
     display: grid;
     grid-template-columns: minmax(0, 0.95fr) minmax(340px, 0.65fr);
-    gap: 0 18px;
+    gap: 0 var(--wdc-space-4-5);
   }
 
   .simple-detail:not(.embedded) > .sd-header,
@@ -717,7 +717,7 @@ onMounted(async () => {
 @media (max-width: 760px) {
   .simple-detail {
     width: calc(100% - 32px);
-    margin: 18px auto;
+    margin: var(--wdc-space-4-5) auto;
     padding: var(--wdc-space-4);
   }
 

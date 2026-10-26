@@ -637,7 +637,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   margin-bottom: 0;
   gap: var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-accent-glow);
@@ -661,7 +661,7 @@ onMounted(() => {
 .page-title-detail {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .page-subtitle {
@@ -676,9 +676,9 @@ onMounted(() => {
 .catalog-health {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 3px 10px;
+  gap: var(--wdc-space-1-5);
+  margin-top: var(--wdc-space-1-5);
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-full);
   font-size: 0.72rem;
   font-weight: 600;
@@ -714,7 +714,7 @@ onMounted(() => {
 }
 
 .back-btn {
-  padding: 2px 6px !important;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5) !important;
   height: auto !important;
   font-size: 0.76rem !important;
 }
@@ -727,7 +727,7 @@ onMounted(() => {
 .bin-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 
 .bin-card {
@@ -735,10 +735,10 @@ onMounted(() => {
   border: 1px solid var(--wdc-border);
   border-left: 3px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: var(--wdc-space-4) 18px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   cursor: pointer;
   transition: border-color 0.12s, background 0.12s;
 }
@@ -764,7 +764,7 @@ onMounted(() => {
 .bin-card-title {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
   min-width: 0;
 }
 
@@ -796,7 +796,7 @@ onMounted(() => {
 .metric {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 
 .metric-num {
@@ -844,7 +844,7 @@ onMounted(() => {
 
 .platform-tag {
   margin-right: var(--wdc-space-1);
-  margin-bottom: 2px;
+  margin-bottom: var(--wdc-space-0-5);
   font-size: 0.68rem !important;
   font-weight: 600 !important;
   letter-spacing: 0.02em;
@@ -870,6 +870,6 @@ onMounted(() => {
 }
 
 .builtin-tag {
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
 }
 </style>

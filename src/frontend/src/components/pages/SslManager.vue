@@ -25,7 +25,7 @@
         :closable="true"
         @close="loadError = ''"
         show-icon
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
       <el-alert
         v-if="!mkcertInstalled && !loadError"
@@ -34,7 +34,7 @@
         :description="$t('ssl.mkcertNotInstalledDesc')"
         show-icon
         :closable="false"
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
 
       <!-- Loading -->
@@ -291,13 +291,13 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: var(--wdc-space-5) var(--wdc-space-5) 0;
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .page-title {
@@ -323,7 +323,7 @@ onMounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: var(--wdc-space-4) 20px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
   transition: border-color 0.15s;
 }
 
@@ -358,7 +358,7 @@ onMounted(() => {
 }
 
 .cert-paths {
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
 }
 
 .cert-path {

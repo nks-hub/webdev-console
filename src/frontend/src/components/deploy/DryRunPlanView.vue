@@ -127,7 +127,7 @@ function formatRelative(iso: string): string {
 .preview-plan {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-size: 13px;
 }
 .plan-row {

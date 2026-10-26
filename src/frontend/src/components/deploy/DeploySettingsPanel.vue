@@ -61,16 +61,16 @@
               :title="deployBackendTooltip"
             >
               {{ deployBackendBadge }}
-              <span v-if="deployBackendReadiness.blockers.length > 0" style="margin-left: 4px">
+              <span v-if="deployBackendReadiness.blockers.length > 0" style="margin-left: var(--wdc-space-1)">
                 · {{ deployBackendReadiness.blockers.length }}⚠
               </span>
-              <span v-else style="margin-left: 4px">· ✓</span>
+              <span v-else style="margin-left: var(--wdc-space-1)">· ✓</span>
               <!-- Iter 56 (#258) — surface restart-pending so operator
                    spots the "setting flipped but daemon hasn't restarted"
                    drift without having to open the popover. -->
               <span
                 v-if="deployBackendReadiness.restartPending"
-                style="margin-left: 4px"
+                style="margin-left: var(--wdc-space-1)"
                 :title="t('deploySettings.restartPendingTooltip')"
               >· ↻</span>
             </el-tag>
@@ -89,9 +89,9 @@
               type="warning"
               :closable="false"
               show-icon
-              style="margin-bottom: 8px"
+              style="margin-bottom: var(--wdc-space-2)"
             />
-            <div style="margin-bottom: 6px">
+            <div style="margin-bottom: var(--wdc-space-1-5)">
               <!-- Iter 23: localize recommendation from the same structured
                    fields (readyToFlip + blockers count) instead of relying
                    on the server-side English-only string. Fallback to the
@@ -102,8 +102,8 @@
                   : t('deploySettings.stayOnBuiltIn', { n: deployBackendReadiness.blockers.length }) }}
               </strong>
             </div>
-            <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
-              <div class="muted" style="margin-bottom: 4px">Blockers:</div>
+            <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: var(--wdc-space-2)">
+              <div class="muted" style="margin-bottom: var(--wdc-space-1)">Blockers:</div>
               <!-- Iter 21: shared component renders blockerDetails phase tag
                    + remediation when ?explain=true payload available; falls
                    back to summary-only rows for older daemons. -->
@@ -118,20 +118,20 @@
                  paired with cs/en label so operator knows what's at stake. -->
             <div
               v-if="deployBackendReadiness.gatedEndpoints && deployBackendReadiness.gatedEndpoints.length > 0"
-              style="margin-top: 10px"
+              style="margin-top: var(--wdc-space-2-5)"
             >
-              <div class="muted" style="margin-bottom: 4px">
+              <div class="muted" style="margin-bottom: var(--wdc-space-1)">
                 {{ t('deploySettings.gatedEndpointsLabel', { n: deployBackendReadiness.gatedEndpoints.length }) }}
               </div>
-              <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+              <ul style="font-size: 11px; margin: 0; padding-left: var(--wdc-space-4-5); max-height: 140px; overflow-y: auto">
                 <li v-for="ep in deployBackendReadiness.gatedEndpoints" :key="ep">
                   <code class="mono">{{ ep }}</code>
                 </li>
               </ul>
             </div>
-            <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+            <div class="muted" style="margin-top: var(--wdc-space-2); font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: var(--wdc-space-2); flex-wrap: wrap">
               <code class="mono">GET /api/admin/plugin-readiness</code>
-              <div style="display: flex; gap: 6px">
+              <div style="display: flex; gap: var(--wdc-space-1-5)">
                 <el-button
                   size="small"
                   :loading="readinessRefreshing"
@@ -913,7 +913,7 @@
         <el-divider content-position="left">
           {{ t('deploySettings.hostDialog.localPathsTitle') }}
         </el-divider>
-        <div class="field-hint" style="margin-top: -8px; margin-bottom: 8px">
+        <div class="field-hint" style="margin-top: -8px; margin-bottom: var(--wdc-space-2)">
           {{ t('deploySettings.hostDialog.localPathsHelp') }}
         </div>
         <el-form-item :label="t('deploySettings.hostDialog.localSourcePath')">
@@ -1728,7 +1728,7 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface));
   border-bottom: 1px solid var(--wdc-accent-glow);
   margin-bottom: var(--wdc-space-4);
@@ -1803,7 +1803,7 @@ defineExpose({ saveSettings })
   grid-template-columns: 1fr;
 }
 .hosts-empty {
-  padding: 36px 20px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 1px dashed var(--wdc-border-strong);
   border-radius: var(--wdc-radius);
@@ -1830,7 +1830,7 @@ defineExpose({ saveSettings })
 .section-body {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--wdc-space-4-5);
   padding: 0 var(--wdc-space-5) var(--wdc-space-5);
 }
 
@@ -1923,7 +1923,7 @@ defineExpose({ saveSettings })
 .timeline-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 .timeline-row {
   display: flex;
@@ -2084,8 +2084,8 @@ defineExpose({ saveSettings })
 .hook-row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 14px var(--wdc-space-4);
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   transition: opacity 0.15s ease, box-shadow 0.15s, border-color 0.15s;
@@ -2109,7 +2109,7 @@ defineExpose({ saveSettings })
 .hook-order-btns {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
   padding-top: var(--wdc-space-5);
 }
 
@@ -2125,7 +2125,7 @@ defineExpose({ saveSettings })
 }
 
 .hook-remove {
-  padding-top: 28px;
+  padding-top: var(--wdc-space-5-5);
 }
 
 .empty-state {
@@ -2138,10 +2138,10 @@ defineExpose({ saveSettings })
 .chip-input-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
   min-height: 36px;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
   background: var(--wdc-surface);
@@ -2214,7 +2214,7 @@ defineExpose({ saveSettings })
 /* Phase 7.5+++ — TCP probe row in host edit dialog. */
 .test-conn-row {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-top: 10px; padding: 10px 14px;
+  margin-top: var(--wdc-space-2-5); padding: 10px 14px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

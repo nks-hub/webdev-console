@@ -79,7 +79,7 @@ const emit = defineEmits<{
 .sync-badge {
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 2px 10px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius);
 }
 

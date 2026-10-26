@@ -12,7 +12,7 @@
         <el-button size="small" @click="loadDatabases" :loading="loading" :icon="Refresh">{{ $t('common.refresh') }}</el-button>
         <el-button size="small" type="primary" @click="showCreateDialog = true">
           <el-icon><Plus /></el-icon>
-          <span style="margin-left: 4px">{{ $t('databases.create') }}</span>
+          <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.create') }}</span>
         </el-button>
       </div>
     </div>
@@ -35,7 +35,7 @@
           </el-button>
           <el-button v-if="isAuthError" size="small" @click="goResetPassword">
             <el-icon><Key /></el-icon>
-            <span style="margin-left: 4px">{{ $t('databases.resetRootPassword') }}</span>
+            <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.resetRootPassword') }}</span>
           </el-button>
         </div>
       </template>
@@ -76,15 +76,15 @@
             <input ref="importFileRef" type="file" accept=".sql,.gz" style="display:none" @change="handleImportFile" />
             <el-button size="small" type="success" :loading="importing" @click="triggerImport">
               <el-icon><Upload /></el-icon>
-              <span style="margin-left: 4px">{{ $t('databases.importSql') }}</span>
+              <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.importSql') }}</span>
             </el-button>
             <el-button size="small" :loading="exporting" @click="exportDb">
               <el-icon><Download /></el-icon>
-              <span style="margin-left: 4px">{{ $t('databases.exportSql') }}</span>
+              <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.exportSql') }}</span>
             </el-button>
             <el-button size="small" type="danger" plain @click="confirmDrop(selectedDb)">
               <el-icon><Delete /></el-icon>
-              <span style="margin-left: 4px">{{ $t('databases.drop') }}</span>
+              <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.drop') }}</span>
             </el-button>
           </div>
         </div>
@@ -131,7 +131,7 @@
               <el-table-column prop="name" :label="$t('databases.tree.tableName')" min-width="200">
                 <template #default="{ row }">
                   <el-icon><Grid /></el-icon>
-                  <span class="mono" style="margin-left: 6px">{{ row.name }}</span>
+                  <span class="mono" style="margin-left: var(--wdc-space-1-5)">{{ row.name }}</span>
                   <el-tag v-if="row.kind === 'view'" size="small" type="info" class="ml-1">VIEW</el-tag>
                 </template>
               </el-table-column>
@@ -686,7 +686,7 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   flex-shrink: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -760,7 +760,7 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2);
-  padding: 0 20px;
+  padding: 0 var(--wdc-space-4-5);
   border: none;
   background: transparent;
   cursor: pointer;
@@ -811,7 +811,7 @@ onMounted(() => { void loadDatabases() })
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--wdc-space-4);
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);

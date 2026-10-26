@@ -161,7 +161,7 @@ watch(() => props.modelValue, (open) => {
 .fb-pathbar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .fb-path-input {
   flex: 1;
@@ -180,7 +180,7 @@ watch(() => props.modelValue, (open) => {
 }
 
 .fb-empty {
-  padding: 40px var(--wdc-space-4);
+  padding: var(--wdc-space-6-5) var(--wdc-space-4);
   text-align: center;
   color: var(--wdc-text-3);
   font-size: 0.85rem;
@@ -189,8 +189,8 @@ watch(() => props.modelValue, (open) => {
 .fb-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: var(--wdc-space-2) 14px;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   cursor: pointer;
   border-bottom: 1px solid var(--wdc-border);
   transition: background 0.08s;
@@ -229,7 +229,7 @@ watch(() => props.modelValue, (open) => {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2);
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

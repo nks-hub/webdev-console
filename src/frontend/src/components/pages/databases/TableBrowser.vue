@@ -13,7 +13,7 @@
       <div class="toolbar-right">
         <el-button size="small" :loading="loading" @click="$emit('reload')">
           <el-icon><Refresh /></el-icon>
-          <span style="margin-left: 4px">{{ t('common.refresh') }}</span>
+          <span style="margin-left: var(--wdc-space-1)">{{ t('common.refresh') }}</span>
         </el-button>
       </div>
     </div>
@@ -211,7 +211,7 @@ function columnWidth(col: DataColumn): number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   flex-shrink: 0;
   gap: var(--wdc-space-3);
@@ -223,7 +223,7 @@ function columnWidth(col: DataColumn): number {
 .toolbar-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: 1.05rem;
@@ -235,8 +235,8 @@ function columnWidth(col: DataColumn): number {
 .browser-filter {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px var(--wdc-space-4);
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-2-5) var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   background: var(--wdc-surface-2);
@@ -295,7 +295,7 @@ function columnWidth(col: DataColumn): number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px var(--wdc-space-4);
+  padding: var(--wdc-space-2-5) var(--wdc-space-4);
   border-top: 1px solid var(--wdc-border);
   flex-shrink: 0;
   background: var(--wdc-surface);

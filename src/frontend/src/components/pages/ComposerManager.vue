@@ -17,7 +17,7 @@
           <span class="cm-section-title">{{ $t('composer.version') }}</span>
         </template>
 
-        <div v-if="versionLoading" style="padding: 8px 0">
+        <div v-if="versionLoading" style="padding: var(--wdc-space-2) 0">
           <el-skeleton :rows="2" animated />
         </div>
         <el-descriptions v-else-if="composerVersion" :column="2" border size="small">
@@ -48,7 +48,7 @@
           </div>
         </template>
 
-        <div v-if="loading" style="padding: 8px 0">
+        <div v-if="loading" style="padding: var(--wdc-space-2) 0">
           <el-skeleton :rows="4" animated />
         </div>
 
@@ -262,7 +262,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   flex-shrink: 0;
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
@@ -297,7 +297,7 @@ onMounted(() => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: 0 28px 28px;
+  padding: 0 var(--wdc-space-5-5) var(--wdc-space-5-5);
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-4);
@@ -310,7 +310,7 @@ onMounted(() => {
 .cm-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .cm-section-title {
@@ -336,7 +336,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   padding: var(--wdc-space-6) var(--wdc-space-4);
   text-align: center;
 }

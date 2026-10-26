@@ -260,7 +260,7 @@ async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  margin-bottom: 14px;
+  margin-bottom: var(--wdc-space-3-5);
   box-shadow: var(--wdc-shadow-sm);
 }
 .cmd-group-count {

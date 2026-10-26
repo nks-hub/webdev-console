@@ -143,14 +143,14 @@ const emit = defineEmits<{
 }
 
 .tab-desc {
-  margin: 0 0 14px;
+  margin: 0 0 var(--wdc-space-3-5);
   color: var(--wdc-text-2);
   font-size: 0.86rem;
   line-height: 1.45;
 }
 
 .section-heading {
-  margin: 18px 0 10px;
+  margin: var(--wdc-space-4-5) 0 var(--wdc-space-2-5);
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -165,7 +165,7 @@ const emit = defineEmits<{
 .easy-settings-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px 18px;
+  gap: var(--wdc-space-3-5) var(--wdc-space-4-5);
   width: 100%;
 }
 

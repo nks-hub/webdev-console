@@ -114,7 +114,7 @@ function deviceLabel(row: CatalogDeviceInfo): string {
 .device-name-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .device-name-text {
@@ -131,7 +131,7 @@ function deviceLabel(row: CatalogDeviceInfo): string {
 }
 
 .current-tag {
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
 }
 
 .mono {
@@ -146,7 +146,7 @@ function deviceLabel(row: CatalogDeviceInfo): string {
 
 .row-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   justify-content: flex-end;
 }
 </style>

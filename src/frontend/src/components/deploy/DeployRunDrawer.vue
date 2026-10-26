@@ -309,7 +309,7 @@ async function onCancel(): Promise<void> {
 .hook-panel {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: var(--wdc-space-3) 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   box-shadow: var(--wdc-shadow-sm);
 }
