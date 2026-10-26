@@ -2933,7 +2933,7 @@
     "title": "Průběh nasazení konfigurace",
     "notYet": "Od spuštění aplikace zatím neaplikováno",
     "allOk": "Všechny kroky proběhly",
-    "someFailed": "Selhalo kroků: {n}",
+    "someFailed": "Selhal {n} krok | Selhaly {n} kroky | Selhalo {n} kroků",
     "when": "aplikováno {when}",
     "minutesAgo": "před {n} min",
     "applyAgain": "Aplikovat znovu",
@@ -2959,7 +2959,9 @@
       "reload": "Zkontrolujte webserver na stránce Služby — jeho log obvykle ukáže vadnou direktivu.",
       "php": "Na stránce Binárky nainstalujte verzi PHP, kterou web používá.",
       "vhost": "Plugin webserveru nemohl zapsat vhost; ověřte, že je Apache nainstalovaný."
-    }
+    },
+    "failedStep": "Selhal krok „{step}“",
+    "moreFailed": "Selhal ještě {n} další krok. | Selhaly ještě {n} další kroky. | Selhalo ještě {n} dalších kroků."
   },
   "servicesPage": {
     "title": "Služby",

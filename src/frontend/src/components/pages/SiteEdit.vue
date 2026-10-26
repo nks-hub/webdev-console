@@ -8,14 +8,12 @@
     <!-- Page header -->
     <div class="page-header">
       <div class="header-left">
-        <el-button size="small" text @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
-          <span>{{ $t('sites.backToSites') }}</span>
-        </el-button>
-        <div class="title-block">
-          <div class="title-label">{{ $t('sites.editSite') }}</div>
-          <div class="title-name">{{ domain }}</div>
-        </div>
+        <nav class="crumbs" :aria-label="$t('sites.backToSites')">
+          <a v-activate:link class="crumb-link" @click="goBack">{{ $t('sites.title') }}</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{{ domain }}</span>
+        </nav>
+        <h1 class="title-name">{{ domain }}</h1>
       </div>
       <div class="header-actions">
         <el-button size="small" @click="openInBrowser" :disabled="!site">
@@ -1572,7 +1570,7 @@ onBeforeUnmount(() => {
 
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   padding: 0 0 var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
@@ -1581,9 +1579,25 @@ onBeforeUnmount(() => {
 }
 .header-left {
   display: flex;
-  align-items: center;
-  gap: var(--wdc-space-3-5);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--wdc-space-1-5);
+  min-width: 0;
 }
+.crumbs {
+  display: flex;
+  gap: var(--wdc-space-2);
+  font-size: 0.87rem;
+  color: var(--wdc-text-3);
+}
+.crumb-link {
+  color: var(--wdc-text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--wdc-border-strong);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.crumb-link:hover { color: var(--wdc-text); text-decoration-color: var(--wdc-accent); }
 .title-block {
   display: flex;
   flex-direction: column;
@@ -1596,9 +1610,11 @@ onBeforeUnmount(() => {
   font-family: var(--wdc-font-display);
 }
 .title-name {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.728rem;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
   color: var(--wdc-text);
+  overflow-wrap: anywhere;
 }
 .header-actions {
   display: flex;
