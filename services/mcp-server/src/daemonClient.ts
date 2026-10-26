@@ -28,6 +28,34 @@ interface PortFile {
   scopes: string[]
 }
 
+/**
+ * Turn a daemon error body into one line for the agent. Besides `error` it
+ * keeps what the agent needs to act: the reason and detail, the MCP
+ * capability the operator has to enable (with its hint), and the intent
+ * kind/target to request via wdc_request_confirmation.
+ */
+export function describeDaemonError(status: number, text: string): string {
+  if (!text) return `HTTP ${status}`
+  let obj: Record<string, unknown>
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (!parsed || typeof parsed !== 'object') throw new Error('not an object')
+    obj = parsed as Record<string, unknown>
+  } catch {
+    return text.length > 300 ? text.slice(0, 300) + '…' : text
+  }
+  const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+  const parts: string[] = []
+  const head = str(obj.error) ?? str(obj.detail) ?? str(obj.message) ?? str(obj.title) ?? text
+  parts.push(head)
+  if (str(obj.reason)) parts.push(`reason: ${str(obj.reason)}`)
+  if (str(obj.detail) && str(obj.detail) !== head) parts.push(str(obj.detail)!)
+  if (str(obj.capability)) parts.push(`capability: ${str(obj.capability)}${str(obj.settingKey) ? ` (${str(obj.settingKey)})` : ''}`)
+  if (str(obj.intentKind)) parts.push(`intent: kind ${str(obj.intentKind)} on ${str(obj.intentDomain) ?? '?'}`)
+  if (str(obj.hint)) parts.push(str(obj.hint)!)
+  return parts.join(' — ')
+}
+
 class DaemonNotRunningError extends Error {
   constructor() {
     super(
@@ -177,16 +205,7 @@ class DaemonClient {
       // Surface the daemon's structured error body. All daemon endpoints
       // return JSON with `error` or `detail` per the recent robustness sweep.
       const text = await res.text().catch(() => '')
-      let detail = `HTTP ${res.status}`
-      if (text) {
-        try {
-          const obj = JSON.parse(text)
-          detail = String(obj.error ?? obj.detail ?? obj.message ?? text)
-        } catch {
-          detail = text.length > 300 ? text.slice(0, 300) + '…' : text
-        }
-      }
-      throw new Error(`Daemon request failed: ${res.status} ${detail}`)
+      throw new Error(`Daemon request failed: ${res.status} ${describeDaemonError(res.status, text)}`)
     }
     if (res.status === 204) return null
     const ct = res.headers.get('content-type') ?? ''

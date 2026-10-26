@@ -1,139 +1,75 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using NKS.WebDevConsole.Core.Interfaces;
+using NKS.WebDevConsole.Daemon.Services;
 
 namespace NKS.WebDevConsole.Daemon.Mcp;
 
+/// <summary>Why the MCP token may not make a request: the HTTP status and JSON body to answer with.</summary>
+public sealed record McpDenial(int StatusCode, object Body);
+
 /// <summary>
-/// What a caller holding the MCP token (an AI agent behind the MCP server)
-/// may do. The MCP token is limited to an allow-list: the routes the shipped
-/// MCP tools in services/mcp-server/src/tools/*.ts call, and nothing else.
-/// Every other route answers 403 for the MCP token, so new daemon routes are
-/// closed to the agent until somebody adds them here on purpose.
+/// Decides what a caller holding the MCP token (an AI agent behind the MCP
+/// server) may do; see <see cref="McpCapabilities"/> for the tiers.
 ///
 /// The decision is made on the endpoint the router matched (its route
-/// pattern), not on the raw request path. Path variants the router treats as
-/// the same route (a trailing slash, different letter case) therefore cannot
-/// slip past it, and a path the router does not match at all is refused.
+/// pattern, parameter names and letter case ignored), not on the raw path, so
+/// spellings the router treats as the same route (trailing slash, case) are
+/// judged the same way. A request the router matched to no route falls under
+/// <see cref="McpCapabilities.UnlistedRoutes"/>.
 ///
-/// Destructive operations on allowed routes still go through the intent gate,
-/// which requires a GUI-confirmed intent for MCP callers. A few allowed routes
-/// also have their request body checked here (protected settings, site fields
-/// that would run commands or widen exposure).
+/// Answers:
+/// <list type="bullet">
+///   <item>403 <c>{ error: "mcp_forbidden", detail }</c> for the trust root.</item>
+///   <item>403 <c>{ error: "mcp_capability_disabled", capability, settingKey, detail, hint }</c>
+///   when the capability covering the route or body field is off.</item>
+///   <item>403/425 <c>{ error: "intent_rejected", reason, detail, capability, intentKind,
+///   intentDomain, intentHost, hint }</c> when an enabled capability needs a
+///   human-approved intent (X-Intent-Token) and none was approved.</item>
+/// </list>
 /// </summary>
 public static class McpTokenPolicy
 {
-    // Mirrors PROTECTED_SETTING_PREFIXES in services/mcp-server/src/tools/settings.ts.
-    public static readonly string[] ProtectedSettingPrefixes =
-        ["mcp.", "deploy.", "daemon.", "plugins.", "sync.", "paths.", "telemetry."];
-    public static readonly string[] ProtectedSettingKeys = ["backup.dir"];
+    // Mirrors the mcp.* guard in services/mcp-server/src/tools/settings.ts.
+    public static bool IsMcpSetting(string key) =>
+        key.Trim().ToLowerInvariant().StartsWith("mcp.", StringComparison.Ordinal);
 
-    /// <summary>
-    /// Site fields the MCP token may send to <c>POST /api/sites</c>: exactly the
-    /// input schema of <c>wdc_create_site</c> (services/mcp-server/src/tools/sites.ts).
-    /// Anything else (nodeStartCommand, environment, cloudflare, bind
-    /// addresses, ...) either runs a command or widens who can reach the site.
-    /// </summary>
-    public static readonly string[] AllowedSiteFields =
-        ["domain", "documentRoot", "phpVersion", "sslEnabled", "aliases", "framework"];
-
-    /// <summary>
-    /// Routes the MCP token may call, as (METHOD, route pattern). Keep in sync
-    /// with services/mcp-server/daemon-routes.json, which a Vitest test checks
-    /// against the daemonClient calls in services/mcp-server/src/tools/*.ts and
-    /// McpTokenPolicyTests checks against this list. Parameter names do not
-    /// matter: patterns are compared with every <c>{...}</c> segment replaced.
-    /// </summary>
-    public static readonly IReadOnlyList<(string Method, string Pattern)> AllowedRoutes =
-    [
-        // system.ts
-        ("GET", "/api/status"),
-        ("GET", "/api/system"),
-        ("GET", "/api/activity"),
-        // sites.ts
-        ("GET", "/api/sites"),
-        ("GET", "/api/sites/{domain}"),
-        ("GET", "/api/sites/{domain}/access-log"),
-        ("GET", "/api/sites/{domain}/metrics"),
-        ("POST", "/api/sites"),
-        ("DELETE", "/api/sites/{domain}"),
-        // services.ts
-        ("GET", "/api/services"),
-        ("POST", "/api/services/{id}/start"),
-        ("POST", "/api/services/{id}/stop"),
-        // settings.ts
-        ("GET", "/api/settings"),
-        ("PUT", "/api/settings"),
-        // backup.ts
-        ("GET", "/api/backup/list"),
-        ("POST", "/api/backup"),
-        ("POST", "/api/restore"),
-        // binaries.ts
-        ("GET", "/api/binaries/catalog"),
-        ("GET", "/api/binaries/installed"),
-        ("POST", "/api/binaries/catalog/refresh"),
-        ("POST", "/api/binaries/install"),
-        ("DELETE", "/api/binaries/{app}/{version}"),
-        // cloudflare.ts
-        ("GET", "/api/cloudflare/config"),
-        ("PUT", "/api/cloudflare/config"),
-        ("GET", "/api/cloudflare/verify"),
-        ("GET", "/api/cloudflare/zones"),
-        ("GET", "/api/cloudflare/zones/{zoneId}/dns"),
-        ("POST", "/api/cloudflare/zones/{zoneId}/dns"),
-        ("DELETE", "/api/cloudflare/zones/{zoneId}/dns/{recordId}"),
-        ("GET", "/api/cloudflare/tunnels"),
-        ("GET", "/api/cloudflare/suggest-subdomain"),
-        // confirmation.ts, deploy.ts (intent requests; approval stays in the app)
-        ("POST", "/api/mcp/intents"),
-        ("POST", "/api/mcp/intents/confirm-request"),
-        // databases.ts
-        ("GET", "/api/databases"),
-        ("POST", "/api/databases"),
-        ("DELETE", "/api/databases/{name}"),
-        ("GET", "/api/databases/{name}/tables"),
-        ("POST", "/api/databases/{name}/query"),
-        // mysqlUsers.ts
-        ("GET", "/api/plugins/mysql/users"),
-        ("POST", "/api/plugins/mysql/users"),
-        ("POST", "/api/plugins/mysql/users/password"),
-        ("POST", "/api/plugins/mysql/users/grants"),
-        ("POST", "/api/plugins/mysql/users/drop"),
-        ("POST", "/api/plugins/mysql/change-password"),
-        ("POST", "/api/plugins/mysql/reset-password"),
-        // php.ts
-        ("GET", "/api/php/versions"),
-        ("POST", "/api/php/{version}/extensions/{name}"),
-        // plugins.ts
-        ("GET", "/api/plugins"),
-        ("GET", "/api/plugins/marketplace"),
-        ("POST", "/api/plugins/{id}/enable"),
-        ("POST", "/api/plugins/{id}/disable"),
-        ("POST", "/api/plugins/install"),
-        // ssl.ts
-        ("GET", "/api/ssl/certs"),
-        ("POST", "/api/ssl/install-ca"),
-        ("POST", "/api/ssl/generate"),
-        ("DELETE", "/api/ssl/certs/{domain}"),
-        // deploy.ts
-        ("GET", "/api/nks.wdc.deploy/sites/{domain}/history"),
-        ("GET", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}"),
-        ("DELETE", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}"),
-        ("POST", "/api/nks.wdc.deploy/sites/{domain}/hosts/{host}/deploy"),
-        ("POST", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback"),
-        ("POST", "/api/nks.wdc.deploy/sites/{domain}/groups"),
-        ("GET", "/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}"),
-        ("POST", "/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback"),
-        ("POST", "/api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore"),
-    ];
-
-    private static readonly HashSet<(string Method, string Pattern)> AllowedSet =
-        AllowedRoutes.Select(r => (r.Method.ToUpperInvariant(), CanonicalPattern(r.Pattern))).ToHashSet();
-
-    public static bool IsProtectedSetting(string key)
+    public static bool IsOperatorSetting(string key)
     {
         var k = key.Trim().ToLowerInvariant();
-        return ProtectedSettingKeys.Contains(k) || ProtectedSettingPrefixes.Any(p => k.StartsWith(p, StringComparison.Ordinal));
+        return McpCapabilities.OperatorSettingKeys.Contains(k)
+               || McpCapabilities.OperatorSettingPrefixes.Any(p => k.StartsWith(p, StringComparison.Ordinal));
     }
+
+    /// <summary>Routes the MCP token can never call, whatever the capabilities say.</summary>
+    public static readonly IReadOnlyList<McpRoute> NeverAllowed =
+    [
+        new("POST", "/api/mcp/intents/{intentId}/confirm"),
+        new("POST", "/api/mcp/intents/{intentId}/revoke"),
+        new("POST", "/api/mcp/grants"),
+        new("PATCH", "/api/mcp/grants/{id}"),
+        new("DELETE", "/api/mcp/grants/{id}"),
+        new("POST", "/api/mcp/grants/import"),
+        new("POST", "/api/mcp/grants/sweep-now"),
+        new("POST", "/api/mcp/grants/test-match"),
+    ];
+
+    private static readonly HashSet<(string, string)> AlwaysSet =
+        McpCapabilities.AlwaysAllowed.Select(Key).ToHashSet();
+
+    private static readonly HashSet<(string, string)> NeverSet = NeverAllowed.Select(Key).ToHashSet();
+
+    private static readonly Dictionary<(string, string), (McpCapability Capability, McpRoute Route)> GroupRoutes =
+        McpCapabilities.All
+            .SelectMany(c => c.Routes.Select(r => (Key: Key(r), Value: (c, r))))
+            .ToDictionary(x => x.Key, x => x.Value);
+
+    private static (string, string) Key(McpRoute r) => (r.Method.ToUpperInvariant(), CanonicalPattern(r.Pattern));
+
+    private static readonly (string, string) SettingsPut = ("PUT", "/api/settings");
+    private static readonly (string, string) SitePost = ("POST", "/api/sites");
+    private static readonly (string, string) SitePut = ("PUT", "/api/sites/{*}");
+    private static readonly (string, string) CloudflareConfigPut = ("PUT", "/api/cloudflare/config");
 
     /// <summary>
     /// Canonical form of a route pattern or path for comparison: lower case,
@@ -149,58 +85,174 @@ public static class McpTokenPolicy
         return p.ToLowerInvariant();
     }
 
-    public static bool IsAllowedRoute(string method, string routePattern)
+    private static string NormalizedMethod(string method)
     {
         var m = method.ToUpperInvariant();
-        if (m == "HEAD") m = "GET";
-        return AllowedSet.Contains((m, CanonicalPattern(routePattern)));
+        return m == "HEAD" ? "GET" : m;
+    }
+
+    /// <summary>
+    /// Production entry point: capability switches come from SettingsStore
+    /// (<c>mcp.capabilities.&lt;id&gt;</c>), intents are checked with the
+    /// daemon's IDeployIntentValidator.
+    /// </summary>
+    public static Task<McpDenial?> EvaluateAsync(HttpContext ctx)
+    {
+        var settings = ctx.RequestServices.GetService<SettingsStore>();
+        Func<string, bool> isEnabled = settings is null
+            ? id => McpCapabilities.Get(id).DefaultEnabled
+            : id => McpCapabilities.IsEnabled(settings, id);
+        return EvaluateAsync(ctx, isEnabled, ctx.RequestServices.GetService<IDeployIntentValidator>());
     }
 
     /// <summary>Returns why the request is refused, or null when it may proceed.</summary>
-    public static async Task<string?> DenyReasonAsync(HttpContext ctx)
+    public static async Task<McpDenial?> EvaluateAsync(
+        HttpContext ctx, Func<string, bool> isEnabled, IDeployIntentValidator? intentValidator)
     {
+        var method = NormalizedMethod(ctx.Request.Method);
         // The router has already run (WebApplication adds UseRouting ahead of
-        // the app's own middleware), so the matched endpoint is the route the
-        // request will actually reach, whatever the spelling of its path.
+        // the app's own middleware), so this is the route the request reaches.
         var pattern = (ctx.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
         if (pattern is null)
-            return "this route is not available to the MCP token";
-
-        if (!IsAllowedRoute(ctx.Request.Method, pattern))
-            return $"{ctx.Request.Method.ToUpperInvariant()} {pattern} is not available to the MCP token";
-
-        var key = (ctx.Request.Method.ToUpperInvariant(), CanonicalPattern(pattern));
-        if (key == ("PUT", "/api/settings"))
         {
-            var keys = await ReadObjectPropertiesAsync(ctx);
-            var blocked = keys.Select(p => p.Name).Where(IsProtectedSetting).ToArray();
-            if (blocked.Length > 0)
-                return "operator-only settings: " + string.Join(", ", blocked);
+            var unlisted = McpCapabilities.Get(McpCapabilities.UnlistedRoutes);
+            return isEnabled(unlisted.Id) ? null : CapabilityDisabled(unlisted, $"{method} {ctx.Request.Path} matches no route");
         }
-        else if (key == ("POST", "/api/sites"))
+
+        var key = (method, CanonicalPattern(pattern));
+        var routeText = $"{method} {pattern}";
+
+        // Trust root: approving intents, managing grants, any other write under /api/mcp.
+        if (NeverSet.Contains(key)
+            || (method != "GET" && key.Item2.StartsWith("/api/mcp/", StringComparison.Ordinal) && !AlwaysSet.Contains(key)))
+            return Forbidden($"{routeText} is never available to the MCP token: intents are approved and grants managed in the WDC app");
+
+        McpRoute? route = null;
+        McpCapability? routeCapability = null;
+        if (!AlwaysSet.Contains(key))
         {
-            return SiteBodyDenyReason(await ReadObjectPropertiesAsync(ctx));
+            if (GroupRoutes.TryGetValue(key, out var group))
+                (routeCapability, route) = group;
+            else
+                routeCapability = McpCapabilities.Get(McpCapabilities.UnlistedRoutes);
+            if (!isEnabled(routeCapability.Id))
+                return CapabilityDisabled(routeCapability, routeText);
+        }
+
+        var needsBody = key == SettingsPut || key == SitePost || key == SitePut || key == CloudflareConfigPut
+                        || route?.IntentTarget?.Contains("{body.", StringComparison.Ordinal) == true;
+        var body = needsBody ? await ReadObjectPropertiesAsync(ctx) : [];
+
+        if (key == SettingsPut)
+        {
+            var names = body.Select(p => p.Name).ToList();
+            var mcpKeys = names.Where(IsMcpSetting).ToArray();
+            if (mcpKeys.Length > 0)
+                return Forbidden("mcp.* settings decide what the MCP token may do and are changed only in the WDC app: " + string.Join(", ", mcpKeys));
+            var operatorKeys = names.Where(IsOperatorSetting).ToArray();
+            if (operatorKeys.Length > 0 && !isEnabled(McpCapabilities.SettingsOperator))
+                return CapabilityDisabled(McpCapabilities.Get(McpCapabilities.SettingsOperator), "operator-only settings: " + string.Join(", ", operatorKeys));
+        }
+        else if (key == SitePost || key == SitePut)
+        {
+            var setsStartCommand = body.Any(p =>
+                p.Name.Equals("nodeStartCommand", StringComparison.OrdinalIgnoreCase)
+                && !(p.Kind == JsonValueKind.Null || p.Kind == JsonValueKind.String && string.IsNullOrWhiteSpace(p.Text)));
+            var extra = body
+                .Select(p => p.Name)
+                .Where(n => !n.Equals("nodeStartCommand", StringComparison.OrdinalIgnoreCase)
+                            && !McpCapabilities.BasicSiteFields.Contains(n, StringComparer.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (extra.Length > 0 && !isEnabled(McpCapabilities.SiteAdvancedFields))
+                return CapabilityDisabled(McpCapabilities.Get(McpCapabilities.SiteAdvancedFields), "site fields: " + string.Join(", ", extra));
+            if (setsStartCommand)
+            {
+                var node = McpCapabilities.Get(McpCapabilities.NodeProcess);
+                if (!isEnabled(node.Id))
+                    return CapabilityDisabled(node, "nodeStartCommand runs a shell command");
+                var fields = node.BodyFields.First(f => (f.Method.ToUpperInvariant(), CanonicalPattern(f.Pattern)) == key);
+                if (await IntentGateAsync(ctx, intentValidator, node, fields.IntentKind!, fields.IntentTarget!, McpCapabilities.IntentHost, body) is { } denied)
+                    return denied;
+            }
+        }
+        else if (key == CloudflareConfigPut)
+        {
+            var credentials = body
+                .Select(p => p.Name)
+                .Where(n => McpCapabilities.CloudflareCredentialFields.Contains(n, StringComparer.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (credentials.Length > 0)
+            {
+                var cf = McpCapabilities.Get(McpCapabilities.CloudflareCredentials);
+                if (!isEnabled(cf.Id))
+                    return CapabilityDisabled(cf, "Cloudflare credential fields: " + string.Join(", ", credentials));
+                var fields = cf.BodyFields.Single();
+                if (await IntentGateAsync(ctx, intentValidator, cf, fields.IntentKind!, fields.IntentTarget!, McpCapabilities.IntentHost, body) is { } denied)
+                    return denied;
+            }
+        }
+
+        if (route is { IntentKind: not null, IntentByEndpoint: false } && routeCapability is not null)
+        {
+            if (await IntentGateAsync(ctx, intentValidator, routeCapability, route.IntentKind, route.IntentTarget ?? "*", route.IntentHost, body) is { } denied)
+                return denied;
         }
         return null;
     }
 
-    private static string? SiteBodyDenyReason(IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)> props)
-    {
-        // Every occurrence counts: with duplicate keys the deserializer keeps the last one.
-        var setsStartCommand = props.Any(p =>
-            p.Name.Equals("nodeStartCommand", StringComparison.OrdinalIgnoreCase)
-            && !(p.Kind == JsonValueKind.Null || p.Kind == JsonValueKind.String && string.IsNullOrWhiteSpace(p.Text)));
-        if (setsStartCommand)
-            return "nodeStartCommand runs a shell command and cannot be set with the MCP token; set it in the WDC app";
+    private static McpDenial Forbidden(string detail) =>
+        new(StatusCodes.Status403Forbidden, new { error = "mcp_forbidden", detail });
 
-        var extra = props
-            .Select(p => p.Name)
-            .Where(n => !n.Equals("nodeStartCommand", StringComparison.OrdinalIgnoreCase)
-                        && !AllowedSiteFields.Contains(n, StringComparer.OrdinalIgnoreCase))
-            .ToArray();
-        return extra.Length > 0
-            ? "site fields not available to the MCP token: " + string.Join(", ", extra)
-            : null;
+    private static McpDenial CapabilityDisabled(McpCapability capability, string detail) =>
+        new(StatusCodes.Status403Forbidden, new
+        {
+            error = "mcp_capability_disabled",
+            capability = capability.Id,
+            settingKey = capability.SettingKey,
+            detail,
+            hint = $"The WDC operator has not allowed \"{capability.Title}\" for AI agents. " +
+                   $"Enable it in WDC → Settings → MCP ({capability.SettingKey}).",
+        });
+
+    /// <summary>Expands an intent target template: <c>{name}</c> route value, <c>{body.name}</c> body field.</summary>
+    internal static string ExpandTarget(string template, HttpContext ctx, IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)> body) =>
+        Regex.Replace(template, @"\{(body\.)?([A-Za-z0-9_]+)\}", m =>
+        {
+            var name = m.Groups[2].Value;
+            if (m.Groups[1].Success)
+                return body.LastOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).Text ?? "";
+            return ctx.Request.RouteValues.TryGetValue(name, out var v) ? Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture) ?? "" : "";
+        });
+
+    private static async Task<McpDenial?> IntentGateAsync(
+        HttpContext ctx,
+        IDeployIntentValidator? validator,
+        McpCapability capability,
+        string kind,
+        string targetTemplate,
+        string host,
+        IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)> body)
+    {
+        var domain = ExpandTarget(targetTemplate, ctx, body);
+        var hint = $"Ask the user to approve it: call wdc_request_confirmation for intent kind \"{kind}\" " +
+                   $"on \"{domain}\", then send the approved intentToken as X-Intent-Token.";
+        if (validator is null)
+            return new(StatusCodes.Status403Forbidden, new
+            {
+                error = "intent_rejected", reason = "validator_unavailable", detail = (string?)null,
+                capability = capability.Id, intentKind = kind, intentDomain = domain, intentHost = host, hint,
+            });
+
+        var token = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault() ?? "";
+        var verdict = await validator.ValidateAndConsumeAsync(token, kind, domain, host, allowUnconfirmed: false, ctx.RequestAborted);
+        if (verdict.Ok) return null;
+        return new(verdict.Reason == "pending_confirmation" ? 425 : StatusCodes.Status403Forbidden, new
+        {
+            error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail,
+            capability = capability.Id, intentKind = kind, intentDomain = domain, intentHost = host, hint,
+        });
     }
 
     private static async Task<IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)>> ReadObjectPropertiesAsync(HttpContext ctx)

@@ -4,7 +4,7 @@
  * The daemon gives the MCP token an allow-list of routes
  * (McpTokenPolicy.AllowedRoutes in the daemon). McpTokenPolicyTests checks
  * that list against daemon-routes.json; this test checks daemon-routes.json
- * against every daemonClient call in src/tools/*.ts. A tool that starts
+ * against every daemonClient call in src/*.ts and src/tools/*.ts. A tool that starts
  * calling a new route fails here until the route is added to both lists.
  */
 
@@ -14,11 +14,11 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const toolsDir = join(here, 'tools')
+const sourceDirs = [here, join(here, 'tools')]
 const fixturePath = join(here, '..', 'daemon-routes.json')
 
-const CALL = /daemonClient\.(get|post|put|delete)\s*(?:<[^>]*>)?\s*\(\s*(['`])([^'`]*)\2/g
-const ANY_CALL = /daemonClient\.(get|post|put|delete)\s*(?:<[^>]*>)?\s*\(/g
+const CALL = /daemonClient\s*\.(get|post|put|delete)\s*(?:<[^>]*>)?\s*\(\s*(['`])([^'`]*)\2/g
+const ANY_CALL = /daemonClient\s*\.(get|post|put|delete)\s*(?:<[^>]*>)?\s*\(/g
 
 function canonical(path: string): string {
   return path
@@ -31,15 +31,20 @@ function canonical(path: string): string {
 function routesCalledByTools(): { routes: Set<string>; unparsed: string[] } {
   const routes = new Set<string>()
   const unparsed: string[] = []
-  const files = readdirSync(toolsDir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'))
+  const files = sourceDirs.flatMap(dir =>
+    readdirSync(dir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts')).map(f => join(dir, f)))
   for (const file of files) {
-    let src = readFileSync(join(toolsDir, file), 'utf8')
+    let src = readFileSync(file, 'utf8')
     const prefix = src.match(/const PREFIX = '([^']+)'/)
     if (prefix) src = src.replaceAll('${PREFIX}', prefix[1]!)
     const total = [...src.matchAll(ANY_CALL)].length
     const calls = [...src.matchAll(CALL)]
     if (calls.length !== total) unparsed.push(`${file}: ${total - calls.length} call(s) without a literal path`)
-    for (const m of calls) routes.add(`${m[1]!.toUpperCase()} ${canonical(m[3]!)}`)
+    for (const m of calls) {
+      // Only /api routes are subject to the MCP token policy (/healthz is public).
+      if (!m[3]!.startsWith('/api')) continue
+      routes.add(`${m[1]!.toUpperCase()} ${canonical(m[3]!)}`)
+    }
   }
   return { routes, unparsed }
 }

@@ -7,7 +7,7 @@ namespace NKS.WebDevConsole.Daemon.Config;
 /// <summary>
 /// Bearer-token gate for the daemon's /api surface. A request carries either
 /// the GUI token (full access) or the MCP token (limited by
-/// <see cref="McpTokenPolicy"/>). Lifted out of Program.cs so tests can run the
+/// <see cref="McpTokenPolicy"/> and the operator's MCP capabilities). Lifted out of Program.cs so tests can run the
 /// exact production gate against real routing.
 /// </summary>
 internal static class DaemonAuth
@@ -77,11 +77,11 @@ internal static class DaemonAuth
                 McpCallerContext.IsMcpToken = isMcp;
                 if (isMcp)
                 {
-                    var denied = await McpTokenPolicy.DenyReasonAsync(ctx);
+                    var denied = await McpTokenPolicy.EvaluateAsync(ctx);
                     if (denied is not null)
                     {
-                        ctx.Response.StatusCode = 403;
-                        await ctx.Response.WriteAsJsonAsync(new { error = "mcp_forbidden", detail = denied });
+                        ctx.Response.StatusCode = denied.StatusCode;
+                        await ctx.Response.WriteAsJsonAsync(denied.Body, denied.Body.GetType());
                         return;
                     }
                 }

@@ -1,5 +1,5 @@
 {
-  "$comment": "Daemon routes the MCP tools in src/tools/*.ts call. The daemon allows the MCP token on exactly these routes (McpTokenPolicy.AllowedRoutes); src/daemonRoutes.test.ts and McpTokenPolicyTests keep the three in sync. Parameter names are not compared.",
+  "$comment": "Daemon /api routes the MCP server calls (src/*.ts, src/tools/*.ts). src/daemonRoutes.test.ts checks this list against the sources; the daemon's McpTokenPolicyTests checks that every route is either always allowed for the MCP token (McpCapabilities.AlwaysAllowed) or belongs to an operator-controlled capability (McpCapabilities.All). Parameter names are not compared.",
   "routes": [
     "GET /api/status",
     "GET /api/system",
@@ -65,6 +65,7 @@
     "POST /api/nks.wdc.deploy/sites/{domain}/groups",
     "GET /api/nks.wdc.deploy/sites/{domain}/groups/{groupId}",
     "POST /api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback",
-    "POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore"
+    "POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore",
+    "POST /api/mcp/tool-calls"
   ]
 }
