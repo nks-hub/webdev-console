@@ -134,12 +134,14 @@ public static class McpCapabilities
         new("DELETE", "/api/databases/{name}"),
         new("GET", "/api/databases/{name}/tables"),
         new("POST", "/api/databases/{name}/query"),
-        // mysqlUsers.ts
+        // mysqlUsers.ts. Creating and granting stay open for read / readWrite
+        // on an ordinary database to a local account; the "admin" preset or a
+        // non-local host is database_admin (see that capability's BodyFields).
+        // Resetting an account's password needs an intent (checked by the endpoint).
         new("GET", "/api/plugins/mysql/users"),
         new("POST", "/api/plugins/mysql/users"),
-        new("POST", "/api/plugins/mysql/users/password"),
+        new("POST", "/api/plugins/mysql/users/password", "mysql_user_password", "{body.userName}@{body.host}", IntentByEndpoint: true, IntentHost: "*mysql*"),
         new("POST", "/api/plugins/mysql/users/grants"),
-        new("POST", "/api/plugins/mysql/change-password"),
         // php.ts
         new("GET", "/api/php/versions"),
         new("POST", "/api/php/{version}/extensions/{name}"),
@@ -173,6 +175,13 @@ public static class McpCapabilities
     /// <summary>Site fields of the wdc_create_site schema (services/mcp-server/src/tools/sites.ts).</summary>
     public static readonly string[] BasicSiteFields =
         ["domain", "documentRoot", "phpVersion", "sslEnabled", "aliases", "framework"];
+
+    /// <summary>
+    /// Values of a MySQL account create / grant request that make it database
+    /// administration (descriptive; DatabaseEndpoints decides on the parsed values).
+    /// </summary>
+    public static readonly string[] ElevatedMySqlAccountFields =
+        ["privileges=admin", "host other than localhost, 127.0.0.1, ::1"];
 
     public static readonly string[] CloudflareCredentialFields =
         ["cloudflaredPath", "tunnelToken", "apiToken", "accountId"];
@@ -260,20 +269,28 @@ public static class McpCapabilities
             Tools: ["wdc_install_plugin"]),
         new(DatabaseAdmin,
             "Database server administration",
-            "Reset the MySQL or PostgreSQL root password, drop MySQL accounts, read or set the stored root password. " +
-            "Resets and drops need an approved intent (checked by the endpoint).",
+            "Reset or change the MySQL or PostgreSQL root password, drop MySQL accounts, create MySQL accounts with " +
+            "the admin preset or for a non-local host, read or set the stored root password. Resets, changes, drops " +
+            "and admin accounts need an approved intent (checked by the endpoint).",
             DefaultEnabled: false,
             Routes:
             [
                 // The endpoints run these intent gates (DatabaseEndpoints.IntentGateAsync).
                 new("POST", "/api/plugins/mysql/reset-password", "mysql_root_reset", "root", IntentByEndpoint: true, IntentHost: "*mysql*"),
+                new("POST", "/api/plugins/mysql/change-password", "mysql_root_reset", "root", IntentByEndpoint: true, IntentHost: "*mysql*"),
                 new("POST", "/api/plugins/mysql/users/drop", "mysql_user_drop", "{body.userName}@{body.host}", IntentByEndpoint: true, IntentHost: "*mysql*"),
                 new("POST", "/api/plugins/postgresql/reset-password", "postgres_root_reset", "postgres", IntentByEndpoint: true, IntentHost: "*postgres*"),
                 new("GET", "/api/databases/root-password"),
                 new("POST", "/api/databases/root-password"),
             ],
-            BodyFields: [],
-            Tools: ["wdc_reset_mysql_root_password", "wdc_drop_mysql_user"]),
+            // Checked by the endpoint on the values it uses (DatabaseEndpoints.MySqlAccountGrantIsElevated):
+            // the always-allowed routes need this capability and an intent only for these values.
+            BodyFields:
+            [
+                new("POST", "/api/plugins/mysql/users", [.. ElevatedMySqlAccountFields], "mysql_user_admin", "{body.userName}@{body.host}"),
+                new("POST", "/api/plugins/mysql/users/grants", [.. ElevatedMySqlAccountFields], "mysql_user_admin", "{body.userName}@{body.host}"),
+            ],
+            Tools: ["wdc_reset_mysql_root_password", "wdc_change_mysql_root_password", "wdc_drop_mysql_user"]),
         new(BackupRestore,
             "Backup restore",
             "Restore a WDC backup over the current state. Needs an approved intent (checked by the endpoint).",

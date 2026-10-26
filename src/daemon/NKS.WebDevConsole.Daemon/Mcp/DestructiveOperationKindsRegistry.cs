@@ -143,6 +143,12 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
             "mysql_root_reset", "Reset the MySQL root password", CorePluginId, DangerLevel.Destructive);
         _kinds["mysql_user_drop"] = new DestructiveOperationKind(
             "mysql_user_drop", "Drop a MySQL user account", CorePluginId, DangerLevel.Destructive);
+        // Account takeover / privilege escalation: resetting another account's
+        // password, or creating an account with ALL PRIVILEGES or a non-local host.
+        _kinds["mysql_user_password"] = new DestructiveOperationKind(
+            "mysql_user_password", "Reset a MySQL user account's password", CorePluginId, DangerLevel.Destructive);
+        _kinds["mysql_user_admin"] = new DestructiveOperationKind(
+            "mysql_user_admin", "Create or grant a MySQL account with admin privileges or a non-local host", CorePluginId, DangerLevel.Destructive);
         _kinds["postgres_root_reset"] = new DestructiveOperationKind(
             "postgres_root_reset", "Reset the PostgreSQL superuser password", CorePluginId, DangerLevel.Destructive);
     }

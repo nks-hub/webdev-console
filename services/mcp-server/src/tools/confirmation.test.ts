@@ -22,6 +22,8 @@ describe('intentFor', () => {
     ['plugin_install', 'nks.wdc.redis', { kind: 'plugin_install', domain: 'nks.wdc.redis', host: '*plugin*' }],
     ['backup_restore', 'ignored', { kind: 'backup_restore', domain: '*backup*', host: '*backup*' }],
     ['mysql_user_drop', 'app@localhost', { kind: 'mysql_user_drop', domain: 'app@localhost', host: '*mysql*' }],
+    ['mysql_user_password', 'app@localhost', { kind: 'mysql_user_password', domain: 'app@localhost', host: '*mysql*' }],
+    ['mysql_user_admin', 'app@%', { kind: 'mysql_user_admin', domain: 'app@%', host: '*mysql*' }],
     ['mysql_root_reset', 'ignored', { kind: 'mysql_root_reset', domain: 'root', host: '*mysql*' }],
     ['cloudflare_credentials', 'config', { kind: 'cloudflare_credentials', domain: 'config', host: '*mcp*' }],
     ['node_process', 'app.loc', { kind: 'node_process', domain: 'app.loc', host: '*mcp*' }],

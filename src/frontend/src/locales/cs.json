@@ -496,6 +496,8 @@
       "daemon_admin": "Restartovat, vypnout, resetovat nebo odinstalovat démona",
       "mysql_root_reset": "Resetovat heslo uživatele root v MySQL",
       "mysql_user_drop": "Smazat uživatelský účet MySQL",
+      "mysql_user_password": "Resetovat heslo uživatelského účtu MySQL",
+      "mysql_user_admin": "Vytvořit nebo oprávnit účet MySQL s administrátorskými právy nebo nelokálním hostem",
       "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL"
     },
     "empty": "Žádné druhy nejsou registrované",

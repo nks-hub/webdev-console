@@ -158,7 +158,7 @@ describe('registerMysqlUsersTools — handler routing', () => {
       password: 's3cret',
       database: 'shop',
       privileges: 'readWrite',
-    })
+    }, undefined)
   })
 
   it('wdc_create_mysql_user → POST omits optional database/privileges when absent', async () => {
@@ -169,7 +169,7 @@ describe('registerMysqlUsersTools — handler routing', () => {
       userName: 'app',
       host: 'localhost',
       password: 'pw',
-    })
+    }, undefined)
   })
 
   it('wdc_set_mysql_user_password → POST .../password', async () => {
@@ -180,7 +180,7 @@ describe('registerMysqlUsersTools — handler routing', () => {
       userName: 'app',
       host: '%',
       password: 'newpw',
-    })
+    }, undefined)
   })
 
   it('wdc_grant_mysql_user_database → POST .../grants', async () => {
@@ -197,7 +197,7 @@ describe('registerMysqlUsersTools — handler routing', () => {
       host: 'localhost',
       database: 'shop',
       privileges: 'admin',
-    })
+    }, undefined)
   })
 
   it('wdc_drop_mysql_user → POST .../drop, confirm not forwarded', async () => {
@@ -229,7 +229,39 @@ describe('registerMysqlUsersTools — handler routing', () => {
     expect(mockPost).toHaveBeenCalledWith('/api/plugins/mysql/change-password', {
       currentPwd: 'old',
       newPwd: 'new',
-    })
+    }, undefined)
+  })
+
+  it.each([
+    [
+      'wdc_set_mysql_user_password',
+      { userName: 'app', host: 'localhost', password: 'newpw-123' },
+      '/api/plugins/mysql/users/password',
+      { userName: 'app', host: 'localhost', password: 'newpw-123' },
+    ],
+    [
+      'wdc_create_mysql_user',
+      { userName: 'app', host: '%', password: 'pw-12345', database: 'shop', privileges: 'admin' },
+      '/api/plugins/mysql/users',
+      { userName: 'app', host: '%', password: 'pw-12345', database: 'shop', privileges: 'admin' },
+    ],
+    [
+      'wdc_grant_mysql_user_database',
+      { userName: 'app', host: 'localhost', database: 'shop', privileges: 'admin' },
+      '/api/plugins/mysql/users/grants',
+      { userName: 'app', host: 'localhost', database: 'shop', privileges: 'admin' },
+    ],
+    [
+      'wdc_change_mysql_root_password',
+      { currentPwd: '', newPwd: 'new-root-1' },
+      '/api/plugins/mysql/change-password',
+      { currentPwd: '', newPwd: 'new-root-1' },
+    ],
+  ] as const)('%s forwards the approved intent as X-Intent-Token', async (name, args, path, body) => {
+    const tool = build().find(t => t.name === name)!
+    expect(tool.schema.inputSchema.intentToken).toBeDefined()
+    await tool.handler({ ...args, intentToken: 'intent.token.sig' })
+    expect(mockPost).toHaveBeenCalledWith(path, body, { 'X-Intent-Token': 'intent.token.sig' })
   })
 
   it('wdc_reset_mysql_root_password → POST .../reset-password, confirm not forwarded', async () => {

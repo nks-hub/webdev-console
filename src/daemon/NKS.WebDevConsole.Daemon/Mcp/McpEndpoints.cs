@@ -51,7 +51,7 @@ public static class McpEndpoints
             }),
             tools = c.Tools,
         }),
-        alwaysAllowed = McpCapabilities.AlwaysAllowed.Select(r => new { method = r.Method, pattern = r.Pattern }),
+        alwaysAllowed = McpCapabilities.AlwaysAllowed.Select(r => new { method = r.Method, pattern = r.Pattern, intentKind = r.IntentKind }),
         neverAllowed = McpTokenPolicy.NeverAllowed.Select(r => new { method = r.Method, pattern = r.Pattern }),
         neverAllowedSettings = "mcp.*",
     };

@@ -205,7 +205,7 @@ public static class McpTokenPolicy
     private static McpDenial Forbidden(string detail) =>
         new(StatusCodes.Status403Forbidden, new { error = "mcp_forbidden", detail });
 
-    private static McpDenial CapabilityDisabled(McpCapability capability, string detail) =>
+    internal static McpDenial CapabilityDisabled(McpCapability capability, string detail) =>
         new(StatusCodes.Status403Forbidden, new
         {
             error = "mcp_capability_disabled",

@@ -31,7 +31,14 @@ export const CONFIRMABLE_OPERATIONS = {
   plugin_uninstall: { kind: 'plugin_uninstall', host: '*plugin*', describe: 'uninstall plugin' },
   backup_restore: { kind: 'backup_restore', host: '*backup*', describe: 'restore a backup over the current state', fixedDomain: '*backup*' },
   mysql_user_drop: { kind: 'mysql_user_drop', host: '*mysql*', describe: 'drop the MySQL account' },
-  mysql_root_reset: { kind: 'mysql_root_reset', host: '*mysql*', describe: 'reset the MySQL root password', fixedDomain: 'root' },
+  mysql_user_password: { kind: 'mysql_user_password', host: '*mysql*', describe: 'reset the password of the MySQL account' },
+  mysql_root_reset: { kind: 'mysql_root_reset', host: '*mysql*', describe: 'reset or change the MySQL root password', fixedDomain: 'root' },
+  // Needs the database_admin capability too (WDC → Settings → MCP).
+  mysql_user_admin: {
+    kind: 'mysql_user_admin',
+    host: '*mysql*',
+    describe: 'create or grant, with admin privileges or for a non-local host, the MySQL account',
+  },
   // Capability groups the operator enables in WDC → Settings → MCP; each
   // call in them still needs an approved intent (host '*mcp*').
   cloudflare_credentials: { kind: 'cloudflare_credentials', host: '*mcp*', describe: 'change Cloudflare credentials or tunnel routing for' },
@@ -76,13 +83,15 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
       description:
         'Destructive operations (dropping or changing databases, deleting sites, stopping services, ' +
         'revoking certificates, deleting DNS records, installing binaries or plugins, restoring backups, ' +
-        'dropping MySQL accounts, resetting the MySQL root password) ' +
+        'dropping MySQL accounts or resetting their passwords, creating MySQL accounts with admin privileges or ' +
+        'a non-local host, resetting or changing the MySQL root password) ' +
         'need the user\'s approval in the WDC app. Call this first, tell the user what you want to do and ' +
         'why, wait for them to approve the banner in WDC, then call the operation\'s tool with the ' +
         'returned intentToken. Until it is approved the daemon answers 425 pending_confirmation.\n\n' +
         'Args:\n  operation: One of ' + operations.join(', ') + '.\n' +
         '  target: What the operation acts on (database name, site domain, service id, zone id, ' +
-        'binary app, plugin id, MySQL account as userName@host for mysql_user_drop, "config" or the ' +
+        'binary app, plugin id, MySQL account as userName@host for mysql_user_drop, mysql_user_password and ' +
+        'mysql_user_admin, "config" or the ' +
         'tunnel id for cloudflare_credentials, site domain for node_process, service id for ' +
         'service_config_write, restart/shutdown/reset/uninstall for daemon_admin). ' +
         'Ignored for backup_restore, mysql_root_reset and hosts_write. When the daemon refuses a call ' +
