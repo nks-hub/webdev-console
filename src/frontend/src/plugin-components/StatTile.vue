@@ -2,7 +2,14 @@
   <!-- F91.6: generic stat tile with optional route navigation + icon.
        Plugins use this for Dashboard contributions like "Node.js processes:
        3" without shipping their own Vue component. -->
-  <div class="stat-card" :class="{ 'stat-clickable': route }" @click="onClick">
+  <div
+    class="stat-card"
+    :class="{ 'stat-clickable': route }"
+    :role="route ? 'link' : undefined"
+    :tabindex="route ? 0 : undefined"
+    @click="onClick"
+    @keydown.enter.self="onClick"
+  >
     <el-icon class="stat-icon" :class="{ 'stat-icon-running': highlight }"><component :is="iconComponent" /></el-icon>
     <div class="stat-content">
       <div class="stat-value mono">{{ value }}</div>

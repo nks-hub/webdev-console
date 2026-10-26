@@ -15,9 +15,9 @@
 
     <!-- Breadcrumb -->
     <div class="help-breadcrumb" v-if="activeTopic">
-      <span class="bc-item bc-link" @click="clearTopic">{{ t('help.breadcrumbRoot') }}</span>
+      <span v-activate:link class="bc-item bc-link" @click="clearTopic">{{ t('help.breadcrumbRoot') }}</span>
       <span class="bc-sep">/</span>
-      <span class="bc-item bc-link" @click="clearTopic">{{ t(`help.groups.${activeGroup?.key}`) }}</span>
+      <span v-activate:link class="bc-item bc-link" @click="clearTopic">{{ t(`help.groups.${activeGroup?.key}`) }}</span>
       <span class="bc-sep">/</span>
       <span class="bc-item bc-current">{{ t(`help.topics.${activeTopic.key}.title`) }}</span>
     </div>

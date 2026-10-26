@@ -27,7 +27,7 @@
         <span class="stat tier-chip" :class="`tier-${trustTier}`" :title="t(`mcpHub.tier.${trustTier}Hint`)">
           <strong>{{ tierIcon }} {{ t(`mcpHub.tier.${trustTier}`) }}</strong>
         </span>
-        <span class="stat clickable-stat" @click="onActiveClick">
+        <span v-activate class="stat clickable-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
           <span class="muted">{{ t('mcpHub.stats.active') }}</span>
         </span>
@@ -40,7 +40,7 @@
           <strong>⚠️ {{ grantsStats.deadweight }}</strong>
           <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
         </span>
-        <span class="stat clickable-stat" @click="onTotalMatchesClick">
+        <span v-activate class="stat clickable-stat" @click="onTotalMatchesClick">
           <strong>{{ grantsStats.totalMatches }}</strong>
           <span class="muted">{{ t('mcpHub.stats.totalMatches') }}</span>
         </span>

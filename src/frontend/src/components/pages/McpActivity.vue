@@ -210,15 +210,17 @@
         </div>
         <div v-if="!collapsedSessions.has(session.key)" class="session-body">
           <div v-for="row in groupReads(session.entries, session.key)" :key="row.key">
-            <div v-if="row.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(row.key)">
+            <div v-if="row.kind === 'collapsed-reads'" v-activate class="collapsed-reads-row" @click="expandReads(row.key)">
               <el-icon class="chev"><ArrowRight /></el-icon>
               <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
               <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
             </div>
             <template v-else>
               <div
+                v-activate
                 class="call-row clickable-row"
                 :class="[`danger-${row.entry.dangerLevel}`, { expanded: expandedRows.has(row.entry.id) }]"
+                :aria-expanded="expandedRows.has(row.entry.id)"
                 @click="toggleRow(row.entry.id)"
               >
                 <HealthStatusDot :level="dangerToDotLevel(row.entry.dangerLevel)" />
@@ -268,7 +270,7 @@
     <!-- Flat view (legacy / debugging) -->
     <div v-else class="activity-timeline">
       <div v-for="row in flatView" :key="row.key" class="activity-group" :class="{ collapsed: row.kind === 'collapsed-reads' }">
-        <div v-if="row.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(row.key)">
+        <div v-if="row.kind === 'collapsed-reads'" v-activate class="collapsed-reads-row" @click="expandReads(row.key)">
           <el-icon class="chev"><ArrowRight /></el-icon>
           <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
           <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
