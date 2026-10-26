@@ -48,21 +48,66 @@ public sealed class BackupManager
         Directory.CreateDirectory(_backupRoot);
     }
 
-    public string DefaultBackupPath()
+    /// <summary>Folder that holds the backup archives (<c>{wdcRoot}/backups</c>).</summary>
+    public string BackupRoot => _backupRoot;
+
+    public string DefaultBackupPath() => UniquePath("wdc-backup");
+
+    private string UniquePath(string prefix)
     {
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
-        return Path.Combine(_backupRoot, $"wdc-backup-{timestamp}.zip");
+        var path = Path.Combine(_backupRoot, $"{prefix}-{timestamp}.zip");
+        for (var i = 2; File.Exists(path); i++)
+            path = Path.Combine(_backupRoot, $"{prefix}-{timestamp}-{i}.zip");
+        return path;
     }
 
     /// <summary>
-    /// Creates a zip backup at the requested path with the given content flags.
+    /// Resolves where a backup is written. Without <paramref name="outputPath"/>
+    /// it is a new timestamped file in the backup folder. A caller-chosen path
+    /// must name a <c>.zip</c> file directly in the backup folder (a bare file
+    /// name is resolved there): the archive holds state.db and TLS private
+    /// keys, so it must never land, or overwrite a file, anywhere else.
+    /// </summary>
+    /// <exception cref="ArgumentException">The path is outside the backup folder or not a .zip file.</exception>
+    public string ResolveOutputPath(string? outputPath)
+    {
+        if (string.IsNullOrWhiteSpace(outputPath)) return DefaultBackupPath();
+
+        var root = Path.GetFullPath(_backupRoot);
+        string full;
+        try { full = Path.GetFullPath(outputPath, root); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new ArgumentException($"Invalid backup path: {ex.Message}", nameof(outputPath), ex);
+        }
+
+        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        var dir = Path.GetDirectoryName(full);
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(root, full)
+            || dir is null
+            || !string.Equals(Path.TrimEndingDirectorySeparator(dir), Path.TrimEndingDirectorySeparator(root), comparison))
+            throw new ArgumentException($"Backups are written to {root}; pass a file name in that folder.", nameof(outputPath));
+        if (!full.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Backup file name must end in .zip.", nameof(outputPath));
+        return full;
+    }
+
+    /// <summary>
+    /// Creates a zip backup with the given content flags, at
+    /// <see cref="ResolveOutputPath"/>. Never overwrites an existing file, and
+    /// on Unix the archive is created owner-only (0600) from the start.
     /// Returns the absolute path, file count, and archive size.
     /// </summary>
+    /// <exception cref="ArgumentException">The path is outside the backup folder or not a .zip file.</exception>
+    /// <exception cref="BackupTargetExistsException">A file already exists at the path.</exception>
     public (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags) CreateBackup(
         string? outputPath = null,
         BackupContentFlags flags = BackupContentFlags.Default)
     {
-        var target = string.IsNullOrWhiteSpace(outputPath) ? DefaultBackupPath() : Path.GetFullPath(outputPath);
+        var target = ResolveOutputPath(outputPath);
         var targetDir = Path.GetDirectoryName(target)!;
 
         _logger.LogInformation("Backup starting → {Path} (flags={Flags}, wdcRoot={Root})", target, flags, _wdcRoot);
@@ -76,16 +121,13 @@ public sealed class BackupManager
         if (!Directory.Exists(_wdcRoot))
             _logger.LogWarning("WDC root does not exist: {Root} — backup may be empty", _wdcRoot);
 
-        if (File.Exists(target))
-        {
-            _logger.LogDebug("Removing existing backup file: {Path}", target);
-            File.Delete(target);
-        }
+        if (File.Exists(target) || Directory.Exists(target))
+            throw new BackupTargetExistsException(target);
 
         int count = 0;
         try
         {
-            using var fs = File.Create(target);
+            using var fs = OpenNewArchive(target);
             _logger.LogDebug("Archive file stream opened: {Path}", target);
 
             using var zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
@@ -319,7 +361,7 @@ public sealed class BackupManager
         if (!File.Exists(archivePath))
             throw new FileNotFoundException("Backup archive not found", archivePath);
 
-        var safetyBackup = Path.Combine(_backupRoot, $"auto-pre-restore-{DateTime.UtcNow:yyyyMMdd-HHmmss}.zip");
+        var safetyBackup = UniquePath("auto-pre-restore");
         try
         {
             CreateBackup(safetyBackup);
@@ -450,6 +492,31 @@ public sealed class BackupManager
         return Directory.EnumerateFiles(dst, "*", SearchOption.AllDirectories).Count();
     }
 
+    /// <summary>
+    /// Opens a new archive file: CreateNew (an existing file or link at the
+    /// path fails instead of being followed or truncated) and, on Unix, mode
+    /// 0600 at creation so the archive is never readable by other users.
+    /// </summary>
+    internal static FileStream OpenNewArchive(string path)
+    {
+        var options = new FileStreamOptions
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+        };
+        if (!OperatingSystem.IsWindows())
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        try
+        {
+            return new FileStream(path, options);
+        }
+        catch (IOException) when (File.Exists(path) || Directory.Exists(path))
+        {
+            throw new BackupTargetExistsException(path);
+        }
+    }
+
     public IReadOnlyList<BackupEntry> ListBackups()
     {
         if (!Directory.Exists(_backupRoot)) return Array.Empty<BackupEntry>();
@@ -483,4 +550,11 @@ public sealed class BackupManager
 
     /// <summary>Represents a single backup archive in the listing.</summary>
     public record BackupEntry(string Path, long Size, DateTime Created, BackupContentFlags ContentFlags);
+}
+
+/// <summary>A backup was asked to write to a path that already exists.</summary>
+public sealed class BackupTargetExistsException(string path)
+    : IOException($"Backup file already exists: {path}")
+{
+    public string Path { get; } = path;
 }

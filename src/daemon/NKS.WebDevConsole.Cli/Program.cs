@@ -2767,7 +2767,7 @@ migrateCommand.SetAction(async (parseResult, ct) =>
 
 // --- wdc backup ---
 var backupCommand = new Command("backup", "Create a zip backup of NKS WDC state (sites, certs, db)");
-var backupOutOption = new Option<string?>("--out") { Description = "Output zip path (default: ~/.wdc/backups/wdc-backup-<timestamp>.zip)" };
+var backupOutOption = new Option<string?>("--out") { Description = "Also save the zip to this path (moved out of ~/.wdc/backups/; default: keep it there as wdc-backup-<timestamp>.zip)" };
 backupCommand.Add(backupOutOption);
 backupCommand.SetAction(async (parseResult, ct) =>
 {
@@ -2776,13 +2776,48 @@ backupCommand.SetAction(async (parseResult, ct) =>
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
 
+    // The daemon only writes backups into its own backup folder (the zip holds
+    // state.db and TLS keys). For --out the CLI, running as the user, moves
+    // the new archive to the requested path itself.
+    string? destination = null;
+    if (!string.IsNullOrEmpty(outPath))
+    {
+        destination = Path.GetFullPath(outPath);
+        if (File.Exists(destination) || Directory.Exists(destination))
+        {
+            AnsiConsole.MarkupLine($"[red]Backup failed:[/] {Markup.Escape(destination)} already exists");
+            Environment.Exit(1);
+            return;
+        }
+    }
+
     try
     {
-        var url = "/api/backup" + (string.IsNullOrEmpty(outPath) ? "" : $"?out={Uri.EscapeDataString(outPath)}");
-        var result = await client.PostAsync(url);
+        var result = await client.PostAsync("/api/backup");
+        if (destination is not null)
+        {
+            var created = result.GetProperty("path").GetString()
+                ?? throw new InvalidOperationException("daemon did not report the backup path");
+            var destDir = Path.GetDirectoryName(destination);
+            if (!string.IsNullOrEmpty(destDir)) Directory.CreateDirectory(destDir);
+            // File.Copy keeps the archive's owner-only mode on Unix.
+            File.Copy(created, destination, overwrite: false);
+            try { File.Delete(created); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (!json) AnsiConsole.MarkupLine($"[yellow]Note:[/] a copy also remains at {Markup.Escape(created)}");
+            }
+            if (json)
+            {
+                var node = System.Text.Json.Nodes.JsonNode.Parse(result.GetRawText())!.AsObject();
+                node["path"] = destination;
+                PrintJson(node);
+                return;
+            }
+        }
         if (json) { PrintJson(result); return; }
 
-        var path = result.GetProperty("path").GetString() ?? "?";
+        var path = destination ?? result.GetProperty("path").GetString() ?? "?";
         var files = result.GetProperty("files").GetInt32();
         var size = result.GetProperty("size").GetInt64();
         AnsiConsole.MarkupLine($"[green]✓[/] Backup created");
@@ -2793,6 +2828,11 @@ backupCommand.SetAction(async (parseResult, ct) =>
     catch (HttpRequestException ex)
     {
         AnsiConsole.MarkupLine($"[red]Backup failed:[/] {Markup.Escape(ex.Message)}");
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+    {
+        AnsiConsole.MarkupLine($"[red]Backup created but could not be saved to {Markup.Escape(destination ?? "?")}:[/] {Markup.Escape(ex.Message)}");
+        Environment.Exit(1);
     }
 });
 
