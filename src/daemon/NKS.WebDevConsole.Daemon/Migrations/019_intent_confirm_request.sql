@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 018 — intent_confirm_request: remember which intents asked for
+-- Migration 019 — intent_confirm_request: remember which intents asked for
 -- operator approval, and what the agent said
 --
 -- `POST /api/mcp/intents/confirm-request` only broadcast an SSE event. A WDC

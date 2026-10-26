@@ -196,7 +196,7 @@ export interface IntentInventoryEntry {
   /**
    * Set when the agent asked the operator to approve this intent through
    * confirm-request (GUI/CI-minted intents never do), with the description
-   * it gave. Absent on daemons that predate migration 018.
+   * it gave. Absent on daemons that predate migration 019.
    */
   confirmRequestedAt?: string | null
   prompt?: string | null
