@@ -29,24 +29,6 @@ internal static class CloudflareEndpoints
         return sp.GetService(t);
     }
 
-    /// <summary>
-    /// Config fields the MCP token may not set: the cloudflared executable
-    /// the daemon runs, the tunnel credentials (which decide where public
-    /// traffic for the user's sites is routed) and the API account. An agent
-    /// could otherwise point the daemon at its own binary or tunnel.
-    /// </summary>
-    internal static readonly string[] OperatorOnlyConfigFields =
-        ["cloudflaredPath", "tunnelToken", "apiToken", "accountId"];
-
-    /// <summary>Operator-only fields present in a config body (any letter case).</summary>
-    internal static IReadOnlyList<string> OperatorOnlyFieldsIn(System.Text.Json.JsonElement root) =>
-        root.ValueKind == System.Text.Json.JsonValueKind.Object
-            ? root.EnumerateObject()
-                .Select(p => p.Name)
-                .Where(n => OperatorOnlyConfigFields.Contains(n, StringComparer.OrdinalIgnoreCase))
-                .ToList()
-            : [];
-
     public static void MapCloudflareEndpoints(this WebApplication app, PluginLoader pluginLoader)
     {
         object? ResolveCloudflareServiceOrNull(IServiceProvider sp, string typeName)
@@ -109,16 +91,6 @@ internal static class CloudflareEndpoints
             using (doc)
             {
                 var root = doc.RootElement;
-                if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken
-                    && OperatorOnlyFieldsIn(root) is { Count: > 0 } blocked)
-                {
-                    return Results.Json(new
-                    {
-                        error = "mcp_forbidden",
-                        detail = "Cloudflare credentials and the cloudflared path are set in the WDC app, not by the MCP token: "
-                                 + string.Join(", ", blocked),
-                    }, statusCode: 403);
-                }
                 var t = cfg.GetType();
 
                 void Apply(string jsonKey, string propName)

@@ -261,13 +261,14 @@ public static class McpCapabilities
         new(DatabaseAdmin,
             "Database server administration",
             "Reset the MySQL or PostgreSQL root password, drop MySQL accounts, read or set the stored root password. " +
-            "Resets and drops need an approved intent.",
+            "Resets and drops need an approved intent (checked by the endpoint).",
             DefaultEnabled: false,
             Routes:
             [
-                new("POST", "/api/plugins/mysql/reset-password", "mysql_root_reset", "root", IntentHost: "*mysql*"),
-                new("POST", "/api/plugins/mysql/users/drop", "mysql_user_drop", "{body.userName}@{body.host}", IntentHost: "*mysql*"),
-                new("POST", "/api/plugins/postgresql/reset-password", "postgres_root_reset", "postgres", IntentHost: "*postgres*"),
+                // The endpoints run these intent gates (DatabaseEndpoints.IntentGateAsync).
+                new("POST", "/api/plugins/mysql/reset-password", "mysql_root_reset", "root", IntentByEndpoint: true, IntentHost: "*mysql*"),
+                new("POST", "/api/plugins/mysql/users/drop", "mysql_user_drop", "{body.userName}@{body.host}", IntentByEndpoint: true, IntentHost: "*mysql*"),
+                new("POST", "/api/plugins/postgresql/reset-password", "postgres_root_reset", "postgres", IntentByEndpoint: true, IntentHost: "*postgres*"),
                 new("GET", "/api/databases/root-password"),
                 new("POST", "/api/databases/root-password"),
             ],

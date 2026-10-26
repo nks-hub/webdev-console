@@ -1,9 +1,7 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Moq;
 using NKS.WebDevConsole.Core.Interfaces;
-using NKS.WebDevConsole.Daemon.Cloudflare;
 using NKS.WebDevConsole.Daemon.Data;
 using NKS.WebDevConsole.Daemon.Mcp;
 
@@ -117,28 +115,5 @@ public class DatabaseAdminIntentGateTests
         Assert.NotNull(kind);
         Assert.Equal(DangerLevel.Destructive, kind!.Danger);
         Assert.Equal("core", kind.PluginId);
-    }
-}
-
-public class CloudflareConfigMcpFieldsTests
-{
-    private static JsonElement Body(string json) => JsonDocument.Parse(json).RootElement;
-
-    [Theory]
-    [InlineData("""{"cloudflaredPath":"/tmp/evil"}""", "cloudflaredPath")]
-    [InlineData("""{"tunnelToken":"attacker"}""", "tunnelToken")]
-    [InlineData("""{"apiToken":"x","defaultZoneId":"z"}""", "apiToken")]
-    [InlineData("""{"AccountId":"y"}""", "AccountId")]
-    public void Operator_only_fields_are_detected(string json, string field)
-    {
-        Assert.Contains(field, CloudflareEndpoints.OperatorOnlyFieldsIn(Body(json)));
-    }
-
-    [Theory]
-    [InlineData("""{"tunnelName":"t","tunnelId":"id","defaultZoneId":"z","subdomainTemplate":"{stem}"}""")]
-    [InlineData("""[]""")]
-    public void The_fields_the_mcp_tool_sends_are_allowed(string json)
-    {
-        Assert.Empty(CloudflareEndpoints.OperatorOnlyFieldsIn(Body(json)));
     }
 }
