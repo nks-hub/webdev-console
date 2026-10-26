@@ -420,7 +420,7 @@ var siteTemplates = new Dictionary<string, (string php, bool ssl, string? framew
     ["static"]    = ("none", false, null),
     ["node"]      = ("none", false, null),
 };
-var templateOpt = new Option<string?>("--template", $"Site blueprint: {string.Join(", ", siteTemplates.Keys)}");
+var templateOpt = new Option<string?>("--template") { Description = $"Site blueprint: {string.Join(", ", siteTemplates.Keys)}" };
 var createNodePortOpt = new Option<int?>("--node-port") { Description = "Node.js upstream port (enables reverse-proxy mode)" };
 var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt, templateOpt, createNodePortOpt };
 createSiteCmd.SetAction(async (parseResult, ct) =>
