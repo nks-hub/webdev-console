@@ -41,13 +41,13 @@
     <template v-else>
       <section class="figures-sec" :aria-label="$t('overview.figures.title')">
         <dl class="figures">
-          <div v-activate:link class="figure is-link" @click="$router.push('/sites')">
+          <div class="figure is-link">
             <dt>{{ $t('dashboard.stats.sites') }}</dt>
-            <dd class="mono">{{ sitesStore.sites.length }}</dd>
+            <dd class="mono"><router-link class="figure-link" to="/sites">{{ sitesStore.sites.length }}</router-link></dd>
           </div>
-          <div v-activate:link class="figure is-link" @click="$router.push('/plugins')">
+          <div class="figure is-link">
             <dt>{{ $t('dashboard.stats.pluginsEnabled') }}</dt>
-            <dd class="mono">{{ pluginsStore.enabledPlugins.length }} / {{ pluginsStore.manifests.length || (daemonStore.status?.plugins ?? 0) }}</dd>
+            <dd class="mono"><router-link class="figure-link" to="/plugins">{{ pluginsStore.enabledPlugins.length }} / {{ pluginsStore.manifests.length || (daemonStore.status?.plugins ?? 0) }}</router-link></dd>
           </div>
           <div class="figure">
             <dt>{{ $t('dashboard.stats.daemonUptime') }}</dt>
@@ -57,9 +57,9 @@
             <dt>{{ $t('dashboard.stats.nodeProcesses') }}</dt>
             <dd class="mono">{{ nodeProcessCount }}</dd>
           </div>
-          <div v-if="lastBackupAge" v-activate:link class="figure is-link" @click="$router.push('/backups')">
+          <div v-if="lastBackupAge" class="figure is-link">
             <dt>{{ $t('dashboard.stats.lastBackup') }}</dt>
-            <dd class="mono">{{ lastBackupAge }}</dd>
+            <dd class="mono"><router-link class="figure-link" to="/backups">{{ lastBackupAge }}</router-link></dd>
           </div>
           <div class="figure">
             <dt>{{ $t('dashboard.metrics.cpuUsage') }}</dt>
@@ -459,11 +459,11 @@ function closeConfig() {
   font-size: 1.2rem;
   color: var(--wdc-text);
 }
-.figure.is-link { cursor: pointer; }
+.figure-link { color: inherit; text-decoration: none; }
 @media (hover: hover) {
-  .figure.is-link:hover dd { color: var(--wdc-accent-ink); }
+  .figure-link:hover { color: var(--wdc-accent-ink); text-decoration: underline; text-decoration-color: var(--wdc-accent); }
 }
-.figure.is-link:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: -2px; }
+.figure-link:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; border-radius: var(--wdc-radius-xs); }
 
 .metrics-grid {
   display: grid;

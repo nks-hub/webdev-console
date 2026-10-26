@@ -427,7 +427,8 @@
       "allDanger": "All danger levels",
       "toolName": "Filter by tool…",
       "search": "Search tools and args…",
-      "collapseReads": "Collapse reads"
+      "collapseReads": "Collapse reads",
+      "dangerAria": "Filter by danger level"
     },
     "view": {
       "sessions": "By session",
@@ -1201,7 +1202,8 @@
     "hostnameColumn": "Hostname",
     "sourceColumn": "Source (site)",
     "entriesCount": "{n} entries",
-    "loadingHosts": "Parsing system hosts file…"
+    "loadingHosts": "Parsing system hosts file…",
+    "enableEntryAria": "Entry for {hostname} enabled"
   },
   "apache": {
     "title": "Apache Web Server",
