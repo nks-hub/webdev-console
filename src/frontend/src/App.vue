@@ -145,6 +145,12 @@ function startDeploySse(): void {
   if (unsubscribeDeploy) return
   unsubscribeDeploy = subscribeEventsMap({
     'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
+    // The built-in local backend emits these two instead of deploy:event.
+    'deploy:phase': (data) =>
+      deployStore.handlePhaseEvent(data as { deployId: string; phase: string; message?: string }),
+    'deploy:complete': (data) =>
+      deployStore.handleCompleteEvent(data as {
+        deployId: string; success: boolean; error?: string | null; kind?: string }),
     // Phase 7.5+++ — hook execution feedback. RunHooksAsync emits one
     // event per hook fire so the drawer can show shell/http/php results.
     'deploy:hook': (data) =>
