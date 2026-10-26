@@ -94,7 +94,7 @@ function isAvailable(cmd: Command): boolean {
   if (!cmd.route) return true
   if (cmd.route.startsWith('/mcp') && !featureFlagsStore.showMcpSurface) return false
   const target = router.resolve(cmd.route)
-  return !(target.meta.requiresAdvanced && uiModeStore.isSimple)
+  return !(target.meta.advancedNav && uiModeStore.isSimple)
 }
 
 const commands = computed<Command[]>(() => allCommands.value.filter(isAvailable))
@@ -210,14 +210,14 @@ defineExpose({ open })
 .command-list {
   max-height: 320px;
   overflow-y: auto;
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
 }
 
 .command-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-3) 14px;
   border-radius: var(--wdc-radius);
   cursor: pointer;
   transition: background 0.1s, box-shadow 0.1s;
@@ -270,7 +270,7 @@ defineExpose({ open })
 }
 
 .command-empty {
-  padding: 24px;
+  padding: var(--wdc-space-5);
   text-align: center;
   color: var(--wdc-text-3);
   font-size: 0.85rem;
