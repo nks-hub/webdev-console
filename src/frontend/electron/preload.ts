@@ -126,15 +126,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // #147 — cross-platform OS notifications. Renderer side fires this
   // on important events (deploy completed, MCP confirm requested, etc.)
   // and main hands off to Electron's Notification API which uses the
-  // platform-native mechanism (Win toast, macOS NSUserNotification,
-  // Linux libnotify).
+  // platform-native mechanism (Win toast, macOS notification centre,
+  // Linux libnotify). Main applies the preference gates and resolves to
+  // a status string ('shown', 'disabled', 'focused', 'throttled', …).
   osNotify: (payload: {
-    title?: string
+    title: string
     body?: string
     urgency?: 'low' | 'normal' | 'critical'
     silent?: boolean
-    channel?: string
+    channel: string
+    route?: string
+    key?: string
+    once?: boolean
+    test?: boolean
   }) => ipcRenderer.invoke('os-notify', payload),
+
+  // Notification preferences (master switch, background-only, per-channel
+  // toggles) persisted by main in userData so main-fired toasts honour them.
+  notifyPrefsGet: () => ipcRenderer.invoke('notify-prefs-get'),
+  notifyPrefsSet: (patch: Record<string, unknown>) => ipcRenderer.invoke('notify-prefs-set', patch),
+
+  // Clicking an OS notification focuses the window and main sends the
+  // notification's app route here; the renderer does router.push. Returns
+  // an unsubscribe function, same pattern as onSsoCallback.
+  onNavigate: (handler: (route: string) => void) => {
+    const listener = (_evt: unknown, route: string) => handler(route)
+    ipcRenderer.on('navigate', listener)
+    return () => ipcRenderer.removeListener('navigate', listener)
+  },
 
   // Runtime version probe — reads from Electron's app.getVersion() (which
   // resolves the bundled package.json at process start). Decouples the

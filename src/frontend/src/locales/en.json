@@ -2247,7 +2247,8 @@
       "account": "Account",
       "sync": "Sync",
       "update": "Update",
-      "about": "About"
+      "about": "About",
+      "notifications": "Notifications"
     },
     "simple": {
       "apacheHttp": "Apache HTTP",
@@ -2497,16 +2498,6 @@
       "modeBuiltIn": "Currently: built-in (Program.cs handlers)",
       "modePlugin": "Currently: plugin v{v}",
       "pluginLoadedNotActive": "plugin v{v} loaded but inactive (legacy handlers own the routes)"
-    },
-    "osNotify": {
-      "title": "System notifications",
-      "description": "Native OS toasts (Windows, macOS, Linux) shown even when the WDC window is in the background. Each channel can be turned off independently. Stored locally on this desktop.",
-      "deployLabel": "Deploy notifications",
-      "mcpLabel": "MCP confirmation requests",
-      "systemLabel": "System events",
-      "testBtn": "Test notification",
-      "testTitle": "NKS WDC — test notification",
-      "testBody": "If you see this, OS notifications are wired correctly."
     },
     "groups": {
       "app": "Application",
@@ -2939,5 +2930,100 @@
     "logEmpty": "The service log is empty.",
     "fixRestart": "Start again",
     "fixConfig": "Edit configuration"
+  },
+  "osNotifications": {
+    "channels": {
+      "services": {
+        "label": "Service crashes",
+        "description": "A service such as Apache or MySQL crashed."
+      },
+      "sites": {
+        "label": "Site apply failures",
+        "description": "Applying a site's configuration finished with failed steps."
+      },
+      "deploy": {
+        "label": "Deploys",
+        "description": "A deploy finished, successfully or with an error."
+      },
+      "mcp": {
+        "label": "MCP confirmation requests",
+        "description": "An AI assistant waits for you to approve an operation."
+      },
+      "backup": {
+        "label": "Backups",
+        "description": "A scheduled or manual backup finished or failed."
+      },
+      "updates": {
+        "label": "App updates",
+        "description": "A new version of WebDev Console is available (once per version)."
+      },
+      "daemon": {
+        "label": "Daemon status",
+        "description": "The background daemon stopped or was restarted automatically."
+      },
+      "system": {
+        "label": "Other system events",
+        "description": "Other long-running operations, such as snapshots and restores."
+      }
+    },
+    "settings": {
+      "title": "Notifications",
+      "subtitle": "Native system notifications (Windows, macOS, Linux)",
+      "description": "WebDev Console can show native system notifications for important events. Clicking a notification opens the related page. Settings apply to this computer only.",
+      "masterLabel": "Show system notifications",
+      "masterHint": "Turns all notifications on or off.",
+      "backgroundOnlyLabel": "Only when the app is in the background",
+      "backgroundOnlyHint": "No notifications while the WebDev Console window is focused, except critical ones such as crashes and failures.",
+      "channelsTitle": "Notify me about",
+      "throttleHint": "Repeated notifications for the same event are shown at most once per minute.",
+      "testBtn": "Send test notification",
+      "testTitle": "WebDev Console test notification",
+      "testBody": "If you can see this, system notifications work. Click it to open Settings.",
+      "testShown": "Test notification sent.",
+      "testUnsupported": "This system doesn't support notifications, or they are blocked for WebDev Console.",
+      "testFailed": "The test notification couldn't be shown.",
+      "testBrowser": "System notifications are only available in the desktop app.",
+      "platformHint": "If nothing appears, check that notifications for WebDev Console are allowed in the system settings and that Do Not Disturb or Focus is off.",
+      "saveFailed": "Couldn't save notification settings."
+    },
+    "events": {
+      "serviceCrashedTitle": "{service} crashed",
+      "serviceCrashedBody": "The service stopped unexpectedly. Click to open Services.",
+      "siteApplyFailedTitle": "Site {domain} wasn't applied completely",
+      "siteApplyFailedBody": "Step \"{step}\" failed: {detail}",
+      "siteApplyFailedBodyNoDetail": "Step \"{step}\" failed.",
+      "siteApplyFailedMore": "{count} more step(s) failed too.",
+      "deploySucceededTitle": "Deploy succeeded",
+      "deploySucceededBody": "Deploy {id} finished successfully.",
+      "deploySucceededBodySite": "Deploy of {domain} finished successfully.",
+      "deployFailedTitle": "Deploy failed",
+      "deployFailedBody": "Deploy {id} failed: {error}",
+      "deployFailedBodySite": "Deploy of {domain} failed: {error}",
+      "deployCancelledTitle": "Deploy cancelled",
+      "deployCancelledBody": "Deploy {id} was cancelled.",
+      "rollbackSucceededTitle": "Rollback finished",
+      "rollbackSucceededBody": "The previous release is live again.",
+      "rollbackFailedTitle": "Rollback failed",
+      "rollbackFailedBody": "Rollback failed: {error}",
+      "mcpConfirmTitle": "Approval needed",
+      "mcpConfirmBodyKind": "An AI assistant wants to run \"{kind}\". Open WebDev Console to approve or reject it.",
+      "mcpConfirmBody": "An AI assistant wants to run a destructive operation. Open WebDev Console to approve or reject it.",
+      "backupCompletedTitle": "Backup finished",
+      "backupCompletedBody": "{trigger} backup saved ({files} files, {size}).",
+      "backupFailedTitle": "Backup failed",
+      "backupFailedBody": "{trigger} backup failed: {error}",
+      "backupTriggerScheduled": "Scheduled",
+      "backupTriggerManual": "Manual",
+      "updateAvailableTitle": "Update available",
+      "updateAvailableBody": "WebDev Console {version} is available.",
+      "daemonRestartedTitle": "Daemon restarted",
+      "daemonRestartedBody": "The WebDev Console daemon stopped unexpectedly and was restarted automatically.",
+      "daemonGaveUpTitle": "The daemon keeps stopping",
+      "daemonGaveUpBody": "Automatic restarts were stopped. Check the logs, then use \"Start daemon\" in the tray menu.",
+      "daemonStartFailedTitle": "The daemon couldn't be started",
+      "daemonStartFailedBody": "{error}",
+      "daemonMigrationFailedTitle": "Database upgrade failed",
+      "daemonMigrationFailedBody": "The daemon stopped because its database couldn't be upgraded. Check the daemon log, then use \"Start daemon\" in the tray menu."
+    }
   }
 }

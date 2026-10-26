@@ -18,10 +18,13 @@ extraResources:
   # process.resourcesPath/build/. Without this they stay in buildResources
   # only and the packaged app falls back to the blurry procedural 16×16
   # dot — which is what the user sees as "background noise" on Retina.
+  # icon.png is the Linux (libnotify) / Windows dev-mode notification icon
+  # resolved by electron/notifications.ts from process.resourcesPath/build/.
   - from: build
     to: build
     filter:
       - "icon-tray-*.png"
+      - "icon.png"
 
 artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 
@@ -92,6 +95,14 @@ mac:
   # Flip to `notarize: true` when ready; secrets APPLE_API_KEY_ID +
   # APPLE_API_ISSUER + APPLE_API_KEY_B64 are already set in the repo.
   notarize: false
+  # Notifications: macOS attributes them to this bundle (CFBundleName from
+  # productName, CFBundleIdentifier from appId), so no extendInfo is needed.
+  # Local notifications need no entitlement and no usage-description key
+  # (there is no NS*UsageDescription for them; the OS shows its own
+  # permission prompt on first use). NSUserNotificationAlertStyle=alert is
+  # deliberately not set: it only affects the deprecated NSUserNotification
+  # API and would make every toast a sticky alert; users choose banner vs.
+  # alert in System Settings → Notifications.
 
 linux:
   target:

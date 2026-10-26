@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, Notification, clipboard } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, clipboard } from 'electron'
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
@@ -17,6 +17,15 @@ import log from 'electron-log/main'
 // the guarded call sites that check whether updater exists still work
 // because the import itself is always available now.
 import { autoUpdater as electronAutoUpdater } from 'electron-updater'
+import {
+  configureNotificationIdentity,
+  getNotificationPrefs,
+  notificationText,
+  setNotificationWindowProvider,
+  showOsNotification,
+  updateNotificationPrefs,
+} from './notifications'
+import type { OsNotifyPayload } from '../src/services/osNotificationShared'
 
 // Wire `console.log`/`console.warn`/`console.error` (and daemon stdout,
 // which we currently forward via `console.log('[daemon]', ...)` below)
@@ -235,6 +244,12 @@ if (isPortable) {
   console.log('[portable]   daemon WDC_DATA_DIR:', portableWdcDir)
 }
 
+// OS notification identity (Windows AppUserModelID, app name for macOS /
+// libnotify). Runs after the portable block because it pins the userData
+// path, and before requestSingleInstanceLock() + the first notification.
+configureNotificationIdentity()
+setNotificationWindowProvider(() => win)
+
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
 
 // See preload.ts: on Unix only a port file we own with no group/other
@@ -358,10 +373,7 @@ function scheduleCrashRestart(reason: string) {
   if (crashRestarts >= CRASH_RESTART_MAX) {
     autoRestartSuspended = true
     log.error(`[daemon] ${reason} — giving up after ${crashRestarts} restart attempts`)
-    notifyDaemonDown(
-      'The WebDev Console daemon keeps stopping',
-      'Automatic restarts were stopped. Use "Start daemon" in the tray menu after checking the logs.',
-    )
+    notifyDaemonDown('daemonGaveUpTitle', 'daemonGaveUpBody')
     void updateTray()
     return
   }
@@ -370,7 +382,20 @@ function scheduleCrashRestart(reason: string) {
   log.warn(`[daemon] ${reason} — restart ${crashRestarts}/${CRASH_RESTART_MAX} in ${delay} ms`)
   crashRestartTimer = setTimeout(() => {
     crashRestartTimer = null
-    void spawnDaemon().catch((e) => {
+    void spawnDaemon().then(() => {
+      // Tell the operator the supervisor had to step in. Normal urgency: the
+      // daemon is back, so this respects "only in background".
+      if (daemon || daemonConnected) {
+        showOsNotification({
+          channel: 'daemon',
+          title: notificationText('daemonRestartedTitle'),
+          body: notificationText('daemonRestartedBody'),
+          urgency: 'normal',
+          route: '/dashboard',
+          key: 'daemon:restarted',
+        })
+      }
+    }).catch((e) => {
       log.error('[daemon] respawn failed', e)
       scheduleCrashRestart('respawn failed')
     })
@@ -384,13 +409,28 @@ function restartDaemonManually() {
   if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
   void spawnDaemon().catch((e) => {
     log.error('[daemon] manual start failed', e)
-    notifyDaemonDown('The WebDev Console daemon could not be started', String(e instanceof Error ? e.message : e))
+    notifyDaemonDown('daemonStartFailedTitle', 'daemonStartFailedBody', {
+      error: String(e instanceof Error ? e.message : e),
+    })
   })
 }
 
-function notifyDaemonDown(title: string, body: string) {
+/** Critical daemon-channel toast; honours the operator's notification
+ *  preferences (master switch + "daemon" channel) like every other toast. */
+function notifyDaemonDown(
+  titleKey: Parameters<typeof notificationText>[0],
+  bodyKey: Parameters<typeof notificationText>[0],
+  params: Record<string, string> = {},
+) {
   try {
-    if (Notification.isSupported()) new Notification({ title, body }).show()
+    showOsNotification({
+      channel: 'daemon',
+      title: notificationText(titleKey, params),
+      body: notificationText(bodyKey, params),
+      urgency: 'critical',
+      route: '/dashboard',
+      key: `daemon:${titleKey}`,
+    })
   } catch { /* notifications unavailable — the tray state still shows it */ }
 }
 
@@ -599,10 +639,7 @@ async function spawnDaemonInner() {
       if (code === EXIT_MIGRATION_FAILED) {
         autoRestartSuspended = true
         log.error('[daemon] database migration failed — not restarting')
-        notifyDaemonDown(
-          'WebDev Console database upgrade failed',
-          'The daemon stopped because its database could not be migrated. Check the daemon log, then use "Start daemon" in the tray.',
-        )
+        notifyDaemonDown('daemonMigrationFailedTitle', 'daemonMigrationFailedBody')
       } else if (code === 0) {
         // Clean exit we didn't ask for (e.g. `wdc daemon stop`): respect it,
         // the tray offers "Start daemon".
@@ -1384,6 +1421,17 @@ async function setupAutoUpdater() {
       updaterStatus = `Downloading ${info.version}`
       updateTray()
       console.log('[updater] Update available:', info.version)
+      // Same key as the renderer's GitHub-release check, so whichever
+      // notices the version first fires and the other one is a duplicate.
+      showOsNotification({
+        channel: 'updates',
+        title: notificationText('updateAvailableTitle'),
+        body: notificationText('updateAvailableBody', { version: info.version }),
+        urgency: 'low',
+        route: '/settings?tab=update',
+        key: `update:${info.version.replace(/^v/, '')}`,
+        once: true,
+      })
     })
     autoUpdater.on('update-not-available', () => {
       checkingForUpdates = false
@@ -1871,50 +1919,26 @@ ipcMain.handle('renderer-log', (_evt, payload: { level?: string; args?: unknown[
   }
 })
 
-// #147 — cross-platform OS notifications via Electron's Notification class.
-// Uses native Win10/11 toast on Windows, NSUserNotificationCenter on macOS,
-// libnotify on Linux. Renderer hands us {title, body, urgency, channel} —
-// we map urgency to the platform-relevant flag (silent=info, normal=success,
-// critical=error). The optional `channel` is recorded for telemetry only;
-// platform notification grouping happens via the AppUserModelID on Windows
-// and the bundle id on macOS, both already set elsewhere.
-ipcMain.handle('os-notify', (_evt, payload: {
-  title?: string
-  body?: string
-  urgency?: 'low' | 'normal' | 'critical'
-  silent?: boolean
-  channel?: string
-}) => {
+// #147 — cross-platform OS notifications. The renderer sends
+// {title, body, urgency, channel, route?, key?, once?, test?}; every gate
+// (master switch, channel toggle, background-only, 60 s throttle, once per
+// key), platform option and the click → focus + navigate wiring live in
+// electron/notifications.ts so main-fired toasts behave the same way.
+// The click route is validated there with isSafeAppRoute().
+ipcMain.handle('os-notify', (_evt, payload: OsNotifyPayload) => {
   try {
-    if (!Notification.isSupported()) {
-      log.warn('[os-notify] not supported on this platform — skipping', { channel: payload?.channel })
-      return false
-    }
-    const n = new Notification({
-      title: (payload?.title ?? 'NKS WebDev Console').slice(0, 200),
-      body: (payload?.body ?? '').slice(0, 1000),
-      silent: payload?.silent ?? (payload?.urgency === 'low'),
-      urgency: payload?.urgency ?? 'normal',
-    })
-    // Clicking a notification should bring the main window forward so
-    // the operator can act on what triggered it. Best-effort — if no
-    // window exists (rare), the notification still fires fine.
-    n.on('click', () => {
-      const w = BrowserWindow.getAllWindows()[0]
-      if (w) {
-        if (w.isMinimized()) w.restore()
-        w.show()
-        w.focus()
-      }
-    })
-    n.show()
-    log.info('[os-notify] fired', { channel: payload?.channel, urgency: payload?.urgency })
-    return true
+    return showOsNotification(payload)
   } catch (err) {
     log.error('[os-notify] failed:', err)
-    return false
+    return 'failed'
   }
 })
+
+// Notification preferences live in userData/notification-prefs.json so the
+// main process can honour them for daemon/updater toasts. The renderer reads
+// and writes them here (Settings → Notifications).
+ipcMain.handle('notify-prefs-get', () => getNotificationPrefs())
+ipcMain.handle('notify-prefs-set', (_evt, patch: unknown) => updateNotificationPrefs(patch))
 
 ipcMain.handle('restart-renderer', async (_evt) => {
   try {
