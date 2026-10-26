@@ -2968,15 +2968,29 @@
     "filter": {
       "all": "All",
       "running": "Running",
-      "problems": "Needs attention"
+      "problems": "Crashed"
     },
     "empty": "No services registered yet",
-    "noProblems": "Every service is running",
+    "noProblems": "No service has crashed.",
     "whyTitle": "Why is it not running?",
     "showLog": "Show log",
     "logEmpty": "The service log is empty.",
     "fixRestart": "Start again",
-    "fixConfig": "Edit configuration"
+    "fixConfig": "Edit configuration",
+    "showAll": "Show all",
+    "explain": {
+      "running": "Running and answering.",
+      "stopped": "Stopped. It does not run until you start it.",
+      "starting": "Starting…",
+      "stopping": "Stopping…",
+      "crashed": "Crashed: the process ended on its own. The end of its log usually says why.",
+      "disabled": "Disabled; its plugin is turned off."
+    },
+    "facts": {
+      "uptime": "Running for"
+    },
+    "logTitle": "End of the log",
+    "stop": "Stop"
   },
   "overview": {
     "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",
