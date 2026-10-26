@@ -620,6 +620,7 @@
     "bindRequired": "Vyber alespoň jednu IP nebo zvol * pro všechny listener adresy.",
     "createdWithDb": "Web {domain} + databáze {db} vytvořen",
     "createdDbFailed": "Web {domain} vytvořen (vytvoření databáze selhalo)",
+    "createdSslMissing": "Web vytvořen, ale SSL certifikát nebyl vystaven. Nainstalujte mkcert a jeho CA v Binárky → SSL.",
     "created": "Web {domain} vytvořen",
     "createFailed": "Vytvoření selhalo: {err}",
     "detected": "Rozpoznáno: {framework}",

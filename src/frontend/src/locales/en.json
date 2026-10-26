@@ -620,6 +620,7 @@
     "bindRequired": "Select at least one IP binding, or choose * for all listener addresses.",
     "createdWithDb": "Site {domain} + database {db} created",
     "createdDbFailed": "Site {domain} created (database creation failed)",
+    "createdSslMissing": "Site created, but the SSL certificate was not issued. Install mkcert and its CA in Binaries → SSL.",
     "created": "Site {domain} created",
     "createFailed": "Create failed: {err}",
     "detected": "Detected: {framework}",

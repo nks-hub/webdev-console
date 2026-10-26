@@ -640,11 +640,19 @@ const newSite = reactive({
   cloudflareTunnel: false,
 })
 
-// Auto-suggest document root when domain is typed in simple mode
+// Auto-suggest document root when domain is typed in simple mode. The
+// suggestion sits next to the OS-specific placeholder (it used to be a
+// hardcoded C:\work\htdocs path on every OS) and stops as soon as the user
+// types or picks a folder of their own.
+let lastSuggestedDocRoot = ''
 watch(() => newSite.domain, (domain) => {
-  if (uiModeStore.isSimple && domain) {
-    newSite.documentRoot = `C:\\work\\htdocs\\${domain}`
-  }
+  if (!uiModeStore.isSimple || !domain) return
+  if (newSite.documentRoot && newSite.documentRoot !== lastSuggestedDocRoot) return
+  const placeholder = docRootPlaceholder.value
+  const sep = placeholder.includes('\\') ? '\\' : '/'
+  const base = placeholder.slice(0, Math.max(placeholder.lastIndexOf(sep), 0))
+  lastSuggestedDocRoot = base ? `${base}${sep}${domain}` : ''
+  newSite.documentRoot = lastSuggestedDocRoot
 })
 
 function applyTemplate(tplName: string) {
@@ -837,7 +845,7 @@ async function createSite() {
     // with guidance on how to recover.
     if (newSite.sslEnabled && created && created.sslEnabled === false) {
       ElMessage.warning({
-        message: 'Site vytvořen, ale SSL certifikát nebyl vystaven. Nainstaluj mkcert + CA v Binaries → SSL.',
+        message: t('sitesToast.createdSslMissing'),
         duration: 8000,
         showClose: true,
       })
@@ -855,7 +863,7 @@ async function createSite() {
         if (!dbRes.ok) throw new Error(`DB create HTTP ${dbRes.status}`)
         ElMessage.success(t('sitesToast.createdWithDb', { domain: newSite.domain, db: dbName }))
       } catch {
-        ElMessage.success(t('sitesToast.createdDbFailed', { domain: newSite.domain }))
+        ElMessage.warning(t('sitesToast.createdDbFailed', { domain: newSite.domain }))
       }
     } else {
       ElMessage.success(t('sitesToast.created', { domain: newSite.domain }))
