@@ -40,8 +40,21 @@ public sealed class BinaryDownloader
 
         if (File.Exists(archivePath))
         {
-            _logger.LogInformation("Archive already cached: {Path}", archivePath);
-            return archivePath;
+            // The cache dir is user-writable, so a cached archive is only reused
+            // when it still matches the catalog hash; otherwise re-download.
+            if (string.IsNullOrWhiteSpace(release.Sha256))
+            {
+                _logger.LogInformation("Archive already cached: {Path}", archivePath);
+                return archivePath;
+            }
+            var cachedHash = await ComputeSha256Async(archivePath, ct);
+            if (cachedHash.Equals(release.Sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Archive already cached and SHA256-verified: {Path}", archivePath);
+                return archivePath;
+            }
+            _logger.LogWarning("Cached archive {Path} does not match the catalog SHA256 — downloading again", archivePath);
+            File.Delete(archivePath);
         }
 
         _logger.LogInformation("Downloading {App} {Version} from {Url}", release.App, release.Version, release.Url);
@@ -225,7 +238,7 @@ public sealed class BinaryDownloader
                 var destPath = Path.GetFullPath(Path.Combine(destinationDir, relative));
 
                 // Resolved path must live strictly inside the destination root.
-                if (!destPath.StartsWith(destFull, StringComparison.OrdinalIgnoreCase))
+                if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(destFull, destPath))
                 {
                     _logger.LogWarning(
                         "Skipping zip entry that would escape destination root: {Entry} → {Path}",
@@ -288,7 +301,7 @@ public sealed class BinaryDownloader
             var relative = name.Replace('/', Path.DirectorySeparatorChar);
             var destPath = Path.GetFullPath(Path.Combine(destinationDir, relative));
 
-            if (!destPath.StartsWith(destFull, StringComparison.OrdinalIgnoreCase))
+            if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(destFull, destPath))
             {
                 _logger.LogWarning(
                     "Skipping tar entry that would escape destination root: {Entry} -> {Path}",

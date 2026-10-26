@@ -52,21 +52,18 @@ var daemonVersion =
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS for Electron renderer — the packaged app loads the Vue SPA from
-// a `file://` URL which gives `Origin: null`, and the dev server runs
-// on `http://localhost:5173`. Kestrel binds loopback-only (see the
-// daemon listener config below) so the daemon is unreachable from
-// anywhere but the same machine anyway — that makes a permissive CORS
-// policy safe: anything that can reach the daemon is already running
-// on this host with this user's privileges.
+// CORS for the Electron renderer: the packaged app serves the SPA from
+// app://nks-wdc and the dev server runs on a loopback http origin. Kestrel
+// binds loopback-only, but a browser on this machine can still reach it,
+// so only those origins may read responses; any web page gets no CORS
+// grant. Auth is a bearer header (no cookies), so credentials stay off.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
         policy
-            .SetIsOriginAllowed(_ => true)
+            .SetIsOriginAllowed(DaemonCors.IsAllowedOrigin)
             .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials());
+            .AllowAnyHeader());
 });
 
 // OpenAPI metadata so /openapi/v1.json can be consumed by NSwag/swagger-typescript-api
@@ -1835,6 +1832,7 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
                 var downloadUrl = item.TryGetProperty("downloadUrl", out var duEl) ? duEl.GetString() ?? "" : "";
                 var author = item.TryGetProperty("author", out var aEl) ? aEl.GetString() ?? "" : "";
                 var license = item.TryGetProperty("license", out var lEl) ? lEl.GetString() ?? "" : "";
+                var sha256 = item.TryGetProperty("sha256", out var shEl) ? shEl.GetString() : null;
                 entries.Add(new
                 {
                     id,
@@ -1842,6 +1840,7 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
                     version,
                     description,
                     downloadUrl,
+                    sha256,
                     author,
                     license,
                     installed = installedIds.Contains(id),
@@ -2073,6 +2072,7 @@ app.MapPost("/api/plugins/install", async (
     }
     var downloadUrl = body?.GetValueOrDefault("downloadUrl") ?? "";
     var pluginId = body?.GetValueOrDefault("id") ?? "";
+    var expectedSha256 = (body?.GetValueOrDefault("sha256") ?? "").Trim();
 
     if (string.IsNullOrWhiteSpace(downloadUrl))
         return Results.BadRequest(new { error = "downloadUrl required" });
@@ -2105,9 +2105,18 @@ app.MapPost("/api/plugins/install", async (
     if (!schemeOk)
         return Results.BadRequest(new { error = "downloadUrl must be HTTPS (or HTTP localhost)" });
 
+    // A plugin DLL runs inside the daemon (elevated on Windows), so an archive
+    // from an arbitrary URL must match a SHA-256 the caller got from a trusted
+    // catalogue entry. Loopback URLs stay hash-optional for local plugin dev.
+    var isLoopbackUrl = uri.IsLoopback;
+    if (expectedSha256.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(expectedSha256, "^[0-9a-fA-F]{64}$"))
+        return Results.BadRequest(new { error = "sha256 must be 64 hex characters" });
+    if (expectedSha256.Length == 0 && !isLoopbackUrl)
+        return Results.BadRequest(new { error = "sha256 is required for plugin downloads" });
+
     var pluginsRoot = Path.GetFullPath(pluginDir);
     var targetDir = Path.GetFullPath(Path.Combine(pluginsRoot, pluginId));
-    if (!targetDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
+    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(pluginsRoot, targetDir))
         return Results.BadRequest(new { error = "Resolved path escapes plugins root" });
 
     var cacheDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.CacheRoot, "plugin-installs");
@@ -2124,6 +2133,18 @@ app.MapPost("/api/plugins/install", async (
             await stream.CopyToAsync(fs);
         }
 
+        if (expectedSha256.Length > 0)
+        {
+            string actualSha256;
+            using (var verify = File.OpenRead(tempZip))
+                actualSha256 = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(verify, ct));
+            if (!actualSha256.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                try { File.Delete(tempZip); } catch { /* best effort */ }
+                return Results.BadRequest(new { error = $"SHA-256 mismatch for plugin {pluginId}: expected {expectedSha256}, got {actualSha256}" });
+            }
+        }
+
         // Extract to staging dir first, then atomic rename onto target
         var stagingDir = targetDir + ".staging";
         if (Directory.Exists(stagingDir)) Directory.Delete(stagingDir, recursive: true);
@@ -2137,7 +2158,7 @@ app.MapPost("/api/plugins/install", async (
                 if (string.IsNullOrEmpty(entry.Name)) continue;
                 if (entry.FullName.Contains("..")) continue; // zip-slip defense
                 var dest = Path.GetFullPath(Path.Combine(stagingDir, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
-                if (!dest.StartsWith(Path.GetFullPath(stagingDir), StringComparison.OrdinalIgnoreCase))
+                if (!PathContainment.IsUnder(stagingDir, dest))
                     continue;
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 using var entryStream = entry.Open();
@@ -2260,7 +2281,7 @@ app.MapDelete("/api/plugins/{id}", async (
 
         // A) dedicated folder
         var candidateDir = Path.GetFullPath(Path.Combine(pluginsRoot, id));
-        if (candidateDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase)
+        if (NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(pluginsRoot, candidateDir)
             && Directory.Exists(candidateDir))
         {
             targetsToDelete.AddRange(Directory.EnumerateFiles(candidateDir, "*", SearchOption.AllDirectories));
@@ -2301,7 +2322,7 @@ app.MapDelete("/api/plugins/{id}", async (
                 if (!string.IsNullOrEmpty(asmPath) && File.Exists(asmPath))
                 {
                     var asmFull = Path.GetFullPath(asmPath);
-                    if (asmFull.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
+                    if (NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(pluginsRoot, asmFull))
                     {
                         var baseName = Path.GetFileNameWithoutExtension(asmPath);
                         var dir = Path.GetDirectoryName(asmFull)!;
@@ -4317,14 +4338,14 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     var historyDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot, "history");
     var historyDirFull = Path.GetFullPath(historyDir);
     var historyFile = Path.GetFullPath(Path.Combine(historyDir, $"{domain}.conf.{timestamp}"));
-    if (!historyFile.StartsWith(historyDirFull, StringComparison.OrdinalIgnoreCase))
+    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(historyDirFull, historyFile))
         return Results.BadRequest(new { error = "Resolved history path escapes history root" });
     if (!File.Exists(historyFile))
         return Results.NotFound(new { error = $"History entry {timestamp} not found" });
 
     var generatedRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot);
     var generatedFile = Path.GetFullPath(Path.Combine(generatedRoot, $"{domain}.conf"));
-    if (!generatedFile.StartsWith(generatedRoot, StringComparison.OrdinalIgnoreCase))
+    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(generatedRoot, generatedFile))
         return Results.BadRequest(new { error = "Resolved generated path escapes generated root" });
 
     File.Copy(historyFile, generatedFile, overwrite: true);

@@ -987,6 +987,8 @@ export interface MarketplacePlugin {
   version: string
   description: string
   downloadUrl: string
+  /** SHA-256 of the archive at downloadUrl; the daemon refuses remote installs without it. */
+  sha256?: string | null
   author: string
   license: string
   installed: boolean
@@ -1013,10 +1015,10 @@ export interface InstallPluginResponse {
   restartRequired: boolean
   message: string
 }
-export const installPluginFromMarketplace = (id: string, downloadUrl: string): Promise<InstallPluginResponse> =>
+export const installPluginFromMarketplace = (id: string, downloadUrl: string, sha256?: string | null): Promise<InstallPluginResponse> =>
   json<InstallPluginResponse>('/api/plugins/install', {
     method: 'POST',
-    body: JSON.stringify({ id, downloadUrl }),
+    body: JSON.stringify(sha256 ? { id, downloadUrl, sha256 } : { id, downloadUrl }),
   })
 
 // Onboarding

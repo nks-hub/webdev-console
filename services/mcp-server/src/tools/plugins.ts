@@ -118,10 +118,16 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         'Download and install a plugin from a marketplace entry. Requires id + downloadUrl ' +
         'from the marketplace catalog. The daemon will need a restart after install for the ' +
         'plugin to be active.\n\n' +
-        'Args:\n  id: Plugin id.\n  downloadUrl: http(s) URL.',
+        'Args:\n  id: Plugin id.\n  downloadUrl: http(s) URL.\n' +
+        '  sha256: SHA-256 of the archive from the same catalog entry (required for non-local URLs).',
       inputSchema: {
         id: PluginIdSchema,
         downloadUrl: PluginDownloadUrlSchema,
+        sha256: z
+          .string()
+          .regex(/^[0-9a-fA-F]{64}$/, 'sha256 must be 64 hex characters')
+          .optional()
+          .describe('SHA-256 of the plugin archive, from the marketplace entry'),
       },
       annotations: {
         readOnlyHint: false,
@@ -130,7 +136,7 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         openWorldHint: true,
       },
     },
-    async ({ id, downloadUrl }) =>
-      safe(() => daemonClient.post('/api/plugins/install', { id, downloadUrl })),
+    async ({ id, downloadUrl, sha256 }) =>
+      safe(() => daemonClient.post('/api/plugins/install', sha256 ? { id, downloadUrl, sha256 } : { id, downloadUrl })),
   )
 }

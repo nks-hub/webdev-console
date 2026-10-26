@@ -305,7 +305,7 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
 
   installing.value.add(mp.id)
   try {
-    const result = await installPluginFromMarketplace(mp.id, mp.downloadUrl)
+    const result = await installPluginFromMarketplace(mp.id, mp.downloadUrl, mp.sha256)
     ElNotification({
       title: t('plugins.toast.installedNotification', { name: mp.name }),
       message: result.restartRequired

@@ -2,6 +2,7 @@ using System.Formats.Tar;
 using System.IO.Compression;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Binaries;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
@@ -45,6 +46,62 @@ public sealed class BinaryDownloaderTests : IDisposable
     {
         try { Directory.Delete(_tempDir, recursive: true); }
         catch { /* best-effort */ }
+    }
+
+    private sealed class FixedResponseHandler(byte[] body) : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Calls++;
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(body),
+            });
+        }
+    }
+
+    private static BinaryDownloader DownloaderServing(FixedResponseHandler handler)
+    {
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handler));
+        return new BinaryDownloader(factory.Object, new Mock<ILogger<BinaryDownloader>>().Object);
+    }
+
+    private static BinaryRelease ReleaseWithSha(string sha256) => new(
+        App: "redis", Version: "7.4.1", MajorMinor: "7.4",
+        Url: "https://downloads.example.com/redis-7.4.1.zip", Os: "linux", Arch: "x64",
+        ArchiveType: "zip", Source: "example", Sha256: sha256);
+
+    [Fact]
+    public async Task DownloadAsync_TamperedCachedArchive_IsReplaced()
+    {
+        var genuine = System.Text.Encoding.UTF8.GetBytes("genuine archive bytes");
+        var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(genuine)).ToLowerInvariant();
+        var cacheDir = Path.Combine(_tempDir, "cache");
+        Directory.CreateDirectory(cacheDir);
+        await File.WriteAllTextAsync(Path.Combine(cacheDir, "redis-7.4.1.zip"), "planted by someone else");
+
+        var handler = new FixedResponseHandler(genuine);
+        var path = await DownloaderServing(handler).DownloadAsync(ReleaseWithSha(sha), cacheDir);
+
+        Assert.Equal(1, handler.Calls);
+        Assert.Equal(genuine, await File.ReadAllBytesAsync(path));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_VerifiedCachedArchive_IsReused()
+    {
+        var genuine = System.Text.Encoding.UTF8.GetBytes("genuine archive bytes");
+        var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(genuine)).ToLowerInvariant();
+        var cacheDir = Path.Combine(_tempDir, "cache");
+        Directory.CreateDirectory(cacheDir);
+        await File.WriteAllBytesAsync(Path.Combine(cacheDir, "redis-7.4.1.zip"), genuine);
+
+        var handler = new FixedResponseHandler(genuine);
+        await DownloaderServing(handler).DownloadAsync(ReleaseWithSha(sha), cacheDir);
+
+        Assert.Equal(0, handler.Calls);
     }
 
     [Fact]
