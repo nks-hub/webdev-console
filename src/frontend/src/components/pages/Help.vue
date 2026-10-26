@@ -305,7 +305,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: var(--wdc-space-3);
   flex-wrap: wrap;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
   background: transparent;
 }

@@ -338,7 +338,6 @@ async function refresh(): Promise<void> {
   letter-spacing: -0.02em;
   color: var(--wdc-text);
 }
-.page > *:not(.page-header) { padding: 0 24px; }
 .page > .page-header + * { padding-top: 16px; }
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lock-count-badge {

@@ -166,7 +166,7 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
   color: var(--el-text-color-primary);
 }
 .metric-label {
-  font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 0.82rem;
   color: var(--el-text-color-secondary); margin-top: 2px;
   font-family: var(--wdc-font-display);
 }

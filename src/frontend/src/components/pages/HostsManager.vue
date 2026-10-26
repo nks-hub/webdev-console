@@ -632,7 +632,7 @@ onMounted(async () => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) 0;
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-3);

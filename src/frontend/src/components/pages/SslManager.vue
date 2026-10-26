@@ -308,7 +308,7 @@ onMounted(() => {
 
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
-.page-body { padding: 0 24px 24px; }
+.page-body { padding: 0 0 24px; }
 
 .cert-list {
   display: flex;

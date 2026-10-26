@@ -479,7 +479,7 @@ onMounted(() => {
 }
 
 .page-body-pad {
-  padding: var(--wdc-space-4) var(--wdc-space-5) var(--wdc-space-5);
+  padding: var(--wdc-space-4) 0 var(--wdc-space-5);
 }
 
 .pm-grid {

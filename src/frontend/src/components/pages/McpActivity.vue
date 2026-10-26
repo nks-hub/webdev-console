@@ -729,7 +729,7 @@ onBeforeUnmount(() => {
   outline-offset: 2px;
 }
 .stat-num { font-size: 20px; font-weight: 600; }
-.stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+.stat-label { font-size: 0.82rem; color: var(--el-text-color-secondary);
   font-family: var(--wdc-font-display);
 }
 .activity-filters {

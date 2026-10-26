@@ -152,7 +152,7 @@ const emit = defineEmits<{
 .section-heading {
   margin: var(--wdc-space-4-5) 0 var(--wdc-space-2-5);
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--wdc-text-2);
   font-family: var(--wdc-font-display);
 }

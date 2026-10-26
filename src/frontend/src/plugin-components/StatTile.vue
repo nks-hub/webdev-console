@@ -70,7 +70,7 @@ function onClick() {
 .stat-icon-running { color: var(--wdc-status-running); background: rgba(52, 211, 153, 0.14); }
 .stat-content { min-width: 0; }
 .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); letter-spacing: -0.02em; }
-.stat-label { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.10em; color: var(--wdc-text-3); font-weight: 500;
+.stat-label { font-size: 0.82rem; color: var(--wdc-text-3); font-weight: 500;
   font-family: var(--wdc-font-display);
 }
 </style>
