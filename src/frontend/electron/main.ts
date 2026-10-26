@@ -2,7 +2,7 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, n
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync, statSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync, statSync, copyFileSync, mkdirSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import http from 'http'
 import * as Sentry from '@sentry/electron/main'
@@ -1992,6 +1992,63 @@ ipcMain.handle('elevate-daemon', async () => {
     const msg = err instanceof Error ? err.message : String(err)
     log.error('[elevate-daemon] failed', msg)
     return { ok: false, error: msg }
+  }
+})
+
+// Where the bundled MCP server lives, for the MCP hub's "Connect an AI
+// client" card. Packaged builds ship it as an extraResource
+// (resources/mcp-server/index.js, built by `npm run stage:mcp`); dev runs
+// use the repo's services/mcp-server bundle or tsc output. Also reports
+// whether the daemon has written the MCP token file the server reads.
+// An AppImage is mounted at a new /tmp/.mount_* path on every launch, so a
+// path into its resources would break the AI client's config after the next
+// restart. Copy the bundle to ~/.wdc/mcp-server and hand out that path.
+function stableAppImageMcpServer(bundled: string): string {
+  const targetDir = join(homedir(), '.wdc', 'mcp-server')
+  for (const name of ['index.js', 'package.json']) {
+    const from = join(dirname(bundled), name)
+    const to = join(targetDir, name)
+    const fresh = readFileSync(from)
+    if (existsSync(to) && readFileSync(to).equals(fresh)) continue
+    mkdirSync(targetDir, { recursive: true })
+    copyFileSync(from, to)
+  }
+  return join(targetDir, 'index.js')
+}
+
+function findMcpServerEntry(): { path: string; exists: boolean } {
+  const repoServer = resolve(app.getAppPath(), '..', '..', 'services', 'mcp-server')
+  if (app.isPackaged && process.env.APPIMAGE) {
+    const bundled = join(process.resourcesPath, 'mcp-server', 'index.js')
+    if (existsSync(bundled)) {
+      try {
+        return { path: stableAppImageMcpServer(bundled), exists: true }
+      } catch (err) {
+        log.warn('[mcp-server-info] could not copy the MCP server out of the AppImage', err)
+      }
+    }
+  }
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath, 'mcp-server', 'index.js')]
+    : [
+        join(repoServer, 'dist-bundle', 'index.js'),
+        join(repoServer, 'dist', 'index.js'),
+        join(app.getAppPath(), 'resources', 'mcp-server', 'index.js'),
+      ]
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return { path: candidate, exists: true }
+  }
+  return { path: candidates[0], exists: false }
+}
+
+ipcMain.handle('mcp-server-info', async () => {
+  const entry = findMcpServerEntry()
+  const portFile = join(tmpdir(), 'nks-wdc-mcp.port')
+  return {
+    serverPath: entry.path,
+    serverExists: entry.exists,
+    packaged: app.isPackaged,
+    portFilePresent: existsSync(portFile),
   }
 })
 

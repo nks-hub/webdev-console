@@ -18,7 +18,7 @@
 - 🐘 **Per-site PHP** - each site can pin its own PHP version, INI overrides (memory, timeouts, upload limits, Xdebug, OPcache, extensions) and Apache Fcgid timeouts
 - 🚚 **MAMP PRO migration** - importer reads MAMP PRO's SQLite database, recreates vhosts, copies SSL certs and migrates databases (verified on 17 sites + 66 databases)
 - 🎛️ **Three interfaces** - Electron GUI, `wdc` CLI and REST API with Bearer-token auth
-- 🤖 **MCP server** - 67 tools for Claude Code or any MCP client: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Every tool call is logged and shown in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
+- 🤖 **MCP server** - 72 tools for Claude Code or any MCP client, shipped with the app: sites, databases, services, SSL, plugins, backups, Cloudflare tunnels, deployments. Every tool call is logged and shown in the GUI's MCP → Activity tab (24h timeline, top tools, p50/p95/p99 latency, CSV export). See `src/daemon/NKS.WebDevConsole.Daemon/Mcp/README.md` for the operator guide.
 - ☁️ **Cloudflare** - tunnels, DNS records and routes via `cloudflared`
 - 🔐 **Elevated on Windows** - one UAC prompt at launch, no per-operation prompts for hosts-file edits
 - 📦 **Self-contained daemon** - .NET 9 published with `--self-contained`, no separate runtime install needed
@@ -135,29 +135,57 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:$PORT/api/status
 
 OpenAPI spec is exposed at `/openapi/v1.json`.
 
-### MCP server (Claude Code)
+### MCP server (Claude Code, Claude Desktop, Cursor)
+
+The installer ships the MCP server as `resources/mcp-server/index.js`. Open
+**MCP** in the app: the **Connect an AI client** card has the MCP switch,
+live status and copy buttons with the exact path for your install. For
+Claude Code it is:
+
+```bash
+claude mcp add --scope user nks-wdc -- node "<WDC resources>/mcp-server/index.js"
+```
+
+Options go before the server name and `--` separates the server command.
+Node.js 18+ must be on `PATH`. Claude Desktop (`claude_desktop_config.json`)
+and Cursor (`.cursor/mcp.json`) take the same `mcpServers` entry:
+
+```json
+{ "mcpServers": { "nks-wdc": { "command": "node", "args": ["<WDC resources>/mcp-server/index.js"] } } }
+```
+
+From a source checkout, build the server and point the client at it:
 
 ```bash
 cd services/mcp-server
-npm install && npm run build
-claude mcp add --scope user nks-wdc node "$(pwd)/dist/index.js"
+npm install && npm run build      # or `npm run bundle` for the single-file build in dist-bundle/
+claude mcp add --scope user nks-wdc -- node "$(pwd)/dist/index.js"
 ```
 
-| Module      | Tools | Examples                                                   |
-| ----------- | ----- | ---------------------------------------------------------- |
-| sites       | 6     | list, get, create, delete, get_metrics, get_access_log     |
-| services    | 3     | list, start, stop                                          |
-| system      | 3     | status, system_info, recent_activity                       |
-| databases   | 6     | list, create, drop, tables, query, execute                 |
-| ssl         | 4     | list_certs, install_ca, generate_cert, revoke_cert         |
-| php         | 2     | set_default, toggle_extension                              |
-| binaries    | 5     | list_catalog, list_installed, install, uninstall, refresh  |
-| plugins     | 5     | list, get, enable, disable, info                           |
-| backup      | 3     | create, list, restore                                      |
-| settings    | 2     | get, update                                                |
-| cloudflare  | 9     | tunnels, dns, routes, …                                    |
+MCP must be enabled (MCP card switch, or Settings → Advanced → MCP);
+otherwise approval requests fail with `mcp_disabled`.
 
-Destructive tools (`drop_database`, `delete_site`, `revoke_cert`, `restore_backup`, `execute`) require `confirm: "YES"`.
+| Module       | Tools | Examples                                                      |
+| ------------ | ----- | ------------------------------------------------------------- |
+| sites        | 6     | list, get, create, delete, get_metrics, get_access_log        |
+| services     | 3     | list, start, stop                                             |
+| system       | 3     | status, system_info, recent_activity                          |
+| databases    | 6     | list, create, drop, tables, query, execute                    |
+| mysql users  | 7     | list, create, set_password, grant, drop, root password        |
+| ssl          | 4     | list_certs, install_ca, generate_cert, revoke_cert            |
+| php          | 2     | list_versions, toggle_extension                               |
+| binaries     | 5     | list_catalog, list_installed, install, uninstall, refresh     |
+| plugins      | 5     | list, marketplace, enable, disable, install                   |
+| backup       | 3     | create, list, restore                                         |
+| settings     | 2     | get, update                                                   |
+| cloudflare   | 9     | tunnels, dns, routes, …                                       |
+| deploy       | 16    | targets, releases, intents, deploy, rollback, groups, …       |
+| confirmation | 1     | request_confirmation                                          |
+
+Destructive operations need the operator's approval in WDC: the agent calls
+`wdc_request_confirmation`, the user approves the banner (or a trust rule on
+the MCP → Rules tab approves it), then the agent repeats the operation with
+the returned intent token. With `--readonly` the server leaves out every mutating tool (33 tools remain).
 
 ### MAMP PRO migration
 
@@ -181,7 +209,7 @@ webdev-console/
 │   └── frontend/                            # Electron 34 + Vue 3 + Element Plus + Tailwind v4
 ├── services/
 │   ├── catalog-api/                         # FastAPI sidecar (binary + version catalog)
-│   └── mcp-server/                          # TypeScript stdio MCP server (67 tools, Phase 8 audit log)
+│   └── mcp-server/                          # TypeScript stdio MCP server (72 tools, Phase 8 audit log)
 ├── tests/                                   # xUnit tests (Daemon + Core)
 ├── scripts/                                 # build helpers
 └── .github/workflows/                       # CI matrix — Windows, macOS, Linux

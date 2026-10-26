@@ -1,5 +1,11 @@
 <template>
   <div class="page mcp-hub-page">
+    <!-- Connect an AI client — copy-paste registration for Claude Code,
+         Claude Desktop and Cursor, the MCP enable switch, and live status
+         (enabled, MCP token file, last call). Collapses itself once an AI
+         client has called WDC. -->
+    <McpConnectCard />
+
     <!-- Onboarding panel — first-time setup with preset profiles. Stays
          at the very top of the page so the four trust-tier cards are
          the first thing the operator sees, before any header chrome.
@@ -123,6 +129,7 @@ import McpGrants from './McpGrants.vue'
 import McpKinds from './McpKinds.vue'
 import SuggestedGrantsBanner from '../mcp/SuggestedGrantsBanner.vue'
 import McpOnboardingPanel from '../mcp/McpOnboardingPanel.vue'
+import McpConnectCard from '../mcp/McpConnectCard.vue'
 import {
   fetchIntentInventory,
   fetchMcpGrantsStats,

@@ -2,56 +2,85 @@
 
 MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon as AI-callable tools and resources. Lets Claude Desktop, Claude Code, Cursor, and other MCP clients fully manage your local development environment.
 
-> **48 tools across 11 modules** — built on the modern `McpServer.registerTool()` API with Zod input schemas, honest tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), shared response formatting with JSON-envelope truncation at 25 KB, split read/write SQL tools (`wdc_query` vs `wdc_execute`), and non-empty credential schemas to prevent accidental wipes. See [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap.
+> **72 tools across 14 modules** (33 with `--readonly`) — built on the modern `McpServer.registerTool()` API with Zod input schemas, honest tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), shared response formatting with JSON-envelope truncation at 25 KB, split read/write SQL tools (`wdc_query` vs `wdc_execute`), and non-empty credential schemas to prevent accidental wipes. See [`docs/plans/mcp-server-integration-plan.md`](../../docs/plans/mcp-server-integration-plan.md) for the full roadmap.
 
-## Quick start
+## Connect an AI client
+
+The WDC installer ships this server as one bundled file,
+`<WDC resources>/mcp-server/index.js`. In the app, **MCP → Connect an AI
+client** shows the exact path for your install with copy buttons, an MCP
+on/off switch and live status (MCP enabled, MCP token file present, last
+MCP call). The server runs with Node.js 18+ from `PATH`.
+
+Default locations of the bundled server:
+
+| OS | Path |
+|---|---|
+| Windows (per-user install) | `%LOCALAPPDATA%\Programs\NKS WebDev Console\resources\mcp-server\index.js` |
+| macOS | `/Applications/NKS WebDev Console.app/Contents/Resources/mcp-server/index.js` |
+| Linux (AppImage) | `~/.wdc/mcp-server/index.js` — copied there on demand, because the AppImage mount path changes on every launch |
+
+### Claude Code
+
+```bash
+claude mcp add --scope user nks-wdc -- node "<WDC resources>/mcp-server/index.js"
+```
+
+Options (`--scope`, `-e KEY=value`) go before the server name; `--`
+separates the server command so its arguments are not read as
+`claude mcp add` flags. Check with `claude mcp list`.
 
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Merge into `~/Library/Application Support/Claude/claude_desktop_config.json`
+(macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows), then
+restart Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "nks-wdc": {
-      "command": "npx",
-      "args": ["-y", "@nks-wdc/mcp-server"]
+      "command": "node",
+      "args": ["<WDC resources>/mcp-server/index.js"]
     }
   }
 }
 ```
 
-Restart Claude Desktop. All 48 tools appear in the tool picker.
-
-### Claude Code
-
-Add to `~/.claude.json` `mcpServers` section, same shape as above.
-
 ### Cursor
 
-Add to `.cursor/mcp.json` in your project, same shape.
+Merge the same `mcpServers` entry into `.cursor/mcp.json` in your project
+(or `~/.cursor/mcp.json` for every project).
+
+### From a source checkout
+
+```bash
+npm install
+npm run build        # tsc → dist/index.js
+npm run bundle       # esbuild → dist-bundle/index.js (what the installer ships)
+claude mcp add --scope user nks-wdc -- node "$(pwd)/dist/index.js"
+```
+
+### Enabling MCP
+
+Approval requests (`wdc_request_confirmation`) need MCP enabled in WDC — the
+switch on the MCP card, or Settings → Advanced → MCP. While it is off the
+daemon answers `404 mcp_disabled` with a hint saying where to turn it on.
 
 ### Read-only mode
 
 Append `--readonly` to skip mutation tools (only list/get/metrics):
 
-```json
-{
-  "mcpServers": {
-    "nks-wdc": {
-      "command": "npx",
-      "args": ["-y", "@nks-wdc/mcp-server", "--readonly"]
-    }
-  }
-}
+```bash
+claude mcp add --scope user nks-wdc-readonly -- node "<WDC resources>/mcp-server/index.js" --readonly
 ```
 
-## Tool catalog (48 tools)
+## Tool catalog (72 tools)
 
-### Sites (5)
+### Sites (6)
 | Tool | Type |
 |---|---|
-| `wdc_list_sites` / `wdc_get_site` / `wdc_get_site_metrics` | read |
+| `wdc_list_sites` / `wdc_get_site` / `wdc_get_site_metrics` / `wdc_get_site_access_log` | read |
 | `wdc_create_site` | mutate |
 | `wdc_delete_site` | **destructive** |
 
@@ -80,11 +109,11 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 | `wdc_install_ca` / `wdc_generate_cert` | mutate |
 | `wdc_revoke_cert` | **destructive** |
 
-### PHP (3)
+### PHP (2)
 | Tool | Type |
 |---|---|
 | `wdc_list_php_versions` | read |
-| `wdc_set_default_php` / `wdc_toggle_php_extension` | mutate |
+| `wdc_toggle_php_extension` | mutate |
 
 ### Binaries (5)
 | Tool | Type |
@@ -118,6 +147,25 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 | `wdc_get_cloudflare_config` / `wdc_verify_cloudflare_token` / `wdc_list_cloudflare_zones` / `wdc_list_cloudflare_dns` / `wdc_list_cloudflare_tunnels` / `wdc_get_cloudflare_subdomain_suggestion` | read |
 | `wdc_save_cloudflare_config` / `wdc_create_cloudflare_dns` | mutate |
 | `wdc_delete_cloudflare_dns` | **destructive** |
+
+### MySQL users (7)
+| Tool | Type |
+|---|---|
+| `wdc_list_mysql_users` | read |
+| `wdc_create_mysql_user` / `wdc_set_mysql_user_password` / `wdc_grant_mysql_user_database` / `wdc_change_mysql_root_password` | mutate |
+| `wdc_drop_mysql_user` / `wdc_reset_mysql_root_password` | **destructive** |
+
+### Deploy (16, depending on the token's deploy scopes)
+| Tool | Type |
+|---|---|
+| `wdc_deploy_list_targets` / `wdc_deploy_get_status` / `wdc_deploy_list_releases` / `wdc_deploy_get_release` / `wdc_deploy_get_logs` / `wdc_deploy_preflight` / `wdc_deploy_group_status` | read |
+| `wdc_deploy_create_intent` / `wdc_deploy_lock` / `wdc_deploy_unlock` | mutate |
+| `wdc_deploy_site` / `wdc_deploy_rollback` / `wdc_deploy_cancel` / `wdc_deploy_group_start` / `wdc_deploy_group_rollback` / `wdc_deploy_restore_snapshot` | **destructive** |
+
+### Confirmation (1)
+| Tool | Type |
+|---|---|
+| `wdc_request_confirmation` | mutate — asks the operator to approve a destructive operation |
 
 ## Daemon discovery
 

@@ -23,6 +23,15 @@ public static class McpEndpoints
         ctx.RequestServices.GetRequiredService<SettingsStore>()
             .GetBool("mcp", "enabled", defaultValue: false);
 
+    /// <summary>Operator-facing hint returned with every <c>mcp_disabled</c> 404.</summary>
+    public const string McpDisabledHint =
+        "Enable MCP in WDC → Settings → Advanced → MCP, or with the switch on the MCP page.";
+
+    // 404 while mcp.enabled is off. The hint tells the agent (and the human
+    // reading its error) how to turn the integration on.
+    public static IResult McpDisabled() =>
+        Results.NotFound(new { error = "mcp_disabled", hint = McpDisabledHint });
+
     public static void MapMcpEndpoints(this WebApplication app)
     {
         app.MapPost("/api/mcp/intents", async (
@@ -31,7 +40,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Mcp.IntentSigner signer,
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
             var root = doc.RootElement;
             string? domain = root.TryGetProperty("domain", out var dEl) ? dEl.GetString() : null;
@@ -114,7 +123,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             SettingsStore settings) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
             var root = doc.RootElement;
             string? intentId = root.TryGetProperty("intentId", out var iEl) ? iEl.GetString() : null;
@@ -207,7 +216,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             if (string.IsNullOrWhiteSpace(intentId))
             {
                 return Results.BadRequest(new { error = "intentId is required" });
@@ -248,7 +257,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             if (string.IsNullOrWhiteSpace(intentId))
             {
                 return Results.BadRequest(new { error = "intentId is required" });
@@ -288,7 +297,7 @@ public static class McpEndpoints
             int limit = 100,
             string? matchedGrantId = null) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             using var conn = db.CreateConnection();
             await conn.OpenAsync();
             // Phase 7.5+++ — optional matchedGrantId filter for "show all
@@ -361,7 +370,7 @@ public static class McpEndpoints
             SettingsStore settings,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             // Phase 7.5+++ — surface mcp.always_confirm_kinds membership per row.
             // Same parsing rules as the validator's lookup so the GUI flag and
             // the runtime gate can never disagree.
@@ -426,7 +435,7 @@ public static class McpEndpoints
             int? page = null,
             int? pageSize = null) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             // Phase 7.5+++ — opt-in audit view. Nullable + default null so the
             // minimal-API binder treats the param as truly optional (a non-
             // nullable `bool` would 400 when the query string is empty).
@@ -470,7 +479,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
 
             GrantCreateBody? body;
             try { body = await ctx.Request.ReadFromJsonAsync<GrantCreateBody>(ct); }
@@ -531,7 +540,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             var ok = await grants.RevokeAsync(id, ct);
             if (!ok)
             {
@@ -560,7 +569,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             using var conn = db.CreateConnection();
             await conn.OpenAsync(ct);
             try
@@ -619,7 +628,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
             var root = doc.RootElement;
             var sessionId  = root.TryGetProperty("sessionId",  out var sEl) ? sEl.GetString() : null;
@@ -665,7 +674,7 @@ public static class McpEndpoints
             SettingsStore settings,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             using var conn = db.CreateConnection();
             await conn.OpenAsync(ct);
             // Read the same operator-tunable retention the background janitor uses
@@ -706,7 +715,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             System.Text.Json.JsonDocument doc;
             try { doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct); }
             catch { return Results.BadRequest(new { error = "Invalid JSON body" }); }
@@ -761,7 +770,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             CancellationToken ct) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             System.Text.Json.JsonDocument doc;
             try { doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct); }
             catch { return Results.BadRequest(new { error = "Invalid JSON body" }); }
@@ -1007,7 +1016,7 @@ public static class McpEndpoints
             int? withinDays,
             int? minOccurrences) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             var days = Math.Clamp(withinDays ?? 7, 1, 90);
             var minN = Math.Max(2, minOccurrences ?? 3);
             var cutoff = DateTime.UtcNow.AddDays(-days).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");

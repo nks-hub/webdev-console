@@ -152,4 +152,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // is responsible for waiting on the new daemon port file to appear.
   elevateDaemon: (): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('elevate-daemon'),
+
+  // Resolved path of the bundled MCP server (resources/mcp-server/index.js
+  // when packaged) plus whether the daemon's MCP token file exists. Feeds
+  // the copy-paste commands on the MCP hub's "Connect an AI client" card.
+  getMcpServerInfo: (): Promise<{
+    serverPath: string
+    serverExists: boolean
+    packaged: boolean
+    portFilePresent: boolean
+  }> => ipcRenderer.invoke('mcp-server-info'),
 })
