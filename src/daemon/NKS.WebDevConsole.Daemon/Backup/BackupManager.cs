@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Services;
 
@@ -207,7 +208,60 @@ public sealed class BackupManager
             _logger.LogDebug("state.db not found, skipping: {Path}", src);
             return 0;
         }
-        return AddFileToZipSafe(zip, src, "data/state.db");
+        // state.db runs in WAL mode, so a raw file copy misses every commit that
+        // still sits in state.db-wal. Take a consistent snapshot through SQLite's
+        // online backup API (next to the live file, not in the shared temp dir)
+        // and pack that; fall back to the raw copy if SQLite cannot read it.
+        var snapshot = Path.Combine(Path.GetDirectoryName(src)!, $".state-backup-{Guid.NewGuid():N}.db");
+        try
+        {
+            return TrySqliteCopy(src, snapshot)
+                ? AddFileToZipSafe(zip, snapshot, "data/state.db")
+                : AddFileToZipSafe(zip, src, "data/state.db");
+        }
+        finally
+        {
+            TryDeleteSqliteFiles(snapshot);
+        }
+    }
+
+    /// <summary>
+    /// Copies <paramref name="sourceDb"/> into <paramref name="destinationDb"/> with
+    /// SQLite's online backup API, which takes the proper locks and includes pages
+    /// still in the WAL. Returns false (and leaves the caller to fall back) when
+    /// either file is not a usable SQLite database.
+    /// </summary>
+    private bool TrySqliteCopy(string sourceDb, string destinationDb)
+    {
+        try
+        {
+            using var source = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = sourceDb, Mode = SqliteOpenMode.ReadOnly, Pooling = false,
+            }.ToString());
+            using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = destinationDb, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false,
+            }.ToString());
+            source.Open();
+            destination.Open();
+            source.BackupDatabase(destination);
+            return true;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning(ex, "SQLite online backup {Source} -> {Destination} failed; falling back to a file copy",
+                sourceDb, destinationDb);
+            return false;
+        }
+    }
+
+    private static void TryDeleteSqliteFiles(string dbPath)
+    {
+        foreach (var suffix in new[] { "", "-wal", "-shm", "-journal" })
+        {
+            try { File.Delete(dbPath + suffix); } catch { /* best-effort cleanup */ }
+        }
     }
 
     private int PackDirectory(ZipArchive zip, string relativeSubdir, string zipPrefix)
@@ -358,7 +412,15 @@ public sealed class BackupManager
             if (File.Exists(srcDb))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(dstDb)!);
-                File.Copy(srcDb, dstDb, overwrite: true);
+                // The daemon holds pooled WAL connections to the live state.db.
+                // File.Copy over it left a stale state.db-wal next to the new file
+                // (corruption, or a restore that silently did not take effect).
+                // Write through SQLite so the restore uses the same locks and WAL.
+                if (!(File.Exists(dstDb) && TrySqliteCopy(srcDb, dstDb)))
+                {
+                    SqliteConnection.ClearAllPools();
+                    File.Copy(srcDb, dstDb, overwrite: true);
+                }
                 promoted++;
             }
 

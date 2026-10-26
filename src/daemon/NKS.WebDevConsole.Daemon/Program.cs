@@ -4581,7 +4581,7 @@ app.MapDelete("/api/backup/{id}", (BackupManager bm, string id) =>
 {
     var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
     var resolved = Path.GetFullPath(Path.Combine(backupRoot, id));
-    if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+    if (!PathContainment.IsUnder(backupRoot, resolved))
         return Results.BadRequest(new { error = "Path escapes backup root" });
     if (!File.Exists(resolved)) return Results.NotFound(new { error = "Backup not found" });
     try { File.Delete(resolved); return Results.Ok(new { deleted = id }); }
@@ -4602,7 +4602,7 @@ app.MapGet("/api/backup/download", (BackupManager bm, string? path) =>
     {
         var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
         var resolved = Path.GetFullPath(path);
-        if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+        if (!PathContainment.IsUnder(backupRoot, resolved))
             return Results.BadRequest(new { error = "Path escapes backup root" });
         target = resolved;
     }
@@ -4612,6 +4612,10 @@ app.MapGet("/api/backup/download", (BackupManager bm, string? path) =>
 
 app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
 {
+    // An uploaded archive holds state.db and the sites' TLS private keys. It
+    // used to stay in the shared temp dir with default permissions forever;
+    // write it owner-only and delete it once the restore is done.
+    string? uploadedTmp = null;
     try
     {
         string archivePath;
@@ -4620,10 +4624,13 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
             var form = await ctx.Request.ReadFormAsync();
             var file = form.Files.FirstOrDefault();
             if (file is null) return Results.BadRequest(new { error = "No file uploaded" });
-            var tmp = Path.Combine(Path.GetTempPath(), $"wdc-restore-{Guid.NewGuid():N}.zip");
-            using (var fs = File.Create(tmp))
+            uploadedTmp = Path.Combine(Path.GetTempPath(), $"wdc-restore-{Guid.NewGuid():N}.zip");
+            var tmpOptions = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows())
+                tmpOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using (var fs = new FileStream(uploadedTmp, tmpOptions))
                 await file.CopyToAsync(fs);
-            archivePath = tmp;
+            archivePath = uploadedTmp;
         }
         else
         {
@@ -4633,13 +4640,13 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
                 return Results.BadRequest(new { error = "path or multipart file required" });
             var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
             var resolved = Path.GetFullPath(requested);
-            if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+            if (!PathContainment.IsUnder(backupRoot, resolved))
                 return Results.BadRequest(new { error = "Path escapes backup root" });
             archivePath = resolved;
         }
 
         var (restored, safety) = bm.RestoreBackup(archivePath);
-        return Results.Ok(new { restored, safetyBackup = safety, archive = archivePath });
+        return Results.Ok(new { restored, safetyBackup = safety, archive = uploadedTmp is null ? archivePath : null });
     }
     catch (System.Text.Json.JsonException ex)
     {
@@ -4647,13 +4654,20 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
     }
     catch (FileNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
     catch (Exception ex) { return Results.Problem($"Restore failed: {ex.Message}"); }
+    finally
+    {
+        if (uploadedTmp is not null)
+        {
+            try { File.Delete(uploadedTmp); } catch { /* best-effort; temp cleaner will catch it */ }
+        }
+    }
 });
 
 app.MapPost("/api/backup/{id}/restore", (BackupManager bm, string id) =>
 {
     var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
     var resolved = Path.GetFullPath(Path.Combine(backupRoot, id));
-    if (!resolved.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+    if (!PathContainment.IsUnder(backupRoot, resolved))
         return Results.BadRequest(new { error = "Path escapes backup root" });
     if (!File.Exists(resolved)) return Results.NotFound(new { error = "Backup not found" });
     try
