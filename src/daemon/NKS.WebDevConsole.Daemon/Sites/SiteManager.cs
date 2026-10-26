@@ -242,6 +242,7 @@ public sealed class SiteManager : ISiteRegistry
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
         ValidateBindConflicts(site);
+        SitePhpIniWriter.Validate(site.PhpSettings);
 
         var toml = TomlSerializer.Serialize(site);
 
@@ -252,7 +253,7 @@ public sealed class SiteManager : ISiteRegistry
         // ValidateDomain would silently re-open the traversal vector.
         var sitesRoot = Path.GetFullPath(_sitesDir);
         var path = Path.GetFullPath(Path.Combine(_sitesDir, $"{site.Domain}.toml"));
-        if (!path.StartsWith(sitesRoot, StringComparison.OrdinalIgnoreCase))
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(sitesRoot, path))
             throw new UnauthorizedAccessException("Resolved site path escapes sites root");
 
         await _writer.WriteAsync(path, toml);
@@ -277,11 +278,12 @@ public sealed class SiteManager : ISiteRegistry
             foreach (var alias in site.Aliases)
                 ValidateAlias(alias);
         ValidateBindConflicts(site, site.Domain);
+        SitePhpIniWriter.Validate(site.PhpSettings);
 
         var toml = TomlSerializer.Serialize(site);
         var sitesRoot = Path.GetFullPath(_sitesDir);
         var path = Path.GetFullPath(Path.Combine(_sitesDir, $"{site.Domain}.toml"));
-        if (!path.StartsWith(sitesRoot, StringComparison.OrdinalIgnoreCase))
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(sitesRoot, path))
             throw new UnauthorizedAccessException("Resolved site path escapes sites root");
 
         await _writer.WriteAsync(path, toml);
@@ -312,9 +314,9 @@ public sealed class SiteManager : ISiteRegistry
         var path = Path.GetFullPath(Path.Combine(_sitesDir, $"{domain}.toml"));
         var genPath = Path.GetFullPath(Path.Combine(_generatedDir, $"{domain}.conf"));
 
-        if (!path.StartsWith(sitesRoot, StringComparison.OrdinalIgnoreCase))
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(sitesRoot, path))
             throw new UnauthorizedAccessException("Resolved site path escapes sites root");
-        if (!genPath.StartsWith(generatedRoot, StringComparison.OrdinalIgnoreCase))
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(generatedRoot, genPath))
             throw new UnauthorizedAccessException("Resolved generated path escapes generated root");
 
         if (File.Exists(path)) File.Delete(path);
