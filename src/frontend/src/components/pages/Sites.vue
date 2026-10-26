@@ -1097,10 +1097,12 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   white-space: nowrap;
 }
 
-@media (max-width: 1100px) {
+/* The sidebar takes ~232px, so these breakpoints leave the table room
+   for its pinned action column without clipping the last header. */
+@media (max-width: 1400px) {
   .sites-table :deep(.col-framework-cell) { display: none; }
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .sites-table :deep(.col-docroot-cell) { display: none; }
 }
 @media (max-width: 700px) {
