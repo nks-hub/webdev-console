@@ -137,7 +137,12 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
     const prefix = `HTTP ${r.status} ${r.statusText}`
     throw new Error(detail ? `${prefix}: ${detail}` : prefix)
   }
-  return r.json() as Promise<T>
+  // DELETE endpoints (sites, binaries, …) answer 204 No Content. Calling
+  // r.json() on an empty body throws, which made successful deletes surface
+  // as "Delete failed" in the UI.
+  if (r.status === 204) return undefined as T
+  const body = await r.text()
+  return (body ? JSON.parse(body) : undefined) as T
 }
 
 // Status
@@ -1159,7 +1164,7 @@ export const fetchLatestBinary = (app: string) =>
   json<LatestBinary>(`/api/binaries/catalog/${encodeURIComponent(app)}/latest`)
 
 export const uninstallBinary = (app: string, version: string) =>
-  json<{ ok: boolean }>(`/api/binaries/${app}/${version}`, { method: 'DELETE' })
+  json<void>(`/api/binaries/${encodeURIComponent(app)}/${encodeURIComponent(version)}`, { method: 'DELETE' })
 
 // Service config
 export interface ConfigFile {
