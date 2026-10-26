@@ -225,6 +225,7 @@
 </template>
 
 <script setup lang="ts">
+import { openHostsFile } from '../../utils/hostsFile'
 import { ref, computed, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -538,10 +539,6 @@ async function onRestoreFile(evt: Event) {
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
-function openHostsFile() {
-  const hostsPath = 'C:\\Windows\\System32\\drivers\\etc\\hosts'
-  window.open(`vscode://file/${hostsPath}`, '_self')
-}
 
 function sourceTagType(source: string): '' | 'success' | 'info' | 'warning' | 'danger' {
   if (source === 'wdc') return 'success'

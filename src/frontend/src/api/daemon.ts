@@ -627,13 +627,32 @@ export const fetchBackups = () =>
 export const createBackup = () =>
   json<{ path: string; files: number; size: number }>('/api/backup', { method: 'POST' })
 
-export const downloadBackup = (path?: string) => {
-  const token = daemonToken()
-  const params = new URLSearchParams()
-  if (path) params.set('path', path)
-  if (token) params.set('token', token)
-  const qs = params.toString()
-  window.open(`${daemonBaseUrl()}/api/backup/download${qs ? '?' + qs : ''}`, '_blank')
+/**
+ * Downloads a backup archive through an authenticated fetch and saves it
+ * via a blob link. window.open was denied by the Electron window-open
+ * handler, and a plain <a download> to the daemon carried no token.
+ */
+export async function downloadBackup(path?: string): Promise<void> {
+  const qs = path ? `?path=${encodeURIComponent(path)}` : ''
+  const r = await fetch(`${daemonBaseUrl()}/api/backup/download${qs}`, { headers: daemonAuthHeaders() })
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`)
+  const blob = await r.blob()
+  const disposition = r.headers.get('content-disposition') ?? ''
+  const fromHeader = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1]
+  const name = fromHeader
+    ? decodeURIComponent(fromHeader)
+    : (path?.split(/[\\/]/).pop() || 'wdc-backup.zip')
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
 }
 
 // Per-site metrics — Phase 11 performance monitoring foothold

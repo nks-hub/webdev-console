@@ -177,7 +177,8 @@
       "backupNow": "Back up now",
       "openFolder": "Open backup folder",
       "refresh": "Refresh",
-      "createdToast": "Backup created: {files} files, {size}"
+      "createdToast": "Backup created: {files} files, {size}",
+      "noBackupsYet": "No backup yet. Create one first."
     },
     "snapshots": {
       "count": "{n} backups",
@@ -192,7 +193,8 @@
       "deleteConfirmMessage": "Delete backup {name}?",
       "backupFailed": "Backup failed",
       "restoreFailed": "Restore failed",
-      "deleteFailed": "Delete failed"
+      "deleteFailed": "Delete failed",
+      "downloadFailed": "Download failed: {error}"
     },
     "toast": {
       "completed": "Backup completed",

@@ -175,7 +175,9 @@ function getUpdateFeedOverride(): string | null {
 // is excluded on purpose: ShellExecute honours .exe/.lnk/.url associations,
 // so file:// or UNC links would launch programs without a prompt.
 function isSafeExternalUrl(url: string): boolean {
-  return /^(https?|mailto):/i.test(url)
+  // vscode://file/<path> opens a file in VS Code ("Edit hosts file"); other
+  // vscode:// routes reach extension URI handlers and stay blocked.
+  return /^(https?|mailto):/i.test(url) || /^vscode:\/\/file\//i.test(url)
 }
 
 // Portable mode: if portable.txt exists next to the app, redirect both
@@ -625,7 +627,14 @@ async function createWindow() {
   // the explicit electronAPI.openExternal IPC (allowlisted to https/mailto)
   // instead. Without this an XSS in the renderer could spawn a child window
   // pointing at an attacker URL with the same preload bridge attached.
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  // Never open a second Electron window. Links the renderer opens with
+  // window.open (site URLs, Mailpit, Cloudflare dashboard, update downloads)
+  // go to the system browser when their scheme is safe; everything else is
+  // dropped. Previously every window.open was silently denied.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
 
   // Lock the renderer to its own origin. The legitimate URL is either
   // app://nks-wdc/index.html (packaged) or the dev server (ELECTRON_RENDERER_URL).

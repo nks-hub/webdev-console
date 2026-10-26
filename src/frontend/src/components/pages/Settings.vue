@@ -1534,7 +1534,7 @@ const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
 
 function downloadBackupFile(path: string) {
-  downloadBackup(path)
+  downloadBackup(path).catch((e) => ElMessage.error(t('backupsPage.snapshots.downloadFailed', { error: errorMessage(e) })))
 }
 
 // ── Danger-zone reset operations ──────────────────────────────────────

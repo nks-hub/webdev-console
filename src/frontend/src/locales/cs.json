@@ -177,7 +177,8 @@
       "backupNow": "Zálohovat nyní",
       "openFolder": "Otevřít složku záloh",
       "refresh": "Obnovit",
-      "createdToast": "Záloha vytvořena: {files} souborů, {size}"
+      "createdToast": "Záloha vytvořena: {files} souborů, {size}",
+      "noBackupsYet": "Zatím tu není žádná záloha. Nejdřív nějakou vytvořte."
     },
     "snapshots": {
       "count": "{n} záloh",
@@ -192,7 +193,8 @@
       "deleteConfirmMessage": "Smazat zálohu {name}?",
       "backupFailed": "Záloha selhala",
       "restoreFailed": "Obnovení selhalo",
-      "deleteFailed": "Smazání selhalo"
+      "deleteFailed": "Smazání selhalo",
+      "downloadFailed": "Stažení selhalo: {error}"
     },
     "toast": {
       "completed": "Záloha dokončena",
