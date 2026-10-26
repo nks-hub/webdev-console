@@ -5,7 +5,9 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import * as monaco from 'monaco-editor'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+// monaco-editor >= 0.56 exports its ESM tree at the package root
+// ("./*" -> "./esm/vs/*.js"), so the old esm/vs/... deep path no longer resolves.
+import editorWorker from 'monaco-editor/editor/editor.worker?worker'
 
 // Minimal worker setup — no language-specific workers for conf/ini/etc
 ;(self as unknown as Record<string, unknown>).MonacoEnvironment = {
