@@ -102,6 +102,7 @@ const commands = computed<Command[]>(() => allCommands.value.filter(isAvailable)
 const allCommands = computed<Command[]>(() => [
   { id: 'sites', label: t('commandPalette.gotoSites'), icon: Monitor, shortcut: '', route: '/sites', action: () => router.push('/sites') },
   { id: 'dashboard', label: t('commandPalette.gotoDashboard'), icon: DataAnalysis, route: '/dashboard', action: () => router.push('/dashboard') },
+  { id: 'services', label: t('commandPalette.gotoServices'), icon: Monitor, route: '/services', action: () => router.push('/services') },
   { id: 'databases', label: t('commandPalette.gotoDatabases'), icon: Coin, route: '/databases', action: () => router.push('/databases') },
   { id: 'ssl', label: t('commandPalette.gotoSsl'), icon: Lock, route: '/ssl', action: () => router.push('/ssl') },
   { id: 'php', label: t('commandPalette.gotoPhp'), icon: Grid, route: '/php', action: () => router.push('/php') },

@@ -31,11 +31,13 @@ const Help = () => import('../components/pages/Help.vue')
 const Login = () => import('../components/pages/Login.vue')
 const BackupsPage = () => import('../components/pages/BackupsPage.vue')
 const McpHub = () => import('../components/pages/McpHub.vue')
+const ServicesPage = () => import('../components/pages/ServicesPage.vue')
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
   { path: '/dashboard', component: Dashboard, meta: { title: 'Dashboard', titleKey: 'nav.overview' } },
   { path: '/sites', component: Sites, meta: { title: 'Sites', titleKey: 'nav.sites' } },
+  { path: '/services', component: ServicesPage, meta: { title: 'Services', titleKey: 'nav.services' } },
   { path: '/sites/:domain/edit', component: SiteEdit, props: true, meta: { title: 'Edit Site', titleKey: 'nav.editSite' } },
   { path: '/databases', component: Databases, meta: { title: 'Databases', titleKey: 'nav.databases', requiresAdvanced: true } },
   { path: '/ssl', component: SslManager, meta: { title: 'SSL', titleKey: 'nav.ssl', requiresAdvanced: true } },
@@ -54,7 +56,8 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/composer', component: ComposerManager, meta: { title: 'Composer', titleKey: 'nav.composer', requiresAdvanced: true } },
   { path: '/hosts', component: HostsManager, meta: { title: 'Hosts', titleKey: 'nav.hosts', requiresAdvanced: true } },
   { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', requiresAdvanced: true } },
-  { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services', requiresAdvanced: true } },
+  // No requiresAdvanced: the Services page links here in both UI modes.
+  { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services' } },
   { path: '/backups', component: BackupsPage, meta: { title: 'Zálohy', titleKey: 'nav.backups' } },
   // Phase 8 — single MCP hub with 4 tabs (Activity / Requests / Rules / Catalog).
   // /mcp redirects to /mcp/activity (the new default — full audit feed).

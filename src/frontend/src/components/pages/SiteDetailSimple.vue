@@ -181,6 +181,7 @@
 
       <!-- Service status — extracted to a self-contained card so this
            component stays focused on site-config editing. -->
+      <SiteApplyPipeline :domain="domain" />
       <SimpleSiteServicesCard :domain="domain" />
 
       <!-- Recent activity (errors + traffic) — extracted to a dedicated
@@ -207,6 +208,7 @@ defineOptions({ name: 'SiteDetailSimple' })
 import { computed, h, onMounted, ref, watch } from 'vue'
 import SimpleSiteActivityCard from './SimpleSiteActivityCard.vue'
 import SimpleSiteServicesCard from './SimpleSiteServicesCard.vue'
+import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'

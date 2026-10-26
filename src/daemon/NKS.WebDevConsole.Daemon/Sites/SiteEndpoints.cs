@@ -876,6 +876,23 @@ internal static class SiteEndpoints
             await orchestrator.RemoveAsync(domain);
             return Results.NoContent();
         });
+
+        // Re-run the apply pipeline for one site and return the per-step
+        // result (ssl, vhost, php, reload, hosts, …). Used by the site
+        // page's pipeline view to retry after fixing whatever failed,
+        // without saving the config again.
+        app.MapPost("/api/sites/{domain}/apply", async (string domain, SiteManager sm, SiteOrchestrator orchestrator, CancellationToken ct) =>
+        {
+            var site = sm.Get(domain);
+            if (site is null) return Results.NotFound(new { error = $"Site {domain} not found" });
+            var result = await orchestrator.ApplyAsync(site, ct);
+            return Results.Ok(new
+            {
+                domain = result.Domain,
+                success = result.Success,
+                steps = result.Steps.Select(st => new { name = st.Name, status = st.Status, detail = st.Detail }),
+            });
+        });
     }
 
     internal static IReadOnlyList<BindAddressOption> GetBindAddressOptions()
