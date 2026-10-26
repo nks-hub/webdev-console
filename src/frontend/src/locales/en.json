@@ -2217,6 +2217,7 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Configure NKS WDC daemon and UI preferences",
+    "loadFailedSaveBlocked": "Settings could not be loaded from the daemon, so saving is blocked to avoid overwriting them with defaults. Reload the page once the daemon is running.",
     "tabs": {
       "general": "General",
       "ports": "Ports",

@@ -2217,6 +2217,7 @@
   "settings": {
     "title": "Nastavení",
     "subtitle": "Konfigurace NKS WDC daemonu a uživatelského rozhraní",
+    "loadFailedSaveBlocked": "Nastavení se nepodařilo načíst z daemonu, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až daemon poběží, načtěte stránku znovu.",
     "tabs": {
       "general": "Obecné",
       "ports": "Porty",
