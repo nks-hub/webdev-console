@@ -102,6 +102,36 @@ describe('DaemonRequestError', () => {
     expect(err(404, '').message).toBe('Daemon request failed: 404 HTTP 404')
   })
 
+  it('surfaces the capability with its setting key and the daemon hint', () => {
+    const e = err(403, {
+      error: 'mcp_capability_disabled',
+      capability: 'database_admin',
+      settingKey: 'mcp.capabilities.database_admin',
+      detail: 'POST /api/plugins/mysql/reset-password',
+      hint: 'Enable it in WDC → Settings → MCP (mcp.capabilities.database_admin).',
+    })
+    expect(e.message).toContain('mcp_capability_disabled')
+    expect(e.message).toContain('capability: database_admin (mcp.capabilities.database_admin)')
+    expect(e.message).toContain('Hint: Enable it in WDC → Settings → MCP')
+    expect(e.settingKey).toBe('mcp.capabilities.database_admin')
+  })
+
+  it('surfaces the intent kind and target together with the next step', () => {
+    const e = err(425, {
+      error: 'intent_rejected',
+      reason: 'pending_confirmation',
+      intentKind: 'node_process',
+      intentDomain: 'app.loc',
+      hint: 'Ask the user to approve it',
+    })
+    expect(e.message).toContain('reason: pending_confirmation')
+    expect(e.message).toContain('intent: kind node_process on app.loc')
+    expect(e.message).toContain('Hint: Ask the user to approve it')
+    expect(e.message).toMatch(/Next step: The user has not approved yet/)
+    expect(e.intentKind).toBe('node_process')
+    expect(e.intentDomain).toBe('app.loc')
+  })
+
   it('does not repeat a detail equal to the error code', () => {
     const e = err(409, { error: 'already_confirmed', detail: 'already_confirmed' })
     expect(e.message).toBe('Daemon request failed: 409 already_confirmed')

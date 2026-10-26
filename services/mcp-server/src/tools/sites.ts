@@ -90,9 +90,10 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
     async ({ domain, limit }) => {
       const qs = new URLSearchParams()
       if (limit !== undefined) qs.set('limit', String(limit))
-      const path = `/api/sites/${encodeURIComponent(domain)}/access-log${qs.toString() ? '?' + qs.toString() : ''}`
       // Entries run oldest → newest; an oversized result keeps the newest.
-      return safe(() => daemonClient.get(path), { keep: 'tail' })
+      return safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}/access-log?${qs.toString()}`), {
+        keep: 'tail',
+      })
     },
   )
 

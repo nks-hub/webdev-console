@@ -23,8 +23,65 @@ public static class McpEndpoints
         ctx.RequestServices.GetRequiredService<SettingsStore>()
             .GetBool("mcp", "enabled", defaultValue: false);
 
+    /// <summary>Body of GET /api/mcp/capabilities (contract in MapMcpEndpoints).</summary>
+    internal static object CapabilitiesResponse(Func<string, bool> isEnabled) => new
+    {
+        settingPrefix = McpCapabilities.SettingPrefix,
+        capabilities = McpCapabilities.All.Select(c => new
+        {
+            id = c.Id,
+            settingKey = c.SettingKey,
+            title = c.Title,
+            description = c.Description,
+            enabled = isEnabled(c.Id),
+            defaultEnabled = c.DefaultEnabled,
+            routes = c.Routes.Select(r => new
+            {
+                method = r.Method,
+                pattern = r.Pattern,
+                intentKind = r.IntentKind,
+                intentBy = r.IntentKind is null ? null : r.IntentByEndpoint ? "endpoint" : "daemon",
+            }),
+            bodyFields = c.BodyFields.Select(f => new
+            {
+                method = f.Method,
+                pattern = f.Pattern,
+                fields = f.Fields,
+                intentKind = f.IntentKind,
+            }),
+            tools = c.Tools,
+        }),
+        alwaysAllowed = McpCapabilities.AlwaysAllowed.Select(r => new { method = r.Method, pattern = r.Pattern }),
+        neverAllowed = McpTokenPolicy.NeverAllowed.Select(r => new { method = r.Method, pattern = r.Pattern }),
+        neverAllowedSettings = "mcp.*",
+    };
+
     public static void MapMcpEndpoints(this WebApplication app)
     {
+        // GET /api/mcp/capabilities — what the MCP token may do, for the
+        // Settings → MCP panel (and for agents, which may read it too).
+        // Not gated by mcp.enabled: the panel needs it to turn MCP on.
+        //
+        // {
+        //   "settingPrefix": "mcp.capabilities.",
+        //   "capabilities": [{
+        //     "id", "settingKey", "title", "description",
+        //     "enabled", "defaultEnabled",
+        //     "routes":     [{ "method", "pattern", "intentKind"?, "intentBy": "daemon"|"endpoint"|null }],
+        //     "bodyFields": [{ "method", "pattern", "fields": [..], "intentKind"? }],
+        //     "tools":      ["wdc_..."]
+        //   }],
+        //   "alwaysAllowed": [{ "method", "pattern" }],
+        //   "neverAllowed":  [{ "method", "pattern" }],
+        //   "neverAllowedSettings": "mcp.*"
+        // }
+        //
+        // A capability is switched with PUT /api/settings
+        // { "mcp.capabilities.<id>": "true" | "false" } using the GUI token;
+        // the MCP token can never write mcp.* settings.
+        app.MapGet("/api/mcp/capabilities", (SettingsStore settings) =>
+            Results.Ok(CapabilitiesResponse(id => McpCapabilities.IsEnabled(settings, id))));
+
         app.MapPost("/api/mcp/intents", async (
             HttpContext ctx,
             NKS.WebDevConsole.Daemon.Data.Database db,

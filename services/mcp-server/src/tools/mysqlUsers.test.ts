@@ -207,7 +207,19 @@ describe('registerMysqlUsersTools — handler routing', () => {
     expect(mockPost).toHaveBeenCalledWith('/api/plugins/mysql/users/drop', {
       userName: 'app',
       host: 'localhost',
-    })
+    }, undefined)
+  })
+
+  it('wdc_drop_mysql_user forwards the approved intent as X-Intent-Token', async () => {
+    const tools = build()
+    const tool = tools.find(t => t.name === 'wdc_drop_mysql_user')!
+    expect(tool.schema.inputSchema.intentToken).toBeDefined()
+    await tool.handler({ userName: 'app', host: 'localhost', confirm: 'YES', intentToken: 'intent.token.sig' })
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/plugins/mysql/users/drop',
+      { userName: 'app', host: 'localhost' },
+      { 'X-Intent-Token': 'intent.token.sig' },
+    )
   })
 
   it('wdc_change_mysql_root_password → POST .../change-password', async () => {
@@ -226,6 +238,18 @@ describe('registerMysqlUsersTools — handler routing', () => {
     await tool.handler({ newPwd: 'new', confirm: 'YES' })
     expect(mockPost).toHaveBeenCalledWith('/api/plugins/mysql/reset-password', {
       newPwd: 'new',
-    })
+    }, undefined)
+  })
+
+  it('wdc_reset_mysql_root_password forwards the approved intent as X-Intent-Token', async () => {
+    const tools = build()
+    const tool = tools.find(t => t.name === 'wdc_reset_mysql_root_password')!
+    expect(tool.schema.inputSchema.intentToken).toBeDefined()
+    await tool.handler({ newPwd: 'new', confirm: 'YES', intentToken: 'intent.token.sig' })
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/plugins/mysql/reset-password',
+      { newPwd: 'new' },
+      { 'X-Intent-Token': 'intent.token.sig' },
+    )
   })
 })

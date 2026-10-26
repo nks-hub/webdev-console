@@ -77,8 +77,10 @@ function str(v: unknown): string | undefined {
 
 /**
  * Structured daemon refusal. The message is composed from every field the
- * daemon sends (error, reason, detail, hint, message, ProblemDetails title)
- * plus a next-step sentence, so the agent can act on it without guessing.
+ * daemon sends (error, reason, detail, hint, message, ProblemDetails title),
+ * the MCP capability the operator has to enable (with its setting key), the
+ * intent kind/target to request via wdc_request_confirmation, plus a
+ * next-step sentence, so the agent can act on it without guessing.
  */
 export class DaemonRequestError extends Error {
   readonly status: number
@@ -89,6 +91,11 @@ export class DaemonRequestError extends Error {
   readonly detail?: string
   readonly hint?: string
   readonly capability?: string
+  /** Setting that turns the capability on, e.g. `mcp.capabilities.database_admin`. */
+  readonly settingKey?: string
+  /** Intent kind and target the daemon expects an approved intent for. */
+  readonly intentKind?: string
+  readonly intentDomain?: string
   readonly nextStep?: string
   readonly body: unknown
 
@@ -111,6 +118,9 @@ export class DaemonRequestError extends Error {
         : rawDetail
     const hint = str(obj?.hint)
     const capability = str(obj?.capability)
+    const settingKey = str(obj?.settingKey)
+    const intentKind = str(obj?.intentKind)
+    const intentDomain = str(obj?.intentDomain)
     const extra = [str(obj?.message), str(obj?.title)]
 
     const parts: string[] = []
@@ -119,7 +129,8 @@ export class DaemonRequestError extends Error {
     }
     push(code)
     if (reason) push(`reason: ${reason}`)
-    if (capability) push(`capability: ${capability}`)
+    if (capability) push(`capability: ${capability}${settingKey ? ` (${settingKey})` : ''}`)
+    if (intentKind) push(`intent: kind ${intentKind} on ${intentDomain ?? '?'}`)
     push(detail)
     for (const e of extra) push(e)
     if (!obj) {
@@ -140,6 +151,9 @@ export class DaemonRequestError extends Error {
     this.detail = detail
     this.hint = hint
     this.capability = capability
+    this.settingKey = settingKey
+    this.intentKind = intentKind
+    this.intentDomain = intentDomain
     this.nextStep = nextStep
     this.body = body
   }

@@ -19,6 +19,52 @@ namespace NKS.WebDevConsole.Daemon.Data;
 /// </summary>
 internal static class DatabaseEndpoints
 {
+    // Intent scopes of the database admin routes. wdc_request_confirmation in
+    // services/mcp-server/src/tools/confirmation.ts mints intents with the same
+    // (kind, domain, host) triple, or the approved intent is rejected.
+    internal const string MySqlRootResetKind = "mysql_root_reset";
+    internal const string MySqlUserDropKind = "mysql_user_drop";
+    internal const string PostgresRootResetKind = "postgres_root_reset";
+    internal const string MySqlIntentHost = "*mysql*";
+    internal const string PostgresIntentHost = "*postgres*";
+    internal const string MySqlRootIntentDomain = "root";
+    internal const string PostgresRootIntentDomain = "postgres";
+
+    /// <summary>Intent domain for dropping a MySQL account: <c>user@host</c>.</summary>
+    internal static string MySqlUserIntentDomain(string userName, string host) => $"{userName}@{host}";
+
+    /// <summary>
+    /// MCP intent gate shared by the database admin routes. Callers holding the
+    /// MCP token, or any caller that sends X-Intent-Token, must present an
+    /// approved intent for (<paramref name="kind"/>, <paramref name="domain"/>,
+    /// <paramref name="host"/>); a typed "YES" from the agent is not consent.
+    /// GUI calls without the header pass unchanged. Returns the error response,
+    /// or null when the request may proceed.
+    /// </summary>
+    internal static async Task<IResult?> IntentGateAsync(
+        HttpContext ctx,
+        IDeployIntentValidator intentValidator,
+        string kind,
+        string domain,
+        string host)
+    {
+        var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+        if (string.IsNullOrEmpty(intentToken) && !NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
+            return null;
+
+        // The validator ignores X-Allow-Unconfirmed for the MCP token.
+        var allowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            intentToken ?? "", kind, domain, host, allowUnconfirmed, ctx.RequestAborted);
+        return verdict.Ok
+            ? null
+            : Results.Json(
+                new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     public static void MapDatabaseEndpoints(
         this WebApplication app,
         PluginLoader pluginLoader,
@@ -270,8 +316,12 @@ internal static class DatabaseEndpoints
             BinaryManager bm,
             SettingsStore settings,
             IServiceProvider sp,
-            ILoggerFactory lf) =>
+            ILoggerFactory lf,
+            IDeployIntentValidator intentValidator) =>
         {
+            if (await IntentGateAsync(ctx, intentValidator, PostgresRootResetKind, PostgresRootIntentDomain, PostgresIntentHost) is { } gate)
+                return gate;
+
             var log = lf.CreateLogger("PostgreSqlResetPassword");
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var newPassword = PostgreSqlHelper.GetPayloadValue(body, "newPassword", "newPwd", "password");
@@ -566,8 +616,12 @@ internal static class DatabaseEndpoints
             BinaryManager bm,
             SettingsStore settings,
             IServiceProvider sp,
-            ILoggerFactory lf) =>
+            ILoggerFactory lf,
+            IDeployIntentValidator intentValidator) =>
         {
+            if (await IntentGateAsync(ctx, intentValidator, MySqlRootResetKind, MySqlRootIntentDomain, MySqlIntentHost) is { } gate)
+                return gate;
+
             var log = lf.CreateLogger("MySqlResetPassword");
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var newPwd = MySqlPasswordHelper.GetPayloadValue(body, "newPwd", "newPassword");
@@ -949,7 +1003,7 @@ internal static class DatabaseEndpoints
             }
         });
 
-        app.MapPost("/api/plugins/mysql/users/drop", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+        app.MapPost("/api/plugins/mysql/users/drop", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp, IDeployIntentValidator intentValidator) =>
         {
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
@@ -961,6 +1015,9 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { success = false, error = userError });
             if (MySqlUserHelper.ValidateHost(host) is { } hostError)
                 return Results.BadRequest(new { success = false, error = hostError });
+
+            if (await IntentGateAsync(ctx, intentValidator, MySqlUserDropKind, MySqlUserIntentDomain(userName, host), MySqlIntentHost) is { } gate)
+                return gate;
 
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
