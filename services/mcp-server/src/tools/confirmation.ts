@@ -85,6 +85,10 @@ export interface IntentState {
   kind?: string
   domain?: string
   host?: string
+  /** Trust grant that approved the intent without asking the user, if any. */
+  matchedGrantId?: string | null
+  /** True when a trust grant approved the intent (no banner was shown). */
+  autoApproved?: boolean
 }
 
 interface DaemonIntentRow {
@@ -97,6 +101,7 @@ interface DaemonIntentRow {
   kind?: string
   domain?: string
   host?: string
+  matchedGrantId?: string | null
 }
 
 export function normaliseState(state: string | undefined): ConfirmationStatus {
@@ -113,6 +118,10 @@ export function normaliseState(state: string | undefined): ConfirmationStatus {
       return 'unknown'
   }
 }
+
+/** Next step when a trust grant approved the intent instead of the user. */
+export const NEXT_AUTO_APPROVED =
+  'Approved automatically by a trust grant the user created in WDC; call the operation\'s tool now with the intentToken.'
 
 const NEXT_BY_STATUS: Record<ConfirmationStatus, string> = {
   pending: 'The user has not decided yet. Ask them to approve the request in WDC; check again or retry the operation with the intentToken afterwards.',
@@ -134,7 +143,21 @@ function toState(row: DaemonIntentRow): IntentState {
     kind: row.kind,
     domain: row.domain,
     host: row.host,
+    matchedGrantId: row.matchedGrantId ?? null,
+    autoApproved: Boolean(row.matchedGrantId) && Boolean(row.confirmedAt),
   }
+}
+
+/** The next step for a state, telling a grant approval apart from the user's. */
+export function nextFor(state: Pick<IntentState, 'status' | 'autoApproved'>): string {
+  return state.status === 'ready' && state.autoApproved ? NEXT_AUTO_APPROVED : NEXT_BY_STATUS[state.status]
+}
+
+/** Body of POST /api/mcp/intents/confirm-request on daemons that report grant approvals. */
+interface ConfirmRequestResponse {
+  confirmed?: boolean
+  autoApproved?: boolean
+  matchedGrantId?: string | null
 }
 
 /**
@@ -226,8 +249,12 @@ export async function requestConfirmation(req: ConfirmationRequest, wait?: WaitO
     },
   )
   const base = { ...created, kind: req.kind, domain: req.domain, host: req.host }
+  let banner: unknown
   try {
-    await daemonClient.post('/api/mcp/intents/confirm-request', { intentId: created.intentId, prompt: req.prompt })
+    banner = await daemonClient.post<ConfirmRequestResponse | null>('/api/mcp/intents/confirm-request', {
+      intentId: created.intentId,
+      prompt: req.prompt,
+    })
   } catch (err) {
     return {
       ...base,
@@ -237,6 +264,19 @@ export async function requestConfirmation(req: ConfirmationRequest, wait?: WaitO
         (err instanceof Error ? err.message : String(err)) +
         '. Ask the user to approve intent ' + created.intentId + ' in WDC → MCP → Intents, ' +
         'then call the operation with this intentToken. Do not request another confirmation for the same operation.',
+    }
+  }
+  // A trust grant that covers this operation approves it on the spot: no
+  // banner is shown and the intentToken can be used right away.
+  const answer = banner && typeof banner === 'object' ? (banner as ConfirmRequestResponse) : undefined
+  if (answer?.confirmed === true) {
+    const autoApproved = answer.autoApproved === true
+    return {
+      ...base,
+      status: 'ready',
+      autoApproved,
+      ...(answer.matchedGrantId ? { matchedGrantId: answer.matchedGrantId } : {}),
+      next: autoApproved ? NEXT_AUTO_APPROVED : NEXT_BY_STATUS.ready,
     }
   }
   if (!req.waitSeconds) {
@@ -250,7 +290,13 @@ export async function requestConfirmation(req: ConfirmationRequest, wait?: WaitO
   }
   try {
     const state = await waitForIntent(created.intentId, req.waitSeconds, wait)
-    return { ...base, status: state.status, expiresAt: state.expiresAt ?? created.expiresAt, next: NEXT_BY_STATUS[state.status] }
+    return {
+      ...base,
+      status: state.status,
+      expiresAt: state.expiresAt ?? created.expiresAt,
+      ...(state.autoApproved ? { autoApproved: true, matchedGrantId: state.matchedGrantId } : {}),
+      next: nextFor(state),
+    }
   } catch (err) {
     return {
       ...base,
@@ -273,9 +319,10 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
         'wdc_deploy_create_intent).\n\n' +
         'Args:\n  intentId: The intentId from that call.\n' +
         `  waitSeconds: Optionally wait up to ${MAX_WAIT_SECONDS}s for the user to decide.\n\n` +
-        'Returns: { intentId, status, expiresAt, confirmedAt, usedAt, revokedAt, kind, domain, host, next } where ' +
-        'status is pending (not approved yet), ready (approved, call the tool now), consumed (already used), ' +
-        'expired, or revoked (the user withdrew it).',
+        'Returns: { intentId, status, expiresAt, confirmedAt, usedAt, revokedAt, kind, domain, host, ' +
+        'matchedGrantId, autoApproved, next } where status is pending (not approved yet), ready (approved, ' +
+        'call the tool now), consumed (already used), expired, or revoked (the user withdrew it). autoApproved ' +
+        'is true when a trust grant the user created approved it instead of the banner.',
       inputSchema: {
         intentId: IntentIdSchema,
         waitSeconds: WaitSecondsSchema,
@@ -285,7 +332,7 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
     async ({ intentId, waitSeconds }) =>
       safe(async () => {
         const state = await waitForIntent(intentId, waitSeconds)
-        return { ...state, next: NEXT_BY_STATUS[state.status] }
+        return { ...state, next: nextFor(state) }
       }),
   )
 
@@ -317,7 +364,9 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
         '  reason: One sentence shown to the user.\n' +
         `  waitSeconds: Optionally wait up to ${MAX_WAIT_SECONDS}s for the user to decide before returning.\n\n` +
         'Returns: { intentId, intentToken, expiresAt, status, next } (status pending/ready/expired/revoked). ' +
-        'If the approval banner could not be shown the intent is still returned, with a warning.',
+        'status ready with autoApproved: true means a trust grant the user created approved it at once: ' +
+        'retry the operation now with the intentToken. If the approval banner could not be shown the intent ' +
+        'is still returned, with a warning.',
       inputSchema: {
         operation: z.enum(operations),
         target: z.string().min(1).max(255),

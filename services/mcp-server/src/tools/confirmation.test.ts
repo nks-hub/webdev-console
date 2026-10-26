@@ -21,6 +21,7 @@ import {
   normaliseState,
   registerConfirmationTools,
   requestConfirmation,
+  nextFor,
   waitForIntent,
 } from './confirmation.js'
 
@@ -132,6 +133,16 @@ describe('fetchIntentState', () => {
   })
 })
 
+describe('grant approvals in the status', () => {
+  it('marks a ready intent with a matched grant as auto-approved', async () => {
+    recorder.reset(() => ({ ...row('ready'), confirmedAt: '2030-01-01T00:00:01Z', matchedGrantId: 'g1' }))
+    const state = await fetchIntentState(INTENT)
+    expect(state).toMatchObject({ status: 'ready', autoApproved: true, matchedGrantId: 'g1' })
+    expect(nextFor(state)).toMatch(/trust grant/)
+    expect(nextFor({ status: 'ready', autoApproved: false })).toMatch(/^Approved\./)
+  })
+})
+
 describe('waitForIntent', () => {
   it('reads once when waitSeconds is 0', async () => {
     recorder.reset(intentDaemon(['pending_confirmation', 'ready']))
@@ -185,6 +196,29 @@ describe('requestConfirmation', () => {
     const r = await requestConfirmation({ ...req, waitSeconds: 60 }, fakeClock())
     expect(r).toMatchObject({ intentId: INTENT, status: 'ready' })
     expect(r.next).toMatch(/Approved/)
+  })
+
+  it('reports an approval by a trust grant as ready to retry now', async () => {
+    recorder.reset((call) => {
+      if (call.path === '/api/mcp/intents') return created
+      if (call.path === '/api/mcp/intents/confirm-request') return { intentId: INTENT, confirmed: true, autoApproved: true, matchedGrantId: 'g1' }
+      throw new Error(`unexpected ${call.method} ${call.path}`)
+    })
+    const r = await requestConfirmation({ ...req, waitSeconds: 60 }, fakeClock())
+    expect(r).toMatchObject({ intentId: INTENT, intentToken: created.intentToken, status: 'ready', autoApproved: true, matchedGrantId: 'g1' })
+    expect(r.next).toMatch(/approved automatically by a trust grant[\s\S]*now/i)
+    expect(recorder.calls).toHaveLength(2) // no status polling
+  })
+
+  it('keeps waiting when the daemon raised the banner (confirmed false)', async () => {
+    recorder.reset((call) => {
+      if (call.path === '/api/mcp/intents') return created
+      if (call.path === '/api/mcp/intents/confirm-request') return { intentId: INTENT, confirmed: false, autoApproved: false }
+      throw new Error(`unexpected ${call.method} ${call.path}`)
+    })
+    const r = await requestConfirmation(req)
+    expect(r).toMatchObject({ status: 'pending' })
+    expect(r.autoApproved).toBeUndefined()
   })
 
   it('passes releaseId through when given', async () => {

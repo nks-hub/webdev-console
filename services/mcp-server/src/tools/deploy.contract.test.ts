@@ -225,6 +225,15 @@ describe('wdc_deploy_create_intent', () => {
     for (const call of recorder.calls) expect(matchRoute(call.method, call.path)).toBeDefined()
   })
 
+  it('reports an approval by a trust grant as ready to deploy now', async () => {
+    recorder.reset(c => (c.path === '/api/mcp/intents'
+      ? created
+      : { intentId: 'iid', confirmed: true, autoApproved: true, matchedGrantId: 'g1' }))
+    const body = resultBody(await tools().call('wdc_deploy_create_intent', { domain: 'shop.loc', host: 'production' })) as Record<string, unknown>
+    expect(body).toMatchObject({ intentToken: TOKEN, status: 'ready', autoApproved: true, matchedGrantId: 'g1' })
+    expect(body.next).toMatch(/trust grant/)
+  })
+
   it('requires a host for deploy intents', async () => {
     const r = await tools().call('wdc_deploy_create_intent', { domain: 'shop.loc' })
     expect(r.isError).toBe(true)

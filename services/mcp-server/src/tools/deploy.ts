@@ -23,6 +23,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { safe } from '../formatting.js'
 import { DomainSchema } from '../schemas.js'
+import { NEXT_AUTO_APPROVED } from './confirmation.js'
 
 const PREFIX = '/api/nks.wdc.deploy'
 
@@ -326,7 +327,8 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
           '  host: Target host; required for operation=deploy, ignored otherwise.\n' +
           '  ttlSeconds: TTL (60-3600, default 900).\n\n' +
           'Returns: { intentId, intentToken, expiresAt, kind, host, next } and a warning if the approval ' +
-          'banner could not be shown.',
+          'banner could not be shown. status ready with autoApproved: true means a trust grant the user created ' +
+          'approved it at once: call the deploy tool now with the intentToken.',
         inputSchema: {
           domain: DomainSchema,
           operation: z.enum(operations).default('deploy'),
@@ -349,8 +351,9 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
             ? `deploy ${domain} → ${intent.host}`
             : `${DEPLOY_INTENT_OPERATIONS[operation].describe} ${domain}`
           const result = { ...created, kind: intent.kind, domain, host: intent.host }
+          let banner: unknown
           try {
-            await daemonClient.post('/api/mcp/intents/confirm-request', {
+            banner = await daemonClient.post('/api/mcp/intents/confirm-request', {
               intentId: created.intentId,
               prompt: `AI requests to ${what}`,
             })
@@ -361,6 +364,20 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
                 'The intent was created but WDC could not be asked to show the approval banner: ' +
                 (err instanceof Error ? err.message : String(err)) +
                 `. Ask the user to approve intent ${created.intentId} in WDC → MCP → Intents.`,
+            }
+          }
+          // A trust grant that covers the operation approves it on the spot.
+          const answer = banner && typeof banner === 'object'
+            ? (banner as { confirmed?: boolean; autoApproved?: boolean; matchedGrantId?: string | null })
+            : undefined
+          if (answer?.confirmed === true) {
+            const autoApproved = answer.autoApproved === true
+            return {
+              ...result,
+              status: 'ready',
+              autoApproved,
+              ...(answer.matchedGrantId ? { matchedGrantId: answer.matchedGrantId } : {}),
+              next: autoApproved ? NEXT_AUTO_APPROVED : 'Approved. Call the deploy tool now with this intentToken.',
             }
           }
           return {
