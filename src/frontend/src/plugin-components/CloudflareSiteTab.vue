@@ -418,7 +418,7 @@ async function copyPublicUrl() {
 <style scoped>
 .tab-content { padding: 16px 0; }
 .edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius-lg); margin-bottom: 16px; box-shadow: var(--wdc-shadow-sm); }
-.edit-card-header { padding: 14px 18px; border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; background: linear-gradient(180deg, var(--wdc-accent-dim), transparent); border-radius: var(--wdc-radius-lg) var(--wdc-radius-lg) 0 0; }
+.edit-card-header { padding: 14px 18px; border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; background: transparent; border-radius: var(--wdc-radius-lg) var(--wdc-radius-lg) 0 0; }
 .edit-card-title { font-weight: 700; color: var(--wdc-text); font-size: 0.95rem; }
 .edit-card-hint { font-size: 0.78rem; color: var(--wdc-text-3); }
 .edit-card-body { padding: 14px 18px; }

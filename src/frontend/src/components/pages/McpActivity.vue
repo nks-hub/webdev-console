@@ -686,8 +686,8 @@ onBeforeUnmount(() => {
   margin-left: auto;
   font-size: 10px;
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
   letter-spacing: 0.3px;
+  font-family: var(--wdc-font-display);
 }
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
@@ -724,7 +724,9 @@ onBeforeUnmount(() => {
   outline-offset: 2px;
 }
 .stat-num { font-size: 20px; font-weight: 600; }
-.stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+  font-family: var(--wdc-font-display);
+}
 .activity-filters {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
   padding: var(--wdc-space-2) 0;
@@ -831,10 +833,10 @@ onBeforeUnmount(() => {
 }
 .detail-label {
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.5px;
   padding-top: var(--wdc-space-0-5);
+  font-family: var(--wdc-font-display);
 }
 .detail-value { word-break: break-all; }
 .detail-value.clickable { cursor: pointer; color: var(--el-color-primary); }

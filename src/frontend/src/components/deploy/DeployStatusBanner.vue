@@ -142,7 +142,7 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
   flex-direction: column;
   gap: var(--wdc-space-3-5);
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
+  background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
   border-left: 4px solid var(--wdc-accent);
@@ -168,6 +168,7 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
 .metric-label {
   font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--el-text-color-secondary); margin-top: 2px;
+  font-family: var(--wdc-font-display);
 }
 .metric-success .metric-value { color: var(--el-color-success); }
 .metric-warning .metric-value { color: var(--el-color-warning); }

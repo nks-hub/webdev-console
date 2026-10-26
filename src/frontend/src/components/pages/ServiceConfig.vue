@@ -369,8 +369,8 @@ onMounted(() => { void load() })
   align-items: center;
   justify-content: space-between;
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
   flex-shrink: 0;
 }
 
@@ -386,11 +386,10 @@ onMounted(() => { void load() })
   gap: var(--wdc-space-1);
 }
 .title-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-accent);
+  font-family: var(--wdc-font-display);
 }
 .title-name {
   font-size: 1.6rem;
@@ -467,10 +466,9 @@ onMounted(() => { void load() })
 }
 .meta-label {
   color: var(--wdc-text-3);
-  text-transform: uppercase;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: var(--wdc-font-display);
 }
 .meta-value {
   color: var(--wdc-text);

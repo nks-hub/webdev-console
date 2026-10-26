@@ -1033,9 +1033,9 @@ function cooldownActiveSec(g: McpGrantRow): number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;
@@ -1104,7 +1104,7 @@ function cooldownActiveSec(g: McpGrantRow): number {
 .bulk-toolbar {
   display: flex; align-items: center; gap: 12px;
   padding: var(--wdc-space-3) var(--wdc-space-4); margin-top: 8px;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   box-shadow: var(--wdc-shadow-sm);

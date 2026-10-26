@@ -1174,12 +1174,11 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 
 .history-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--el-text-color-secondary);
   margin-bottom: var(--wdc-space-2);
+  font-family: var(--wdc-font-display);
 }
 
 .history-list {

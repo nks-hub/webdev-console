@@ -654,7 +654,9 @@ onMounted(async () => {
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
 }
-.sd-section-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--wdc-text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.sd-section-title { margin: 0 0 12px; font-size: 14px; font-weight: 500; color: var(--wdc-text-2); text-transform: uppercase; letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
+}
 /* Service-row + dot-transition styles moved to SimpleSiteServicesCard.vue.
    .sd-status-dot + .dot-running/.dot-stopped stay here because the page
    header status row above still uses them for the Apache pill. */

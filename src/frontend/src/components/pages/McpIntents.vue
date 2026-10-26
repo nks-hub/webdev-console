@@ -668,9 +668,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;
@@ -700,9 +700,8 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-bottom: var(--wdc-space-1-5);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  font-family: var(--wdc-font-display);
 }
 .domain-stats-grid {
   display: grid;
@@ -737,7 +736,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--wdc-space-2);
   padding: var(--wdc-space-3) var(--wdc-space-4);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   box-shadow: var(--wdc-shadow-sm);

@@ -167,14 +167,14 @@ function openUi() {
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: transparent; padding: 0; }
+.cf-page { min-height: 100%; background: transparent; }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-autostart-row { padding: 10px 24px 0; width: 100%; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }

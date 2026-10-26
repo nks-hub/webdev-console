@@ -143,17 +143,16 @@ function formatBytes(bytes: number): string {
   align-items: center;
   justify-content: space-between;
   padding: var(--wdc-space-3-5) var(--wdc-space-4);
-  border-bottom: 1px solid var(--wdc-accent-glow);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
 }
 
 .tree-title {
-  font-size: 0.74rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-accent);
+  font-family: var(--wdc-font-display);
 }
 
 .tree-search {

@@ -244,10 +244,10 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: var(--wdc-space-4-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .header-left { display: flex; align-items: center; gap: 12px; }
@@ -346,12 +346,11 @@ onMounted(() => { void loadVersions() })
 }
 
 .section-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin-bottom: var(--wdc-space-2-5);
+  font-family: var(--wdc-font-display);
 }
 
 /* Extensions grid */

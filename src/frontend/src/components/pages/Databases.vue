@@ -686,10 +686,10 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   flex-shrink: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .header-left { display: flex; align-items: center; gap: 16px; }
@@ -743,7 +743,7 @@ onMounted(() => { void loadDatabases() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
   border-bottom: 2px solid var(--wdc-accent-glow);
   flex-shrink: 0;
   padding: 0 var(--wdc-space-4) 0 var(--wdc-space-3);

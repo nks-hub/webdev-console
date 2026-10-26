@@ -306,8 +306,8 @@ onMounted(() => {
   gap: var(--wdc-space-3);
   flex-wrap: wrap;
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .help-page-header h1,
 .help-page-header h2 {
@@ -441,12 +441,11 @@ onMounted(() => {
 }
 
 .search-result-group {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin-bottom: 1px;
+  font-family: var(--wdc-font-display);
 }
 
 .help-no-results {

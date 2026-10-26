@@ -260,8 +260,8 @@ onBeforeUnmount(() => {
 .page { padding: 0; display: flex; flex-direction: column; gap: 0; }
 .hub-header {
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .hub-header h2 {
   margin: 0;

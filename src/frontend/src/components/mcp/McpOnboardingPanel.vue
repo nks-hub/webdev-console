@@ -202,7 +202,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .mcp-onboarding-panel {
   border: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
+  background: var(--wdc-surface);
   border-radius: var(--wdc-radius-lg);
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
   margin-bottom: var(--wdc-space-4);

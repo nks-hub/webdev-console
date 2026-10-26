@@ -358,7 +358,8 @@ h1, h2, h3, h4,
 */
 
 /* Page wrapper: one measure, generous top, sections separated by space. */
-:where(.wdc-page, .sites-page, .dashboard-page, .databases-page, .settings-page, .plugin-page) {
+:where(.wdc-page, .sites-page, .dashboard-page, .databases-page, .settings-page, .plugin-page,
+  .backups-page, .binaries-page, .cf-page, .composer-manager, .help-page, .hosts-manager, .mcp-activity-page, .page, .php-page, .pm-page, .db-plugin-page, .svc-config-page, .ssl-page, .site-edit-page) {
   padding: var(--wdc-space-6) var(--wdc-space-6-5) var(--wdc-space-8);
   display: flex;
   flex-direction: column;
