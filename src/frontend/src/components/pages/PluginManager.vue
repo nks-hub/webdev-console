@@ -241,6 +241,7 @@ import {
   restartDaemon,
   restorePlugin,
   waitForDaemon,
+  daemonToken,
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
@@ -366,6 +367,7 @@ async function toggle(id: string) {
 async function doRestore(id: string) {
   restoring.value.add(id)
   try {
+    const tokenBefore = daemonToken()
     const res = await restorePlugin(id)
     if (res.rebuildRequired) {
       ElNotification.warning({
@@ -381,7 +383,7 @@ async function doRestore(id: string) {
         message: res.message,
         duration: 3000,
       })
-      const ready = await waitForDaemon(15000)
+      const ready = await waitForDaemon(15000, tokenBefore)
       if (!ready) ElMessage.warning(t('plugins.toast.restartTimeout'))
       await pluginsStore.loadAll()
       await reloadMarketplace()
@@ -414,11 +416,12 @@ async function confirmUninstall(id: string, name: string) {
         message: t('plugins.toast.uninstalledRestarting', { msg: res.message ?? t('plugins.toast.fileDeleted') }),
         duration: 4000,
       })
+      const tokenBefore = daemonToken()
       try { await restartDaemon() } catch { /* daemon already closing the socket */ }
       // F91.12: poll /healthz until the respawned daemon answers.
       // Replaces a flat 3.5s sleep that sometimes reloaded stale data
       // when the new daemon took longer to boot.
-      const ready = await waitForDaemon(15000)
+      const ready = await waitForDaemon(15000, tokenBefore)
       if (!ready) {
         ElMessage.warning(t('plugins.toast.restartTimeoutLong'))
       }

@@ -1099,9 +1099,20 @@ export const restorePlugin = (id: string) =>
  * until the timeout expires. Used after a restart so the UI waits for the
  * new daemon to be ready before loading fresh state.
  */
-export async function waitForDaemon(timeoutMs = 15000): Promise<boolean> {
+/**
+ * Polls /healthz until the daemon answers. Pass the token that was current
+ * before a restart: the old process keeps answering /healthz for a moment
+ * before it exits, so only a rotated token (a new port file) proves the
+ * respawned daemon is the one answering. Without it callers reloaded data
+ * from the dying daemon.
+ */
+export async function waitForDaemon(timeoutMs = 15000, previousToken?: string): Promise<boolean> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
+    if (previousToken && daemonToken() === previousToken) {
+      await new Promise(res => setTimeout(res, 400))
+      continue
+    }
     try {
       const r = await fetch(`${daemonBaseUrl()}/healthz`)
       if (r.ok) return true

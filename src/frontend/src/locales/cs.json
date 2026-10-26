@@ -1551,6 +1551,7 @@
     "saveSuccess": "Nastavení uloženo",
     "saveLocalOnly": "Nastavení uloženo lokálně (backend persistence v Phase 6.3)",
     "saveFailed": "Uložení selhalo",
+    "saveBlockedLoadFailed": "Nastavení deploye se nepodařilo načíst z daemonu, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až daemon poběží, otevřete stránku znovu.",
     "discard": "Zahodit",
     "discardConfirmTitle": "Zahodit změny?",
     "discardConfirmMessage": "Všechny neuložené změny v tomto formuláři budou zahozeny. Pokračovat?",

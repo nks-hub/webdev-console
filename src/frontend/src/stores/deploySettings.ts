@@ -27,6 +27,8 @@ const STORAGE_KEY_PREFIX = 'deploy_settings_'
  */
 export const useDeploySettingsStore = defineStore('deploySettings', () => {
   const settingsByDomain = ref<Map<string, DeploySettings>>(new Map())
+  /** Domains whose settings could not be loaded; save() refuses for them. */
+  const loadFailed = ref<Set<string>>(new Set())
 
   function readFromStorage(domain: string): DeploySettings | null {
     try {
@@ -45,7 +47,20 @@ export const useDeploySettingsStore = defineStore('deploySettings', () => {
   async function loadForDomain(domain: string): Promise<DeploySettings> {
     // Try the backend endpoint (returns defaults on 404 — see api/deploy.ts).
     // If it returns something other than the bare defaults we trust the backend.
-    const fromApi = await fetchDeploySettings(domain)
+    let fromApi: DeploySettings
+    try {
+      fromApi = await fetchDeploySettings(domain)
+      loadFailed.value.delete(domain)
+    } catch {
+      // Show what we have (last local copy or defaults) but block Save until
+      // a later load succeeds, so a transient failure cannot overwrite the
+      // daemon's copy with defaults.
+      loadFailed.value.add(domain)
+      const fallback = readFromStorage(domain) ?? defaultDeploySettings()
+      settingsByDomain.value.set(domain, fallback)
+      settingsByDomain.value = new Map(settingsByDomain.value)
+      return fallback
+    }
     const hasRealData = fromApi.hosts.length > 0 || fromApi.hooks.length > 0
 
     let settings: DeploySettings
@@ -66,6 +81,7 @@ export const useDeploySettingsStore = defineStore('deploySettings', () => {
    * and throws Error("PENDING_BACKEND") so the caller can show a toast.
    */
   async function save(domain: string, settings: DeploySettings): Promise<void> {
+    if (loadFailed.value.has(domain)) throw new Error('LOAD_FAILED')
     settingsByDomain.value.set(domain, settings)
     settingsByDomain.value = new Map(settingsByDomain.value)
 
@@ -110,6 +126,7 @@ export const useDeploySettingsStore = defineStore('deploySettings', () => {
 
   return {
     settingsByDomain,
+    loadFailed,
     loadForDomain,
     save,
     getForDomain,

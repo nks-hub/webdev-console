@@ -1551,6 +1551,7 @@
     "saveSuccess": "Settings saved",
     "saveLocalOnly": "Settings saved locally (backend persistence in Phase 6.3)",
     "saveFailed": "Save failed",
+    "saveBlockedLoadFailed": "Deploy settings could not be loaded from the daemon, so saving is blocked to avoid overwriting them with defaults. Reopen the page once the daemon is running.",
     "discard": "Discard",
     "discardConfirmTitle": "Discard changes?",
     "discardConfirmMessage": "All unsaved changes in this form will be discarded. Continue?",

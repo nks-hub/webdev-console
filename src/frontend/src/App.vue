@@ -148,6 +148,9 @@ function startDeploySse(): void {
     // The built-in local backend emits deploy:phase / deploy:complete instead
     // of deploy:event; deploy:complete is handled further down together with
     // the OS notification.
+    // mcp.enabled / deploy.enabled toggled in Settings (or by another window).
+    'mcp:settings-changed': () => { void featureFlagsStore.load() },
+    'deploy:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:phase': (data) =>
       deployStore.handlePhaseEvent(data as { deployId: string; phase: string; message?: string }),
     // Phase 7.5+++ — hook execution feedback. RunHooksAsync emits one
@@ -350,6 +353,7 @@ onMounted(() => {
   // /sites while the daemon was still compiling, the list auto-populates
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
+    void featureFlagsStore.load()
     void pluginsStore.loadAll()
     void sitesStore.load()
     // Retry token mirror on every daemon (re)connect — covers the case
