@@ -103,15 +103,7 @@ internal static class MySqlPasswordHelper
     public static string WriteTempInitFile(string sql)
     {
         var tmp = Path.Combine(Path.GetTempPath(), $"wdc-mysql-init-{Guid.NewGuid():N}.sql");
-        File.WriteAllText(tmp, sql);
-        if (!OperatingSystem.IsWindows())
-        {
-            try
-            {
-                new FileInfo(tmp).UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-            }
-            catch { /* best effort */ }
-        }
+        NKS.WebDevConsole.Daemon.Config.SecretFile.WriteAllText(tmp, sql);
         return tmp;
     }
 

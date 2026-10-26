@@ -738,8 +738,13 @@ Set-Content -Path $hostsPath -Value $newContent -Encoding ASCII -Force
 ipconfig /flushdns | Out-Null
 ";
         // Write script to temp file and execute with elevation
-        var scriptPath = Path.Combine(Path.GetTempPath(), "nks-wdc-hosts-update.ps1");
-        await File.WriteAllTextAsync(scriptPath, psScript, ct);
+        // Random name + CreateNew so nothing can pre-create or predict the path,
+        // and the file is held open with read-only sharing while the elevated
+        // PowerShell runs, so another process cannot swap its contents between
+        // the write and the UAC-approved execution.
+        var scriptPath = Path.Combine(Path.GetTempPath(), $"nks-wdc-hosts-update-{Guid.NewGuid():N}.ps1");
+        await NKS.WebDevConsole.Daemon.Config.SecretFile.WriteAllTextAsync(scriptPath, psScript, ct);
+        using var scriptLock = new FileStream(scriptPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
         var psi = new System.Diagnostics.ProcessStartInfo
         {
@@ -768,6 +773,11 @@ ipconfig /flushdns | Out-Null
         catch (Exception ex)
         {
             _logger.LogWarning("Hosts file write failed: {Error}. Try running NKS WDC as administrator.", ex.Message);
+        }
+        finally
+        {
+            scriptLock.Dispose();
+            try { File.Delete(scriptPath); } catch { /* best effort */ }
         }
     }
 
