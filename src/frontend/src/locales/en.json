@@ -3014,6 +3014,10 @@
       "unlisted_routes": {
         "title": "Everything else",
         "description": "Any other daemon endpoint without its own group."
+      },
+      "composer": {
+        "title": "Composer",
+        "description": "Run Composer install, require and remove in site folders; package scripts run."
       }
     }
   }

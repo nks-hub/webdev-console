@@ -3014,6 +3014,10 @@
       "unlisted_routes": {
         "title": "Vše ostatní",
         "description": "Jakýkoli další endpoint daemonu bez vlastní skupiny."
+      },
+      "composer": {
+        "title": "Composer",
+        "description": "Spouštět Composer install, require a remove ve složkách webů; spouští se i skripty balíčků."
       }
     }
   }

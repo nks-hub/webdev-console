@@ -31,7 +31,7 @@ test.describe('MCP capabilities settings contract', () => {
   test('every capability group has en + cs labels', () => {
     const ids = ['settings_operator', 'service_config', 'hosts_file', 'node_process', 'site_advanced_fields',
       'cloudflare_credentials', 'plugin_install', 'database_admin', 'backup_restore', 'deploy_config',
-      'daemon_admin', 'unlisted_routes']
+      'daemon_admin', 'unlisted_routes', 'composer']
     for (const locale of ['en', 'cs']) {
       const json = JSON.parse(readFileSync(join(srcRoot, 'locales', `${locale}.json`), 'utf-8')) as
         { mcpCapabilities?: { groups?: Record<string, { title?: string; description?: string }> } }
