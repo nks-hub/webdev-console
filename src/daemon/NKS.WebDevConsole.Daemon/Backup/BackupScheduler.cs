@@ -21,6 +21,7 @@ public sealed class BackupScheduler : IDisposable
 {
     private readonly BackupManager _backupManager;
     private readonly SettingsStore _settings;
+    private readonly SseService _sse;
     private readonly ILogger<BackupScheduler> _logger;
     private Timer? _timer;
     private int _running;
@@ -37,10 +38,12 @@ public sealed class BackupScheduler : IDisposable
     public BackupScheduler(
         BackupManager backupManager,
         SettingsStore settings,
+        SseService sse,
         ILogger<BackupScheduler> logger)
     {
         _backupManager = backupManager;
         _settings = settings;
+        _sse = sse;
         _logger = logger;
     }
 
@@ -79,9 +82,27 @@ public sealed class BackupScheduler : IDisposable
 
             var flags = ReadContentFlags();
             _logger.LogInformation("Scheduled backup triggered (every {Hours}h, flags={Flags})", scheduleHours, flags);
-            var result = _backupManager.CreateBackup(flags: flags);
+            (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags) result;
+            try
+            {
+                result = _backupManager.CreateBackup(flags: flags);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Scheduled backup failed: {Error}", ex.Message);
+                Publish("backup:failed", new { trigger = "scheduled", error = ex.Message });
+                return;
+            }
             _logger.LogInformation("Scheduled backup created: {Path} ({Files} files, {Size} bytes, flags={Flags})",
                 result.Path, result.FileCount, result.SizeBytes, result.Flags);
+            Publish("backup:completed", new
+            {
+                trigger = "scheduled",
+                path = result.Path,
+                files = result.FileCount,
+                size = result.SizeBytes,
+                contentFlags = result.Flags.ToString(),
+            });
 
             // Prune: keep only the most recent N where N = backup.retainCount
             // (clamped to [MinRetainCount, MaxRetainCount]) or the default when
@@ -117,6 +138,20 @@ public sealed class BackupScheduler : IDisposable
         {
             Interlocked.Exchange(ref _running, 0);
         }
+    }
+
+    /// <summary>
+    /// Broadcasts a backup outcome over SSE (the desktop app turns it into an
+    /// OS notification). Fire-and-forget: the timer callback is synchronous and
+    /// a slow SSE client must not hold up the scheduler.
+    /// </summary>
+    private void Publish(string eventType, object payload)
+    {
+        _ = Task.Run(async () =>
+        {
+            try { await _sse.BroadcastAsync(eventType, payload); }
+            catch (Exception ex) { _logger.LogDebug(ex, "{Event} broadcast failed", eventType); }
+        });
     }
 
     /// <summary>
