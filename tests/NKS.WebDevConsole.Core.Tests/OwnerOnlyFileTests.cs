@@ -97,7 +97,10 @@ public sealed class OwnerOnlyFileTests : IDisposable
         var path = PathFor("nks-wdc-daemon.port");
         Directory.CreateDirectory(path);
 
-        Assert.ThrowsAny<IOException>(() => OwnerOnlyFile.WriteAllTextAtomic(path, "17280\nsecret"));
+        // Unix reports IOException; Windows reports UnauthorizedAccessException
+        // for a rename onto a directory.
+        var ex = Record.Exception(() => OwnerOnlyFile.WriteAllTextAtomic(path, "17280\nsecret"));
+        Assert.True(ex is IOException or UnauthorizedAccessException, $"unexpected {ex?.GetType().Name ?? "no exception"}");
         Assert.Empty(Directory.GetFiles(_dir.FullName));
     }
 }
