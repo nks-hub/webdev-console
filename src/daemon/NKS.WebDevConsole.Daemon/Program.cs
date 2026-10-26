@@ -391,7 +391,18 @@ var database = new Database(dbPath);
 builder.Services.AddSingleton(database);
 
 var migrationRunner = new MigrationRunner(earlyLoggerFactory.CreateLogger<MigrationRunner>());
-migrationRunner.Run(database.ConnectionString);
+if (!migrationRunner.Run(database.ConnectionString))
+{
+    // Starting on a half-migrated state.db lets every repository fail later
+    // with confusing "no such column/table" errors (or silently lose writes).
+    // Stop here with a distinct exit code; 98/99 are reserved for the
+    // Electron respawn protocol, so a failed migration does not loop.
+    var fatal = $"state.db migration failed ({dbPath}); refusing to start. The failing script is logged above.";
+    earlyLoggerFactory.CreateLogger("Startup").LogCritical("{Message}", fatal);
+    Console.Error.WriteLine(fatal);
+    earlyLoggerFactory.Dispose();
+    Environment.Exit(3);
+}
 
 // Port probing: avoid the 5000/3000/8080 "everyone squats here" range.
 // macOS Sequoia's AirPlay Receiver (ControlCenter) binds *:5000; any dev
