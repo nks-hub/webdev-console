@@ -31,19 +31,18 @@ test.describe('Simple-mode card a11y', () => {
     expect(opening).toMatch(/keydown\.space/)
   })
 
-  test('DashboardSimple.vue recent-sites li carries role + tabindex + aria-label', () => {
+  test('DashboardSimple.vue recent-sites rows are links inside plain list items', () => {
     const source = readFileSync(join(srcRoot, 'components', 'pages', 'DashboardSimple.vue'), 'utf-8')
 
-    // Find the <li class="simple-recent-item" ...> opening tag — span over
-    // newlines because the template uses multi-line attribute lists.
-    const liMatch = source.match(/<li[\s\S]*?class="simple-recent-item"[\s\S]*?>/)
-    expect(liMatch, 'simple-recent-item li present in template').not.toBeNull()
-    const opening = liMatch![0]
-    expect(opening).toMatch(/role="button"/)
-    expect(opening).toMatch(/tabindex="0"/)
+    // Each recent site is a router-link (navigation, keyboard and screen
+    // reader support built in) inside a plain <li>. A role on the <li>
+    // itself breaks list semantics (axe: list / listitem).
+    const linkMatch = source.match(/<router-link[\s\S]*?class="simple-recent-item"[\s\S]*?>/)
+    expect(linkMatch, 'simple-recent-item router-link present in template').not.toBeNull()
+    const opening = linkMatch![0]
+    expect(opening).toMatch(/:to="/)
     expect(opening).toMatch(/aria-label/)
-    expect(opening).toMatch(/keydown\.enter/)
-    expect(opening).toMatch(/keydown\.space/)
+    expect(source).not.toMatch(/<li[^>]*role="button"/)
   })
 
   test('i18n key sites.card.openSiteAria exists in both locales', () => {
