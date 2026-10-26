@@ -112,7 +112,8 @@ public static class McpEndpoints
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster broadcaster,
             NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
             NKS.WebDevConsole.Daemon.Data.Database db,
-            SettingsStore settings) =>
+            SettingsStore settings,
+            DeployIntentValidator validator) =>
         {
             if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
             using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
@@ -122,6 +123,37 @@ public static class McpEndpoints
             if (string.IsNullOrWhiteSpace(intentId))
             {
                 return Results.BadRequest(new { error = "intentId is required" });
+            }
+
+            // A persistent grant that covers this caller + kind + target
+            // approves the intent right here, with the same rules the
+            // validator applies at consume time. No banner is raised and the
+            // agent is told it can fire the operation immediately instead of
+            // waiting for a human who was never going to be asked.
+            var autoApproval = await validator.TryAutoApproveAsync(intentId!, ctx.RequestAborted);
+            if (autoApproval.Confirmed)
+            {
+                if (autoApproval.AutoApproved)
+                {
+                    try
+                    {
+                        await broadcaster.BroadcastAsync("mcp:intent-changed", new
+                        {
+                            change = "confirmed",
+                            intentId,
+                            autoApproved = true,
+                            matchedGrantId = autoApproval.MatchedGrantId,
+                        });
+                    }
+                    catch { /* SSE failure is non-fatal */ }
+                }
+                return Results.Ok(new
+                {
+                    intentId,
+                    confirmed = true,
+                    autoApproved = autoApproval.AutoApproved,
+                    matchedGrantId = autoApproval.MatchedGrantId,
+                });
             }
             // Phase 6.14b — include expiresAt + kind so the GUI banner can show a
             // live countdown and surface what verb is about to fire. Best-effort
@@ -194,7 +226,7 @@ public static class McpEndpoints
             // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
             await broadcaster.BroadcastAsync("mcp:confirm-request",
                 new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host, alwaysConfirm });
-            return Results.Accepted();
+            return Results.Accepted(value: new { intentId, confirmed = false, autoApproved = false, alwaysConfirm });
         });
 
         // GUI calls this when the user clicks Approve on the banner that the

@@ -33,6 +33,7 @@ import { registerDeployTools } from './tools/deploy.js'
 import { registerConfirmationTools } from './tools/confirmation.js'
 import { daemonClient } from './daemonClient.js'
 import { wrapHandler } from './auditLog.js'
+import { setClientName } from './callerIdentity.js'
 
 export interface RegisterOptions {
   readonly: boolean
@@ -102,6 +103,13 @@ registerSettingsTools(server, opts)
 registerCloudflareTools(server, opts)
 registerDeployTools(server, opts)
 registerConfirmationTools(server, opts)
+
+// The initialize handshake names the AI client (claude-code, Claude Desktop,
+// Cursor, ...). Its name becomes X-Mcp-Api-Key-Id on daemon requests so an
+// operator can scope a trust grant to one client.
+server.server.oninitialized = () => {
+  setClientName(server.server.getClientVersion()?.name)
+}
 
 const transport = new StdioServerTransport()
 await server.connect(transport)

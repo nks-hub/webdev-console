@@ -151,7 +151,7 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDestructiveOper
 // kinds registry + a live mcp.strict_kinds setting lookup. The lookup
 // is a delegate (not a captured bool) so flipping the toggle in the
 // settings UI takes effect immediately, without daemon restart.
-builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>(sp =>
+builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>(sp =>
     new NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator(
         sp.GetRequiredService<NKS.WebDevConsole.Daemon.Data.Database>(),
         sp.GetRequiredService<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>(),
@@ -172,6 +172,10 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentVal
             }
             return (IReadOnlySet<string>)set;
         }));
+// The concrete type is also resolved directly by the confirm-request route,
+// which uses TryAutoApproveAsync to skip the banner when a grant applies.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>(sp =>
+    sp.GetRequiredService<NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>());
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
 // intents (audit tail), 1-day for unused expired ones. See class docs.
 builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.IntentSweeperService>();
@@ -1202,13 +1206,13 @@ app.Use(async (ctx, next) =>
 // validator without us threading a parameter through the plugin
 // boundary. Slots are cleared automatically when the request scope
 // ends (AsyncLocal copy-on-write semantics).
+// The headers are caller-supplied and are not authentication — the bearer
+// token is. Scoped grants built on them are a convenience boundary only.
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path.StartsWithSegments("/api"))
     {
-        McpCallerContext.SessionId  = ctx.Request.Headers["X-Mcp-Session-Id"].FirstOrDefault();
-        McpCallerContext.ApiKeyId   = ctx.Request.Headers["X-Mcp-Api-Key-Id"].FirstOrDefault();
-        McpCallerContext.InstanceId = ctx.Request.Headers["X-Mcp-Instance-Id"].FirstOrDefault();
+        McpCallerContext.ApplyIdentityHeaders(ctx.Request.Headers);
     }
     await next();
 });
