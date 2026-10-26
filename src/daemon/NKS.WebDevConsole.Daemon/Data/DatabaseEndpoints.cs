@@ -1038,13 +1038,13 @@ internal static class DatabaseEndpoints
             // host — keeps a deploy intent from being reused as a database
             // intent and vice versa.
             var dbIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dbIntentToken))
+            if (!string.IsNullOrEmpty(dbIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var dbAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dbVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dbIntentToken, "database_drop", domain: name, host: "*db*", dbAllowUnconfirmed, ct);
+                    dbIntentToken ?? "", "database_drop", domain: name, host: "*db*", dbAllowUnconfirmed, ct);
                 if (!dbVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbVerdict.Reason, detail = dbVerdict.Detail },
@@ -1163,24 +1163,27 @@ internal static class DatabaseEndpoints
             if (!IsValidDatabaseName(name))
                 return Results.BadRequest(new { error = "Invalid database name" });
 
+            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+            var sql = body?.GetValueOrDefault("sql") ?? "";
+            if (string.IsNullOrWhiteSpace(sql))
+                return Results.BadRequest(new { error = "sql required" });
+
+            // An MCP-token caller (AI agent) runs read-only statements freely;
+            // anything the guard cannot prove read-only needs a confirmed intent.
             var dbqIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dbqIntentToken))
+            if (!string.IsNullOrEmpty(dbqIntentToken)
+                || (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && !NKS.WebDevConsole.Daemon.Mcp.SqlReadOnlyGuard.IsReadOnly(sql)))
             {
                 var dbqAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dbqVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dbqIntentToken, "database_query", domain: name, host: "*db*", dbqAllowUnconfirmed, ct);
+                    dbqIntentToken ?? "", "database_query", domain: name, host: "*db*", dbqAllowUnconfirmed, ct);
                 if (!dbqVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
             }
-
-            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
-            var sql = body?.GetValueOrDefault("sql") ?? "";
-            if (string.IsNullOrWhiteSpace(sql))
-                return Results.BadRequest(new { error = "sql required" });
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
                 return Results.BadRequest(new { error = "MySQL not installed" });
@@ -1267,13 +1270,13 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "Invalid database name" });
 
             var impIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(impIntentToken))
+            if (!string.IsNullOrEmpty(impIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var impAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var impVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    impIntentToken, "database_import", domain: name, host: "*db*", impAllowUnconfirmed, ct);
+                    impIntentToken ?? "", "database_import", domain: name, host: "*db*", impAllowUnconfirmed, ct);
                 if (!impVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = impVerdict.Reason, detail = impVerdict.Detail },
@@ -1440,24 +1443,27 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "Invalid database name" });
 
             // MCP intent gate parity with /api/databases/{name}/query (kind=database_query).
+            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+            var sql = body?.GetValueOrDefault("sql") ?? "";
+            if (string.IsNullOrWhiteSpace(sql))
+                return Results.BadRequest(new { error = "sql required" });
+
+            // An MCP-token caller (AI agent) runs read-only statements freely;
+            // anything the guard cannot prove read-only needs a confirmed intent.
             var dbqIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dbqIntentToken))
+            if (!string.IsNullOrEmpty(dbqIntentToken)
+                || (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && !NKS.WebDevConsole.Daemon.Mcp.SqlReadOnlyGuard.IsReadOnly(sql)))
             {
                 var dbqAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dbqVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dbqIntentToken, "database_query", domain: db, host: "*db*", dbqAllowUnconfirmed, ct);
+                    dbqIntentToken ?? "", "database_query", domain: db, host: "*db*", dbqAllowUnconfirmed, ct);
                 if (!dbqVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
             }
-
-            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
-            var sql = body?.GetValueOrDefault("sql") ?? "";
-            if (string.IsNullOrWhiteSpace(sql))
-                return Results.BadRequest(new { error = "sql required" });
 
             try
             {

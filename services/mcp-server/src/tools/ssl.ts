@@ -6,6 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
@@ -87,6 +88,7 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
       inputSchema: {
         domain: DomainSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -95,7 +97,7 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
         openWorldHint: false,
       },
     },
-    async ({ domain }) =>
-      safe(() => daemonClient.delete(`/api/ssl/certs/${encodeURIComponent(domain)}`)),
+    async ({ domain, intentToken }) =>
+      safe(() => daemonClient.delete(`/api/ssl/certs/${encodeURIComponent(domain)}`, intentHeaders(intentToken))),
   )
 }

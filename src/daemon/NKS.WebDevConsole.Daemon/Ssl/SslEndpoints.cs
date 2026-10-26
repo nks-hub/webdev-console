@@ -179,13 +179,13 @@ internal static class SslEndpoints
             CancellationToken ct) =>
         {
             var sslIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(sslIntentToken))
+            if (!string.IsNullOrEmpty(sslIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var sslAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var sslVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    sslIntentToken, "ssl_cert_delete", domain, host: "*ssl*", sslAllowUnconfirmed, ct);
+                    sslIntentToken ?? "", "ssl_cert_delete", domain, host: "*ssl*", sslAllowUnconfirmed, ct);
                 if (!sslVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = sslVerdict.Reason, detail = sslVerdict.Detail },

@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 
 // Mirror the PluginIdSchema shape — service ids live in a URL path segment,
@@ -76,6 +77,7 @@ export function registerServicesTools(server: McpServer, opts: RegisterOptions):
         'then SIGKILL fallback.\n\nArgs:\n  serviceId: Service to stop.',
       inputSchema: {
         serviceId: ServiceIdSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -84,7 +86,7 @@ export function registerServicesTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: false,
       },
     },
-    async ({ serviceId }) =>
-      safe(() => daemonClient.post(`/api/services/${encodeURIComponent(serviceId)}/stop`)),
+    async ({ serviceId, intentToken }) =>
+      safe(() => daemonClient.post(`/api/services/${encodeURIComponent(serviceId)}/stop`, undefined, intentHeaders(intentToken))),
   )
 }

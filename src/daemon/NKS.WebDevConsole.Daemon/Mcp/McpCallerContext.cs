@@ -23,10 +23,21 @@ public static class McpCallerContext
     private static readonly AsyncLocal<string?> _sessionId  = new();
     private static readonly AsyncLocal<string?> _apiKeyId   = new();
     private static readonly AsyncLocal<string?> _instanceId = new();
+    private static readonly AsyncLocal<bool> _isMcpToken = new();
 
     public static string? SessionId  { get => _sessionId.Value;  set => _sessionId.Value  = value; }
     public static string? ApiKeyId   { get => _apiKeyId.Value;   set => _apiKeyId.Value   = value; }
     public static string? InstanceId { get => _instanceId.Value; set => _instanceId.Value = value; }
+
+    /// <summary>
+    /// True when the request authenticated with the MCP token from
+    /// <c>nks-wdc-mcp.port</c> rather than the GUI token. Unlike the
+    /// X-Mcp-* headers this cannot be set by the caller: the auth middleware
+    /// decides it from which token matched. MCP callers must present a
+    /// confirmed intent on every destructive route, cannot use
+    /// X-Allow-Unconfirmed, and cannot approve intents or create grants.
+    /// </summary>
+    public static bool IsMcpToken { get => _isMcpToken.Value; set => _isMcpToken.Value = value; }
 
     /// <summary>
     /// True when the caller carries at least one identifier the grants
@@ -49,5 +60,6 @@ public static class McpCallerContext
         _sessionId.Value = null;
         _apiKeyId.Value = null;
         _instanceId.Value = null;
+        _isMcpToken.Value = false;
     }
 }

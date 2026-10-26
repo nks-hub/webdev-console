@@ -106,6 +106,11 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // GUI database tab; AI callers must clear the gate first.
         _kinds["database_import"] = new DestructiveOperationKind(
             "database_import", "Import a SQL dump into a database (overwrites)", CorePluginId, DangerLevel.Destructive);
+        // Restoring a WDC backup replaces state.db, site configs and
+        // certificates. The GUI keeps its own confirm dialog; MCP-token
+        // callers must clear this gate.
+        _kinds["backup_restore"] = new DestructiveOperationKind(
+            "backup_restore", "Restore a WDC backup over the current state", CorePluginId, DangerLevel.Destructive);
         // Phase 7.5+++ wave 3 — code-load risk vectors. Installing a new
         // plugin or binary brings third-party code into the daemon's
         // process space (plugin DLL loaded via PluginLoadContext) or onto

@@ -121,10 +121,13 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 
 ## Daemon discovery
 
-The MCP server reads the WDC daemon's port + auth token from one of:
+The MCP server reads the WDC daemon's port + auth token from the first of:
 
-1. `$TMPDIR/nks-wdc-daemon.port` (where the daemon writes it on startup)
-2. `~/.wdc/daemon.port` (legacy fallback)
+1. `$TMPDIR/nks-wdc-mcp.port`: the MCP token, which the daemon issues for AI clients
+2. `$TMPDIR/nks-wdc-daemon.port`: the GUI token, only used with daemons that predate the MCP token
+3. `~/.wdc/daemon.port` (legacy fallback)
+
+On Unix a port file is only used when it belongs to the current user and has no group/other permissions.
 
 If the daemon isn't running, every tool call returns:
 
@@ -138,7 +141,8 @@ The token rotates per daemon restart — the MCP server re-reads the port file a
 
 - **Local-only:** stdio transport means no network exposure; the MCP server is a parent-child process under your AI client
 - **Bearer token:** every daemon request is auth-gated by the per-session token from the port file
-- **Destructive tools:** `wdc_delete_site` requires explicit `confirm: "YES"` in the input
+- **Human approval for destructive operations:** with the MCP token, the daemon refuses destructive routes (drop database, SQL that can write, delete site, stop service, revoke certificate, delete DNS record, install binary or plugin, restore backup, deploy/rollback) unless the request carries an intent the user approved in the WDC app. Call `wdc_request_confirmation`, let the user approve the banner, then call the tool again with `intentToken`. The MCP token cannot approve intents, create trust grants, call admin routes or change operator-only settings, and `X-Allow-Unconfirmed` is ignored for it. Read-only SQL through `wdc_query` needs no approval; the daemon checks it independently.
+- **Destructive tools:** also require explicit `confirm: "YES"` in the input
 - **Read-only mode:** `--readonly` flag skips registering mutation tools (they don't appear in `tools/list`)
 - **Daemon validation:** all input flows through the daemon's existing validators (`ValidateDomain`, `IsValidDatabaseName`, etc.) — MCP is a thin transport, not the security boundary
 

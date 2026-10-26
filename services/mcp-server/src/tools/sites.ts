@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
@@ -177,6 +178,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
       inputSchema: {
         domain: DomainSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -185,7 +187,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         openWorldHint: false,
       },
     },
-    async ({ domain }) =>
-      safe(() => daemonClient.delete(`/api/sites/${encodeURIComponent(domain)}`)),
+    async ({ domain, intentToken }) =>
+      safe(() => daemonClient.delete(`/api/sites/${encodeURIComponent(domain)}`, intentHeaders(intentToken))),
   )
 }

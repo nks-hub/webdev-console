@@ -58,7 +58,12 @@ class DaemonClient {
   private readPortFile(): PortFile | null {
     // Order matches what wdc CLI checks: first the OS temp path used by
     // the daemon's Lifetime callback, then the legacy ~/.wdc location.
+    // The daemon writes a separate MCP token to nks-wdc-mcp.port. Requests
+    // with it must present GUI-confirmed intents for destructive operations
+    // and cannot approve intents themselves. The GUI port file is only a
+    // fallback for daemons that predate the MCP token.
     const candidates = [
+      join(tmpdir(), 'nks-wdc-mcp.port'),
       join(tmpdir(), 'nks-wdc-daemon.port'),
       join(homedir(), '.wdc', 'daemon.port'),
     ]
