@@ -779,46 +779,33 @@ var mcpPortFile = Path.Combine(Path.GetTempPath(), "nks-wdc-mcp.port");
 var mcpToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
 // Write port file AFTER server starts listening (avoids race condition).
-// Uses atomic temp+rename so readers on Windows never see a half-written file
-// or hit EPERM/EBUSY against the daemon's open write handle — this matters for
-// the packaged-runtime smoke step on GitHub Actions Windows runners, which
-// used to flake on `EPERM: open nks-wdc-daemon.port` right after daemon boot.
+// OwnerOnlyFile writes a randomly named temp file (CreateNew; 0600 on Unix,
+// a current-user-only DACL on Windows) and renames it over the target, so
+// readers never see a half-written file and nobody else can read the token:
+// a fixed `.tmp` name in the shared temp dir could be pre-created by another
+// user, and FileMode.Create would then write the token into their file.
+// The rename retries briefly on Windows, where a reader holding the old file
+// used to make it fail (`EPERM: open nks-wdc-daemon.port` on CI runners).
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
-    static void WritePortFile(string path, string content)
+    try
     {
-        var tmpFile = path + ".tmp";
-        if (OperatingSystem.IsWindows())
-        {
-            // %TEMP% on Windows resolves to a per-user directory whose ACL
-            // already restricts read access to the owning user, so the default
-            // File.WriteAllText behaviour is fine here.
-            File.WriteAllText(tmpFile, content);
-        }
-        else
-        {
-            // On Linux/macOS the default umask (022) leaves the port file at
-            // 0644 inside world-readable /tmp. Any local user could then `cat`
-            // the bearer token and impersonate the daemon owner against every
-            // /api/* endpoint (sites, hosts, certs, mysql admin). Force 0600
-            // explicitly so only the WDC user ever sees the token.
-            var opts = new FileStreamOptions
-            {
-                Mode = FileMode.Create,
-                Access = FileAccess.Write,
-                Share = FileShare.None,
-                UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
-            };
-            using var stream = new FileStream(tmpFile, opts);
-            using var writer = new StreamWriter(stream);
-            writer.Write(content);
-        }
-        File.Move(tmpFile, path, overwrite: true);
+        OwnerOnlyFile.WriteAllTextAtomic(portFile, $"{port}\n{authToken}");
+        OwnerOnlyFile.WriteAllTextAtomic(mcpPortFile, $"{port}\n{mcpToken}");
     }
-    WritePortFile(portFile, $"{port}\n{authToken}");
-    WritePortFile(mcpPortFile, $"{port}\n{mcpToken}");
+    catch (Exception ex)
+    {
+        // No client can find this daemon, and a stale or foreign port file may
+        // be left in place. Do not keep running unreachable: stop and let the
+        // GUI start a fresh daemon.
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup")
+            .LogCritical(ex, "Could not write the port file {PortFile} or {McpPortFile}; stopping the daemon", portFile, mcpPortFile);
+        Console.Error.WriteLine($"[daemon] FATAL: could not write port file: {ex.Message}");
+        app.Lifetime.StopApplication();
+        return;
+    }
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 
     // Banner: one structured line with every piece of state someone
