@@ -11,8 +11,8 @@
  *   3. POST /api/sites with the minimum simple-mode payload creates a
  *      working site (defaults to `bindAddresses=["*"]` when omitted,
  *      SSL off, no PHP).
- *   4. The vhost file lands on disk under sites-enabled/ AND the
- *      daemon's history copy under generated/.
+ *   4. The vhost file lands on disk under sites-enabled/ (when an Apache
+ *      binary is installed) AND the daemon's history copy under generated/.
  *   5. GET /api/sites/{domain} round-trips the saved config without
  *      losing any default fields.
  *   6. DELETE /api/sites/{domain} removes both files.
@@ -28,6 +28,16 @@
 import { scenario, api, assert, tmpDir, rmTree, writeFile, wdcDataDir } from '../harness.mjs'
 import { join } from 'node:path'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
+
+// The live vhost under sites-enabled/ only exists when an Apache binary is
+// installed in the data dir. CI runners start from an empty WDC_DATA_DIR and
+// never download Apache, so the live-file checks run only where Apache is
+// present; the daemon-side assertions (create, history vhost, round-trip,
+// delete) run everywhere.
+function apacheInstalled() {
+  const apacheRoot = join(wdcDataDir(), 'binaries', 'apache')
+  return existsSync(apacheRoot) && readdirSync(apacheRoot).length > 0
+}
 
 function findApacheVhost(domain) {
   const apacheRoot = join(wdcDataDir(), 'binaries', 'apache')
@@ -92,15 +102,19 @@ export default scenario('24', 'Fresh-install first-site flow', 'P0', async (ctx)
   ctx.cleanup(() => api.delete(`/api/sites/${domain}`).catch(() => {}))
   assert.statusOk(create, 'POST /api/sites for the first-ever site')
 
-  // Step 4: live Apache vhost and daemon-history vhost both land on disk.
-  const liveVhost = findApacheVhost(domain)
-  assert.ok(liveVhost, `live Apache vhost must exist under sites-enabled/ for ${domain}`)
-  const live = readFileSync(liveVhost, 'utf-8')
-  assert.ok(
-    /<VirtualHost\s+\*:80>/.test(live),
-    `live vhost binds wildcard HTTP by default; got:\n${live}`,
-  )
-  assert.contains(live, domain, 'live vhost references the site domain')
+  // Step 4: live Apache vhost (when Apache is installed) and daemon-history
+  // vhost both land on disk.
+  const hasApache = apacheInstalled()
+  if (hasApache) {
+    const liveVhost = findApacheVhost(domain)
+    assert.ok(liveVhost, `live Apache vhost must exist under sites-enabled/ for ${domain}`)
+    const live = readFileSync(liveVhost, 'utf-8')
+    assert.ok(
+      /<VirtualHost\s+\*:80>/.test(live),
+      `live vhost binds wildcard HTTP by default; got:\n${live}`,
+    )
+    assert.contains(live, domain, 'live vhost references the site domain')
+  }
 
   const historyVhost = join(wdcDataDir(), 'generated', `${domain}.conf`)
   assert.ok(existsSync(historyVhost), `daemon history vhost exists at ${historyVhost}`)
@@ -125,8 +139,10 @@ export default scenario('24', 'Fresh-install first-site flow', 'P0', async (ctx)
   // assert the live file goes away.
   const del = await api.delete(`/api/sites/${domain}`)
   assert.statusOk(del, `DELETE /api/sites/${domain}`)
-  assert.ok(
-    findApacheVhost(domain) === null,
-    `live vhost removed from sites-enabled/ after DELETE`,
-  )
+  if (hasApache) {
+    assert.ok(
+      findApacheVhost(domain) === null,
+      `live vhost removed from sites-enabled/ after DELETE`,
+    )
+  }
 })
