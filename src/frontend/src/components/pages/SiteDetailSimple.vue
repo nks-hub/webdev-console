@@ -1,5 +1,5 @@
 <template>
-  <div class="simple-detail">
+  <div class="simple-detail" :class="{ embedded }">
     <div v-if="loading" class="state-box">
       <el-skeleton :rows="6" animated />
     </div>
@@ -9,8 +9,8 @@
     </div>
 
     <template v-else>
-      <!-- Header row -->
-      <div class="sd-header">
+      <!-- Header row (the unified site page supplies its own header) -->
+      <div v-if="!embedded" class="sd-header">
         <div class="sd-domain">{{ domain }}</div>
         <el-button size="large" @click="openInBrowser">
           {{ $t('sites.detail.simple.open') }}
@@ -181,7 +181,7 @@
 
       <!-- Service status — extracted to a self-contained card so this
            component stays focused on site-config editing. -->
-      <SiteApplyPipeline :domain="domain" />
+      <SiteApplyPipeline v-if="!embedded" :domain="domain" />
       <SimpleSiteServicesCard :domain="domain" />
 
       <!-- Recent activity (errors + traffic) — extracted to a dedicated
@@ -222,7 +222,9 @@ import { useI18n } from 'vue-i18n'
 import { daemonBaseUrl, fetchBindAddressOptions, fetchPhpVersions, type BindAddressOption } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 
-const props = defineProps<{ domain: string }>()
+// embedded: rendered as the Overview tab of the site page, which already
+// shows the domain header and the apply pipeline.
+const props = defineProps<{ domain: string; embedded?: boolean }>()
 
 const { t } = useI18n()
 const router = useRouter()
@@ -469,7 +471,7 @@ onMounted(async () => {
 .simple-detail {
   width: 100%;
   margin: 0;
-  padding: 22px 24px;
+  padding: 22px var(--wdc-space-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -484,7 +486,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   margin-bottom: 20px;
 }
 
@@ -498,8 +500,8 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(170px, 0.45fr) minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
-  padding: 12px 0;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-3) 0;
   border-top: 1px solid var(--wdc-border);
 }
 
@@ -517,7 +519,7 @@ onMounted(async () => {
 .sd-label-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .sd-label {
@@ -529,7 +531,7 @@ onMounted(async () => {
 .sd-label-stack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   min-width: 0;
 }
 
@@ -538,7 +540,7 @@ onMounted(async () => {
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 /* Settings-row icon — tinted to the accent color so each row gets a
@@ -628,7 +630,7 @@ onMounted(async () => {
 .sd-saved {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   font-size: 12px;
   font-weight: 600;
   color: var(--el-color-success);
@@ -642,12 +644,12 @@ onMounted(async () => {
 .sd-danger-row {
   display: flex;
   justify-content: flex-start;
-  padding-top: 8px;
+  padding-top: var(--wdc-space-2);
 }
 
 .sd-section {
   margin-top: 18px;
-  padding: 16px;
+  padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
@@ -675,26 +677,35 @@ onMounted(async () => {
 
 /* Recent activity styles moved to SimpleSiteActivityCard.vue. */
 
+/* Embedded as the site page's Overview tab: the tab already provides the
+   card frame, and the window-width two-column layout below would squeeze
+   the form column inside the narrower tab body. */
+.simple-detail.embedded {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
 @media (min-width: 900px) {
-  .simple-detail {
+  .simple-detail:not(.embedded) {
     display: grid;
     grid-template-columns: minmax(0, 0.95fr) minmax(340px, 0.65fr);
     gap: 0 18px;
   }
 
-  .simple-detail > .sd-header,
-  .simple-detail > .sd-status-row,
-  .simple-detail > .el-divider,
-  .simple-detail > .sd-row,
-  .simple-detail > .sd-danger-row {
+  .simple-detail:not(.embedded) > .sd-header,
+  .simple-detail:not(.embedded) > .sd-status-row,
+  .simple-detail:not(.embedded) > .el-divider,
+  .simple-detail:not(.embedded) > .sd-row,
+  .simple-detail:not(.embedded) > .sd-danger-row {
     grid-column: 1;
   }
 
-  .simple-detail > .sd-section {
+  .simple-detail:not(.embedded) > .sd-section {
     grid-column: 2;
   }
 
-  .simple-detail > .sd-section:first-of-type {
+  .simple-detail:not(.embedded) > .sd-section:first-of-type {
     grid-row: 1 / span 5;
     margin-top: 0;
     position: sticky;
@@ -707,7 +718,7 @@ onMounted(async () => {
   .simple-detail {
     width: calc(100% - 32px);
     margin: 18px auto;
-    padding: 16px;
+    padding: var(--wdc-space-4);
   }
 
   .sd-header {
@@ -722,7 +733,7 @@ onMounted(async () => {
 
   .sd-row {
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+    gap: var(--wdc-space-2);
   }
 
   .sd-control-wrap {
