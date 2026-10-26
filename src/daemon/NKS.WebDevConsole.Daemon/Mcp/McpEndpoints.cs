@@ -262,7 +262,7 @@ public static class McpEndpoints
 
             var now = DateTimeOffset.UtcNow.ToString("o");
             var rows = await Dapper.SqlMapper.ExecuteAsync(conn,
-                "UPDATE deploy_intents SET used_at = @Now WHERE id = @Id AND used_at IS NULL",
+                "UPDATE deploy_intents SET used_at = @Now, revoked_at = @Now WHERE id = @Id AND used_at IS NULL",
                 new { Id = intentId, Now = now });
             if (rows == 0)
             {
@@ -338,6 +338,41 @@ public static class McpEndpoints
                 };
             }).ToList();
             return Results.Ok(new { count = entries.Count, entries });
+        });
+
+        // State of one intent, for the MCP agent waiting on the user's approval
+        // (wdc_get_confirmation_status). Same data as a row of the list above
+        // plus `revoked`, without the signature or nonce.
+        app.MapGet("/api/mcp/intents/{intentId}", async (
+            string intentId,
+            HttpContext ctx,
+            NKS.WebDevConsole.Daemon.Data.Database db,
+            NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry) =>
+        {
+            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (string.IsNullOrWhiteSpace(intentId))
+                return Results.BadRequest(new { error = "intentId is required" });
+            using var conn = db.CreateConnection();
+            await conn.OpenAsync();
+            var intent = await NKS.WebDevConsole.Daemon.Mcp.McpIntentStatus.LoadAsync(conn, intentId, DateTimeOffset.UtcNow);
+            if (intent is null) return Results.NotFound(new { error = "intent_not_found", intentId });
+            var registered = kindsRegistry.Get(intent.Kind);
+            return Results.Ok(new
+            {
+                intent.IntentId,
+                intent.Kind,
+                kindLabel = registered?.Label,
+                intent.Domain,
+                intent.Host,
+                intent.ReleaseId,
+                intent.State,
+                intent.ExpiresAt,
+                intent.ConfirmedAt,
+                intent.UsedAt,
+                intent.RevokedAt,
+                intent.CreatedAt,
+                intent.MatchedGrantId,
+            });
         });
 
         static string ComputeIntentState(string? usedAt, string? confirmedAt, string expiresAtRaw)

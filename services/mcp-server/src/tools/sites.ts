@@ -71,7 +71,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
         'Args:\n' +
         '  domain: Local site domain.\n' +
         '  limit: Number of most-recent entries to return (1-1000, default 100).\n\n' +
-        'Returns: { domain, count, topClients, entries } sorted oldest → newest.\n\n' +
+        'Returns: { domain, count, topClients, entries } sorted oldest → newest. If the result ' +
+        'is too large, the oldest entries are dropped and truncation says how many.\n\n' +
         'Use this for diagnosing traffic spikes, spotting scrapers, verifying ' +
         'that a deployment is actually serving requests, or auditing who just ' +
         'visited a specific site.',
@@ -90,7 +91,8 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
       const qs = new URLSearchParams()
       if (limit !== undefined) qs.set('limit', String(limit))
       const path = `/api/sites/${encodeURIComponent(domain)}/access-log${qs.toString() ? '?' + qs.toString() : ''}`
-      return safe(() => daemonClient.get(path))
+      // Entries run oldest → newest; an oversized result keeps the newest.
+      return safe(() => daemonClient.get(path), { keep: 'tail' })
     },
   )
 

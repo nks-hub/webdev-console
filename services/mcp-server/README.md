@@ -146,6 +146,14 @@ The token rotates per daemon restart — the MCP server re-reads the port file a
 - **Read-only mode:** `--readonly` flag skips registering mutation tools (they don't appear in `tools/list`)
 - **Daemon validation:** all input flows through the daemon's existing validators (`ValidateDomain`, `IsValidDatabaseName`, etc.) — MCP is a thin transport, not the security boundary
 
+## Approvals and errors
+
+1. Call `wdc_request_confirmation` with the operation, its target and a one-sentence reason. The WDC app shows an Approve banner. Pass `waitSeconds` (up to 120) to wait for the decision in the same call.
+2. `wdc_get_confirmation_status(intentId)` reports `pending`, `ready`, `consumed`, `expired` or `revoked`, plus `expiresAt`.
+3. Once it is `ready`, call the destructive tool with `intentToken`. Each token works once, for exactly that operation and target.
+
+When the daemon refuses a call, the tool error carries the daemon's `error`, `reason`, `detail` and `hint`, plus a `Next step:` line (for example: request a confirmation, wait for approval, or ask the user to enable MCP or an MCP capability in WDC → Settings). Oversized log results keep the newest entries; other lists keep the first ones. Both mark the result `truncated`.
+
 ## Development
 
 ```bash
