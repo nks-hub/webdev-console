@@ -153,9 +153,7 @@ public sealed class PluginState
         // daemon crash between WriteAllText starting and finishing leaves a
         // truncated state file that breaks all subsequent loads. File.Move
         // with overwrite:true is atomic on NTFS/ext4 at the filesystem level.
-        var tmp = StateFilePath + ".tmp";
-        File.WriteAllText(tmp, json);
-        File.Move(tmp, StateFilePath, overwrite: true);
+        NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(StateFilePath, json);
     }
 
     private void SaveUninstalled()
@@ -164,8 +162,6 @@ public sealed class PluginState
         var json = JsonSerializer.Serialize(
             _uninstalled.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
             IndentedJson);
-        var tmp = UninstalledFilePath + ".tmp";
-        File.WriteAllText(tmp, json);
-        File.Move(tmp, UninstalledFilePath, overwrite: true);
+        NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(UninstalledFilePath, json);
     }
 }

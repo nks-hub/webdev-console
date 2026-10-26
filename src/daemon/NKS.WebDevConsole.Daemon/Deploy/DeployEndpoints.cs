@@ -416,12 +416,9 @@ internal static class DeployEndpoints
             var path = DeploySettingsPath(domain);
             // Atomic write: temp file in same dir + File.Move with overwrite.
             // Avoids leaving a half-written file if the daemon crashes mid-flush.
-            var tmp = path + ".tmp";
-            await File.WriteAllTextAsync(tmp, body, ct);
-            // File.Move on Windows pre-.NET 5 errored on overwrite; current .NET
-            // overload accepts overwrite=true safely.
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(tmp, path);
+            // Delete-then-move left a window with no settings file at all and
+            // raced concurrent saves on the shared ".tmp" name.
+            NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(path, body);
             return Results.Ok(new { domain, status = "saved", bytes = body.Length });
         });
 
