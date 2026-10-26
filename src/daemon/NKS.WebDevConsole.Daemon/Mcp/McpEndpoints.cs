@@ -190,8 +190,8 @@ public static class McpEndpoints
             }
 
             // Best-effort: the SSE bus is the GUI's notification channel. Failure
-            // to broadcast (no subscribers, etc.) is not fatal — the AI can still
-            // proceed with MCP_DEPLOY_AUTO_APPROVE=true to bypass GUI banner.
+            // to broadcast (no subscribers, etc.) is not fatal — the operator can
+            // still approve the intent from the MCP Intents page.
             await broadcaster.BroadcastAsync("mcp:confirm-request",
                 new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host, alwaysConfirm });
             return Results.Accepted();

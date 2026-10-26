@@ -30,6 +30,11 @@ export const CONFIRMABLE_OPERATIONS = {
   plugin_install: { kind: 'plugin_install', host: '*plugin*', describe: 'install plugin' },
   plugin_uninstall: { kind: 'plugin_uninstall', host: '*plugin*', describe: 'uninstall plugin' },
   backup_restore: { kind: 'backup_restore', host: '*backup*', describe: 'restore a backup over the current state', fixedDomain: '*backup*' },
+  // Deploy routes (target = site domain). A deploy itself is bound to one host,
+  // so it is minted with wdc_deploy_create_intent, which takes the host.
+  deploy_rollback: { kind: 'rollback', host: '*', describe: 'roll back the live release (deploy or group) of site' },
+  deploy_cancel: { kind: 'cancel', host: '*', describe: 'cancel the running deploy of site' },
+  deploy_restore: { kind: 'restore', host: '*restore*', describe: 'restore a pre-deploy database snapshot over the live data of site' },
 } as const
 
 export type ConfirmableOperation = keyof typeof CONFIRMABLE_OPERATIONS

@@ -27,10 +27,11 @@ public interface IDeployIntentValidator
     /// cannot fire twice — even from concurrent callers.
     ///
     /// When <paramref name="allowUnconfirmed"/> is <c>true</c> (CI / headless
-    /// flows that gate via <c>MCP_DEPLOY_AUTO_APPROVE</c>) the validator
-    /// pre-stamps <c>confirmed_at</c> before checking, bypassing the Mode A
-    /// GUI banner gate. The default <c>false</c> requires the GUI confirmation
-    /// to have happened or the call returns <c>pending_confirmation</c>.
+    /// callers holding the GUI token, via <c>X-Allow-Unconfirmed</c>) the
+    /// validator pre-stamps <c>confirmed_at</c> before checking, bypassing the
+    /// Mode A GUI banner gate. It is ignored for the MCP token. The default
+    /// <c>false</c> requires the GUI confirmation to have happened or the call
+    /// returns <c>pending_confirmation</c>.
     /// </summary>
     Task<IntentValidationResult> ValidateAndConsumeAsync(
         string intentToken,

@@ -21,9 +21,8 @@ interface PortFile {
    *
    * Default when the line is absent (or contains only `*`): legacy
    * behaviour — all tools register, mirroring how the MCP server worked
-   * before scopes existed. Per v2 audit fix the destructive deploy tools
-   * (deploy / rollback / cancel) ALSO check `MCP_DEPLOY_AUTO_APPROVE` env
-   * var before firing, so absent scope is not the only gate.
+   * before scopes existed. Scopes only decide which tools are listed; the
+   * destructive deploy routes still need an intent the user approved in WDC.
    */
   scopes: string[]
 }
