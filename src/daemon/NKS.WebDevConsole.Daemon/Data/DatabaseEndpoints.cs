@@ -1644,11 +1644,10 @@ internal static class DatabaseEndpoints
             if (ctx.Request.ContentLength > ImportMaxBytes + ImportMultipartOverheadBytes)
                 return ImportTooLarge();
 
-            // Note: the mysql client also runs its own client commands (source,
-            // system, ...) found in the dump. Turning them off needs --commands=OFF
-            // (recent MySQL) or --binary-mode, which could not be confirmed for
-            // every client version in the binary catalog, so the import runs
-            // without them; MCP-token imports need an approved intent.
+            // The mysql client also runs its own client commands (system,
+            // source, tee, ...) found in the dump; MysqlClientHardening turns
+            // them off where the installed client supports it. MCP-token imports
+            // additionally need an approved intent.
             var tmpFile = Path.GetTempFileName();
             try
             {
@@ -1667,6 +1666,7 @@ internal static class DatabaseEndpoints
                 }
 
                 var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+                args.AddRange(await MysqlClientHardening.ResolveAsync(mysqlCli, ct));
                 args.Add(name);
                 try
                 {
