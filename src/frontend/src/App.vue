@@ -73,13 +73,13 @@
                of polling forever. -->
           <template v-if="daemonStore.bootFailed">
             <div class="splash-error-icon" aria-hidden="true">⚠</div>
-            <div class="splash-status splash-status--error">Daemon se nepodařilo spustit</div>
+            <div class="splash-status splash-status--error">{{ t('splash.failedTitle') }}</div>
             <div class="splash-hint">{{ splashFailHint }}</div>
             <div class="splash-actions">
-              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">Zkusit znovu</button>
-              <button class="splash-btn" @click="reloadApp">Restartovat aplikaci</button>
+              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">{{ t('splash.retry') }}</button>
+              <button class="splash-btn" @click="reloadApp">{{ t('splash.restartApp') }}</button>
             </div>
-            <div class="splash-loghint">Log daemona: ~/.wdc/logs/daemon</div>
+            <div class="splash-loghint">{{ t('splash.logHint', { path: '~/.wdc/logs/daemon' }) }}</div>
           </template>
           <template v-else>
             <div class="splash-spinner" :class="{ 'splash-spinner--warn': splashWarn }" aria-hidden="true"></div>
@@ -99,6 +99,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
@@ -123,6 +124,7 @@ import { useSiteApplyStore } from './stores/siteApply'
 import { osNotify } from './services/osNotifications'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
@@ -251,35 +253,35 @@ const splashElapsedSec = computed(() => {
 const splashElapsed = computed(() => `${splashElapsedSec.value}s`)
 
 const splashStatus = computed(() => {
-  if (!daemonStore.bootStartedAt) return 'Spouštím frontend…'
+  if (!daemonStore.bootStartedAt) return t('splash.status.mounting')
   const fails = daemonStore.consecutiveFailures
   const kind = daemonStore.lastErrorKind
   // After the daemon has bound HTTP at least once but shutters down (daemon
   // restart) we flip back to connecting state. Cover both flows here.
-  if (fails === 0 && daemonStore.pollAttempts === 1) return 'Connecting to backend…'
+  if (fails === 0 && daemonStore.pollAttempts === 1) return t('splash.status.connecting')
   if (kind === 'network') {
     // Daemon process not listening yet — port file may still be missing
     // or the socket is not bound. Normal during first few seconds of boot.
-    if (splashElapsedSec.value < 8) return 'Daemon se spouští…'
-    if (splashElapsedSec.value < 20) return 'Daemon startuje pluginy…'
-    if (splashElapsedSec.value < 45) return 'Daemon stále odpovídá pomalu…'
-    return 'Daemon dlouho nereaguje — chystám diagnostiku…'
+    if (splashElapsedSec.value < 8) return t('splash.status.daemonStarting')
+    if (splashElapsedSec.value < 20) return t('splash.status.pluginsStarting')
+    if (splashElapsedSec.value < 45) return t('splash.status.slow')
+    return t('splash.status.unresponsive')
   }
-  if (kind === 'auth') return 'Daemon běží, synchronizuji token…'
-  if (kind === 'server') return 'Daemon hlásí chybu — opakuji…'
-  if (kind === 'unknown' && fails > 0) return 'Čekám na backend…'
-  return 'Connecting to backend…'
+  if (kind === 'auth') return t('splash.status.auth')
+  if (kind === 'server') return t('splash.status.server')
+  if (kind === 'unknown' && fails > 0) return t('splash.status.waiting')
+  return t('splash.status.connecting')
 })
 
 const splashHint = computed(() => {
   const kind = daemonStore.lastErrorKind
   const n = daemonStore.pollAttempts
-  if (!daemonStore.bootStartedAt) return 'mount fáze'
-  if (kind === 'network') return `pokus ${n} · port file / socket`
-  if (kind === 'auth') return `pokus ${n} · rotace tokenu`
-  if (kind === 'server') return `pokus ${n} · 5xx odpověď`
-  if (n <= 1) return 'první pokus'
-  return `pokus ${n}`
+  if (!daemonStore.bootStartedAt) return t('splash.hint.mount')
+  if (kind === 'network') return t('splash.hint.network', { n })
+  if (kind === 'auth') return t('splash.hint.auth', { n })
+  if (kind === 'server') return t('splash.hint.server', { n })
+  if (n <= 1) return t('splash.hint.first')
+  return t('splash.hint.attempt', { n })
 })
 
 // Over ~15s of network errors we visually escalate the spinner (amber tint)
@@ -294,10 +296,11 @@ const splashFailHint = computed(() => {
   const kind = daemonStore.lastErrorKind
   const n = daemonStore.pollAttempts
   const s = splashElapsedSec.value
-  if (kind === 'network') return `Daemon neodpovídá (port file / socket) — ${n} pokusů za ${s}s.`
-  if (kind === 'auth') return `Daemon běží, ale token se nepodařilo sesynchronizovat — ${n} pokusů.`
-  if (kind === 'server') return `Daemon vrací chybu (5xx) — ${n} pokusů za ${s}s.`
-  return `Backend se neozval za ${s}s (${n} pokusů).`
+  const attempts = t('splash.attempts', { n }, n)
+  if (kind === 'network') return t('splash.fail.network', { attempts, s })
+  if (kind === 'auth') return t('splash.fail.auth', { attempts })
+  if (kind === 'server') return t('splash.fail.server', { attempts, s })
+  return t('splash.fail.unknown', { attempts, s })
 })
 
 function reloadApp() {

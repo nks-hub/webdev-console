@@ -2940,5 +2940,37 @@
     "logEmpty": "Log služby je prázdný.",
     "fixRestart": "Spustit znovu",
     "fixConfig": "Upravit konfiguraci"
+  },
+  "splash": {
+    "failedTitle": "Daemon se nepodařilo spustit",
+    "retry": "Zkusit znovu",
+    "restartApp": "Restartovat aplikaci",
+    "logHint": "Log daemona: {path}",
+    "status": {
+      "mounting": "Spouštím frontend…",
+      "connecting": "Připojuji se k backendu…",
+      "daemonStarting": "Daemon se spouští…",
+      "pluginsStarting": "Daemon spouští pluginy…",
+      "slow": "Daemon stále odpovídá pomalu…",
+      "unresponsive": "Daemon dlouho nereaguje — chystám diagnostiku…",
+      "auth": "Daemon běží, synchronizuji token…",
+      "server": "Daemon hlásí chybu — zkouším znovu…",
+      "waiting": "Čekám na backend…"
+    },
+    "hint": {
+      "mount": "načítání rozhraní",
+      "first": "první pokus",
+      "attempt": "pokus {n}",
+      "network": "pokus {n} · port file / socket",
+      "auth": "pokus {n} · rotace tokenu",
+      "server": "pokus {n} · odpověď 5xx"
+    },
+    "attempts": "{n} pokus | {n} pokusy | {n} pokusů",
+    "fail": {
+      "network": "Daemon neodpovídá (port file / socket) — {attempts} za {s} s.",
+      "auth": "Daemon běží, ale token se nepodařilo synchronizovat — {attempts}.",
+      "server": "Daemon vrací chybu (5xx) — {attempts} za {s} s.",
+      "unknown": "Backend se neozval za {s} s ({attempts})."
+    }
   }
 }
