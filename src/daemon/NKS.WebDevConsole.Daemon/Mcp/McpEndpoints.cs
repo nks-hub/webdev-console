@@ -16,13 +16,6 @@ namespace NKS.WebDevConsole.Daemon.Mcp;
 /// </summary>
 public static class McpEndpoints
 {
-    // Helper: read mcp.enabled from settings on every request. Cheap (in-memory
-    // dictionary lookup); could be cached but settings rarely change so the
-    // extra round-trip via SettingsStore is fine.
-    static bool IsMcpEnabled(HttpContext ctx) =>
-        ctx.RequestServices.GetRequiredService<SettingsStore>()
-            .GetBool("mcp", "enabled", defaultValue: false);
-
     /// <summary>Operator-facing hint returned with every <c>mcp_disabled</c> 404.</summary>
     public const string McpDisabledHint =
         "Enable MCP in WDC → Settings → Advanced → MCP, or with the switch on the MCP page.";
@@ -31,6 +24,13 @@ public static class McpEndpoints
     // reading its error) how to turn the integration on.
     public static IResult McpDisabled() =>
         Results.NotFound(new { error = "mcp_disabled", hint = McpDisabledHint });
+
+    // Helper: read mcp.enabled from settings on every request. Cheap (in-memory
+    // dictionary lookup); could be cached but settings rarely change so the
+    // extra round-trip via SettingsStore is fine.
+    static bool IsMcpEnabled(HttpContext ctx) =>
+        ctx.RequestServices.GetRequiredService<SettingsStore>()
+            .GetBool("mcp", "enabled", defaultValue: false);
 
     public static void MapMcpEndpoints(this WebApplication app)
     {

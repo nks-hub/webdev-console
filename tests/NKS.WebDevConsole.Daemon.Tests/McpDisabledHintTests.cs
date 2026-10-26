@@ -40,7 +40,8 @@ public sealed class McpDisabledHintTests
         var source = File.ReadAllText(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "..", "..",
             "src", "daemon", "NKS.WebDevConsole.Daemon", "Mcp", "McpEndpoints.cs"));
-        Assert.DoesNotContain("new { error = \"mcp_disabled\" }", source);
+        Assert.False(source.Contains("new { error = \"mcp_disabled\" }"),
+            "A /api/mcp route returns a bare mcp_disabled body; use `return McpDisabled();` so it carries the enable hint.");
         Assert.Contains("return McpDisabled();", source);
     }
 }
