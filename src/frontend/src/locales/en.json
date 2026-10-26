@@ -4,7 +4,7 @@
     "empty": "No matching commands",
     "goTo": "Go to {target}",
     "gotoSites": "Go to Sites",
-    "gotoDashboard": "Go to Services",
+    "gotoDashboard": "Go to Overview",
     "gotoDatabases": "Go to Databases",
     "gotoSsl": "Go to SSL Manager",
     "gotoPhp": "Go to PHP Manager",
@@ -97,7 +97,9 @@
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
     "newVersionAvailable": "New version v{version} is available",
-    "connecting": "Connecting…"
+    "connecting": "Connecting…",
+    "openNavigation": "Open navigation",
+    "searchPlaceholder": "Search sites, services and actions"
   },
   "autostart": {
     "label": "Auto-start when WDC launches"
@@ -151,7 +153,17 @@
     "serviceStopped": "{name} stopped",
     "signedInAsTitle": "Signed in as {name} — click to sign out",
     "signInTitle": "Sign in with SSO",
-    "system": "System"
+    "system": "System",
+    "mainNavigation": "Main navigation",
+    "brandHome": "WebDev Console, overview",
+    "application": "Application",
+    "servicesCrashed": "{n} service crashed | {n} services crashed",
+    "groups": {
+      "workspace": "Workspace",
+      "stack": "Stack",
+      "network": "Network",
+      "operations": "Operations"
+    }
   },
   "versions": {
     "active": "Active",
