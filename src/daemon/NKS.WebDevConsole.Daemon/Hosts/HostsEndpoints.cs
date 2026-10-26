@@ -179,9 +179,10 @@ internal static class HostsEndpoints
                     return Results.BadRequest(new { error = $"Invalid IP: {e.Ip}" });
                 if (!IsHostnameValid(e.Hostname))
                     return Results.BadRequest(new { error = $"Invalid hostname: {e.Hostname}" });
-                // A CR/LF (or any control char) in a comment would end the line and
-                // let the request append arbitrary entries to the hosts file.
-                if (e.Comment is not null && e.Comment.Any(char.IsControl))
+                // A CR/LF (or another control char) in a comment would end the line
+                // and let the request append arbitrary entries to the hosts file.
+                // TAB is allowed: GET returns comments with inner tabs verbatim.
+                if (e.Comment is not null && e.Comment.Any(c => c != '\t' && char.IsControl(c)))
                     return Results.BadRequest(new { error = $"Invalid comment for {e.Hostname}" });
             }
 

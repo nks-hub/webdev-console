@@ -41,6 +41,11 @@ describe('isReadOnlySql', () => {
     '/* x */ DROP TABLE users',
     'SELECT 1; DROP TABLE users',
     'UPDATE t SET a = 1',
+    'WITH x AS (SELECT 1 AS `a\\`) DELETE FROM users -- `',
+    'WITH c AS (SELECT 1--1) DELETE FROM users',
+    "SELECT 1--1 INTO OUTFILE '/tmp/x'",
+    'WITH c AS (SELECT 1) /*! DELETE FROM users */',
+    'SELECT 1 /*M! INTO OUTFILE "/tmp/x" */',
   ])('rejects %s', (sql) => {
     expect(isReadOnlySql(sql)).toBe(false)
   })

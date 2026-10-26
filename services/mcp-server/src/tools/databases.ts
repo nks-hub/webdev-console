@@ -64,7 +64,9 @@ function stripLiteralsAndComments(sql: string): string {
     if (ch === "'" || ch === '"' || ch === '`') {
       let j = i + 1
       while (j < sql.length) {
-        if (sql[j] === '\\') { j += 2; continue }
+        // Backslash escapes only exist inside string literals; MySQL identifiers
+        // escape a backtick by doubling it.
+        if (ch !== '`' && sql[j] === '\\') { j += 2; continue }
         if (sql[j] === ch) {
           if (sql[j + 1] === ch) { j += 2; continue } // doubled quote escape
           break
@@ -81,7 +83,10 @@ function stripLiteralsAndComments(sql: string): string {
       i = end < 0 ? sql.length : end + 2
       continue
     }
-    if ((ch === '-' && sql[i + 1] === '-') || ch === '#') {
+    // MySQL starts a `--` comment only when whitespace follows (`1--1` is
+    // arithmetic), so anything else stays visible to the keyword check.
+    const dashComment = ch === '-' && sql[i + 1] === '-' && (i + 2 >= sql.length || /\s/.test(sql[i + 2]!))
+    if (dashComment || ch === '#') {
       const nl = sql.indexOf('\n', i)
       out += ' '
       i = nl < 0 ? sql.length : nl
@@ -104,6 +109,9 @@ const WRITE_KEYWORDS =
   /\b(?:(?:INSERT|REPLACE)\b(?!\s*\()|(?:UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD|HANDLER|OUTFILE|DUMPFILE)\b)/i
 
 export function isReadOnlySql(sql: string): boolean {
+  // MySQL executes the body of /*! … */ and MariaDB of /*M! … */, so a
+  // "comment" can carry a statement. Never treat those as read-only.
+  if (/\/\*M?!/i.test(sql)) return false
   const normalized = stripLeadingCommentsAndWs(sql)
   if (!READ_ONLY_VERBS.test(normalized)) return false
   if (hasInnerSemicolon(sql)) return false

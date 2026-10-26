@@ -418,7 +418,13 @@ public sealed class BackupManager
                 // Write through SQLite so the restore uses the same locks and WAL.
                 if (!(File.Exists(dstDb) && TrySqliteCopy(srcDb, dstDb)))
                 {
+                    // Raw-copy fallback: drop the old WAL and shared-memory files
+                    // too, or SQLite replays their frames onto the restored file.
                     SqliteConnection.ClearAllPools();
+                    foreach (var suffix in new[] { "-wal", "-shm" })
+                    {
+                        try { File.Delete(dstDb + suffix); } catch { /* best-effort */ }
+                    }
                     File.Copy(srcDb, dstDb, overwrite: true);
                 }
                 promoted++;
