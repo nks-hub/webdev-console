@@ -23,6 +23,11 @@ describe('intentFor', () => {
     ['backup_restore', 'ignored', { kind: 'backup_restore', domain: '*backup*', host: '*backup*' }],
     ['mysql_user_drop', 'app@localhost', { kind: 'mysql_user_drop', domain: 'app@localhost', host: '*mysql*' }],
     ['mysql_root_reset', 'ignored', { kind: 'mysql_root_reset', domain: 'root', host: '*mysql*' }],
+    ['cloudflare_credentials', 'config', { kind: 'cloudflare_credentials', domain: 'config', host: '*mcp*' }],
+    ['node_process', 'app.loc', { kind: 'node_process', domain: 'app.loc', host: '*mcp*' }],
+    ['service_config_write', 'apache', { kind: 'service_config_write', domain: 'apache', host: '*mcp*' }],
+    ['hosts_write', 'ignored', { kind: 'hosts_write', domain: 'hosts', host: '*mcp*' }],
+    ['daemon_admin', 'restart', { kind: 'daemon_admin', domain: 'restart', host: '*mcp*' }],
   ] as const)('%s on %s', (operation, target, expected) => {
     expect(intentFor(operation, target)).toEqual(expected)
   })

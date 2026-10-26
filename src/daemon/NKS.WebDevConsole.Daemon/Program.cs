@@ -1213,80 +1213,9 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-// Auth middleware for /api/* requests.
-// SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
-var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);
-var mcpTokenBytes = System.Text.Encoding.UTF8.GetBytes(mcpToken);
-app.Use(async (ctx, next) =>
-{
-    if (ctx.Request.Path.StartsWithSegments("/api"))
-    {
-        // Parse Authorization: Bearer <token> — use prefix check instead of Replace() which
-        // is fragile (multiple occurrences, whitespace) and doesn't handle case variants.
-        var authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
-        string? provided = null;
-        if (!string.IsNullOrEmpty(authHeader) &&
-            authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            provided = authHeader.Substring(7).Trim();
-        }
-        // SSE/WebSocket fallback: browser EventSource/WebSocket APIs cannot set
-        // Authorization headers, so token-via-query is allowed *only* on
-        // those streaming endpoints. Plain /api/* requests must use the header
-        // — a query-string fallback there leaked the bearer into Kestrel
-        // access logs and any log-shipping pipeline (Sentry breadcrumb,
-        // file sink) for the token's full TTL.
-        if (provided is null)
-        {
-            var path = ctx.Request.Path.Value ?? string.Empty;
-            var streamingPath = path.StartsWith("/api/events", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/api/ws", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/api/backup/download", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/api/plugins/", StringComparison.OrdinalIgnoreCase)
-                && path.EndsWith("/icon", StringComparison.OrdinalIgnoreCase);
-            if (streamingPath)
-            {
-                provided = ctx.Request.Query["token"].FirstOrDefault();
-            }
-        }
-
-        bool ok = false;
-        bool isMcp = false;
-        if (!string.IsNullOrEmpty(provided))
-        {
-            var providedBytes = System.Text.Encoding.UTF8.GetBytes(provided);
-            // FixedTimeEquals requires same length — reject different length fast
-            ok = providedBytes.Length == authTokenBytes.Length
-                 && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, authTokenBytes);
-            if (!ok)
-            {
-                isMcp = providedBytes.Length == mcpTokenBytes.Length
-                        && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, mcpTokenBytes);
-                ok = isMcp;
-            }
-        }
-
-        if (!ok)
-        {
-            ctx.Response.StatusCode = 401;
-            await ctx.Response.WriteAsync("Unauthorized");
-            return;
-        }
-
-        McpCallerContext.IsMcpToken = isMcp;
-        if (isMcp)
-        {
-            var denied = await McpTokenPolicy.DenyReasonAsync(ctx);
-            if (denied is not null)
-            {
-                ctx.Response.StatusCode = 403;
-                await ctx.Response.WriteAsJsonAsync(new { error = "mcp_forbidden", detail = denied });
-                return;
-            }
-        }
-    }
-    await next();
-});
+// Auth middleware for /api/* requests: bearer token check (GUI or MCP
+// token) plus the MCP token's route allow-list. Lives in Config/DaemonAuth.cs.
+app.UseDaemonAuth(authToken, mcpToken);
 
 // Daemon status and system information routes. Lives in Services/SystemEndpoints.cs.
 app.MapSystemEndpoints(pluginLoader, daemonVersion, DaemonUptimeSeconds);

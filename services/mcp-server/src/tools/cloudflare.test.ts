@@ -1,7 +1,7 @@
 /**
- * wdc_save_cloudflare_config must not let the agent set the Cloudflare
- * credentials or the cloudflared executable path. The daemon refuses them
- * from the MCP token as well; the tool does not offer or forward them.
+ * wdc_save_cloudflare_config keeps the credential fields; the daemon decides
+ * whether the MCP token may set them (capability cloudflare_credentials plus
+ * an approved intent), so the tool forwards the intent token as a header.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -38,32 +38,27 @@ function saveTool(): RegisteredTool {
   return tools.find(t => t.name === 'wdc_save_cloudflare_config')!
 }
 
-const OPERATOR_ONLY = ['cloudflaredPath', 'tunnelToken', 'apiToken', 'accountId']
-
 beforeEach(() => {
   mockPut.mockClear()
 })
 
 describe('wdc_save_cloudflare_config', () => {
-  it('does not offer the operator-only fields', () => {
+  it('keeps the credential fields and accepts an intent token', () => {
     const keys = Object.keys(saveTool().schema.inputSchema)
-    for (const field of OPERATOR_ONLY) expect(keys).not.toContain(field)
-    expect(keys).toEqual(expect.arrayContaining(['tunnelName', 'tunnelId', 'defaultZoneId', 'subdomainTemplate']))
+    expect(keys).toEqual(expect.arrayContaining(['cloudflaredPath', 'tunnelToken', 'apiToken', 'accountId', 'intentToken']))
   })
 
-  it('forwards only the allowed fields even if more are passed', async () => {
-    await saveTool().handler({
-      defaultZoneId: 'zone1',
-      subdomainTemplate: '{stem}-{hash}',
-      cloudflaredPath: '/tmp/evil',
-      tunnelToken: 'attacker-tunnel',
-      apiToken: 'x',
-      accountId: 'y',
-    })
-    expect(mockPut).toHaveBeenCalledTimes(1)
-    const [path, body] = mockPut.mock.calls[0]!
-    expect(path).toBe('/api/cloudflare/config')
-    for (const field of OPERATOR_ONLY) expect(body).not.toHaveProperty(field)
-    expect(body).toMatchObject({ defaultZoneId: 'zone1', subdomainTemplate: '{stem}-{hash}' })
+  it('sends the intent token as X-Intent-Token, not in the body', async () => {
+    await saveTool().handler({ apiToken: 'tok', accountId: 'acc', intentToken: 'intent.token.sig' })
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/cloudflare/config',
+      { apiToken: 'tok', accountId: 'acc' },
+      { 'X-Intent-Token': 'intent.token.sig' },
+    )
+  })
+
+  it('sends no intent header without a token', async () => {
+    await saveTool().handler({ defaultZoneId: 'zone1' })
+    expect(mockPut).toHaveBeenCalledWith('/api/cloudflare/config', { defaultZoneId: 'zone1' }, undefined)
   })
 })

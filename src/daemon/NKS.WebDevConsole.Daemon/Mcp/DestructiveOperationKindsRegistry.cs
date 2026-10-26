@@ -126,11 +126,19 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
             "plugin_install", "Install a new plugin DLL", CorePluginId, DangerLevel.Destructive);
         _kinds["binary_install"] = new DestructiveOperationKind(
             "binary_install", "Install a new binary (PHP, MySQL, …)", CorePluginId, DangerLevel.Destructive);
-        // Database server administration. Resetting a root password locks
-        // out every client that used the old one (and the MySQL reset
-        // briefly takes mysqld offline); dropping an account cannot be
-        // undone. The MCP tools used to rely on a typed confirm: "YES"
-        // that the agent fills in itself, which is not the user's consent.
+        // MCP capabilities (McpCapabilities): once the operator enables one of
+        // these groups, each call still needs an approved intent. The daemon's
+        // MCP policy checks them (host "*mcp*", or the database host markers).
+        _kinds["service_config_write"] = new DestructiveOperationKind(
+            "service_config_write", "Rewrite a service config file (httpd.conf, php.ini, …)", CorePluginId, DangerLevel.Destructive);
+        _kinds["hosts_write"] = new DestructiveOperationKind(
+            "hosts_write", "Rewrite or restore the system hosts file", CorePluginId, DangerLevel.Destructive);
+        _kinds["node_process"] = new DestructiveOperationKind(
+            "node_process", "Set or run a site's Node.js start command", CorePluginId, DangerLevel.Destructive);
+        _kinds["cloudflare_credentials"] = new DestructiveOperationKind(
+            "cloudflare_credentials", "Change Cloudflare credentials or tunnel routing", CorePluginId, DangerLevel.Destructive);
+        _kinds["daemon_admin"] = new DestructiveOperationKind(
+            "daemon_admin", "Restart, shut down, reset or uninstall the daemon", CorePluginId, DangerLevel.Destructive);
         _kinds["mysql_root_reset"] = new DestructiveOperationKind(
             "mysql_root_reset", "Reset the MySQL root password", CorePluginId, DangerLevel.Destructive);
         _kinds["mysql_user_drop"] = new DestructiveOperationKind(
