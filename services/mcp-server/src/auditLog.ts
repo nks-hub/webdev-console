@@ -71,10 +71,35 @@ function classify(toolName: string): 'read' | 'mutate' | 'destructive' {
   return DANGER_OVERRIDES[toolName] ?? 'read'
 }
 
+/**
+ * Argument keys whose values are secrets (password, newPwd, currentPwd,
+ * rootPassword, apiToken, tunnelToken, intentToken, clientSecret, ...).
+ * The daemon applies the same rule before storing an audit row
+ * (McpAuditRedactor.cs); keep the two in step.
+ */
+const SECRET_KEY = /password|pwd|secret|token/i
+export const REDACTED = '[redacted]'
+
+export function isSecretKey(key: string): boolean {
+  return SECRET_KEY.test(key)
+}
+
+/** JSON.stringify replacer that replaces the value of every secret key, at any depth. */
+function redactSecrets(this: unknown, key: string, value: unknown): unknown {
+  return key !== '' && isSecretKey(key) ? REDACTED : value
+}
+
+/** Serialises tool arguments for the audit log with secret values redacted. */
+export function redactedJson(args: unknown): string {
+  return JSON.stringify(args ?? {}, redactSecrets) ?? '{}'
+}
+
 function summarize(args: unknown): { summary: string; hash: string } {
   let json: string
   try {
-    json = JSON.stringify(args ?? {})
+    // Redacted before hashing too: a short hash of a low-entropy password
+    // could be brute-forced from the audit log.
+    json = redactedJson(args)
   } catch {
     json = '<unserializable>'
   }

@@ -19,7 +19,7 @@ vi.mock('./daemonClient.js', () => ({
 }))
 
 // Import AFTER vi.mock so the wrap module sees the mocked client.
-import { wrapHandler } from './auditLog.js'
+import { REDACTED, isSecretKey, redactedJson, wrapHandler } from './auditLog.js'
 import { daemonClient } from './daemonClient.js'
 
 const mockPost = vi.mocked(daemonClient.post)
@@ -177,5 +177,50 @@ describe('wrapHandler', () => {
     expect(result).toEqual({ content: [{ type: 'text', text: 'ok' }] })
     await flush()
     expect(mockPost).toHaveBeenCalledOnce()
+  })
+})
+
+describe('audit summary redaction', () => {
+  it.each([
+    'password', 'Password', 'newPwd', 'newPassword', 'currentPwd', 'rootPassword',
+    'apiToken', 'tunnelToken', 'intentToken', 'clientSecret', 'PWD',
+  ])('treats %s as a secret key', key => {
+    expect(isSecretKey(key)).toBe(true)
+  })
+
+  it.each(['userName', 'host', 'database', 'privileges', 'sql', 'domain'])('keeps %s', key => {
+    expect(isSecretKey(key)).toBe(false)
+  })
+
+  it('replaces secret values at any depth and keeps the rest', () => {
+    const json = redactedJson({
+      userName: 'app',
+      password: 'hunter2-secret',
+      nested: { rootPassword: 'r00t-pass', list: [{ apiToken: 'cf-token' }] },
+      tunnelToken: { any: 'shape' },
+    })
+    expect(JSON.parse(json)).toEqual({
+      userName: 'app',
+      password: REDACTED,
+      nested: { rootPassword: REDACTED, list: [{ apiToken: REDACTED }] },
+      tunnelToken: REDACTED,
+    })
+    for (const secret of ['hunter2-secret', 'r00t-pass', 'cf-token', 'shape']) expect(json).not.toContain(secret)
+  })
+
+  it('never posts a password to the audit log, nor hashes it', async () => {
+    const wrapped = wrapHandler('wdc_change_mysql_root_password', vi.fn(async () => ({ content: [] })))
+    await wrapped({ currentPwd: 'old-secret-1', newPwd: 'new-secret-2', intentToken: 'intent.token.sig' })
+    await flush()
+
+    const body = auditBody()
+    expect(JSON.parse(body.argsSummary)).toEqual({ currentPwd: REDACTED, newPwd: REDACTED, intentToken: REDACTED })
+    expect(JSON.stringify(body)).not.toContain('secret-')
+
+    // The hash is over the redacted arguments: different passwords, same hash.
+    mockPost.mockClear()
+    await wrapped({ currentPwd: 'other-1', newPwd: 'other-2', intentToken: 'intent.token.sig' })
+    await flush()
+    expect(auditBody().argsHash).toBe(body.argsHash)
   })
 })
