@@ -406,7 +406,12 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry) =>
         {
-            if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
+            if (!IsMcpEnabled(ctx))
+                return Results.NotFound(new
+                {
+                    error = "mcp_disabled",
+                    hint = "Enable MCP in WDC → Settings → Advanced → MCP, or with the switch on the MCP page.",
+                });
             if (string.IsNullOrWhiteSpace(intentId))
                 return Results.BadRequest(new { error = "intentId is required" });
             using var conn = db.CreateConnection();

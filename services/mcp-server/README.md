@@ -165,6 +165,8 @@ The token rotates per daemon restart — the MCP server re-reads the port file a
 2. `wdc_get_confirmation_status(intentId)` reports `pending`, `ready`, `consumed`, `expired` or `revoked`, plus `expiresAt`.
 3. Once it is `ready`, call the destructive tool with `intentToken`. Each token works once, for exactly that operation and target.
 
+When a trust grant the user created in WDC covers the operation, the daemon approves the intent at once: `wdc_request_confirmation` returns `status: "ready"` with `autoApproved: true` (and `matchedGrantId`), and the tool can be retried right away.
+
 When the daemon refuses a call, the tool error carries the daemon's `error`, `reason`, `detail` and `hint`, plus a `Next step:` line (for example: request a confirmation, wait for approval, or ask the user to enable MCP or an MCP capability in WDC → Settings). Oversized log results keep the newest entries; other lists keep the first ones. Both mark the result `truncated`.
 
 ## Development
