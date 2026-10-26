@@ -795,7 +795,8 @@
       "restarted": "Apache restartován",
       "stopApacheTitle": "Zastavit Apache",
       "stopApacheConfirm": "Zastavením Apache se přestanou načítat VŠECHNY weby, ne jen tento. Opravdu pokračovat?",
-      "stopApacheTooltip": "Zastaví Apache — vypne všechny weby"
+      "stopApacheTooltip": "Zastaví Apache — vypne všechny weby",
+      "startWebServer": "Spustit webový server"
     },
     "edit": {
       "browseDocRoot": "Vybrat složku document root"
@@ -863,6 +864,30 @@
       "noConflicts": "Žádné konflikty",
       "conflictsTitle": "Konflikty a varování",
       "majorJump": "Major version jump — možné breaking changes"
+    },
+    "list": {
+      "stateFilter": "Filtrovat podle stavu",
+      "status": "Stav",
+      "runtime": "Runtime",
+      "address": "Adresa",
+      "state": {
+        "ok": "Běží",
+        "failed": "Použití selhalo",
+        "disabled": "Vypnutý"
+      },
+      "filter": {
+        "all": "Vše",
+        "failed": "S chybou",
+        "disabled": "Vypnuté"
+      },
+      "summaryEmpty": "Zatím žádný web.",
+      "summaryTotal": "{n} web | {n} weby | {n} webů",
+      "summaryFailed": "{n} selhal při posledním použití | {n} selhaly při posledním použití | {n} selhalo při posledním použití",
+      "summaryDisabled": "{n} vypnutý | {n} vypnuté | {n} vypnutých",
+      "noneInFilter": "Filtru neodpovídá žádný web.",
+      "clearFilter": "Zrušit filtr",
+      "enable": "Zapnout web",
+      "disable": "Vypnout web"
     }
   },
   "uiMode": {
