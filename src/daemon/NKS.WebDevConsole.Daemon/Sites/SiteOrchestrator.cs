@@ -25,6 +25,13 @@ public sealed class SiteOrchestrator
     private readonly ILogger<SiteOrchestrator> _logger;
     private readonly IServiceProvider _sp;
 
+    // One gate per domain so two applies of the same site (PUT save, the
+    // explicit /apply endpoint, rollback, reapply-all) cannot interleave their
+    // vhost/reload/hosts steps. Different domains still apply in parallel.
+    // Domains are case-insensitive, matching SiteManager's lookup.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _applyLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public SiteOrchestrator(ILogger<SiteOrchestrator> logger, IServiceProvider sp)
     {
         _logger = logger;
@@ -39,14 +46,32 @@ public sealed class SiteOrchestrator
     /// </summary>
     public async Task<SiteApplyResult> ApplyAsync(SiteConfig site, CancellationToken ct = default)
     {
+        var gate = _applyLocks.GetOrAdd(site.Domain, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            return await ApplyCoreAsync(site, ct);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<SiteApplyResult> ApplyCoreAsync(SiteConfig site, CancellationToken ct)
+    {
         _logger.LogInformation("Orchestrating site {Domain}...", site.Domain);
         var result = new SiteApplyResult(site.Domain);
 
         if (!site.Enabled)
         {
-            await RemoveVhostsForDisabledSiteAsync(site.Domain, ct);
-            _logger.LogInformation("Site {Domain} is disabled — vhosts removed", site.Domain);
-            result.Ok("vhost", "site disabled — vhosts removed");
+            var failures = await RemoveVhostsForDisabledSiteAsync(site.Domain, ct);
+            foreach (var (step, detail) in failures)
+                result.Fail(step, detail);
+            if (!failures.Any(f => f.Step == "vhost"))
+                result.Ok("vhost", "site disabled — vhosts removed");
+            _logger.LogInformation("Site {Domain} is disabled — vhost removal finished ({Failed} failed step(s))",
+                site.Domain, failures.Count);
             await PublishApplyResultAsync(result);
             return result;
         }
@@ -477,9 +502,13 @@ public sealed class SiteOrchestrator
     /// Removes generated vhosts for a disabled site across all registered httpd modules
     /// (Apache, Nginx) and reloads each running web server so the config takes effect.
     /// Does NOT delete the TOML file — the site remains in the sites list.
+    /// Returns the failed steps (<c>vhost</c> or <c>reload</c>, with a detail
+    /// naming the module) so the caller can report them instead of claiming
+    /// the vhosts were removed.
     /// </summary>
-    private async Task RemoveVhostsForDisabledSiteAsync(string domain, CancellationToken ct)
+    private async Task<List<(string Step, string Detail)>> RemoveVhostsForDisabledSiteAsync(string domain, CancellationToken ct)
     {
+        var failures = new List<(string Step, string Detail)>();
         var modules = _sp.GetServices<IServiceModule>().ToList();
 
         var httpdIds = new[] { "apache", "nginx" };
@@ -497,9 +526,14 @@ public sealed class SiteOrchestrator
             {
                 _logger.LogDebug("{Module} has no RemoveVhostAsync — skipping vhost removal", id);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to remove vhost for disabled site {Domain} ({Module})", domain, id);
+                failures.Add(("vhost", $"{id}: {ex.Message}"));
             }
 
             try
@@ -508,11 +542,18 @@ public sealed class SiteOrchestrator
                 if (status.State == ServiceState.Running)
                     await mod.ReloadAsync(ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reload {Module} after disabling {Domain}", id, domain);
+                failures.Add(("reload", $"{id}: {ex.Message}"));
             }
         }
+
+        return failures;
     }
 
     /// <summary>
