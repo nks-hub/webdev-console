@@ -80,6 +80,16 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
               () => (IReadOnlySet<string>)new HashSet<string>(StringComparer.OrdinalIgnoreCase))
     { }
 
+    private IDeployEventBroadcaster? _events;
+
+    /// <summary>
+    /// Attach the SSE bus so a consumed intent is announced as
+    /// <c>mcp:intent-changed {change:"consumed"}</c> and any banner or toast
+    /// still showing it in the GUI goes away. Wired once at startup in
+    /// Program.cs; tests leave it unset.
+    /// </summary>
+    public void AttachEvents(IDeployEventBroadcaster events) => _events = events;
+
     /// <summary>Empty kinds registry for the legacy ctor — every Get returns null.</summary>
     private sealed class NullKinds : IDestructiveOperationKinds
     {
@@ -256,6 +266,12 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
             "UPDATE deploy_intents SET used_at = @UsedAt WHERE id = @Id AND used_at IS NULL",
             new { Id = intentId, UsedAt = DateTimeOffset.UtcNow.ToString("o") });
         if (rows == 0) return IntentValidationResult.Deny("already_used");
+
+        if (_events is { } events)
+        {
+            try { await events.BroadcastAsync("mcp:intent-changed", new { change = "consumed", intentId }); }
+            catch { /* SSE failure is non-fatal; the operation proceeds */ }
+        }
 
         return IntentValidationResult.Allow();
     }

@@ -1111,6 +1111,11 @@ static bool IsLegacyHostHandlers(HttpContext ctx) =>
 // MCP surface (intents / kinds / grants / tool-call audit) lives in
 // Mcp/McpEndpoints.cs — registered here so route order is unchanged.
 app.MapMcpEndpoints();
+// Announce consumed intents over SSE so stale approval banners close.
+if (app.Services.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>()
+        is NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator intentValidator)
+    intentValidator.AttachEvents(
+        app.Services.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster>());
 
 // Body record for the POST endpoint. Lives at file scope so the
 // minimal-API binder can deserialise it.

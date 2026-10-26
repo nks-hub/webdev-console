@@ -29,7 +29,7 @@
             <template #kind><strong>{{ humanKindLabel(item) }}</strong></template>
           </i18n-t>
           <span v-else>{{ t('mcp.banner.genericRequest') }}</span>
-          <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span">
+          <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span" class="mcp-confirm-target">
             <template #domain><code class="mono">{{ item.domain }}</code></template>
             <template #host><code class="mono">{{ item.host }}</code></template>
           </i18n-t>
@@ -399,6 +399,9 @@ onBeforeUnmount(() => {
   color: var(--el-text-color-primary);
   margin-bottom: var(--wdc-space-1);
 }
+/* The kind and target are separate i18n-t spans; template whitespace
+   between them is condensed away, so space them explicitly. */
+.mcp-confirm-target { margin-left: 0.3em; }
 
 .mcp-confirm-prompt {
   font-size: 13px;

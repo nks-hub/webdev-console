@@ -193,6 +193,15 @@ export interface IntentInventoryEntry {
   // or null when the operator confirmed manually via the GUI banner
   // (or used the allowUnconfirmed CI escape hatch).
   matchedGrantId?: string | null
+  /**
+   * Set when the agent asked the operator to approve this intent through
+   * confirm-request (GUI/CI-minted intents never do), with the description
+   * it gave. Absent on daemons that predate migration 018.
+   */
+  confirmRequestedAt?: string | null
+  prompt?: string | null
+  /** Kind is listed in mcp.always_confirm_kinds, so grants were skipped. */
+  alwaysConfirm?: boolean
   state: 'consumed' | 'expired' | 'pending_confirmation' | 'ready'
 }
 
@@ -211,6 +220,15 @@ export const fetchIntentInventory = (
   if (matchedGrantId) params.set('matchedGrantId', matchedGrantId)
   return json(`/api/mcp/intents?${params.toString()}`)
 }
+
+/**
+ * Requests still waiting for the operator: asked via confirm-request, not
+ * confirmed, not used, not expired. The GUI loads these on start and on
+ * daemon reconnect so a request that arrived while WDC was closed can
+ * still be approved.
+ */
+export const fetchPendingIntents = (limit = 100): Promise<IntentInventoryResponse> =>
+  json(`/api/mcp/intents?${new URLSearchParams({ limit: String(limit), pendingOnly: 'true' }).toString()}`)
 
 export interface RevokeIntentResponse {
   intentId: string

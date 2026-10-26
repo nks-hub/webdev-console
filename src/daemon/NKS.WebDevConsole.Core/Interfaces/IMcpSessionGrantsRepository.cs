@@ -73,7 +73,8 @@ public interface IMcpSessionGrantsRepository
     ///   <item>scope_type='api_key' AND scope_value=<paramref name="apiKeyId"/></item>
     /// </list>
     /// AND kind_pattern is '*' OR equals <paramref name="kind"/>
-    /// AND target_pattern is '*' OR equals <paramref name="target"/>
+    /// AND target_pattern is '*', equals <paramref name="target"/>, or is a
+    /// '*'-wildcard pattern matching it case-insensitively (e.g. <c>*_dev</c>)
     /// AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at &gt; now).
     /// Returns null when no grant matches (validator falls back to GUI flow).
     /// </summary>

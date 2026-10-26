@@ -301,6 +301,14 @@
       "toastRevokeFailed": "Revoke failed: {error}",
       "toastIdCopied": "Intent ID copied",
       "toastCopyFail": "Copy failed — clipboard access denied"
+    },
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveAria": "Approve this AI request",
+    "rejectAria": "Reject and revoke this AI request so the AI cannot run it",
+    "approveDialog": {
+      "title": "Approve AI request?",
+      "message": "AI wants to perform {kind} on {target}. Reason given: {prompt}"
     }
   },
   "mcpHub": {
@@ -371,6 +379,16 @@
         ],
         "cta": "Use Balanced"
       },
+      "localDev": {
+        "name": "Local development",
+        "desc": "Restart services and change *_dev databases without asking",
+        "bullets": [
+          "Auto-approve: stopping and restarting services",
+          "Auto-approve: drop, SQL and import on databases named *_dev",
+          "Everything else still asks"
+        ],
+        "cta": "Use Local development"
+      },
       "permissive": {
         "name": "Full Trust",
         "desc": "AI may do anything without asking — test envs only",
@@ -391,7 +409,8 @@
         ],
         "cta": "Open Rules"
       }
-    }
+    },
+    "default": "default"
   },
   "mcpActivity": {
     "stats": {
@@ -2682,6 +2701,11 @@
       "toastTrustedFor": "Trusted for {minutes} min — future identical requests skip the banner",
       "toastAlwaysTrusted": "Trust grant saved — future identical requests skip the banner",
       "toastGrantFailed": "Could not save trust grant: {error}"
+    },
+    "notify": {
+      "title": "NKS WDC — AI request needs approval",
+      "body": "AI wants to: {kind}. Open WDC to approve or reject it.",
+      "bodyGeneric": "AI wants to run a destructive operation. Open WDC to approve or reject it."
     }
   },
   "footer": {
