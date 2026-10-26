@@ -1319,95 +1319,116 @@ export const backupHosts = (): Promise<{ path: string; timestamp: string }> =>
 export const restoreHosts = (pathOrContent: { path?: string; content?: string }): Promise<{ restored: boolean }> =>
   json('/api/hosts/restore', { method: 'POST', body: JSON.stringify(pathOrContent) })
 
+// One EventSource shared by every subscriber. The daemon speaks HTTP/1.1 and
+// Chromium allows six connections per host, so one EventSource per caller
+// (the MCP hub alone mounted eleven) left no connection for fetch() and the
+// whole UI hung. Handlers are reference-counted per subscription; the
+// connection opens with the first subscriber and closes with the last.
+type SseHandler = (data: unknown) => void
+const sseHandlers = new Map<string, Set<SseHandler>>()
+const sseAttached = new Set<string>()
+let sseSource: EventSource | null = null
+let sseBackoffMs = 1000
+let sseReconnectTimer: ReturnType<typeof setTimeout> | null = null
+const SSE_MAX_BACKOFF = 15000
+
+function sseUrl(): string {
+  // daemonToken() handles the preload-first / query-string fallback order.
+  const token = daemonToken()
+  return token
+    ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
+    : `${daemonBaseUrl()}/api/events`
+}
+
+function sseAttach(eventName: string): void {
+  if (!sseSource || sseAttached.has(eventName)) return
+  sseAttached.add(eventName)
+  sseSource.addEventListener(eventName, (e: MessageEvent) => {
+    let data: unknown
+    try { data = JSON.parse(e.data) } catch { return /* malformed payload */ }
+    for (const handler of [...(sseHandlers.get(eventName) ?? [])]) {
+      try { handler(data) } catch (err) { console.error(`[sse] ${eventName} handler failed`, err) }
+    }
+  })
+}
+
+function sseClose(): void {
+  if (sseSource) {
+    try { sseSource.close() } catch { /* ignore */ }
+    sseSource = null
+  }
+  sseAttached.clear()
+}
+
+function sseConnect(): void {
+  if (sseSource || sseHandlers.size === 0) return
+  try {
+    sseSource = new EventSource(sseUrl())
+  } catch {
+    sseScheduleReconnect()
+    return
+  }
+  sseSource.addEventListener('open', () => { sseBackoffMs = 1000 })
+  for (const eventName of sseHandlers.keys()) sseAttach(eventName)
+  sseSource.onerror = () => {
+    // EventSource would auto-reconnect with a stale URL; rebuild it so the
+    // next attempt picks up a fresh port/token after a daemon restart.
+    sseClose()
+    sseScheduleReconnect()
+  }
+}
+
+function sseScheduleReconnect(): void {
+  if (sseReconnectTimer !== null || sseHandlers.size === 0) return
+  // ±20% jitter so several windows don't reconnect in lockstep.
+  const delay = sseBackoffMs * (0.8 + Math.random() * 0.4)
+  sseReconnectTimer = setTimeout(() => {
+    sseReconnectTimer = null
+    sseBackoffMs = Math.min(sseBackoffMs * 2, SSE_MAX_BACKOFF)
+    sseConnect()
+  }, delay)
+}
+
 /**
- * Map-shaped SSE subscription. Pass any number of named event handlers as
- * key/value entries — added so `deploy:event` and other plugin-contributed
- * SSE channels can attach without growing the named-parameter overload of
- * <see cref="subscribeEvents"/> (per v2 audit fix #4: "subscribeEvents
- * refactor to Map"). The 5 named-param overload below stays as a thin
- * wrapper so existing callers keep compiling unchanged.
+ * Map-shaped SSE subscription: pass any number of named event handlers.
+ * All subscriptions share one EventSource to /api/events.
  *
- * Returns a cleanup function — call it to close the EventSource.
+ * Returns a cleanup function that removes this subscription's handlers.
  */
 export function subscribeEventsMap(
   handlers: Record<string, (data: unknown) => void>,
 ): () => void {
-  let es: EventSource | null = null
-  let closed = false
-  let backoffMs = 1000
-  const MAX_BACKOFF = 15000
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-
-  function buildUrl(): string {
-    // daemonToken() handles the preload-first / query-string fallback order,
-    // matching the original inline logic here + 9 other call sites.
-    const token = daemonToken()
-    return token
-      ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
-      : `${daemonBaseUrl()}/api/events`
-  }
-
-  function connect() {
-    if (closed) return
-    try {
-      es = new EventSource(buildUrl())
-    } catch {
-      scheduleReconnect()
-      return
+  // Wrap each handler so two subscriptions passing the same function
+  // reference stay independent when one of them unsubscribes.
+  const registered: Array<[string, SseHandler]> = Object.entries(handlers)
+    .map(([eventName, handler]) => [eventName, (data: unknown) => handler(data)])
+  for (const [eventName, wrapper] of registered) {
+    let set = sseHandlers.get(eventName)
+    if (!set) {
+      set = new Set()
+      sseHandlers.set(eventName, set)
     }
-
-    es.addEventListener('open', () => {
-      // Successful connection — reset backoff
-      backoffMs = 1000
-    })
-
-    // Iterate the handler map so every registered event type wires into the
-    // single shared connection. Reusing the same EventSource for plugin
-    // events (e.g. deploy:event) avoids the previous 3-EventSource problem
-    // identified in the v2 audit.
-    for (const [eventName, handler] of Object.entries(handlers)) {
-      es.addEventListener(eventName, (e: MessageEvent) => {
-        try { handler(JSON.parse(e.data)) } catch { /* ignore malformed payload */ }
-      })
-    }
-
-    es.onerror = () => {
-      // EventSource would auto-reconnect with stale URL — we close and rebuild
-      // so the next attempt uses fresh port/token (daemon restart scenario)
-      if (es) {
-        try { es.close() } catch { /* ignore */ }
-        es = null
-      }
-      scheduleReconnect()
-    }
+    set.add(wrapper)
+    sseAttach(eventName)
   }
+  sseConnect()
 
-  function scheduleReconnect() {
-    if (closed) return
-    if (reconnectTimer !== null) return
-    // Add ±20% jitter so multiple renderer windows reconnecting after a
-    // daemon restart don't all hit /api/events at the exact same moment.
-    // Without jitter an exponential-backoff herd can keep retriggering
-    // thundering reconnects on every failed probe.
-    const jitter = backoffMs * (0.8 + Math.random() * 0.4)
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null
-      backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF)
-      connect()
-    }, jitter)
-  }
-
-  connect()
-
+  let unsubscribed = false
   return () => {
-    closed = true
-    if (reconnectTimer !== null) {
-      clearTimeout(reconnectTimer)
-      reconnectTimer = null
+    if (unsubscribed) return
+    unsubscribed = true
+    for (const [eventName, wrapper] of registered) {
+      const set = sseHandlers.get(eventName)
+      set?.delete(wrapper)
+      if (set && set.size === 0) sseHandlers.delete(eventName)
     }
-    if (es) {
-      try { es.close() } catch { /* ignore */ }
-      es = null
+    if (sseHandlers.size === 0) {
+      if (sseReconnectTimer !== null) {
+        clearTimeout(sseReconnectTimer)
+        sseReconnectTimer = null
+      }
+      sseBackoffMs = 1000
+      sseClose()
     }
   }
 }
