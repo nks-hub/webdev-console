@@ -25,14 +25,49 @@ internal static class DatabaseEndpoints
         Database database,
         JsonSerializerOptions caseInsensitiveJson)
     {
-        // F49c: port probe cache — set once per daemon boot by ResolveMysqlPortWithFallback.
+        // F49c: port probe cache. A port that authenticated is cached for the
+        // daemon's lifetime; the plugin-default fallback is cached only briefly
+        // so a mysqld that comes up after the first probe (startup race,
+        // manual start) is found on a later request instead of never.
         int? _cachedMysqlPort = null;
+        int? _fallbackMysqlPort = null;
+        DateTime _fallbackMysqlPortUntil = DateTime.MinValue;
         object _mysqlPortProbeLock = new();
+        var fallbackPortTtl = TimeSpan.FromSeconds(30);
+
+        // Pings one port with the WDC root password. Bounded by a hard 3 s
+        // timeout — a non-MySQL listener on the port used to hang the probe
+        // (and the request thread blocked on it) indefinitely.
+        static async Task<bool> PingMysqlPortAsync(string mysqladmin, int port, string password)
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            try
+            {
+                var args = new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "--connect-timeout=2", "ping" };
+                var env = new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
+                var result = await CliWrap.Cli.Wrap(mysqladmin)
+                    .WithArguments(args)
+                    .WithEnvironmentVariables(env)
+                    .WithValidation(CliWrap.CommandResultValidation.None)
+                    .ExecuteBufferedAsync(cts.Token)
+                    .ConfigureAwait(false);
+                // `mysqladmin ping` exits 0 and prints "mysqld is alive" even when
+                // authentication fails, so an external mysqld (MAMP, XAMPP) would
+                // otherwise win the probe. Reject the port when access was denied.
+                return result.ExitCode == 0
+                    && result.StandardOutput.Contains("mysqld is alive", StringComparison.OrdinalIgnoreCase)
+                    && !result.StandardError.Contains("Access denied", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         // F49c: Resolve MySQL port with explicit-setting → live-prober → plugin-default
         // fallback chain. Plugin Port default (3306) collides with MAMP on user's machine,
         // so step 2 actively probes a small port sweep with the WDC password: the real
-        // WDC mysqld is whichever port authenticates. Cached once per daemon boot.
+        // WDC mysqld is whichever port authenticates.
         int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, PluginLoader loader, BinaryManager bm)
         {
             // Step 1: explicit user config wins always, no probing.
@@ -41,42 +76,37 @@ internal static class DatabaseEndpoints
 
             // Step 2: probe cache — avoid repeating the probe on every endpoint hit.
             if (_cachedMysqlPort is int cached) return cached;
+            if (_fallbackMysqlPort is int recent && DateTime.UtcNow < _fallbackMysqlPortUntil) return recent;
 
             lock (_mysqlPortProbeLock)
             {
                 if (_cachedMysqlPort is int doubleChecked) return doubleChecked;
+                if (_fallbackMysqlPort is int recent2 && DateTime.UtcNow < _fallbackMysqlPortUntil) return recent2;
 
                 // Step 3: try port list with WDC root password via mysqladmin ping.
+                // Ports are probed in parallel, so the worst case is one 3 s
+                // timeout rather than four sequential ones.
                 var password = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
                 var mysql = bm.ListInstalled("mysql").FirstOrDefault();
                 var mysqladmin = mysql?.Executable is null ? null : Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysqladmin.exe" : "mysqladmin");
                 if (!string.IsNullOrEmpty(password) && mysqladmin is not null && File.Exists(mysqladmin))
                 {
                     var candidatePorts = new[] { 3306, 3307, 3308, 3309 };
-                    foreach (var port in candidatePorts)
+                    var alive = Task.Run(() => Task.WhenAll(
+                            candidatePorts.Select(port => PingMysqlPortAsync(mysqladmin, port, password))))
+                        .GetAwaiter().GetResult();
+                    for (var i = 0; i < candidatePorts.Length; i++)
                     {
-                        try
+                        if (alive[i])
                         {
-                            var args = new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "ping" };
-                            var env = new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
-                            var result = CliWrap.Cli.Wrap(mysqladmin)
-                                .WithArguments(args)
-                                .WithEnvironmentVariables(env)
-                                .WithValidation(CliWrap.CommandResultValidation.None)
-                                .ExecuteBufferedAsync()
-                                .ConfigureAwait(false)
-                                .GetAwaiter().GetResult();
-                            if (result.ExitCode == 0 && result.StandardOutput.Contains("mysqld is alive", StringComparison.OrdinalIgnoreCase))
-                            {
-                                _cachedMysqlPort = port;
-                                return port;
-                            }
+                            _cachedMysqlPort = candidatePorts[i];
+                            return candidatePorts[i];
                         }
-                        catch { /* skip port, try next */ }
                     }
                 }
 
                 // Step 4: fall back to plugin default (3306) — prober exhausted.
+                var fallback = 3306;
                 try
                 {
                     var mysqlPlugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.mysql");
@@ -89,15 +119,16 @@ internal static class DatabaseEndpoints
                             if (module is not null)
                             {
                                 var portVal = moduleType.GetProperty("Port")?.GetValue(module);
-                                if (portVal is int p && p > 0) { _cachedMysqlPort = p; return p; }
+                                if (portVal is int p && p > 0) fallback = p;
                             }
                         }
                     }
                 }
                 catch { }
 
-                _cachedMysqlPort = 3306;
-                return 3306;
+                _fallbackMysqlPort = fallback;
+                _fallbackMysqlPortUntil = DateTime.UtcNow + fallbackPortTtl;
+                return fallback;
             }
         }
 
