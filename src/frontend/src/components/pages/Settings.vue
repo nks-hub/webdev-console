@@ -56,6 +56,16 @@
           />
         </SettingsPanel>
 
+        <!-- Native OS notifications — same component as the Advanced
+             "Notifications" section; changes apply immediately. -->
+        <SettingsPanel
+          :title="$t('osNotifications.settings.title')"
+          :subtitle="$t('osNotifications.settings.subtitle')"
+          :icon="Bell"
+        >
+          <NotificationSettings :t="t" />
+        </SettingsPanel>
+
         <!-- Simple Network panel — read-only port snapshot + DNS flush
              shortcut. The full per-plugin port editor stays in Advanced;
              beginners just need to see "what listens where" without
@@ -860,33 +870,6 @@
                 </el-form-item>
               </el-form>
             </div>
-
-            <!-- #147 — OS notification toggles. Stored client-side
-                 (localStorage via osNotifications service) since they
-                 only matter for THIS desktop install. Each channel can
-                 be turned off independently so an operator who lives in
-                 the WDC window all day can mute deploy toasts but keep
-                 the louder MCP confirm requests. -->
-            <div class="settings-section" style="margin-top: var(--wdc-space-4)">
-              <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
-              <p class="hint">{{ $t('settings.osNotify.description') }}</p>
-              <el-form label-position="left" label-width="240px" size="small">
-                <el-form-item :label="$t('settings.osNotify.deployLabel')">
-                  <el-switch v-model="osNotifyDeploy" />
-                </el-form-item>
-                <el-form-item :label="$t('settings.osNotify.mcpLabel')">
-                  <el-switch v-model="osNotifyMcp" />
-                </el-form-item>
-                <el-form-item :label="$t('settings.osNotify.systemLabel')">
-                  <el-switch v-model="osNotifySystem" />
-                </el-form-item>
-                <el-form-item>
-                  <el-button size="small" plain @click="onTestOsNotify">
-                    {{ $t('settings.osNotify.testBtn') }}
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </div>
           </div>
         </section>
 
@@ -993,6 +976,13 @@
             @check="runUpdateCheck"
             @download="downloadAndInstall"
           />
+        </section>
+        <!-- Notifications tab — visible in both Simple and Advanced. Stored
+             by the Electron main process, so no Save step is involved. -->
+        <section v-show="activeTab === 'notifications'" class="shell-section">
+          <SettingsCard :title="$t('osNotifications.settings.title')">
+            <NotificationSettings :t="t" />
+          </SettingsCard>
         </section>
         <!-- Sync tab — cloud config sync + export/import -->
         <section v-show="activeTab === 'sync'" class="shell-section">
@@ -1147,8 +1137,8 @@
             </div>
           </div>
         </section>
-        <!-- Save button (not shown on About or Update) -->
-        <template v-if="activeTab !== 'about' && activeTab !== 'update'" #footer>
+        <!-- Save button (not shown on About, Update or Notifications) -->
+        <template v-if="activeTab !== 'about' && activeTab !== 'update' && activeTab !== 'notifications'" #footer>
           <el-button type="primary" size="small" :loading="saving" @click="save">
             {{ $t('common.save') }} {{ $t('common.settings') }}
           </el-button>
@@ -1167,7 +1157,7 @@ import { useI18n } from 'vue-i18n'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
 import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -1181,10 +1171,10 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
+import NotificationSettings from '../settings/shared/NotificationSettings.vue'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
@@ -1254,6 +1244,7 @@ const settingsSections = computed<SettingsSection[]>(() => [
   { name: 'general', label: t('settings.tabs.general'), group: 'app' },
   { name: 'account', label: t('settings.tabs.account'), group: 'app' },
   { name: 'update', label: t('settings.tabs.update'), group: 'app' },
+  { name: 'notifications', label: t('settings.tabs.notifications'), group: 'app' },
   { name: 'about', label: t('settings.tabs.about'), group: 'app' },
   { name: 'ports', label: t('settings.tabs.ports'), group: 'environment' },
   { name: 'paths', label: t('settings.tabs.paths'), group: 'environment' },
@@ -1445,24 +1436,6 @@ async function loadDeployFlipReadiness(): Promise<void> {
   } catch { /* keep locked on error */ }
 }
 
-// #147 — OS notification per-channel toggles. Persist via the
-// osNotifications service (localStorage-backed) on flip so the change
-// takes effect immediately without a Save All step.
-const osNotifyDeploy = ref(isChannelEnabled('deploy'))
-const osNotifyMcp = ref(isChannelEnabled('mcp'))
-const osNotifySystem = ref(isChannelEnabled('system'))
-watch(osNotifyDeploy, (v) => setChannelEnabled('deploy', v))
-watch(osNotifyMcp,    (v) => setChannelEnabled('mcp', v))
-watch(osNotifySystem, (v) => setChannelEnabled('system', v))
-
-async function onTestOsNotify(): Promise<void> {
-  await osNotify({
-    title: t('settings.osNotify.testTitle'),
-    body: t('settings.osNotify.testBody'),
-    urgency: 'normal',
-    channel: 'system',
-  })
-}
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
