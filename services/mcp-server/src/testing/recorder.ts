@@ -12,6 +12,8 @@ export interface RecordedCall {
   path: string
   body?: unknown
   headers?: Record<string, string>
+  /** Set for non-JSON bodies sent with postText(). */
+  contentType?: string
 }
 
 export type Responder = (call: RecordedCall) => unknown
@@ -34,6 +36,8 @@ class Recorder {
     get: (path: string, headers?: Record<string, string>) => this.handle({ method: 'GET', path, headers }),
     post: (path: string, body?: unknown, headers?: Record<string, string>) =>
       this.handle({ method: 'POST', path, body, headers }),
+    postText: (path: string, text: string, contentType: string, headers?: Record<string, string>) =>
+      this.handle({ method: 'POST', path, body: text, contentType, headers }),
     put: (path: string, body?: unknown, headers?: Record<string, string>) =>
       this.handle({ method: 'PUT', path, body, headers }),
     delete: (path: string, headers?: Record<string, string>) => this.handle({ method: 'DELETE', path, headers }),
