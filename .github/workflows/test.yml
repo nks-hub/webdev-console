@@ -58,6 +58,11 @@ jobs:
       # --blame-hang-timeout aborts a stuck test after 3 min and names it in
       # the log, instead of the job silently running into timeout-minutes.
       - name: Test
+        # Orchestrator tests run the real hosts-file step. Without this the
+        # macOS runner (not root) falls through to an osascript admin prompt
+        # nobody can answer and the test host hangs.
+        env:
+          NKS_WDC_SKIP_HOSTS_UAC: '1'
         run: dotnet test WebDevConsole.sln -c Release --no-build --verbosity normal --blame-hang-timeout 3m --blame-hang-dump-type none
 
   mcp-server:
