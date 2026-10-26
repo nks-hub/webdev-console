@@ -1313,7 +1313,14 @@ internal static class DeployEndpoints
             var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
             if (string.IsNullOrEmpty(intentToken) && root.TryGetProperty("intentToken", out var tEl))
                 intentToken = tEl.GetString();
-            var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "production" : "production";
+            // Restore intents are minted for the synthetic host "*restore*" (GUI and
+            // plugin route convention). Defaulting a missing body host to "production"
+            // made every GUI restore fail with host_mismatch, so the intent check uses
+            // the marker and the target host comes from the snapshot's own deploy run
+            // unless the caller names one explicitly.
+            var bodyHost = root.TryGetProperty("host", out var hEl) ? hEl.GetString() : null;
+            if (string.IsNullOrWhiteSpace(bodyHost)) bodyHost = null;
+            var intentHost = bodyHost ?? "*restore*";
             if (string.IsNullOrEmpty(snapshotId))
                 return Results.BadRequest(new { error = "snapshotId is required" });
 
@@ -1326,7 +1333,7 @@ internal static class DeployEndpoints
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    intentToken, "restore", domain, host, allowUnconfirmed, ct);
+                    intentToken, "restore", domain, intentHost, allowUnconfirmed, ct);
                 if (!verdict.Ok)
                 {
                     return Results.Json(
@@ -1346,6 +1353,7 @@ internal static class DeployEndpoints
                     error = "snapshot_has_no_backup",
                     detail = $"Deploy {snapshotId[..8]} did not capture a pre-deploy snapshot.",
                 });
+            var host = bodyHost ?? sourceRow.Host;
 
             // Phase 7.5+++ — REAL extract when the backup path resolves to an
             // actual .zip file. Resolves the `~` prefix to the user's home dir.
