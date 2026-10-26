@@ -24,6 +24,8 @@ export const CONFIRMABLE_OPERATIONS = {
   database_import: { kind: 'database_import', host: '*db*', describe: 'import a dump into database' },
   site_delete: { kind: 'site_delete', host: '*site*', describe: 'delete site' },
   service_stop: { kind: 'service_restart', host: '*svc*', describe: 'stop service' },
+  service_restart: { kind: 'service_restart', host: '*svc*', describe: 'restart service' },
+  service_config_write: { kind: 'service_config_write', host: '*svc*', describe: 'overwrite a configuration file of service' },
   ssl_cert_delete: { kind: 'ssl_cert_delete', host: '*ssl*', describe: 'revoke the certificate of' },
   dns_record_delete: { kind: 'dns_record_delete', host: '*dns*', describe: 'delete a DNS record in zone' },
   binary_install: { kind: 'binary_install', host: '*binary*', describe: 'install binary' },

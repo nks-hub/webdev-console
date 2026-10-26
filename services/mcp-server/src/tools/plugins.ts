@@ -6,6 +6,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
+import { ConfirmYesSchema } from '../schemas.js'
 
 const PluginIdSchema = z
   .string()
@@ -146,5 +147,27 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
           intentHeaders(intentToken),
         ),
       ),
+  )
+
+  server.registerTool(
+    'wdc_uninstall_plugin',
+    {
+      title: 'Uninstall plugin (destructive)',
+      description:
+        'DESTRUCTIVE: Remove an installed plugin from disk. Disable it first (wdc_disable_plugin); the ' +
+        'daemon refuses while it is enabled or while an enabled plugin depends on it. The plugin stays ' +
+        'loaded until the daemon restarts.\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "plugin_uninstall", target: id).\n\n' +
+        'Args:\n  id: Plugin id.\n  confirm: Must be "YES".\n  intentToken: Approved intent.\n\n' +
+        'Returns: the daemon\'s result, including restartRequired.',
+      inputSchema: {
+        id: PluginIdSchema,
+        confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ id, intentToken }) =>
+      safe(() => daemonClient.delete(`/api/plugins/${encodeURIComponent(id)}`, intentHeaders(intentToken))),
   )
 }

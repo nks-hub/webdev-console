@@ -28,6 +28,14 @@ interface PortFile {
   scopes: string[]
 }
 
+/** A request body sent as-is instead of as JSON (e.g. a SQL dump). */
+export class RawBody {
+  constructor(
+    readonly text: string,
+    readonly contentType: string,
+  ) {}
+}
+
 class DaemonNotRunningError extends Error {
   constructor() {
     super(
@@ -132,12 +140,13 @@ class DaemonClient {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
     }
-    if (body !== undefined) headers['Content-Type'] = 'application/json'
+    if (body instanceof RawBody) headers['Content-Type'] = body.contentType
+    else if (body !== undefined) headers['Content-Type'] = 'application/json'
     if (extraHeaders) Object.assign(headers, extraHeaders)
     return {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body instanceof RawBody ? body.text : body !== undefined ? JSON.stringify(body) : undefined,
     }
   }
 
@@ -199,6 +208,10 @@ class DaemonClient {
   }
   post<T = unknown>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
     return this.request('POST', path, body, extraHeaders) as Promise<T>
+  }
+  /** POST a non-JSON body (e.g. a SQL dump as text/plain). */
+  postText<T = unknown>(path: string, text: string, contentType: string, extraHeaders?: Record<string, string>): Promise<T> {
+    return this.request('POST', path, new RawBody(text, contentType), extraHeaders) as Promise<T>
   }
   put<T = unknown>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
     return this.request('PUT', path, body, extraHeaders) as Promise<T>

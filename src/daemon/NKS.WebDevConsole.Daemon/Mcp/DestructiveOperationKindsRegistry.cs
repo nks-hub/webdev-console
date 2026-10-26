@@ -100,6 +100,12 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // an already-stopped service).
         _kinds["service_restart"] = new DestructiveOperationKind(
             "service_restart", "Stop or restart a managed service", CorePluginId, DangerLevel.Reversible);
+        // Writing a service config file (httpd.conf, php.ini, my.cnf, ...)
+        // restarts the service with it; a crafted config can load modules or
+        // handlers that run code. Destructive so strict mode treats it like
+        // the other code-load vectors.
+        _kinds["service_config_write"] = new DestructiveOperationKind(
+            "service_config_write", "Overwrite a service configuration file", CorePluginId, DangerLevel.Destructive);
         // `database_import` overwrites the target database with the SQL
         // dump in the request body. Strictly destructive — the existing
         // schema/data is gone. Operator-driven imports happen via the

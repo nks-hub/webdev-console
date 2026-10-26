@@ -249,7 +249,7 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
     },
