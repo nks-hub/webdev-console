@@ -19,6 +19,10 @@ namespace NKS.WebDevConsole.Daemon.Data;
 /// </summary>
 internal static class DatabaseEndpoints
 {
+    // Limits for statements an AI client runs without an approved intent.
+    internal const int McpReadOnlyMaxRows = 1000;
+    internal const int McpReadOnlyTimeoutSeconds = 15;
+
     // Intent scopes of the database admin routes. wdc_request_confirmation in
     // services/mcp-server/src/tools/confirmation.ts mints intents with the same
     // (kind, domain, host) triple, or the approved intent is rejected.
@@ -1272,6 +1276,36 @@ internal static class DatabaseEndpoints
                         new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
             }
+
+            // AI client without an approved intent: the guard above let the
+            // statement through as read-only; run it so that the server
+            // enforces that too (read-only transaction, single statement,
+            // time limit, row cap) instead of handing it to the mysql CLI.
+            if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && string.IsNullOrEmpty(dbqIntentToken))
+            {
+                try
+                {
+                    var ro = await MakeMySqlDriverV2(settings, sp, bm).ExecuteReadOnlyQueryAsync(
+                        name, sql, McpReadOnlyMaxRows, McpReadOnlyTimeoutSeconds, ct);
+                    var roHeaders = ro.Set.Columns.Select(c => c.Name).ToArray();
+                    var roRows = ro.Set.Rows.Select(r =>
+                    {
+                        var row = new Dictionary<string, string?>();
+                        for (int i = 0; i < roHeaders.Length && i < r.Count; i++)
+                            row[roHeaders[i]] = r[i]?.ToString();
+                        return row;
+                    }).ToList();
+                    return Results.Ok(new { columns = roHeaders, rows = roRows, rowCount = roRows.Count, truncated = ro.Truncated });
+                }
+                catch (MySqlConnector.MySqlException mex)
+                {
+                    return Results.BadRequest(new { error = mex.Message, code = mex.Number, sqlState = mex.SqlState });
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
                 return Results.BadRequest(new { error = "MySQL not installed" });
@@ -1551,6 +1585,31 @@ internal static class DatabaseEndpoints
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
+            }
+
+            if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && string.IsNullOrEmpty(dbqIntentToken))
+            {
+                try
+                {
+                    var ro = await MakeMySqlDriverV2(settings, sp, bm).ExecuteReadOnlyQueryAsync(
+                        db, sql, McpReadOnlyMaxRows, McpReadOnlyTimeoutSeconds, ct);
+                    return Results.Ok(new QueryExecutionResult
+                    {
+                        Results = new[] { ro.Set },
+                        ExecutionTimeMs = ro.Set.ExecutionTimeMs,
+                        Warnings = ro.Truncated
+                            ? new[] { new QueryWarning("Note", 0, $"Result truncated to {McpReadOnlyMaxRows} rows") }
+                            : null,
+                    });
+                }
+                catch (MySqlConnector.MySqlException mex)
+                {
+                    return Results.BadRequest(new { error = mex.Message, code = mex.Number, sqlState = mex.SqlState });
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
             }
 
             try

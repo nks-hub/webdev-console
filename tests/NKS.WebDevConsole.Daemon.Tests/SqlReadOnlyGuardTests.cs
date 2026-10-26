@@ -17,6 +17,7 @@ public class SqlReadOnlyGuardTests
     [InlineData(@"DESCRIBE users")]
     [InlineData(@"EXPLAIN SELECT * FROM users")]
     [InlineData(@"SELECT 'it''s' FROM t")]
+    [InlineData(@"SELECT into_count, sleep_ms FROM stats")]
     [InlineData(@"SELECT 1 -- delete
 ")]
     public void Allows_read_only_statements(string sql) => Assert.True(SqlReadOnlyGuard.IsReadOnly(sql));
@@ -36,5 +37,12 @@ public class SqlReadOnlyGuardTests
     [InlineData(@"SELECT 1--1 INTO OUTFILE '/tmp/x'")]
     [InlineData(@"WITH c AS (SELECT 1) /*! DELETE FROM users */")]
     [InlineData(@"SELECT 1 /*M! INTO OUTFILE ""/tmp/x"" */")]
+    [InlineData(@"SELECT LOAD_FILE('/etc/hosts')")]
+    [InlineData(@"SELECT SLEEP(30)")]
+    [InlineData(@"SELECT BENCHMARK(100000000, MD5('x'))")]
+    [InlineData(@"SELECT GET_LOCK('wdc', 10)")]
+    [InlineData(@"SELECT id INTO @x FROM users LIMIT 1")]
+    [InlineData(@"SELECT * FROM users LOCK IN SHARE MODE")]
+    [InlineData(@"SELECT NEXTVAL(seq)")]
     public void Rejects_statements_that_can_write(string sql) => Assert.False(SqlReadOnlyGuard.IsReadOnly(sql));
 }
