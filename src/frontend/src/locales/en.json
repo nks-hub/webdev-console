@@ -986,7 +986,9 @@
       "installed": "Installed ({version})",
       "installedShort": "Installed",
       "installing": "Installing…"
-    }
+    },
+    "removeConfirmTitle": "Remove version",
+    "removeConfirmMessage": "Remove {app} {version}? Sites pinned to this version will stop working until another version is selected."
   },
   "php": {
     "title": "PHP Versions",
@@ -1028,7 +1030,9 @@
       "aliasesPlaceholder": "www.myapp.loc, api.myapp.loc",
       "cancel": "Cancel",
       "generateBtn": "Generate"
-    }
+    },
+    "revokeConfirmTitle": "Revoke certificate",
+    "revokeConfirmMessage": "Revoke the certificate for \"{domain}\"? Sites using it will fall back to HTTP until a new certificate is generated."
   },
   "plugins": {
     "title": "Plugins",
@@ -2785,7 +2789,8 @@
           "tip": "Tip: integrate with Claude Code via the MCP server — see Help → MCP dev API."
         }
       }
-    }
+    },
+    "runSetupWizard": "Run setup wizard"
   },
   "onboarding": {
     "title": "Welcome to NKS WebDev Console",

@@ -41,6 +41,8 @@ export const i18n = createI18n({
   pluralRules: { cs: czechPluralRule },
 })
 
+document.documentElement.lang = i18n.global.locale.value
+
 export function setLocale(locale: Locale) {
   if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale)) return
   ;(i18n.global.locale as unknown as { value: string }).value = locale

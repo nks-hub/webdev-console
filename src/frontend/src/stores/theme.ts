@@ -20,8 +20,12 @@ function applyThemeClass(dark: boolean) {
 export const useThemeStore = defineStore('theme', () => {
   const mode = ref<ThemeMode>((localStorage.getItem(STORAGE_KEY) as ThemeMode) || 'dark')
 
+  // Reactive mirror of the OS preference so `isDark` (and every consumer
+  // such as chart themes) re-evaluates when the system theme flips.
+  const systemDark = ref(getSystemPrefersDark())
+
   const isDark = computed(() => {
-    if (mode.value === 'system') return getSystemPrefersDark()
+    if (mode.value === 'system') return systemDark.value
     return mode.value === 'dark'
   })
 
@@ -39,10 +43,8 @@ export const useThemeStore = defineStore('theme', () => {
 
   // Listen for system theme changes when mode is 'system'
   const mql = window.matchMedia('(prefers-color-scheme: dark)')
-  mql.addEventListener('change', () => {
-    if (mode.value === 'system') {
-      applyThemeClass(getSystemPrefersDark())
-    }
+  mql.addEventListener('change', (e) => {
+    systemDark.value = e.matches
   })
 
   return { mode, isDark, setMode, toggle }

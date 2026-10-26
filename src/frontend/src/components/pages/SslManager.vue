@@ -131,7 +131,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { Lock } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchSites } from '../../api/daemon'
@@ -241,9 +241,18 @@ async function generateCert() {
 }
 
 async function revokeCert(domain: string) {
+  try {
+    await ElMessageBox.confirm(
+      t('ssl.revokeConfirmMessage', { domain }),
+      t('ssl.revokeConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('ssl.revoke'), cancelButtonText: t('common.cancel') },
+    )
+  } catch {
+    return
+  }
   revoking.value.add(domain)
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs/${domain}`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs/${encodeURIComponent(domain)}`, {
       method: 'DELETE',
       headers: authHeaders(),
     })
