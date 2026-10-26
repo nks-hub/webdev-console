@@ -21,6 +21,8 @@ describe('intentFor', () => {
     ['binary_install', 'php', { kind: 'binary_install', domain: 'php', host: '*binary*' }],
     ['plugin_install', 'nks.wdc.redis', { kind: 'plugin_install', domain: 'nks.wdc.redis', host: '*plugin*' }],
     ['backup_restore', 'ignored', { kind: 'backup_restore', domain: '*backup*', host: '*backup*' }],
+    ['mysql_user_drop', 'app@localhost', { kind: 'mysql_user_drop', domain: 'app@localhost', host: '*mysql*' }],
+    ['mysql_root_reset', 'ignored', { kind: 'mysql_root_reset', domain: 'root', host: '*mysql*' }],
   ] as const)('%s on %s', (operation, target, expected) => {
     expect(intentFor(operation, target)).toEqual(expected)
   })

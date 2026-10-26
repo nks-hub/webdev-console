@@ -488,7 +488,10 @@
       "plugin_install": "Install a new plugin DLL",
       "plugin_uninstall": "Uninstall a plugin",
       "binary_install": "Install a new binary (PHP, MySQL, …)",
-      "service_restart": "Stop or restart a managed service"
+      "service_restart": "Stop or restart a managed service",
+      "mysql_root_reset": "Reset the MySQL root password",
+      "mysql_user_drop": "Drop a MySQL user account",
+      "postgres_root_reset": "Reset the PostgreSQL superuser password"
     },
     "empty": "No kinds registered",
     "col": {

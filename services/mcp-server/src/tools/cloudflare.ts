@@ -159,14 +159,11 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
       description:
         'Update Cloudflare plugin settings. Pass any subset of fields — omitted fields keep ' +
         'current value. Empty strings are rejected to prevent accidental credential wipes. ' +
-        'Returns the new redacted config.',
+        'The API token, account id, tunnel token and cloudflared path are operator-only: ' +
+        'the user sets them in the WDC app. Returns the new redacted config.',
       inputSchema: {
-        cloudflaredPath: NonEmptyString.optional(),
-        tunnelToken: NonEmptyString.optional(),
         tunnelName: NonEmptyString.optional(),
         tunnelId: NonEmptyString.optional(),
-        apiToken: NonEmptyString.optional(),
-        accountId: NonEmptyString.optional(),
         defaultZoneId: NonEmptyString.optional(),
         subdomainTemplate: NonEmptyString.optional().describe(
           'Template like "{stem}-{hash}". Placeholders: {stem}, {hash}, {user}',
@@ -183,7 +180,8 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async (args) => safe(() => daemonClient.put('/api/cloudflare/config', args)),
+    async ({ tunnelName, tunnelId, defaultZoneId, subdomainTemplate }) =>
+      safe(() => daemonClient.put('/api/cloudflare/config', { tunnelName, tunnelId, defaultZoneId, subdomainTemplate })),
   )
 
   server.registerTool(

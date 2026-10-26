@@ -488,7 +488,10 @@
       "plugin_install": "Nainstalovat nový plugin (DLL)",
       "plugin_uninstall": "Odinstalovat plugin",
       "binary_install": "Nainstalovat binárku (PHP, MySQL, …)",
-      "service_restart": "Zastavit nebo restartovat službu"
+      "service_restart": "Zastavit nebo restartovat službu",
+      "mysql_root_reset": "Resetovat heslo uživatele root v MySQL",
+      "mysql_user_drop": "Smazat uživatelský účet MySQL",
+      "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL"
     },
     "empty": "Žádné druhy nejsou registrované",
     "col": {

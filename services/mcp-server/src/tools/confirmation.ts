@@ -30,6 +30,8 @@ export const CONFIRMABLE_OPERATIONS = {
   plugin_install: { kind: 'plugin_install', host: '*plugin*', describe: 'install plugin' },
   plugin_uninstall: { kind: 'plugin_uninstall', host: '*plugin*', describe: 'uninstall plugin' },
   backup_restore: { kind: 'backup_restore', host: '*backup*', describe: 'restore a backup over the current state', fixedDomain: '*backup*' },
+  mysql_user_drop: { kind: 'mysql_user_drop', host: '*mysql*', describe: 'drop the MySQL account' },
+  mysql_root_reset: { kind: 'mysql_root_reset', host: '*mysql*', describe: 'reset the MySQL root password', fixedDomain: 'root' },
 } as const
 
 export type ConfirmableOperation = keyof typeof CONFIRMABLE_OPERATIONS
@@ -66,13 +68,15 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
       title: 'Ask the user to approve a destructive operation',
       description:
         'Destructive operations (dropping or changing databases, deleting sites, stopping services, ' +
-        'revoking certificates, deleting DNS records, installing binaries or plugins, restoring backups) ' +
+        'revoking certificates, deleting DNS records, installing binaries or plugins, restoring backups, ' +
+        'dropping MySQL accounts, resetting the MySQL root password) ' +
         'need the user\'s approval in the WDC app. Call this first, tell the user what you want to do and ' +
         'why, wait for them to approve the banner in WDC, then call the operation\'s tool with the ' +
         'returned intentToken. Until it is approved the daemon answers 425 pending_confirmation.\n\n' +
         'Args:\n  operation: One of ' + operations.join(', ') + '.\n' +
         '  target: What the operation acts on (database name, site domain, service id, zone id, ' +
-        'binary app, plugin id). Ignored for backup_restore.\n' +
+        'binary app, plugin id, MySQL account as userName@host for mysql_user_drop). ' +
+        'Ignored for backup_restore and mysql_root_reset.\n' +
         '  reason: One sentence shown to the user.',
       inputSchema: {
         operation: z.enum(operations),
@@ -91,7 +95,7 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
         )
         await daemonClient.post('/api/mcp/intents/confirm-request', {
           intentId: created.intentId,
-          prompt: `AI wants to ${CONFIRMABLE_OPERATIONS[operation].describe} ${operation === 'backup_restore' ? '' : target}: ${reason}`.trim(),
+          prompt: `AI wants to ${CONFIRMABLE_OPERATIONS[operation].describe}${'fixedDomain' in CONFIRMABLE_OPERATIONS[operation] ? '' : ' ' + target}: ${reason}`.trim(),
         })
         return {
           ...created,

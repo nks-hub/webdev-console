@@ -126,6 +126,17 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
             "plugin_install", "Install a new plugin DLL", CorePluginId, DangerLevel.Destructive);
         _kinds["binary_install"] = new DestructiveOperationKind(
             "binary_install", "Install a new binary (PHP, MySQL, …)", CorePluginId, DangerLevel.Destructive);
+        // Database server administration. Resetting a root password locks
+        // out every client that used the old one (and the MySQL reset
+        // briefly takes mysqld offline); dropping an account cannot be
+        // undone. The MCP tools used to rely on a typed confirm: "YES"
+        // that the agent fills in itself, which is not the user's consent.
+        _kinds["mysql_root_reset"] = new DestructiveOperationKind(
+            "mysql_root_reset", "Reset the MySQL root password", CorePluginId, DangerLevel.Destructive);
+        _kinds["mysql_user_drop"] = new DestructiveOperationKind(
+            "mysql_user_drop", "Drop a MySQL user account", CorePluginId, DangerLevel.Destructive);
+        _kinds["postgres_root_reset"] = new DestructiveOperationKind(
+            "postgres_root_reset", "Reset the PostgreSQL superuser password", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)
