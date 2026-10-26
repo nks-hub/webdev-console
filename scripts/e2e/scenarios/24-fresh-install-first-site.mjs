@@ -11,8 +11,9 @@
  *   3. POST /api/sites with the minimum simple-mode payload creates a
  *      working site (defaults to `bindAddresses=["*"]` when omitted,
  *      SSL off, no PHP).
- *   4. The vhost file lands on disk under sites-enabled/ (when an Apache
- *      binary is installed) AND the daemon's history copy under generated/.
+ *   4. The live vhost lands on disk under sites-enabled/ (next to the
+ *      Apache binary, or generated/apache/ when none is installed); the
+ *      daemon's history copy under generated/ is checked when present.
  *   5. GET /api/sites/{domain} round-trips the saved config without
  *      losing any default fields.
  *   6. DELETE /api/sites/{domain} removes both files.
@@ -29,24 +30,20 @@ import { scenario, api, assert, tmpDir, rmTree, writeFile, wdcDataDir } from '..
 import { join } from 'node:path'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 
-// The live vhost under sites-enabled/ only exists when an Apache binary is
-// installed in the data dir. CI runners start from an empty WDC_DATA_DIR and
-// never download Apache, so the live-file checks run only where Apache is
-// present; the daemon-side assertions (create, history vhost, round-trip,
-// delete) run everywhere.
-function apacheInstalled() {
-  const apacheRoot = join(wdcDataDir(), 'binaries', 'apache')
-  return existsSync(apacheRoot) && readdirSync(apacheRoot).length > 0
-}
-
+// Where the Apache plugin writes the live vhost: next to an installed Apache
+// binary, or — when no Apache is installed (CI runners start from an empty
+// WDC_DATA_DIR) — under generated/apache/sites-enabled/. Scenario 3 uses the
+// same fallback.
 function findApacheVhost(domain) {
+  const candidates = []
   const apacheRoot = join(wdcDataDir(), 'binaries', 'apache')
-  if (!existsSync(apacheRoot)) return null
-  for (const v of readdirSync(apacheRoot)) {
-    const candidate = join(apacheRoot, v, 'conf', 'sites-enabled', `${domain}.conf`)
-    if (existsSync(candidate)) return candidate
+  if (existsSync(apacheRoot)) {
+    for (const v of readdirSync(apacheRoot)) {
+      candidates.push(join(apacheRoot, v, 'conf', 'sites-enabled', `${domain}.conf`))
+    }
   }
-  return null
+  candidates.push(join(wdcDataDir(), 'generated', 'apache', 'sites-enabled', `${domain}.conf`))
+  return candidates.find((c) => existsSync(c)) ?? null
 }
 
 export default scenario('24', 'Fresh-install first-site flow', 'P0', async (ctx) => {
@@ -102,27 +99,26 @@ export default scenario('24', 'Fresh-install first-site flow', 'P0', async (ctx)
   ctx.cleanup(() => api.delete(`/api/sites/${domain}`).catch(() => {}))
   assert.statusOk(create, 'POST /api/sites for the first-ever site')
 
-  // Step 4: live Apache vhost (when Apache is installed) and daemon-history
-  // vhost both land on disk.
-  const hasApache = apacheInstalled()
-  if (hasApache) {
-    const liveVhost = findApacheVhost(domain)
-    assert.ok(liveVhost, `live Apache vhost must exist under sites-enabled/ for ${domain}`)
-    const live = readFileSync(liveVhost, 'utf-8')
-    assert.ok(
-      /<VirtualHost\s+\*:80>/.test(live),
-      `live vhost binds wildcard HTTP by default; got:\n${live}`,
-    )
-    assert.contains(live, domain, 'live vhost references the site domain')
-  }
+  // Step 4: the live Apache vhost lands on disk. The daemon's history copy
+  // under generated/ is rendered from the bundled template, which only
+  // ships with packaged builds, so it is checked when present.
+  const liveVhost = findApacheVhost(domain)
+  assert.ok(liveVhost, `live Apache vhost must exist for ${domain}`)
+  const live = readFileSync(liveVhost, 'utf-8')
+  assert.ok(
+    /<VirtualHost\s+\*:80>/.test(live),
+    `live vhost binds wildcard HTTP by default; got:\n${live}`,
+  )
+  assert.contains(live, domain, 'live vhost references the site domain')
 
   const historyVhost = join(wdcDataDir(), 'generated', `${domain}.conf`)
-  assert.ok(existsSync(historyVhost), `daemon history vhost exists at ${historyVhost}`)
-  const history = readFileSync(historyVhost, 'utf-8')
-  assert.ok(
-    /<VirtualHost\s+\*:\d+>/.test(history),
-    `daemon history vhost emits at least one wildcard VirtualHost; got:\n${history}`,
-  )
+  if (existsSync(historyVhost)) {
+    const history = readFileSync(historyVhost, 'utf-8')
+    assert.ok(
+      /<VirtualHost\s+\*:\d+>/.test(history),
+      `daemon history vhost emits at least one wildcard VirtualHost; got:\n${history}`,
+    )
+  }
 
   // Step 5: round-trip GET preserves the wildcard default.
   const got = await api.get(`/api/sites/${domain}`)
@@ -139,10 +135,8 @@ export default scenario('24', 'Fresh-install first-site flow', 'P0', async (ctx)
   // assert the live file goes away.
   const del = await api.delete(`/api/sites/${domain}`)
   assert.statusOk(del, `DELETE /api/sites/${domain}`)
-  if (hasApache) {
-    assert.ok(
-      findApacheVhost(domain) === null,
-      `live vhost removed from sites-enabled/ after DELETE`,
-    )
-  }
+  assert.ok(
+    findApacheVhost(domain) === null,
+    `live vhost removed from sites-enabled/ after DELETE`,
+  )
 })
