@@ -103,10 +103,33 @@ public sealed class McpToolCallsRepository
                        intent_id AS IntentId
                 FROM mcp_tool_calls
                 {whereSql}
-                ORDER BY called_at DESC
+                ORDER BY called_at DESC, id
                 LIMIT @Limit OFFSET @Offset",
             p);
         return rows.AsList();
+    }
+
+    /// <summary>
+    /// Every call matching the filters, newest first, read in pages so the
+    /// CSV export is not cut at <see cref="ListAsync"/>'s 1000-row cap.
+    /// </summary>
+    public async IAsyncEnumerable<McpToolCallRow> ListAllAsync(
+        string? dangerLevel,
+        string? toolName,
+        string? sessionId,
+        string? searchQuery,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        const int pageSize = 1000;
+        var seen = new HashSet<string>();
+        for (var offset = 0; ; offset += pageSize)
+        {
+            var page = await ListAsync(pageSize, offset, dangerLevel, toolName, sessionId, ct, searchQuery);
+            // A call logged during the export pushes the later pages down a row.
+            foreach (var row in page)
+                if (seen.Add(row.Id)) yield return row;
+            if (page.Count < pageSize) yield break;
+        }
     }
 
     /// <summary>Total count for paging.</summary>
@@ -167,10 +190,13 @@ public sealed class McpToolCallsRepository
         // The ORDER BY duration_ms isn't backed by an index right now, but
         // for typical bounded windows it's still much cheaper than the
         // full materialisation.
-        async Task<int> percentileAsync(double pct)
+        // Nearest rank: at least pct % of the calls took this long or less.
+        // floor(pct * (n - 1)) reported 58 ms as the p99 of 8 calls that
+        // included a 60 ms one. Integer maths keeps 95 % of 20 at rank 19.
+        async Task<int> percentileAsync(int pct)
         {
             if (basic.Total == 0) return 0;
-            var idx = (int)Math.Floor(pct * (basic.Total - 1));
+            var idx = (pct * basic.Total + 99) / 100 - 1;
             var v = await conn.ExecuteScalarAsync<int?>(
                 @"SELECT duration_ms FROM mcp_tool_calls
                   WHERE called_at >= @Since
@@ -179,9 +205,9 @@ public sealed class McpToolCallsRepository
                 new { Since = since, Offset = idx });
             return v ?? 0;
         }
-        var p50 = await percentileAsync(0.50);
-        var p95 = await percentileAsync(0.95);
-        var p99 = await percentileAsync(0.99);
+        var p50 = await percentileAsync(50);
+        var p95 = await percentileAsync(95);
+        var p99 = await percentileAsync(99);
 
         var perMinute = basic.Total > 0
             ? Math.Round((double)basic.Total / minutes, 2)
