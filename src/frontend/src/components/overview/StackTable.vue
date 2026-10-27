@@ -124,7 +124,9 @@ interface Row { svc: ServiceInfo; state: ServiceViewState; port: number | null }
 const rows = computed<Row[]>(() => {
   const all = daemonStore.visibleServices.map(svc => {
     const state = serviceViewState(svc)
-    return { svc, state, port: state === 'notInstalled' ? null : servicePort(svc.id) }
+    // The daemon reports the configured port when it knows it; the settings table is the fallback.
+    const port = (svc as ServiceInfo & { port?: number }).port ?? servicePort(svc.id)
+    return { svc, state, port: state === 'notInstalled' ? null : port }
   })
   return [...all.filter(r => r.state !== 'notInstalled'), ...all.filter(r => r.state === 'notInstalled')]
 })

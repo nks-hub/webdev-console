@@ -55,8 +55,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/binaries', component: Binaries, meta: { title: 'Binaries', titleKey: 'nav.binaries', advancedNav: true } },
   { path: '/composer', component: ComposerManager, meta: { title: 'Composer', titleKey: 'nav.composer', advancedNav: true } },
   { path: '/hosts', component: HostsManager, meta: { title: 'Hosts', titleKey: 'nav.hosts', advancedNav: true } },
-  // Old deep link to a single service: land on the Services page with that service selected.
-  { path: '/service/:id', redirect: to => ({ path: '/services', query: { select: String(to.params.id) } }) },
+  { path: '/service/:id', redirect: to => ({ path: '/services', query: { service: String(to.params.id) } }) },
   { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services' } },
   { path: '/backups', component: BackupsPage, meta: { title: 'Backups', titleKey: 'nav.backups' } },
   // Phase 8 — single MCP hub with 4 tabs (Activity / Requests / Rules / Catalog).

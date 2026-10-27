@@ -38,6 +38,21 @@ test.describe('Shell services contract', () => {
     expect(source).not.toMatch(/CircleCloseFilled/)
   })
 
+  test('MCP stays in the menu and palette while MCP is off, marked as off', () => {
+    const sidebar = read('components', 'layout', 'AppSidebar.vue')
+    expect(sidebar).not.toMatch(/if \(featureFlagsStore\.showMcpSurface\) ops\.push/)
+    expect(sidebar).toMatch(/tag: featureFlagsStore\.mcpEnabled \? undefined : t\('nav\.mcpOff'\)/)
+    expect(sidebar).toMatch(/mcpConfirmStore\.count/)
+    const palette = read('components', 'shared', 'CommandPalette.vue')
+    expect(palette).not.toMatch(/if \(featureFlagsStore\.showMcpSurface\)/)
+  })
+
+  test('Overview opens the full service editor instead of a second side panel', () => {
+    const dashboard = read('components', 'pages', 'Dashboard.vue')
+    expect(dashboard).not.toMatch(/ConfigSidePanel/)
+    expect(dashboard).toMatch(/\/service\/\$\{encodeURIComponent\(id\)\}\/config/)
+  })
+
   test('shortcuts read the typed letter or physical key, not a fixed e.key', () => {
     const source = read('App.vue')
     expect(source).not.toMatch(/e\.key === 'k'/)

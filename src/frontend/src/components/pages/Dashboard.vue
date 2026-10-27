@@ -131,13 +131,6 @@
         :service-id="logsDialog.serviceId"
       />
     </el-dialog>
-
-    <!-- Config: slide-in side panel (NOT drawer, NOT full-view route). -->
-    <ConfigSidePanel
-      :open="configPanel.open"
-      :service-id="configPanel.serviceId"
-      @close="closeConfig"
-    />
   </div>
 </template>
 
@@ -162,7 +155,6 @@ import { usePluginsStore } from '../../stores/plugins'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
-import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
 import { useI18n } from 'vue-i18n'
 import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
@@ -348,30 +340,10 @@ function openLogs(id: string) {
   logsDialog.open = true
 }
 
-// Config opens a slide-in SIDE PANEL (per user directive: "config editor
-// jako postranní panel místo drawer"). NOT a router-view navigation, NOT
-// an el-drawer modal. Closing restores the Dashboard state unchanged.
-const configPanel = reactive({
-  open: false,
-  serviceId: null as string | null,
-})
+// Configuration opens the full service editor (unsaved-change guard, Ctrl+S);
+// Cloudflare Tunnel has its own page instead of file-based configs.
 function openConfig(id: string) {
-  // Cloudflare Tunnel has a dedicated configuration page that manages the
-  // whole thing via the Cloudflare REST API — the generic ConfigSidePanel
-  // (which expects file-based service configs like httpd.conf) is useless
-  // for it and would show "No config files found" with a 500 in the panel.
-  // Send it straight to /cloudflare instead.
-  if (id === 'cloudflare') {
-    router.push('/cloudflare')
-    return
-  }
-  configPanel.serviceId = id
-  configPanel.open = true
-}
-function closeConfig() {
-  configPanel.open = false
-  // Keep serviceId set briefly so the slide-out animation doesn't jump;
-  // ConfigSidePanel ignores serviceId when open=false.
+  void router.push(id === 'cloudflare' ? '/cloudflare' : `/service/${encodeURIComponent(id)}/config`)
 }
 </script>
 
