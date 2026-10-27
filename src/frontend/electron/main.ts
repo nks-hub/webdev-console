@@ -1484,7 +1484,9 @@ async function installUpdateAndRestart() {
   isQuitting = true
   await shutdownDaemon()
   try {
-    electronAutoUpdater.quitAndInstall(false, true)
+    // Silent: the assisted NSIS installer otherwise walks the user through the
+    // whole wizard again (install mode, directory, finish) on every update.
+    electronAutoUpdater.quitAndInstall(true, true)
   } catch (e) {
     // The installer did not take over: keep the app usable instead of
     // leaving it quitting with no daemon.
