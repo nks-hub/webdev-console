@@ -1,6 +1,6 @@
 <template>
   <div class="sd-section">
-    <h3 class="sd-section-title">{{ t('sites.detail.simple.activity.title') }}</h3>
+    <h2 class="sd-section-title">{{ t('sites.detail.simple.activity.title') }}</h2>
 
     <!-- Errors block -->
     <div class="sd-activity-block">
@@ -10,7 +10,7 @@
       </div>
       <ul v-if="errorLines.length > 0" class="sd-err-list">
         <li
-          v-for="(line, idx) in errorLines.slice(0, showAllErrors ? 5 : 3)"
+          v-for="(line, idx) in errorLines.slice(0, showAllErrors ? errorLines.length : 3)"
           :key="idx"
           class="sd-err-line"
         >
@@ -28,7 +28,7 @@
           link
           @click="showAllErrors = true"
         >
-          {{ t('sites.detail.simple.activity.errors.showAll') }}
+          {{ t('sites.detail.simple.activity.errors.showAll', { n: errorLines.length - 3 }) }}
         </el-button>
         <el-button size="small" link class="sd-full-logs" @click="openFullLogs">
           {{ t('sites.detail.simple.activity.fullLogs') }}
@@ -100,7 +100,7 @@ function formatErrorTime(iso: string): string {
 }
 
 function openFullLogs() {
-  router.push(`/sites/${encodeURIComponent(props.domain)}/edit?tab=errors`)
+  router.push(`/sites/${encodeURIComponent(props.domain)}/edit?tab=logs`)
 }
 
 async function load() {
@@ -138,19 +138,10 @@ defineExpose({ reload: load })
 </script>
 
 <style scoped>
-.sd-section {
-  margin-top: var(--wdc-space-4-5);
-  padding: var(--wdc-space-4);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  background: var(--wdc-surface-2);
-}
 .sd-section-title {
   margin: 0 0 var(--wdc-space-3);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 0.93rem;
   color: var(--wdc-text-2);
-  font-family: var(--wdc-font-display);
 }
 .sd-activity-block {
   padding: var(--wdc-space-3) 0;

@@ -2,33 +2,36 @@ import { test, expect } from './_fixtures'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
-// A11y contract for the simple-mode site cards. The card-body div is the
-// primary navigation target — without keyboard support a screen-reader or
-// keyboard-only operator can't open a site without using the dropdown menu.
+// A11y contract for the sites table (one table for Simple and Advanced). The
+// domain is a real link, so a keyboard or screen-reader user can open a site
+// without the row click; every icon-only button names its site.
 // Source-level template checking suffices for static-attribute coverage —
-// a future refactor that drops role/tabindex/aria-label lands here.
+// a future refactor that drops a link, caption or label lands here.
 
 // Playwright's CWD for `npx playwright test` is `src/frontend/`, so resolve
 // the Vue source dir relative to that. Avoids `import.meta.url` which
 // Playwright's CJS test loader (transformIgnorePatterns) can't parse.
 const srcRoot = resolve(process.cwd(), 'src')
 
-test.describe('Simple-mode card a11y', () => {
-  test('SimpleSiteCard.vue template carries role + tabindex + aria-label', () => {
-    // Read the .vue source directly from disk. Source-level template
-    // checking is sufficient for static-attribute coverage and avoids
-    // a full headless render.
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SimpleSiteCard.vue'), 'utf-8')
+test.describe('Sites table a11y', () => {
+  test('SitesTable.vue has a caption, column scopes, a domain link and named row buttons', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'sites', 'SitesTable.vue'), 'utf-8')
+    expect(source).toMatch(/<caption class="visually-hidden">/)
+    expect(source).toMatch(/<th[^>]*scope="col"/)
+    // The domain opens the detail through a router-link, not a click handler on a div.
+    expect(source).toMatch(/<router-link class="web-domain"/)
+    // Icon-only and menu buttons carry the site in their label.
+    expect(source).toMatch(/sites\.list\.openAria/)
+    expect(source).toMatch(/sites\.list\.folderAria/)
+    expect(source).toMatch(/sites\.card\.moreActions/)
+    // Sort state is announced.
+    expect(source).toMatch(/:aria-sort=/)
+  })
 
-    // The card-body div must carry all three a11y attributes.
-    const cardBodyMatch = source.match(/<div\s+class="card-body"[\s\S]*?>/)
-    expect(cardBodyMatch, 'card-body div present in template').not.toBeNull()
-    const opening = cardBodyMatch![0]
-    expect(opening).toMatch(/role="button"/)
-    expect(opening).toMatch(/tabindex="0"/)
-    expect(opening).toMatch(/aria-label/)
-    expect(opening).toMatch(/keydown\.enter/)
-    expect(opening).toMatch(/keydown\.space/)
+  test('status is always a word, never colour alone', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'sites', 'SiteStatusBadge.vue'), 'utf-8')
+    expect(source).toMatch(/<span class="ss-text">\{\{ label \}\}<\/span>/)
+    expect(source).toMatch(/aria-hidden="true"/)
   })
 
   test('DashboardSimple.vue recent-sites rows are links inside plain list items', () => {

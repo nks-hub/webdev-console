@@ -9,8 +9,8 @@ import { join, resolve } from 'node:path'
 //   - Dashboard recent-sites widget — was "prehled je prilis strohy"
 //   - Settings Simple Network panel — read-only port snapshot
 //   - Settings Simple Backup panel — one-click manual backup
-//   - SiteDetailSimple document root edit — was "neni tam zadna editace"
-//   - No-PHP empty state in Sites simple create dialog
+//   - Site settings document root edit — was "neni tam zadna editace"
+//   - No-PHP empty state in the create site dialog
 //
 // Without contracts here a future cleanup could silently drop the
 // gap-closing UX after a refactor.
@@ -49,26 +49,32 @@ test.describe('Simple-mode features contract', () => {
     expect(source).toMatch(/settings\.simple\.backup\.openManager/)
   })
 
-  test('SiteDetailSimple wires document root edit + folder picker', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteDetailSimple.vue'), 'utf-8')
-    // The field was missing entirely before commit 59e1d29 — operator
-    // had no way to edit docroot in simple mode. Lock both the input
-    // ref and the picker handler.
-    expect(source).toMatch(/v-model="documentRoot"/)
-    expect(source).toMatch(/onDocRootChange/)
-    expect(source).toMatch(/pickDocRoot/)
-    expect(source).toMatch(/sites\.documentRoot/)
+  test('Site settings wire document root edit + folder picker', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteEdit.vue'), 'utf-8')
+    // Operators had no way to edit docroot in simple mode before commit 59e1d29.
+    // It now lives in the one Settings tab, next to the folder browser.
+    expect(source).toMatch(/v-model="site\.documentRoot"/)
+    expect(source).toMatch(/<FolderBrowser/)
+    expect(source).toMatch(/siteEdit\.folderHint/)
   })
 
-  test('Sites simple create dialog surfaces no-PHP empty state', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'Sites.vue'), 'utf-8')
-    // The alert + Open-PHP-Manager link only fires when phpVersions is
-    // empty — proves to the beginner that they can install PHP from
-    // here instead of leaving the create dialog confused.
-    expect(source).toMatch(/v-if="phpVersions\.length === 0"/)
-    expect(source).toMatch(/sites\.simple\.noPhpInstalledTitle/)
-    expect(source).toMatch(/sites\.simple\.noPhpInstalledCta/)
-    expect(source).toMatch(/openPhpManagerFromSimple/)
+  test('Create site dialog surfaces a no-PHP empty state with an install button', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'sites', 'CreateSiteDialog.vue'), 'utf-8')
+    // The callout only shows when no PHP version is installed — it tells
+    // the beginner they can install PHP from here instead of leaving the
+    // dialog confused.
+    expect(source).toMatch(/siteState\.phpVersions === null \|\| siteState\.phpVersions\.length/)
+    expect(source).toMatch(/sites\.new\.noPhp/)
+    expect(source).toMatch(/siteState\.install\('php'\)/)
+  })
+
+  test('New sites start on the PHP version chosen in Settings', () => {
+    // Settings stores the choice as general.defaultPhp; the shared site state
+    // marks it as the default version when it is installed, and the create
+    // dialog and the site page preselect that version.
+    const state = readFileSync(join(srcRoot, 'stores', 'siteState.ts'), 'utf-8')
+    expect(state).toMatch(/general\.defaultPhp/)
+    expect(readFileSync(join(srcRoot, 'components', 'sites', 'CreateSiteDialog.vue'), 'utf-8')).toMatch(/p\.isDefault/)
   })
 
   test('i18n keys for all simple-mode redesigns exist cs+en', () => {
@@ -88,10 +94,9 @@ test.describe('Simple-mode features contract', () => {
       'settings.simple.backup.title',
       'settings.simple.backup.create',
       'settings.simple.backup.openManager',
-      'sites.detail.simple.docRootHint',
-      'sites.simple.noPhpInstalledTitle',
-      'sites.simple.noPhpInstalledHint',
-      'sites.simple.noPhpInstalledCta',
+      'siteEdit.folderHint',
+      'sites.new.noPhp',
+      'sites.new.installPhp',
     ]
     for (const k of required) {
       expect(getPath(cs, k), `cs ${k}`).toBeTruthy()
