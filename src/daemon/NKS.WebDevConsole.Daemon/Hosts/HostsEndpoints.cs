@@ -190,6 +190,9 @@ internal static class HostsEndpoints
             const string beginMarker = "# BEGIN NKS WebDev Console";
             const string endMarker   = "# END NKS WebDev Console";
 
+            // Held across read → rewrite → write so a concurrent site apply
+            // cannot write back hosts content read before this save.
+            await HostsFileWriter.Gate.WaitAsync();
             try
             {
                 var content = await File.ReadAllTextAsync(hostsPath);
@@ -278,7 +281,7 @@ internal static class HostsEndpoints
                 }
                 File.Copy(hostsPath, $"{hostsPath}.wdc-backup.1", overwrite: true);
 
-                await File.WriteAllTextAsync(hostsPath, newContent, HostsEncoding);
+                await HostsFileWriter.WriteAsync(hostsPath, newContent, HostsEncoding);
 
                 try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
@@ -291,6 +294,10 @@ internal static class HostsEndpoints
             catch (Exception ex)
             {
                 return Results.Problem($"Failed to apply hosts: {ex.Message}");
+            }
+            finally
+            {
+                HostsFileWriter.Gate.Release();
             }
         });
 
@@ -335,6 +342,7 @@ internal static class HostsEndpoints
             const int MaxHostsBytes = 10 * 1024 * 1024;
 
             var hostsPath = GetHostsPath();
+            await HostsFileWriter.Gate.WaitAsync();
             try
             {
                 string newContent;
@@ -364,7 +372,7 @@ internal static class HostsEndpoints
                 if (File.Exists(hostsPath))
                     File.Copy(hostsPath, $"{hostsPath}.wdc-backup.1", overwrite: true);
 
-                await File.WriteAllTextAsync(hostsPath, newContent, HostsEncoding);
+                await HostsFileWriter.WriteAsync(hostsPath, newContent, HostsEncoding);
                 try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
                 return Results.Ok(new { restored = true });
@@ -376,6 +384,10 @@ internal static class HostsEndpoints
             catch (Exception ex)
             {
                 return Results.Problem($"Restore failed: {ex.Message}");
+            }
+            finally
+            {
+                HostsFileWriter.Gate.Release();
             }
         });
     }

@@ -207,4 +207,29 @@ public class AtomicWriterTests : IDisposable
         Assert.Equal(0, removed);
         Assert.True(File.Exists(conf));
     }
+
+    [Fact]
+    public async Task WriteAsync_ConcurrentWritesToSameTarget_LeaveOneCompleteVersion()
+    {
+        var target = Path.Combine(_tempDir, "concurrent.conf");
+        var payloads = Enumerable.Range(0, 25).Select(i => new string((char)('a' + i % 26), 10_000 + i)).ToArray();
+
+        await Task.WhenAll(payloads.Select(p => _writer.WriteAsync(target, p)));
+
+        var final = await File.ReadAllTextAsync(target);
+        Assert.Contains(final, payloads);
+        Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+    }
+
+    [Fact]
+    public void WriteAllTextAtomic_CreatesDirectoryAndLeavesNoTemp()
+    {
+        var target = Path.Combine(_tempDir, "nested", "state.json");
+
+        AtomicWriter.WriteAllTextAtomic(target, "{\"a\":1}");
+        AtomicWriter.WriteAllTextAtomic(target, "{\"a\":2}");
+
+        Assert.Equal("{\"a\":2}", File.ReadAllText(target));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(target)!, "*.tmp"));
+    }
 }

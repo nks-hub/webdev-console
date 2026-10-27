@@ -102,4 +102,16 @@ public class SseServiceTests
         _service.RemoveClient(id2);
         Assert.Equal(2, _service.ClientCount);
     }
+
+    [Fact]
+    public async Task Broadcast_SurvivesClientRemovedConcurrently()
+    {
+        for (var i = 0; i < 50; i++)
+        {
+            var ids = Enumerable.Range(0, 5).Select(_ => _service.AddClient(CreateMockResponse())).ToList();
+            var broadcast = _service.BroadcastAsync("test", new { i });
+            foreach (var id in ids) _service.RemoveClient(id);
+            await broadcast; // must not throw ObjectDisposedException
+        }
+    }
 }

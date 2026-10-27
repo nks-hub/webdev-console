@@ -55,9 +55,7 @@ public sealed class SitePhpIniWriter
         var overrides = BuildOverrideBlock(site.PhpSettings);
         var combined = global + "\n\n; === Per-site overrides (NKS WDC) — do not edit manually ===\n" + overrides;
 
-        var tmp = sitePhpIni + ".tmp";
-        File.WriteAllText(tmp, combined);
-        File.Move(tmp, sitePhpIni, overwrite: true);
+        NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(sitePhpIni, combined);
 
         _logger.LogInformation("Wrote per-site php.ini for {Domain} to {Path}", site.Domain, sitePhpIni);
         return sitePhpIni;

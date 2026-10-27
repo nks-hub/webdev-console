@@ -151,6 +151,8 @@ function startDeploySse(): void {
     // of deploy:event; deploy:complete is handled further down together with
     // the OS notification.
     // mcp.enabled / deploy.enabled toggled in Settings (or by another window).
+    // HealthMonitor saw a service change state (crash, external stop/start).
+    'service:state': () => { void daemonStore.poll() },
     'mcp:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:phase': (data) =>

@@ -2826,12 +2826,18 @@ else
             try
             {
                 Console.WriteLine($"[startup-bg] re-applying site {siteToApply.Domain}...");
-                var applyTask = startupOrchestrator.ApplyAsync(siteToApply);
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(25));
+                // Cooperative cancel at 25 s plus a 27 s wall-clock guard. Before,
+                // a timed-out apply kept running in the background (holding the
+                // hosts-file gate or an elevation prompt) while the loop moved on.
+                using var applyCts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+                var applyTask = startupOrchestrator.ApplyAsync(siteToApply, applyCts.Token);
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(27));
                 var completed = await Task.WhenAny(applyTask, timeoutTask);
-                if (completed == timeoutTask)
+                if (completed == timeoutTask || applyTask.IsCanceled)
                 {
-                    Console.WriteLine($"[startup-bg] site {siteToApply.Domain} re-apply timed out after 25s — skipped; re-apply via UI");
+                    applyCts.Cancel();
+                    _ = applyTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+                    Console.WriteLine($"[startup-bg] site {siteToApply.Domain} re-apply timed out after 25s — cancelled; re-apply via UI");
                     continue;
                 }
                 await applyTask;
@@ -3554,7 +3560,11 @@ app.MapPost("/api/sites", async (HttpContext ctx, SiteManager sm, SiteOrchestrat
     try
     {
         var created = await sm.CreateAsync(site);
-        await orchestrator.ApplyAsync(created);
+        var applyResult = await orchestrator.ApplyAsync(created);
+        // Surface failed apply steps (cert, vhost, hosts…) — they used to be
+        // logged only, so the site looked created and working when it wasn't.
+        foreach (var step in applyResult.Steps.Where(st => st.Status == SiteApplyStep.Failed))
+            warnings.Add($"{step.Name}: {step.Detail}");
 
         // Framework auto-detect hint — soft suggestion only, never auto-runs
         var hints = new List<string>();
@@ -3755,12 +3765,17 @@ app.MapPut("/api/sites/{domain}", async (string domain, SiteConfig site, SiteMan
     try
     {
         var updated = await sm.UpdateAsync(site);
-        await orchestrator.ApplyAsync(updated);
-        var warnings = SiteManager.CollectBindAddressWarnings(updated);
+        var applyResult = await orchestrator.ApplyAsync(updated);
+        var bindWarnings = SiteManager.CollectBindAddressWarnings(updated);
+        var warnings = bindWarnings
+            .Concat(applyResult.Steps
+                .Where(st => st.Status == SiteApplyStep.Failed)
+                .Select(st => $"{st.Name}: {st.Detail}"))
+            .ToList();
         if (warnings.Count > 0)
         {
             var log = lf.CreateLogger("SiteUpdate");
-            foreach (var w in warnings)
+            foreach (var w in bindWarnings)
                 log.LogWarning("Site {Domain} bind warning: {Warning}", updated.Domain, w);
             return Results.Ok(new { site = updated, warnings });
         }
@@ -4318,70 +4333,75 @@ app.MapPost("/api/composer/self-install", async (IHttpClientFactory httpFactory,
     }
 });
 
-// List config history versions for a site
+// List config history versions for a site (archived site TOMLs — the
+// source of truth the vhosts are rendered from).
 app.MapGet("/api/sites/{domain}/history", (string domain, SiteManager sm) =>
 {
-    var site = sm.Get(domain);
-    if (site is null) return Results.NotFound();
-
-    var generatedDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot, "history");
-    if (!Directory.Exists(generatedDir))
-        return Results.Ok(Array.Empty<object>());
-
-    var prefix = $"{domain}.conf.";
-    var versions = Directory.GetFiles(generatedDir, prefix + "*")
-        .Select(f => new
-        {
-            timestamp = Path.GetFileName(f).Substring(prefix.Length),
-            size = new FileInfo(f).Length,
-            createdAt = File.GetLastWriteTimeUtc(f),
-            path = f,
-        })
-        .OrderByDescending(v => v.timestamp)
-        .ToList();
-    return Results.Ok(versions);
-});
-
-// Rollback a site's vhost config to a specific historical version
-app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, string timestamp, SiteManager sm, SiteOrchestrator orchestrator) =>
-{
-    // SECURITY: validate both path segments before building filesystem paths. The
-    // timestamp is user-supplied and could contain "../" or null bytes — without
-    // validation an attacker (with a valid auth token) could overwrite any file
-    // the daemon user can write. domain is already validated by sm.Get() (the
-    // dictionary lookup will fail for traversal strings) but we re-check anyway
-    // so the path-containment assertion below is definitely safe.
     try { SiteManager.ValidateDomain(domain); }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
-
-    // Timestamp format produced by config history rotation is ISO-like with digits,
-    // letters and safe punctuation (e.g. "20260411T140522Z"). Reject anything else.
-    if (string.IsNullOrWhiteSpace(timestamp) ||
-        !System.Text.RegularExpressions.Regex.IsMatch(timestamp, @"^[a-zA-Z0-9_\-.:]{1,64}$"))
+    if (sm.Get(domain) is null) return Results.NotFound();
+    return Results.Ok(sm.ListHistory(domain).Select(e => new
     {
-        return Results.BadRequest(new { error = "Invalid timestamp format" });
+        timestamp = e.Timestamp,
+        size = e.Size,
+        createdAt = e.CreatedAt,
+    }));
+});
+
+// Rollback a site's config to a historical version. Previously this copied
+// an archived *vhost* into generated/ and then ran ApplyAsync, which
+// re-rendered the vhost from the unchanged TOML — so the rollback was
+// silently undone. Restoring the TOML and re-applying is what actually
+// brings the old configuration back. The timestamp may come from the path
+// (CLI) or a JSON body {"timestamp": "..."} (GUI).
+async Task<IResult> RollbackSiteAsync(string domain, string? timestamp, SiteManager sm, SiteOrchestrator orchestrator)
+{
+    try { SiteManager.ValidateDomain(domain); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    if (string.IsNullOrWhiteSpace(timestamp))
+        return Results.BadRequest(new { error = "timestamp is required" });
+    if (sm.Get(domain) is null) return Results.NotFound(new { error = $"Site {domain} not found" });
+
+    SiteConfig? restored;
+    try
+    {
+        restored = await sm.RestoreFromHistoryAsync(domain, timestamp);
     }
-
-    var site = sm.Get(domain);
-    if (site is null) return Results.NotFound(new { error = $"Site {domain} not found" });
-
-    var historyDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot, "history");
-    var historyDirFull = Path.GetFullPath(historyDir);
-    var historyFile = Path.GetFullPath(Path.Combine(historyDir, $"{domain}.conf.{timestamp}"));
-    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(historyDirFull, historyFile))
-        return Results.BadRequest(new { error = "Resolved history path escapes history root" });
-    if (!File.Exists(historyFile))
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.UnprocessableEntity(new { error = ex.Message });
+    }
+    if (restored is null)
         return Results.NotFound(new { error = $"History entry {timestamp} not found" });
 
-    var generatedRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot);
-    var generatedFile = Path.GetFullPath(Path.Combine(generatedRoot, $"{domain}.conf"));
-    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(generatedRoot, generatedFile))
-        return Results.BadRequest(new { error = "Resolved generated path escapes generated root" });
-
-    File.Copy(historyFile, generatedFile, overwrite: true);
-    // Re-apply through orchestrator so vhost is also written next to Apache binary
-    await orchestrator.ApplyAsync(site);
+    await orchestrator.ApplyAsync(restored);
     return Results.Ok(new { domain, restoredFrom = timestamp });
+}
+
+app.MapPost("/api/sites/{domain}/rollback/{timestamp}",
+    (string domain, string timestamp, SiteManager sm, SiteOrchestrator orchestrator) =>
+        RollbackSiteAsync(domain, timestamp, sm, orchestrator));
+
+app.MapPost("/api/sites/{domain}/rollback", async (string domain, HttpContext ctx, SiteManager sm, SiteOrchestrator orchestrator) =>
+{
+    string? timestamp = null;
+    try
+    {
+        using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
+        if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object &&
+            doc.RootElement.TryGetProperty("timestamp", out var ts) &&
+            ts.ValueKind == System.Text.Json.JsonValueKind.String)
+            timestamp = ts.GetString();
+    }
+    catch (System.Text.Json.JsonException)
+    {
+        return Results.BadRequest(new { error = "Invalid JSON body" });
+    }
+    return await RollbackSiteAsync(domain, timestamp, sm, orchestrator);
 });
 
 // Telemetry consent — Phase 7 plan item #111.
@@ -4771,12 +4791,30 @@ app.MapGet("/api/sites/discover-mamp", (MampMigrator migrator) =>
     }
 });
 
-app.MapPost("/api/sites/migrate-mamp", async (MampMigrator migrator, SiteManager sm) =>
+app.MapPost("/api/sites/migrate-mamp", async (MampMigrator migrator, SiteManager sm, SiteOrchestrator orchestrator) =>
 {
     try
     {
         var imported = await migrator.ImportAsync(sm);
-        return Results.Ok(new { count = imported.Count, imported });
+        // Importing only wrote the site TOMLs, so the sites showed up in the
+        // list but had no Apache vhost, hosts entry or certificate until the
+        // user happened to save each one. Apply them like a normal create.
+        var applied = new List<object>();
+        foreach (var domain in imported)
+        {
+            var site = sm.Get(domain);
+            if (site is null) continue;
+            try
+            {
+                var r = await orchestrator.ApplyAsync(site);
+                applied.Add(new { domain, ok = r.Success, steps = r.Steps });
+            }
+            catch (Exception ex)
+            {
+                applied.Add(new { domain, ok = false, error = ex.Message });
+            }
+        }
+        return Results.Ok(new { count = imported.Count, imported, applied });
     }
     catch (Exception ex)
     {
@@ -4791,8 +4829,8 @@ app.MapPost("/api/sites/reapply-all", async (SiteManager sm, SiteOrchestrator or
     {
         try
         {
-            await orchestrator.ApplyAsync(site);
-            results.Add(new { domain = site.Domain, ok = true });
+            var r = await orchestrator.ApplyAsync(site);
+            results.Add(new { domain = site.Domain, ok = r.Success, steps = r.Steps });
         }
         catch (Exception ex)
         {

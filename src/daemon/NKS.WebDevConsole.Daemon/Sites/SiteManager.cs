@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Tomlyn;
@@ -16,7 +17,14 @@ public sealed class SiteManager : ISiteRegistry
     private readonly AtomicWriter _writer;
     private readonly string _sitesDir;
     private readonly string _generatedDir;
-    private readonly Dictionary<string, SiteConfig> _sites = new();
+    // Read from every request thread while Create/Update/Delete mutate it, so
+    // a plain Dictionary could corrupt or throw mid-enumeration. LoadAll swaps
+    // in a fully built map instead of clearing the live one, so readers never
+    // observe a transient empty registry.
+    private volatile ConcurrentDictionary<string, SiteConfig> _sites = new();
+    // Serialises mutations so the bind-conflict check and the write it guards
+    // are atomic with respect to other creates/updates.
+    private readonly SemaphoreSlim _mutationLock = new(1, 1);
 
     public SiteManager(ILogger<SiteManager> logger, TemplateEngine te, AtomicWriter aw, string sitesDir, string generatedDir)
     {
@@ -36,8 +44,12 @@ public sealed class SiteManager : ISiteRegistry
 
     public void LoadAll()
     {
-        _sites.Clear();
-        if (!Directory.Exists(_sitesDir)) return;
+        var loaded = new ConcurrentDictionary<string, SiteConfig>();
+        if (!Directory.Exists(_sitesDir))
+        {
+            _sites = loaded;
+            return;
+        }
 
         // Simple line-based check: find top-level TOML keys (lines matching
         // `^key\s*=` at indent 0, excluding comment lines and table headers)
@@ -91,14 +103,15 @@ public sealed class SiteManager : ISiteRegistry
                 }
 
                 NormalizeSiteBindAddresses(model);
-                _sites[model.Domain] = model;
+                loaded[model.Domain] = model;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to load site config {File}", file);
             }
         }
-        _logger.LogInformation("Loaded {Count} sites", _sites.Count);
+        _sites = loaded;
+        _logger.LogInformation("Loaded {Count} sites", loaded.Count);
     }
 
     public SiteConfig? Get(string domain) => _sites.GetValueOrDefault(domain);
@@ -234,6 +247,13 @@ public sealed class SiteManager : ISiteRegistry
 
     public async Task<SiteConfig> CreateAsync(SiteConfig site)
     {
+        await _mutationLock.WaitAsync();
+        try { return await CreateCoreAsync(site); }
+        finally { _mutationLock.Release(); }
+    }
+
+    private async Task<SiteConfig> CreateCoreAsync(SiteConfig site)
+    {
         ValidateDomain(site.Domain);
         ValidateDocumentRoot(site.DocumentRoot);
         NormalizeSiteBindAddresses(site);
@@ -267,6 +287,13 @@ public sealed class SiteManager : ISiteRegistry
     }
 
     public async Task<SiteConfig> UpdateAsync(SiteConfig site)
+    {
+        await _mutationLock.WaitAsync();
+        try { return await UpdateCoreAsync(site); }
+        finally { _mutationLock.Release(); }
+    }
+
+    private async Task<SiteConfig> UpdateCoreAsync(SiteConfig site)
     {
         // SECURITY: validate before building any path from domain (prevents traversal
         // via crafted PUT body). Same treatment as Delete/Create.
@@ -302,6 +329,13 @@ public sealed class SiteManager : ISiteRegistry
 
     public bool Delete(string domain)
     {
+        _mutationLock.Wait();
+        try { return DeleteCore(domain); }
+        finally { _mutationLock.Release(); }
+    }
+
+    private bool DeleteCore(string domain)
+    {
         // SECURITY: validate domain before touching any path. Without this, a caller
         // could pass "../../something" and delete files outside the sites directory.
         ValidateDomain(domain);
@@ -321,7 +355,65 @@ public sealed class SiteManager : ISiteRegistry
 
         if (File.Exists(path)) File.Delete(path);
         if (File.Exists(genPath)) File.Delete(genPath);
-        return _sites.Remove(domain);
+        return _sites.TryRemove(domain, out _);
+    }
+
+    // ── Config history ────────────────────────────────────────────────
+    // AtomicWriter archives every previous <domain>.toml under
+    // sites/history/<domain>.toml.<timestamp>. The TOML is the source of
+    // truth (vhosts are re-rendered from it on every apply), so history and
+    // rollback work on these files rather than on generated vhost copies.
+
+    private static readonly Regex HistoryTimestampPattern =
+        new(@"^\d{8}_\d{6}(_\d{3})?$", RegexOptions.Compiled);
+
+    public sealed record SiteHistoryEntry(string Timestamp, long Size, DateTime CreatedAt);
+
+    public IReadOnlyList<SiteHistoryEntry> ListHistory(string domain)
+    {
+        ValidateDomain(domain);
+        var historyDir = Path.Combine(_sitesDir, "history");
+        if (!Directory.Exists(historyDir)) return Array.Empty<SiteHistoryEntry>();
+        var prefix = $"{domain}.toml.";
+        return Directory.GetFiles(historyDir, prefix + "*")
+            .Select(f => (file: f, ts: Path.GetFileName(f)[prefix.Length..]))
+            .Where(x => HistoryTimestampPattern.IsMatch(x.ts))
+            .Select(x => new SiteHistoryEntry(x.ts, new FileInfo(x.file).Length, ParseHistoryTimestamp(x.ts)))
+            .OrderByDescending(e => e.Timestamp, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static DateTime ParseHistoryTimestamp(string ts)
+    {
+        var format = ts.Length > 15 ? "yyyyMMdd_HHmmss_fff" : "yyyyMMdd_HHmmss";
+        return DateTime.TryParseExact(ts, format, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+            out var dt)
+            ? dt
+            : DateTime.MinValue;
+    }
+
+    /// <summary>
+    /// Restores <paramref name="domain"/>'s TOML from a history entry through the
+    /// normal update path (validation, bind-conflict check, vhost regeneration).
+    /// The current config is archived first, so a rollback is itself undoable.
+    /// Returns null when the entry does not exist.
+    /// </summary>
+    public async Task<SiteConfig?> RestoreFromHistoryAsync(string domain, string timestamp)
+    {
+        ValidateDomain(domain);
+        if (!HistoryTimestampPattern.IsMatch(timestamp))
+            throw new ArgumentException("Invalid history timestamp", nameof(timestamp));
+        var historyDir = Path.GetFullPath(Path.Combine(_sitesDir, "history"));
+        var file = Path.GetFullPath(Path.Combine(historyDir, $"{domain}.toml.{timestamp}"));
+        if (!PathContainment.IsUnder(historyDir, file))
+            throw new UnauthorizedAccessException("Resolved history path escapes history root");
+        if (!File.Exists(file)) return null;
+
+        var model = TomlSerializer.Deserialize<SiteConfig>(await File.ReadAllTextAsync(file))
+            ?? throw new InvalidOperationException($"History entry {timestamp} could not be parsed");
+        model.Domain = domain;
+        return await UpdateAsync(model);
     }
 
     /// <summary>
