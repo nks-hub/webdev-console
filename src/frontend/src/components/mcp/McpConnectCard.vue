@@ -345,7 +345,7 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
   color: var(--el-text-color-primary);
 }
 .connect-footnote {
