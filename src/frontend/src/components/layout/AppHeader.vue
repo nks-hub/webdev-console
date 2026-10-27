@@ -51,8 +51,9 @@
       </div>
 
       <el-dropdown trigger="click" @command="onLocaleChange">
-        <button type="button" class="icon-btn lang-btn mono" :aria-label="t('settings.language')" :title="t('settings.language')">
+        <button type="button" class="icon-btn lang-btn mono" aria-haspopup="menu" :aria-label="t('settings.language')" :title="t('settings.language')">
           {{ currentLocale.toUpperCase() }}
+          <el-icon :size="12" aria-hidden="true"><ArrowDown /></el-icon>
         </button>
         <template #dropdown>
           <el-dropdown-menu>
@@ -83,7 +84,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Moon, Sunny, Search, Menu } from '@element-plus/icons-vue'
+import { Moon, Sunny, Search, Menu, ArrowDown } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
@@ -146,7 +147,12 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   .icon-btn:hover { background: var(--wdc-surface-2); color: var(--wdc-text); }
 }
 .icon-btn:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; }
-.lang-btn { font-size: 0.78rem; }
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wdc-space-1);
+  font-size: 0.78rem;
+}
 .menu-btn { display: none; }
 
 .search {
@@ -219,11 +225,12 @@ kbd {
 @media (hover: hover) {
   .tray-key:hover { color: var(--wdc-text); }
 }
+/* Same accent wash as the active menu row, so the chosen mode is obvious. */
 .tray-key[aria-pressed="true"] {
-  background: var(--wdc-key-face);
-  border-color: var(--wdc-border-strong);
-  color: var(--wdc-text);
-  box-shadow: var(--wdc-shadow-key-press);
+  background: var(--wdc-accent-dim);
+  border-color: color-mix(in oklab, var(--wdc-accent) 55%, transparent);
+  color: var(--wdc-accent-ink);
+  font-weight: 600;
 }
 .tray-key:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 1px; }
 

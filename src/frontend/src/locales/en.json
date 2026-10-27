@@ -146,26 +146,26 @@
     "mcp": "MCP",
     "backups": "Backups",
     "help": "Help",
-    "signedIn": "Signed in",
+    "signedIn": "Signed in as",
     "signIn": "Sign in",
-    "signOutConfirm": "Sign out of the catalog?",
-    "signOutTitle": "Sign out",
-    "signedOutToast": "Signed out",
     "serviceStarted": "{name} started",
     "serviceStopped": "{name} stopped",
-    "signedInAsTitle": "Signed in as {name} — click to sign out",
+    "signedInAsTitle": "Signed in as {name}. Click to open account settings.",
     "signInTitle": "Sign in with SSO",
     "system": "System",
     "mainNavigation": "Main navigation",
     "brandHome": "WebDev Console, overview",
     "application": "Application",
-    "servicesCrashed": "{n} service crashed | {n} services crashed",
     "groups": {
       "workspace": "Workspace",
-      "stack": "Stack",
+      "stack": "Environment",
       "network": "Network",
       "operations": "Operations"
-    }
+    },
+    "cloudflare": "Cloudflare",
+    "problemsBadge": "{n} problem | {n} problems",
+    "problemStartFailed": "{name} did not start",
+    "problemExited": "{name} crashed"
   },
   "versions": {
     "active": "Active",
@@ -2755,13 +2755,14 @@
     }
   },
   "footer": {
-    "servicesRunning": "services running",
+    "servicesRunning": "{running} of {total} service running | {running} of {total} services running",
     "tunnel": "Tunnel",
     "daemon": "Daemon",
-    "daemonRunning": "Daemon running",
-    "daemonOffline": "Daemon offline",
-    "crashed": "{n} crashed",
-    "tunnelTitle": "Cloudflare Tunnel is running — exposed sites are publicly reachable"
+    "tunnelTitle": "Cloudflare Tunnel is running — exposed sites are publicly reachable",
+    "problems": "{n} problem | {n} problems",
+    "simpleOffline": "The app cannot reach its background service",
+    "simpleProblems": "{n} service has a problem | {n} services have a problem",
+    "simpleAllRunning": "Everything is running"
   },
   "help": {
     "title": "Help",
@@ -3326,5 +3327,9 @@
       "days": "{n} d ago"
     },
     "openFromSettings": "Connect an AI client"
+  },
+  "app": {
+    "name": "NKS WebDev Console",
+    "short": "WDC"
   }
 }

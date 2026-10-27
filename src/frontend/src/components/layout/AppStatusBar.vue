@@ -1,15 +1,13 @@
 <template>
-  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }">
-    <!-- Simple mode: centered daemon status only -->
+  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }" role="status">
+    <!-- Simple mode: one plain sentence about the whole stack -->
     <template v-if="uiMode.isSimple">
       <span class="status-item status-item-center">
-        <HealthStatusDot
-          :level="daemonStore.connected ? 'ok' : 'err'"
-          :pulse="daemonStore.connected"
-        />
-        <span>{{ daemonStore.connected ? t('footer.daemonRunning') : t('footer.daemonOffline') }}</span>
+        <HealthStatusDot :level="simpleLevel" :pulse="simpleLevel === 'ok'" :title="simpleText" />
+        <router-link v-if="crashedCount > 0" class="status-link status-alert" :to="problemsLink">{{ simpleText }}</router-link>
+        <span v-else>{{ simpleText }}</span>
       </span>
-      <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
+      <span class="status-right mono">{{ versionLabel }}</span>
     </template>
 
     <!-- Advanced mode: full status bar -->
@@ -21,13 +19,13 @@
 
       <span class="status-sep" />
 
-      <span class="status-item">
-        {{ runningCount }}/{{ totalCount }} {{ t('footer.servicesRunning') }}
-      </span>
+      <router-link class="status-item status-link" to="/services">
+        {{ t('footer.servicesRunning', { running: runningCount, total: totalCount }, totalCount) }}
+      </router-link>
 
-      <span class="status-item status-alert" v-if="crashedCount > 0">
-        {{ t('footer.crashed', { n: crashedCount }) }}
-      </span>
+      <router-link v-if="crashedCount > 0" class="status-item status-link status-alert" :to="problemsLink">
+        {{ t('footer.problems', { n: crashedCount }, crashedCount) }}
+      </router-link>
 
       <span
         v-if="tunnelRunning"
@@ -39,11 +37,11 @@
 
       <template v-if="daemonStore.connected && totalRam > 0">
         <span class="status-sep" />
-        <span class="status-item mono">CPU {{ totalCpu.toFixed(1) }}%</span>
-        <span class="status-item mono">RAM {{ formatMem(totalRam) }}</span>
+        <span class="status-item mono">CPU {{ formatPercent(totalCpu, localeName) }}</span>
+        <span class="status-item mono">RAM {{ formatBytes(totalRam, localeName) }}</span>
       </template>
 
-      <span class="status-right mono">NKS WDC v{{ appVersion }}</span>
+      <span class="status-right mono">{{ versionLabel }}</span>
     </template>
   </footer>
 </template>
@@ -55,28 +53,41 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useAppVersion } from '../../utils/appVersion'
+import { isRunning } from '../../utils/serviceState'
+import { formatBytes, formatPercent } from '../../utils/format'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
 const versionRef = useAppVersion()
-const appVersion = computed(() => versionRef.value.full)
+const versionLabel = computed(() => `${t('app.short')} v${versionRef.value.full}`)
+const localeName = computed(() => String(locale.value))
 
-const services = computed(() => daemonStore.services)
+// The same set and counting the Overview uses (visible plugins only).
+const services = computed(() => daemonStore.visibleServices)
 const totalCount = computed(() => services.value.length)
-const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
-const crashedCount = computed(() => services.value.filter(s => s.state === 4).length)
-const tunnelRunning = computed(() =>
-  services.value.some(s => s.id === 'cloudflare' && (s.state === 2 || s.status === 'running'))
-)
+const runningCount = computed(() => daemonStore.runningServices.length)
+const crashedCount = computed(() => daemonStore.crashedServices.length)
+const problemsLink = { path: '/services', query: { filter: 'problems' } }
+const tunnelRunning = computed(() => services.value.some(s => s.id === 'cloudflare' && isRunning(s)))
 const totalCpu = computed(() => services.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0))
 const totalRam = computed(() => services.value.reduce((sum, s) => sum + (s.memoryBytes ?? 0), 0))
 
-function formatMem(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
-}
+const simpleLevel = computed<'ok' | 'warn' | 'err' | 'muted'>(() => {
+  if (!daemonStore.connected || crashedCount.value > 0) return 'err'
+  return allInstalledRunning.value ? 'ok' : 'muted'
+})
+// Services that are not installed are neither running nor a fault.
+const allInstalledRunning = computed(() => {
+  const installed = services.value.filter(s => s.installed !== false)
+  return installed.length > 0 && installed.every(isRunning)
+})
+const simpleText = computed(() => {
+  if (!daemonStore.connected) return t('footer.simpleOffline')
+  if (crashedCount.value > 0) return t('footer.simpleProblems', { n: crashedCount.value }, crashedCount.value)
+  if (allInstalledRunning.value) return t('footer.simpleAllRunning')
+  return t('footer.servicesRunning', { running: runningCount.value, total: totalCount.value }, totalCount.value)
+})
 </script>
 
 <style scoped>
@@ -112,6 +123,15 @@ function formatMem(bytes: number): string {
   white-space: nowrap;
 }
 
+.status-link {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--wdc-radius-xs);
+}
+@media (hover: hover) {
+  .status-link:hover { color: var(--wdc-text); text-decoration: underline; }
+}
+.status-link:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; }
 .status-alert { color: var(--wdc-status-error); font-weight: 600; }
 .status-tunnel { color: var(--wdc-tunnel-text); font-weight: 700; }
 :global(.dark) .status-tunnel,
@@ -134,7 +154,7 @@ function formatMem(bytes: number): string {
 
 .status-right {
   margin-left: auto;
-  color: var(--wdc-text);
+  color: var(--wdc-text-3);
 }
 
 @media (max-width: 520px) {

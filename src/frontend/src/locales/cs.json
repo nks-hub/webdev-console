@@ -146,26 +146,26 @@
     "mcp": "MCP",
     "backups": "Zálohy",
     "help": "Nápověda",
-    "signedIn": "Přihlášen",
+    "signedIn": "Přihlášeno jako",
     "signIn": "Přihlásit se",
-    "signOutConfirm": "Odhlásit z katalogu?",
-    "signOutTitle": "Odhlásit",
-    "signedOutToast": "Odhlášeno",
     "serviceStarted": "{name} spuštěno",
     "serviceStopped": "{name} zastaveno",
-    "signedInAsTitle": "Přihlášen jako {name} — kliknutím se odhlásíte",
+    "signedInAsTitle": "Přihlášeno jako {name}. Kliknutím otevřete nastavení účtu.",
     "signInTitle": "Přihlásit se přes SSO",
     "system": "Systém",
     "mainNavigation": "Hlavní navigace",
     "brandHome": "WebDev Console, přehled",
     "application": "Aplikace",
-    "servicesCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
     "groups": {
       "workspace": "Pracovní prostor",
-      "stack": "Stack",
+      "stack": "Prostředí",
       "network": "Síť",
       "operations": "Provoz"
-    }
+    },
+    "cloudflare": "Cloudflare",
+    "problemsBadge": "{n} problém | {n} problémy | {n} problémů",
+    "problemStartFailed": "Služba {name} se nespustila",
+    "problemExited": "Služba {name} spadla"
   },
   "versions": {
     "active": "Aktivní",
@@ -2755,13 +2755,14 @@
     }
   },
   "footer": {
-    "servicesRunning": "služeb běží",
+    "servicesRunning": "Běží {running} z {total} služby | Běží {running} z {total} služeb | Běží {running} z {total} služeb",
     "tunnel": "Tunel",
-    "daemon": "Daemon",
-    "daemonRunning": "Daemon běží",
-    "daemonOffline": "Daemon offline",
-    "crashed": "{n} spadlo",
-    "tunnelTitle": "Cloudflare Tunnel běží — exponované weby jsou veřejně dostupné"
+    "daemon": "Démon",
+    "tunnelTitle": "Tunel Cloudflare běží. Zveřejněné weby jsou dostupné z internetu.",
+    "problems": "{n} problém | {n} problémy | {n} problémů",
+    "simpleOffline": "Aplikace se nemůže spojit se službou na pozadí",
+    "simpleProblems": "{n} služba nefunguje | {n} služby nefungují | {n} služeb nefunguje",
+    "simpleAllRunning": "Vše běží"
   },
   "help": {
     "title": "Nápověda",
@@ -3326,5 +3327,9 @@
       "days": "před {n} d"
     },
     "openFromSettings": "Připojit AI klienta"
+  },
+  "app": {
+    "name": "NKS WebDev Console",
+    "short": "WDC"
   }
 }

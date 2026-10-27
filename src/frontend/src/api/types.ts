@@ -16,7 +16,14 @@ export interface ServiceInfo {
   /** UTC timestamp ISO string marking when the service transitioned to
    * Running, used by SiteDetailSimple for "Started N ago" labels. */
   startedAt?: string
+  /** Version of the installed binary behind the service. */
   version?: string
+  /** False when the binary is not on disk. Absent on older daemons (treated as installed). */
+  installed?: boolean
+  /** Binary catalog app that provides the service, for the "install" link. */
+  binaryApp?: string | null
+  /** For crashed services: `startFailed` never reached running, `exited` ran and stopped. */
+  crashKind?: 'startFailed' | 'exited' | null
 }
 
 export interface StatusResponse {

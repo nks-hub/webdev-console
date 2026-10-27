@@ -115,6 +115,9 @@ import { useFeatureFlagsStore } from './stores/featureFlags'
 import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import { OPEN_COMMAND_PALETTE_EVENT } from './utils/commandPalette'
+import { loadLastBackup } from './utils/lastBackup'
+import { loadServicePorts } from './utils/servicePorts'
+import { updateDocumentTitle } from './router'
 import type { DeployEventDto } from './api/deploy'
 import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
@@ -175,7 +178,10 @@ function startDeploySse(): void {
       notifySiteApplied(data as SiteApplyResultDto)
     },
     // Scheduled (BackupScheduler) or manual (POST /api/backup) backups.
-    'backup:completed': (data) => notifyBackupCompleted(data as BackupEvent),
+    'backup:completed': (data) => {
+      void loadLastBackup()
+      notifyBackupCompleted(data as BackupEvent)
+    },
     'backup:failed': (data) => notifyBackupFailed(data as BackupEvent),
     'mcp:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:settings-changed': () => { void featureFlagsStore.load() },
@@ -248,7 +254,10 @@ watch(
 )
 
 // Main fires daemon/updater toasts itself; keep its locale in step with the UI.
-watch(() => i18n.global.locale.value, (locale) => syncNotificationLocale(locale))
+watch(() => i18n.global.locale.value, (locale) => {
+  syncNotificationLocale(locale)
+  updateDocumentTitle()
+})
 
 // F91.11: pull the authoritative SSO profile the moment the daemon is
 // reachable. Without this the "Signed in as {email}" label only appeared
@@ -342,29 +351,52 @@ function openCommandPalette() {
   commandPalette.value?.open()
 }
 
+// Shortcut targets for Ctrl+1..7, in the same order the help page lists them.
+const NUMBER_SHORTCUT_ROUTES = ['/dashboard', '/sites', '/databases', '/ssl', '/php', '/binaries', '/settings']
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement
+    && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable="true"], .monaco-editor') !== null)
+}
+
+// The letter the user means, independent of layout and Caps Lock: the typed
+// Latin letter when there is one, otherwise the physical key (Cyrillic etc.).
+function shortcutLetter(e: KeyboardEvent): string {
+  if (/^[a-z]$/i.test(e.key)) return e.key.toLowerCase()
+  return e.code.startsWith('Key') ? e.code.slice(3).toLowerCase() : ''
+}
+
 function handleKeydown(e: KeyboardEvent) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault()
-    commandPalette.value?.open()
-  }
   if (e.key === 'F5') {
     e.preventDefault()
     daemonStore.retryBoot()
+    return
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+  // Ctrl+Alt is AltGr on Windows keyboards: it types characters, not shortcuts.
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+  const target = e.target
+
+  const letter = shortcutLetter(e)
+  // In Monaco, Ctrl+K starts a chord (Ctrl+K Ctrl+C); leave it to the editor.
+  if (letter === 'k' && !(target instanceof HTMLElement && target.closest('.monaco-editor'))) {
     e.preventDefault()
-    router.push({ path: '/sites', query: { create: '1' } })
+    commandPalette.value?.open()
+    return
   }
-  // Ctrl+1-7 navigation
-  if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '7') {
+  if (isEditableTarget(target)) return
+
+  if (letter === 'n') {
     e.preventDefault()
-    const routes = ['/dashboard', '/sites', '/databases', '/ssl', '/php', '/binaries', '/settings']
-    const idx = parseInt(e.key) - 1
-    // Skip Advanced-only pages in Simple mode instead of letting the router
-    // guard bounce the shortcut to /sites.
-    if (idx < routes.length && !(router.resolve(routes[idx]).meta.advancedNav && uiMode.isSimple)) {
-      router.push(routes[idx])
-    }
+    void router.push({ path: '/sites', query: { create: '1' } })
+    return
+  }
+  // The digit row is read by physical key: on a Czech layout it types "+ěščřžý"
+  // without Shift, so e.key never says "1".
+  const digit = /^Digit([1-7])$/.exec(e.code)
+  if (digit && !e.shiftKey) {
+    e.preventDefault()
+    // Simple mode hides these pages from the menu, not from the shortcuts.
+    void router.push(NUMBER_SHORTCUT_ROUTES[Number(digit[1]) - 1])
   }
 }
 
@@ -389,10 +421,6 @@ async function mirrorAuthTokenToDaemon() {
 
 onMounted(() => {
   daemonStore.startPolling()
-  void mirrorAuthTokenToDaemon()
-  // Phase 6.23 — hydrate feature flags so guards (sidebar entries, MCP
-  // banner mount, etc.) flip to their real values once daemon answers.
-  void featureFlagsStore.ensureLoaded()
   // F96: kick off background update check once per session. Store guards
   // against flooding the public GitHub API — refresh() honors a 6h cached
   // window, so the hourly setInterval inside startAutoCheck is idempotent.
@@ -404,13 +432,20 @@ onMounted(() => {
   // /sites while the daemon was still compiling, the list auto-populates
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
-    void featureFlagsStore.load()
+    // Everything that talks to the daemon starts here, after the first
+    // successful poll: earlier calls only collected 401s while the token
+    // was still being handed over.
+    startDeploySse()
     // Reload MCP requests still waiting for approval — the SSE event for
     // one that arrived while WDC was closed or the daemon was restarting
     // was never seen, and without this it could not be approved at all.
-    void mcpConfirmStore.loadPending()
+    // Skipped while MCP is off: the endpoint answers 404 then.
+    void featureFlagsStore.load().then(() => {
+      if (featureFlagsStore.showMcpSurface) void mcpConfirmStore.loadPending()
+    })
     void pluginsStore.loadAll()
     void sitesStore.load()
+    void loadServicePorts()
     // Retry token mirror on every daemon (re)connect — covers the case
     // where the daemon was still starting when we fired in onMounted.
     void mirrorAuthTokenToDaemon()
@@ -425,10 +460,6 @@ onMounted(() => {
   // phase-based status update live even during quiet poll intervals.
   // Cheap — 1s setInterval, stopped on unmount.
   splashTimer = setInterval(() => { nowTs.value = Date.now() }, 1000)
-
-  // Subscribe to deploy SSE channel — single subscription for the whole app
-  // life, drives the persistent <DeployRunDrawer>.
-  startDeploySse()
 
   // OS notifications: import legacy toggles once, mirror the UI locale to
   // main, and route notification clicks into the router.
