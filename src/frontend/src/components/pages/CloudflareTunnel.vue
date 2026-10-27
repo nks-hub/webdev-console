@@ -55,7 +55,7 @@
             {{ serviceRunning ? $t('cloudflare.status.tunnelRunning') : (serviceInfo ? $t('cloudflare.status.stopped') : $t('cloudflare.status.unknown')) }}
           </div>
           <div class="status-meta" v-if="serviceInfo">
-            {{ $t('cloudflare.status.pidUptime', { pid: serviceInfo.pid ?? '—', uptime: formatUptime(serviceInfo.uptime) }) }}
+            {{ $t('cloudflare.status.pidUptime', { pid: serviceInfo.pid ?? '—', uptime: formatUptime(serviceInfo.uptimeSeconds ?? serviceInfo.uptime) }) }}
           </div>
           <div class="status-meta" v-else-if="configReady">
             {{ $t('cloudflare.status.serviceInfoUnavailable') }}
@@ -698,8 +698,13 @@ function openDocs() {
   )
 }
 
-function formatUptime(secs: number | string | undefined): string {
-  if (typeof secs !== 'number') secs = Number(secs) || 0
+// Seconds, or the daemon's TimeSpan string "[d.]hh:mm:ss[.fffffff]".
+function formatUptime(value: number | string | undefined): string {
+  let secs = typeof value === 'number' ? value : 0
+  if (typeof value === 'string') {
+    const m = value.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)/)
+    secs = m ? Number(m[1] ?? 0) * 86400 + Number(m[2]) * 3600 + Number(m[3]) * 60 + Number(m[4]) : Number(value) || 0
+  }
   if (!secs || secs < 1) return '—'
   const h = Math.floor(secs / 3600)
   const m = Math.floor((secs % 3600) / 60)
