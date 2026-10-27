@@ -118,10 +118,15 @@ import { OPEN_COMMAND_PALETTE_EVENT } from './utils/commandPalette'
 import type { DeployEventDto } from './api/deploy'
 import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
-import { osNotify } from './services/osNotifications'
+import { i18n } from './i18n'
+import { isSafeAppRoute, loadNotificationPrefs, syncNotificationLocale } from './services/osNotifications'
+import {
+  notifyBackupCompleted, notifyBackupFailed, notifyDeployComplete, notifyMcpConfirm,
+  notifyServiceState, notifySiteApplied, notifyUpdateAvailable,
+  type BackupEvent, type ServiceStateEvent,
+} from './services/osNotificationEvents'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
 import { mcpKindLabel } from './utils/mcpKindLabel'
-import { i18n } from './i18n'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -156,9 +161,22 @@ function startDeploySse(): void {
     // the OS notification.
     // mcp.enabled / deploy.enabled toggled in Settings (or by another window).
     // HealthMonitor saw a service change state (crash, external stop/start).
-    'service:state': () => { void daemonStore.poll() },
+    // A crash also raises an OS notification (services channel).
+    'service:state': (data) => {
+      void daemonStore.poll()
+      const evt = data as ServiceStateEvent
+      const svc = daemonStore.services.find(s => s.id === evt?.serviceId)
+      notifyServiceState(evt, svc?.displayName || svc?.name)
+    },
     // Per-step outcome of a site apply (SiteApplyPipeline on the site page).
-    'site:applied': (data) => siteApplyStore.record(data as SiteApplyResultDto),
+    // Failed steps raise an OS notification (sites channel).
+    'site:applied': (data) => {
+      siteApplyStore.record(data as SiteApplyResultDto)
+      notifySiteApplied(data as SiteApplyResultDto)
+    },
+    // Scheduled (BackupScheduler) or manual (POST /api/backup) backups.
+    'backup:completed': (data) => notifyBackupCompleted(data as BackupEvent),
+    'backup:failed': (data) => notifyBackupFailed(data as BackupEvent),
     'mcp:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:phase': (data) =>
@@ -179,18 +197,8 @@ function startDeploySse(): void {
       // gives one-click Approve/Reject right where the operator's eyes are.
       void showMcpConfirmToast(evt)
       // #147 — fire OS notification so the operator sees the request
-      // even when the WDC window is in the background.
-      // Same human kind label the banner shows ("Drop a database"), not
-      // the wire id ("database_drop").
-      const kindText = mcpKindLabel(evt)
-      void osNotify({
-        title: i18n.global.t('mcp.notify.title'),
-        body: kindText
-          ? i18n.global.t('mcp.notify.body', { kind: kindText })
-          : i18n.global.t('mcp.notify.bodyGeneric'),
-        urgency: 'critical',
-        channel: 'mcp',
-      })
+      // even when the WDC window is in the background. Click → MCP intents.
+      notifyMcpConfirm({ ...evt, kindLabel: mcpKindLabel(evt) })
     },
     // The intent was settled somewhere (banner, toast, Intents page, a
     // trust grant, the agent consuming it, expiry): close its toast and
@@ -210,22 +218,37 @@ function startDeploySse(): void {
         deployStore.handleCompleteEvent({
           deployId: evt.deployId, success: evt.success === true, error: evt.error, kind: evt.kind })
       }
-      void osNotify({
-        title: evt.success
-          ? 'NKS WDC — Deploy succeeded'
-          : 'NKS WDC — Deploy failed',
-        body: evt.success
-          ? `Deploy ${evt.deployId?.slice(0, 8) ?? ''} completed.`
-          : (evt.error ?? `Deploy ${evt.deployId?.slice(0, 8) ?? ''} failed.`),
-        urgency: evt.success ? 'normal' : 'critical',
-        channel: 'deploy',
-      })
+      // Click → the site's deploy tab when the run's domain is known.
+      const domain = evt.deployId ? deployStore.runs.get(evt.deployId)?.domain : null
+      notifyDeployComplete(evt, domain)
     },
   })
 }
 function stopDeploySse(): void {
   if (unsubscribeDeploy) { unsubscribeDeploy(); unsubscribeDeploy = null }
 }
+
+// OS notification click → main focuses the window and sends the
+// notification's app route over the `navigate` IPC channel. Main already
+// validated it; re-check here before handing it to the router.
+let unsubscribeNavigate: (() => void) | null = null
+function startNotificationNavigation(): void {
+  if (unsubscribeNavigate || !window.electronAPI?.onNavigate) return
+  unsubscribeNavigate = window.electronAPI.onNavigate((target) => {
+    if (!isSafeAppRoute(target)) return
+    router.push(target).catch(() => { /* duplicate navigation */ })
+  })
+}
+
+// A newer app version found by the background GitHub check → one OS
+// notification per version (main remembers the key).
+watch(
+  () => (updatesStore.hasUpdate ? updatesStore.latestVersion : ''),
+  (version) => { if (version) notifyUpdateAvailable(version) },
+)
+
+// Main fires daemon/updater toasts itself; keep its locale in step with the UI.
+watch(() => i18n.global.locale.value, (locale) => syncNotificationLocale(locale))
 
 // F91.11: pull the authoritative SSO profile the moment the daemon is
 // reachable. Without this the "Signed in as {email}" label only appeared
@@ -404,6 +427,11 @@ onMounted(() => {
   // life, drives the persistent <DeployRunDrawer>.
   startDeploySse()
 
+  // OS notifications: import legacy toggles once, mirror the UI locale to
+  // main, and route notification clicks into the router.
+  void loadNotificationPrefs().then(() => syncNotificationLocale(i18n.global.locale.value))
+  startNotificationNavigation()
+
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
@@ -412,6 +440,8 @@ onUnmounted(() => {
   daemonStore.stopPolling()
   unsubscribeConnect?.()
   stopDeploySse()
+  unsubscribeNavigate?.()
+  unsubscribeNavigate = null
   if (splashTimer) { clearInterval(splashTimer); splashTimer = null }
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)

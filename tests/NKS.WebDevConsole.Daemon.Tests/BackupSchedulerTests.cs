@@ -57,7 +57,7 @@ public sealed class BackupSchedulerTests : IDisposable
     }
 
     private BackupScheduler NewScheduler() =>
-        new(_manager, _settings, NullLogger<BackupScheduler>.Instance);
+        new(_manager, _settings, new SseService(), NullLogger<BackupScheduler>.Instance);
 
     private string Touch(string name)
     {

@@ -2317,7 +2317,8 @@
       "sync": "Synchronizace",
       "update": "Aktualizace",
       "about": "O aplikaci",
-      "mcp": "AI klienti (MCP)"
+      "mcp": "AI klienti (MCP)",
+      "notifications": "Notifikace"
     },
     "simple": {
       "apacheHttp": "Apache HTTP",
@@ -2568,16 +2569,6 @@
       "modeBuiltIn": "Aktuálně: built-in (Program.cs handlers)",
       "modePlugin": "Aktuálně: plugin v{v}",
       "pluginLoadedNotActive": "plugin v{v} načten, ale neaktivní (legacy handlers vlastní routy)"
-    },
-    "osNotify": {
-      "title": "Systémové notifikace",
-      "description": "Toasty operačního systému (Windows, macOS, Linux), které se zobrazí i když je WDC okno na pozadí. Každý kanál lze vypnout zvlášť. Nastavení je lokální pro tento desktop.",
-      "deployLabel": "Notifikace deploye",
-      "mcpLabel": "MCP žádosti o potvrzení",
-      "systemLabel": "Systémové události",
-      "testBtn": "Otestovat notifikaci",
-      "testTitle": "NKS WDC — test notifikace",
-      "testBody": "Pokud vidíte tuto notifikaci, je vše správně nakonfigurované."
     },
     "groups": {
       "app": "Aplikace",
@@ -3189,6 +3180,101 @@
       "auth": "Daemon běží, ale token se nepodařilo synchronizovat — {attempts}.",
       "server": "Daemon vrací chybu (5xx) — {attempts} za {s} s.",
       "unknown": "Backend se neozval za {s} s ({attempts})."
+    }
+  },
+  "osNotifications": {
+    "channels": {
+      "services": {
+        "label": "Pády služeb",
+        "description": "Některá služba, třeba Apache nebo MySQL, spadla."
+      },
+      "sites": {
+        "label": "Chyby při aplikaci webů",
+        "description": "Aplikace konfigurace webu skončila s chybnými kroky."
+      },
+      "deploy": {
+        "label": "Deploye",
+        "description": "Deploy doběhl, ať už úspěšně, nebo s chybou."
+      },
+      "mcp": {
+        "label": "Žádosti MCP o potvrzení",
+        "description": "AI asistent čeká, až schválíte nějakou operaci."
+      },
+      "backup": {
+        "label": "Zálohy",
+        "description": "Plánovaná nebo ruční záloha doběhla nebo selhala."
+      },
+      "updates": {
+        "label": "Aktualizace aplikace",
+        "description": "Je k dispozici nová verze WebDev Console (jednou pro každou verzi)."
+      },
+      "daemon": {
+        "label": "Stav daemonu",
+        "description": "Daemon na pozadí se zastavil nebo byl automaticky restartován."
+      },
+      "system": {
+        "label": "Ostatní systémové události",
+        "description": "Další dlouhé operace, například snapshoty a obnovy."
+      }
+    },
+    "settings": {
+      "title": "Notifikace",
+      "subtitle": "Nativní systémové notifikace (Windows, macOS, Linux)",
+      "description": "WebDev Console umí u důležitých událostí zobrazit nativní systémové notifikace. Kliknutím na notifikaci otevřete příslušnou stránku. Nastavení platí jen pro tento počítač.",
+      "masterLabel": "Zobrazovat systémové notifikace",
+      "masterHint": "Zapne nebo vypne všechny notifikace.",
+      "backgroundOnlyLabel": "Jen když je aplikace na pozadí",
+      "backgroundOnlyHint": "Když máte okno WebDev Console aktivní, notifikace se nezobrazují. Výjimkou jsou kritické události, jako jsou pády a selhání.",
+      "channelsTitle": "Upozorňovat na",
+      "throttleHint": "Opakované notifikace ke stejné události se zobrazí nejvýše jednou za minutu.",
+      "testBtn": "Poslat testovací notifikaci",
+      "testTitle": "Testovací notifikace WebDev Console",
+      "testBody": "Pokud tohle vidíte, systémové notifikace fungují. Kliknutím otevřete Nastavení.",
+      "testShown": "Testovací notifikace odeslána.",
+      "testUnsupported": "Tento systém notifikace nepodporuje, nebo jsou pro WebDev Console zablokované.",
+      "testFailed": "Testovací notifikaci se nepodařilo zobrazit.",
+      "testBrowser": "Systémové notifikace jsou dostupné jen v desktopové aplikaci.",
+      "platformHint": "Pokud se nic nezobrazí, zkontrolujte, že má WebDev Console v nastavení systému povolené notifikace a že je vypnutý režim Nerušit nebo Soustředění.",
+      "saveFailed": "Nastavení notifikací se nepodařilo uložit."
+    },
+    "events": {
+      "serviceCrashedTitle": "Služba {service} spadla",
+      "serviceCrashedBody": "Služba se neočekávaně zastavila. Kliknutím otevřete Služby.",
+      "siteApplyFailedTitle": "Web {domain} se nepodařilo aplikovat celý",
+      "siteApplyFailedBody": "Krok „{step}“ selhal: {detail}",
+      "siteApplyFailedBodyNoDetail": "Krok „{step}“ selhal.",
+      "siteApplyFailedMore": "Selhaly i další kroky ({count}).",
+      "deploySucceededTitle": "Deploy proběhl úspěšně",
+      "deploySucceededBody": "Deploy {id} úspěšně doběhl.",
+      "deploySucceededBodySite": "Deploy webu {domain} úspěšně doběhl.",
+      "deployFailedTitle": "Deploy selhal",
+      "deployFailedBody": "Deploy {id} selhal: {error}",
+      "deployFailedBodySite": "Deploy webu {domain} selhal: {error}",
+      "deployCancelledTitle": "Deploy zrušen",
+      "deployCancelledBody": "Deploy {id} byl zrušen.",
+      "rollbackSucceededTitle": "Rollback dokončen",
+      "rollbackSucceededBody": "Předchozí release je znovu nasazený.",
+      "rollbackFailedTitle": "Rollback selhal",
+      "rollbackFailedBody": "Rollback selhal: {error}",
+      "mcpConfirmTitle": "Je potřeba vaše schválení",
+      "mcpConfirmBodyKind": "AI asistent chce spustit „{kind}“. Otevřete WebDev Console a operaci schvalte nebo zamítněte.",
+      "mcpConfirmBody": "AI asistent chce spustit destruktivní operaci. Otevřete WebDev Console a operaci schvalte nebo zamítněte.",
+      "backupCompletedTitle": "Záloha dokončena",
+      "backupCompletedBody": "{trigger} záloha uložena (souborů: {files}, {size}).",
+      "backupFailedTitle": "Záloha selhala",
+      "backupFailedBody": "{trigger} záloha selhala: {error}",
+      "backupTriggerScheduled": "Plánovaná",
+      "backupTriggerManual": "Ruční",
+      "updateAvailableTitle": "Je dostupná aktualizace",
+      "updateAvailableBody": "Je k dispozici WebDev Console {version}.",
+      "daemonRestartedTitle": "Daemon byl restartován",
+      "daemonRestartedBody": "Daemon WebDev Console se neočekávaně zastavil a byl automaticky znovu spuštěn.",
+      "daemonGaveUpTitle": "Daemon se opakovaně zastavuje",
+      "daemonGaveUpBody": "Automatické restarty byly zastaveny. Zkontrolujte logy a pak použijte „Spustit daemon“ v nabídce v systémové liště.",
+      "daemonStartFailedTitle": "Daemon se nepodařilo spustit",
+      "daemonStartFailedBody": "{error}",
+      "daemonMigrationFailedTitle": "Upgrade databáze selhal",
+      "daemonMigrationFailedBody": "Daemon se zastavil, protože se nepodařilo upgradovat jeho databázi. Zkontrolujte log daemonu a pak použijte „Spustit daemon“ v nabídce v systémové liště."
     }
   }
 }
