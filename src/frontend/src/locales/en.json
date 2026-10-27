@@ -1226,7 +1226,7 @@
       "empty": "No databases match.",
       "noTables": "no tables",
       "dbCount": "databases",
-      "tableCount": "{count} tables",
+      "tableCount": "{count} table | {count} tables",
       "tableName": "Table",
       "rows": "Rows",
       "size": "Size",
@@ -1234,7 +1234,7 @@
       "comment": "Comment"
     },
     "browse": {
-      "totalRows": "{count} rows",
+      "totalRows": "{count} row | {count} rows",
       "filterPlaceholder": "WHERE expression: id > 100 AND name LIKE 'foo%'",
       "applyFilter": "Apply",
       "filterHint": "raw SQL boolean expression, applied as WHERE",
@@ -1263,7 +1263,7 @@
       "history": "History ({count})",
       "clearHistory": "Clear history",
       "runHint": "Type SQL above and press Ctrl+Enter to execute. Multiple statements separated by ; are supported.",
-      "affected": "{count} rows affected",
+      "affected": "{count} row affected | {count} rows affected",
       "tabAffected": "#{n}: affected ({count})",
       "tabRows": "#{n}: rows ({count})",
       "run": "Run query",
@@ -1283,7 +1283,10 @@
       "createNeedsRunning": "Start MySQL first",
       "notRunningHint": "Start it with the button below. If it does not start, the MySQL log shows why.",
       "startedButUnreachable": "the service reports it started, but the database does not answer yet; try Refresh in a moment"
-    }
+    },
+    "dbCountTag": "{n} database | {n} databases",
+    "nameHint": "Letters without accents, digits and underscore, 64 characters at most.",
+    "nameInvalid": "The name can only contain letters without accents, digits and underscore."
   },
   "binaries": {
     "title": "Binaries",

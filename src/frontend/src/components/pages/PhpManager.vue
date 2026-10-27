@@ -190,11 +190,31 @@ async function loadConfig(version: string) {
       return
     }
     selectedConfig.value = file.content
-    extensions.value = parseExtensions(file.content)
+    extensions.value = [...parseExtensions(file.content), ...await availableNotInIni(version, file.content)]
   } catch (e) {
     configError.value = t('php.configLoadFailed', { err: errorMessage(e) })
   } finally {
     configLoading.value = false
+  }
+}
+
+/**
+ * Extension files in the version's ext folder that php.ini does not mention
+ * yet, offered switched off so they can be enabled from here. Built-in
+ * modules (no file) are left out: there is nothing to toggle.
+ */
+async function availableNotInIni(version: string, iniContent: string): Promise<ExtInfo[]> {
+  const inIni = new Set(parseExtensions(iniContent).map(e => e.name.toLowerCase()))
+  const majorMinor = version.split('.').slice(0, 2).join('.')
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/php/${encodeURIComponent(majorMinor)}/extensions`, { headers: authHeaders() })
+    if (!r.ok) return []
+    const list = await r.json() as Array<{ name: string; soFile?: string | null }>
+    return list
+      .filter(e => e.soFile && /^[a-z0-9_]{1,64}$/i.test(e.name) && !inIni.has(e.name.toLowerCase()))
+      .map(e => ({ name: e.name, enabled: false, zend: e.name === 'xdebug' || e.name === 'opcache' }))
+  } catch {
+    return []
   }
 }
 
