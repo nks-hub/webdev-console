@@ -133,12 +133,14 @@ jobs:
           # Team DG3SLRLF7A) issued 2026-04-23, expires 2031-04-24. CSC_LINK
           # is a base64-encoded .p12 set via `gh secret set`; electron-builder
           # decodes + installs into a temp keychain on the mac runner.
-          # Windows/Linux legs see the secrets too but ignore them (no mac
-          # identity match). Notarization NOT enabled yet — needs
+          # Mac leg only: on Windows electron-builder falls back to CSC_LINK,
+          # signs the installer with this cert (which Windows does not trust)
+          # and writes its name into app-update.yml, after which the installed
+          # app rejects every update. Notarization NOT enabled yet — needs
           # APPLE_APP_SPECIFIC_PASSWORD from appleid.apple.com; today's
           # signing is enough to unlock Touch ID in osascript admin dialogs.
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ matrix.target == 'mac' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.target == 'mac' && secrets.CSC_KEY_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # Notarization via App Store Connect API key (no app-specific
           # password required). APPLE_API_KEY path is exported by the

@@ -64,6 +64,16 @@ function main() {
       'Missing unpacked Electron app executable')
     assert(includesFile(files, (file) => file.endsWith(join('win-unpacked', 'resources', 'daemon', 'NKS.WebDevConsole.Daemon.exe'))),
       'Missing bundled daemon executable inside win-unpacked/resources/daemon')
+    // A publisherName in app-update.yml makes the installed app accept only
+    // updates whose Authenticode signature Windows trusts. 0.5.0 and 0.5.1
+    // were signed with the macOS Developer ID cert, which Windows does not
+    // trust, so they rejected every update. Allow it only with a real
+    // Windows cert (WIN_CSC_LINK).
+    const appUpdateYml = files.find((file) => file.endsWith(join('win-unpacked', 'resources', 'app-update.yml')))
+    if (appUpdateYml && !process.env.WIN_CSC_LINK) {
+      assert(!/^publisherName:/m.test(readFileSync(appUpdateYml, 'utf-8')),
+        'app-update.yml has publisherName without a Windows signing cert; installed apps would reject every update')
+    }
   } else if (target === 'mac') {
     assert(includesFile(files, (file) => file.endsWith('.dmg')),
       'Missing macOS .dmg artifact')
