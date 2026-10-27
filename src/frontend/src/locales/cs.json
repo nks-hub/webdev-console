@@ -129,7 +129,7 @@
     "success": "Přihlášeno",
     "registered": "Účet vytvořen",
     "failed": "Přihlášení se nezdařilo",
-    "emailPlaceholder": "vas@email.cz",
+    "emailPlaceholder": "vas{'@'}email.cz",
     "passwordAgain": "Heslo znovu",
     "createAccount": "Vytvořit účet",
     "haveAccount": "Už mám účet",
@@ -1401,7 +1401,7 @@
       "userDeleted": "MySQL uživatel smazán",
       "deleteUserFailed": "Smazání uživatele selhalo: {err}",
       "dropUserConfirmTitle": "Smazat MySQL uživatele",
-      "dropUserConfirmMessage": "Smazat MySQL uživatele {user}@{host}? Databáze nebudou smazány.",
+      "dropUserConfirmMessage": "Smazat MySQL uživatele {user}{'@'}{host}? Databáze nebudou smazány.",
       "dropUserConfirmBtn": "Smazat"
     },
     "dropDatabasePrompt": "Pro trvalé smazání databáze napište {name}.",
@@ -1747,7 +1747,7 @@
       "empty": "Zatím nejsou nakonfigurovaní žádní hosti — klikněte na „Přidat hosta“ pro nastavení produkce / stagingu / atd.",
       "col": {
         "name": "Název",
-        "sshTarget": "SSH user@host",
+        "sshTarget": "SSH user{'@'}host",
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
         "localPaths": "Lokální cesty",

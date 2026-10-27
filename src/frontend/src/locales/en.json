@@ -129,7 +129,7 @@
     "success": "Signed in",
     "registered": "Account created",
     "failed": "Sign-in failed",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "you{'@'}example.com",
     "passwordAgain": "Repeat password",
     "createAccount": "Create account",
     "haveAccount": "I have an account",
@@ -1401,7 +1401,7 @@
       "userDeleted": "MySQL user deleted",
       "deleteUserFailed": "Delete user failed: {err}",
       "dropUserConfirmTitle": "Delete MySQL user",
-      "dropUserConfirmMessage": "Delete MySQL user {user}@{host}? Databases are not deleted.",
+      "dropUserConfirmMessage": "Delete MySQL user {user}{'@'}{host}? Databases are not deleted.",
       "dropUserConfirmBtn": "Delete"
     },
     "dropDatabasePrompt": "Type {name} to permanently drop this database.",
@@ -1747,7 +1747,7 @@
       "empty": "No hosts configured yet — click \"Add host\" to set up production / staging / etc.",
       "col": {
         "name": "Name",
-        "sshTarget": "SSH user@host",
+        "sshTarget": "SSH user{'@'}host",
         "remotePath": "Remote path",
         "branch": "Branch",
         "localPaths": "Local paths",
