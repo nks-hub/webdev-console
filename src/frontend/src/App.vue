@@ -115,6 +115,7 @@ import { useAuthStore } from './stores/auth'
 import { useDeployStore } from './stores/deploy'
 import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { useFeatureFlagsStore } from './stores/featureFlags'
+import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
 import { osNotify } from './services/osNotifications'
@@ -134,6 +135,7 @@ const authStore = useAuthStore()
 const deployStore = useDeployStore()
 const mcpConfirmStore = useMcpConfirmStore()
 const featureFlagsStore = useFeatureFlagsStore()
+const uiMode = useUiModeStore()
 useThemeStore()
 
 // Single SSE subscription that fans the daemon's "deploy:event" channel
@@ -148,6 +150,9 @@ function startDeploySse(): void {
     // The built-in local backend emits deploy:phase / deploy:complete instead
     // of deploy:event; deploy:complete is handled further down together with
     // the OS notification.
+    // mcp.enabled / deploy.enabled toggled in Settings (or by another window).
+    'mcp:settings-changed': () => { void featureFlagsStore.load() },
+    'deploy:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:phase': (data) =>
       deployStore.handlePhaseEvent(data as { deployId: string; phase: string; message?: string }),
     // Phase 7.5+++ — hook execution feedback. RunHooksAsync emits one
@@ -310,7 +315,11 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     const routes = ['/dashboard', '/sites', '/databases', '/ssl', '/php', '/binaries', '/settings']
     const idx = parseInt(e.key) - 1
-    if (idx < routes.length) router.push(routes[idx])
+    // Skip Advanced-only pages in Simple mode instead of letting the router
+    // guard bounce the shortcut to /sites.
+    if (idx < routes.length && !(router.resolve(routes[idx]).meta.requiresAdvanced && uiMode.isSimple)) {
+      router.push(routes[idx])
+    }
   }
 }
 
@@ -350,6 +359,7 @@ onMounted(() => {
   // /sites while the daemon was still compiling, the list auto-populates
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
+    void featureFlagsStore.load()
     void pluginsStore.loadAll()
     void sitesStore.load()
     // Retry token mirror on every daemon (re)connect — covers the case

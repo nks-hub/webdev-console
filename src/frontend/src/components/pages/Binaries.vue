@@ -267,7 +267,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -538,6 +538,15 @@ async function install(app: string, version: string) {
 }
 
 async function uninstall(app: string, version: string) {
+  try {
+    await ElMessageBox.confirm(
+      t('binaries.removeConfirmMessage', { app, version }),
+      t('binaries.removeConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('binaries.remove'), cancelButtonText: t('common.cancel') },
+    )
+  } catch {
+    return
+  }
   const key = `${app}-${version}`
   uninstalling.value.add(key)
   try {

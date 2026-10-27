@@ -40,10 +40,12 @@ export const useFeatureFlagsStore = defineStore('featureFlags', () => {
       // deploy.enabled defaults TRUE — only flip false on explicit "false"/"0"
       const rawDeploy = s['deploy.enabled']
       deployEnabled.value = !(rawDeploy === false || rawDeploy === 'false' || rawDeploy === '0')
-    } catch {
-      // Daemon flaky — keep defaults (mcp OFF, deploy ON), retry on next manual reload
-    } finally {
       loaded.value = true
+    } catch {
+      // Daemon not reachable yet: keep defaults (mcp OFF, deploy ON) and
+      // leave `loaded` false. App.vue calls load() again on every daemon
+      // (re)connect and when the daemon broadcasts a settings change, so
+      // the MCP banner no longer stays unmounted for the whole session.
     }
   }
 

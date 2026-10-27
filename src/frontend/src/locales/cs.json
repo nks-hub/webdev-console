@@ -177,7 +177,8 @@
       "backupNow": "Zálohovat nyní",
       "openFolder": "Otevřít složku záloh",
       "refresh": "Obnovit",
-      "createdToast": "Záloha vytvořena: {files} souborů, {size}"
+      "createdToast": "Záloha vytvořena: {files} souborů, {size}",
+      "noBackupsYet": "Zatím tu není žádná záloha. Nejdřív nějakou vytvořte."
     },
     "snapshots": {
       "count": "{n} záloh",
@@ -192,7 +193,8 @@
       "deleteConfirmMessage": "Smazat zálohu {name}?",
       "backupFailed": "Záloha selhala",
       "restoreFailed": "Obnovení selhalo",
-      "deleteFailed": "Smazání selhalo"
+      "deleteFailed": "Smazání selhalo",
+      "downloadFailed": "Stažení selhalo: {error}"
     },
     "toast": {
       "completed": "Záloha dokončena",
@@ -984,7 +986,9 @@
       "installed": "Nainstalováno ({version})",
       "installedShort": "Nainstalováno",
       "installing": "Instalace…"
-    }
+    },
+    "removeConfirmTitle": "Odebrat verzi",
+    "removeConfirmMessage": "Odebrat {app} {version}? Weby připnuté na tuto verzi přestanou fungovat, dokud nevyberete jinou verzi."
   },
   "php": {
     "title": "Verze PHP",
@@ -1026,7 +1030,9 @@
       "aliasesPlaceholder": "www.myapp.loc, api.myapp.loc",
       "cancel": "Zrušit",
       "generateBtn": "Vygenerovat"
-    }
+    },
+    "revokeConfirmTitle": "Odvolat certifikát",
+    "revokeConfirmMessage": "Odvolat certifikát pro „{domain}\"? Weby, které ho používají, poběží přes HTTP, dokud nebude vygenerován nový certifikát."
   },
   "plugins": {
     "title": "Pluginy",
@@ -1549,6 +1555,7 @@
     "saveSuccess": "Nastavení uloženo",
     "saveLocalOnly": "Nastavení uloženo lokálně (backend persistence v Phase 6.3)",
     "saveFailed": "Uložení selhalo",
+    "saveBlockedLoadFailed": "Nastavení deploye se nepodařilo načíst z daemonu, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až daemon poběží, otevřete stránku znovu.",
     "discard": "Zahodit",
     "discardConfirmTitle": "Zahodit změny?",
     "discardConfirmMessage": "Všechny neuložené změny v tomto formuláři budou zahozeny. Pokračovat?",
@@ -2782,7 +2789,8 @@
           "tip": "Tip: integruj s Claude Code přes MCP server — viz Nápověda → MCP dev API."
         }
       }
-    }
+    },
+    "runSetupWizard": "Spustit průvodce nastavením"
   },
   "onboarding": {
     "title": "Vítej v NKS WebDev Console",

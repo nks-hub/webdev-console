@@ -425,8 +425,13 @@ function onTreeSelect({ db, table }: { db: string; table?: string }) {
 }
 
 // ── Browse data
+// Monotonic id so a slow response for a previously selected table (or an
+// older page/sort) cannot overwrite the grid of the current selection.
+let browseRequestSeq = 0
+
 async function loadTableData() {
   if (!selectedDb.value || !selectedTable.value) return
+  const seq = ++browseRequestSeq
   browseLoading.value = true
   browseError.value = ''
   try {
@@ -442,6 +447,7 @@ async function loadTableData() {
       { headers: authHeaders() })
     if (!r.ok) throw await httpError(r)
     const data = await r.json() as BrowseResult & { error?: string }
+    if (seq !== browseRequestSeq) return
     if (data.error) {
       browseError.value = data.error
       return
@@ -455,9 +461,9 @@ async function loadTableData() {
     browseOrderBy.value = data.appliedOrderBy ?? null
     browseOrderDir.value = (data.appliedOrderDir as 'asc' | 'desc' | null) ?? null
   } catch (e) {
-    browseError.value = errorMessage(e)
+    if (seq === browseRequestSeq) browseError.value = errorMessage(e)
   } finally {
-    browseLoading.value = false
+    if (seq === browseRequestSeq) browseLoading.value = false
   }
 }
 

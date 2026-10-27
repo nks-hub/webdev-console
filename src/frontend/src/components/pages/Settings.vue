@@ -1158,6 +1158,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
@@ -1228,8 +1229,9 @@ queueMicrotask(() => {
 const { locale, t, te } = useI18n()
 
 function onLocaleChange(v: string) {
-  locale.value = v
-  localStorage.setItem('wdc-locale', v)
+  // setLocale persists the choice and updates <html lang> so screen
+  // readers and hyphenation follow the UI language.
+  setLocale(v as Locale)
 }
 
 const activeTab = ref('general')
@@ -1534,7 +1536,7 @@ const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
 
 function downloadBackupFile(path: string) {
-  downloadBackup(path)
+  downloadBackup(path).catch((e) => ElMessage.error(t('backupsPage.snapshots.downloadFailed', { error: errorMessage(e) })))
 }
 
 // ── Danger-zone reset operations ──────────────────────────────────────

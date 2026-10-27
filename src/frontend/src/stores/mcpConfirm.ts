@@ -106,15 +106,15 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
     try {
       await confirmIntent(intentId)
     } catch (err) {
-      // 409 (already_confirmed) is benign — daemon stamped from another
-      // window or the user double-clicked. 404 means the intent expired
-      // before approval; the AI side will surface its own error. Either
-      // way the banner should disappear so we drop it locally.
-      // eslint-disable-next-line no-console
-      console.warn('[mcpConfirm] approve failed', intentId, err)
-    } finally {
-      remove(intentId)
+      // 409 (already confirmed elsewhere) and 404/410 (expired) settle the
+      // request either way, so the banner goes. Anything else (daemon down,
+      // 401, 500) means the approval did NOT happen: keep the banner and let
+      // the caller tell the user, instead of looking approved while the AI
+      // request quietly expires.
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!/HTTP (409|404|410)\b/.test(msg)) throw err
     }
+    remove(intentId)
   }
 
   /** User dismissed the banner without approving — token expires naturally. */

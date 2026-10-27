@@ -31,7 +31,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
-import { daemonBaseUrl, daemonToken } from '../../api/daemon'
+import { daemonBaseUrl, daemonToken, subscribeEventsMap } from '../../api/daemon'
 
 const { t } = useI18n()
 
@@ -133,22 +133,15 @@ onMounted(async () => {
 
   // Subscribe to SSE log events and append matching lines
   if (props.serviceId) {
-    const token = daemonToken()
-    const url = token
-      ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
-      : `${daemonBaseUrl()}/api/events`
-    const es = new EventSource(url)
-
-    es.addEventListener('log', (e: MessageEvent) => {
-      try {
-        const data = JSON.parse(e.data) as { serviceId?: string; line?: string }
-        if (data.serviceId === props.serviceId && data.line) {
-          terminal?.writeln(data.line)
-        }
-      } catch { /* ignore parse errors */ }
+    // Shared /api/events connection (see subscribeEventsMap). The daemon's
+    // log events carry the text as `message`; older builds used `line`.
+    closeEventSource = subscribeEventsMap({
+      log: (raw) => {
+        const data = raw as { serviceId?: string; line?: string; message?: string }
+        const text = data.line ?? data.message
+        if (data.serviceId === props.serviceId && text) terminal?.writeln(text)
+      },
     })
-
-    closeEventSource = () => es.close()
   }
 
   const resizeObserver = new ResizeObserver(() => fitAddon?.fit())

@@ -283,8 +283,12 @@ export async function fetchDeploySettings(domain: string): Promise<DeploySetting
     return await request<DeploySettings>(
       `${PREFIX}/sites/${encodeURIComponent(domain)}/settings`,
     )
-  } catch {
-    return defaultDeploySettings()
+  } catch (e) {
+    // Only "no settings saved yet" means defaults. Any other failure (daemon
+    // down, 500) must surface: the panel's Save writes the whole object, so
+    // treating a failed load as defaults wiped the saved hosts.
+    if (e instanceof Error && /HTTP 404\b/.test(e.message)) return defaultDeploySettings()
+    throw e
   }
 }
 

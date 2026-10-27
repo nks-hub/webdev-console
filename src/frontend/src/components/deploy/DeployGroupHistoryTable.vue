@@ -446,7 +446,17 @@ onMounted(() => {
   // event AND every group-level state transition triggers a debounced
   // refresh — the list reads come from SQLite and are cheap, so simple
   // re-fetch beats incremental patch logic for now.
+  // The SDK contract names the channel deploy:group-event (plugin backends);
+  // the built-in coordinator broadcasts deploy:group-started and
+  // deploy:group-complete with { groupId, domain }. Listen to all three.
+  const onGroupEvent = (data: unknown) => {
+    const evt = data as { domain?: string; groupId?: string }
+    if (evt.domain && evt.domain !== props.domain) return
+    scheduleRefresh()
+  }
   unsubscribeSse = subscribeEventsMap({
+    'deploy:group-started': onGroupEvent,
+    'deploy:group-complete': onGroupEvent,
     'deploy:group-event': (data) => {
       // Filter to this site only — the SSE channel is global. Without the
       // domain check, opening Site A would refresh whenever Site B's

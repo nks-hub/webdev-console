@@ -177,7 +177,8 @@
       "backupNow": "Back up now",
       "openFolder": "Open backup folder",
       "refresh": "Refresh",
-      "createdToast": "Backup created: {files} files, {size}"
+      "createdToast": "Backup created: {files} files, {size}",
+      "noBackupsYet": "No backup yet. Create one first."
     },
     "snapshots": {
       "count": "{n} backups",
@@ -192,7 +193,8 @@
       "deleteConfirmMessage": "Delete backup {name}?",
       "backupFailed": "Backup failed",
       "restoreFailed": "Restore failed",
-      "deleteFailed": "Delete failed"
+      "deleteFailed": "Delete failed",
+      "downloadFailed": "Download failed: {error}"
     },
     "toast": {
       "completed": "Backup completed",
@@ -984,7 +986,9 @@
       "installed": "Installed ({version})",
       "installedShort": "Installed",
       "installing": "Installing…"
-    }
+    },
+    "removeConfirmTitle": "Remove version",
+    "removeConfirmMessage": "Remove {app} {version}? Sites pinned to this version will stop working until another version is selected."
   },
   "php": {
     "title": "PHP Versions",
@@ -1026,7 +1030,9 @@
       "aliasesPlaceholder": "www.myapp.loc, api.myapp.loc",
       "cancel": "Cancel",
       "generateBtn": "Generate"
-    }
+    },
+    "revokeConfirmTitle": "Revoke certificate",
+    "revokeConfirmMessage": "Revoke the certificate for \"{domain}\"? Sites using it will fall back to HTTP until a new certificate is generated."
   },
   "plugins": {
     "title": "Plugins",
@@ -1549,6 +1555,7 @@
     "saveSuccess": "Settings saved",
     "saveLocalOnly": "Settings saved locally (backend persistence in Phase 6.3)",
     "saveFailed": "Save failed",
+    "saveBlockedLoadFailed": "Deploy settings could not be loaded from the daemon, so saving is blocked to avoid overwriting them with defaults. Reopen the page once the daemon is running.",
     "discard": "Discard",
     "discardConfirmTitle": "Discard changes?",
     "discardConfirmMessage": "All unsaved changes in this form will be discarded. Continue?",
@@ -2782,7 +2789,8 @@
           "tip": "Tip: integrate with Claude Code via the MCP server — see Help → MCP dev API."
         }
       }
-    }
+    },
+    "runSetupWizard": "Run setup wizard"
   },
   "onboarding": {
     "title": "Welcome to NKS WebDev Console",

@@ -1307,6 +1307,8 @@ async function saveSettings(): Promise<void> {
     if (msg === 'PENDING_BACKEND') {
       lastSavedSnapshot.value = JSON.stringify(settings)
       ElMessage.info(t('deploySettings.saveLocalOnly'))
+    } else if (msg === 'LOAD_FAILED') {
+      ElMessage.error(t('deploySettings.saveBlockedLoadFailed'))
     } else {
       ElMessage.error(msg || t('deploySettings.saveFailed'))
     }

@@ -185,8 +185,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { errorMessage } from '../../utils/errors'
 import { Loading } from '@element-plus/icons-vue'
-import { daemonBaseUrl, daemonAuthHeaders } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders, downloadBackup as downloadBackupFile } from '../../api/daemon'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
 
 const { t } = useI18n()
@@ -337,24 +338,22 @@ async function runBackupNow() {
 }
 
 function openBackupFolder() {
-  // electronAPI doesn't expose openPath (local file), only openExternal
-  // (URLs). Use file:// URL which Electron's openExternal happily opens
-  // via the OS default handler (Explorer on Win, Finder on macOS).
-  const root = (window as unknown as { __WDC_ROOT__?: string }).__WDC_ROOT__
-  const path = `${root ?? ''}/.wdc/backups`
-  const url = `file://${path.replace(/\\/g, '/')}`
-  window.electronAPI?.openExternal?.(url)
+  // openExternal refuses file:// on purpose (ShellExecute would run
+  // executables), so reveal the newest archive in the OS file manager.
+  const newest = backups.value[0]?.path
+  if (!newest) {
+    ElMessage.info(t('backupsPage.overview.noBackupsYet'))
+    return
+  }
+  void window.electronAPI?.revealInFolder?.(newest)
 }
 
-function downloadBackup(path: string) {
-  const name = fileName(path)
-  const url = `${daemonBaseUrl()}/api/backup/download?path=${encodeURIComponent(path)}`
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+async function downloadBackup(path: string) {
+  try {
+    await downloadBackupFile(path)
+  } catch (e) {
+    ElMessage.error(t('backupsPage.snapshots.downloadFailed', { error: errorMessage(e) }))
+  }
 }
 
 async function restoreBackup(b: BackupEntry) {

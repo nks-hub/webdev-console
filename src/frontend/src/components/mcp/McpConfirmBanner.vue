@@ -176,6 +176,8 @@ async function approve(intentId: string): Promise<void> {
   busy.value = next
   try {
     await store.approve(intentId)
+  } catch (err) {
+    ElMessage.error(t('mcp.toast.approveFailed', { error: err instanceof Error ? err.message : String(err) }))
   } finally {
     const cleared = new Set(busy.value)
     cleared.delete(intentId)
@@ -231,6 +233,8 @@ async function approveAndTrust(item: PendingConfirm, expiresMin: number | null):
       }))
     }
     await store.approve(item.intentId)
+  } catch (err) {
+    ElMessage.error(t('mcp.toast.approveFailed', { error: err instanceof Error ? err.message : String(err) }))
   } finally {
     const cleared = new Set(busy.value)
     cleared.delete(item.intentId)

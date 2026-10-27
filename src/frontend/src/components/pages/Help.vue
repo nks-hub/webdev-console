@@ -3,9 +3,14 @@
     <!-- Page header -->
     <div class="page-header help-page-header">
       <h1 class="page-title">{{ t('help.title') }}</h1>
-      <el-button type="primary" size="small" @click="openWizard">
-        &#9654; {{ t('help.startGettingStarted') }}
-      </el-button>
+      <div class="help-header-actions">
+        <el-button size="small" @click="requestOnboarding">
+          {{ t('help.runSetupWizard') }}
+        </el-button>
+        <el-button type="primary" size="small" @click="openWizard">
+          &#9654; {{ t('help.startGettingStarted') }}
+        </el-button>
+      </div>
     </div>
 
     <!-- Breadcrumb -->
@@ -139,6 +144,7 @@ import {
   Menu, Star,
 } from '@element-plus/icons-vue'
 import GettingStartedWizard from '../shared/GettingStartedWizard.vue'
+import { requestOnboarding } from '../../utils/onboarding'
 
 const { t } = useI18n()
 
@@ -282,6 +288,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.help-header-actions {
+  display: flex;
+  gap: 8px;
+}
 .help-page {
   display: flex;
   flex-direction: column;

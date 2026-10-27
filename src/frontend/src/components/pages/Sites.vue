@@ -458,6 +458,7 @@
 </template>
 
 <script setup lang="ts">
+import { openHostsFile } from '../../utils/hostsFile'
 import { ref, reactive, computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -949,11 +950,6 @@ async function reapplyAll() {
   }
 }
 
-function openHostsFile() {
-  // Open hosts file in system editor
-  const hostsPath = 'C:\\Windows\\System32\\drivers\\etc\\hosts'
-  window.open(`vscode://file/${hostsPath}`, '_self')
-}
 
 function openInBrowser(site: SiteInfo) {
   const proto = site.sslEnabled ? 'https' : 'http'

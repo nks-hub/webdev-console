@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -152,8 +152,11 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { compareSemver } from '../../utils/semver'
 import { useSitesStore } from '../../stores/sites'
+import { useDaemonStore } from '../../stores/daemon'
+import { OPEN_ONBOARDING_EVENT } from '../../utils/onboarding'
 
 const sitesStore = useSitesStore()
+const daemonStore = useDaemonStore()
 
 const { t } = useI18n()
 const router = useRouter()
@@ -370,37 +373,58 @@ function goNext() {
 // to click finish/skip for "don't show again" to stick. Idempotent writes.
 watch(dontShowAgain, (val) => writeLocalFlag(LS_DONTSHOW, val))
 
-onMounted(async () => {
-  // Client-side early-out: if either local flag is set, never open.
+// The wizard mounts before the daemon is necessarily reachable (Electron
+// splash, slow first start). A failed state fetch used to leave it closed
+// for the whole session, so the auto-open check now runs on every connect
+// until it gets a definitive answer from the daemon.
+let stopConnectWatch: (() => void) | null = null
+
+async function autoOpenCheck() {
+  await refreshState()
+  if (!state.value) return
+  stopConnectWatch?.()
+  stopConnectWatch = null
+  // Only auto-open if the daemon reports the wizard hasn't been completed yet.
+  if (!state.value.completed) {
+    visible.value = true
+    void loadPhpVersions()
+  } else {
+    // Back-fill the LS flag so future launches skip the fetch entirely.
+    writeLocalFlag(LS_COMPLETED, true)
+  }
+}
+
+async function open() {
+  // Explicit reopen (Help page) — clear local opt-out so the user
+  // actually sees the wizard (otherwise the LS gate would block us).
+  writeLocalFlag(LS_COMPLETED, false)
+  writeLocalFlag(LS_DONTSHOW, false)
+  dontShowAgain.value = false
+  await refreshState()
+  visible.value = true
+  activeStep.value = 0
+  void loadPhpVersions()
+}
+
+function onOpenRequest() { void open() }
+
+onMounted(() => {
+  window.addEventListener(OPEN_ONBOARDING_EVENT, onOpenRequest)
+  // Client-side early-out: if either local flag is set, never auto-open.
   // Protects against the server flag being wiped (dev reset, portable dir
   // move, permission issue on write) — we always have the LS fallback.
   if (readLocalFlag(LS_COMPLETED) || readLocalFlag(LS_DONTSHOW)) {
     return
   }
-  await refreshState()
-  // Only auto-open if the daemon reports the wizard hasn't been completed yet.
-  if (state.value && !state.value.completed) {
-    visible.value = true
-    void loadPhpVersions()
-  } else if (state.value?.completed) {
-    // Back-fill the LS flag so future launches skip the fetch entirely.
-    writeLocalFlag(LS_COMPLETED, true)
-  }
+  stopConnectWatch = daemonStore.onConnect(autoOpenCheck)
 })
 
-defineExpose({
-  open: async () => {
-    // Explicit reopen from Settings — clear local opt-out so the user
-    // actually sees the wizard (otherwise the LS gate would block us).
-    writeLocalFlag(LS_COMPLETED, false)
-    writeLocalFlag(LS_DONTSHOW, false)
-    dontShowAgain.value = false
-    await refreshState()
-    visible.value = true
-    activeStep.value = 0
-    void loadPhpVersions()
-  },
+onBeforeUnmount(() => {
+  window.removeEventListener(OPEN_ONBOARDING_EVENT, onOpenRequest)
+  stopConnectWatch?.()
 })
+
+defineExpose({ open })
 </script>
 
 <style scoped>
