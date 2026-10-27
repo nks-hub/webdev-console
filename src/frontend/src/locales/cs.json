@@ -4,7 +4,7 @@
     "empty": "Žádné odpovídající příkazy",
     "goTo": "Přejít na {target}",
     "gotoSites": "Přejít na Weby",
-    "gotoDashboard": "Přejít na Služby",
+    "gotoDashboard": "Přejít na Přehled",
     "gotoDatabases": "Přejít na Databáze",
     "gotoSsl": "Přejít na Správu SSL",
     "gotoPhp": "Přejít na Správu PHP",
@@ -97,7 +97,9 @@
     "darkMode": "Tmavý režim",
     "lightMode": "Světlý režim",
     "newVersionAvailable": "Nová verze v{version} je dostupná",
-    "connecting": "Připojování…"
+    "connecting": "Připojování…",
+    "openNavigation": "Otevřít navigaci",
+    "searchPlaceholder": "Hledat weby, služby a akce"
   },
   "autostart": {
     "label": "Auto-start při spuštění WDC"
@@ -151,7 +153,17 @@
     "serviceStopped": "{name} zastaveno",
     "signedInAsTitle": "Přihlášen jako {name} — kliknutím se odhlásíte",
     "signInTitle": "Přihlásit se přes SSO",
-    "system": "Systém"
+    "system": "Systém",
+    "mainNavigation": "Hlavní navigace",
+    "brandHome": "WebDev Console, přehled",
+    "application": "Aplikace",
+    "servicesCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
+    "groups": {
+      "workspace": "Pracovní prostor",
+      "stack": "Stack",
+      "network": "Síť",
+      "operations": "Provoz"
+    }
   },
   "versions": {
     "active": "Aktivní",
