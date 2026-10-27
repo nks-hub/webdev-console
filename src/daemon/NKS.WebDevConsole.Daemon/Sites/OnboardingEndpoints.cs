@@ -28,6 +28,25 @@ namespace NKS.WebDevConsole.Daemon.Sites;
 /// </summary>
 internal static class OnboardingEndpoints
 {
+    /// <summary>mkcert's root CA is trusted once rootCA.pem exists in its CAROOT.</summary>
+    private static bool MkcertCaInstalled() =>
+        File.Exists(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "mkcert", "rootCA.pem"));
+
+    /// <summary>
+    /// major.minor of the PHP version a new site starts on: the saved choice when it is installed,
+    /// else the newest installed one, else empty. An empty version means "no PHP" to the vhost
+    /// generator, so a site that should run PHP must never be created with it.
+    /// </summary>
+    internal static string PickDefaultPhp(IEnumerable<string> installedVersions, string? preferred)
+    {
+        static string MajorMinor(string v) => string.Join('.', v.Split('.').Take(2));
+        var minors = installedVersions.Select(MajorMinor).Where(v => Version.TryParse(v, out _)).Distinct().ToList();
+        var wanted = MajorMinor(preferred ?? "");
+        if (minors.Contains(wanted)) return wanted;
+        return minors.OrderByDescending(Version.Parse).FirstOrDefault() ?? "";
+    }
+
     public static void MapOnboardingEndpoints(this WebApplication app)
     {
         // Onboarding state — Phase 7 plan item.
@@ -45,11 +64,7 @@ internal static class OnboardingEndpoints
             var hasMysql = installed.Any(b => b.App.Equals("mysql", StringComparison.OrdinalIgnoreCase));
             var hasMkcert = installed.Any(b => b.App.Equals("mkcert", StringComparison.OrdinalIgnoreCase));
 
-            // mkcert CA installed state — check presence of rootCA.pem in the mkcert CAROOT
-            var mkcertRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "mkcert");
-            var mkcertCaInstalled = File.Exists(Path.Combine(mkcertRoot, "rootCA.pem"));
+            var mkcertCaInstalled = MkcertCaInstalled();
 
             // ListInstalled is newest-first per app, so FirstOrDefault is the latest version.
             string? VersionOf(string app) =>
@@ -76,7 +91,7 @@ internal static class OnboardingEndpoints
             });
         });
 
-        app.MapPost("/api/onboarding/complete", async (SiteManager siteManager, SiteOrchestrator siteOrch) =>
+        app.MapPost("/api/onboarding/complete", async (SiteManager siteManager, SiteOrchestrator siteOrch, BinaryManager bm, SettingsStore settings) =>
         {
             var flagFile = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.DataRoot, "onboarding-complete.flag");
             Directory.CreateDirectory(Path.GetDirectoryName(flagFile)!);
@@ -121,19 +136,20 @@ internal static class OnboardingEndpoints
                     // vhost file but leave SiteManager unaware of the site, so on next
                     // daemon restart the site would vanish. This is the same order the
                     // /api/sites POST handler uses.
-                    // PhpVersion empty lets ApacheModule pick the daemon's active
-                    // version at orchestration time instead of pinning to a
-                    // possibly-not-installed "8.5". SslEnabled: true so the seed
-                    // site exposes https://localhost/ out of the gate — mkcert
-                    // issues the cert during ApplyAsync, the vhost config gets
-                    // both :80 and :443 blocks, and the user can click the first
-                    // link they see and have a working HTTPS loopback.
+                    // The page is PHP, and the vhost generator only wires PHP for a
+                    // non-empty version, so the seed gets the saved or newest installed one.
+                    // HTTPS only when the mkcert CA is trusted: without it the certificate
+                    // step fails and the very first site would open with an apply error.
+                    var installed = bm.ListInstalled();
                     var created = await siteManager.CreateAsync(new NKS.WebDevConsole.Core.Models.SiteConfig
                     {
                         Domain = "localhost",
                         DocumentRoot = docRoot,
-                        PhpVersion = "",
-                        SslEnabled = true,
+                        PhpVersion = PickDefaultPhp(
+                            installed.Where(b => b.App.Equals("php", StringComparison.OrdinalIgnoreCase)).Select(b => b.MajorMinor),
+                            settings.GetString("php", "activeVersion")),
+                        SslEnabled = MkcertCaInstalled()
+                            && installed.Any(b => b.App.Equals("mkcert", StringComparison.OrdinalIgnoreCase)),
                         Enabled = true,
                         Aliases = new[] { "127.0.0.1" },
                     });
