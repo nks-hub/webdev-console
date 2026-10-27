@@ -2594,7 +2594,9 @@
     "lookedIn": "WDC hledalo soubory tady: {paths}",
     "loadFailed": "Konfiguraci se nepodařilo načíst: {err}",
     "unsavedHint": "Máte neuložené změny. Uložte je tlačítkem Uložit a použít nebo zkratkou Ctrl+S.",
-    "noConfigHint": "Konfigurační soubor obvykle vznikne při prvním spuštění služby. Spusťte ji a potom stránku obnovte."
+    "noConfigHint": "Konfigurační soubor obvykle vznikne při prvním spuštění služby. Spusťte ji a potom stránku obnovte.",
+    "generatedTitle": "Tento soubor WDC vytváří samo",
+    "generatedHint": "Při další změně webu, portu nebo verze PHP ho WDC přepíše a vaše úpravy zmizí. Trvalé nastavení změňte v aplikaci (Weby, Nastavení)."
   },
   "settingsToast": {
     "ssoFailed": "Přihlášení přes SSO selhalo: {err}",

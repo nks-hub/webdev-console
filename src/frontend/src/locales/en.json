@@ -2594,7 +2594,9 @@
     "lookedIn": "WDC looked for files here: {paths}",
     "loadFailed": "Could not load the configuration: {err}",
     "unsavedHint": "You have unsaved changes. Save them with Save & Apply or Ctrl+S.",
-    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page."
+    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page.",
+    "generatedTitle": "WDC writes this file itself",
+    "generatedHint": "WDC rewrites it on the next change to a site, a port or a PHP version, and your edits are lost. Make lasting changes in the app (Sites, Settings)."
   },
   "settingsToast": {
     "ssoFailed": "SSO sign-in failed: {err}",
