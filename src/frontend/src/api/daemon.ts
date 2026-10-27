@@ -101,6 +101,23 @@ export function daemonToken(): string {
   return ''
 }
 
+/**
+ * Non-2xx daemon answer. `code` is the machine-readable `code` field some
+ * endpoints add to the JSON body so the UI can word the error itself.
+ */
+export class DaemonError extends Error {
+  readonly code?: string
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly detail: string,
+    readonly body?: Record<string, unknown>,
+  ) {
+    super(message)
+    this.code = typeof body?.code === 'string' ? body.code : undefined
+  }
+}
+
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${daemonBaseUrl()}${path}`, {
     ...init,
@@ -113,6 +130,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
     // back to the generic HTTP status. Without this, any 400/500 from the
     // daemon renders as "HTTP 400 Bad Request" in the UI with zero context.
     let detail = ''
+    let parsed: Record<string, unknown> | undefined
     try {
       const txt = await r.text()
       if (txt) {
@@ -122,6 +140,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
             detail = body
           } else if (body && typeof body === 'object') {
             const rec = body as Record<string, unknown>
+            parsed = rec
             for (const key of ['error', 'message', 'detail', 'title']) {
               const v = rec[key]
               if (typeof v === 'string' && v) { detail = v; break }
@@ -135,7 +154,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
       }
     } catch { /* couldn't read body — fall through */ }
     const prefix = `HTTP ${r.status} ${r.statusText}`
-    throw new Error(detail ? `${prefix}: ${detail}` : prefix)
+    throw new DaemonError(detail ? `${prefix}: ${detail}` : prefix, r.status, detail, parsed)
   }
   // DELETE endpoints (sites, binaries, …) answer 204 No Content. Calling
   // r.json() on an empty body throws, which made successful deletes surface
@@ -1212,11 +1231,25 @@ export const fetchInstalledBinaries = async (): Promise<InstalledBinary[]> => {
   }))
 }
 
-export const installBinary = (app: string, version: string) =>
+/**
+ * Download + extract one binary. Progress arrives separately as
+ * `binary:progress` SSE events ({ app, version, downloaded, total });
+ * aborting `signal` cancels the download on the daemon side too.
+ */
+export const installBinary = (app: string, version: string, signal?: AbortSignal) =>
   json<{ ok: boolean; path?: string; message?: string }>('/api/binaries/install', {
     method: 'POST',
     body: JSON.stringify({ app, version }),
+    signal,
   })
+
+export interface BinaryProgressEvent {
+  app: string
+  version: string
+  downloaded: number
+  /** -1 when the server sent no Content-Length. */
+  total: number
+}
 
 export interface LatestBinary {
   app: string
