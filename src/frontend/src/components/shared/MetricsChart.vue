@@ -17,14 +17,18 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
+import { useChartPalette, rgba } from '../../utils/themeColors'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
 const props = defineProps<{
   data: number[]
-  color?: string
+  /** Series colour: a design token tone. */
+  tone?: 'accent' | 'success'
   height?: number
 }>()
+
+const palette = useChartPalette()
 
 const chartHeight = computed(() => props.height ?? 80)
 const chartContainer = ref<HTMLElement | null>(null)
@@ -47,7 +51,8 @@ onBeforeUnmount(() => {
 })
 
 const chartOption = computed(() => {
-  const color = props.color ?? '#6366f1'
+  const p = palette.value
+  const line = props.tone === 'success' ? p.success : p.accent
   // Guard: caller may pass undefined before the first metrics payload
   // lands (async load). Previously `.length` on undefined threw and
   // poisoned the computed, which Vue surfaced as a page-wide render
@@ -59,9 +64,9 @@ const chartOption = computed(() => {
     animation: false,
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#1c1e2a',
-      borderColor: 'rgba(255,255,255,0.12)',
-      textStyle: { color: '#eceef6', fontSize: 11 },
+      backgroundColor: rgba(p.elevated),
+      borderColor: rgba(p.borderStrong),
+      textStyle: { color: rgba(p.text), fontSize: 11 },
       formatter: (params: unknown) => {
         const val = (params as Array<{ value?: unknown }>)?.[0]?.value
         return val != null ? `${Number(val).toFixed(1)}` : ''
@@ -80,11 +85,11 @@ const chartOption = computed(() => {
       splitNumber: 2,
       axisLabel: {
         fontSize: 9,
-        color: '#8b8fa8',
+        color: rgba(p.text3),
         formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
       },
       splitLine: {
-        lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' },
+        lineStyle: { color: rgba(p.border), type: 'dashed' },
       },
       axisLine: { show: false },
       axisTick: { show: false },
@@ -94,14 +99,14 @@ const chartOption = computed(() => {
       data: dataArr,
       smooth: 0.3,
       symbol: 'none',
-      lineStyle: { color, width: 1.5 },
+      lineStyle: { color: rgba(line), width: 1.5 },
       areaStyle: {
         color: {
           type: 'linear',
           x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: color + '25' },
-            { offset: 1, color: color + '03' },
+            { offset: 0, color: rgba(line, 0.16) },
+            { offset: 1, color: rgba(line, 0.01) },
           ],
         },
       },
