@@ -438,13 +438,13 @@ internal static class CloudflareEndpoints
             CancellationToken ct) =>
         {
             var dnsIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dnsIntentToken))
+            if (!string.IsNullOrEmpty(dnsIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var dnsAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dnsVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dnsIntentToken, "dns_record_delete", domain: zoneId, host: "*dns*", dnsAllowUnconfirmed, ct);
+                    dnsIntentToken ?? "", "dns_record_delete", domain: zoneId, host: "*dns*", dnsAllowUnconfirmed, ct);
                 if (!dnsVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dnsVerdict.Reason, detail = dnsVerdict.Detail },

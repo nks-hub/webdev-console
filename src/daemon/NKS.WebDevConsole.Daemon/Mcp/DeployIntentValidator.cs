@@ -80,6 +80,16 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
               () => (IReadOnlySet<string>)new HashSet<string>(StringComparer.OrdinalIgnoreCase))
     { }
 
+    private IDeployEventBroadcaster? _events;
+
+    /// <summary>
+    /// Attach the SSE bus so a consumed intent is announced as
+    /// <c>mcp:intent-changed {change:"consumed"}</c> and any banner or toast
+    /// still showing it in the GUI goes away. Wired once at startup in
+    /// Program.cs; tests leave it unset.
+    /// </summary>
+    public void AttachEvents(IDeployEventBroadcaster events) => _events = events;
+
     /// <summary>Empty kinds registry for the legacy ctor — every Get returns null.</summary>
     private sealed class NullKinds : IDestructiveOperationKinds
     {
@@ -99,6 +109,10 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         bool allowUnconfirmed,
         CancellationToken ct)
     {
+        // X-Allow-Unconfirmed is the CI/headless escape hatch for the GUI
+        // token. An MCP-token caller (an AI agent) must never self-confirm.
+        if (McpCallerContext.IsMcpToken) allowUnconfirmed = false;
+
         if (string.IsNullOrWhiteSpace(intentToken))
             return IntentValidationResult.Deny("missing_token");
 
@@ -169,65 +183,21 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         // had to be re-asserted on every request.
         if (string.IsNullOrEmpty(row.ConfirmedAt))
         {
-            var grantedAuto = false;
             string? matchedGrantId = null;
-            // Phase 7.5+++ — always-confirm override. When the operator
-            // marks a kind as always-confirm via Settings, skip grant
-            // auto-approval entirely so the GUI banner is mandatory even
-            // for grants that would otherwise match. Permits the user's
-            // "ring-fence the riskiest ops" story without revoking
-            // trustworthy session/instance grants for everything else.
-            var alwaysConfirm = false;
-            try
+            if (!allowUnconfirmed)
             {
-                alwaysConfirm = _alwaysConfirmKindsLookup().Contains(row.Kind);
+                var (grant, alwaysConfirm) = await FindAutoApprovingGrantAsync(row.Kind, row.Domain, ct);
+                if (grant is null)
+                    // Phase 7.5+++ — when the always-confirm override forced the
+                    // skip (rather than no-grant-found), tag the deny with
+                    // detail="always_confirm" so the GUI banner can explain
+                    // "operator marked this kind as always-confirm" rather
+                    // than the generic "needs confirmation".
+                    return alwaysConfirm
+                        ? IntentValidationResult.DenyWithDetail("pending_confirmation", "always_confirm")
+                        : IntentValidationResult.Deny("pending_confirmation");
+                matchedGrantId = string.IsNullOrEmpty(grant.Id) ? null : grant.Id;
             }
-            catch { /* best-effort, fall back to grant matching */ }
-            if (!allowUnconfirmed && !alwaysConfirm && McpCallerContext.HasAnyIdentity)
-            {
-                var grant = await _grants.FindMatchingActiveAsync(
-                    McpCallerContext.SessionId,
-                    McpCallerContext.InstanceId,
-                    McpCallerContext.ApiKeyId,
-                    row.Kind,
-                    row.Domain,
-                    ct);
-                // Phase 7.5+++ — cooldown check. If the grant has a positive
-                // min_cooldown_seconds AND last_matched_at + cooldown is in
-                // the future, treat the grant as a non-match → falls back to
-                // GUI banner. Real safety knob for AI rate-limiting.
-                if (grant is not null && grant.MinCooldownSeconds > 0
-                    && !string.IsNullOrEmpty(grant.LastMatchedAt))
-                {
-                    if (DateTimeOffset.TryParse(grant.LastMatchedAt, out var lastMatched))
-                    {
-                        var cooldownUntil = lastMatched.AddSeconds(grant.MinCooldownSeconds);
-                        if (cooldownUntil > DateTimeOffset.UtcNow)
-                        {
-                            grant = null; // skip — cooldown active
-                        }
-                    }
-                }
-                grantedAuto = grant is not null;
-                // Phase 7.5+++ — bump match telemetry so operators can spot
-                // dead vs heavily-used grants. Best-effort; never blocks
-                // the auth path (RecordMatchAsync swallows DB errors).
-                if (grant is not null && !string.IsNullOrEmpty(grant.Id))
-                {
-                    matchedGrantId = grant.Id;
-                    await _grants.RecordMatchAsync(grant.Id, ct);
-                }
-            }
-
-            if (!allowUnconfirmed && !grantedAuto)
-                // Phase 7.5+++ — when the always-confirm override forced the
-                // skip (rather than no-grant-found), tag the deny with
-                // detail="always_confirm" so the GUI banner can explain
-                // "operator marked this kind as always-confirm" rather
-                // than the generic "needs confirmation".
-                return alwaysConfirm
-                    ? IntentValidationResult.DenyWithDetail("pending_confirmation", "always_confirm")
-                    : IntentValidationResult.Deny("pending_confirmation");
             // Pre-stamp via single UPDATE — no-op if a concurrent GUI click
             // already stamped (rowcount=0 is fine, the row is now
             // confirmed either way and the next read will see it).
@@ -253,7 +223,115 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
             new { Id = intentId, UsedAt = DateTimeOffset.UtcNow.ToString("o") });
         if (rows == 0) return IntentValidationResult.Deny("already_used");
 
+        if (_events is { } events)
+        {
+            try { await events.BroadcastAsync("mcp:intent-changed", new { change = "consumed", intentId }); }
+            catch { /* SSE failure is non-fatal; the operation proceeds */ }
+        }
+
         return IntentValidationResult.Allow();
+    }
+
+    /// <summary>
+    /// Confirm a pending intent up front when a persistent grant covers it,
+    /// so <c>POST /api/mcp/intents/confirm-request</c> can skip the GUI
+    /// banner and tell the agent it may proceed immediately. Uses the same
+    /// grant rules as <see cref="ValidateAndConsumeAsync"/> (always-confirm
+    /// override, caller eligibility, cooldown, match telemetry), so an
+    /// intent is auto-approved at confirm-request time exactly when it
+    /// would have been auto-approved at consume time.
+    /// </summary>
+    public async Task<IntentAutoApproval> TryAutoApproveAsync(string intentId, CancellationToken ct)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.OpenAsync(ct);
+        var row = await conn.QuerySingleOrDefaultAsync<IntentRow>(
+            "SELECT id AS Id, domain AS Domain, host AS Host, kind AS Kind, " +
+            "expires_at AS ExpiresAtRaw, used_at AS UsedAt, confirmed_at AS ConfirmedAt " +
+            "FROM deploy_intents WHERE id = @Id",
+            new { Id = intentId });
+
+        if (row is null) return IntentAutoApproval.Unavailable("not_found");
+        if (!string.IsNullOrEmpty(row.UsedAt)) return IntentAutoApproval.Unavailable("already_used");
+        if (DateTimeOffset.TryParse(row.ExpiresAtRaw, out var exp) && exp < DateTimeOffset.UtcNow)
+            return IntentAutoApproval.Unavailable("expired");
+        if (!string.IsNullOrEmpty(row.ConfirmedAt)) return IntentAutoApproval.WasConfirmed();
+
+        var (grant, alwaysConfirm) = await FindAutoApprovingGrantAsync(row.Kind, row.Domain, ct);
+        if (grant is null) return IntentAutoApproval.NeedsOperator(alwaysConfirm);
+
+        var grantId = string.IsNullOrEmpty(grant.Id) ? null : grant.Id;
+        var rows = await conn.ExecuteAsync(
+            "UPDATE deploy_intents SET confirmed_at = @Now, matched_grant_id = @GrantId " +
+            "WHERE id = @Id AND confirmed_at IS NULL AND used_at IS NULL",
+            new { Id = intentId, Now = DateTimeOffset.UtcNow.ToString("o"), GrantId = grantId });
+        if (rows == 0)
+        {
+            // Lost a race with a GUI approve (fine — it is confirmed) or a
+            // revoke (it is used). Re-read to tell which.
+            var confirmed = await conn.QuerySingleOrDefaultAsync<string?>(
+                "SELECT confirmed_at FROM deploy_intents WHERE id = @Id AND used_at IS NULL",
+                new { Id = intentId });
+            return string.IsNullOrEmpty(confirmed)
+                ? IntentAutoApproval.Unavailable("already_used")
+                : IntentAutoApproval.WasConfirmed();
+        }
+        return IntentAutoApproval.FromGrant(grantId);
+    }
+
+    /// <summary>
+    /// The single grant pre-check shared by consume-time and
+    /// confirm-request-time auto-approval. Returns the matching grant (and
+    /// records the match) or null, plus whether the operator's
+    /// always-confirm override is what blocked it.
+    /// <para>
+    /// Eligibility is <see cref="McpCallerContext.CanUseGrants"/>: an
+    /// MCP-token caller always qualifies, so scope_type='always' grants
+    /// apply even when the MCP server sent no X-Mcp-* identity headers.
+    /// Session/instance/api-key grants additionally need the matching
+    /// header. Those headers are caller-supplied, so scoped grants are a
+    /// convenience boundary, not authentication (see McpCallerContext).
+    /// </para>
+    /// </summary>
+    private async Task<(McpSessionGrantRow? Grant, bool AlwaysConfirm)> FindAutoApprovingGrantAsync(
+        string kind, string domain, CancellationToken ct)
+    {
+        // Phase 7.5+++ — always-confirm override. When the operator
+        // marks a kind as always-confirm via Settings, skip grant
+        // auto-approval entirely so the GUI banner is mandatory even
+        // for grants that would otherwise match.
+        var alwaysConfirm = false;
+        try
+        {
+            alwaysConfirm = _alwaysConfirmKindsLookup().Contains(kind);
+        }
+        catch { /* best-effort, fall back to grant matching */ }
+        if (alwaysConfirm || !McpCallerContext.CanUseGrants) return (null, alwaysConfirm);
+
+        var grant = await _grants.FindMatchingActiveAsync(
+            McpCallerContext.SessionId,
+            McpCallerContext.InstanceId,
+            McpCallerContext.ApiKeyId,
+            kind,
+            domain,
+            ct);
+        // Phase 7.5+++ — cooldown check. If the grant has a positive
+        // min_cooldown_seconds AND last_matched_at + cooldown is in
+        // the future, treat the grant as a non-match → falls back to
+        // GUI banner. Real safety knob for AI rate-limiting.
+        if (grant is not null && grant.MinCooldownSeconds > 0
+            && !string.IsNullOrEmpty(grant.LastMatchedAt)
+            && DateTimeOffset.TryParse(grant.LastMatchedAt, out var lastMatched)
+            && lastMatched.AddSeconds(grant.MinCooldownSeconds) > DateTimeOffset.UtcNow)
+        {
+            grant = null; // skip — cooldown active
+        }
+        // Phase 7.5+++ — bump match telemetry so operators can spot
+        // dead vs heavily-used grants. Best-effort; never blocks
+        // the auth path (RecordMatchAsync swallows DB errors).
+        if (grant is not null && !string.IsNullOrEmpty(grant.Id))
+            await _grants.RecordMatchAsync(grant.Id, ct);
+        return (grant, false);
     }
 
     /// <summary>Internal Dapper row.</summary>
@@ -271,4 +349,24 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         /// <summary>NULL until the GUI banner is approved (Mode A).</summary>
         public string? ConfirmedAt { get; set; }
     }
+}
+
+/// <summary>
+/// Outcome of <see cref="DeployIntentValidator.TryAutoApproveAsync"/>.
+/// <see cref="Confirmed"/> means the agent may fire the intent now (no
+/// banner needed); <see cref="AutoApproved"/> narrows that to "a grant
+/// approved it just now". <see cref="Reason"/> is set when the intent can
+/// no longer be approved at all (not_found / already_used / expired).
+/// </summary>
+public sealed record IntentAutoApproval(
+    bool Confirmed,
+    bool AutoApproved,
+    string? MatchedGrantId,
+    bool AlwaysConfirm,
+    string? Reason)
+{
+    public static IntentAutoApproval FromGrant(string? grantId) => new(true, true, grantId, false, null);
+    public static IntentAutoApproval WasConfirmed() => new(true, false, null, false, null);
+    public static IntentAutoApproval NeedsOperator(bool alwaysConfirm) => new(false, false, null, alwaysConfirm, null);
+    public static IntentAutoApproval Unavailable(string reason) => new(false, false, null, false, reason);
 }

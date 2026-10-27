@@ -18,11 +18,11 @@
         :closable="true"
         @close="loadError = ''"
         show-icon
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
 
       <!-- Loading skeleton -->
-      <div v-if="loading && versions.length === 0" style="padding: 24px">
+      <div v-if="loading && versions.length === 0" style="padding: var(--wdc-space-5)">
         <el-skeleton :rows="3" animated />
       </div>
 
@@ -98,6 +98,9 @@ import { ElMessage } from 'element-plus'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchPhpVersions } from '../../api/daemon'
 import type { PhpVersion } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface ExtInfo {
   name: string
@@ -189,18 +192,18 @@ async function toggleExtension(name: string, enabled: boolean) {
     )
     if (!r.ok) {
       const text = await r.text().catch(() => r.statusText)
-      ElMessage.error(`Failed to toggle ${name}: ${text}`)
+      ElMessage.error(t('toast.extToggleFailed', { name, err: text }))
       return
     }
     // Optimistically update local state; daemon also restarted PHP so a
     // follow-up config reload picks up the real result.
     const ext = extensions.value.find((e) => e.name === name)
     if (ext) ext.enabled = enabled
-    ElMessage.success(`${name} ${enabled ? 'enabled' : 'disabled'} — PHP restarted`)
+    ElMessage.success(t(enabled ? 'toast.extEnabledRestarted' : 'toast.extDisabledRestarted', { name }))
     // Reload config after a brief pause so the ini content matches the new state.
     setTimeout(() => { void loadConfig(selectedVersion.value) }, 400)
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     togglingExt.value = ''
   }
@@ -214,17 +217,17 @@ async function setDefault(version: string) {
       body: JSON.stringify({ version }),
     })
     if (r.ok) {
-      ElMessage.success(`PHP ${version} set as default`)
+      ElMessage.success(t('toast.phpDefaultSet', { version }))
       await loadVersions()
     } else {
       // Surface the daemon's response body so the user can see WHY the
       // operation failed (permission denied, invalid version, file locked…)
       // instead of a generic "Failed to set default" dead-end.
       const text = await r.text().catch(() => r.statusText)
-      ElMessage.error(`Failed to set default: ${text || `HTTP ${r.status}`}`)
+      ElMessage.error(t('toast.setDefaultFailed', { err: text || `HTTP ${r.status}` }))
     }
   } catch (e) {
-    ElMessage.error(`Cannot set default: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.setDefaultFailed', { err: errorMessage(e) }))
   }
 }
 
@@ -241,10 +244,10 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  margin-bottom: var(--wdc-space-4-5);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .header-left { display: flex; align-items: center; gap: 12px; }
@@ -263,26 +266,26 @@ onMounted(() => { void loadVersions() })
   font-weight: 600;
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
+  border-radius: var(--wdc-radius);
   font-family: 'JetBrains Mono', monospace;
 }
 
-.page-body { padding: 0 24px 24px; }
+.page-body { padding: 0 0 24px; }
 
 /* Version grid */
 .version-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: var(--wdc-space-2-5);
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .version-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -295,7 +298,7 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 
 .ver-number {
@@ -313,7 +316,7 @@ onMounted(() => { void loadVersions() })
 .ver-path {
   font-size: 0.7rem;
   color: var(--wdc-text-3);
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -326,14 +329,14 @@ onMounted(() => { void loadVersions() })
 /* Detail */
 .php-detail {
   border-top: 1px solid var(--wdc-border);
-  padding-top: 20px;
+  padding-top: var(--wdc-space-4-5);
 }
 
 .detail-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
 }
 
 .detail-title {
@@ -343,12 +346,11 @@ onMounted(() => { void loadVersions() })
 }
 
 .section-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
-  margin-bottom: 10px;
+  margin-bottom: var(--wdc-space-2-5);
+  font-family: var(--wdc-font-display);
 }
 
 /* Extensions grid */
@@ -357,14 +359,14 @@ onMounted(() => { void loadVersions() })
 .ext-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .ext-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-sm);
   font-size: 0.78rem;
   background: var(--wdc-surface);
@@ -402,7 +404,7 @@ onMounted(() => { void loadVersions() })
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 14px;
+  padding: var(--wdc-space-3-5);
   max-height: 500px;
   overflow: auto;
   white-space: pre-wrap;

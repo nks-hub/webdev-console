@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -152,8 +152,11 @@ import {
 import { errorMessage } from '../../utils/errors'
 import { compareSemver } from '../../utils/semver'
 import { useSitesStore } from '../../stores/sites'
+import { useDaemonStore } from '../../stores/daemon'
+import { OPEN_ONBOARDING_EVENT } from '../../utils/onboarding'
 
 const sitesStore = useSitesStore()
+const daemonStore = useDaemonStore()
 
 const { t } = useI18n()
 const router = useRouter()
@@ -204,14 +207,14 @@ async function doInstall(app: string, explicitVersion?: string) {
     // — apache 2.4.62 was Windows-only so a pinned macOS version 404'd.
     const version = explicitVersion?.trim() || await resolveLatest(app)
     if (!version) {
-      ElMessage.warning(`${app}: no binary available for this platform`)
+      ElMessage.warning(t('toast.noBinaryForPlatform', { app }))
       return
     }
     await installBinary(app, version)
-    ElMessage.success(`${app} ${version} installed`)
+    ElMessage.success(t('toast.installedVersion', { app, version }))
     await refreshState()
   } catch (e) {
-    ElMessage.error(`${app}: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.prefixedError', { name: app, err: errorMessage(e) }))
   } finally {
     installing.value.delete(app)
   }
@@ -266,7 +269,7 @@ async function installCa() {
     ElMessage.success(t('ssl.caTrusted'))
     await refreshState()
   } catch (e) {
-    ElMessage.error(`mkcert CA install failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.caInstallFailed', { err: errorMessage(e) }))
   } finally {
     installingCa.value = false
   }
@@ -370,81 +373,102 @@ function goNext() {
 // to click finish/skip for "don't show again" to stick. Idempotent writes.
 watch(dontShowAgain, (val) => writeLocalFlag(LS_DONTSHOW, val))
 
-onMounted(async () => {
-  // Client-side early-out: if either local flag is set, never open.
+// The wizard mounts before the daemon is necessarily reachable (Electron
+// splash, slow first start). A failed state fetch used to leave it closed
+// for the whole session, so the auto-open check now runs on every connect
+// until it gets a definitive answer from the daemon.
+let stopConnectWatch: (() => void) | null = null
+
+async function autoOpenCheck() {
+  await refreshState()
+  if (!state.value) return
+  stopConnectWatch?.()
+  stopConnectWatch = null
+  // Only auto-open if the daemon reports the wizard hasn't been completed yet.
+  if (!state.value.completed) {
+    visible.value = true
+    void loadPhpVersions()
+  } else {
+    // Back-fill the LS flag so future launches skip the fetch entirely.
+    writeLocalFlag(LS_COMPLETED, true)
+  }
+}
+
+async function open() {
+  // Explicit reopen (Help page) — clear local opt-out so the user
+  // actually sees the wizard (otherwise the LS gate would block us).
+  writeLocalFlag(LS_COMPLETED, false)
+  writeLocalFlag(LS_DONTSHOW, false)
+  dontShowAgain.value = false
+  await refreshState()
+  visible.value = true
+  activeStep.value = 0
+  void loadPhpVersions()
+}
+
+function onOpenRequest() { void open() }
+
+onMounted(() => {
+  window.addEventListener(OPEN_ONBOARDING_EVENT, onOpenRequest)
+  // Client-side early-out: if either local flag is set, never auto-open.
   // Protects against the server flag being wiped (dev reset, portable dir
   // move, permission issue on write) — we always have the LS fallback.
   if (readLocalFlag(LS_COMPLETED) || readLocalFlag(LS_DONTSHOW)) {
     return
   }
-  await refreshState()
-  // Only auto-open if the daemon reports the wizard hasn't been completed yet.
-  if (state.value && !state.value.completed) {
-    visible.value = true
-    void loadPhpVersions()
-  } else if (state.value?.completed) {
-    // Back-fill the LS flag so future launches skip the fetch entirely.
-    writeLocalFlag(LS_COMPLETED, true)
-  }
+  stopConnectWatch = daemonStore.onConnect(autoOpenCheck)
 })
 
-defineExpose({
-  open: async () => {
-    // Explicit reopen from Settings — clear local opt-out so the user
-    // actually sees the wizard (otherwise the LS gate would block us).
-    writeLocalFlag(LS_COMPLETED, false)
-    writeLocalFlag(LS_DONTSHOW, false)
-    dontShowAgain.value = false
-    await refreshState()
-    visible.value = true
-    activeStep.value = 0
-    void loadPhpVersions()
-  },
+onBeforeUnmount(() => {
+  window.removeEventListener(OPEN_ONBOARDING_EVENT, onOpenRequest)
+  stopConnectWatch?.()
 })
+
+defineExpose({ open })
 </script>
 
 <style scoped>
 .ob-wrap {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 4px 0 0;
+  gap: var(--wdc-space-4-5);
+  padding: var(--wdc-space-1) 0 0;
 }
 .ob-subtitle {
   font-size: 0.92rem;
   color: var(--wdc-text-2);
-  margin: 0 0 4px;
+  margin: 0 0 var(--wdc-space-1);
   text-align: center;
 }
 .ob-step {
   min-height: 180px;
-  padding: 16px 8px 4px;
+  padding: var(--wdc-space-4) var(--wdc-space-2) var(--wdc-space-1);
 }
 .ob-step-desc {
   font-size: 0.88rem;
   color: var(--wdc-text-2);
-  margin: 0 0 16px;
+  margin: 0 0 var(--wdc-space-4);
 }
 .ob-step-final {
   text-align: center;
-  padding-top: 36px;
+  padding-top: var(--wdc-space-6-5);
 }
 .ob-final-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   justify-content: center;
   flex-wrap: wrap;
 }
 .ob-actions-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .ob-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -457,7 +481,7 @@ defineExpose({
 .ob-row :deep(.ob-version-select) {
   width: 140px;
   margin-left: auto;
-  margin-right: 8px;
+  margin-right: var(--wdc-space-2);
 }
 .ob-footer {
   display: flex;
@@ -467,13 +491,13 @@ defineExpose({
 .ob-footer-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .ob-dontshow {
   color: var(--wdc-text-3);
 }
 .ob-nav {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 </style>

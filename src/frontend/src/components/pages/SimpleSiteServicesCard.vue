@@ -141,26 +141,25 @@ async function restartService(svc: ServiceRow) {
 
 <style scoped>
 .sd-section {
-  margin-top: 18px;
-  padding: 16px;
+  margin-top: var(--wdc-space-4-5);
+  padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
 }
 .sd-section-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--wdc-text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 .sd-service-row {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto auto;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: center;
-  padding: 10px 0;
+  padding: var(--wdc-space-2-5) 0;
   border-bottom: 1px solid var(--wdc-border);
 }
 .sd-service-row:last-child { border-bottom: 0; }

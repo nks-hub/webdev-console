@@ -31,7 +31,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
-import { daemonBaseUrl, daemonToken } from '../../api/daemon'
+import { daemonBaseUrl, daemonToken, subscribeEventsMap } from '../../api/daemon'
 
 const { t } = useI18n()
 
@@ -49,6 +49,11 @@ let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let searchAddon: SearchAddon | null = null
 let closeEventSource: (() => void) | null = null
+let resizeObserver: ResizeObserver | null = null
+// onMounted awaits the history fetch; if the viewer is closed meanwhile,
+// it must not subscribe afterwards (the subscription would leak and keep
+// writing to a disposed terminal).
+let unmounted = false
 
 function clearTerminal() {
   terminal?.clear()
@@ -113,6 +118,9 @@ onMounted(async () => {
   terminal.open(terminalRef.value)
   fitAddon.fit()
 
+  resizeObserver = new ResizeObserver(() => fitAddon?.fit())
+  resizeObserver.observe(terminalRef.value)
+
   // Fetch historical logs from daemon
   if (props.serviceId) {
     try {
@@ -129,35 +137,33 @@ onMounted(async () => {
     } catch {
       // daemon may not be running
     }
+    if (unmounted) return
   }
 
   // Subscribe to SSE log events and append matching lines
   if (props.serviceId) {
-    const token = daemonToken()
-    const url = token
-      ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
-      : `${daemonBaseUrl()}/api/events`
-    const es = new EventSource(url)
-
-    es.addEventListener('log', (e: MessageEvent) => {
-      try {
-        const data = JSON.parse(e.data) as { serviceId?: string; line?: string }
-        if (data.serviceId === props.serviceId && data.line) {
-          terminal?.writeln(data.line)
-        }
-      } catch { /* ignore parse errors */ }
+    // Shared /api/events connection (see subscribeEventsMap). The daemon's
+    // log events carry the text as `message`; older builds used `line`.
+    closeEventSource = subscribeEventsMap({
+      log: (raw) => {
+        const data = raw as { serviceId?: string; line?: string; message?: string }
+        const text = data.line ?? data.message
+        if (data.serviceId === props.serviceId && text) terminal?.writeln(text)
+      },
     })
-
-    closeEventSource = () => es.close()
   }
-
-  const resizeObserver = new ResizeObserver(() => fitAddon?.fit())
-  resizeObserver.observe(terminalRef.value)
 })
 
 onUnmounted(() => {
+  unmounted = true
+  resizeObserver?.disconnect()
+  resizeObserver = null
   closeEventSource?.()
+  closeEventSource = null
   terminal?.dispose()
+  terminal = null
+  fitAddon = null
+  searchAddon = null
 })
 </script>
 

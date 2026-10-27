@@ -46,7 +46,7 @@ const emit = defineEmits<{
 <style scoped>
 .sync-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 
@@ -61,7 +61,7 @@ const emit = defineEmits<{
 
 .sso-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
 }
 
@@ -76,7 +76,7 @@ const emit = defineEmits<{
 }
 
 .tab-desc {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   color: var(--wdc-text-3);
   font-size: 0.85rem;
 }

@@ -115,11 +115,11 @@ function revertEdit() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2);
   border-bottom: 1px solid var(--el-border-color);
   flex-shrink: 0;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .config-path { font-family: monospace; font-size: 0.82rem; color: var(--el-text-color-secondary); }
 .toolbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -136,7 +136,7 @@ function revertEdit() {
   font-size: 0.82rem;
   border: none;
   outline: none;
-  padding: 12px;
+  padding: var(--wdc-space-3);
   line-height: 1.6;
   tab-size: 4;
 }

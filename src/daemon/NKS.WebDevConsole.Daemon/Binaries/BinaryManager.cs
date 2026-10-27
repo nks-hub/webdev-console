@@ -73,7 +73,7 @@ public sealed class BinaryManager
         ValidateAppVersion(app, version);
         var combined = Path.GetFullPath(Path.Combine(_root, app.ToLowerInvariant(), version));
         var rootFull = Path.GetFullPath(_root);
-        if (!combined.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(rootFull, combined))
             throw new UnauthorizedAccessException("Resolved install path escapes binaries root");
         return combined;
     }

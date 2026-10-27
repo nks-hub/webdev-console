@@ -8,10 +8,10 @@
         <span v-if="updateCheck.loading">{{ t('common.loading') }}</span>
         <span v-else-if="updateCheck.latest" class="mono">
           v{{ updateCheck.latest }}
-          <el-tag v-if="updateCheck.hasUpdate" type="warning" size="small" style="margin-left:8px">
+          <el-tag v-if="updateCheck.hasUpdate" type="warning" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.available') }}
           </el-tag>
-          <el-tag v-else type="success" size="small" style="margin-left:8px">
+          <el-tag v-else type="success" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.upToDate') }}
           </el-tag>
         </span>
@@ -60,7 +60,7 @@
     <SettingsCard
       v-if="updateCheck.releaseNotes"
       :title="`${t('settings.update.releaseNotesTitle')} v${updateCheck.latest}`"
-      style="margin-top: 12px"
+      style="margin-top: var(--wdc-space-3)"
     >
       <template #meta>
         <el-link
@@ -81,7 +81,7 @@
       v-if="updateCheck.error"
       type="error"
       :closable="false"
-      style="margin-top: 12px"
+      style="margin-top: var(--wdc-space-3)"
     >
       {{ updateCheck.error }}
     </el-alert>

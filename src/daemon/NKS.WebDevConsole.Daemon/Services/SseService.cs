@@ -64,6 +64,12 @@ public sealed class SseService
             {
                 return (id, alive: false);
             }
+            catch (ObjectDisposedException)
+            {
+                // Evicted by a concurrent broadcast or RemoveClient between
+                // the snapshot and here — nothing to write to.
+                return (id, alive: false);
+            }
             try
             {
                 await client.Response.WriteAsync(message, cts.Token);
@@ -85,7 +91,8 @@ public sealed class SseService
                 // early-return path for the cancelled lock-wait above
                 // never touched the semaphore, so this block only runs
                 // for the successful-acquire code path.
-                client.WriteLock.Release();
+                try { client.WriteLock.Release(); }
+                catch (ObjectDisposedException) { /* evicted while we were writing */ }
             }
         }).ToArray();
 
@@ -107,5 +114,11 @@ public sealed class SseClient : IDisposable
     public SemaphoreSlim WriteLock { get; } = new(1, 1);
 
     public SseClient(string id, HttpResponse response) { Id = id; Response = response; }
-    public void Dispose() => WriteLock.Dispose();
+
+    // Intentionally does not dispose WriteLock. Concurrent broadcasts hold
+    // snapshots of this client; disposing the semaphore under them made
+    // WaitAsync/Release throw ObjectDisposedException, which escaped
+    // Task.WhenAll and dropped the whole broadcast for every client. A
+    // SemaphoreSlim that never allocated its wait handle needs no disposal.
+    public void Dispose() { }
 }

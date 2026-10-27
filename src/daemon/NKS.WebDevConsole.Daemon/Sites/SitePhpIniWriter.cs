@@ -55,9 +55,7 @@ public sealed class SitePhpIniWriter
         var overrides = BuildOverrideBlock(site.PhpSettings);
         var combined = global + "\n\n; === Per-site overrides (NKS WDC) — do not edit manually ===\n" + overrides;
 
-        var tmp = sitePhpIni + ".tmp";
-        File.WriteAllText(tmp, combined);
-        File.Move(tmp, sitePhpIni, overwrite: true);
+        NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(sitePhpIni, combined);
 
         _logger.LogInformation("Wrote per-site php.ini for {Domain} to {Path}", site.Domain, sitePhpIni);
         return sitePhpIni;
@@ -99,8 +97,45 @@ public sealed class SitePhpIniWriter
         return candidate;
     }
 
+    private static readonly System.Text.RegularExpressions.Regex SizeValue =
+        new(@"^(-1|\d{1,7}[KMGkmg]?)$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex TimezoneValue =
+        new(@"^[A-Za-z][A-Za-z0-9_+\-]{0,31}(/[A-Za-z0-9_+\-]{1,32}){0,2}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex ExtensionName =
+        new(@"^[A-Za-z0-9_\-]{1,64}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Rejects values that would break out of their php.ini line. Every string
+    /// here is written verbatim after "key = ", so a newline in memory_limit or
+    /// an extension name would let a PUT /api/sites body append directives such
+    /// as auto_prepend_file to the site's php.ini.
+    /// </summary>
+    public static void Validate(SitePhpSettings? s)
+    {
+        if (s is null) return;
+        static void Size(string? v, string name)
+        {
+            if (!string.IsNullOrEmpty(v) && !SizeValue.IsMatch(v))
+                throw new ArgumentException($"{name} must be a PHP size such as 256M, 1G or -1");
+        }
+        Size(s.MemoryLimit, "memory_limit");
+        Size(s.PostMaxSize, "post_max_size");
+        Size(s.UploadMaxFilesize, "upload_max_filesize");
+        if (s.MaxExecutionTime is < -1) throw new ArgumentException("max_execution_time must be -1 or more");
+        if (s.MaxInputTime is < -1) throw new ArgumentException("max_input_time must be -1 or more");
+        if (!string.IsNullOrEmpty(s.Timezone) && !TimezoneValue.IsMatch(s.Timezone))
+            throw new ArgumentException("date.timezone must be an IANA zone such as Europe/Prague");
+        foreach (var ext in (s.ExtraExtensions ?? []).Concat(s.DisabledExtensions ?? []))
+        {
+            if (!string.IsNullOrWhiteSpace(ext) && !ExtensionName.IsMatch(ext.Trim()))
+                throw new ArgumentException($"Invalid PHP extension name: {ext}");
+        }
+    }
+
     private static string BuildOverrideBlock(SitePhpSettings s)
     {
+        // Defense in depth for TOML files edited on disk, which skip the API check.
+        Validate(s);
         var sb = new System.Text.StringBuilder();
 
         if (!string.IsNullOrEmpty(s.MemoryLimit))

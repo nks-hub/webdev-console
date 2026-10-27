@@ -216,7 +216,7 @@ onBeforeUnmount(() => {
 .timeline-chart {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  padding: 14px 16px 10px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4) var(--wdc-space-2-5);
   background: var(--wdc-surface);
   box-shadow: var(--wdc-shadow-sm);
   display: flex;
@@ -227,10 +227,10 @@ onBeforeUnmount(() => {
 .timeline-title {
   display: flex; align-items: center; gap: 8px;
   font-size: 11px;
-  margin-bottom: 6px;
-  text-transform: uppercase;
+  margin-bottom: var(--wdc-space-1-5);
   letter-spacing: 0.5px;
   flex: 0 0 auto;
+  font-family: var(--wdc-font-display);
 }
 .empty-note { color: var(--el-text-color-disabled); }
 .chart-svg {

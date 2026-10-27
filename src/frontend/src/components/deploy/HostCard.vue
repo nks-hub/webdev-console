@@ -147,7 +147,7 @@ function formatRelative(iso: string): string {
 .host-card-live-phase {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .live-icon {
   font-size: 12px;

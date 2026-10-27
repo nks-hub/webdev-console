@@ -29,7 +29,7 @@
             <template #kind><strong>{{ humanKindLabel(item) }}</strong></template>
           </i18n-t>
           <span v-else>{{ t('mcp.banner.genericRequest') }}</span>
-          <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span">
+          <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span" class="mcp-confirm-target">
             <template #domain><code class="mono">{{ item.domain }}</code></template>
             <template #host><code class="mono">{{ item.host }}</code></template>
           </i18n-t>
@@ -176,6 +176,8 @@ async function approve(intentId: string): Promise<void> {
   busy.value = next
   try {
     await store.approve(intentId)
+  } catch (err) {
+    ElMessage.error(t('mcp.toast.approveFailed', { error: err instanceof Error ? err.message : String(err) }))
   } finally {
     const cleared = new Set(busy.value)
     cleared.delete(intentId)
@@ -231,6 +233,8 @@ async function approveAndTrust(item: PendingConfirm, expiresMin: number | null):
       }))
     }
     await store.approve(item.intentId)
+  } catch (err) {
+    ElMessage.error(t('mcp.toast.approveFailed', { error: err instanceof Error ? err.message : String(err) }))
   } finally {
     const cleared = new Set(busy.value)
     cleared.delete(item.intentId)
@@ -357,16 +361,16 @@ onBeforeUnmount(() => {
   z-index: 3000;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   max-width: min(440px, calc(100vw - 24px));
 }
 
 .mcp-confirm-banner {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   align-items: start;
-  padding: 14px 16px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   background: rgba(245, 158, 11, 0.10);
   border: 1px solid var(--wdc-status-starting);
   border-left-width: 5px;
@@ -382,7 +386,7 @@ onBeforeUnmount(() => {
 
 .mcp-confirm-icon {
   color: var(--el-color-warning, #e6a23c);
-  padding-top: 2px;
+  padding-top: var(--wdc-space-0-5);
 }
 
 .mcp-confirm-body {
@@ -393,14 +397,17 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-size: 14px;
   color: var(--el-text-color-primary);
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
+/* The kind and target are separate i18n-t spans; template whitespace
+   between them is condensed away, so space them explicitly. */
+.mcp-confirm-target { margin-left: 0.3em; }
 
 .mcp-confirm-prompt {
   font-size: 13px;
   color: var(--el-text-color-regular);
   word-break: break-word;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 
 .mcp-confirm-meta {
@@ -410,14 +417,14 @@ onBeforeUnmount(() => {
 .mcp-confirm-always-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   font-size: 12px;
   font-weight: 500;
   color: var(--el-color-warning-dark-2);
   background: var(--el-color-warning-light-9);
-  padding: 6px 12px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-3);
   border-radius: var(--wdc-radius-sm);
-  margin: 4px 0;
+  margin: var(--wdc-space-1) 0;
   border-left: 3px solid var(--el-color-warning);
 }
 
@@ -425,7 +432,7 @@ onBeforeUnmount(() => {
   font-family: var(--el-font-family-monospace, monospace);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
 }
 .mcp-confirm-expiry {
@@ -439,7 +446,7 @@ onBeforeUnmount(() => {
 .mcp-confirm-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   justify-self: end;
 }
 

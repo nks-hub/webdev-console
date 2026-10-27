@@ -166,6 +166,33 @@ public partial class PluginLoader
         }
     }
 
+    /// <summary>
+    /// Plugin DLLs at the top level of <paramref name="pluginsDirectory"/> (bundled
+    /// layout) plus one level down in folders that carry a <c>plugin.json</c>
+    /// (<c>plugins/&lt;id&gt;/</c>, where <c>/api/plugins/install</c> extracts
+    /// marketplace plugins). Requiring the manifest keeps build leftovers such as
+    /// culture or <c>runtimes</c> folders out of the scan. Top-level files come first,
+    /// so a bundled plugin wins over a stale installed copy with the same id, and
+    /// <c>*.staging</c> folders from an interrupted install are skipped.
+    /// </summary>
+    internal static IReadOnlyList<string> EnumeratePluginCandidates(string pluginsDirectory)
+    {
+        static IEnumerable<string> Dlls(string dir) =>
+            Directory.GetFiles(dir, "NKS.WebDevConsole.Plugin.*.dll")
+                .Where(f => !f.EndsWith("Plugin.SDK.dll", StringComparison.OrdinalIgnoreCase)
+                         && !f.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<string>(Dlls(pluginsDirectory));
+        foreach (var sub in Directory.GetDirectories(pluginsDirectory).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+        {
+            if (sub.EndsWith(".staging", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!File.Exists(Path.Combine(sub, "plugin.json"))) continue;
+            result.AddRange(Dlls(sub));
+        }
+        return result;
+    }
+
     public void LoadPlugins(string pluginsDirectory, NKS.WebDevConsole.Daemon.Services.PluginState? pluginState = null)
     {
         if (!Directory.Exists(pluginsDirectory))
@@ -174,10 +201,9 @@ public partial class PluginLoader
             return;
         }
 
-        var pluginDlls = Directory.GetFiles(pluginsDirectory, "NKS.WebDevConsole.Plugin.*.dll")
-            .Where(f => !f.EndsWith("Plugin.SDK.dll", StringComparison.OrdinalIgnoreCase));
+        var pluginDlls = EnumeratePluginCandidates(pluginsDirectory);
 
-        _logger.LogInformation("Scanning {Dir} — found {Count} plugin candidates", pluginsDirectory, pluginDlls.Count());
+        _logger.LogInformation("Scanning {Dir} — found {Count} plugin candidates", pluginsDirectory, pluginDlls.Count);
 
         foreach (var dllPath in pluginDlls)
         {
@@ -241,6 +267,11 @@ public partial class PluginLoader
                             _logger.LogInformation("Plugin {Id} is uninstalled (discovered via code) — skipping", plugin.Id);
                             // We can't purge right now because the DLL is loaded in `context`.
                             // Leave the id in the blacklist so the next boot cleans it up.
+                            continue;
+                        }
+                        if (_plugins.Any(p => string.Equals(p.Instance.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            _logger.LogWarning("Plugin {Id} from {Path} is already loaded — skipping duplicate", plugin.Id, dllPath);
                             continue;
                         }
                         // SemVer check on the plugin's declared version. Non-fatal:

@@ -42,7 +42,7 @@
           class="tree-db"
           :class="{ expanded: expanded.has(db.name), selected: selectedDb === db.name && !selectedTable }"
         >
-          <div class="tree-row" @click="toggleDb(db.name)">
+          <div v-activate class="tree-row" :aria-expanded="expanded.has(db.name)" @click="toggleDb(db.name)">
             <el-icon class="caret"><CaretRight /></el-icon>
             <el-icon class="kind-icon"><Coin /></el-icon>
             <span class="db-name">{{ db.name }}</span>
@@ -142,22 +142,21 @@ function formatBytes(bytes: number): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
 }
 
 .tree-title {
-  font-size: 0.74rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--wdc-accent);
+  font-family: var(--wdc-font-display);
 }
 
 .tree-search {
-  padding: 10px 12px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
 }
@@ -165,14 +164,14 @@ function formatBytes(bytes: number): string {
 .tree-body {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
 }
 
 .tree-empty {
-  padding: 24px 14px;
+  padding: var(--wdc-space-5) var(--wdc-space-3-5);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--wdc-text-3);
   font-size: 0.78rem;
   justify-content: center;
@@ -191,8 +190,8 @@ function formatBytes(bytes: number): string {
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px 7px 14px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1-5) var(--wdc-space-3) var(--wdc-space-1-5) var(--wdc-space-3-5);
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
   font-size: 0.84rem;
@@ -248,8 +247,8 @@ function formatBytes(bytes: number): string {
 .tree-table {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 36px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1) var(--wdc-space-3) var(--wdc-space-1) var(--wdc-space-6-5);
   cursor: pointer;
   font-size: 0.79rem;
   transition: background 0.1s, border-color 0.1s;
@@ -281,12 +280,12 @@ function formatBytes(bytes: number): string {
 }
 
 .tree-loading {
-  padding: 7px 12px 7px 36px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-3) var(--wdc-space-1-5) var(--wdc-space-6-5);
   font-size: 0.74rem;
   color: var(--wdc-text-3);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .tree-loading.muted { font-style: italic; }
 </style>

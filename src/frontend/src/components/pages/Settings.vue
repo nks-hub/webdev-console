@@ -56,6 +56,16 @@
           />
         </SettingsPanel>
 
+        <!-- Native OS notifications — same component as the Advanced
+             "Notifications" section; changes apply immediately. -->
+        <SettingsPanel
+          :title="$t('osNotifications.settings.title')"
+          :subtitle="$t('osNotifications.settings.subtitle')"
+          :icon="Bell"
+        >
+          <NotificationSettings :t="t" />
+        </SettingsPanel>
+
         <!-- Simple Network panel — read-only port snapshot + DNS flush
              shortcut. The full per-plugin port editor stays in Advanced;
              beginners just need to see "what listens where" without
@@ -219,9 +229,15 @@
         </div>
       </div>
 
-      <el-tabs v-else v-model="activeTab" class="settings-tabs">
+      <SettingsShell
+        v-else
+        v-model="activeTab"
+        :sections="settingsSections"
+        :group-labels="settingsGroupLabels"
+        :aria-label="$t('settings.title')"
+      >
         <!-- Ports tab -->
-        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.ports')" name="ports">
+        <section v-show="activeTab === 'ports'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.ports.description') }}</p>
 
@@ -232,7 +248,7 @@
             <SettingsCard
               v-if="pluginPorts.length > 0"
               :title="$t('settings.advancedPorts.pluginPorts')"
-              style="margin-bottom: 16px"
+              style="margin-bottom: var(--wdc-space-4)"
             >
               <template #meta>
                 <span style="font-size: 0.72rem; color: var(--wdc-text-3)">{{ $t('settings.advancedPorts.active', { n: pluginPorts.length }) }}</span>
@@ -272,7 +288,7 @@
                 type="info"
                 :closable="false"
                 show-icon
-                style="margin-bottom: 12px"
+                style="margin-bottom: var(--wdc-space-3)"
               >
                 <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
                 {{ $t('settings.advancedPorts.portAlertDesc') }}
@@ -303,10 +319,10 @@
               </el-form>
             </SettingsCard>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- General tab -->
-        <el-tab-pane :label="$t('settings.tabs.general')" name="general">
+        <section v-show="activeTab === 'general'" class="shell-section">
           <EasyGeneralSettings
             :t="t"
             :locale="locale"
@@ -329,9 +345,9 @@
             @flush-dns="flushDns"
             @discover-mamp="discoverMamp"
           />
-        </el-tab-pane>
+        </section>
         <!-- Paths tab -->
-        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.paths')" name="paths">
+        <section v-show="activeTab === 'paths'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.paths.tabDesc') }}</p>
             <!-- F79: Browse buttons open the native file/folder dialog via
@@ -408,7 +424,7 @@
                   controls-position="right"
                   style="width: 160px"
                 />
-                <span style="margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3)">{{ $t('settings.advancedBackups.hours') }}</span>
+                <span style="margin-left: var(--wdc-space-2); font-size: 0.82rem; color: var(--wdc-text-3)">{{ $t('settings.advancedBackups.hours') }}</span>
                 <div class="hint">
                   {{ $t('settings.advancedBackups.scheduleHint') }}
                 </div>
@@ -416,10 +432,10 @@
             </el-form>
 
             <!-- Manual backup management -->
-            <div style="margin-top: 24px; border-top: 1px solid var(--wdc-border); padding-top: 16px">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+            <div style="margin-top: var(--wdc-space-5); border-top: 1px solid var(--wdc-border); padding-top: var(--wdc-space-4)">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--wdc-space-3)">
                 <span style="font-weight: 600; font-size: 0.95rem">{{ $t('settings.advancedBackups.title') }}</span>
-                <div style="display: flex; gap: 8px">
+                <div style="display: flex; gap: var(--wdc-space-2)">
                   <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
                     {{ $t('settings.advancedBackups.create') }}
                   </el-button>
@@ -450,10 +466,10 @@
             </div>
             </SettingsCard>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- Databases tab -->
-        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.databases')" name="databases">
+        <section v-show="activeTab === 'databases'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settingsDb.tabDesc') }}</p>
             <SettingsCard :title="$t('settings.tabs.databases')">
@@ -470,10 +486,22 @@
               </div>
             </SettingsCard>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- Advanced tab — integration endpoints -->
-        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.advanced')" name="advanced">
+        <!-- What AI clients connected over MCP may do. Toggles save
+             immediately; the daemon refuses them from the MCP token. -->
+        <section v-show="activeTab === 'mcp'" class="shell-section">
+          <div class="tab-content">
+            <p v-if="!mcpEnabled" class="tab-desc">
+              {{ $t('mcpCapabilities.mcpOff') }}
+              <el-button size="small" text @click="activeTab = 'advanced'">{{ $t('mcpCapabilities.openAdvanced') }}</el-button>
+            </p>
+            <McpCapabilitiesSettings v-if="activeTab === 'mcp'" />
+          </div>
+        </section>
+
+        <section v-show="activeTab === 'advanced'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.advanced.tabDesc') }}</p>
             <el-form label-position="top" size="small">
@@ -541,7 +569,7 @@
                 <el-switch v-model="pluginAutoSync" />
                 <el-button
                   size="small"
-                  style="margin-left: 12px"
+                  style="margin-left: var(--wdc-space-3)"
                   :loading="syncingPlugins"
                   @click="syncPluginsNow"
                 >{{ $t('settings.advanced.syncNow') }}</el-button>
@@ -618,7 +646,7 @@
                  entry + makes the daemon's /api/mcp/intents endpoints
                  return 404. Operators not running an AI client see no
                  trace of the subsystem. -->
-            <div class="settings-section" id="mcp-section" style="margin-top: 16px">
+            <div class="settings-section" id="mcp-section" style="margin-top: var(--wdc-space-4)">
               <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.mcp.description') }}
@@ -627,13 +655,24 @@
               <el-form label-position="left" label-width="320px" size="small">
                 <el-form-item :label="$t('settings.mcp.enableLabel')">
                   <el-switch v-model="mcpEnabled" />
+                  <!-- Copy-paste setup for Claude Code / Desktop / Cursor
+                       lives on the MCP page's "Connect an AI client" card. -->
+                  <el-button
+                    link
+                    type="primary"
+                    class="mcp-connect-link"
+                    data-testid="settings-mcp-connect-link"
+                    @click="$router.push('/mcp/activity')"
+                  >
+                    {{ $t('mcpConnect.openFromSettings') }} →
+                  </el-button>
                 </el-form-item>
                 <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
                      mode where any regex-valid kind passes). Turn ON to refuse
                      any kind not registered via IDestructiveOperationKinds. -->
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
                   <el-switch v-model="mcpStrictKinds" />
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.strictKindsHint') }}</div>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.strictKindsHint') }}</div>
                 </el-form-item>
                 <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
                      separated list (e.g. "restore,cancel") of kind ids
@@ -665,7 +704,7 @@
                       :value="opt.id"
                     >
                       <span>{{ humanKindLabel(opt) }}</span>
-                      <span class="muted" style="margin-left: 8px; font-size: 11px">
+                      <span class="muted" style="margin-left: var(--wdc-space-2); font-size: 11px">
                         {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
                       </span>
                     </el-option>
@@ -680,7 +719,7 @@
                        fills the picker with every kind tagged Destructive
                        (restore, test_hook, settings_write, plus any plugin-
                        contributed dangerous kinds). "Clear" resets. -->
-                  <div v-if="mcpKindOptions.length > 0" style="margin-top: 6px">
+                  <div v-if="mcpKindOptions.length > 0" style="margin-top: var(--wdc-space-1-5)">
                     <el-button
                       size="small"
                       :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
@@ -697,7 +736,7 @@
                       {{ $t('settings.mcp.clearAlwaysConfirm') }}
                     </el-button>
                   </div>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
                 </el-form-item>
                 <!-- Phase 7.5+++ — operator-tunable janitor retention.
                      Defaults match GrantSweeperService.Default* (1d/30d).
@@ -705,14 +744,14 @@
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
                   <el-input-number v-model="mcpExpiredRetentionDays"
                     :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
                 </el-form-item>
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
                   <el-input-number v-model="mcpRevokedRetentionDays"
                     :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
                 </el-form-item>
                 <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
                      hourly McpToolCallsSweeperService. Bumping this
@@ -721,8 +760,8 @@
                 <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
                   <el-input-number v-model="mcpToolCallRetentionDays"
                     :min="1" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: 8px">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: 4px">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
                 </el-form-item>
               </el-form>
             </div>
@@ -732,7 +771,7 @@
                  OFF hides Deploy tab in SiteEdit + plugin REST endpoints
                  return 404. Useful for installs that only use WDC as
                  local Apache/MySQL manager without remote deploys. -->
-            <div id="deploy-subsystem" class="settings-section" style="margin-top: 16px">
+            <div id="deploy-subsystem" class="settings-section" style="margin-top: var(--wdc-space-4)">
               <h4 class="section-title">{{ $t('settings.deploySubsystem.title') }}</h4>
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
@@ -746,7 +785,7 @@
               <div
                 v-if="deployBackendMode"
                 class="hint"
-                style="margin-bottom: 12px; padding: 10px 14px; border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
+                style="margin-bottom: var(--wdc-space-3); padding: var(--wdc-space-2-5) var(--wdc-space-3-5); border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
               >
                 <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
                   🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
@@ -754,7 +793,7 @@
                 <span v-else style="color: var(--el-color-info)">
                   ⚙ {{ $t('settings.deploySubsystem.modeBuiltIn') }}
                 </span>
-                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: 8px">
+                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: var(--wdc-space-2)">
                   ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
                 </span>
               </div>
@@ -783,7 +822,7 @@
                   type="warning"
                   :closable="false"
                   show-icon
-                  style="margin-bottom: 12px; max-width: 480px"
+                  style="margin-bottom: var(--wdc-space-3); max-width: 480px"
                 />
                 <el-form-item :label="$t('settings.deploySubsystem.legacyHandlersLabel')">
                   <el-tooltip
@@ -792,7 +831,7 @@
                   >
                     <el-switch v-model="deployUseLegacyHostHandlers" :disabled="!deployFlipUnlocked && !deployRestartPending" />
                   </el-tooltip>
-                  <span class="hint" style="margin-left: 12px">
+                  <span class="hint" style="margin-left: var(--wdc-space-3)">
                     {{ $t('settings.deploySubsystem.legacyHandlersHint') }}
                   </span>
                   <el-popover
@@ -806,7 +845,7 @@
                         type="warning"
                         size="small"
                         effect="plain"
-                        style="margin-left: 12px; cursor: pointer"
+                        style="margin-left: var(--wdc-space-3); cursor: pointer"
                       >
                         🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
                       </el-tag>
@@ -818,7 +857,7 @@
                          Iter 24: localized recommendation header mirrors the
                          per-site popover for visual symmetry. -->
                     <div style="font-size: 12px">
-                      <div style="margin-bottom: 6px">
+                      <div style="margin-bottom: var(--wdc-space-1-5)">
                         <strong>
                           {{ deployFlipUnlocked
                             ? $t('deploySettings.readyToFlip')
@@ -835,18 +874,18 @@
                            cutover scope from either entry point. -->
                       <div
                         v-if="deployFlipGatedEndpoints.length > 0"
-                        style="margin-top: 10px"
+                        style="margin-top: var(--wdc-space-2-5)"
                       >
-                        <div class="muted" style="margin-bottom: 4px; font-size: 11px">
+                        <div class="muted" style="margin-bottom: var(--wdc-space-1); font-size: 11px">
                           {{ $t('deploySettings.gatedEndpointsLabel', { n: deployFlipGatedEndpoints.length }) }}
                         </div>
-                        <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+                        <ul style="font-size: 11px; margin: 0; padding-left: var(--wdc-space-4-5); max-height: 140px; overflow-y: auto">
                           <li v-for="ep in deployFlipGatedEndpoints" :key="ep">
                             <code class="mono">{{ ep }}</code>
                           </li>
                         </ul>
                       </div>
-                      <div class="muted" style="margin-top: 8px; font-size: 11px">
+                      <div class="muted" style="margin-top: var(--wdc-space-2); font-size: 11px">
                         <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
                       </div>
                     </div>
@@ -854,38 +893,11 @@
                 </el-form-item>
               </el-form>
             </div>
-
-            <!-- #147 — OS notification toggles. Stored client-side
-                 (localStorage via osNotifications service) since they
-                 only matter for THIS desktop install. Each channel can
-                 be turned off independently so an operator who lives in
-                 the WDC window all day can mute deploy toasts but keep
-                 the louder MCP confirm requests. -->
-            <div class="settings-section" style="margin-top: 16px">
-              <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
-              <p class="hint">{{ $t('settings.osNotify.description') }}</p>
-              <el-form label-position="left" label-width="240px" size="small">
-                <el-form-item :label="$t('settings.osNotify.deployLabel')">
-                  <el-switch v-model="osNotifyDeploy" />
-                </el-form-item>
-                <el-form-item :label="$t('settings.osNotify.mcpLabel')">
-                  <el-switch v-model="osNotifyMcp" />
-                </el-form-item>
-                <el-form-item :label="$t('settings.osNotify.systemLabel')">
-                  <el-switch v-model="osNotifySystem" />
-                </el-form-item>
-                <el-form-item>
-                  <el-button size="small" plain @click="onTestOsNotify">
-                    {{ $t('settings.osNotify.testBtn') }}
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </div>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- Account & Devices tab -->
-        <el-tab-pane :label="$t('settings.tabs.account')" name="account">
+        <section v-show="activeTab === 'account'" class="shell-section">
           <div class="tab-content">
             <!-- F91.4: SSO (catalog-api OIDC) moved from About -> Account
                  because signing in belongs with account management, not
@@ -974,10 +986,10 @@
               />
             </template>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- Update tab — visible in both Simple and Advanced -->
-        <el-tab-pane :label="$t('settings.tabs.update')" name="update">
+        <section v-show="activeTab === 'update'" class="shell-section">
           <EasyUpdateSettings
             :t="t"
             :current-version="currentVersion"
@@ -987,9 +999,16 @@
             @check="runUpdateCheck"
             @download="downloadAndInstall"
           />
-        </el-tab-pane>
+        </section>
+        <!-- Notifications tab — visible in both Simple and Advanced. Stored
+             by the Electron main process, so no Save step is involved. -->
+        <section v-show="activeTab === 'notifications'" class="shell-section">
+          <SettingsCard :title="$t('osNotifications.settings.title')">
+            <NotificationSettings :t="t" />
+          </SettingsCard>
+        </section>
         <!-- Sync tab — cloud config sync + export/import -->
-        <el-tab-pane v-if="uiModeStore.isAdvanced" :label="$t('settings.tabs.sync')" name="sync">
+        <section v-show="activeTab === 'sync'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.sync.topDesc') }}</p>
 
@@ -1038,10 +1057,10 @@
               @import="importSettings"
             />
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- About tab -->
-        <el-tab-pane :label="$t('settings.tabs.about')" name="about">
+        <section v-show="activeTab === 'about'" class="shell-section">
           <div class="tab-content">
             <div class="about-card">
               <div class="about-logo">NKS WDC</div>
@@ -1086,7 +1105,7 @@
                   type="primary"
                   plain
                   :loading="refreshingCatalog"
-                  style="margin-left: 8px"
+                  style="margin-left: var(--wdc-space-2)"
                   @click="refreshCatalogNow"
                 >{{ $t('settings.advanced.refreshCatalog') }}</el-button>
               </div>
@@ -1124,7 +1143,7 @@
                   <span class="sys-label">{{ $t('settings.about.binaries') }}</span>
                   <span class="sys-value">{{ systemInfo.binaries }}</span>
                 </div>
-                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: 12px">{{ $t('settings.about.installedVersions') }}</div>
+                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: var(--wdc-space-3)">{{ $t('settings.about.installedVersions') }}</div>
                 <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
                   <span class="sys-label">{{ bin.app }}</span>
                   <span class="sys-value">{{ bin.version }}</span>
@@ -1140,16 +1159,16 @@
               </div>
             </div>
           </div>
-        </el-tab-pane>
-      </el-tabs>
+        </section>
+        <!-- Save button (not shown on About, Update, MCP or Notifications; those save on change) -->
+        <template v-if="activeTab !== 'about' && activeTab !== 'update' && activeTab !== 'mcp' && activeTab !== 'notifications'" #footer>
+          <el-button type="primary" size="small" :loading="saving" @click="save">
+            {{ $t('common.save') }} {{ $t('common.settings') }}
+          </el-button>
+          <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
+        </template>
+      </SettingsShell>
 
-      <!-- Save button (not shown on About or Update) -->
-      <div class="settings-footer" v-if="uiModeStore.isAdvanced && activeTab !== 'about' && activeTab !== 'update'">
-        <el-button type="primary" size="small" :loading="saving" @click="save">
-          {{ $t('common.save') }} {{ $t('common.settings') }}
-        </el-button>
-        <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
-      </div>
     </div>
   </div>
 </template>
@@ -1158,8 +1177,11 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
+import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
+import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -1173,10 +1195,10 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
+import NotificationSettings from '../settings/shared/NotificationSettings.vue'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
@@ -1228,13 +1250,35 @@ queueMicrotask(() => {
 const { locale, t, te } = useI18n()
 
 function onLocaleChange(v: string) {
-  locale.value = v
-  localStorage.setItem('wdc-locale', v)
+  // setLocale persists the choice and updates <html lang> so screen
+  // readers and hyphenation follow the UI language.
+  setLocale(v as Locale)
 }
 
 const activeTab = ref('general')
 
-const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync'])
+// Advanced-mode section list for SettingsShell, grouped by what the
+// settings affect (the app itself, the local environment, integrations).
+const settingsGroupLabels = computed(() => ({
+  app: t('settings.groups.app'),
+  environment: t('settings.groups.environment'),
+  integration: t('settings.groups.integration'),
+}))
+const settingsSections = computed<SettingsSection[]>(() => [
+  { name: 'general', label: t('settings.tabs.general'), group: 'app' },
+  { name: 'account', label: t('settings.tabs.account'), group: 'app' },
+  { name: 'update', label: t('settings.tabs.update'), group: 'app' },
+  { name: 'notifications', label: t('settings.tabs.notifications'), group: 'app' },
+  { name: 'about', label: t('settings.tabs.about'), group: 'app' },
+  { name: 'ports', label: t('settings.tabs.ports'), group: 'environment' },
+  { name: 'paths', label: t('settings.tabs.paths'), group: 'environment' },
+  { name: 'databases', label: t('settings.tabs.databases'), group: 'environment' },
+  { name: 'sync', label: t('settings.tabs.sync'), group: 'integration' },
+  { name: 'mcp', label: t('settings.tabs.mcp'), group: 'integration' },
+  { name: 'advanced', label: t('settings.tabs.advanced'), group: 'integration' },
+])
+
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync', 'mcp'])
 watch(() => uiModeStore.isSimple, (simple) => {
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
@@ -1417,24 +1461,6 @@ async function loadDeployFlipReadiness(): Promise<void> {
   } catch { /* keep locked on error */ }
 }
 
-// #147 — OS notification per-channel toggles. Persist via the
-// osNotifications service (localStorage-backed) on flip so the change
-// takes effect immediately without a Save All step.
-const osNotifyDeploy = ref(isChannelEnabled('deploy'))
-const osNotifyMcp = ref(isChannelEnabled('mcp'))
-const osNotifySystem = ref(isChannelEnabled('system'))
-watch(osNotifyDeploy, (v) => setChannelEnabled('deploy', v))
-watch(osNotifyMcp,    (v) => setChannelEnabled('mcp', v))
-watch(osNotifySystem, (v) => setChannelEnabled('system', v))
-
-async function onTestOsNotify(): Promise<void> {
-  await osNotify({
-    title: t('settings.osNotify.testTitle'),
-    body: t('settings.osNotify.testBody'),
-    urgency: 'normal',
-    channel: 'system',
-  })
-}
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
@@ -1491,7 +1517,11 @@ const phpFpmBasePort = ref(9000)
 const telemetryEnabled = ref(false)
 const telemetryCrashReports = ref(false)
 const backupDir = ref('')
-const backupScheduleHours = ref(0)
+// Matches BackupScheduler.DefaultScheduleHours; 0 means "off", so a 0
+// default silently disabled scheduled backups on the first Save.
+const backupScheduleHours = ref(24)
+// Save writes every key; never let it run on top of a failed load.
+const settingsLoaded = ref(false)
 
 // Backup management
 import { fetchBackups, createBackup, downloadBackup, listMcpKinds, type BackupEntry } from '../../api/daemon'
@@ -1530,7 +1560,7 @@ const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
 
 function downloadBackupFile(path: string) {
-  downloadBackup(path)
+  downloadBackup(path).catch((e) => ElMessage.error(t('backupsPage.snapshots.downloadFailed', { error: errorMessage(e) })))
 }
 
 // ── Danger-zone reset operations ──────────────────────────────────────
@@ -1885,6 +1915,7 @@ async function loadMcpKindOptions(): Promise<void> {
 async function loadSettings() {
   try {
     const data = await fetchSettings()
+    settingsLoaded.value = true
     if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
     if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
     // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
@@ -2780,6 +2811,10 @@ onBeforeUnmount(() => {
 })
 
 async function save() {
+  if (!settingsLoaded.value) {
+    ElMessage.error(t('settings.loadFailedSaveBlocked'))
+    return
+  }
   saving.value = true
   try {
     const payload: Record<string, string> = {
@@ -2834,10 +2869,10 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .page-title {
@@ -2851,17 +2886,17 @@ async function save() {
 .page-subtitle {
   font-size: 0.85rem;
   color: var(--wdc-text-3);
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 
 .page-body {
-  padding: 24px;
+  padding: var(--wdc-space-5);
 }
 
 .simple-settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  gap: 16px;
+  gap: var(--wdc-space-4);
   align-items: start;
 }
 
@@ -2874,14 +2909,14 @@ async function save() {
 
 .simple-settings-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--wdc-space-2);
+  margin-top: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 
 .simple-runtime-grid {
   display: grid;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .simple-settings-footer {
@@ -2894,11 +2929,11 @@ async function save() {
 }
 
 .tab-content {
-  padding: 20px 0;
+  padding: var(--wdc-space-4-5) 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
   grid-auto-flow: dense;
-  gap: 20px 24px;
+  gap: var(--wdc-space-4-5) var(--wdc-space-5);
   align-items: start;
 }
 .tab-content > .tab-desc,
@@ -2912,7 +2947,7 @@ async function save() {
 .tab-desc {
   font-size: 0.82rem;
   color: var(--el-text-color-secondary);
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
   line-height: 1.5;
 }
 
@@ -2921,28 +2956,29 @@ async function save() {
   font-size: 0.82rem;
 }
 
+.mcp-connect-link { margin-left: var(--wdc-space-3); }
 .hint {
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
   font-size: 0.76rem;
   color: var(--wdc-text-3);
   line-height: 1.5;
 }
 .danger-zone {
-  margin-top: 32px;
-  padding: 18px 20px;
+  margin-top: var(--wdc-space-6);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: color-mix(in srgb, var(--el-color-danger) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--el-color-danger) 30%, transparent);
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
   max-width: none;
 }
 .danger-title {
-  margin: 0 0 4px 0;
+  margin: 0 0 var(--wdc-space-1) 0;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--el-color-danger);
 }
 .danger-desc {
-  margin: 0 0 18px 0;
+  margin: 0 0 var(--wdc-space-4-5) 0;
   font-size: 0.82rem;
   color: var(--wdc-text-3);
 }
@@ -2950,15 +2986,15 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-3) 0;
   border-top: 1px solid color-mix(in srgb, var(--el-color-danger) 20%, transparent);
 }
 .danger-row .danger-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .danger-row strong {
   font-size: 0.88rem;
@@ -2975,7 +3011,7 @@ async function save() {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.74rem;
@@ -2984,11 +3020,11 @@ async function save() {
    shared primitive (plan §6). */
 
 .settings-footer {
-  margin-top: 24px;
-  padding-top: 16px;
+  margin-top: var(--wdc-space-5);
+  padding-top: var(--wdc-space-4);
   border-top: 1px solid var(--el-border-color);
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 @media (max-width: 980px) {
@@ -3003,16 +3039,16 @@ async function save() {
 
 @media (max-width: 640px) {
   .page-header {
-    padding: 18px 16px 0;
-    margin-bottom: 14px;
+    padding: var(--wdc-space-4-5) var(--wdc-space-4) 0;
+    margin-bottom: var(--wdc-space-3-5);
   }
 
   .page-body {
-    padding: 0 16px 18px;
+    padding: 0 var(--wdc-space-4) var(--wdc-space-4-5);
   }
 
   .simple-settings-panel {
-    padding: 14px;
+    padding: var(--wdc-space-3-5);
   }
 
   .settings-footer {
@@ -3032,8 +3068,8 @@ async function save() {
 .about-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 28px 36px;
-  padding: 8px 4px;
+  gap: var(--wdc-space-5-5) var(--wdc-space-6-5);
+  padding: var(--wdc-space-2) var(--wdc-space-1);
 }
 @media (max-width: 820px) {
   .about-card { grid-template-columns: minmax(0, 1fr); gap: 20px; }
@@ -3064,11 +3100,11 @@ async function save() {
 .about-logo {
   display: inline-flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: var(--wdc-brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -3096,23 +3132,22 @@ async function save() {
 .about-stack {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 2px;
+  gap: var(--wdc-space-1);
+  margin-top: var(--wdc-space-0-5);
 }
 
 .about-system { font-size: 0.85rem; }
 .about-sys-title {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
-  margin: 0 0 6px;
+  margin: 0 0 var(--wdc-space-1-5);
+  font-family: var(--wdc-font-display);
 }
 .about-sys-row {
   display: flex;
   justify-content: space-between;
-  padding: 3px 0;
+  padding: var(--wdc-space-1) 0;
   font-size: 0.82rem;
   border-bottom: 1px dashed var(--wdc-border);
 }
@@ -3129,7 +3164,7 @@ async function save() {
 .mysql-root-row {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   width: 100%;
 }
 .mysql-root-row .el-input {
@@ -3143,7 +3178,7 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
 }
 .db-row:last-child { border-bottom: none; }
@@ -3155,23 +3190,22 @@ async function save() {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
   overflow: hidden;
 }
 .settings-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border-bottom: 1px solid var(--wdc-border);
 }
 .settings-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text);
+  font-family: var(--wdc-font-display);
 }
 .settings-card-body { padding: 18px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }

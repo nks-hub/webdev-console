@@ -140,34 +140,35 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
 .deploy-status-banner {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 22px;
-  background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
   border-left: 4px solid var(--wdc-accent);
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
   box-shadow: var(--wdc-shadow-card);
 }
 .status-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 @container (max-width: 600px) {
   .status-metrics { grid-template-columns: repeat(2, 1fr); }
 }
 .metric {
   display: flex; flex-direction: column; align-items: center;
-  padding: 8px 4px;
+  padding: var(--wdc-space-2) var(--wdc-space-1);
 }
 .metric-value {
   font-size: 28px; font-weight: 700; line-height: 1.1;
   color: var(--el-text-color-primary);
 }
 .metric-label {
-  font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 0.82rem;
   color: var(--el-text-color-secondary); margin-top: 2px;
+  font-family: var(--wdc-font-display);
 }
 .metric-success .metric-value { color: var(--el-color-success); }
 .metric-warning .metric-value { color: var(--el-color-warning); }
@@ -178,10 +179,10 @@ const triggeredByMix = computed<TriggeredByCount[]>(() => {
 }
 .status-host-pill {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 4px 12px;
+  padding: var(--wdc-space-1) var(--wdc-space-3);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 12px;
   font-weight: 500;
 }

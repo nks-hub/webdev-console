@@ -32,7 +32,7 @@
         </el-button>
         <el-button size="small" link class="sd-full-logs" @click="openFullLogs">
           {{ t('sites.detail.simple.activity.fullLogs') }}
-          <el-icon style="margin-left:4px"><ArrowRight /></el-icon>
+          <el-icon style="margin-left:var(--wdc-space-1)"><ArrowRight /></el-icon>
         </el-button>
       </div>
     </div>
@@ -139,43 +139,42 @@ defineExpose({ reload: load })
 
 <style scoped>
 .sd-section {
-  margin-top: 18px;
-  padding: 16px;
+  margin-top: var(--wdc-space-4-5);
+  padding: var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
 }
 .sd-section-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--wdc-text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 .sd-activity-block {
-  padding: 12px 0;
+  padding: var(--wdc-space-3) 0;
   border-bottom: 1px solid var(--wdc-border);
 }
 .sd-activity-block:last-child { border-bottom: 0; }
 .sd-activity-label {
   font-size: 13px;
   color: var(--el-text-color-regular);
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .sd-err-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   height: 18px;
   background: var(--el-color-danger);
   color: white;
-  border-radius: 9px;
+  border-radius: var(--wdc-radius);
   font-size: 11px;
   font-weight: 600;
 }
@@ -188,8 +187,8 @@ defineExpose({ reload: load })
 }
 .sd-err-line {
   display: flex;
-  gap: 8px;
-  padding: 4px 0;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1) 0;
   font-size: 12px;
   line-height: 1.4;
 }
@@ -203,7 +202,7 @@ defineExpose({ reload: load })
 .sd-activity-empty {
   color: var(--el-text-color-secondary);
   font-size: 12px;
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
 }
 .sd-activity-actions { display: flex; gap: 12px; margin-top: 6px; }
 .sd-full-logs { margin-left: auto; min-height: 32px; }

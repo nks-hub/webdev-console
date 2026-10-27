@@ -10,6 +10,42 @@ namespace NKS.WebDevConsole.Daemon.Hosts;
 /// </summary>
 internal static class HostsEndpoints
 {
+    // UTF-8 without BOM: ASCII turned any non-ASCII text in the user's own
+    // lines (e.g. Czech comments) into '?', and a BOM can break the first line.
+    private static readonly System.Text.Encoding HostsEncoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+    /// <summary>Where <c>POST /api/hosts/backup</c> writes its <c>hosts-*.bak</c> copies.</summary>
+    internal static string HostsBackupsDir =>
+        Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "hosts");
+
+    /// <summary>
+    /// Resolves the <c>path</c> of a hosts restore request. Only a
+    /// <c>hosts-*.bak</c> file directly inside <paramref name="backupsDir"/> is
+    /// accepted; anything else (another folder, a traversal, a different file
+    /// name) returns null so the hosts file can never be overwritten with an
+    /// arbitrary file the daemon can read.
+    /// </summary>
+    internal static string? ResolveBackupPath(string path, string backupsDir)
+    {
+        string full;
+        try { full = Path.GetFullPath(path, backupsDir); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return null; }
+
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(backupsDir, full))
+            return null;
+        var dir = Path.GetDirectoryName(full);
+        if (dir is null || !string.Equals(
+                Path.TrimEndingDirectorySeparator(dir),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(backupsDir)),
+                OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            return null;
+        var name = Path.GetFileName(full);
+        return name.StartsWith("hosts-", StringComparison.OrdinalIgnoreCase)
+               && name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)
+            ? full
+            : null;
+    }
+
     public static void MapHostsEndpoints(this WebApplication app)
     {
         static string GetHostsPath() =>
@@ -175,12 +211,20 @@ internal static class HostsEndpoints
                     return Results.BadRequest(new { error = $"Invalid IP: {e.Ip}" });
                 if (!IsHostnameValid(e.Hostname))
                     return Results.BadRequest(new { error = $"Invalid hostname: {e.Hostname}" });
+                // A CR/LF (or another control char) in a comment would end the line
+                // and let the request append arbitrary entries to the hosts file.
+                // TAB is allowed: GET returns comments with inner tabs verbatim.
+                if (e.Comment is not null && e.Comment.Any(c => c != '\t' && char.IsControl(c)))
+                    return Results.BadRequest(new { error = $"Invalid comment for {e.Hostname}" });
             }
 
             var hostsPath = GetHostsPath();
             const string beginMarker = "# BEGIN NKS WebDev Console";
             const string endMarker   = "# END NKS WebDev Console";
 
+            // Held across read → rewrite → write so a concurrent site apply
+            // cannot write back hosts content read before this save.
+            await HostsFileWriter.Gate.WaitAsync();
             try
             {
                 var content = await File.ReadAllTextAsync(hostsPath);
@@ -196,14 +240,32 @@ internal static class HostsEndpoints
                 }
                 wdcLines.Add(endMarker);
 
-                // Build non-wdc lines (custom + external) from request
-                var nonWdcLines = new List<string>();
-                foreach (var e in req.Entries.Where(e => e.Source != "wdc"))
+                // Entries outside the managed block belong to the user's own part of
+                // the file. The request's custom rows used to be built here and then
+                // dropped, so "Add entry" reported success without touching the file.
+                // Append rows that are not in the file yet; edits and removals of
+                // existing lines are still left as they are and reported back.
+                static string Key(string ip, string host) => $"{ip.Trim()}\u0000{host.Trim()}".ToLowerInvariant();
+                var existingOutside = ParseHostsEntries(content, new HashSet<string>(StringComparer.OrdinalIgnoreCase))
+                    .Where(x => x.Source != "wdc")
+                    .ToList();
+                var existingKeys = existingOutside.Select(x => Key(x.Ip, x.Hostname)).ToHashSet();
+                var requested = req.Entries.Where(e => e.Source != "wdc").ToList();
+                var addedLines = new List<string>();
+                foreach (var e in requested.Where(q => !existingKeys.Contains(Key(q.Ip, q.Hostname))))
                 {
                     var prefix = e.Enabled ? "" : "# ";
                     var comment = string.IsNullOrWhiteSpace(e.Comment) ? "" : $" # {e.Comment.Trim()}";
-                    nonWdcLines.Add($"{prefix}{e.Ip}\t{e.Hostname}{comment}");
+                    addedLines.Add($"{prefix}{e.Ip.Trim()}\t{e.Hostname.Trim()}{comment}");
+                    existingKeys.Add(Key(e.Ip, e.Hostname));
                 }
+                var requestedByKey = requested
+                    .GroupBy(e => Key(e.Ip, e.Hostname))
+                    .ToDictionary(g => g.Key, g => g.First());
+                var notApplied = existingOutside.Count(x =>
+                    !requestedByKey.TryGetValue(Key(x.Ip, x.Hostname), out var r)
+                    || r.Enabled != x.Enabled
+                    || !string.Equals((r.Comment ?? "").Trim(), x.Comment ?? "", StringComparison.Ordinal));
 
                 // Rebuild: strip existing managed block, replace with new one, keep external
                 // Strategy: strip begin..end block, inject new block, rebuild non-wdc lines
@@ -223,6 +285,12 @@ internal static class HostsEndpoints
                 {
                     before = content.TrimEnd();
                     after = string.Empty;
+                }
+
+                if (addedLines.Count > 0)
+                {
+                    var added = string.Join(Environment.NewLine, addedLines);
+                    before = before.Length > 0 ? before + Environment.NewLine + added : added;
                 }
 
                 var sb = new System.Text.StringBuilder();
@@ -245,11 +313,11 @@ internal static class HostsEndpoints
                 }
                 File.Copy(hostsPath, $"{hostsPath}.wdc-backup.1", overwrite: true);
 
-                await File.WriteAllTextAsync(hostsPath, newContent, System.Text.Encoding.ASCII);
+                await HostsFileWriter.WriteAsync(hostsPath, newContent, HostsEncoding);
 
                 try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
-                return Results.Ok(new { applied = true, entryCount = req.Entries.Count });
+                return Results.Ok(new { applied = true, entryCount = req.Entries.Count, added = addedLines.Count, notApplied });
             }
             catch (UnauthorizedAccessException)
             {
@@ -259,6 +327,10 @@ internal static class HostsEndpoints
             {
                 return Results.Problem($"Failed to apply hosts: {ex.Message}");
             }
+            finally
+            {
+                HostsFileWriter.Gate.Release();
+            }
         });
 
         app.MapPost("/api/hosts/backup", () =>
@@ -267,7 +339,7 @@ internal static class HostsEndpoints
             if (!File.Exists(hostsPath))
                 return Results.NotFound(new { error = "Hosts file not found" });
 
-            var backupsDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "hosts");
+            var backupsDir = HostsBackupsDir;
             Directory.CreateDirectory(backupsDir);
 
             var ts = DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmssZ");
@@ -302,17 +374,23 @@ internal static class HostsEndpoints
             const int MaxHostsBytes = 10 * 1024 * 1024;
 
             var hostsPath = GetHostsPath();
+            await HostsFileWriter.Gate.WaitAsync();
             try
             {
                 string newContent;
                 if (!string.IsNullOrWhiteSpace(req.Path))
                 {
-                    if (!File.Exists(req.Path))
+                    var backupPath = ResolveBackupPath(req.Path, HostsBackupsDir);
+                    if (backupPath is null)
+                        return Results.BadRequest(new { error = "path must name a hosts backup (hosts-*.bak) in the WDC hosts backup folder" });
+                    if (!File.Exists(backupPath))
                         return Results.NotFound(new { error = $"Backup file not found: {req.Path}" });
-                    var fi = new FileInfo(req.Path);
+                    var fi = new FileInfo(backupPath);
+                    if (fi.LinkTarget is not null)
+                        return Results.BadRequest(new { error = "Backup file must not be a link" });
                     if (fi.Length > MaxHostsBytes)
                         return Results.BadRequest(new { error = $"Backup file too large ({fi.Length} bytes, max {MaxHostsBytes})" });
-                    newContent = await File.ReadAllTextAsync(req.Path);
+                    newContent = await File.ReadAllTextAsync(backupPath);
                 }
                 else
                 {
@@ -331,7 +409,7 @@ internal static class HostsEndpoints
                 if (File.Exists(hostsPath))
                     File.Copy(hostsPath, $"{hostsPath}.wdc-backup.1", overwrite: true);
 
-                await File.WriteAllTextAsync(hostsPath, newContent, System.Text.Encoding.ASCII);
+                await HostsFileWriter.WriteAsync(hostsPath, newContent, HostsEncoding);
                 try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
                 return Results.Ok(new { restored = true });
@@ -343,6 +421,10 @@ internal static class HostsEndpoints
             catch (Exception ex)
             {
                 return Results.Problem($"Restore failed: {ex.Message}");
+            }
+            finally
+            {
+                HostsFileWriter.Gate.Release();
             }
         });
     }

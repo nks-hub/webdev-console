@@ -3,16 +3,21 @@
     <!-- Page header -->
     <div class="page-header help-page-header">
       <h1 class="page-title">{{ t('help.title') }}</h1>
-      <el-button type="primary" size="small" @click="openWizard">
-        &#9654; {{ t('help.startGettingStarted') }}
-      </el-button>
+      <div class="help-header-actions">
+        <el-button size="small" @click="requestOnboarding">
+          {{ t('help.runSetupWizard') }}
+        </el-button>
+        <el-button type="primary" size="small" @click="openWizard">
+          &#9654; {{ t('help.startGettingStarted') }}
+        </el-button>
+      </div>
     </div>
 
     <!-- Breadcrumb -->
     <div class="help-breadcrumb" v-if="activeTopic">
-      <span class="bc-item bc-link" @click="clearTopic">{{ t('help.breadcrumbRoot') }}</span>
+      <span v-activate:link class="bc-item bc-link" @click="clearTopic">{{ t('help.breadcrumbRoot') }}</span>
       <span class="bc-sep">/</span>
-      <span class="bc-item bc-link" @click="clearTopic">{{ t(`help.groups.${activeGroup?.key}`) }}</span>
+      <span v-activate:link class="bc-item bc-link" @click="clearTopic">{{ t(`help.groups.${activeGroup?.key}`) }}</span>
       <span class="bc-sep">/</span>
       <span class="bc-item bc-current">{{ t(`help.topics.${activeTopic.key}.title`) }}</span>
     </div>
@@ -139,6 +144,7 @@ import {
   Menu, Star,
 } from '@element-plus/icons-vue'
 import GettingStartedWizard from '../shared/GettingStartedWizard.vue'
+import { requestOnboarding } from '../../utils/onboarding'
 
 const { t } = useI18n()
 
@@ -282,6 +288,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.help-header-actions {
+  display: flex;
+  gap: var(--wdc-space-2);
+}
 .help-page {
   display: flex;
   flex-direction: column;
@@ -293,11 +303,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .help-page-header h1,
 .help-page-header h2 {
@@ -312,8 +322,8 @@ onMounted(() => {
 .help-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 0 10px;
+  gap: var(--wdc-space-1);
+  padding: var(--wdc-space-1) 0 var(--wdc-space-2-5);
   font-size: 0.78rem;
   color: var(--wdc-text-3);
   flex-shrink: 0;
@@ -347,11 +357,11 @@ onMounted(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   border-right: 1px solid var(--wdc-border);
   background: var(--wdc-surface);
   overflow-y: auto;
-  padding: 10px 6px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-1-5);
 }
 
 .help-search { padding: 0 4px; }
@@ -359,7 +369,7 @@ onMounted(() => {
 .help-nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
   flex: 1;
 }
 
@@ -369,8 +379,8 @@ onMounted(() => {
 .help-group-header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 10px;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-2) var(--wdc-space-2-5);
   background: transparent;
   border: none;
   border-radius: var(--wdc-radius-sm);
@@ -400,16 +410,16 @@ onMounted(() => {
 .help-group-items {
   display: flex;
   flex-direction: column;
-  padding-left: 22px;
+  padding-left: var(--wdc-space-5);
   gap: 1px;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 
 .help-nav-item {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 6px 12px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-3);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--wdc-radius-sm);
@@ -431,16 +441,15 @@ onMounted(() => {
 }
 
 .search-result-group {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin-bottom: 1px;
+  font-family: var(--wdc-font-display);
 }
 
 .help-no-results {
-  padding: 16px 10px;
+  padding: var(--wdc-space-4) var(--wdc-space-2-5);
   font-size: 0.82rem;
   color: var(--wdc-text-3);
   font-style: italic;
@@ -451,7 +460,7 @@ onMounted(() => {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  padding: 20px 24px 40px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5) var(--wdc-space-6-5);
   background: var(--wdc-surface);
 }
 
@@ -466,14 +475,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .video-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   color: var(--wdc-text-3);
 }
 
@@ -492,13 +501,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 10px;
-  padding: 8px 12px;
+  gap: var(--wdc-space-1-5) var(--wdc-space-2-5);
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
   font-size: 0.78rem;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
   max-width: 640px;
 }
 
@@ -520,7 +529,7 @@ onMounted(() => {
 .help-section-title {
   font-size: 1.4rem;
   font-weight: 700;
-  margin: 0 0 16px;
+  margin: 0 0 var(--wdc-space-4);
   color: var(--wdc-text);
 }
 
@@ -533,11 +542,11 @@ onMounted(() => {
 }
 
 .help-prose :deep(h3) {
-  margin: 22px 0 8px;
+  margin: var(--wdc-space-5) 0 var(--wdc-space-2);
   font-size: 1rem;
   font-weight: 600;
   color: var(--wdc-text);
-  padding-top: 4px;
+  padding-top: var(--wdc-space-1);
 }
 
 .help-prose :deep(p) { margin: 0 0 10px; }
@@ -545,7 +554,7 @@ onMounted(() => {
 .help-prose :deep(code) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 2px 7px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
@@ -564,9 +573,9 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 24px;
+  padding: var(--wdc-space-7) var(--wdc-space-5);
   text-align: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .welcome-icon {
@@ -600,16 +609,16 @@ onMounted(() => {
 .welcome-groups {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   justify-content: center;
-  margin-top: 12px;
+  margin-top: var(--wdc-space-3);
 }
 
 .welcome-group-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

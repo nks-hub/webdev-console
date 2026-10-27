@@ -34,7 +34,7 @@
       <el-tab-pane name="marketplace">
         <template #label>
           <span>{{ $t('plugins.marketplace') }}</span>
-          <el-tag v-if="marketplace.reachable" size="small" type="success" effect="plain" style="margin-left:6px">
+          <el-tag v-if="marketplace.reachable" size="small" type="success" effect="plain" style="margin-left:var(--wdc-space-1-5)">
             {{ marketplace.plugins.length }}
           </el-tag>
         </template>
@@ -55,7 +55,7 @@
         show-icon
         :title="`Marketplace unreachable: ${marketplace.error}`"
         :description="`Source: ${marketplace.source}`"
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
       <div v-if="loadingMarketplace" class="page-body-pad">
         <el-skeleton :rows="3" animated />
@@ -241,6 +241,7 @@ import {
   restartDaemon,
   restorePlugin,
   waitForDaemon,
+  daemonToken,
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
@@ -305,7 +306,7 @@ async function installFromMarketplace(mp: MarketplacePlugin) {
 
   installing.value.add(mp.id)
   try {
-    const result = await installPluginFromMarketplace(mp.id, mp.downloadUrl)
+    const result = await installPluginFromMarketplace(mp.id, mp.downloadUrl, mp.sha256)
     ElNotification({
       title: t('plugins.toast.installedNotification', { name: mp.name }),
       message: result.restartRequired
@@ -366,6 +367,7 @@ async function toggle(id: string) {
 async function doRestore(id: string) {
   restoring.value.add(id)
   try {
+    const tokenBefore = daemonToken()
     const res = await restorePlugin(id)
     if (res.rebuildRequired) {
       ElNotification.warning({
@@ -381,7 +383,7 @@ async function doRestore(id: string) {
         message: res.message,
         duration: 3000,
       })
-      const ready = await waitForDaemon(15000)
+      const ready = await waitForDaemon(15000, tokenBefore)
       if (!ready) ElMessage.warning(t('plugins.toast.restartTimeout'))
       await pluginsStore.loadAll()
       await reloadMarketplace()
@@ -414,11 +416,12 @@ async function confirmUninstall(id: string, name: string) {
         message: t('plugins.toast.uninstalledRestarting', { msg: res.message ?? t('plugins.toast.fileDeleted') }),
         duration: 4000,
       })
+      const tokenBefore = daemonToken()
       try { await restartDaemon() } catch { /* daemon already closing the socket */ }
       // F91.12: poll /healthz until the respawned daemon answers.
       // Replaces a flat 3.5s sleep that sometimes reloaded stale data
       // when the new daemon took longer to boot.
-      const ready = await waitForDaemon(15000)
+      const ready = await waitForDaemon(15000, tokenBefore)
       if (!ready) {
         ElMessage.warning(t('plugins.toast.restartTimeoutLong'))
       }
@@ -455,10 +458,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .page-title {
@@ -472,17 +475,17 @@ onMounted(() => {
 .page-subtitle {
   font-size: 0.76rem;
   color: var(--wdc-text-3);
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
 }
 
 .page-body-pad {
-  padding: 16px 24px 24px;
+  padding: var(--wdc-space-4) 0 var(--wdc-space-5);
 }
 
 .pm-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
-  gap: 12px;
+  gap: var(--wdc-space-3);
   justify-content: start;
 }
 
@@ -490,10 +493,10 @@ onMounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
   border-left-width: 3px;
   border-left-style: solid;
@@ -502,7 +505,7 @@ onMounted(() => {
 
 .pm-card--enabled {
   border-left-color: var(--wdc-accent);
-  background: linear-gradient(to right, rgba(94,234,212,0.04), transparent 40%), var(--wdc-surface);
+  background: var(--wdc-surface);
 }
 .pm-card--disabled { opacity: 0.55; }
 .pm-card--disabled .pm-name { color: var(--wdc-text-muted); }
@@ -520,13 +523,13 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .pm-card-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -543,10 +546,10 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.7rem;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   height: 18px;
   line-height: 18px;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 
 .pm-card-desc {
@@ -564,18 +567,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 
 .pm-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
+  gap: var(--wdc-space-2);
+  font-size: 0.82rem;
   color: var(--wdc-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 
 .pm-version {
@@ -584,8 +586,8 @@ onMounted(() => {
   color: var(--wdc-text-muted);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 8px;
-  border-radius: 999px;
+  padding: 1px var(--wdc-space-2);
+  border-radius: var(--wdc-radius-full);
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
@@ -599,15 +601,15 @@ onMounted(() => {
 .pm-perms {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .pm-card-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   justify-content: flex-end;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
 }
 
@@ -621,12 +623,12 @@ onMounted(() => {
   grid-column: 1 / -1;
   display: flex;
   justify-content: center;
-  padding: 40px 0;
+  padding: var(--wdc-space-6-5) 0;
 }
 
 .pm-mp-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
 }
 </style>

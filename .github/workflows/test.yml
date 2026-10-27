@@ -1,10 +1,13 @@
 name: Tests
 
 on:
+  # Feature branches are covered by the pull_request trigger; running on
+  # every branch push as well ran the whole matrix twice per PR commit.
   push:
-    branches: ['**']
-  pull_request:
     branches: [main, master]
+  # No base-branch filter: stacked PRs (base = another feature branch) need
+  # the same checks as PRs into main.
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,8 +18,15 @@ permissions:
 
 jobs:
   test:
-    name: Build & Test (.NET)
-    runs-on: windows-latest
+    name: Build & Test (.NET, ${{ matrix.os }})
+    # The daemon ships for Windows, macOS and Linux and has OS-specific code
+    # paths (hosts file, port file permissions, elevation). Running the
+    # suite on Windows only let Unix regressions through.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     # Safety net: build+test typically finishes in ~2m, so 20m catches
     # a hung `dotnet test` (dead test deadlock, network-dependent probe)
     # long before the job's default 6h cap.
@@ -45,5 +55,39 @@ jobs:
       - name: Build
         run: dotnet build WebDevConsole.sln --no-restore -c Release
 
+      # --blame-hang-timeout aborts a stuck test after 3 min and names it in
+      # the log, instead of the job silently running into timeout-minutes.
       - name: Test
-        run: dotnet test WebDevConsole.sln -c Release --verbosity normal
+        # Orchestrator tests run the real hosts-file step. Without this the
+        # macOS runner (not root) falls through to an osascript admin prompt
+        # nobody can answer and the test host hangs.
+        env:
+          NKS_WDC_SKIP_HOSTS_UAC: '1'
+        run: dotnet test WebDevConsole.sln -c Release --no-build --verbosity normal --blame-hang-timeout 3m --blame-hang-dump-type none
+
+  mcp-server:
+    name: MCP server (tsc + vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/mcp-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: services/mcp-server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test

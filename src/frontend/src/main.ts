@@ -3,6 +3,14 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
+// Self-hosted fonts: no runtime requests to Google, works offline.
+import '@fontsource/familjen-grotesk/500.css'
+import '@fontsource/familjen-grotesk/600.css'
+import '@fontsource/ibm-plex-sans/400.css'
+import '@fontsource/ibm-plex-sans/500.css'
+import '@fontsource/ibm-plex-sans/600.css'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
 import './assets/tokens.css'
 import * as ElementPlusIcons from '@element-plus/icons-vue'
 import * as Sentry from '@sentry/electron/renderer'
@@ -16,6 +24,7 @@ import App from './App.vue'
 // xterm for LogViewer) get code-split into their own chunks instead of
 // being pulled into the main bundle through this eager import barrel.
 import { registerPanelComponent } from './plugins/PluginRegistry'
+import { vActivate } from './directives/activate'
 
 registerPanelComponent('service-status-card', defineAsyncComponent(() => import('./components/shared/ServiceCard.vue')))
 registerPanelComponent('version-switcher', defineAsyncComponent(() => import('./components/shared/VersionSwitcher.vue')))
@@ -34,6 +43,7 @@ app.use(createPinia())
 app.use(ElementPlus)
 app.use(router)
 app.use(i18n)
+app.directive('activate', vActivate)
 
 // Sentry renderer init — the main process already sets up the transport +
 // DSN via @sentry/electron/main; renderer init picks that up automatically

@@ -91,7 +91,7 @@
                 :closable="true"
                 show-icon
                 :title="databasesError"
-                style="margin-bottom: 14px"
+                style="margin-bottom: var(--wdc-space-3-5)"
                 @close="databasesError = ''"
               />
 
@@ -281,7 +281,7 @@
                 :closable="false"
                 show-icon
                 :title="usersError"
-                style="margin-bottom: 12px"
+                style="margin-bottom: var(--wdc-space-3)"
               />
               <el-table :data="users" size="small" stripe class="users-table" v-loading="usersLoading">
                 <el-table-column prop="userName" :label="$t('mysqlPlugin.userName')" min-width="160" />
@@ -361,11 +361,11 @@
                 type="warning"
                 :closable="false"
                 show-icon
-                style="margin-bottom: 16px"
+                style="margin-bottom: var(--wdc-space-4)"
               >
                 <template #title>{{ $t('mysqlPlugin.resetWarning') }}</template>
                 <template #default>
-                  <p style="margin: 6px 0 0">{{ $t('mysqlPlugin.resetDescription') }}</p>
+                  <p style="margin: var(--wdc-space-1-5) 0 0">{{ $t('mysqlPlugin.resetDescription') }}</p>
                 </template>
               </el-alert>
               <el-form label-width="180px" size="default">
@@ -403,7 +403,7 @@
             :closable="false"
             show-icon
             :title="$t('mysqlPlugin.tuningPending')"
-            style="margin-bottom: 16px"
+            style="margin-bottom: var(--wdc-space-4)"
           />
           <EditCard :title="$t('mysqlPlugin.tuningParams')">
             <el-form label-width="240px" size="default">
@@ -1052,21 +1052,21 @@ watch(() => route.query.tab, value => {
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: transparent; padding: 0; }
+.cf-page { min-height: 100%; background: transparent; }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
-.page-autostart-row { padding: 10px 24px 0; width: 100%; }
+.page-autostart-row { padding: 10px 0 0; width: 100%; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
 .page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }
 .header-actions { display: flex; gap: 8px; }
-.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 24px 4px; }
+.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 0 4px; }
 .status-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); }
 .status-card.status-active { border-color: var(--wdc-status-running); }
 .status-icon { font-size: 1.4rem; width: 30px; text-align: center; color: var(--wdc-text-3); }
@@ -1074,7 +1074,7 @@ watch(() => route.query.tab, value => {
 .status-body { display: flex; flex-direction: column; min-width: 0; }
 .status-title { font-size: 0.92rem; font-weight: 700; color: var(--wdc-text); }
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
-.cf-tabs { padding: 16px 24px; }
+.cf-tabs { padding: 16px 0; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
 /* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
@@ -1100,7 +1100,9 @@ watch(() => route.query.tab, value => {
 .database-detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .tables-section { margin-bottom: 18px; }
 .tables-table { width: 100%; }
-.section-label { margin-bottom: 8px; color: var(--wdc-text-3); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.section-label { margin-bottom: 8px; color: var(--wdc-text-3); font-size: 0.82rem; font-weight: 500;
+  font-family: var(--wdc-font-display);
+}
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 .query-section { margin-top: 14px; }
 .query-input { margin-bottom: 8px; }
@@ -1111,7 +1113,7 @@ watch(() => route.query.tab, value => {
 .user-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 0 18px;
+  gap: 0 var(--wdc-space-4-5);
 }
 .user-form-grid :deep(.el-form-item) { margin-bottom: 14px; }
 .muted { color: var(--wdc-text-3); }

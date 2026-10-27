@@ -64,7 +64,7 @@
       <span v-if="statusText === 'crashed'" class="offline-crashed">{{ $t('services.card.crashed') }}</span>
       <span v-else-if="statusText === 'starting'" class="offline-starting">{{ $t('services.card.starting') }}</span>
       <span v-else class="offline-stopped">{{ $t('services.card.notRunning') }}</span>
-      <span class="meta-item" v-if="service.version" style="margin-top: 4px;">
+      <span class="meta-item" v-if="service.version" style="margin-top: var(--wdc-space-1);">
         <span class="meta-label">v</span>
         <span class="meta-val">{{ service.version }}</span>
       </span>
@@ -110,6 +110,9 @@ import { computed, ref } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { useServicesStore } from '../../stores/services'
 import type { ServiceInfo } from '../../api/types'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{ service: ServiceInfo }>()
 const servicesStore = useServicesStore()
@@ -162,7 +165,7 @@ async function act(action: 'start' | 'stop' | 'restart') {
   try {
     await servicesStore[action](svc.id)
     const svcName = svc.displayName || svc.id
-    ElMessage.success(`${svcName}: ${action} succeeded`)
+    ElMessage.success(t(action === 'start' ? 'toast.serviceStarted' : action === 'stop' ? 'toast.serviceStopped' : 'toast.serviceRestarted', { name: svcName }))
   } catch (err: unknown) {
     const svcName = svc.displayName || svc.id
     const message = err instanceof Error ? err.message : String(err)
@@ -197,10 +200,10 @@ function formatUptime(seconds: number): string {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 20px;
+  padding: var(--wdc-space-4-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   transition: border-color 0.12s, background 0.12s;
   border-left-width: 4px;
   border-left-style: solid;
@@ -229,7 +232,7 @@ function formatUptime(seconds: number): string {
 .svc-name-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .svc-status-dot {
@@ -264,42 +267,41 @@ function formatUptime(seconds: number): string {
 .svc-metrics {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .metric-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .metric-label {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--wdc-text-2);
   width: 32px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   flex-shrink: 0;
+  font-family: var(--wdc-font-display);
 }
 
 .metric-bar-wrap {
   flex: 1;
   height: 8px;
   background: var(--wdc-elevated);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 
 .metric-bar {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   overflow: hidden;
 }
 
 .metric-bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   transition: width 0.4s ease;
 }
 
@@ -317,22 +319,21 @@ function formatUptime(seconds: number): string {
 
 .svc-meta {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .meta-label {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 
 .meta-val {
@@ -344,14 +345,14 @@ function formatUptime(seconds: number): string {
 .svc-offline {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   min-height: 42px;
   justify-content: center;
 }
 
 .svc-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .svc-actions .el-button {

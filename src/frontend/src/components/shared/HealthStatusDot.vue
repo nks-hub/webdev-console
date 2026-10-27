@@ -2,8 +2,8 @@
   <span
     class="health-dot"
     :class="['health-dot-' + level, pulse ? 'health-dot-pulse' : null]"
-    :title="title || level"
-    :aria-label="title || level"
+    :title="title || defaultLabel"
+    :aria-label="title || defaultLabel"
     role="img"
   />
 </template>
@@ -21,12 +21,20 @@
  *   err     — failed, stopped, blocked
  *   muted   — unknown / not applicable / disabled
  */
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 defineOptions({ name: 'HealthStatusDot' })
-defineProps<{
+const props = defineProps<{
   level: 'ok' | 'warn' | 'err' | 'muted'
   pulse?: boolean
   title?: string
 }>()
+
+const { t } = useI18n()
+// Spoken/tooltip fallback when the caller passes no title — the dot's
+// colour alone carries no meaning for screen readers or colour-blind users.
+const defaultLabel = computed(() => t(`common.status.${props.level}`))
 </script>
 
 <style scoped>

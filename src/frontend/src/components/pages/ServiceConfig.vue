@@ -368,29 +368,28 @@ onMounted(() => { void load() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
   flex-shrink: 0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 
 .title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .title-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-accent);
+  font-family: var(--wdc-font-display);
 }
 .title-name {
   font-size: 1.6rem;
@@ -401,11 +400,11 @@ onMounted(() => { void load() })
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .state-box {
-  padding: 32px 24px;
+  padding: var(--wdc-space-6) var(--wdc-space-5);
 }
 
 .config-body {
@@ -416,7 +415,7 @@ onMounted(() => { void load() })
 }
 
 .file-tabs {
-  padding: 0 20px;
+  padding: 0 var(--wdc-space-4-5);
   border-bottom: 1px solid var(--wdc-border);
   background: var(--wdc-surface);
   flex-shrink: 0;
@@ -428,7 +427,7 @@ onMounted(() => { void load() })
 .tab-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -437,7 +436,7 @@ onMounted(() => { void load() })
   height: 7px;
   border-radius: 50%;
   background: var(--wdc-status-starting);
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 
 .editor-wrap {
@@ -445,15 +444,15 @@ onMounted(() => { void load() })
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 14px 20px;
-  gap: 12px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
+  gap: var(--wdc-space-3);
 }
 
 .file-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
-  padding: 10px 14px;
+  gap: var(--wdc-space-4-5);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -462,15 +461,14 @@ onMounted(() => { void load() })
 .meta-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 0.78rem;
 }
 .meta-label {
   color: var(--wdc-text-3);
-  text-transform: uppercase;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: var(--wdc-font-display);
 }
 .meta-value {
   color: var(--wdc-text);
@@ -488,7 +486,7 @@ onMounted(() => { void load() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -497,7 +495,7 @@ onMounted(() => { void load() })
 .val-left, .val-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .mono {

@@ -144,6 +144,27 @@ public class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void CatalogUrl_ignores_plain_http_remote_catalog()
+    {
+        Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", null);
+        var store = new SettingsStore(_database);
+        store.Set("daemon", "catalogUrl", "http://catalog.example.com");
+        Assert.Equal("https://wdc.nks-hub.cz", store.CatalogUrl);
+    }
+
+    [Theory]
+    [InlineData("https://catalog.example.com", true)]
+    [InlineData("http://127.0.0.1:9000", true)]
+    [InlineData("http://localhost:9000", true)]
+    [InlineData("http://catalog.example.com", false)]
+    [InlineData("ftp://catalog.example.com", false)]
+    [InlineData("not a url", false)]
+    public void IsAcceptableCatalogUrl_requires_https_or_loopback_http(string url, bool expected)
+    {
+        Assert.Equal(expected, SettingsStore.IsAcceptableCatalogUrl(url));
+    }
+
+    [Fact]
     public void CatalogUrl_stored_overrides_env_var()
     {
         Environment.SetEnvironmentVariable("NKS_WDC_CATALOG_URL", "https://env.example.com");

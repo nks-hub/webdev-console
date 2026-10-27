@@ -1,13 +1,13 @@
 <template>
   <div
     class="metric-tile"
-    :class="`tile-${variant}`"
-    role="button"
-    tabindex="0"
+    :class="[`tile-${variant}`, { 'tile-static': !interactive }]"
+    :role="interactive ? 'button' : undefined"
+    :tabindex="interactive ? 0 : undefined"
     :aria-label="`${label}: ${value}`"
-    @click="$emit('click')"
-    @keydown.enter.prevent="$emit('click')"
-    @keydown.space.prevent="$emit('click')"
+    @click="interactive && $emit('click')"
+    @keydown.enter.prevent="interactive && $emit('click')"
+    @keydown.space.prevent="interactive && $emit('click')"
   >
     <div class="tile-header">
       <el-icon v-if="iconComponent" class="tile-icon"><component :is="iconComponent" /></el-icon>
@@ -34,9 +34,12 @@ const props = withDefaults(defineProps<{
   value: string | number
   icon?: string
   variant?: 'default' | 'success' | 'warning' | 'danger'
+  /** false renders a read-only tile: no button role, focus stop or click. */
+  interactive?: boolean
 }>(), {
   icon: '',
   variant: 'default',
+  interactive: true,
 })
 
 defineEmits<{ (e: 'click'): void }>()
@@ -51,13 +54,13 @@ const iconComponent = computed(() => {
 .metric-tile {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: 12px;
-  padding: 18px 20px;
+  border-radius: var(--wdc-radius-md);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   min-height: 104px;
 }
 .metric-tile:hover {
@@ -65,6 +68,15 @@ const iconComponent = computed(() => {
   box-shadow: var(--wdc-shadow-card);
   border-color: var(--wdc-accent-glow);
 }
+.metric-tile.tile-static {
+  cursor: default;
+}
+.metric-tile.tile-static:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--wdc-border);
+}
+
 .metric-tile:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
@@ -72,15 +84,14 @@ const iconComponent = computed(() => {
 .tile-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--el-text-color-secondary);
 }
 .tile-icon { font-size: 16px; }
 .tile-label {
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   font-weight: 500;
+  font-family: var(--wdc-font-display);
 }
 .tile-value {
   font-size: 28px;

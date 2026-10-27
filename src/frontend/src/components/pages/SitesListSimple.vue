@@ -4,9 +4,6 @@
       <div class="simple-header-title">
         <h1 class="page-title">
           {{ $t('sites.title') }}
-          <span v-if="sitesStore.sites.length > 0" class="page-title-count">
-            {{ sitesStore.sites.length }}
-          </span>
         </h1>
         <p v-if="sitesStore.sites.length > 0" class="page-subtitle">
           {{ $t('sites.simple.subtitle', {
@@ -15,7 +12,7 @@
           }) }}
         </p>
       </div>
-      <el-button type="primary" size="small" @click="emit('create')">
+      <el-button type="primary" @click="emit('create')">
         + {{ $t('sites.card.newSite') }}
       </el-button>
     </div>
@@ -66,7 +63,6 @@
         @navigate="(d) => navigateToSite(d)"
         @open="openSite"
         @start-apache="startApache"
-        @stop-apache="stopApache"
         @toggle-enabled="toggleSiteEnabled"
         @command="(cmd, s) => handleCommand(cmd, s)"
       />
@@ -141,7 +137,7 @@ async function toggleSiteEnabled(site: { domain: string; enabled?: boolean }, va
     ElMessage.success(enabled ? `Site ${site.domain} enabled` : `Site ${site.domain} disabled`)
     await sitesStore.load()
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${e instanceof Error ? e.message : e}`)
+    ElMessage.error($t('toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     togglingEnabled.value = null
   }
@@ -316,30 +312,7 @@ async function startApache() {
   try {
     await startService('apache')
   } catch (e) {
-    ElMessage.error(`Start failed: ${errorMessage(e)}`)
-  } finally {
-    toggling.value = false
-  }
-}
-
-async function stopApache() {
-  // Stopping Apache from a per-site card is misleading — it actually takes
-  // down EVERY site on the host. The confirm dialog forces an acknowledgment
-  // so an absent-minded click doesn't break unrelated work.
-  try {
-    await ElMessageBox.confirm(
-      $t('sites.card.stopApacheConfirm'),
-      $t('sites.card.stopApacheTitle'),
-      { type: 'warning', confirmButtonText: $t('sites.card.stop') }
-    )
-  } catch {
-    return
-  }
-  toggling.value = true
-  try {
-    await stopService('apache')
-  } catch (e) {
-    ElMessage.error(`Stop failed: ${errorMessage(e)}`)
+    ElMessage.error($t('toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }
@@ -372,7 +345,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
       await startService('apache')
       ElMessage.success($t('sites.card.restarted'))
     } catch (e) {
-      ElMessage.error(`Restart failed: ${errorMessage(e)}`)
+      ElMessage.error($t('toast.restartFailed', { err: errorMessage(e) }))
     } finally {
       restarting.value = false
     }
@@ -391,9 +364,9 @@ async function handleCommand(cmd: string, site: SiteInfo) {
     }
     try {
       await sitesStore.remove(site.domain)
-      ElMessage.success(`${site.domain} deleted`)
+      ElMessage.success($t('toast.deleted', { name: site.domain }))
     } catch (e) {
-      ElMessage.error(`Delete failed: ${errorMessage(e)}`)
+      ElMessage.error($t('toast.deleteFailed', { err: errorMessage(e) }))
     }
   }
 }
@@ -401,33 +374,34 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 <style scoped>
 .sites-simple {
-  padding: 24px;
-  min-height: 100%;
-  background: var(--wdc-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--wdc-space-5);
 }
 
 .simple-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--wdc-space-4);
 }
 
 .simple-header-title {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   min-width: 0;
 }
 
 .page-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.728rem;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
   color: var(--wdc-text);
 }
 .page-title-count {
@@ -436,16 +410,15 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   justify-content: center;
   min-width: 28px;
   height: 22px;
-  padding: 0 8px;
+  padding: 0 var(--wdc-space-2);
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--wdc-accent);
   background: var(--wdc-accent-dim);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
 }
 .page-subtitle {
-  margin: 0;
-  font-size: 0.82rem;
+  margin: var(--wdc-space-1) 0 0;
   color: var(--wdc-text-2);
 }
 
@@ -455,8 +428,8 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--wdc-space-4);
 }
 
 /* Per-card styles moved to SimpleSiteCard.vue. */
@@ -470,13 +443,12 @@ async function handleCommand(cmd: string, site: SiteInfo) {
    installed the app sees the value proposition + a single big CTA. */
 .welcome-hero {
   max-width: 560px;
-  margin: 48px auto;
-  padding: 40px 32px;
+  margin: var(--wdc-space-7) auto;
+  padding: var(--wdc-space-6-5) var(--wdc-space-6);
   text-align: center;
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  box-shadow: var(--wdc-shadow-card);
 }
 .welcome-mark {
   display: inline-flex;
@@ -484,41 +456,41 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   justify-content: center;
   width: 64px;
   height: 64px;
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
   border-radius: 50%;
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
   font-size: 32px;
 }
 .welcome-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--wdc-space-2);
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--wdc-text);
 }
 .welcome-sub {
-  margin: 0 0 24px;
+  margin: 0 0 var(--wdc-space-5);
   color: var(--wdc-text-2);
   font-size: 0.95rem;
   line-height: 1.5;
 }
 .welcome-cta {
-  margin-bottom: 28px;
+  margin-bottom: var(--wdc-space-5-5);
 }
 .welcome-features {
   list-style: none;
   margin: 0;
-  padding: 16px 0 0;
+  padding: var(--wdc-space-4) 0 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
   text-align: left;
 }
 .welcome-features li {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   color: var(--wdc-text-2);
   font-size: 0.86rem;
 }
@@ -534,13 +506,13 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 @media (max-width: 820px) {
   .sites-simple {
-    padding: 18px 16px;
+    padding: var(--wdc-space-4-5) var(--wdc-space-4);
   }
 
   .simple-header {
     align-items: stretch;
     flex-direction: column;
-    margin-bottom: 16px;
+    margin-bottom: var(--wdc-space-4);
   }
 
   .simple-header :deep(.el-button) {
@@ -567,7 +539,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   .card-title-row {
     align-items: flex-start;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--wdc-space-1);
   }
 
   .card-actions {

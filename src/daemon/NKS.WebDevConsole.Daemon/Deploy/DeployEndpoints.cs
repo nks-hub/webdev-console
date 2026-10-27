@@ -43,13 +43,13 @@ internal static class DeployEndpoints
             // bypassable. Validate-before-not-found ordering keeps the oracle
             // shape consistent with the rest of the gated endpoints.
             var thIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(thIntentToken))
+            if (!string.IsNullOrEmpty(thIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var thAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var thVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    thIntentToken, "test_hook", domain, host: "*", thAllowUnconfirmed, ct);
+                    thIntentToken ?? "", "test_hook", domain, host: "*", thAllowUnconfirmed, ct);
                 if (!thVerdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = thVerdict.Reason, detail = thVerdict.Detail },
                         statusCode: thVerdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -392,13 +392,13 @@ internal static class DeployEndpoints
             // plant hook payloads or change deploy targets. Validate-before-
             // write so a bogus token is denied without touching the file.
             var swIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(swIntentToken))
+            if (!string.IsNullOrEmpty(swIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var swAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var swVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    swIntentToken, "settings_write", domain, host: "*", swAllowUnconfirmed, ct);
+                    swIntentToken ?? "", "settings_write", domain, host: "*", swAllowUnconfirmed, ct);
                 if (!swVerdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = swVerdict.Reason, detail = swVerdict.Detail },
                         statusCode: swVerdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -416,12 +416,9 @@ internal static class DeployEndpoints
             var path = DeploySettingsPath(domain);
             // Atomic write: temp file in same dir + File.Move with overwrite.
             // Avoids leaving a half-written file if the daemon crashes mid-flush.
-            var tmp = path + ".tmp";
-            await File.WriteAllTextAsync(tmp, body, ct);
-            // File.Move on Windows pre-.NET 5 errored on overwrite; current .NET
-            // overload accepts overwrite=true safely.
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(tmp, path);
+            // Delete-then-move left a window with no settings file at all and
+            // raced concurrent saves on the shared ".tmp" name.
+            NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(path, body);
             return Results.Ok(new { domain, status = "saved", bytes = body.Length });
         });
 
@@ -478,13 +475,13 @@ internal static class DeployEndpoints
             // Host scope is validated as wildcard "*" since we don't yet know
             // the source row's host before the not-found check runs.
             var rbIntentToken = rbCtx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(rbIntentToken))
+            if (!string.IsNullOrEmpty(rbIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var rbAllowUnconfirmed = string.Equals(
                     rbCtx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    rbIntentToken, "rollback", domain, "*", rbAllowUnconfirmed, ct);
+                    rbIntentToken ?? "", "rollback", domain, "*", rbAllowUnconfirmed, ct);
                 if (!verdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                         statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -628,13 +625,13 @@ internal static class DeployEndpoints
             if (string.IsNullOrEmpty(rtIntentToken)
                 && root.TryGetProperty("intentToken", out var rtTokenEl))
                 rtIntentToken = rtTokenEl.GetString();
-            if (!string.IsNullOrEmpty(rtIntentToken))
+            if (!string.IsNullOrEmpty(rtIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var rtAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    rtIntentToken, "rollback", domain, host, rtAllowUnconfirmed, ct);
+                    rtIntentToken ?? "", "rollback", domain, host, rtAllowUnconfirmed, ct);
                 if (!verdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                         statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -745,7 +742,7 @@ internal static class DeployEndpoints
             // Validate-before-not-found prevents an oracle leak (bogus token
             // can't enumerate deployIds via 403 vs 404).
             var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(intentToken))
+            if (!string.IsNullOrEmpty(intentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var allowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
@@ -754,7 +751,7 @@ internal static class DeployEndpoints
                 // below, but for the intent we accept "*" host since cancel can
                 // legitimately fire on any host the deploy was started against).
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    intentToken, "cancel", domain, host: "*", allowUnconfirmed, ct);
+                    intentToken ?? "", "cancel", domain, host: "*", allowUnconfirmed, ct);
                 if (!verdict.Ok)
                 {
                     return Results.Json(
@@ -849,13 +846,13 @@ internal static class DeployEndpoints
             if (string.IsNullOrEmpty(grpIntentToken)
                 && root.TryGetProperty("intentToken", out var grpTokenEl))
                 grpIntentToken = grpTokenEl.GetString();
-            if (!string.IsNullOrEmpty(grpIntentToken))
+            if (!string.IsNullOrEmpty(grpIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var grpAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    grpIntentToken, "deploy", domain, hosts[0], grpAllowUnconfirmed, ct);
+                    grpIntentToken ?? "", "deploy", domain, hosts[0], grpAllowUnconfirmed, ct);
                 if (!verdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                         statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -1011,13 +1008,13 @@ internal static class DeployEndpoints
 
             // Optional MCP intent gate (kind=rollback, host=*).
             var grbIntentToken = grbCtx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(grbIntentToken))
+            if (!string.IsNullOrEmpty(grbIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var grbAllowUnconfirmed = string.Equals(
                     grbCtx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    grbIntentToken, "rollback", domain, "*", grbAllowUnconfirmed, ct);
+                    grbIntentToken ?? "", "rollback", domain, "*", grbAllowUnconfirmed, ct);
                 if (!verdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
                         statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -1138,13 +1135,13 @@ internal static class DeployEndpoints
             // disk-fill territory if AI spams it; gate keeps the operator's
             // grant + always-confirm controls effective.
             var snIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(snIntentToken))
+            if (!string.IsNullOrEmpty(snIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var snAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var snVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    snIntentToken, "snapshot_create", domain, host: "*", snAllowUnconfirmed, ct);
+                    snIntentToken ?? "", "snapshot_create", domain, host: "*", snAllowUnconfirmed, ct);
                 if (!snVerdict.Ok)
                     return Results.Json(new { error = "intent_rejected", reason = snVerdict.Reason, detail = snVerdict.Detail },
                         statusCode: snVerdict.Reason == "pending_confirmation" ? 425 : 403);
@@ -1313,20 +1310,27 @@ internal static class DeployEndpoints
             var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
             if (string.IsNullOrEmpty(intentToken) && root.TryGetProperty("intentToken", out var tEl))
                 intentToken = tEl.GetString();
-            var host = root.TryGetProperty("host", out var hEl) ? hEl.GetString() ?? "production" : "production";
+            // Restore intents are minted for the synthetic host "*restore*" (GUI and
+            // plugin route convention). Defaulting a missing body host to "production"
+            // made every GUI restore fail with host_mismatch, so the intent check uses
+            // the marker and the target host comes from the snapshot's own deploy run
+            // unless the caller names one explicitly.
+            var bodyHost = root.TryGetProperty("host", out var hEl) ? hEl.GetString() : null;
+            if (string.IsNullOrWhiteSpace(bodyHost)) bodyHost = null;
+            var intentHost = bodyHost ?? "*restore*";
             if (string.IsNullOrEmpty(snapshotId))
                 return Results.BadRequest(new { error = "snapshotId is required" });
 
             // MCP intent gate — restore requires kind='restore' specifically (NOT
             // kind='deploy'); validator enforces the kind_match check. Caller
             // can pass X-Allow-Unconfirmed for headless flows.
-            if (!string.IsNullOrEmpty(intentToken))
+            if (!string.IsNullOrEmpty(intentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var allowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    intentToken, "restore", domain, host, allowUnconfirmed, ct);
+                    intentToken ?? "", "restore", domain, intentHost, allowUnconfirmed, ct);
                 if (!verdict.Ok)
                 {
                     return Results.Json(
@@ -1346,6 +1350,7 @@ internal static class DeployEndpoints
                     error = "snapshot_has_no_backup",
                     detail = $"Deploy {snapshotId[..8]} did not capture a pre-deploy snapshot.",
                 });
+            var host = bodyHost ?? sourceRow.Host;
 
             // Phase 7.5+++ — REAL extract when the backup path resolves to an
             // actual .zip file. Resolves the `~` prefix to the user's home dir.
@@ -1683,13 +1688,13 @@ internal static class DeployEndpoints
             // (or the caller passes X-Allow-Unconfirmed for CI). Plugin-extensible
             // via the kinds registry — if mcp.strict_kinds is on, only registered
             // kinds pass.
-            if (!string.IsNullOrEmpty(intentToken))
+            if (!string.IsNullOrEmpty(intentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var allowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var verdict = await intentValidator.ValidateAndConsumeAsync(
-                    intentToken, "deploy", domain, host, allowUnconfirmed, ct);
+                    intentToken ?? "", "deploy", domain, host, allowUnconfirmed, ct);
                 if (!verdict.Ok)
                 {
                     return Results.Json(

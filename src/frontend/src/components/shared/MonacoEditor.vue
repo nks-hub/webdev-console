@@ -4,15 +4,7 @@
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import * as monaco from 'monaco-editor'
-// monaco-editor >= 0.56 exports its ESM tree at the package root
-// ("./*" -> "./esm/vs/*.js"), so the old esm/vs/... deep path no longer resolves.
-import editorWorker from 'monaco-editor/editor/editor.worker?worker'
-
-// Minimal worker setup — no language-specific workers for conf/ini/etc
-;(self as unknown as Record<string, unknown>).MonacoEnvironment = {
-  getWorker: () => new editorWorker(),
-}
+import * as monaco from './monaco'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -39,6 +31,12 @@ function mapLanguage(lang: string): string {
   if (['conf', 'cnf', 'nginx'].includes(normalized)) return 'ini'
   if (['yml'].includes(normalized)) return 'yaml'
   if (['cmd', 'bat'].includes(normalized)) return 'bat'
+  // Highlighting only (no JSON/TOML language service is bundled):
+  // JSON reads well with the JavaScript tokenizer, TOML with INI.
+  if (normalized === 'json') return 'javascript'
+  if (normalized === 'toml') return 'ini'
+  if (['sh', 'bash', 'zsh'].includes(normalized)) return 'shell'
+  if (['text', 'txt', ''].includes(normalized)) return 'plaintext'
   return normalized
 }
 
@@ -47,24 +45,25 @@ const WDC_DARK: monaco.editor.IStandaloneThemeData = {
   base: 'vs-dark',
   inherit: true,
   rules: [
-    { token: 'comment', foreground: '6b7094', fontStyle: 'italic' },
-    { token: 'string', foreground: 'a5d6a7' },
-    { token: 'number', foreground: 'ffab70' },
-    { token: 'keyword', foreground: 'c4b5fd', fontStyle: 'bold' },
+    { token: 'comment', foreground: '8a93a6', fontStyle: 'italic' },
+    { token: 'string', foreground: '9fd8a8' },
+    { token: 'number', foreground: 'f2b880' },
+    { token: 'keyword', foreground: '8fb4ff', fontStyle: 'bold' },
   ],
   colors: {
-    'editor.background': '#0f111a',
-    'editor.foreground': '#ffffff',
-    'editorLineNumber.foreground': '#5c5f72',
-    'editorLineNumber.activeForeground': '#a78bfa',
-    'editor.selectionBackground': '#2a2e42',
-    'editor.inactiveSelectionBackground': '#1e2133',
-    'editorCursor.foreground': '#a78bfa',
-    'editor.lineHighlightBackground': '#1a1d2c',
-    'editorIndentGuide.background1': '#1e2133',
-    'editorGutter.background': '#0f111a',
-    'scrollbarSlider.background': '#2a2e4280',
-    'scrollbarSlider.hoverBackground': '#3b3f5c80',
+    // Graphite editor in both themes, like the log boxes (--wdc-log-bg).
+    'editor.background': '#11151c',
+    'editor.foreground': '#e3e7ee',
+    'editorLineNumber.foreground': '#5d6577',
+    'editorLineNumber.activeForeground': '#8fb4ff',
+    'editor.selectionBackground': '#24324d',
+    'editor.inactiveSelectionBackground': '#1c2433',
+    'editorCursor.foreground': '#8fb4ff',
+    'editor.lineHighlightBackground': '#171c26',
+    'editorIndentGuide.background1': '#1f2633',
+    'editorGutter.background': '#11151c',
+    'scrollbarSlider.background': '#2b344680',
+    'scrollbarSlider.hoverBackground': '#3a465c80',
   },
 }
 
@@ -77,7 +76,7 @@ onMounted(() => {
     theme: 'wdc-dark',
     readOnly: props.readOnly,
     automaticLayout: true,
-    fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+    fontFamily: "'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace",
     fontSize: 13,
     lineHeight: 20,
     minimap: { enabled: false },

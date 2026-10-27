@@ -55,6 +55,7 @@
             <template #default="{ row }">
               <el-switch
                 :model-value="row.enabled"
+                :aria-label="$t('hosts.enableEntryAria', { hostname: row.hostname })"
                 size="small"
                 @change="(v: boolean) => toggleEnabled(row, v)"
               />
@@ -73,7 +74,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
+              <span v-else v-activate class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
             </template>
           </el-table-column>
 
@@ -89,7 +90,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else class="editable" @click="startEdit(row, 'hostname')">
+              <span v-else v-activate class="editable" @click="startEdit(row, 'hostname')">
                 {{ row.hostname }}
                 <el-tooltip
                   v-if="row.source === 'wdc' && !siteExists(row.hostname)"
@@ -160,10 +161,10 @@
           type="warning"
           :closable="false"
           show-icon
-          style="margin-top: 16px"
+          style="margin-top: var(--wdc-space-4)"
         >
           <div>{{ $t('hosts.loadFailedBody') }}</div>
-          <div style="margin-top: 8px; display: flex; gap: 8px">
+          <div style="margin-top: var(--wdc-space-2); display: flex; gap: var(--wdc-space-2)">
             <el-button size="small" :loading="loading" @click="load">
               {{ $t('hosts.retry') }}
             </el-button>
@@ -185,10 +186,10 @@
           type="error"
           :closable="false"
           show-icon
-          style="margin-top: 16px"
+          style="margin-top: var(--wdc-space-4)"
         >
           <div>{{ $t('hosts.emptyHostsCorruptionBody') }}</div>
-          <div style="margin-top: 8px; display: flex; gap: 8px">
+          <div style="margin-top: var(--wdc-space-2); display: flex; gap: var(--wdc-space-2)">
             <el-button size="small" :loading="reapplying" @click="reapply">
               {{ $t('hosts.reapplyFromSites') }}
             </el-button>
@@ -225,6 +226,7 @@
 </template>
 
 <script setup lang="ts">
+import { openHostsFile } from '../../utils/hostsFile'
 import { ref, computed, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -418,8 +420,13 @@ async function confirmApply() {
       source: r.source,
       comment: r.comment ?? null,
     }))
-    await applyHosts(payload)
+    const res = await applyHosts(payload)
     ElMessage.success(t('hosts.applySuccess'))
+    // The daemon only appends new entries outside the WDC block; edits and
+    // removals of existing external lines are left untouched in the file.
+    if (res?.notApplied) {
+      ElMessage.warning({ message: t('hosts.externalNotApplied', { count: res.notApplied }), duration: 8000, showClose: true })
+    }
     await load()
   } catch (e) {
     const msg: string = errorMessage(e)
@@ -533,10 +540,6 @@ async function onRestoreFile(evt: Event) {
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
-function openHostsFile() {
-  const hostsPath = 'C:\\Windows\\System32\\drivers\\etc\\hosts'
-  window.open(`vscode://file/${hostsPath}`, '_self')
-}
 
 function sourceTagType(source: string): '' | 'success' | 'info' | 'warning' | 'danger' {
   if (source === 'wdc') return 'success'
@@ -574,18 +577,18 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
   flex-shrink: 0;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 
 .header-title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .page-title {
@@ -604,7 +607,7 @@ onMounted(async () => {
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -612,8 +615,8 @@ onMounted(async () => {
 .staging-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 24px;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-2) var(--wdc-space-5);
   background: var(--el-color-warning-light-9, #fdf6ec);
   border-bottom: 1px solid var(--el-color-warning-light-5, #f5dab1);
   flex-shrink: 0;
@@ -629,16 +632,16 @@ onMounted(async () => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .entry-count {
@@ -659,7 +662,7 @@ onMounted(async () => {
   cursor: text;
   display: inline-block;
   min-width: 40px;
-  padding: 2px 6px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   transition: background 0.15s, box-shadow 0.15s;
 }
@@ -683,10 +686,10 @@ onMounted(async () => {
   height: 16px;
   border-radius: 50%;
   background: var(--el-color-warning);
-  color: #fff;
+  color: var(--wdc-on-accent);
   font-size: 10px;
   font-weight: 700;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
   cursor: help;
   vertical-align: middle;
 }

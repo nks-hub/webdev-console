@@ -303,7 +303,7 @@
            :class="{ ok: testMatchResult.matched, none: !testMatchResult.matched }">
         <template v-if="testMatchResult.matched">
           <strong>✓ {{ t('mcpGrants.testMatch.resultMatch') }}</strong>
-          <div class="muted" style="margin-top: 4px; font-size: 12px">
+          <div class="muted" style="margin-top: var(--wdc-space-1); font-size: 12px">
             <div>id: <code class="mono">{{ testMatchResult.grant?.id }}</code></div>
             <div>scope: <code class="mono">{{ testMatchResult.grant?.scopeType }}{{ testMatchResult.grant?.scopeValue ? ' = ' + testMatchResult.grant.scopeValue : '' }}</code></div>
             <div>kind: <code class="mono">{{ testMatchResult.grant?.kindPattern }}</code> · target: <code class="mono">{{ testMatchResult.grant?.targetPattern }}</code></div>
@@ -312,7 +312,7 @@
         </template>
         <template v-else>
           <strong>✗ {{ t('mcpGrants.testMatch.resultNoMatch') }}</strong>
-          <div class="muted" style="margin-top: 4px; font-size: 12px">
+          <div class="muted" style="margin-top: var(--wdc-space-1); font-size: 12px">
             {{ t('mcpGrants.testMatch.resultNoMatchHint') }}
           </div>
         </template>
@@ -361,8 +361,8 @@
         <el-form-item :label="t('mcpGrants.dialog.cooldown')">
           <el-input-number v-model="form.minCooldownSeconds"
             :min="0" :max="86400" controls-position="right" style="width: 130px" />
-          <span class="hint" style="margin-left: 8px">{{ t('mcpGrants.dialog.cooldownSuffix') }}</span>
-          <div class="hint" style="margin-top: 4px">{{ t('mcpGrants.dialog.cooldownHint') }}</div>
+          <span class="hint" style="margin-left: var(--wdc-space-2)">{{ t('mcpGrants.dialog.cooldownSuffix') }}</span>
+          <div class="hint" style="margin-top: var(--wdc-space-1)">{{ t('mcpGrants.dialog.cooldownHint') }}</div>
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.note')">
           <el-input v-model="form.note" type="textarea" :rows="2" :placeholder="t('mcpGrants.dialog.notePlaceholder')" />
@@ -1033,9 +1033,9 @@ function cooldownActiveSec(g: McpGrantRow): number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;
@@ -1045,7 +1045,6 @@ function cooldownActiveSec(g: McpGrantRow): number {
   color: var(--wdc-text);
 }
 .page-header .actions { display: flex; gap: 8px; }
-.page > *:not(.page-header) { padding: 0 24px; }
 .page > .page-header + * { padding-top: 16px; }
 .muted { color: var(--el-text-color-secondary); }
 .grants-table { margin-top: 8px; }
@@ -1067,28 +1066,28 @@ function cooldownActiveSec(g: McpGrantRow): number {
 }
 .expires-soon-badge {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
+  margin-left: var(--wdc-space-1-5);
+  padding: 1px var(--wdc-space-2);
   font-size: 10px;
   font-weight: 600;
   background: var(--el-color-warning-light-9);
   border: 1px solid var(--el-color-warning-light-5);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   color: var(--el-color-warning-dark-2);
 }
 .cooldown-badge {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
+  margin-left: var(--wdc-space-1-5);
+  padding: 1px var(--wdc-space-2);
   font-size: 10px;
   font-weight: 600;
   background: var(--el-color-info-light-9);
   border: 1px solid var(--el-color-info-light-5);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   color: var(--el-color-info-dark-2);
 }
 .test-match-result {
-  margin-top: 12px; padding: 12px 16px;
+  margin-top: var(--wdc-space-3); padding: 12px 16px;
   border-radius: var(--wdc-radius-sm);
   font-size: 13px;
   box-shadow: var(--wdc-shadow-sm);
@@ -1103,8 +1102,8 @@ function cooldownActiveSec(g: McpGrantRow): number {
 }
 .bulk-toolbar {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; margin-top: 8px;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  padding: var(--wdc-space-3) var(--wdc-space-4); margin-top: 8px;
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   box-shadow: var(--wdc-shadow-sm);

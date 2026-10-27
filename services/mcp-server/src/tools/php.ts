@@ -26,6 +26,21 @@ export function registerPhpTools(server: McpServer, opts: RegisterOptions): void
     async () => safe(() => daemonClient.get('/api/php/versions')),
   )
 
+  server.registerTool(
+    'wdc_list_php_extensions',
+    {
+      title: 'List PHP extensions',
+      description:
+        'List the extensions available for an installed PHP version and whether each is enabled. ' +
+        'Toggle one with wdc_toggle_php_extension.\n\n' +
+        'Args:\n  version: PHP major.minor like "8.3" (see wdc_list_php_versions).\n\n' +
+        'Returns: Array of extensions (name, enabled, ...); empty when the version is unknown.',
+      inputSchema: { version: PhpVersionSchema },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ version }) => safe(() => daemonClient.get(`/api/php/${encodeURIComponent(version)}/extensions`)),
+  )
+
   if (opts.readonly) return
 
   // NOTE: There is intentionally no `wdc_set_default_php` tool. In WDC

@@ -2,7 +2,14 @@
   <!-- F91.6: generic stat tile with optional route navigation + icon.
        Plugins use this for Dashboard contributions like "Node.js processes:
        3" without shipping their own Vue component. -->
-  <div class="stat-card" :class="{ 'stat-clickable': route }" @click="onClick">
+  <div
+    class="stat-card"
+    :class="{ 'stat-clickable': route }"
+    :role="route ? 'link' : undefined"
+    :tabindex="route ? 0 : undefined"
+    @click="onClick"
+    @keydown.enter.self="onClick"
+  >
     <el-icon class="stat-icon" :class="{ 'stat-icon-running': highlight }"><component :is="iconComponent" /></el-icon>
     <div class="stat-content">
       <div class="stat-value mono">{{ value }}</div>
@@ -37,8 +44,8 @@ function onClick() {
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -54,7 +61,7 @@ function onClick() {
 .stat-icon {
   width: 40px;
   height: 40px;
-  padding: 10px;
+  padding: var(--wdc-space-2-5);
   border-radius: var(--wdc-radius);
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
@@ -63,5 +70,7 @@ function onClick() {
 .stat-icon-running { color: var(--wdc-status-running); background: rgba(52, 211, 153, 0.14); }
 .stat-content { min-width: 0; }
 .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); letter-spacing: -0.02em; }
-.stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.10em; color: var(--wdc-text-3); font-weight: 600; }
+.stat-label { font-size: 0.82rem; color: var(--wdc-text-3); font-weight: 500;
+  font-family: var(--wdc-font-display);
+}
 </style>

@@ -1,104 +1,23 @@
 <template>
   <div class="simple-dashboard">
-    <div class="simple-hero">
-      <h1 class="hero-title">{{ t('dashboard.simple.welcomeTitle') }}</h1>
-      <p class="hero-summary">
-        {{ t('dashboard.simple.summary', {
-          sites: sitesCount,
-          running: runningServices,
-          total: totalServices,
-          hits: totalHits,
-          errors: totalErrors,
-        }) }}
-      </p>
-    </div>
-
-    <div v-if="aggregatesLoading" v-loading="true" style="height: 80px; margin-bottom: 12px;" />
-
-    <div class="simple-tiles">
-      <SimpleMetricTile
-        :label="t('dashboard.simple.tiles.sites')"
-        :value="sitesCount"
-        icon="Link"
-        @click="router.push('/sites')"
-      />
-      <SimpleMetricTile
-        :label="t('dashboard.simple.tiles.services')"
-        :value="`${runningServices}/${totalServices}`"
-        icon="Monitor"
-        :variant="runningServices < totalServices ? 'warning' : 'success'"
-        @click="router.push('/services')"
-      />
-      <SimpleMetricTile
-        :label="t('dashboard.simple.tiles.hits')"
-        :value="totalHits"
-        icon="DataLine"
-        @click="router.push('/sites')"
-      />
-      <SimpleMetricTile
-        :label="t('dashboard.simple.tiles.errors')"
-        :value="totalErrors"
-        icon="WarningFilled"
-        :variant="totalErrors > 0 ? 'danger' : 'default'"
-        @click="router.push('/sites')"
-      />
-    </div>
-
-    <BannerCallout
-      v-if="sitesCount > 0 && !simpleApacheRunning"
-      tone="warning"
-      :title="t('dashboard.simple.apacheStopped.title')"
-      :subtitle="t('dashboard.simple.apacheStopped.subtitle')"
-      icon-pulse
-    >
-      <template #icon><el-icon><WarningFilled /></el-icon></template>
-      <template #action>
-        <el-button type="success" size="default" :loading="startingApache" @click="startApache">
-          {{ t('dashboard.simple.apacheStopped.startBtn') }}
-        </el-button>
-      </template>
-    </BannerCallout>
-
-    <!-- Plan §4/478 — readiness signal: no recent backup. -->
-    <BannerCallout
-      v-if="sitesCount > 0 && backupStale"
-      tone="neutral"
-      :title="t('dashboard.simple.backupStale.title')"
-      :subtitle="lastBackupAgeMs === null
-        ? t('dashboard.simple.backupStale.never')
-        : t('dashboard.simple.backupStale.olderThanDays', { days: 7 })"
-    >
-      <template #icon><el-icon><FolderChecked /></el-icon></template>
-      <template #action>
-        <el-button type="primary" size="default" @click="router.push('/backups')">
-          {{ t('dashboard.simple.backupStale.openBtn') }}
-        </el-button>
-      </template>
-    </BannerCallout>
-
-    <!-- Plan §4 (item 478): update available banner. -->
-    <BannerCallout
-      v-if="updatesStore.hasUpdate"
-      tone="info"
-      :title="t('dashboard.simple.updateAvailable.title')"
-      :subtitle="t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion })"
-    >
-      <template #icon><el-icon><Download /></el-icon></template>
-      <template #action>
-        <el-button type="primary" size="default" @click="router.push('/settings?tab=update')">
-          {{ t('dashboard.simple.updateAvailable.openBtn') }}
-        </el-button>
-      </template>
-    </BannerCallout>
+    <!-- Simple density below the shared attention list + stack table:
+         today's traffic, the three most common actions, recent sites. -->
+    <dl class="simple-figures" :aria-busy="aggregatesLoading">
+      <div class="simple-figure">
+        <dt>{{ t('dashboard.simple.tiles.hits') }}</dt>
+        <dd class="mono">{{ aggregatesLoading ? '…' : totalHits }}</dd>
+      </div>
+      <div class="simple-figure" :class="{ 'has-errors': totalErrors > 0 }">
+        <dt>{{ t('dashboard.simple.tiles.errors') }}</dt>
+        <dd class="mono">{{ aggregatesLoading ? '…' : totalErrors }}</dd>
+      </div>
+    </dl>
 
     <div class="simple-quick-actions">
-      <el-button type="primary" size="large" @click="router.push('/sites?create=1')">
-        + {{ t('dashboard.simple.quickActions.newSite') }}
-      </el-button>
-      <el-button size="large" @click="openMailpit">
+      <el-button @click="openMailpit">
         {{ t('dashboard.simple.quickActions.mailpit') }}
       </el-button>
-      <el-button size="large" @click="router.push('/settings?tab=backup')">
+      <el-button @click="router.push('/backups')">
         {{ t('dashboard.simple.quickActions.backup') }}
       </el-button>
     </div>
@@ -131,26 +50,22 @@
         </el-button>
       </div>
       <ul class="simple-recent-list">
-        <li
-          v-for="s in recentSimpleSites"
-          :key="s.domain"
-          class="simple-recent-item"
-          role="button"
-          tabindex="0"
-          :aria-label="t('sites.card.openSiteAria', { domain: s.domain })"
-          @click="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-          @keydown.enter.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-          @keydown.space.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-        >
-          <HealthStatusDot
-            :level="s.enabled === false ? 'muted' : 'ok'"
-          />
-          <span class="simple-recent-domain">{{ s.domain }}</span>
-          <span class="simple-recent-meta mono">
-            <template v-if="s.phpVersion && s.phpVersion !== 'none'">PHP {{ s.phpVersion }}</template>
-            <template v-else>{{ t('sites.phpNone') }}</template>
-          </span>
-          <el-icon class="simple-recent-arrow"><ArrowRight /></el-icon>
+        <li v-for="s in recentSimpleSites" :key="s.domain">
+          <router-link
+            class="simple-recent-item"
+            :to="`/sites/${encodeURIComponent(s.domain)}/edit`"
+            :aria-label="t('sites.card.openSiteAria', { domain: s.domain })"
+          >
+            <HealthStatusDot
+              :level="s.enabled === false ? 'muted' : 'ok'"
+            />
+            <span class="simple-recent-domain">{{ s.domain }}</span>
+            <span class="simple-recent-meta mono">
+              <template v-if="s.phpVersion && s.phpVersion !== 'none'">PHP {{ s.phpVersion }}</template>
+              <template v-else>{{ t('sites.phpNone') }}</template>
+            </span>
+            <el-icon class="simple-recent-arrow"><ArrowRight /></el-icon>
+          </router-link>
         </li>
       </ul>
     </div>
@@ -172,14 +87,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, WarningFilled, Plus, Download, FolderChecked } from '@element-plus/icons-vue'
-import SimpleMetricTile from '../common/SimpleMetricTile.vue'
+import { ArrowRight, Plus } from '@element-plus/icons-vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
-import BannerCallout from '../shared/BannerCallout.vue'
 import { useSitesStore } from '../../stores/sites'
-import { useDaemonStore } from '../../stores/daemon'
-import { useServicesStore } from '../../stores/services'
-import { useUpdatesStore } from '../../stores/updates'
 import { daemonBaseUrl } from '../../api/daemon'
 
 defineOptions({ name: 'DashboardSimple' })
@@ -187,38 +97,14 @@ defineOptions({ name: 'DashboardSimple' })
 const { t } = useI18n()
 const router = useRouter()
 const sitesStore = useSitesStore()
-const daemonStore = useDaemonStore()
-const servicesStore = useServicesStore()
-const updatesStore = useUpdatesStore()
 
-// Tiles + summary
 const sitesCount = computed(() => sitesStore.sites.length)
-const services = computed(() => daemonStore.services)
-const runningServices = computed(() => services.value.filter(s => s.state === 2).length)
-const totalServices = computed(() => services.value.length)
 
 const totalHits = ref(0)
 const totalErrors = ref(0)
 const aggregatesLoading = ref(false)
 
 const recentSimpleSites = computed(() => sitesStore.sites.slice(0, 5))
-
-const simpleApacheRunning = computed(() => {
-  const apache = services.value.find(s => s.id === 'apache' || s.id === 'httpd')
-  return apache?.state === 2 || apache?.status === 'running'
-})
-const startingApache = ref(false)
-
-async function startApache() {
-  const apache = services.value.find(s => s.id === 'apache' || s.id === 'httpd')
-  if (!apache) return
-  startingApache.value = true
-  try {
-    await servicesStore.start(apache.id)
-  } finally {
-    startingApache.value = false
-  }
-}
 
 function openMailpit() {
   const mailpitUrl = 'http://127.0.0.1:8025'
@@ -277,33 +163,9 @@ async function loadAggregates() {
   aggregatesLoading.value = false
 }
 
-// Plan §4/478 — backup age readiness signal. Surfaces a "no recent
-// backup" banner when (a) backups feature is set up but nothing is
-// stored, or (b) the newest backup is older than 7 days. Soft warning
-// — informational, not alarmist.
-const BACKUP_STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
-const lastBackupAgeMs = ref<number | null>(null)
-const backupStale = computed(() => {
-  if (lastBackupAgeMs.value === null) return true // never backed up
-  return lastBackupAgeMs.value > BACKUP_STALE_THRESHOLD_MS
-})
-async function loadLastBackupAge() {
-  try {
-    const { fetchBackups } = await import('../../api/daemon')
-    const data = await fetchBackups()
-    if (data.backups.length > 0) {
-      lastBackupAgeMs.value = Date.now() - new Date(data.backups[0].createdUtc).getTime()
-    } else {
-      lastBackupAgeMs.value = null
-    }
-  } catch {
-    // Daemon offline / endpoint missing — silence; the banner just won't show.
-  }
-}
 
 onMounted(() => {
   void loadAggregates()
-  void loadLastBackupAge()
 })
 
 defineExpose({ reload: loadAggregates })
@@ -313,76 +175,53 @@ defineExpose({ reload: loadAggregates })
 .simple-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: var(--wdc-space-5);
   width: 100%;
-  margin: 0 auto;
 }
-.simple-hero {
-  text-align: center;
-  padding: 24px 0 8px;
-}
-.hero-title {
+.simple-figures {
+  display: flex;
   margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  letter-spacing: -0.01em;
+  border-top: 1px solid var(--wdc-border);
+  border-bottom: 1px solid var(--wdc-border);
 }
-.hero-summary {
-  margin: 8px 0 0;
-  color: var(--wdc-text-2);
-  font-size: 0.95rem;
-}
-.simple-tiles {
+.simple-figure {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  max-width: none;
-  width: 100%;
-  margin: 0 auto;
+  gap: var(--wdc-space-1);
+  padding: var(--wdc-space-3) var(--wdc-space-6) var(--wdc-space-3) 0;
 }
-/* 3 banner CSS blocks (apache / update / backup) consolidated into
-   BannerCallout shared primitive (plan §6). Apache's pulsing icon is
-   now opt-in via :icon-pulse prop. */
+.simple-figure + .simple-figure { padding-left: var(--wdc-space-6); border-left: 1px solid var(--wdc-border); }
+.simple-figure dt { font-family: var(--wdc-font-display); font-size: 0.82rem; color: var(--wdc-text-3); }
+.simple-figure dd { margin: 0; font-size: 1.2rem; color: var(--wdc-text); }
+.simple-figure.has-errors dd { color: var(--wdc-status-error); }
 .simple-quick-actions {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
-  padding-top: 8px;
 }
+.simple-quick-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .simple-recent {
-  max-width: none;
   width: 100%;
-  margin: 18px auto 0;
-  padding: 16px 18px;
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  background: var(--wdc-surface-2);
 }
 
 .simple-empty-card {
   max-width: none;
   width: 100%;
-  margin: 18px auto 0;
-  padding: 24px 22px;
-  border: 1.5px dashed color-mix(in oklab, var(--wdc-accent) 40%, var(--wdc-border));
+  padding: var(--wdc-space-5);
+  border: 1px dashed color-mix(in oklab, var(--wdc-accent) 40%, var(--wdc-border));
   border-radius: var(--wdc-radius);
   background: color-mix(in oklab, var(--wdc-accent) 6%, var(--wdc-surface));
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color var(--wdc-dur-micro) var(--wdc-ease-out), background-color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
 .simple-empty-card:hover,
 .simple-empty-card:focus-visible {
   border-color: var(--wdc-accent);
   background: color-mix(in oklab, var(--wdc-accent) 10%, var(--wdc-surface));
   outline: none;
-  transform: translateY(-1px);
 }
 .simple-empty-icon {
   width: 48px;
@@ -400,7 +239,7 @@ defineExpose({ reload: loadAggregates })
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .simple-empty-body strong {
   font-size: 1rem;
@@ -419,33 +258,35 @@ defineExpose({ reload: loadAggregates })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 .simple-recent-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--wdc-text-2);
+  font-family: var(--wdc-font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--wdc-text);
 }
 .simple-recent-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  border-top: 1px solid var(--wdc-border);
 }
 .simple-recent-item {
+  color: inherit;
+  text-decoration: none;
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr) auto 16px;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: center;
-  padding: 12px 6px;
+  padding: var(--wdc-space-3) var(--wdc-space-1-5);
   min-height: 48px;
   border-bottom: 1px solid var(--wdc-border);
   cursor: pointer;
   transition: background 0.12s;
 }
-.simple-recent-item:last-child { border-bottom: 0; }
-.simple-recent-item:hover { background: var(--wdc-surface); }
+.simple-recent-item:hover { background: var(--wdc-hover); }
 .simple-recent-item:focus-visible {
   outline: 2px solid var(--wdc-accent);
   outline-offset: -2px;
@@ -453,7 +294,8 @@ defineExpose({ reload: loadAggregates })
 /* Per-site dot now uses HealthStatusDot shared primitive; the old
    .simple-recent-dot rules are removed. */
 .simple-recent-domain {
-  font-weight: 600;
+  font-family: var(--wdc-font-display);
+  font-weight: 500;
   color: var(--wdc-text);
   overflow: hidden;
   text-overflow: ellipsis;

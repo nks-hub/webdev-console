@@ -35,6 +35,9 @@ import { VideoPlay } from '@element-plus/icons-vue'
 import { fetchSettings, saveSettings } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { usePluginsStore } from '../../stores/plugins'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   /** Plugin-like object — backend-resolved serviceId is what drives the toggle.
@@ -89,10 +92,10 @@ async function toggle(next: boolean) {
   saving.value = true
   try {
     await saveSettings({ [`service.${sid}.autoStart`]: String(next) })
-    ElMessage.success(`${sid}: auto-start ${next ? 'zapnut' : 'vypnut'}`)
+    ElMessage.success(t(next ? 'toast.autostartOn' : 'toast.autostartOff', { name: sid }))
   } catch (e) {
     currentRaw.value = prev
-    ElMessage.error(`Uložení selhalo: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.saveFailed', { err: errorMessage(e) }))
   } finally {
     saving.value = false
   }
@@ -115,22 +118,22 @@ watch(() => resolvedPlugin.value?.serviceId, () => { void loadCurrent() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 8px;
-  margin: 10px 0;
+  border-radius: var(--wdc-radius-sm);
+  margin: var(--wdc-space-2-5) 0;
 }
 .plugin-autostart--compact {
-  padding: 6px 10px;
-  margin: 8px 0;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
+  margin: var(--wdc-space-2) 0;
   font-size: 0.82rem;
 }
 .plugin-autostart-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--wdc-text-2);
   font-weight: 500;
   line-height: 1.2;

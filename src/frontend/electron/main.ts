@@ -1,8 +1,8 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, Notification, clipboard } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, clipboard } from 'electron'
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync, statSync, copyFileSync, mkdirSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import http from 'http'
 import * as Sentry from '@sentry/electron/main'
@@ -17,6 +17,15 @@ import log from 'electron-log/main'
 // the guarded call sites that check whether updater exists still work
 // because the import itself is always available now.
 import { autoUpdater as electronAutoUpdater } from 'electron-updater'
+import {
+  configureNotificationIdentity,
+  getNotificationPrefs,
+  notificationText,
+  setNotificationWindowProvider,
+  showOsNotification,
+  updateNotificationPrefs,
+} from './notifications'
+import type { OsNotifyPayload } from '../src/services/osNotificationShared'
 
 // Wire `console.log`/`console.warn`/`console.error` (and daemon stdout,
 // which we currently forward via `console.log('[daemon]', ...)` below)
@@ -145,6 +154,39 @@ let updaterStatus = 'Idle'
 let updateDownloaded = false
 let checkingForUpdates = false
 
+// ── Daemon supervision ────────────────────────────────────────────────
+// A daemon that crashed used to stay dead until the user restarted the
+// whole app, and an adopted (CLI-started) or UAC-elevated daemon had no
+// watcher at all because we hold no child-process handle for it.
+//  - Crashed child  → respawn with exponential backoff, capped attempts.
+//  - Adopted daemon → /healthz poll; after repeated failures, respawn.
+//  - Deliberate stops (quit, elevation, update install) set
+//    `expectedDaemonExit` so the exit handler doesn't fight them.
+let expectedDaemonExit = false
+let daemonSpawning = false
+let crashRestarts = 0
+let crashRestartTimer: NodeJS.Timeout | null = null
+let crashStableTimer: NodeJS.Timeout | null = null
+let healthMonitor: NodeJS.Timeout | null = null
+let healthFailures = 0
+let monitorPausedUntil = 0
+let autoRestartSuspended = false
+const CRASH_RESTART_MAX = 5
+const CRASH_RESTART_BASE_MS = 1000
+const CRASH_RESTART_CAP_MS = 30_000
+// A daemon that stays up this long resets the crash counter.
+const CRASH_STABLE_MS = 60_000
+const HEALTH_INTERVAL_MS = 5000
+const HEALTH_FAILURE_LIMIT = 3
+// How long the monitor waits for an elevated daemon (UAC prompt + start)
+// before assuming the prompt was declined and starting a normal one.
+const ELEVATION_GRACE_MS = 90_000
+// Factory wipe deletes ~/.wdc while no daemon runs; keep the monitor off it.
+const FACTORY_WIPE_GRACE_MS = 120_000
+// Daemon exit code contract (Program.cs): 3 = DB migration failed (fatal,
+// respawning would loop), 98 = factory reset, 99 = restart requested.
+const EXIT_MIGRATION_FAILED = 3
+
 // Catalog source: the public NKS catalog at https://wdc.nks-hub.cz (baked
 // into SettingsStore.CatalogUrl as the built-in default). The Electron
 // shell no longer spawns a local catalog-api sidecar — production users
@@ -155,7 +197,29 @@ let checkingForUpdates = false
 function getUpdateFeedOverride(): string | null {
   const raw = process.env.NKS_WDC_UPDATE_FEED_URL?.trim()
   if (!raw) return null
+  // Windows builds are not code-signed, so the feed's sha512 is the only
+  // integrity check on an update; never take it over plain HTTP except from
+  // a loopback test feed (scripts/serve-electron-update-feed.mjs).
+  try {
+    const u = new URL(raw)
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
+    if (u.protocol !== 'https:' && !(u.protocol === 'http:' && loopback)) {
+      console.warn(`[updates] ignoring NKS_WDC_UPDATE_FEED_URL ${raw}: HTTPS required`)
+      return null
+    }
+  } catch {
+    return null
+  }
   return raw.endsWith('/') ? raw : `${raw}/`
+}
+
+// Schemes the shell may open for links coming from renderer content. file:
+// is excluded on purpose: ShellExecute honours .exe/.lnk/.url associations,
+// so file:// or UNC links would launch programs without a prompt.
+function isSafeExternalUrl(url: string): boolean {
+  // vscode://file/<path> opens a file in VS Code ("Edit hosts file"); other
+  // vscode:// routes reach extension URI handlers and stay blocked.
+  return /^(https?|mailto):/i.test(url) || /^vscode:\/\/file\//i.test(url)
 }
 
 // Portable mode: if portable.txt exists next to the app, redirect both
@@ -180,11 +244,33 @@ if (isPortable) {
   console.log('[portable]   daemon WDC_DATA_DIR:', portableWdcDir)
 }
 
+// OS notification identity (Windows AppUserModelID, app name for macOS /
+// libnotify). Runs after the portable block because it pins the userData
+// path, and before requestSingleInstanceLock() + the first notification.
+configureNotificationIdentity()
+setNotificationWindowProvider(() => win)
+
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
+
+// See preload.ts: on Unix only a port file we own with no group/other
+// permissions is trusted, so another local user cannot pre-create it.
+function isTrustedPortFile(path: string): boolean {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return true
+  try {
+    const st = statSync(path)
+    return st.uid === process.getuid() && (st.mode & 0o077) === 0
+  } catch {
+    return false
+  }
+}
 
 function readPortFile(): { port: number; token: string } | null {
   try {
     if (!existsSync(PORT_FILE)) return null
+    if (!isTrustedPortFile(PORT_FILE)) {
+      console.warn(`[daemon] ignoring ${PORT_FILE}: not owned by this user or readable by others`)
+      return null
+    }
     const lines = readFileSync(PORT_FILE, 'utf-8').split('\n').filter(Boolean)
     if (lines.length >= 2) return { port: parseInt(lines[0], 10), token: lines[1] }
   } catch {}
@@ -259,6 +345,137 @@ function findDaemonProject(): string {
   return candidates[0] // fallback
 }
 
+/** True when the port file points at a responding WDC daemon. Unlike
+ *  isDaemonAlive this never stops a version-skewed daemon — it's the
+ *  cheap probe the supervision loop runs every few seconds. */
+async function probeDaemonHealth(): Promise<boolean> {
+  const info = readPortFile()
+  if (!info) return false
+  try {
+    const body = await new Promise<string>((resolve, reject) => {
+      const req = http.get(`http://localhost:${info.port}/healthz`, (res) => {
+        let buf = ''
+        res.on('data', (chunk: Buffer) => { buf += chunk.toString() })
+        res.on('end', () => resolve(buf))
+      })
+      req.on('error', reject)
+      req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')) })
+    })
+    const parsed = JSON.parse(body) as { service?: string; ok?: boolean }
+    return parsed.service === 'nks-wdc-daemon' && parsed.ok === true
+  } catch {
+    return false
+  }
+}
+
+function scheduleCrashRestart(reason: string) {
+  if (isQuitting || crashRestartTimer) return
+  if (crashRestarts >= CRASH_RESTART_MAX) {
+    autoRestartSuspended = true
+    log.error(`[daemon] ${reason} — giving up after ${crashRestarts} restart attempts`)
+    notifyDaemonDown('daemonGaveUpTitle', 'daemonGaveUpBody')
+    void updateTray()
+    return
+  }
+  const delay = Math.min(CRASH_RESTART_BASE_MS * 2 ** crashRestarts, CRASH_RESTART_CAP_MS)
+  crashRestarts++
+  log.warn(`[daemon] ${reason} — restart ${crashRestarts}/${CRASH_RESTART_MAX} in ${delay} ms`)
+  crashRestartTimer = setTimeout(() => {
+    crashRestartTimer = null
+    void spawnDaemon().then(() => {
+      // Tell the operator the supervisor had to step in. Normal urgency: the
+      // daemon is back, so this respects "only in background".
+      if (daemon || daemonConnected) {
+        showOsNotification({
+          channel: 'daemon',
+          title: notificationText('daemonRestartedTitle'),
+          body: notificationText('daemonRestartedBody'),
+          urgency: 'normal',
+          route: '/dashboard',
+          key: 'daemon:restarted',
+        })
+      }
+    }).catch((e) => {
+      log.error('[daemon] respawn failed', e)
+      scheduleCrashRestart('respawn failed')
+    })
+  }, delay)
+}
+
+/** Manual "Start daemon" from the tray: forget earlier failures. */
+function restartDaemonManually() {
+  crashRestarts = 0
+  autoRestartSuspended = false
+  if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
+  void spawnDaemon().catch((e) => {
+    log.error('[daemon] manual start failed', e)
+    notifyDaemonDown('daemonStartFailedTitle', 'daemonStartFailedBody', {
+      error: String(e instanceof Error ? e.message : e),
+    })
+  })
+}
+
+/** Critical daemon-channel toast; honours the operator's notification
+ *  preferences (master switch + "daemon" channel) like every other toast. */
+function notifyDaemonDown(
+  titleKey: Parameters<typeof notificationText>[0],
+  bodyKey: Parameters<typeof notificationText>[0],
+  params: Record<string, string> = {},
+) {
+  try {
+    showOsNotification({
+      channel: 'daemon',
+      title: notificationText(titleKey, params),
+      body: notificationText(bodyKey, params),
+      urgency: 'critical',
+      route: '/dashboard',
+      key: `daemon:${titleKey}`,
+    })
+  } catch { /* notifications unavailable — the tray state still shows it */ }
+}
+
+function startHealthMonitor() {
+  if (healthMonitor) return
+  healthMonitor = setInterval(() => { void healthTick() }, HEALTH_INTERVAL_MS)
+}
+
+async function healthTick() {
+  if (isQuitting || daemonSpawning || crashRestartTimer) return
+  const healthy = await probeDaemonHealth()
+  if (healthy) {
+    // Also covers a daemon the user started again from the CLI after we
+    // stopped auto-restarting.
+    healthFailures = 0
+    monitorPausedUntil = 0
+    autoRestartSuspended = false
+    if (!daemonConnected) {
+      daemonConnected = true
+      void updateTray()
+    }
+    return
+  }
+  if (daemonConnected) {
+    daemonConnected = false
+    void updateTray()
+  }
+  // Our own child reports its exit directly; the restart path below only
+  // covers daemons we adopted or launched elevated (no process handle).
+  if (daemon || autoRestartSuspended || Date.now() < monitorPausedUntil) return
+  if (++healthFailures >= HEALTH_FAILURE_LIMIT) {
+    healthFailures = 0
+    scheduleCrashRestart('adopted daemon stopped responding')
+  }
+}
+
+/** Resolves once `child` has exited, or after `timeoutMs`. */
+function waitForChildExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(false), timeoutMs)
+    child.once('exit', () => { clearTimeout(t); resolve(true) })
+  })
+}
+
 async function isDaemonAlive(): Promise<boolean> {
   const info = readPortFile()
   if (!info) return false
@@ -325,10 +542,22 @@ async function isDaemonAlive(): Promise<boolean> {
 }
 
 async function spawnDaemon() {
+  if (daemonSpawning || isQuitting) return
+  if (daemon && daemon.exitCode === null && daemon.signalCode === null) return
+  daemonSpawning = true
+  try {
+    await spawnDaemonInner()
+  } finally {
+    daemonSpawning = false
+  }
+}
+
+async function spawnDaemonInner() {
   // If a daemon is already running (e.g. started from CLI), reuse it
   if (await isDaemonAlive()) {
     console.log('[daemon] already running (port file exists and responds), reusing')
     daemonConnected = true
+    healthFailures = 0
     updateTray()
     return
   }
@@ -378,6 +607,13 @@ async function spawnDaemon() {
     daemon = spawn(daemonExe, [], { stdio: 'pipe', detached: false, env: daemonEnv })
   }
   log.info(`[daemon] spawned pid=${daemon.pid}`)
+  const child = daemon
+  expectedDaemonExit = false
+  if (crashStableTimer) clearTimeout(crashStableTimer)
+  crashStableTimer = setTimeout(() => {
+    crashStableTimer = null
+    if (daemon === child) crashRestarts = 0
+  }, CRASH_STABLE_MS)
 
   daemon.stdout?.on('data', (d) => {
     try { console.log('[daemon]', d.toString().trim()) } catch {}
@@ -388,11 +624,31 @@ async function spawnDaemon() {
   daemon.on('error', (err) => {
     console.error('[daemon] process error:', err.message)
   })
-  daemon.on('exit', (code) => {
-    console.log(`[daemon] exited code=${code}`)
+  daemon.on('exit', (code, signal) => {
+    console.log(`[daemon] exited code=${code} signal=${signal}`)
+    // A replacement may already be running (elevation, manual restart);
+    // only clear state that still belongs to this child.
+    if (daemon !== child) return
     daemonConnected = false
     daemon = null
+    if (crashStableTimer) { clearTimeout(crashStableTimer); crashStableTimer = null }
+    const deliberate = expectedDaemonExit
+    expectedDaemonExit = false
     updateTray()
+    if (!isQuitting && !deliberate && code !== 98 && code !== 99) {
+      if (code === EXIT_MIGRATION_FAILED) {
+        autoRestartSuspended = true
+        log.error('[daemon] database migration failed — not restarting')
+        notifyDaemonDown('daemonMigrationFailedTitle', 'daemonMigrationFailedBody')
+      } else if (code === 0) {
+        // Clean exit we didn't ask for (e.g. `wdc daemon stop`): respect it,
+        // the tray offers "Start daemon".
+        log.info('[daemon] stopped cleanly outside the app — not restarting')
+        autoRestartSuspended = true
+      } else {
+        scheduleCrashRestart(`daemon exited unexpectedly (code=${code} signal=${signal})`)
+      }
+    }
     // F91.7: exit code 99 = "restart me" contract from the daemon's
     // /api/admin/restart endpoint. Don't respawn while the whole app is
     // quitting — we'd keep the process alive past Electron's own exit.
@@ -412,6 +668,7 @@ async function spawnDaemon() {
     // so the same codepath works on Win/macOS/Linux.
     if (code === 98 && !isQuitting) {
       console.log('[daemon] FACTORY RESET signal (exit 98) — wiping all state')
+      monitorPausedUntil = Date.now() + FACTORY_WIPE_GRACE_MS
       void performFactoryWipe().finally(() => {
         setTimeout(() => { void spawnDaemon() }, 500)
       })
@@ -491,7 +748,9 @@ async function createWindow() {
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
-      sandbox: false
+      // The preload only uses contextBridge/ipcRenderer; the daemon port
+      // file is read here in main ('daemon-connection-info').
+      sandbox: true
     }
   })
 
@@ -564,10 +823,12 @@ async function createWindow() {
     const isEditable = params.isEditable === true
     const template: Electron.MenuItemConstructorOptions[] = []
     if (params.linkURL) {
-      template.push({
-        label: 'Open Link',
-        click: () => { void shell.openExternal(params.linkURL) },
-      })
+      if (isSafeExternalUrl(params.linkURL)) {
+        template.push({
+          label: 'Open Link',
+          click: () => { void shell.openExternal(params.linkURL) },
+        })
+      }
       template.push({
         label: 'Copy Link',
         click: () => { clipboard.writeText(params.linkURL) },
@@ -587,7 +848,14 @@ async function createWindow() {
   // the explicit electronAPI.openExternal IPC (allowlisted to https/mailto)
   // instead. Without this an XSS in the renderer could spawn a child window
   // pointing at an attacker URL with the same preload bridge attached.
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  // Never open a second Electron window. Links the renderer opens with
+  // window.open (site URLs, Mailpit, Cloudflare dashboard, update downloads)
+  // go to the system browser when their scheme is safe; everything else is
+  // dropped. Previously every window.open was silently denied.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
 
   // Lock the renderer to its own origin. The legitimate URL is either
   // app://nks-wdc/index.html (packaged) or the dev server (ELECTRON_RENDERER_URL).
@@ -918,9 +1186,8 @@ function buildUpdaterMenuItems(): Electron.MenuItemConstructorOptions[] {
       enabled: !checkingForUpdates,
       click: async () => {
         if (updateDownloaded) {
-          isQuitting = true
           try {
-            electronAutoUpdater.quitAndInstall(false, true)
+            await installUpdateAndRestart()
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error)
             void dialog.showMessageBox({
@@ -959,9 +1226,13 @@ async function updateTray() {
     : 'Daemon unavailable'
   activeTray.setToolTip(`NKS WDC - ${summary}`)
 
+  const canStartDaemon = !snapshot.connected && !daemon && !daemonSpawning
   const trayMenu = Menu.buildFromTemplate([
     { label: trayMenuLabel, enabled: false },
     { label: summary, enabled: false },
+    ...(canStartDaemon
+      ? [{ label: 'Start daemon', click: () => restartDaemonManually() }] as Electron.MenuItemConstructorOptions[]
+      : []),
     { type: 'separator' },
     {
       label: 'Open Dashboard',
@@ -1116,6 +1387,16 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
   }
 }
 
+/** Stop the daemon before handing over to the installer. Setting
+ *  isQuitting first made before-quit skip shutdownDaemon, so the old
+ *  daemon kept its binary locked and the update failed or left a
+ *  version-skewed daemon running. */
+async function installUpdateAndRestart() {
+  isQuitting = true
+  await shutdownDaemon()
+  electronAutoUpdater.quitAndInstall(false, true)
+}
+
 async function setupAutoUpdater() {
   if (!app.isPackaged || isPortable) {
     updaterStatus = 'Disabled'
@@ -1142,6 +1423,17 @@ async function setupAutoUpdater() {
       updaterStatus = `Downloading ${info.version}`
       updateTray()
       console.log('[updater] Update available:', info.version)
+      // Same key as the renderer's GitHub-release check, so whichever
+      // notices the version first fires and the other one is a duplicate.
+      showOsNotification({
+        channel: 'updates',
+        title: notificationText('updateAvailableTitle'),
+        body: notificationText('updateAvailableBody', { version: info.version }),
+        urgency: 'low',
+        route: '/settings?tab=update',
+        key: `update:${info.version.replace(/^v/, '')}`,
+        once: true,
+      })
     })
     autoUpdater.on('update-not-available', () => {
       checkingForUpdates = false
@@ -1171,8 +1463,7 @@ async function setupAutoUpdater() {
       })
 
       if (result.response === 0) {
-        isQuitting = true
-        autoUpdater.quitAndInstall(false, true)
+        await installUpdateAndRestart()
       }
     })
     autoUpdater.on('error', (error) => {
@@ -1378,9 +1669,27 @@ async function performFactoryWipe() {
 }
 
 async function shutdownDaemon() {
+  expectedDaemonExit = true
+  if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
+  const child = daemon
   try { await daemonPost('/api/admin/shutdown') } catch { /* already dead or unreachable */ }
-  try { daemon?.kill() } catch { /* already dead */ }
+  if (child) {
+    // Give the daemon time to stop services and flush SQLite before the
+    // hard kill — the installer and the next launch both need its files.
+    const exited = await waitForChildExit(child, 8000)
+    if (!exited) {
+      log.warn('[daemon] graceful shutdown timed out — killing')
+      try { child.kill() } catch { /* already dead */ }
+      await waitForChildExit(child, 2000)
+    }
+  } else {
+    // Adopted/elevated daemon: wait until it stops answering.
+    for (let i = 0; i < 16 && await probeDaemonHealth(); i++) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  }
   daemon = null
+  daemonConnected = false
   // Best-effort port file cleanup so the next app launch sees a clean
   // slate instead of having to wait for its own isDaemonAlive probe.
   try {
@@ -1519,8 +1828,7 @@ ipcMain.handle('open-external', async (_evt, url: string) => {
   // file://attacker.tld/share/payload.lnk also work. A renderer XSS that
   // reaches this IPC channel would otherwise have one-call RCE.
   // For "open in folder" use the dedicated revealInFolder handler.
-  const allowed = /^(https?|mailto):/i
-  if (!allowed.test(url)) return false
+  if (!isSafeExternalUrl(url)) return false
   await shell.openExternal(url)
   return true
 })
@@ -1613,50 +1921,26 @@ ipcMain.handle('renderer-log', (_evt, payload: { level?: string; args?: unknown[
   }
 })
 
-// #147 — cross-platform OS notifications via Electron's Notification class.
-// Uses native Win10/11 toast on Windows, NSUserNotificationCenter on macOS,
-// libnotify on Linux. Renderer hands us {title, body, urgency, channel} —
-// we map urgency to the platform-relevant flag (silent=info, normal=success,
-// critical=error). The optional `channel` is recorded for telemetry only;
-// platform notification grouping happens via the AppUserModelID on Windows
-// and the bundle id on macOS, both already set elsewhere.
-ipcMain.handle('os-notify', (_evt, payload: {
-  title?: string
-  body?: string
-  urgency?: 'low' | 'normal' | 'critical'
-  silent?: boolean
-  channel?: string
-}) => {
+// #147 — cross-platform OS notifications. The renderer sends
+// {title, body, urgency, channel, route?, key?, once?, test?}; every gate
+// (master switch, channel toggle, background-only, 60 s throttle, once per
+// key), platform option and the click → focus + navigate wiring live in
+// electron/notifications.ts so main-fired toasts behave the same way.
+// The click route is validated there with isSafeAppRoute().
+ipcMain.handle('os-notify', (_evt, payload: OsNotifyPayload) => {
   try {
-    if (!Notification.isSupported()) {
-      log.warn('[os-notify] not supported on this platform — skipping', { channel: payload?.channel })
-      return false
-    }
-    const n = new Notification({
-      title: (payload?.title ?? 'NKS WebDev Console').slice(0, 200),
-      body: (payload?.body ?? '').slice(0, 1000),
-      silent: payload?.silent ?? (payload?.urgency === 'low'),
-      urgency: payload?.urgency ?? 'normal',
-    })
-    // Clicking a notification should bring the main window forward so
-    // the operator can act on what triggered it. Best-effort — if no
-    // window exists (rare), the notification still fires fine.
-    n.on('click', () => {
-      const w = BrowserWindow.getAllWindows()[0]
-      if (w) {
-        if (w.isMinimized()) w.restore()
-        w.show()
-        w.focus()
-      }
-    })
-    n.show()
-    log.info('[os-notify] fired', { channel: payload?.channel, urgency: payload?.urgency })
-    return true
+    return showOsNotification(payload)
   } catch (err) {
     log.error('[os-notify] failed:', err)
-    return false
+    return 'failed'
   }
 })
+
+// Notification preferences live in userData/notification-prefs.json so the
+// main process can honour them for daemon/updater toasts. The renderer reads
+// and writes them here (Settings → Notifications).
+ipcMain.handle('notify-prefs-get', () => getNotificationPrefs())
+ipcMain.handle('notify-prefs-set', (_evt, patch: unknown) => updateNotificationPrefs(patch))
 
 ipcMain.handle('restart-renderer', async (_evt) => {
   try {
@@ -1687,8 +1971,18 @@ ipcMain.handle('elevate-daemon', async () => {
   }
   try {
     log.info('[elevate-daemon] requested — killing current daemon pid=' + (daemon?.pid ?? 'none'))
+    // The elevated daemon is launched by PowerShell, so we never get a
+    // handle to it; the health monitor watches it instead and starts a
+    // normal daemon if the UAC prompt is declined.
+    monitorPausedUntil = Date.now() + ELEVATION_GRACE_MS
+    healthFailures = 0
+    if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
     if (daemon && !daemon.killed) {
-      try { daemon.kill() } catch (e) { log.warn('[elevate-daemon] kill failed', e) }
+      expectedDaemonExit = true
+      const old = daemon
+      daemon = null
+      daemonConnected = false
+      try { old.kill() } catch (e) { log.warn('[elevate-daemon] kill failed', e) }
     }
     // Best-effort port-file wipe so the renderer doesn't latch onto the
     // stale token while the elevated daemon comes up.
@@ -1724,6 +2018,81 @@ ipcMain.handle('elevate-daemon', async () => {
     const msg = err instanceof Error ? err.message : String(err)
     log.error('[elevate-daemon] failed', msg)
     return { ok: false, error: msg }
+  }
+})
+
+// Daemon port + token for the sandboxed preload (synchronous: the renderer's
+// daemonApi.getPort()/getToken() are sync). Only the main window may ask, and
+// only a trusted port file (see readPortFile) is returned.
+ipcMain.on('daemon-connection-info', (event) => {
+  try {
+    if (!win || event.sender !== win.webContents) {
+      event.returnValue = null
+      return
+    }
+    const info = readPortFile()
+    event.returnValue = info && Number.isInteger(info.port) && info.port > 0 && info.port <= 65535
+      ? { port: info.port, token: info.token.trim() }
+      : null
+  } catch {
+    event.returnValue = null
+  }
+})
+
+// Where the bundled MCP server lives, for the MCP hub's "Connect an AI
+// client" card. Packaged builds ship it as an extraResource
+// (resources/mcp-server/index.js, built by `npm run stage:mcp`); dev runs
+// use the repo's services/mcp-server bundle or tsc output. Also reports
+// whether the daemon has written the MCP token file the server reads.
+// An AppImage is mounted at a new /tmp/.mount_* path on every launch, so a
+// path into its resources would break the AI client's config after the next
+// restart. Copy the bundle to ~/.wdc/mcp-server and hand out that path.
+function stableAppImageMcpServer(bundled: string): string {
+  const targetDir = join(homedir(), '.wdc', 'mcp-server')
+  for (const name of ['index.js', 'package.json']) {
+    const from = join(dirname(bundled), name)
+    const to = join(targetDir, name)
+    const fresh = readFileSync(from)
+    if (existsSync(to) && readFileSync(to).equals(fresh)) continue
+    mkdirSync(targetDir, { recursive: true })
+    copyFileSync(from, to)
+  }
+  return join(targetDir, 'index.js')
+}
+
+function findMcpServerEntry(): { path: string; exists: boolean } {
+  const repoServer = resolve(app.getAppPath(), '..', '..', 'services', 'mcp-server')
+  if (app.isPackaged && process.env.APPIMAGE) {
+    const bundled = join(process.resourcesPath, 'mcp-server', 'index.js')
+    if (existsSync(bundled)) {
+      try {
+        return { path: stableAppImageMcpServer(bundled), exists: true }
+      } catch (err) {
+        log.warn('[mcp-server-info] could not copy the MCP server out of the AppImage', err)
+      }
+    }
+  }
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath, 'mcp-server', 'index.js')]
+    : [
+        join(repoServer, 'dist-bundle', 'index.js'),
+        join(repoServer, 'dist', 'index.js'),
+        join(app.getAppPath(), 'resources', 'mcp-server', 'index.js'),
+      ]
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return { path: candidate, exists: true }
+  }
+  return { path: candidates[0], exists: false }
+}
+
+ipcMain.handle('mcp-server-info', async () => {
+  const entry = findMcpServerEntry()
+  const portFile = join(tmpdir(), 'nks-wdc-mcp.port')
+  return {
+    serverPath: entry.path,
+    serverExists: entry.exists,
+    packaged: app.isPackaged,
+    portFilePresent: existsSync(portFile),
   }
 })
 
@@ -1775,7 +2144,13 @@ app.whenReady().then(async () => {
   })
   // Catalog source is the public NKS catalog at https://wdc.nks-hub.cz
   // (SettingsStore default). No local sidecar — daemon fetches directly.
-  await spawnDaemon()
+  try {
+    await spawnDaemon()
+  } catch (e) {
+    log.error('[daemon] initial start failed', e)
+    scheduleCrashRestart('initial start failed')
+  }
+  startHealthMonitor()
   createWindow()
   createTray()
   await setupAutoUpdater()

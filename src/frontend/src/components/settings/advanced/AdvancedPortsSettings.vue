@@ -153,7 +153,7 @@ function emitPort(key: keyof AdvancedPortValues, value: number | undefined): voi
 
 <style scoped>
 .plugin-ports {
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
 }
 
 .settings-card-meta {
@@ -170,7 +170,7 @@ function emitPort(key: keyof AdvancedPortValues, value: number | undefined): voi
 }
 
 .port-alert {
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
   /* responsive: removed fixed cap */
 }
 </style>

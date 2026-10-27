@@ -39,7 +39,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   color: var(--el-text-color-secondary);
   font-size: 14px;
   text-align: center;
@@ -50,7 +50,7 @@ onBeforeUnmount(() => {
 .elapsed {
   opacity: 0.6;
   font-size: 12px;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .mono {
   font-family: 'JetBrains Mono', monospace;

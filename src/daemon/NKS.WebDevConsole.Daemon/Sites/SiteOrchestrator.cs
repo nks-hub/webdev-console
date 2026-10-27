@@ -18,9 +18,19 @@ public sealed class SiteOrchestrator
 {
     internal const string HostsBlockBegin = "# BEGIN NKS WebDev Console";
     internal const string HostsBlockEnd = "# END NKS WebDev Console";
+    // UTF-8 without BOM: ASCII rewrote non-ASCII text in the user's own hosts
+    // lines (comments in Czech, IDN notes) as '?'.
+    private static readonly Encoding HostsFileEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private readonly ILogger<SiteOrchestrator> _logger;
     private readonly IServiceProvider _sp;
+
+    // One gate per domain so two applies of the same site (PUT save, the
+    // explicit /apply endpoint, rollback, reapply-all) cannot interleave their
+    // vhost/reload/hosts steps. Different domains still apply in parallel.
+    // Domains are case-insensitive, matching SiteManager's lookup.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _applyLocks =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public SiteOrchestrator(ILogger<SiteOrchestrator> logger, IServiceProvider sp)
     {
@@ -34,15 +44,36 @@ public sealed class SiteOrchestrator
     /// site instead of generating new ones, then reloads the web server. SSL cert and
     /// php.ini writing still run (no harm, they are not routed to).
     /// </summary>
-    public async Task ApplyAsync(SiteConfig site, CancellationToken ct = default)
+    public async Task<SiteApplyResult> ApplyAsync(SiteConfig site, CancellationToken ct = default)
+    {
+        var gate = _applyLocks.GetOrAdd(site.Domain, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            return await ApplyCoreAsync(site, ct);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<SiteApplyResult> ApplyCoreAsync(SiteConfig site, CancellationToken ct)
     {
         _logger.LogInformation("Orchestrating site {Domain}...", site.Domain);
+        var result = new SiteApplyResult(site.Domain);
 
         if (!site.Enabled)
         {
-            await RemoveVhostsForDisabledSiteAsync(site.Domain, ct);
-            _logger.LogInformation("Site {Domain} is disabled — vhosts removed", site.Domain);
-            return;
+            var failures = await RemoveVhostsForDisabledSiteAsync(site.Domain, ct);
+            foreach (var (step, detail) in failures)
+                result.Fail(step, detail);
+            if (!failures.Any(f => f.Step == "vhost"))
+                result.Ok("vhost", "site disabled — vhosts removed");
+            _logger.LogInformation("Site {Domain} is disabled — vhost removal finished ({Failed} failed step(s))",
+                site.Domain, failures.Count);
+            await PublishApplyResultAsync(result);
+            return result;
         }
 
         // 0. Auto-detect PHP version from .php-version file in docroot
@@ -85,21 +116,29 @@ public sealed class SiteOrchestrator
                         var task = (Task)genMethod.Invoke(sslPlugin.Instance, new object[] { site.Domain, aliases })!;
                         await task;
                         var resultProp = task.GetType().GetProperty("Result");
-                        var result = resultProp?.GetValue(task);
-                        if (result != null)
+                        var certResult = resultProp?.GetValue(task);
+                        if (certResult != null)
+                        {
                             _logger.LogInformation("SSL certificate generated for {Domain}", site.Domain);
+                            result.Ok("ssl");
+                        }
                         else
+                        {
                             _logger.LogWarning("SSL certificate generation returned null for {Domain} — mkcert may not be installed", site.Domain);
+                            result.Fail("ssl", "certificate generation returned nothing — is mkcert installed?");
+                        }
                     }
                 }
                 else
                 {
                     _logger.LogWarning("SSL plugin not loaded — skipping cert generation for {Domain}", site.Domain);
+                    result.Fail("ssl", "SSL plugin not loaded");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to generate SSL certificate for {Domain}", site.Domain);
+                result.Fail("ssl", ex.Message);
             }
         }
 
@@ -110,11 +149,12 @@ public sealed class SiteOrchestrator
         try
         {
             var phpIniWriter = _sp.GetService<SitePhpIniWriter>();
-            phpIniWriter?.Write(site);
+            if (phpIniWriter?.Write(site) is not null) result.Ok("phpIni");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to write per-site php.ini for {Domain}", site.Domain);
+            result.Fail("phpIni", ex.Message);
         }
 
         // 2. Apache — generate vhost file via reflection (cross-ALC boundary).
@@ -127,15 +167,18 @@ public sealed class SiteOrchestrator
             try
             {
                 await InvokeAsync(apacheModule, "GenerateVhostAsync", new object[] { site, ct });
+                result.Ok("vhost");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to generate vhost for {Domain}", site.Domain);
+                result.Fail("vhost", ex.Message);
             }
         }
         else
         {
             _logger.LogWarning("Apache module not registered — skipping vhost generation");
+            result.Fail("vhost", "Apache module not registered");
         }
 
         // 3. PHP — ensure module is running (it manages all installed versions internally)
@@ -154,10 +197,12 @@ public sealed class SiteOrchestrator
                     _logger.LogInformation("Starting PHP module for site {Domain}", site.Domain);
                     await phpModule.StartAsync(ct);
                 }
+                result.Ok("php");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to ensure PHP module running for {Domain}", site.Domain);
+                result.Fail("php", ex.Message);
             }
         }
 
@@ -170,11 +215,17 @@ public sealed class SiteOrchestrator
                 if (apacheStatus.State == ServiceState.Running)
                 {
                     await apacheModule.ReloadAsync(ct);
+                    result.Ok("reload");
+                }
+                else
+                {
+                    result.Skip("reload", "Apache is not running");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reload Apache after applying {Domain}", site.Domain);
+                result.Fail("reload", ex.Message);
             }
         }
 
@@ -191,11 +242,17 @@ public sealed class SiteOrchestrator
                     await InvokeAsync(nodeModule, "StartSiteAsync",
                         new object[] { site.Domain, site.DocumentRoot, site.NodeUpstreamPort, site.NodeStartCommand ?? "", ct });
                     _logger.LogInformation("Node.js process started for {Domain} on port {Port}", site.Domain, site.NodeUpstreamPort);
+                    result.Ok("node");
+                }
+                else
+                {
+                    result.Fail("node", "Node.js module not registered");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to start Node.js process for {Domain}", site.Domain);
+                result.Fail("node", ex.Message);
             }
         }
         else
@@ -222,12 +279,23 @@ public sealed class SiteOrchestrator
 
             _logger.LogInformation("[hosts] site apply requesting {Count} entries for {Domain}: {List}",
                 domains.Count, site.Domain, string.Join(", ", domains));
-            await UpdateHostsFileAsync(domains, ct);
+            switch (await UpdateHostsFileAsync(domains, ct))
+            {
+                case HostsUpdateOutcome.Unchanged: result.Ok("hosts", "already up to date"); break;
+                case HostsUpdateOutcome.Written: result.Ok("hosts"); break;
+                case HostsUpdateOutcome.Skipped: result.Skip("hosts", "NKS_WDC_SKIP_HOSTS_UAC is set"); break;
+                default: result.Fail("hosts", "hosts file not updated — elevation declined or failed"); break;
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogWarning("[hosts] site apply failed for {Domain} (may need admin elevation): {Error}",
                 site.Domain, ex.Message);
+            result.Fail("hosts", ex.Message);
         }
 
         // 5. Cloudflare Tunnel — auto-sync DNS + ingress for every site that has
@@ -241,9 +309,37 @@ public sealed class SiteOrchestrator
         catch (Exception ex)
         {
             _logger.LogWarning("Cloudflare sync failed for {Domain}: {Error}", site.Domain, ex.Message);
+            result.Fail("cloudflare", ex.Message);
         }
 
-        _logger.LogInformation("Site {Domain} applied", site.Domain);
+        _logger.LogInformation("Site {Domain} applied ({Failed} failed step(s))",
+            site.Domain, result.Steps.Count(st => st.Status == SiteApplyStep.Failed));
+        await PublishApplyResultAsync(result);
+        return result;
+    }
+
+    /// <summary>
+    /// Broadcasts the per-step outcome as <c>site:applied</c> so the UI can show
+    /// which part of an apply failed (every step used to log and carry on, and
+    /// the API reported success regardless).
+    /// </summary>
+    private async Task PublishApplyResultAsync(SiteApplyResult result)
+    {
+        try
+        {
+            var sse = _sp.GetService<NKS.WebDevConsole.Daemon.Services.SseService>();
+            if (sse is not null)
+                await sse.BroadcastAsync("site:applied", new
+                {
+                    domain = result.Domain,
+                    success = result.Success,
+                    steps = result.Steps.Select(st => new { name = st.Name, status = st.Status, detail = st.Detail }),
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "site:applied broadcast failed");
+        }
     }
 
     /// <summary>
@@ -406,9 +502,13 @@ public sealed class SiteOrchestrator
     /// Removes generated vhosts for a disabled site across all registered httpd modules
     /// (Apache, Nginx) and reloads each running web server so the config takes effect.
     /// Does NOT delete the TOML file — the site remains in the sites list.
+    /// Returns the failed steps (<c>vhost</c> or <c>reload</c>, with a detail
+    /// naming the module) so the caller can report them instead of claiming
+    /// the vhosts were removed.
     /// </summary>
-    private async Task RemoveVhostsForDisabledSiteAsync(string domain, CancellationToken ct)
+    private async Task<List<(string Step, string Detail)>> RemoveVhostsForDisabledSiteAsync(string domain, CancellationToken ct)
     {
+        var failures = new List<(string Step, string Detail)>();
         var modules = _sp.GetServices<IServiceModule>().ToList();
 
         var httpdIds = new[] { "apache", "nginx" };
@@ -426,9 +526,14 @@ public sealed class SiteOrchestrator
             {
                 _logger.LogDebug("{Module} has no RemoveVhostAsync — skipping vhost removal", id);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to remove vhost for disabled site {Domain} ({Module})", domain, id);
+                failures.Add(("vhost", $"{id}: {ex.Message}"));
             }
 
             try
@@ -437,11 +542,18 @@ public sealed class SiteOrchestrator
                 if (status.State == ServiceState.Running)
                     await mod.ReloadAsync(ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reload {Module} after disabling {Domain}", id, domain);
+                failures.Add(("reload", $"{id}: {ex.Message}"));
             }
         }
+
+        return failures;
     }
 
     /// <summary>
@@ -527,11 +639,27 @@ public sealed class SiteOrchestrator
     public Task UpdateHostsBlockAsync(IEnumerable<string> domainsToAdd, CancellationToken ct) =>
         UpdateHostsFileAsync(domainsToAdd, ct);
 
+    private enum HostsUpdateOutcome { Unchanged, Written, Skipped, Failed }
+
     /// <summary>
     /// Collects all domains from all sites and writes them into the managed block of the hosts file.
     /// Uses PowerShell with -Verb RunAs (UAC elevation) on Windows — ONLY when content would actually change.
     /// </summary>
-    private async Task UpdateHostsFileAsync(IEnumerable<string> domainsToAdd, CancellationToken ct)
+    private async Task<HostsUpdateOutcome> UpdateHostsFileAsync(IEnumerable<string> domainsToAdd, CancellationToken ct)
+    {
+        // Shared with the hosts editor endpoints — see HostsFileWriter.
+        await NKS.WebDevConsole.Daemon.Hosts.HostsFileWriter.Gate.WaitAsync(ct);
+        try
+        {
+            return await UpdateHostsFileCoreAsync(domainsToAdd, ct);
+        }
+        finally
+        {
+            NKS.WebDevConsole.Daemon.Hosts.HostsFileWriter.Gate.Release();
+        }
+    }
+
+    private async Task<HostsUpdateOutcome> UpdateHostsFileCoreAsync(IEnumerable<string> domainsToAdd, CancellationToken ct)
     {
         var hostsPath = OperatingSystem.IsWindows()
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts")
@@ -587,7 +715,7 @@ public sealed class SiteOrchestrator
             if (AllDomainsAlreadyMapped(existing, allDomains))
             {
                 _logger.LogInformation("[hosts] already contains all {Count} managed domains — skipping elevation", allDomains.Count);
-                return;
+                return HostsUpdateOutcome.Unchanged;
             }
         }
         catch (Exception ex)
@@ -606,7 +734,7 @@ public sealed class SiteOrchestrator
                 "NKS_WDC_SKIP_HOSTS_UAC=1 is set — hosts file write skipped for {Count} domain(s). " +
                 "This is intended for CI/e2e tests only.",
                 allDomains.Count);
-            return;
+            return HostsUpdateOutcome.Skipped;
         }
 
         if (!OperatingSystem.IsWindows())
@@ -618,7 +746,7 @@ public sealed class SiteOrchestrator
             try
             {
                 await WriteHostsFileDirectAsync(hostsPath, allDomains, ct);
-                return;
+                return HostsUpdateOutcome.Written;
             }
             catch (UnauthorizedAccessException)
             {
@@ -634,7 +762,7 @@ public sealed class SiteOrchestrator
                 _logger.LogInformation("[hosts] wrote {Count} entries via elevation: {List}", allDomains.Count, string.Join(", ", allDomains));
             else
                 _logger.LogWarning("[hosts] elevation declined or failed — hosts file NOT updated. Sites will not resolve until the user runs NKS WDC with sudo or re-approves the prompt.");
-            return;
+            return ok ? HostsUpdateOutcome.Written : HostsUpdateOutcome.Failed;
         }
 
         // FAST PATH: if the daemon is already running elevated (app manifest
@@ -648,7 +776,7 @@ public sealed class SiteOrchestrator
             try
             {
                 await WriteHostsFileDirectAsync(hostsPath, allDomains, ct);
-                return;
+                return HostsUpdateOutcome.Written;
             }
             catch (Exception ex)
             {
@@ -735,8 +863,13 @@ Set-Content -Path $hostsPath -Value $newContent -Encoding ASCII -Force
 ipconfig /flushdns | Out-Null
 ";
         // Write script to temp file and execute with elevation
-        var scriptPath = Path.Combine(Path.GetTempPath(), "nks-wdc-hosts-update.ps1");
-        await File.WriteAllTextAsync(scriptPath, psScript, ct);
+        // Random name + CreateNew so nothing can pre-create or predict the path,
+        // and the file is held open with read-only sharing while the elevated
+        // PowerShell runs, so another process cannot swap its contents between
+        // the write and the UAC-approved execution.
+        var scriptPath = Path.Combine(Path.GetTempPath(), $"nks-wdc-hosts-update-{Guid.NewGuid():N}.ps1");
+        await NKS.WebDevConsole.Daemon.Config.SecretFile.WriteAllTextAsync(scriptPath, psScript, ct);
+        using var scriptLock = new FileStream(scriptPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
         var psi = new System.Diagnostics.ProcessStartInfo
         {
@@ -753,18 +886,29 @@ ipconfig /flushdns | Out-Null
             // update (UAC-elevated invocation so the daemon inherits the
             // child's handle table entry and keeps it alive until GC).
             using var proc = System.Diagnostics.Process.Start(psi);
-            if (proc is not null)
+            if (proc is null) return HostsUpdateOutcome.Failed;
+            await proc.WaitForExitAsync(ct);
+            if (proc.ExitCode == 0)
             {
-                await proc.WaitForExitAsync(ct);
-                if (proc.ExitCode == 0)
-                    _logger.LogInformation("Hosts file updated with {Count} domains", allDomains.Count);
-                else
-                    _logger.LogWarning("Hosts update script exited with code {Code}", proc.ExitCode);
+                _logger.LogInformation("Hosts file updated with {Count} domains", allDomains.Count);
+                return HostsUpdateOutcome.Written;
             }
+            _logger.LogWarning("Hosts update script exited with code {Code}", proc.ExitCode);
+            return HostsUpdateOutcome.Failed;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Hosts file write failed: {Error}. Try running NKS WDC as administrator.", ex.Message);
+            return HostsUpdateOutcome.Failed;
+        }
+        finally
+        {
+            scriptLock.Dispose();
+            try { File.Delete(scriptPath); } catch { /* best effort */ }
         }
     }
 
@@ -820,7 +964,7 @@ ipconfig /flushdns | Out-Null
         var newContent = RewriteManagedHostsContent(content, allDomains);
 
         RotateHostsBackups(hostsPath);
-        await File.WriteAllTextAsync(hostsPath, newContent, Encoding.ASCII, ct);
+        await NKS.WebDevConsole.Daemon.Hosts.HostsFileWriter.WriteAsync(hostsPath, newContent, HostsFileEncoding, ct);
         await FlushDnsCacheAsync(ct);
 
         _logger.LogInformation("[hosts] wrote {Count} entries directly to {Path}: {List}",
@@ -857,7 +1001,7 @@ ipconfig /flushdns | Out-Null
                 return false;
             }
 
-            await File.WriteAllTextAsync(tmp, newContent, Encoding.ASCII, ct);
+            await File.WriteAllTextAsync(tmp, newContent, HostsFileEncoding, ct);
 
             if (OperatingSystem.IsMacOS())
             {

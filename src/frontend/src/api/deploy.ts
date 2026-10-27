@@ -283,8 +283,12 @@ export async function fetchDeploySettings(domain: string): Promise<DeploySetting
     return await request<DeploySettings>(
       `${PREFIX}/sites/${encodeURIComponent(domain)}/settings`,
     )
-  } catch {
-    return defaultDeploySettings()
+  } catch (e) {
+    // Only "no settings saved yet" means defaults. Any other failure (daemon
+    // down, 500) must surface: the panel's Save writes the whole object, so
+    // treating a failed load as defaults wiped the saved hosts.
+    if (e instanceof Error && /HTTP 404\b/.test(e.message)) return defaultDeploySettings()
+    throw e
   }
 }
 
@@ -307,9 +311,13 @@ export async function saveDeploySettings(domain: string, settings: DeploySetting
  */
 export async function fetchDeploySnapshots(domain: string): Promise<DeploySnapshotEntry[]> {
   try {
-    return await request<DeploySnapshotEntry[]>(
+    // The daemon answers { domain, count, entries }; older builds returned a
+    // bare array. Accept both so the list never iterates the wrapper's keys.
+    const res = await request<DeploySnapshotEntry[] | { entries?: DeploySnapshotEntry[] }>(
       `${PREFIX}/sites/${encodeURIComponent(domain)}/snapshots`,
     )
+    if (Array.isArray(res)) return res
+    return Array.isArray(res?.entries) ? res.entries : []
   } catch {
     return []
   }

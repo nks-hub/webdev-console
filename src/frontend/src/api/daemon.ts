@@ -137,7 +137,12 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
     const prefix = `HTTP ${r.status} ${r.statusText}`
     throw new Error(detail ? `${prefix}: ${detail}` : prefix)
   }
-  return r.json() as Promise<T>
+  // DELETE endpoints (sites, binaries, …) answer 204 No Content. Calling
+  // r.json() on an empty body throws, which made successful deletes surface
+  // as "Delete failed" in the UI.
+  if (r.status === 204) return undefined as T
+  const body = await r.text()
+  return (body ? JSON.parse(body) : undefined) as T
 }
 
 // Status
@@ -188,6 +193,15 @@ export interface IntentInventoryEntry {
   // or null when the operator confirmed manually via the GUI banner
   // (or used the allowUnconfirmed CI escape hatch).
   matchedGrantId?: string | null
+  /**
+   * Set when the agent asked the operator to approve this intent through
+   * confirm-request (GUI/CI-minted intents never do), with the description
+   * it gave. Absent on daemons that predate migration 019.
+   */
+  confirmRequestedAt?: string | null
+  prompt?: string | null
+  /** Kind is listed in mcp.always_confirm_kinds, so grants were skipped. */
+  alwaysConfirm?: boolean
   state: 'consumed' | 'expired' | 'pending_confirmation' | 'ready'
 }
 
@@ -206,6 +220,15 @@ export const fetchIntentInventory = (
   if (matchedGrantId) params.set('matchedGrantId', matchedGrantId)
   return json(`/api/mcp/intents?${params.toString()}`)
 }
+
+/**
+ * Requests still waiting for the operator: asked via confirm-request, not
+ * confirmed, not used, not expired. The GUI loads these on start and on
+ * daemon reconnect so a request that arrived while WDC was closed can
+ * still be approved.
+ */
+export const fetchPendingIntents = (limit = 100): Promise<IntentInventoryResponse> =>
+  json(`/api/mcp/intents?${new URLSearchParams({ limit: String(limit), pendingOnly: 'true' }).toString()}`)
 
 export interface RevokeIntentResponse {
   intentId: string
@@ -565,6 +588,28 @@ export const stopService = (id: string) =>
 export const restartService = (id: string) =>
   json<{ ok: boolean }>(`/api/services/${id}/restart`, { method: 'POST' })
 
+/** Last `lines` log lines of a service (plugin-managed log file). */
+export const fetchServiceLogs = (id: string, lines = 30): Promise<string[]> =>
+  json(`/api/services/${encodeURIComponent(id)}/logs?lines=${lines}`)
+
+/** One step of a site apply — mirrors SiteApplyStep on the daemon. */
+export interface SiteApplyStepDto {
+  name: string
+  status: 'ok' | 'skipped' | 'failed'
+  detail?: string | null
+}
+
+/** Outcome of a site apply, from POST /api/sites/{domain}/apply or the site:applied event. */
+export interface SiteApplyResultDto {
+  domain: string
+  success: boolean
+  steps: SiteApplyStepDto[]
+}
+
+/** Re-runs the apply pipeline for one site and returns the per-step result. */
+export const applySite = (domain: string): Promise<SiteApplyResultDto> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/apply`, { method: 'POST' })
+
 // Sites
 export const fetchSites = (): Promise<SiteInfo[]> =>
   json('/api/sites')
@@ -622,13 +667,32 @@ export const fetchBackups = () =>
 export const createBackup = () =>
   json<{ path: string; files: number; size: number }>('/api/backup', { method: 'POST' })
 
-export const downloadBackup = (path?: string) => {
-  const token = daemonToken()
-  const params = new URLSearchParams()
-  if (path) params.set('path', path)
-  if (token) params.set('token', token)
-  const qs = params.toString()
-  window.open(`${daemonBaseUrl()}/api/backup/download${qs ? '?' + qs : ''}`, '_blank')
+/**
+ * Downloads a backup archive through an authenticated fetch and saves it
+ * via a blob link. window.open was denied by the Electron window-open
+ * handler, and a plain <a download> to the daemon carried no token.
+ */
+export async function downloadBackup(path?: string): Promise<void> {
+  const qs = path ? `?path=${encodeURIComponent(path)}` : ''
+  const r = await fetch(`${daemonBaseUrl()}/api/backup/download${qs}`, { headers: daemonAuthHeaders() })
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`)
+  const blob = await r.blob()
+  const disposition = r.headers.get('content-disposition') ?? ''
+  const fromHeader = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1]
+  const name = fromHeader
+    ? decodeURIComponent(fromHeader)
+    : (path?.split(/[\\/]/).pop() || 'wdc-backup.zip')
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
 }
 
 // Per-site metrics — Phase 11 performance monitoring foothold
@@ -982,6 +1046,8 @@ export interface MarketplacePlugin {
   version: string
   description: string
   downloadUrl: string
+  /** SHA-256 of the archive at downloadUrl; the daemon refuses remote installs without it. */
+  sha256?: string | null
   author: string
   license: string
   installed: boolean
@@ -1008,10 +1074,10 @@ export interface InstallPluginResponse {
   restartRequired: boolean
   message: string
 }
-export const installPluginFromMarketplace = (id: string, downloadUrl: string): Promise<InstallPluginResponse> =>
+export const installPluginFromMarketplace = (id: string, downloadUrl: string, sha256?: string | null): Promise<InstallPluginResponse> =>
   json<InstallPluginResponse>('/api/plugins/install', {
     method: 'POST',
-    body: JSON.stringify({ id, downloadUrl }),
+    body: JSON.stringify(sha256 ? { id, downloadUrl, sha256 } : { id, downloadUrl }),
   })
 
 // Onboarding
@@ -1073,9 +1139,20 @@ export const restorePlugin = (id: string) =>
  * until the timeout expires. Used after a restart so the UI waits for the
  * new daemon to be ready before loading fresh state.
  */
-export async function waitForDaemon(timeoutMs = 15000): Promise<boolean> {
+/**
+ * Polls /healthz until the daemon answers. Pass the token that was current
+ * before a restart: the old process keeps answering /healthz for a moment
+ * before it exits, so only a rotated token (a new port file) proves the
+ * respawned daemon is the one answering. Without it callers reloaded data
+ * from the dying daemon.
+ */
+export async function waitForDaemon(timeoutMs = 15000, previousToken?: string): Promise<boolean> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
+    if (previousToken && daemonToken() === previousToken) {
+      await new Promise(res => setTimeout(res, 400))
+      continue
+    }
     try {
       const r = await fetch(`${daemonBaseUrl()}/healthz`)
       if (r.ok) return true
@@ -1159,7 +1236,7 @@ export const fetchLatestBinary = (app: string) =>
   json<LatestBinary>(`/api/binaries/catalog/${encodeURIComponent(app)}/latest`)
 
 export const uninstallBinary = (app: string, version: string) =>
-  json<{ ok: boolean }>(`/api/binaries/${app}/${version}`, { method: 'DELETE' })
+  json<void>(`/api/binaries/${encodeURIComponent(app)}/${encodeURIComponent(version)}`, { method: 'DELETE' })
 
 // Service config
 export interface ConfigFile {
@@ -1303,7 +1380,7 @@ export interface HostApplyEntry {
 export const fetchHosts = (): Promise<HostEntry[]> =>
   json('/api/hosts')
 
-export const applyHosts = (entries: HostApplyEntry[]): Promise<{ applied: boolean; entryCount: number }> =>
+export const applyHosts = (entries: HostApplyEntry[]): Promise<{ applied: boolean; entryCount: number; added?: number; notApplied?: number }> =>
   json('/api/hosts/apply', { method: 'POST', body: JSON.stringify({ entries }) })
 
 export const backupHosts = (): Promise<{ path: string; timestamp: string }> =>
@@ -1312,95 +1389,116 @@ export const backupHosts = (): Promise<{ path: string; timestamp: string }> =>
 export const restoreHosts = (pathOrContent: { path?: string; content?: string }): Promise<{ restored: boolean }> =>
   json('/api/hosts/restore', { method: 'POST', body: JSON.stringify(pathOrContent) })
 
+// One EventSource shared by every subscriber. The daemon speaks HTTP/1.1 and
+// Chromium allows six connections per host, so one EventSource per caller
+// (the MCP hub alone mounted eleven) left no connection for fetch() and the
+// whole UI hung. Handlers are reference-counted per subscription; the
+// connection opens with the first subscriber and closes with the last.
+type SseHandler = (data: unknown) => void
+const sseHandlers = new Map<string, Set<SseHandler>>()
+const sseAttached = new Set<string>()
+let sseSource: EventSource | null = null
+let sseBackoffMs = 1000
+let sseReconnectTimer: ReturnType<typeof setTimeout> | null = null
+const SSE_MAX_BACKOFF = 15000
+
+function sseUrl(): string {
+  // daemonToken() handles the preload-first / query-string fallback order.
+  const token = daemonToken()
+  return token
+    ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
+    : `${daemonBaseUrl()}/api/events`
+}
+
+function sseAttach(eventName: string): void {
+  if (!sseSource || sseAttached.has(eventName)) return
+  sseAttached.add(eventName)
+  sseSource.addEventListener(eventName, (e: MessageEvent) => {
+    let data: unknown
+    try { data = JSON.parse(e.data) } catch { return /* malformed payload */ }
+    for (const handler of [...(sseHandlers.get(eventName) ?? [])]) {
+      try { handler(data) } catch (err) { console.error(`[sse] ${eventName} handler failed`, err) }
+    }
+  })
+}
+
+function sseClose(): void {
+  if (sseSource) {
+    try { sseSource.close() } catch { /* ignore */ }
+    sseSource = null
+  }
+  sseAttached.clear()
+}
+
+function sseConnect(): void {
+  if (sseSource || sseHandlers.size === 0) return
+  try {
+    sseSource = new EventSource(sseUrl())
+  } catch {
+    sseScheduleReconnect()
+    return
+  }
+  sseSource.addEventListener('open', () => { sseBackoffMs = 1000 })
+  for (const eventName of sseHandlers.keys()) sseAttach(eventName)
+  sseSource.onerror = () => {
+    // EventSource would auto-reconnect with a stale URL; rebuild it so the
+    // next attempt picks up a fresh port/token after a daemon restart.
+    sseClose()
+    sseScheduleReconnect()
+  }
+}
+
+function sseScheduleReconnect(): void {
+  if (sseReconnectTimer !== null || sseHandlers.size === 0) return
+  // ±20% jitter so several windows don't reconnect in lockstep.
+  const delay = sseBackoffMs * (0.8 + Math.random() * 0.4)
+  sseReconnectTimer = setTimeout(() => {
+    sseReconnectTimer = null
+    sseBackoffMs = Math.min(sseBackoffMs * 2, SSE_MAX_BACKOFF)
+    sseConnect()
+  }, delay)
+}
+
 /**
- * Map-shaped SSE subscription. Pass any number of named event handlers as
- * key/value entries — added so `deploy:event` and other plugin-contributed
- * SSE channels can attach without growing the named-parameter overload of
- * <see cref="subscribeEvents"/> (per v2 audit fix #4: "subscribeEvents
- * refactor to Map"). The 5 named-param overload below stays as a thin
- * wrapper so existing callers keep compiling unchanged.
+ * Map-shaped SSE subscription: pass any number of named event handlers.
+ * All subscriptions share one EventSource to /api/events.
  *
- * Returns a cleanup function — call it to close the EventSource.
+ * Returns a cleanup function that removes this subscription's handlers.
  */
 export function subscribeEventsMap(
   handlers: Record<string, (data: unknown) => void>,
 ): () => void {
-  let es: EventSource | null = null
-  let closed = false
-  let backoffMs = 1000
-  const MAX_BACKOFF = 15000
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-
-  function buildUrl(): string {
-    // daemonToken() handles the preload-first / query-string fallback order,
-    // matching the original inline logic here + 9 other call sites.
-    const token = daemonToken()
-    return token
-      ? `${daemonBaseUrl()}/api/events?token=${encodeURIComponent(token)}`
-      : `${daemonBaseUrl()}/api/events`
-  }
-
-  function connect() {
-    if (closed) return
-    try {
-      es = new EventSource(buildUrl())
-    } catch {
-      scheduleReconnect()
-      return
+  // Wrap each handler so two subscriptions passing the same function
+  // reference stay independent when one of them unsubscribes.
+  const registered: Array<[string, SseHandler]> = Object.entries(handlers)
+    .map(([eventName, handler]) => [eventName, (data: unknown) => handler(data)])
+  for (const [eventName, wrapper] of registered) {
+    let set = sseHandlers.get(eventName)
+    if (!set) {
+      set = new Set()
+      sseHandlers.set(eventName, set)
     }
-
-    es.addEventListener('open', () => {
-      // Successful connection — reset backoff
-      backoffMs = 1000
-    })
-
-    // Iterate the handler map so every registered event type wires into the
-    // single shared connection. Reusing the same EventSource for plugin
-    // events (e.g. deploy:event) avoids the previous 3-EventSource problem
-    // identified in the v2 audit.
-    for (const [eventName, handler] of Object.entries(handlers)) {
-      es.addEventListener(eventName, (e: MessageEvent) => {
-        try { handler(JSON.parse(e.data)) } catch { /* ignore malformed payload */ }
-      })
-    }
-
-    es.onerror = () => {
-      // EventSource would auto-reconnect with stale URL — we close and rebuild
-      // so the next attempt uses fresh port/token (daemon restart scenario)
-      if (es) {
-        try { es.close() } catch { /* ignore */ }
-        es = null
-      }
-      scheduleReconnect()
-    }
+    set.add(wrapper)
+    sseAttach(eventName)
   }
+  sseConnect()
 
-  function scheduleReconnect() {
-    if (closed) return
-    if (reconnectTimer !== null) return
-    // Add ±20% jitter so multiple renderer windows reconnecting after a
-    // daemon restart don't all hit /api/events at the exact same moment.
-    // Without jitter an exponential-backoff herd can keep retriggering
-    // thundering reconnects on every failed probe.
-    const jitter = backoffMs * (0.8 + Math.random() * 0.4)
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null
-      backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF)
-      connect()
-    }, jitter)
-  }
-
-  connect()
-
+  let unsubscribed = false
   return () => {
-    closed = true
-    if (reconnectTimer !== null) {
-      clearTimeout(reconnectTimer)
-      reconnectTimer = null
+    if (unsubscribed) return
+    unsubscribed = true
+    for (const [eventName, wrapper] of registered) {
+      const set = sseHandlers.get(eventName)
+      set?.delete(wrapper)
+      if (set && set.size === 0) sseHandlers.delete(eventName)
     }
-    if (es) {
-      try { es.close() } catch { /* ignore */ }
-      es = null
+    if (sseHandlers.size === 0) {
+      if (sseReconnectTimer !== null) {
+        clearTimeout(sseReconnectTimer)
+        sseReconnectTimer = null
+      }
+      sseBackoffMs = 1000
+      sseClose()
     }
   }
 }

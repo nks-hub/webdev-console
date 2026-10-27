@@ -182,7 +182,7 @@ onMounted(loadCatalogUrl)
   align-items: center;
   justify-content: center;
   min-height: 100%;
-  padding: 40px 20px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-4-5);
   box-sizing: border-box;
 }
 .login-card {
@@ -191,23 +191,23 @@ onMounted(loadCatalogUrl)
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-xl);
-  padding: 40px 36px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-6-5);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--wdc-space-4-5);
   box-shadow: var(--wdc-shadow-pop);
 }
 .login-brand {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   align-items: flex-start;
 }
 .brand-mark {
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: 0.06em;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: var(--wdc-brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -220,12 +220,11 @@ onMounted(loadCatalogUrl)
 .login-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   color: var(--el-text-color-secondary);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 4px 0;
+  font-size: 0.82rem;
+  margin: var(--wdc-space-1) 0;
+  font-family: var(--wdc-font-display);
 }
 .login-divider::before,
 .login-divider::after {
@@ -237,16 +236,18 @@ onMounted(loadCatalogUrl)
 .login-catalog-hint {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   font-size: 0.78rem;
   color: var(--el-text-color-secondary);
 }
-.login-catalog-hint .label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.7rem; }
+.login-catalog-hint .label { font-size: 0.82rem;
+  font-family: var(--wdc-font-display);
+}
 .mono { font-family: 'JetBrains Mono', monospace; }
 .login-catalog-hint .url {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-text);
   font-size: 0.78rem;
@@ -255,7 +256,7 @@ onMounted(loadCatalogUrl)
 .login-skip {
   font-size: 0.82rem;
   text-align: center;
-  padding-top: 6px;
+  padding-top: var(--wdc-space-1-5);
   border-top: 1px dashed var(--wdc-border);
 }
 .login-skip a { color: var(--wdc-accent); text-decoration: none; }

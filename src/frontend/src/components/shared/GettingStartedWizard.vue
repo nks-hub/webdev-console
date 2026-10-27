@@ -127,8 +127,8 @@ defineExpose({ open, close, hasSeen })
 .gsw-wrap {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 4px 0 0;
+  gap: var(--wdc-space-4-5);
+  padding: var(--wdc-space-1) 0 0;
   outline: none;
 }
 
@@ -147,18 +147,17 @@ defineExpose({ open, close, hasSeen })
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 18px 20px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 
 .gsw-step-indicator {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-accent);
+  font-family: var(--wdc-font-display);
 }
 
 .gsw-step-title {
@@ -178,7 +177,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-step-desc :deep(code) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
@@ -187,7 +186,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-step-desc :deep(kbd) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 2px 7px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
@@ -198,11 +197,11 @@ defineExpose({ open, close, hasSeen })
 .gsw-codeblock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
 }
 
 .gsw-codeblock code {
@@ -213,12 +212,12 @@ defineExpose({ open, close, hasSeen })
 
 .gsw-tip {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: flex-start;
   font-size: 0.82rem;
   color: var(--wdc-text-3);
   line-height: 1.5;
-  padding-top: 4px;
+  padding-top: var(--wdc-space-1);
   border-top: 1px solid var(--wdc-border);
 }
 
@@ -241,7 +240,7 @@ defineExpose({ open, close, hasSeen })
 .gsw-tip :deep(kbd) {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 6px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
@@ -257,6 +256,6 @@ defineExpose({ open, close, hasSeen })
 
 .gsw-nav {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 </style>

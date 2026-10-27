@@ -66,7 +66,7 @@
         </template>
         <div class="tab-content">
           <el-alert v-if="loadError" type="error" :title="loadError" :closable="true" @close="loadError = ''" show-icon />
-          <div v-if="loading && versions.length === 0" style="padding: 24px">
+          <div v-if="loading && versions.length === 0" style="padding: var(--wdc-space-5)">
             <el-skeleton :rows="3" animated />
           </div>
           <div class="version-grid" v-else-if="versions.length > 0">
@@ -135,7 +135,7 @@
             :hint="selectedVersion ? `PHP ${selectedVersion}` : $t('phpPlugin.selectVersion')"
             flush-body
           >
-            <div v-if="!selectedConfig" class="hint" style="padding: 18px 20px">{{ $t('phpPlugin.selectVersionHint') }}</div>
+            <div v-if="!selectedConfig" class="hint" style="padding: var(--wdc-space-4-5) var(--wdc-space-4-5)">{{ $t('phpPlugin.selectVersionHint') }}</div>
             <pre v-else class="config-pre">{{ selectedConfig }}</pre>
           </EditCard>
         </div>
@@ -166,6 +166,9 @@ import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import EditCard from '../shared/EditCard.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineOptions({ name: 'PhpPluginPage' })
 
@@ -243,9 +246,9 @@ async function toggleExtension(name: string, enabled: boolean) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const ext = extensions.value.find(e => e.name === name)
     if (ext) ext.enabled = enabled
-    ElMessage.success(`${cleanName} ${enabled ? 'enabled' : 'disabled'}`)
+    ElMessage.success(t(enabled ? 'toast.extEnabled' : 'toast.extDisabled', { name: cleanName }))
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     togglingExt.value = ''
   }
@@ -255,27 +258,27 @@ onMounted(() => { void loadVersions() })
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: transparent; padding: 0; }
+.cf-page { min-height: 100%; background: transparent; }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
-.page-autostart-row { padding: 10px 24px 0; width: 100%; }
+.page-autostart-row { padding: 10px 0 0; width: 100%; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
 .page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }
 .header-actions { display: flex; gap: 8px; }
-.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 24px 4px; }
+.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 0 4px; }
 .status-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); }
 .status-icon { font-size: 1.4rem; width: 30px; text-align: center; color: var(--wdc-text-3); }
 .status-body { display: flex; flex-direction: column; min-width: 0; }
 .status-title { font-size: 0.92rem; font-weight: 700; color: var(--wdc-text); }
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
-.cf-tabs { padding: 16px 24px; }
+.cf-tabs { padding: 16px 0; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
 /* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }

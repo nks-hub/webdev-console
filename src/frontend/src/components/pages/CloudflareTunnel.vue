@@ -35,7 +35,7 @@
       :closable="true"
       @close="pageLoadError = ''"
       show-icon
-      style="margin: 0 24px 16px"
+      style="margin: 0 0 var(--wdc-space-4)"
     />
 
     <!-- Status strip -->
@@ -122,7 +122,7 @@
                   {{ saveStatus.message }}
                 </span>
               </div>
-              <div class="hint" style="margin-top: 12px;">
+              <div class="hint" style="margin-top: var(--wdc-space-3);">
                 {{ $t('cloudflare.autoSetupExplain', { tunnel: 'NKS-WDC-Tunnel-{md5}', file: '~/.wdc/cloudflare/config.json' }) }}
               </div>
           </EditCard>
@@ -231,7 +231,7 @@
                   {{ syncStatus.message }}
                 </span>
               </div>
-              <div class="hint" style="margin-top: 10px;">
+              <div class="hint" style="margin-top: var(--wdc-space-2-5);">
                 Sync will: (1) upsert a proxied CNAME for each site pointing at
                 <code>{{ config.tunnelId ? config.tunnelId.slice(0,8)+'…' : 'tunnel' }}.cfargotunnel.com</code>,
                 (2) rebuild the tunnel ingress rules with an
@@ -269,7 +269,7 @@
                 :data="dnsRecords"
                 size="small"
                 class="dns-table"
-                style="margin-top: 14px"
+                style="margin-top: var(--wdc-space-3-5)"
               >
                 <el-table-column prop="type" :label="$t('cloudflare.type')" width="90">
                   <template #default="{ row }">
@@ -859,16 +859,15 @@ async function autoVerifyToken() {
 .cf-page {
   min-height: 100%;
   background: var(--wdc-bg);
-  padding: 0;
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title {
@@ -887,14 +886,14 @@ async function autoVerifyToken() {
 .status-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 18px 24px 4px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5) var(--wdc-space-1);
 }
 .status-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -935,13 +934,13 @@ async function autoVerifyToken() {
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 .cf-tabs {
-  padding: 16px 24px;
+  padding: var(--wdc-space-4) var(--wdc-space-5);
 }
 
 .tab-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   /* F91.18 / task 37: removed max-width: 1100px — Cloudflare page is a
      first-class top-level view that should use the full content-area
      width, matching Services/Sites/Databases pages. */
@@ -950,7 +949,7 @@ async function autoVerifyToken() {
 /* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 
 .hint {
-  margin-top: 6px;
+  margin-top: var(--wdc-space-1-5);
   font-size: 0.78rem;
   color: var(--wdc-text-3);
 }
@@ -958,32 +957,32 @@ async function autoVerifyToken() {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
 }
 
 .card-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
-  margin-top: 12px;
+  margin-top: var(--wdc-space-3);
 }
 .token-status {
   font-size: 0.8rem;
   font-weight: 600;
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
 }
 .token-ok { color: var(--wdc-status-running); }
 .token-fail { color: var(--wdc-status-error); }
 
 .row-gap {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .tunnel-picker {
-  margin-top: 10px;
+  margin-top: var(--wdc-space-2-5);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
   overflow: hidden;
@@ -992,8 +991,8 @@ async function autoVerifyToken() {
   display: grid;
   grid-template-columns: 180px 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   cursor: pointer;
   border-bottom: 1px solid var(--wdc-border);
   transition: background 0.1s;
@@ -1017,8 +1016,8 @@ async function autoVerifyToken() {
 .save-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding-top: 4px;
+  gap: var(--wdc-space-3-5);
+  padding-top: var(--wdc-space-1);
 }
 .save-status { font-size: 0.82rem; font-weight: 600; }
 .save-status.ok { color: var(--wdc-status-running); }
@@ -1028,13 +1027,13 @@ async function autoVerifyToken() {
 .ingress-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .ingress-row {
   display: grid;
   grid-template-columns: 1fr 24px 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .ingress-host :deep(.el-input__inner),
 .ingress-service :deep(.el-input__inner) {
@@ -1047,7 +1046,7 @@ async function autoVerifyToken() {
   text-align: center;
 }
 .ingress-empty {
-  padding: 16px 0;
+  padding: var(--wdc-space-4) 0;
   font-size: 0.85rem;
   color: var(--wdc-text-3);
   text-align: center;
@@ -1056,13 +1055,13 @@ async function autoVerifyToken() {
 .site-pick-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .site-pick-card {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   text-align: left;
   font-family: inherit;
   cursor: pointer;
@@ -1082,7 +1081,7 @@ async function autoVerifyToken() {
 .site-pick-meta {
   font-size: 0.72rem;
   color: var(--wdc-text-3);
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 
 .dns-table :deep(th) {
@@ -1093,15 +1092,15 @@ async function autoVerifyToken() {
 .site-expose-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--wdc-space-2);
+  margin-bottom: var(--wdc-space-4);
 }
 .site-expose-row {
   display: grid;
   grid-template-columns: 1fr 24px 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

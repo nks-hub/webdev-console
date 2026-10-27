@@ -17,6 +17,12 @@ public sealed class DaemonClient : IDisposable
     {
         var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
         if (!File.Exists(portFile)) return false;
+        // On Unix the daemon creates this file 0600 in the shared temp dir. A
+        // file that group/others can access was not written by our daemon
+        // (another user can pre-create it and capture our requests), so skip it.
+        if (!OperatingSystem.IsWindows()
+            && (File.GetUnixFileMode(portFile) & (UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.OtherRead | UnixFileMode.OtherWrite)) != 0)
+            return false;
 
         var lines = File.ReadAllLines(portFile);
         if (lines.Length < 2) return false;

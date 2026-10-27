@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
-import { useUiModeStore } from '../stores/uiMode'
 import { usePluginsStore } from '../stores/plugins'
 
 // Lazy-loaded so heavy page deps (monaco-editor, echarts, xterm) land in
@@ -31,30 +30,32 @@ const Help = () => import('../components/pages/Help.vue')
 const Login = () => import('../components/pages/Login.vue')
 const BackupsPage = () => import('../components/pages/BackupsPage.vue')
 const McpHub = () => import('../components/pages/McpHub.vue')
+const ServicesPage = () => import('../components/pages/ServicesPage.vue')
 
 const baseRoutes: RouteRecordRaw[] = [
   { path: '/', redirect: '/sites' },
   { path: '/dashboard', component: Dashboard, meta: { title: 'Dashboard', titleKey: 'nav.overview' } },
   { path: '/sites', component: Sites, meta: { title: 'Sites', titleKey: 'nav.sites' } },
+  { path: '/services', component: ServicesPage, meta: { title: 'Services', titleKey: 'nav.services' } },
   { path: '/sites/:domain/edit', component: SiteEdit, props: true, meta: { title: 'Edit Site', titleKey: 'nav.editSite' } },
-  { path: '/databases', component: Databases, meta: { title: 'Databases', titleKey: 'nav.databases', requiresAdvanced: true } },
-  { path: '/ssl', component: SslManager, meta: { title: 'SSL', titleKey: 'nav.ssl', requiresAdvanced: true } },
-  { path: '/php', component: PhpManager, meta: { title: 'PHP', titleKey: 'nav.php', requiresAdvanced: true } },
-  { path: '/cloudflare', component: CloudflareTunnel, meta: { title: 'Cloudflare Tunnel', titleKey: 'nav.tunnel', requiresAdvanced: true } },
-  { path: '/plugins/apache', component: ApachePluginPage, meta: { title: 'Apache', titleKey: 'nav.webServer', requiresAdvanced: true } },
-  { path: '/plugins/php-custom', component: PhpPluginPage, meta: { title: 'PHP', titleKey: 'nav.php', requiresAdvanced: true } },
-  { path: '/plugins/mysql', component: MySqlPluginPage, meta: { title: 'MySQL', titleKey: 'nav.database', requiresAdvanced: true } },
-  { path: '/plugins/postgresql', component: PostgreSqlPluginPage, meta: { title: 'PostgreSQL', requiresAdvanced: true } },
-  { path: '/plugins/mailpit', component: MailpitPluginPage, meta: { title: 'Mailpit', titleKey: 'nav.cacheMail', requiresAdvanced: true } },
-  { path: '/plugins/redis', component: RedisPluginPage, meta: { title: 'Redis', titleKey: 'nav.cacheMail', requiresAdvanced: true } },
+  { path: '/databases', component: Databases, meta: { title: 'Databases', titleKey: 'nav.databases', advancedNav: true } },
+  { path: '/ssl', component: SslManager, meta: { title: 'SSL', titleKey: 'nav.ssl', advancedNav: true } },
+  { path: '/php', component: PhpManager, meta: { title: 'PHP', titleKey: 'nav.php', advancedNav: true } },
+  { path: '/cloudflare', component: CloudflareTunnel, meta: { title: 'Cloudflare Tunnel', titleKey: 'nav.tunnel', advancedNav: true } },
+  { path: '/plugins/apache', component: ApachePluginPage, meta: { title: 'Apache', titleKey: 'nav.webServer', advancedNav: true } },
+  { path: '/plugins/php-custom', component: PhpPluginPage, meta: { title: 'PHP', titleKey: 'nav.php', advancedNav: true } },
+  { path: '/plugins/mysql', component: MySqlPluginPage, meta: { title: 'MySQL', titleKey: 'nav.database', advancedNav: true } },
+  { path: '/plugins/postgresql', component: PostgreSqlPluginPage, meta: { title: 'PostgreSQL', advancedNav: true } },
+  { path: '/plugins/mailpit', component: MailpitPluginPage, meta: { title: 'Mailpit', titleKey: 'nav.cacheMail', advancedNav: true } },
+  { path: '/plugins/redis', component: RedisPluginPage, meta: { title: 'Redis', titleKey: 'nav.cacheMail', advancedNav: true } },
   { path: '/settings', component: Settings, meta: { title: 'Settings', titleKey: 'nav.settings' } },
-  { path: '/plugins', component: PluginManager, meta: { title: 'Plugins', titleKey: 'nav.plugins', requiresAdvanced: true } },
-  { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin', titleKey: 'nav.plugins', requiresAdvanced: true } },
-  { path: '/binaries', component: Binaries, meta: { title: 'Binaries', titleKey: 'nav.binaries', requiresAdvanced: true } },
-  { path: '/composer', component: ComposerManager, meta: { title: 'Composer', titleKey: 'nav.composer', requiresAdvanced: true } },
-  { path: '/hosts', component: HostsManager, meta: { title: 'Hosts', titleKey: 'nav.hosts', requiresAdvanced: true } },
-  { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', requiresAdvanced: true } },
-  { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services', requiresAdvanced: true } },
+  { path: '/plugins', component: PluginManager, meta: { title: 'Plugins', titleKey: 'nav.plugins', advancedNav: true } },
+  { path: '/plugin/:id', component: PluginPage, props: true, meta: { title: 'Plugin', titleKey: 'nav.plugins', advancedNav: true } },
+  { path: '/binaries', component: Binaries, meta: { title: 'Binaries', titleKey: 'nav.binaries', advancedNav: true } },
+  { path: '/composer', component: ComposerManager, meta: { title: 'Composer', titleKey: 'nav.composer', advancedNav: true } },
+  { path: '/hosts', component: HostsManager, meta: { title: 'Hosts', titleKey: 'nav.hosts', advancedNav: true } },
+  { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', advancedNav: true } },
+  { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services' } },
   { path: '/backups', component: BackupsPage, meta: { title: 'Zálohy', titleKey: 'nav.backups' } },
   // Phase 8 — single MCP hub with 4 tabs (Activity / Requests / Rules / Catalog).
   // /mcp redirects to /mcp/activity (the new default — full audit feed).
@@ -68,6 +69,9 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
   { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
+  // Unknown paths (stale links, removed pages) used to render an empty
+  // shell; send them to the default landing page instead.
+  { path: '/:pathMatch(.*)*', redirect: '/sites' },
 ]
 
 export const router = createRouter({
@@ -75,11 +79,12 @@ export const router = createRouter({
   routes: baseRoutes,
 })
 
+// Simple vs Advanced is a density setting, not an access level: routes
+// marked `advancedNav` are only *listed* (sidebar, command palette,
+// Ctrl+N shortcuts) in Advanced mode, but always open when reached by a
+// link. The old guard silently bounced Simple-mode users to /sites from
+// links on their own pages (service tiles, "edit config", deep links).
 router.beforeEach((to) => {
-  const uiMode = useUiModeStore()
-  if (to.meta.requiresAdvanced && uiMode.isSimple) {
-    return { path: '/sites' }
-  }
   // F91: block deep-links to plugin-owned routes whose plugin is disabled.
   // isRouteVisible fails open before the first /api/plugins/ui fetch so the
   // initial navigation on app launch is never blocked by a pending request.

@@ -1,16 +1,9 @@
 <template>
   <div class="app-root">
-    <div class="app-backdrop" />
-    <AppHeader />
-
     <div class="app-body">
-      <!-- Sidebar: always visible at >=960px; hidden below that breakpoint -->
+      <!-- Sidebar runs the full height on the left; at <960px it moves
+           into a drawer opened from the header's menu button. -->
       <AppSidebar class="sidebar-desktop" @navigate="drawerOpen = false" />
-
-      <!-- Hamburger button — only rendered at <960px -->
-      <button class="hamburger-btn" aria-label="Open menu" @click="drawerOpen = true">
-        <span /><span /><span />
-      </button>
 
       <!-- Mobile drawer sidebar -->
       <el-drawer
@@ -23,7 +16,9 @@
         <AppSidebar @navigate="drawerOpen = false" />
       </el-drawer>
 
-      <main class="content-area">
+      <div class="app-main">
+      <AppHeader @open-menu="drawerOpen = true" />
+      <main id="main" class="content-area" tabindex="-1">
         <!-- keep-alive caches mounted page components so clicking a nav
              item doesn't re-mount the whole tree AND re-run onMounted's
              fetch cascade every time. This is the biggest win for the
@@ -37,6 +32,7 @@
           </keep-alive>
         </router-view>
       </main>
+      </div>
     </div>
 
     <AppStatusBar />
@@ -73,13 +69,13 @@
                of polling forever. -->
           <template v-if="daemonStore.bootFailed">
             <div class="splash-error-icon" aria-hidden="true">⚠</div>
-            <div class="splash-status splash-status--error">Daemon se nepodařilo spustit</div>
+            <div class="splash-status splash-status--error">{{ t('splash.failedTitle') }}</div>
             <div class="splash-hint">{{ splashFailHint }}</div>
             <div class="splash-actions">
-              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">Zkusit znovu</button>
-              <button class="splash-btn" @click="reloadApp">Restartovat aplikaci</button>
+              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">{{ t('splash.retry') }}</button>
+              <button class="splash-btn" @click="reloadApp">{{ t('splash.restartApp') }}</button>
             </div>
-            <div class="splash-loghint">Log daemona: ~/.wdc/logs/daemon</div>
+            <div class="splash-loghint">{{ t('splash.logHint', { path: '~/.wdc/logs/daemon' }) }}</div>
           </template>
           <template v-else>
             <div class="splash-spinner" :class="{ 'splash-spinner--warn': splashWarn }" aria-hidden="true"></div>
@@ -99,6 +95,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
@@ -115,11 +112,23 @@ import { useAuthStore } from './stores/auth'
 import { useDeployStore } from './stores/deploy'
 import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { useFeatureFlagsStore } from './stores/featureFlags'
+import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
+import { OPEN_COMMAND_PALETTE_EVENT } from './utils/commandPalette'
 import type { DeployEventDto } from './api/deploy'
-import { osNotify } from './services/osNotifications'
+import type { SiteApplyResultDto } from './api/daemon'
+import { useSiteApplyStore } from './stores/siteApply'
+import { i18n } from './i18n'
+import { isSafeAppRoute, loadNotificationPrefs, syncNotificationLocale } from './services/osNotifications'
+import {
+  notifyBackupCompleted, notifyBackupFailed, notifyDeployComplete, notifyMcpConfirm,
+  notifyServiceState, notifySiteApplied, notifyUpdateAvailable,
+  type BackupEvent, type ServiceStateEvent,
+} from './services/osNotificationEvents'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
+import { mcpKindLabel } from './utils/mcpKindLabel'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
@@ -134,6 +143,8 @@ const authStore = useAuthStore()
 const deployStore = useDeployStore()
 const mcpConfirmStore = useMcpConfirmStore()
 const featureFlagsStore = useFeatureFlagsStore()
+const siteApplyStore = useSiteApplyStore()
+const uiMode = useUiModeStore()
 useThemeStore()
 
 // Single SSE subscription that fans the daemon's "deploy:event" channel
@@ -145,6 +156,31 @@ function startDeploySse(): void {
   if (unsubscribeDeploy) return
   unsubscribeDeploy = subscribeEventsMap({
     'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
+    // The built-in local backend emits deploy:phase / deploy:complete instead
+    // of deploy:event; deploy:complete is handled further down together with
+    // the OS notification.
+    // mcp.enabled / deploy.enabled toggled in Settings (or by another window).
+    // HealthMonitor saw a service change state (crash, external stop/start).
+    // A crash also raises an OS notification (services channel).
+    'service:state': (data) => {
+      void daemonStore.poll()
+      const evt = data as ServiceStateEvent
+      const svc = daemonStore.services.find(s => s.id === evt?.serviceId)
+      notifyServiceState(evt, svc?.displayName || svc?.name)
+    },
+    // Per-step outcome of a site apply (SiteApplyPipeline on the site page).
+    // Failed steps raise an OS notification (sites channel).
+    'site:applied': (data) => {
+      siteApplyStore.record(data as SiteApplyResultDto)
+      notifySiteApplied(data as SiteApplyResultDto)
+    },
+    // Scheduled (BackupScheduler) or manual (POST /api/backup) backups.
+    'backup:completed': (data) => notifyBackupCompleted(data as BackupEvent),
+    'backup:failed': (data) => notifyBackupFailed(data as BackupEvent),
+    'mcp:settings-changed': () => { void featureFlagsStore.load() },
+    'deploy:settings-changed': () => { void featureFlagsStore.load() },
+    'deploy:phase': (data) =>
+      deployStore.handlePhaseEvent(data as { deployId: string; phase: string; message?: string }),
     // Phase 7.5+++ — hook execution feedback. RunHooksAsync emits one
     // event per hook fire so the drawer can show shell/http/php results.
     'deploy:hook': (data) =>
@@ -161,43 +197,58 @@ function startDeploySse(): void {
       // gives one-click Approve/Reject right where the operator's eyes are.
       void showMcpConfirmToast(evt)
       // #147 — fire OS notification so the operator sees the request
-      // even when the WDC window is in the background.
-      void osNotify({
-        title: 'NKS WDC — MCP confirmation needed',
-        body: evt.kind
-          ? `Claude wants to perform ${evt.kind} — open WDC to approve.`
-          : 'Claude wants to run a destructive operation — open WDC to approve.',
-        urgency: 'critical',
-        channel: 'mcp',
-      })
+      // even when the WDC window is in the background. Click → MCP intents.
+      notifyMcpConfirm({ ...evt, kindLabel: mcpKindLabel(evt) })
     },
-    // Auto-dismiss the toast when the intent is resolved through the
-    // banner or another surface (used_at / revoked / matched grant).
+    // The intent was settled somewhere (banner, toast, Intents page, a
+    // trust grant, the agent consuming it, expiry): close its toast and
+    // drop its banner so nothing stale stays on screen.
     'mcp:intent-changed': (data) => {
-      const evt = data as { intentId?: string }
-      if (evt.intentId) closeMcpConfirmToast(evt.intentId)
+      const evt = data as { intentId?: string; change?: string }
+      if (!evt.intentId) return
+      closeMcpConfirmToast(evt.intentId)
+      mcpConfirmStore.handleIntentChanged(evt)
     },
     // #147 — surface deploy completion in OS notification center so a
     // long-running deploy doesn't require the operator to keep the
     // window foregrounded to know when it finished.
     'deploy:complete': (data) => {
-      const evt = data as { deployId?: string; success?: boolean; error?: string }
-      void osNotify({
-        title: evt.success
-          ? 'NKS WDC — Deploy succeeded'
-          : 'NKS WDC — Deploy failed',
-        body: evt.success
-          ? `Deploy ${evt.deployId?.slice(0, 8) ?? ''} completed.`
-          : (evt.error ?? `Deploy ${evt.deployId?.slice(0, 8) ?? ''} failed.`),
-        urgency: evt.success ? 'normal' : 'critical',
-        channel: 'deploy',
-      })
+      const evt = data as { deployId?: string; success?: boolean; error?: string; kind?: string }
+      if (evt.deployId) {
+        deployStore.handleCompleteEvent({
+          deployId: evt.deployId, success: evt.success === true, error: evt.error, kind: evt.kind })
+      }
+      // Click → the site's deploy tab when the run's domain is known.
+      const domain = evt.deployId ? deployStore.runs.get(evt.deployId)?.domain : null
+      notifyDeployComplete(evt, domain)
     },
   })
 }
 function stopDeploySse(): void {
   if (unsubscribeDeploy) { unsubscribeDeploy(); unsubscribeDeploy = null }
 }
+
+// OS notification click → main focuses the window and sends the
+// notification's app route over the `navigate` IPC channel. Main already
+// validated it; re-check here before handing it to the router.
+let unsubscribeNavigate: (() => void) | null = null
+function startNotificationNavigation(): void {
+  if (unsubscribeNavigate || !window.electronAPI?.onNavigate) return
+  unsubscribeNavigate = window.electronAPI.onNavigate((target) => {
+    if (!isSafeAppRoute(target)) return
+    router.push(target).catch(() => { /* duplicate navigation */ })
+  })
+}
+
+// A newer app version found by the background GitHub check → one OS
+// notification per version (main remembers the key).
+watch(
+  () => (updatesStore.hasUpdate ? updatesStore.latestVersion : ''),
+  (version) => { if (version) notifyUpdateAvailable(version) },
+)
+
+// Main fires daemon/updater toasts itself; keep its locale in step with the UI.
+watch(() => i18n.global.locale.value, (locale) => syncNotificationLocale(locale))
 
 // F91.11: pull the authoritative SSO profile the moment the daemon is
 // reachable. Without this the "Signed in as {email}" label only appeared
@@ -230,35 +281,35 @@ const splashElapsedSec = computed(() => {
 const splashElapsed = computed(() => `${splashElapsedSec.value}s`)
 
 const splashStatus = computed(() => {
-  if (!daemonStore.bootStartedAt) return 'Spouštím frontend…'
+  if (!daemonStore.bootStartedAt) return t('splash.status.mounting')
   const fails = daemonStore.consecutiveFailures
   const kind = daemonStore.lastErrorKind
   // After the daemon has bound HTTP at least once but shutters down (daemon
   // restart) we flip back to connecting state. Cover both flows here.
-  if (fails === 0 && daemonStore.pollAttempts === 1) return 'Connecting to backend…'
+  if (fails === 0 && daemonStore.pollAttempts === 1) return t('splash.status.connecting')
   if (kind === 'network') {
     // Daemon process not listening yet — port file may still be missing
     // or the socket is not bound. Normal during first few seconds of boot.
-    if (splashElapsedSec.value < 8) return 'Daemon se spouští…'
-    if (splashElapsedSec.value < 20) return 'Daemon startuje pluginy…'
-    if (splashElapsedSec.value < 45) return 'Daemon stále odpovídá pomalu…'
-    return 'Daemon dlouho nereaguje — chystám diagnostiku…'
+    if (splashElapsedSec.value < 8) return t('splash.status.daemonStarting')
+    if (splashElapsedSec.value < 20) return t('splash.status.pluginsStarting')
+    if (splashElapsedSec.value < 45) return t('splash.status.slow')
+    return t('splash.status.unresponsive')
   }
-  if (kind === 'auth') return 'Daemon běží, synchronizuji token…'
-  if (kind === 'server') return 'Daemon hlásí chybu — opakuji…'
-  if (kind === 'unknown' && fails > 0) return 'Čekám na backend…'
-  return 'Connecting to backend…'
+  if (kind === 'auth') return t('splash.status.auth')
+  if (kind === 'server') return t('splash.status.server')
+  if (kind === 'unknown' && fails > 0) return t('splash.status.waiting')
+  return t('splash.status.connecting')
 })
 
 const splashHint = computed(() => {
   const kind = daemonStore.lastErrorKind
   const n = daemonStore.pollAttempts
-  if (!daemonStore.bootStartedAt) return 'mount fáze'
-  if (kind === 'network') return `pokus ${n} · port file / socket`
-  if (kind === 'auth') return `pokus ${n} · rotace tokenu`
-  if (kind === 'server') return `pokus ${n} · 5xx odpověď`
-  if (n <= 1) return 'první pokus'
-  return `pokus ${n}`
+  if (!daemonStore.bootStartedAt) return t('splash.hint.mount')
+  if (kind === 'network') return t('splash.hint.network', { n })
+  if (kind === 'auth') return t('splash.hint.auth', { n })
+  if (kind === 'server') return t('splash.hint.server', { n })
+  if (n <= 1) return t('splash.hint.first')
+  return t('splash.hint.attempt', { n })
 })
 
 // Over ~15s of network errors we visually escalate the spinner (amber tint)
@@ -273,14 +324,19 @@ const splashFailHint = computed(() => {
   const kind = daemonStore.lastErrorKind
   const n = daemonStore.pollAttempts
   const s = splashElapsedSec.value
-  if (kind === 'network') return `Daemon neodpovídá (port file / socket) — ${n} pokusů za ${s}s.`
-  if (kind === 'auth') return `Daemon běží, ale token se nepodařilo sesynchronizovat — ${n} pokusů.`
-  if (kind === 'server') return `Daemon vrací chybu (5xx) — ${n} pokusů za ${s}s.`
-  return `Backend se neozval za ${s}s (${n} pokusů).`
+  const attempts = t('splash.attempts', { n }, n)
+  if (kind === 'network') return t('splash.fail.network', { attempts, s })
+  if (kind === 'auth') return t('splash.fail.auth', { attempts })
+  if (kind === 'server') return t('splash.fail.server', { attempts, s })
+  return t('splash.fail.unknown', { attempts, s })
 })
 
 function reloadApp() {
   window.location.reload()
+}
+
+function openCommandPalette() {
+  commandPalette.value?.open()
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -301,7 +357,11 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     const routes = ['/dashboard', '/sites', '/databases', '/ssl', '/php', '/binaries', '/settings']
     const idx = parseInt(e.key) - 1
-    if (idx < routes.length) router.push(routes[idx])
+    // Skip Advanced-only pages in Simple mode instead of letting the router
+    // guard bounce the shortcut to /sites.
+    if (idx < routes.length && !(router.resolve(routes[idx]).meta.advancedNav && uiMode.isSimple)) {
+      router.push(routes[idx])
+    }
   }
 }
 
@@ -341,6 +401,11 @@ onMounted(() => {
   // /sites while the daemon was still compiling, the list auto-populates
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
+    void featureFlagsStore.load()
+    // Reload MCP requests still waiting for approval — the SSE event for
+    // one that arrived while WDC was closed or the daemon was restarting
+    // was never seen, and without this it could not be approved at all.
+    void mcpConfirmStore.loadPending()
     void pluginsStore.loadAll()
     void sitesStore.load()
     // Retry token mirror on every daemon (re)connect — covers the case
@@ -362,25 +427,29 @@ onMounted(() => {
   // life, drives the persistent <DeployRunDrawer>.
   startDeploySse()
 
+  // OS notifications: import legacy toggles once, mirror the UI locale to
+  // main, and route notification clicks into the router.
+  void loadNotificationPrefs().then(() => syncNotificationLocale(i18n.global.locale.value))
+  startNotificationNavigation()
+
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
 
 onUnmounted(() => {
   daemonStore.stopPolling()
   unsubscribeConnect?.()
   stopDeploySse()
+  unsubscribeNavigate?.()
+  unsubscribeNavigate = null
   if (splashTimer) { clearInterval(splashTimer); splashTimer = null }
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
 </script>
 
 <style>
-/*
-  Shell — base bg + radial gradient mesh. Two soft light sources
-  (accent + secondary) bake an ambient warmth into the chrome so it
-  doesn't read as a flat dark block. Mesh sits on top of the bg via
-  a fixed pseudo-element so it doesn't scroll with content.
-*/
+/* Shell: full-height sidebar | (header over content), status bar below. */
 .app-root {
   display: flex;
   flex-direction: column;
@@ -391,28 +460,18 @@ onUnmounted(() => {
   background: var(--wdc-bg);
 }
 
-.app-root::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: var(--wdc-mesh-bg);
-  z-index: 0;
-}
-
-.app-backdrop { display: none; }
-
-/* Lift app shell above the mesh */
-.app-header,
-.app-body,
-.app-status-bar { position: relative; z-index: 1; }
-
 .app-body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
-  position: relative;
-  z-index: 1;
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .content-area {
@@ -420,9 +479,9 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--wdc-bg);
-  scroll-behavior: smooth;
   padding: 0;
 }
+.content-area:focus { outline: none; }
 
 /* ═══ Splash overlay — shown until backend first connects ════════════════ */
 .splash-overlay {
@@ -432,7 +491,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 40%, rgba(86, 194, 255, 0.08), var(--wdc-bg) 60%);
+  background: var(--wdc-bg);
   backdrop-filter: blur(4px);
 }
 
@@ -440,12 +499,12 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 44px 64px;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-7) var(--wdc-space-8);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border-strong);
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  border-radius: var(--wdc-radius-md);
+  box-shadow: var(--wdc-shadow-pop);
   min-width: 360px;
 }
 
@@ -474,7 +533,7 @@ onUnmounted(() => {
   /* F70: slower (1.5s) + ease-in-out so the ring glides instead of racing.
      Previous 0.9s linear read as "splašený" during multi-second boots. */
   animation: wdc-spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  margin: 4px 0;
+  margin: var(--wdc-space-1) 0;
   transition: border-top-color 0.4s ease;
 }
 
@@ -504,7 +563,7 @@ onUnmounted(() => {
   font-size: 2.4rem;
   line-height: 1;
   color: var(--wdc-warning, #f5a623);
-  margin: 2px 0;
+  margin: var(--wdc-space-0-5) 0;
 }
 .splash-status--error {
   color: var(--wdc-text);
@@ -518,12 +577,12 @@ onUnmounted(() => {
 }
 .splash-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 4px;
+  gap: var(--wdc-space-2-5);
+  margin-top: var(--wdc-space-1);
 }
 .splash-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: var(--wdc-space-2) var(--wdc-space-4);
+  border-radius: var(--wdc-radius-sm);
   border: 1px solid var(--wdc-border-strong);
   background: var(--wdc-surface-2, var(--wdc-surface));
   color: var(--wdc-text);
@@ -536,7 +595,7 @@ onUnmounted(() => {
 .splash-btn--primary {
   background: var(--wdc-accent);
   border-color: var(--wdc-accent);
-  color: #fff;
+  color: var(--wdc-on-accent);
 }
 .splash-btn--primary:hover { filter: brightness(1.08); }
 
@@ -550,45 +609,22 @@ onUnmounted(() => {
 }
 
 /* ═══ Mobile sidebar drawer ═══════════════════════════════════════════════ */
-.hamburger-btn {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 200;
-  flex-direction: column;
-  gap: 5px;
-  padding: 8px;
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  cursor: pointer;
-}
-.hamburger-btn span {
-  display: block;
-  width: 20px;
-  height: 2px;
-  background: var(--wdc-text);
-  border-radius: 2px;
-}
-
-.sidebar-drawer :deep(.el-drawer__body) {
-  padding: 0;
+.sidebar-drawer .el-drawer__body {
+  padding: 0 !important;
   overflow: hidden;
 }
-.sidebar-drawer :deep(.el-drawer) {
-  background: var(--wdc-surface);
+.sidebar-drawer.el-drawer {
+  background: var(--wdc-chrome) !important;
+}
+.sidebar-drawer .sidebar {
+  width: 100%;
+  min-width: 0;
+  border-right: 0;
 }
 
 @media (max-width: 959px) {
   .app-body > .sidebar-desktop {
     display: none !important;
-  }
-  .hamburger-btn {
-    display: flex;
-  }
-  .content-area {
-    padding-left: 0;
   }
 }
 </style>

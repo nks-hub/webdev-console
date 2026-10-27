@@ -93,23 +93,23 @@ onBeforeUnmount(() => {
 .top-tools-panel {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  padding: 14px 16px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   background: var(--wdc-surface);
   box-shadow: var(--wdc-shadow-sm);
 }
 .panel-title {
   font-size: 11px;
-  margin-bottom: 8px;
-  text-transform: uppercase;
+  margin-bottom: var(--wdc-space-2);
   letter-spacing: 0.5px;
+  font-family: var(--wdc-font-display);
 }
 .tool-rows { display: flex; flex-direction: column; gap: 4px; }
 .tool-row {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) 2fr auto auto auto;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: center;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border-radius: var(--wdc-radius-sm);
   cursor: pointer;
   font-size: 12px;
@@ -124,13 +124,13 @@ onBeforeUnmount(() => {
 .bar-track {
   height: 8px;
   background: var(--wdc-elevated);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 .bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   transition: width 0.3s;
 }
 .fill-read { background: var(--el-color-info); opacity: 0.7; }
@@ -141,8 +141,8 @@ onBeforeUnmount(() => {
 .errors {
   background: var(--el-color-danger);
   color: white;
-  padding: 1px 6px;
-  border-radius: 10px;
+  padding: 1px var(--wdc-space-1-5);
+  border-radius: var(--wdc-radius);
   font-size: 10px;
   font-weight: 600;
 }

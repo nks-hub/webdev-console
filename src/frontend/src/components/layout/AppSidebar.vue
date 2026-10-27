@@ -1,308 +1,96 @@
 <template>
-  <nav class="sidebar">
+  <nav class="sidebar" :aria-label="$t('nav.mainNavigation')">
+    <a
+      v-activate:link
+      class="brand"
+      :aria-label="$t('nav.brandHome')"
+      @click="navigate('/dashboard')"
+    >
+      <span class="brand-mark" aria-hidden="true">wdc</span>
+      <span class="brand-name">WebDev Console</span>
+    </a>
+
     <!--
-      Workspace card removed — it duplicated the header (NW logo +
-      "NKS WDC"). Service-count summary lives in the bottom status
-      bar already, so no information is lost. Sidebar now starts
-      directly with the nav cluster, saving ~70px vertical space.
+      Navigation in four groups (workspace, stack, network, operations)
+      plus an application footer. Text-first rows; a trailing count or
+      status flag replaces the per-service LEDs and switches the old
+      sidebar carried — starting and stopping lives on Overview and
+      Services, where the row says *why* something is not running.
+      In Simple mode the Advanced destinations are hidden from the nav
+      but stay reachable by URL and from the command palette.
     -->
-
-    <div class="nav-cluster">
-      <div class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
-        <span class="nav-icon-shell"><el-icon :size="18"><House /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.overview') }}</span>
-      </div>
-      <div class="nav-item sites-btn" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Link /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.sites') }}</span>
-      </div>
-    </div>
-
-    <!-- Simple-mode services rail: a single compact section with just
-         the runtimes a beginner needs to flip (web server + active PHP
-         + database). The full categorised view stays advanced-only. -->
-    <template v-if="uiModeStore.isSimple">
-      <div class="sidebar-section">
-        <div class="section-label">
-          <span>{{ $t('nav.services') }}</span>
-          <span class="section-count">{{ essentialServices.length }}</span>
-        </div>
-        <template v-for="svc in essentialServices" :key="svc.id">
-          <div
-            class="service-item"
-            :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }"
-            @click="openService(svc.id)"
+    <template v-for="group in groups" :key="group.id">
+      <p :id="`nav-g-${group.id}`" class="nav-group">{{ $t(group.labelKey) }}</p>
+      <ul class="nav-list" :aria-labelledby="`nav-g-${group.id}`">
+        <li v-for="item in group.items" :key="item.key">
+          <a
+            v-activate:link
+            class="nav-item"
+            :class="{ active: isActive(item.route), 'nav-item-tunnel': item.tunnelLive }"
+            :aria-current="isActive(item.route) ? 'page' : undefined"
+            @click="navigate(item.route)"
           >
-            <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-              <ServiceIcon :service="svc.id" :active="svc.state === 2" />
-            </el-tooltip>
-            <div class="svc-copy">
-              <span class="svc-name">{{ shortName(svc) }}</span>
-              <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Stopped' }}</span>
-            </div>
-            <span class="svc-led" :class="{ on: svc.state === 2 }" />
-            <el-switch
-              :model-value="svc.state === 2"
-              :loading="servicesStore.isBusy(svc.id)"
-              size="small"
-              @click.stop
-              @change="toggleSvc(svc)"
-            />
-          </div>
-        </template>
-      </div>
+            <span class="nav-label">{{ item.label }}</span>
+            <span v-if="item.flag" class="nav-flag" :title="item.flag.title">
+              <el-icon :size="14" aria-hidden="true"><CircleCloseFilled /></el-icon>
+              <span class="visually-hidden">{{ item.flag.title }}</span>
+            </span>
+            <span v-else-if="item.count !== undefined" class="nav-count mono">{{ item.count }}</span>
+          </a>
+        </li>
+      </ul>
     </template>
 
-    <template v-if="!uiModeStore.isSimple">
-    <div class="sidebar-section">
-      <div class="section-label">
-        <span>{{ $t('nav.webServer') }}</span>
-        <span class="section-count">{{ webServices.length }}</span>
-      </div>
-      <template v-for="svc in webServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
-          </el-tooltip>
-          <div class="svc-copy">
-            <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Stopped' }}</span>
-          </div>
-          <span class="svc-led" :class="{ on: svc.state === 2 }" />
-          <el-switch
-            :model-value="svc.state === 2"
-            :loading="servicesStore.isBusy(svc.id)"
-            size="small"
-            @click.stop
-            @change="toggleSvc(svc)"
-          />
-        </div>
-      </template>
-    </div>
-
-    <div class="sidebar-section" v-if="langServices.length">
-      <div class="section-label">
-        <span>{{ $t('nav.languages') }}</span>
-        <span class="section-count">{{ langServices.length }}</span>
-      </div>
-      <template v-for="svc in langServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
-          </el-tooltip>
-          <div class="svc-copy">
-            <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Ready' : 'Idle' }}</span>
-          </div>
-          <span class="svc-led" :class="{ on: svc.state === 2 }" />
-          <el-switch
-            :model-value="svc.state === 2"
-            :loading="servicesStore.isBusy(svc.id)"
-            size="small"
-            @click.stop
-            @change="toggleSvc(svc)"
-          />
-        </div>
-      </template>
-    </div>
-
-    <div class="sidebar-section" v-if="dbServices.length">
-      <div class="section-label">
-        <span>{{ $t('nav.database') }}</span>
-        <span class="section-count">{{ dbServices.length }}</span>
-      </div>
-      <template v-for="svc in dbServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
-          </el-tooltip>
-          <div class="svc-copy">
-            <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Offline' }}</span>
-          </div>
-          <span class="svc-led" :class="{ on: svc.state === 2 }" />
-          <el-switch
-            :model-value="svc.state === 2"
-            :loading="servicesStore.isBusy(svc.id)"
-            size="small"
-            @click.stop
-            @change="toggleSvc(svc)"
-          />
-        </div>
-      </template>
-    </div>
-
-    <div class="sidebar-section" v-if="cacheServices.length">
-      <div class="section-label">
-        <span>{{ $t('nav.cacheMail') }}</span>
-        <span class="section-count">{{ cacheServices.length }}</span>
-      </div>
-      <template v-for="svc in cacheServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
-            <ServiceIcon :service="svc.id" :active="svc.state === 2" />
-          </el-tooltip>
-          <div class="svc-copy">
-            <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Standby' }}</span>
-          </div>
-          <span class="svc-led" :class="{ on: svc.state === 2 }" />
-          <el-switch
-            :model-value="svc.state === 2"
-            :loading="servicesStore.isBusy(svc.id)"
-            size="small"
-            @click.stop
-            @change="toggleSvc(svc)"
-          />
-        </div>
-      </template>
-    </div>
-    </template><!-- /advanced service sections -->
-
-    <template v-if="!uiModeStore.isSimple">
-    <div class="sidebar-section tools-section">
-      <div class="section-label">
-        <span>{{ $t('nav.tools') }}</span>
-      </div>
-      <!-- F91 phase 3: plugin-contributed nav entries. Order is driven by
-           each plugin's manifest (UiSchemaBuilder.AddNavEntry order field)
-           so the sidebar rearranges itself when plugins are enabled /
-           disabled without hardcoded composer/hosts/ssl/cloudflare paths. -->
-      <div
-        v-for="entry in pluginsStore.toolsNavEntries"
-        :key="entry.pluginId + ':' + entry.id"
-        class="nav-item"
-        :class="{
-          active: isActive(entry.route),
-          'nav-item-tunnel': entry.pluginId === 'nks.wdc.cloudflare' && cloudflareRunning,
-        }"
-        @click="navigate(entry.route)"
-      >
-        <span class="nav-icon-shell">
-          <el-icon :size="18"><component :is="iconFor(entry.icon)" /></el-icon>
-        </span>
-        <span class="nav-label">{{ entry.label }}</span>
-        <span
-          v-if="entry.pluginId === 'nks.wdc.cloudflare' && exposedSiteCount > 0"
-          class="nav-badge mono"
-        >{{ exposedSiteCount }}</span>
-      </div>
-      <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.binaries') }}</span>
-      </div>
-    </div>
-    </template><!-- /tools section -->
-
-    <div class="sidebar-spacer" />
-
-    <div class="sidebar-bottom">
-      <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.databases') }}</span>
-      </div>
-      <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
-           fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
-           Dashboard service toggle and the /plugin/nks.wdc.php panel. -->
-      <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.plugins') }}</span>
-      </div>
-      <div class="nav-item" :class="{ active: isActive('/backups') }" @click="navigate('/backups')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Files /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.backups') }}</span>
-      </div>
-      <!-- Phase 6.11b — admin audit view of all signed MCP intents.
-           Phase 6.23 — gated by featureFlagsStore.mcpEnabled (default
-           false). Once an operator explicitly flips mcp.enabled=true
-           in daemon settings the AI surface is opt-in regardless of
-           UI mode — hiding it again behind the Simple/Advanced toggle
-           silently buried the feature for operators who use Simple
-           but run an AI client (incident 2026-05-07). -->
-      <!-- Phase 7.3 — single MCP hub entry; tabs inside the page split
-           between Intents (audit log) and Oprávnění (persistent grants). -->
-      <div
-        v-if="featureFlagsStore.showMcpSurface"
-        class="nav-item"
-        :class="{ active: isActive('/mcp/intents') || isActive('/mcp/grants') }"
-        @click="navigate('/mcp/intents')"
-      >
-        <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.mcp') }}</span>
-      </div>
-      <div
-        class="nav-item nav-item-mode"
-        :title="$t('settings.mode.description')"
-        @click="uiModeStore.toggleMode()"
-      >
-        <span class="nav-icon-shell">
-          <el-icon :size="18"><component :is="uiModeStore.isAdvanced ? Operation : MagicStick" /></el-icon>
-        </span>
-        <span class="nav-label">
-          {{ uiModeStore.isAdvanced ? $t('settings.mode.advanced') : $t('settings.mode.simple') }}
-        </span>
-        <el-switch
-          :model-value="uiModeStore.isAdvanced"
-          size="small"
-          @click.stop
-          @change="(v: boolean) => uiModeStore.setUiMode(v ? 'advanced' : 'simple')"
-        />
-      </div>
-      <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.settings') }}</span>
-      </div>
-      <!-- F89: Help entry — always visible in both Simple + Advanced modes. -->
-      <div class="nav-item" :class="{ active: isActive('/help') }" @click="navigate('/help')">
-        <span class="nav-icon-shell"><el-icon :size="18"><QuestionFilled /></el-icon></span>
-        <span class="nav-label">Help</span>
-      </div>
-      <!-- F83: top-level sign-in entry point so users don't have to
-           drill into Settings → About to discover the SSO flow. When
-           already signed in the item shows the avatar mark + a "Sign out"
-           action; when signed out a single click kicks off the deep-link
-           flow against the catalog URL stored in SettingsStore. -->
-      <!-- F91.14: surface the real SSO identity in the sidebar so the
-           user sees "Signed in as lury@lury.cz" at a glance, not just a
-           generic "Signed in". Falls back to "Signed in" when the JWT
-           decode and /auth/me both produced nothing (unlikely, but
-           keeps the layout stable). -->
-      <div
-        class="nav-item nav-item-sso"
-        :class="{ signedin: authStore.isAuthenticated }"
-        :title="authStore.isAuthenticated
-          ? `Signed in as ${authStore.displayName || '(unknown)'} — click to sign out`
-          : 'Sign in with SSO'"
-        @click="toggleSso"
-      >
-        <span class="nav-icon-shell">
-          <el-icon :size="18">
-            <component :is="authStore.isAuthenticated ? UserFilled : User" />
-          </el-icon>
-        </span>
-        <span class="nav-label nav-label-sso">
-          <template v-if="authStore.isAuthenticated">
-            <span class="sso-caption">{{ $t('nav.signedIn') }}</span>
-            <span class="sso-email mono" :title="authStore.displayName || ''">
-              {{ authStore.displayName || '…' }}
-            </span>
-          </template>
-          <template v-else>{{ $t('nav.signIn') }}</template>
-        </span>
-        <span v-if="authStore.loginPending" class="sso-spinner" />
-      </div>
-    </div>
+    <ul class="nav-list nav-foot" :aria-label="$t('nav.application')">
+      <li v-if="uiModeStore.isAdvanced">
+        <a v-activate:link class="nav-item" :class="{ active: isActive('/plugins') }"
+          :aria-current="isActive('/plugins') ? 'page' : undefined" @click="navigate('/plugins')">
+          <span class="nav-label">{{ $t('nav.plugins') }}</span>
+        </a>
+      </li>
+      <li>
+        <a v-activate:link class="nav-item" :class="{ active: isActive('/settings') }"
+          :aria-current="isActive('/settings') ? 'page' : undefined" @click="navigate('/settings')">
+          <span class="nav-label">{{ $t('nav.settings') }}</span>
+        </a>
+      </li>
+      <li>
+        <a v-activate:link class="nav-item" :class="{ active: isActive('/help') }"
+          :aria-current="isActive('/help') ? 'page' : undefined" @click="navigate('/help')">
+          <span class="nav-label">{{ $t('nav.help') }}</span>
+        </a>
+      </li>
+      <!-- Catalog sign-in: shows the real identity when signed in. -->
+      <li>
+        <a
+          v-activate
+          class="nav-item nav-item-sso"
+          :class="{ signedin: authStore.isAuthenticated }"
+          :title="authStore.isAuthenticated
+            ? $t('nav.signedInAsTitle', { name: authStore.displayName || '?' })
+            : $t('nav.signInTitle')"
+          @click="toggleSso"
+        >
+          <span class="nav-label nav-label-sso">
+            <template v-if="authStore.isAuthenticated">
+              <span class="sso-caption">{{ $t('nav.signedIn') }}</span>
+              <span class="sso-email mono">{{ authStore.displayName || '…' }}</span>
+            </template>
+            <template v-else>{{ $t('nav.signIn') }}</template>
+          </span>
+          <span v-if="authStore.loginPending" class="sso-spinner" aria-hidden="true" />
+        </a>
+      </li>
+    </ul>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, markRaw, type Component } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key, Operation, MagicStick } from '@element-plus/icons-vue'
-import ServiceIcon from '../shared/ServiceIcon.vue'
+import { CircleCloseFilled } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
-import { useServicesStore } from '../../stores/services'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
@@ -310,18 +98,27 @@ import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 
+const emit = defineEmits<{ navigate: [] }>()
 const { t } = useI18n()
-import type { ServiceInfo } from '../../api/types'
 
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
-const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiModeStore = useUiModeStore()
 const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
 const authStore = useAuthStore()
+
+interface NavItem {
+  key: string
+  route: string
+  label: string
+  count?: number
+  flag?: { title: string }
+  tunnelLive?: boolean
+}
+interface NavGroup { id: string; labelKey: string; items: NavItem[] }
 
 async function toggleSso() {
   if (authStore.isAuthenticated) {
@@ -332,39 +129,20 @@ async function toggleSso() {
     } catch { /* user cancelled */ }
     return
   }
-  // Route to the dedicated login page instead of firing the OIDC flow
-  // inline — gives us a landing surface for provider/catalog info + the
-  // "continue without signing in" escape hatch users asked for.
   void router.push('/login')
 }
 
-// Plugin-contributed sidebar entries need the /api/plugins/ui round-trip to
-// populate before the Tools section can render. pluginsStore.loadAll is also
-// called elsewhere (Plugins page), so the sidebar is idempotent: if the
-// store is already warm this returns immediately.
+// Plugin-contributed entries need the /api/plugins/ui round-trip; the
+// store call is idempotent when another page already warmed it.
 onMounted(() => {
   if (pluginsStore.manifests.length === 0) void pluginsStore.loadAll()
 })
 
-// Map the icon name (Element Plus component identifier) shipped in each
-// plugin's NavContribution to the actual runtime component. Falls back to
-// Box so a plugin shipping an unknown icon name still renders a sidebar row.
-const ICON_REGISTRY: Record<string, Component> = markRaw({
-  Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled,
-})
-function iconFor(name: string): Component {
-  return ICON_REGISTRY[name] ?? Box
-}
-
-// Sidebar is always expanded — the collapse toggle was dropped because
-// it added no value (sidebar fits at any reasonable window width) and
-// the icon-only mode hid service names that users needed to glance at.
 const services = computed(() => daemonStore.services)
-const runningCount = computed(() => services.value.filter(s => s.state === 2).length)
+// Crashed services flag the Services entry. A stopped service is a
+// choice, not a fault, so it does not raise the flag.
+const crashedCount = computed(() => services.value.filter(s => s.state === 4).length)
 
-// Tunnel entry in the bottom nav lights up when cloudflared is running AND
-// shows a badge with the count of sites currently exposed through it.
-// Both are derived state — no extra fetches, just reuse daemon + sites stores.
 const cloudflareRunning = computed(() =>
   services.value.some(s => s.id === 'cloudflare' && (s.state === 2 || s.status === 'running'))
 )
@@ -372,42 +150,54 @@ const exposedSiteCount = computed(() =>
   sitesStore.sites.filter(s => s.cloudflare?.enabled).length
 )
 
-const SHORT_NAMES: Record<string, string> = {
-  'Apache HTTP Server': 'Apache',
-  'PHP (Multi-version)': 'PHP',
-  'Mailpit': 'Mailpit',
-}
-function shortName(svc: ServiceInfo): string {
-  return SHORT_NAMES[svc.displayName ?? ''] || svc.displayName || svc.id
-}
+// Plugin tool pages are sorted into the group they belong to by route.
+const NETWORK_ROUTES = new Set(['/ssl', '/hosts', '/cloudflare'])
 
-// F91.3: sidebar categories are driven by the plugin store, not a hardcoded
-// table. Each plugin calls UiSchemaBuilder.SetServiceCategory(category, id),
-// which registers a `service-row:{category}:{id}` surface. Disabling the
-// plugin drops that surface, so the row vanishes. Cloudflare no longer
-// appears here because its plugin declares only Tools surfaces.
-function servicesInCategory(category: string) {
-  const allowed = pluginsStore.serviceIdsInCategory(category)
-  return services.value.filter(s => allowed.has(s.id))
-}
+const groups = computed<NavGroup[]>(() => {
+  const adv = uiModeStore.isAdvanced
+  const pluginItems: NavItem[] = pluginsStore.toolsNavEntries.map(e => ({
+    key: `${e.pluginId}:${e.id}`,
+    route: e.route,
+    label: e.label,
+    count: e.pluginId === 'nks.wdc.cloudflare' && exposedSiteCount.value > 0 ? exposedSiteCount.value : undefined,
+    tunnelLive: e.pluginId === 'nks.wdc.cloudflare' && cloudflareRunning.value,
+  }))
+  const networkItems = pluginItems.filter(i => NETWORK_ROUTES.has(i.route))
+  const toolItems = pluginItems.filter(i => !NETWORK_ROUTES.has(i.route))
 
-const webServices = computed(() => servicesInCategory('web'))
-const langServices = computed(() => servicesInCategory('lang'))
-const dbServices = computed(() => servicesInCategory('db'))
-const cacheServices = computed(() => servicesInCategory('cache'))
-
-// Simple-mode rail: only the runtimes a beginner cares about — web
-// server + database + a single PHP entry (preferring an active version
-// if multiple are installed). Mail/cache/cloudflare are advanced-only.
-const essentialServices = computed(() => {
-  const out: ServiceInfo[] = []
-  const web = webServices.value
-  if (web.length) out.push(web[0])
-  const langs = langServices.value
-  const activePhp = langs.find(s => s.state === 2) ?? langs[0]
-  if (activePhp) out.push(activePhp)
-  const db = dbServices.value
-  if (db.length) out.push(db[0])
+  const out: NavGroup[] = [
+    {
+      id: 'workspace',
+      labelKey: 'nav.groups.workspace',
+      items: [
+        { key: 'overview', route: '/dashboard', label: t('nav.overview') },
+        { key: 'sites', route: '/sites', label: t('nav.sites'), count: sitesStore.sites.length || undefined },
+      ],
+    },
+    {
+      id: 'stack',
+      labelKey: 'nav.groups.stack',
+      items: [
+        {
+          key: 'services',
+          route: '/services',
+          label: t('nav.services'),
+          flag: crashedCount.value > 0 ? { title: t('nav.servicesCrashed', { n: crashedCount.value }, crashedCount.value) } : undefined,
+        },
+        ...(adv ? [
+          { key: 'databases', route: '/databases', label: t('nav.databases') },
+          { key: 'binaries', route: '/binaries', label: t('nav.binaries') },
+          ...toolItems,
+        ] : []),
+      ],
+    },
+  ]
+  if (adv && networkItems.length) {
+    out.push({ id: 'network', labelKey: 'nav.groups.network', items: networkItems })
+  }
+  const ops: NavItem[] = [{ key: 'backups', route: '/backups', label: t('nav.backups') }]
+  if (featureFlagsStore.showMcpSurface) ops.push({ key: 'mcp', route: '/mcp', label: t('nav.mcp') })
+  out.push({ id: 'operations', labelKey: 'nav.groups.operations', items: ops })
   return out
 })
 
@@ -416,360 +206,155 @@ function isActive(path: string) {
 }
 
 function navigate(path: string) {
+  emit('navigate')
   if (route.path === path) {
     void router.replace({ path, query: {} })
   } else {
     void router.push(path)
   }
 }
-
-function openService(id: string) {
-  // Cloudflare has a dedicated configuration page — the generic service
-  // config drawer expects file-based configs and 500s for API-driven
-  // services. Route directly to the Cloudflare Tunnel management page.
-  if (id === 'cloudflare') {
-    void router.push('/cloudflare')
-    return
-  }
-  void router.push(`/service/${id}/config`)
-}
-
-async function toggleSvc(svc: ServiceInfo) {
-  const name = svc.displayName || svc.id
-  try {
-    if (svc.state === 2) {
-      await servicesStore.stop(svc.id)
-      ElMessage.success(t('nav.serviceStopped', { name }))
-    } else {
-      await servicesStore.start(svc.id)
-      ElMessage.success(t('nav.serviceStarted', { name }))
-    }
-  } catch (err) {
-    ElMessage.error(`${name}: ${err instanceof Error ? err.message : String(err)}`)
-  }
-}
 </script>
 
 <style scoped>
-/*
-  Sidebar — translucent glass panel that sits over the page mesh.
-  Backdrop-filter blur + low-opacity surface so the ambient gradient
-  shows through subtly. Single right-edge separator.
-*/
 .sidebar {
-  width: 240px;
+  width: 232px;
+  min-width: 232px;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--wdc-surface) 78%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  gap: var(--wdc-space-0-5);
+  padding: var(--wdc-space-3) var(--wdc-space-3) var(--wdc-space-4);
+  background: var(--wdc-chrome);
   border-right: 1px solid var(--wdc-border);
-  flex-shrink: 0;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px 12px 12px;
+  scrollbar-width: thin;
 }
 
-/*
-  Workspace card — slimmer, no border, fits inline as a status block
-  rather than a "branded card". Saves ~20px vertical so the nav
-  cluster + sections are visible without scrolling.
-*/
-.sidebar-top {
-  margin-bottom: 16px;
-}
-
-.workspace-card {
+.brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 8px 12px;
-  border-bottom: 1px solid var(--wdc-border);
-}
-
-.workspace-mark {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--wdc-radius-sm);
-  background: var(--wdc-gradient-accent);
-  color: #ffffff;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  box-shadow: var(--wdc-shadow-sm);
-}
-
-.workspace-copy {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 2px;
-}
-
-.workspace-title {
-  color: var(--wdc-text);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1.2;
-}
-
-.workspace-subtitle {
-  color: var(--wdc-text-3);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1-5) var(--wdc-space-2);
+  margin-bottom: var(--wdc-space-2);
+  border-radius: var(--wdc-radius);
+  font-family: var(--wdc-font-display);
   font-weight: 600;
-}
-
-.nav-cluster {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.sites-btn {
-  font-weight: 700;
-}
-
-.sidebar-section {
-  margin-bottom: 4px;
-}
-
-/*
-  Section labels — drop the count chip (was visually competing with
-  service item LEDs). Smaller, looser tracking, more whitespace.
-*/
-.section-label {
-  display: flex;
-  align-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.10em;
-  color: var(--wdc-text-3);
-  padding: 16px 10px 6px;
-}
-
-.section-count { display: none; }
-
-/*
-  Service item redesign — single-row, drop meta text. Just icon +
-  name + LED + switch. Was 48px tall with two stacked text rows;
-  now 36px with one row, tighter vertical rhythm.
-*/
-.service-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  border-radius: var(--wdc-radius-sm);
-  transition: background 0.12s, color 0.12s;
-  min-height: 36px;
-  border: none;
+  font-size: 1rem;
+  color: var(--wdc-text);
   cursor: pointer;
+  user-select: none;
+  text-decoration: none;
 }
-
-.service-item:hover { background: var(--wdc-hover); }
-.service-item.active {
-  background: var(--wdc-accent-dim);
-  color: var(--wdc-accent);
-}
-.service-item.active .svc-name { color: var(--wdc-accent); }
-
-.svc-copy {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.svc-name {
-  font-size: 0.84rem;
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--wdc-radius);
+  background: var(--wdc-text);
+  color: var(--wdc-bg);
+  font-family: var(--wdc-font-mono);
+  font-size: 0.72rem;
   font-weight: 500;
-  color: var(--wdc-text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/*
-  Meta text dropped — status is conveyed by the LED dot color, no
-  need to spell "RUNNING" / "READY" / "OFFLINE" under every name.
-  Was the single biggest source of sidebar noise.
-*/
-.svc-meta { display: none; }
-
-.svc-led {
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  /* Flat: use token for "off" state so it's visible in both modes */
-  background: var(--wdc-status-stopped);
+.nav-group {
+  margin: var(--wdc-space-3) 0 var(--wdc-space-1);
+  padding-inline: var(--wdc-space-2);
+  font-family: var(--wdc-font-display);
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: var(--wdc-text-3);
 }
 
-.svc-led.on {
-  /* Flat: solid dot, no outer glow ring */
-  background: var(--wdc-status-running);
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--wdc-space-0-5);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
-  border-radius: var(--wdc-radius-sm);
-  cursor: pointer;
+  justify-content: space-between;
+  gap: var(--wdc-space-2);
+  min-height: 32px;
+  padding: var(--wdc-space-1) var(--wdc-space-2);
+  border-radius: var(--wdc-radius);
   color: var(--wdc-text-2);
-  font-size: 0.92rem;
-  font-weight: 600;
-  transition: background 0.12s, color 0.12s, border-left-color 0.12s;
-  /* Flat: 3px left edge that becomes accent when active */
-  border-left: 3px solid transparent;
+  font-size: 0.93rem;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--wdc-dur-micro) var(--wdc-ease-out), color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
-
-.nav-item:hover {
-  /* Flat: solid surface-2, no alpha layering */
-  background: var(--wdc-surface-2);
-  color: var(--wdc-text);
+@media (hover: hover) {
+  .nav-item:hover { background: var(--wdc-surface-2); color: var(--wdc-text); }
 }
-
+.nav-item:focus-visible {
+  outline: 2px solid var(--wdc-accent);
+  outline-offset: -2px;
+}
 .nav-item.active {
-  /*
-    Active nav item — gradient fill + ambient accent glow. Strong
-    visual anchor that matches the logo's gradient.
-  */
   background: var(--wdc-accent-dim);
-  color: var(--wdc-accent);
-  border-left-color: var(--wdc-accent);
-  font-weight: 700;
-  box-shadow: 0 0 0 1px var(--wdc-accent-glow), 0 4px 16px var(--wdc-accent-glow);
+  color: var(--wdc-accent-ink);
+  font-weight: 500;
 }
-.nav-item.active .nav-icon-shell { color: var(--wdc-accent); }
+.nav-item-tunnel .nav-label { color: var(--wdc-status-starting); }
 
-/*
-  Tunnel entry — Cloudflare brand orange when cloudflared is live.
-  The colored icon + border-left signals running status without
-  forcing the user to scan the sidebar.
-*/
-.nav-item-tunnel { color: var(--wdc-cat-tunnel); }
-.nav-item-tunnel .nav-icon-shell { color: var(--wdc-cat-tunnel); }
-.nav-item-tunnel.active {
-  background: rgba(243, 128, 32, 0.14);
-  border-left-color: var(--wdc-cat-tunnel);
-  color: var(--wdc-cat-tunnel);
-}
-:global(html.dark) .nav-item-tunnel { color: #fff2b3; }
-
-/* F83 SSO entry — subtle accent when signed in so the state is
-   legible without crowding the bottom-nav visual weight. */
-.nav-item-sso.signedin .nav-icon-shell { color: #16a34a; }
-.nav-item-sso.signedin { border-left-color: #16a34a; }
-
-/* Mode toggle — discoverable sidebar entry so users don't have to
-   drill into Settings → General to flip Simple/Advanced. Switch sits
-   to the right (like service rows). Label updates with mode. */
-.nav-item-mode {
-  justify-content: flex-start;
-}
-.nav-item-mode .nav-label {
-  flex: 1;
+.nav-label {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.nav-item-mode :deep(.el-switch) {
-  margin-left: auto;
+.nav-count {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
 }
+.nav-flag {
+  display: inline-flex;
+  color: var(--wdc-status-error);
+}
+
+.nav-foot {
+  margin-top: auto;
+  padding-top: var(--wdc-space-3);
+  border-top: 1px solid var(--wdc-border);
+}
+
 .nav-label-sso {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
-  overflow: hidden;
-  min-width: 0;
+  line-height: 1.25;
 }
-.nav-label-sso .sso-caption {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.sso-caption {
+  font-size: 0.74rem;
   color: var(--wdc-text-3);
 }
-.nav-label-sso .sso-email {
+.sso-email {
   font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--wdc-text);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sso-spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--wdc-border-strong);
+  border-top-color: var(--wdc-accent);
   border-radius: 50%;
-  animation: sso-spin 0.7s linear infinite;
+  animation: sso-spin 0.8s linear infinite;
 }
 @keyframes sso-spin { to { transform: rotate(360deg); } }
 
-.nav-label {
-  flex: 1;
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
-}
-
-.nav-badge {
-  display: inline-block;
-  padding: 1px 7px;
-  background: #9a4a00;
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
-}
-
-:global(html.dark) .workspace-subtitle,
-:global(html.dark) .section-label { color: #ffffff; }
-:global(html.dark) .nav-badge { background: #ffb15f; color: #141006; }
-
-.nav-icon-shell {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--wdc-radius-sm);
-  /* Flat: solid surface-2 tile, no alpha */
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-}
-
-.sidebar-spacer {
-  flex: 1;
-}
-
-.sidebar-bottom {
-  border-top: 1px solid var(--wdc-border-strong);
-  padding-top: 8px;
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sidebar-bottom .nav-item,
-.sidebar-bottom .nav-item .nav-label {
-  color: var(--wdc-text);
-}
-
-:global(html.dark) .sidebar-bottom .nav-item,
-:global(html.dark) .sidebar-bottom .nav-item .nav-label {
-  color: #ffffff !important;
 }
 </style>

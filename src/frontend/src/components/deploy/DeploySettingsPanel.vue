@@ -61,16 +61,16 @@
               :title="deployBackendTooltip"
             >
               {{ deployBackendBadge }}
-              <span v-if="deployBackendReadiness.blockers.length > 0" style="margin-left: 4px">
+              <span v-if="deployBackendReadiness.blockers.length > 0" style="margin-left: var(--wdc-space-1)">
                 · {{ deployBackendReadiness.blockers.length }}⚠
               </span>
-              <span v-else style="margin-left: 4px">· ✓</span>
+              <span v-else style="margin-left: var(--wdc-space-1)">· ✓</span>
               <!-- Iter 56 (#258) — surface restart-pending so operator
                    spots the "setting flipped but daemon hasn't restarted"
                    drift without having to open the popover. -->
               <span
                 v-if="deployBackendReadiness.restartPending"
-                style="margin-left: 4px"
+                style="margin-left: var(--wdc-space-1)"
                 :title="t('deploySettings.restartPendingTooltip')"
               >· ↻</span>
             </el-tag>
@@ -89,9 +89,9 @@
               type="warning"
               :closable="false"
               show-icon
-              style="margin-bottom: 8px"
+              style="margin-bottom: var(--wdc-space-2)"
             />
-            <div style="margin-bottom: 6px">
+            <div style="margin-bottom: var(--wdc-space-1-5)">
               <!-- Iter 23: localize recommendation from the same structured
                    fields (readyToFlip + blockers count) instead of relying
                    on the server-side English-only string. Fallback to the
@@ -102,8 +102,8 @@
                   : t('deploySettings.stayOnBuiltIn', { n: deployBackendReadiness.blockers.length }) }}
               </strong>
             </div>
-            <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: 8px">
-              <div class="muted" style="margin-bottom: 4px">Blockers:</div>
+            <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: var(--wdc-space-2)">
+              <div class="muted" style="margin-bottom: var(--wdc-space-1)">Blockers:</div>
               <!-- Iter 21: shared component renders blockerDetails phase tag
                    + remediation when ?explain=true payload available; falls
                    back to summary-only rows for older daemons. -->
@@ -118,20 +118,20 @@
                  paired with cs/en label so operator knows what's at stake. -->
             <div
               v-if="deployBackendReadiness.gatedEndpoints && deployBackendReadiness.gatedEndpoints.length > 0"
-              style="margin-top: 10px"
+              style="margin-top: var(--wdc-space-2-5)"
             >
-              <div class="muted" style="margin-bottom: 4px">
+              <div class="muted" style="margin-bottom: var(--wdc-space-1)">
                 {{ t('deploySettings.gatedEndpointsLabel', { n: deployBackendReadiness.gatedEndpoints.length }) }}
               </div>
-              <ul style="font-size: 11px; margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto">
+              <ul style="font-size: 11px; margin: 0; padding-left: var(--wdc-space-4-5); max-height: 140px; overflow-y: auto">
                 <li v-for="ep in deployBackendReadiness.gatedEndpoints" :key="ep">
                   <code class="mono">{{ ep }}</code>
                 </li>
               </ul>
             </div>
-            <div class="muted" style="margin-top: 8px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+            <div class="muted" style="margin-top: var(--wdc-space-2); font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: var(--wdc-space-2); flex-wrap: wrap">
               <code class="mono">GET /api/admin/plugin-readiness</code>
-              <div style="display: flex; gap: 6px">
+              <div style="display: flex; gap: var(--wdc-space-1-5)">
                 <el-button
                   size="small"
                   :loading="readinessRefreshing"
@@ -913,7 +913,7 @@
         <el-divider content-position="left">
           {{ t('deploySettings.hostDialog.localPathsTitle') }}
         </el-divider>
-        <div class="field-hint" style="margin-top: -8px; margin-bottom: 8px">
+        <div class="field-hint" style="margin-top: -8px; margin-bottom: var(--wdc-space-2)">
           {{ t('deploySettings.hostDialog.localPathsHelp') }}
         </div>
         <el-form-item :label="t('deploySettings.hostDialog.localSourcePath')">
@@ -1307,6 +1307,8 @@ async function saveSettings(): Promise<void> {
     if (msg === 'PENDING_BACKEND') {
       lastSavedSnapshot.value = JSON.stringify(settings)
       ElMessage.info(t('deploySettings.saveLocalOnly'))
+    } else if (msg === 'LOAD_FAILED') {
+      ElMessage.error(t('deploySettings.saveBlockedLoadFailed'))
     } else {
       ElMessage.error(msg || t('deploySettings.saveFailed'))
     }
@@ -1508,7 +1510,7 @@ async function submitHostForm(): Promise<void> {
     if (idx !== -1) settings.hosts.splice(idx, 1, { ...payload })
   } else {
     if (settings.hosts.some(h => h.name === payload.name)) {
-      ElMessage.error(`A host named "${payload.name}" already exists`)
+      ElMessage.error(t('toast.hostExists', { name: payload.name }))
       return
     }
     store.addHost(props.domain, payload)
@@ -1531,7 +1533,7 @@ async function removeHost(name: string): Promise<void> {
   store.removeHost(props.domain, name)
   const idx = settings.hosts.findIndex(h => h.name === name)
   if (idx !== -1) settings.hosts.splice(idx, 1)
-  ElMessage.success(`Host "${name}" removed`)
+  ElMessage.success(t('toast.hostRemoved', { name }))
 }
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -1616,7 +1618,7 @@ async function onSnapshotNow(): Promise<void> {
     snapshots.value = await fetchDeploySnapshots(props.domain)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Snapshot failed: ${msg}`)
+    ElMessage.error(t('toast.snapshotFailed', { err: msg }))
   } finally {
     snapshotting.value = false
   }
@@ -1689,7 +1691,7 @@ async function onRestoreSnapshot(snapshot: DeploySnapshotEntry): Promise<void> {
     snapshots.value = await fetchDeploySnapshots(props.domain)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Restore failed: ${msg}`)
+    ElMessage.error(t('toast.restoreFailed', { err: msg }))
   } finally {
     restoringId.value = null
   }
@@ -1726,18 +1728,18 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface));
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  margin-bottom: 16px;
-  gap: 12px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
+  background: var(--wdc-surface);
+  border-bottom: 1px solid var(--wdc-border);
+  margin-bottom: var(--wdc-space-4);
+  gap: var(--wdc-space-3);
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
 .settings-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .settings-domain {
@@ -1751,7 +1753,7 @@ defineExpose({ saveSettings })
 }
 .dirty-tag { margin-left: 4px; }
 .mcp-grants-tag {
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
   cursor: pointer;
   user-select: none;
 }
@@ -1761,18 +1763,18 @@ defineExpose({ saveSettings })
 /* #109 — backend identity badge sits next to grants tag in the header.
    Static (no click), default cursor distinguishes it from clickable tags. */
 .deploy-backend-tag {
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .settings-header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .section-intro {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: var(--wdc-space-1);
+  margin-bottom: var(--wdc-space-1);
 }
 .section-h2 {
   margin: 0;
@@ -1791,30 +1793,30 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin-bottom: var(--wdc-space-3);
+  gap: var(--wdc-space-3);
 }
 .hosts-count { font-size: 13px; }
 .hosts-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   grid-template-columns: 1fr;
 }
 .hosts-empty {
-  padding: 36px 20px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 1px dashed var(--wdc-border-strong);
   border-radius: var(--wdc-radius);
   text-align: center;
 }
 .empty-title {
-  margin: 0 0 4px;
+  margin: 0 0 var(--wdc-space-1);
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 .empty-lead {
-  margin: 0 0 16px;
+  margin: 0 0 var(--wdc-space-4);
   color: var(--el-text-color-secondary);
   font-size: 13px;
   /* responsive: removed fixed cap */
@@ -1828,15 +1830,15 @@ defineExpose({ saveSettings })
 .section-body {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 0 24px 24px;
+  gap: var(--wdc-space-4-5);
+  padding: 0 var(--wdc-space-5) var(--wdc-space-5);
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .section-title {
@@ -1846,7 +1848,7 @@ defineExpose({ saveSettings })
 }
 
 .section-footer {
-  padding-top: 8px;
+  padding-top: var(--wdc-space-2);
 }
 
 .settings-form {
@@ -1854,7 +1856,7 @@ defineExpose({ saveSettings })
 }
 
 .field-hint {
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
@@ -1883,13 +1885,13 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .snapshots-filter { margin-left: auto; }
 .snapshots-summary { font-size: 12px; }
 .snapshots-timeline {
   list-style: none;
-  margin: 12px 0 0;
+  margin: var(--wdc-space-3) 0 0;
   padding: 0;
   position: relative;
 }
@@ -1904,7 +1906,7 @@ defineExpose({ saveSettings })
 }
 .timeline-item {
   position: relative;
-  padding: 8px 0 8px 24px;
+  padding: var(--wdc-space-2) 0 var(--wdc-space-2) var(--wdc-space-5);
 }
 .timeline-dot {
   position: absolute;
@@ -1921,12 +1923,12 @@ defineExpose({ saveSettings })
 .timeline-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 .timeline-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .timeline-when { font-size: 13px; }
@@ -1936,7 +1938,7 @@ defineExpose({ saveSettings })
 .subsection {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .subsection-header {
@@ -1947,19 +1949,19 @@ defineExpose({ saveSettings })
 /* Advanced redesign #171 — Lifecycle + Env cards */
 .advanced-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   grid-template-columns: 1fr;
 }
 .adv-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .adv-card-title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-weight: 600;
 }
 .adv-icon {
@@ -1977,19 +1979,19 @@ defineExpose({ saveSettings })
   box-shadow: var(--wdc-shadow-sm);
 }
 .adv-card-lead {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 12px;
   line-height: 1.5;
 }
 .env-empty {
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
   font-size: 12px;
 }
 
 /* Notifications redesign #156 — per-channel cards */
 .notify-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   grid-template-columns: 1fr 1fr;
 }
 @media (max-width: 720px) {
@@ -2000,12 +2002,12 @@ defineExpose({ saveSettings })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .notify-card-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-weight: 600;
 }
 .notify-channel-icon {
@@ -2023,13 +2025,13 @@ defineExpose({ saveSettings })
   box-shadow: var(--wdc-shadow-sm);
 }
 .notify-card-lead {
-  margin: 0 0 12px;
+  margin: 0 0 var(--wdc-space-3);
   font-size: 12px;
   line-height: 1.5;
 }
 .notify-triggers-group {
   display: flex;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   flex-wrap: wrap;
 }
 
@@ -2037,7 +2039,7 @@ defineExpose({ saveSettings })
 .hooks-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .hook-card.hook-disabled {
   opacity: 0.6;
@@ -2046,13 +2048,13 @@ defineExpose({ saveSettings })
 .hook-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 .hook-card-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
   flex: 1;
   min-width: 0;
@@ -2068,13 +2070,13 @@ defineExpose({ saveSettings })
 .hook-card-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .hook-card-body { padding-top: 4px; }
 .hook-row-flex {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   align-items: flex-start;
 }
 
@@ -2082,8 +2084,8 @@ defineExpose({ saveSettings })
 .hook-row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   transition: opacity 0.15s ease, box-shadow 0.15s, border-color 0.15s;
@@ -2107,14 +2109,14 @@ defineExpose({ saveSettings })
 .hook-order-btns {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding-top: 24px;
+  gap: var(--wdc-space-0-5);
+  padding-top: var(--wdc-space-5);
 }
 
 .hook-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex: 1;
 }
 
@@ -2123,11 +2125,11 @@ defineExpose({ saveSettings })
 }
 
 .hook-remove {
-  padding-top: 28px;
+  padding-top: var(--wdc-space-5-5);
 }
 
 .empty-state {
-  padding: 24px 0;
+  padding: var(--wdc-space-5) 0;
   color: var(--el-text-color-secondary);
   font-size: 13px;
 }
@@ -2136,10 +2138,10 @@ defineExpose({ saveSettings })
 .chip-input-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
   min-height: 36px;
-  padding: 6px 10px;
+  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
   background: var(--wdc-surface);
@@ -2159,14 +2161,14 @@ defineExpose({ saveSettings })
 .chip-input :deep(.el-input__wrapper) {
   box-shadow: none !important;
   background: transparent;
-  padding: 0 4px;
+  padding: 0 var(--wdc-space-1);
 }
 
 /* Advanced - env vars */
 .env-vars-wrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   width: 100%;
   /* responsive: removed fixed cap */
 }
@@ -2174,7 +2176,7 @@ defineExpose({ saveSettings })
 .env-var-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .env-key {
@@ -2193,7 +2195,7 @@ defineExpose({ saveSettings })
 /* Form row helper */
 .form-row {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
   align-items: flex-start;
 }
@@ -2205,14 +2207,14 @@ defineExpose({ saveSettings })
 /* Phase 7.5+++ — snapshots disk-impact summary. */
 .snapshots-summary {
   font-size: 13px;
-  margin: 4px 0 8px;
+  margin: var(--wdc-space-1) 0 var(--wdc-space-2);
 }
 .snapshots-oldest { margin-left: 6px; }
 
 /* Phase 7.5+++ — TCP probe row in host edit dialog. */
 .test-conn-row {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-top: 10px; padding: 10px 14px;
+  margin-top: var(--wdc-space-2-5); padding: 10px 14px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

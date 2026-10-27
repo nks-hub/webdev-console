@@ -65,17 +65,17 @@ function formatBackupSize(size: number): string {
 
 <style scoped>
 .advanced-backups {
-  margin-top: 24px;
+  margin-top: var(--wdc-space-5);
   border-top: 1px solid var(--wdc-border);
-  padding-top: 16px;
+  padding-top: var(--wdc-space-4);
 }
 
 .advanced-backups-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-3);
 }
 
 .advanced-backups-title {
@@ -85,7 +85,7 @@ function formatBackupSize(size: number): string {
 
 .advanced-backups-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
 }

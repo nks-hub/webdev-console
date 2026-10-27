@@ -83,6 +83,9 @@ import { ElMessage } from 'element-plus'
 import { browseFolder } from '../../api/daemon'
 import type { FsBrowseResponse, FsEntry } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -110,7 +113,7 @@ async function navigate(path?: string) {
     pathInput.value = res.path
     selectedPath.value = ''
   } catch (e) {
-    ElMessage.error(`Cannot open path: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.openPathFailed', { err: errorMessage(e) }))
   } finally {
     loading.value = false
   }
@@ -152,13 +155,13 @@ watch(() => props.modelValue, (open) => {
 .fb-root {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .fb-pathbar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .fb-path-input {
   flex: 1;
@@ -177,7 +180,7 @@ watch(() => props.modelValue, (open) => {
 }
 
 .fb-empty {
-  padding: 40px 16px;
+  padding: var(--wdc-space-6-5) var(--wdc-space-4);
   text-align: center;
   color: var(--wdc-text-3);
   font-size: 0.85rem;
@@ -186,8 +189,8 @@ watch(() => props.modelValue, (open) => {
 .fb-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   cursor: pointer;
   border-bottom: 1px solid var(--wdc-border);
   transition: background 0.08s;
@@ -225,18 +228,17 @@ watch(() => props.modelValue, (open) => {
 .fb-selection {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
 }
 .fb-selection-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 .fb-selection-path {
   font-family: 'JetBrains Mono', monospace;

@@ -10,6 +10,13 @@ public sealed class HealthMonitor : BackgroundService
     private readonly IServiceProvider _sp;
     private readonly SseService _sse;
     private readonly ILogger<HealthMonitor> _logger;
+    // Last observed state per service. Plugin-managed services (Apache, MySQL,
+    // PHP…) run their own processes rather than going through ProcessManager,
+    // so ProcessManager's "service" event never fired for them: a crash or an
+    // external stop only showed up on the UI's next 5 s poll, and only if the
+    // window happened to be polling. A state change seen here is broadcast as
+    // "service:state" so the UI refreshes immediately.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ServiceState> _lastState = new();
 
     public HealthMonitor(IServiceProvider sp, SseService sse, ILogger<HealthMonitor> logger)
     {
@@ -60,6 +67,18 @@ public sealed class HealthMonitor : BackgroundService
                 try
                 {
                     var status = await module.GetStatusAsync(ct);
+                    var previous = _lastState.TryGetValue(status.Id, out var prev) ? prev : (ServiceState?)null;
+                    _lastState[status.Id] = status.State;
+                    if (previous is not null && previous != status.State)
+                    {
+                        await _sse.BroadcastAsync("service:state", new
+                        {
+                            serviceId = status.Id,
+                            state = status.State.ToString().ToLowerInvariant(),
+                            previous = previous.Value.ToString().ToLowerInvariant(),
+                            pid = status.Pid,
+                        });
+                    }
                     if (status.State == ServiceState.Running)
                     {
                         await _sse.BroadcastAsync("metrics", new

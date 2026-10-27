@@ -25,7 +25,7 @@
         :closable="true"
         @close="loadError = ''"
         show-icon
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
       <el-alert
         v-if="!mkcertInstalled && !loadError"
@@ -34,7 +34,7 @@
         :description="$t('ssl.mkcertNotInstalledDesc')"
         show-icon
         :closable="false"
-        style="margin-bottom: 16px"
+        style="margin-bottom: var(--wdc-space-4)"
       />
 
       <!-- Loading -->
@@ -131,7 +131,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { Lock } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchSites } from '../../api/daemon'
@@ -205,7 +205,7 @@ async function installCA() {
     if (data.ok) ElMessage.success(t('ssl.caInstalled'))
     else ElMessage.error(data.message || 'CA install failed')
   } catch (e) {
-    ElMessage.error(`CA install failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.caInstallFailed', { err: errorMessage(e) }))
   } finally {
     installingCA.value = false
   }
@@ -225,7 +225,7 @@ async function generateCert() {
     })
     const data = await r.json()
     if (data.ok) {
-      ElMessage.success(`Certificate generated for ${genDomain.value}`)
+      ElMessage.success(t('toast.certGenerated', { domain: genDomain.value }))
       showGenerateDialog.value = false
       genDomain.value = ''
       genAliases.value = ''
@@ -234,28 +234,37 @@ async function generateCert() {
       ElMessage.error(data.message || 'Generation failed')
     }
   } catch (e) {
-    ElMessage.error(`Generation failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.generationFailed', { err: errorMessage(e) }))
   } finally {
     generating.value = false
   }
 }
 
 async function revokeCert(domain: string) {
+  try {
+    await ElMessageBox.confirm(
+      t('ssl.revokeConfirmMessage', { domain }),
+      t('ssl.revokeConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('ssl.revoke'), cancelButtonText: t('common.cancel') },
+    )
+  } catch {
+    return
+  }
   revoking.value.add(domain)
   try {
-    const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs/${domain}`, {
+    const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs/${encodeURIComponent(domain)}`, {
       method: 'DELETE',
       headers: authHeaders(),
     })
     const data = await r.json()
     if (data.ok) {
-      ElMessage.success(`Certificate for ${domain} revoked`)
+      ElMessage.success(t('toast.certRevoked', { domain }))
       await loadCerts()
     } else {
       ElMessage.error(data.message || 'Revoke failed')
     }
   } catch (e) {
-    ElMessage.error(`Revoke failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.revokeFailed', { err: errorMessage(e) }))
   } finally {
     revoking.value.delete(domain)
   }
@@ -281,14 +290,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 0;
-  margin-bottom: 20px;
+  padding: 0 0 var(--wdc-space-4);
+  margin-bottom: var(--wdc-space-4-5);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .page-title {
@@ -299,12 +308,12 @@ onMounted(() => {
 
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
-.page-body { padding: 0 24px 24px; }
+.page-body { padding: 0 0 24px; }
 
 .cert-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .cert-card {
@@ -314,7 +323,7 @@ onMounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 16px 20px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
   transition: border-color 0.15s;
 }
 
@@ -325,8 +334,8 @@ onMounted(() => {
 .cert-domain {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--wdc-space-2);
+  margin-bottom: var(--wdc-space-1);
 }
 
 .cert-lock { font-size: 1rem; }
@@ -339,8 +348,8 @@ onMounted(() => {
 
 .cert-meta {
   display: flex;
-  gap: 16px;
-  margin-bottom: 4px;
+  gap: var(--wdc-space-4);
+  margin-bottom: var(--wdc-space-1);
 }
 
 .cert-meta-item {
@@ -349,7 +358,7 @@ onMounted(() => {
 }
 
 .cert-paths {
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
 }
 
 .cert-path {

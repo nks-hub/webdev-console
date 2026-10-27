@@ -40,14 +40,14 @@ defineEmits<{
 
 <style scoped>
 .db-list {
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
 }
 
 .db-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
 }
 
@@ -63,8 +63,8 @@ defineEmits<{
 
 .db-create {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--wdc-space-2);
+  margin-top: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 </style>

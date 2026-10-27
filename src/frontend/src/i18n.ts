@@ -22,13 +22,26 @@ function detectInitialLocale(): Locale {
   return DEFAULT_LOCALE
 }
 
+// Czech has three plural forms: 1 | 2–4 | 0 and 5+ ("1 host | 2 hosti |
+// 5 hostů"). vue-i18n's default rule maps three-form messages to
+// zero | one | many, which rendered "1 hosti" and "2 hostů".
+function czechPluralRule(choice: number, choicesLength: number): number {
+  const n = Math.abs(choice)
+  if (choicesLength === 3) return n === 1 ? 0 : n >= 2 && n <= 4 ? 1 : 2
+  if (choicesLength === 2) return n === 1 ? 0 : 1
+  return Math.min(n, choicesLength - 1)
+}
+
 export const i18n = createI18n({
   legacy: false,
   locale: detectInitialLocale(),
   fallbackLocale: DEFAULT_LOCALE,
   warnHtmlMessage: false,
   messages: { en, cs },
+  pluralRules: { cs: czechPluralRule },
 })
+
+document.documentElement.lang = i18n.global.locale.value
 
 export function setLocale(locale: Locale) {
   if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale)) return

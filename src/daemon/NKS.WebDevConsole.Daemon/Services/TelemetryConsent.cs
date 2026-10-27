@@ -100,9 +100,7 @@ public sealed class TelemetryConsent
                 consentGivenUtc = ConsentGivenUtc?.ToString("O"),
             };
             // Atomic write: temp + rename survives a daemon crash mid-write.
-            var tmp = ConsentFilePath + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(payload, IndentedJson));
-            File.Move(tmp, ConsentFilePath, overwrite: true);
+            NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(ConsentFilePath, JsonSerializer.Serialize(payload, IndentedJson));
         }
     }
 

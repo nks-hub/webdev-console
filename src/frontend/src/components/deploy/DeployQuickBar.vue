@@ -220,7 +220,7 @@ async function onFire(): Promise<void> {
 
 <style scoped>
 .quick-bar {
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 1px dashed var(--wdc-border-strong);
   border-radius: var(--wdc-radius);
@@ -228,7 +228,7 @@ async function onFire(): Promise<void> {
 .quick-bar-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
 }
 .quick-label {

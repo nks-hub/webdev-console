@@ -246,7 +246,7 @@ async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
 .cmd-center { display: flex; flex-direction: column; gap: 24px; container-type: inline-size; }
 .cmd-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   grid-template-columns: 1fr;
 }
 @container (min-width: 720px) { .cmd-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -255,12 +255,12 @@ async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
 .cmd-group-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  margin-bottom: 14px;
+  margin-bottom: var(--wdc-space-3-5);
   box-shadow: var(--wdc-shadow-sm);
 }
 .cmd-group-count {

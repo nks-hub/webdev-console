@@ -326,10 +326,10 @@ async function refresh(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  gap: var(--wdc-space-3);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;
@@ -338,16 +338,15 @@ async function refresh(): Promise<void> {
   letter-spacing: -0.02em;
   color: var(--wdc-text);
 }
-.page > *:not(.page-header) { padding: 0 24px; }
 .page > .page-header + * { padding-top: 16px; }
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lock-count-badge {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
+  margin-left: var(--wdc-space-1-5);
+  padding: 1px var(--wdc-space-1-5);
   background: var(--el-color-warning);
   color: white;
-  border-radius: 9px;
+  border-radius: var(--wdc-radius);
   font-size: 11px;
   font-weight: 700;
 }
@@ -379,7 +378,7 @@ async function refresh(): Promise<void> {
   background: var(--el-color-warning-light-7);
 }
 .quick-grant-btn {
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
   min-height: 28px;
   font-size: 0.76rem;
 }
@@ -414,7 +413,7 @@ async function refresh(): Promise<void> {
 
   .quick-grant-btn {
     display: flex;
-    margin: 4px 0 0;
+    margin: var(--wdc-space-1) 0 0;
   }
 }
 </style>

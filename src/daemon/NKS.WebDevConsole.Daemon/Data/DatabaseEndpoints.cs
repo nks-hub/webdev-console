@@ -19,20 +19,105 @@ namespace NKS.WebDevConsole.Daemon.Data;
 /// </summary>
 internal static class DatabaseEndpoints
 {
+    // Limits for statements an AI client runs without an approved intent.
+    internal const int McpReadOnlyMaxRows = 1000;
+    internal const int McpReadOnlyTimeoutSeconds = 15;
+
+    // Intent scopes of the database admin routes. wdc_request_confirmation in
+    // services/mcp-server/src/tools/confirmation.ts mints intents with the same
+    // (kind, domain, host) triple, or the approved intent is rejected.
+    internal const string MySqlRootResetKind = "mysql_root_reset";
+    internal const string MySqlUserDropKind = "mysql_user_drop";
+    internal const string PostgresRootResetKind = "postgres_root_reset";
+    internal const string MySqlIntentHost = "*mysql*";
+    internal const string PostgresIntentHost = "*postgres*";
+    internal const string MySqlRootIntentDomain = "root";
+    internal const string PostgresRootIntentDomain = "postgres";
+
+    /// <summary>Intent domain for dropping a MySQL account: <c>user@host</c>.</summary>
+    internal static string MySqlUserIntentDomain(string userName, string host) => $"{userName}@{host}";
+
+    /// <summary>
+    /// MCP intent gate shared by the database admin routes. Callers holding the
+    /// MCP token, or any caller that sends X-Intent-Token, must present an
+    /// approved intent for (<paramref name="kind"/>, <paramref name="domain"/>,
+    /// <paramref name="host"/>); a typed "YES" from the agent is not consent.
+    /// GUI calls without the header pass unchanged. Returns the error response,
+    /// or null when the request may proceed.
+    /// </summary>
+    internal static async Task<IResult?> IntentGateAsync(
+        HttpContext ctx,
+        IDeployIntentValidator intentValidator,
+        string kind,
+        string domain,
+        string host)
+    {
+        var intentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+        if (string.IsNullOrEmpty(intentToken) && !NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
+            return null;
+
+        // The validator ignores X-Allow-Unconfirmed for the MCP token.
+        var allowUnconfirmed = string.Equals(
+            ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
+            StringComparison.OrdinalIgnoreCase);
+        var verdict = await intentValidator.ValidateAndConsumeAsync(
+            intentToken ?? "", kind, domain, host, allowUnconfirmed, ctx.RequestAborted);
+        return verdict.Ok
+            ? null
+            : Results.Json(
+                new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
+                statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
+
     public static void MapDatabaseEndpoints(
         this WebApplication app,
         PluginLoader pluginLoader,
         Database database,
         JsonSerializerOptions caseInsensitiveJson)
     {
-        // F49c: port probe cache — set once per daemon boot by ResolveMysqlPortWithFallback.
+        // F49c: port probe cache. A port that authenticated is cached for the
+        // daemon's lifetime; the plugin-default fallback is cached only briefly
+        // so a mysqld that comes up after the first probe (startup race,
+        // manual start) is found on a later request instead of never.
         int? _cachedMysqlPort = null;
+        int? _fallbackMysqlPort = null;
+        DateTime _fallbackMysqlPortUntil = DateTime.MinValue;
         object _mysqlPortProbeLock = new();
+        var fallbackPortTtl = TimeSpan.FromSeconds(30);
+
+        // Pings one port with the WDC root password. Bounded by a hard 3 s
+        // timeout — a non-MySQL listener on the port used to hang the probe
+        // (and the request thread blocked on it) indefinitely.
+        static async Task<bool> PingMysqlPortAsync(string mysqladmin, int port, string password)
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            try
+            {
+                var args = new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "--connect-timeout=2", "ping" };
+                var env = new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
+                var result = await CliWrap.Cli.Wrap(mysqladmin)
+                    .WithArguments(args)
+                    .WithEnvironmentVariables(env)
+                    .WithValidation(CliWrap.CommandResultValidation.None)
+                    .ExecuteBufferedAsync(cts.Token)
+                    .ConfigureAwait(false);
+                // `mysqladmin ping` exits 0 and prints "mysqld is alive" even when
+                // authentication fails, so an external mysqld (MAMP, XAMPP) would
+                // otherwise win the probe. Reject the port when access was denied.
+                return result.ExitCode == 0
+                    && result.StandardOutput.Contains("mysqld is alive", StringComparison.OrdinalIgnoreCase)
+                    && !result.StandardError.Contains("Access denied", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         // F49c: Resolve MySQL port with explicit-setting → live-prober → plugin-default
         // fallback chain. Plugin Port default (3306) collides with MAMP on user's machine,
         // so step 2 actively probes a small port sweep with the WDC password: the real
-        // WDC mysqld is whichever port authenticates. Cached once per daemon boot.
+        // WDC mysqld is whichever port authenticates.
         int ResolveMysqlPortWithFallback(SettingsStore settings, IServiceProvider sp, PluginLoader loader, BinaryManager bm)
         {
             // Step 1: explicit user config wins always, no probing.
@@ -41,42 +126,37 @@ internal static class DatabaseEndpoints
 
             // Step 2: probe cache — avoid repeating the probe on every endpoint hit.
             if (_cachedMysqlPort is int cached) return cached;
+            if (_fallbackMysqlPort is int recent && DateTime.UtcNow < _fallbackMysqlPortUntil) return recent;
 
             lock (_mysqlPortProbeLock)
             {
                 if (_cachedMysqlPort is int doubleChecked) return doubleChecked;
+                if (_fallbackMysqlPort is int recent2 && DateTime.UtcNow < _fallbackMysqlPortUntil) return recent2;
 
                 // Step 3: try port list with WDC root password via mysqladmin ping.
+                // Ports are probed in parallel, so the worst case is one 3 s
+                // timeout rather than four sequential ones.
                 var password = NKS.WebDevConsole.Core.Services.MySqlRootPassword.TryRead();
                 var mysql = bm.ListInstalled("mysql").FirstOrDefault();
                 var mysqladmin = mysql?.Executable is null ? null : Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysqladmin.exe" : "mysqladmin");
                 if (!string.IsNullOrEmpty(password) && mysqladmin is not null && File.Exists(mysqladmin))
                 {
                     var candidatePorts = new[] { 3306, 3307, 3308, 3309 };
-                    foreach (var port in candidatePorts)
+                    var alive = Task.Run(() => Task.WhenAll(
+                            candidatePorts.Select(port => PingMysqlPortAsync(mysqladmin, port, password))))
+                        .GetAwaiter().GetResult();
+                    for (var i = 0; i < candidatePorts.Length; i++)
                     {
-                        try
+                        if (alive[i])
                         {
-                            var args = new[] { "-h", "127.0.0.1", "-P", port.ToString(), "-u", "root", "ping" };
-                            var env = new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
-                            var result = CliWrap.Cli.Wrap(mysqladmin)
-                                .WithArguments(args)
-                                .WithEnvironmentVariables(env)
-                                .WithValidation(CliWrap.CommandResultValidation.None)
-                                .ExecuteBufferedAsync()
-                                .ConfigureAwait(false)
-                                .GetAwaiter().GetResult();
-                            if (result.ExitCode == 0 && result.StandardOutput.Contains("mysqld is alive", StringComparison.OrdinalIgnoreCase))
-                            {
-                                _cachedMysqlPort = port;
-                                return port;
-                            }
+                            _cachedMysqlPort = candidatePorts[i];
+                            return candidatePorts[i];
                         }
-                        catch { /* skip port, try next */ }
                     }
                 }
 
                 // Step 4: fall back to plugin default (3306) — prober exhausted.
+                var fallback = 3306;
                 try
                 {
                     var mysqlPlugin = loader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.mysql");
@@ -89,15 +169,16 @@ internal static class DatabaseEndpoints
                             if (module is not null)
                             {
                                 var portVal = moduleType.GetProperty("Port")?.GetValue(module);
-                                if (portVal is int p && p > 0) { _cachedMysqlPort = p; return p; }
+                                if (portVal is int p && p > 0) fallback = p;
                             }
                         }
                     }
                 }
                 catch { }
 
-                _cachedMysqlPort = 3306;
-                return 3306;
+                _fallbackMysqlPort = fallback;
+                _fallbackMysqlPortUntil = DateTime.UtcNow + fallbackPortTtl;
+                return fallback;
             }
         }
 
@@ -239,8 +320,12 @@ internal static class DatabaseEndpoints
             BinaryManager bm,
             SettingsStore settings,
             IServiceProvider sp,
-            ILoggerFactory lf) =>
+            ILoggerFactory lf,
+            IDeployIntentValidator intentValidator) =>
         {
+            if (await IntentGateAsync(ctx, intentValidator, PostgresRootResetKind, PostgresRootIntentDomain, PostgresIntentHost) is { } gate)
+                return gate;
+
             var log = lf.CreateLogger("PostgreSqlResetPassword");
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var newPassword = PostgreSqlHelper.GetPayloadValue(body, "newPassword", "newPwd", "password");
@@ -535,8 +620,12 @@ internal static class DatabaseEndpoints
             BinaryManager bm,
             SettingsStore settings,
             IServiceProvider sp,
-            ILoggerFactory lf) =>
+            ILoggerFactory lf,
+            IDeployIntentValidator intentValidator) =>
         {
+            if (await IntentGateAsync(ctx, intentValidator, MySqlRootResetKind, MySqlRootIntentDomain, MySqlIntentHost) is { } gate)
+                return gate;
+
             var log = lf.CreateLogger("MySqlResetPassword");
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var newPwd = MySqlPasswordHelper.GetPayloadValue(body, "newPwd", "newPassword");
@@ -918,7 +1007,7 @@ internal static class DatabaseEndpoints
             }
         });
 
-        app.MapPost("/api/plugins/mysql/users/drop", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+        app.MapPost("/api/plugins/mysql/users/drop", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp, IDeployIntentValidator intentValidator) =>
         {
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
@@ -930,6 +1019,9 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { success = false, error = userError });
             if (MySqlUserHelper.ValidateHost(host) is { } hostError)
                 return Results.BadRequest(new { success = false, error = hostError });
+
+            if (await IntentGateAsync(ctx, intentValidator, MySqlUserDropKind, MySqlUserIntentDomain(userName, host), MySqlIntentHost) is { } gate)
+                return gate;
 
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
@@ -1038,13 +1130,13 @@ internal static class DatabaseEndpoints
             // host — keeps a deploy intent from being reused as a database
             // intent and vice versa.
             var dbIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dbIntentToken))
+            if (!string.IsNullOrEmpty(dbIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var dbAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dbVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dbIntentToken, "database_drop", domain: name, host: "*db*", dbAllowUnconfirmed, ct);
+                    dbIntentToken ?? "", "database_drop", domain: name, host: "*db*", dbAllowUnconfirmed, ct);
                 if (!dbVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbVerdict.Reason, detail = dbVerdict.Detail },
@@ -1163,24 +1255,57 @@ internal static class DatabaseEndpoints
             if (!IsValidDatabaseName(name))
                 return Results.BadRequest(new { error = "Invalid database name" });
 
+            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+            var sql = body?.GetValueOrDefault("sql") ?? "";
+            if (string.IsNullOrWhiteSpace(sql))
+                return Results.BadRequest(new { error = "sql required" });
+
+            // An MCP-token caller (AI agent) runs read-only statements freely;
+            // anything the guard cannot prove read-only needs a confirmed intent.
             var dbqIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dbqIntentToken))
+            if (!string.IsNullOrEmpty(dbqIntentToken)
+                || (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && !NKS.WebDevConsole.Daemon.Mcp.SqlReadOnlyGuard.IsReadOnly(sql)))
             {
                 var dbqAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dbqVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dbqIntentToken, "database_query", domain: name, host: "*db*", dbqAllowUnconfirmed, ct);
+                    dbqIntentToken ?? "", "database_query", domain: name, host: "*db*", dbqAllowUnconfirmed, ct);
                 if (!dbqVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
             }
 
-            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
-            var sql = body?.GetValueOrDefault("sql") ?? "";
-            if (string.IsNullOrWhiteSpace(sql))
-                return Results.BadRequest(new { error = "sql required" });
+            // AI client without an approved intent: the guard above let the
+            // statement through as read-only; run it so that the server
+            // enforces that too (read-only transaction, single statement,
+            // time limit, row cap) instead of handing it to the mysql CLI.
+            if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && string.IsNullOrEmpty(dbqIntentToken))
+            {
+                try
+                {
+                    var ro = await MakeMySqlDriverV2(settings, sp, bm).ExecuteReadOnlyQueryAsync(
+                        name, sql, McpReadOnlyMaxRows, McpReadOnlyTimeoutSeconds, ct);
+                    var roHeaders = ro.Set.Columns.Select(c => c.Name).ToArray();
+                    var roRows = ro.Set.Rows.Select(r =>
+                    {
+                        var row = new Dictionary<string, string?>();
+                        for (int i = 0; i < roHeaders.Length && i < r.Count; i++)
+                            row[roHeaders[i]] = r[i]?.ToString();
+                        return row;
+                    }).ToList();
+                    return Results.Ok(new { columns = roHeaders, rows = roRows, rowCount = roRows.Count, truncated = ro.Truncated });
+                }
+                catch (MySqlConnector.MySqlException mex)
+                {
+                    return Results.BadRequest(new { error = mex.Message, code = mex.Number, sqlState = mex.SqlState });
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
                 return Results.BadRequest(new { error = "MySQL not installed" });
@@ -1267,13 +1392,13 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "Invalid database name" });
 
             var impIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(impIntentToken))
+            if (!string.IsNullOrEmpty(impIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
                 var impAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var impVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    impIntentToken, "database_import", domain: name, host: "*db*", impAllowUnconfirmed, ct);
+                    impIntentToken ?? "", "database_import", domain: name, host: "*db*", impAllowUnconfirmed, ct);
                 if (!impVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = impVerdict.Reason, detail = impVerdict.Detail },
@@ -1440,24 +1565,52 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "Invalid database name" });
 
             // MCP intent gate parity with /api/databases/{name}/query (kind=database_query).
+            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+            var sql = body?.GetValueOrDefault("sql") ?? "";
+            if (string.IsNullOrWhiteSpace(sql))
+                return Results.BadRequest(new { error = "sql required" });
+
+            // An MCP-token caller (AI agent) runs read-only statements freely;
+            // anything the guard cannot prove read-only needs a confirmed intent.
             var dbqIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(dbqIntentToken))
+            if (!string.IsNullOrEmpty(dbqIntentToken)
+                || (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && !NKS.WebDevConsole.Daemon.Mcp.SqlReadOnlyGuard.IsReadOnly(sql)))
             {
                 var dbqAllowUnconfirmed = string.Equals(
                     ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
                     StringComparison.OrdinalIgnoreCase);
                 var dbqVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    dbqIntentToken, "database_query", domain: db, host: "*db*", dbqAllowUnconfirmed, ct);
+                    dbqIntentToken ?? "", "database_query", domain: db, host: "*db*", dbqAllowUnconfirmed, ct);
                 if (!dbqVerdict.Ok)
                     return Results.Json(
                         new { error = "intent_rejected", reason = dbqVerdict.Reason, detail = dbqVerdict.Detail },
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
             }
 
-            var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(ct);
-            var sql = body?.GetValueOrDefault("sql") ?? "";
-            if (string.IsNullOrWhiteSpace(sql))
-                return Results.BadRequest(new { error = "sql required" });
+            if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && string.IsNullOrEmpty(dbqIntentToken))
+            {
+                try
+                {
+                    var ro = await MakeMySqlDriverV2(settings, sp, bm).ExecuteReadOnlyQueryAsync(
+                        db, sql, McpReadOnlyMaxRows, McpReadOnlyTimeoutSeconds, ct);
+                    return Results.Ok(new QueryExecutionResult
+                    {
+                        Results = new[] { ro.Set },
+                        ExecutionTimeMs = ro.Set.ExecutionTimeMs,
+                        Warnings = ro.Truncated
+                            ? new[] { new QueryWarning("Note", 0, $"Result truncated to {McpReadOnlyMaxRows} rows") }
+                            : null,
+                    });
+                }
+                catch (MySqlConnector.MySqlException mex)
+                {
+                    return Results.BadRequest(new { error = mex.Message, code = mex.Number, sqlState = mex.SqlState });
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
 
             try
             {

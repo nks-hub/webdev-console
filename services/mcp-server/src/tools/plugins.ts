@@ -4,7 +4,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
+import { ConfirmYesSchema, capabilityNote } from '../schemas.js'
+
+// Installing and uninstalling plugins are the daemon's plugin_install capability.
+const PLUGIN_INSTALL = capabilityNote('Plugin install and uninstall')
 
 const PluginIdSchema = z
   .string()
@@ -118,10 +123,19 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         'Download and install a plugin from a marketplace entry. Requires id + downloadUrl ' +
         'from the marketplace catalog. The daemon will need a restart after install for the ' +
         'plugin to be active.\n\n' +
-        'Args:\n  id: Plugin id.\n  downloadUrl: http(s) URL.',
+        `${PLUGIN_INSTALL} Each install needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "plugin_install", target: id).\n\n' +
+        'Args:\n  id: Plugin id.\n  downloadUrl: http(s) URL.\n' +
+        '  sha256: SHA-256 of the archive from the same catalog entry (required for non-local URLs).',
       inputSchema: {
         id: PluginIdSchema,
         downloadUrl: PluginDownloadUrlSchema,
+        sha256: z
+          .string()
+          .regex(/^[0-9a-fA-F]{64}$/, 'sha256 must be 64 hex characters')
+          .optional()
+          .describe('SHA-256 of the plugin archive, from the marketplace entry'),
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -130,7 +144,36 @@ export function registerPluginsTools(server: McpServer, opts: RegisterOptions): 
         openWorldHint: true,
       },
     },
-    async ({ id, downloadUrl }) =>
-      safe(() => daemonClient.post('/api/plugins/install', { id, downloadUrl })),
+    async ({ id, downloadUrl, sha256, intentToken }) =>
+      safe(() =>
+        daemonClient.post(
+          '/api/plugins/install',
+          sha256 ? { id, downloadUrl, sha256 } : { id, downloadUrl },
+          intentHeaders(intentToken),
+        ),
+      ),
+  )
+
+  server.registerTool(
+    'wdc_uninstall_plugin',
+    {
+      title: 'Uninstall plugin (destructive)',
+      description:
+        'DESTRUCTIVE: Remove an installed plugin from disk. Disable it first (wdc_disable_plugin); the ' +
+        'daemon refuses while it is enabled or while an enabled plugin depends on it. The plugin stays ' +
+        'loaded until the daemon restarts.\n\n' +
+        `${PLUGIN_INSTALL} Each uninstall needs the user's approval: ` +
+        'wdc_request_confirmation(operation: "plugin_uninstall", target: id).\n\n' +
+        'Args:\n  id: Plugin id.\n  confirm: Must be "YES".\n  intentToken: Approved intent.\n\n' +
+        'Returns: the daemon\'s result, including restartRequired.',
+      inputSchema: {
+        id: PluginIdSchema,
+        confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ id, intentToken }) =>
+      safe(() => daemonClient.delete(`/api/plugins/${encodeURIComponent(id)}`, intentHeaders(intentToken))),
   )
 }

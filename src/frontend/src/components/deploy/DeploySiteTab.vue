@@ -23,9 +23,6 @@
         <el-button type="primary" size="large" @click="wizardOpen = true">
           {{ t('deploy.empty.startWizard') }}
         </el-button>
-        <el-button size="large" plain @click="$emit('import-config')">
-          {{ t('deploy.empty.importExisting') }}
-        </el-button>
       </div>
       <p class="site-tab-foot">
         <el-icon><InfoFilled /></el-icon>
@@ -92,7 +89,6 @@ import type { DeployDiff } from './DiffSummary.vue'
 import type { PreflightCheck } from './PreflightChecklist.vue'
 
 const props = defineProps<{ domain: string }>()
-defineEmits<{ 'import-config': [] }>()
 
 const deployStore = useDeployStore()
 const loading = ref(true)
@@ -169,6 +165,6 @@ function onWizardDone(_form: unknown): void {
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
 
 .deploy-sub-tabs :deep(.el-tabs__content) {
-  padding: 16px 0 0;
+  padding: var(--wdc-space-4) 0 0;
 }
 </style>

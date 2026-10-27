@@ -120,7 +120,7 @@
 
     <!-- Filters row -->
     <div class="activity-filters">
-      <el-select v-model="dangerFilter" size="small" :placeholder="t('mcpActivity.filter.allDanger')" clearable style="width: 160px">
+      <el-select v-model="dangerFilter" size="small" :placeholder="t('mcpActivity.filter.allDanger')" :aria-label="t('mcpActivity.filter.dangerAria')" clearable style="width: 160px">
         <el-option :label="t('mcpActivity.danger.read')" value="read" />
         <el-option :label="t('mcpActivity.danger.mutate')" value="mutate" />
         <el-option :label="t('mcpActivity.danger.destructive')" value="destructive" />
@@ -162,17 +162,22 @@
         class="session-card"
         :class="{ 'has-destructive': session.destructives > 0, 'has-error': session.errors > 0 }"
       >
+        <!-- The whole header toggles on click; keyboard and screen-reader
+             users get a real button, so the session-filter pill and the
+             header actions are not nested inside another control. -->
         <div
           class="session-header"
-          role="button"
-          tabindex="0"
-          :aria-expanded="!collapsedSessions.has(session.key)"
-          :aria-label="t('mcpActivity.session.toggle', { caller: session.caller })"
           @click="toggleSession(session.key)"
-          @keydown.enter.prevent="toggleSession(session.key)"
-          @keydown.space.prevent="toggleSession(session.key)"
         >
-          <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
+          <button
+            type="button"
+            class="session-toggle"
+            :aria-expanded="!collapsedSessions.has(session.key)"
+            :aria-label="t('mcpActivity.session.toggle', { caller: session.caller })"
+            @click.stop="toggleSession(session.key)"
+          >
+            <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
+          </button>
           <code class="mono caller-pill">{{ session.caller }}</code>
           <code
             v-if="session.sessionId"
@@ -210,15 +215,17 @@
         </div>
         <div v-if="!collapsedSessions.has(session.key)" class="session-body">
           <div v-for="row in groupReads(session.entries, session.key)" :key="row.key">
-            <div v-if="row.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(row.key)">
+            <div v-if="row.kind === 'collapsed-reads'" v-activate class="collapsed-reads-row" @click="expandReads(row.key)">
               <el-icon class="chev"><ArrowRight /></el-icon>
               <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
               <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
             </div>
             <template v-else>
               <div
+                v-activate
                 class="call-row clickable-row"
                 :class="[`danger-${row.entry.dangerLevel}`, { expanded: expandedRows.has(row.entry.id) }]"
+                :aria-expanded="expandedRows.has(row.entry.id)"
                 @click="toggleRow(row.entry.id)"
               >
                 <HealthStatusDot :level="dangerToDotLevel(row.entry.dangerLevel)" />
@@ -268,7 +275,7 @@
     <!-- Flat view (legacy / debugging) -->
     <div v-else class="activity-timeline">
       <div v-for="row in flatView" :key="row.key" class="activity-group" :class="{ collapsed: row.kind === 'collapsed-reads' }">
-        <div v-if="row.kind === 'collapsed-reads'" class="collapsed-reads-row" @click="expandReads(row.key)">
+        <div v-if="row.kind === 'collapsed-reads'" v-activate class="collapsed-reads-row" @click="expandReads(row.key)">
           <el-icon class="chev"><ArrowRight /></el-icon>
           <span class="muted">{{ t('mcpActivity.readsCollapsed', { n: row.count }) }}</span>
           <span class="time-range muted">{{ formatRelative(row.lastAt) }}</span>
@@ -653,7 +660,7 @@ onBeforeUnmount(() => {
 .analytics-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 @media (max-width: 900px) {
   .analytics-row { grid-template-columns: 1fr; }
@@ -661,7 +668,7 @@ onBeforeUnmount(() => {
 .analytics-timeline, .analytics-toptools { min-width: 0; }
 .perf-kpis {
   display: flex; flex-wrap: wrap; gap: 8px;
-  padding: 12px 16px;
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -670,11 +677,11 @@ onBeforeUnmount(() => {
 .kpi {
   flex: 1 1 100px;
   min-width: 90px;
-  padding: 4px 10px;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
   border-left: 2px solid var(--el-border-color);
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .kpi.warn { border-left-color: var(--el-color-warning); }
 .kpi.danger { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
@@ -684,13 +691,13 @@ onBeforeUnmount(() => {
   margin-left: auto;
   font-size: 10px;
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
   letter-spacing: 0.3px;
+  font-family: var(--wdc-font-display);
 }
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -716,16 +723,18 @@ onBeforeUnmount(() => {
   outline: 2px solid var(--el-color-primary-light-5);
 }
 .stat-tile.clickable:focus-visible,
-.session-header:focus-visible,
+.session-toggle:focus-visible,
 .session-pill.clickable:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
 }
 .stat-num { font-size: 20px; font-weight: 600; }
-.stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-label { font-size: 0.82rem; color: var(--el-text-color-secondary);
+  font-family: var(--wdc-font-display);
+}
 .activity-filters {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
 }
 .total-count { font-size: 12px; }
 
@@ -749,9 +758,18 @@ onBeforeUnmount(() => {
 .session-card:last-child { border-bottom: none; }
 .session-card.has-destructive { border-left-color: var(--el-color-danger); }
 .session-card.has-error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
+.session-toggle {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
 .session-header {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   cursor: pointer;
   user-select: none;
@@ -770,8 +788,8 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 .count-pill {
-  padding: 2px 10px;
-  border-radius: 999px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
+  border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 700;
   background: var(--wdc-surface-2);
@@ -796,7 +814,7 @@ onBeforeUnmount(() => {
 .activity-group:last-child { border-bottom: none; }
 .collapsed-reads-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   cursor: pointer;
   font-size: 12px;
@@ -806,7 +824,7 @@ onBeforeUnmount(() => {
 .collapsed-reads-row .chev { font-size: 10px; }
 .call-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   font-size: 12px;
   border-top: 1px solid var(--wdc-border);
   transition: background 0.12s;
@@ -817,7 +835,7 @@ onBeforeUnmount(() => {
 .call-row.clickable-row { cursor: pointer; }
 .call-row.expanded { background: var(--wdc-accent-dim); }
 .row-detail {
-  padding: 12px 18px 14px 32px;
+  padding: var(--wdc-space-3) var(--wdc-space-4-5) var(--wdc-space-3-5) var(--wdc-space-6);
   background: var(--wdc-surface-2);
   border-top: 1px dashed var(--wdc-border);
   font-size: 12px;
@@ -825,14 +843,14 @@ onBeforeUnmount(() => {
 .detail-grid {
   display: grid;
   grid-template-columns: 120px 1fr;
-  gap: 4px 12px;
+  gap: var(--wdc-space-1) var(--wdc-space-3);
 }
 .detail-label {
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.5px;
-  padding-top: 2px;
+  padding-top: var(--wdc-space-0-5);
+  font-family: var(--wdc-font-display);
 }
 .detail-value { word-break: break-all; }
 .detail-value.clickable { cursor: pointer; color: var(--el-color-primary); }
@@ -842,8 +860,8 @@ onBeforeUnmount(() => {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 10px 12px;
-  margin: 4px 0;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
+  margin: var(--wdc-space-1) 0;
   font-size: 11px;
   max-height: 200px;
   overflow: auto;
@@ -855,10 +873,10 @@ onBeforeUnmount(() => {
 .tool-name { font-weight: 600; }
 .args-preview { color: var(--el-text-color-secondary); }
 .session-pill, .caller-pill {
-  padding: 2px 8px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 10px;
   font-weight: 500;
 }

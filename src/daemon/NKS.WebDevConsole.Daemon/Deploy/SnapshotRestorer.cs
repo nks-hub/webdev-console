@@ -212,20 +212,17 @@ public sealed class SnapshotRestorer : ISnapshotRestorer
                 $"port={conn.Port}\n";
             defaultsFile = Path.Combine(Path.GetTempPath(),
                 $"wdc-mysqlrestore-{Guid.NewGuid():N}.cnf");
-            await File.WriteAllTextAsync(defaultsFile, defaultsContent, ct);
-            if (!OperatingSystem.IsWindows())
-            {
-                try
-                {
-                    new FileInfo(defaultsFile).UnixFileMode =
-                        UnixFileMode.UserRead | UnixFileMode.UserWrite;
-                }
-                catch { /* best effort */ }
-            }
+            await NKS.WebDevConsole.Daemon.Config.SecretFile.WriteAllTextAsync(defaultsFile, defaultsContent, ct);
 
             // Stream gunzip → mysql client stdin.
             await using var src = File.OpenRead(archive);
             await using var gz = new GZipStream(src, CompressionMode.Decompress);
+            // The database name comes from the site's .env (a cloned repo). As a
+            // positional argument, a value starting with '-' would be parsed as
+            // another option, so refuse it rather than pass it on.
+            if (string.IsNullOrWhiteSpace(conn.Database) || conn.Database.StartsWith('-')
+                || conn.Database.Any(char.IsControl))
+                throw new InvalidOperationException($"Refusing database name '{conn.Database}' from .env");
             var result = await Cli.Wrap(mysqlClient)
                 .WithArguments(new[]
                 {

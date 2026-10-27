@@ -56,6 +56,34 @@ public class PluginLoaderTests
     }
 
     [Fact]
+    public void EnumeratePluginCandidates_IncludesInstalledSubfolders_SkipsStagingSdkAndBuildLeftovers()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "nks.wdc.redis"));
+        Directory.CreateDirectory(Path.Combine(root, "nks.wdc.mailpit.staging"));
+        Directory.CreateDirectory(Path.Combine(root, "cs"));
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "NKS.WebDevConsole.Plugin.Apache.dll"), "");
+            File.WriteAllText(Path.Combine(root, "NKS.WebDevConsole.Plugin.SDK.dll"), "");
+            File.WriteAllText(Path.Combine(root, "nks.wdc.redis", "plugin.json"), "{}");
+            File.WriteAllText(Path.Combine(root, "nks.wdc.redis", "NKS.WebDevConsole.Plugin.Redis.dll"), "");
+            File.WriteAllText(Path.Combine(root, "nks.wdc.redis", "StackExchange.Redis.dll"), "");
+            File.WriteAllText(Path.Combine(root, "nks.wdc.mailpit.staging", "plugin.json"), "{}");
+            File.WriteAllText(Path.Combine(root, "nks.wdc.mailpit.staging", "NKS.WebDevConsole.Plugin.Mailpit.dll"), "");
+            File.WriteAllText(Path.Combine(root, "cs", "NKS.WebDevConsole.Plugin.Apache.resources.dll"), "");
+
+            var names = PluginLoader.EnumeratePluginCandidates(root).Select(f => Path.GetFileName(f)!).ToList();
+
+            Assert.Equal(new[] { "NKS.WebDevConsole.Plugin.Apache.dll", "NKS.WebDevConsole.Plugin.Redis.dll" }, names);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public void Plugins_IsReadOnly()
     {
         Assert.IsAssignableFrom<IReadOnlyList<LoadedPlugin>>(_loader.Plugins);

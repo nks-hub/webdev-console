@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema } from '../schemas.js'
 
@@ -55,17 +56,21 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
     async () => safe(() => daemonClient.get('/api/binaries/installed')),
   )
 
+  if (opts.readonly) return
+
   server.registerTool(
     'wdc_refresh_catalog',
     {
       title: 'Refresh binary catalog',
       description:
         'Force a refresh of the binary catalog cache from the configured catalog API URL. ' +
-        'Returns the new release count and last-fetch timestamp. Semantically read-only — ' +
-        'only refreshes an in-process cache, never mutates user state.',
+        'Returns the new release count and last-fetch timestamp. Changes only the cached catalog, ' +
+        'not installed binaries.',
       inputSchema: {},
       annotations: {
-        readOnlyHint: true,
+        // It rewrites the catalog cache (a POST), so it is not read-only and
+        // is left out in --readonly mode.
+        readOnlyHint: false,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: true,
@@ -73,8 +78,6 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
     },
     async () => safe(() => daemonClient.post('/api/binaries/catalog/refresh')),
   )
-
-  if (opts.readonly) return
 
   server.registerTool(
     'wdc_install_binary',
@@ -87,6 +90,7 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
       inputSchema: {
         app: AppNameSchema,
         version: VersionSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -95,8 +99,8 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: true,
       },
     },
-    async ({ app, version }) =>
-      safe(() => daemonClient.post('/api/binaries/install', { app, version })),
+    async ({ app, version, intentToken }) =>
+      safe(() => daemonClient.post('/api/binaries/install', { app, version }, intentHeaders(intentToken))),
   )
 
   server.registerTool(

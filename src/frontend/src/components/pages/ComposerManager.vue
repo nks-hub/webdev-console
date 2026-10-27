@@ -17,7 +17,7 @@
           <span class="cm-section-title">{{ $t('composer.version') }}</span>
         </template>
 
-        <div v-if="versionLoading" style="padding: 8px 0">
+        <div v-if="versionLoading" style="padding: var(--wdc-space-2) 0">
           <el-skeleton :rows="2" animated />
         </div>
         <el-descriptions v-else-if="composerVersion" :column="2" border size="small">
@@ -48,7 +48,7 @@
           </div>
         </template>
 
-        <div v-if="loading" style="padding: 8px 0">
+        <div v-if="loading" style="padding: var(--wdc-space-2) 0">
           <el-skeleton :rows="4" animated />
         </div>
 
@@ -262,16 +262,16 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 0 0 var(--wdc-space-4);
   flex-shrink: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .header-title-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .page-title {
@@ -290,27 +290,27 @@ onMounted(() => {
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
 }
 
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: 0 28px 28px;
+  padding: 0 var(--wdc-space-5-5) var(--wdc-space-5-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 
 .cm-card {
-  border-radius: 10px;
+  border-radius: var(--wdc-radius);
 }
 
 .cm-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .cm-section-title {
@@ -328,16 +328,16 @@ onMounted(() => {
 }
 
 .scan-progress {
-  margin-top: 12px;
-  padding: 0 4px;
+  margin-top: var(--wdc-space-3);
+  padding: 0 var(--wdc-space-1);
 }
 
 .composer-not-installed {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 32px 16px;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-6) var(--wdc-space-4);
   text-align: center;
 }
 .composer-not-installed h3 { margin: 4px 0 0; font-size: 1rem; font-weight: 600; }

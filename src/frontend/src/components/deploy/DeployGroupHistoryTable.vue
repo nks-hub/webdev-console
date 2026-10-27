@@ -353,7 +353,7 @@ async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
     await refresh()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Replay failed to start: ${msg}`)
+    ElMessage.error(t('toast.replayFailed', { err: msg }))
   } finally {
     replayingId.value = null
   }
@@ -377,12 +377,12 @@ async function onRollbackGroup(row: DeployGroupEntry): Promise<void> {
   rollingBackId.value = row.id
   try {
     await rollbackDeployGroup(props.domain, row.id)
-    ElMessage.success(`Group rollback dispatched (${hostCount} hosts)`)
+    ElMessage.success(t('toast.groupRollbackDispatched', { n: hostCount }))
     // Refresh to reflect rolling_back_all → rolled_back/partial_failure
     await refresh()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Group rollback failed: ${msg}`)
+    ElMessage.error(t('toast.groupRollbackFailed', { err: msg }))
   } finally {
     rollingBackId.value = null
   }
@@ -395,7 +395,7 @@ async function onOpenHostRun(host: string, deployId: string): Promise<void> {
     await deployStore.loadAndOpenHistorical(props.domain, deployId, host)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Could not open run: ${msg}`)
+    ElMessage.error(t('toast.openRunFailed', { err: msg }))
   } finally {
     openingDeployId.value = null
   }
@@ -446,7 +446,17 @@ onMounted(() => {
   // event AND every group-level state transition triggers a debounced
   // refresh — the list reads come from SQLite and are cheap, so simple
   // re-fetch beats incremental patch logic for now.
+  // The SDK contract names the channel deploy:group-event (plugin backends);
+  // the built-in coordinator broadcasts deploy:group-started and
+  // deploy:group-complete with { groupId, domain }. Listen to all three.
+  const onGroupEvent = (data: unknown) => {
+    const evt = data as { domain?: string; groupId?: string }
+    if (evt.domain && evt.domain !== props.domain) return
+    scheduleRefresh()
+  }
   unsubscribeSse = subscribeEventsMap({
+    'deploy:group-started': onGroupEvent,
+    'deploy:group-complete': onGroupEvent,
     'deploy:group-event': (data) => {
       // Filter to this site only — the SSE channel is global. Without the
       // domain check, opening Site A would refresh whenever Site B's
@@ -481,15 +491,15 @@ watch(() => props.domain, () => refresh())
 .group-history-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-2);
 }
 .group-history-header .group-history-title {
   margin-right: auto;
 }
 .rate-pct {
   font-variant-numeric: tabular-nums;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .group-success-rate {
   display: inline-flex;
@@ -511,23 +521,23 @@ watch(() => props.domain, () => refresh())
   font-size: 13px;
 }
 .phase-icon {
-  margin-right: 4px;
+  margin-right: var(--wdc-space-1);
   vertical-align: -2px;
 }
 .group-children {
-  padding: 12px 24px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-5) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border-top: 1px solid var(--wdc-border);
 }
 .group-children-title {
   font-weight: 600;
   font-size: 12px;
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
   color: var(--el-text-color-regular);
 }
 .group-error {
-  margin-top: 10px;
-  padding: 8px 12px;
+  margin-top: var(--wdc-space-2-5);
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   background: var(--el-color-danger-light-9, #fef0f0);
   border-left: 3px solid var(--el-color-danger);
   border-radius: var(--wdc-radius-sm);

@@ -593,6 +593,27 @@ public sealed class DeployIntentValidatorTests
         finally { Cleanup(path); }
     }
 
+    [Fact]
+    public async Task McpTokenCaller_CannotSelfConfirm_WithAllowUnconfirmed()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var (token, _) = InsertValidIntent(db, confirmedAt: null);
+            McpCallerContext.IsMcpToken = true;
+            var result = await MakeValidator(db).ValidateAndConsumeAsync(
+                token, "deploy", "myapp.loc", "production",
+                allowUnconfirmed: true, CancellationToken.None);
+            Assert.False(result.Ok);
+            Assert.Equal("pending_confirmation", result.Reason);
+        }
+        finally
+        {
+            McpCallerContext.Clear();
+            Cleanup(path);
+        }
+    }
+
     // --- Deny: already_used ---
 
     [Fact]

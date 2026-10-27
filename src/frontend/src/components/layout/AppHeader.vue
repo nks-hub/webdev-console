@@ -1,42 +1,59 @@
 <template>
-  <header class="app-header" style="-webkit-app-region: drag;">
-    <!--
-      Top nav dropped — all routes already exist in AppSidebar
-      (Dashboard, Sites, Databases, MySQL, PostgreSQL, SSL, Settings).
-      Header is now just brand + page title context, freeing space and
-      removing dual-nav cognitive load.
-    -->
-    <div class="header-left" style="-webkit-app-region: no-drag">
-      <span class="app-logo" @click="router.push('/dashboard')">
-        <span class="logo-mark">NW</span>
-        <span class="logo-text">NKS WDC</span>
-      </span>
-      <span class="page-context" v-if="currentTitle">{{ currentTitle }}</span>
-    </div>
+  <header class="app-header">
+    <button
+      type="button"
+      class="icon-btn menu-btn no-drag"
+      :aria-label="t('header.openNavigation')"
+      @click="emit('open-menu')"
+    >
+      <el-icon :size="16"><Menu /></el-icon>
+    </button>
 
-    <div class="header-right" style="-webkit-app-region: no-drag">
-      <!-- F96: self-updater badge. Surfaces when a newer release is
-           tagged on nks-hub/webdev-console; clicking routes to
-           Settings → Update tab where the user can download / install. -->
+    <!-- Looks like a search field, opens the command palette (Ctrl K):
+         sites, services, pages and actions in one place. -->
+    <button type="button" class="search no-drag" @click="requestCommandPalette()">
+      <el-icon :size="14" aria-hidden="true"><Search /></el-icon>
+      <span class="search-text">{{ t('header.searchPlaceholder') }}</span>
+      <kbd>{{ shortcutLabel }}</kbd>
+    </button>
+
+    <div class="header-right no-drag">
       <button
         v-if="updatesStore.hasUpdate"
+        type="button"
         class="update-badge"
-        :title="$t('header.newVersionAvailable', { version: updatesStore.latestVersion })"
+        :title="t('header.newVersionAvailable', { version: updatesStore.latestVersion })"
         @click="openUpdateTab"
       >
-        <span class="update-dot" />
-        <span class="update-label">v{{ updatesStore.latestVersion }}</span>
+        <span class="update-dot" aria-hidden="true" />
+        <span class="update-label mono">v{{ updatesStore.latestVersion }}</span>
       </button>
 
-      <div class="conn-pill" :class="daemonStore.connected ? 'conn-ok' : 'conn-err'">
-        <span class="conn-dot" />
-        {{ daemonStore.connected ? t('header.connected') : t('header.offline') }}
+      <span v-if="!daemonStore.connected" class="conn-pill conn-err" role="status">
+        <span class="conn-dot" aria-hidden="true" />{{ t('header.offline') }}
+      </span>
+
+      <!-- Interface density: Simple hides advanced destinations and
+           columns, Advanced shows everything. One click, both visible. -->
+      <div class="tray" role="group" :aria-label="t('settings.mode.label')" :title="t('settings.mode.description')">
+        <button
+          type="button"
+          class="tray-key"
+          :aria-pressed="uiModeStore.isSimple"
+          @click="uiModeStore.setUiMode('simple')"
+        >{{ t('settings.mode.simple') }}</button>
+        <button
+          type="button"
+          class="tray-key"
+          :aria-pressed="uiModeStore.isAdvanced"
+          @click="uiModeStore.setUiMode('advanced')"
+        >{{ t('settings.mode.advanced') }}</button>
       </div>
 
       <el-dropdown trigger="click" @command="onLocaleChange">
-        <el-button size="small" text class="lang-btn" :title="t('settings.language')">
+        <button type="button" class="icon-btn lang-btn mono" :aria-label="t('settings.language')" :title="t('settings.language')">
           {{ currentLocale.toUpperCase() }}
-        </el-button>
+        </button>
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="en" :disabled="currentLocale === 'en'">
@@ -49,176 +66,175 @@
         </template>
       </el-dropdown>
 
-      <el-button circle size="small" @click="toggleTheme" :title="isDark ? t('header.lightMode') : t('header.darkMode')">
-        <el-icon><Moon v-if="isDark" /><Sunny v-else /></el-icon>
-      </el-button>
+      <button
+        type="button"
+        class="icon-btn"
+        :aria-label="isDark ? t('header.lightMode') : t('header.darkMode')"
+        :title="isDark ? t('header.lightMode') : t('header.darkMode')"
+        @click="toggleTheme"
+      >
+        <el-icon :size="16"><Sunny v-if="isDark" /><Moon v-else /></el-icon>
+      </button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Moon, Sunny } from '@element-plus/icons-vue'
+import { Moon, Sunny, Search, Menu } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useUpdatesStore } from '../../stores/updates'
-import { usePluginsStore } from '../../stores/plugins'
 import { setLocale, type Locale } from '../../i18n'
+import { requestCommandPalette } from '../../utils/commandPalette'
+
+const emit = defineEmits<{ 'open-menu': [] }>()
 
 const router = useRouter()
-const route = useRoute()
 const daemonStore = useDaemonStore()
 const themeStore = useThemeStore()
-const uiMode = useUiModeStore()
+const uiModeStore = useUiModeStore()
 const updatesStore = useUpdatesStore()
-const pluginsStore = usePluginsStore()
 const { t, locale } = useI18n()
 
-// F96: navigate to the Settings → Update tab when the header badge is clicked.
+const shortcutLabel = navigator.platform.toLowerCase().includes('mac') ? '⌘ K' : 'Ctrl K'
+
 function openUpdateTab() {
   void router.push({ path: '/settings', query: { tab: 'update' } })
 }
 const isDark = computed(() => themeStore.isDark)
 const currentLocale = computed(() => String(locale.value))
-const currentTitle = computed(() => {
-  const key = route.meta?.titleKey as string | undefined
-  if (key) return t(key)
-  return String(route.meta?.title || 'Control Surface')
-})
 function toggleTheme() { themeStore.toggle() }
 function onLocaleChange(next: Locale) { setLocale(next) }
-
-// PHP dropped from top-level nav — it's accessible via the Services dashboard
-// (toggle + config editor) and via its plugin panel at /plugin/nks.wdc.php.
-// Keeping runtime-specific managers out of the top nav prevents the menu from
-// exploding as we add Node/Go/Python/etc.
-// F91: /ssl is plugin-owned (nks.wdc.ssl). If the SSL plugin is disabled the
-// tab disappears — the shared pluginsStore.isRouteVisible check hides any
-// Top nav dropped in SOFT VIBRANT — sidebar owns all routing now.
 </script>
 
 <style scoped>
-/*
-  ─── Header — GLASSMORPHISM shell ─────────────────────────────────
-  Translucent backdrop-filter blur over the page mesh. Bigger 60px
-  bar, larger logo, dramatic page context badge.
-*/
+/* Top bar: search on the left, density / language / theme on the right.
+   Draggable as a window title area; every control opts out. */
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  height: 60px;
-  padding: 0 24px;
-  background: color-mix(in srgb, var(--wdc-surface) 72%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  gap: var(--wdc-space-3);
+  height: 52px;
+  padding: 0 var(--wdc-space-5);
+  background: var(--wdc-bg);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  gap: 24px;
+  -webkit-app-region: drag;
 }
+.no-drag { -webkit-app-region: no-drag; }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.page-context {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--wdc-accent);
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  padding: 4px 12px;
-  background: var(--wdc-accent-dim);
-  border-radius: 999px;
-  border: 1px solid var(--wdc-accent-glow);
-}
-
-.app-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--wdc-space-1-5);
+  border: 1px solid transparent;
+  border-radius: var(--wdc-radius);
+  background: transparent;
+  color: var(--wdc-text-2);
+  font: inherit;
   cursor: pointer;
-  user-select: none;
+  -webkit-app-region: no-drag;
+  transition: background-color var(--wdc-dur-micro) var(--wdc-ease-out), color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
+@media (hover: hover) {
+  .icon-btn:hover { background: var(--wdc-surface-2); color: var(--wdc-text); }
+}
+.icon-btn:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; }
+.lang-btn { font-size: 0.78rem; }
+.menu-btn { display: none; }
 
-.logo-mark {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
+.search {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: var(--wdc-gradient-accent);
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  box-shadow: var(--wdc-shadow-sm), 0 0 24px var(--wdc-accent-glow);
+  gap: var(--wdc-space-2);
+  flex: 0 1 400px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 var(--wdc-space-2) 0 var(--wdc-space-3);
+  border: 1px solid var(--wdc-border-strong);
+  border-radius: var(--wdc-radius);
+  background: var(--wdc-surface);
+  color: var(--wdc-text-3);
+  font: inherit;
+  font-size: 0.87rem;
+  text-align: left;
+  cursor: text;
+  transition: border-color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
-
-/* Logo text inline next to mark — bigger, bolder. */
-.logo-text {
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  color: var(--wdc-text);
+@media (hover: hover) {
+  .search:hover { border-color: var(--wdc-text-3); }
+}
+.search:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 1px; }
+.search-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+kbd {
+  font-family: var(--wdc-font-mono);
+  font-size: 0.72rem;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
+  border: 1px solid var(--wdc-border-strong);
+  border-radius: var(--wdc-radius-xs);
+  background: var(--wdc-key-face);
+  color: var(--wdc-text-2);
 }
 
 .header-right {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2);
 }
 
-.header-right :deep(.el-button) {
-  min-width: 36px !important;
-  height: 36px !important;
+/* Segmented tray: the pressed key sits sunken in the track. */
+.tray {
+  display: inline-flex;
+  gap: var(--wdc-space-0-5);
+  padding: var(--wdc-space-0-5);
+  border-radius: var(--wdc-radius-md);
+  background: var(--wdc-surface-2);
 }
-
-.header-right :deep(.el-button.is-circle) {
-  width: 36px !important;
-  min-width: 36px !important;
-  height: 36px !important;
-}
-
-.lang-btn {
-  min-width: 44px !important;
-  padding: 0 12px !important;
-}
-
-/*
-  Connection pill — minimal: just a colored dot + small label, no
-  fill, no border. Was a chunky filled pill that doubled as background
-  noise.
-*/
-.conn-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.tray-key {
+  min-height: 28px;
+  padding: 0 var(--wdc-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--wdc-radius);
   background: transparent;
-  border: none;
-  color: var(--wdc-text-3);
+  color: var(--wdc-text-2);
+  font-family: var(--wdc-font-display);
+  font-weight: 500;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background-color var(--wdc-dur-micro) var(--wdc-ease-out), color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
+@media (hover: hover) {
+  .tray-key:hover { color: var(--wdc-text); }
+}
+.tray-key[aria-pressed="true"] {
+  background: var(--wdc-key-face);
+  border-color: var(--wdc-border-strong);
+  color: var(--wdc-text);
+  box-shadow: var(--wdc-shadow-key-press);
+}
+.tray-key:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 1px; }
 
-.conn-ok { color: var(--wdc-status-running); }
+.conn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wdc-space-1-5);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
 .conn-err { color: var(--wdc-status-error); }
-
-/*
-  Static dots — no opacity animation, no box-shadow glow. Both used
-  to pulse together (different periods produced an apparent fast
-  flicker), and the box-shadow forced a GPU repaint each frame even
-  when the page was idle.
-*/
 .conn-dot {
   width: 8px;
   height: 8px;
@@ -226,76 +242,35 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   background: currentColor;
 }
 
-/*
-  Update badge — solid amber pill so a fresh release pops in the
-  header. Mono label keeps the version readable.
-*/
 .update-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  min-height: 32px;
-  border-radius: 999px;
-  border: 1px solid var(--wdc-status-starting);
-  background: rgba(245, 158, 11, 0.16);
+  gap: var(--wdc-space-1-5);
+  min-height: 28px;
+  padding: 0 var(--wdc-space-2-5);
+  border: 1px solid color-mix(in oklab, var(--wdc-status-starting) 45%, transparent);
+  border-radius: var(--wdc-radius);
+  background: color-mix(in oklab, var(--wdc-status-starting) 12%, transparent);
   color: var(--wdc-status-starting);
   font-size: 0.78rem;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.update-badge:hover {
-  background: var(--wdc-status-starting);
-  color: #141006;
+@media (hover: hover) {
+  .update-badge:hover { background: var(--wdc-status-starting); color: var(--wdc-badge-fg); }
 }
-html:not(.dark) .update-badge:hover { color: #ffffff; }
-/* Static dot — was pulsing at 2.2s, paired with conn-dot's 2s pulse,
-   the offset cycles read as a fast flicker. */
 .update-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
 }
-.update-label { letter-spacing: 0.02em; }
 
-@media (max-width: 760px) {
-  .app-header {
-    padding: 0 8px;
-    gap: 8px;
-  }
-
-  .logo-copy,
-  .header-nav,
-  .conn-pill {
-    display: none;
-  }
-
-  .header-nav {
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .header-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-tab {
-    padding: 7px 10px;
-    font-size: 0.78rem;
-  }
-
-  .header-right {
-    gap: 6px;
-  }
-
-  .update-badge {
-    min-width: 40px;
-    padding: 0 8px;
-  }
+@media (max-width: 959px) {
+  .app-header { padding: 0 var(--wdc-space-3); gap: var(--wdc-space-2); }
+  .menu-btn { display: inline-grid; }
+  kbd { display: none; }
 }
-
+@media (max-width: 640px) {
+  .tray { display: none; }
+}
 </style>

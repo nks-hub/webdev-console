@@ -7,7 +7,7 @@
       </span>
       <el-button size="small" :loading="loading" @click="$emit('reload')">
         <el-icon><Refresh /></el-icon>
-        <span style="margin-left: 4px">{{ t('common.refresh') }}</span>
+        <span style="margin-left: var(--wdc-space-1)">{{ t('common.refresh') }}</span>
       </el-button>
     </div>
 
@@ -105,16 +105,16 @@ const activeTab = ref<'columns' | 'indexes'>('columns')
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--wdc-accent-glow);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  background: transparent;
 }
 
 .toolbar-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: 1.05rem;
@@ -128,7 +128,7 @@ const activeTab = ref<'columns' | 'indexes'>('columns')
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 0 16px;
+  padding: 0 var(--wdc-space-4);
   background: var(--wdc-bg);
 }
 

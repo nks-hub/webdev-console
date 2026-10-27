@@ -134,7 +134,7 @@
               {{ applyStatus.message }}
             </span>
           </div>
-          <div class="hint" style="margin-top: 8px">
+          <div class="hint" style="margin-top: var(--wdc-space-2)">
             {{ $t('cloudflareSite.applyHint') }}
           </div>
         </div>
@@ -156,6 +156,9 @@ import {
   updateSite,
 } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   name: string
@@ -326,7 +329,7 @@ async function suggest() {
       emit('dirty')
     }
   } catch (e) {
-    ElMessage.warning('Nepodařilo se navrhnout subdoménu: ' + (e instanceof Error ? e.message : ''))
+    ElMessage.warning(t('toast.suggestSubdomainFailed', { err: e instanceof Error ? e.message : '' }))
   } finally {
     suggesting.value = false
   }
@@ -375,11 +378,11 @@ async function applyNow() {
       kind: 'success',
       message: `Synced ${sync.synced ?? 0} site(s) — ${publicUrl.value}`,
     }
-    ElMessage.success('Tunel aplikován: ' + publicUrl.value)
+    ElMessage.success(t('toast.tunnelApplied', { url: publicUrl.value }))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     applyStatus.value = { kind: 'error', message: msg }
-    ElMessage.error('Apply failed: ' + msg)
+    ElMessage.error(t('toast.applyFailed', { err: msg }))
   } finally {
     applying.value = false
   }
@@ -405,9 +408,9 @@ async function copyPublicUrl() {
   if (!publicUrl.value) return
   try {
     await navigator.clipboard.writeText(publicUrl.value)
-    ElMessage.success('Zkopírováno: ' + publicUrl.value)
+    ElMessage.success(t('toast.copied', { url: publicUrl.value }))
   } catch {
-    ElMessage.warning('Schránka nedostupná — URL: ' + publicUrl.value)
+    ElMessage.warning(t('toast.clipboardUnavailable', { url: publicUrl.value }))
   }
 }
 </script>
@@ -415,7 +418,7 @@ async function copyPublicUrl() {
 <style scoped>
 .tab-content { padding: 16px 0; }
 .edit-card { background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius-lg); margin-bottom: 16px; box-shadow: var(--wdc-shadow-sm); }
-.edit-card-header { padding: 14px 18px; border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; background: linear-gradient(180deg, var(--wdc-accent-dim), transparent); border-radius: var(--wdc-radius-lg) var(--wdc-radius-lg) 0 0; }
+.edit-card-header { padding: 14px 18px; border-bottom: 1px solid var(--wdc-border); display: flex; justify-content: space-between; align-items: baseline; background: transparent; border-radius: var(--wdc-radius-lg) var(--wdc-radius-lg) 0 0; }
 .edit-card-title { font-weight: 700; color: var(--wdc-text); font-size: 0.95rem; }
 .edit-card-hint { font-size: 0.78rem; color: var(--wdc-text-3); }
 .edit-card-body { padding: 14px 18px; }
@@ -437,6 +440,6 @@ async function copyPublicUrl() {
 .mono { font-family: 'Cascadia Code', 'Consolas', monospace; }
 .setup-warning { padding: 8px 0; }
 .apply-status { font-size: 0.82rem; }
-.apply-status.success { color: #36c290; }
-.apply-status.error { color: #ef6e6e; }
+.apply-status.success { color: var(--wdc-status-running); }
+.apply-status.error { color: var(--wdc-status-error); }
 </style>
