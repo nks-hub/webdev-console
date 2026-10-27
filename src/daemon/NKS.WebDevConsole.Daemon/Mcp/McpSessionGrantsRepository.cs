@@ -141,7 +141,12 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "WHERE revoked_at IS NULL " +
             "  AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) " +
             "  AND (kind_pattern = '*' OR kind_pattern = @Kind) " +
-            "  AND (target_pattern = '*' OR target_pattern = @Target) " +
+            "  AND (target_pattern = '*' OR target_pattern = @Target " +
+            // '*' inside a target pattern is a wildcard ("*_dev" covers
+            // shop_dev, blog_dev). Matched case-insensitively with GLOB;
+            // '[' and '?' are escaped so only '*' is special.
+            "       OR (instr(target_pattern, '*') > 0 AND lower(@Target) GLOB " +
+            "           replace(replace(lower(target_pattern), '[', '[[]'), '?', '[?]'))) " +
             "  AND (" + string.Join(" OR ", clauses) + ") " +
             "ORDER BY granted_at DESC LIMIT 1";
 

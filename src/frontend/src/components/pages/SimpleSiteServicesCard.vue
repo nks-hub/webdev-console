@@ -150,10 +150,9 @@ async function restartService(svc: ServiceRow) {
 .sd-section-title {
   margin: 0 0 var(--wdc-space-3);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--wdc-text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 .sd-service-row {
   display: grid;

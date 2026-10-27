@@ -209,9 +209,9 @@ async function copyJson(): Promise<void> {
 .summary-row.error { color: var(--el-color-danger); }
 .section-label {
   font-size: 11px;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: var(--wdc-space-1-5);
+  font-family: var(--wdc-font-display);
 }
 .by-tool { display: flex; flex-direction: column; gap: 2px; }
 .tool-line {

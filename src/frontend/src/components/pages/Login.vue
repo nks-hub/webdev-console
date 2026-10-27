@@ -222,10 +222,9 @@ onMounted(loadCatalogUrl)
   align-items: center;
   gap: var(--wdc-space-3);
   color: var(--el-text-color-secondary);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 0.82rem;
   margin: var(--wdc-space-1) 0;
+  font-family: var(--wdc-font-display);
 }
 .login-divider::before,
 .login-divider::after {
@@ -241,7 +240,9 @@ onMounted(loadCatalogUrl)
   font-size: 0.78rem;
   color: var(--el-text-color-secondary);
 }
-.login-catalog-hint .label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.7rem; }
+.login-catalog-hint .label { font-size: 0.82rem;
+  font-family: var(--wdc-font-display);
+}
 .mono { font-family: 'JetBrains Mono', monospace; }
 .login-catalog-hint .url {
   background: var(--wdc-surface-2);

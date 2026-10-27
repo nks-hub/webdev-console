@@ -19,7 +19,10 @@ public sealed record McpRoute(
     bool IntentByEndpoint = false,
     string IntentHost = McpCapabilities.IntentHost);
 
-/// <summary>Request-body fields of a route that belong to a capability.</summary>
+/// <summary>
+/// Request fields of a route that belong to a capability: JSON body fields,
+/// or query-string parameters written as <c>?name</c>.
+/// </summary>
 public sealed record McpBodyFields(
     string Method,
     string Pattern,
@@ -71,6 +74,7 @@ public static class McpCapabilities
     public const string SiteAdvancedFields = "site_advanced_fields";
     public const string CloudflareCredentials = "cloudflare_credentials";
     public const string PluginInstall = "plugin_install";
+    public const string Composer = "composer";
     public const string DatabaseAdmin = "database_admin";
     public const string BackupRestore = "backup_restore";
     public const string DeployConfig = "deploy_config";
@@ -90,22 +94,46 @@ public static class McpCapabilities
         new("GET", "/api/status"),
         new("GET", "/api/system"),
         new("GET", "/api/activity"),
-        // sites.ts (POST /api/sites: nodeStartCommand and other fields are capability-scoped)
+        // sites.ts (POST and PUT /api/sites: nodeStartCommand and the fields
+        // beyond BasicSiteFields are capability-scoped). Rollback only restores
+        // the site's own config history; the tool keeps its confirm.
         new("GET", "/api/sites"),
         new("GET", "/api/sites/{domain}"),
         new("GET", "/api/sites/{domain}/access-log"),
         new("GET", "/api/sites/{domain}/metrics"),
+        new("GET", "/api/sites/{domain}/logs/errors"),
+        new("GET", "/api/sites/{domain}/history"),
         new("POST", "/api/sites"),
+        new("PUT", "/api/sites/{domain}"),
         new("DELETE", "/api/sites/{domain}"),
-        // services.ts
+        new("POST", "/api/sites/{domain}/apply"),
+        new("POST", "/api/sites/reapply-all"),
+        new("POST", "/api/sites/{domain}/detect-framework"),
+        new("POST", "/api/sites/{domain}/duplicate"),
+        new("POST", "/api/sites/{domain}/rollback"),
+        // composer.ts (install/require/remove: Composer capability)
+        new("GET", "/api/sites/{domain}/composer/status"),
+        new("GET", "/api/sites/{domain}/composer/outdated"),
+        // node.ts (start/stop/restart: NodeProcess capability)
+        new("GET", "/api/node/sites"),
+        // services.ts (stop and restart keep their service_restart intent;
+        // config writes: ServiceConfig capability)
         new("GET", "/api/services"),
         new("POST", "/api/services/{id}/start"),
         new("POST", "/api/services/{id}/stop"),
+        new("POST", "/api/services/{id}/restart"),
+        new("GET", "/api/services/{id}/logs"),
+        new("GET", "/api/services/{id}/config"),
+        new("POST", "/api/config/validate"),
+        // hosts.ts (hosts file writes: HostsFile capability)
+        new("GET", "/api/hosts"),
+        new("POST", "/api/dns/flush"),
         // settings.ts (protected keys are capability-scoped, mcp.* never)
         new("GET", "/api/settings"),
         new("PUT", "/api/settings"),
-        // backup.ts
+        // backup.ts (restore and delete: BackupRestore capability)
         new("GET", "/api/backup/list"),
+        new("GET", "/api/backup/stats"),
         new("POST", "/api/backup"),
         // binaries.ts
         new("GET", "/api/binaries/catalog"),
@@ -123,17 +151,27 @@ public static class McpCapabilities
         new("DELETE", "/api/cloudflare/zones/{zoneId}/dns/{recordId}"),
         new("GET", "/api/cloudflare/tunnels"),
         new("GET", "/api/cloudflare/suggest-subdomain"),
-        // confirmation.ts, deploy.ts, auditLog.ts; capability list for the agent
+        // confirmation.ts, deploy.ts, auditLog.ts; capability list for the agent.
+        // GET /api/mcp/intents (the inventory, no tokens) is the status
+        // fallback for daemons without GET /api/mcp/intents/{intentId}.
         new("POST", "/api/mcp/intents"),
         new("POST", "/api/mcp/intents/confirm-request"),
+        new("GET", "/api/mcp/intents/{intentId}"),
+        new("GET", "/api/mcp/intents"),
         new("POST", "/api/mcp/tool-calls"),
         new("GET", "/api/mcp/capabilities"),
-        // databases.ts
+        // databases.ts (import: DatabaseAdmin capability; export is allowed
+        // unless it names an outputPath, which is DatabaseAdmin too)
         new("GET", "/api/databases"),
         new("POST", "/api/databases"),
         new("DELETE", "/api/databases/{name}"),
         new("GET", "/api/databases/{name}/tables"),
         new("POST", "/api/databases/{name}/query"),
+        new("GET", "/api/databases/{name}/size"),
+        new("GET", "/api/databases/v2/{name}/tables/{table}/columns"),
+        new("GET", "/api/databases/v2/{name}/tables/{table}/indexes"),
+        new("GET", "/api/databases/v2/{name}/tables/{table}/data"),
+        new("GET", "/api/databases/{name}/export"),
         // mysqlUsers.ts
         new("GET", "/api/plugins/mysql/users"),
         new("POST", "/api/plugins/mysql/users"),
@@ -142,6 +180,7 @@ public static class McpCapabilities
         new("POST", "/api/plugins/mysql/change-password"),
         // php.ts
         new("GET", "/api/php/versions"),
+        new("GET", "/api/php/{version}/extensions"),
         new("POST", "/api/php/{version}/extensions/{name}"),
         // plugins.ts
         new("GET", "/api/plugins"),
@@ -153,15 +192,16 @@ public static class McpCapabilities
         new("POST", "/api/ssl/install-ca"),
         new("POST", "/api/ssl/generate"),
         new("DELETE", "/api/ssl/certs/{domain}"),
-        // deploy.ts
+        // deploy.ts (the deploy, rollback, cancel and restore routes keep their intent gate)
         new("GET", "/api/nks.wdc.deploy/sites/{domain}/history"),
         new("GET", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}"),
         new("DELETE", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}"),
-        new("POST", "/api/nks.wdc.deploy/sites/{domain}/hosts/{host}/deploy"),
+        new("POST", "/api/nks.wdc.deploy/sites/{domain}/deploy"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback"),
+        new("GET", "/api/nks.wdc.deploy/sites/{domain}/groups"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/groups"),
-        new("GET", "/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback"),
+        new("GET", "/api/nks.wdc.deploy/sites/{domain}/snapshots"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore"),
     ];
 
@@ -173,6 +213,9 @@ public static class McpCapabilities
     /// <summary>Site fields of the wdc_create_site schema (services/mcp-server/src/tools/sites.ts).</summary>
     public static readonly string[] BasicSiteFields =
         ["domain", "documentRoot", "phpVersion", "sslEnabled", "aliases", "framework"];
+
+    /// <summary>Query parameter of GET /api/databases/{name}/export naming the file the MCP server writes.</summary>
+    public const string ExportOutputPathParameter = "outputPath";
 
     public static readonly string[] CloudflareCredentialFields =
         ["cloudflaredPath", "tunnelToken", "apiToken", "accountId"];
@@ -189,11 +232,13 @@ public static class McpCapabilities
             Tools: ["wdc_update_settings"]),
         new(ServiceConfig,
             "Service configuration files",
-            "Rewrite service config files such as httpd.conf and php.ini. Each write needs an approved intent.",
+            "Rewrite service config files such as httpd.conf and php.ini. Each write needs an approved intent " +
+            "(checked by the endpoint).",
             DefaultEnabled: false,
-            Routes: [new("POST", "/api/services/{id}/config", "service_config_write", "{id}")],
+            // ServiceConfigEndpoints runs McpIntentGate (kind service_config_write, host *svc*).
+            Routes: [new("POST", "/api/services/{id}/config", "service_config_write", "{id}", IntentByEndpoint: true, IntentHost: "*svc*")],
             BodyFields: [],
-            Tools: []),
+            Tools: ["wdc_update_service_config"]),
         new(HostsFile,
             "Hosts file",
             "Rewrite or restore the system hosts file. Each write needs an approved intent.",
@@ -222,7 +267,7 @@ public static class McpCapabilities
                 new("POST", "/api/sites", ["nodeStartCommand"], "node_process", "{body.domain}"),
                 new("PUT", "/api/sites/{domain}", ["nodeStartCommand"], "node_process", "{domain}"),
             ],
-            Tools: ["wdc_create_site"]),
+            Tools: ["wdc_create_site", "wdc_start_node_site", "wdc_stop_node_site", "wdc_restart_node_site"]),
         new(SiteAdvancedFields,
             "Advanced site fields",
             "Site fields beyond domain, documentRoot, phpVersion, sslEnabled, aliases and framework: environment variables, " +
@@ -234,7 +279,7 @@ public static class McpCapabilities
                 new("POST", "/api/sites", ["* except " + string.Join(", ", BasicSiteFields)]),
                 new("PUT", "/api/sites/{domain}", ["* except " + string.Join(", ", BasicSiteFields)]),
             ],
-            Tools: []),
+            Tools: ["wdc_create_site", "wdc_update_site"]),
         new(CloudflareCredentials,
             "Cloudflare credentials and tunnel routing",
             "Set the Cloudflare API token, account id, tunnel token and cloudflared path, rewrite tunnel ingress and run " +
@@ -257,46 +302,67 @@ public static class McpCapabilities
                 new("DELETE", "/api/plugins/{id}", "plugin_uninstall", IntentByEndpoint: true),
             ],
             BodyFields: [],
-            Tools: ["wdc_install_plugin"]),
-        new(DatabaseAdmin,
-            "Database server administration",
-            "Reset the MySQL or PostgreSQL root password, drop MySQL accounts, read or set the stored root password. " +
-            "Resets and drops need an approved intent.",
+            Tools: ["wdc_install_plugin_from_marketplace", "wdc_uninstall_plugin"]),
+        new(Composer,
+            "Composer commands",
+            "Run Composer install/require/remove in site folders (package scripts run).",
             DefaultEnabled: false,
             Routes:
             [
-                new("POST", "/api/plugins/mysql/reset-password", "mysql_root_reset", "root", IntentHost: "*mysql*"),
-                new("POST", "/api/plugins/mysql/users/drop", "mysql_user_drop", "{body.userName}@{body.host}", IntentHost: "*mysql*"),
-                new("POST", "/api/plugins/postgresql/reset-password", "postgres_root_reset", "postgres", IntentHost: "*postgres*"),
+                new("POST", "/api/sites/{domain}/composer/install"),
+                new("POST", "/api/sites/{domain}/composer/require"),
+                new("POST", "/api/sites/{domain}/composer/remove"),
+            ],
+            BodyFields: [],
+            Tools: ["wdc_composer_install", "wdc_composer_require", "wdc_composer_remove"]),
+        new(DatabaseAdmin,
+            "Database server administration",
+            "Reset the MySQL or PostgreSQL root password, drop MySQL accounts, read or set the stored root password, " +
+            "import SQL dumps, export a database to a file path. Resets, drops and imports need an approved intent " +
+            "(checked by the endpoint).",
+            DefaultEnabled: false,
+            Routes:
+            [
+                // The endpoints run these intent gates (DatabaseEndpoints.IntentGateAsync).
+                new("POST", "/api/plugins/mysql/reset-password", "mysql_root_reset", "root", IntentByEndpoint: true, IntentHost: "*mysql*"),
+                new("POST", "/api/plugins/mysql/users/drop", "mysql_user_drop", "{body.userName}@{body.host}", IntentByEndpoint: true, IntentHost: "*mysql*"),
+                new("POST", "/api/plugins/postgresql/reset-password", "postgres_root_reset", "postgres", IntentByEndpoint: true, IntentHost: "*postgres*"),
+                new("POST", "/api/databases/{name}/import", "database_import", "{name}", IntentByEndpoint: true, IntentHost: "*db*"),
                 new("GET", "/api/databases/root-password"),
                 new("POST", "/api/databases/root-password"),
             ],
-            BodyFields: [],
-            Tools: ["wdc_reset_mysql_root_password", "wdc_drop_mysql_user"]),
+            // An export is always allowed; one the MCP server writes to a file
+            // path names it (wdc_export_database outputPath) and needs this group.
+            BodyFields: [new("GET", "/api/databases/{name}/export", ["?" + ExportOutputPathParameter])],
+            Tools: ["wdc_reset_mysql_root_password", "wdc_drop_mysql_user", "wdc_import_database", "wdc_export_database"]),
         new(BackupRestore,
-            "Backup restore",
-            "Restore a WDC backup over the current state. Needs an approved intent (checked by the endpoint).",
+            "Backup restore and delete",
+            "Restore a WDC backup over the current state, or delete a backup. Each needs an approved intent.",
             DefaultEnabled: false,
             Routes:
             [
                 new("POST", "/api/restore", "backup_restore", IntentByEndpoint: true),
                 new("POST", "/api/backup/{id}/restore", "backup_restore", IntentByEndpoint: true),
+                new("DELETE", "/api/backup/{id}", "backup_delete", "{id}", IntentHost: "*backup*"),
             ],
             BodyFields: [],
-            Tools: ["wdc_restore_backup"]),
+            Tools: ["wdc_restore_backup", "wdc_restore_backup_by_id", "wdc_delete_backup"]),
         new(DeployConfig,
             "Deploy configuration",
-            "Change per-site deploy settings (hooks run on deploy), test-run hooks and notifications, probe hosts.",
+            "Read and change per-site deploy settings (hosts, hooks run on deploy, notification webhooks, env vars), " +
+            "test-run hooks and notifications, probe hosts.",
             DefaultEnabled: false,
             Routes:
             [
+                // The settings file holds notification webhooks and env vars besides the hosts.
+                new("GET", "/api/nks.wdc.deploy/sites/{domain}/settings"),
                 new("PUT", "/api/nks.wdc.deploy/sites/{domain}/settings", "settings_write", IntentByEndpoint: true),
                 new("POST", "/api/nks.wdc.deploy/sites/{domain}/hooks/test", "test_hook", IntentByEndpoint: true),
                 new("POST", "/api/nks.wdc.deploy/sites/{domain}/notifications/test"),
                 new("POST", "/api/nks.wdc.deploy/test-host-connection"),
             ],
             BodyFields: [],
-            Tools: []),
+            Tools: ["wdc_deploy_list_targets"]),
         new(DaemonAdmin,
             "Daemon administration",
             "Restart, shut down, reset or uninstall the daemon. Each needs an approved intent.",
@@ -313,8 +379,8 @@ public static class McpCapabilities
             Tools: []),
         new(UnlistedRoutes,
             "Other routes",
-            "Every other daemon route that is not always allowed and not in a group above (site update, service " +
-            "config reads, database export and import, catalog sync, read-only MCP audit routes, ...).",
+            "Every other daemon route that is not always allowed and not in a group above (Docker Compose " +
+            "lifecycle, catalog sync, read-only MCP audit routes, ...).",
             DefaultEnabled: false,
             Routes: [],
             BodyFields: [],

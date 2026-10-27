@@ -49,8 +49,12 @@ public sealed class ServiceLogTailer : BackgroundService
         }
     }
 
-    private async Task TickAsync(CancellationToken ct)
+    internal async Task TickAsync(CancellationToken ct)
     {
+        // The UI log viewer consumes the shared /api/events stream and the
+        // daemon cannot tell which SSE clients have a log viewer open, so any
+        // SSE client counts as a listener; WebSocket subscribers are tracked
+        // per service.
         var sseListening = _sse.ClientCount > 0;
         foreach (var module in _sp.GetServices<IServiceModule>())
         {
@@ -67,7 +71,11 @@ public sealed class ServiceLogTailer : BackgroundService
             IReadOnlyList<string> window;
             try { window = await module.GetLogsAsync(WindowLines, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch { continue; }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Reading the log window of {ServiceId} failed", id);
+                continue;
+            }
 
             if (!_lastWindow.TryGetValue(id, out var previous))
             {
@@ -92,6 +100,9 @@ public sealed class ServiceLogTailer : BackgroundService
     /// <paramref name="previous"/> appearing as a prefix of <paramref name="next"/>
     /// (both are tail windows of the same log). No overlap means the log
     /// rotated or more than a full window was written: everything is new.
+    /// Window content alone cannot tell "unchanged" from "the same lines were
+    /// appended again" once a full window is periodic (for example all lines
+    /// identical); such repeats are not reported.
     /// </summary>
     public static IReadOnlyList<string> NewLines(IReadOnlyList<string> previous, IReadOnlyList<string> next)
     {

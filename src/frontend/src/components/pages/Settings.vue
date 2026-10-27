@@ -2885,10 +2885,10 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .page-title {
@@ -3153,12 +3153,11 @@ async function save() {
 
 .about-system { font-size: 0.85rem; }
 .about-sys-title {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin: 0 0 var(--wdc-space-1-5);
+  font-family: var(--wdc-font-display);
 }
 .about-sys-row {
   display: flex;
@@ -3218,11 +3217,10 @@ async function save() {
   border-bottom: 1px solid var(--wdc-border);
 }
 .settings-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text);
+  font-family: var(--wdc-font-display);
 }
 .settings-card-body { padding: 18px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }

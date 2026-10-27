@@ -8,14 +8,12 @@
     <!-- Page header -->
     <div class="page-header">
       <div class="header-left">
-        <el-button size="small" text @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
-          <span>{{ $t('sites.backToSites') }}</span>
-        </el-button>
-        <div class="title-block">
-          <div class="title-label">{{ $t('sites.editSite') }}</div>
-          <div class="title-name">{{ domain }}</div>
-        </div>
+        <nav class="crumbs" :aria-label="$t('sites.backToSites')">
+          <a v-activate:link class="crumb-link" @click="goBack">{{ $t('sites.title') }}</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{{ domain }}</span>
+        </nav>
+        <h1 class="title-name">{{ domain }}</h1>
       </div>
       <div class="header-actions">
         <el-button size="small" @click="openInBrowser" :disabled="!site">
@@ -671,9 +669,29 @@ const site = ref<SiteInfo | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const dirty = ref(false)
-// ?tab=errors / ?tab=composer deep links (activity card, Composer page)
-// were ignored before — the page always opened on the first tab.
-const activeTab = ref(typeof route.query.tab === 'string' && route.query.tab ? route.query.tab : 'overview')
+// ?tab=errors / ?tab=composer deep links (activity card, Composer page).
+// The activity card links to this same route, so the query is watched
+// instead of read once, and the active tab is mirrored back into the
+// query so a repeated click on such a link is a real navigation.
+function queryTab(): string {
+  const q = route.query.tab
+  return typeof q === 'string' && q ? q : 'overview'
+}
+const activeTab = ref(queryTab())
+watch(() => route.query.tab, () => {
+  // Leaving the page also changes the query; only follow it while this
+  // route is still the site page.
+  if (!route.params.domain) return
+  const tab = queryTab()
+  if (tab !== activeTab.value) activeTab.value = tab
+})
+watch(activeTab, (tab) => {
+  if (!route.params.domain || tab === queryTab()) return
+  const query = { ...route.query }
+  if (tab === 'overview') delete query.tab
+  else query.tab = tab
+  void router.replace({ query })
+})
 // Same per-version option shape as Sites.vue wizard — keeps the detail
 // page and the wizard aligned. `value` is the backend-persisted
 // majorMinor; `label` shows the full patch + active flag.
@@ -1051,18 +1069,89 @@ function onPluginSiteUpdate(updated: SiteInfo) {
   markDirty()
 }
 
+// ── Store sync ────────────────────────────────────────────────────────
+// The Overview tab (SiteDetailSimple) saves straight through the sites
+// store, while this page edits its own copy and PUTs the whole record on
+// Save & Apply. Without syncing, an Overview change (PHP version, tunnel,
+// SSL, document root, bind) followed by a save from another tab sent the
+// stale copy back and silently reverted it. `storeBaseline` is the store
+// entry this copy was last synced from, so a later store change can be
+// diffed against it to find exactly what changed elsewhere.
+let storeBaseline: SiteInfo | null = null
+
+function cloneSite(s: SiteInfo): SiteInfo {
+  return JSON.parse(JSON.stringify(s)) as SiteInfo
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function normalizeSiteCopy(s: SiteInfo) {
+  s.bindAddresses = normalizeBindAddresses(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
+  s.bindAddress = s.bindAddresses[0] ?? '*'
+  if (s.domain?.toLowerCase() === 'localhost') s.localhostLoopbackEnabled = true
+}
+
+function seedFromStore(found: SiteInfo | undefined) {
+  storeBaseline = found ? cloneSite(found) : null
+  const copy = found ? cloneSite(found) : null
+  if (copy) normalizeSiteCopy(copy)
+  site.value = copy
+  dirty.value = false
+}
+
+// Apply only the fields that changed in the store since the last sync,
+// leaving the user's unsaved edits on other fields untouched. Cloudflare
+// is merged per sub-field on top of the tunnel refs, which are what
+// save() actually sends.
+function mergeStoreChanges(next: SiteInfo) {
+  if (!site.value || !storeBaseline) return
+  const prev = storeBaseline as unknown as Record<string, unknown>
+  const incoming = next as unknown as Record<string, unknown>
+  const local = site.value as unknown as Record<string, unknown>
+  const keys = new Set([...Object.keys(prev), ...Object.keys(incoming)])
+  for (const key of keys) {
+    if (sameValue(prev[key], incoming[key])) continue
+    if (key === 'cloudflare') {
+      const before = (prev.cloudflare ?? {}) as Record<string, unknown>
+      const after = (next.cloudflare ?? {}) as Record<string, unknown>
+      const merged: Record<string, unknown> = {
+        enabled: cloudflareEnabled.value,
+        subdomain: cloudflareSubdomain.value,
+        zoneId: cloudflareZoneId.value,
+        zoneName: cloudflareZoneName.value,
+        localService: cloudflareLocalService.value,
+        protocol: cloudflareProtocol.value,
+      }
+      for (const sub of new Set([...Object.keys(before), ...Object.keys(after)])) {
+        if (!sameValue(before[sub], after[sub])) merged[sub] = after[sub]
+      }
+      site.value.cloudflare = merged as unknown as SiteInfo['cloudflare']
+    } else {
+      local[key] = incoming[key] === undefined ? undefined : JSON.parse(JSON.stringify(incoming[key]))
+    }
+  }
+  normalizeSiteCopy(site.value)
+  storeBaseline = cloneSite(next)
+}
+
+const storeEntry = computed(() => sitesStore.sites.find(s => s.domain === domain.value))
+watch(storeEntry, (next) => {
+  // Not loaded yet, site deleted, or a domain switch in progress — load()
+  // seeds those cases itself.
+  if (!next || !site.value || !storeBaseline) return
+  if (storeBaseline.domain !== next.domain || site.value.domain !== next.domain) return
+  if (sameValue(storeBaseline, next)) return
+  if (dirty.value) mergeStoreChanges(next)
+  else seedFromStore(next)
+}, { deep: true })
+
 async function load() {
   loading.value = true
   try {
     await sitesStore.load()
-    const found = sitesStore.sites.find(s => s.domain === domain.value)
-    site.value = found ? { ...found, aliases: [...(found.aliases ?? [])] } : null
-    if (site.value) {
-      site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses?.length ? site.value.bindAddresses : [site.value.bindAddress || '*'])
-      site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
-    }
-    if (site.value?.domain?.toLowerCase() === 'localhost') site.value.localhostLoopbackEnabled = true
-    dirty.value = false
+    seedFromStore(sitesStore.sites.find(s => s.domain === domain.value))
 
     // PHP versions — authoritative list from daemon. Leave the array
     // empty on failure so the template's "no versions installed" hint
@@ -1522,15 +1611,31 @@ watch(domain, () => {
   void load()
 })
 
-// Simple mode: fall back to Overview if the active tab is one that only
-// Advanced density shows (deep link, or switching modes on the page).
-const ADVANCED_TABS = ['general', 'runtime', 'deploy', 'history', 'danger'] as const
+// Fall back to Overview when the active tab has no pane to show: a tab
+// only Advanced density renders (deep link, or switching modes on the
+// page), Deploy with the deploy surface turned off, or an unknown
+// ?tab= value, which used to leave the page with an empty body.
+const BASE_TABS: readonly string[] = ['overview', 'metrics', 'errors']
+const ADVANCED_TABS: readonly string[] = ['general', 'runtime', 'deploy', 'history', 'danger']
+const pluginTabNames = computed(() =>
+  pluginsStore.contributionsForSlot('site-edit-tabs')
+    .map(c => c.props?.name)
+    .filter((n): n is string => typeof n === 'string' && n !== ''),
+)
 watch(
-  [() => uiMode.isSimple, activeTab],
-  ([simple, tab]) => {
-    if (simple && ADVANCED_TABS.includes(tab as typeof ADVANCED_TABS[number])) {
-      activeTab.value = 'overview'
+  [activeTab, () => uiMode.isSimple, () => featureFlagsStore.loaded, pluginTabNames, () => pluginsStore.manifests.length],
+  () => {
+    const tab = activeTab.value
+    if (BASE_TABS.includes(tab)) return
+    if (ADVANCED_TABS.includes(tab)) {
+      const deployHidden = tab === 'deploy' && featureFlagsStore.loaded && !featureFlagsStore.showDeploySurface
+      if (uiMode.isSimple || deployHidden) activeTab.value = 'overview'
+      return
     }
+    if (pluginTabNames.value.includes(tab)) return
+    // Plugin manifests not loaded yet: the tab may still be contributed.
+    if (pluginsStore.manifests.length === 0) return
+    activeTab.value = 'overview'
   },
   { immediate: true },
 )
@@ -1572,34 +1677,51 @@ onBeforeUnmount(() => {
 
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
   flex-shrink: 0;
 }
 .header-left {
   display: flex;
-  align-items: center;
-  gap: var(--wdc-space-3-5);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--wdc-space-1-5);
+  min-width: 0;
 }
+.crumbs {
+  display: flex;
+  gap: var(--wdc-space-2);
+  font-size: 0.87rem;
+  color: var(--wdc-text-3);
+}
+.crumb-link {
+  color: var(--wdc-text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--wdc-border-strong);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.crumb-link:hover { color: var(--wdc-text); text-decoration-color: var(--wdc-accent); }
 .title-block {
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-0-5);
 }
 .title-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 .title-name {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.728rem;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
   color: var(--wdc-text);
+  overflow-wrap: anywhere;
 }
 .header-actions {
   display: flex;
@@ -1960,12 +2082,11 @@ onBeforeUnmount(() => {
 }
 .sub-label {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-2);
   margin-bottom: var(--wdc-space-2-5);
+  font-family: var(--wdc-font-display);
 }
 .php-version-grid {
   display: flex;
@@ -2272,12 +2393,11 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--wdc-border);
 }
 .historical-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text);
   flex-shrink: 0;
+  font-family: var(--wdc-font-display);
 }
 .historical-controls {
   display: flex;
@@ -2291,12 +2411,11 @@ onBeforeUnmount(() => {
   gap: var(--wdc-space-1-5);
 }
 .historical-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   white-space: nowrap;
+  font-family: var(--wdc-font-display);
 }
 .historical-series-toggles {
   display: flex;

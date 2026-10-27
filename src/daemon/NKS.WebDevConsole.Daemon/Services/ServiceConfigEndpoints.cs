@@ -110,12 +110,21 @@ internal static class ServiceConfigEndpoints
             }
         });
 
+        // MCP intent-gated under kind=service_config_write. The body replaces a
+        // service config file (httpd.conf, php.ini, my.cnf, ...) and the
+        // service restarts with it, so a write can enable arbitrary handlers or
+        // modules. GUI saves without a token header are unaffected.
         app.MapPost("/api/services/{id}/config", async (
             string id,
             HttpContext ctx,
             ServiceConfigManager configManager,
-            IServiceProvider sp) =>
+            IServiceProvider sp,
+            NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
         {
+            var refused = await McpIntentGate.CheckAsync(
+                ctx, intentValidator, "service_config_write", domain: id, host: "*svc*", ctx.RequestAborted);
+            if (refused is not null) return refused;
+
             var body = await ctx.Request.ReadFromJsonAsync<ServiceConfigWriteRequest>();
             if (body == null || string.IsNullOrWhiteSpace(body.Path))
                 return Results.BadRequest(new { error = "path is required" });

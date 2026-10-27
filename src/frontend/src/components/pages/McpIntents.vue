@@ -228,10 +228,37 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="" width="100" align="right">
+      <el-table-column label="" width="220" align="right">
         <template #default="{ row }">
+          <!-- Pending requests can be decided right here — e.g. one that
+               arrived while WDC was closed, whose banner was never shown. -->
+          <div v-if="row.state === 'pending_confirmation'" class="intent-decide">
+            <el-button
+              size="small"
+              type="primary"
+              :loading="decidingId === row.intentId && decision === 'approve'"
+              :disabled="decidingId !== null || revokingId !== null"
+              :aria-label="t('mcpIntents.approveAria')"
+              data-testid="intent-approve"
+              @click="onApprove(row)"
+            >
+              {{ t('mcpIntents.approve') }}
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              plain
+              :loading="decidingId === row.intentId && decision === 'reject'"
+              :disabled="decidingId !== null || revokingId !== null"
+              :aria-label="t('mcpIntents.rejectAria')"
+              data-testid="intent-reject"
+              @click="onReject(row)"
+            >
+              {{ t('mcpIntents.reject') }}
+            </el-button>
+          </div>
           <el-button
-            v-if="row.state === 'ready' || row.state === 'pending_confirmation'"
+            v-else-if="row.state === 'ready'"
             size="small"
             link
             type="danger"
@@ -285,10 +312,17 @@ import {
   subscribeEventsMap,
   type IntentInventoryEntry,
 } from '../../api/daemon'
+import { useMcpConfirmStore } from '../../stores/mcpConfirm'
+import { mcpKindLabel } from '../../utils/mcpKindLabel'
 
 const entries = ref<IntentInventoryEntry[]>([])
 const loading = ref(false)
 const revokingId = ref<string | null>(null)
+// Approve / Reject of a pending row. Both go through the banner store so a
+// banner for the same intent closes too.
+const confirmStore = useMcpConfirmStore()
+const decidingId = ref<string | null>(null)
+const decision = ref<'approve' | 'reject' | null>(null)
 
 // Phase 6.18b — bulk revoke selection state. The el-table emits
 // selection-change with the FULL selected set (not deltas) so we mirror
@@ -555,6 +589,60 @@ async function onRevoke(row: IntentInventoryEntry): Promise<void> {
   }
 }
 
+function describeTarget(row: IntentInventoryEntry): string {
+  return row.domain === row.host ? row.domain : `${row.domain} → ${row.host}`
+}
+
+async function onApprove(row: IntentInventoryEntry): Promise<void> {
+  if (decidingId.value !== null) return
+  try {
+    await ElMessageBox.confirm(
+      t('mcpIntents.approveDialog.message', {
+        kind: mcpKindLabel(row),
+        target: describeTarget(row),
+        prompt: row.prompt || t('mcp.banner.noDescription'),
+      }),
+      t('mcpIntents.approveDialog.title'),
+      {
+        type: row.kindDanger === 'destructive' ? 'warning' : 'info',
+        confirmButtonText: t('mcpIntents.approve'),
+        cancelButtonText: t('mcpIntents.single.cancel'),
+      },
+    )
+  } catch { return }
+
+  decidingId.value = row.intentId
+  decision.value = 'approve'
+  try {
+    if (await confirmStore.approve(row.intentId)) ElMessage.success(t('mcp.toast.approveSuccess'))
+    else ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
+    await refresh()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(t('mcp.toast.approveFailed', { error: msg }))
+  } finally {
+    decidingId.value = null
+    decision.value = null
+  }
+}
+
+async function onReject(row: IntentInventoryEntry): Promise<void> {
+  if (decidingId.value !== null) return
+  decidingId.value = row.intentId
+  decision.value = 'reject'
+  try {
+    if (await confirmStore.reject(row.intentId)) ElMessage.success(t('mcp.toast.rejectSuccess'))
+    else ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
+    await refresh()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    ElMessage.error(t('mcp.toast.rejectFailed', { error: msg }))
+  } finally {
+    decidingId.value = null
+    decision.value = null
+  }
+}
+
 async function copyId(id: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(id)
@@ -658,6 +746,12 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.intent-decide {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: var(--wdc-space-2);
+}
+.intent-decide .el-button + .el-button { margin-left: 0; }
 .mcp-intents-page {
   padding: var(--wdc-space-4) var(--wdc-space-5);
   display: flex;
@@ -668,9 +762,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;
@@ -700,9 +794,8 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-bottom: var(--wdc-space-1-5);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  font-family: var(--wdc-font-display);
 }
 .domain-stats-grid {
   display: grid;
@@ -737,7 +830,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--wdc-space-2);
   padding: var(--wdc-space-3) var(--wdc-space-4);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   box-shadow: var(--wdc-shadow-sm);

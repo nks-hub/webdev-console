@@ -468,13 +468,13 @@ function formatDate(iso: string): string {
 </script>
 
 <style scoped>
-.backups-page { width: 100%; margin: 0 auto; padding: 0; }
+.backups-page { width: 100%; }
 
 .page-header {
   margin-bottom: var(--wdc-space-5);
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-title {
   font-size: 1.6rem;
@@ -528,12 +528,11 @@ function formatDate(iso: string): string {
   padding: var(--wdc-space-4) var(--wdc-space-4-5);
 }
 .stat-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin-bottom: var(--wdc-space-1-5);
+  font-family: var(--wdc-font-display);
 }
 .stat-value {
   font-size: 1.1rem;

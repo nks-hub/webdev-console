@@ -1,12 +1,17 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Daemon.Services;
+using NKS.WebDevConsole.Daemon.Sites;
 
 namespace NKS.WebDevConsole.Daemon.Mcp;
 
 /// <summary>Why the MCP token may not make a request: the HTTP status and JSON body to answer with.</summary>
 public sealed record McpDenial(int StatusCode, object Body);
+
+/// <summary>A top-level property of a JSON request body.</summary>
+internal readonly record struct BodyProperty(string Name, JsonValueKind Kind, string? Text, JsonElement Value);
 
 /// <summary>
 /// Decides what a caller holding the MCP token (an AI agent behind the MCP
@@ -70,6 +75,7 @@ public static class McpTokenPolicy
     private static readonly (string, string) SitePost = ("POST", "/api/sites");
     private static readonly (string, string) SitePut = ("PUT", "/api/sites/{*}");
     private static readonly (string, string) CloudflareConfigPut = ("PUT", "/api/cloudflare/config");
+    private static readonly (string, string) DatabaseExport = ("GET", "/api/databases/{*}/export");
 
     /// <summary>
     /// Canonical form of a route pattern or path for comparison: lower case,
@@ -94,7 +100,8 @@ public static class McpTokenPolicy
     /// <summary>
     /// Production entry point: capability switches come from SettingsStore
     /// (<c>mcp.capabilities.&lt;id&gt;</c>), intents are checked with the
-    /// daemon's IDeployIntentValidator.
+    /// daemon's IDeployIntentValidator, the current site config for
+    /// PUT /api/sites/{domain} comes from SiteManager.
     /// </summary>
     public static Task<McpDenial?> EvaluateAsync(HttpContext ctx)
     {
@@ -102,12 +109,29 @@ public static class McpTokenPolicy
         Func<string, bool> isEnabled = settings is null
             ? id => McpCapabilities.Get(id).DefaultEnabled
             : id => McpCapabilities.IsEnabled(settings, id);
-        return EvaluateAsync(ctx, isEnabled, ctx.RequestServices.GetService<IDeployIntentValidator>());
+        var sites = ctx.RequestServices.GetService<SiteManager>();
+        Func<string, JsonElement?>? currentSite = null;
+        if (sites is not null)
+        {
+            // Serialise the way GET /api/sites/{domain} answers, so a body
+            // that echoes that answer compares equal field by field.
+            var json = ctx.RequestServices.GetService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>()?.Value.SerializerOptions
+                       ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            currentSite = domain => sites.Get(domain) is { } site ? JsonSerializer.SerializeToElement(site, json) : null;
+        }
+        return EvaluateAsync(ctx, isEnabled, ctx.RequestServices.GetService<IDeployIntentValidator>(), currentSite);
     }
 
-    /// <summary>Returns why the request is refused, or null when it may proceed.</summary>
+    /// <summary>
+    /// Returns why the request is refused, or null when it may proceed.
+    /// <paramref name="currentSite"/> gives the current config of a site as
+    /// JSON (null when there is none): a PUT /api/sites/{domain} body carries
+    /// the whole config, and only the fields it changes are judged. Without
+    /// it every field in the body counts as a change.
+    /// </summary>
     public static async Task<McpDenial?> EvaluateAsync(
-        HttpContext ctx, Func<string, bool> isEnabled, IDeployIntentValidator? intentValidator)
+        HttpContext ctx, Func<string, bool> isEnabled, IDeployIntentValidator? intentValidator,
+        Func<string, JsonElement?>? currentSite = null)
     {
         var method = NormalizedMethod(ctx.Request.Method);
         // The router has already run (WebApplication adds UseRouting ahead of
@@ -155,6 +179,8 @@ public static class McpTokenPolicy
         }
         else if (key == SitePost || key == SitePut)
         {
+            if (key == SitePut && currentSite is not null)
+                body = ChangedProperties(body, currentSite(ExpandTarget("{domain}", ctx, body)));
             var setsStartCommand = body.Any(p =>
                 p.Name.Equals("nodeStartCommand", StringComparison.OrdinalIgnoreCase)
                 && !(p.Kind == JsonValueKind.Null || p.Kind == JsonValueKind.String && string.IsNullOrWhiteSpace(p.Text)));
@@ -194,6 +220,12 @@ public static class McpTokenPolicy
             }
         }
 
+        else if (key == DatabaseExport && ctx.Request.Query.ContainsKey(McpCapabilities.ExportOutputPathParameter)
+                 && !isEnabled(McpCapabilities.DatabaseAdmin))
+        {
+            return CapabilityDisabled(McpCapabilities.Get(McpCapabilities.DatabaseAdmin), "export to a file path (outputPath)");
+        }
+
         if (route is { IntentKind: not null, IntentByEndpoint: false } && routeCapability is not null)
         {
             if (await IntentGateAsync(ctx, intentValidator, routeCapability, route.IntentKind, route.IntentTarget ?? "*", route.IntentHost, body) is { } denied)
@@ -217,7 +249,7 @@ public static class McpTokenPolicy
         });
 
     /// <summary>Expands an intent target template: <c>{name}</c> route value, <c>{body.name}</c> body field.</summary>
-    internal static string ExpandTarget(string template, HttpContext ctx, IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)> body) =>
+    internal static string ExpandTarget(string template, HttpContext ctx, IReadOnlyList<BodyProperty> body) =>
         Regex.Replace(template, @"\{(body\.)?([A-Za-z0-9_]+)\}", m =>
         {
             var name = m.Groups[2].Value;
@@ -233,7 +265,7 @@ public static class McpTokenPolicy
         string kind,
         string targetTemplate,
         string host,
-        IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)> body)
+        IReadOnlyList<BodyProperty> body)
     {
         var domain = ExpandTarget(targetTemplate, ctx, body);
         var hint = $"Ask the user to approve it: call wdc_request_confirmation for intent kind \"{kind}\" " +
@@ -255,7 +287,26 @@ public static class McpTokenPolicy
         });
     }
 
-    private static async Task<IReadOnlyList<(string Name, JsonValueKind Kind, string? Text)>> ReadObjectPropertiesAsync(HttpContext ctx)
+    /// <summary>
+    /// The body properties whose value differs from the same property (by
+    /// name, ignoring case) of <paramref name="current"/>; all of them when
+    /// there is no current object. A null value equals a missing property.
+    /// </summary>
+    internal static IReadOnlyList<BodyProperty> ChangedProperties(IReadOnlyList<BodyProperty> body, JsonElement? current)
+    {
+        if (current is not { ValueKind: JsonValueKind.Object } cur) return body;
+        var existing = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in cur.EnumerateObject()) existing[p.Name] = p.Value;
+        return body.Where(p =>
+        {
+            if (!existing.TryGetValue(p.Name, out var was))
+                return p.Kind != JsonValueKind.Null;
+            if (p.Kind == JsonValueKind.Null && was.ValueKind == JsonValueKind.Null) return false;
+            return !JsonElement.DeepEquals(p.Value, was);
+        }).ToList();
+    }
+
+    private static async Task<IReadOnlyList<BodyProperty>> ReadObjectPropertiesAsync(HttpContext ctx)
     {
         ctx.Request.EnableBuffering();
         try
@@ -263,7 +314,8 @@ public static class McpTokenPolicy
             using var doc = await JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ctx.RequestAborted);
             return doc.RootElement.ValueKind == JsonValueKind.Object
                 ? doc.RootElement.EnumerateObject()
-                    .Select(p => (p.Name, p.Value.ValueKind, p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : null))
+                    .Select(p => new BodyProperty(
+                        p.Name, p.Value.ValueKind, p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : null, p.Value.Clone()))
                     .ToList()
                 : [];
         }

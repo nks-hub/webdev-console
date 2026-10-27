@@ -4,7 +4,7 @@
     "empty": "Žádné odpovídající příkazy",
     "goTo": "Přejít na {target}",
     "gotoSites": "Přejít na Weby",
-    "gotoDashboard": "Přejít na Služby",
+    "gotoDashboard": "Přejít na Přehled",
     "gotoDatabases": "Přejít na Databáze",
     "gotoSsl": "Přejít na Správu SSL",
     "gotoPhp": "Přejít na Správu PHP",
@@ -90,6 +90,7 @@
     "justNow": "právě teď",
     "warning": "Upozornění",
     "danger": "Nebezpečí",
+    "working": "Pracuji…",
     "retry": "Zkusit znovu"
   },
   "header": {
@@ -98,7 +99,9 @@
     "darkMode": "Tmavý režim",
     "lightMode": "Světlý režim",
     "newVersionAvailable": "Nová verze v{version} je dostupná",
-    "connecting": "Připojování…"
+    "connecting": "Připojování…",
+    "openNavigation": "Otevřít navigaci",
+    "searchPlaceholder": "Hledat weby, služby a akce"
   },
   "autostart": {
     "label": "Auto-start při spuštění WDC"
@@ -152,7 +155,17 @@
     "serviceStopped": "{name} zastaveno",
     "signedInAsTitle": "Přihlášen jako {name} — kliknutím se odhlásíte",
     "signInTitle": "Přihlásit se přes SSO",
-    "system": "Systém"
+    "system": "Systém",
+    "mainNavigation": "Hlavní navigace",
+    "brandHome": "WebDev Console, přehled",
+    "application": "Aplikace",
+    "servicesCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
+    "groups": {
+      "workspace": "Pracovní prostor",
+      "stack": "Stack",
+      "network": "Síť",
+      "operations": "Provoz"
+    }
   },
   "versions": {
     "active": "Aktivní",
@@ -302,6 +315,14 @@
       "toastRevokeFailed": "Odvolání selhalo: {error}",
       "toastIdCopied": "ID intentu zkopírováno",
       "toastCopyFail": "Kopírování selhalo — schránka odepřena"
+    },
+    "approve": "Schválit",
+    "reject": "Odmítnout",
+    "approveAria": "Schválit tuto žádost AI",
+    "rejectAria": "Odmítnout a odvolat tuto žádost AI, aby ji AI nemohla provést",
+    "approveDialog": {
+      "title": "Schválit žádost AI?",
+      "message": "AI chce provést {kind} na {target}. Uvedený důvod: {prompt}"
     }
   },
   "mcpHub": {
@@ -372,6 +393,16 @@
         ],
         "cta": "Použít Vyvážený"
       },
+      "localDev": {
+        "name": "Lokální vývoj",
+        "desc": "Restart služeb a změny v databázích *_dev bez ptaní",
+        "bullets": [
+          "Auto-schválení: zastavení a restart služeb",
+          "Auto-schválení: smazání, SQL a import u databází s názvem *_dev",
+          "Vše ostatní se dál ptá"
+        ],
+        "cta": "Použít Lokální vývoj"
+      },
       "permissive": {
         "name": "Plná důvěra",
         "desc": "AI smí vše bez ptaní — jen pro testovací prostředí",
@@ -392,7 +423,8 @@
         ],
         "cta": "Otevřít Pravidla"
       }
-    }
+    },
+    "default": "výchozí"
   },
   "mcpActivity": {
     "stats": {
@@ -415,7 +447,8 @@
       "allDanger": "Všechny úrovně",
       "toolName": "Filter podle nástroje…",
       "search": "Hledat v nástrojích a argumentech…",
-      "collapseReads": "Sbalit read volání"
+      "collapseReads": "Sbalit read volání",
+      "dangerAria": "Filtrovat podle úrovně nebezpečí"
     },
     "view": {
       "sessions": "Podle session",
@@ -497,7 +530,8 @@
       "daemon_admin": "Restartovat, vypnout, resetovat nebo odinstalovat démona",
       "mysql_root_reset": "Resetovat heslo uživatele root v MySQL",
       "mysql_user_drop": "Smazat uživatelský účet MySQL",
-      "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL"
+      "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL",
+      "backup_delete": "Smazat zálohu WDC"
     },
     "empty": "Žádné druhy nejsou registrované",
     "col": {
@@ -791,7 +825,8 @@
       "restarted": "Apache restartován",
       "stopApacheTitle": "Zastavit Apache",
       "stopApacheConfirm": "Zastavením Apache se přestanou načítat VŠECHNY weby, ne jen tento. Opravdu pokračovat?",
-      "stopApacheTooltip": "Zastaví Apache — vypne všechny weby"
+      "stopApacheTooltip": "Zastaví Apache — vypne všechny weby",
+      "startWebServer": "Spustit webový server"
     },
     "edit": {
       "browseDocRoot": "Vybrat složku document root"
@@ -859,6 +894,30 @@
       "noConflicts": "Žádné konflikty",
       "conflictsTitle": "Konflikty a varování",
       "majorJump": "Major version jump — možné breaking changes"
+    },
+    "list": {
+      "stateFilter": "Filtrovat podle stavu",
+      "status": "Stav",
+      "runtime": "Runtime",
+      "address": "Adresa",
+      "state": {
+        "ok": "Běží",
+        "failed": "Použití selhalo",
+        "disabled": "Vypnutý"
+      },
+      "filter": {
+        "all": "Vše",
+        "failed": "S chybou",
+        "disabled": "Vypnuté"
+      },
+      "summaryEmpty": "Zatím žádný web.",
+      "summaryTotal": "{n} web | {n} weby | {n} webů",
+      "summaryFailed": "{n} selhal při posledním použití | {n} selhaly při posledním použití | {n} selhalo při posledním použití",
+      "summaryDisabled": "{n} vypnutý | {n} vypnuté | {n} vypnutých",
+      "noneInFilter": "Filtru neodpovídá žádný web.",
+      "clearFilter": "Zrušit filtr",
+      "enable": "Zapnout web",
+      "disable": "Vypnout web"
     }
   },
   "uiMode": {
@@ -1172,7 +1231,8 @@
     "hostnameColumn": "Hostname",
     "sourceColumn": "Zdroj (web)",
     "entriesCount": "{n} záznamů",
-    "loadingHosts": "Parsování systémového hosts souboru…"
+    "loadingHosts": "Parsování systémového hosts souboru…",
+    "enableEntryAria": "Záznam pro {hostname} zapnutý"
   },
   "apache": {
     "title": "Apache Web Server",
@@ -2692,6 +2752,11 @@
       "toastTrustedFor": "Oprávnění na {minutes} min uloženo — další shodné požadavky banner přeskočí",
       "toastAlwaysTrusted": "Trvalé oprávnění uloženo — další shodné požadavky banner přeskočí",
       "toastGrantFailed": "Nepodařilo se uložit oprávnění: {error}"
+    },
+    "notify": {
+      "title": "NKS WDC — žádost AI čeká na schválení",
+      "body": "AI chce provést: {kind}. Otevři WDC a žádost schval, nebo odmítni.",
+      "bodyGeneric": "AI chce spustit destruktivní operaci. Otevři WDC a žádost schval, nebo odmítni."
     }
   },
   "footer": {
@@ -2905,7 +2970,7 @@
     "title": "Průběh nasazení konfigurace",
     "notYet": "Od spuštění aplikace zatím neaplikováno",
     "allOk": "Všechny kroky proběhly",
-    "someFailed": "Selhalo kroků: {n}",
+    "someFailed": "Selhal {n} krok | Selhaly {n} kroky | Selhalo {n} kroků",
     "when": "aplikováno {when}",
     "minutesAgo": "před {n} min",
     "applyAgain": "Aplikovat znovu",
@@ -2931,7 +2996,9 @@
       "reload": "Zkontrolujte webserver na stránce Služby — jeho log obvykle ukáže vadnou direktivu.",
       "php": "Na stránce Binárky nainstalujte verzi PHP, kterou web používá.",
       "vhost": "Plugin webserveru nemohl zapsat vhost; ověřte, že je Apache nainstalovaný."
-    }
+    },
+    "failedStep": "Selhal krok „{step}“",
+    "moreFailed": "Selhal ještě {n} další krok. | Selhaly ještě {n} další kroky. | Selhalo ještě {n} dalších kroků."
   },
   "servicesPage": {
     "title": "Služby",
@@ -2940,15 +3007,85 @@
     "filter": {
       "all": "Vše",
       "running": "Běžící",
-      "problems": "Vyžaduje pozornost"
+      "problems": "Spadlé"
     },
     "empty": "Zatím nejsou registrované žádné služby",
-    "noProblems": "Všechny služby běží",
+    "noProblems": "Žádná služba nespadla.",
     "whyTitle": "Proč neběží?",
     "showLog": "Zobrazit log",
     "logEmpty": "Log služby je prázdný.",
     "fixRestart": "Spustit znovu",
-    "fixConfig": "Upravit konfiguraci"
+    "fixConfig": "Upravit konfiguraci",
+    "showAll": "Zobrazit vše",
+    "explain": {
+      "running": "Běží a odpovídá.",
+      "stopped": "Zastaveno. Nepoběží, dokud ji nespustíte.",
+      "starting": "Spouští se…",
+      "stopping": "Zastavuje se…",
+      "crashed": "Spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
+      "disabled": "Vypnuto; její plugin je vypnutý."
+    },
+    "facts": {
+      "uptime": "Běží"
+    },
+    "logTitle": "Konec logu",
+    "stop": "Zastavit"
+  },
+  "overview": {
+    "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",
+    "summaryNoServices": "Zatím žádná nainstalovaná služba · {sites} web | Zatím žádná nainstalovaná služba · {sites} weby | Zatím žádná nainstalovaná služba · {sites} webů",
+    "summaryCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
+    "restarted": "{name} restartováno",
+    "actionFailed": "{name}: akce se nezdařila",
+    "attention": {
+      "title": "Vyžaduje pozornost",
+      "none": "Teď nic nevyžaduje vaši pozornost.",
+      "crashed": "spadla. Důvod obvykle najdete v logu.",
+      "showWhy": "Zobrazit proč",
+      "applyFailed": "Při posledním použití selhal krok {step}. | při posledním použití selhaly kroky: {step}. | při posledním použití selhaly kroky: {step}.",
+      "openSite": "Otevřít web",
+      "apacheStopped": "Webový server je zastavený, weby se nenačtou.",
+      "startApache": "Spustit Apache",
+      "backupNever": "Zatím neexistuje žádná záloha.",
+      "backupOld": "Poslední záloha je starší než {days} dní.",
+      "openBackups": "Otevřít zálohy",
+      "update": "Verze {version} je připravená k instalaci.",
+      "openUpdate": "Otevřít aktualizaci"
+    },
+    "stack": {
+      "title": "Stack",
+      "all": "Všechny služby",
+      "caption": "Stav služeb",
+      "loading": "Načítám stav služeb",
+      "service": "Služba",
+      "status": "Stav",
+      "port": "Port",
+      "version": "Verze",
+      "usage": "CPU · RAM",
+      "actions": "Akce",
+      "empty": "Zatím nemáte nainstalovanou žádnou službu.",
+      "emptyHint": "Weby potřebují webový server a PHP. Doporučené verze stáhnete v sekci Binárky.",
+      "openBinaries": "Otevřít Binárky"
+    },
+    "status": {
+      "running": "Běží",
+      "stopped": "Zastaveno",
+      "starting": "Spouští se",
+      "stopping": "Zastavuje se",
+      "crashed": "Spadla",
+      "disabled": "Vypnuto"
+    },
+    "actions": {
+      "start": "Spustit",
+      "restart": "Restartovat",
+      "why": "Proč?",
+      "logs": "Logy",
+      "config": "Konfigurace",
+      "more": "Další akce pro {name}"
+    },
+    "figures": {
+      "title": "Přehled čísel"
+    }
   },
   "mcpCapabilities": {
     "intro": "AI klienti připojení přes MCP mohou vždy číst stav a provádět běžné akce (weby, služby, databáze). Každá skupina níže odemyká víc. Destruktivní akce ve skupině dál čekají na vaše schválení ve WDC, pokud je nepokrývá trvalé oprávnění.",
