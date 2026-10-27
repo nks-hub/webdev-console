@@ -7,15 +7,11 @@
       :subtitle="t('mysqlPlugin.subtitle')"
     />
 
-    <p v-if="installed && !running" class="hint">{{ t('mysqlPlugin.needsRunning') }}</p>
-
     <el-tabs v-if="installed" v-model="activeTab" class="cf-tabs">
       <!-- Databases -->
-      <el-tab-pane name="databases">
-        <template #label>
-          <span class="tab-label"><el-icon><Grid /></el-icon> {{ $t('mysqlPlugin.tabDatabases') }}</span>
-        </template>
-        <div class="tab-content">
+      <el-tab-pane name="databases" :label="t('mysqlPlugin.tabDatabases')">
+        <p v-if="!running" class="needs-running">{{ t('mysqlPlugin.needsRunning') }}</p>
+        <div v-else class="tab-content">
           <EditCard :title="$t('mysqlPlugin.tabDatabases')">
             <template #hint>
               <el-button size="small" text @click="$router.push('/databases')">
@@ -151,11 +147,9 @@
       </el-tab-pane>
 
       <!-- Users -->
-      <el-tab-pane name="users">
-        <template #label>
-          <span class="tab-label"><el-icon><User /></el-icon> {{ $t('mysqlPlugin.tabUsers') }}</span>
-        </template>
-        <div class="tab-content">
+      <el-tab-pane name="users" :label="t('mysqlPlugin.tabUsers')">
+        <p v-if="!running" class="needs-running">{{ t('mysqlPlugin.needsRunning') }}</p>
+        <div v-else class="tab-content">
           <EditCard :title="$t('mysqlPlugin.createUser')" :hint="$t('mysqlPlugin.createUserHint')">
             <el-form label-width="200px" class="user-form-grid">
                 <el-form-item :label="$t('mysqlPlugin.userName')">
@@ -254,13 +248,11 @@
       </el-tab-pane>
 
       <!-- Root Password -->
-      <el-tab-pane name="password">
-        <template #label>
-          <span class="tab-label"><el-icon><Key /></el-icon> {{ $t('mysqlPlugin.tabPassword') }}</span>
-        </template>
+      <el-tab-pane name="password" :label="t('mysqlPlugin.tabPassword')">
         <div class="tab-content">
           <!-- Change password -->
-          <EditCard :title="$t('mysqlPlugin.changePassword')" :hint="$t('mysqlPlugin.changePasswordHint')">
+          <p v-if="!running" class="needs-running">{{ t('mysqlPlugin.changeNeedsRunning') }}</p>
+          <EditCard v-else :title="$t('mysqlPlugin.changePassword')" :hint="$t('mysqlPlugin.changePasswordHint')">
             <el-form label-width="180px" size="default">
                 <el-form-item :label="$t('mysqlPlugin.currentPassword')">
                   <el-input v-model="changePwd.current" type="password" show-password :placeholder="$t('mysqlPlugin.currentPasswordOptional')" style="max-width: 340px" />
@@ -331,10 +323,7 @@
       </el-tab-pane>
 
       <!-- Logs -->
-      <el-tab-pane name="logs" lazy>
-        <template #label>
-          <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('mysqlPlugin.tabLogs') }}</span>
-        </template>
+      <el-tab-pane name="logs" :label="t('mysqlPlugin.tabLogs')" lazy>
         <LogViewer service-id="mysql" class="tab-log" />
       </el-tab-pane>
     </el-tabs>
@@ -391,7 +380,7 @@
 import { computed, onActivated, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Grid, Key, Document, User, Plus } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
@@ -939,6 +928,7 @@ watch(() => route.query.tab, value => {
 
 <style scoped>
 .tab-log { height: 460px; }
+.needs-running { margin: 0; padding: var(--wdc-space-4) 0; color: var(--wdc-text-2); line-height: 1.5; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
 /* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
@@ -992,8 +982,6 @@ watch(() => route.query.tab, value => {
   .cf-tabs :deep(.el-tabs__nav-wrap.is-scrollable) { padding: 0; }
   .cf-tabs :deep(.el-tabs__nav-prev),
   .cf-tabs :deep(.el-tabs__nav-next) { display: none; }
-  .tab-label { gap: 0; font-size: 0.74rem; }
-  .tab-label :deep(.el-icon) { display: none; }
   .edit-card-header { align-items: flex-start; flex-direction: column; gap: 6px; }
   .edit-card-body { padding: 16px 14px; }
   .table-body { padding: 0; }

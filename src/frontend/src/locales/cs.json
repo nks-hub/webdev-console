@@ -1542,13 +1542,13 @@
   "phpPlugin": {
     "title": "PHP",
     "subtitle": "Verze, rozšíření a php.ini",
-    "defaultVersion": "Výchozí verze",
+    "defaultVersion": "Verze pro nové weby",
     "tabVersions": "Verze",
     "tabExtensions": "Rozšíření",
     "tabLogs": "Log",
     "selectVersionHint": "Nejprve vyberte verzi PHP na záložce Verze.",
     "noExtensions": "V php.ini této verze nejsou žádná rozšíření.",
-    "noDefault": "Není nastavená",
+    "noDefault": "Není vybraná",
     "configFailed": "Soubor php.ini se nepodařilo načíst: {err}",
     "installedVersions": "Nainstalováno",
     "loadFailed": "Verze PHP se nepodařilo načíst: {err}",
@@ -1632,7 +1632,8 @@
     "resetDescription": "Zastaví MySQL, spustí ho v nouzovém režimu (--skip-grant-tables), nastaví všem root účtům nové heslo a pak ho normálně spustí.",
     "newRootPassword": "Nové root heslo",
     "resetPasswordBtn": "Resetovat root heslo",
-    "needsRunning": "Databáze a uživatele uvidíte, až MySQL poběží."
+    "needsRunning": "Databáze a uživatele uvidíte, až MySQL poběží. Spusťte ho tlačítkem nahoře.",
+    "changeNeedsRunning": "Heslo jde změnit, jen když MySQL běží. Pokud ho neznáte, použijte reset níže."
   },
   "postgresPlugin": {
     "title": "PostgreSQL",

@@ -1542,13 +1542,13 @@
   "phpPlugin": {
     "title": "PHP",
     "subtitle": "Versions, extensions and php.ini",
-    "defaultVersion": "Default version",
+    "defaultVersion": "Version for new sites",
     "tabVersions": "Versions",
     "tabExtensions": "Extensions",
     "tabLogs": "Log",
     "selectVersionHint": "Pick a PHP version on the Versions tab first.",
     "noExtensions": "The php.ini of this version lists no extensions.",
-    "noDefault": "Not set",
+    "noDefault": "Not chosen",
     "configFailed": "Could not load php.ini: {err}",
     "installedVersions": "Installed",
     "loadFailed": "Could not load PHP versions: {err}",
@@ -1632,7 +1632,8 @@
     "resetDescription": "Stops MySQL, restarts in safe mode (--skip-grant-tables), resets all root accounts to the new password, then restarts normally.",
     "newRootPassword": "New root password",
     "resetPasswordBtn": "Reset root password",
-    "needsRunning": "Databases and users show up once MySQL is running."
+    "needsRunning": "Databases and users show up once MySQL is running. Start it with the button at the top.",
+    "changeNeedsRunning": "The password can only be changed while MySQL is running. If you do not know it, use the reset below."
   },
   "postgresPlugin": {
     "title": "PostgreSQL",
