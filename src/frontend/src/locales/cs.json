@@ -2968,15 +2968,29 @@
     "filter": {
       "all": "Vše",
       "running": "Běžící",
-      "problems": "Vyžaduje pozornost"
+      "problems": "Spadlé"
     },
     "empty": "Zatím nejsou registrované žádné služby",
-    "noProblems": "Všechny služby běží",
+    "noProblems": "Žádná služba nespadla.",
     "whyTitle": "Proč neběží?",
     "showLog": "Zobrazit log",
     "logEmpty": "Log služby je prázdný.",
     "fixRestart": "Spustit znovu",
-    "fixConfig": "Upravit konfiguraci"
+    "fixConfig": "Upravit konfiguraci",
+    "showAll": "Zobrazit vše",
+    "explain": {
+      "running": "Běží a odpovídá.",
+      "stopped": "Zastaveno. Nepoběží, dokud ji nespustíte.",
+      "starting": "Spouští se…",
+      "stopping": "Zastavuje se…",
+      "crashed": "Spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
+      "disabled": "Vypnuto; její plugin je vypnutý."
+    },
+    "facts": {
+      "uptime": "Běží"
+    },
+    "logTitle": "Konec logu",
+    "stop": "Zastavit"
   },
   "overview": {
     "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",

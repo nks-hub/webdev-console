@@ -117,6 +117,10 @@
   --wdc-gradient-accent: linear-gradient(var(--wdc-accent), var(--wdc-accent));
   --wdc-gradient-secondary: linear-gradient(var(--wdc-accent-secondary), var(--wdc-accent-secondary));
 
+  /* Log/terminal boxes stay graphite in both themes. */
+  --wdc-log-bg:   oklch(17% 0.016 262);
+  --wdc-log-text: oklch(90% 0.01 250);
+
   --wdc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --wdc-dur-micro: 120ms;
   --wdc-dur-short: 220ms;
