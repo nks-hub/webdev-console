@@ -5,6 +5,7 @@ import { spawn, ChildProcess } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync, statSync, copyFileSync, mkdirSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import http from 'http'
+import { connect as tcpConnect } from 'node:net'
 import * as Sentry from '@sentry/electron/main'
 import log from 'electron-log/main'
 // Static import of electron-updater so vite/rollup bundles the actual
@@ -463,8 +464,26 @@ async function healthTick() {
   if (daemon || autoRestartSuspended || Date.now() < monitorPausedUntil) return
   if (++healthFailures >= HEALTH_FAILURE_LIMIT) {
     healthFailures = 0
+    // A process that still holds its port is hung, not gone. A second daemon
+    // would fight it over Apache and MySQL, so respawn only once the port is free.
+    const port = readPortFile()?.port
+    if (port && await portAcceptsConnections(port)) {
+      log.warn(`[daemon] adopted daemon on port ${port} is not answering /healthz but still listens — not starting a second one`)
+      return
+    }
     scheduleCrashRestart('adopted daemon stopped responding')
   }
+}
+
+/** True when something accepts TCP connections on localhost:port (a timeout counts as yes). */
+function portAcceptsConnections(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = tcpConnect({ host: 'localhost', port })
+    const done = (open: boolean) => { socket.destroy(); resolve(open) }
+    socket.setTimeout(1500, () => done(true))
+    socket.once('connect', () => done(true))
+    socket.once('error', () => done(false))
+  })
 }
 
 /** Resolves once `child` has exited, or after `timeoutMs`. */
@@ -1394,7 +1413,15 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
 async function installUpdateAndRestart() {
   isQuitting = true
   await shutdownDaemon()
-  electronAutoUpdater.quitAndInstall(false, true)
+  try {
+    electronAutoUpdater.quitAndInstall(false, true)
+  } catch (e) {
+    // The installer did not take over: keep the app usable instead of
+    // leaving it quitting with no daemon.
+    log.error('[updater] quitAndInstall failed', e)
+    isQuitting = false
+    restartDaemonManually()
+  }
 }
 
 async function setupAutoUpdater() {
