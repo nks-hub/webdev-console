@@ -785,6 +785,8 @@ var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumber
 // admin routes and trust-related settings are refused.
 var mcpPortFile = Path.Combine(Path.GetTempPath(), "nks-wdc-mcp.port");
 var mcpToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+// Rewrites a port file that went missing under a live daemon; see ApplicationStarted.
+System.Threading.Timer? portFileWatchdog = null;
 
 // Write port file AFTER server starts listening (avoids race condition).
 // OwnerOnlyFile writes a randomly named temp file (CreateNew; 0600 on Unix,
@@ -815,6 +817,21 @@ app.Lifetime.ApplicationStarted.Register(() =>
         return;
     }
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
+
+    // Self-heal: the port file is the only way clients learn the bearer token,
+    // and several paths delete it under a live daemon (Electron's shutdown or
+    // elevation wipe, a second instance starting, a factory reset). The daemon
+    // then kept serving while every client got 401 forever (the "token could
+    // not be synchronised" splash). One File.Exists per 5 s makes it recover.
+    portFileWatchdog = new System.Threading.Timer(_ =>
+    {
+        try
+        {
+            if (!File.Exists(portFile)) OwnerOnlyFile.WriteAllTextAtomic(portFile, $"{port}\n{authToken}");
+            if (!File.Exists(mcpPortFile)) OwnerOnlyFile.WriteAllTextAtomic(mcpPortFile, $"{port}\n{mcpToken}");
+        }
+        catch { /* transient FS error; the next tick retries */ }
+    }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
 
     // Banner: one structured line with every piece of state someone
     // triaging a support ticket asks for — daemon version, bound port,
@@ -1412,15 +1429,24 @@ if (autoStartEnabled)
             // Mirror the plugin-start dual-guard (F51f): a module whose
             // StartAsync never returns (MySQL pid-file wait, Redis PONG,
             // Cloudflared tunnel-ready) must not wedge Task.WhenAll and
-            // orphan the subsequent site re-apply. 20s cooperative token +
-            // 22s wall-clock race; an orphaned start task keeps running.
-            using var moduleCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            // orphan the subsequent site re-apply.
+            //
+            // The budget has to exceed the longest wait a module does
+            // internally, or we cancel a start that was going to succeed and
+            // report it as a failure. MySQL waits up to 30s for the port, so
+            // at 20s it was cancelled every time on a cold data directory:
+            // mysqld came up seconds later and served fine, while the UI said
+            // "crashed" and the log said "The operation was canceled."
+            // 45s cooperative + 50s wall-clock leaves headroom above the
+            // slowest module without stalling anything — these run in the
+            // background after Kestrel is already listening.
+            using var moduleCts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
             var startTask = module.StartAsync(moduleCts.Token);
-            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(22), CancellationToken.None);
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(50), CancellationToken.None);
             if (await Task.WhenAny(startTask, timeoutTask) == timeoutTask)
             {
                 moduleCts.Cancel();
-                Console.WriteLine($"[auto-start] {module.ServiceId}: timed out after 22s — continuing");
+                Console.WriteLine($"[auto-start] {module.ServiceId}: timed out after 50s — continuing");
                 return;
             }
             await startTask;
@@ -1547,6 +1573,8 @@ app.Lifetime.ApplicationStopping.Register(() =>
 {
     var shutdownLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Shutdown");
     shutdownLogger.LogInformation("Shutdown requested — stopping services and cleaning port file");
+    // Stop the self-heal first, or it would put the port file back for a daemon that is going away.
+    portFileWatchdog?.Dispose();
     app.Services.GetRequiredService<ShutdownCoordinator>()
         .StopAllAsync(
             app.Services.GetServices<IServiceModule>(),

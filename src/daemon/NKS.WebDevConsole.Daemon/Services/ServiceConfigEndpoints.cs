@@ -92,8 +92,20 @@ internal static class ServiceConfigEndpoints
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
                 || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
             if (module == null) return Results.NotFound();
-            var logs = await module.GetLogsAsync(lines ?? 100, CancellationToken.None);
-            return Results.Ok(logs);
+            try
+            {
+                var logs = await module.GetLogsAsync(lines ?? 100, CancellationToken.None);
+                return Results.Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                // A running service usually holds its own log file open and some
+                // modules read it without FileShare.ReadWrite. An unhandled throw
+                // became a bare 500 without CORS headers, which the renderer
+                // reported as a CORS failure with an empty log panel.
+                app.Logger.LogWarning(ex, "Log read failed for {Service}", id);
+                return Results.Ok(new[] { $"[log unavailable] {ex.Message}" });
+            }
         });
 
         // Service config read — returns the main config file content for a service
