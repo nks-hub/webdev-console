@@ -2670,11 +2670,12 @@ const updaterState = ref<AppUpdaterState | null>(null)
 let unsubscribeUpdater: (() => void) | null = null
 
 // electron-updater checks on its own at startup. Until the GitHub check
-// runs, the version its feed reported is the newest one known.
+// runs, the version its feed reported is the newest one known, also after
+// a failed download (an error keeps the last version the feed reported).
 const latestVersion = computed<string | null>(() => {
   if (updateCheck.latest) return updateCheck.latest
   const u = updaterState.value
-  return u && (u.status === 'up-to-date' || u.status === 'downloading' || u.status === 'downloaded') ? u.version : null
+  return u && (u.status === 'up-to-date' || u.status === 'downloading' || u.status === 'downloaded' || u.status === 'error') ? u.version : null
 })
 const lastCheckedIso = computed<string | null>(() =>
   [updateCheck.lastCheckedIso, updaterState.value?.checkedAt].filter((x): x is string => !!x).sort().pop() ?? null)

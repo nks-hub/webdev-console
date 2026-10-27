@@ -3015,7 +3015,12 @@
       "restartInstall": "Restartovat a nainstalovat",
       "openReleasePage": "Otevřít stránku vydání",
       "downloadingVersion": "Stahuji verzi {v}",
-      "tabDesc": "Instalovaná verze hledá aktualizace sama při spuštění a stáhne je na pozadí. Nainstalují se po restartu aplikace."
+      "tabDesc": "Instalovaná verze hledá aktualizace sama při spuštění a stáhne je na pozadí. Nainstalují se po restartu aplikace.",
+      "errorHint": {
+        "signature": "Stáhněte instalátor ze stránky vydání a spusťte ho. Automatická aktualizace staženou verzi odmítla, protože nemá podpis, který tato instalace očekává.",
+        "generic": "Novou verzi můžete stáhnout i ručně ze stránky vydání."
+      },
+      "errorDetail": "Technické podrobnosti"
     },
     "danger": {
       "title": "Nebezpečná zóna",

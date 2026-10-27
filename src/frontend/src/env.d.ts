@@ -27,6 +27,7 @@ interface AppUpdaterState {
   transferred: number | null
   total: number | null
   error: string | null
+  errorCode: string | null
   checkedAt: string | null
 }
 
