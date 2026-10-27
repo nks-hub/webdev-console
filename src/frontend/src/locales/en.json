@@ -840,8 +840,7 @@
           "title": "Site services",
           "restart": "Restart",
           "start": "Start",
-          "restarted": "{name} restarted",
-          "started": "{name} started"
+          "shared": "All sites share these services, so a restart affects every site."
         },
         "activity": {
           "title": "Recent activity",
@@ -987,7 +986,8 @@
       },
       "tunnelOpen": "Open the public URL in the browser",
       "tunnelOfflineTitle": "The tunnel service is stopped, so this URL does not respond until you start cloudflared.",
-      "tunnelOffline": "offline"
+      "tunnelOffline": "offline",
+      "openWaiting": "Apache is not running, so the site will not answer yet."
     },
     "reapplyAllTitle": "Regenerate configuration of all sites",
     "reapplyAllConfirm": "The configuration of every site is created again and Apache restarts briefly. Sites do not respond during the restart. Continue?",
@@ -1015,11 +1015,24 @@
       },
       "failed": {
         "title": "Apache could not be started.",
-        "detail": "{err}"
+        "detail": "{err}",
+        "noReason": "The process ended before it was up. The reason is usually at the end of the Apache log."
       },
       "installApache": "Install Apache",
       "startApache": "Start Apache",
-      "showLog": "Show log"
+      "showLog": "Show log",
+      "restarting": {
+        "title": "Apache is restarting…",
+        "detail": "The site is being saved, so sites do not answer for a moment."
+      },
+      "stopping": {
+        "title": "Apache is stopping…",
+        "detail": "Sites do not answer for a moment."
+      },
+      "crashed": {
+        "title": "Apache crashed.",
+        "detail": "The process ended on its own. The reason is usually at the end of the Apache log."
+      }
     },
     "empty": {
       "title": "There is no site yet",
@@ -1083,15 +1096,15 @@
         },
         "laravel": {
           "label": "Laravel",
-          "hint": "The site is served from the public sub-folder of the project. It was added to the path."
+          "hint": "The public sub-folder, which Apache serves the site from, is added to the path."
         },
         "symfony": {
           "label": "Symfony",
-          "hint": "The site is served from the public sub-folder of the project. It was added to the path."
+          "hint": "The public sub-folder, which Apache serves the site from, is added to the path."
         },
         "nette": {
           "label": "Nette",
-          "hint": "The site is served from the www sub-folder of the project. It was added to the path."
+          "hint": "The www sub-folder, which Apache serves the site from, is added to the path."
         },
         "nextjs": {
           "label": "Next.js (Node)",
@@ -1113,7 +1126,14 @@
         "domainNoTld": "The domain needs an ending, for example myapp.loc.",
         "domainExists": "A site with this domain already exists.",
         "folderRequired": "Choose the site folder."
-      }
+      },
+      "folderUsed": "Site {domain} already uses this folder. Both sites will show the same files.",
+      "httpsOffNeedsCa": "HTTPS is off because the certificate authority is missing. It switches on after the install.",
+      "installHttpsOn": "Install and turn on",
+      "mysqlStopped": "MySQL is not running, so the database cannot be created.",
+      "startMysql": "Start MySQL",
+      "mysqlStarting": "MySQL is starting; you can create the database in a moment.",
+      "creating": "The site is being created and Apache restarts, which can take a few seconds."
     }
   },
   "uiMode": {
@@ -1860,7 +1880,7 @@
     "composeDone": "Done",
     "composeFailedShort": "Failed",
     "deleteTitle": "Delete site",
-    "deleteDesc": "The site configuration, its hosts entry and its Apache vhost are removed. Files in the folder and databases stay.",
+    "deleteDesc": "The site configuration, its hosts entry and its Apache virtual host are removed. Files in the folder and databases stay.",
     "deleteAction": "Delete site…",
     "unsaved": "Unsaved changes",
     "unsavedAria": "Unsaved changes of the site",
@@ -1868,7 +1888,7 @@
     "leaveText": "You have unsaved changes. Do you really want to leave this page?",
     "leaveConfirm": "Leave without saving",
     "stay": "Stay",
-    "historyBanner": "A configuration backup is made before every save. Restoring brings back only the configuration files of the site (vhost and plugin settings). The site folder is left alone.",
+    "historyBanner": "A configuration backup is made before every save. Restoring brings back only the configuration files of the site (virtual host and plugin settings). The site folder is left alone.",
     "snapshot": "Configuration backup",
     "ov": {
       "state": "Status",
@@ -1885,9 +1905,10 @@
         "running": "The site answers at the address above.",
         "waitingStopped": "The configuration is written. The site starts answering once you start Apache; the button is below in Site services.",
         "waitingMissing": "The configuration is written. The site starts answering after Apache is installed and started; the button is below in Site services.",
-        "failed": "The last configuration apply did not succeed. Details are in the bar “Last configuration apply” above.",
+        "failed": "The last configuration apply did not succeed. Details are in the bar above.",
         "applying": "The configuration is being saved and applied.",
-        "disabled": "The site is turned off: its configuration is kept, but it does not answer. Turning it on brings it back."
+        "disabled": "The site is turned off: its configuration is kept, but it does not answer. Turning it on brings it back.",
+        "waitingBusy": "Apache is starting or restarting right now. The site answers in a moment."
       },
       "on": "On"
     },
@@ -3448,7 +3469,8 @@
       "apacheDown": "Apache is not running",
       "batch": "The reload happens once for all sites",
       "hosts": "The hosts file is left alone (turned off by the environment)"
-    }
+    },
+    "applyHint": "Creates the certificate, virtual host and hosts entry again from the site settings."
   },
   "servicesPage": {
     "title": "Services",

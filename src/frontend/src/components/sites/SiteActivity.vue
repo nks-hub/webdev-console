@@ -61,9 +61,9 @@ import MiniSparkline from '../common/MiniSparkline.vue'
 import { daemonBaseUrl } from '../../api/daemon'
 import { useSitesStore } from '../../stores/sites'
 
-defineOptions({ name: 'SimpleSiteActivityCard' })
+defineOptions({ name: 'SiteActivity' })
 
-// Extracted from SiteDetailSimple.vue — the "Recent activity" pane is a
+// The "Recent activity" pane is a
 // self-contained read-only widget (last-5 errors + hourly hits sparkline)
 // that doesn't share state with the editable site-config rows. Pulling
 // it out keeps the parent component focused on edit flows and lets future

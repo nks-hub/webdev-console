@@ -7,7 +7,7 @@
       </div>
       <div class="header-actions">
         <el-dropdown trigger="click" @command="onHeaderCommand">
-          <el-button :aria-label="$t('sites.list.moreHeader')">
+          <el-button :aria-label="$t('sites.list.moreHeader')" :title="$t('sites.list.moreHeader')">
             <el-icon aria-hidden="true"><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
@@ -36,7 +36,7 @@
     <template v-else>
       <WebServerBanner />
 
-      <div class="toolbar" role="search">
+      <div v-if="showToolbar" class="toolbar" role="search">
         <el-input
           ref="searchInput"
           v-model="search"
@@ -95,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -181,6 +181,12 @@ const stateFilters = computed(() => [
   { id: 'disabled' as const, label: t('sites.list.filter.disabled'), count: counts.value.disabled },
 ])
 
+// Search and the status filter earn their space once the list is long; with a handful of
+// sites they are just more controls to read (they stay while a filter is active).
+const SEARCH_FROM = 6
+const showToolbar = computed(() =>
+  sitesStore.sites.length >= SEARCH_FROM || !!search.value || stateFilter.value !== 'all')
+
 const sitesSummary = computed(() => {
   const total = sitesStore.sites.length
   if (total === 0) return t('sites.list.summaryEmpty')
@@ -255,10 +261,17 @@ async function reload() {
   void siteState.refresh()
 }
 
-onMounted(() => {
-  void reload()
+// The page stays cached by <keep-alive>, so the "/" shortcut is only live while it is shown
+// (otherwise it would swallow the key on every other page), and what may have changed
+// elsewhere (sites, Apache or PHP installed, a site applied) is fetched again on return.
+let activatedOnce = false
+onMounted(() => { void reload() })
+onActivated(() => {
   window.addEventListener('keydown', onKeydown)
+  if (activatedOnce) void reload()
+  activatedOnce = true
 })
+onDeactivated(() => window.removeEventListener('keydown', onKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 // Re-scan when the set of sites or any document root changes.

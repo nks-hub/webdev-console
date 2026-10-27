@@ -43,8 +43,8 @@ const prerequisites = computed(() => siteState.prerequisites)
 const items = computed<Array<{ app: PrerequisiteApp; name: string; ok: boolean }>>(() => {
   const p = prerequisites.value
   return [
-    { app: 'apache', name: t('sites.empty.apache'), ok: !!p?.apacheInstalled },
-    { app: 'php', name: t('sites.empty.php'), ok: !!p?.phpInstalled },
+    { app: 'apache', name: t('sites.empty.apache'), ok: !!p?.apacheInstalled || siteState.webServer !== 'missing' && siteState.webServer !== 'unknown' },
+    { app: 'php', name: t('sites.empty.php'), ok: !!p?.phpInstalled || !!siteState.phpVersions?.length },
     { app: 'https', name: t('sites.empty.https'), ok: !!p?.mkcertBinaryInstalled && !!p?.mkcertCaInstalled },
   ]
 })
