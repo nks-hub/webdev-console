@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-brand">
-        <div class="brand-mark">{{ $t('app.name') }}</div>
+        <h1 class="brand-mark">{{ $t('app.name') }}</h1>
         <div class="brand-sub">{{ $t('login.subtitle') }}</div>
       </div>
 
@@ -214,6 +214,7 @@ onMounted(loadCatalogUrl)
   align-items: flex-start;
 }
 .brand-mark {
+  margin: 0;
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: 0.06em;

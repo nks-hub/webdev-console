@@ -3891,7 +3891,10 @@
   },
   "app": {
     "name": "NKS WebDev Console",
-    "short": "WDC"
+    "short": "WDC",
+    "advancedPageNote": "Tato stránka patří do Pokročilého režimu, proto ji menu v Jednoduchém režimu neukazuje.",
+    "switchToAdvanced": "Přepnout na Pokročilý",
+    "skipToContent": "Přeskočit na obsah"
   },
   "pageError": {
     "title": "Tuto stránku se nepodařilo zobrazit",

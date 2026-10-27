@@ -6,7 +6,7 @@
     align-center
     @close="onDismiss"
   >
-    <div class="ob-wrap">
+    <div class="ob-wrap" @keydown.capture="onKeydownCapture">
       <p class="ob-subtitle">{{ t('onboarding.subtitle') }}</p>
 
       <el-steps :active="activeStep" finish-status="success" align-center class="ob-steps">
@@ -422,6 +422,14 @@ async function finish() {
 // Every way of closing without finishing (×, Esc, click outside, "Later")
 // lands here. That is "later", not "never": the wizard returns on the next
 // launch unless "Don't show again" is ticked.
+// ElSelect swallows Esc even while its list is closed, so the dialog never sees
+// it; catch it first, but leave an open list to close on its own.
+function onKeydownCapture(e: KeyboardEvent) {
+  if (e.key !== 'Escape') return
+  if ((e.target as HTMLElement | null)?.getAttribute('aria-expanded') === 'true') return
+  visible.value = false
+}
+
 function onDismiss() {
   dismissedThisSession = true
   if (dontShowAgain.value) void markCompleted()

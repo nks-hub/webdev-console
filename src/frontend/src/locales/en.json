@@ -3891,7 +3891,10 @@
   },
   "app": {
     "name": "NKS WebDev Console",
-    "short": "WDC"
+    "short": "WDC",
+    "advancedPageNote": "This page belongs to Advanced mode, so the menu does not list it in Simple mode.",
+    "switchToAdvanced": "Switch to Advanced",
+    "skipToContent": "Skip to content"
   },
   "pageError": {
     "title": "This page could not be shown",
