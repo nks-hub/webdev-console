@@ -2954,10 +2954,7 @@
       "revokedRetentionHint": "Revoked rules stay in the history for this many days. 0 = delete right after revoking.",
       "toolCallRetentionLabel": "Keep the call history for",
       "toolCallRetentionHint": "Activity entries (what the AI called) are deleted after this many days. Longer history takes more disk space. The default is 30 days.",
-      "daysSuffix": "days",
-      "enableConfirm": "A connected AI assistant will be able to create and change sites, databases and services. Actions that cannot be undone will wait for your approval.",
-      "enableConfirmTitle": "Allow MCP?",
-      "enableConfirmButton": "Allow"
+      "daysSuffix": "days"
     },
     "deploySubsystem": {
       "title": "Deploys",
@@ -2983,6 +2980,10 @@
       "leaveMessage": "You have unsaved changes in Settings. Leaving the page discards them.",
       "leave": "Discard and leave",
       "stay": "Stay"
+    },
+    "mcpTab": {
+      "optionsTitle": "More MCP options",
+      "simpleSubtitle": "What AI assistants connected over MCP may do. With MCP off, no AI client gets in."
     }
   },
   "mcpGrants": {
@@ -3340,7 +3341,22 @@
     "later": "Later",
     "laterHint": "You can reopen the wizard from Help.",
     "stateError": "Could not load the current state, retrying.",
-    "installedVersion": "Installed ({version})"
+    "installedVersion": "Installed ({version})",
+    "versionOf": "Version: {name}",
+    "err": {
+      "forbidden": "The server refused the download of {name} {version} (403).",
+      "notFound": "{name} {version} is not on the server (404).",
+      "httpStatus": "The server for {name} {version} answered with error {status}.",
+      "notAnArchive": "The server returned a web page instead of the {name} {version} download.",
+      "shaMismatch": "The downloaded {name} {version} file does not match its checksum.",
+      "noBuild": "There is no build of {name} {version} for this system.",
+      "unreachable": "Could not download {name} {version}, the server is not responding.",
+      "cancelled": "The installation of {name} {version} was cancelled.",
+      "generic": "{name} {version} could not be installed.",
+      "details": "Technical details",
+      "tryAnother": "Try another version",
+      "openBinaries": "Open Binaries"
+    }
   },
   "toast": {
     "noBinaryForPlatform": "{app}: no binary available for this platform",

@@ -248,8 +248,11 @@ if (!sourceUsed) {
   // install every plugin from the marketplace — not shippable. CI sets
   // `CI=true` by default, so this gate activates only on CI runs; local
   // devs without plugin sources keep the soft-fail behaviour.
-  if (process.env.CI === 'true' && process.env.WDC_SKIP_PLUGIN_DOWNLOAD !== '1') {
-    console.error('[stage-plugins] CI=true and no plugins were staged — refusing to ship a broken bundle.')
+  // A package without plugins has no Apache, PHP or MySQL at all, so fail
+  // unless skipping was asked for explicitly (offline dev builds).
+  if (process.env.WDC_SKIP_PLUGIN_DOWNLOAD !== '1' && process.env.WDC_ALLOW_NO_PLUGINS !== '1') {
+    console.error('[stage-plugins] no plugins were staged — refusing to build a broken bundle. ' +
+      'Set GITHUB_TOKEN (rate limit) or WDC_ALLOW_NO_PLUGINS=1 to build without plugins.')
     process.exit(1)
   }
   process.exit(0)
