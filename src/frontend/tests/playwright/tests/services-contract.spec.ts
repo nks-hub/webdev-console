@@ -1,7 +1,7 @@
 import { test, expect } from './_fixtures'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { cleanError, errorCause, portsLabel, stateOf } from '../../../src/utils/services'
+import { cleanError, errorCause, installRouteOf, portsLabel, stateKeyOf, stateOf } from '../../../src/utils/services'
 import { logLevelOf, matchesLogLevel } from '../../../src/utils/logLevel'
 import type { ServiceInfo } from '../../../src/api/types'
 
@@ -25,6 +25,16 @@ test.describe('Service status helpers', () => {
     expect(stateOf(svc({ state: 2 }))).toBe('running')
     expect(stateOf(svc({ status: 'crashed' }))).toBe('crashed')
     expect(stateOf(null)).toBe('stopped')
+  })
+
+  test('a crash before the service ever ran reads as a failed start', () => {
+    expect(stateKeyOf(svc({ state: 4, crashKind: 'startFailed' }))).toBe('startFailed')
+    expect(stateKeyOf(svc({ state: 4, crashKind: 'exited' }))).toBe('crashed')
+  })
+
+  test('Install opens the binary the daemon names for the service', () => {
+    expect(installRouteOf(svc({ id: 'cloudflare', binaryApp: 'cloudflared' }))).toEqual({ path: '/binaries', query: { app: 'cloudflared' } })
+    expect(installRouteOf(svc({ id: 'redis' }))).toEqual({ path: '/binaries', query: { app: 'redis' } })
   })
 
   test('ports come from the daemon, never from a built-in table', () => {
@@ -77,7 +87,7 @@ test.describe('Services UI contract', () => {
     for (const file of [['pages', 'ServicesPage.vue'], ['shared', 'ServicePageHead.vue']]) {
       const source = read('components', ...file)
       expect(source).toMatch(/notInstalled/)
-      expect(source).toMatch(/path: '\/binaries', query: \{ app: binaryAppOf\(/)
+      expect(source).toMatch(/installRouteOf\(/)
     }
   })
 
@@ -99,7 +109,7 @@ test.describe('Services UI contract', () => {
   })
 
   test('every service state has a word and a sentence in both locales', () => {
-    const states = ['stopped', 'starting', 'running', 'stopping', 'crashed', 'disabled', 'notInstalled']
+    const states = ['stopped', 'starting', 'running', 'stopping', 'crashed', 'disabled', 'notInstalled', 'startFailed']
     for (const lang of ['cs', 'en']) {
       const page = locale(lang).servicesPage as Record<string, Record<string, string>>
       for (const s of states) {

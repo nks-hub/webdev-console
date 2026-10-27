@@ -2970,7 +2970,8 @@
       "stopping": "The service is stopping…",
       "crashed": "The service crashed: its process exited on its own. The end of the log usually says why.",
       "disabled": "The service crashed several times in a row, so WDC stopped restarting it. The end of the log says why.",
-      "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started."
+      "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started.",
+      "startFailed": "The service did not start: its process exited before it was up. The end of the log says why."
     },
     "status": {
       "running": "Running",
@@ -2979,7 +2980,8 @@
       "stopping": "Stopping",
       "crashed": "Crashed",
       "disabled": "Off after crashes",
-      "notInstalled": "Not installed"
+      "notInstalled": "Not installed",
+      "startFailed": "Failed to start"
     },
     "facts": {
       "uptime": "Uptime",

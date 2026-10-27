@@ -69,7 +69,7 @@
                   <el-icon :size="14" aria-hidden="true">
                     <component :is="STATE_ICONS[stateOf(svc)]" :class="{ spin: isTransient(stateOf(svc)) }" />
                   </el-icon>
-                  {{ t(`servicesPage.status.${stateOf(svc)}`) }}
+                  {{ t(`servicesPage.status.${stateKeyOf(svc)}`) }}
                 </span>
               </td>
               <td class="num mono">{{ svc.port ?? '—' }}</td>
@@ -91,21 +91,21 @@
           <el-icon :size="16" aria-hidden="true">
             <component :is="STATE_ICONS[selectedState]" :class="{ spin: isTransient(selectedState) }" />
           </el-icon>
-          <span>{{ t(`servicesPage.explain.${selectedState}`, { name: shortName(selected) }) }}</span>
+          <span>{{ t(`servicesPage.explain.${stateKeyOf(selected)}`, { name: shortName(selected) }) }}</span>
         </p>
 
         <ServiceErrorNote :service-id="selected.id" />
 
         <dl v-if="selectedState !== 'notInstalled'" class="dl">
           <div v-if="selectedState === 'running' && selected.uptimeSeconds != null">
-            <dt>{{ t('servicesPage.facts.uptime') }}</dt><dd class="mono">{{ formatUptime(selected.uptimeSeconds) }}</dd>
+            <dt>{{ t('servicesPage.facts.uptime') }}</dt><dd class="mono">{{ formatDuration(selected.uptimeSeconds, locale) }}</dd>
           </div>
           <div v-if="selected.version"><dt>{{ t('servicesPage.facts.version') }}</dt><dd class="mono">{{ selected.version }}</dd></div>
           <div v-if="portsLabel(selected)"><dt>{{ t('servicesPage.facts.ports') }}</dt><dd class="mono">{{ portsLabel(selected) }}</dd></div>
           <template v-if="selectedState === 'running'">
             <div v-if="selected.pid"><dt>PID</dt><dd class="mono">{{ selected.pid }}</dd></div>
             <div><dt>CPU</dt><dd class="mono">{{ (selected.cpuPercent ?? 0).toFixed(1) }} %</dd></div>
-            <div><dt>RAM</dt><dd class="mono">{{ formatMem(selected.memoryBytes ?? 0) }}</dd></div>
+            <div><dt>RAM</dt><dd class="mono">{{ formatBytes(selected.memoryBytes ?? 0, locale) }}</dd></div>
           </template>
         </dl>
 
@@ -164,9 +164,10 @@ import { fetchServiceLogs } from '../../api/daemon'
 import type { ServiceInfo } from '../../api/types'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import ServiceErrorNote from '../shared/ServiceErrorNote.vue'
+import { formatBytes, formatDuration } from '../../utils/format'
+import { shortServiceName as shortName, type ServiceViewState } from '../../utils/serviceState'
 import {
-  binaryAppOf, cleanError, formatMem, formatUptime, isProblemState, manageRouteOf,
-  portsLabel, shortName, stateOf, type ServiceState,
+  cleanError, installRouteOf, isProblemState, manageRouteOf, portsLabel, stateKeyOf, stateOf,
 } from '../../utils/services'
 
 /**
@@ -177,7 +178,7 @@ import {
 type Filter = 'all' | 'running' | 'problems' | 'notInstalled'
 const FILTERS: Filter[] = ['all', 'running', 'problems', 'notInstalled']
 
-const STATE_ICONS: Record<ServiceState, Component> = {
+const STATE_ICONS: Record<ServiceViewState, Component> = {
   running: Check,
   stopped: Remove,
   starting: Loading,
@@ -186,9 +187,9 @@ const STATE_ICONS: Record<ServiceState, Component> = {
   disabled: WarningFilled,
   notInstalled: Download,
 }
-const isTransient = (s: ServiceState) => s === 'starting' || s === 'stopping'
+const isTransient = (s: ServiceViewState) => s === 'starting' || s === 'stopping'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const daemonStore = useDaemonStore()
@@ -258,7 +259,7 @@ const visible = computed(() => {
 
 const selected = computed<ServiceInfo | null>(() =>
   visible.value.find(s => s.id === selectedId.value) ?? visible.value[0] ?? null)
-const selectedState = computed<ServiceState>(() => stateOf(selected.value))
+const selectedState = computed<ServiceViewState>(() => stateOf(selected.value))
 
 function select(id: string) {
   selectedId.value = id
@@ -293,7 +294,7 @@ async function act(svc: ServiceInfo, op: ServiceOp) {
 }
 
 function install(svc: ServiceInfo) {
-  void router.push({ path: '/binaries', query: { app: binaryAppOf(svc.id) } })
+  void router.push(installRouteOf(svc))
 }
 </script>
 

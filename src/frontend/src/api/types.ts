@@ -16,11 +16,14 @@ export interface ServiceInfo {
   /** UTC timestamp ISO string marking when the service transitioned to
    * Running, used by SiteDetailSimple for "Started N ago" labels. */
   startedAt?: string
-  /** Newest installed binary the module runs; absent when none is installed. */
+  /** Version of the installed binary behind the service. */
   version?: string
-  /** False only when the daemon knows the binary is missing. Undefined
-   *  (older daemon, third-party service) means installed. */
+  /** False when the binary is not on disk. Absent on older daemons (treated as installed). */
   installed?: boolean
+  /** Binary catalog app that provides the service, for the "install" link. */
+  binaryApp?: string | null
+  /** For crashed services: `startFailed` never reached running, `exited` ran and stopped. */
+  crashKind?: 'startFailed' | 'exited' | null
   /** Primary listen port from the module's config (HTTP for web servers and Mailpit). */
   port?: number
   /** All configured ports by role: port, http, https, smtp. */

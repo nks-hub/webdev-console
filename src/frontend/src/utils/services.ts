@@ -1,42 +1,28 @@
 import type { ServiceInfo } from '../api/types'
 import { errorMessage } from './errors'
+import { serviceViewState, type ServiceViewState } from './serviceState'
 
 /**
- * Shared vocabulary for service rows: the Services page, the service plugin
- * pages and the Overview stack all read the same daemon fields
- * (GET /api/services → ServiceStatusDto) through these helpers.
+ * Helpers for the Services page and the service plugin pages. The state
+ * itself comes from utils/serviceState.ts (shared with the shell).
  */
-export type ServiceState = 'stopped' | 'starting' | 'running' | 'stopping' | 'crashed' | 'disabled' | 'notInstalled'
 
-const BY_NUMBER: ServiceState[] = ['stopped', 'starting', 'running', 'stopping', 'crashed', 'disabled']
-
-/** Lifecycle state in words; a service whose binary is missing is 'notInstalled'. */
-export function stateOf(svc: ServiceInfo | null | undefined): ServiceState {
-  if (!svc) return 'stopped'
-  if (svc.installed === false) return 'notInstalled'
-  return BY_NUMBER[svc.state ?? -1]
-    ?? ((BY_NUMBER as string[]).includes(svc.status ?? '') ? svc.status as ServiceState : 'stopped')
-}
+/** serviceViewState for a service that may not be in the list (yet). */
+export const stateOf = (svc: ServiceInfo | null | undefined): ServiceViewState =>
+  svc ? serviceViewState(svc) : 'stopped'
 
 /** Crashed, or switched off by the daemon after too many crashes in a row. */
-export const isProblemState = (s: ServiceState) => s === 'crashed' || s === 'disabled'
+export const isProblemState = (s: ServiceViewState) => s === 'crashed' || s === 'disabled'
 
-const SHORT_NAMES: Record<string, string> = {
-  'Apache HTTP Server': 'Apache',
-  'PHP (Multi-version)': 'PHP',
+/** Key under servicesPage.status / .explain: a crash before the service ever ran reads as a failed start. */
+export function stateKeyOf(svc: ServiceInfo | null | undefined): ServiceViewState | 'startFailed' {
+  const state = stateOf(svc)
+  return state === 'crashed' && svc?.crashKind === 'startFailed' ? 'startFailed' : state
 }
 
-export function shortName(svc: Pick<ServiceInfo, 'id' | 'displayName' | 'name'>): string {
-  const name = svc.displayName || svc.name || ''
-  return SHORT_NAMES[name] || name || svc.id
-}
-
-/** Binary folder on the Binaries page; mirrors ServiceStatusDto.BinaryApps in the daemon. */
-export function binaryAppOf(serviceId: string): string {
-  if (serviceId === 'cloudflare') return 'cloudflared'
-  if (serviceId === 'httpd') return 'apache'
-  return serviceId
-}
+/** Binaries page link for a service that is not installed. */
+export const installRouteOf = (svc: ServiceInfo) =>
+  ({ path: '/binaries', query: { app: svc.binaryApp ?? svc.id } })
 
 /** Dedicated management page for a service, when one exists. */
 const MANAGE_ROUTES: Record<string, string> = {
@@ -49,21 +35,6 @@ const MANAGE_ROUTES: Record<string, string> = {
   cloudflare: '/cloudflare',
 }
 export const manageRouteOf = (serviceId: string): string | null => MANAGE_ROUTES[serviceId] ?? null
-
-export function formatUptime(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds))
-  if (s < 60) return `${s} s`
-  if (s < 3600) return `${Math.floor(s / 60)} min`
-  const h = Math.floor(s / 3600)
-  if (h < 48) return `${h} h ${Math.floor((s % 3600) / 60)} min`
-  return `${Math.floor(h / 24)} d ${h % 24} h`
-}
-
-export function formatMem(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
-}
 
 const PORT_LABELS: Record<string, string> = { http: 'HTTP', https: 'HTTPS', smtp: 'SMTP' }
 

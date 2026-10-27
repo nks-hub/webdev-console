@@ -32,14 +32,14 @@
   <p v-else-if="!service" class="svc-sentence" role="status">{{ t('servicesPage.unknown', { name: title }) }}</p>
   <template v-else>
     <p class="svc-sentence" :class="`st-${state}`" role="status" aria-live="polite">
-      {{ t(`servicesPage.explain.${state}`, { name: shortName(service) }) }}
+      {{ t(`servicesPage.explain.${stateKeyOf(service)}`, { name: shortName(service) }) }}
     </p>
 
     <ServiceErrorNote :service-id="serviceId" />
 
     <dl v-if="state !== 'notInstalled'" class="dl">
       <div v-if="state === 'running' && service.uptimeSeconds != null">
-        <dt>{{ t('servicesPage.facts.uptime') }}</dt><dd class="mono">{{ formatUptime(service.uptimeSeconds) }}</dd>
+        <dt>{{ t('servicesPage.facts.uptime') }}</dt><dd class="mono">{{ formatDuration(service.uptimeSeconds, locale) }}</dd>
       </div>
       <div v-if="service.version"><dt>{{ t('servicesPage.facts.version') }}</dt><dd class="mono">{{ service.version }}</dd></div>
       <div v-if="portsLabel(service)"><dt>{{ t('servicesPage.facts.ports') }}</dt><dd class="mono">{{ portsLabel(service) }}</dd></div>
@@ -57,7 +57,9 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore, type ServiceOp } from '../../stores/services'
-import { binaryAppOf, formatUptime, isProblemState, portsLabel, shortName, stateOf } from '../../utils/services'
+import { formatDuration } from '../../utils/format'
+import { shortServiceName as shortName } from '../../utils/serviceState'
+import { installRouteOf, isProblemState, portsLabel, stateKeyOf, stateOf } from '../../utils/services'
 import PluginAutostartSwitch from './PluginAutostartSwitch.vue'
 import ServiceErrorNote from './ServiceErrorNote.vue'
 
@@ -68,7 +70,7 @@ const props = defineProps<{
   subtitle?: string
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
@@ -82,7 +84,7 @@ function act(op: ServiceOp) {
 }
 
 function install() {
-  void router.push({ path: '/binaries', query: { app: binaryAppOf(props.serviceId) } })
+  if (service.value) void router.push(installRouteOf(service.value))
 }
 </script>
 

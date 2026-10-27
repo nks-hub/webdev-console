@@ -2970,7 +2970,8 @@
       "stopping": "Služba se zastavuje…",
       "crashed": "Služba spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
       "disabled": "Služba několikrát za sebou spadla, proto ji WDC přestalo samo restartovat. Důvod najdete na konci logu.",
-      "notInstalled": "Služba {name} zatím není nainstalovaná. Nainstalujte ji v Binárkách, potom ji půjde spustit."
+      "notInstalled": "Služba {name} zatím není nainstalovaná. Nainstalujte ji v Binárkách, potom ji půjde spustit.",
+      "startFailed": "Službu se nepodařilo spustit: proces skončil dřív, než se rozběhl. Důvod najdete na konci logu."
     },
     "status": {
       "running": "Běží",
@@ -2979,7 +2980,8 @@
       "stopping": "Zastavuje se",
       "crashed": "Spadlo",
       "disabled": "Vypnuto po pádech",
-      "notInstalled": "Nenainstalováno"
+      "notInstalled": "Nenainstalováno",
+      "startFailed": "Nenaběhlo"
     },
     "facts": {
       "uptime": "Doba běhu",

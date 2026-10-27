@@ -35,7 +35,7 @@
     <!-- The binary is missing: say so and offer the install, not file paths. -->
     <div v-else-if="notInstalled" class="state-box state-text">
       <p>{{ t('serviceConfig.notInstalled', { name: displayName }) }}</p>
-      <el-button type="primary" @click="router.push({ path: '/binaries', query: { app: binaryAppOf(serviceId) } })">
+      <el-button v-if="service" type="primary" @click="router.push(installRouteOf(service))">
         {{ t('servicesPage.install') }}
       </el-button>
     </div>
@@ -138,7 +138,8 @@ import { ArrowLeft, Refresh, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
-import { binaryAppOf, cleanError, shortName, stateOf } from '../../utils/services'
+import { shortServiceName as shortName } from '../../utils/serviceState'
+import { cleanError, installRouteOf, stateOf } from '../../utils/services'
 import MonacoEditor from '../shared/MonacoEditor.vue'
 
 defineOptions({ name: 'ServiceConfig' })
