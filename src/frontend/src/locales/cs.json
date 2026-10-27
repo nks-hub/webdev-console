@@ -3340,15 +3340,6 @@
     "installedVersion": "Nainstalováno ({version})",
     "versionOf": "Verze: {name}",
     "err": {
-      "forbidden": "Server odmítl stažení {name} {version} (403).",
-      "notFound": "{name} {version} na serveru není (404).",
-      "httpStatus": "Server pro {name} {version} odpověděl chybou {status}.",
-      "notAnArchive": "Server místo {name} {version} vrátil webovou stránku, ne soubor ke stažení.",
-      "shaMismatch": "Stažený soubor {name} {version} nesouhlasí s kontrolním součtem.",
-      "noBuild": "Pro {name} {version} není sestavení pro tento systém.",
-      "unreachable": "{name} {version} se nepodařilo stáhnout, server neodpovídá.",
-      "cancelled": "Instalace {name} {version} byla zrušena.",
-      "generic": "{name} {version} se nepodařilo nainstalovat.",
       "details": "Technické podrobnosti",
       "tryAnother": "Zkusit jinou verzi",
       "openBinaries": "Otevřít Binárky"

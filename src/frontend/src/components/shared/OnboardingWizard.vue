@@ -176,7 +176,7 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { compareSemver } from '../../utils/semver'
-import { classifyInstallFailure } from '../../utils/installFailure'
+import { installErrorDetail, installErrorMessage } from '../../utils/binaries'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { OPEN_ONBOARDING_EVENT } from '../../utils/onboarding'
@@ -295,12 +295,11 @@ async function doInstall(app: string, label: string) {
     ElMessage.success(t('toast.installedVersion', { app: label, version }))
     await refreshState()
   } catch (e) {
-    const failure = classifyInstallFailure(e)
     ;(tried[app] ??= []).push(version)
     failures.value[app] = {
       version,
-      text: t(`onboarding.err.${failure.kind}`, { name: label, version, status: failure.status ?? '' }),
-      detail: failure.detail,
+      text: installErrorMessage(t, e, app, version),
+      detail: installErrorDetail(e),
     }
   } finally {
     installing.value.delete(app)
