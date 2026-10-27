@@ -3953,7 +3953,7 @@
       },
       "cursor": {
         "title": "Cursor",
-        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máte, přidejte jen položku nks-wdc do mcpServers. Cursor nad 40 nástrojů některé vynechá, proto ukázka načte jen základní sadu (--modules=essential: weby, služby, databáze a stav)."
+        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máte, přidejte jen položku nks-wdc do mcpServers. Cursor nad 40 nástrojů některé vynechá, proto ukázka načte jen základní sadu: weby, služby, databáze a stav."
       }
     },
     "copy": "Kopírovat",

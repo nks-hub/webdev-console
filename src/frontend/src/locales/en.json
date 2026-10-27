@@ -3953,7 +3953,7 @@
       },
       "cursor": {
         "title": "Cursor",
-        "where": "Into .cursor/mcp.json in the project, or ~/.cursor/mcp.json for every project. If it already lists other servers, add only the nks-wdc entry to mcpServers. Cursor leaves out tools above 40, so the snippet loads the basic set only (--modules=essential: sites, services, databases and status)."
+        "where": "Into .cursor/mcp.json in the project, or ~/.cursor/mcp.json for every project. If it already lists other servers, add only the nks-wdc entry to mcpServers. Cursor leaves out tools above 40, so the snippet loads the basic set only: sites, services, databases and status."
       }
     },
     "copy": "Copy",

@@ -185,4 +185,11 @@ test.describe('MCP approval UX contract', () => {
     expect(timeline).toContain('function localHour(hour: string)')
     expect(timeline).not.toMatch(/total: \$\{b\.total\}/)
   })
+
+  test('round 4: throughput from the 24 h count, localized numbers, no empty chart', () => {
+    const activity = read('components', 'pages', 'McpActivity.vue')
+    expect(activity).toContain('formatThroughput(stats.total / STATS_WINDOW_MINUTES)')
+    expect(activity).not.toContain('toFixed(')
+    expect(activity).toContain('<div v-if="stats && stats.total > 0" class="analytics-row">')
+  })
 })
