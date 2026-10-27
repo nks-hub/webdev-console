@@ -23,47 +23,51 @@
         :title="t('onboarding.stateError')"
       />
 
-      <!-- Step 1: binaries -->
+      <!-- Step 1: binaries. Each row lets you pick the version; a failed
+           install keeps its error right under the row. -->
       <div v-if="activeStep === 0" class="ob-step">
         <p class="ob-step-desc">{{ t('onboarding.step1Desc') }}</p>
         <div class="ob-actions-grid">
-          <div class="ob-row">
-            <span class="ob-label">Apache</span>
-            <el-tag v-if="state?.prerequisites.apacheInstalled" size="small" type="success">{{ installedText(state.versions?.apache) }}</el-tag>
-            <el-button v-else size="small" :loading="installing.has('apache')" @click="doInstall('apache')">
-              {{ t('onboarding.installApache') }}
-            </el-button>
-          </div>
-          <div class="ob-row">
-            <span class="ob-label">PHP</span>
-            <el-tag v-if="state?.prerequisites.phpInstalled" size="small" type="success">{{ installedText(state.versions?.php) }}</el-tag>
-            <template v-else>
-              <el-select
-                v-model="phpVersionChoice"
-                size="small"
-                class="ob-version-select"
-                :placeholder="t('onboarding.pickVersion')"
-                :loading="loadingVersions"
-                :disabled="installing.has('php')"
-              >
-                <el-option
-                  v-for="v in phpVersions"
-                  :key="v"
-                  :label="v"
-                  :value="v"
-                />
-              </el-select>
-              <el-button size="small" :loading="installing.has('php')" @click="doInstall('php', phpVersionChoice)">
-                {{ t('onboarding.installPhp') }}
-              </el-button>
-            </template>
-          </div>
-          <div class="ob-row">
-            <span class="ob-label">MySQL</span>
-            <el-tag v-if="state?.prerequisites.mysqlInstalled" size="small" type="success">{{ installedText(state.versions?.mysql) }}</el-tag>
-            <el-button v-else size="small" :loading="installing.has('mysql')" @click="doInstall('mysql')">
-              {{ t('onboarding.installMysql') }}
-            </el-button>
+          <div v-for="row in BINARY_ROWS" :key="row.app" class="ob-item">
+            <div class="ob-row">
+              <span class="ob-label">{{ row.label }}</span>
+              <el-tag v-if="state && row.installed(state)" size="small" type="success">{{ installedText(state.versions?.[row.app]) }}</el-tag>
+              <template v-else>
+                <el-select
+                  :id="`ob-version-${row.app}`"
+                  v-model="choice[row.app]"
+                  size="small"
+                  class="ob-version-select"
+                  :placeholder="t('onboarding.pickVersion')"
+                  :aria-label="t('onboarding.versionOf', { name: row.label })"
+                  :loading="loadingVersions"
+                  :disabled="installing.has(row.app)"
+                >
+                  <el-option
+                    v-for="v in versionsByApp[row.app] ?? []"
+                    :key="v"
+                    :label="v"
+                    :value="v"
+                  />
+                </el-select>
+                <el-button size="small" :loading="installing.has(row.app)" @click="doInstall(row.app, row.label)">
+                  {{ t(row.installKey) }}
+                </el-button>
+              </template>
+            </div>
+            <div v-if="failures[row.app] && !(state && row.installed(state))" class="ob-error" role="alert">
+              <p class="ob-error-text">{{ failures[row.app].text }}</p>
+              <details v-if="failures[row.app].detail" class="ob-error-detail">
+                <summary>{{ t('onboarding.err.details') }}</summary>
+                <code>{{ failures[row.app].detail }}</code>
+              </details>
+              <div class="ob-error-actions">
+                <el-button v-if="(versionsByApp[row.app] ?? []).length > 1" size="small" @click="tryAnother(row.app)">
+                  {{ t('onboarding.err.tryAnother') }}
+                </el-button>
+                <el-button size="small" text @click="openBinaries(row.app)">{{ t('onboarding.err.openBinaries') }}</el-button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -72,12 +76,24 @@
       <div v-else-if="activeStep === 1" class="ob-step">
         <p class="ob-step-desc">{{ t('onboarding.step2Desc') }}</p>
         <div class="ob-actions-grid">
-          <div class="ob-row">
-            <span class="ob-label">{{ t('onboarding.labelMkcertBinary') }}</span>
-            <el-tag v-if="state?.prerequisites.mkcertBinaryInstalled" size="small" type="success">{{ installedText(state.versions?.mkcert) }}</el-tag>
-            <el-button v-else size="small" :loading="installing.has('mkcert')" @click="doInstall('mkcert')">
-              {{ t('onboarding.installMkcert') }}
-            </el-button>
+          <div class="ob-item">
+            <div class="ob-row">
+              <span class="ob-label">{{ t('onboarding.labelMkcertBinary') }}</span>
+              <el-tag v-if="state?.prerequisites.mkcertBinaryInstalled" size="small" type="success">{{ installedText(state.versions?.mkcert) }}</el-tag>
+              <el-button v-else size="small" :loading="installing.has('mkcert')" @click="doInstall('mkcert', 'mkcert')">
+                {{ t('onboarding.installMkcert') }}
+              </el-button>
+            </div>
+            <div v-if="failures.mkcert && !state?.prerequisites.mkcertBinaryInstalled" class="ob-error" role="alert">
+              <p class="ob-error-text">{{ failures.mkcert.text }}</p>
+              <details v-if="failures.mkcert.detail" class="ob-error-detail">
+                <summary>{{ t('onboarding.err.details') }}</summary>
+                <code>{{ failures.mkcert.detail }}</code>
+              </details>
+              <div class="ob-error-actions">
+                <el-button size="small" text @click="openBinaries('mkcert')">{{ t('onboarding.err.openBinaries') }}</el-button>
+              </div>
+            </div>
           </div>
           <div class="ob-row">
             <span class="ob-label">{{ t('onboarding.labelLocalCaTrust') }}</span>
@@ -143,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -155,10 +171,12 @@ import {
   fetchBinaryCatalog,
   fetchSystem,
   installSslCa,
+  subscribeEventsMap,
   type OnboardingState,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { compareSemver } from '../../utils/semver'
+import { classifyInstallFailure } from '../../utils/installFailure'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { OPEN_ONBOARDING_EVENT } from '../../utils/onboarding'
@@ -176,13 +194,33 @@ const router = useRouter()
 const LS_COMPLETED = 'wdc.onboarding.completed'
 const LS_DONTSHOW = 'wdc.onboarding.dontShowAgain'
 
+// Programs offered in step 1, each with a version picker.
+type PickableApp = 'apache' | 'php' | 'mysql'
+interface BinaryRow {
+  app: PickableApp
+  label: string
+  installKey: string
+  installed: (s: OnboardingState) => boolean
+}
+const BINARY_ROWS: BinaryRow[] = [
+  { app: 'apache', label: 'Apache', installKey: 'onboarding.installApache', installed: s => s.prerequisites.apacheInstalled },
+  { app: 'php', label: 'PHP', installKey: 'onboarding.installPhp', installed: s => s.prerequisites.phpInstalled },
+  { app: 'mysql', label: 'MySQL', installKey: 'onboarding.installMysql', installed: s => s.prerequisites.mysqlInstalled },
+]
+
+interface Failure { version: string; text: string; detail: string }
+
 const visible = ref(false)
 const activeStep = ref(0)
 const state = ref<OnboardingState | null>(null)
 const installing = ref<Set<string>>(new Set())
 const installingCa = ref(false)
-const phpVersions = ref<string[]>([])
-const phpVersionChoice = ref<string>('')
+const versionsByApp = ref<Partial<Record<PickableApp, string[]>>>({})
+const choice = reactive<Record<string, string>>({})
+const failures = ref<Record<string, Failure>>({})
+// Versions already tried per app, so "Try another version" walks the list
+// instead of offering the broken one again.
+const tried: Record<string, string[]> = {}
 const loadingVersions = ref(false)
 const finishing = ref(false)
 const creatingSample = ref(false)
@@ -208,65 +246,106 @@ function installedText(version?: string | null): string {
 async function refreshState() {
   try {
     state.value = await fetchOnboardingState()
+    // Something installed elsewhere (Binaries page, CLI) clears its old error.
+    for (const row of BINARY_ROWS) {
+      if (row.installed(state.value)) delete failures.value[row.app]
+    }
   } catch (e) {
     console.warn('[onboarding] state fetch failed', e)
     state.value = null
   }
 }
 
-// While the dialog is open the state is re-read every few seconds and when
-// the step changes, so an install done elsewhere (Binaries page, CLI) shows up.
-const REFRESH_MS = 4000
+// While the dialog is open the state is re-read when the daemon announces an
+// installed binary, when the window regains focus and on step changes, with a
+// slow timer as a safety net.
+const REFRESH_MS = 15000
 let refreshTimer: ReturnType<typeof setInterval> | null = null
-watch(visible, (open) => {
+let unsubscribeSse: (() => void) | null = null
+const onFocus = () => { void refreshState() }
+
+function startLiveRefresh() {
+  stopLiveRefresh()
+  refreshTimer = setInterval(() => { void refreshState() }, REFRESH_MS)
+  unsubscribeSse = subscribeEventsMap({ 'binary:installed': () => { void refreshState() } })
+  window.addEventListener('focus', onFocus)
+}
+function stopLiveRefresh() {
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
-  if (open) refreshTimer = setInterval(() => { void refreshState() }, REFRESH_MS)
-})
+  unsubscribeSse?.(); unsubscribeSse = null
+  window.removeEventListener('focus', onFocus)
+}
+watch(visible, (open) => { if (open) startLiveRefresh(); else stopLiveRefresh() })
 watch(activeStep, () => { void refreshState() })
 
-async function doInstall(app: string, explicitVersion?: string) {
+async function doInstall(app: string, label: string) {
   installing.value.add(app)
+  delete failures.value[app]
+  let version = ''
   try {
-    // Prefer a user-picked version (PHP selector), fall back to "latest
-    // compatible on this OS/arch" which the daemon resolves. Never hardcode
-    // — apache 2.4.62 was Windows-only so a pinned macOS version 404'd.
-    const version = explicitVersion?.trim() || await resolveLatest(app)
+    // Prefer a user-picked version, fall back to "latest compatible on this
+    // OS/arch" which the daemon resolves. Never hardcode — apache 2.4.62 was
+    // Windows-only so a pinned macOS version 404'd.
+    version = choice[app]?.trim() || await resolveLatest(app) || ''
     if (!version) {
-      ElMessage.warning(t('toast.noBinaryForPlatform', { app }))
+      ElMessage.warning(t('toast.noBinaryForPlatform', { app: label }))
       return
     }
     await installBinary(app, version)
-    ElMessage.success(t('toast.installedVersion', { app, version }))
+    ElMessage.success(t('toast.installedVersion', { app: label, version }))
     await refreshState()
   } catch (e) {
-    ElMessage.error(t('toast.prefixedError', { name: app, err: errorMessage(e) }))
+    const failure = classifyInstallFailure(e)
+    ;(tried[app] ??= []).push(version)
+    failures.value[app] = {
+      version,
+      text: t(`onboarding.err.${failure.kind}`, { name: label, version, status: failure.status ?? '' }),
+      detail: failure.detail,
+    }
   } finally {
     installing.value.delete(app)
   }
 }
 
-async function loadPhpVersions() {
+// Picks the next version that has not failed yet, wrapping around the list,
+// and puts the cursor on the picker.
+function tryAnother(app: string) {
+  const list = versionsByApp.value[app as PickableApp] ?? []
+  const next = list.find(v => !(tried[app] ?? []).includes(v)) ?? list.find(v => v !== failures.value[app]?.version)
+  if (next) choice[app] = next
+  delete failures.value[app]
+  void nextTick(() => document.getElementById(`ob-version-${app}`)?.focus())
+}
+
+function openBinaries(app: string) {
+  visible.value = false
+  void router.push({ path: '/binaries', query: { app } })
+}
+
+// MySQL: the long-term 8.4 line is the safe default, not the newest innovation release.
+function preferredVersion(app: PickableApp, versions: string[]): string {
+  return (app === 'mysql' ? versions.find(v => v.startsWith('8.4.')) : undefined) ?? versions[0] ?? ''
+}
+
+async function loadVersions() {
   loadingVersions.value = true
   try {
     const [catalog, system] = await Promise.all([
       fetchBinaryCatalog(),
       fetchSystem(),
     ])
-    const osTag = system.os.tag
-    const archTag = system.os.arch
-    const releases = catalog.php ?? []
-    // Unique versions compatible with current OS/arch, newest first.
-    const versions = Array.from(new Set(
-      releases
-        .filter(r => r.os === osTag && r.arch === archTag)
-        .map(r => r.version)
-    )).sort((a, b) => compareSemver(b, a))
-    phpVersions.value = versions
-    if (versions.length > 0 && !phpVersionChoice.value) {
-      phpVersionChoice.value = versions[0]
+    for (const { app } of BINARY_ROWS) {
+      // Unique versions compatible with current OS/arch, newest first.
+      const versions = Array.from(new Set(
+        (catalog[app] ?? [])
+          .filter(r => r.os === system.os.tag && r.arch === system.os.arch)
+          .map(r => r.version)
+      )).sort((a, b) => compareSemver(b, a))
+      versionsByApp.value[app] = versions
+      if (!choice[app]) choice[app] = preferredVersion(app, versions)
     }
   } catch (e) {
-    console.warn('[onboarding] php version load failed', e)
+    console.warn('[onboarding] version list load failed', e)
   } finally {
     loadingVersions.value = false
   }
@@ -410,7 +489,7 @@ async function autoOpenCheck() {
   if (!state.value.completed) {
     if (dismissedThisSession) return
     visible.value = true
-    void loadPhpVersions()
+    void loadVersions()
   } else {
     // Back-fill the LS flag so future launches skip the fetch entirely.
     writeLocalFlag(LS_COMPLETED, true)
@@ -426,7 +505,7 @@ async function open() {
   await refreshState()
   visible.value = true
   activeStep.value = 0
-  void loadPhpVersions()
+  void loadVersions()
 }
 
 function onOpenRequest() { void open() }
@@ -445,7 +524,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener(OPEN_ONBOARDING_EVENT, onOpenRequest)
   stopConnectWatch?.()
-  if (refreshTimer) clearInterval(refreshTimer)
+  stopLiveRefresh()
 })
 
 defineExpose({ open })
@@ -487,6 +566,21 @@ defineExpose({ open })
   flex-direction: column;
   gap: var(--wdc-space-2-5);
 }
+.ob-item { display: grid; gap: var(--wdc-space-1-5); }
+.ob-error {
+  display: grid;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
+  border: 1px solid color-mix(in oklab, var(--wdc-status-error) 45%, transparent);
+  border-radius: var(--wdc-radius-sm);
+  background: color-mix(in oklab, var(--wdc-status-error) 8%, transparent);
+}
+.ob-error-text { margin: 0; font-size: 0.88rem; color: var(--wdc-text); }
+.ob-error-detail { font-size: 0.78rem; color: var(--wdc-text-2); }
+.ob-error-detail summary { cursor: pointer; }
+.ob-error-detail code { display: block; margin-top: var(--wdc-space-1); overflow-wrap: anywhere; }
+.ob-error-actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-2); }
+.ob-error-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .ob-row {
   display: flex;
   align-items: center;
