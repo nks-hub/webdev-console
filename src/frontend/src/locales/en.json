@@ -1229,9 +1229,13 @@
       "createNeedsMysql": "Install MySQL first",
       "notRunning": "MySQL is installed but not running.",
       "startMysql": "Start MySQL",
-      "startFailed": "Could not start MySQL: {err}",
+      "startFailed": "MySQL could not be started ({err}). The MySQL log shows why.",
       "portConflictTitle": "Port {port} rejected the WDC root password.",
-      "portConflictHint": "Another MySQL server (MAMP, XAMPP or a system service) probably runs on this port. Switch WDC to a free port or reset the root password."
+      "portConflictHint": "Another MySQL server (MAMP, XAMPP or a system service) probably runs on this port. Switch WDC to a free port or reset the root password.",
+      "openLog": "Show MySQL log",
+      "createNeedsRunning": "Start MySQL first",
+      "notRunningHint": "Start it with the button below. If it does not start, the MySQL log shows why.",
+      "startedButUnreachable": "the service reports it started, but the database does not answer yet; try Refresh in a moment"
     }
   },
   "binaries": {

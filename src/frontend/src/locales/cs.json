@@ -1229,9 +1229,13 @@
       "createNeedsMysql": "Nejdřív nainstalujte MySQL",
       "notRunning": "MySQL je nainstalovaný, ale neběží.",
       "startMysql": "Spustit MySQL",
-      "startFailed": "MySQL se nepodařilo spustit: {err}",
+      "startFailed": "MySQL se nepodařilo spustit ({err}). Příčinu najdete v logu MySQL.",
       "portConflictTitle": "Port {port} odmítl heslo roota WDC.",
-      "portConflictHint": "Na tomto portu nejspíš běží jiný MySQL server (MAMP, XAMPP nebo systémová služba). Přepněte WDC na volný port, nebo heslo roota obnovte."
+      "portConflictHint": "Na tomto portu nejspíš běží jiný MySQL server (MAMP, XAMPP nebo systémová služba). Přepněte WDC na volný port, nebo heslo roota obnovte.",
+      "openLog": "Zobrazit log MySQL",
+      "createNeedsRunning": "Nejdřív spusťte MySQL",
+      "notRunningHint": "Spusťte ho tlačítkem níže. Pokud se nespustí, příčinu najdete v logu MySQL.",
+      "startedButUnreachable": "služba hlásí spuštění, ale databáze zatím neodpovídá; zkuste za chvíli Obnovit"
     }
   },
   "binaries": {

@@ -10,9 +10,9 @@
       </div>
       <div class="header-actions">
         <el-button size="small" @click="loadDatabases" :loading="loading" :icon="Refresh">{{ $t('common.refresh') }}</el-button>
-        <el-tooltip :disabled="reason !== 'mysql_not_installed'" :content="$t('databases.diag.createNeedsMysql')" placement="bottom">
+        <el-tooltip :disabled="!mysqlUnavailable" :content="createBlockedHint" placement="bottom">
           <span>
-            <el-button size="small" type="primary" :disabled="reason === 'mysql_not_installed'" @click="showCreateDialog = true">
+            <el-button size="small" type="primary" :disabled="mysqlUnavailable" @click="showCreateDialog = true">
               <el-icon><Plus /></el-icon>
               <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.create') }}</span>
             </el-button>
@@ -49,6 +49,9 @@
         <div class="alert-body">
           <el-button v-if="reason === 'mysql_not_running'" type="primary" size="small" :loading="startingMysql" @click="startMysql">
             {{ $t('databases.diag.startMysql') }}
+          </el-button>
+          <el-button v-if="reason === 'mysql_not_running'" size="small" @click="router.push({ path: '/plugins/mysql', query: { tab: 'logs' } })">
+            {{ $t('databases.diag.openLog') }}
           </el-button>
           <el-button v-if="suggestedPort" type="primary" size="small" :loading="fixing" @click="useAltPort">
             {{ $t('databases.useAltPort', { port: suggestedPort }) }}
@@ -250,7 +253,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Key, Upload, Download, Delete, Grid, DataLine, List, Operation } from '@element-plus/icons-vue'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, DaemonError } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import DatabaseTreePane from './databases/DatabaseTreePane.vue'
 import TableBrowser from './databases/TableBrowser.vue'
@@ -285,24 +288,40 @@ const errorPort = ref<number | null>(null)
 const suggestedPort = ref<number | null>(null)
 const fixing = ref(false)
 const startingMysql = ref(false)
+/** Why the last "Start MySQL" click failed, shown under the not-running title. */
+const startError = ref('')
+
+// Creating a database needs a running server; say why the button is off.
+const mysqlUnavailable = computed(() => reason.value === 'mysql_not_installed' || reason.value === 'mysql_not_running')
+const createBlockedHint = computed(() => reason.value === 'mysql_not_running'
+  ? t('databases.diag.createNeedsRunning')
+  : t('databases.diag.createNeedsMysql'))
 
 const errorTitle = computed(() => {
   if (reason.value === 'mysql_not_running') return t('databases.diag.notRunning')
   if (reason.value === 'port_conflict') return t('databases.diag.portConflictTitle', { port: errorPort.value ?? '?' })
   return error.value
 })
-// The daemon's hint is English; port_conflict gets its own sentence.
-const errorHintText = computed(() =>
-  reason.value === 'port_conflict' ? t('databases.diag.portConflictHint') : '')
+// The daemon's hint is English; port_conflict and not-running get their own sentence.
+const errorHintText = computed(() => {
+  if (reason.value === 'port_conflict') return t('databases.diag.portConflictHint')
+  if (reason.value === 'mysql_not_running') {
+    return startError.value
+      ? t('databases.diag.startFailed', { err: startError.value })
+      : t('databases.diag.notRunningHint')
+  }
+  return ''
+})
 
 async function startMysql() {
   startingMysql.value = true
+  startError.value = ''
   try {
     await startService('mysql')
     await loadDatabases()
+    if (reason.value === 'mysql_not_running') startError.value = t('databases.diag.startedButUnreachable')
   } catch (e) {
-    error.value = t('databases.diag.startFailed', { err: errorMessage(e) })
-    reason.value = ''
+    startError.value = e instanceof DaemonError ? (e.detail || e.message) : errorMessage(e)
   } finally {
     startingMysql.value = false
   }
