@@ -67,6 +67,19 @@ test.describe('Shell services contract', () => {
     expect(palette).toMatch(/manageRouteOf\(svc\.id\)/)
   })
 
+  test('settings save bar paints above Element Plus input-number buttons (z-index 1)', () => {
+    const shell = read('components', 'settings', 'SettingsShell.vue')
+    const footer = shell.match(/\.shell-footer \{([^}]*)\}/)?.[1] ?? ''
+    expect(footer).toMatch(/position: sticky/)
+    expect(footer).toMatch(/background: var\(--wdc-bg\)/)
+    expect(Number(footer.match(/z-index: (\d+)/)?.[1])).toBeGreaterThan(1)
+  })
+
+  test('sign-in entry is marked current on the login page', () => {
+    const sidebar = read('components', 'layout', 'AppSidebar.vue')
+    expect(sidebar).toMatch(/active: isPathActive\('\/login'\)/)
+  })
+
   test('browser sign-in can be cancelled and times out', () => {
     const auth = read('stores', 'auth.ts')
     expect(auth).toMatch(/function cancelLogin/)
