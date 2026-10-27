@@ -50,7 +50,15 @@
     <!-- Marketplace tab -->
     <div v-else-if="activeTab === 'marketplace'" class="page-body-pad">
       <el-alert
-        v-if="marketplace.error"
+        v-if="marketplace.source === 'built-in'"
+        type="info"
+        :closable="false"
+        show-icon
+        :title="$t('plugins.marketplaceBuiltIn')"
+        style="margin-bottom: var(--wdc-space-4)"
+      />
+      <el-alert
+        v-else-if="marketplace.error"
         type="warning"
         :closable="false"
         show-icon
@@ -78,10 +86,10 @@
               <el-tag v-if="mp.installed" size="small" type="success" effect="plain">{{ $t('plugins.installedTag') }}</el-tag>
             </div>
           </div>
-          <div class="pm-card-desc">{{ mp.description || $t('plugins.page.noDescription') }}</div>
+          <div class="pm-card-desc" :title="pluginDescription(mp)">{{ pluginDescription(mp) }}</div>
           <div class="pm-card-footer">
             <div class="pm-meta">
-              <span class="pm-version">v{{ mp.version }}</span>
+              <span class="pm-version">v{{ installedVersion(mp.id) ?? mp.version }}</span>
               <span v-if="mp.author" class="pm-author">{{ $t('plugins.byAuthor', { author: mp.author }) }}</span>
               <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
             </div>
@@ -169,8 +177,8 @@
           />
         </div>
 
-        <div class="pm-card-desc">
-          {{ plugin.description || $t('plugins.page.noDescription') }}
+        <div class="pm-card-desc" :title="pluginDescription(plugin)">
+          {{ pluginDescription(plugin) }}
         </div>
 
         <div class="pm-card-footer">
@@ -258,7 +266,7 @@ import {
 } from '../../api/daemon'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const pluginsStore = usePluginsStore()
@@ -350,12 +358,24 @@ watch(activeTab, (tab) => {
   }
 })
 
+// First-party plugins ship English plugin.json descriptions; show the
+// translated one for known ids and the manifest text for anything else.
+function pluginDescription(p: { id: string; description?: string | null }): string {
+  const key = `plugins.descriptions.${p.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
+  return te(key) ? t(key) : (p.description || t('plugins.page.noDescription'))
+}
+
+/** The built-in catalogue lists 1.0.0 for everything; show what is really installed. */
+function installedVersion(id: string): string | null {
+  return pluginsStore.manifests.find(m => m.id === id)?.version ?? null
+}
+
 function matchesSearch(p: { id: string; name: string; description?: string | null }): boolean {
   const q = search.value.trim().toLowerCase()
   return q === ''
     || p.name.toLowerCase().includes(q)
     || p.id.toLowerCase().includes(q)
-    || (p.description ?? '').toLowerCase().includes(q)
+    || pluginDescription(p).toLowerCase().includes(q)
 }
 
 const filteredPlugins = computed(() => pluginsStore.manifests.filter(matchesSearch))
@@ -527,7 +547,7 @@ onMounted(() => {
 
 .pm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--wdc-space-3);
   justify-content: start;
 }
@@ -595,7 +615,7 @@ onMounted(() => {
   font-size: 0.85rem;
   color: var(--wdc-text-dim);
   line-height: 1.5;
-  flex: 1;
+  max-height: 3em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -603,6 +623,8 @@ onMounted(() => {
 }
 
 .pm-card-footer {
+  /* pins version, binary hint and actions to the bottom of equal-height cards */
+  margin-top: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -666,7 +688,6 @@ onMounted(() => {
   display: flex;
   gap: var(--wdc-space-2);
   justify-content: flex-end;
-  margin-top: auto;
   padding-top: var(--wdc-space-3);
   border-top: 1px solid var(--wdc-border);
 }

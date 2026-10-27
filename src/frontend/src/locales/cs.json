@@ -1463,7 +1463,26 @@
     "disabledHint": "Vypnuto. Zapnete ho přepínačem nahoře.",
     "noneLoaded": "Nejsou načtené žádné pluginy",
     "byAuthor": "Autor: {author}",
-    "noMatching": "Žádný plugin neodpovídá „{q}“"
+    "noMatching": "Žádný plugin neodpovídá „{q}“",
+    "marketplaceBuiltIn": "Online marketplace teď není dostupný. Zobrazuje se katalog pluginů dodaných s WDC.",
+    "descriptions": {
+      "apache": "Webový server Apache 2.4. Spouští httpd, vytváří virtuální hosty pro weby a kontroluje konfiguraci.",
+      "caddy": "Webový server Caddy, alternativa k Apache s automatickým HTTPS. Pro weby vytváří Caddyfile.",
+      "cloudflare": "Zveřejní lokální weby na internetu přes Cloudflare Tunnel bez přesměrování portů a veřejné IP. Spravuje cloudflared, DNS záznamy a pravidla tunelu.",
+      "composer": "Správce závislostí pro PHP. Spouští příkazy Composeru (install, require, update) ve složkách webů.",
+      "hosts": "Spravuje blok WDC v systémovém souboru hosts a před každou změnou uloží zálohu.",
+      "deploy": "Nasazuje weby na servery přes nksdeploy bez výpadku a ukládá historii nasazení.",
+      "deploy_localrsync": "Nasazení na tento počítač nebo síťový disk pomocí rsync. Používá ho modul nasazení.",
+      "mailpit": "Lokální SMTP server. Zachytí e-maily odeslané z webů a ukáže je ve webovém rozhraní.",
+      "mariadb": "Databázový server MariaDB kompatibilní s MySQL, se šifrovaným heslem roota a šablonou my.ini.",
+      "mysql": "Databázový server MySQL se šifrovaným heslem roota, šablonou my.ini a správou databází a uživatelů.",
+      "nginx": "Webový server a reverzní proxy Nginx, alternativa k Apache.",
+      "node": "Spravuje více verzí Node.js ve spravovaných binárkách a přepíná aktivní verzi.",
+      "php": "Spravuje více verzí PHP, jejich php.ini a rozšíření a spouští PHP pro weby.",
+      "postgresql": "Databázový server PostgreSQL.",
+      "redis": "Cache server Redis se spravovaným souborem redis.conf.",
+      "ssl": "Vytváří certifikáty pro HTTPS pomocí mkcert a instaluje lokální certifikační autoritu."
+    }
   },
   "hosts": {
     "title": "Soubor hosts",

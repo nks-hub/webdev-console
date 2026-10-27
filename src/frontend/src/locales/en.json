@@ -1463,7 +1463,26 @@
     "disabledHint": "Off. Turn it on with the switch above.",
     "noneLoaded": "No plugins loaded",
     "byAuthor": "By {author}",
-    "noMatching": "No plugins matching ‘{q}’"
+    "noMatching": "No plugins matching ‘{q}’",
+    "marketplaceBuiltIn": "The online marketplace is not available right now. Showing the plugins that ship with WDC.",
+    "descriptions": {
+      "apache": "Apache 2.4 web server. Runs httpd, creates virtual hosts for your sites and checks the configuration.",
+      "caddy": "Caddy web server, an alternative to Apache with automatic HTTPS. Creates a Caddyfile for your sites.",
+      "cloudflare": "Publishes local sites on the internet through Cloudflare Tunnel without port forwarding or a public IP. Manages cloudflared, DNS records and tunnel rules.",
+      "composer": "PHP dependency manager. Runs Composer commands (install, require, update) in site folders.",
+      "hosts": "Manages the WDC block in the system hosts file and keeps a backup before every change.",
+      "deploy": "Deploys sites to servers through nksdeploy without downtime and keeps a deploy history.",
+      "deploy_localrsync": "Deploys to this computer or a network drive with rsync. Used by the deploy module.",
+      "mailpit": "Local SMTP server. Catches e-mail sent by your sites and shows it in a web inbox.",
+      "mariadb": "MariaDB database server, compatible with MySQL, with an encrypted root password and a my.ini template.",
+      "mysql": "MySQL database server with an encrypted root password, a my.ini template and database and user management.",
+      "nginx": "Nginx web server and reverse proxy, an alternative to Apache.",
+      "node": "Manages several Node.js versions in the managed binaries and switches the active one.",
+      "php": "Manages several PHP versions, their php.ini and extensions, and runs PHP for your sites.",
+      "postgresql": "PostgreSQL database server.",
+      "redis": "Redis cache server with a managed redis.conf.",
+      "ssl": "Creates HTTPS certificates with mkcert and installs the local certificate authority."
+    }
   },
   "hosts": {
     "title": "Hosts file",
