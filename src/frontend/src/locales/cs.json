@@ -117,19 +117,32 @@
   },
   "login": {
     "subtitle": "Místní vývojová konzole",
-    "description": "Přihlaste se ke svému NKS WDC katalogovému účtu pro automatickou synchronizaci pluginů, SSO-chráněné akce a identitu zařízení. Aplikaci můžete používat i bez přihlášení — tlačítko zůstane v sidebaru kdykoliv k dispozici.",
-    "signInSso": "Přihlásit přes SSO",
-    "signOut": "Odhlásit",
+    "description": "Přihlášením k účtu NKS se vám synchronizují pluginy a zpřístupní se akce, které vyžadují ověření. Aplikace funguje i bez přihlášení, přihlásit se můžete kdykoli z menu vlevo.",
+    "signInSso": "Přihlásit se účtem NKS",
+    "signOut": "Odhlásit se",
     "continue": "Pokračovat do aplikace",
     "continueWithout": "Pokračovat bez přihlášení →",
-    "signedInHint": "Jste přihlášeni ke katalogu.",
-    "catalogUrl": "URL katalogu",
+    "signedInHint": "Jste přihlášeni k účtu NKS.",
     "or": "nebo",
     "email": "E-mail",
     "password": "Heslo",
     "success": "Přihlášeno",
     "registered": "Účet vytvořen",
-    "failed": "Přihlášení selhalo"
+    "failed": "Přihlášení se nezdařilo",
+    "emailPlaceholder": "vas@email.cz",
+    "passwordAgain": "Heslo znovu",
+    "createAccount": "Vytvořit účet",
+    "haveAccount": "Už mám účet",
+    "noAccount": "Nemám účet",
+    "errors": {
+      "desktopOnly": "Přihlášení účtem NKS funguje jen v desktopové aplikaci.",
+      "emptyToken": "Přihlášení skončilo bez přístupového tokenu. Zkuste to znovu.",
+      "badCredentials": "E-mail nebo heslo nesouhlasí.",
+      "exists": "Účet s tímto e-mailem už existuje.",
+      "network": "Nepodařilo se spojit s katalogem. Zkontrolujte připojení k internetu.",
+      "mismatch": "Hesla se neshodují.",
+      "generic": "Přihlášení se nepovedlo ({detail})."
+    }
   },
   "nav": {
     "services": "Služby",
@@ -2259,7 +2272,7 @@
     "title": "Konfigurace služby",
     "reload": "Obnovit",
     "card": {
-      "crashed": "Proces spadl",
+      "crashed": "Spadlo",
       "starting": "Spouštění…",
       "notRunning": "Služba neběží"
     },
@@ -3226,35 +3239,35 @@
     }
   },
   "splash": {
-    "failedTitle": "Daemon se nepodařilo spustit",
+    "failedTitle": "Službu na pozadí se nepodařilo spustit",
     "retry": "Zkusit znovu",
     "restartApp": "Restartovat aplikaci",
-    "logHint": "Log daemona: {path}",
+    "logHint": "Log služby na pozadí: {path}",
     "status": {
-      "mounting": "Spouštím frontend…",
-      "connecting": "Připojuji se k backendu…",
-      "daemonStarting": "Daemon se spouští…",
-      "pluginsStarting": "Daemon spouští pluginy…",
-      "slow": "Daemon stále odpovídá pomalu…",
-      "unresponsive": "Daemon dlouho nereaguje — chystám diagnostiku…",
-      "auth": "Daemon běží, synchronizuji token…",
-      "server": "Daemon hlásí chybu — zkouším znovu…",
-      "waiting": "Čekám na backend…"
+      "mounting": "Spouštím rozhraní…",
+      "connecting": "Připojuji se ke službě na pozadí…",
+      "daemonStarting": "Služba na pozadí se spouští…",
+      "pluginsStarting": "Služba na pozadí načítá pluginy…",
+      "slow": "Služba na pozadí stále odpovídá pomalu…",
+      "unresponsive": "Služba na pozadí dlouho neodpovídá, připravuji diagnostiku…",
+      "auth": "Služba na pozadí běží, ověřuji přístup…",
+      "server": "Služba na pozadí hlásí chybu, zkouším to znovu…",
+      "waiting": "Čekám na službu na pozadí…"
     },
     "hint": {
       "mount": "načítání rozhraní",
       "first": "první pokus",
       "attempt": "pokus {n}",
-      "network": "pokus {n} · port file / socket",
-      "auth": "pokus {n} · rotace tokenu",
-      "server": "pokus {n} · odpověď 5xx"
+      "network": "pokus {n} · spojení se nezdařilo",
+      "auth": "pokus {n} · ověření přístupu",
+      "server": "pokus {n} · služba hlásí chybu"
     },
     "attempts": "{n} pokus | {n} pokusy | {n} pokusů",
     "fail": {
-      "network": "Daemon neodpovídá (port file / socket) — {attempts} za {s} s.",
-      "auth": "Daemon běží, ale token se nepodařilo synchronizovat — {attempts}.",
-      "server": "Daemon vrací chybu (5xx) — {attempts} za {s} s.",
-      "unknown": "Backend se neozval za {s} s ({attempts})."
+      "network": "Služba na pozadí neodpovídá: {attempts} za {s} s.",
+      "auth": "Služba na pozadí běží, ale nepodařilo se ověřit přístup: {attempts}.",
+      "server": "Služba na pozadí vrací chybu: {attempts} za {s} s.",
+      "unknown": "Služba na pozadí se neozvala za {s} s ({attempts})."
     }
   },
   "osNotifications": {
