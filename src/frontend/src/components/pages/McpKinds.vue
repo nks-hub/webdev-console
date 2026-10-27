@@ -218,11 +218,11 @@ function goToCreateGrantForKind(kindId: string): void {
   void router.push({ path: '/mcp/grants', query: { createForKind: kindId } })
 }
 
-// Phase 7.5+++ — deep-link to the Settings → Advanced → MCP section
-// where the always-confirm picker lives. Operator can edit the
+// Phase 7.5+++ — deep-link to the "More MCP options" section of
+// Settings → AI clients (MCP), where the always-confirm picker lives. Operator can edit the
 // override directly from a kind row.
 function goToAlwaysConfirmSetting(): void {
-  void router.push({ path: '/settings', query: { tab: 'advanced', scroll: 'mcp-section' } })
+  void router.push({ path: '/settings', query: { tab: 'mcp', scroll: 'mcp-section' } })
 }
 
 const search = ref('')
