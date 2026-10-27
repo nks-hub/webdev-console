@@ -2983,7 +2983,7 @@
     },
     "mcpTab": {
       "optionsTitle": "Další volby MCP",
-      "simpleSubtitle": "Co smějí AI asistenti připojení přes MCP. Vypnuté MCP žádného AI klienta nepustí."
+      "simpleSubtitle": "Co smí AI klienti připojení přes MCP. Vypnuté MCP žádného AI klienta nepustí."
     }
   },
   "mcpGrants": {
@@ -3158,7 +3158,7 @@
       "expiresIn": "vyprší za {seconds} s",
       "approve": "Schválit",
       "decline": "Odmítnout",
-      "declineAria": "Odmítnout: AI tuhle žádost už nebude moct provést",
+      "declineAria": "Odmítnout: AI tuto žádost už nebude moct provést",
       "dismiss": "Zavřít",
       "ageJustNow": "právě teď",
       "ageSeconds": "před {seconds} s",
@@ -3606,7 +3606,7 @@
     "loadFailed": "Seznam schopností se nepodařilo načíst: {err}",
     "approvalStillRequired": "Nevratné akce dál musíte schválit",
     "alwaysTitle": "Co AI smí vždy",
-    "alwaysHint": "Tohle nástroje MCP potřebují pro běžnou práci. Vypnete to jen vypnutím MCP.",
+    "alwaysHint": "Tyto akce nástroje MCP potřebují pro běžnou práci. Vypnout je jde jen vypnutím celého MCP.",
     "neverTitle": "Co AI nesmí nikdy",
     "settingsPrefix": "Nastavení začínající {prefix}",
     "enableTitle": "Povolit AI klientům?",
