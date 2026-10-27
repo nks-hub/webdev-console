@@ -257,181 +257,202 @@
     }
   },
   "mcpIntents": {
-    "title": "MCP Intent Inventory",
+    "title": "AI requests",
     "refresh": "Refresh",
-    "description": "Audit trail of HMAC-signed intent tokens minted by AI / CI clients via the Model Context Protocol. Each intent authorises a single destructive operation (deploy / rollback / cancel / restore) on a specific (domain, host) pair. Used intents stay around for 7 days as audit history; expired-unused intents are swept after 1 day.",
-    "stateSummaryAria": "Intent state summary",
-    "domainBreakdownAria": "Intent breakdown by domain",
-    "domainBreakdownTitle": "Per-domain breakdown:",
+    "description": "Actions an AI asked for that someone has to approve. Decide pending requests here. Used and revoked requests stay in the history for 7 days; unused ones are removed a day after they expire.",
+    "stateSummaryAria": "Requests by state",
+    "domainBreakdownAria": "Requests by target",
+    "domainBreakdownTitle": "By target:",
     "filter": {
-      "groupAria": "Filter intents",
+      "groupAria": "Filter requests",
       "allStates": "All states",
       "stateAria": "Filter by state",
-      "allKinds": "All kinds",
-      "kindAria": "Filter by kind",
-      "search": "Search domain or host…",
-      "searchAria": "Search by domain or host",
+      "allKinds": "All actions",
+      "kindAria": "Filter by action",
+      "search": "Search target…",
+      "searchAria": "Search by target",
       "showing": "Showing {visible} of {total}"
     },
-    "emptyNoIntents": "No MCP intents recorded — the daemon hasn't seen any AI-signed destructive ops yet.",
-    "emptyNoMatch": "No intents match the current filters",
-    "emptyTable": "No intents",
+    "emptyNoIntents": "No requests yet. They appear when an AI wants to do something you have to approve.",
+    "emptyNoMatch": "No request matches the filters",
+    "emptyTable": "No requests",
     "bulk": {
-      "toolbarAria": "Bulk intent actions",
+      "toolbarAria": "Bulk request actions",
       "selected": "{n} selected:",
       "revokeSelected": "Revoke selected ({n})",
       "clearSelection": "Clear selection",
-      "confirmTitle": "Bulk revoke MCP intents",
-      "confirmMessage": "Revoke {n} intent(s)? Each will be marked used_at on the daemon so any AI client trying to fire them gets already_used.\n\nTargets: {targets}",
-      "confirmMore": " and {n} more…",
-      "confirmRevokeBtn": "Revoke all",
+      "confirmTitle": "Revoke the selected requests?",
+      "confirmMessage": "Revoke the selected requests ({n})? The AI can no longer carry them out.\n\n{targets}",
+      "confirmMore": " and {n} more",
+      "confirmRevokeBtn": "Revoke",
       "cancel": "Cancel",
-      "toastOk": "Revoked {n} intent(s)",
-      "toastPartial": "Revoked {ok}, {failed} failed"
+      "toastOk": "Revoked: {n}",
+      "toastPartial": "Revoked: {ok}, failed: {failed}"
     },
     "col": {
       "created": "Created",
-      "domain": "Domain",
-      "host": "Host",
-      "kind": "Kind",
+      "kind": "Action",
       "state": "State",
       "expires": "Expires",
-      "intentId": "Intent ID",
-      "matchedGrant": "Auto-via grant"
+      "intentId": "Request ID",
+      "matchedGrant": "Approved by",
+      "target": "Target"
     },
-    "matchedGrantClickHint": "Click to show all intents this grant approved ({id}).",
-    "matchedGrantBanner": "Filtered: showing only intents approved by grant",
+    "matchedGrantClickHint": "Show every request this rule approved ({id}).",
+    "matchedGrantBanner": "Only requests approved by rule",
     "clearMatchedGrantFilter": "Clear filter",
     "manualConfirm": "manual",
-    "confirmedManually": "Confirmed manually via GUI banner (no grant matched)",
+    "confirmedManually": "Approved by hand, no rule matched",
     "revoke": "Revoke",
-    "revokeAria": "Revoke this intent (mark as used without firing)",
+    "revokeAria": "Revoke the approved request so the AI cannot carry it out",
     "single": {
-      "confirmTitle": "Revoke MCP intent",
-      "confirmMessage": "Revoke intent {id}? ({kind} on {domain} → {host}) Any AI client trying to fire this token will get already_used.",
+      "confirmTitle": "Revoke the request?",
+      "confirmMessage": "Revoke \"{kind}\" on {target}? The AI can no longer carry it out.",
       "confirmRevokeBtn": "Revoke",
       "cancel": "Cancel",
-      "toastRevoked": "Intent revoked",
-      "toastRevokeFailed": "Revoke failed: {error}",
-      "toastIdCopied": "Intent ID copied",
-      "toastCopyFail": "Copy failed — clipboard access denied"
+      "toastRevoked": "Request revoked",
+      "toastRevokeFailed": "Revoking failed: {error}",
+      "toastIdCopied": "Request ID copied",
+      "toastCopyFail": "Copy failed, the clipboard is blocked"
     },
     "approve": "Approve",
     "reject": "Reject",
     "approveAria": "Approve this AI request",
-    "rejectAria": "Reject and revoke this AI request so the AI cannot run it",
-    "approveDialog": {
-      "title": "Approve AI request?",
-      "message": "AI wants to perform {kind} on {target}. Reason given: {prompt}"
+    "rejectAria": "Reject the request so the AI cannot carry it out",
+    "state": {
+      "pending_confirmation": "Waiting for approval",
+      "ready": "Approved, waiting for the AI",
+      "consumed": "Done",
+      "revoked": "Rejected",
+      "expired": "Expired"
+    },
+    "relative": {
+      "inSeconds": "in {n} s",
+      "inMinutes": "in {n} min",
+      "inHours": "in {n} h",
+      "secondsAgo": "{n} s ago",
+      "minutesAgo": "{n} min ago"
     }
   },
   "mcpHub": {
-    "title": "Model Context Protocol",
-    "description": "Central management of AI communication. Activity shows full call audit, Requests pending signed requests, Rules auto-approval policy, and Catalog the available action types.",
+    "title": "AI clients (MCP)",
     "tabs": {
       "activity": "Activity",
       "requests": "Requests",
       "rules": "Rules",
-      "catalog": "Catalog"
+      "catalog": "Actions to approve"
     },
     "stats": {
       "active": "active rules",
-      "deadweight": "never matched (cleanup?)",
-      "deadweightHint": "Rules AI has never used — likely safe to remove",
-      "totalMatches": "total auto-approvals",
-      "lastMatch": "last auto-approval:",
-      "alwaysConfirm": "always-ask kinds",
+      "deadweight": "unused rules",
+      "deadweightHint": "Rules older than 7 days that no AI has used yet. You can probably revoke them.",
+      "totalMatches": "approved by rules",
+      "lastMatch": "last:",
+      "alwaysConfirm": "actions always ask",
       "justNow": "just now",
-      "minutesAgo": "{n}m ago",
+      "minutesAgo": "{n} min ago",
       "hoursAgo": "{n}h ago",
       "daysAgo": "{n}d ago"
     },
     "tier": {
-      "sandbox": "Sandbox",
-      "sandboxHint": "No rules — AI asks for every destructive action",
       "balanced": "Balanced",
-      "balancedHint": "Auto-approve reversible actions (deploy, rollback)",
-      "fullTrust": "Full Trust",
-      "fullTrustHint": "Wildcard rule accepts everything without asking",
-      "custom": "Custom",
-      "customHint": "Custom combination of rules"
+      "balancedHint": "Deploy and rollback are approved automatically, the AI asks about the rest.",
+      "custom": "Custom rules",
+      "customHint": "The rules match no profile.",
+      "minimalHint": "No rules: the AI asks about everything that needs approval.",
+      "localDevHint": "Service restarts and changes to *_dev databases are approved automatically.",
+      "permissiveHint": "One rule for everything: the AI asks about nothing."
     },
     "suggested": {
-      "title": "{n} auto-approval suggestion(s)",
-      "hint": "You manually approved these actions multiple times in the last 7 days. Click \"Auto-approve\" to create a rule that lets them through without further prompts.",
-      "occurrences": "{n}× manually approved",
-      "autoApprove": "Auto-approve",
-      "created": "Rule created: {kind} → {domain}",
-      "failed": "Failed to create rule: {error}"
+      "title": "{n} suggested rule | {n} suggested rules",
+      "hint": "You approved these actions by hand again and again over the last 7 days. \"Approve automatically\" creates a rule for every AI client.",
+      "occurrences": "approved by hand {n}×",
+      "autoApprove": "Approve automatically",
+      "created": "Rule created: {kind} – {domain}",
+      "failed": "Could not create the rule: {error}",
+      "dismiss": "Hide suggestions"
+    },
+    "glossary": {
+      "requests": "an AI wants to do something that is hard to undo (drop a database, overwrite a config) and waits for your approval.",
+      "rules": "approve these requests automatically, for example service restarts.",
+      "catalog": "the actions an AI has to ask about."
+    },
+    "off": {
+      "title": "MCP is off",
+      "body": "AI clients cannot reach WDC now. Turn MCP on with the switch above to see activity, requests and rules here."
     }
   },
   "mcpOnboarding": {
-    "title": "Welcome to MCP — let's set it up",
-    "hint": "Pick a profile based on how much you want to trust AI. You can adjust rules later in the Rules tab.",
+    "title": "How much may an AI do without asking?",
+    "hint": "Pick a profile. You can change the rules later under Rules.",
     "dismiss": "Skip",
     "recommended": "recommended",
-    "applied": "Profile {profile} applied ({n} rules created)",
-    "minimalApplied": "Minimal profile active — AI asks for everything",
+    "applied": "Profile {profile} is set",
+    "minimalApplied": "Minimal profile: the AI asks about everything that needs approval",
     "profiles": {
       "minimal": {
         "name": "Minimal",
-        "desc": "Safest — manually approve every destructive AI action",
+        "desc": "Safest: you approve every AI request by hand.",
         "bullets": [
-          "No auto-approve rules",
-          "Read-only calls pass freely",
-          "Every mutation or destructive op requires confirmation"
+          "No auto-approval rules",
+          "Reads and everyday actions (sites, services, databases) run without asking",
+          "Deleting and overwriting always asks"
         ],
         "cta": "Use Minimal"
       },
       "balanced": {
         "name": "Balanced",
-        "desc": "Reversible actions auto-approve, destructive ones ask",
+        "desc": "Deploy and rollback are approved automatically, irreversible actions ask.",
         "bullets": [
-          "Auto-approve: deploy, rollback (reversible)",
-          "Asks for: restore, drop, snapshot delete",
-          "Suits most workflows"
+          "Approved automatically: deploy and rollback (can be undone)",
+          "Asks: snapshot restore, dropping a database and other irreversible actions",
+          "Fits most work"
         ],
         "cta": "Use Balanced"
       },
       "localDev": {
         "name": "Local development",
-        "desc": "Restart services and change *_dev databases without asking",
+        "desc": "Service restarts and changes to *_dev databases without asking.",
         "bullets": [
-          "Auto-approve: stopping and restarting services",
-          "Auto-approve: drop, SQL and import on databases named *_dev",
-          "Everything else still asks"
+          "Approved automatically: stopping and restarting services",
+          "Approved automatically: drop, SQL and import for databases named *_dev",
+          "Everything else asks"
         ],
         "cta": "Use Local development"
       },
       "permissive": {
         "name": "Full Trust",
-        "desc": "AI may do anything without asking — test envs only",
+        "desc": "The AI may do anything without asking. For test environments only.",
         "bullets": [
-          "Wildcard rule: everything × everything",
-          "No confirmations",
-          "Tip: pair with Always-ask for production domains"
+          "One rule for every action and target",
+          "Asks about nothing, irreversible actions included",
+          "To keep approving some actions, mark them under Actions to approve → Edit \"always ask\""
         ],
-        "cta": "Use Full Trust"
+        "cta": "Use Full trust…"
       },
       "custom": {
         "name": "Manual",
-        "desc": "No preset — set up rules myself",
+        "desc": "No profile. Create your own rules under Rules.",
         "bullets": [
           "Opens the Rules tab",
-          "Build your own rules from scratch",
-          "For advanced operators"
+          "Starts with no rules",
+          "For when you know exactly what to allow"
         ],
         "cta": "Open Rules"
       }
     },
-    "default": "default"
+    "default": "default",
+    "applyFailed": "Profile {profile} was only partly applied ({ok} of {total} rules). Try again.",
+    "permissiveWord": "TRUST",
+    "permissiveConfirm": "Full trust creates a rule that lets every connected AI client carry out even irreversible actions, such as dropping a database, without asking. To confirm, type {word}.",
+    "permissiveMismatch": "Type exactly {word}."
   },
   "mcpActivity": {
     "stats": {
-      "totalCalls": "Total calls 24h",
+      "totalCalls": "Calls in 24 h",
       "reads": "Reads",
-      "mutates": "Mutating",
-      "destructives": "Destructive",
+      "mutates": "Changes",
+      "destructives": "Irreversible",
       "errors": "Errors",
       "sessions": "Sessions",
       "clickToFilter": "Click to filter by this level",
@@ -441,7 +462,10 @@
       "throughput": "throughput",
       "latency": "latency",
       "errorRate": "error rate",
-      "callsPerMinHint": "Average call rate over the last 24h"
+      "callsPerMinHint": "Average call rate over the last 24h",
+      "latencyP50": "response, median",
+      "latencyP95": "response, 95% of calls",
+      "latencyP99": "response, 99% of calls"
     },
     "filter": {
       "allDanger": "All danger levels",
@@ -452,11 +476,11 @@
     },
     "view": {
       "sessions": "By session",
-      "flat": "Flat"
+      "flat": "List"
     },
     "filterBySession": "Filter to session {id}",
     "session": {
-      "toggle": "Expand/collapse session — {caller}"
+      "toggle": "Expand or collapse session {caller}"
     },
     "timeline": {
       "title": "Activity for last {hours}h",
@@ -469,9 +493,10 @@
     "detail": {
       "calledAt": "called at",
       "argsHash": "args hash",
-      "intentId": "intent",
+      "intentId": "request",
       "args": "args",
-      "copy": "Copy"
+      "copy": "Copy",
+      "error": "error"
     },
     "sessionDetail": {
       "title": "Session detail",
@@ -489,22 +514,24 @@
     "danger": {
       "read": "read",
       "mutate": "mutate",
-      "destructive": "destructive"
+      "destructive": "irreversible"
     },
     "refresh": "Refresh",
     "exportCsv": "Export CSV",
     "totalShown": "{n} of {total}",
-    "empty": "No MCP calls yet — no AI client has connected.",
-    "readsCollapsed": "{n}× read collapsed (click to expand)",
+    "empty": "No AI client has connected yet. The steps are above.",
+    "readsCollapsed": "{n}× reads collapsed (click to expand)",
     "justNow": "just now",
     "minutesAgo": "{n}m ago",
     "hoursAgo": "{n}h ago",
-    "daysAgo": "{n}d ago"
+    "daysAgo": "{n}d ago",
+    "exportFailed": "CSV export failed: {error}",
+    "callsCount": "{n} call | {n} calls"
   },
   "mcpKinds": {
-    "title": "Registered destructive operation kinds",
+    "title": "Actions an AI must get approved",
     "refresh": "Refresh",
-    "description": "Plugins register the destructive operations they expose to AI clients here. Each kind ships with a wire-format id (used in MCP intent tokens), a human-readable label (shown in the confirm banner), and a danger level (escalates banner visual treatment for irreversible ops).",
+    "description": "An AI has to ask before any of these actions. The description is what you see in the request. Irreversible actions cannot be taken back. \"Always ask\" means no rule approves the action.",
     "labels": {
       "deploy": "Deploy a new release",
       "rollback": "Roll back to a previous release",
@@ -533,33 +560,35 @@
       "postgres_root_reset": "Reset the PostgreSQL superuser password",
       "backup_delete": "Delete a WDC backup",
       "mysql_user_admin": "Create or grant a MySQL account with admin privileges or a non-local host",
-      "mysql_user_password": "Reset a MySQL user account's password"
+      "mysql_user_password": "Reset a MySQL user account's password",
+      "backup_restore": "Restore a WDC backup over the current state"
     },
-    "empty": "No kinds registered",
+    "empty": "The daemon returned no actions yet.",
     "col": {
       "id": "ID",
-      "label": "Label",
+      "label": "Description",
       "plugin": "Plugin",
-      "danger": "Danger",
-      "intentCount": "Used",
-      "autoApproveGrants": "Auto-approve (grants)"
+      "danger": "Can be undone?",
+      "intentCount": "Requests",
+      "autoApproveGrants": "Approved by rules"
     },
-    "unused": "never",
-    "noAutoApprove": "—",
-    "quickGrant": "Create grant",
-    "alwaysConfirm": "Always confirm",
-    "alwaysConfirmTooltip": "Without ring-fence, this kind would auto-approve via {n} grant(s). Click to edit settings.",
-    "editAlwaysConfirm": "Edit ring-fence",
+    "unused": "not yet",
+    "noAutoApprove": "–",
+    "quickGrant": "Add rule",
+    "alwaysConfirm": "Always ask",
+    "alwaysConfirmTooltip": "Without \"always ask\", rules ({n}) would approve this action. Click to edit.",
+    "editAlwaysConfirm": "Edit \"always ask\"",
     "danger": {
       "reversible": "Reversible",
-      "destructive": "Destructive"
+      "destructive": "Irreversible"
     },
     "dangerFilter": {
       "all": "All"
     },
-    "toastLoadFailed": "Could not load kinds: {error}",
+    "toastLoadFailed": "Could not load the actions: {error}",
     "filterPlaceholder": "Search id or label…",
-    "pluginFilterPlaceholder": "Plugin filter"
+    "pluginFilterPlaceholder": "Plugin",
+    "autoApproveCount": "{n} rule | {n} rules"
   },
   "composer": {
     "title": "Composer",
@@ -2543,22 +2572,22 @@
     },
     "mcp": {
       "title": "Model Context Protocol (MCP)",
-      "description": "Optional integration for AI agents (Claude, Cursor, …) connecting via MCP. When enabled, AI deploy/restore requests prompt for confirmation in a banner; signed intent tokens are auditable under the \"MCP Intents\" sidebar entry.",
-      "warning": "Leave OFF unless you actively run an AI agent against this daemon.",
+      "description": "Integration for AI clients (Claude, Cursor, …) over MCP. While it is off, the daemon refuses AI clients. While it is on, you still approve irreversible actions in requests. The overview is under AI clients (MCP) in the menu.",
+      "warning": "Keep it off unless you actually use an AI client.",
       "enableLabel": "Enable MCP integration",
-      "strictKindsLabel": "Strict kind validation",
-      "strictKindsHint": "When ON, intents fail with kind_unknown unless the kind is registered in the kinds registry. Restricts AI to verbs plugins explicitly expose. Default OFF for backwards compatibility.",
-      "alwaysConfirmKindsLabel": "Always-confirm kinds",
-      "alwaysConfirmKindsHint": "Comma-separated list of kinds (e.g. \"restore,database_drop,plugin_install\") for which the validator SKIPS grant auto-approval — operator must confirm in the GUI banner even when a wildcard always-grant exists. Ring-fence for the riskiest ops across deploy, database, DNS, SSL, plugins, and binaries.",
-      "alwaysConfirmKindsPlaceholder": "Pick kinds to ring-fence",
-      "lockAllDestructive": "Lock all destructive ({n})",
+      "strictKindsLabel": "Known actions only",
+      "strictKindsHint": "When on, the daemon refuses a request for an action no plugin registered, so an AI can only ask for actions listed under Actions to approve. Off by default for older plugins.",
+      "alwaysConfirmKindsLabel": "Always ask for these actions",
+      "alwaysConfirmKindsHint": "For the selected actions the daemon skips the rules and always asks you, even when a rule for everything exists. Useful for the riskiest actions (restore, dropping a database, installing a plugin).",
+      "alwaysConfirmKindsPlaceholder": "Pick the actions that always ask",
+      "lockAllDestructive": "Always ask for all irreversible ({n})",
       "clearAlwaysConfirm": "Clear",
-      "expiredRetentionLabel": "Expired-grant retention",
-      "expiredRetentionHint": "After expiry, the janitor waits this many days before deleting the row. 0 = never delete naturally-expired grants (only explicitly revoked ones).",
-      "revokedRetentionLabel": "Revoked-grant retention",
-      "revokedRetentionHint": "Audit rows for revoked grants are deleted only after this many days. 0 = delete immediately on revoke (no audit trail).",
-      "toolCallRetentionLabel": "Tool-call audit retention",
-      "toolCallRetentionHint": "Rows in mcp_tool_calls (Activity feed) are pruned after this many days. Higher value = more forensic history, more disk. Hourly sweep, default 30.",
+      "expiredRetentionLabel": "Delete expired rules after",
+      "expiredRetentionHint": "How many days an expired rule stays in the history. 0 = never delete expired rules (only revoked ones are deleted).",
+      "revokedRetentionLabel": "Delete revoked rules after",
+      "revokedRetentionHint": "How many days a revoked rule stays in the history. 0 = delete right after revoking (no history).",
+      "toolCallRetentionLabel": "Delete activity records after",
+      "toolCallRetentionHint": "How many days the Activity records are kept. A longer history takes more disk space. Cleaned up hourly, 30 days by default.",
       "daysSuffix": "days"
     },
     "deploySubsystem": {
@@ -2580,38 +2609,38 @@
     }
   },
   "mcpGrants": {
-    "title": "MCP trust grants",
-    "description": "Persistent trust rules consulted by the daemon BEFORE asking the GUI banner for confirmation. A matching grant auto-approves an intent. Survives daemon restarts.",
+    "title": "Auto-approval rules",
+    "description": "A rule says: approve this action on this target without asking. The daemon checks the rules before it asks you. Rules survive a restart.",
     "refresh": "Refresh",
-    "newGrant": "New grant",
+    "newGrant": "New rule",
     "revoke": "Revoke",
     "permanent": "Permanent",
     "empty": {
-      "title": "No active grants",
-      "description": "Approve a request via the banner with \"Trust 30 min\" or \"Always trust\" to create one — or use \"New grant\" above for fine-grained control."
+      "title": "No rules yet",
+      "description": "A rule is created by \"Approve and don't ask for 30 min\" or \"Approve and stop asking\" on a request, or with \"New rule\"."
     },
     "col": {
-      "scope": "Scope",
-      "scopeValue": "Scope value",
-      "kind": "Kind",
+      "scope": "Applies to",
+      "scopeValue": "Client or session",
+      "kind": "Action",
       "target": "Target",
-      "grantedAt": "Granted at",
-      "expires": "Expires",
-      "cooldown": "Cooldown",
+      "grantedAt": "Created",
+      "expires": "Valid until",
+      "cooldown": "Pause after use",
       "matchCount": "Matched",
       "note": "Note",
-      "actions": "Actions"
+      "actions": "Options"
     },
-    "cooldownActiveTooltip": "This grant is in cooldown — subsequent matches fall back to the banner until the cooldown elapses.",
+    "cooldownActiveTooltip": "The rule pauses after use. Until the pause ends, the AI asks.",
     "matches": {
       "none": "never",
       "justNow": "just now",
       "minutesAgo": "{n}m ago",
       "hoursAgo": "{n}h ago",
       "daysAgo": "{n}d ago",
-      "deadweight": "DEADWEIGHT",
-      "deadweightTooltip": "This grant has existed for more than {days} days and never matched anything. Likely safe to revoke.",
-      "drilldownTooltip": "Click to show all intents this grant approved ({id})."
+      "deadweight": "unused",
+      "deadweightTooltip": "The rule is older than {days} days and no AI has used it. You can probably revoke it.",
+      "drilldownTooltip": "Show the requests this rule approved ({id})."
     },
     "expiresIn": {
       "expired": "expired",
@@ -2619,139 +2648,165 @@
       "minutes": "in {n}m",
       "hours": "in {n}h"
     },
-    "expiringSoonTooltip": "This grant expires within 1 hour. AI will fall back to the GUI banner until you mint a new grant.",
+    "expiringSoonTooltip": "The rule expires within an hour. After that the AI asks again until you create a new one.",
     "usage": {
       "all": "All",
-      "inuse": "In use",
-      "deadweight": "Deadweight",
-      "deadweightHint": "Deadweight = never-used grants older than {days} days (revoke candidates).",
-      "emptyForFilter": "No grants match this filter.",
-      "revokeAllDeadweight": "Revoke all deadweight ({n})",
-      "revokeAllDeadweightTitle": "Revoke all deadweight grants?",
-      "revokeAllDeadweightConfirm": "Revoke {n} grants that have existed for more than {days} days and never matched anything? Rows stay in the audit trail but are marked revoked."
+      "inuse": "Used",
+      "deadweight": "Unused",
+      "deadweightHint": "Unused = no AI has used it and it is older than {days} days.",
+      "emptyForFilter": "No rule matches this filter.",
+      "revokeAllDeadweight": "Revoke unused ({n})",
+      "revokeAllDeadweightTitle": "Revoke unused rules?",
+      "revokeAllDeadweightConfirm": "Revoke the rules ({n}) older than {days} days that no AI has used? They stay in the history as revoked."
     },
     "scopeFilter": {
-      "placeholder": "Scope type filter"
+      "placeholder": "Applies to"
     },
-    "includeRevokedLabel": "Show revoked (audit view)",
+    "includeRevokedLabel": "Show revoked too",
     "targetFilterTag": "target: {target}",
-    "kindFilterTag": "kind: {kind}",
+    "kindFilterTag": "action: {kind}",
     "dialog": {
-      "title": "New trust grant",
-      "scopeType": "Scope type",
-      "scopeValue": "Scope value",
-      "scopeValueRequired": "Scope value is required for this scope type.",
+      "title": "New rule",
+      "scopeType": "Applies to",
+      "scopeValue": "Client or session",
+      "scopeValueRequired": "Pick a client or a session.",
       "scopeValuePlaceholder": {
-        "session": "mcp-session-id (e.g. agent-42)",
-        "apiKey": "api-key fingerprint (NOT the key itself)",
-        "instance": "wdc instance UUID"
+        "session": "Pick a session from Activity",
+        "apiKey": "client:claude-code",
+        "instance": "Installation ID (UUID)"
       },
-      "kindPattern": "Kind pattern",
+      "kindPattern": "Action",
       "kindPatternPlaceholder": "* {'|'} deploy {'|'} rollback {'|'} database_drop {'|'} site_delete {'|'} plugin_install",
-      "targetPattern": "Target pattern",
-      "targetPatternPlaceholder": "* {'|'} blog.loc {'|'} …",
+      "targetPattern": "Target",
+      "targetPatternPlaceholder": "blog.loc, shop_db, apache or *",
       "expiry": "Expiry",
       "expiryPermanent": "Permanent",
-      "cooldown": "Cooldown after match",
+      "cooldown": "Pause after use",
       "cooldownSuffix": "seconds",
-      "cooldownHint": "After each match this grant is dormant for N seconds (rate-limit). 0 = no cooldown. Useful for CI loops to keep AI from flooding destructive ops.",
+      "cooldownHint": "After each use the rule stops working for N seconds and the AI asks. 0 = no pause. Useful against an AI repeating the same action in a loop.",
       "note": "Note",
-      "notePlaceholder": "Why this grant exists (free-form, optional)",
-      "create": "Create grant"
+      "notePlaceholder": "Why the rule exists (optional)",
+      "create": "Create rule",
+      "noKnownValues": "WDC has not seen any yet; you can type one.",
+      "anyKind": "Every action (*)",
+      "anyKindHint": "Does not cover the actions of the groups in Settings → AI clients (MCP); a rule has to name them.",
+      "targetHint": "The target is a site domain, a database name or a service ID. * means anything, *_dev everything ending in _dev.",
+      "kindInvalid": "Pick an action from the list.",
+      "targetRequired": "Fill in the target, or type * for anything.",
+      "expiry30m": "30 min",
+      "expiry2h": "2 hours",
+      "expiry24h": "24 hours"
     },
     "confirmRevoke": {
-      "title": "Revoke trust grant?",
-      "message": "Future matching requests will require GUI confirmation again. The grant row stays in the database (audit trail) but is marked revoked."
+      "title": "Revoke the rule?",
+      "message": "The AI asks again for the same requests. The rule stays in the history as revoked."
     },
-    "toastLoadFailed": "Could not load grants: {error}",
-    "toastCreated": "Grant created",
-    "toastCreateFailed": "Could not create grant: {error}",
-    "toastRevoked": "Grant revoked",
-    "toastRevokeFailed": "Could not revoke grant: {error}",
-    "sweepNow": "Clean now",
+    "toastLoadFailed": "Could not load the rules: {error}",
+    "toastCreated": "Rule created",
+    "toastCreateFailed": "Could not create the rule: {error}",
+    "toastRevoked": "Rule revoked",
+    "toastRevokeFailed": "Could not revoke the rule: {error}",
+    "sweepNow": "Clean up old",
     "exportJson": "Export JSON",
-    "exportToast": "Exported {n} grants to JSON file",
+    "exportToast": "Exported rules: {n}",
     "importJson": "Import JSON",
-    "importToast": "Imported {imported} grants (skipped duplicates: {skipped})",
-    "importPartial": "Imported {imported} (duplicates: {skipped}, errors: {failed}) — check server logs",
+    "importToast": "Imported: {imported}, duplicates skipped: {skipped}",
+    "importPartial": "Imported: {imported}, duplicates: {skipped}, errors: {failed}. Details are in the daemon log.",
     "importFailed": "Import failed: {error}",
-    "sweepDone": "Cleaned {n} stale grants",
-    "sweepNothing": "Nothing to clean — all grants are current",
-    "sweepFailed": "Cleanup failed: {error}",
+    "sweepDone": "Old rules removed: {n}",
+    "sweepNothing": "Nothing to clean up",
+    "sweepFailed": "Clean-up failed: {error}",
     "testMatch": {
-      "button": "Test match",
-      "title": "Test grant match (dry-run)",
-      "description": "Find which active grant would match the given request — without creating an intent or firing the operation.",
+      "button": "Try the rules",
+      "title": "Which rule would approve a request?",
+      "description": "Checks whether a rule would approve the request. Nothing is created or run.",
       "sessionId": "Session ID",
-      "sessionIdPlaceholder": "agent-42 (optional)",
-      "instanceId": "Instance ID",
-      "instanceIdPlaceholder": "wdc-uuid (optional)",
-      "apiKeyId": "API key ID",
-      "apiKeyIdPlaceholder": "claude-code-LuRy (optional)",
-      "kind": "Kind",
-      "kindPlaceholder": "deploy {'|'} rollback {'|'} restore {'|'} …",
+      "sessionIdPlaceholder": "optional",
+      "instanceId": "Installation ID",
+      "instanceIdPlaceholder": "optional",
+      "apiKeyId": "AI client",
+      "apiKeyIdPlaceholder": "client:claude-code (optional)",
+      "kind": "Action",
+      "kindPlaceholder": "deploy, database_drop, …",
       "target": "Target",
-      "targetPlaceholder": "blog.loc {'|'} shop.loc {'|'} …",
-      "run": "Run test",
-      "resultMatch": "Match found",
-      "resultNoMatch": "No match",
-      "resultNoMatchHint": "This request would land in the confirm banner (pending_confirmation). Check scope_type, kind_pattern, target_pattern.",
-      "previousMatches": "This grant has matched {n} time(s) previously."
+      "targetPlaceholder": "blog.loc, shop_db, …",
+      "run": "Try",
+      "resultMatch": "A rule would approve the request",
+      "resultNoMatch": "No rule matches",
+      "resultNoMatchHint": "The AI would have to ask and the request would wait for your approval. Check who the rule applies to, the action and the target.",
+      "previousMatches": "The rule has approved {n}× so far.",
+      "resultId": "Rule ID:"
     },
     "bulk": {
       "selected": "Selected: {n}",
       "clear": "Clear selection",
       "revokeBtn": "Revoke selected ({n})",
-      "confirmTitle": "Revoke selected grants?",
-      "confirmMessage": "Revoke {n} grants: {targets}? This cannot be undone, but rows stay in the audit trail.",
+      "confirmTitle": "Revoke the selected rules?",
+      "confirmMessage": "Revoke the rules ({n}): {targets}? They stay in the history as revoked.",
       "confirmMore": " and {n} more",
       "confirmRevokeBtn": "Revoke",
-      "toastOk": "Revoked {n} grants",
+      "toastOk": "Revoked: {n}",
       "toastPartial": "Revoked: {ok}, failed: {failed}"
+    },
+    "scope": {
+      "always": "Every AI client",
+      "apiKey": "One AI client",
+      "session": "One run of an AI client",
+      "instance": "This installation",
+      "everyClient": "everyone",
+      "alwaysHint": "Applies to every AI client connected to WDC.",
+      "apiKeyHint": "Only for the client with this name, for example client:claude-code. The MCP server reports the name itself; it is not authentication.",
+      "sessionHint": "Only for one run of the MCP server. Stops applying when the AI client restarts.",
+      "instanceHint": "For MCP servers with this installation ID (file ~/.wdc/mcp-instance-id)."
     }
   },
   "mcp": {
     "toast": {
-      "kindRequest": "AI: {kind}",
-      "genericRequest": "AI requests confirmation",
-      "approve": "Approve",
+      "kindRequest": "The AI wants to: {kind}",
+      "genericRequest": "The AI asks for approval",
       "reject": "Reject",
-      "detail": "Detail",
-      "approveSuccess": "AI request approved",
-      "approveFailed": "Approve failed: {error}",
-      "rejectSuccess": "AI request rejected",
-      "rejectFailed": "Reject failed: {error}"
+      "detail": "Show",
+      "approveSuccess": "Request approved",
+      "approveFailed": "Approving failed: {error}",
+      "rejectSuccess": "Request rejected",
+      "rejectFailed": "Rejecting failed: {error}"
     },
     "banner": {
-      "stackLabel": "MCP deploy approval requests",
-      "kindRequest": "AI requests {kind}",
-      "genericRequest": "AI is requesting a destructive operation",
-      "onTarget": "on {domain} → {host}",
+      "stackLabel": "AI requests waiting for approval",
+      "kindRequest": "The AI wants to: {kind}",
+      "genericRequest": "The AI asks for an action the daemon did not describe",
       "noDescription": "No description provided.",
-      "alwaysConfirmExplain": "Operator marked this kind as always-confirm — existing trust grants were skipped.",
-      "intent": "intent",
+      "alwaysConfirmExplain": "You set this action to \"always ask\", so no rule approves it on its own.",
       "expiresIn": "expires in {seconds}s",
       "approve": "Approve",
       "decline": "Decline",
-      "declineAria": "Decline AND revoke this intent so the AI cannot retry",
+      "declineAria": "Reject: the AI can no longer carry out this request",
       "dismiss": "Dismiss",
       "ageJustNow": "just now",
       "ageSeconds": "{seconds}s ago",
-      "ageMinutes": "{minutes}m {seconds}s ago",
-      "toastDeclined": "Intent declined and revoked",
-      "toastAlreadyConsumed": "Intent was already consumed or revoked elsewhere",
-      "toastDeclineFailed": "Decline failed (banner dismissed locally): {error}",
-      "toastExpired": "Intent {id} expired before approval — banner dismissed",
-      "trust30Min": "Trust 30 min",
-      "alwaysTrust": "Always trust",
-      "toastTrustedFor": "Trusted for {minutes} min — future identical requests skip the banner",
-      "toastAlwaysTrusted": "Trust grant saved — future identical requests skip the banner",
-      "toastGrantFailed": "Could not save trust grant: {error}"
+      "ageMinutes": "{minutes} min {seconds} s ago",
+      "toastDeclined": "Request rejected",
+      "toastAlreadyConsumed": "The request was settled elsewhere or has expired",
+      "toastDeclineFailed": "Rejecting failed (banner closed): {error}",
+      "toastExpired": "Request \"{kind}\" expired without approval",
+      "trust30Min": "Approve and don't ask for 30 min",
+      "alwaysTrust": "Approve and stop asking",
+      "toastTrustedFor": "Approved. For {minutes} min a rule approves the same action on the same target.",
+      "toastAlwaysTrusted": "Approved. From now on a rule approves the same action on the same target.",
+      "toastGrantFailed": "Could not save the rule: {error}",
+      "target": "Target:",
+      "aiSays": "Description from the AI (not verified):",
+      "dismissHint": "Close. The AI keeps waiting; the request stays under Requests.",
+      "forSession": "only for this run of the AI client",
+      "forClient": "only for the AI client {client}",
+      "forAll": "for every connected AI client",
+      "trustMinutesRule": "This also creates a rule: approve \"{kind}\" on {target} without asking for {minutes} min, {who}.",
+      "trustAlwaysRule": "This also creates a permanent rule: approve \"{kind}\" on {target} without asking, {who}. Remove it under Rules."
     },
     "notify": {
-      "title": "NKS WDC — AI request needs approval",
-      "body": "AI wants to: {kind}. Open WDC to approve or reject it.",
-      "bodyGeneric": "AI wants to run a destructive operation. Open WDC to approve or reject it."
+      "title": "NKS WDC: an AI request waits for approval",
+      "body": "The AI wants to: {kind}. Open WDC to approve or reject it.",
+      "bodyGeneric": "The AI asks for an action you have to approve. Open WDC to approve or reject it."
     }
   },
   "footer": {
@@ -3083,21 +3138,20 @@
     }
   },
   "mcpCapabilities": {
-    "intro": "AI clients connected over MCP can always read state and run the everyday actions (sites, services, databases). Each group below unlocks more. Destructive actions inside a group still wait for your approval in WDC unless a grant covers them.",
+    "intro": "AI clients connected over MCP may always read the state of WDC and do the everyday things listed below. Each group allows something more. Irreversible actions still need your approval in an enabled group, unless a rule covers them.",
     "loadFailed": "Could not load the MCP capabilities: {err}",
-    "approvalStillRequired": "Destructive actions still ask for approval",
-    "alwaysTitle": "Always allowed ({n})",
-    "alwaysHint": "What the shipped MCP tools need for everyday work.",
-    "neverTitle": "Never allowed",
-    "neverHint": "An AI client can never approve its own requests or change these switches.",
+    "approvalStillRequired": "Irreversible actions still need your approval",
+    "alwaysTitle": "What an AI may always do",
+    "alwaysHint": "The MCP tools need this for everyday work. Only turning MCP off stops it.",
+    "neverTitle": "What an AI may never do",
     "settingsPrefix": "Settings starting with {prefix}",
     "enableTitle": "Allow AI clients?",
-    "enableConfirm": "AI clients connected to WDC will be able to use “{name}”. Destructive actions in this group still need your approval.",
+    "enableConfirm": "AI clients connected to WDC will be allowed to: {name}. Irreversible actions in this group still need your approval.",
     "enableButton": "Allow",
-    "enabled": "AI clients may now use “{name}”",
-    "disabled": "“{name}” is off for AI clients",
-    "mcpOff": "MCP is turned off, so no AI client can connect. These switches take effect once it is on.",
-    "openAdvanced": "Turn on MCP",
+    "enabled": "AI clients may now: {name}",
+    "disabled": "{name}: off for AI clients",
+    "mcpOff": "MCP is off and the daemon refuses AI clients. Turn it on with the switch below.",
+    "openAdvanced": "Settings in Advanced",
     "groups": {
       "settings_operator": {
         "title": "Operator settings",
@@ -3105,15 +3159,15 @@
       },
       "service_config": {
         "title": "Service configuration",
-        "description": "Edit httpd.conf, php.ini and other service config files, then restart the service."
+        "description": "Overwrite httpd.conf, php.ini and other service configuration files. Each write needs your approval."
       },
       "hosts_file": {
         "title": "Hosts file",
-        "description": "Apply, back up and restore the system hosts file."
+        "description": "Rewrite, back up or restore the system hosts file. Writes need your approval."
       },
       "node_process": {
         "title": "Node.js processes",
-        "description": "Set a start command for Node sites and start, stop or restart those processes."
+        "description": "Set the start command of Node.js sites and start, stop and restart those processes. Starting needs your approval."
       },
       "site_advanced_fields": {
         "title": "Advanced site fields",
@@ -3121,37 +3175,71 @@
       },
       "cloudflare_credentials": {
         "title": "Cloudflare credentials",
-        "description": "Set the cloudflared path, tunnel and API tokens, account and ingress rules."
+        "description": "Set the cloudflared path, tunnel and API tokens, the account and tunnel routing. Each change needs your approval."
       },
       "plugin_install": {
-        "title": "Plugins",
-        "description": "Install and uninstall plugins."
+        "title": "Plugin installation",
+        "description": "Install plugins from a URL and uninstall them. Each action needs your approval."
       },
       "database_admin": {
-        "title": "Database administration",
-        "description": "Reset MySQL/PostgreSQL root passwords and drop MySQL users."
+        "title": "Database server administration",
+        "description": "Reset and change the MySQL and PostgreSQL root passwords, drop MySQL accounts, create accounts with admin rights or for a non-local host, import SQL dumps and export to a file. Most of it needs your approval."
       },
       "backup_restore": {
-        "title": "Restore backups",
-        "description": "Restore WDC from a backup, replacing current sites and settings."
+        "title": "Backup restore and delete",
+        "description": "Restore WDC from a backup over the current sites and settings, or delete a backup. Each action needs your approval."
       },
       "deploy_config": {
         "title": "Deploy configuration",
-        "description": "Change deploy targets and hooks, run hook and notification tests, probe hosts."
+        "description": "Read and change the deploy settings of sites (servers, hooks, webhooks, environment variables), test hooks and notifications, check servers."
       },
       "daemon_admin": {
         "title": "Daemon administration",
-        "description": "Restart, shut down or reset the daemon and run the uninstaller."
+        "description": "Restart, shut down or reset the daemon and start the uninstall. Each action needs your approval."
       },
       "unlisted_routes": {
         "title": "Everything else",
-        "description": "Any other daemon endpoint without its own group."
+        "description": "Every other daemon route not in a group above (Docker Compose, catalog sync and more)."
       },
       "composer": {
         "title": "Composer",
         "description": "Run Composer install, require and remove in site folders; package scripts run."
+      },
+      "cloudflare_dns": {
+        "title": "Cloudflare DNS records",
+        "description": "Create public DNS records in the zones of the saved Cloudflare account, for example a subdomain pointing elsewhere. Deleting a record needs your approval either way."
       }
-    }
+    },
+    "master": {
+      "label": "Allow AI clients (MCP)",
+      "on": "MCP is on. AI clients can control WDC within the limits below.",
+      "off": "MCP is off. The daemon refuses every AI client, including one already running. The switches below apply once MCP is on.",
+      "connectGuide": "How to connect an AI client"
+    },
+    "riskyGroup": "Also allows routes added in later versions. Turn it on only for a while.",
+    "riskyWord": "ALLOW",
+    "riskyConfirm": "\"{name}\" opens every daemon route not in another group to AI clients, including ones added later. To confirm, type {word}.",
+    "riskyMismatch": "Type exactly {word}.",
+    "alwaysList": [
+      "Read the state of WDC, sites, services, databases, logs, backups and settings.",
+      "Create, edit and delete sites and apply their configuration. Deleting a site needs your approval.",
+      "Start services. Stopping and restarting need your approval.",
+      "Create databases, read and export data and run read-only queries. Dropping a database and SQL that changes data need your approval.",
+      "Create MySQL accounts for an ordinary database and change their privileges. Resetting an account password needs your approval.",
+      "Turn plugins and PHP extensions on and off, install and uninstall binaries. Installing a binary needs your approval.",
+      "Create SSL certificates and install the certificate authority. Deleting a certificate needs your approval.",
+      "Change ordinary WDC settings (not operator or MCP settings) and create backups.",
+      "Read Cloudflare zones, DNS records and tunnels. Deleting a DNS record needs your approval.",
+      "Start a deploy, rollback or snapshot restore, each only after your approval."
+    ],
+    "neverList": [
+      "Approve its own request.",
+      "Create, change or delete auto-approval rules.",
+      "Change MCP settings, including the switches on this page."
+    ],
+    "devTitle": "Developer details (routes and tools)",
+    "devAlways": "Always allowed routes ({n})",
+    "devNever": "Never allowed routes"
   },
   "splash": {
     "failedTitle": "The daemon failed to start",
@@ -3343,5 +3431,18 @@
       "daemonRefused": "The server runs, but the daemon refused:",
       "unavailable": "Testing works only in the desktop app with the server installed."
     }
+  },
+  "mcpApproval": {
+    "title": "Approve the AI request?",
+    "titleIrreversible": "Approve an action that cannot be undone?",
+    "what": "The AI wants to: {kind} – {target}",
+    "unknownKind": "unknown action",
+    "noTarget": "no target",
+    "aiSays": "Description from the AI (not verified): {prompt}",
+    "aiSaysNothing": "The AI gave no description.",
+    "typeToConfirm": "To approve, type {expected}.",
+    "word": "APPROVE",
+    "mismatch": "Type exactly {expected}.",
+    "approve": "Approve"
   }
 }

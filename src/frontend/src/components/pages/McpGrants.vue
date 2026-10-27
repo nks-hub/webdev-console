@@ -63,8 +63,8 @@
         class="scope-filter"
       >
         <el-option v-for="opt in scopeTypeOptions" :key="opt.value"
-          :value="opt.value">
-          <span>{{ opt.value }} <span class="muted">({{ opt.count }})</span></span>
+          :value="opt.value" :label="scopeLabel(opt.value)">
+          <span>{{ scopeLabel(opt.value) }} <span class="muted">({{ opt.count }})</span></span>
         </el-option>
       </el-select>
       <span v-if="deadweightCount > 0" class="muted hint">
@@ -158,13 +158,13 @@
       <el-table-column type="selection" width="40" />
       <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="130">
         <template #default="{ row }">
-          <el-tag :type="scopeTagType(row.scopeType)" size="small">{{ row.scopeType }}</el-tag>
+          <el-tag :type="scopeTagType(row.scopeType)" size="small">{{ scopeLabel(row.scopeType) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="scopeValue" :label="t('mcpGrants.col.scopeValue')" min-width="210">
         <template #default="{ row }">
-          <code v-if="row.scopeValue" class="mono">{{ truncate(row.scopeValue, 22) }}</code>
-          <span v-else class="muted">—</span>
+          <code v-if="row.scopeValue" class="mono" :title="row.scopeValue">{{ truncate(row.scopeValue, 22) }}</code>
+          <span v-else class="muted">{{ t('mcpGrants.scope.everyClient') }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="kindPattern" :label="t('mcpGrants.col.kind')" min-width="100">
@@ -304,9 +304,9 @@
         <template v-if="testMatchResult.matched">
           <strong>✓ {{ t('mcpGrants.testMatch.resultMatch') }}</strong>
           <div class="muted" style="margin-top: var(--wdc-space-1); font-size: 12px">
-            <div>id: <code class="mono">{{ testMatchResult.grant?.id }}</code></div>
-            <div>scope: <code class="mono">{{ testMatchResult.grant?.scopeType }}{{ testMatchResult.grant?.scopeValue ? ' = ' + testMatchResult.grant.scopeValue : '' }}</code></div>
-            <div>kind: <code class="mono">{{ testMatchResult.grant?.kindPattern }}</code> · target: <code class="mono">{{ testMatchResult.grant?.targetPattern }}</code></div>
+            <div>{{ t('mcpGrants.testMatch.resultId') }} <code class="mono">{{ testMatchResult.grant?.id }}</code></div>
+            <div>{{ t('mcpGrants.col.scope') }}: {{ scopeLabel(testMatchResult.grant?.scopeType ?? '') }}<code v-if="testMatchResult.grant?.scopeValue" class="mono"> = {{ testMatchResult.grant.scopeValue }}</code></div>
+            <div>{{ t('mcpGrants.col.kind') }}: <code class="mono">{{ testMatchResult.grant?.kindPattern }}</code> · {{ t('mcpGrants.col.target') }}: <code class="mono">{{ testMatchResult.grant?.targetPattern }}</code></div>
             <div>{{ t('mcpGrants.testMatch.previousMatches', { n: testMatchResult.grant?.matchCount ?? 0 }) }}</div>
           </div>
         </template>
@@ -333,29 +333,42 @@
       <el-form :model="form" label-width="200px" size="small">
         <el-form-item :label="t('mcpGrants.dialog.scopeType')">
           <el-select v-model="form.scopeType" @change="onScopeTypeChange">
-            <el-option label="session" value="session" />
-            <el-option label="api_key" value="api_key" />
-            <el-option label="instance" value="instance" />
-            <el-option label="always" value="always" />
+            <el-option v-for="s in SCOPE_TYPES" :key="s" :label="scopeLabel(s)" :value="s" />
+          </el-select>
+          <div class="hint">{{ t(`mcpGrants.scope.${scopeKey(form.scopeType)}Hint`) }}</div>
+        </el-form-item>
+        <!-- Session and client ids are random or derived by the MCP server,
+             so offer the ones WDC has seen instead of asking to type them. -->
+        <el-form-item v-if="form.scopeType !== 'always'" :label="t('mcpGrants.dialog.scopeValue')">
+          <el-select
+            v-model="form.scopeValue"
+            filterable
+            allow-create
+            default-first-option
+            :placeholder="scopeValuePlaceholder"
+            :no-data-text="t('mcpGrants.dialog.noKnownValues')"
+          >
+            <el-option v-for="v in knownScopeValues" :key="v" :label="v" :value="v" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="form.scopeType !== 'always'" :label="t('mcpGrants.dialog.scopeValue')">
-          <el-input v-model="form.scopeValue" :placeholder="scopeValuePlaceholder" />
-        </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.kindPattern')">
-          <el-input v-model="form.kindPattern"
-            :placeholder="t('mcpGrants.dialog.kindPatternPlaceholder')" />
+          <el-select v-model="form.kindPattern" filterable>
+            <el-option :label="t('mcpGrants.dialog.anyKind')" value="*" />
+            <el-option v-for="k in kindOptions" :key="k.id" :label="k.label" :value="k.id" />
+          </el-select>
+          <div v-if="form.kindPattern === '*'" class="hint">{{ t('mcpGrants.dialog.anyKindHint') }}</div>
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.targetPattern')">
           <el-input v-model="form.targetPattern"
             :placeholder="t('mcpGrants.dialog.targetPatternPlaceholder')" />
+          <div class="hint">{{ t('mcpGrants.dialog.targetHint') }}</div>
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.expiry')">
           <el-radio-group v-model="form.expiryMode">
             <el-radio value="permanent">{{ t('mcpGrants.dialog.expiryPermanent') }}</el-radio>
-            <el-radio value="30m">30 min</el-radio>
-            <el-radio value="2h">2 h</el-radio>
-            <el-radio value="24h">24 h</el-radio>
+            <el-radio value="30m">{{ t('mcpGrants.dialog.expiry30m') }}</el-radio>
+            <el-radio value="2h">{{ t('mcpGrants.dialog.expiry2h') }}</el-radio>
+            <el-radio value="24h">{{ t('mcpGrants.dialog.expiry24h') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="t('mcpGrants.dialog.cooldown')">
@@ -387,10 +400,25 @@ import { Refresh, Plus, Delete, Search, Download, Upload } from '@element-plus/i
 import {
   listMcpGrants, createMcpGrant, revokeMcpGrant, sweepMcpGrantsNow,
   testMatchMcpGrant, importMcpGrants, subscribeEventsMap,
-  type McpGrantRow, type McpGrantScopeType, type McpGrantTestMatchResult,
+  listMcpKinds, fetchIntentInventory, fetchMcpToolCalls,
+  type McpGrantRow, type McpGrantScopeType, type McpGrantTestMatchResult, type McpKindRow,
 } from '../../api/daemon'
+import { mcpKindLabel } from '../../utils/mcpKindLabel'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+
+// Broadest first: a grant for every AI client is the only scope an
+// operator can set up before any AI client has connected.
+const SCOPE_TYPES: McpGrantScopeType[] = ['always', 'api_key', 'session', 'instance']
+
+function scopeKey(scope: string): string {
+  return scope === 'api_key' ? 'apiKey' : scope
+}
+
+function scopeLabel(scope: string): string {
+  const key = `mcpGrants.scope.${scopeKey(scope)}`
+  return te(key) ? t(key) : scope
+}
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
@@ -719,7 +747,7 @@ const form = ref<{
   note: string
   minCooldownSeconds: number
 }>({
-  scopeType: 'session',
+  scopeType: 'always',
   scopeValue: '',
   kindPattern: '*',
   targetPattern: '*',
@@ -736,6 +764,39 @@ const scopeValuePlaceholder = computed(() => {
     default:         return ''
   }
 })
+
+// Options for the create dialog, loaded when it opens: registered kinds,
+// and the AI clients and sessions WDC has seen (requests carry both,
+// the activity log carries sessions).
+const dialogKinds = ref<McpKindRow[]>([])
+const seenClients = ref<string[]>([])
+const seenSessions = ref<string[]>([])
+
+const kindOptions = computed(() => dialogKinds.value
+  .map((k) => ({ id: k.id, label: `${mcpKindLabel({ kind: k.id, kindLabel: k.label })} (${k.id})` }))
+  .sort((a, b) => a.label.localeCompare(b.label)))
+
+const knownScopeValues = computed(() =>
+  form.value.scopeType === 'api_key' ? seenClients.value
+    : form.value.scopeType === 'session' ? seenSessions.value
+      : [])
+
+async function loadDialogOptions(): Promise<void> {
+  const [kinds, intents, calls] = await Promise.all([
+    listMcpKinds().catch(() => ({ entries: [] as McpKindRow[] })),
+    fetchIntentInventory(200).catch(() => ({ entries: [] })),
+    fetchMcpToolCalls(200).catch(() => ({ entries: [] })),
+  ])
+  dialogKinds.value = kinds.entries
+  const distinct = (values: Array<string | null | undefined>) => [...new Set(values.filter((v): v is string => !!v))]
+  seenClients.value = distinct(intents.entries.map((e) => e.clientId))
+  seenSessions.value = distinct([...intents.entries.map((e) => e.sessionId), ...calls.entries.map((c) => c.sessionId)])
+}
+
+watch(createDialogOpen, (open) => { if (open) void loadDialogOptions() })
+
+// Same rule as the daemon's kind ids; '*' is any kind.
+const KIND_PATTERN = /^(\*|[a-z][a-z0-9_:]{0,63})$/
 
 // Phase 7.5+++ — subscribe to mcp:grant-changed SSE so the table
 // auto-refreshes when ANY caller (banner button, admin dialog, MCP
@@ -887,6 +948,15 @@ async function submitCreate(): Promise<void> {
     ElMessage.warning(t('mcpGrants.dialog.scopeValueRequired'))
     return
   }
+  // The daemon matches the kind exactly or '*'; "deploy*" would never match.
+  if (!KIND_PATTERN.test(form.value.kindPattern.trim())) {
+    ElMessage.warning(t('mcpGrants.dialog.kindInvalid'))
+    return
+  }
+  if (!form.value.targetPattern.trim()) {
+    ElMessage.warning(t('mcpGrants.dialog.targetRequired'))
+    return
+  }
   creating.value = true
   try {
     const expiresAt = form.value.expiryMode === 'permanent'
@@ -895,8 +965,8 @@ async function submitCreate(): Promise<void> {
     await createMcpGrant({
       scopeType: form.value.scopeType,
       scopeValue: form.value.scopeType === 'always' ? null : form.value.scopeValue.trim(),
-      kindPattern: form.value.kindPattern || '*',
-      targetPattern: form.value.targetPattern || '*',
+      kindPattern: form.value.kindPattern.trim(),
+      targetPattern: form.value.targetPattern.trim(),
       expiresAt,
       grantedBy: 'gui-admin',
       note: form.value.note || undefined,

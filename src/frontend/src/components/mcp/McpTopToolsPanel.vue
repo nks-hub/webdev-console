@@ -11,7 +11,7 @@
         :class="`danger-${r.dangerLevel}`"
         role="button"
         tabindex="0"
-        :aria-label="t('mcpActivity.topTools.clickHint', { tool: r.toolName }) + ' — ' + r.count + ' calls'"
+        :aria-label="t('mcpActivity.topTools.clickHint', { tool: r.toolName }) + ' – ' + t('mcpActivity.callsCount', { n: r.count }, r.count)"
         @click="onToolClick(r.toolName)"
         @keydown.enter.prevent="onToolClick(r.toolName)"
         @keydown.space.prevent="onToolClick(r.toolName)"

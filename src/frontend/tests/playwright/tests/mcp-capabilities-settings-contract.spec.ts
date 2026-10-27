@@ -21,6 +21,21 @@ test.describe('MCP capabilities settings contract', () => {
     expect(s.indexOf('ElMessageBox.confirm')).toBeLessThan(s.indexOf('saveSettings({'))
   })
 
+  test('the tab really turns MCP on and off, and the catch-all group has to be typed', () => {
+    const s = source()
+    expect(s).toMatch(/async function toggleMcp\(enabled: boolean\)[\s\S]*?saveSettings\(\{ 'mcp\.enabled': String\(enabled\) \}\)[\s\S]*?flags\.load\(\)/)
+    expect(s).toMatch(/data-testid="mcp-caps-master"/)
+    expect(s).toMatch(/cap\.id === RISKY_GROUP[\s\S]*?ElMessageBox\.prompt/)
+    expect(s).toContain("const RISKY_GROUP = 'unlisted_routes'")
+    // Plain-language lists come first; raw routes and tool names only in the developer details.
+    for (const locale of ['en', 'cs']) {
+      const caps = JSON.parse(readFileSync(join(srcRoot, 'locales', `${locale}.json`), 'utf-8')).mcpCapabilities
+      expect(caps.alwaysList.length, `${locale} alwaysList`).toBeGreaterThan(5)
+      expect(caps.neverList.length, `${locale} neverList`).toBe(3)
+      expect(caps.master.label).toBeTruthy()
+    }
+  })
+
   test('Settings registers the MCP section and hides the save footer there', () => {
     const s = readFileSync(join(srcRoot, 'components', 'pages', 'Settings.vue'), 'utf-8')
     expect(s).toMatch(/name: 'mcp', label: t\('settings\.tabs\.mcp'\)/)
@@ -30,7 +45,7 @@ test.describe('MCP capabilities settings contract', () => {
 
   test('every capability group has en + cs labels', () => {
     const ids = ['settings_operator', 'service_config', 'hosts_file', 'node_process', 'site_advanced_fields',
-      'cloudflare_credentials', 'plugin_install', 'database_admin', 'backup_restore', 'deploy_config',
+      'cloudflare_credentials', 'cloudflare_dns', 'plugin_install', 'database_admin', 'backup_restore', 'deploy_config',
       'daemon_admin', 'unlisted_routes', 'composer']
     for (const locale of ['en', 'cs']) {
       const json = JSON.parse(readFileSync(join(srcRoot, 'locales', `${locale}.json`), 'utf-8')) as

@@ -9,7 +9,7 @@
              visible regardless so an operator can reach the override
              editor from a clean list. -->
         <el-button @click="goToAlwaysConfirmSetting">
-          🔒 {{ t('mcpKinds.editAlwaysConfirm') }}
+          <el-icon aria-hidden="true"><Lock /></el-icon> {{ t('mcpKinds.editAlwaysConfirm') }}
           <span v-if="lockedKindCount > 0" class="lock-count-badge">{{ lockedKindCount }}</span>
         </el-button>
         <el-button :loading="loading" @click="refresh">
@@ -118,7 +118,7 @@
         <template #default="{ row }">
           <el-tooltip
             v-if="row.alwaysConfirm === true"
-            :content="t('mcpKinds.alwaysConfirmTooltip', { n: autoApproveCount(row.id) })"
+            :content="t('mcpKinds.alwaysConfirmTooltip', { n: autoApproveCount(row) })"
             placement="top"
           >
             <el-tag
@@ -128,18 +128,18 @@
               class="always-confirm-tag"
               @click="goToAlwaysConfirmSetting"
             >
-              🔒 {{ t('mcpKinds.alwaysConfirm') }}
+              {{ t('mcpKinds.alwaysConfirm') }}
             </el-tag>
           </el-tooltip>
           <el-tag
-            v-else-if="autoApproveCount(row.id) > 0"
+            v-else-if="autoApproveCount(row) > 0"
             type="warning"
             size="small"
             effect="plain"
             class="auto-approve-tag"
             @click="goToGrants(row.id)"
           >
-            ⚠ {{ autoApproveCount(row.id) }}
+            {{ t('mcpKinds.autoApproveCount', { n: autoApproveCount(row) }, autoApproveCount(row)) }}
           </el-tag>
           <span v-else class="muted">{{ t('mcpKinds.noAutoApprove') }}</span>
           <!-- Phase 7.5+++ — quick "+ Grant" affordance per kind row.
@@ -167,7 +167,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Lock, Refresh } from '@element-plus/icons-vue'
 import {
   listMcpKinds, listMcpGrants, subscribeEventsMap,
   type McpKindRow, type McpGrantRow,
@@ -192,10 +192,12 @@ function humanLabel(row: { id?: string; label: string }): string {
   return te(key) ? t(key) : (row.label || row.id)
 }
 
-function autoApproveCount(kindId: string): number {
+// Grants that can approve this kind without asking. A '*' grant does not
+// count for capability-group kinds: the daemon ignores it for them.
+function autoApproveCount(row: McpKindRow): number {
   return grants.value.filter((g) => {
     const kp = (g.kindPattern || '').toLowerCase()
-    return kp === '*' || kp === kindId.toLowerCase()
+    return kp === row.id.toLowerCase() || (kp === '*' && !row.ignoresWildcardGrants)
   }).length
 }
 

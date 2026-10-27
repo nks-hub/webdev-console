@@ -1,6 +1,7 @@
 import { test, expect } from './_fixtures'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { DEFAULT_PROFILE, MCP_PROFILES, detectProfile } from '../../../src/components/mcp/mcpProfiles'
 
 // Source-level contract for the MCP approval flow in the GUI:
 //  - a settled intent (approved anywhere, rejected, consumed, expired) must
@@ -26,12 +27,53 @@ test.describe('MCP approval UX contract', () => {
     expect(handler![1]).toContain('mcpConfirmStore.handleIntentChanged(evt)')
   })
 
-  test('toast approves and rejects through the banner store', () => {
+  test('toast rejects through the banner store and never approves', () => {
     const toast = read('utils', 'mcpConfirmToast.ts')
-    expect(toast).toContain('useMcpConfirmStore().approve(evt.intentId)')
     expect(toast).toContain('useMcpConfirmStore().reject(evt.intentId)')
+    expect(toast).not.toContain('.approve(')
     expect(toast).not.toMatch(/\bconfirmIntent\(/)
     expect(toast).not.toMatch(/\brevokeIntent\(/)
+  })
+
+  test('banner never focuses Approve and confirms before approving', () => {
+    const banner = read('components', 'mcp', 'McpConfirmBanner.vue')
+    // A request arriving while the operator types must not take Enter/Space.
+    expect(banner).not.toMatch(/\.focus\(/)
+    expect(banner).toMatch(/async function approve\(item: PendingConfirm\)[\s\S]*?confirmMcpApproval\(item\)[\s\S]*?store\.approve\(item\.intentId\)/)
+    expect(banner).toMatch(/async function approveAndTrust[\s\S]*?confirmMcpApproval\(item, trustScopeText/)
+    // Anything not known to be reversible needs the target typed in.
+    const approval = read('utils', 'mcpApproval.ts')
+    expect(approval).toMatch(/if \(item\.kindDanger !== 'reversible'\)[\s\S]*?ElMessageBox\.prompt[\s\S]*?inputValidator/)
+  })
+
+  test('trust shortcuts never create a wildcard grant and scope to the asking client', () => {
+    const banner = read('components', 'mcp', 'McpConfirmBanner.vue')
+    expect(banner).not.toMatch(/\?\? '\*'/)
+    expect(banner).toMatch(/function canTrust[\s\S]*?!!item\.kind && !isMcpTargetMarker\(item\.domain\) && !item\.alwaysConfirm/)
+    expect(banner).toMatch(/kindPattern: item\.kind!,\s*targetPattern: item\.domain!/)
+    expect(banner).toMatch(/minutes !== null && item\.sessionId\) return \{ scopeType: 'session'/)
+    expect(banner).toMatch(/item\.clientId\) return \{ scopeType: 'api_key'/)
+    // The daemon reports who asked, live and after a reload.
+    const store = read('stores', 'mcpConfirm.ts')
+    expect(store).toContain('sessionId: e.sessionId ?? undefined')
+    expect(store).toContain('clientId: e.clientId ?? undefined')
+  })
+
+  test('suggested grants target the domain the daemon matches', () => {
+    const banner = read('components', 'mcp', 'SuggestedGrantsBanner.vue')
+    expect(banner).toContain('targetPattern: s.domain,')
+    expect(banner).not.toContain('/*`')
+  })
+
+  test('hub shows one off state instead of failing lists while MCP is off', () => {
+    const hub = read('components', 'pages', 'McpHub.vue')
+    expect(hub).toMatch(/<div v-if="!flags\.mcpEnabled" class="hub-off"[\s\S]*?<template v-else>[\s\S]*?<McpOnboardingPanel /)
+    for (const pane of ['activity', 'intents', 'grants', 'kinds']) {
+      expect(hub).toContain(`name="${pane}" lazy>`)
+    }
+    // Simple mode keeps Activity and Requests only.
+    expect(hub).toContain('<el-tab-pane v-if="advanced" name="grants" lazy>')
+    expect(hub).toContain('<el-tab-pane v-if="advanced" name="kinds" lazy>')
   })
 
   test('pending requests are reloaded on daemon connect', () => {
@@ -49,7 +91,7 @@ test.describe('MCP approval UX contract', () => {
   test('Intents page approves and rejects pending rows via the store', () => {
     const page = read('components', 'pages', 'McpIntents.vue')
     expect(page).toMatch(/v-if="row\.state === 'pending_confirmation'" class="intent-decide"[\s\S]*?data-testid="intent-approve"[\s\S]*?data-testid="intent-reject"/)
-    expect(page).toMatch(/async function onApprove[\s\S]*?ElMessageBox\.confirm[\s\S]*?confirmStore\.approve\(row\.intentId\)/)
+    expect(page).toMatch(/async function onApprove[\s\S]*?confirmMcpApproval\(row\)[\s\S]*?confirmStore\.approve\(row\.intentId\)/)
     expect(page).toMatch(/async function onReject[\s\S]*?confirmStore\.reject\(row\.intentId\)/)
   })
 
@@ -66,14 +108,24 @@ test.describe('MCP approval UX contract', () => {
   })
 
   test('onboarding offers a local-dev preset and keeps strict as default', () => {
+    expect(DEFAULT_PROFILE).toBe('minimal')
+    const localDev = MCP_PROFILES.find((p) => p.id === 'localDev')!
+    expect(localDev.grants.map((g) => `${g.kindPattern}|${g.targetPattern}`)).toEqual([
+      'service_restart|*', 'database_drop|*_dev', 'database_query|*_dev', 'database_import|*_dev',
+    ])
+    expect(localDev.grants.every((g) => g.scopeType === 'always')).toBe(true)
+    // The hub names the profile the active grants match, all five of them.
+    expect(detectProfile([])).toBe('minimal')
+    expect(detectProfile(localDev.grants.map((g) => ({ ...g })))).toBe('localDev')
+    expect(detectProfile([{ kindPattern: '*', targetPattern: '*' }])).toBe('permissive')
+    expect(detectProfile([{ kindPattern: 'deploy', targetPattern: 'blog.loc' }])).toBe('custom')
+
     const panel = read('components', 'mcp', 'McpOnboardingPanel.vue')
-    expect(panel).toMatch(/const DEFAULT_PROFILE: ProfileDefinition\['id'\] = 'minimal'/)
-    expect(panel).toMatch(/id: 'localDev'[\s\S]*?kindPattern: 'service_restart'/)
-    expect(panel).toContain("const DEV_DATABASE_PATTERN = '*_dev'")
-    for (const kind of ['database_drop', 'database_query', 'database_import']) {
-      expect(panel).toContain(`localDevDatabaseGrant('${kind}'`)
-    }
     expect(panel).not.toMatch(/profile\.id === 'balanced'/)
+    // Only the button applies a profile, and Full trust has to be typed.
+    expect(panel).not.toContain('role="button"')
+    expect(panel).toMatch(/async function apply[\s\S]*?profile\.id === 'permissive' && !\(await confirmPermissive\(\)\)/)
+    expect(panel).toMatch(/if \(okCount < profile\.grants\.length\)[\s\S]*?ElMessage\.error/)
   })
 
   test('new strings exist in en and cs', () => {
@@ -84,7 +136,12 @@ test.describe('MCP approval UX contract', () => {
       expect(j.mcp.notify.bodyGeneric).toBeTruthy()
       expect(j.mcpIntents.approve).toBeTruthy()
       expect(j.mcpIntents.reject).toBeTruthy()
-      expect(j.mcpIntents.approveDialog.message).toContain('{prompt}')
+      expect(j.mcpApproval.aiSays).toContain('{prompt}')
+      expect(j.mcpApproval.typeToConfirm).toContain('{expected}')
+      for (const state of ['pending_confirmation', 'ready', 'consumed', 'revoked', 'expired']) {
+        expect(j.mcpIntents.state[state], `${locale} state ${state}`).toBeTruthy()
+      }
+      expect(j.mcpKinds.labels.backup_restore).toBeTruthy()
       expect(j.mcpOnboarding.default).toBeTruthy()
       expect(j.mcpOnboarding.profiles.localDev.bullets).toHaveLength(3)
     }

@@ -257,183 +257,204 @@
     }
   },
   "mcpIntents": {
-    "title": "Inventář MCP intentů",
+    "title": "Žádosti AI",
     "refresh": "Obnovit",
-    "description": "Audit log HMAC-podepsaných intent tokenů, které AI / CI klienti vydali přes Model Context Protocol. Každý intent autorizuje jednu destruktivní operaci (deploy / rollback / cancel / restore) na konkrétní dvojici (doména, host). Spotřebované intenty zůstávají 7 dní jako audit historie; nepoužité expirované se po dni smažou.",
-    "stateSummaryAria": "Souhrn stavů intentů",
-    "domainBreakdownAria": "Rozpis intentů podle domény",
-    "domainBreakdownTitle": "Rozpis podle domén:",
+    "description": "Akce, o které AI požádala a které musí někdo schválit. O čekajících žádostech rozhodneš tady. Provedené a odvolané žádosti zůstávají v historii 7 dní, nepoužité zmizí den po vypršení.",
+    "stateSummaryAria": "Počty žádostí podle stavu",
+    "domainBreakdownAria": "Žádosti podle cíle",
+    "domainBreakdownTitle": "Podle cíle:",
     "filter": {
-      "groupAria": "Filtrovat intenty",
+      "groupAria": "Filtrovat žádosti",
       "allStates": "Všechny stavy",
       "stateAria": "Filtr podle stavu",
-      "allKinds": "Všechny druhy",
-      "kindAria": "Filtr podle druhu",
-      "search": "Hledat doménu nebo hosta…",
-      "searchAria": "Hledat podle domény nebo hosta",
+      "allKinds": "Všechny akce",
+      "kindAria": "Filtr podle akce",
+      "search": "Hledat cíl…",
+      "searchAria": "Hledat podle cíle",
       "showing": "Zobrazeno {visible} z {total}"
     },
-    "emptyNoIntents": "Žádné MCP intenty nezaznamenány — daemon zatím neviděl žádnou AI-podepsanou destruktivní operaci.",
-    "emptyNoMatch": "Žádné intenty neodpovídají filtrům",
-    "emptyTable": "Žádné intenty",
+    "emptyNoIntents": "Zatím žádné žádosti. Objeví se, až bude AI chtít udělat něco, co musíš schválit.",
+    "emptyNoMatch": "Filtrům neodpovídá žádná žádost",
+    "emptyTable": "Žádné žádosti",
     "bulk": {
-      "toolbarAria": "Hromadné akce s intenty",
+      "toolbarAria": "Hromadné akce se žádostmi",
       "selected": "Vybráno: {n}",
       "revokeSelected": "Odvolat vybrané ({n})",
       "clearSelection": "Zrušit výběr",
-      "confirmTitle": "Hromadné odvolání MCP intentů",
-      "confirmMessage": "Odvolat {n} intent(ů)? Každý bude označen used_at na daemonu, takže AI klient pokoušející se ho použít dostane already_used.\n\nCíle: {targets}",
-      "confirmMore": " a dalších {n}…",
-      "confirmRevokeBtn": "Odvolat vše",
+      "confirmTitle": "Odvolat vybrané žádosti?",
+      "confirmMessage": "Odvolat vybrané žádosti ({n})? AI je pak už nebude moct provést.\n\n{targets}",
+      "confirmMore": " a další ({n})",
+      "confirmRevokeBtn": "Odvolat",
       "cancel": "Zrušit",
-      "toastOk": "Odvoláno {n} intent(ů)",
-      "toastPartial": "Odvoláno {ok}, selhalo {failed}"
+      "toastOk": "Odvoláno: {n}",
+      "toastPartial": "Odvoláno: {ok}, nepovedlo se: {failed}"
     },
     "col": {
       "created": "Vytvořeno",
-      "domain": "Doména",
-      "host": "Host",
-      "kind": "Druh",
+      "kind": "Akce",
       "state": "Stav",
       "expires": "Vyprší",
-      "intentId": "ID intentu",
-      "matchedGrant": "Automaticky přes grant"
+      "intentId": "ID žádosti",
+      "matchedGrant": "Schválilo",
+      "target": "Cíl"
     },
-    "matchedGrantClickHint": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id}).",
-    "matchedGrantBanner": "Filtrováno: zobrazují se jen intenty schválené oprávněním",
+    "matchedGrantClickHint": "Zobrazit všechny žádosti, které schválilo toto pravidlo ({id}).",
+    "matchedGrantBanner": "Jen žádosti schválené pravidlem",
     "clearMatchedGrantFilter": "Zrušit filtr",
     "manualConfirm": "ručně",
-    "confirmedManually": "Potvrzeno ručně přes GUI banner (žádné oprávnění nematchovalo)",
+    "confirmedManually": "Schváleno ručně, žádné pravidlo nepasovalo",
     "revoke": "Odvolat",
-    "revokeAria": "Odvolat tento intent (označit jako použitý bez spuštění)",
+    "revokeAria": "Odvolat schválenou žádost, aby ji AI nemohla provést",
     "single": {
-      "confirmTitle": "Odvolat MCP intent",
-      "confirmMessage": "Odvolat intent {id}? ({kind} na {domain} → {host}) AI klient pokoušející se ho použít dostane already_used.",
+      "confirmTitle": "Odvolat žádost?",
+      "confirmMessage": "Odvolat „{kind}“ na {target}? AI ji pak už nebude moct provést.",
       "confirmRevokeBtn": "Odvolat",
       "cancel": "Zrušit",
-      "toastRevoked": "Intent odvolán",
-      "toastRevokeFailed": "Odvolání selhalo: {error}",
-      "toastIdCopied": "ID intentu zkopírováno",
-      "toastCopyFail": "Kopírování selhalo — schránka odepřena"
+      "toastRevoked": "Žádost odvolána",
+      "toastRevokeFailed": "Odvolání se nepodařilo: {error}",
+      "toastIdCopied": "ID žádosti zkopírováno",
+      "toastCopyFail": "Kopírování se nepodařilo, schránka je zablokovaná"
     },
     "approve": "Schválit",
     "reject": "Odmítnout",
     "approveAria": "Schválit tuto žádost AI",
-    "rejectAria": "Odmítnout a odvolat tuto žádost AI, aby ji AI nemohla provést",
-    "approveDialog": {
-      "title": "Schválit žádost AI?",
-      "message": "AI chce provést {kind} na {target}. Uvedený důvod: {prompt}"
+    "rejectAria": "Odmítnout žádost, aby ji AI nemohla provést",
+    "state": {
+      "pending_confirmation": "Čeká na schválení",
+      "ready": "Schváleno, čeká na AI",
+      "consumed": "Provedeno",
+      "revoked": "Odmítnuto",
+      "expired": "Vypršelo"
+    },
+    "relative": {
+      "inSeconds": "za {n} s",
+      "inMinutes": "za {n} min",
+      "inHours": "za {n} h",
+      "secondsAgo": "před {n} s",
+      "minutesAgo": "před {n} min"
     }
   },
   "mcpHub": {
-    "title": "Model Context Protocol",
-    "description": "Centrální správa AI komunikace. Activity ukazuje kompletní audit volání, Žádosti čekající podepsané požadavky, Pravidla auto-schválení a Katalog dostupné druhy operací.",
+    "title": "AI klienti (MCP)",
     "tabs": {
       "activity": "Aktivita",
       "requests": "Žádosti",
       "rules": "Pravidla",
-      "catalog": "Katalog"
+      "catalog": "Schvalované akce"
     },
     "stats": {
       "active": "aktivní pravidla",
-      "deadweight": "nikdy nematchlo (smazat?)",
-      "deadweightHint": "Pravidla, která ještě nikdy AI nepoužila — pravděpodobně lze odstranit",
-      "totalMatches": "celkem auto-schválení",
-      "lastMatch": "poslední auto-schválení:",
-      "alwaysConfirm": "druhů vždy se ptát",
+      "deadweight": "nepoužitá pravidla",
+      "deadweightHint": "Pravidla starší než 7 dní, která AI ještě nepoužila. Nejspíš je můžeš odvolat.",
+      "totalMatches": "schváleno pravidly",
+      "lastMatch": "naposledy:",
+      "alwaysConfirm": "akcí se vždy ptá",
       "justNow": "právě teď",
-      "minutesAgo": "před {n} m",
+      "minutesAgo": "před {n} min",
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d"
     },
     "tier": {
-      "sandbox": "Sandbox",
-      "sandboxHint": "Žádná pravidla — AI se ptá na vše destruktivní",
       "balanced": "Vyvážený",
-      "balancedHint": "Auto-schválení reverzibilních akcí (deploy, rollback)",
-      "fullTrust": "Plná důvěra",
-      "fullTrustHint": "Wildcard pravidlo přijímá vše bez ptaní",
-      "custom": "Custom",
-      "customHint": "Vlastní kombinace pravidel"
+      "balancedHint": "Deploy a rollback se schvalují samy, na ostatní se AI ptá.",
+      "custom": "Vlastní pravidla",
+      "customHint": "Pravidla neodpovídají žádnému profilu.",
+      "minimalHint": "Žádná pravidla: AI se ptá na všechno, co se musí schválit.",
+      "localDevHint": "Restart služeb a změny databází *_dev se schvalují samy.",
+      "permissiveHint": "Pravidlo pro všechno: AI se na nic neptá."
     },
     "suggested": {
-      "title": "{n} návrh(ů) na auto-schválení",
-      "hint": "Tyto akce jsi v posledních 7 dnech schvaloval ručně víckrát. Klikni \"Auto-approve\" a vytvoří se pravidlo, které je propustí bez dalšího potvrzování.",
-      "occurrences": "{n}× ručně schváleno",
-      "autoApprove": "Auto-approve",
-      "created": "Pravidlo vytvořeno: {kind} → {domain}",
-      "failed": "Vytvoření pravidla selhalo: {error}"
+      "title": "{n} návrh na automatické schválení | {n} návrhy na automatické schválení | {n} návrhů na automatické schválení",
+      "hint": "Tyhle akce za posledních 7 dní opakovaně schvaluješ ručně. „Schvalovat samo“ vytvoří pravidlo pro všechny AI klienty.",
+      "occurrences": "{n}× schváleno ručně",
+      "autoApprove": "Schvalovat samo",
+      "created": "Pravidlo vytvořeno: {kind} – {domain}",
+      "failed": "Pravidlo se nepodařilo vytvořit: {error}",
+      "dismiss": "Skrýt návrhy"
+    },
+    "glossary": {
+      "requests": "AI chce udělat něco, co nejde snadno vrátit (smazat databázi, přepsat konfiguraci), a čeká, až to schválíš.",
+      "rules": "tyhle žádosti schvaluj automaticky, třeba restart služeb.",
+      "catalog": "seznam akcí, u kterých se AI musí zeptat."
+    },
+    "off": {
+      "title": "MCP je vypnuté",
+      "body": "AI klienti teď k WDC nemají přístup. Zapni MCP přepínačem výše, pak se tu ukáže aktivita, žádosti a pravidla."
     }
   },
   "mcpOnboarding": {
-    "title": "Vítej v MCP — pojďme to nastavit",
-    "hint": "Vyber profil podle toho, jak moc chceš AI důvěřovat. Pravidla můžeš později upravit v záložce Pravidla.",
+    "title": "Kolik toho smí AI udělat bez ptaní?",
+    "hint": "Vyber profil. Pravidla pak můžeš upravit v záložce Pravidla.",
     "dismiss": "Přeskočit",
     "recommended": "doporučeno",
-    "applied": "Profil {profile} aplikován ({n} pravidel vytvořeno)",
-    "minimalApplied": "Minimální profil aktivní — AI se ptá na vše",
+    "applied": "Profil {profile} je nastavený",
+    "minimalApplied": "Profil Minimální: AI se ptá na všechno, co se musí schválit",
     "profiles": {
       "minimal": {
         "name": "Minimální",
-        "desc": "Nejbezpečnější — AI musíš schválit každou destruktivní akci ručně",
+        "desc": "Nejbezpečnější: každou žádost AI schvaluješ ručně.",
         "bullets": [
-          "Žádná auto-schvalovací pravidla",
-          "Read-only volání procházejí volně",
-          "Každá mutace nebo destruktivní akce vyžaduje potvrzení"
+          "Žádná pravidla pro automatické schválení",
+          "Čtení a běžné akce (weby, služby, databáze) AI provede sama",
+          "Na mazání a přepisování se zeptá"
         ],
         "cta": "Použít Minimální"
       },
       "balanced": {
         "name": "Vyvážený",
-        "desc": "Reverzibilní akce projdou auto, destruktivní se ptají",
+        "desc": "Deploy a rollback se schvalují samy, nevratné akce se ptají.",
         "bullets": [
-          "Auto-schválení: deploy, rollback (lze vrátit)",
-          "Vyžaduje potvrzení: restore, drop, snapshot delete",
-          "Vhodný pro většinu workflow"
+          "Samo se schválí: deploy a rollback (jdou vrátit)",
+          "Zeptá se: obnova snapshotu, smazání databáze a další nevratné akce",
+          "Hodí se pro většinu práce"
         ],
         "cta": "Použít Vyvážený"
       },
       "localDev": {
         "name": "Lokální vývoj",
-        "desc": "Restart služeb a změny v databázích *_dev bez ptaní",
+        "desc": "Restart služeb a změny v databázích *_dev bez ptaní.",
         "bullets": [
-          "Auto-schválení: zastavení a restart služeb",
-          "Auto-schválení: smazání, SQL a import u databází s názvem *_dev",
-          "Vše ostatní se dál ptá"
+          "Samo se schválí: zastavení a restart služeb",
+          "Samo se schválí: smazání, SQL a import u databází s názvem *_dev",
+          "Na všechno ostatní se zeptá"
         ],
         "cta": "Použít Lokální vývoj"
       },
       "permissive": {
         "name": "Plná důvěra",
-        "desc": "AI smí vše bez ptaní — jen pro testovací prostředí",
+        "desc": "AI smí všechno bez ptaní. Jen pro testovací prostředí.",
         "bullets": [
-          "Wildcard pravidlo: vše × vše",
-          "Žádná potvrzení",
-          "Doporučujeme: vždy použij Always-ask pro produkční domény"
+          "Jedno pravidlo pro všechny akce a cíle",
+          "Na nic se nezeptá, ani na nevratné akce",
+          "Co se má schvalovat vždy, nastavíš v Schvalovaných akcích tlačítkem Upravit „vždy se ptát“"
         ],
-        "cta": "Použít Plnou důvěru"
+        "cta": "Použít Plnou důvěru…"
       },
       "custom": {
         "name": "Ručně",
-        "desc": "Žádný preset — pravidla nastavím sám/sama",
+        "desc": "Bez profilu. Pravidla si vytvoříš v záložce Pravidla.",
         "bullets": [
           "Otevře záložku Pravidla",
-          "Vytvoříš si vlastní pravidla od nuly",
-          "Pro pokročilé operátory"
+          "Začneš bez pravidel",
+          "Pro ty, kdo přesně vědí, co chtějí povolit"
         ],
         "cta": "Otevřít Pravidla"
       }
     },
-    "default": "výchozí"
+    "default": "výchozí",
+    "applyFailed": "Profil {profile} se nastavil jen zčásti ({ok} z {total} pravidel). Zkus to znovu.",
+    "permissiveWord": "DŮVĚŘUJI",
+    "permissiveConfirm": "Plná důvěra vytvoří pravidlo, se kterým každý připojený AI klient provede bez ptaní i nevratné akce, třeba smazání databáze. Pro potvrzení napiš {word}.",
+    "permissiveMismatch": "Napiš přesně {word}."
   },
   "mcpActivity": {
     "stats": {
-      "totalCalls": "Celkem volání 24h",
-      "reads": "Read",
-      "mutates": "Mutating",
-      "destructives": "Destruktivní",
+      "totalCalls": "Volání za 24 h",
+      "reads": "Čtení",
+      "mutates": "Změny",
+      "destructives": "Nevratné",
       "errors": "Chyby",
-      "sessions": "Session",
+      "sessions": "Relace (session)",
       "clickToFilter": "Klikni pro filtr na tuto úroveň",
       "clickToClear": "Klikni pro zrušení filtru"
     },
@@ -441,22 +462,25 @@
       "throughput": "propustnost",
       "latency": "odezva",
       "errorRate": "chybovost",
-      "callsPerMinHint": "Průměrná frekvence volání za posledních 24 h"
+      "callsPerMinHint": "Průměrná frekvence volání za posledních 24 h",
+      "latencyP50": "odezva, medián",
+      "latencyP95": "odezva, 95 % volání",
+      "latencyP99": "odezva, 99 % volání"
     },
     "filter": {
       "allDanger": "Všechny úrovně",
-      "toolName": "Filter podle nástroje…",
+      "toolName": "Filtrovat podle nástroje…",
       "search": "Hledat v nástrojích a argumentech…",
-      "collapseReads": "Sbalit read volání",
+      "collapseReads": "Sbalit čtení",
       "dangerAria": "Filtrovat podle úrovně nebezpečí"
     },
     "view": {
-      "sessions": "Podle session",
-      "flat": "Plochý"
+      "sessions": "Podle relace",
+      "flat": "Seznam"
     },
-    "filterBySession": "Filtrovat na session {id}",
+    "filterBySession": "Filtrovat na relaci {id}",
     "session": {
-      "toggle": "Rozbalit/sbalit session — {caller}"
+      "toggle": "Rozbalit nebo sbalit relaci {caller}"
     },
     "timeline": {
       "title": "Aktivita za posledních {hours} h",
@@ -469,42 +493,45 @@
     "detail": {
       "calledAt": "voláno",
       "argsHash": "hash argumentů",
-      "intentId": "záměr",
+      "intentId": "žádost",
       "args": "argumenty",
-      "copy": "Kopírovat"
+      "copy": "Kopírovat",
+      "error": "chyba"
     },
     "sessionDetail": {
-      "title": "Detail session",
+      "title": "Detail relace",
       "open": "Detail",
-      "openHint": "Otevřít detail session v drawer panelu",
-      "sessionId": "Session ID:",
+      "openHint": "Otevřít detail relace",
+      "sessionId": "ID relace:",
       "callCount": "Počet volání:",
       "totalDuration": "Celková doba:",
       "errors": "Chyby:",
       "byTool": "Rozdělení podle nástroje",
       "allCalls": "Všechna volání",
       "copyJson": "Kopírovat JSON",
-      "copied": "JSON zkopírován do clipboardu"
+      "copied": "JSON zkopírován do schránky"
     },
     "danger": {
       "read": "čtení",
       "mutate": "změna",
-      "destructive": "destruktivní"
+      "destructive": "nevratné"
     },
     "refresh": "Obnovit",
     "exportCsv": "Export CSV",
     "totalShown": "{n} z {total}",
-    "empty": "Žádná MCP volání zatím — AI klient se ještě nepřipojil.",
-    "readsCollapsed": "{n}× read sbaleno (klikni pro rozbalení)",
+    "empty": "Zatím se nepřipojil žádný AI klient. Postup najdeš výše.",
+    "readsCollapsed": "{n}× čtení sbaleno (rozbalíš kliknutím)",
     "justNow": "právě teď",
-    "minutesAgo": "před {n} m",
+    "minutesAgo": "před {n} min",
     "hoursAgo": "před {n} h",
-    "daysAgo": "před {n} d"
+    "daysAgo": "před {n} d",
+    "exportFailed": "Export CSV se nepodařil: {error}",
+    "callsCount": "{n} volání"
   },
   "mcpKinds": {
-    "title": "Registrované druhy destruktivních operací",
+    "title": "Akce, které AI musí schválit",
     "refresh": "Obnovit",
-    "description": "Pluginy zde registrují destruktivní operace, které vystavují AI klientům. Každý druh má wire-format ID (použité v MCP intent tokenech), čitelný popisek (zobrazený v potvrzovacím banneru) a úroveň nebezpečí (eskaluje vizuální zpracování banneru u nevratných operací).",
+    "description": "O tyhle akce musí AI požádat. Popis vidíš i v žádosti. Nevratné akce nejdou vzít zpět. „Vždy se ptát“ znamená, že akci neschválí žádné pravidlo.",
     "labels": {
       "deploy": "Nasadit novou verzi",
       "rollback": "Vrátit se na předchozí verzi",
@@ -533,33 +560,35 @@
       "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL",
       "backup_delete": "Smazat zálohu WDC",
       "mysql_user_admin": "Vytvořit nebo oprávnit účet MySQL s administrátorskými právy nebo nelokálním hostem",
-      "mysql_user_password": "Resetovat heslo uživatelského účtu MySQL"
+      "mysql_user_password": "Resetovat heslo uživatelského účtu MySQL",
+      "backup_restore": "Obnovit zálohu WDC přes současný stav"
     },
-    "empty": "Žádné druhy nejsou registrované",
+    "empty": "Daemon zatím nevrátil žádné akce.",
     "col": {
       "id": "ID",
       "label": "Popis",
       "plugin": "Plugin",
-      "danger": "Nebezpečí",
-      "intentCount": "Použito",
-      "autoApproveGrants": "Auto-schválení (granty)"
+      "danger": "Jde vrátit?",
+      "intentCount": "Žádostí",
+      "autoApproveGrants": "Schvalují pravidla"
     },
-    "unused": "nikdy",
-    "noAutoApprove": "—",
-    "quickGrant": "Vytvořit grant",
-    "alwaysConfirm": "Vždy potvrdit",
-    "alwaysConfirmTooltip": "Bez ring-fence by tento druh fungoval auto-přes {n} grantů. Klikněte pro úpravu nastavení.",
-    "editAlwaysConfirm": "Upravit ring-fence",
+    "unused": "zatím ne",
+    "noAutoApprove": "–",
+    "quickGrant": "Přidat pravidlo",
+    "alwaysConfirm": "Vždy se ptát",
+    "alwaysConfirmTooltip": "Bez „vždy se ptát“ by tuhle akci schvalovala pravidla ({n}). Klikni pro úpravu.",
+    "editAlwaysConfirm": "Upravit „vždy se ptát“",
     "danger": {
       "reversible": "Vratné",
-      "destructive": "Destruktivní"
+      "destructive": "Nevratné"
     },
     "dangerFilter": {
       "all": "Vše"
     },
-    "toastLoadFailed": "Nepodařilo se načíst druhy: {error}",
+    "toastLoadFailed": "Seznam akcí se nepodařilo načíst: {error}",
     "filterPlaceholder": "Hledat ID nebo popis…",
-    "pluginFilterPlaceholder": "Filtr pluginu"
+    "pluginFilterPlaceholder": "Plugin",
+    "autoApproveCount": "{n} pravidlo | {n} pravidla | {n} pravidel"
   },
   "composer": {
     "title": "Composer",
@@ -2543,22 +2572,22 @@
     },
     "mcp": {
       "title": "Model Context Protocol (MCP)",
-      "description": "Volitelná integrace pro AI agenty (Claude, Cursor, …) připojující se přes MCP. Pokud je zapnuto, AI požadavky na deploy/restore vyžadují potvrzení v banneru; podepsané intent tokeny lze auditovat v sekci „MCP Intents“ v postranní liště.",
-      "warning": "Nechte VYPNUTÉ, pokud aktivně neprovozujete AI agenta proti tomuto daemonu.",
+      "description": "Integrace pro AI klienty (Claude, Cursor, …) přes MCP. Když je vypnutá, daemon AI klienty odmítá. Když je zapnutá, nevratné akce dál schvaluješ v žádostech. Přehled najdeš v menu pod AI klienti (MCP).",
+      "warning": "Nech vypnuté, dokud AI klienta opravdu nepoužíváš.",
       "enableLabel": "Zapnout MCP integraci",
-      "strictKindsLabel": "Striktní validace druhů",
-      "strictKindsHint": "Pokud zapnuto, intenty selžou s kind_unknown, dokud druh není registrovaný v registru. Omezuje AI jen na verby, které pluginy explicitně vystavují. Výchozí VYPNUTO kvůli zpětné kompatibilitě.",
-      "alwaysConfirmKindsLabel": "Vždy vyžadovat potvrzení (druhy)",
-      "alwaysConfirmKindsHint": "Čárkou oddělený seznam druhů (např. \"restore,database_drop,plugin_install\") pro které validátor PŘESKOČÍ automatické schválení přes granty — operátor musí potvrdit v GUI banneru i když existuje zástupný always-grant. Ring-fence pro nejrizikovější operace napříč deploy, databází, sítí, SSL, pluginy a binárkami.",
-      "alwaysConfirmKindsPlaceholder": "Vyberte druhy operací pro ring-fence",
-      "lockAllDestructive": "Uzamknout všechny destruktivní ({n})",
+      "strictKindsLabel": "Jen známé akce",
+      "strictKindsHint": "Když je zapnuté, daemon odmítne žádost o akci, kterou žádný plugin nezaregistroval. AI pak smí žádat jen o akce ze seznamu Schvalované akce. Výchozí stav je vypnuto kvůli starším pluginům.",
+      "alwaysConfirmKindsLabel": "Vždy se ptát u těchto akcí",
+      "alwaysConfirmKindsHint": "U vybraných akcí daemon pravidla přeskočí a vždy se tě zeptá, i když pravidlo pro všechno existuje. Hodí se pro nejrizikovější akce (obnova, smazání databáze, instalace pluginu).",
+      "alwaysConfirmKindsPlaceholder": "Vyber akce, u kterých se má vždy ptát",
+      "lockAllDestructive": "Ptát se u všech nevratných ({n})",
       "clearAlwaysConfirm": "Vyčistit",
-      "expiredRetentionLabel": "Retence expirovaných oprávnění",
-      "expiredRetentionHint": "Po vypršení čeká janitor tolik dní, než řádek smaže. 0 = nikdy neexpirovaná oprávnění nemazat (jen revokovaná).",
-      "revokedRetentionLabel": "Retence odvolaných oprávnění",
-      "revokedRetentionHint": "Audit záznamy odvolaných oprávnění se mažou až po této době. 0 = mazat ihned po revoke (žádný audit log).",
-      "toolCallRetentionLabel": "Retence audit logu volání",
-      "toolCallRetentionHint": "Po této době se mažou řádky v mcp_tool_calls (Activity feed). Vyšší hodnota = více historie pro forensiku, ale zabírá disk. Hourly sweep, default 30.",
+      "expiredRetentionLabel": "Mazat vypršená pravidla po",
+      "expiredRetentionHint": "Kolik dní po vypršení se pravidlo ještě drží v historii. 0 = vypršená pravidla nemazat (smažou se jen odvolaná).",
+      "revokedRetentionLabel": "Mazat odvolaná pravidla po",
+      "revokedRetentionHint": "Kolik dní zůstává odvolané pravidlo v historii. 0 = smazat hned po odvolání (bez historie).",
+      "toolCallRetentionLabel": "Mazat záznamy aktivity po",
+      "toolCallRetentionHint": "Kolik dní se drží záznamy z Aktivity. Delší historie zabere víc místa na disku. Maže se jednou za hodinu, výchozí hodnota je 30 dní.",
       "daysSuffix": "dní"
     },
     "deploySubsystem": {
@@ -2580,178 +2609,204 @@
     }
   },
   "mcpGrants": {
-    "title": "MCP oprávnění",
-    "description": "Trvalá oprávnění, která daemon zkontroluje DŘÍVE než se zeptá GUI banneru. Shoda automaticky schválí intent. Přežijí restart daemonu.",
+    "title": "Pravidla automatického schválení",
+    "description": "Pravidlo říká: tuhle akci na tomhle cíli schval bez ptaní. Daemon pravidla zkontroluje dřív, než se tě zeptá. Platí i po restartu.",
     "refresh": "Obnovit",
-    "newGrant": "Nové oprávnění",
+    "newGrant": "Nové pravidlo",
     "revoke": "Odvolat",
     "permanent": "Trvalé",
     "empty": {
-      "title": "Žádná aktivní oprávnění",
-      "description": "Schvalte v banneru tlačítkem „Důvěřovat 30 min“ nebo „Vždy důvěřovat“ — nebo použijte „Nové oprávnění“ výše pro detailní nastavení."
+      "title": "Zatím žádná pravidla",
+      "description": "Pravidlo vznikne tlačítkem „Schválit a 30 min se neptat“ nebo „Schválit a už se neptat“ u žádosti, případně tlačítkem „Nové pravidlo“."
     },
     "col": {
-      "scope": "Rozsah",
-      "scopeValue": "Hodnota rozsahu",
-      "kind": "Druh",
+      "scope": "Pro koho",
+      "scopeValue": "Klient nebo relace",
+      "kind": "Akce",
       "target": "Cíl",
-      "grantedAt": "Uděleno",
-      "expires": "Vyprší",
-      "cooldown": "Cooldown",
+      "grantedAt": "Vytvořeno",
+      "expires": "Platí do",
+      "cooldown": "Pauza po použití",
       "matchCount": "Použito",
       "note": "Poznámka",
-      "actions": "Akce"
+      "actions": "Možnosti"
     },
-    "cooldownActiveTooltip": "Toto oprávnění je v cooldownu — další matche budou padat do banneru, dokud cooldown neuplyne.",
+    "cooldownActiveTooltip": "Pravidlo má po použití pauzu. Do jejího konce se AI zeptá.",
     "matches": {
       "none": "nikdy",
       "justNow": "právě teď",
-      "minutesAgo": "před {n} m",
+      "minutesAgo": "před {n} min",
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d",
-      "deadweight": "DEADWEIGHT",
-      "deadweightTooltip": "Toto oprávnění existuje déle než {days} dní a nikdy se nezmatchovalo. Pravděpodobně bezpečně odvolatelné.",
-      "drilldownTooltip": "Klikněte pro zobrazení všech intentů schválených tímto oprávněním ({id})."
+      "deadweight": "nepoužité",
+      "deadweightTooltip": "Pravidlo je starší než {days} dní a AI ho nikdy nepoužila. Nejspíš ho můžeš odvolat.",
+      "drilldownTooltip": "Zobrazit žádosti schválené tímto pravidlem ({id})."
     },
     "expiresIn": {
       "expired": "vypršelo",
       "seconds": "za {n} s",
-      "minutes": "za {n} m",
+      "minutes": "za {n} min",
       "hours": "za {n} h"
     },
-    "expiringSoonTooltip": "Toto oprávnění vyprší během 1 hodiny. AI bude muset znovu projít přes GUI banner, dokud nezmnotujete nové oprávnění.",
+    "expiringSoonTooltip": "Pravidlo vyprší do hodiny. Pak se AI zase zeptá, dokud nevytvoříš nové.",
     "usage": {
       "all": "Vše",
-      "inuse": "Aktivně použité",
-      "deadweight": "Deadweight",
-      "deadweightHint": "Deadweight = nikdy nepoužité oprávnění starší než {days} dní (kandidát na revoke).",
-      "emptyForFilter": "Žádná oprávnění neodpovídají tomuto filtru.",
-      "revokeAllDeadweight": "Odvolat všechna deadweight ({n})",
-      "revokeAllDeadweightTitle": "Odvolat všechna deadweight oprávnění?",
-      "revokeAllDeadweightConfirm": "Odvolat {n} oprávnění, která existují déle než {days} dní a nikdy se nezmatchovala? Záznamy zůstanou v auditu, ale budou označené jako odvolané."
+      "inuse": "Používaná",
+      "deadweight": "Nepoužitá",
+      "deadweightHint": "Nepoužité = AI ho ještě nepoužila a je starší než {days} dní.",
+      "emptyForFilter": "Filtru neodpovídá žádné pravidlo.",
+      "revokeAllDeadweight": "Odvolat nepoužitá ({n})",
+      "revokeAllDeadweightTitle": "Odvolat nepoužitá pravidla?",
+      "revokeAllDeadweightConfirm": "Odvolat pravidla ({n}), která jsou starší než {days} dní a AI je nikdy nepoužila? V historii zůstanou jako odvolaná."
     },
     "scopeFilter": {
-      "placeholder": "Filtr typu rozsahu"
+      "placeholder": "Pro koho"
     },
-    "includeRevokedLabel": "Zobrazit i odvolaná (audit)",
+    "includeRevokedLabel": "Zobrazit i odvolaná",
     "targetFilterTag": "cíl: {target}",
-    "kindFilterTag": "druh: {kind}",
+    "kindFilterTag": "akce: {kind}",
     "dialog": {
-      "title": "Nové oprávnění",
-      "scopeType": "Typ rozsahu",
-      "scopeValue": "Hodnota rozsahu",
-      "scopeValueRequired": "Hodnota rozsahu je pro tento typ povinná.",
+      "title": "Nové pravidlo",
+      "scopeType": "Pro koho",
+      "scopeValue": "Klient nebo relace",
+      "scopeValueRequired": "Vyber klienta nebo relaci.",
       "scopeValuePlaceholder": {
-        "session": "mcp-session-id (např. agent-42)",
-        "apiKey": "fingerprint API klíče (NE samotný klíč)",
-        "instance": "wdc instance UUID"
+        "session": "Vyber relaci z Aktivity",
+        "apiKey": "client:claude-code",
+        "instance": "ID instalace (UUID)"
       },
-      "kindPattern": "Vzor druhu",
+      "kindPattern": "Akce",
       "kindPatternPlaceholder": "* {'|'} deploy {'|'} rollback {'|'} database_drop {'|'} site_delete {'|'} plugin_install",
-      "targetPattern": "Vzor cíle",
-      "targetPatternPlaceholder": "* {'|'} blog.loc {'|'} …",
+      "targetPattern": "Cíl",
+      "targetPatternPlaceholder": "blog.loc, shop_db, apache nebo *",
       "expiry": "Platnost",
-      "expiryPermanent": "Trvalá",
-      "cooldown": "Cooldown po matchi",
+      "expiryPermanent": "Trvale",
+      "cooldown": "Pauza po použití",
       "cooldownSuffix": "sekund",
-      "cooldownHint": "Po každém matchi je oprávnění dormantní N sekund (rate-limit). 0 = bez cooldownu. Užitečné pro CI smyčky aby AI nedělala flood.",
+      "cooldownHint": "Po každém použití pravidlo N sekund nefunguje a AI se zeptá. 0 = bez pauzy. Hodí se proti AI, která stejnou akci opakuje ve smyčce.",
       "note": "Poznámka",
-      "notePlaceholder": "Proč toto oprávnění existuje (volitelné)",
-      "create": "Vytvořit"
+      "notePlaceholder": "Proč pravidlo existuje (volitelné)",
+      "create": "Vytvořit",
+      "noKnownValues": "WDC zatím žádnou hodnotu neviděl, můžeš ji napsat.",
+      "anyKind": "Všechny akce (*)",
+      "anyKindHint": "Neplatí pro akce skupin z Nastavení → AI klienti (MCP). Ty musí pravidlo jmenovat.",
+      "targetHint": "Cíl je doména webu, název databáze nebo ID služby. * znamená cokoli, *_dev všechno, co končí na _dev.",
+      "kindInvalid": "Vyber akci ze seznamu.",
+      "targetRequired": "Vyplň cíl, nebo napiš * pro cokoli.",
+      "expiry30m": "30 min",
+      "expiry2h": "2 hodiny",
+      "expiry24h": "24 hodin"
     },
     "confirmRevoke": {
-      "title": "Odvolat oprávnění?",
-      "message": "Budoucí shodné požadavky budou opět vyžadovat potvrzení v GUI. Záznam zůstane v databázi (audit), ale bude označen jako odvolaný."
+      "title": "Odvolat pravidlo?",
+      "message": "Na stejné žádosti se pak AI zase zeptá. Pravidlo zůstane v historii jako odvolané."
     },
-    "toastLoadFailed": "Nepodařilo se načíst oprávnění: {error}",
-    "toastCreated": "Oprávnění vytvořeno",
-    "toastCreateFailed": "Nepodařilo se vytvořit oprávnění: {error}",
-    "toastRevoked": "Oprávnění odvoláno",
-    "toastRevokeFailed": "Nepodařilo se odvolat oprávnění: {error}",
-    "sweepNow": "Vyčistit",
+    "toastLoadFailed": "Pravidla se nepodařilo načíst: {error}",
+    "toastCreated": "Pravidlo vytvořeno",
+    "toastCreateFailed": "Pravidlo se nepodařilo vytvořit: {error}",
+    "toastRevoked": "Pravidlo odvoláno",
+    "toastRevokeFailed": "Pravidlo se nepodařilo odvolat: {error}",
+    "sweepNow": "Uklidit staré",
     "exportJson": "Export JSON",
-    "exportToast": "Exportováno {n} oprávnění do JSON souboru",
+    "exportToast": "Exportováno pravidel: {n}",
     "importJson": "Import JSON",
-    "importToast": "Importováno {imported} oprávnění (přeskočeno duplicit: {skipped})",
-    "importPartial": "Importováno {imported} (duplicit: {skipped}, chyb: {failed}) — zkontrolujte serverové logy",
-    "importFailed": "Import selhal: {error}",
-    "sweepDone": "Vyčištěno {n} starých oprávnění",
-    "sweepNothing": "Není co čistit — všechna oprávnění jsou aktuální",
-    "sweepFailed": "Čištění selhalo: {error}",
+    "importToast": "Importováno: {imported}, duplicitních přeskočeno: {skipped}",
+    "importPartial": "Importováno: {imported}, duplicit: {skipped}, chyb: {failed}. Podrobnosti jsou v logu daemonu.",
+    "importFailed": "Import se nepodařil: {error}",
+    "sweepDone": "Uklizeno starých pravidel: {n}",
+    "sweepNothing": "Není co uklízet",
+    "sweepFailed": "Úklid se nepodařil: {error}",
     "testMatch": {
-      "button": "Test shody",
-      "title": "Test shody oprávnění (dry-run)",
-      "description": "Zjistí, které aktivní oprávnění by zmatchovalo daný požadavek — bez vytvoření intentu nebo spuštění operace.",
-      "sessionId": "Session ID",
-      "sessionIdPlaceholder": "agent-42 (volitelné)",
-      "instanceId": "Instance ID",
-      "instanceIdPlaceholder": "wdc-uuid (volitelné)",
-      "apiKeyId": "API key ID",
-      "apiKeyIdPlaceholder": "claude-code-LuRy (volitelné)",
-      "kind": "Druh",
-      "kindPlaceholder": "deploy {'|'} rollback {'|'} restore {'|'} …",
+      "button": "Vyzkoušet pravidla",
+      "title": "Které pravidlo by žádost schválilo?",
+      "description": "Zjistí, jestli by některé pravidlo žádost schválilo. Nic se nevytvoří ani nespustí.",
+      "sessionId": "ID relace",
+      "sessionIdPlaceholder": "volitelné",
+      "instanceId": "ID instalace",
+      "instanceIdPlaceholder": "volitelné",
+      "apiKeyId": "AI klient",
+      "apiKeyIdPlaceholder": "client:claude-code (volitelné)",
+      "kind": "Akce",
+      "kindPlaceholder": "deploy, database_drop, …",
       "target": "Cíl",
-      "targetPlaceholder": "blog.loc {'|'} shop.loc {'|'} …",
-      "run": "Spustit test",
-      "resultMatch": "Shoda nalezena",
-      "resultNoMatch": "Žádná shoda",
-      "resultNoMatchHint": "Tento požadavek by skončil v banneru pro potvrzení (pending_confirmation). Zkontrolujte scope_type, kind_pattern, target_pattern.",
-      "previousMatches": "Toto oprávnění už zmatchovalo {n}× v minulosti."
+      "targetPlaceholder": "blog.loc, shop_db, …",
+      "run": "Vyzkoušet",
+      "resultMatch": "Žádost by schválilo pravidlo",
+      "resultNoMatch": "Žádné pravidlo nepasuje",
+      "resultNoMatchHint": "AI by se musela zeptat a žádost by čekala na tvoje schválení. Zkontroluj, pro koho pravidlo platí, akci a cíl.",
+      "previousMatches": "Pravidlo už schválilo {n}×.",
+      "resultId": "ID pravidla:"
     },
     "bulk": {
       "selected": "Vybráno: {n}",
       "clear": "Zrušit výběr",
-      "revokeBtn": "Odvolat vybrané ({n})",
-      "confirmTitle": "Odvolat vybraná oprávnění?",
-      "confirmMessage": "Odvolat {n} oprávnění: {targets}? Tato akce nemůže být vrácena, ale záznamy zůstanou v auditu.",
-      "confirmMore": " a dalších {n}",
+      "revokeBtn": "Odvolat vybraná ({n})",
+      "confirmTitle": "Odvolat vybraná pravidla?",
+      "confirmMessage": "Odvolat pravidla ({n}): {targets}? V historii zůstanou jako odvolaná.",
+      "confirmMore": " a další ({n})",
       "confirmRevokeBtn": "Odvolat",
-      "toastOk": "Odvoláno {n} oprávnění",
-      "toastPartial": "Odvoláno: {ok}, selhalo: {failed}"
+      "toastOk": "Odvoláno: {n}",
+      "toastPartial": "Odvoláno: {ok}, nepovedlo se: {failed}"
+    },
+    "scope": {
+      "always": "Všichni AI klienti",
+      "apiKey": "Jeden AI klient",
+      "session": "Jedno spuštění AI klienta",
+      "instance": "Tahle instalace",
+      "everyClient": "všichni",
+      "alwaysHint": "Platí pro každého AI klienta připojeného k WDC.",
+      "apiKeyHint": "Jen pro klienta s tímto jménem, třeba client:claude-code. Jméno hlásí MCP server sám, nejde o ověření.",
+      "sessionHint": "Jen pro jedno spuštění MCP serveru. Po restartu AI klienta přestane platit.",
+      "instanceHint": "Pro MCP servery s tímto ID instalace (soubor ~/.wdc/mcp-instance-id)."
     }
   },
   "mcp": {
     "toast": {
-      "kindRequest": "AI: {kind}",
-      "genericRequest": "AI požaduje potvrzení",
-      "approve": "Schválit",
+      "kindRequest": "AI chce: {kind}",
+      "genericRequest": "AI žádá o schválení",
       "reject": "Odmítnout",
-      "detail": "Detail",
-      "approveSuccess": "Žádost AI schválena",
-      "approveFailed": "Schválení selhalo: {error}",
-      "rejectSuccess": "Žádost AI odmítnuta",
-      "rejectFailed": "Odmítnutí selhalo: {error}"
+      "detail": "Zobrazit",
+      "approveSuccess": "Žádost schválena",
+      "approveFailed": "Schválení se nepodařilo: {error}",
+      "rejectSuccess": "Žádost odmítnuta",
+      "rejectFailed": "Odmítnutí se nepodařilo: {error}"
     },
     "banner": {
-      "stackLabel": "Žádosti o potvrzení MCP deploye",
-      "kindRequest": "AI požaduje {kind}",
-      "genericRequest": "AI požaduje destruktivní operaci",
-      "onTarget": "na {domain} → {host}",
+      "stackLabel": "Žádosti AI čekající na schválení",
+      "kindRequest": "AI chce: {kind}",
+      "genericRequest": "AI žádá o akci, kterou daemon nepopsal",
       "noDescription": "Bez popisu.",
-      "alwaysConfirmExplain": "Operátor označil tento druh jako vždy-potvrdit — stávající trust granty byly přeskočeny.",
-      "intent": "záměr",
+      "alwaysConfirmExplain": "Tuhle akci máš nastavenou na „vždy se ptát“, takže ji žádné pravidlo neschválí samo.",
       "expiresIn": "vyprší za {seconds} s",
       "approve": "Schválit",
       "decline": "Odmítnout",
-      "declineAria": "Odmítnout A odvolat tento intent, aby ho AI nemohla znovu zkusit",
+      "declineAria": "Odmítnout: AI tuhle žádost už nebude moct provést",
       "dismiss": "Zavřít",
       "ageJustNow": "právě teď",
       "ageSeconds": "před {seconds} s",
-      "ageMinutes": "před {minutes} m {seconds} s",
-      "toastDeclined": "Intent odmítnut a odvolán",
-      "toastAlreadyConsumed": "Intent byl mezitím spotřebován nebo odvolán jinde",
-      "toastDeclineFailed": "Odmítnutí selhalo (banner uzavřen lokálně): {error}",
-      "toastExpired": "Intent {id} vypršel před schválením — banner uzavřen",
-      "trust30Min": "Důvěřovat 30 min",
-      "alwaysTrust": "Vždy důvěřovat",
-      "toastTrustedFor": "Oprávnění na {minutes} min uloženo — další shodné požadavky banner přeskočí",
-      "toastAlwaysTrusted": "Trvalé oprávnění uloženo — další shodné požadavky banner přeskočí",
-      "toastGrantFailed": "Nepodařilo se uložit oprávnění: {error}"
+      "ageMinutes": "před {minutes} min {seconds} s",
+      "toastDeclined": "Žádost odmítnuta",
+      "toastAlreadyConsumed": "Žádost už mezitím vyřídil někdo jiný, nebo vypršela",
+      "toastDeclineFailed": "Odmítnutí se nepodařilo (banner je zavřený): {error}",
+      "toastExpired": "Žádost „{kind}“ vypršela bez schválení",
+      "trust30Min": "Schválit a 30 min se neptat",
+      "alwaysTrust": "Schválit a už se neptat",
+      "toastTrustedFor": "Schváleno. Stejnou akci na stejném cíli teď {minutes} min schválí pravidlo.",
+      "toastAlwaysTrusted": "Schváleno. Stejnou akci na stejném cíli od teď schválí pravidlo.",
+      "toastGrantFailed": "Pravidlo se nepodařilo uložit: {error}",
+      "target": "Cíl:",
+      "aiSays": "Popis od AI (neověřený):",
+      "dismissHint": "Zavřít. AI dál čeká, žádost najdeš v záložce Žádosti.",
+      "forSession": "jen pro toto spuštění AI klienta",
+      "forClient": "jen pro AI klienta {client}",
+      "forAll": "pro všechny připojené AI klienty",
+      "trustMinutesRule": "Zároveň vznikne pravidlo: „{kind}“ na {target} schvaluj {minutes} min bez ptaní, {who}.",
+      "trustAlwaysRule": "Zároveň vznikne trvalé pravidlo: „{kind}“ na {target} schvaluj bez ptaní, {who}. Zrušíš ho v záložce Pravidla."
     },
     "notify": {
-      "title": "NKS WDC — žádost AI čeká na schválení",
-      "body": "AI chce provést: {kind}. Otevři WDC a žádost schval, nebo odmítni.",
-      "bodyGeneric": "AI chce spustit destruktivní operaci. Otevři WDC a žádost schval, nebo odmítni."
+      "title": "NKS WDC: žádost AI čeká na schválení",
+      "body": "AI chce: {kind}. Otevři WDC a žádost schval, nebo odmítni.",
+      "bodyGeneric": "AI žádá o akci, kterou musíš schválit. Otevři WDC a žádost schval, nebo odmítni."
     }
   },
   "footer": {
@@ -3083,21 +3138,20 @@
     }
   },
   "mcpCapabilities": {
-    "intro": "AI klienti připojení přes MCP mohou vždy číst stav a provádět běžné akce (weby, služby, databáze). Každá skupina níže odemyká víc. Destruktivní akce ve skupině dál čekají na vaše schválení ve WDC, pokud je nepokrývá trvalé oprávnění.",
-    "loadFailed": "Schopnosti MCP se nepodařilo načíst: {err}",
-    "approvalStillRequired": "Destruktivní akce dál vyžadují schválení",
-    "alwaysTitle": "Vždy povoleno ({n})",
-    "alwaysHint": "Co dodané nástroje MCP potřebují pro běžnou práci.",
-    "neverTitle": "Nikdy povoleno",
-    "neverHint": "AI klient nikdy nemůže schválit vlastní požadavek ani měnit tyto přepínače.",
+    "intro": "AI klienti připojení přes MCP smí vždy číst stav WDC a dělat běžné věci ze seznamu níže. Každá skupina povolí něco navíc. Nevratné akce i v povolené skupině dál schvaluješ, pokud je nepokryje pravidlo.",
+    "loadFailed": "Seznam schopností se nepodařilo načíst: {err}",
+    "approvalStillRequired": "Nevratné akce dál musíš schválit",
+    "alwaysTitle": "Co AI smí vždy",
+    "alwaysHint": "Tohle MCP nástroje potřebují pro běžnou práci. Vypneš to jen vypnutím MCP.",
+    "neverTitle": "Co AI nesmí nikdy",
     "settingsPrefix": "Nastavení začínající {prefix}",
     "enableTitle": "Povolit AI klientům?",
-    "enableConfirm": "AI klienti připojení k WDC budou moci používat „{name}“. Destruktivní akce v této skupině dál vyžadují vaše schválení.",
+    "enableConfirm": "AI klienti připojení k WDC budou smět: {name}. Nevratné akce v této skupině dál musíš schválit.",
     "enableButton": "Povolit",
-    "enabled": "AI klienti nyní mohou používat „{name}“",
-    "disabled": "„{name}“ je pro AI klienty vypnuto",
-    "mcpOff": "MCP je vypnuté, takže se žádný AI klient nepřipojí. Přepínače začnou platit po jeho zapnutí.",
-    "openAdvanced": "Zapnout MCP",
+    "enabled": "AI klienti teď smí: {name}",
+    "disabled": "{name}: pro AI klienty vypnuto",
+    "mcpOff": "MCP je vypnuté a daemon AI klienty odmítá. Zapneš ho přepínačem níže.",
+    "openAdvanced": "Nastavení v Pokročilých",
     "groups": {
       "settings_operator": {
         "title": "Provozní nastavení",
@@ -3105,15 +3159,15 @@
       },
       "service_config": {
         "title": "Konfigurace služeb",
-        "description": "Upravovat httpd.conf, php.ini a další konfigurace služeb a službu restartovat."
+        "description": "Přepisovat httpd.conf, php.ini a další konfigurační soubory služeb. Každý zápis musíš schválit."
       },
       "hosts_file": {
         "title": "Soubor hosts",
-        "description": "Aplikovat, zálohovat a obnovovat systémový soubor hosts."
+        "description": "Přepsat, zálohovat nebo obnovit systémový soubor hosts. Zápis musíš schválit."
       },
       "node_process": {
         "title": "Procesy Node.js",
-        "description": "Nastavit startovací příkaz Node webů a tyto procesy spouštět, zastavovat a restartovat."
+        "description": "Nastavit startovací příkaz webů v Node.js a tyto procesy spouštět, zastavovat a restartovat. Spuštění musíš schválit."
       },
       "site_advanced_fields": {
         "title": "Pokročilá pole webu",
@@ -3121,37 +3175,71 @@
       },
       "cloudflare_credentials": {
         "title": "Přístupy ke Cloudflare",
-        "description": "Nastavovat cestu k cloudflared, tokeny tunelu a API, účet a pravidla ingress."
+        "description": "Nastavovat cestu k cloudflared, tokeny tunelu a API, účet a směrování tunelu. Každou změnu musíš schválit."
       },
       "plugin_install": {
-        "title": "Pluginy",
-        "description": "Instalovat a odinstalovat pluginy."
+        "title": "Instalace pluginů",
+        "description": "Instalovat pluginy z adresy URL a odinstalovat je. Každou akci musíš schválit."
       },
       "database_admin": {
-        "title": "Správa databází",
-        "description": "Resetovat root hesla MySQL/PostgreSQL a mazat uživatele MySQL."
+        "title": "Správa databázového serveru",
+        "description": "Resetovat a měnit root hesla MySQL a PostgreSQL, mazat účty MySQL, zakládat účty s administrátorskými právy nebo pro jiný než místní počítač, importovat SQL dumpy a exportovat do souboru. Většinu z toho musíš schválit."
       },
       "backup_restore": {
-        "title": "Obnova záloh",
-        "description": "Obnovit WDC ze zálohy a nahradit tím současné weby a nastavení."
+        "title": "Obnova a mazání záloh",
+        "description": "Obnovit WDC ze zálohy přes současné weby a nastavení, nebo zálohu smazat. Každou akci musíš schválit."
       },
       "deploy_config": {
-        "title": "Konfigurace deploye",
-        "description": "Měnit cíle a hooky deploye, spouštět testy hooků a notifikací, ověřovat hosty."
+        "title": "Nastavení deploye",
+        "description": "Číst a měnit nastavení deploye webů (servery, hooky, webhooky, proměnné prostředí), zkoušet hooky a notifikace a ověřovat servery."
       },
       "daemon_admin": {
         "title": "Správa daemonu",
-        "description": "Restartovat, vypnout nebo resetovat daemon a spustit odinstalaci."
+        "description": "Restartovat, vypnout nebo resetovat daemon a spustit odinstalaci. Každou akci musíš schválit."
       },
       "unlisted_routes": {
         "title": "Vše ostatní",
-        "description": "Jakýkoli další endpoint daemonu bez vlastní skupiny."
+        "description": "Každou další routu daemonu, která není v žádné skupině výše (Docker Compose, synchronizace katalogu a další)."
       },
       "composer": {
         "title": "Composer",
         "description": "Spouštět Composer install, require a remove ve složkách webů; spouští se i skripty balíčků."
+      },
+      "cloudflare_dns": {
+        "title": "DNS záznamy v Cloudflare",
+        "description": "Vytvářet veřejné DNS záznamy v zónách uloženého účtu Cloudflare, třeba subdoménu mířící jinam. Smazání záznamu i tak musíš schválit."
       }
-    }
+    },
+    "master": {
+      "label": "Povolit AI klienty (MCP)",
+      "on": "MCP je zapnuté. AI klienti můžou WDC ovládat v rozsahu níže.",
+      "off": "MCP je vypnuté. Daemon odmítne každého AI klienta, i toho, který už běží. Přepínače níže začnou platit po zapnutí.",
+      "connectGuide": "Jak připojit AI klienta"
+    },
+    "riskyGroup": "Povolí i routy, které přibudou v dalších verzích. Zapínej jen dočasně.",
+    "riskyWord": "POVOLIT",
+    "riskyConfirm": "„{name}“ otevře AI klientům všechny routy daemonu, které nejsou v jiné skupině, i ty, které přibudou později. Pro potvrzení napiš {word}.",
+    "riskyMismatch": "Napiš přesně {word}.",
+    "alwaysList": [
+      "Číst stav WDC, weby, služby, databáze, logy, zálohy a nastavení.",
+      "Zakládat, upravovat a mazat weby a aplikovat jejich konfiguraci. Smazání webu musíš schválit.",
+      "Spouštět služby. Zastavení a restart musíš schválit.",
+      "Zakládat databáze, číst a exportovat data a spouštět dotazy pro čtení. Smazání databáze a SQL, které mění data, musíš schválit.",
+      "Zakládat účty MySQL pro běžnou databázi a měnit jejich práva. Reset hesla účtu musíš schválit.",
+      "Zapínat a vypínat pluginy a rozšíření PHP, instalovat a odinstalovat binárky. Instalaci binárky musíš schválit.",
+      "Vytvářet SSL certifikáty a instalovat certifikační autoritu. Smazání certifikátu musíš schválit.",
+      "Měnit běžná nastavení WDC (ne provozní nastavení a nastavení MCP) a vytvářet zálohy.",
+      "Číst zóny, DNS záznamy a tunely v Cloudflare. Smazání DNS záznamu musíš schválit.",
+      "Spustit deploy, rollback nebo obnovu snapshotu, vždy až po tvém schválení."
+    ],
+    "neverList": [
+      "Schválit vlastní žádost.",
+      "Vytvářet, měnit nebo mazat pravidla automatického schválení.",
+      "Měnit nastavení MCP, včetně přepínačů na této stránce."
+    ],
+    "devTitle": "Podrobnosti pro vývojáře (routy a nástroje)",
+    "devAlways": "Vždy povolené routy ({n})",
+    "devNever": "Nikdy povolené routy"
   },
   "splash": {
     "failedTitle": "Daemon se nepodařilo spustit",
@@ -3343,5 +3431,18 @@
       "daemonRefused": "Server běží, ale daemon odmítl:",
       "unavailable": "Vyzkoušet jde jen v desktopové aplikaci s nainstalovaným serverem."
     }
+  },
+  "mcpApproval": {
+    "title": "Schválit žádost AI?",
+    "titleIrreversible": "Schválit akci, kterou nejde vrátit?",
+    "what": "AI chce: {kind} – {target}",
+    "unknownKind": "neznámá akce",
+    "noTarget": "bez cíle",
+    "aiSays": "Popis od AI (neověřený): {prompt}",
+    "aiSaysNothing": "AI k žádosti nic nenapsala.",
+    "typeToConfirm": "Pro schválení napiš {expected}.",
+    "word": "SCHVALUJI",
+    "mismatch": "Napiš přesně {expected}.",
+    "approve": "Schválit"
   }
 }

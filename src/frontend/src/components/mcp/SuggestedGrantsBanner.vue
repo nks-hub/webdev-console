@@ -2,11 +2,17 @@
   <div v-if="suggestions.length > 0" class="suggested-grants-banner">
     <div class="banner-header">
       <span class="banner-title">
-        💡 {{ t('mcpHub.suggested.title', { n: suggestions.length }) }}
+        {{ t('mcpHub.suggested.title', { n: suggestions.length }, suggestions.length) }}
       </span>
-      <el-button size="small" link @click="dismissed = true" class="dismiss-btn">
-        ✕
-      </el-button>
+      <el-button
+        size="small"
+        link
+        class="dismiss-btn"
+        :icon="Close"
+        :aria-label="t('mcpHub.suggested.dismiss')"
+        :title="t('mcpHub.suggested.dismiss')"
+        @click="dismissed = true"
+      />
     </div>
     <p class="banner-hint muted">{{ t('mcpHub.suggested.hint') }}</p>
     <div class="suggestion-list">
@@ -17,15 +23,15 @@
         :class="{ pending: pendingIdx === idx }"
       >
         <span class="suggestion-text">
-          <code class="mono kind">{{ s.kindLabel || s.kind }}</code>
+          <span class="kind">{{ mcpKindLabel(s) }}</span>
           <el-tag
             v-if="s.kindDanger === 'destructive'"
             type="danger"
             size="small"
             effect="plain"
-          >destructive</el-tag>
-          <span class="muted">→</span>
-          <code class="mono target">{{ s.domain }}/{{ s.host }}</code>
+          >{{ t('mcpKinds.danger.destructive') }}</el-tag>
+          <span class="muted">–</span>
+          <code class="mono target">{{ s.domain }}</code>
           <span class="occurrences">
             {{ t('mcpHub.suggested.occurrences', { n: s.occurrences }) }}
           </span>
@@ -48,6 +54,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { Close } from '@element-plus/icons-vue'
+import { mcpKindLabel } from '../../utils/mcpKindLabel'
 import {
   fetchMcpSuggestedGrants,
   createMcpGrant,
@@ -68,6 +76,8 @@ async function refresh(): Promise<void> {
     const data = await fetchMcpSuggestedGrants(7, 3)
     allSuggestions.value = data.suggestions
   } catch (err) {
+    // Not shown to the operator: suggestions are optional, and the page
+    // reports a daemon that is down elsewhere.
     console.warn('[SuggestedGrantsBanner] refresh failed:', err)
   }
 }
@@ -75,22 +85,21 @@ async function refresh(): Promise<void> {
 async function approve(s: McpGrantSuggestion, idx: number): Promise<void> {
   pendingIdx.value = idx
   try {
-    // Create an "always" grant matching this exact (kind, domain) combo.
-    // Host pattern is broad (*) so future host additions in the same
-    // domain stay covered without re-approval.
+    // An "always" grant for exactly this (kind, domain) pair. The daemon
+    // matches the target pattern against the intent's domain alone, so the
+    // target is the domain itself (a "domain/*" pattern never matched).
     await createMcpGrant({
       scopeType: 'always',
       scopeValue: null,
       kindPattern: s.kind,
-      targetPattern: `${s.domain}/*`,
+      targetPattern: s.domain,
       grantedBy: 'auto-suggest',
       note: `Suggested from ${s.occurrences} manual approvals (last 7 days)`,
     })
-    ElMessage.success(t('mcpHub.suggested.created', { kind: s.kindLabel || s.kind, domain: s.domain }))
-    // Remove that suggestion from the list — the next refresh would
-    // also drop it because matchedGrantId on future intents won't be
-    // null anymore.
-    allSuggestions.value = allSuggestions.value.filter((_, i) => i !== idx)
+    ElMessage.success(t('mcpHub.suggested.created', { kind: mcpKindLabel(s), domain: s.domain }))
+    // The daemon leaves out pairs a grant covers, so the next refresh
+    // agrees; drop every row of this pair now (one per host).
+    allSuggestions.value = allSuggestions.value.filter((x) => x.kind !== s.kind || x.domain !== s.domain)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     ElMessage.error(t('mcpHub.suggested.failed', { error: msg }))
