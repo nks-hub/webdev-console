@@ -2183,7 +2183,12 @@
       "search": "Hledat…",
       "find": "Najít",
       "copy": "Kopírovat",
-      "clear": "Vyčistit"
+      "clear": "Vyčistit",
+      "levelLabel": "Úroveň záznamů",
+      "copied": "Zkopírováno do schránky",
+      "copyFailed": "Log se nepodařilo zkopírovat: {err}",
+      "noLog": "Log zatím neexistuje nebo je prázdný. Služba do něj ještě nic nezapsala.",
+      "loadFailed": "Log se nepodařilo načíst: {err}"
     },
     "errors": {
       "timestamp": "Čas",

@@ -2183,7 +2183,12 @@
       "search": "Search…",
       "find": "Find",
       "copy": "Copy",
-      "clear": "Clear"
+      "clear": "Clear",
+      "levelLabel": "Log level",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Could not copy the log: {err}",
+      "noLog": "The log does not exist yet or is empty. The service has not written anything to it.",
+      "loadFailed": "Could not load the log: {err}"
     },
     "errors": {
       "timestamp": "Timestamp",

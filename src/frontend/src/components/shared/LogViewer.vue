@@ -1,7 +1,7 @@
 <template>
   <div class="log-viewer">
     <div class="log-toolbar">
-      <el-select v-model="logLevel" size="small" style="width: 100px">
+      <el-select v-model="logLevel" size="small" style="width: 120px" :aria-label="t('logs.viewer.levelLabel')">
         <el-option :label="t('logs.viewer.levelAll')" value="all" />
         <el-option :label="t('logs.viewer.levelError')" value="error" />
         <el-option :label="t('logs.viewer.levelWarn')" value="warn" />
@@ -11,6 +11,7 @@
         v-model="searchText"
         size="small"
         :placeholder="t('logs.viewer.search')"
+        :aria-label="t('logs.viewer.search')"
         clearable
         style="width: 160px"
         @keydown.enter="searchInTerminal"
@@ -19,44 +20,66 @@
       <el-button size="small" @click="copyLogs">{{ t('logs.viewer.copy') }}</el-button>
       <el-button size="small" @click="clearTerminal">{{ t('logs.viewer.clear') }}</el-button>
     </div>
+    <p v-if="notice" class="log-notice" role="status">{{ notice }}</p>
     <div ref="terminalRef" class="terminal-container" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { daemonBaseUrl, daemonToken, subscribeEventsMap } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
+import { matchesLogLevel, type LogLevelFilter } from '../../utils/logLevel'
+import { resolveToken, rgba } from '../../utils/themeColors'
 
 const { t } = useI18n()
 
-// daemonApi is declared as non-optional in ../../api/daemon.ts; the local
-// redeclaration here used to mark it optional, which produced conflicting
-// `declare global` merges. Dropped — we lean on the central declaration
-// and guard access with optional-chaining where needed.
-
 const props = defineProps<{ serviceId?: string }>()
 const terminalRef = ref<HTMLElement>()
-const logLevel = ref('all')
+const logLevel = ref<LogLevelFilter>('all')
 const searchText = ref('')
+const notice = ref('')
 
+// Matches the scrollback: the Phase 4 acceptance criterion ("handles 10k+
+// lines without lag") and e2e scenario #14 fetch 10 000 lines.
+const MAX_LINES = 10000
+// Every line received, so the level filter can redraw without refetching.
+let lines: string[] = []
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let searchAddon: SearchAddon | null = null
 let closeEventSource: (() => void) | null = null
 let watchTimer: ReturnType<typeof setInterval> | null = null
 let resizeObserver: ResizeObserver | null = null
-// onMounted awaits the history fetch; if the viewer is closed meanwhile,
-// it must not subscribe afterwards (the subscription would leak and keep
-// writing to a disposed terminal).
-let unmounted = false
+// Bumped by every start()/stop(): a history fetch that resolves after the
+// viewer was hidden or closed must not subscribe (the subscription would
+// leak and keep writing to a hidden or disposed terminal).
+let generation = 0
+let live = false
+
+function append(line: string) {
+  lines.push(line)
+  if (lines.length > MAX_LINES) lines = lines.slice(-MAX_LINES)
+  if (matchesLogLevel(line, logLevel.value)) terminal?.writeln(line)
+}
+
+function redraw() {
+  if (!terminal) return
+  terminal.clear()
+  terminal.reset()
+  for (const line of lines) if (matchesLogLevel(line, logLevel.value)) terminal.writeln(line)
+}
+watch(logLevel, redraw)
 
 function clearTerminal() {
+  lines = []
   terminal?.clear()
 }
 
@@ -65,49 +88,106 @@ function searchInTerminal() {
   searchAddon.findNext(searchText.value)
 }
 
-function copyLogs() {
+async function copyLogs() {
   if (!terminal) return
-  const sel = terminal.getSelection()
-  if (sel) {
-    navigator.clipboard.writeText(sel)
-  } else {
-    // Copy all visible buffer
-    const buf = terminal.buffer.active
-    const lines: string[] = []
-    for (let i = 0; i < buf.length; i++) {
-      const line = buf.getLine(i)
-      if (line) lines.push(line.translateToString())
-    }
-    navigator.clipboard.writeText(lines.join('\n').trimEnd())
+  const text = terminal.getSelection()
+    || lines.filter(l => matchesLogLevel(l, logLevel.value)).join('\n').trimEnd()
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(t('logs.viewer.copied'))
+  } catch (e) {
+    ElMessage.error(t('logs.viewer.copyFailed', { err: errorMessage(e) }))
   }
 }
 
-onMounted(async () => {
+function authHeaders(): Record<string, string> {
+  const token = daemonToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+/** Loads the log history, then follows new lines while the viewer is visible. */
+async function start() {
+  if (live || !props.serviceId || !terminal) return
+  live = true
+  const run = ++generation
+  const id = props.serviceId
+  notice.value = ''
+  lines = []
+  terminal.clear()
+  terminal.reset()
+
+  try {
+    const resp = await fetch(`${daemonBaseUrl()}/api/services/${encodeURIComponent(id)}/logs?lines=100`, { headers: authHeaders() })
+    if (run !== generation) return
+    if (resp.status === 404) {
+      notice.value = t('logs.viewer.noLog')
+    } else if (!resp.ok) {
+      notice.value = t('logs.viewer.loadFailed', { err: `HTTP ${resp.status}` })
+    } else {
+      const history = await resp.json() as string[]
+      if (run !== generation) return
+      if (!Array.isArray(history) || history.length === 0) notice.value = t('logs.viewer.noLog')
+      else history.forEach(append)
+    }
+  } catch (e) {
+    if (run !== generation) return
+    notice.value = t('logs.viewer.loadFailed', { err: errorMessage(e) })
+  }
+
+  // The daemon only tails a service's log while a viewer renews its watch
+  // lease (30 s), so a hidden viewer lets the lease lapse.
+  const renew = () => {
+    void fetch(`${daemonBaseUrl()}/api/services/${encodeURIComponent(id)}/logs/watch`, {
+      method: 'POST',
+      headers: authHeaders(),
+    }).catch(() => { /* daemon restarting: the next renewal retries */ })
+  }
+  renew()
+  watchTimer = setInterval(renew, 15_000)
+  // Shared /api/events connection (see subscribeEventsMap). The daemon's
+  // log events carry the text as `message`; older builds used `line`.
+  closeEventSource = subscribeEventsMap({
+    log: (raw) => {
+      const data = raw as { serviceId?: string; line?: string; message?: string }
+      const text = data.line ?? data.message
+      if (data.serviceId !== id || !text) return
+      notice.value = ''
+      append(text)
+    },
+  })
+}
+
+function stop() {
+  generation++
+  live = false
+  closeEventSource?.()
+  closeEventSource = null
+  if (watchTimer) clearInterval(watchTimer)
+  watchTimer = null
+}
+
+function themeColors() {
+  const bg = rgba(resolveToken('--wdc-log-bg', { r: 17, g: 21, b: 28 }))
+  const fg = rgba(resolveToken('--wdc-log-text', { r: 227, g: 231, b: 238 }))
+  const accent = resolveToken('--wdc-accent', { r: 143, g: 180, b: 255 })
+  return {
+    background: bg,
+    foreground: fg,
+    cursor: rgba(accent),
+    selectionBackground: rgba(accent, 0.3),
+  }
+}
+
+onMounted(() => {
   if (!terminalRef.value) return
 
   terminal = new Terminal({
-    theme: {
-      background: '#0f1117',
-      foreground: '#eceef6',
-      cursor: '#6366f1',
-      selectionBackground: '#6366f140',
-      black: '#1a1c28',
-      red: '#ef4444',
-      green: '#22c55e',
-      yellow: '#f59e0b',
-      blue: '#6366f1',
-      magenta: '#8b5cf6',
-      cyan: '#06b6d4',
-      white: '#eceef6',
-    },
+    theme: themeColors(),
     fontSize: 13,
     fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
     convertEol: true,
     disableStdin: true,
-    // Scrollback sized to match the Phase 4 acceptance criterion
-    // ("handles 10k+ lines without lag") and e2e scenario #14 which
-    // fetches 10 000 lines from /api/services/{id}/logs.
-    scrollback: 10000,
+    scrollback: MAX_LINES,
   })
 
   fitAddon = new FitAddon()
@@ -122,57 +202,18 @@ onMounted(async () => {
   resizeObserver = new ResizeObserver(() => fitAddon?.fit())
   resizeObserver.observe(terminalRef.value)
 
-  // Fetch historical logs from daemon
-  if (props.serviceId) {
-    try {
-      const baseUrl = daemonBaseUrl()
-      const token = daemonToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-
-      const resp = await fetch(`${baseUrl}/api/services/${props.serviceId}/logs?lines=100`, { headers })
-      if (resp.ok) {
-        const logs = await resp.json() as string[]
-        logs.forEach(line => terminal?.writeln(line))
-      }
-    } catch {
-      // daemon may not be running
-    }
-    if (unmounted) return
-  }
-
-  // Subscribe to SSE log events and append matching lines. The daemon only
-  // tails a service's log while a viewer renews its watch lease (30 s).
-  if (props.serviceId) {
-    const watch = () => {
-      const token = daemonToken()
-      void fetch(`${daemonBaseUrl()}/api/services/${props.serviceId}/logs/watch`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }).catch(() => { /* daemon restarting — the next renewal retries */ })
-    }
-    watch()
-    watchTimer = setInterval(watch, 15_000)
-    // Shared /api/events connection (see subscribeEventsMap). The daemon's
-    // log events carry the text as `message`; older builds used `line`.
-    closeEventSource = subscribeEventsMap({
-      log: (raw) => {
-        const data = raw as { serviceId?: string; line?: string; message?: string }
-        const text = data.line ?? data.message
-        if (data.serviceId === props.serviceId && text) terminal?.writeln(text)
-      },
-    })
-  }
+  void start()
 })
 
+// Inside a kept-alive page the viewer is hidden, not unmounted: stop the
+// watch lease and the SSE subscription while hidden, reload on return.
+onActivated(() => { void start() })
+onDeactivated(stop)
+
 onUnmounted(() => {
-  unmounted = true
+  stop()
   resizeObserver?.disconnect()
   resizeObserver = null
-  closeEventSource?.()
-  closeEventSource = null
-  if (watchTimer) clearInterval(watchTimer)
-  watchTimer = null
   terminal?.dispose()
   terminal = null
   fitAddon = null
@@ -181,7 +222,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.log-viewer { display: flex; flex-direction: column; height: 100%; }
-.log-toolbar { display: flex; gap: 8px; padding: 8px 12px; background: var(--wdc-surface); border-bottom: 1px solid var(--wdc-border); }
-.terminal-container { flex: 1; min-height: 200px; }
+.log-viewer { display: flex; flex-direction: column; height: 100%; min-height: 240px; }
+.log-toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: var(--wdc-surface); border-bottom: 1px solid var(--wdc-border); }
+.log-toolbar :deep(.el-button + .el-button) { margin-left: 0; }
+.log-notice { margin: 0; padding: 8px 12px; color: var(--wdc-text-3); font-size: 0.82rem; background: var(--wdc-surface); }
+.terminal-container { flex: 1; min-height: 200px; padding: 6px 0 0 8px; background: var(--wdc-log-bg); }
 </style>
