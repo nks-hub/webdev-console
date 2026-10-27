@@ -113,8 +113,8 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Search, House, Monitor, DataLine, Lock, Connection, Document,
-  Setting, Box, Download, DataBoard, Tools, Histogram, ArrowDown,
-  Menu, Star, VideoPlay,
+  Setting, Box, Download, DataBoard, Histogram, ArrowDown,
+  Menu, Star, VideoPlay, Cpu,
 } from '@element-plus/icons-vue'
 import GettingStartedWizard from '../shared/GettingStartedWizard.vue'
 import { requestOnboarding } from '../../utils/onboarding'
@@ -161,7 +161,7 @@ const groups: Group[] = [
   },
   {
     key: 'advanced',
-    icon: Tools,
+    icon: Cpu,
     topics: [
       { key: 'plugins' },
       { key: 'mcp' },

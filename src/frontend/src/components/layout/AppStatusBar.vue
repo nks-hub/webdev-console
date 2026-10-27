@@ -1,8 +1,8 @@
 <template>
-  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }" role="status">
+  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }">
     <!-- Simple mode: one plain sentence about the whole stack -->
     <template v-if="uiMode.isSimple">
-      <span class="status-item status-item-center">
+      <span class="status-item status-item-center" role="status">
         <HealthStatusDot :level="simpleLevel" :pulse="simpleLevel === 'ok'" :title="simpleText" />
         <router-link v-if="crashedCount > 0" class="status-link status-alert" :to="problemsLink">{{ simpleText }}</router-link>
         <span v-else>{{ simpleText }}</span>
