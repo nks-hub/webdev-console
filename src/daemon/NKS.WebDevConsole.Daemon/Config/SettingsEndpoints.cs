@@ -36,7 +36,11 @@ internal static class SettingsEndpoints
             using var conn = db.CreateConnection();
             var settings = await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings");
             var dict = new Dictionary<string, string>();
-            foreach (var s in settings) dict[$"{s.category}.{s.key}"] = s.value;
+            foreach (var s in settings)
+            {
+                string name = $"{s.category}.{s.key}";
+                if (!SettingsKeys.Secret.Contains(name)) dict[name] = s.value;
+            }
             return Results.Ok(dict);
         });
 

@@ -2467,15 +2467,18 @@
       "deviceNameHint": "Volitelný štítek pro identifikaci tohoto zařízení v sync UI.",
       "copy": "Kopírovat",
       "cloudSync": "Cloudová synchronizace",
-      "cloudSyncDesc": "Odešle aktuální nastavení (weby, služby, porty, cesty, přepínače pluginů) do služby catalog-api, aby se daly jedním kliknutím obnovit při čisté instalaci.",
+      "cloudSyncDesc": "Odešle weby (domény, verze PHP, SSL, aliasy) a přenositelná nastavení do vašeho účtu v katalogu, aby šly na jiném počítači nebo po čisté instalaci jedním kliknutím obnovit. Porty, cesty, přihlášení a identita zařízení se neodesílají.",
       "pushToCloud": "Odeslat do cloudu",
       "pullFromCloud": "Stáhnout z cloudu",
       "checkStatus": "Zkontrolovat stav",
       "lastSynced": "Poslední synchronizace",
       "exportImport": "Export / Import",
-      "tabDesc": "Stáhne JSON soubor se všemi nastaveními nebo naimportuje dříve exportovaný soubor. Užitečné pro offline přenos nebo verzované týmové konfigurace.",
+      "tabDesc": "Uloží přenositelná nastavení (plán a obsah záloh, adresu katalogu, zapnutí deploye a synchronizace pluginů) do souboru JSON, nebo je ze souboru načte. Porty, cesty, přihlášení ke katalogu a identita zařízení do souboru nepatří a zůstávají jen na tomto počítači.",
       "exportFile": "Exportovat do souboru",
-      "importFile": "Importovat ze souboru"
+      "importFile": "Importovat ze souboru",
+      "importTitle": "Importovat nastavení",
+      "importConfirm": "Importovat nastavení ze souboru „{file}“ (zařízení {device}, exportováno {date})? Použijí se jen přenositelná nastavení. Porty, cesty, přihlášení a identita tohoto zařízení zůstanou beze změny.",
+      "importInvalid": "Soubor neobsahuje nastavení NKS WebDev Console (chybí část „settings“)."
     },
     "paths": {
       "tabDesc": "Přepiš cesty k binárkám. Nech prázdné pro použití auto-detekovaných výchozích.",

@@ -2467,15 +2467,18 @@
       "deviceNameHint": "Optional label to identify this device in the sync UI.",
       "copy": "Copy",
       "cloudSync": "Cloud sync",
-      "cloudSyncDesc": "Push your current settings (sites, services, ports, paths, plugin toggles) to the catalog-api service so a fresh install can restore them with one click.",
+      "cloudSyncDesc": "Sends your sites (domains, PHP versions, SSL, aliases) and the portable settings to your catalog account so you can restore them on another computer or after a clean install. Ports, paths, the sign-in and this device's identity are not sent.",
       "pushToCloud": "Push to cloud",
       "pullFromCloud": "Pull from cloud",
       "checkStatus": "Check status",
       "lastSynced": "Last synced",
       "exportImport": "Export / Import",
-      "tabDesc": "Download a JSON file of all settings, or import from a previously exported file. Useful for offline transfers or version-controlled team configs.",
+      "tabDesc": "Saves the portable settings (backup schedule and content, catalog address, deploy and plugin sync switches) to a JSON file, or loads them from one. Ports, paths, the catalog sign-in and this device's identity are never written to the file and stay on this computer.",
       "exportFile": "Export to file",
-      "importFile": "Import from file"
+      "importFile": "Import from file",
+      "importTitle": "Import settings",
+      "importConfirm": "Import settings from \"{file}\" (device {device}, exported {date})? Only the portable settings are applied. Ports, paths, the sign-in and this device's identity stay unchanged.",
+      "importInvalid": "The file holds no NKS WebDev Console settings (the \"settings\" part is missing)."
     },
     "paths": {
       "tabDesc": "Override binary paths. Leave blank to use auto-detected defaults.",

@@ -1212,6 +1212,7 @@ import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
 import SyncExportImportCard from '../settings/sync/SyncExportImportCard.vue'
 import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
 import { compareSemver } from '../../utils/semver'
+import { pickSyncableSettings } from '../../utils/settingsSync'
 import { useAppVersion } from '../../utils/appVersion'
 
 const versionRef = useAppVersion()
@@ -1746,7 +1747,8 @@ async function restoreSnapshot(row: SyncSnapshot) {
     // Route the payload through the same merge logic as pullFromCloud —
     // saveSettings + reload.
     if (data?.payload?.settings) {
-      await saveSettings(data.payload.settings as Record<string, string>)
+      const portable = pickSyncableSettings(data.payload.settings as Record<string, string>)
+      if (Object.keys(portable).length > 0) await saveSettings(portable)
       await loadSettings()
     }
     ElMessage.success(t('settingsToast.snapshotRestored'))
@@ -2353,11 +2355,7 @@ async function buildSyncPayload(): Promise<Record<string, unknown>> {
   const rawSites: Array<{ domain: string } & Record<string, unknown>> = sitesRes.ok ? await sitesRes.json() : []
   const system = systemRes.ok ? await systemRes.json() : null
 
-  // Filter settings: drop local-only keys (paths, ports, backup.dir)
-  const settings: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(rawSettings)) {
-    if (isSettingSyncable(key)) settings[key] = value
-  }
+  const settings = pickSyncableSettings(rawSettings)
 
   // Filter sites: keep only SITE_SYNC_FIELDS per site (plus domain as the key)
   const sites = rawSites.map(site => {
@@ -2368,10 +2366,11 @@ async function buildSyncPayload(): Promise<Record<string, unknown>> {
     return filtered
   })
 
+  // No deviceId here: the push request names the device separately, and an
+  // exported file must not carry this machine's identity to another one.
   return {
     exportedAt: new Date().toISOString(),
-    version: appVersion,
-    deviceId: deviceId.value,
+    version: appVersion.value,
     deviceName: deviceName.value,
     settings,
     sites,
@@ -2415,27 +2414,9 @@ async function pushToCloud() {
   }
 }
 
-// ── Sync field classification (Strategy D) ────────────────────────────
-// Each settings key is tagged as "sync" (portable across devices) or
-// "local" (machine-specific paths/ports that must stay untouched on
-// pull). The classification lives here so adding a new settings key
-// forces the developer to decide "is this sync or local?" at definition
-// time. Site fields follow the same principle: domain/phpVersion/ssl/
-// aliases/framework/cloudflare are sync; documentRoot/ports are local.
-const SYNC_SETTINGS_PREFIXES = [
-  'general.', 'telemetry.', 'backup.scheduleHours', 'daemon.catalogUrl',
-  'sync.',
-]
-const LOCAL_SETTINGS_PREFIXES = [
-  'paths.', 'ports.', 'backup.dir',
-]
-
-function isSettingSyncable(key: string): boolean {
-  if (SYNC_SETTINGS_PREFIXES.some(p => key.startsWith(p))) return true
-  if (LOCAL_SETTINGS_PREFIXES.some(p => key.startsWith(p))) return false
-  return true // unknown keys default to sync
-}
-
+// Settings classification lives in utils/settingsSync (an allowlist). Site
+// fields follow the same principle: domain/phpVersion/ssl/aliases/framework/
+// cloudflare are portable; documentRoot/ports stay local.
 const SITE_SYNC_FIELDS = new Set([
   'domain', 'phpVersion', 'sslEnabled', 'aliases', 'framework',
   'environment', 'cloudflare', 'nodeUpstreamPort', 'nodeStartCommand',
@@ -2473,14 +2454,7 @@ async function pullFromCloud() {
     // keys (paths, ports, backup dir) stay untouched so pulling another
     // device's snapshot doesn't overwrite C:\work\htdocs with /home/user.
     if (payload?.settings && typeof payload.settings === 'object') {
-      const merged: Record<string, string> = {}
-      for (const [key, value] of Object.entries(payload.settings as Record<string, string>)) {
-        if (isSettingSyncable(key)) {
-          merged[key] = value
-        }
-        // Local keys: keep existing local value (skip remote)
-      }
-
+      const merged = pickSyncableSettings(payload.settings as Record<string, string>)
       if (Object.keys(merged).length > 0) {
         await saveSettings(merged)
       }
@@ -2606,26 +2580,21 @@ async function importSettings(event: Event) {
     const text = await file.text()
     const data = JSON.parse(text)
     if (!data.settings || typeof data.settings !== 'object') {
-      throw new Error('Invalid settings file — missing "settings" object')
+      throw new Error(t('settings.sync.importInvalid'))
     }
-    const fromDevice = data.deviceId ?? 'unknown'
-    const fromDate = data.exportedAt ? new Date(data.exportedAt).toLocaleString() : 'unknown'
     await ElMessageBox.confirm(
-      `Import settings from "${file.name}"?\n\n`
-      + `Source device: ${fromDevice}\n`
-      + `Exported: ${fromDate}\n\n`
-      + `Sync-classified settings (preferences, telemetry) will be applied.\n`
-      + `Local settings (paths, ports) will be kept unchanged.\n`
-      + (data.sites?.length ? `${data.sites.length} site(s) will be merged by domain.` : ''),
-      'Import settings',
-      { confirmButtonText: 'Import', type: 'warning' },
+      t('settings.sync.importConfirm', {
+        file: file.name,
+        device: data.deviceName || '—',
+        date: data.exportedAt ? new Date(data.exportedAt).toLocaleString(locale.value) : '—',
+      }),
+      t('settings.sync.importTitle'),
+      { confirmButtonText: t('settings.sync.importFile'), cancelButtonText: t('common.cancel'), type: 'warning' },
     )
 
-    // Use the same merge logic as pullFromCloud — sync fields only
-    const merged: Record<string, string> = {}
-    for (const [key, value] of Object.entries(data.settings as Record<string, string>)) {
-      if (isSettingSyncable(key)) merged[key] = value
-    }
+    // Same allowlist as pullFromCloud: a foreign file must not replace the
+    // catalog login or this device's identity.
+    const merged = pickSyncableSettings(data.settings as Record<string, string>)
     if (Object.keys(merged).length > 0) {
       await saveSettings(merged)
     }

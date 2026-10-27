@@ -3324,10 +3324,9 @@ syncPushCmd.SetAction(async (parseResult, ct) =>
     var filteredSettings = FilterSyncSettings(settings);
     var filteredSites = FilterSyncSites(sites);
 
-    // Send JWT if the user has logged in via Settings → Account, so the
-    // catalog-api's optional_account dependency auto-links the device to
-    // the user's account. Without this header pushes are anonymous.
-    var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
+    // Push through the daemon's proxy: it attaches the catalog login the app
+    // stored, which GET /api/settings no longer hands out. Without a login
+    // the push is anonymous, as before.
     var payload = new
     {
         exportedAt = DateTime.UtcNow.ToString("o"),
@@ -3335,23 +3334,19 @@ syncPushCmd.SetAction(async (parseResult, ct) =>
         sites = filteredSites,
     };
     var body = JsonContent.Create(new { device_id = deviceId, payload });
-    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-    if (!string.IsNullOrEmpty(jwt))
-        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
-    using var resp = await http.PostAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config", body);
-    if (!resp.IsSuccessStatusCode)
+    var (status, respBody) = await client.PostRawAsync("/api/sync/push", body);
+    if (status is < 200 or >= 300)
     {
         // Surface catalog-api's { detail: "..." } body so users see the
         // real reason (device_id format, duplicate email, auth failure)
         // instead of a bare "An error occurred" .NET exception.
-        var errBody = await resp.Content.ReadAsStringAsync();
-        var detail = TryExtractErrorDetail(errBody);
+        var detail = TryExtractErrorDetail(respBody);
         AnsiConsole.MarkupLine(
-            $"[red]Sync push failed ({(int)resp.StatusCode}):[/] {Markup.Escape(detail)}");
+            $"[red]Sync push failed ({status}):[/] {Markup.Escape(detail)}");
         Environment.Exit(1);
         return;
     }
-    if (json) { PrintJson(await resp.Content.ReadAsStringAsync()); return; }
+    if (json) { PrintJson(respBody); return; }
     AnsiConsole.MarkupLine(
         $"[green]Pushed[/] {filteredSites.Count} sites + {filteredSettings.Count} sync-classified settings to {Markup.Escape(catalogUrl)}");
 });
@@ -3381,29 +3376,21 @@ syncPullCmd.SetAction(async (parseResult, ct) =>
         Environment.Exit(1);
         return;
     }
-    var catalogUrl = settings.TryGetProperty("daemon.catalogUrl", out var cu) ? cu.GetString() ?? "" : "";
-    if (string.IsNullOrWhiteSpace(catalogUrl)) catalogUrl = "https://wdc.nks-hub.cz";
-    var jwt = settings.TryGetProperty("sync.accountToken", out var jwtVal) ? jwtVal.GetString() ?? "" : "";
-
-    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-    if (!string.IsNullOrEmpty(jwt))
-        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
-    using var resp = await http.GetAsync($"{catalogUrl.TrimEnd('/')}/api/v1/sync/config/{deviceId}");
-    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+    // Through the daemon's proxy, which adds the stored catalog login.
+    var (status, data) = await client.PostRawAsync("/api/sync/pull", JsonContent.Create(new { device_id = deviceId }));
+    if (status == 404)
     {
         AnsiConsole.MarkupLine("[yellow]No cloud snapshot found for this device.[/] Push first.");
         return;
     }
-    if (!resp.IsSuccessStatusCode)
+    if (status is < 200 or >= 300)
     {
-        var errBody = await resp.Content.ReadAsStringAsync();
-        var detail = TryExtractErrorDetail(errBody);
+        var detail = TryExtractErrorDetail(data);
         AnsiConsole.MarkupLine(
-            $"[red]Sync pull failed ({(int)resp.StatusCode}):[/] {Markup.Escape(detail)}");
+            $"[red]Sync pull failed ({status}):[/] {Markup.Escape(detail)}");
         Environment.Exit(1);
         return;
     }
-    var data = await resp.Content.ReadAsStringAsync();
     if (json) { PrintJson(data); return; }
     AnsiConsole.MarkupLine($"[green]Pulled[/] snapshot from cloud. Apply via Settings → Sync → Pull in UI for smart merge.");
     AnsiConsole.MarkupLine("[dim]CLI pull currently shows the raw snapshot — smart merge requires the UI.[/]");
@@ -3434,7 +3421,6 @@ syncExportCmd.SetAction(async (parseResult, ct) =>
     {
         exportedAt = DateTime.UtcNow.ToString("o"),
         version = exportVersion,
-        deviceId = settings.TryGetProperty("sync.deviceId", out var d) ? d.GetString() : "",
         settings = filteredSettings,
         sites = filteredSites,
     };
@@ -3627,15 +3613,14 @@ static string TryExtractErrorDetail(string body)
 // existing call sites.
 internal static class SyncClassification
 {
-    // Mirror of Settings.vue SYNC_SETTINGS_PREFIXES / LOCAL_SETTINGS_PREFIXES
-    // so CLI and UI pushes filter identically.
-    private static readonly string[] SyncPrefixes = new[]
+    // Mirror of src/frontend/src/utils/settingsSync.ts so CLI and UI move the
+    // same keys. An allowlist: ports, paths, the catalog token, this device's
+    // identity, MCP and telemetry choices never leave the machine. Entries
+    // ending in "." match a prefix, the rest match exactly.
+    private static readonly string[] PortableSettings = new[]
     {
-        "general.", "telemetry.", "backup.scheduleHours", "daemon.catalogUrl", "sync.",
-    };
-    private static readonly string[] LocalPrefixes = new[]
-    {
-        "paths.", "ports.", "backup.dir",
+        "backup.scheduleHours", "backup.retainCount", "backup.content.",
+        "daemon.catalogUrl", "plugins.autoSyncEnabled", "deploy.enabled",
     };
     private static readonly HashSet<string> SiteSyncFields =
         new(StringComparer.OrdinalIgnoreCase)
@@ -3646,11 +3631,9 @@ internal static class SyncClassification
 
     public static bool IsSyncable(string key)
     {
-        foreach (var p in SyncPrefixes)
-            if (key.StartsWith(p, StringComparison.Ordinal)) return true;
-        foreach (var p in LocalPrefixes)
-            if (key.StartsWith(p, StringComparison.Ordinal)) return false;
-        return true; // unknown keys default to sync, same as UI
+        foreach (var p in PortableSettings)
+            if (p.EndsWith('.') ? key.StartsWith(p, StringComparison.Ordinal) : key == p) return true;
+        return false;
     }
 
     public static Dictionary<string, object?> FilterSettings(JsonElement settings)

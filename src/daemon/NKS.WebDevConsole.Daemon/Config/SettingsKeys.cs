@@ -6,6 +6,16 @@ namespace NKS.WebDevConsole.Daemon.Config;
 internal static class SettingsKeys
 {
     /// <summary>
+    /// Stored for the daemon's own use (catalog heartbeat, sync proxy) but never
+    /// returned by <c>GET /api/settings</c>: the catalog account JWT ended up in
+    /// settings exports, cloud pushes and in front of MCP clients.
+    /// </summary>
+    public static readonly HashSet<string> Secret = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "sync.accountToken",
+    };
+
+    /// <summary>
     /// Splits <c>backup.content.ssl</c> into <c>backup</c> + <c>content.ssl</c>.
     /// Returns false for names without a category or without a key, which used
     /// to land under <c>general.*</c> and silently save nothing the caller meant.

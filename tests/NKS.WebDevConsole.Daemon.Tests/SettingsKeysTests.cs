@@ -15,6 +15,22 @@ public sealed class SettingsKeysTests
     }
 
     [Theory]
+    [InlineData("sync.accountToken")]
+    [InlineData("SYNC.ACCOUNTTOKEN")]
+    public void Secret_HidesTheCatalogToken(string name)
+    {
+        Assert.Contains(name, SettingsKeys.Secret);
+    }
+
+    [Fact]
+    public void Secret_KeepsDeviceIdentityReadable()
+    {
+        // The renderer and CLI read these back; they are local-only, not secret.
+        Assert.DoesNotContain("sync.deviceId", SettingsKeys.Secret);
+        Assert.DoesNotContain("sync.accountEmail", SettingsKeys.Secret);
+    }
+
+    [Theory]
     [InlineData("category")]
     [InlineData("value")]
     [InlineData(".key")]
