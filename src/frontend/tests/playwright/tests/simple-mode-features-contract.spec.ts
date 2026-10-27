@@ -10,7 +10,7 @@ import { join, resolve } from 'node:path'
 //   - Settings Simple Network panel — read-only port snapshot
 //   - Settings Simple Backup panel — one-click manual backup
 //   - SiteDetailSimple document root edit — was "neni tam zadna editace"
-//   - No-PHP empty state in Sites simple create dialog
+//   - No-PHP empty state in the create site dialog
 //
 // Without contracts here a future cleanup could silently drop the
 // gap-closing UX after a refactor.
@@ -60,15 +60,14 @@ test.describe('Simple-mode features contract', () => {
     expect(source).toMatch(/sites\.documentRoot/)
   })
 
-  test('Sites simple create dialog surfaces no-PHP empty state', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'Sites.vue'), 'utf-8')
-    // The alert + Open-PHP-Manager link only fires when phpVersions is
-    // empty — proves to the beginner that they can install PHP from
-    // here instead of leaving the create dialog confused.
-    expect(source).toMatch(/v-if="phpVersions\.length === 0"/)
-    expect(source).toMatch(/sites\.simple\.noPhpInstalledTitle/)
-    expect(source).toMatch(/sites\.simple\.noPhpInstalledCta/)
-    expect(source).toMatch(/openPhpManagerFromSimple/)
+  test('Create site dialog surfaces a no-PHP empty state with an install button', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'sites', 'CreateSiteDialog.vue'), 'utf-8')
+    // The callout only shows when no PHP version is installed — it tells
+    // the beginner they can install PHP from here instead of leaving the
+    // dialog confused.
+    expect(source).toMatch(/siteState\.phpVersions === null \|\| siteState\.phpVersions\.length/)
+    expect(source).toMatch(/sites\.new\.noPhp/)
+    expect(source).toMatch(/siteState\.install\('php'\)/)
   })
 
   test('i18n keys for all simple-mode redesigns exist cs+en', () => {
@@ -89,9 +88,8 @@ test.describe('Simple-mode features contract', () => {
       'settings.simple.backup.create',
       'settings.simple.backup.openManager',
       'sites.detail.simple.docRootHint',
-      'sites.simple.noPhpInstalledTitle',
-      'sites.simple.noPhpInstalledHint',
-      'sites.simple.noPhpInstalledCta',
+      'sites.new.noPhp',
+      'sites.new.installPhp',
     ]
     for (const k of required) {
       expect(getPath(cs, k), `cs ${k}`).toBeTruthy()

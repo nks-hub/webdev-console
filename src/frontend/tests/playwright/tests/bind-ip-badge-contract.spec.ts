@@ -11,8 +11,8 @@ import { join, resolve } from 'node:path'
 const srcRoot = resolve(process.cwd(), 'src')
 
 test.describe('Bind-IP badge contract', () => {
-  test('Sites.vue create dialog wires bind-opt-badge on wildcard + loopback options', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'Sites.vue'), 'utf-8')
+  test('CreateSiteDialog.vue wires bind-opt-badge on wildcard + loopback options', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'sites', 'CreateSiteDialog.vue'), 'utf-8')
     // Conditional v-if must check opt.wildcard or opt.loopback — that's
     // what decides whether the badge renders next to a given option.
     expect(source).toMatch(/v-if="opt\.wildcard \|\| opt\.loopback"/)

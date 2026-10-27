@@ -14,11 +14,9 @@
       :href="`https://${site.cloudflare.subdomain}.${site.cloudflare.zoneName}`"
       target="_blank"
       @click.stop
-      :title="cloudflaredRunning
-        ? 'Open public URL in browser'
-        : 'Tunnel service is stopped — this URL will not respond until you start cloudflared'"
+      :title="cloudflaredRunning ? $t('sites.list.tunnelOpen') : $t('sites.list.tunnelOfflineTitle')"
     >{{ site.cloudflare.subdomain }}.{{ site.cloudflare.zoneName }}</a>
-    <span v-if="!cloudflaredRunning" class="tunnel-badge-offline">offline</span>
+    <span v-if="!cloudflaredRunning" class="tunnel-badge-offline">{{ $t('sites.list.tunnelOffline') }}</span>
   </div>
 </template>
 

@@ -68,8 +68,8 @@ test.describe('Daemon warnings wrapper contract', () => {
     expect(source).toMatch(/updateSite[\s\S]*?json<SiteUpdateResponse>/)
   })
 
-  test('Sites.vue createSite toasts each warning + hint', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'Sites.vue'), 'utf-8')
+  test('CreateSiteDialog.vue submit toasts each warning + hint', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'sites', 'CreateSiteDialog.vue'), 'utf-8')
     // The loop over lastCreateWarnings must call ElMessage.warning
     // for each entry. Without the loop, a daemon warning for a bogus
     // bind IP would silently disappear again.

@@ -604,11 +604,17 @@ export interface SiteApplyResultDto {
   domain: string
   success: boolean
   steps: SiteApplyStepDto[]
+  /** When the daemon finished the apply (ms since epoch). */
+  at?: number
 }
 
 /** Re-runs the apply pipeline for one site and returns the per-step result. */
 export const applySite = (domain: string): Promise<SiteApplyResultDto> =>
   json(`/api/sites/${encodeURIComponent(domain)}/apply`, { method: 'POST' })
+
+/** Last apply result of every site the daemon has applied since it started. */
+export const fetchSiteApplyStatus = (): Promise<SiteApplyResultDto[]> =>
+  json('/api/sites/apply-status')
 
 // Sites
 export const fetchSites = (): Promise<SiteInfo[]> =>
@@ -628,10 +634,14 @@ export const createSite = (data: Partial<SiteInfo>) =>
   json<SiteCreateResponse>('/api/sites', { method: 'POST', body: JSON.stringify(data) })
 
 export const deleteSite = (id: string) =>
-  json<void>(`/api/sites/${id}`, { method: 'DELETE' })
+  json<void>(`/api/sites/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+/** Soft-enables or soft-disables a site (vhost removed, configuration kept). */
+export const setSiteEnabled = (id: string, enabled: boolean) =>
+  json<SiteInfo>(`/api/sites/${encodeURIComponent(id)}/enabled`, { method: 'PATCH', body: JSON.stringify({ enabled }) })
 
 export const updateSite = (id: string, data: Partial<SiteInfo>) =>
-  json<SiteUpdateResponse>(`/api/sites/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+  json<SiteUpdateResponse>(`/api/sites/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) })
 
 // Docker Compose detection — returns whether the site's document root
 // contains a compose file. Phase 11 foothold (commit 2a92687).

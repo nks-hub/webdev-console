@@ -673,20 +673,18 @@
     "disabled": "Site {domain} disabled",
     "toggleFailed": "Toggle failed: {err}",
     "folderPickerDesktopOnly": "Folder picker only available in the desktop app",
-    "domainRequired": "Domain and document root are required",
     "bindRequired": "Select at least one IP binding, or choose * for all listener addresses.",
     "createdWithDb": "Site {domain} + database {db} created",
     "createdDbFailed": "Site {domain} created (database creation failed)",
-    "createdSslMissing": "Site created, but the SSL certificate was not issued. Install mkcert and its CA in Binaries → SSL.",
+    "createdSslMissing": "The site was created, but the HTTPS certificate could not be issued. Install mkcert and its certificate authority on the SSL page.",
     "created": "Site {domain} created",
     "createFailed": "Create failed: {err}",
     "detected": "Detected: {framework}",
     "noFramework": "No framework detected",
     "detectFailed": "Detection failed: {err}",
-    "deleted": "Site deleted",
+    "deleted": "Site {domain} deleted",
     "deleteFailed": "Delete failed: {err}",
-    "deleteConfirm": "Delete site \"{domain}\"? This cannot be undone.",
-    "deleteConfirmTitle": "Warning"
+    "deleteConfirm": "Delete site {domain}? The site configuration and its hosts entry are removed. Files in the folder stay."
   },
   "sites": {
     "title": "Sites",
@@ -702,25 +700,24 @@
     "templateNone": "— No template —",
     "createDatabase": "Create Database",
     "createDatabasePlaceholder": "auto: myapp_db",
-    "filterPlaceholder": "Filter by domain or docroot…",
+    "filterPlaceholder": "Search by site, alias or folder",
     "ssl": "SSL",
     "aliases": "Aliases",
     "bindIp": "Bind IPs",
     "bindIpRecommended": "recommended",
-    "bindIpHint": "Select * by itself for name-based vhosts on every listener, or select one or more concrete device IPs. Localhost always works on localhost/127.0.0.1; added localhost IPs also work as direct IP URLs. Other domains must arrive with that Host header, for example through a hosts entry.",
+    "bindIpHint": "* means the site answers on every address of this computer (default). To restrict it, pick one or more specific IP addresses. Localhost always works through localhost and 127.0.0.1.",
     "localhostLoopback": "Localhost loopback",
     "localhostLoopbackHint": "Localhost is always available through localhost/127.0.0.1; add extra IPs in Bind IPs.",
     "create": "New Site",
-    "openHosts": "Open hosts",
+    "openHosts": "Open hosts file",
     "openHostsTitle": "Open system hosts file",
     "httpsEnabled": "HTTPS enabled",
     "runtimeStatic": "Static",
     "composeBadge": "Compose",
-    "noMatching": "No sites matching '{q}'",
-    "noSitesYet": "No sites configured yet",
+    "noMatching": "No site matches “{q}”",
     "filterMatches": "{matches} of {total}",
     "additionalDomains": "{n} additional domains",
-    "reapplyAll": "Reapply All",
+    "reapplyAll": "Regenerate configuration of all sites…",
     "reapplyAllHint": "Regenerate all vhosts",
     "openInBrowser": "Open in Browser",
     "saveAndApply": "Save & Apply",
@@ -729,10 +726,10 @@
     },
     "open": "Open",
     "detect": "Detect",
-    "delete": "Delete",
+    "delete": "Delete site",
     "editSite": "Edit site",
     "backToSites": "Back to sites",
-    "notFound": "Site '{domain}' not found",
+    "notFound": "Site “{domain}” was not found",
     "simple": {
       "cloudflareTunnel": "Cloudflare Tunnel",
       "submit": "Create Site",
@@ -898,29 +895,175 @@
       "majorJump": "Major version jump — possible breaking changes"
     },
     "list": {
-      "stateFilter": "Filter by state",
-      "status": "Status",
-      "runtime": "Runtime",
-      "address": "Address",
-      "state": {
-        "ok": "Running",
-        "failed": "Apply failed",
-        "stopped": "Stopped",
-        "disabled": "Disabled"
-      },
+      "stateFilter": "Filter by status",
       "filter": {
         "all": "All",
-        "failed": "With errors",
-        "disabled": "Disabled"
+        "disabled": "Disabled",
+        "problems": "Problems"
       },
       "summaryEmpty": "No sites yet.",
       "summaryTotal": "{n} site | {n} sites",
-      "summaryFailed": "{n} failed on the last apply | {n} failed on the last apply",
+      "summaryFailed": "{n} with an error | {n} with an error",
       "summaryDisabled": "{n} disabled | {n} disabled",
       "noneInFilter": "No site matches this filter.",
       "clearFilter": "Clear filter",
       "enable": "Enable site",
-      "disable": "Disable site"
+      "disable": "Disable site",
+      "caption": "Sites",
+      "colWeb": "Site",
+      "colState": "Status",
+      "colRuntime": "Runs on",
+      "colFolder": "Folder",
+      "colNetwork": "Network",
+      "colTunnel": "Tunnel",
+      "shown": "Showing {n} of {total} sites",
+      "moreHeader": "More actions",
+      "loadFailedTitle": "Could not load the sites",
+      "loadFailedText": "The WDC service is not responding. Check that the app is running and try again.",
+      "aliasesLabel": "{n} alias: {list} | {n} aliases: {list}",
+      "openUrlAria": "Open {url} in the browser",
+      "openAria": "Open {domain} in the browser",
+      "folderAria": "Open the folder of {domain}",
+      "folder": "Folder",
+      "showDetail": "Show details",
+      "hideDetail": "Hide details",
+      "missing": "missing",
+      "phpMissingTitle": "PHP {v} is not installed. Install it on the Binaries page, or switch the site to another version.",
+      "phpDefault": "default",
+      "menu": {
+        "edit": "Site settings",
+        "duplicate": "Duplicate…",
+        "delete": "Delete site…"
+      },
+      "tunnelOpen": "Open the public URL in the browser",
+      "tunnelOfflineTitle": "The tunnel service is stopped, so this URL does not respond until you start cloudflared.",
+      "tunnelOffline": "offline"
+    },
+    "reapplyAllTitle": "Regenerate configuration of all sites",
+    "reapplyAllConfirm": "The configuration of every site is created again and Apache restarts briefly. Sites do not respond during the restart. Continue?",
+    "runtimeStaticSite": "Static site",
+    "selectFolder": "Select the site folder",
+    "state": {
+      "running": "Running",
+      "waiting": "Waiting for Apache",
+      "failed": "Error: {step}",
+      "applying": "Saving…",
+      "disabled": "Disabled"
+    },
+    "banner": {
+      "missing": {
+        "title": "Sites are not running: the Apache web server is missing.",
+        "detail": "Without it no site answers. After installing, just start Apache."
+      },
+      "stopped": {
+        "title": "Apache is stopped, so no site answers right now.",
+        "detail": "Sites answer again once it is started."
+      },
+      "starting": {
+        "title": "Apache is starting…",
+        "detail": "Sites will answer in a moment."
+      },
+      "failed": {
+        "title": "Apache could not be started.",
+        "detail": "{err}"
+      },
+      "installApache": "Install Apache",
+      "startApache": "Start Apache",
+      "showLog": "Show log"
+    },
+    "empty": {
+      "title": "There is no site yet",
+      "lead": "A site is a folder on your disk that WDC serves at an address like https://mysite.loc.",
+      "createFirst": "Create the first site",
+      "addExisting": "Add an existing folder",
+      "checkTitle": "What a site needs to run",
+      "apache": "Apache web server",
+      "php": "PHP",
+      "https": "Certificates for HTTPS (mkcert)",
+      "installed": "installed",
+      "missing": "missing",
+      "install": "Install"
+    },
+    "bulk": {
+      "title": "Bulk actions",
+      "selected": "{n} site selected | {n} sites selected",
+      "clear": "Clear selection",
+      "delete": "Delete…",
+      "selectAll": "Select all sites",
+      "selectRow": "Select site {domain}",
+      "deleteConfirm": "The configuration of the selected sites and their hosts entries will be removed (count: {n}). Files in the folders stay.",
+      "deleted": "{n} site deleted | {n} sites deleted",
+      "done": {
+        "enable": "{n} site enabled | {n} sites enabled",
+        "disable": "{n} site disabled | {n} sites disabled",
+        "apply": "Configuration applied to {n} site | Configuration applied to {n} sites"
+      }
+    },
+    "new": {
+      "lead": "Enter a domain and the folder of the site. Everything else has sensible defaults.",
+      "willRunAt": "The site will run at",
+      "domainHint": "For example myapp.loc. A .loc domain only works on this computer.",
+      "folder": "Site folder",
+      "pick": "Choose…",
+      "folderExists": "The folder exists",
+      "folderMissing": "The folder does not exist yet. Create it before you open the site.",
+      "folderHint": "The folder with your site, usually containing index.php or index.html.",
+      "runtime": "Runs on",
+      "noPhp": "No PHP version is installed.",
+      "installPhp": "Install PHP",
+      "nodeHint": "Apache forwards requests to your app. You start the app yourself or with the Node.js plugin.",
+      "https": "HTTPS",
+      "httpsNeedsCa": "The certificate authority is missing; HTTPS starts working after it is installed.",
+      "installHttps": "Install",
+      "httpsHint": "Turns on HTTPS with a local certificate and redirects http to https.",
+      "mysqlMissing": "MySQL is not installed.",
+      "installMysql": "Install MySQL",
+      "dbName": "Database name",
+      "more": "More options",
+      "aliasesEmpty": "Type an alias and press Enter",
+      "aliasesHint": "Other domains the site answers on. An asterisk stands for any subdomain: *.myapp.loc.",
+      "template": {
+        "php-generic": {
+          "label": "PHP (generic site)",
+          "hint": "The site folder is the folder with your index.php or front controller."
+        },
+        "wordpress": {
+          "label": "WordPress",
+          "hint": "The site folder is the root of the WordPress installation."
+        },
+        "laravel": {
+          "label": "Laravel",
+          "hint": "The site is served from the public sub-folder of the project. It was added to the path."
+        },
+        "symfony": {
+          "label": "Symfony",
+          "hint": "The site is served from the public sub-folder of the project. It was added to the path."
+        },
+        "nette": {
+          "label": "Nette",
+          "hint": "The site is served from the www sub-folder of the project. It was added to the path."
+        },
+        "nextjs": {
+          "label": "Next.js (Node)",
+          "hint": "Apache forwards requests to port 3000. Start the app with npm run dev."
+        },
+        "node-generic": {
+          "label": "Node.js (generic app)",
+          "hint": "Apache forwards requests to port 3000. The app can run on Node, Bun or Deno."
+        },
+        "static": {
+          "label": "Static site (HTML)",
+          "hint": "No PHP or Node. Apache returns the files of the site folder."
+        }
+      },
+      "err": {
+        "domainRequired": "Enter a domain.",
+        "domainSpaces": "The domain must not contain spaces.",
+        "domainInvalid": "The domain may only contain the letters a–z, digits, hyphens and dots.",
+        "domainNoTld": "The domain needs an ending, for example myapp.loc.",
+        "domainExists": "A site with this domain already exists.",
+        "folderRequired": "Choose the site folder."
+      }
     }
   },
   "uiMode": {
@@ -2962,14 +3105,12 @@
     "clipboardUnavailable": "Clipboard unavailable — URL: {url}"
   },
   "siteApply": {
-    "title": "Apply pipeline",
-    "notYet": "Not applied since the app started",
-    "allOk": "All steps succeeded",
+    "title": "Last configuration apply",
+    "notYet": "This site’s configuration has not been applied since the app started",
+    "allOk": "Configuration applied",
     "someFailed": "{n} step failed | {n} steps failed",
-    "when": "applied {when}",
-    "minutesAgo": "{n} min ago",
     "applyAgain": "Apply again",
-    "appliedOk": "Site applied",
+    "appliedOk": "Site configuration applied",
     "status": {
       "ok": "done",
       "skipped": "skipped",
@@ -2993,7 +3134,17 @@
       "vhost": "The web server plugin could not write the vhost; check that Apache is installed."
     },
     "failedStep": "The “{step}” step failed",
-    "moreFailed": "{n} more step failed. | {n} more steps failed."
+    "moreFailed": "{n} more step failed. | {n} more steps failed.",
+    "waitingStopped": "The configuration is written, but the site is not running yet: Apache is stopped",
+    "waitingMissing": "The configuration is written, but the site is not running yet: Apache is missing",
+    "applyNow": "Apply configuration",
+    "showSteps": "Show steps",
+    "hideSteps": "Hide steps",
+    "skip": {
+      "apacheDown": "Apache is not running",
+      "batch": "The reload happens once for all sites",
+      "hosts": "The hosts file is left alone (turned off by the environment)"
+    }
   },
   "servicesPage": {
     "title": "Services",
