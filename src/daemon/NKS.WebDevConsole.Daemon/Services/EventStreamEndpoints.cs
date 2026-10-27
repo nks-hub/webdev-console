@@ -55,7 +55,7 @@ internal static class EventStreamEndpoints
             using var ws = await ctx.WebSockets.AcceptWebSocketAsync();
 
             // Send recent log history first so the client doesn't start with an empty viewer
-            var history = await module.GetLogsAsync(50, ctx.RequestAborted);
+            var history = await ctx.RequestServices.GetRequiredService<ServiceLogBuffer>().TailAsync(module, 50, ctx.RequestAborted);
             foreach (var line in history)
             {
                 var payload = System.Text.Json.JsonSerializer.Serialize(new { line, ts = DateTime.UtcNow });

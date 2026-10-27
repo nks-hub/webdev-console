@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NKS.WebDevConsole.Core.Models;
+using NKS.WebDevConsole.Daemon.Binaries;
 using NKS.WebDevConsole.Daemon.Services;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
@@ -13,6 +14,8 @@ public class ServiceStartErrorTests
 {
     private static ServiceStatus Status(string id, ServiceState state) => new(id, id, state, null, 0, 0, null);
 
+    private static InstalledBinary[] Installed(string app) => [new(app, "1.0.0", "1.0", $"/bin/{app}/1.0.0", $"/bin/{app}/1.0.0/{app}")];
+
     [Fact]
     public void FailedStart_IsReportedWhileTheServiceIsStopped()
     {
@@ -20,9 +23,22 @@ public class ServiceStartErrorTests
         tracker.MarkStartRequested("mailpit");
         tracker.RecordStartFailure("mailpit", "mailpit.exe not found");
 
-        var dto = ServiceInfoProjection.Build(Status("mailpit", ServiceState.Stopped), [], tracker);
+        var dto = ServiceInfoProjection.Build(Status("mailpit", ServiceState.Stopped), Installed("mailpit"), tracker);
 
         Assert.Equal("mailpit.exe not found", dto.StartError);
+    }
+
+    [Fact]
+    public void StartError_IsNotReportedForAServiceThatIsNotInstalled()
+    {
+        // Auto-start also tries enabled plugins without a binary; the UI already says "not installed".
+        var tracker = new ServiceRunTracker();
+        tracker.RecordStartFailure("redis", "redis-server executable not found.");
+
+        var dto = ServiceInfoProjection.Build(Status("redis", ServiceState.Stopped), [], tracker);
+
+        Assert.False(dto.Installed);
+        Assert.Null(dto.StartError);
     }
 
     [Fact]

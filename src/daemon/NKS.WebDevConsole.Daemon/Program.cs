@@ -90,6 +90,7 @@ builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddSingleton<ServiceRunTracker>();
 builder.Services.AddSingleton<ShutdownCoordinator>();
 builder.Services.AddHostedService<HealthMonitor>();
+builder.Services.AddSingleton<ServiceLogBuffer>();
 builder.Services.AddSingleton<ServiceLogTailer>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ServiceLogTailer>());
 builder.Services.AddHostedService<MetricsHistoryService>();
