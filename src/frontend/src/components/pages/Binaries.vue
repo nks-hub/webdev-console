@@ -189,7 +189,8 @@
               <span class="mono col-version">{{ row.version }}</span>
               <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">{{ selectedApp === 'php' ? $t('php.default') : $t('binaries.default') }}</el-tag>
               <el-tag v-if="failedInstall?.app === selectedApp && failedInstall?.version === row.version" size="small" type="danger" effect="plain" class="col-tag">{{ $t('binaries.failedTag') }}</el-tag>
-              <el-tag v-else-if="row.version === suggestedVersion" size="small" type="primary" effect="plain" class="col-tag">{{ $t('binaries.suggestedTag') }}</el-tag>
+              <el-tag v-else-if="failedInstall?.app === selectedApp && row.version === suggestedVersion" size="small" type="primary" effect="plain" class="col-tag">{{ $t('binaries.suggestedTag') }}</el-tag>
+              <el-tag v-else-if="row.version === recommendedVersion" size="small" type="primary" effect="plain" class="col-tag">{{ $t('binaries.recommendedTag') }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column :label="$t('binaries.col.platforms')" min-width="200">
@@ -242,7 +243,7 @@
                 v-else-if="!row.installed"
                 size="small"
                 type="primary"
-                :plain="row.version !== suggestedVersion"
+                :plain="row.version !== suggestedVersion && row.version !== recommendedVersion"
                 :loading="installing.has(`${selectedApp}-${row.version}`)"
                 :disabled="progress.phase === 'running'"
                 @click="install(selectedApp!, row.version)"
@@ -615,8 +616,21 @@ const suggestedVersion = computed<string | null>(() => {
   return candidates.find(v => versionGreater(v, failed.version) > 0) ?? candidates[0] ?? null
 })
 
+/**
+ * What to install when nothing of the open module is installed yet (e.g. a
+ * link from Services): the newest stable build for this machine, for MySQL
+ * the newest 8.4 LTS rather than an Innovation release.
+ */
+const recommendedVersion = computed<string | null>(() => {
+  const app = selectedApp.value
+  if (!app || failedInstall.value?.app === app || installed.value.some(b => b.app === app)) return null
+  const stable = nativeVersions(app).filter(v => !v.includes('-'))
+  return (app === 'mysql' ? stable.find(v => v.startsWith('8.4.')) : undefined) ?? stable[0] ?? null
+})
+
 function rowClass({ row }: { row: DetailRow }): string {
-  return row.version === suggestedVersion.value && failedInstall.value?.app === selectedApp.value
+  const failedHere = failedInstall.value?.app === selectedApp.value
+  return (failedHere && row.version === suggestedVersion.value) || row.version === recommendedVersion.value
     ? 'row-suggested'
     : ''
 }

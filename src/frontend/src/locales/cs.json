@@ -1133,7 +1133,8 @@
       "source": "nejnovější z getcomposer.org"
     },
     "removeConfirmTitle": "Odebrat verzi",
-    "removeConfirmMessage": "Odebrat {app} {version}? Weby připnuté na tuto verzi přestanou fungovat, dokud nevyberete jinou verzi."
+    "removeConfirmMessage": "Odebrat {app} {version}? Weby připnuté na tuto verzi přestanou fungovat, dokud nevyberete jinou verzi.",
+    "recommendedTag": "Doporučená"
   },
   "php": {
     "title": "Verze PHP",

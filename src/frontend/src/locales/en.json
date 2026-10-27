@@ -1133,7 +1133,8 @@
       "source": "latest from getcomposer.org"
     },
     "removeConfirmTitle": "Remove version",
-    "removeConfirmMessage": "Remove {app} {version}? Sites pinned to this version will stop working until another version is selected."
+    "removeConfirmMessage": "Remove {app} {version}? Sites pinned to this version will stop working until another version is selected.",
+    "recommendedTag": "Recommended"
   },
   "php": {
     "title": "PHP Versions",
