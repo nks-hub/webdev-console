@@ -1,29 +1,26 @@
 <template>
   <div class="help-page">
     <!-- Page header -->
-    <div class="page-header help-page-header">
-      <h1 class="page-title">{{ t('help.title') }}</h1>
+    <header class="wdc-page-hero">
+      <h1>{{ t('help.title') }}</h1>
       <div class="help-header-actions">
-        <el-button size="small" @click="requestOnboarding">
+        <el-button @click="requestOnboarding">
           {{ t('help.runSetupWizard') }}
         </el-button>
-        <el-button type="primary" size="small" @click="openWizard">
-          &#9654; {{ t('help.startGettingStarted') }}
+        <el-button type="primary" :icon="VideoPlay" @click="openWizard">
+          {{ t('help.startGettingStarted') }}
         </el-button>
       </div>
-    </div>
+    </header>
 
-    <!-- Breadcrumb -->
-    <div class="help-breadcrumb" v-if="activeTopic">
-      <span v-activate:link class="bc-item bc-link" @click="clearTopic">{{ t('help.breadcrumbRoot') }}</span>
-      <span class="bc-sep">/</span>
-      <span v-activate:link class="bc-item bc-link" @click="clearTopic">{{ t(`help.groups.${activeGroup?.key}`) }}</span>
-      <span class="bc-sep">/</span>
-      <span class="bc-item bc-current">{{ t(`help.topics.${activeTopic.key}.title`) }}</span>
-    </div>
-    <div class="help-breadcrumb" v-else>
-      <span class="bc-item bc-current">{{ t('help.breadcrumbRoot') }}</span>
-    </div>
+    <!-- Breadcrumb: root and group both open the first topic they contain. -->
+    <nav class="help-breadcrumb" :aria-label="t('help.breadcrumbRoot')" v-if="activeTopic">
+      <span v-activate:link class="bc-item bc-link" @click="openRoot">{{ t('help.breadcrumbRoot') }}</span>
+      <span class="bc-sep" aria-hidden="true">/</span>
+      <span v-activate:link class="bc-item bc-link" @click="activeGroup && selectFirstInGroup(activeGroup)">{{ t(`help.groups.${activeGroup?.key}`) }}</span>
+      <span class="bc-sep" aria-hidden="true">/</span>
+      <span class="bc-item bc-current" aria-current="page">{{ t(`help.topics.${activeTopic.key}.title`) }}</span>
+    </nav>
 
     <div class="help-body">
       <!-- Sidebar -->
@@ -88,14 +85,6 @@
       <!-- Content pane -->
       <article class="help-content" ref="contentRef">
         <template v-if="activeTopic">
-          <!-- Video placeholder (task 32) -->
-          <div class="help-video-placeholder">
-            <div class="video-inner">
-              <span class="video-play-icon">&#9654;</span>
-              <span class="video-label">{{ t('help.comingSoonVideo') }}</span>
-            </div>
-          </div>
-
           <!-- In-page anchor nav for long topics -->
           <nav v-if="contentAnchors.length > 1" class="help-anchor-nav" :aria-label="$t('help.jumpTo')">
             <span class="anchor-nav-label">{{ $t('help.jumpTo') }}:</span>
@@ -112,22 +101,6 @@
           <div class="help-prose" v-html="t(`help.topics.${activeTopic.key}.body`)" ref="proseRef" />
         </template>
 
-        <div v-else class="help-welcome">
-          <div class="welcome-icon">?</div>
-          <h2 class="welcome-title">{{ t('help.title') }}</h2>
-          <p class="welcome-hint">{{ t('help.searchPlaceholder') }}</p>
-          <div class="welcome-groups">
-            <button
-              v-for="group in groups"
-              :key="group.key"
-              class="welcome-group-btn"
-              @click="selectFirstInGroup(group)"
-            >
-              <el-icon><component :is="group.icon" /></el-icon>
-              {{ t(`help.groups.${group.key}`) }}
-            </button>
-          </div>
-        </div>
       </article>
     </div>
 
@@ -141,7 +114,7 @@ import { useI18n } from 'vue-i18n'
 import {
   Search, House, Monitor, DataLine, Lock, Connection, Document,
   Setting, Box, Download, DataBoard, Tools, Histogram, ArrowDown,
-  Menu, Star,
+  Menu, Star, VideoPlay,
 } from '@element-plus/icons-vue'
 import GettingStartedWizard from '../shared/GettingStartedWizard.vue'
 import { requestOnboarding } from '../../utils/onboarding'
@@ -266,9 +239,8 @@ function selectFirstInGroup(group: Group) {
   }
 }
 
-function clearTopic() {
-  activeTopic.value = null
-  activeGroup.value = null
+function openRoot() {
+  selectFirstInGroup(groups[0])
 }
 
 function scrollToAnchor(id: string) {
@@ -293,29 +265,8 @@ onMounted(() => {
   gap: var(--wdc-space-2);
 }
 .help-page {
-  display: flex;
-  flex-direction: column;
   height: 100%;
   overflow: hidden;
-}
-
-.help-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--wdc-space-3);
-  flex-wrap: wrap;
-  padding: 0 0 var(--wdc-space-4);
-  border-bottom: 1px solid var(--wdc-border);
-  background: transparent;
-}
-.help-page-header h1,
-.help-page-header h2 {
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--wdc-text);
-  margin: 0;
 }
 
 /* Breadcrumb */
@@ -323,8 +274,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-1);
-  padding: var(--wdc-space-1) 0 var(--wdc-space-2-5);
-  font-size: 0.78rem;
+  padding: 0;
+  font-size: 0.82rem;
   color: var(--wdc-text-3);
   flex-shrink: 0;
 }
@@ -333,7 +284,7 @@ onMounted(() => {
 
 .bc-link {
   cursor: pointer;
-  color: var(--wdc-accent);
+  color: var(--wdc-accent-ink);
   transition: opacity 0.15s;
 }
 
@@ -434,9 +385,9 @@ onMounted(() => {
 .help-nav-item:hover { background: var(--wdc-surface-2); color: var(--wdc-text); }
 
 .help-nav-item.active {
-  background: rgba(86, 194, 255, 0.08);
+  background: var(--wdc-accent-dim);
   border-color: var(--wdc-border);
-  color: var(--wdc-accent);
+  color: var(--wdc-accent-ink);
   font-weight: 600;
 }
 
@@ -464,38 +415,6 @@ onMounted(() => {
   background: var(--wdc-surface);
 }
 
-/* Video placeholder */
-.help-video-placeholder {
-  width: 100%;
-  max-width: 640px;
-  aspect-ratio: 16 / 9;
-  background: var(--wdc-surface-2);
-  border: 2px dashed var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--wdc-space-4-5);
-}
-
-.video-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--wdc-space-2-5);
-  color: var(--wdc-text-3);
-}
-
-.video-play-icon {
-  font-size: 2rem;
-  opacity: 0.4;
-}
-
-.video-label {
-  font-size: 0.82rem;
-  font-style: italic;
-}
-
 /* Anchor nav */
 .help-anchor-nav {
   display: flex;
@@ -518,7 +437,7 @@ onMounted(() => {
 }
 
 .anchor-nav-link {
-  color: var(--wdc-accent);
+  color: var(--wdc-accent-ink);
   text-decoration: none;
   transition: opacity 0.15s;
 }
@@ -558,79 +477,13 @@ onMounted(() => {
   border-radius: var(--wdc-radius-sm);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82rem;
-  color: var(--wdc-accent);
+  color: var(--wdc-accent-ink);
 }
 
-.help-prose :deep(a) { color: var(--wdc-accent); text-decoration: none; }
-.help-prose :deep(a:hover) { text-decoration: underline; }
+.help-prose :deep(a) { color: var(--wdc-accent-ink); text-decoration: underline; text-decoration-color: var(--wdc-accent); text-underline-offset: 0.15em; }
+.help-prose :deep(a:hover) { text-decoration-thickness: 2px; }
 .help-prose :deep(ul) { padding-left: 20px; margin: 6px 0 12px; }
 .help-prose :deep(li) { margin-bottom: 5px; }
 .help-prose :deep(strong) { color: var(--wdc-text); font-weight: 600; }
 .help-prose :deep(em) { color: var(--wdc-text-2); }
-
-/* Welcome state */
-.help-welcome {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--wdc-space-7) var(--wdc-space-5);
-  text-align: center;
-  gap: var(--wdc-space-3);
-}
-
-.welcome-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--wdc-surface-2);
-  border: 2px solid var(--wdc-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  font-weight: 700;
-  font-style: italic;
-  color: var(--wdc-text-3);
-}
-
-.welcome-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  margin: 0;
-}
-
-.welcome-hint {
-  font-size: 0.88rem;
-  color: var(--wdc-text-3);
-  margin: 0;
-}
-
-.welcome-groups {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--wdc-space-2);
-  justify-content: center;
-  margin-top: var(--wdc-space-3);
-}
-
-.welcome-group-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-1-5);
-  padding: var(--wdc-space-2) var(--wdc-space-3-5);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  color: var(--wdc-text-2);
-  font-size: 0.84rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.welcome-group-btn:hover {
-  background: rgba(86, 194, 255, 0.08);
-  border-color: var(--wdc-accent);
-  color: var(--wdc-accent);
-}
 </style>
