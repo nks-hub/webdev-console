@@ -189,12 +189,12 @@
             type="button"
             class="session-toggle"
             :aria-expanded="!collapsedSessions.has(session.key)"
-            :aria-label="t('mcpActivity.session.toggle', { caller: session.caller })"
+            :aria-label="t('mcpActivity.session.toggle', { caller: callerLabel(session.caller) })"
             @click.stop="toggleSession(session.key)"
           >
             <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
           </button>
-          <code class="mono caller-pill">{{ session.caller }}</code>
+          <code class="mono caller-pill" :title="session.caller">{{ callerLabel(session.caller) }}</code>
           <code
             v-if="session.sessionId"
             class="mono session-pill clickable"
@@ -314,7 +314,7 @@
           <code v-if="row.entry.sessionId" class="mono session-pill" :title="row.entry.sessionId">
             {{ row.entry.sessionId.slice(0, 8) }}
           </code>
-          <code class="mono caller-pill">{{ row.entry.caller }}</code>
+          <code class="mono caller-pill" :title="row.entry.caller">{{ callerLabel(row.entry.caller) }}</code>
         </div>
       </div>
     </div>
@@ -388,6 +388,12 @@ const expandedReadGroups = ref<Set<string>>(new Set())
 const expandedRows = ref<Set<string>>(new Set())
 // Map MCP danger level → HealthStatusDot 4-level vocabulary.
 // read = informational, mutate = warning, destructive = danger.
+// The MCP server records the AI client as `client:<name>` (older servers
+// wrote 'mcp-server' for every client).
+function callerLabel(caller: string): string {
+  return caller.startsWith('client:') ? caller.slice('client:'.length) : caller
+}
+
 function dangerToDotLevel(level: string | undefined): 'ok' | 'warn' | 'err' | 'muted' {
   if (level === 'destructive') return 'err'
   if (level === 'mutate') return 'warn'

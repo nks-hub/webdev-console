@@ -421,7 +421,7 @@
   },
   "mcpOnboarding": {
     "title": "Kolik toho smí AI udělat bez ptaní?",
-    "hint": "Vyberte profil. Pravidla pak můžete upravit v záložce Pravidla.",
+    "hint": "Vyberte profil. Pravidla pak můžete upravit níže.",
     "dismiss": "Přeskočit",
     "recommended": "doporučeno",
     "applied": "Profil {profile} je nastavený",

@@ -421,7 +421,7 @@
   },
   "mcpOnboarding": {
     "title": "How much may an AI do without asking?",
-    "hint": "Pick a profile. You can change the rules later under Rules.",
+    "hint": "Pick a profile. You can change the rules below afterwards.",
     "dismiss": "Skip",
     "recommended": "recommended",
     "applied": "Profile {profile} is set",
