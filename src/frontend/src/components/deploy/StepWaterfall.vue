@@ -76,15 +76,15 @@ function formatMs(ms: number): string {
 .waterfall {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
   font-family: var(--el-font-family);
 }
 .step {
   display: grid;
   grid-template-columns: 24px 1fr auto auto;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-1-5) var(--wdc-space-3);
   border-left: 3px solid transparent;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -101,7 +101,7 @@ function formatMs(ms: number): string {
 }
 .step-status {
   font-size: 0.7em; letter-spacing: 0.05em;
-  padding: 2px 8px; border-radius: 999px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2); border-radius: 999px;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   font-weight: 600;
@@ -113,7 +113,7 @@ function formatMs(ms: number): string {
 .ponr-banner {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 10px;
-  margin: 10px 0; padding: 10px 16px;
+  margin: var(--wdc-space-2-5) 0; padding: 10px 16px;
   border-radius: var(--wdc-radius);
   font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
   font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;

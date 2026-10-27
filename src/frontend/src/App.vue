@@ -324,7 +324,7 @@ function handleKeydown(e: KeyboardEvent) {
     const idx = parseInt(e.key) - 1
     // Skip Advanced-only pages in Simple mode instead of letting the router
     // guard bounce the shortcut to /sites.
-    if (idx < routes.length && !(router.resolve(routes[idx]).meta.requiresAdvanced && uiMode.isSimple)) {
+    if (idx < routes.length && !(router.resolve(routes[idx]).meta.advancedNav && uiMode.isSimple)) {
       router.push(routes[idx])
     }
   }
@@ -466,11 +466,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 44px 64px;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-7) var(--wdc-space-8);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border-strong);
-  border-radius: 14px;
+  border-radius: var(--wdc-radius-md);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
   min-width: 360px;
 }
@@ -500,7 +500,7 @@ onUnmounted(() => {
   /* F70: slower (1.5s) + ease-in-out so the ring glides instead of racing.
      Previous 0.9s linear read as "splašený" during multi-second boots. */
   animation: wdc-spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  margin: 4px 0;
+  margin: var(--wdc-space-1) 0;
   transition: border-top-color 0.4s ease;
 }
 
@@ -530,7 +530,7 @@ onUnmounted(() => {
   font-size: 2.4rem;
   line-height: 1;
   color: var(--wdc-warning, #f5a623);
-  margin: 2px 0;
+  margin: var(--wdc-space-0-5) 0;
 }
 .splash-status--error {
   color: var(--wdc-text);
@@ -544,12 +544,12 @@ onUnmounted(() => {
 }
 .splash-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 4px;
+  gap: var(--wdc-space-2-5);
+  margin-top: var(--wdc-space-1);
 }
 .splash-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: var(--wdc-space-2) var(--wdc-space-4);
+  border-radius: var(--wdc-radius-sm);
   border: 1px solid var(--wdc-border-strong);
   background: var(--wdc-surface-2, var(--wdc-surface));
   color: var(--wdc-text);
@@ -562,7 +562,7 @@ onUnmounted(() => {
 .splash-btn--primary {
   background: var(--wdc-accent);
   border-color: var(--wdc-accent);
-  color: #fff;
+  color: var(--wdc-on-accent);
 }
 .splash-btn--primary:hover { filter: brightness(1.08); }
 
@@ -583,8 +583,8 @@ onUnmounted(() => {
   left: 12px;
   z-index: 200;
   flex-direction: column;
-  gap: 5px;
-  padding: 8px;
+  gap: var(--wdc-space-1);
+  padding: var(--wdc-space-2);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -595,7 +595,7 @@ onUnmounted(() => {
   width: 20px;
   height: 2px;
   background: var(--wdc-text);
-  border-radius: 2px;
+  border-radius: var(--wdc-radius-2xs);
 }
 
 .sidebar-drawer :deep(.el-drawer__body) {

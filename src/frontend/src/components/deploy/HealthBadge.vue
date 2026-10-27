@@ -77,9 +77,9 @@ onMounted(() => {
 .hb {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
+  border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 600;
   border: 1px solid var(--wdc-border);

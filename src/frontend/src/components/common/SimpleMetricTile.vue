@@ -54,13 +54,13 @@ const iconComponent = computed(() => {
 .metric-tile {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-radius: 12px;
-  padding: 18px 20px;
+  border-radius: var(--wdc-radius-md);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   min-height: 104px;
 }
 .metric-tile:hover {
@@ -84,7 +84,7 @@ const iconComponent = computed(() => {
 .tile-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   color: var(--el-text-color-secondary);
 }
 .tile-icon { font-size: 16px; }

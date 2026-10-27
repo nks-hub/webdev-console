@@ -91,7 +91,7 @@
                 :closable="true"
                 show-icon
                 :title="databasesError"
-                style="margin-bottom: 14px"
+                style="margin-bottom: var(--wdc-space-3-5)"
                 @close="databasesError = ''"
               />
 
@@ -281,7 +281,7 @@
                 :closable="false"
                 show-icon
                 :title="usersError"
-                style="margin-bottom: 12px"
+                style="margin-bottom: var(--wdc-space-3)"
               />
               <el-table :data="users" size="small" stripe class="users-table" v-loading="usersLoading">
                 <el-table-column prop="userName" :label="$t('mysqlPlugin.userName')" min-width="160" />
@@ -361,11 +361,11 @@
                 type="warning"
                 :closable="false"
                 show-icon
-                style="margin-bottom: 16px"
+                style="margin-bottom: var(--wdc-space-4)"
               >
                 <template #title>{{ $t('mysqlPlugin.resetWarning') }}</template>
                 <template #default>
-                  <p style="margin: 6px 0 0">{{ $t('mysqlPlugin.resetDescription') }}</p>
+                  <p style="margin: var(--wdc-space-1-5) 0 0">{{ $t('mysqlPlugin.resetDescription') }}</p>
                 </template>
               </el-alert>
               <el-form label-width="180px" size="default">
@@ -403,7 +403,7 @@
             :closable="false"
             show-icon
             :title="$t('mysqlPlugin.tuningPending')"
-            style="margin-bottom: 16px"
+            style="margin-bottom: var(--wdc-space-4)"
           />
           <EditCard :title="$t('mysqlPlugin.tuningParams')">
             <el-form label-width="240px" size="default">
@@ -1057,7 +1057,7 @@ watch(() => route.query.tab, value => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -1111,7 +1111,7 @@ watch(() => route.query.tab, value => {
 .user-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 0 18px;
+  gap: 0 var(--wdc-space-4-5);
 }
 .user-form-grid :deep(.el-form-item) { margin-bottom: 14px; }
 .muted { color: var(--wdc-text-3); }

@@ -100,9 +100,9 @@ defineExpose({ startValidation, setResult, reset })
 .validation-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1-5) var(--wdc-space-3-5);
+  border-radius: var(--wdc-radius-full);
   font-size: 0.8rem;
   font-weight: 600;
   border: 1px solid currentColor;

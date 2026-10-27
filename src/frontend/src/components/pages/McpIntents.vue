@@ -659,16 +659,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mcp-intents-page {
-  padding: 16px 24px;
+  padding: var(--wdc-space-4) var(--wdc-space-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }
@@ -687,10 +687,10 @@ onBeforeUnmount(() => {
 .state-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .domain-stats {
-  padding: 14px 16px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -699,7 +699,7 @@ onBeforeUnmount(() => {
 .domain-stats-title {
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  margin-bottom: 6px;
+  margin-bottom: var(--wdc-space-1-5);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -707,13 +707,13 @@ onBeforeUnmount(() => {
 .domain-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .domain-stats-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: var(--wdc-space-1);
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border-radius: var(--wdc-radius-sm);
   border: 1px solid var(--wdc-border);
@@ -726,7 +726,7 @@ onBeforeUnmount(() => {
 .domain-stats-counts {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .domain-stats-chip {
   font-variant-numeric: tabular-nums;
@@ -735,8 +735,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -749,13 +749,13 @@ onBeforeUnmount(() => {
 .bulk-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: var(--el-color-warning-light-9, #fdf6ec);
   border: 1px solid var(--el-color-warning, #e6a23c);
   border-left-width: 4px;
   border-radius: var(--wdc-radius);
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
   box-shadow: var(--wdc-shadow-sm);
 }
 .intent-table {
@@ -764,10 +764,10 @@ onBeforeUnmount(() => {
 .intent-pagination {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: var(--wdc-space-3);
 }
 .kind-id-mono {
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
   font-size: 11px;
   color: var(--el-text-color-secondary);
   opacity: 0.7;
@@ -793,7 +793,7 @@ onBeforeUnmount(() => {
 .auto-grant:hover { opacity: 0.85; }
 .grant-drilldown-banner { margin-bottom: 4px; }
 .state-icon {
-  margin-right: 4px;
+  margin-right: var(--wdc-space-1);
   vertical-align: -2px;
 }
 </style>

@@ -226,15 +226,15 @@ void computed(() => props.site.domain)
   transform: translateY(-1px);
 }
 .site-card :deep(.el-card__body) {
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .card-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   min-width: 0;
   cursor: pointer;
   outline-offset: 4px;
@@ -250,7 +250,7 @@ void computed(() => props.site.domain)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   min-width: 0;
 }
 .card-title {
@@ -266,7 +266,7 @@ void computed(() => props.site.domain)
 .card-status {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 0.78rem;
   color: var(--wdc-text-2);
 }
@@ -280,9 +280,9 @@ void computed(() => props.site.domain)
 }
 .card-badges {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
 }
 .badge-php {
   background: var(--wdc-accent) !important;
@@ -291,8 +291,8 @@ void computed(() => props.site.domain)
 .card-activity {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--wdc-space-2);
+  margin-top: var(--wdc-space-1-5);
   font-size: 0.74rem;
   color: var(--wdc-text-2);
 }
@@ -305,8 +305,8 @@ void computed(() => props.site.domain)
 .card-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: var(--wdc-space-1-5);
+  margin-top: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .danger-item { color: var(--el-color-danger); }

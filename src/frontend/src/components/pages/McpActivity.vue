@@ -655,7 +655,7 @@ onBeforeUnmount(() => {
 .analytics-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 @media (max-width: 900px) {
   .analytics-row { grid-template-columns: 1fr; }
@@ -663,7 +663,7 @@ onBeforeUnmount(() => {
 .analytics-timeline, .analytics-toptools { min-width: 0; }
 .perf-kpis {
   display: flex; flex-wrap: wrap; gap: 8px;
-  padding: 12px 16px;
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -672,11 +672,11 @@ onBeforeUnmount(() => {
 .kpi {
   flex: 1 1 100px;
   min-width: 90px;
-  padding: 4px 10px;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
   border-left: 2px solid var(--el-border-color);
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .kpi.warn { border-left-color: var(--el-color-warning); }
 .kpi.danger { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
@@ -692,7 +692,7 @@ onBeforeUnmount(() => {
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
   flex: 1 1 120px; min-width: 100px;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -727,7 +727,7 @@ onBeforeUnmount(() => {
 .stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .activity-filters {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
 }
 .total-count { font-size: 12px; }
 
@@ -753,7 +753,7 @@ onBeforeUnmount(() => {
 .session-card.has-error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
 .session-header {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   cursor: pointer;
   user-select: none;
@@ -772,8 +772,8 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 .count-pill {
-  padding: 2px 10px;
-  border-radius: 999px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
+  border-radius: var(--wdc-radius-full);
   font-size: 11px;
   font-weight: 700;
   background: var(--wdc-surface-2);
@@ -798,7 +798,7 @@ onBeforeUnmount(() => {
 .activity-group:last-child { border-bottom: none; }
 .collapsed-reads-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px;
+  padding: var(--wdc-space-2) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   cursor: pointer;
   font-size: 12px;
@@ -808,7 +808,7 @@ onBeforeUnmount(() => {
 .collapsed-reads-row .chev { font-size: 10px; }
 .call-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
   font-size: 12px;
   border-top: 1px solid var(--wdc-border);
   transition: background 0.12s;
@@ -819,7 +819,7 @@ onBeforeUnmount(() => {
 .call-row.clickable-row { cursor: pointer; }
 .call-row.expanded { background: var(--wdc-accent-dim); }
 .row-detail {
-  padding: 12px 18px 14px 32px;
+  padding: var(--wdc-space-3) var(--wdc-space-4-5) var(--wdc-space-3-5) var(--wdc-space-6);
   background: var(--wdc-surface-2);
   border-top: 1px dashed var(--wdc-border);
   font-size: 12px;
@@ -827,14 +827,14 @@ onBeforeUnmount(() => {
 .detail-grid {
   display: grid;
   grid-template-columns: 120px 1fr;
-  gap: 4px 12px;
+  gap: var(--wdc-space-1) var(--wdc-space-3);
 }
 .detail-label {
   color: var(--el-text-color-secondary);
   text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.5px;
-  padding-top: 2px;
+  padding-top: var(--wdc-space-0-5);
 }
 .detail-value { word-break: break-all; }
 .detail-value.clickable { cursor: pointer; color: var(--el-color-primary); }
@@ -844,8 +844,8 @@ onBeforeUnmount(() => {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
-  padding: 10px 12px;
-  margin: 4px 0;
+  padding: var(--wdc-space-2-5) var(--wdc-space-3);
+  margin: var(--wdc-space-1) 0;
   font-size: 11px;
   max-height: 200px;
   overflow: auto;
@@ -857,10 +857,10 @@ onBeforeUnmount(() => {
 .tool-name { font-weight: 600; }
 .args-preview { color: var(--el-text-color-secondary); }
 .session-pill, .caller-pill {
-  padding: 2px 8px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 10px;
   font-weight: 500;
 }

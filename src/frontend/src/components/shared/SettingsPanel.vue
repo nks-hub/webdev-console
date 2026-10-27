@@ -52,15 +52,15 @@ defineProps<{
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 18px;
+  padding: var(--wdc-space-4-5);
 }
 
 .settings-panel-header {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-3-5);
+  padding-bottom: var(--wdc-space-3);
   border-bottom: 1px solid var(--wdc-border);
 }
 
@@ -70,7 +70,7 @@ defineProps<{
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
   background: color-mix(in oklab, var(--wdc-accent) 14%, transparent);
   color: var(--wdc-accent);
   flex-shrink: 0;
@@ -93,7 +93,7 @@ defineProps<{
 }
 
 .settings-panel-subtitle {
-  margin: 3px 0 0;
+  margin: var(--wdc-space-1) 0 0;
   color: var(--wdc-text-2);
   font-size: 0.82rem;
   line-height: 1.4;
@@ -105,8 +105,8 @@ defineProps<{
 
 .settings-panel-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--wdc-space-2);
+  margin-top: var(--wdc-space-2-5);
   flex-wrap: wrap;
 }
 </style>

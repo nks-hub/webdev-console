@@ -122,13 +122,13 @@ onBeforeUnmount(() => {
   border: 1px solid var(--el-color-warning-light-5);
   background: linear-gradient(135deg, var(--el-color-warning-light-9), var(--wdc-surface));
   border-radius: var(--wdc-radius);
-  padding: 14px 18px;
-  margin-bottom: 12px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
+  margin-bottom: var(--wdc-space-3);
   box-shadow: var(--wdc-shadow-sm);
 }
 .banner-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 .banner-title { font-weight: 600; font-size: 13px; }
 .dismiss-btn { padding: 0 4px; }
@@ -136,8 +136,8 @@ onBeforeUnmount(() => {
 .suggestion-list { display: flex; flex-direction: column; gap: 4px; }
 .suggestion-row {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-2) var(--wdc-space-3);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);

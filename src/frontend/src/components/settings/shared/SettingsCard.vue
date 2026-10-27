@@ -19,16 +19,16 @@ defineProps<{
 <style scoped>
 .settings-card {
   border: 1px solid var(--wdc-border);
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
   background: var(--wdc-surface-2);
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
 }
 
 .settings-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   border-bottom: 1px solid var(--wdc-border);
 }
 
@@ -38,6 +38,6 @@ defineProps<{
 }
 
 .settings-card-body {
-  padding: 18px;
+  padding: var(--wdc-space-4-5);
 }
 </style>

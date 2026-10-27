@@ -48,14 +48,14 @@
     <template v-else>
     <!-- Offline state -->
     <div v-if="!daemonStore.connected" class="offline-banner">
-      <el-skeleton :rows="5" animated style="padding: 0 16px;" />
+      <el-skeleton :rows="5" animated style="padding: 0 var(--wdc-space-4);" />
       <el-alert
         type="warning"
         :title="$t('dashboard.connectingTitle')"
         :description="$t('dashboard.connectingDesc')"
         :closable="false"
         show-icon
-        style="margin: 16px;"
+        style="margin: var(--wdc-space-4);"
       />
     </div>
 
@@ -68,7 +68,7 @@
         tone="info"
         :title="$t('dashboard.simple.updateAvailable.title')"
         :subtitle="$t('dashboard.simple.updateAvailable.subtitle', { version: updatesStore.latestVersion })"
-        style="margin: 0 16px 12px"
+        style="margin: 0 var(--wdc-space-4) var(--wdc-space-3)"
       >
         <template #icon><el-icon><Download /></el-icon></template>
         <template #action>
@@ -634,7 +634,7 @@ function closeConfig() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   /*
     Unified accent-dim gradient strip across every page. Was a flat
@@ -647,7 +647,7 @@ function closeConfig() {
 .header-title-block {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .page-title {
@@ -661,7 +661,7 @@ function closeConfig() {
 .page-count {
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  gap: var(--wdc-space-1);
   font-size: 0.78rem;
 }
 
@@ -682,18 +682,18 @@ function closeConfig() {
 
 .count-label {
   color: var(--wdc-text-3);
-  margin-left: 2px;
+  margin-left: var(--wdc-space-0-5);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 /* ─── Offline banner ──────────────────────────────────────────────────────── */
 .offline-banner {
-  padding: 16px 20px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
 }
 
 /* ─── Service list ────────────────────────────────────────────────────────── */
@@ -705,8 +705,8 @@ function closeConfig() {
 .service-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 24px;
+  gap: var(--wdc-space-3-5);
+  padding: 0 var(--wdc-space-5);
   height: 58px;
   /*
     Was hardcoded rgba(255,255,255,0.06) — invisible in light mode.
@@ -744,7 +744,7 @@ function closeConfig() {
 .svc-identity {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   min-width: 0;
   flex: 1;
 }
@@ -769,7 +769,7 @@ function closeConfig() {
 .svc-port {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--wdc-space-1);
   flex-shrink: 0;
   width: 110px;
 }
@@ -790,7 +790,7 @@ function closeConfig() {
 .svc-metrics {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-shrink: 0;
   width: 240px;
   justify-content: flex-start;
@@ -826,7 +826,7 @@ function closeConfig() {
 .svc-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -834,7 +834,7 @@ function closeConfig() {
 .action-btn {
   font-size: 0.75rem !important;
   color: var(--wdc-text-3) !important;
-  padding: 0 8px !important;
+  padding: 0 var(--wdc-space-2) !important;
   height: 26px !important;
   line-height: 26px !important;
 }
@@ -844,7 +844,7 @@ function closeConfig() {
 }
 
 .svc-toggle {
-  margin-left: 8px;
+  margin-left: var(--wdc-space-2);
 }
 
 /* ─── Mono util ───────────────────────────────────────────────────────────── */
@@ -854,7 +854,7 @@ function closeConfig() {
 
 /* ─── Empty state ─────────────────────────────────────────────────────────── */
 .empty-state {
-  padding: 48px 0;
+  padding: var(--wdc-space-7) 0;
 }
 
 /* ─── Log drawer ──────────────────────────────────────────────────────────── */
@@ -875,7 +875,7 @@ function closeConfig() {
 .log-loading {
   color: var(--wdc-text-3);
   font-size: 0.82rem;
-  padding: 16px 0;
+  padding: var(--wdc-space-4) 0;
 }
 
 /* ─── Dashboard subtitle ────────────────────────────────────────────────── */
@@ -889,15 +889,15 @@ function closeConfig() {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 18px 24px 8px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5) var(--wdc-space-2);
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: var(--wdc-space-3-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -933,7 +933,7 @@ function closeConfig() {
 .stat-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
   min-width: 0;
   flex: 1;
 }
@@ -956,21 +956,21 @@ function closeConfig() {
 
 /* ─── Metrics charts row ─────────────────────────────────────────────────── */
 .metrics-section {
-  padding: 8px 24px 16px;
+  padding: var(--wdc-space-2) var(--wdc-space-5) var(--wdc-space-4);
   flex-shrink: 0;
 }
 
 .metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .metric-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  padding: 18px 20px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   height: 160px;
   overflow: hidden;
   box-shadow: var(--wdc-shadow-sm);
@@ -983,7 +983,7 @@ function closeConfig() {
 
 /* ─── Services panel ─────────────────────────────────────────────────────── */
 .services-panel {
-  margin: 0 24px 16px;
+  margin: 0 var(--wdc-space-5) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -994,8 +994,8 @@ function closeConfig() {
 .panel-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 16px 22px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-4) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
 }
@@ -1011,7 +1011,7 @@ function closeConfig() {
 .panel-count {
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  gap: var(--wdc-space-1);
   font-size: 0.78rem;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -1019,8 +1019,8 @@ function closeConfig() {
 /* ─── Quick actions ──────────────────────────────────────────────────────── */
 .quick-actions {
   display: flex;
-  gap: 8px;
-  padding: 4px 24px 20px;
+  gap: var(--wdc-space-2);
+  padding: var(--wdc-space-1) var(--wdc-space-5) var(--wdc-space-4-5);
   flex-wrap: wrap;
 }
 
@@ -1028,7 +1028,7 @@ function closeConfig() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 
 .metric-card-title {
@@ -1053,7 +1053,7 @@ function closeConfig() {
 .config-file-header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 
 .config-file-name {
@@ -1081,7 +1081,7 @@ function closeConfig() {
   color: var(--wdc-text-2);
   white-space: pre-wrap;
   word-break: break-all;
-  padding: 12px;
+  padding: var(--wdc-space-3);
   background: var(--wdc-bg);
   border-radius: var(--wdc-radius-sm);
   max-height: 500px;
@@ -1090,14 +1090,14 @@ function closeConfig() {
 
 /* Recent activity timeline (Phase 4) */
 .activity-section {
-  margin-top: 24px;
-  padding: 0 24px 24px;
+  margin-top: var(--wdc-space-5);
+  padding: 0 var(--wdc-space-5) var(--wdc-space-5);
 }
 .activity-section .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
 }
 .activity-section .section-title {
   font-size: 0.8rem;
@@ -1107,12 +1107,12 @@ function closeConfig() {
   color: var(--wdc-text-3);
 }
 .activity-timeline {
-  padding-left: 4px;
+  padding-left: var(--wdc-space-1);
 }
 .activity-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-size: 0.82rem;
 }
 .activity-op {

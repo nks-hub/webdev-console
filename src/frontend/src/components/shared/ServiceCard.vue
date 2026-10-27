@@ -64,7 +64,7 @@
       <span v-if="statusText === 'crashed'" class="offline-crashed">{{ $t('services.card.crashed') }}</span>
       <span v-else-if="statusText === 'starting'" class="offline-starting">{{ $t('services.card.starting') }}</span>
       <span v-else class="offline-stopped">{{ $t('services.card.notRunning') }}</span>
-      <span class="meta-item" v-if="service.version" style="margin-top: 4px;">
+      <span class="meta-item" v-if="service.version" style="margin-top: var(--wdc-space-1);">
         <span class="meta-label">v</span>
         <span class="meta-val">{{ service.version }}</span>
       </span>
@@ -200,10 +200,10 @@ function formatUptime(seconds: number): string {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 20px;
+  padding: var(--wdc-space-4-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
   transition: border-color 0.12s, background 0.12s;
   border-left-width: 4px;
   border-left-style: solid;
@@ -232,7 +232,7 @@ function formatUptime(seconds: number): string {
 .svc-name-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .svc-status-dot {
@@ -267,13 +267,13 @@ function formatUptime(seconds: number): string {
 .svc-metrics {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .metric-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .metric-label {
@@ -289,20 +289,20 @@ function formatUptime(seconds: number): string {
   flex: 1;
   height: 8px;
   background: var(--wdc-elevated);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--wdc-border);
 }
 
 .metric-bar {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   overflow: hidden;
 }
 
 .metric-bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   transition: width 0.4s ease;
 }
 
@@ -320,15 +320,15 @@ function formatUptime(seconds: number): string {
 
 .svc-meta {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .meta-label {
@@ -347,14 +347,14 @@ function formatUptime(seconds: number): string {
 .svc-offline {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   min-height: 42px;
   justify-content: center;
 }
 
 .svc-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .svc-actions .el-button {

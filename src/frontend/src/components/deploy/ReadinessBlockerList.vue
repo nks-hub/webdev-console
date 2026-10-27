@@ -1,5 +1,5 @@
 <template>
-  <ul style="padding-left: 16px; margin: 0">
+  <ul style="padding-left: var(--wdc-space-4); margin: 0">
     <!-- Renders blockerDetails (?explain=true payload) when available with
          phase tag + remediation hint per blocker. Falls back to summary-only
          rows synthesized from flat blockers[] when older daemon returns
@@ -7,7 +7,7 @@
     <li
       v-for="(b, i) in entries"
       :key="i"
-      style="line-height: 1.4; margin-bottom: 6px"
+      style="line-height: 1.4; margin-bottom: var(--wdc-space-1-5)"
     >
       <span v-if="b.phase" style="display: inline-block; min-width: 28px">
         <el-tag size="small" type="info" effect="plain">{{ b.phase }}</el-tag>
@@ -16,7 +16,7 @@
       <div
         v-if="b.remediation"
         class="muted"
-        style="font-size: 11px; margin-top: 2px; padding-left: 32px"
+        style="font-size: 11px; margin-top: var(--wdc-space-0-5); padding-left: var(--wdc-space-6)"
       >
         → {{ b.remediation }}
       </div>

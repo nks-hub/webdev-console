@@ -143,14 +143,14 @@ const emit = defineEmits<{
 }
 
 .tab-desc {
-  margin: 0 0 14px;
+  margin: 0 0 var(--wdc-space-3-5);
   color: var(--wdc-text-2);
   font-size: 0.86rem;
   line-height: 1.45;
 }
 
 .section-heading {
-  margin: 18px 0 10px;
+  margin: var(--wdc-space-4-5) 0 var(--wdc-space-2-5);
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -159,13 +159,13 @@ const emit = defineEmits<{
 }
 
 .section-heading:first-of-type {
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 
 .easy-settings-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px 18px;
+  gap: var(--wdc-space-3-5) var(--wdc-space-4-5);
   width: 100%;
 }
 
@@ -173,7 +173,7 @@ const emit = defineEmits<{
   align-content: start;
   min-width: 0;
   margin-bottom: 0;
-  padding: 12px;
+  padding: var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -183,7 +183,7 @@ const emit = defineEmits<{
   color: var(--wdc-text);
   font-weight: 700;
   line-height: 1.25;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 
 .easy-settings-form :deep(.el-select),
@@ -194,7 +194,7 @@ const emit = defineEmits<{
 
 .hint {
   width: 100%;
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
   color: var(--wdc-text-2);
   font-size: 0.8rem;
   line-height: 1.45;

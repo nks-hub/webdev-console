@@ -66,7 +66,7 @@
         </template>
         <div class="tab-content">
           <el-alert v-if="loadError" type="error" :title="loadError" :closable="true" @close="loadError = ''" show-icon />
-          <div v-if="loading && versions.length === 0" style="padding: 24px">
+          <div v-if="loading && versions.length === 0" style="padding: var(--wdc-space-5)">
             <el-skeleton :rows="3" animated />
           </div>
           <div class="version-grid" v-else-if="versions.length > 0">
@@ -135,7 +135,7 @@
             :hint="selectedVersion ? `PHP ${selectedVersion}` : $t('phpPlugin.selectVersion')"
             flush-body
           >
-            <div v-if="!selectedConfig" class="hint" style="padding: 18px 20px">{{ $t('phpPlugin.selectVersionHint') }}</div>
+            <div v-if="!selectedConfig" class="hint" style="padding: var(--wdc-space-4-5) var(--wdc-space-4-5)">{{ $t('phpPlugin.selectVersionHint') }}</div>
             <pre v-else class="config-pre">{{ selectedConfig }}</pre>
           </EditCard>
         </div>
@@ -263,7 +263,7 @@ onMounted(() => { void loadVersions() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }

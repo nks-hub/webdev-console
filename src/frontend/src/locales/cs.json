@@ -1540,7 +1540,8 @@
     "start": "Spustit",
     "restart": "Restartovat",
     "ports": "Porty",
-    "historicalTitle": "Historický graf"
+    "historicalTitle": "Historický graf",
+    "overview": "Přehled"
   },
   "deploySettings": {
     "tabs": {
@@ -2506,6 +2507,11 @@
       "testBtn": "Otestovat notifikaci",
       "testTitle": "NKS WDC — test notifikace",
       "testBody": "Pokud vidíte tuto notifikaci, je vše správně nakonfigurované."
+    },
+    "groups": {
+      "app": "Aplikace",
+      "environment": "Prostředí",
+      "integration": "Integrace"
     }
   },
   "mcpGrants": {

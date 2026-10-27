@@ -129,7 +129,7 @@
             :closable="false"
             show-icon
             :title="$t('apache.tuningPending')"
-            style="margin-bottom: 16px"
+            style="margin-bottom: var(--wdc-space-4)"
           />
           <EditCard :title="$t('apache.mpm')">
             <el-form label-width="200px" size="default">
@@ -279,7 +279,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
 }

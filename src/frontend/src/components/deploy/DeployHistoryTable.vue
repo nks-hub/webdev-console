@@ -187,13 +187,13 @@ function phaseTagType(phase: string): 'success' | 'danger' | 'warning' | 'info' 
 .history-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px 0;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-1) 0;
 }
 .history-summary-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .history-summary-pct {
   font-variant-numeric: tabular-nums;

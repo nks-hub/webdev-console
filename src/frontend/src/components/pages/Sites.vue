@@ -306,7 +306,7 @@
               type="info"
               :closable="false"
               show-icon
-              style="margin-bottom: 8px"
+              style="margin-bottom: var(--wdc-space-2)"
             >
               <template #title>{{ $t('sites.simple.noPhpInstalledTitle') }}</template>
               <div>
@@ -443,7 +443,7 @@
               v-if="newSite.createDb"
               v-model="newSite.dbName"
               :placeholder="$t('sites.createDatabasePlaceholder')"
-              style="margin-top: 8px"
+              style="margin-top: var(--wdc-space-2)"
             />
           </el-form-item>
         </el-form>
@@ -985,10 +985,10 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .sites-page {
   min-height: 100%;
   background: transparent;
-  padding: 32px;
+  padding: var(--wdc-space-6);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--wdc-space-5);
 }
 
 .page-header {
@@ -997,13 +997,13 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   justify-content: space-between;
   padding: 0;
   margin: 0;
-  gap: 24px;
+  gap: var(--wdc-space-5);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 
 .page-title {
@@ -1026,15 +1026,15 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   background: var(--wdc-accent-dim);
   color: var(--wdc-accent);
   border: 1px solid var(--wdc-accent-glow);
-  padding: 4px 12px;
-  border-radius: 999px;
+  padding: var(--wdc-space-1) var(--wdc-space-3);
+  border-radius: var(--wdc-radius-full);
   font-family: 'JetBrains Mono', monospace;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 /*
@@ -1042,7 +1042,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   the table card.
 */
 .search-bar {
-  padding: 16px 20px;
+  padding: var(--wdc-space-4) var(--wdc-space-4-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
@@ -1050,7 +1050,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .search-results-count {
   font-size: 0.82rem;
@@ -1075,12 +1075,12 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   height: 44px !important;
 }
 .sites-table :deep(td.el-table__cell) {
-  padding: 0 12px !important;
+  padding: 0 var(--wdc-space-3) !important;
   font-size: 0.78rem;
   line-height: 1.2;
 }
 .sites-table :deep(th.el-table__cell) {
-  padding: 6px 12px !important;
+  padding: var(--wdc-space-1-5) var(--wdc-space-3) !important;
 }
 .sites-table :deep(.el-table .cell) {
   padding: 0 !important;
@@ -1092,20 +1092,20 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   min-width: 0;
   line-height: 1.2;
 }
 .sites-table :deep(.cell-domain-row) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   flex-wrap: nowrap;
 }
 .sites-table :deep(.col-aliases) {
   display: inline-flex !important;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
   margin: 0 !important;
 }
 .sites-table :deep(.col-tunnel) {
@@ -1115,14 +1115,14 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 .sites-table :deep(.el-tag) {
   height: 18px !important;
-  padding: 0 6px !important;
+  padding: 0 var(--wdc-space-1-5) !important;
   font-size: 0.62rem !important;
   line-height: 16px !important;
 }
 .sites-table :deep(.alias-dot) {
   height: 18px !important;
   min-width: 22px;
-  padding: 0 6px;
+  padding: 0 var(--wdc-space-1-5);
   font-size: 0.62rem;
 }
 .sites-table :deep(.col-domain) {
@@ -1136,12 +1136,12 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .cell-domain {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .cell-domain-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 .col-domain {
@@ -1167,7 +1167,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   color: var(--wdc-text-2);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-family: 'JetBrains Mono', monospace;
   /* F71: don't let the alias list grow the row vertically when there are
      many aliases — truncate to a single line and show the full list via
@@ -1182,13 +1182,13 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   color: var(--wdc-accent);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   min-width: 32px;
   min-height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   font-size: 0.72rem;
   font-weight: 600;
   flex-shrink: 0;
@@ -1201,19 +1201,19 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .col-tunnel {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: var(--wdc-space-1-5);
+  margin-top: var(--wdc-space-1);
   font-size: 0.76rem;
   font-family: 'JetBrains Mono', monospace;
 }
 .col-tunnel a {
-  color: #f38020; /* Cloudflare orange */
+  color: var(--wdc-brand-cloudflare); /* Cloudflare orange */
   font-weight: 600;
   text-decoration: none;
 }
 .col-tunnel a:hover { text-decoration: underline; }
 .tunnel-icon {
-  color: #f38020;
+  color: var(--wdc-brand-cloudflare);
   font-size: 0.95rem;
 }
 
@@ -1232,12 +1232,12 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 1px 8px;
+  padding: 1px var(--wdc-space-2);
   background: var(--wdc-surface-2);
   color: var(--wdc-text-3);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
-  margin-left: 4px;
+  border-radius: var(--wdc-radius-full);
+  margin-left: var(--wdc-space-1);
 }
 
 .col-mono {
@@ -1289,15 +1289,15 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   .page-header {
     align-items: flex-start;
     flex-direction: column;
-    gap: 12px;
-    padding: 18px 16px 0;
-    margin-bottom: 14px;
+    gap: var(--wdc-space-3);
+    padding: var(--wdc-space-4-5) var(--wdc-space-4) 0;
+    margin-bottom: var(--wdc-space-3-5);
   }
 
   .header-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: var(--wdc-space-2);
     width: 100%;
   }
 
@@ -1312,8 +1312,8 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
   .search-bar,
   .page-body {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--wdc-space-4);
+    padding-right: var(--wdc-space-4);
   }
 
   .search-bar :deep(.el-input) {
@@ -1327,19 +1327,19 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
   .sites-mobile-list {
     display: grid;
-    gap: 10px;
+    gap: var(--wdc-space-2-5);
   }
 
   .site-mobile-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
+    gap: var(--wdc-space-3);
     align-items: center;
     min-width: 0;
-    padding: 12px;
+    padding: var(--wdc-space-3);
     background: var(--wdc-surface);
     border: 1px solid var(--wdc-border);
-    border-radius: 8px;
+    border-radius: var(--wdc-radius-sm);
   }
 
   .site-mobile-main {
@@ -1352,7 +1352,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   .site-mobile-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--wdc-space-1-5);
     min-width: 0;
   }
 
@@ -1367,7 +1367,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   }
 
   .site-mobile-meta {
-    margin-top: 4px;
+    margin-top: var(--wdc-space-1);
     color: var(--wdc-text-3);
     font-size: 0.72rem;
     overflow: hidden;
@@ -1376,7 +1376,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   }
 
   .site-mobile-badges {
-    margin-top: 8px;
+    margin-top: var(--wdc-space-2);
     flex-wrap: wrap;
   }
 
@@ -1405,10 +1405,10 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: nowrap;
   white-space: nowrap;
-  padding-right: 8px;
+  padding-right: var(--wdc-space-2);
 }
 /*
   Action column inner cell — Element Plus's `.cell` adds 10px on each
@@ -1417,7 +1417,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 */
 .sites-table :deep(.el-table-fixed-right .cell),
 .sites-table :deep(td.el-table-fixed-column--right .cell) {
-  padding-right: 16px !important;
+  padding-right: var(--wdc-space-4) !important;
 }
 
 .col-empty {
@@ -1430,7 +1430,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .compose-tag {
   font-size: 0.7rem !important;
@@ -1444,14 +1444,14 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 .runtime-tag.runtime-php {
   /* PHP brand indigo, strong contrast white text — 7.2:1 AAA */
-  background: #4f5b93 !important;
-  border-color: #4f5b93 !important;
-  color: #ffffff !important;
+  background: var(--wdc-brand-php) !important;
+  border-color: var(--wdc-brand-php) !important;
+  color: var(--wdc-on-accent) !important;
 }
 .runtime-tag.runtime-node {
-  background: #3c873a !important;
-  border-color: #3c873a !important;
-  color: #fff !important;
+  background: var(--wdc-brand-node) !important;
+  border-color: var(--wdc-brand-node) !important;
+  color: var(--wdc-on-accent) !important;
 }
 .runtime-tag.runtime-static {
   background: transparent !important;
@@ -1461,7 +1461,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 
 .site-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
   flex-wrap: nowrap;
   overflow: hidden;
@@ -1474,18 +1474,18 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .site-detail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 4px 0;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-1) 0;
 }
 
 .drawer-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .history-section {
   border-top: 1px solid var(--el-border-color);
-  padding-top: 12px;
+  padding-top: var(--wdc-space-3);
 }
 
 .history-title {
@@ -1494,13 +1494,13 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--el-text-color-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 
 .history-item {
@@ -1508,7 +1508,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   justify-content: space-between;
   font-size: 0.78rem;
   color: var(--el-text-color-regular);
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
   border-bottom: 1px dashed var(--el-border-color-lighter, #333);
 }
 
@@ -1520,19 +1520,19 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 .simple-hint {
   font-size: 0.82rem;
   color: var(--wdc-text-3);
-  margin: 0 0 16px;
+  margin: 0 0 var(--wdc-space-4);
   line-height: 1.5;
 }
 
 .form-hint {
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
   color: var(--wdc-text-3);
   font-size: 12px;
   line-height: 1.35;
 }
 
 .simple-advanced-link {
-  margin-top: 12px;
+  margin-top: var(--wdc-space-3);
   text-align: center;
   font-size: 0.8rem;
   color: var(--wdc-text-3);
@@ -1556,7 +1556,7 @@ function handleRowAction(cmd: string, row: SiteInfo) {
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
 }
 .simple-inline-link:hover {
   opacity: 0.8;

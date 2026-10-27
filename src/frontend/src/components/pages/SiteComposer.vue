@@ -135,7 +135,7 @@
           :data="tableRows"
           class="pkg-table"
           size="small"
-          style="margin-top: 16px"
+          style="margin-top: var(--wdc-space-4)"
         >
           <!-- Name -->
           <el-table-column :label="$t('sites.composer.colName')" min-width="260" prop="name" sortable>
@@ -757,18 +757,18 @@ onMounted(() => {
 
 <style scoped>
 .site-composer {
-  padding: 16px;
+  padding: var(--wdc-space-4);
 }
 
 .composer-loading {
-  padding: 48px 24px;
+  padding: var(--wdc-space-7) var(--wdc-space-5);
   text-align: center;
   color: var(--el-text-color-secondary);
 }
 .composer-loading-label {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   font-size: 14px;
 }
 .composer-loading-label .el-icon {
@@ -776,17 +776,17 @@ onMounted(() => {
 }
 
 .composer-alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--wdc-space-4);
 }
 
 .composer-empty {
-  padding: 40px 0;
+  padding: var(--wdc-space-6-5) 0;
   text-align: center;
 }
 
 .composer-empty-hint {
   color: var(--el-text-color-secondary);
-  margin: 8px 0;
+  margin: var(--wdc-space-2) 0;
   font-size: 13px;
 }
 
@@ -798,11 +798,11 @@ onMounted(() => {
 .composer-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--wdc-space-4);
 }
 
 .composer-card {
-  border-radius: 8px;
+  border-radius: var(--wdc-radius-sm);
 }
 
 .card-title {
@@ -813,15 +813,15 @@ onMounted(() => {
 .status-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--wdc-space-3);
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .status-label {
@@ -835,9 +835,9 @@ onMounted(() => {
 
 .actions-row {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 
 /* Package table */
@@ -848,7 +848,7 @@ onMounted(() => {
 .pkg-name-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .pkg-outdated-dot {
@@ -876,7 +876,7 @@ onMounted(() => {
 .output-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 
 .output-pre {
@@ -887,7 +887,7 @@ onMounted(() => {
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
-  padding: 14px 16px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4);
   margin: 0;
   max-height: 300px;
   overflow-y: auto;
@@ -905,27 +905,27 @@ onMounted(() => {
 }
 
 .banner-description {
-  margin: 0 0 8px;
+  margin: 0 0 var(--wdc-space-2);
   font-size: 13px;
   color: var(--el-text-color-regular);
 }
 
 .banner-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 /* Package info popover */
 .pkg-info-loading {
   font-size: 13px;
   color: var(--el-text-color-secondary);
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
 }
 
 .pkg-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 
 .pkg-info-header {
@@ -938,7 +938,7 @@ onMounted(() => {
 .pkg-abandoned {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 12px;
   color: var(--el-color-danger);
 }
@@ -952,7 +952,7 @@ onMounted(() => {
 
 .pkg-stats {
   display: flex;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
@@ -981,8 +981,8 @@ onMounted(() => {
 .suggestion-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 2px 0;
+  gap: var(--wdc-space-0-5);
+  padding: var(--wdc-space-0-5) 0;
 }
 
 .suggestion-name {
@@ -1005,25 +1005,25 @@ onMounted(() => {
 
 .major-jump-icon {
   color: var(--el-color-warning);
-  margin-left: 4px;
+  margin-left: var(--wdc-space-1);
   vertical-align: middle;
 }
 
 .diagnose-ok {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-size: 14px;
   color: var(--el-color-success);
-  padding: 8px 0;
+  padding: var(--wdc-space-2) 0;
 }
 
 .diagnose-line {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 13px;
-  padding: 4px 0;
+  padding: var(--wdc-space-1) 0;
   line-height: 1.4;
 }
 

@@ -78,14 +78,44 @@
   --wdc-space-5: 24px;
   --wdc-space-6: 32px;
   --wdc-space-7: 48px;
+  /* Half steps and large steps, so component spacing never needs raw px.
+     Odd one-off values were snapped to the nearest step (18→20, 22→24,
+     36→40, 44→48, 3/5→4, 7→6, 11→10); 1px hairlines stay literal. */
+  --wdc-space-0-5: 2px;
+  --wdc-space-1-5: 6px;
+  --wdc-space-2-5: 10px;
+  --wdc-space-3-5: 14px;
+  --wdc-space-4-5: 20px;
+  --wdc-space-5-5: 28px;
+  --wdc-space-6-5: 40px;
+  --wdc-space-8:   64px;
   --wdc-space-8: 64px;
 
   /* Radius — bigger, more pillowy */
+  --wdc-radius-2xs:  2px;
   --wdc-radius-xs:   6px;
   --wdc-radius-sm:   8px;
   --wdc-radius:      10px;       /* buttons */
+  --wdc-radius-md:   12px;
   --wdc-radius-lg:   16px;      /* cards */
   --wdc-radius-xl:   20px;      /* large containers / dialogs */
+  --wdc-radius-full: 999px;     /* pills, dots */
+
+  /*
+    Fixed brand and on-colour values (same in both themes). Components
+    used to hard-code these hex values; keep them here so a rebrand or a
+    contrast fix is one edit.
+  */
+  --wdc-on-accent:        #ffffff;   /* text/icons on accent or brand fills */
+  --wdc-brand-gradient:   linear-gradient(135deg, #6366f1, #8b5cf6);
+  --wdc-brand-php:        #4f5b93;
+  --wdc-brand-node:       #3c873a;
+  --wdc-brand-cloudflare: #f38020;
+
+  /* Themed accents for the tunnel highlight and the sidebar count badge. */
+  --wdc-tunnel-text: #fff2b3;
+  --wdc-badge-bg:    #ffb15f;
+  --wdc-badge-fg:    #141006;
 
   /*
     Dramatic shadows — bigger drops, layered with subtle accent glow
@@ -184,6 +214,9 @@ html:not(.dark) {
   --wdc-gradient-secondary: linear-gradient(135deg, #0d9488, #4338ca);
 
   color-scheme: light;
+  --wdc-tunnel-text: #5c2f00;
+  --wdc-badge-bg:    #9a4a00;
+  --wdc-badge-fg:    #ffffff;
 }
 
 /* ─── Element Plus Dark Variable Overrides ────────────────────────────────── */

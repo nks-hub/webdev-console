@@ -1,9 +1,10 @@
 <template>
   <div class="site-edit-page">
-    <!-- Simple mode: tabless single-page view -->
-    <SiteDetailSimple v-if="uiMode.isSimple" :domain="domain" />
-
-    <template v-else>
+    <!-- One site page for both UI modes. Simple vs Advanced only changes
+         density: Simple shows Overview / Metrics / Errors, Advanced adds the
+         editing, runtime, deploy, history and danger tabs. (There used to
+         be a separate SiteDetailSimple page with its own header and save
+         flow.) -->
     <!-- Page header -->
     <div class="page-header">
       <div class="header-left">
@@ -21,6 +22,7 @@
           {{ $t('common.open') }}
         </el-button>
         <el-button
+          v-if="activeTab !== 'overview'"
           type="primary"
           size="small"
           :loading="saving"
@@ -46,8 +48,16 @@
     <div v-else class="edit-body">
       <SiteApplyPipeline :domain="domain" class="site-apply" />
       <el-tabs v-model="activeTab" class="site-tabs">
+        <!-- ── Overview (quick controls, both modes) ── -->
+        <el-tab-pane name="overview">
+          <template #label>
+            <span class="tab-label"><el-icon><House /></el-icon> {{ $t('siteEdit.overview') }}</span>
+          </template>
+          <SiteDetailSimple :domain="domain" embedded />
+        </el-tab-pane>
+
         <!-- ── General ──────────────────────────── -->
-        <el-tab-pane name="general">
+        <el-tab-pane v-if="uiMode.isAdvanced" name="general">
           <template #label>
             <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('siteEdit.general') }}</span>
           </template>
@@ -171,7 +181,7 @@
               :title="$t('siteEdit.dockerCard')"
               :hint="composeInfo.fileName ?? undefined"
             >
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+              <div style="display: flex; align-items: center; gap: var(--wdc-space-2); flex-wrap: wrap">
                   <el-tag size="small" type="info" effect="plain">{{ composeInfo.fileName }}</el-tag>
                   <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
                     {{ $t('siteEdit.composeUp') }}
@@ -194,7 +204,7 @@
         </el-tab-pane>
 
         <!-- ── Runtime ──────────────────────────── -->
-        <el-tab-pane name="runtime">
+        <el-tab-pane v-if="uiMode.isAdvanced" name="runtime">
           <template #label>
             <span class="tab-label"><el-icon><Cpu /></el-icon> {{ $t('siteEdit.runtime') }}</span>
           </template>
@@ -244,11 +254,11 @@
                     style="width: 180px"
                     @change="markDirty"
                   />
-                  <div class="hint" style="margin-top: 8px">
+                  <div class="hint" style="margin-top: var(--wdc-space-2)">
                     Port your Node.js app listens on. Apache will <code>ProxyPass</code> all requests to it.
                   </div>
 
-                  <label class="sub-label" style="margin-top: 16px">{{ $t('siteEdit.startCommand') }}</label>
+                  <label class="sub-label" style="margin-top: var(--wdc-space-4)">{{ $t('siteEdit.startCommand') }}</label>
                   <el-input
                     v-model="nodeStartCommand"
                     placeholder="npm start"
@@ -256,22 +266,22 @@
                     style="width: 320px"
                     @input="markDirty"
                   />
-                  <div class="hint" style="margin-top: 4px">
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">
                     Command to start your app (e.g. <code>npm start</code>, <code>npm run dev</code>, <code>node server.js</code>).
                     Empty defaults to <code>npm start</code>.
                   </div>
 
                   <!-- Per-site Node process controls -->
-                  <div class="node-process-controls" style="margin-top: 16px">
+                  <div class="node-process-controls" style="margin-top: var(--wdc-space-4)">
                     <label class="sub-label">{{ $t('siteEdit.process') }}</label>
-                    <div v-if="!nodePluginAvailable" class="hint" style="margin-top: 4px">
+                    <div v-if="!nodePluginAvailable" class="hint" style="margin-top: var(--wdc-space-1)">
                       <el-icon style="color: var(--el-color-warning)"><WarningFilled /></el-icon>
                       Node.js plugin not loaded in daemon. Apache will still reverse-proxy
                       to <code>localhost:{{ nodeUpstreamPort }}</code>, but you must start
                       the Node process yourself. Install <code>NKS.WebDevConsole.Plugin.Node</code>
                       and restart the daemon to enable per-site process management.
                     </div>
-                    <div v-else style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
+                    <div v-else style="display: flex; align-items: center; gap: var(--wdc-space-2-5); margin-top: var(--wdc-space-1)">
                       <HealthStatusDot
                         :level="nodeProcessState === 2 ? 'ok' : nodeProcessState === 4 ? 'err' : nodeProcessState === 1 ? 'warn' : 'muted'"
                         :pulse="nodeProcessState === 1"
@@ -434,7 +444,7 @@
                 Last updated {{ metricsAgeDisplay }}
               </span>
             </div>
-            <div v-if="!siteMetrics" class="hint" style="padding: 24px 0">
+            <div v-if="!siteMetrics" class="hint" style="padding: var(--wdc-space-5) 0">
               <span v-if="metricsLoading">{{ $t('siteEdit.metricsLoading') }}</span>
               <span v-else>{{ $t('siteEdit.metricsEmpty') }}</span>
             </div>
@@ -537,13 +547,13 @@
         <!-- ── Danger ───────────────────────────── -->
         <el-tab-pane v-if="uiMode.isAdvanced" name="danger">
           <template #label>
-            <span class="tab-label danger-label"><el-icon><WarningFilled /></el-icon> Danger</span>
+            <span class="tab-label danger-label"><el-icon><WarningFilled /></el-icon> {{ $t('siteEdit.danger') }}</span>
           </template>
           <div class="tab-content">
             <!-- Task 28: rename-domain section. Backend endpoint not
                  wired yet — disabled with tooltip explaining the reason
                  until PATCH /api/sites/{domain}/rename is implemented. -->
-            <div class="danger-box" style="margin-bottom: 16px">
+            <div class="danger-box" style="margin-bottom: var(--wdc-space-4)">
               <div class="danger-title">
                 <el-icon><Setting /></el-icon>
                 Rename domain
@@ -557,7 +567,7 @@
                 v-model="renameNewDomain"
                 :placeholder="site.domain"
                 size="default"
-                style="max-width: 320px; margin-bottom: 8px"
+                style="max-width: 320px; margin-bottom: var(--wdc-space-2)"
                 disabled
               />
               <el-tooltip content="Backend PATCH /api/sites/{domain}/rename not yet implemented" placement="top">
@@ -590,7 +600,6 @@
       :initial-path="site?.documentRoot"
       @select="onFolderPick"
     />
-    </template><!-- end v-else advanced -->
   </div>
 </template>
 
@@ -604,7 +613,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
   FolderOpened, Check, Search, Link, DataLine, Refresh, Grid,
-  InfoFilled, Upload,
+  InfoFilled, Upload, House,
 } from '@element-plus/icons-vue'
 import DeploySiteTab from '../deploy/DeploySiteTab.vue'
 import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
@@ -662,7 +671,9 @@ const site = ref<SiteInfo | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const dirty = ref(false)
-const activeTab = ref('general')
+// ?tab=errors / ?tab=composer deep links (activity card, Composer page)
+// were ignored before — the page always opened on the first tab.
+const activeTab = ref(typeof route.query.tab === 'string' && route.query.tab ? route.query.tab : 'overview')
 // Same per-version option shape as Sites.vue wizard — keeps the detail
 // page and the wizard aligned. `value` is the backend-persisted
 // majorMinor; `label` shows the full patch + active flag.
@@ -1511,14 +1522,14 @@ watch(domain, () => {
   void load()
 })
 
-// Simple mode: redirect to 'general' if the active tab is one that is
-// hidden in simple mode (e.g. a user deep-links to #danger or #history).
-const ADVANCED_TABS = ['history', 'danger'] as const
+// Simple mode: fall back to Overview if the active tab is one that only
+// Advanced density shows (deep link, or switching modes on the page).
+const ADVANCED_TABS = ['general', 'runtime', 'deploy', 'history', 'danger'] as const
 watch(
   [() => uiMode.isSimple, activeTab],
   ([simple, tab]) => {
     if (simple && ADVANCED_TABS.includes(tab as typeof ADVANCED_TABS[number])) {
-      activeTab.value = 'general'
+      activeTab.value = 'overview'
     }
   },
   { immediate: true },
@@ -1563,7 +1574,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-5);
   border-bottom: 1px solid var(--wdc-accent-glow);
   background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
   flex-shrink: 0;
@@ -1571,12 +1582,12 @@ onBeforeUnmount(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--wdc-space-3-5);
 }
 .title-block {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--wdc-space-0-5);
 }
 .title-label {
   font-size: 0.7rem;
@@ -1592,20 +1603,20 @@ onBeforeUnmount(() => {
 }
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .state-box {
-  padding: 32px 24px;
+  padding: var(--wdc-space-6) var(--wdc-space-5);
 }
 
 .edit-body {
   flex: 1;
-  padding: 0 20px;
+  padding: 0 var(--wdc-space-4-5);
 }
 
 .site-tabs {
-  margin-top: 8px;
+  margin-top: var(--wdc-space-2);
 }
 
 /* F91.8: full-width, responsive tab bar. Each tab claims equal horizontal
@@ -1617,7 +1628,7 @@ onBeforeUnmount(() => {
 .site-tabs :deep(.el-tabs__header) { margin-bottom: 0; }
 .site-tabs :deep(.el-tabs__nav-wrap) {
   width: 100%;
-  padding: 0 4px;
+  padding: 0 var(--wdc-space-1);
   /* Horizontal scroll fallback whenever the 11 tabs (general / runtime /
      deploy / cloudflare / ssl / composer / history / metrics / errors /
      backup / danger) can't all fit at their natural width. Previously
@@ -1638,7 +1649,7 @@ onBeforeUnmount(() => {
 .site-tabs :deep(.el-tabs__item) {
   flex: 1 1 0;
   min-width: max-content; /* keep label intact; fill only when extra space exists */
-  padding: 0 10px;
+  padding: 0 var(--wdc-space-2-5);
   text-align: center;
   justify-content: center;
   display: inline-flex;
@@ -1648,7 +1659,7 @@ onBeforeUnmount(() => {
 .tab-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   font-size: 0.88rem;
   white-space: nowrap;
 }
@@ -1657,10 +1668,10 @@ onBeforeUnmount(() => {
 }
 
 .tab-content {
-  padding: 24px 4px 28px;
+  padding: var(--wdc-space-5) var(--wdc-space-1) var(--wdc-space-5-5);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--wdc-space-4-5);
   max-width: 100%; /* F91.8: tab content fills container — no 960px cap */
   box-sizing: border-box;
 }
@@ -1670,7 +1681,7 @@ onBeforeUnmount(() => {
 .two-col-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px 24px;
+  gap: var(--wdc-space-4) var(--wdc-space-5);
   max-width: 100%;
 }
 .two-col-form .el-form-item {
@@ -1682,11 +1693,11 @@ onBeforeUnmount(() => {
    scroll when container narrows. */
 .metrics-toolbar {
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .historical-controls {
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: var(--wdc-space-2-5) var(--wdc-space-4);
 }
 
 /* SiteEdit page shell: cap total width but let content reflow below
@@ -1704,18 +1715,18 @@ onBeforeUnmount(() => {
 }
 
 .hint {
-  margin-top: 6px;
+  margin-top: var(--wdc-space-1-5);
   font-size: 0.78rem;
   color: var(--wdc-text-3);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .hint code {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.76rem;
@@ -1767,7 +1778,7 @@ onBeforeUnmount(() => {
   color: var(--wdc-accent) !important;
   font-weight: 700 !important;
   height: 100% !important;
-  padding: 0 14px !important;
+  padding: 0 var(--wdc-space-3-5) !important;
   box-shadow: none !important;
   white-space: nowrap;
   /* Icon + label sit flush; earlier CSS only gave the button 12px side
@@ -1777,7 +1788,7 @@ onBeforeUnmount(() => {
      the full label inside every Element Plus theme. */
   display: inline-flex !important;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   min-width: fit-content;
 }
 .browse-append-btn > span {
@@ -1836,7 +1847,7 @@ onBeforeUnmount(() => {
 .alias-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: center;
   min-height: 32px;
 }
@@ -1844,7 +1855,7 @@ onBeforeUnmount(() => {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 0.78rem !important;
   font-weight: 600 !important;
-  padding: 4px 10px !important;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5) !important;
   height: 28px !important;
   background: var(--wdc-accent) !important;
   border-color: var(--wdc-accent) !important;
@@ -1864,7 +1875,7 @@ onBeforeUnmount(() => {
 /* ─── Framework detect row ───────────────────────────────────────────── */
 .framework-row {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   align-items: stretch;
 }
 .framework-input {
@@ -1875,14 +1886,14 @@ onBeforeUnmount(() => {
 .runtime-picker {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .runtime-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 18px 20px;
+  gap: var(--wdc-space-1-5);
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 2px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -1914,19 +1925,19 @@ onBeforeUnmount(() => {
   font-weight: 800;
   font-size: 1.1rem;
   font-family: 'JetBrains Mono', monospace;
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 .runtime-card-icon.runtime-static {
   background: var(--wdc-elevated);
   color: var(--wdc-text);
 }
 .runtime-card-icon.runtime-php {
-  background: #4f5b93;
-  color: #ffffff;
+  background: var(--wdc-brand-php);
+  color: var(--wdc-on-accent);
 }
 .runtime-card-icon.runtime-node {
-  background: #3c873a;
-  color: #ffffff;
+  background: var(--wdc-brand-node);
+  color: var(--wdc-on-accent);
 }
 .runtime-card-title {
   font-size: 1rem;
@@ -1943,8 +1954,8 @@ onBeforeUnmount(() => {
 
 /* ─── PHP version sub-picker ─────────────────────────────────────────── */
 .php-version-picker {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: var(--wdc-space-4-5);
+  padding-top: var(--wdc-space-4-5);
   border-top: 1px solid var(--wdc-border);
 }
 .sub-label {
@@ -1954,16 +1965,16 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wdc-text-2);
-  margin-bottom: 10px;
+  margin-bottom: var(--wdc-space-2-5);
 }
 .php-version-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .php-version-btn {
   min-width: 76px;
-  padding: 10px 18px;
+  padding: var(--wdc-space-2-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -1979,16 +1990,16 @@ onBeforeUnmount(() => {
   color: var(--wdc-text);
 }
 .php-version-btn.active {
-  background: #4f5b93;
-  border-color: #4f5b93;
-  color: #ffffff;
+  background: var(--wdc-brand-php);
+  border-color: var(--wdc-brand-php);
+  color: var(--wdc-on-accent);
 }
 
 /* ─── Port grid ──────────────────────────────────────────────────────── */
 .port-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--wdc-space-4);
   max-width: 520px;
 }
 .port-item {
@@ -2001,9 +2012,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 14px 18px;
-  margin-top: 16px;
+  gap: var(--wdc-space-4-5);
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
+  margin-top: var(--wdc-space-4);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -2013,16 +2024,16 @@ onBeforeUnmount(() => {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--wdc-text);
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 .tunnel-pill {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 10px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
+  border-radius: var(--wdc-radius);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  margin-left: 6px;
+  margin-left: var(--wdc-space-1-5);
 }
 .tunnel-pill-on {
   background: var(--wdc-status-running);
@@ -2036,7 +2047,7 @@ onBeforeUnmount(() => {
 .tunnel-shared-count {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
-  margin-left: 2px;
+  margin-left: var(--wdc-space-0-5);
 }
 .tunnel-status-desc {
   font-size: 0.8rem;
@@ -2047,7 +2058,7 @@ onBeforeUnmount(() => {
   font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  padding: 1px 7px;
+  padding: 1px var(--wdc-space-1-5);
   border-radius: var(--wdc-radius-sm);
   color: var(--wdc-accent);
   font-size: 0.76rem;
@@ -2056,7 +2067,7 @@ onBeforeUnmount(() => {
 .cf-subdomain-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .cf-zone-suffix {
   font-size: 0.85rem;
@@ -2069,8 +2080,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 14px 0;
+  gap: var(--wdc-space-5);
+  padding: var(--wdc-space-3-5) 0;
 }
 .ssl-toggle-row + .ssl-toggle-row {
   border-top: 1px solid var(--wdc-border);
@@ -2082,7 +2093,7 @@ onBeforeUnmount(() => {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--wdc-text);
-  margin-bottom: 4px;
+  margin-bottom: var(--wdc-space-1);
 }
 .ssl-toggle-desc {
   font-size: 0.8rem;
@@ -2092,34 +2103,34 @@ onBeforeUnmount(() => {
 
 .history-banner {
   display: flex;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   align-items: flex-start;
-  padding: 12px 14px;
+  padding: var(--wdc-space-3) var(--wdc-space-3-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
   font-size: 0.82rem;
   color: var(--wdc-text-2);
   line-height: 1.5;
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 .history-banner .el-icon {
   color: var(--wdc-accent);
-  margin-top: 2px;
+  margin-top: var(--wdc-space-0-5);
   flex-shrink: 0;
 }
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   /* Task 18: full-width (was max-width 720px). */
 }
 .history-row {
   display: grid;
   grid-template-columns: 220px 1fr auto;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
@@ -2127,7 +2138,7 @@ onBeforeUnmount(() => {
 .history-when {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-size: 0.82rem;
   color: var(--wdc-text-2);
 }
@@ -2136,13 +2147,13 @@ onBeforeUnmount(() => {
   color: var(--wdc-text);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .version-badge {
   background: var(--wdc-accent);
   color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: var(--wdc-space-0-5) var(--wdc-space-2);
+  border-radius: var(--wdc-radius);
   font-size: 0.72rem;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
@@ -2157,8 +2168,8 @@ onBeforeUnmount(() => {
 .metrics-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-3);
 }
 .metrics-timestamp {
   font-size: 0.8rem;
@@ -2167,19 +2178,19 @@ onBeforeUnmount(() => {
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-4);
 }
 .metrics-chart-wrap {
-  margin-top: 18px;
+  margin-top: var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border-radius: var(--wdc-radius-sm);
-  padding: 12px 16px;
+  padding: var(--wdc-space-3) var(--wdc-space-4);
 }
 .metrics-chart-label {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 .table-responsive {
   overflow-x: auto;
@@ -2187,7 +2198,7 @@ onBeforeUnmount(() => {
 .metric-card {
   background: var(--wdc-surface-2);
   border-radius: var(--wdc-radius-sm);
-  padding: 20px;
+  padding: var(--wdc-space-4-5);
   text-align: center;
 }
 .metric-value {
@@ -2199,15 +2210,15 @@ onBeforeUnmount(() => {
 .metric-label {
   font-size: 0.78rem;
   color: var(--wdc-text-3);
-  margin-top: 4px;
+  margin-top: var(--wdc-space-1);
 }
 
 /* ─── Compose output ─────────────────────────────────────────────────── */
 .compose-output {
-  margin-top: 12px;
+  margin-top: var(--wdc-space-3);
   background: var(--wdc-surface-2);
   border-radius: var(--wdc-radius-sm);
-  padding: 12px;
+  padding: var(--wdc-space-3);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -2221,7 +2232,7 @@ onBeforeUnmount(() => {
 }
 
 .danger-box {
-  padding: 24px 28px;
+  padding: var(--wdc-space-5) var(--wdc-space-5-5);
   background: rgba(239, 68, 68, 0.06);
   border: 2px solid rgba(239, 68, 68, 0.32);
   border-radius: var(--wdc-radius);
@@ -2230,21 +2241,21 @@ onBeforeUnmount(() => {
 .danger-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--wdc-status-error);
-  margin-bottom: 8px;
+  margin-bottom: var(--wdc-space-2);
 }
 .danger-desc {
   font-size: 0.85rem;
   color: var(--wdc-text-2);
-  margin-bottom: 14px;
+  margin-bottom: var(--wdc-space-3-5);
 }
 
 /* ─── Historical metrics section ─────────────────────────────────────── */
 .historical-section {
-  margin-top: 24px;
+  margin-top: var(--wdc-space-5);
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
@@ -2255,8 +2266,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
   background: var(--wdc-surface-2);
   border-bottom: 1px solid var(--wdc-border);
 }
@@ -2272,12 +2283,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 .historical-control-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .historical-label {
   font-size: 0.72rem;
@@ -2289,19 +2300,19 @@ onBeforeUnmount(() => {
 }
 .historical-series-toggles {
   display: flex;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
   align-items: center;
 }
 .series-toggle {
   font-size: 0.7rem !important;
   font-weight: 600 !important;
-  padding: 3px 10px !important;
-  border-radius: 999px !important;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5) !important;
+  border-radius: var(--wdc-radius-full) !important;
   cursor: pointer;
 }
 .historical-chart-wrap {
   position: relative;
-  padding: 12px 8px 4px;
+  padding: var(--wdc-space-3) var(--wdc-space-2) var(--wdc-space-1);
 }
 .historical-overlay {
   position: absolute;

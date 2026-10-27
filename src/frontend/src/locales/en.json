@@ -1540,7 +1540,8 @@
     "start": "Start",
     "restart": "Restart",
     "ports": "Ports",
-    "historicalTitle": "Historical"
+    "historicalTitle": "Historical",
+    "overview": "Overview"
   },
   "deploySettings": {
     "tabs": {
@@ -2506,6 +2507,11 @@
       "testBtn": "Test notification",
       "testTitle": "NKS WDC — test notification",
       "testBody": "If you see this, OS notifications are wired correctly."
+    },
+    "groups": {
+      "app": "Application",
+      "environment": "Environment",
+      "integration": "Integrations"
     }
   },
   "mcpGrants": {

@@ -48,13 +48,13 @@ defineProps<{
   overflow: hidden;
 }
 .edit-card-header {
-  padding: 14px 20px;
+  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   background: var(--wdc-surface-2);
   border-bottom: 1px solid var(--wdc-border);
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .edit-card-title {
   font-size: 0.78rem;
@@ -68,7 +68,7 @@ defineProps<{
   color: var(--wdc-text-3);
 }
 .edit-card-body {
-  padding: 18px 20px;
+  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
 }
 .edit-card-body-flush {
   padding: 0;

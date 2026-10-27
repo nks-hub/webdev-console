@@ -170,7 +170,7 @@ function emitPath(key: keyof AdvancedPathValues, value: string | number): void {
 }
 
 .schedule-unit {
-  margin-left: 8px;
+  margin-left: var(--wdc-space-2);
   font-size: 0.82rem;
   color: var(--wdc-text-3);
 }

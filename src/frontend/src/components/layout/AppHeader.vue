@@ -111,19 +111,19 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   align-items: center;
   justify-content: space-between;
   height: 60px;
-  padding: 0 24px;
+  padding: 0 var(--wdc-space-5);
   background: color-mix(in srgb, var(--wdc-surface) 72%, transparent);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
-  gap: 24px;
+  gap: var(--wdc-space-5);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--wdc-space-4-5);
 }
 
 .page-context {
@@ -132,16 +132,16 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   color: var(--wdc-accent);
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  padding: 4px 12px;
+  padding: var(--wdc-space-1) var(--wdc-space-3);
   background: var(--wdc-accent-dim);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   border: 1px solid var(--wdc-accent-glow);
 }
 
 .app-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
   cursor: pointer;
   user-select: none;
 }
@@ -152,9 +152,9 @@ function onLocaleChange(next: Locale) { setLocale(next) }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--wdc-radius);
   background: var(--wdc-gradient-accent);
-  color: #ffffff;
+  color: var(--wdc-on-accent);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -172,7 +172,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .header-right :deep(.el-button) {
@@ -188,7 +188,7 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 
 .lang-btn {
   min-width: 44px !important;
-  padding: 0 12px !important;
+  padding: 0 var(--wdc-space-3) !important;
 }
 
 /*
@@ -199,8 +199,8 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .conn-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 6px;
+  gap: var(--wdc-space-1-5);
+  padding: 0 var(--wdc-space-1-5);
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -233,10 +233,10 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 .update-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: var(--wdc-space-1-5);
+  padding: 0 var(--wdc-space-3);
   min-height: 32px;
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   border: 1px solid var(--wdc-status-starting);
   background: rgba(245, 158, 11, 0.16);
   color: var(--wdc-status-starting);
@@ -248,9 +248,9 @@ function onLocaleChange(next: Locale) { setLocale(next) }
 }
 .update-badge:hover {
   background: var(--wdc-status-starting);
-  color: #141006;
+  /* dark text on amber in dark mode, white in light (see --wdc-badge-fg) */
+  color: var(--wdc-badge-fg);
 }
-html:not(.dark) .update-badge:hover { color: #ffffff; }
 /* Static dot — was pulsing at 2.2s, paired with conn-dot's 2s pulse,
    the offset cycles read as a fast flicker. */
 .update-dot {
@@ -263,8 +263,8 @@ html:not(.dark) .update-badge:hover { color: #ffffff; }
 
 @media (max-width: 760px) {
   .app-header {
-    padding: 0 8px;
-    gap: 8px;
+    padding: 0 var(--wdc-space-2);
+    gap: var(--wdc-space-2);
   }
 
   .logo-copy,
@@ -284,17 +284,17 @@ html:not(.dark) .update-badge:hover { color: #ffffff; }
   }
 
   .nav-tab {
-    padding: 7px 10px;
+    padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
     font-size: 0.78rem;
   }
 
   .header-right {
-    gap: 6px;
+    gap: var(--wdc-space-1-5);
   }
 
   .update-badge {
     min-width: 40px;
-    padding: 0 8px;
+    padding: 0 var(--wdc-space-2);
   }
 }
 

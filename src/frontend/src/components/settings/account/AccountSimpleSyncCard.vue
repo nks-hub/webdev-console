@@ -41,7 +41,7 @@ const emit = defineEmits<{
 <style scoped>
 .sync-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
   flex-wrap: wrap;
 }
 

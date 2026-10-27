@@ -148,12 +148,12 @@ const envHint = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--wdc-space-3);
 }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 .host-name {
   font-weight: 700;
@@ -162,19 +162,19 @@ const envHint = computed(() => {
 }
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wdc-space-2);
 }
 
 .card-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--wdc-space-2-5);
 }
 
 .info-row {
   display: grid;
   grid-template-columns: 130px 1fr;
-  gap: 12px;
+  gap: var(--wdc-space-3);
   align-items: baseline;
   font-size: 13px;
 }
@@ -204,10 +204,10 @@ const envHint = computed(() => {
 
 .branch-pill {
   display: inline-block;
-  padding: 3px 10px;
+  padding: var(--wdc-space-1) var(--wdc-space-2-5);
   background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
-  border-radius: 999px;
+  border-radius: var(--wdc-radius-full);
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -215,12 +215,12 @@ const envHint = computed(() => {
 .local-paths {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--wdc-space-1);
 }
 .local-path-line {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .local-path-arrow {
   color: var(--el-color-primary);
@@ -230,11 +230,11 @@ const envHint = computed(() => {
 .flags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--wdc-space-1-5);
 }
 .flag-icon {
   font-size: 12px;
-  margin-right: 2px;
+  margin-right: var(--wdc-space-0-5);
   vertical-align: -2px;
 }
 </style>
