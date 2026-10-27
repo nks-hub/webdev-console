@@ -132,6 +132,29 @@ public sealed class SiteOrchestratorApplyTests
     }
 
     [Fact]
+    public async Task LastApplyResults_KeepsLatestResultPerSite_AndForgetsRemovedSites()
+    {
+        var apache = new ControllableHttpdModule("apache") { RemoveError = new IOException("file locked") };
+        var orchestrator = Build(apache);
+        Assert.Empty(orchestrator.LastApplyResults);
+
+        await orchestrator.ApplyAsync(Disabled("Shop.loc"));
+        var failed = Assert.Single(orchestrator.LastApplyResults);
+        Assert.False(failed.Success);
+        Assert.True(failed.At > 0);
+
+        // The next apply of the same site (any letter case) replaces the failed result.
+        apache.RemoveError = null;
+        await orchestrator.ApplyAsync(Disabled("shop.loc"));
+        await orchestrator.ApplyAsync(Disabled("other.loc"));
+        Assert.Equal(2, orchestrator.LastApplyResults.Count);
+        Assert.True(orchestrator.LastApplyResults.Single(r => r.Domain == "shop.loc").Success);
+
+        await orchestrator.RemoveAsync("SHOP.loc");
+        Assert.Equal(new[] { "other.loc" }, orchestrator.LastApplyResults.Select(r => r.Domain));
+    }
+
+    [Fact]
     public async Task ApplyAsync_SameDomain_DifferentCase_Serializes()
     {
         var apache = new ControllableHttpdModule("apache")

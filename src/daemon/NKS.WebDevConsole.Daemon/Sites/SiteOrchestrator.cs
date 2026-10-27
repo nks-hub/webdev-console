@@ -32,11 +32,18 @@ public sealed class SiteOrchestrator
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _applyLocks =
         new(StringComparer.OrdinalIgnoreCase);
 
+    // Latest apply outcome per site, kept for the lifetime of the daemon.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SiteApplyResult> _lastApply =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public SiteOrchestrator(ILogger<SiteOrchestrator> logger, IServiceProvider sp)
     {
         _logger = logger;
         _sp = sp;
     }
+
+    /// <summary>The most recent apply result of every site that has been applied since the daemon started.</summary>
+    public IReadOnlyCollection<SiteApplyResult> LastApplyResults => _lastApply.Values.ToList();
 
     /// <summary>
     /// Reloads Apache once if it is running; used after applying a batch of
@@ -355,16 +362,14 @@ public sealed class SiteOrchestrator
     /// </summary>
     private async Task PublishApplyResultAsync(SiteApplyResult result)
     {
+        // Remembered before the broadcast: a window that is not connected yet
+        // (startup re-apply, page reload) reads it back via the apply-status list.
+        _lastApply[result.Domain] = result;
         try
         {
             var sse = _sp.GetService<NKS.WebDevConsole.Daemon.Services.SseService>();
             if (sse is not null)
-                await sse.BroadcastAsync("site:applied", new
-                {
-                    domain = result.Domain,
-                    success = result.Success,
-                    steps = result.Steps.Select(st => new { name = st.Name, status = st.Status, detail = st.Detail }),
-                });
+                await sse.BroadcastAsync("site:applied", result.ToPayload());
         }
         catch (Exception ex)
         {
@@ -592,6 +597,7 @@ public sealed class SiteOrchestrator
     public async Task RemoveAsync(string domain, CancellationToken ct = default)
     {
         _logger.LogInformation("Orchestrating removal of site {Domain}...", domain);
+        _lastApply.TryRemove(domain, out _);
 
         var modules = _sp.GetServices<IServiceModule>().ToList();
         var apacheModule = modules.FirstOrDefault(m =>

@@ -886,13 +886,13 @@ internal static class SiteEndpoints
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site {domain} not found" });
             var result = await orchestrator.ApplyAsync(site, ct);
-            return Results.Ok(new
-            {
-                domain = result.Domain,
-                success = result.Success,
-                steps = result.Steps.Select(st => new { name = st.Name, status = st.Status, detail = st.Detail }),
-            });
+            return Results.Ok(result.ToPayload());
         });
+
+        // Last apply result of every site, so a window that opened (or reloaded)
+        // after the startup re-apply still shows which sites ended in an error.
+        app.MapGet("/api/sites/apply-status", (SiteOrchestrator orchestrator) =>
+            Results.Ok(orchestrator.LastApplyResults.Select(r => r.ToPayload())));
     }
 
     internal static IReadOnlyList<BindAddressOption> GetBindAddressOptions()

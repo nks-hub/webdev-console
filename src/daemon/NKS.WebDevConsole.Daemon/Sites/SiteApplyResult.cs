@@ -23,6 +23,18 @@ public sealed class SiteApplyResult
     public IReadOnlyList<SiteApplyStep> Steps => _steps;
     public bool Success => _steps.All(s => s.Status != SiteApplyStep.Failed);
 
+    /// <summary>When the apply finished (ms since the Unix epoch), so a UI that connects later can show its age.</summary>
+    public long At { get; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+    /// <summary>JSON shape shared by the <c>site:applied</c> event, the apply endpoint and the apply-status list.</summary>
+    public object ToPayload() => new
+    {
+        domain = Domain,
+        success = Success,
+        at = At,
+        steps = _steps.Select(st => new { name = st.Name, status = st.Status, detail = st.Detail }).ToList(),
+    };
+
     public void Ok(string step, string? detail = null) => _steps.Add(new(step, SiteApplyStep.Succeeded, detail));
     public void Skip(string step, string? detail = null) => _steps.Add(new(step, SiteApplyStep.Skipped, detail));
     public void Fail(string step, string detail) => _steps.Add(new(step, SiteApplyStep.Failed, detail));
