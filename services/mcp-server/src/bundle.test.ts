@@ -87,8 +87,9 @@ describe('bundled MCP server', () => {
       expect(essentialTools).toContain('wdc_request_confirmation')
       expect(essentialTools).toContain('wdc_create_database')
     } finally {
-      rmSync(out, { recursive: true, force: true })
-      rmSync(home, { recursive: true, force: true })
+      // Windows keeps the killed server's cwd locked for a moment (EPERM on rm).
+      rmSync(out, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+      rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
     }
   }, 60_000)
 })
