@@ -190,10 +190,12 @@ const SERVICE_PAGES = [
 ]
 
 function toolItems(): NavItem[] {
+  // Plugins send one English label; a page the app knows keeps its translated name.
+  const coreLabel = (route: string) => CORE_TOOLS.find(c => c.route === route)?.labelKey
   const fromPlugins: NavItem[] = pluginsStore.toolsNavEntries.map(e => ({
     key: `${e.pluginId}:${e.id}`,
     route: e.route,
-    label: e.label,
+    label: coreLabel(e.route) ? t(coreLabel(e.route)!) : e.label,
     icon: ROUTE_ICONS[e.route] ?? Tools,
   }))
   const known = new Set(fromPlugins.map(i => i.route))
