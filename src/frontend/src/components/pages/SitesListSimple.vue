@@ -4,9 +4,6 @@
       <div class="simple-header-title">
         <h1 class="page-title">
           {{ $t('sites.title') }}
-          <span v-if="sitesStore.sites.length > 0" class="page-title-count">
-            {{ sitesStore.sites.length }}
-          </span>
         </h1>
         <p v-if="sitesStore.sites.length > 0" class="page-subtitle">
           {{ $t('sites.simple.subtitle', {
@@ -15,7 +12,7 @@
           }) }}
         </p>
       </div>
-      <el-button type="primary" size="small" @click="emit('create')">
+      <el-button type="primary" @click="emit('create')">
         + {{ $t('sites.card.newSite') }}
       </el-button>
     </div>
@@ -66,7 +63,6 @@
         @navigate="(d) => navigateToSite(d)"
         @open="openSite"
         @start-apache="startApache"
-        @stop-apache="stopApache"
         @toggle-enabled="toggleSiteEnabled"
         @command="(cmd, s) => handleCommand(cmd, s)"
       />
@@ -322,29 +318,6 @@ async function startApache() {
   }
 }
 
-async function stopApache() {
-  // Stopping Apache from a per-site card is misleading — it actually takes
-  // down EVERY site on the host. The confirm dialog forces an acknowledgment
-  // so an absent-minded click doesn't break unrelated work.
-  try {
-    await ElMessageBox.confirm(
-      $t('sites.card.stopApacheConfirm'),
-      $t('sites.card.stopApacheTitle'),
-      { type: 'warning', confirmButtonText: $t('sites.card.stop') }
-    )
-  } catch {
-    return
-  }
-  toggling.value = true
-  try {
-    await stopService('apache')
-  } catch (e) {
-    ElMessage.error($t('toast.stopFailed', { err: errorMessage(e) }))
-  } finally {
-    toggling.value = false
-  }
-}
-
 async function handleCommand(cmd: string, site: SiteInfo) {
   if (cmd === 'reveal') {
     revealInFolder(site.documentRoot)
@@ -401,17 +374,17 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 <style scoped>
 .sites-simple {
-  padding: var(--wdc-space-5);
-  min-height: 100%;
-  background: var(--wdc-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--wdc-space-5);
 }
 
 .simple-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--wdc-space-4);
-  margin-bottom: var(--wdc-space-5);
 }
 
 .simple-header-title {
@@ -426,8 +399,9 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   align-items: center;
   gap: var(--wdc-space-2-5);
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.728rem;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
   color: var(--wdc-text);
 }
 .page-title-count {
@@ -444,8 +418,7 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   border-radius: var(--wdc-radius-full);
 }
 .page-subtitle {
-  margin: 0;
-  font-size: 0.82rem;
+  margin: var(--wdc-space-1) 0 0;
   color: var(--wdc-text-2);
 }
 
@@ -455,8 +428,8 @@ async function handleCommand(cmd: string, site: SiteInfo) {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--wdc-space-3-5);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--wdc-space-4);
 }
 
 /* Per-card styles moved to SimpleSiteCard.vue. */
@@ -476,7 +449,6 @@ async function handleCommand(cmd: string, site: SiteInfo) {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  box-shadow: var(--wdc-shadow-card);
 }
 .welcome-mark {
   display: inline-flex;

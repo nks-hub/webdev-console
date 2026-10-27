@@ -795,7 +795,8 @@
       "restarted": "Apache restarted",
       "stopApacheTitle": "Stop Apache",
       "stopApacheConfirm": "Stopping Apache will take down ALL sites, not just this one. Proceed?",
-      "stopApacheTooltip": "Stop Apache — disables every site"
+      "stopApacheTooltip": "Stop Apache — disables every site",
+      "startWebServer": "Start web server"
     },
     "edit": {
       "browseDocRoot": "Select document root folder"
@@ -863,6 +864,30 @@
       "noConflicts": "No conflicts detected",
       "conflictsTitle": "Conflicts and warnings",
       "majorJump": "Major version jump — possible breaking changes"
+    },
+    "list": {
+      "stateFilter": "Filter by state",
+      "status": "Status",
+      "runtime": "Runtime",
+      "address": "Address",
+      "state": {
+        "ok": "Running",
+        "failed": "Apply failed",
+        "disabled": "Disabled"
+      },
+      "filter": {
+        "all": "All",
+        "failed": "With errors",
+        "disabled": "Disabled"
+      },
+      "summaryEmpty": "No sites yet.",
+      "summaryTotal": "{n} site | {n} sites",
+      "summaryFailed": "{n} failed on the last apply | {n} failed on the last apply",
+      "summaryDisabled": "{n} disabled | {n} disabled",
+      "noneInFilter": "No site matches this filter.",
+      "clearFilter": "Clear filter",
+      "enable": "Enable site",
+      "disable": "Disable site"
     }
   },
   "uiMode": {

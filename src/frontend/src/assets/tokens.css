@@ -717,6 +717,10 @@ html.dark .nav-item-tunnel .nav-label {
 .el-table__body tr.el-table__row td.el-table-fixed-column--right {
   background: var(--wdc-bg) !important;
 }
+.el-table th.el-table__cell.el-table-fixed-column--left,
+.el-table th.el-table__cell.el-table-fixed-column--right {
+  background: var(--wdc-bg) !important;
+}
 .el-table__body tr.el-table__row:hover td.el-table-fixed-column--left,
 .el-table__body tr.el-table__row:hover td.el-table-fixed-column--right {
   background: var(--wdc-hover) !important;
