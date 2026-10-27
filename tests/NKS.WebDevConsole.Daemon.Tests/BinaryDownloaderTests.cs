@@ -73,14 +73,67 @@ public sealed class BinaryDownloaderTests : IDisposable
         Url: "https://downloads.example.com/redis-7.4.1.zip", Os: "linux", Arch: "x64",
         ArchiveType: "zip", Source: "example", Sha256: sha256);
 
+    private sealed class StatusHandler(System.Net.HttpStatusCode code, string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(new HttpResponseMessage(code) { Content = new StringContent(body) });
+    }
+
+    private static BinaryRelease UnhashedZip() => new(
+        App: "apache", Version: "2.4.66", MajorMinor: "2.4",
+        Url: "https://downloads.example.com/httpd-2.4.66.zip", Os: "windows", Arch: "x64",
+        ArchiveType: "zip", Source: "example");
+
+    [Fact]
+    public async Task DownloadAsync_HtmlInsteadOfZip_FailsWithAClearMessageAndKeepsNothing()
+    {
+        var html = System.Text.Encoding.UTF8.GetBytes("<html><body>Oops... the requested URL was not found</body></html>");
+        var cacheDir = Path.Combine(_tempDir, "cache");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            DownloaderServing(new FixedResponseHandler(html)).DownloadAsync(UnhashedZip(), cacheDir));
+
+        Assert.Contains("returned a web page", ex.Message);
+        Assert.Empty(Directory.GetFiles(cacheDir));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_CachedHtml_IsDownloadedAgain()
+    {
+        var cacheDir = Path.Combine(_tempDir, "cache");
+        Directory.CreateDirectory(cacheDir);
+        await File.WriteAllTextAsync(Path.Combine(cacheDir, "httpd-2.4.66.zip"), "<html>404</html>");
+        var zip = System.Text.Encoding.UTF8.GetBytes("PK real zip");
+        var handler = new FixedResponseHandler(zip);
+
+        var path = await DownloaderServing(handler).DownloadAsync(UnhashedZip(), cacheDir);
+
+        Assert.Equal(1, handler.Calls);
+        Assert.Equal(zip, await File.ReadAllBytesAsync(path));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_Forbidden_NamesTheUrlAndStatus()
+    {
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient(new StatusHandler(System.Net.HttpStatusCode.Forbidden, "denied")));
+        var sut = new BinaryDownloader(factory.Object, new Mock<ILogger<BinaryDownloader>>().Object);
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => sut.DownloadAsync(UnhashedZip(), Path.Combine(_tempDir, "c")));
+
+        Assert.Contains("403", ex.Message);
+        Assert.Contains("httpd-2.4.66.zip", ex.Message);
+    }
+
     [Fact]
     public async Task DownloadAsync_TamperedCachedArchive_IsReplaced()
     {
-        var genuine = System.Text.Encoding.UTF8.GetBytes("genuine archive bytes");
+        var genuine = System.Text.Encoding.UTF8.GetBytes("PK genuine archive bytes");
         var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(genuine)).ToLowerInvariant();
         var cacheDir = Path.Combine(_tempDir, "cache");
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllTextAsync(Path.Combine(cacheDir, "redis-7.4.1.zip"), "planted by someone else");
+        await File.WriteAllTextAsync(Path.Combine(cacheDir, "redis-7.4.1.zip"), "PK planted by someone else");
 
         var handler = new FixedResponseHandler(genuine);
         var path = await DownloaderServing(handler).DownloadAsync(ReleaseWithSha(sha), cacheDir);
@@ -92,7 +145,7 @@ public sealed class BinaryDownloaderTests : IDisposable
     [Fact]
     public async Task DownloadAsync_VerifiedCachedArchive_IsReused()
     {
-        var genuine = System.Text.Encoding.UTF8.GetBytes("genuine archive bytes");
+        var genuine = System.Text.Encoding.UTF8.GetBytes("PK genuine archive bytes");
         var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(genuine)).ToLowerInvariant();
         var cacheDir = Path.Combine(_tempDir, "cache");
         Directory.CreateDirectory(cacheDir);

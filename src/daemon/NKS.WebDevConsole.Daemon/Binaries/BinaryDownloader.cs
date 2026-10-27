@@ -38,6 +38,12 @@ public sealed class BinaryDownloader
         if (string.IsNullOrEmpty(fileName)) fileName = $"{release.App}-{release.Version}.{release.ArchiveType}";
         var archivePath = Path.Combine(destinationDir, fileName);
 
+        if (File.Exists(archivePath) && !HasArchiveSignature(archivePath, release.ArchiveType))
+        {
+            // A broken mirror once served an HTML error page as the .zip; never reuse that.
+            _logger.LogWarning("Cached {Path} is not a {Type} archive — downloading again", archivePath, release.ArchiveType);
+            File.Delete(archivePath);
+        }
         if (File.Exists(archivePath))
         {
             // The cache dir is user-writable, so a cached archive is only reused
@@ -66,7 +72,11 @@ public sealed class BinaryDownloader
             req.Headers.UserAgent.Add(new ProductInfoHeaderValue("NKS-WebDevConsole", "1.0"));
 
         using var response = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException(
+                $"Download of {release.App} {release.Version} failed: {release.Url} answered " +
+                $"{(int)response.StatusCode} {response.ReasonPhrase}. Try another version.",
+                null, response.StatusCode);
 
         var totalBytes = response.Content.Headers.ContentLength ?? -1;
         var tempPath = archivePath + ".tmp";
@@ -83,6 +93,16 @@ public sealed class BinaryDownloader
                 downloaded += read;
                 progress?.Report(new DownloadProgress(release.App, release.Version, downloaded, totalBytes));
             }
+        }
+
+        if (!HasArchiveSignature(tempPath, release.ArchiveType))
+        {
+            var webPage = File.ReadAllText(tempPath).TrimStart().StartsWith('<');
+            try { File.Delete(tempPath); } catch { /* best-effort cleanup */ }
+            throw new InvalidOperationException(
+                $"{release.App} {release.Version}: {release.Url} returned " +
+                (webPage ? "a web page" : "a file that is not a " + release.ArchiveType + " archive") +
+                " instead of the download. The mirror for this version is broken; try another version.");
         }
 
         // Integrity check BEFORE publishing the archive under its final
@@ -116,6 +136,25 @@ public sealed class BinaryDownloader
         File.Move(tempPath, archivePath, overwrite: true);
         _logger.LogInformation("Downloaded {App} {Version} ({Size} bytes)", release.App, release.Version, new FileInfo(archivePath).Length);
         return archivePath;
+    }
+
+    /// <summary>
+    /// True when the file starts with the magic bytes of <paramref name="archiveType"/>
+    /// (zip, tar.gz/tgz, tar.xz). Other types (exe, bin) have no fixed signature and pass.
+    /// </summary>
+    internal static bool HasArchiveSignature(string path, string? archiveType)
+    {
+        byte[]? magic = archiveType?.ToLowerInvariant() switch
+        {
+            "zip" => [0x50, 0x4B],
+            "tar.gz" or "tgz" => [0x1F, 0x8B],
+            "tar.xz" => [0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00],
+            _ => null,
+        };
+        if (magic is null) return true;
+        var head = new byte[magic.Length];
+        using var fs = File.OpenRead(path);
+        return fs.ReadAtLeast(head, head.Length, throwOnEndOfStream: false) == head.Length && head.AsSpan().SequenceEqual(magic);
     }
 
     private static async Task<string> ComputeSha256Async(string path, CancellationToken ct)
