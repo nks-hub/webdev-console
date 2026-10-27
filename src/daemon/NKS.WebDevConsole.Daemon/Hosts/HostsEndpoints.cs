@@ -224,7 +224,9 @@ internal static class HostsEndpoints
 
             // Held across read → rewrite → write so a concurrent site apply
             // cannot write back hosts content read before this save.
-            await HostsFileWriter.Gate.WaitAsync();
+            // A site apply holds the gate while it waits for UAC; don't hang the request behind it.
+            if (!await HostsFileWriter.Gate.WaitAsync(TimeSpan.FromSeconds(30), ctx.RequestAborted))
+                return Results.Problem("The hosts file is busy (a site apply may be waiting for elevation). Try again.", statusCode: 409);
             try
             {
                 var content = await File.ReadAllTextAsync(hostsPath);
@@ -374,7 +376,9 @@ internal static class HostsEndpoints
             const int MaxHostsBytes = 10 * 1024 * 1024;
 
             var hostsPath = GetHostsPath();
-            await HostsFileWriter.Gate.WaitAsync();
+            // A site apply holds the gate while it waits for UAC; don't hang the request behind it.
+            if (!await HostsFileWriter.Gate.WaitAsync(TimeSpan.FromSeconds(30), ctx.RequestAborted))
+                return Results.Problem("The hosts file is busy (a site apply may be waiting for elevation). Try again.", statusCode: 409);
             try
             {
                 string newContent;
