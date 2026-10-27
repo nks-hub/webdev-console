@@ -596,7 +596,8 @@ function rowClass({ row }: { row: Row }) {
 // ── Mount ──────────────────────────────────────────────────────────────
 
 onMounted(async () => {
-  if (!sitesStore.sites.length) await sitesStore.load()
+  // Always refresh: a stale site list marks entries of new sites as orphans.
+  await sitesStore.load()
   await load()
 })
 </script>
