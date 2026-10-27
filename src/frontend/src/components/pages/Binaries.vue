@@ -249,16 +249,25 @@
               >
                 {{ $t('binaries.install') }}
               </el-button>
-              <el-button
-                v-else
-                size="small"
-                type="danger"
-                plain
-                :loading="uninstalling.has(`${selectedApp}-${row.version}`)"
-                @click="uninstall(selectedApp!, row.version)"
-              >
-                {{ $t('binaries.remove') }}
-              </el-button>
+              <template v-else>
+                <el-button
+                  v-if="selectedApp === 'php' && !row.isDefault"
+                  size="small"
+                  text
+                  @click="setPhpDefault(row.version)"
+                >
+                  {{ $t('php.setDefault') }}
+                </el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  plain
+                  :loading="uninstalling.has(`${selectedApp}-${row.version}`)"
+                  @click="uninstall(selectedApp!, row.version)"
+                >
+                  {{ $t('binaries.remove') }}
+                </el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -301,6 +310,9 @@
         </template>
         <template v-else>
           <el-button @click="progress.visible = false">{{ $t('common.close') }}</el-button>
+          <el-button v-if="progress.app === 'php'" type="primary" @click="setPhpDefault(progress.version); progress.visible = false">
+            {{ $t('php.setDefault') }}
+          </el-button>
           <el-button v-if="progress.serviceId" type="primary" :loading="progress.starting" @click="startInstalledService">
             {{ $t('binaries.progress.startService', { name: appDisplayName(progress.app) }) }}
           </el-button>
@@ -319,6 +331,7 @@ import { useI18n } from 'vue-i18n'
 import {
   fetchBinaryCatalog,
   fetchInstalledBinaries,
+  fetchPhpVersions,
   fetchServices,
   fetchSystem,
   installBinary,
@@ -398,6 +411,32 @@ let installAbort: AbortController | null = null
 
 /** Last failed install, kept after the dialog closes so the table can point at it. */
 const failedInstall = ref<{ app: string; version: string; message: string } | null>(null)
+
+/** major.minor of the PHP version new sites get (PHP is the only app with a default today). */
+const activePhp = ref<string | null>(null)
+const majorMinorOf = (v: string) => v.split('.').slice(0, 2).join('.')
+
+async function loadActivePhp() {
+  try {
+    activePhp.value = (await fetchPhpVersions()).find(v => v.isActive)?.majorMinor ?? null
+  } catch { activePhp.value = null /* PHP plugin missing */ }
+}
+
+async function setPhpDefault(version: string) {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/php/default`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ version }),
+    })
+    const body = await r.json().catch(() => ({})) as { error?: string }
+    if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`)
+    ElMessage.success(t('toast.phpDefaultSet', { version: majorMinorOf(version) }))
+    await loadActivePhp()
+  } catch (e) {
+    ElMessage.error(t('toast.setDefaultFailed', { err: errorMessage(e) }))
+  }
+}
 
 type ModuleCard = {
   app: string
@@ -484,7 +523,9 @@ const moduleCards = computed<ModuleCard[]>(() => {
       installedCount: installedForApp.length,
       newestInstalled,
       outdated: !!newestInstalled && !!latest && versionGreater(latest, newestInstalled) < 0,
-      defaultVersion: installedForApp.find(b => b.isDefault)?.version ?? null,
+      defaultVersion: app === 'php'
+        ? installedForApp.find(b => majorMinorOf(b.version) === activePhp.value)?.version ?? null
+        : installedForApp.find(b => b.isDefault)?.version ?? null,
     }
   }).sort((a, b) => a.app.localeCompare(b.app))
 })
@@ -550,6 +591,7 @@ const detailRows = computed<DetailRow[]>(() => {
   // native are kept in stable alphabetical order for determinism.
   const native = nativePlatform.value
   for (const row of byVersion.values()) {
+    if (app === 'php') row.isDefault = row.installed && majorMinorOf(row.version) === activePhp.value
     row.native = !native || row.platforms.length === 0 || row.platforms.includes(native)
     row.platforms.sort((a, b) => {
       if (a === native && b !== native) return -1
@@ -609,6 +651,7 @@ async function refresh() {
     ])
     catalog.value = cat
     installed.value = inst
+    void loadActivePhp()
     // Re-fetch catalog health after the data refresh so the pill shows
     // the latest snapshot. Runs in parallel with the other two calls
     // above via fire-and-forget — no need to block the UI on it.
