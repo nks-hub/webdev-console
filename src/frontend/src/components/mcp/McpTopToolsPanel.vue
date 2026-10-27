@@ -100,8 +100,8 @@ onBeforeUnmount(() => {
 .panel-title {
   font-size: 11px;
   margin-bottom: var(--wdc-space-2);
-  text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-family: var(--wdc-font-display);
 }
 .tool-rows { display: flex; flex-direction: column; gap: 4px; }
 .tool-row {

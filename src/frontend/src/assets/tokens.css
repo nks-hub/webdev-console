@@ -1,76 +1,62 @@
-/* NKS WDC Design System — SOFT VIBRANT (2026-05-08) */
+/* NKS WDC Design System — COBALT (2026-10, redesign phase 3) */
 /*
-  Typography — Inter for the body sans, JetBrains Mono for code.
-  Inter is the contemporary SaaS UI default (Linear, Notion, Stripe);
-  good rhythm at 14px UI sizes and pairs cleanly with rounded soft
-  cards.
+  Typography is self-hosted (see main.ts): Familjen Grotesk for headings,
+  IBM Plex Sans for UI text, JetBrains Mono for paths, ports and logs.
+  The app works offline and makes no font requests to third parties.
+
+  Visual language:
+   - Paper surfaces and ink text with a cool cast; one cobalt accent.
+   - Separation by 1px hairlines and surface steps, not drop shadows,
+     gradients or glows.
+   - Small radii (4–8px). Buttons are tactile keys with a bottom edge.
+   - Status is always icon + text, never colour alone.
 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
-/* ─── Design Tokens (flat, high-contrast, WCAG AAA) ───────────────────────
- *
- * Redesign 2026-04-11:
- *   - All body/secondary text pairs now hit WCAG AAA (7:1+)
- *   - Border tokens lifted to ≥ 3:1 against adjacent surfaces (was 1.1:1 = invisible)
- *   - Flat: elevation via discrete surface colors, not translucent alpha layers
- *   - No shadow stacking — 1px hairlines + surface contrast carry the UI
- *   - Light-mode accent darkened from #0891b2 (3.2:1 FAIL) → #006d7d (7.2:1 AAA)
- *   - Light-mode success darkened from #15803d (3.7:1 FAIL) → #0d5f24 (7.3:1 AAA)
- *   - Light-mode warning darkened from #b45309 (3.4:1 FAIL) → #704d0c (7.1:1 AAA)
- *   - Dark-mode error brightened from #ef4444 (4.5:1 AA) → #ff6b6b (7.1:1 AAA)
- */
 :root {
-  /*
-    SOFT VIBRANT — dark mode
-    Warm dark base (subtle violet undertone, not navy/black) with cards
-    that visibly pop because surfaces step up in clear luminance jumps
-    AND ride on soft drop shadows. Indigo primary + teal secondary +
-    full-saturation Material status palette. Borders are very low alpha;
-    the heavy lifting is done by surface elevation + shadows.
-  */
-  --wdc-bg:          #1c1b22;  /* warm dark, lightly violet */
-  --wdc-surface:     #28272f;  /* cards / sidebar */
-  --wdc-surface-2:   #34333d;  /* nested fills, inputs */
-  --wdc-elevated:    #403e4b;  /* hover, popovers */
-  --wdc-hover:       #38363f;  /* row hover */
+  --wdc-font-display: 'Familjen Grotesk', 'IBM Plex Sans', system-ui, sans-serif;
+  --wdc-font-body:    'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --wdc-font-mono:    'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
 
-  /* Borders very subtle — shadows do the separation work */
-  --wdc-border:          rgba(255, 255, 255, 0.08);
-  --wdc-border-strong:   rgba(255, 255, 255, 0.16);
+  /* ── Dark (default) ── */
+  --wdc-bg:          oklch(17% 0.012 258);   /* page */
+  --wdc-chrome:      oklch(14.5% 0.012 260); /* sidebar, header, status bar */
+  --wdc-surface:     oklch(20% 0.014 258);   /* panels, inputs, table head */
+  --wdc-surface-2:   oklch(23% 0.016 258);   /* nested fills */
+  --wdc-elevated:    oklch(25% 0.017 258);   /* popovers, dialogs */
+  --wdc-hover:       oklch(21.5% 0.015 258); /* row hover */
 
-  /* Text — warm whites */
-  --wdc-text:        #f5f3f7;
-  --wdc-text-2:      #c4c0cc;
-  --wdc-text-3:      #a09ba7;  /* ≥4.5:1 on surface and surface-2 (was #8c8794, 4.2:1) */
+  --wdc-border:          oklch(29% 0.016 258);
+  --wdc-border-strong:   oklch(37% 0.018 258);
 
-  /* Primary accent — Material 3 indigo, vibrant */
-  --wdc-accent:      #818cf8;  /* indigo-400, AAA on bg */
-  --wdc-accent-2:    #a5b4fc;  /* hover lift */
-  --wdc-accent-glow: rgba(129, 140, 248, 0.28);
-  --wdc-accent-dim:  rgba(129, 140, 248, 0.14);
+  --wdc-text:        oklch(94% 0.008 250);
+  --wdc-text-2:      oklch(82% 0.012 252);
+  --wdc-text-3:      oklch(70% 0.016 256);   /* ≥ 4.5:1 on bg, surface and chrome */
 
-  /* Secondary accent — teal, paired with primary for callouts */
-  --wdc-accent-secondary:      #2dd4bf;
-  --wdc-accent-secondary-dim:  rgba(45, 212, 191, 0.14);
+  --wdc-accent:      oklch(68% 0.15 256);    /* cobalt, light for dark ground */
+  --wdc-accent-2:    oklch(78% 0.12 254);    /* hover lift */
+  --wdc-accent-edge: oklch(48% 0.13 258);    /* key bottom edge */
+  --wdc-accent-glow: oklch(68% 0.15 256 / 0.22); /* focus halo only */
+  --wdc-accent-dim:  oklch(27% 0.05 258);    /* wash: selected rows, active nav */
+  --wdc-accent-ink:  oklch(83% 0.09 254);    /* accent-coloured text on the wash */
 
-  /* Status palette — Material 3 vibrant saturation */
-  --wdc-status-running:  #34d399;  /* emerald-400 */
-  --wdc-status-stopped:  #a1a1aa;  /* zinc-400 — "Stopped" text was 3.1:1 on surface */
-  --wdc-status-error:    #f87171;  /* red-400 */
-  --wdc-status-starting: #fbbf24;  /* amber-400 */
+  --wdc-accent-secondary:      oklch(76% 0.09 205);
+  --wdc-accent-secondary-dim:  oklch(26% 0.035 210);
+
+  --wdc-status-running:  oklch(76% 0.13 150);
+  --wdc-status-stopped:  oklch(70% 0.016 256);
+  --wdc-status-error:    oklch(72% 0.15 27);
+  --wdc-status-starting: oklch(80% 0.12 80);
   --wdc-warning:         var(--wdc-status-starting);
 
-  /* Categorical accents — Material You hue stops */
-  --wdc-cat-web:       #fb923c;
-  --wdc-cat-lang:      #c084fc;
-  --wdc-cat-db:        #38bdf8;
-  --wdc-cat-cache:     #34d399;
-  --wdc-cat-tunnel:    #fb923c;
+  --wdc-cat-web:       oklch(76% 0.11 60);
+  --wdc-cat-lang:      oklch(74% 0.11 300);
+  --wdc-cat-db:        oklch(74% 0.10 235);
+  --wdc-cat-cache:     oklch(76% 0.11 160);
+  --wdc-cat-tunnel:    oklch(76% 0.11 60);
 
-  --wdc-glow-running:  rgba(52, 211, 153, 0.28);
-  --wdc-glow-error:    rgba(248, 113, 113, 0.28);
+  --wdc-glow-running:  transparent;
+  --wdc-glow-error:    transparent;
 
-  /* Spacing — strict 4px progression */
+  /* Spacing — 4px progression */
   --wdc-space-1: 4px;
   --wdc-space-2: 8px;
   --wdc-space-3: 12px;
@@ -78,9 +64,6 @@
   --wdc-space-5: 24px;
   --wdc-space-6: 32px;
   --wdc-space-7: 48px;
-  /* Half steps and large steps, so component spacing never needs raw px.
-     Odd one-off values were snapped to the nearest step (18→20, 22→24,
-     36→40, 44→48, 3/5→4, 7→6, 11→10); 1px hairlines stay literal. */
   --wdc-space-0-5: 2px;
   --wdc-space-1-5: 6px;
   --wdc-space-2-5: 10px;
@@ -89,134 +72,118 @@
   --wdc-space-5-5: 28px;
   --wdc-space-6-5: 40px;
   --wdc-space-8:   64px;
-  --wdc-space-8: 64px;
 
-  /* Radius — bigger, more pillowy */
+  /* Radius — small and consistent */
   --wdc-radius-2xs:  2px;
-  --wdc-radius-xs:   6px;
-  --wdc-radius-sm:   8px;
-  --wdc-radius:      10px;       /* buttons */
-  --wdc-radius-md:   12px;
-  --wdc-radius-lg:   16px;      /* cards */
-  --wdc-radius-xl:   20px;      /* large containers / dialogs */
-  --wdc-radius-full: 999px;     /* pills, dots */
+  --wdc-radius-xs:   4px;
+  --wdc-radius-sm:   6px;
+  --wdc-radius:      6px;   /* buttons, inputs */
+  --wdc-radius-md:   8px;
+  --wdc-radius-lg:   8px;   /* panels */
+  --wdc-radius-xl:   10px;  /* dialogs */
+  --wdc-radius-full: 999px;
 
-  /*
-    Fixed brand and on-colour values (same in both themes). Components
-    used to hard-code these hex values; keep them here so a rebrand or a
-    contrast fix is one edit.
-  */
-  --wdc-on-accent:        #ffffff;   /* text/icons on accent or brand fills */
-  --wdc-brand-gradient:   linear-gradient(135deg, #6366f1, #8b5cf6);
+  --wdc-on-accent:        oklch(17% 0.03 262);  /* text on the cobalt fill */
+  --wdc-on-brand:         #ffffff;              /* text on fixed brand fills */
+  --wdc-brand-gradient:   var(--wdc-text);      /* brand mark: ink tile */
   --wdc-brand-php:        #4f5b93;
   --wdc-brand-node:       #3c873a;
   --wdc-brand-cloudflare: #f38020;
 
-  /* Themed accents for the tunnel highlight and the sidebar count badge. */
-  --wdc-tunnel-text: #fff2b3;
-  --wdc-badge-bg:    #ffb15f;
-  --wdc-badge-fg:    #141006;
+  --wdc-tunnel-text: oklch(88% 0.09 85);
+  --wdc-badge-bg:    oklch(80% 0.12 80);
+  --wdc-badge-fg:    oklch(20% 0.03 80);
 
-  /*
-    Dramatic shadows — bigger drops, layered with subtle accent glow
-    on cards. Lifts every surface off the page.
-  */
-  --wdc-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.20);
-  --wdc-shadow-sm:   0 4px 8px rgba(0, 0, 0, 0.24);
-  --wdc-shadow:      0 8px 24px rgba(0, 0, 0, 0.30);
-  --wdc-shadow-card: 0 12px 32px rgba(0, 0, 0, 0.36);
-  --wdc-shadow-pop:  0 24px 56px rgba(0, 0, 0, 0.48);
-  --wdc-shadow-lg:   0 32px 80px rgba(0, 0, 0, 0.60);
+  /* Keys (buttons) */
+  --wdc-key-face:  oklch(24% 0.016 258);
+  --wdc-key-edge:  oklch(11% 0.014 262);
+  --wdc-shadow-key:        0 2px 0 0 var(--wdc-key-edge), inset 0 1px 0 oklch(100% 0 0 / 0.06);
+  --wdc-shadow-key-accent: 0 2px 0 0 var(--wdc-accent-edge), inset 0 1px 0 oklch(100% 0 0 / 0.2);
+  --wdc-shadow-key-press:  inset 0 1px 2px oklch(8% 0.01 262 / 0.6);
 
-  /* Glow shadows — colored ambient light around accent / status surfaces */
-  --wdc-glow-accent: 0 0 0 1px var(--wdc-accent), 0 8px 24px var(--wdc-accent-glow);
-  --wdc-glow-success: 0 0 24px var(--wdc-glow-running);
-  --wdc-glow-error:   0 0 24px var(--wdc-glow-error);
+  /* Shadows — hairlines for surfaces, real shadows only for floating layers */
+  --wdc-shadow-xs:   0 1px 0 oklch(0% 0 0 / 0.25);
+  --wdc-shadow-sm:   0 1px 2px oklch(0% 0 0 / 0.30);
+  --wdc-shadow:      0 4px 12px oklch(0% 0 0 / 0.35);
+  --wdc-shadow-card: none;
+  --wdc-shadow-pop:  0 12px 32px oklch(0% 0 0 / 0.45);
+  --wdc-shadow-lg:   0 20px 48px oklch(0% 0 0 / 0.55);
 
-  /*
-    Background mesh — radial accent + secondary at low alpha. Two soft
-    light sources baked into the page so the chrome feels alive instead
-    of being a flat dark block. Used by .app-root::before.
-  */
-  --wdc-mesh-bg: radial-gradient(circle at 12% 8%, rgba(129, 140, 248, 0.18), transparent 36%),
-                 radial-gradient(circle at 88% 92%, rgba(45, 212, 191, 0.14), transparent 38%),
-                 radial-gradient(circle at 60% 50%, rgba(192, 132, 252, 0.06), transparent 60%);
+  --wdc-glow-accent:  0 0 0 2px var(--wdc-accent-glow);
+  --wdc-glow-success: none;
+  --wdc-glow-error:   none;
 
-  /*
-    Gradient fills — used on primary buttons + key surfaces so the
-    accent isn't a flat tile.
-  */
-  --wdc-gradient-accent: linear-gradient(135deg, #818cf8, #c084fc);
-  --wdc-gradient-secondary: linear-gradient(135deg, #2dd4bf, #818cf8);
+  --wdc-mesh-bg: none;
+  --wdc-gradient-accent: linear-gradient(var(--wdc-accent), var(--wdc-accent));
+  --wdc-gradient-secondary: linear-gradient(var(--wdc-accent-secondary), var(--wdc-accent-secondary));
+
+  /* Log/terminal boxes stay graphite in both themes. */
+  --wdc-log-bg:   oklch(17% 0.016 262);
+  --wdc-log-text: oklch(90% 0.01 250);
+
+  --wdc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --wdc-dur-micro: 120ms;
+  --wdc-dur-short: 220ms;
 
   color-scheme: dark;
 }
 
-/*
-  SOFT VIBRANT — light mode
-  Notion-warm cream bg + pure white cards. Deeper indigo + teal +
-  Material status colors retuned for AAA on warm surfaces.
-*/
+/* ── Light ── */
 html:not(.dark) {
-  --wdc-bg:          #faf8f5;  /* warm cream (Notion) */
-  --wdc-surface:     #ffffff;
-  --wdc-surface-2:   #f5f2ec;
-  --wdc-elevated:    #ede9e1;
-  --wdc-hover:       #f0ece4;
+  --wdc-bg:          oklch(98.6% 0.005 250);
+  --wdc-chrome:      oklch(96.2% 0.008 252);
+  --wdc-surface:     oklch(99.6% 0.002 250);
+  --wdc-surface-2:   oklch(96.2% 0.008 252);
+  --wdc-elevated:    oklch(99.6% 0.002 250);
+  --wdc-hover:       oklch(96.2% 0.008 252);
 
-  --wdc-border:          rgba(28, 25, 23, 0.12);
-  --wdc-border-strong:   rgba(28, 25, 23, 0.22);
+  --wdc-border:          oklch(90% 0.009 252);
+  --wdc-border-strong:   oklch(83% 0.012 252);
 
-  --wdc-text:        #1a1819;
-  --wdc-text-2:      #44424a;
-  --wdc-text-3:      #6b6970;
+  --wdc-text:        oklch(21% 0.028 262);
+  --wdc-text-2:      oklch(36% 0.022 260);
+  --wdc-text-3:      oklch(48% 0.018 258);
 
-  /* Indigo, AAA on cream */
-  --wdc-accent:      #4338ca;  /* indigo-700 */
-  --wdc-accent-2:    #312e81;
-  --wdc-accent-glow: rgba(67, 56, 202, 0.14);
-  --wdc-accent-dim:  rgba(67, 56, 202, 0.08);
+  --wdc-accent:      oklch(52% 0.19 258);
+  --wdc-accent-2:    oklch(43% 0.2 262);
+  --wdc-accent-edge: oklch(39% 0.16 260);
+  --wdc-accent-glow: oklch(52% 0.19 258 / 0.18);
+  --wdc-accent-dim:  oklch(95% 0.028 256);
+  --wdc-accent-ink:  oklch(43% 0.2 262);
 
-  --wdc-accent-secondary:      #0d9488;  /* teal-600 */
-  --wdc-accent-secondary-dim:  rgba(13, 148, 136, 0.08);
+  --wdc-accent-secondary:      oklch(50% 0.10 210);
+  --wdc-accent-secondary-dim:  oklch(95% 0.02 210);
 
-  /* Status palette — AAA on cream */
-  --wdc-status-running:  #047857;  /* emerald-700 */
-  --wdc-status-stopped:  #6b6970;
-  --wdc-status-error:    #b91c1c;
-  --wdc-status-starting: #b45309;
+  --wdc-status-running:  oklch(50% 0.12 150);
+  --wdc-status-stopped:  oklch(48% 0.018 258);
+  --wdc-status-error:    oklch(52% 0.19 27);
+  --wdc-status-starting: oklch(50% 0.11 70);
   --wdc-warning:         var(--wdc-status-starting);
 
-  /* Categorical accents — AAA on cream */
-  --wdc-cat-web:       #c2410c;
-  --wdc-cat-lang:      #6d28d9;
-  --wdc-cat-db:        #0369a1;
-  --wdc-cat-cache:     #047857;
-  --wdc-cat-tunnel:    #c2410c;
+  --wdc-cat-web:       oklch(52% 0.14 50);
+  --wdc-cat-lang:      oklch(48% 0.16 300);
+  --wdc-cat-db:        oklch(48% 0.13 240);
+  --wdc-cat-cache:     oklch(50% 0.12 160);
+  --wdc-cat-tunnel:    oklch(52% 0.14 50);
 
-  /* Dramatic shadows on cream — bigger drops, warm tint */
-  --wdc-shadow-xs:   0 1px 2px rgba(28, 25, 23, 0.06);
-  --wdc-shadow-sm:   0 4px 8px rgba(28, 25, 23, 0.08);
-  --wdc-shadow:      0 8px 24px rgba(28, 25, 23, 0.10);
-  --wdc-shadow-card: 0 12px 32px rgba(28, 25, 23, 0.12);
-  --wdc-shadow-pop:  0 24px 56px rgba(28, 25, 23, 0.16);
-  --wdc-shadow-lg:   0 32px 80px rgba(28, 25, 23, 0.20);
+  --wdc-on-accent:   oklch(98.6% 0.005 250);
+  --wdc-tunnel-text: oklch(38% 0.09 60);
+  --wdc-badge-bg:    oklch(50% 0.11 70);
+  --wdc-badge-fg:    #ffffff;
 
-  --wdc-glow-accent: 0 0 0 1px var(--wdc-accent), 0 8px 24px var(--wdc-accent-glow);
-  --wdc-glow-success: 0 0 24px rgba(4, 120, 87, 0.22);
-  --wdc-glow-error:   0 0 24px rgba(185, 28, 28, 0.22);
+  --wdc-key-face:  oklch(99.4% 0.003 250);
+  --wdc-key-edge:  oklch(80% 0.016 254);
+  --wdc-shadow-key:        0 2px 0 0 var(--wdc-key-edge), inset 0 1px 0 oklch(100% 0 0 / 0.9);
+  --wdc-shadow-key-accent: 0 2px 0 0 var(--wdc-accent-edge), inset 0 1px 0 oklch(100% 0 0 / 0.22);
+  --wdc-shadow-key-press:  inset 0 1px 2px oklch(21% 0.028 262 / 0.14);
 
-  --wdc-mesh-bg: radial-gradient(circle at 12% 8%, rgba(67, 56, 202, 0.10), transparent 36%),
-                 radial-gradient(circle at 88% 92%, rgba(13, 148, 136, 0.08), transparent 38%),
-                 radial-gradient(circle at 60% 50%, rgba(192, 132, 252, 0.04), transparent 60%);
-
-  --wdc-gradient-accent: linear-gradient(135deg, #4338ca, #7c3aed);
-  --wdc-gradient-secondary: linear-gradient(135deg, #0d9488, #4338ca);
+  --wdc-shadow-xs:   0 1px 0 oklch(21% 0.028 262 / 0.05);
+  --wdc-shadow-sm:   0 1px 2px oklch(21% 0.028 262 / 0.06);
+  --wdc-shadow:      0 4px 12px oklch(21% 0.028 262 / 0.08);
+  --wdc-shadow-pop:  0 12px 32px oklch(21% 0.028 262 / 0.14);
+  --wdc-shadow-lg:   0 20px 48px oklch(21% 0.028 262 / 0.18);
 
   color-scheme: light;
-  --wdc-tunnel-text: #5c2f00;
-  --wdc-badge-bg:    #9a4a00;
-  --wdc-badge-fg:    #ffffff;
 }
 
 /* ─── Element Plus Dark Variable Overrides ────────────────────────────────── */
@@ -233,10 +200,10 @@ html:not(.dark) {
   --el-border-color-darker:       rgba(255, 255, 255, 0.16);
 
   --el-text-color-primary:        var(--wdc-text);
-  --el-text-color-regular:        #b4b7cc;
+  --el-text-color-regular:        var(--wdc-text-2);
   --el-text-color-secondary:      var(--wdc-text-2);
   --el-text-color-placeholder:    var(--wdc-text-3);
-  --el-text-color-disabled:       #9ca0bc;
+  --el-text-color-disabled:       var(--wdc-text-3);
 
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
@@ -247,28 +214,28 @@ html:not(.dark) {
   --el-fill-color-blank:          var(--wdc-surface);
 
   --el-color-primary:             var(--wdc-accent);
-  --el-color-primary-light-3:     #a78bfa;
-  --el-color-primary-light-5:     #c4b5fd;
-  --el-color-primary-light-7:     #e9d5ff;
-  --el-color-primary-light-8:     #f3e8ff;
-  --el-color-primary-light-9:     rgba(139, 92, 246, 0.12);
-  --el-color-primary-dark-2:      #7c3aed;
+  --el-color-primary-light-3:     color-mix(in oklab, var(--wdc-accent) 70%, var(--wdc-bg));
+  --el-color-primary-light-5:     color-mix(in oklab, var(--wdc-accent) 50%, var(--wdc-bg));
+  --el-color-primary-light-7:     color-mix(in oklab, var(--wdc-accent) 30%, var(--wdc-bg));
+  --el-color-primary-light-8:     color-mix(in oklab, var(--wdc-accent) 20%, var(--wdc-bg));
+  --el-color-primary-light-9:     var(--wdc-accent-dim);
+  --el-color-primary-dark-2:      var(--wdc-accent-2);
 
   --el-color-success:             var(--wdc-status-running);
-  --el-color-success-light-3:     #4ade80;
-  --el-color-success-light-5:     #86efac;
-  --el-color-success-light-9:     rgba(34, 197, 94, 0.12);
+  --el-color-success-light-3:     color-mix(in oklab, var(--wdc-status-running) 70%, var(--wdc-bg));
+  --el-color-success-light-5:     color-mix(in oklab, var(--wdc-status-running) 50%, var(--wdc-bg));
+  --el-color-success-light-9:     color-mix(in oklab, var(--wdc-status-running) 12%, transparent);
 
   --el-color-warning:             var(--wdc-status-starting);
-  --el-color-warning-light-9:     rgba(245, 158, 11, 0.12);
+  --el-color-warning-light-9:     color-mix(in oklab, var(--wdc-status-starting) 12%, transparent);
 
   --el-color-danger:              var(--wdc-status-error);
-  --el-color-danger-light-9:      rgba(239, 68, 68, 0.12);
+  --el-color-danger-light-9:      color-mix(in oklab, var(--wdc-status-error) 12%, transparent);
 
   --el-color-info:                var(--wdc-text-2);
-  --el-color-info-light-9:        rgba(139, 143, 168, 0.10);
+  --el-color-info-light-9:        color-mix(in oklab, var(--wdc-text-3) 10%, transparent);
 
-  --el-mask-color:                rgba(0, 0, 0, 0.7);
+  --el-mask-color:                oklch(10% 0.02 262 / 0.6);
   --el-mask-color-extra-light:    rgba(0, 0, 0, 0.4);
 
   --el-box-shadow:                var(--wdc-shadow);
@@ -289,32 +256,32 @@ html:not(.dark) {
   --el-border-color-dark:         var(--wdc-border-strong);
   --el-border-color-darker:       rgba(255, 255, 255, 0.16);
   --el-text-color-primary:        var(--wdc-text);
-  --el-text-color-regular:        #b4b7cc;
+  --el-text-color-regular:        var(--wdc-text-2);
   --el-text-color-secondary:      var(--wdc-text-2);
   --el-text-color-placeholder:    var(--wdc-text-3);
-  --el-text-color-disabled:       #9ca0bc;
+  --el-text-color-disabled:       var(--wdc-text-3);
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
   --el-fill-color-blank:          var(--wdc-surface);
   --el-fill-color-dark:           var(--wdc-elevated);
   --el-color-primary:             var(--wdc-accent);
-  --el-color-primary-light-3:     #818cf8;
-  --el-color-primary-light-5:     #a5b4fc;
-  --el-color-primary-light-7:     #c7d2fe;
-  --el-color-primary-light-9:     rgba(139, 92, 246, 0.12);
-  --el-color-primary-dark-2:      #7c3aed;
+  --el-color-primary-light-3:     color-mix(in oklab, var(--wdc-accent) 70%, var(--wdc-bg));
+  --el-color-primary-light-5:     color-mix(in oklab, var(--wdc-accent) 50%, var(--wdc-bg));
+  --el-color-primary-light-7:     color-mix(in oklab, var(--wdc-accent) 30%, var(--wdc-bg));
+  --el-color-primary-light-9:     var(--wdc-accent-dim);
+  --el-color-primary-dark-2:      var(--wdc-accent-2);
   --el-color-success:             var(--wdc-status-running);
-  --el-color-success-light-9:     rgba(34, 197, 94, 0.12);
+  --el-color-success-light-9:     color-mix(in oklab, var(--wdc-status-running) 12%, transparent);
   --el-color-warning:             var(--wdc-status-starting);
-  --el-color-warning-light-9:     rgba(245, 158, 11, 0.12);
+  --el-color-warning-light-9:     color-mix(in oklab, var(--wdc-status-starting) 12%, transparent);
   --el-color-danger:              var(--wdc-status-error);
-  --el-color-danger-light-9:      rgba(239, 68, 68, 0.12);
+  --el-color-danger-light-9:      color-mix(in oklab, var(--wdc-status-error) 12%, transparent);
   --el-color-info:                var(--wdc-text-2);
-  --el-color-info-light-9:        rgba(139, 143, 168, 0.10);
+  --el-color-info-light-9:        color-mix(in oklab, var(--wdc-text-3) 10%, transparent);
   --el-box-shadow:                var(--wdc-shadow);
   --el-box-shadow-light:          var(--wdc-shadow-sm);
   --el-box-shadow-dark:           var(--wdc-shadow-lg);
-  --el-mask-color:                rgba(0, 0, 0, 0.7);
+  --el-mask-color:                oklch(10% 0.02 262 / 0.6);
 }
 
 /* ─── Base Reset ─────────────────────────────────────────────────────────── */
@@ -331,11 +298,11 @@ html:not(.dark) {
   --el-text-color-primary:        var(--wdc-text);
   --el-text-color-regular:        var(--wdc-text-2);
   --el-text-color-secondary:      var(--wdc-text-3);
-  --el-text-color-placeholder:    #5c6074;
-  --el-text-color-disabled:       #686d82;
+  --el-text-color-placeholder:    var(--wdc-text-3);
+  --el-text-color-disabled:       var(--wdc-text-3);
   --el-fill-color:                var(--wdc-surface-2);
   --el-fill-color-light:          var(--wdc-hover);
-  --el-fill-color-lighter:        #eef1f7;
+  --el-fill-color-lighter:        var(--wdc-surface-2);
   --el-fill-color-blank:          var(--wdc-surface);
   --el-fill-color-dark:           var(--wdc-elevated);
   --el-color-primary:             var(--wdc-accent);
@@ -352,11 +319,6 @@ html:not(.dark) {
 }
 
 html {
-  /*
-    Helvetica/Arial render slightly larger optical-size than Inter at
-    the same px size, so root drops 16 → 15. Every rem class scales
-    proportionally and stays readable at 900×600 minimum window.
-  */
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -366,19 +328,26 @@ html {
 body {
   background: var(--wdc-bg);
   color: var(--wdc-text);
-  /*
-    Inter — modern UI sans for SOFT VIBRANT. cv11 enables the
-    straight-sided single-story `a` (cleaner at small sizes), tnum
-    aligns numerals in tables, ss01 is a stylistic-set tweak.
-  */
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--wdc-font-body);
   line-height: 1.5;
-  font-feature-settings: 'cv11', 'tnum', 'ss01';
-  letter-spacing: -0.01em;
+  font-feature-settings: 'tnum';
+  caret-color: var(--wdc-accent);
 }
 
+::selection { background: color-mix(in oklab, var(--wdc-accent) 28%, transparent); color: var(--wdc-text); }
+:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; }
+
 code, pre, .mono, .metric-value, .meta-val, .stat-value {
-  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace !important;
+  font-family: var(--wdc-font-mono) !important;
+}
+
+/* Headings and titles use the display face. */
+h1, h2, h3, h4,
+.page-title, .section-title, .panel-title, .card-title, .el-dialog__title, .el-drawer__title {
+  font-family: var(--wdc-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 /*
@@ -388,335 +357,176 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
   ═══════════════════════════════════════════════════════════════════
 */
 
-/* Generic page wrapper. Standard 32px padding + 24px vertical gap. */
-:where(.wdc-page, .sites-page, .dashboard-page, .databases-page, .settings-page, .plugin-page) {
-  padding: 32px;
+/* Page wrapper: one measure, generous top, sections separated by space. */
+:where(.wdc-page, .sites-page, .dashboard-page, .databases-page, .settings-page, .plugin-page,
+  .backups-page, .binaries-page, .cf-page, .composer-manager, .help-page, .hosts-manager, .mcp-activity-page, .page, .php-page, .pm-page, .db-plugin-page, .svc-config-page, .ssl-page, .site-edit-page) {
+  padding: var(--wdc-space-6) var(--wdc-space-6-5) var(--wdc-space-8);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--wdc-space-5);
   background: transparent;
   min-height: 100%;
+  max-width: 1320px;
 }
 
-/* Hero page header — big title left, action buttons right. */
+/* A page rendered inside another page (MCP hub tabs) does not pad again. */
+:where(.wdc-page, .page, .dashboard-page, .settings-page, .plugin-page) :where(.page, .mcp-activity-page, .plugin-page) {
+  padding: 0;
+  max-width: none;
+}
+
+/* Page header: title left, actions right, aligned on the baseline. */
 .wdc-page-hero {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--wdc-space-4);
   flex-wrap: wrap;
 }
 
 .wdc-page-hero h1,
 :where(.sites-page, .dashboard-page, .databases-page, .settings-page) > .page-header h1,
 :where(.sites-page, .dashboard-page, .databases-page, .settings-page) > .page-header .page-title {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: var(--wdc-font-display);
+  font-size: 1.728rem;
+  font-weight: 600;
+  letter-spacing: -0.028em;
   line-height: 1.1;
   color: var(--wdc-text);
   margin: 0;
 }
 
 .wdc-page-hero .subtitle {
-  font-size: 0.9rem;
-  color: var(--wdc-text-3);
-  margin-top: 4px;
+  font-size: 0.93rem;
+  color: var(--wdc-text-2);
+  margin-top: var(--wdc-space-1);
 }
 
-/* Card primitive — every "section box" should look like this. */
+/* Panel primitive: hairline box, no shadow. */
 :where(.wdc-card) {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  box-shadow: var(--wdc-shadow-card);
-  padding: 24px;
+  box-shadow: none;
+  padding: var(--wdc-space-5);
 }
 
-/* Every Element Plus card gets the card primitive treatment. */
-.el-card {
-  border-radius: var(--wdc-radius-lg) !important;
-  border: 1px solid var(--wdc-border) !important;
-  background: var(--wdc-surface) !important;
-  box-shadow: var(--wdc-shadow-card) !important;
-}
-.el-card__header {
-  padding: 20px 24px !important;
-  border-bottom: 1px solid var(--wdc-border) !important;
-  font-size: 0.96rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.el-card__body { padding: 24px !important; }
-
-/*
-  Status bar (bottom) — flat translucent strip. Complements the
-  glass header at the top.
-*/
+/* Status bar (bottom): flat chrome strip. */
 .app-status-bar,
 .wdc-statusbar {
-  background: color-mix(in srgb, var(--wdc-surface) 78%, transparent) !important;
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  background: var(--wdc-chrome) !important;
   border-top: 1px solid var(--wdc-border);
 }
 
-/*
-  Subtle entry animation — 200ms fade-in on route change. Each page
-  feels alive without being noisy.
-*/
+/* Short fade on route change; no movement. */
 .content-area > * {
-  animation: wdc-page-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: wdc-page-enter var(--wdc-dur-short) var(--wdc-ease-out) both;
 }
 @keyframes wdc-page-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .content-area > * { animation: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 /* ─── Element Plus Component Refinements ─────────────────────────────────── */
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Buttons — comprehensive coverage for EVERY variant used across the app.
-
-   Goals locked in after 2026-04-11 "fixni design vsech tlacitek":
-   (1) Every variant has consistent height per size (28 / 32 / 40)
-   (2) Every coloured variant has a matching solid / plain / text state
-   (3) Every state has WCAG AA+ contrast against its own background
-   (4) disabled opacity = 0.45 with not-allowed cursor (no per-variant override)
-   (5) Loading spinner inherits text colour so it's visible on every bg
-   (6) No gradients, no drop shadows — flat redesign consistency
+   Buttons — tactile keys.
+   (1) Consistent height per size (28 / 32 / 40)
+   (2) Default = key face with a 2px bottom edge; primary = cobalt key;
+       success/warning/danger are coloured text on the key face, so a row
+       of actions never turns into a row of traffic lights
+   (3) Press = edge collapses (translateY 1px + inset shadow)
+   (4) Disabled fades to 0.55 with not-allowed cursor
    ═══════════════════════════════════════════════════════════════════════════ */
-
-/*
-  Button base — SOFT VIBRANT: 8px radius, no inset chiseling, soft
-  drop shadow on solid variants only, no border fight. The previous
-  inset chiseled "3D" look conflicted with the soft card aesthetic.
-*/
 .el-button {
+  --el-button-bg-color: var(--wdc-key-face);
+  --el-button-border-color: var(--wdc-border-strong);
+  --el-button-text-color: var(--wdc-text);
+  --el-button-hover-bg-color: var(--wdc-key-face);
+  --el-button-hover-border-color: var(--wdc-border-strong);
+  --el-button-hover-text-color: var(--wdc-text);
+  --el-button-active-bg-color: var(--wdc-key-face);
+  --el-button-active-border-color: var(--wdc-border-strong);
   border-radius: var(--wdc-radius) !important;
-  font-weight: 600;
-  font-size: 0.82rem;
+  font-family: var(--wdc-font-display);
+  font-weight: 500;
+  font-size: 0.87rem;
+  letter-spacing: 0;
   border-width: 1px !important;
   border-style: solid !important;
-  box-shadow: none !important;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.08s, box-shadow 0.15s;
-  letter-spacing: 0;
+  background: var(--el-button-bg-color) !important;
+  border-color: var(--el-button-border-color) !important;
+  color: var(--el-button-text-color) !important;
+  box-shadow: var(--wdc-shadow-key) !important;
+  transition: transform var(--wdc-dur-micro) var(--wdc-ease-out), box-shadow var(--wdc-dur-micro) var(--wdc-ease-out), background-color var(--wdc-dur-micro) var(--wdc-ease-out), color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
-.el-button--primary,
-.el-button--success,
-.el-button--danger,
-.el-button--warning {
-  box-shadow: var(--wdc-shadow-sm) !important;
-}
-.el-button--primary:hover:not(.is-disabled),
-.el-button--success:hover:not(.is-disabled),
-.el-button--danger:hover:not(.is-disabled),
-.el-button--warning:hover:not(.is-disabled) {
-  box-shadow: var(--wdc-shadow) !important;
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .el-button:hover:not(.is-disabled) { transform: translateY(-1px); }
 }
 .el-button:active:not(.is-disabled) {
-  transform: translateY(0);
-  box-shadow: var(--wdc-shadow-xs) !important;
+  transform: translateY(1px);
+  box-shadow: var(--wdc-shadow-key-press) !important;
 }
+.el-button:focus-visible { outline: 2px solid var(--wdc-accent) !important; outline-offset: 2px; }
 
-/* Size heights — match Element Plus conventions, narrower horizontal padding
-   than stock so dense toolbars don't overflow on the 900px minimum window. */
-.el-button--large  { height: 40px; padding: 0 18px; font-size: 0.88rem; }
-.el-button--default{ height: 34px; padding: 0 16px; }
-.el-button--small  { height: 32px; padding: 0 14px; }
+.el-button.is-circle { border-radius: var(--wdc-radius-full) !important; }
 
-/* Circle buttons must stay perfectly round — strip padding, lock w==h. */
-.el-button.is-circle {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-}
-.el-button.is-circle.el-button--large {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-}
-.el-button.is-circle.el-button--small {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-}
-
-/* ── Default (neutral) ──────────────────────────────────────────────────── */
-.el-button--default {
-  background: var(--wdc-surface-2) !important;
-  border-color: var(--wdc-border) !important;
-  color: var(--wdc-text-2) !important;
-}
-.el-button--default:hover:not(.is-disabled) {
-  background: var(--wdc-elevated) !important;
-  border-color: var(--wdc-border-strong) !important;
-  color: var(--wdc-text) !important;
-}
-.el-button--default:active:not(.is-disabled) {
-  background: var(--wdc-hover) !important;
-}
-
-/* ── Primary (gradient solid) ─────────────────────────────────────────── */
+/* Primary — the one cobalt key per area. */
 .el-button--primary {
-  background: var(--wdc-gradient-accent) !important;
-  border-color: transparent !important;
-  color: #ffffff !important;
+  --el-button-bg-color: var(--wdc-accent);
+  --el-button-border-color: var(--wdc-accent-edge);
+  --el-button-text-color: var(--wdc-on-accent);
+  --el-button-hover-text-color: var(--wdc-on-accent);
+  box-shadow: var(--wdc-shadow-key-accent) !important;
 }
-.el-button--primary:hover:not(.is-disabled) {
-  background: var(--wdc-gradient-accent) !important;
-  filter: brightness(1.08) saturate(1.1);
-  border-color: transparent !important;
-}
-
-/* ── Success (solid) ────────────────────────────────────────────────────── */
-.el-button--success {
-  background: var(--wdc-status-running) !important;
-  border-color: var(--wdc-status-running) !important;
-  color: var(--wdc-bg) !important;
-}
-.el-button--success:hover:not(.is-disabled) {
-  background: #16a34a !important;
-  border-color: #16a34a !important;
+@media (hover: hover) {
+  .el-button--primary:hover:not(.is-disabled) { --el-button-bg-color: color-mix(in oklab, var(--wdc-accent) 88%, var(--wdc-text)); }
 }
 
-/* ── Danger (solid) ─────────────────────────────────────────────────────── */
-.el-button--danger {
-  background: var(--wdc-status-error) !important;
-  border-color: var(--wdc-status-error) !important;
-  color: var(--wdc-bg) !important;
-}
-.el-button--danger:hover:not(.is-disabled) {
-  background: #e34949 !important;
-  border-color: #e34949 !important;
-}
+/* Semantic variants — coloured label on the neutral key. */
+.el-button--success { --el-button-text-color: var(--wdc-status-running); --el-button-hover-text-color: var(--wdc-status-running); }
+.el-button--warning { --el-button-text-color: var(--wdc-status-starting); --el-button-hover-text-color: var(--wdc-status-starting); }
+.el-button--danger  { --el-button-text-color: var(--wdc-status-error); --el-button-hover-text-color: var(--wdc-status-error); }
+.el-button--info    { --el-button-text-color: var(--wdc-text-2); --el-button-hover-text-color: var(--wdc-text); }
 
-/* ── Warning (solid) ────────────────────────────────────────────────────── */
-.el-button--warning {
-  background: var(--wdc-status-starting) !important;
-  border-color: var(--wdc-status-starting) !important;
-  color: var(--wdc-bg) !important;
-}
-.el-button--warning:hover:not(.is-disabled) {
-  background: #d97706 !important;
-  border-color: #d97706 !important;
-}
+/* Plain variants read the same as the semantic keys. */
+.el-button.is-plain.el-button--primary { --el-button-bg-color: var(--wdc-key-face); --el-button-border-color: var(--wdc-border-strong); --el-button-text-color: var(--wdc-accent-ink); --el-button-hover-text-color: var(--wdc-accent-ink); box-shadow: var(--wdc-shadow-key) !important; }
 
-/* ── Info (solid) ───────────────────────────────────────────────────────── */
-.el-button--info {
-  background: var(--wdc-elevated) !important;
-  border-color: var(--wdc-border-strong) !important;
-  color: var(--wdc-text) !important;
+/* Text / link variants — flat, no key edge. */
+.el-button.is-text,
+.el-button.is-link {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
+  --el-button-text-color: var(--wdc-text-2);
+  --el-button-hover-text-color: var(--wdc-text);
+  box-shadow: none !important;
 }
-.el-button--info:hover:not(.is-disabled) {
-  background: var(--wdc-hover) !important;
+@media (hover: hover) {
+  .el-button.is-text:hover:not(.is-disabled) { --el-button-bg-color: var(--wdc-hover); transform: none; }
+  .el-button.is-link:hover:not(.is-disabled) { transform: none; text-decoration: underline; text-decoration-color: var(--wdc-accent); }
 }
-
-/* ── Plain variants — transparent bg, coloured border + text ────────────── */
-.el-button.is-plain.el-button--primary {
-  background: transparent !important;
-  border-color: var(--wdc-accent) !important;
-  color: var(--wdc-accent) !important;
-}
-.el-button.is-plain.el-button--primary:hover:not(.is-disabled) {
-  background: var(--wdc-accent-dim) !important;
-  border-color: var(--wdc-accent) !important;
-  color: var(--wdc-text) !important;
-}
-
-.el-button.is-plain.el-button--success {
-  background: rgba(34, 197, 94, 0.08) !important;
-  border-color: rgba(34, 197, 94, 0.35) !important;
-  color: var(--wdc-status-running) !important;
-}
-.el-button.is-plain.el-button--success:hover:not(.is-disabled) {
-  background: rgba(34, 197, 94, 0.18) !important;
-  border-color: rgba(34, 197, 94, 0.55) !important;
-}
-
-.el-button.is-plain.el-button--danger {
-  background: rgba(239, 68, 68, 0.08) !important;
-  border-color: rgba(239, 68, 68, 0.35) !important;
-  color: var(--wdc-status-error) !important;
-}
-.el-button.is-plain.el-button--danger:hover:not(.is-disabled) {
-  background: rgba(239, 68, 68, 0.18) !important;
-  border-color: rgba(239, 68, 68, 0.55) !important;
-}
-
-.el-button.is-plain.el-button--warning {
-  background: rgba(245, 158, 11, 0.08) !important;
-  border-color: rgba(245, 158, 11, 0.35) !important;
-  color: var(--wdc-status-starting) !important;
-}
-.el-button.is-plain.el-button--warning:hover:not(.is-disabled) {
-  background: rgba(245, 158, 11, 0.18) !important;
-  border-color: rgba(245, 158, 11, 0.55) !important;
-}
-
-.el-button.is-plain.el-button--info {
-  background: transparent !important;
-  border-color: var(--wdc-border-strong) !important;
-  color: var(--wdc-text-2) !important;
-}
-.el-button.is-plain.el-button--info:hover:not(.is-disabled) {
-  background: var(--wdc-surface-2) !important;
-  color: var(--wdc-text) !important;
-}
-
-/* ── Text variants — now button-shaped at rest (subtle bg + border) ──────
-   Previous iteration left them fully transparent which read as "bare text
-   with hover tint" to the user. Give them a faint surface tint and
-   subtle border so they are clearly clickable at rest without competing
-   visually with primary/plain variants. */
-.el-button.is-text {
-  background: var(--wdc-surface-2) !important;
-  border-color: var(--wdc-border) !important;
-  color: var(--wdc-text-2) !important;
-  padding: 0 12px !important;
-}
-.el-button.is-text:hover:not(.is-disabled) {
-  background: var(--wdc-elevated) !important;
-  border-color: var(--wdc-border-strong) !important;
-  color: var(--wdc-text) !important;
-}
-.el-button.is-text.el-button--primary {
-  color: var(--wdc-accent) !important;
-}
-.el-button.is-text.el-button--primary:hover:not(.is-disabled) {
-  background: var(--wdc-accent-dim) !important;
-  color: var(--wdc-text) !important;
-}
-.el-button.is-text.el-button--success {
-  color: var(--wdc-status-running) !important;
-}
-.el-button.is-text.el-button--danger {
-  color: var(--wdc-status-error) !important;
-}
-.el-button.is-text.el-button--danger:hover:not(.is-disabled) {
-  background: rgba(239, 68, 68, 0.14) !important;
-}
-.el-button.is-text.el-button--warning {
-  color: var(--wdc-status-starting) !important;
-}
+.el-button.is-link:hover:not(.is-disabled),
+.el-button.is-link:focus:not(.is-disabled) { --el-button-bg-color: transparent; }
+.el-button.is-text:active:not(.is-disabled),
+.el-button.is-link:active:not(.is-disabled) { box-shadow: none !important; transform: none; }
+.el-button.is-text.el-button--primary, .el-button.is-link.el-button--primary { --el-button-text-color: var(--wdc-accent-ink); --el-button-hover-text-color: var(--wdc-accent-ink); }
+.el-button.is-text.el-button--success, .el-button.is-link.el-button--success { --el-button-text-color: var(--wdc-status-running); }
+.el-button.is-text.el-button--danger,  .el-button.is-link.el-button--danger  { --el-button-text-color: var(--wdc-status-error); --el-button-hover-text-color: var(--wdc-status-error); }
+.el-button.is-text.el-button--warning, .el-button.is-link.el-button--warning { --el-button-text-color: var(--wdc-status-starting); }
 
 /* ── Disabled + loading — uniform policy for every variant ─────────────── */
 .el-button.is-disabled,
 .el-button.is-disabled:hover,
 .el-button.is-disabled:active {
-  opacity: 0.72 !important;
+  opacity: 0.55 !important;
   cursor: not-allowed !important;
-  /* Preserve the variant's own colours — DO NOT override bg/border/color here
-     or the disabled state becomes a uniform grey that hides the button's
-     semantic (primary/danger/etc.). Just fade. */
+  transform: none !important;
 }
 .el-button.is-loading {
-  /* Loading spinner uses currentColor — ensure text colour is the variant's
-     primary colour so the spinner is always visible. Element Plus's default
-     loading overlay is transparent which inherits cleanly. */
   pointer-events: none;
 }
 .el-button.is-loading .el-icon-loading,
@@ -731,35 +541,73 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 }
 
 /*
-  Inputs — SOFT VIBRANT. Bigger (36px), 8px radius, soft glow on
-  focus instead of accent border. Was 32px tight with sharper 5px
-  radius — too "form-y" for the warm card aesthetic.
+  Inputs — 36px, page-ground fill with a visible edge (≥ 3:1), 2px
+  cobalt ring on focus.
 */
 .el-input__wrapper {
-  background: var(--wdc-surface-2) !important;
-  border: 1px solid var(--wdc-border) !important;
+  background: var(--wdc-surface) !important;
+  border: 1px solid var(--wdc-border-strong) !important;
   border-radius: var(--wdc-radius) !important;
   box-shadow: none !important;
-  padding: 4px 12px !important;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  padding: 0 var(--wdc-space-3) !important;
+  min-height: 36px;
+  transition: border-color var(--wdc-dur-micro) var(--wdc-ease-out), box-shadow var(--wdc-dur-micro) var(--wdc-ease-out);
 }
 
 .el-input__wrapper:hover {
-  border-color: var(--wdc-border-strong) !important;
-  background: var(--wdc-elevated) !important;
+  border-color: var(--wdc-text-3) !important;
+  background: var(--wdc-surface) !important;
 }
 
 .el-input__wrapper.is-focus {
   border-color: var(--wdc-accent) !important;
-  box-shadow: 0 0 0 4px var(--wdc-accent-dim) !important;
+  box-shadow: 0 0 0 1px var(--wdc-accent) !important;
   background: var(--wdc-surface) !important;
 }
 
 .el-input__inner {
   color: var(--wdc-text) !important;
-  font-size: 0.86rem;
-  min-height: 36px;
-  line-height: 36px;
+  font-size: 0.87rem;
+  min-height: 34px;
+  line-height: 34px;
+}
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder { color: var(--wdc-text-3) !important; }
+
+/* Selects match the text inputs: same height, ground, edge and focus. */
+.el-select__wrapper {
+  min-height: 36px !important;
+  padding: var(--wdc-space-1) var(--wdc-space-3) !important;
+  background: var(--wdc-surface) !important;
+  border-radius: var(--wdc-radius) !important;
+  box-shadow: 0 0 0 1px var(--wdc-border-strong) inset !important;
+  font-size: 0.87rem;
+}
+.el-select__wrapper:hover { box-shadow: 0 0 0 1px var(--wdc-text-3) inset !important; }
+.el-select__wrapper.is-focused { box-shadow: 0 0 0 2px var(--wdc-accent) inset !important; }
+.el-select--small .el-select__wrapper { min-height: 32px !important; }
+.el-select__placeholder.is-transparent { color: var(--wdc-text-3) !important; }
+
+/* Input group add-ons (e.g. the folder picker) sit flush as a key. */
+.el-input-group__append,
+.el-input-group__prepend {
+  background: var(--wdc-key-face) !important;
+  border: 1px solid var(--wdc-border-strong) !important;
+  box-shadow: none !important;
+  color: var(--wdc-text-2) !important;
+  padding: 0 var(--wdc-space-3) !important;
+}
+.el-input-group__append { border-left: 0 !important; border-radius: 0 var(--wdc-radius) var(--wdc-radius) 0 !important; }
+.el-input-group__prepend { border-right: 0 !important; border-radius: var(--wdc-radius) 0 0 var(--wdc-radius) !important; }
+.el-input-group--append > .el-input__wrapper { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; }
+.el-input-group--prepend > .el-input__wrapper { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
+.el-input-group__append .el-button,
+.el-input-group__prepend .el-button {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .el-select__input {
@@ -779,75 +627,44 @@ code, pre, .mono, .metric-value, .meta-val, .stat-value {
 }
 
 /*
-  Tags / badges — SOFT VIBRANT. 999px pill radius (Material chips),
-  slightly bigger, weight bumped to 600. Small variant pills are 22px
-  tall with 8px horizontal padding.
+  Tags — small square-ish chips. Semantic variants are a tinted wash of
+  their status colour with the status colour as text; the dark variants
+  are the solid fill with on-colour text.
 */
 .el-tag {
-  border-radius: 999px !important;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 0 10px !important;
-  height: 26px;
+  border-radius: var(--wdc-radius-xs) !important;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  padding: 0 var(--wdc-space-2) !important;
+  height: 24px;
   border-width: 1px !important;
 }
 
 .el-tag--small {
-  min-height: 22px;
-  height: 22px;
-  padding: 0 8px !important;
-  font-size: 0.7rem;
+  min-height: 20px;
+  height: 20px;
+  padding: 0 var(--wdc-space-1-5) !important;
+  font-size: 0.74rem;
 }
 
-/*
-  Coloured tag fills — each semantic variant carries a real tinted
-  background + matching border so it reads as a status chip, not a
-  generic chip. Plain variants use a soft 12% fill; dark variants
-  use solid color with high-contrast text.
-*/
-.el-tag--info.is-plain {
-  background: rgba(139, 143, 168, 0.12) !important;
-  border-color: rgba(139, 143, 168, 0.30) !important;
-  color: var(--wdc-text-2) !important;
+.el-tag.is-plain, .el-tag--light, .el-tag:not(.el-tag--dark) {
+  --wdc-tag: var(--wdc-accent-ink);
+  background: color-mix(in oklab, var(--wdc-tag) 10%, transparent) !important;
+  border-color: color-mix(in oklab, var(--wdc-tag) 28%, transparent) !important;
+  color: var(--wdc-tag) !important;
 }
-.el-tag--info.el-tag--dark {
-  background: #64748b !important;
-  border-color: #64748b !important;
-  color: #ffffff !important;
-}
+.el-tag--info:not(.el-tag--dark)    { --wdc-tag: var(--wdc-text-2); }
+.el-tag--success:not(.el-tag--dark) { --wdc-tag: var(--wdc-status-running); }
+.el-tag--warning:not(.el-tag--dark) { --wdc-tag: var(--wdc-status-starting); }
+.el-tag--danger:not(.el-tag--dark)  { --wdc-tag: var(--wdc-status-error); }
 
-.el-tag--success.is-plain {
-  background: rgba(34, 197, 94, 0.12) !important;
-  border-color: rgba(34, 197, 94, 0.32) !important;
-  color: var(--wdc-status-running) !important;
-}
-.el-tag--success.el-tag--dark {
-  background: var(--wdc-status-running) !important;
-  border-color: var(--wdc-status-running) !important;
-  color: #04110a !important;
-}
-
-.el-tag--warning.is-plain {
-  background: rgba(245, 158, 11, 0.12) !important;
-  border-color: rgba(245, 158, 11, 0.32) !important;
-  color: var(--wdc-status-starting) !important;
-}
-.el-tag--warning.el-tag--dark {
-  background: var(--wdc-status-starting) !important;
-  border-color: var(--wdc-status-starting) !important;
-  color: #141006 !important;
-}
-
-html:not(.dark) .el-tag--success.el-tag--dark,
-html:not(.dark) .el-tag--warning.el-tag--dark {
-  color: #ffffff !important;
-}
-
-html:not(.dark) .el-tag--success.el-tag--dark,
-html:not(.dark) .el-tag--warning.el-tag--dark {
-  color: #ffffff !important;
-}
+.el-tag--dark { color: var(--wdc-bg) !important; }
+.el-tag--dark.el-tag--info    { background: var(--wdc-text-3) !important; border-color: var(--wdc-text-3) !important; }
+.el-tag--dark.el-tag--success { background: var(--wdc-status-running) !important; border-color: var(--wdc-status-running) !important; }
+.el-tag--dark.el-tag--warning { background: var(--wdc-status-starting) !important; border-color: var(--wdc-status-starting) !important; }
+.el-tag--dark.el-tag--danger  { background: var(--wdc-status-error) !important; border-color: var(--wdc-status-error) !important; }
+.el-tag--dark.el-tag--primary { background: var(--wdc-accent) !important; border-color: var(--wdc-accent) !important; color: var(--wdc-on-accent) !important; }
 
 /*
   Tunnel tags previously yellow/amber/orange to "highlight running
@@ -869,47 +686,38 @@ html.dark .nav-item-tunnel .nav-label {
   color: var(--wdc-status-starting) !important;
 }
 
-.el-tag--danger.is-plain {
-  background: rgba(239, 68, 68, 0.12) !important;
-  border-color: rgba(239, 68, 68, 0.32) !important;
-  color: var(--wdc-status-error) !important;
-}
-.el-tag--danger.el-tag--dark {
-  background: var(--wdc-status-error) !important;
-  border-color: var(--wdc-status-error) !important;
-  color: #1a0606 !important;
-}
-html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 /*
-  ═════════════════════════════════════════════════════════════════
-  TABLE — completely new look
-  • 20px outer radius card with gradient hairline
-  • Header strip in surface-2 with accent-coloured uppercase labels
-  • Tall rows (16-18px padding) with explicit hairline between
-  • Hover state: accent left-bar + bg lift, no scale
-  ═════════════════════════════════════════════════════════════════
+  Tables — hairline rows on the page ground, no box. Header is quiet
+  display text, not uppercase accent. Hover tints the row.
 */
 .el-table {
-  background: var(--wdc-surface) !important;
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: transparent;
+  --el-table-row-hover-bg-color: var(--wdc-hover);
+  --el-table-border-color: var(--wdc-border);
+  background: transparent !important;
   color: var(--wdc-text);
-  border-radius: var(--wdc-radius-xl) !important;
-  border: 1px solid var(--wdc-border) !important;
-  box-shadow: var(--wdc-shadow-card);
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--wdc-border-strong) !important;
+  box-shadow: none;
   overflow: hidden;
 }
 
 .el-table .el-table__header-wrapper th.el-table__cell,
 .el-table thead th.el-table__cell,
 .el-table th.el-table__cell {
-  background: var(--wdc-surface-2) !important;
-  color: var(--wdc-accent) !important;
-  font-size: 0.72rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.10em !important;
-  border-bottom: 2px solid var(--wdc-accent-glow) !important;
-  padding: 14px 16px !important;
+  background: transparent !important;
+  color: var(--wdc-text-3) !important;
+  font-family: var(--wdc-font-display);
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  border-bottom: 1px solid var(--wdc-border-strong) !important;
+  padding: var(--wdc-space-2) var(--wdc-space-3) !important;
   height: auto !important;
 }
 .el-table th.el-table__cell .cell {
@@ -924,91 +732,94 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
   height: 44px !important;
 }
 .el-table__body tr.el-table__row td {
-  background: var(--wdc-surface) !important;
-  border-bottom: 1px solid var(--wdc-border-strong) !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--wdc-border) !important;
   color: var(--wdc-text);
-  font-size: 0.82rem;
-  /* Comfortable compact: 44px row height. */
-  padding: 8px 12px !important;
-  line-height: 1.3;
+  font-size: 0.87rem;
+  padding: var(--wdc-space-2) var(--wdc-space-3) !important;
+  line-height: 1.35;
   position: relative;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: background-color var(--wdc-dur-micro) var(--wdc-ease-out);
 }
 
-.el-table__body tr.el-table__row:last-child td {
-  border-bottom: none !important;
-}
-
-/* Drop striped rows. */
 .el-table--striped .el-table__body tr.el-table__row--striped td {
-  background: var(--wdc-surface) !important;
+  background: transparent !important;
 }
 
-/*
-  Hover row — accent left-bar via inset box-shadow on first cell.
-  Replaces flat bg-only hover with a more present "selected" state.
-*/
 .el-table__body tr.el-table__row:hover td,
 .el-table--striped .el-table__body tr.el-table__row--striped:hover td {
   background: var(--wdc-hover) !important;
 }
-.el-table__body tr.el-table__row:hover td:first-child,
-.el-table--striped .el-table__body tr.el-table__row--striped:hover td:first-child {
-  box-shadow: inset 4px 0 0 var(--wdc-accent);
+.el-table__body tr.el-table__row.current-row td {
+  background: var(--wdc-accent-dim) !important;
 }
 
 .el-table__body-wrapper {
-  background: var(--wdc-surface) !important;
+  background: transparent !important;
 }
 
 .el-table__inner-wrapper::before {
   display: none !important;
 }
 
+/* Fixed (sticky) columns need an opaque ground or scrolled cells show through. */
+.el-table .el-table-fixed-column--left,
+.el-table .el-table-fixed-column--right,
+.el-table__body tr.el-table__row td.el-table-fixed-column--left,
+.el-table__body tr.el-table__row td.el-table-fixed-column--right {
+  background: var(--wdc-bg) !important;
+}
+.el-table th.el-table__cell.el-table-fixed-column--left,
+.el-table th.el-table__cell.el-table-fixed-column--right {
+  background: var(--wdc-bg) !important;
+}
+.el-table__body tr.el-table__row:hover td.el-table-fixed-column--left,
+.el-table__body tr.el-table__row:hover td.el-table-fixed-column--right {
+  background: var(--wdc-hover) !important;
+}
+.el-card .el-table .el-table-fixed-column--left,
+.el-card .el-table .el-table-fixed-column--right,
+.el-card .el-table__body tr.el-table__row td.el-table-fixed-column--right {
+  background: var(--wdc-surface) !important;
+}
+
 /*
-  ═════════════════════════════════════════════════════════════════
-  CARD — completely new look
-  • 20px radius (bigger), 28px padding (more breathing room)
-  • Subtle gradient hairline border (1px) plus dramatic shadow
-  • Hover: lift translateY(-2px) + larger shadow
-  ═════════════════════════════════════════════════════════════════
+  Cards — hairline panels. No lift, no drop shadow. Header is a quiet
+  display-face title on the panel itself.
 */
 :where(.wdc-card),
 .el-card {
   background: var(--wdc-surface) !important;
-  border: 1px solid transparent !important;
-  border-radius: var(--wdc-radius-xl) !important;
-  box-shadow:
-    var(--wdc-shadow-card),
-    inset 0 0 0 1px var(--wdc-border) !important;
+  border: 1px solid var(--wdc-border) !important;
+  border-radius: var(--wdc-radius-lg) !important;
+  box-shadow: none !important;
   padding: 0 !important;
-  transition: transform 0.18s, box-shadow 0.18s !important;
+  transition: border-color var(--wdc-dur-micro) var(--wdc-ease-out) !important;
 }
 .el-card.is-hoverable:hover,
 .wdc-card.is-hoverable:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    var(--wdc-shadow-pop),
-    inset 0 0 0 1px var(--wdc-accent-glow) !important;
+  transform: none;
+  border-color: var(--wdc-border-strong) !important;
+  box-shadow: none !important;
 }
 .el-card__header {
-  padding: 20px 28px !important;
+  padding: var(--wdc-space-3) var(--wdc-space-4-5) !important;
   border-bottom: 1px solid var(--wdc-border) !important;
-  font-size: 0.78rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  color: var(--wdc-text-2) !important;
-  background: var(--wdc-surface-2);
-  border-radius: var(--wdc-radius-xl) var(--wdc-radius-xl) 0 0;
+  font-family: var(--wdc-font-display);
+  font-size: 0.93rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+  color: var(--wdc-text) !important;
+  background: transparent;
+  border-radius: var(--wdc-radius-lg) var(--wdc-radius-lg) 0 0;
 }
 .el-card__body {
-  padding: 28px !important;
+  padding: var(--wdc-space-4-5) !important;
 }
 
 /*
-  Tabs — SOFT VIBRANT. Bigger 44px tall, more horizontal padding,
-  3px accent bar (was 2px). Active item is bolder and full-text-color.
+  Tabs — display-face labels, active tab in ink with a 2px cobalt rule.
 */
 .el-tabs__header {
   border-bottom: 1px solid var(--wdc-border) !important;
@@ -1020,10 +831,11 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 .el-tabs__item {
-  color: var(--wdc-text-3) !important;
-  font-size: 0.86rem;
+  color: var(--wdc-text-2) !important;
+  font-family: var(--wdc-font-display);
+  font-size: 0.93rem;
   font-weight: 500;
-  padding: 0 20px !important;
+  padding: 0 var(--wdc-space-4) !important;
   height: 44px;
   line-height: 44px;
   transition: color 0.15s;
@@ -1034,14 +846,14 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 .el-tabs__item.is-active {
-  color: var(--wdc-accent) !important;
-  font-weight: 700;
+  color: var(--wdc-text) !important;
+  font-weight: 600;
 }
 
 .el-tabs__active-bar {
   background: var(--wdc-accent) !important;
-  height: 3px !important;
-  border-radius: 2px 2px 0 0;
+  height: 2px !important;
+  border-radius: 0;
 }
 
 /* Menu (sidebar) */
@@ -1120,7 +932,7 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 
 /* Select */
 .el-select .el-input__wrapper {
-  background: var(--wdc-surface-2) !important;
+  background: var(--wdc-surface) !important;
 }
 
 .el-select-dropdown {
@@ -1147,45 +959,41 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 }
 
 /*
-  Dialog — SOFT VIBRANT. Bigger 16px radius, generous padding,
-  surface bg (not elevated — feels lighter), soft shadow.
+  Dialog — hairline edge, 10px radius, the only place with a real shadow.
 */
 .el-dialog {
-  background: var(--wdc-surface) !important;
-  border: none !important;
+  background: var(--wdc-elevated) !important;
+  border: 1px solid var(--wdc-border-strong) !important;
   border-radius: var(--wdc-radius-xl) !important;
   box-shadow: var(--wdc-shadow-pop) !important;
   overflow: hidden;
 }
 
 .el-dialog__header {
-  padding: 24px 28px 20px !important;
-  border-bottom: 1px solid var(--wdc-border);
-  background: var(--wdc-surface);
+  padding: var(--wdc-space-4-5) var(--wdc-space-5) var(--wdc-space-3) !important;
+  border-bottom: 0;
+  background: transparent;
 }
 
 .el-dialog__title {
   color: var(--wdc-text) !important;
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .el-dialog__body {
-  padding: 24px 28px !important;
+  padding: var(--wdc-space-2) var(--wdc-space-5) var(--wdc-space-4) !important;
   color: var(--wdc-text);
 }
 
 .el-dialog__footer {
-  padding: 16px 28px 20px !important;
-  border-top: 1px solid var(--wdc-border);
-  background: var(--wdc-surface-2);
+  padding: var(--wdc-space-3) var(--wdc-space-5) var(--wdc-space-4-5) !important;
+  border-top: 0;
+  background: transparent;
 }
 
-/*
-  Drawer — SOFT VIBRANT. Same surface treatment as dialog. Wider
-  feeling via more padding.
-*/
+/* Drawer — same surface treatment as the dialog. */
 .el-drawer {
   background: var(--wdc-surface) !important;
   border-left: 1px solid var(--wdc-border) !important;
@@ -1237,13 +1045,10 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
   width: var(--wdc-switch-width) !important;
   min-width: var(--wdc-switch-width) !important;
   height: var(--wdc-switch-height) !important;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--wdc-elevated) 88%, #fff 12%), var(--wdc-elevated)) !important;
+  background: var(--wdc-surface-2) !important;
   border-color: var(--wdc-border-strong) !important;
   border-radius: 999px !important;
-  box-shadow:
-    inset 0 0 0 1px var(--wdc-border),
-    inset 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: inset 0 0 0 1px var(--wdc-border-strong) !important;
   transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
@@ -1261,9 +1066,7 @@ html:not(.dark) .el-tag--danger.el-tag--dark { color: #ffffff !important; }
 .el-switch.is-checked .el-switch__core {
   background: var(--wdc-accent) !important;
   border-color: var(--wdc-accent) !important;
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--wdc-accent) 75%, var(--wdc-text)),
-    0 0 0 2px var(--wdc-accent-dim) !important;
+  box-shadow: inset 0 0 0 1px var(--wdc-accent-edge) !important;
 }
 
 .el-switch.is-checked .el-switch__core .el-switch__action {
@@ -1300,48 +1103,82 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
 }
 
 /* Radio button group */
+/* Radio button group — a tray: the pressed key sits on a sunken track. */
+.el-radio-group:has(> .el-radio-button) {
+  padding: var(--wdc-space-0-5);
+  gap: var(--wdc-space-0-5);
+  background: var(--wdc-surface-2);
+  border-radius: var(--wdc-radius-md);
+}
 .el-radio-button__inner {
-  background: var(--wdc-surface-2) !important;
-  border-color: var(--wdc-border) !important;
-  color: var(--wdc-text-2) !important;
-  font-size: 0.78rem;
-}
-
-.el-radio-button__original-radio:checked + .el-radio-button__inner {
-  background: var(--wdc-accent) !important;
-  border-color: var(--wdc-accent) !important;
-  color: #fff !important;
-  box-shadow: -1px 0 0 0 var(--wdc-accent) !important;
-}
-
-/* Alert */
-.el-alert {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  outline: none !important;
   border-radius: var(--wdc-radius) !important;
-  border: 1px solid;
+  color: var(--wdc-text-2) !important;
+  font-family: var(--wdc-font-display);
+  font-size: 0.87rem;
+  font-weight: 500;
+  box-shadow: none !important;
+}
+.el-radio-button:first-child .el-radio-button__inner,
+.el-radio-button:last-child .el-radio-button__inner { border-radius: var(--wdc-radius) !important; }
+.el-radio-button__inner:hover { color: var(--wdc-text) !important; }
+
+.el-radio-button__original-radio:checked + .el-radio-button__inner,
+.el-radio-button.is-active .el-radio-button__inner {
+  background: var(--wdc-key-face) !important;
+  border-color: var(--wdc-border-strong) !important;
+  color: var(--wdc-text) !important;
+  box-shadow: var(--wdc-shadow-key-press) !important;
 }
 
-.el-alert--warning {
-  background: rgba(245, 158, 11, 0.08) !important;
-  border-color: rgba(245, 158, 11, 0.25) !important;
+/* Alert — a tinted strip with a status-coloured edge; text at body size. */
+.el-alert {
+  --wdc-alert: var(--wdc-accent);
+  border-radius: var(--wdc-radius-md) !important;
+  border: 1px solid color-mix(in oklab, var(--wdc-alert) 30%, transparent) !important;
+  background: color-mix(in oklab, var(--wdc-alert) 8%, var(--wdc-bg)) !important;
+  padding: var(--wdc-space-3) var(--wdc-space-4) !important;
+  align-items: flex-start !important;
 }
+.el-alert--info { --wdc-alert: var(--wdc-accent); }
+.el-alert--success { --wdc-alert: var(--wdc-status-running); }
+.el-alert--warning { --wdc-alert: var(--wdc-status-starting); }
+.el-alert--error { --wdc-alert: var(--wdc-status-error); }
+.el-alert .el-alert__icon { color: var(--wdc-alert) !important; font-size: 16px !important; width: 16px !important; margin-top: var(--wdc-space-0-5); }
+.el-alert .el-alert__title {
+  font-family: var(--wdc-font-display);
+  font-size: 0.93rem !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  color: var(--wdc-text) !important;
+}
+.el-alert .el-alert__description {
+  font-size: 0.87rem !important;
+  line-height: 1.5 !important;
+  margin: var(--wdc-space-1) 0 0 !important;
+  color: var(--wdc-text-2) !important;
+}
+.el-alert .el-alert__close-btn { color: var(--wdc-text-3) !important; }
 
-/*
-  Collapse — SOFT VIBRANT card panel. Active header gets the accent
-  gradient ribbon, inactive sits on plain surface.
-*/
+
+
+/* Collapse — hairline panel; the open item's title turns ink-bold. */
 .el-collapse {
   border: 1px solid var(--wdc-border) !important;
   border-radius: var(--wdc-radius-lg) !important;
   overflow: hidden;
-  box-shadow: var(--wdc-shadow-sm);
+  box-shadow: none;
 }
 
 .el-collapse-item__header {
   background: var(--wdc-surface) !important;
   border-bottom-color: var(--wdc-border) !important;
   color: var(--wdc-text) !important;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-family: var(--wdc-font-display);
+  font-size: 0.93rem;
+  font-weight: 500;
   height: 48px;
   padding: 0 20px;
   transition: background 0.15s, color 0.15s;
@@ -1350,9 +1187,10 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
 .el-collapse-item__header:hover { background: var(--wdc-hover) !important; }
 
 .el-collapse-item__header.is-active {
-  color: var(--wdc-accent) !important;
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface)) !important;
-  border-bottom-color: var(--wdc-accent-glow) !important;
+  color: var(--wdc-text) !important;
+  font-weight: 600;
+  background: var(--wdc-surface) !important;
+  border-bottom-color: var(--wdc-border) !important;
 }
 
 .el-collapse-item__wrap {
@@ -1365,20 +1203,14 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
   color: var(--wdc-text);
 }
 
-/* Progress — bigger radius, smoother fill */
+/* Progress — thin flat bar */
 .el-progress-bar__outer {
   background: var(--wdc-surface-2) !important;
-  border-radius: 6px !important;
-  height: 8px !important;
+  border-radius: var(--wdc-radius-2xs) !important;
+  height: 6px !important;
 }
 .el-progress-bar__inner {
-  border-radius: 6px !important;
-  background: var(--wdc-gradient-accent) !important;
-}
-
-.el-progress-bar__inner {
-  border-radius: 2px !important;
-  /* Flat: solid fill, no gradient */
+  border-radius: var(--wdc-radius-2xs) !important;
   background: var(--wdc-accent) !important;
 }
 

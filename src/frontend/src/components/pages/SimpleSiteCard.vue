@@ -1,5 +1,5 @@
 <template>
-  <el-card class="site-card" shadow="hover">
+  <el-card class="site-card" shadow="never">
     <!-- card-body is the primary click target for navigation. Without
          role + tabindex + keyboard handlers, screen-reader and
          keyboard-only users couldn't reach the site edit page (the
@@ -15,35 +15,26 @@
     >
       <div class="card-title-row">
         <div class="card-title">{{ site.domain }}</div>
-        <div class="card-status">
-          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" :title="apacheRunning ? t('common.running') : t('common.stopped')" />
+        <div class="card-status" :class="site.enabled === false ? 'is-off' : apacheRunning ? 'is-ok' : 'is-err'">
+          <el-icon :size="14" aria-hidden="true">
+            <Remove v-if="site.enabled === false" />
+            <Check v-else-if="apacheRunning" />
+            <Close v-else />
+          </el-icon>
           <span class="status-text">
-            {{ apacheRunning ? t('sites.card.running') : t('sites.card.stopped') }}
+            {{ site.enabled === false ? t('sites.list.state.disabled') : apacheRunning ? t('sites.card.running') : t('sites.card.stopped') }}
           </span>
         </div>
       </div>
 
       <div class="card-path mono" :title="site.documentRoot">{{ site.documentRoot }}</div>
 
-      <div class="card-badges">
-        <el-tag
-          v-if="site.phpVersion && site.phpVersion !== 'none'"
-          size="small"
-          effect="dark"
-          class="badge-php"
-        >PHP {{ site.phpVersion }}</el-tag>
-        <el-tag
-          v-if="site.sslEnabled"
-          size="small"
-          type="success"
-          effect="dark"
-        >HTTPS</el-tag>
-        <el-tag
-          v-if="site.cloudflare?.enabled"
-          size="small"
-          type="warning"
-          effect="dark"
-        >{{ t('sites.simple.cloudflareTunnel') }}</el-tag>
+      <div class="card-meta">
+        <span v-if="site.phpVersion && site.phpVersion !== 'none'" class="mono">PHP {{ site.phpVersion }}</span>
+        <span v-if="site.sslEnabled" class="meta-https">
+          <el-icon :size="12" aria-hidden="true"><Lock /></el-icon>HTTPS
+        </span>
+        <span v-if="site.cloudflare?.enabled" class="meta-tunnel">{{ t('sites.simple.cloudflareTunnel') }}</span>
       </div>
 
       <!-- Activity only when there's traffic - removes "0 hits / zatím
@@ -60,31 +51,20 @@
 
     <div class="card-actions" @click.stop>
       <el-button
-        size="large"
-        type="primary"
+        size="small"
         :icon="ExternalLinkIcon"
         @click="emit('open', site)"
       >{{ t('sites.card.open') }}</el-button>
 
+      <!-- The web server is shared by every site; a per-card stop would
+           take all sites down. Only offer to start it when it is off. -->
       <el-button
-        v-if="apacheRunning"
-        size="large"
-        circle
-        :icon="StopIcon"
-        :loading="toggling"
-        :title="t('sites.card.stopApacheTooltip')" :aria-label="t('sites.card.stopApacheTooltip')"
-        @click="emit('stop-apache')"
-      />
-      <el-button
-        v-else
-        size="large"
-        circle
+        v-if="!apacheRunning"
+        size="small"
         type="success"
-        :icon="PlayIcon"
         :loading="toggling"
-        :title="t('sites.card.start')" :aria-label="t('sites.card.start')"
         @click="emit('start-apache')"
-      />
+      >{{ t('sites.card.startWebServer') }}</el-button>
 
       <el-tooltip
         :content="site.enabled === false
@@ -95,7 +75,8 @@
         <el-switch
           :model-value="site.enabled !== false"
           :loading="togglingEnabled === site.domain"
-          size="large"
+          :aria-label="site.enabled === false ? t('sites.list.enable') : t('sites.list.disable')"
+          size="small"
           @change="(v: boolean | string | number) => emit('toggle-enabled', site, Boolean(v))"
         />
       </el-tooltip>
@@ -109,8 +90,8 @@
         @command="(cmd: string) => emit('command', cmd, site)"
       >
         <el-button
-          size="large"
-          circle
+          size="small"
+          text
           :aria-label="t('sites.card.moreActions', { domain: site.domain })"
         >
           <el-icon><MoreFilled /></el-icon>
@@ -141,9 +122,8 @@
 <script setup lang="ts">
 import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MoreFilled, FolderOpened, CopyDocument, RefreshRight } from '@element-plus/icons-vue'
+import { MoreFilled, FolderOpened, CopyDocument, RefreshRight, Check, Close, Remove, Lock } from '@element-plus/icons-vue'
 import MiniSparkline from '../common/MiniSparkline.vue'
-import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import type { SiteInfo } from '../../api/types'
 
 defineOptions({ name: 'SimpleSiteCard' })
@@ -178,7 +158,6 @@ const emit = defineEmits<{
   navigate: [domain: string]
   open: [site: SiteInfo]
   'start-apache': []
-  'stop-apache': []
   'toggle-enabled': [site: SiteInfo, value: boolean]
   command: [cmd: string, site: SiteInfo]
 }>()
@@ -186,7 +165,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 // Inline-defined icon components keep the bundle from importing the
-// full ElIcon catalogue. ExternalLink + Stop + Play are not exported
+// full ElIcon catalogue. ExternalLink is not exported
 // from @element-plus/icons-vue by those names — same source file used
 // by the parent originally.
 const ExternalLinkIcon = {
@@ -200,36 +179,20 @@ const ExternalLinkIcon = {
     h('line', { x1: '10', y1: '14', x2: '21', y2: '3' }),
   ]),
 }
-const StopIcon = {
-  render: () => h('svg', {
-    xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em',
-    fill: 'currentColor',
-  }, [h('rect', { x: '6', y: '6', width: '12', height: '12' })]),
-}
-const PlayIcon = {
-  render: () => h('svg', {
-    xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em',
-    fill: 'currentColor',
-  }, [h('polygon', { points: '6,4 20,12 6,20' })]),
-}
-
 // Strip-unused warning silencer — Vue handles the prop type ref already.
 void computed(() => props.site.domain)
 </script>
 
 <style scoped>
+/* Hairline panel; the whole body opens the site. */
 .site-card {
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-.site-card:hover {
-  transform: translateY(-1px);
 }
 .site-card :deep(.el-card__body) {
-  padding: var(--wdc-space-3) var(--wdc-space-3-5);
+  padding: var(--wdc-space-4) !important;
   display: flex;
   flex-direction: column;
-  gap: var(--wdc-space-1-5);
+  gap: var(--wdc-space-2);
 }
 .card-body {
   display: flex;
@@ -240,12 +203,7 @@ void computed(() => props.site.domain)
   outline-offset: 4px;
   border-radius: var(--wdc-radius-sm);
 }
-/* Show focus ring on keyboard navigation but not on mouse click to
-   avoid the persistent halo after clicking a card (common Element
-   Plus card UX expectation). */
-.card-body:focus-visible {
-  outline: 2px solid var(--wdc-accent);
-}
+.card-body:focus-visible { outline: 2px solid var(--wdc-accent); }
 .card-title-row {
   display: flex;
   align-items: center;
@@ -254,60 +212,67 @@ void computed(() => props.site.domain)
   min-width: 0;
 }
 .card-title {
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-family: var(--wdc-font-display);
+  font-size: 1.07rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--wdc-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-  letter-spacing: -0.01em;
 }
 .card-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--wdc-space-1-5);
-  font-size: 0.78rem;
-  color: var(--wdc-text-2);
+  gap: var(--wdc-space-1);
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
-/* Status dot delegated to HealthStatusDot shared primitive (plan §6). */
+.card-status.is-ok { color: var(--wdc-text-2); }
+.card-status.is-ok .el-icon { color: var(--wdc-status-running); }
+.card-status.is-err { color: var(--wdc-status-error); }
+.card-status.is-off { color: var(--wdc-text-3); }
 .card-path {
   color: var(--wdc-text-3);
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.card-badges {
+.card-meta {
   display: flex;
-  gap: var(--wdc-space-1-5);
   flex-wrap: wrap;
-  margin-top: var(--wdc-space-0-5);
+  gap: var(--wdc-space-1) var(--wdc-space-3);
+  font-size: 0.82rem;
+  color: var(--wdc-text-2);
 }
-.badge-php {
-  background: var(--wdc-accent) !important;
-  border-color: var(--wdc-accent) !important;
-}
+.meta-https { display: inline-flex; align-items: center; gap: var(--wdc-space-1); }
+.meta-https .el-icon { color: var(--wdc-status-running); }
+.meta-tunnel { color: var(--wdc-status-starting); }
 .card-activity {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2);
-  margin-top: var(--wdc-space-1-5);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   color: var(--wdc-text-2);
 }
 .card-hits { color: var(--wdc-text); }
-.card-errors { color: var(--el-color-danger); }
+.card-errors { color: var(--wdc-status-error); }
 .card-lasthit {
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   color: var(--wdc-text-3);
 }
 .card-actions {
   display: flex;
   align-items: center;
-  gap: var(--wdc-space-1-5);
-  margin-top: var(--wdc-space-2);
+  gap: var(--wdc-space-2);
+  margin-top: var(--wdc-space-1);
+  padding-top: var(--wdc-space-3);
+  border-top: 1px solid var(--wdc-border);
   flex-wrap: wrap;
 }
-.danger-item { color: var(--el-color-danger); }
+.card-actions :deep(.el-button + .el-button) { margin-left: 0; }
+.card-actions :deep(.el-dropdown) { margin-left: auto; }
+.danger-item { color: var(--wdc-status-error); }
 </style>

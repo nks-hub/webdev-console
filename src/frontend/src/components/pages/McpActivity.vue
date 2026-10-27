@@ -120,7 +120,7 @@
 
     <!-- Filters row -->
     <div class="activity-filters">
-      <el-select v-model="dangerFilter" size="small" :placeholder="t('mcpActivity.filter.allDanger')" clearable style="width: 160px">
+      <el-select v-model="dangerFilter" size="small" :placeholder="t('mcpActivity.filter.allDanger')" :aria-label="t('mcpActivity.filter.dangerAria')" clearable style="width: 160px">
         <el-option :label="t('mcpActivity.danger.read')" value="read" />
         <el-option :label="t('mcpActivity.danger.mutate')" value="mutate" />
         <el-option :label="t('mcpActivity.danger.destructive')" value="destructive" />
@@ -162,17 +162,22 @@
         class="session-card"
         :class="{ 'has-destructive': session.destructives > 0, 'has-error': session.errors > 0 }"
       >
+        <!-- The whole header toggles on click; keyboard and screen-reader
+             users get a real button, so the session-filter pill and the
+             header actions are not nested inside another control. -->
         <div
           class="session-header"
-          role="button"
-          tabindex="0"
-          :aria-expanded="!collapsedSessions.has(session.key)"
-          :aria-label="t('mcpActivity.session.toggle', { caller: session.caller })"
           @click="toggleSession(session.key)"
-          @keydown.enter.prevent="toggleSession(session.key)"
-          @keydown.space.prevent="toggleSession(session.key)"
         >
-          <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
+          <button
+            type="button"
+            class="session-toggle"
+            :aria-expanded="!collapsedSessions.has(session.key)"
+            :aria-label="t('mcpActivity.session.toggle', { caller: session.caller })"
+            @click.stop="toggleSession(session.key)"
+          >
+            <el-icon class="chev" :class="{ rotated: !collapsedSessions.has(session.key) }"><ArrowRight /></el-icon>
+          </button>
           <code class="mono caller-pill">{{ session.caller }}</code>
           <code
             v-if="session.sessionId"
@@ -686,8 +691,8 @@ onBeforeUnmount(() => {
   margin-left: auto;
   font-size: 10px;
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
   letter-spacing: 0.3px;
+  font-family: var(--wdc-font-display);
 }
 .activity-stats { display: flex; flex-wrap: wrap; gap: 12px; }
 .stat-tile {
@@ -718,13 +723,15 @@ onBeforeUnmount(() => {
   outline: 2px solid var(--el-color-primary-light-5);
 }
 .stat-tile.clickable:focus-visible,
-.session-header:focus-visible,
+.session-toggle:focus-visible,
 .session-pill.clickable:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
 }
 .stat-num { font-size: 20px; font-weight: 600; }
-.stat-label { font-size: 11px; color: var(--el-text-color-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-label { font-size: 0.82rem; color: var(--el-text-color-secondary);
+  font-family: var(--wdc-font-display);
+}
 .activity-filters {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
   padding: var(--wdc-space-2) 0;
@@ -751,6 +758,15 @@ onBeforeUnmount(() => {
 .session-card:last-child { border-bottom: none; }
 .session-card.has-destructive { border-left-color: var(--el-color-danger); }
 .session-card.has-error { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
+.session-toggle {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
 .session-header {
   display: flex; align-items: center; gap: 10px;
   padding: var(--wdc-space-2) var(--wdc-space-3-5);
@@ -831,10 +847,10 @@ onBeforeUnmount(() => {
 }
 .detail-label {
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.5px;
   padding-top: var(--wdc-space-0-5);
+  font-family: var(--wdc-font-display);
 }
 .detail-value { word-break: break-all; }
 .detail-value.clickable { cursor: pointer; color: var(--el-color-primary); }

@@ -2,29 +2,25 @@ import { test, expect } from './_fixtures'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
-// Source-level contract: sidebar must surface a one-click Simple ↔
-// Advanced mode toggle. The earlier UX gap forced operators to drill
-// into Settings → General → Mode to switch — fixed by commit 6d09c85
-// adding `.nav-item-mode` in AppSidebar.vue. This spec regression-locks
-// the toggle so a future sidebar refactor can't silently drop it.
+// Source-level contract: the shell must surface a one-click Simple ↔
+// Advanced switch. It used to be the `.nav-item-mode` row in AppSidebar;
+// the redesign moved it to a two-key tray in AppHeader so both states are
+// visible at once. This spec regression-locks the tray so a future shell
+// refactor can't silently drop it.
 
 const srcRoot = resolve(process.cwd(), 'src')
 
-test.describe('Sidebar mode toggle contract', () => {
-  test('AppSidebar.vue renders nav-item-mode with el-switch + toggle handler', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'layout', 'AppSidebar.vue'), 'utf-8')
-    // The toggle row class lives only on this entry — guards against
-    // accidental renames during a redesign.
-    expect(source).toMatch(/class="nav-item nav-item-mode"/)
-    // el-switch model-value must reflect `uiModeStore.isAdvanced` so the
-    // pill state matches the active mode.
-    expect(source).toMatch(/uiModeStore\.isAdvanced/)
-    // Click on the row container must call toggleMode() — keyboard +
-    // mouse parity comes from el-switch's built-in a11y.
-    expect(source).toMatch(/uiModeStore\.toggleMode\(\)/)
-    // Icon component swaps based on mode so the user sees the next-state
-    // hint, not the current state.
-    expect(source).toMatch(/uiModeStore\.isAdvanced \? Operation : MagicStick/)
+test.describe('Shell mode toggle contract', () => {
+  test('AppHeader.vue renders the Simple/Advanced tray bound to uiModeStore', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'layout', 'AppHeader.vue'), 'utf-8')
+    // A labelled group of two toggle buttons.
+    expect(source).toMatch(/class="tray" role="group"/)
+    // Pressed state mirrors the store, one key per mode.
+    expect(source).toMatch(/:aria-pressed="uiModeStore\.isSimple"/)
+    expect(source).toMatch(/:aria-pressed="uiModeStore\.isAdvanced"/)
+    // Each key sets its mode explicitly (idempotent, unlike a toggle).
+    expect(source).toMatch(/uiModeStore\.setUiMode\('simple'\)/)
+    expect(source).toMatch(/uiModeStore\.setUiMode\('advanced'\)/)
   })
 
   test('uiModeStore exposes toggleMode + setUiMode + isSimple/isAdvanced', () => {

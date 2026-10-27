@@ -22,8 +22,13 @@ public static partial class SqlReadOnlyGuard
     private static partial Regex VerbsNeedingBodyCheck();
 
     // INSERT() and REPLACE() are also string functions, so they only count
-    // when no "(" follows.
-    [GeneratedRegex(@"\b(?:(?:INSERT|REPLACE)\b(?!\s*\()|(?:UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD|HANDLER|OUTFILE|DUMPFILE)\b)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    // when no "(" follows. The second group are reads with side effects:
+    // SELECT … INTO (variables or files), LOAD_FILE (server files; `\bLOAD\b`
+    // does not match it because '_' is a word character), SLEEP/BENCHMARK
+    // (tie up the server), named locks, row locks and sequence advances.
+    // This guard is only the first layer: the statement then runs in a
+    // read-only transaction with a time limit and a row cap.
+    [GeneratedRegex(@"\b(?:(?:INSERT|REPLACE)\b(?!\s*\()|(?:UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD|HANDLER|OUTFILE|DUMPFILE|INTO|LOAD_FILE|SLEEP|BENCHMARK|GET_LOCK|RELEASE_LOCK|RELEASE_ALL_LOCKS|LOCK|NEXTVAL|SETVAL|SYS_EXEC|SYS_EVAL)\b)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex WriteKeywords();
 
     // MySQL runs /*! ... */ and MariaDB /*M! ... */ bodies.

@@ -16,7 +16,13 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// </summary>
 public sealed class WebSocketLogStreamer : IDisposable
 {
-    private readonly ConcurrentDictionary<string, ConcurrentBag<SubscriberChannel>> _subscribers = new();
+    // Set semantics per service (the byte value is unused) so a subscriber
+    // is removed by identity. Push enumerates lock-free; adding a subscriber
+    // and removing one (plus dropping the service key once it is empty) go
+    // through _membershipLock so a connect can never land in a set that a
+    // concurrent disconnect is about to unlink from the dictionary.
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<SubscriberChannel, byte>> _subscribers = new();
+    private readonly object _membershipLock = new();
 
     /// <summary>
     /// Push a log line for a service. All connected WebSocket clients
@@ -25,9 +31,9 @@ public sealed class WebSocketLogStreamer : IDisposable
     public void Push(string serviceId, string line)
     {
         var key = serviceId.ToLowerInvariant();
-        if (!_subscribers.TryGetValue(key, out var bag)) return;
+        if (!_subscribers.TryGetValue(key, out var set)) return;
 
-        foreach (var sub in bag)
+        foreach (var sub in set.Keys)
         {
             sub.Channel.Writer.TryWrite(line);
         }
@@ -43,8 +49,7 @@ public sealed class WebSocketLogStreamer : IDisposable
         var key = serviceId.ToLowerInvariant();
         var sub = new SubscriberChannel(socket);
 
-        var bag = _subscribers.GetOrAdd(key, _ => new ConcurrentBag<SubscriberChannel>());
-        bag.Add(sub);
+        Subscribe(key, sub);
 
         try
         {
@@ -77,22 +82,7 @@ public sealed class WebSocketLogStreamer : IDisposable
         finally
         {
             sub.Channel.Writer.TryComplete();
-
-            // Remove from bag — ConcurrentBag doesn't have Remove, so
-            // rebuild without this subscriber. Infrequent (disconnect only).
-            // If the last subscriber for this service just left, drop the
-            // dictionary key entirely instead of keeping an empty bag —
-            // otherwise a service that churns subscribers accumulates
-            // stale entries forever.
-            if (_subscribers.TryGetValue(key, out var currentBag))
-            {
-                var remaining = new ConcurrentBag<SubscriberChannel>(
-                    currentBag.Where(s => s != sub));
-                if (remaining.IsEmpty)
-                    _subscribers.TryRemove(new KeyValuePair<string, ConcurrentBag<SubscriberChannel>>(key, currentBag));
-                else
-                    _subscribers.TryUpdate(key, remaining, currentBag);
-            }
+            Unsubscribe(key, sub);
 
             if (socket.State == WebSocketState.Open)
             {
@@ -106,18 +96,46 @@ public sealed class WebSocketLogStreamer : IDisposable
         }
     }
 
+    private void Subscribe(string key, SubscriberChannel sub)
+    {
+        lock (_membershipLock)
+        {
+            _subscribers.GetOrAdd(key, static _ => new ConcurrentDictionary<SubscriberChannel, byte>())
+                .TryAdd(sub, 0);
+        }
+    }
+
+    private void Unsubscribe(string key, SubscriberChannel sub)
+    {
+        lock (_membershipLock)
+        {
+            if (!_subscribers.TryGetValue(key, out var set)) return;
+            set.TryRemove(sub, out _);
+            // Drop the key once the last subscriber leaves so a service that
+            // churns subscribers does not keep an empty set around forever.
+            if (set.IsEmpty)
+                _subscribers.TryRemove(new KeyValuePair<string, ConcurrentDictionary<SubscriberChannel, byte>>(key, set));
+        }
+    }
+
     public int SubscriberCount(string serviceId)
     {
         var key = serviceId.ToLowerInvariant();
-        return _subscribers.TryGetValue(key, out var bag) ? bag.Count : 0;
+        return _subscribers.TryGetValue(key, out var set) ? set.Count : 0;
     }
+
+    /// <summary>Number of service ids that currently have at least one subscriber.</summary>
+    internal int ServiceKeyCount => _subscribers.Count;
 
     public void Dispose()
     {
-        foreach (var bag in _subscribers.Values)
-            foreach (var sub in bag)
-                sub.Channel.Writer.TryComplete();
-        _subscribers.Clear();
+        lock (_membershipLock)
+        {
+            foreach (var set in _subscribers.Values)
+                foreach (var sub in set.Keys)
+                    sub.Channel.Writer.TryComplete();
+            _subscribers.Clear();
+        }
     }
 
     private sealed class SubscriberChannel
