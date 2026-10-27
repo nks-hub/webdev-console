@@ -3455,7 +3455,7 @@
   },
   "servicesPage": {
     "title": "Services",
-    "summary": "{total} installed service, {running} running | {total} installed services, {running} running",
+    "summary": "{total} service, {running} running | {total} services, {running} running",
     "filterLabel": "Service filter",
     "filter": {
       "all": "All",

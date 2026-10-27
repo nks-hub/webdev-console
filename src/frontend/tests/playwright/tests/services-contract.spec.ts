@@ -107,6 +107,12 @@ test.describe('Services UI contract', () => {
     }
   })
 
+  test('the summary sentence counts the same services as the "All" filter', () => {
+    const page = read('components', 'pages', 'ServicesPage.vue')
+    expect(page).toMatch(/const summary = computed\(\(\) => \{\s*const total = services\.value\.length/)
+    expect(page).toMatch(/id: 'all' as const, label: t\('servicesPage\.filter\.all'\), count: services\.value\.length/)
+  })
+
   test('/service/:id opens the Services page with that service selected', () => {
     expect(read('router', 'index.ts')).toMatch(/path: '\/service\/:id', redirect: to => \(\{ path: '\/services', query: \{ service:/)
   })

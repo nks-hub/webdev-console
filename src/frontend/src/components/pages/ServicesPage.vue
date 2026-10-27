@@ -245,8 +245,9 @@ const filters = computed(() => [
   { id: 'notInstalled' as const, label: t('servicesPage.filter.notInstalled'), count: notInstalledCount.value },
 ])
 
+// Same set as the "All" filter (`services`), so the sentence and the filter counts agree.
 const summary = computed(() => {
-  const total = installed.value.length
+  const total = services.value.length
   const parts = [t('servicesPage.summary', { total, running: runningCount.value }, total)]
   if (notInstalledCount.value) parts.push(t('servicesPage.summaryNotInstalled', { n: notInstalledCount.value }, notInstalledCount.value))
   if (problemCount.value) parts.push(t('servicesPage.summaryProblems', { n: problemCount.value }, problemCount.value))

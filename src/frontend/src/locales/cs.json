@@ -3455,7 +3455,7 @@
   },
   "servicesPage": {
     "title": "Služby",
-    "summary": "{total} nainstalovaná služba, běží {running} | {total} nainstalované služby, běží {running} | {total} nainstalovaných služeb, běží {running}",
+    "summary": "{total} služba, běží {running} | {total} služby, běží {running} | {total} služeb, běží {running}",
     "filterLabel": "Filtr služeb",
     "filter": {
       "all": "Vše",
