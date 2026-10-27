@@ -123,6 +123,12 @@ test.describe('Services UI contract', () => {
     expect(read('components', 'shared', 'ServiceErrorNote.vue')).toMatch(/installed === false \? '' : service\.value\?\.startError/)
   })
 
+  test('the PHP page reads the version for new sites from isActive, like PhpManager', () => {
+    const page = read('components', 'pages', 'PhpPluginPage.vue')
+    expect(page).toContain('ver.isActive ?? ver.isDefault')
+    expect(page).not.toMatch(/v\.isDefault\)|ver\.isDefault"/)
+  })
+
   test('/service/:id opens the Services page with that service selected', () => {
     expect(read('router', 'index.ts')).toMatch(/path: '\/service\/:id', redirect: to => \(\{ path: '\/services', query: \{ service:/)
   })

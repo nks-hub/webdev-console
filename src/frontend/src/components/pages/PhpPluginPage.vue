@@ -33,11 +33,11 @@
                 :aria-current="selectedVersion === ver.version ? 'true' : undefined"
                 @click="selectVersion(ver)"
               >PHP {{ ver.majorMinor }}</button>
-              <el-tag v-if="ver.isDefault" type="success" size="small" effect="plain">{{ t('php.default') }}</el-tag>
+              <el-tag v-if="isActive(ver)" type="success" size="small" effect="plain">{{ t('php.default') }}</el-tag>
             </span>
             <span class="ver-full mono">{{ ver.version }}</span>
             <span class="ver-path mono">{{ ver.path }}</span>
-            <el-button v-if="!ver.isDefault" size="small" text :loading="settingDefault === ver.version" @click="setDefault(ver.version)">
+            <el-button v-if="!isActive(ver)" size="small" text :loading="settingDefault === ver.version" @click="setDefault(ver.version)">
               {{ t('php.setDefault') }}
             </el-button>
           </div>
@@ -109,7 +109,11 @@ const togglingExt = ref('')
 const settingDefault = ref('')
 
 const installed = computed(() => stateOf(daemonStore.services.find(s => s.id === 'php')) !== 'notInstalled')
-const defaultVersion = computed(() => versions.value.find(v => v.isDefault)?.version ?? '')
+// The daemon marks the version new sites get as `isActive`; `isDefault` is the older field.
+function isActive(ver: PhpVersion): boolean {
+  return !!(ver.isActive ?? ver.isDefault)
+}
+const defaultVersion = computed(() => versions.value.find(isActive)?.version ?? '')
 
 async function loadVersions() {
   loading.value = true
@@ -118,7 +122,7 @@ async function loadVersions() {
     versions.value = await fetchPhpVersions()
     // Keep the user's pick; otherwise the default, or the only one there is.
     const keep = versions.value.find(v => v.version === selectedVersion.value)
-    const pick = keep ?? versions.value.find(v => v.isDefault) ?? versions.value[0]
+    const pick = keep ?? versions.value.find(isActive) ?? versions.value[0]
     if (pick) selectVersion(pick)
   } catch (e) {
     loadError.value = t('phpPlugin.loadFailed', { err: errorMessage(e) })
