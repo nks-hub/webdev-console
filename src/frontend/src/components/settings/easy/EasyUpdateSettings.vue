@@ -8,8 +8,8 @@
       </el-descriptions-item>
       <el-descriptions-item :label="t('settings.update.latest')">
         <span v-if="updateCheck.loading">{{ t('common.loading') }}</span>
-        <span v-else-if="updateCheck.latest" class="mono">
-          v{{ updateCheck.latest }}
+        <span v-else-if="latestVersion" class="mono">
+          v{{ latestVersion }}
           <el-tag v-if="hasUpdate" type="warning" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.available') }}
           </el-tag>
@@ -22,8 +22,8 @@
       <el-descriptions-item v-if="updaterLabel" :label="t('settings.update.autoUpdate')">
         {{ updaterLabel }}
       </el-descriptions-item>
-      <el-descriptions-item v-if="updateCheck.lastCheckedIso" :label="t('settings.update.lastChecked')">
-        <span class="text-muted">{{ formatRelativeTime(updateCheck.lastCheckedIso) }}</span>
+      <el-descriptions-item v-if="lastCheckedIso" :label="t('settings.update.lastChecked')">
+        <span class="text-muted">{{ formatRelativeTime(lastCheckedIso) }}</span>
       </el-descriptions-item>
     </el-descriptions>
 
@@ -112,6 +112,9 @@ const props = defineProps<{
   t: (key: string, params?: Record<string, unknown>) => string
   currentVersion: string
   updateCheck: EasyUpdateCheck
+  /** GitHub's answer, else what electron-updater's feed reported. */
+  latestVersion: string | null
+  lastCheckedIso: string | null
   hasUpdate: boolean
   /** electron-updater in the main process; null outside Electron. */
   updater: AppUpdaterState | null

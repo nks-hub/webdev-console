@@ -224,7 +224,7 @@
       "inMinutes": "za {m} min",
       "backupNow": "Zálohovat nyní",
       "openFolder": "Otevřít složku záloh",
-      "refresh": "Obnovit",
+      "refresh": "Načíst znovu",
       "createdToast": "Záloha vytvořena: {files} souborů, {size}",
       "noBackupsYet": "Zatím tu není žádná záloha. Nejdřív nějakou vytvořte."
     },
@@ -2785,7 +2785,7 @@
       "refreshCatalog": "Synchronizovat katalog",
       "openCatalogAdmin": "Otevřít správu katalogu",
       "catalogUrlHint": "Katalog, ze kterého se stahují binárky (Apache, PHP, MySQL…) a pluginy. Nechte prázdné pro výchozí wdc.nks-hub.cz. Vlastní adresu použijte pro firemní katalog.",
-      "mysqlRootMissing": "Heslo není uložené, aplikace se proto k MySQL nepřihlásí.",
+      "mysqlRootMissing": "Heslo zatím není uložené. Aplikace si ho uloží sama, až poprvé připraví MySQL.",
       "catalogReachable": "Katalog odpovídá ({service} {version})",
       "pluginAutoSyncHint": "Při startu a pak každých 6 hodin stáhne seznam pluginů z katalogu a doplní chybějící verze. Proměnná prostředí NKS_WDC_PLUGIN_AUTOSYNC=1 má přednost.",
       "mysqlRootHint": "Vyplňte, pokud jste heslo uživatele root změnili mimo aplikaci (vlastní instalace MySQL, import z MAMP, ruční změna). Aplikace si uloží jen kopii, heslo v MySQL nemění.",
@@ -2793,7 +2793,8 @@
       "catalogUnreachable": "Katalog nejde zastihnout: {err}. Zkontrolujte adresu a připojení k internetu.",
       "mysqlRootStored": "Heslo je uložené v zašifrované podobě.",
       "neverSynced": "zatím nikdy",
-      "pluginSyncResult": "Pluginů v katalogu: {count}, nově staženo: {installed}"
+      "pluginSyncResult": "Pluginů v katalogu: {count}, nově staženo: {installed}",
+      "saveAndRefresh": "Uložit a obnovit"
     },
     "language": "Jazyk",
     "languageEn": "English",
@@ -2828,7 +2829,14 @@
         "minutes": "{m} min {s} s",
         "hours": "{h} h {m} min",
         "days": "{d} den {h} h | {d} dny {h} h | {d} dní {h} h"
-      }
+      },
+      "links": {
+        "app": "Zdrojový kód aplikace",
+        "plugins": "Pluginy",
+        "catalog": "Katalog (API)",
+        "binaries": "Sestavení binárek"
+      },
+      "os": "Operační systém"
     },
     "sync": {
       "topDesc": "Synchronizujte konfiguraci se svým účtem v katalogu, nebo ji uložte do souboru a ze souboru načtěte.",
@@ -2879,7 +2887,8 @@
       "dataDir": "Datový adresář",
       "dataHint": "Sem NKS WebDev Console ukládá weby, binárky, SSL certifikáty, zálohy a nastavení. Jiné umístění nastavíte proměnnou prostředí WDC_DATA_DIR nebo souborem portable.txt vedle spustitelného souboru aplikace.",
       "manageBackups": "Spravovat zálohy",
-      "backupsDesc": "Plán, obsah a seznam záloh najdete na stránce Zálohy."
+      "backupsDesc": "Plán, obsah a seznam záloh najdete na stránce Zálohy.",
+      "showInFolder": "Zobrazit ve složce"
     },
     "general": {
       "tabDesc": "Chování aplikace a nastavení při spuštění.",
@@ -2953,7 +2962,8 @@
       "updaterError": "Aktualizaci se nepodařilo stáhnout",
       "restartInstall": "Restartovat a nainstalovat",
       "openReleasePage": "Otevřít stránku vydání",
-      "downloadingVersion": "Stahuji verzi {v}"
+      "downloadingVersion": "Stahuji verzi {v}",
+      "tabDesc": "Instalovaná verze hledá aktualizace sama při spuštění a stáhne je na pozadí. Nainstalují se po restartu aplikace."
     },
     "danger": {
       "title": "Nebezpečná zóna",

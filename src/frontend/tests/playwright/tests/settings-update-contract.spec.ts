@@ -16,7 +16,7 @@ test.describe('Settings update contract', () => {
     expect(compareSemver(versionCore('0.5.0'), versionCore('0.5.0-6e25b70'))).toBe(0)
     expect(compareSemver(versionCore('0.5.1'), versionCore('0.5.0-6e25b70'))).toBe(1)
     const settings = read('src', 'components', 'pages', 'Settings.vue')
-    expect(settings).toMatch(/compareSemver\(versionCore\(updateCheck\.latest\), versionCore\(currentVersion\.value\)\)/)
+    expect(settings).toMatch(/compareSemver\(versionCore\(latestVersion\.value\), versionCore\(currentVersion\.value\)\)/)
   })
 
   test('main pushes updater state and installs on request', () => {

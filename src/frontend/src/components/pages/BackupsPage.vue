@@ -202,7 +202,7 @@ import { errorMessage } from '../../utils/errors'
 import { Loading } from '@element-plus/icons-vue'
 import {
   daemonBaseUrl, daemonAuthHeaders, downloadBackup as downloadBackupFile,
-  fetchSettings, saveSettings, restartDaemon, subscribeEventsMap,
+  fetchSettings, fetchSystem, saveSettings, restartDaemon, subscribeEventsMap,
 } from '../../api/daemon'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
@@ -371,15 +371,23 @@ async function runBackupNow() {
   }
 }
 
-function openBackupFolder() {
+async function openBackupFolder() {
   // openExternal refuses file:// on purpose (ShellExecute would run
-  // executables), so reveal the newest archive in the OS file manager.
+  // executables), so reveal the newest archive in the OS file manager,
+  // or the (empty) backups folder itself before the first backup.
   const newest = backups.value[0]?.path
-  if (!newest) {
-    ElMessage.info(t('backupsPage.overview.noBackupsYet'))
+  if (newest) {
+    void window.electronAPI?.revealInFolder?.(newest)
     return
   }
-  void window.electronAPI?.revealInFolder?.(newest)
+  try {
+    const { dataDir } = await fetchSystem()
+    if (!dataDir) throw new Error('no data dir')
+    const sep = dataDir.includes('\\') ? '\\' : '/'
+    void window.electronAPI?.revealInFolder?.(`${dataDir}${sep}backups`)
+  } catch {
+    ElMessage.info(t('backupsPage.overview.noBackupsYet'))
+  }
 }
 
 async function downloadBackup(path: string) {

@@ -224,7 +224,7 @@
       "inMinutes": "in {m} min",
       "backupNow": "Back up now",
       "openFolder": "Open backup folder",
-      "refresh": "Refresh",
+      "refresh": "Reload",
       "createdToast": "Backup created: {files} files, {size}",
       "noBackupsYet": "No backup yet. Create one first."
     },
@@ -2785,7 +2785,7 @@
       "refreshCatalog": "Refresh catalog",
       "openCatalogAdmin": "Open catalog admin",
       "catalogUrlHint": "The catalog binaries (Apache, PHP, MySQL…) and plugins are downloaded from. Leave empty for the default wdc.nks-hub.cz. Use your own address for a company catalog.",
-      "mysqlRootMissing": "No password is stored, so the app cannot sign in to MySQL.",
+      "mysqlRootMissing": "No password is stored yet. The app stores one itself when it first sets up MySQL.",
       "catalogReachable": "The catalog responds ({service} {version})",
       "pluginAutoSyncHint": "On start and then every 6 hours, fetches the plugin list from the catalog and downloads missing versions. The NKS_WDC_PLUGIN_AUTOSYNC=1 environment variable takes precedence.",
       "mysqlRootHint": "Fill it in if the root password was changed outside the app (your own MySQL install, a MAMP import, a manual change). The app only stores a copy and does not change the password in MySQL.",
@@ -2793,7 +2793,8 @@
       "catalogUnreachable": "The catalog cannot be reached: {err}. Check the address and your internet connection.",
       "mysqlRootStored": "The password is stored encrypted.",
       "neverSynced": "never yet",
-      "pluginSyncResult": "Plugins in the catalog: {count}, newly downloaded: {installed}"
+      "pluginSyncResult": "Plugins in the catalog: {count}, newly downloaded: {installed}",
+      "saveAndRefresh": "Save and refresh"
     },
     "language": "Language",
     "languageEn": "English",
@@ -2828,7 +2829,14 @@
         "minutes": "{m} min {s} s",
         "hours": "{h} h {m} min",
         "days": "{d} day {h} h | {d} days {h} h"
-      }
+      },
+      "links": {
+        "app": "App source code",
+        "plugins": "Plugins",
+        "catalog": "Catalog API",
+        "binaries": "Binary builds"
+      },
+      "os": "Operating system"
     },
     "sync": {
       "topDesc": "Sync your configuration with your catalog account, or save it to a file and load it from one.",
@@ -2879,7 +2887,8 @@
       "dataDir": "Data directory",
       "dataHint": "NKS WebDev Console keeps sites, binaries, SSL certificates, backups and settings here. To use another location, set the WDC_DATA_DIR environment variable or put a portable.txt file next to the app's executable.",
       "manageBackups": "Manage backups",
-      "backupsDesc": "The backup schedule, content and list are on the Backups page."
+      "backupsDesc": "The backup schedule, content and list are on the Backups page.",
+      "showInFolder": "Show in folder"
     },
     "general": {
       "tabDesc": "Application behavior and startup preferences.",
@@ -2953,7 +2962,8 @@
       "updaterError": "The update could not be downloaded",
       "restartInstall": "Restart and install",
       "openReleasePage": "Open the release page",
-      "downloadingVersion": "Downloading version {v}"
+      "downloadingVersion": "Downloading version {v}",
+      "tabDesc": "The installed app looks for updates on its own at start and downloads them in the background. They install when the app restarts."
     },
     "danger": {
       "title": "Danger zone",
