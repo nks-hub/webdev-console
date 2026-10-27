@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path'
 //   - Dashboard recent-sites widget — was "prehled je prilis strohy"
 //   - Settings Simple Network panel — read-only port snapshot
 //   - Settings Simple Backup panel — one-click manual backup
-//   - SiteDetailSimple document root edit — was "neni tam zadna editace"
+//   - Site settings document root edit — was "neni tam zadna editace"
 //   - No-PHP empty state in the create site dialog
 //
 // Without contracts here a future cleanup could silently drop the
@@ -49,15 +49,13 @@ test.describe('Simple-mode features contract', () => {
     expect(source).toMatch(/settings\.simple\.backup\.openManager/)
   })
 
-  test('SiteDetailSimple wires document root edit + folder picker', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteDetailSimple.vue'), 'utf-8')
-    // The field was missing entirely before commit 59e1d29 — operator
-    // had no way to edit docroot in simple mode. Lock both the input
-    // ref and the picker handler.
-    expect(source).toMatch(/v-model="documentRoot"/)
-    expect(source).toMatch(/onDocRootChange/)
-    expect(source).toMatch(/pickDocRoot/)
-    expect(source).toMatch(/sites\.documentRoot/)
+  test('Site settings wire document root edit + folder picker', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteEdit.vue'), 'utf-8')
+    // Operators had no way to edit docroot in simple mode before commit 59e1d29.
+    // It now lives in the one Settings tab, next to the folder browser.
+    expect(source).toMatch(/v-model="site\.documentRoot"/)
+    expect(source).toMatch(/<FolderBrowser/)
+    expect(source).toMatch(/siteEdit\.folderHint/)
   })
 
   test('Create site dialog surfaces a no-PHP empty state with an install button', () => {
@@ -87,7 +85,7 @@ test.describe('Simple-mode features contract', () => {
       'settings.simple.backup.title',
       'settings.simple.backup.create',
       'settings.simple.backup.openManager',
-      'sites.detail.simple.docRootHint',
+      'siteEdit.folderHint',
       'sites.new.noPhp',
       'sites.new.installPhp',
     ]

@@ -16,6 +16,7 @@ test.describe('Per-site web server contract', () => {
     for (const file of [
       ['components', 'sites', 'SitesTable.vue'],
       ['components', 'sites', 'WebServerBanner.vue'],
+      ['components', 'sites', 'SiteOverview.vue'],
       ['components', 'pages', 'Sites.vue'],
     ]) {
       const source = read(...file)

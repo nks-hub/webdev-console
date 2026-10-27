@@ -20,8 +20,8 @@ test.describe('Bind-IP badge contract', () => {
     expect(source).toMatch(/sites\.bindIpRecommended/)
   })
 
-  test('SiteDetailSimple.vue carries the same badge wiring', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteDetailSimple.vue'), 'utf-8')
+  test('SiteEdit.vue settings carry the same badge wiring', () => {
+    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteEdit.vue'), 'utf-8')
     expect(source).toMatch(/v-if="opt\.wildcard \|\| opt\.loopback"/)
     expect(source).toMatch(/class="bind-opt-badge"/)
     expect(source).toMatch(/sites\.bindIpRecommended/)

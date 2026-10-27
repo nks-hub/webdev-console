@@ -1,6 +1,6 @@
 <template>
   <div class="sd-section">
-    <h3 class="sd-section-title">{{ t('sites.detail.simple.services.title') }}</h3>
+    <h2 class="sd-section-title">{{ t('sites.detail.simple.services.title') }}</h2>
     <div
       v-for="svc in visibleServices"
       :key="svc.id"
@@ -8,9 +8,16 @@
     >
       <HealthStatusDot :level="stateToLevel(svc)" :pulse="isTransitioning(svc)" />
       <span class="sd-service-name">{{ svc.label }}</span>
-      <span class="sd-service-uptime">{{ uptimeLabel(svc) }}</span>
+      <span class="sd-service-uptime">{{ svc.state === 'missing' ? t('sites.empty.missing') : uptimeLabel(svc) }}</span>
       <el-button
-        size="large"
+        v-if="svc.state === 'missing'"
+        size="small"
+        :loading="siteState.installing.has('apache')"
+        @click="siteState.install('apache')"
+      >{{ t('sites.banner.installApache') }}</el-button>
+      <el-button
+        v-else
+        size="small"
         :loading="restartLoading[svc.id]"
         :disabled="isTransitioning(svc)"
         @click="restartService(svc)"
@@ -29,6 +36,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
+import { useSiteStateStore } from '../../stores/siteState'
 import { errorMessage } from '../../utils/errors'
 
 defineOptions({ name: 'SimpleSiteServicesCard' })
@@ -49,6 +57,7 @@ const { t } = useI18n()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
+const siteState = useSiteStateStore()
 
 const restartLoading = reactive<Record<string, boolean>>({})
 
@@ -57,6 +66,7 @@ const site = computed(() => sitesStore.sites.find(s => s.domain === props.domain
 interface ServiceRow {
   id: string
   label: string
+  /** Service state, or 'missing' for a web server that is not installed. */
   state: number | string
   startedAt?: string
 }
@@ -64,33 +74,16 @@ interface ServiceRow {
 const visibleServices = computed<ServiceRow[]>(() => {
   const svcs = daemonStore.services
   const out: ServiceRow[] = []
-  const add = (id: string, label: string) => {
-    const s = svcs.find(x => x.id === id)
-    if (s) out.push({ id: s.id, label, state: s.state ?? 0, startedAt: s.startedAt })
+  const apache = svcs.find(x => x.id === 'apache')
+  if (apache) out.push({ id: apache.id, label: 'Apache', state: apache.state ?? 0, startedAt: apache.startedAt })
+  else if (siteState.webServer === 'missing') out.push({ id: 'apache', label: 'Apache', state: 'missing' })
+  const php = site.value?.phpVersion
+  if (php && php !== 'none') {
+    const phpSvc = svcs.find(x => x.id === `php-${php}`) ?? svcs.find(x => x.id === 'php')
+    if (phpSvc) out.push({ id: phpSvc.id, label: `PHP ${php}`, state: phpSvc.state ?? 0, startedAt: phpSvc.startedAt })
   }
-  add('apache', 'Apache')
-  if (site.value?.phpVersion) {
-    const phpSvc = svcs.find(x => x.id === `php-${site.value!.phpVersion}`)
-      ?? svcs.find(x => x.id === 'php')
-    if (phpSvc) {
-      out.push({
-        id: phpSvc.id,
-        label: `PHP ${site.value!.phpVersion}`,
-        state: phpSvc.state ?? 0,
-        startedAt: phpSvc.startedAt,
-      })
-    }
-  }
-  const dbSvc = svcs.find(x => x.id === 'mysql') ?? svcs.find(x => x.id === 'mariadb')
-  if (dbSvc) {
-    out.push({
-      id: dbSvc.id,
-      label: dbSvc.id === 'mysql' ? 'MySQL' : 'MariaDB',
-      state: dbSvc.state ?? 0,
-      startedAt: dbSvc.startedAt,
-    })
-  }
-  if (site.value?.cloudflare?.enabled) add('cloudflared', 'Cloudflare Tunnel')
+  const tunnel = site.value?.cloudflare?.enabled ? svcs.find(x => x.id === 'cloudflare') : undefined
+  if (tunnel) out.push({ id: tunnel.id, label: t('siteEdit.ov.tunnel'), state: tunnel.state ?? 0, startedAt: tunnel.startedAt })
   return out
 })
 
@@ -140,19 +133,10 @@ async function restartService(svc: ServiceRow) {
 </script>
 
 <style scoped>
-.sd-section {
-  margin-top: var(--wdc-space-4-5);
-  padding: var(--wdc-space-4);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  background: var(--wdc-surface-2);
-}
 .sd-section-title {
   margin: 0 0 var(--wdc-space-3);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 0.93rem;
   color: var(--wdc-text-2);
-  font-family: var(--wdc-font-display);
 }
 .sd-service-row {
   display: grid;
@@ -163,10 +147,10 @@ async function restartService(svc: ServiceRow) {
   border-bottom: 1px solid var(--wdc-border);
 }
 .sd-service-row:last-child { border-bottom: 0; }
-.sd-service-name { font-size: 14px; font-weight: 500; }
+.sd-service-name { font-size: 0.93rem; font-weight: 500; }
 .sd-service-uptime {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
+  color: var(--wdc-text-2);
+  font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
 }
 /* Per-service dot delegated to HealthStatusDot shared primitive

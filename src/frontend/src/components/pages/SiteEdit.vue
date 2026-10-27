@@ -1,390 +1,297 @@
 <template>
   <div class="site-edit-page">
     <!-- One site page for both UI modes. Simple vs Advanced only changes
-         density: Simple shows Overview / Metrics / Errors, Advanced adds the
-         editing, runtime, deploy, history and danger tabs. (There used to
-         be a separate SiteDetailSimple page with its own header and save
-         flow.) -->
-    <!-- Page header -->
-    <div class="page-header">
+         density: Advanced shows more groups on the Settings tab plus the
+         Deploy and History tabs. Everything is edited on the Settings tab and
+         saved with one bar, so there is a single save model. -->
+    <header class="page-header">
       <div class="header-left">
         <nav class="crumbs" :aria-label="$t('sites.backToSites')">
-          <a v-activate:link class="crumb-link" @click="goBack">{{ $t('sites.title') }}</a>
+          <router-link class="crumb-link" to="/sites">{{ $t('sites.title') }}</router-link>
           <span aria-hidden="true">/</span>
           <span aria-current="page">{{ domain }}</span>
         </nav>
         <h1 class="title-name">{{ domain }}</h1>
+        <div v-if="site" class="title-meta">
+          <SiteStatusBadge :state="state" />
+          <a v-if="state.kind !== 'disabled'" class="title-url" :href="url" @click.prevent="openUrl(url)">{{ url }}</a>
+        </div>
       </div>
-      <div class="header-actions">
-        <el-button size="small" @click="openInBrowser" :disabled="!site">
-          {{ $t('common.open') }}
+      <div v-if="site" class="header-actions">
+        <el-button :disabled="state.kind === 'disabled'" @click="openUrl(url)">
+          <el-icon aria-hidden="true"><TopRight /></el-icon>{{ $t('common.open') }}
         </el-button>
-        <el-button
-          v-if="activeTab !== 'overview'"
-          type="primary"
-          size="small"
-          :loading="saving"
-          :disabled="!dirty"
-          @click="save"
-        >
-          {{ $t('common.save') }} &amp; {{ $t('common.apply') }}
+        <el-button @click="openFolder">
+          <el-icon aria-hidden="true"><Folder /></el-icon>{{ $t('sites.list.folder') }}
         </el-button>
       </div>
-    </div>
+    </header>
 
-    <!-- Loading -->
     <div v-if="loading" class="state-box">
       <el-skeleton :rows="10" animated />
     </div>
 
-    <!-- Not found -->
     <div v-else-if="!site" class="state-box">
-      <el-empty :description="$t('sites.notFound', { domain })" />
+      <el-empty :description="$t('sites.notFound', { domain })">
+        <el-button type="primary" @click="router.push('/sites')">{{ $t('sites.backToSites') }}</el-button>
+      </el-empty>
     </div>
 
-    <!-- Content with tabs -->
     <div v-else class="edit-body">
       <SiteApplyPipeline :domain="domain" class="site-apply" />
+
       <el-tabs v-model="activeTab" class="site-tabs">
-        <!-- ── Overview (quick controls, both modes) ── -->
-        <el-tab-pane name="overview">
-          <template #label>
-            <span class="tab-label"><el-icon><House /></el-icon> {{ $t('siteEdit.overview') }}</span>
-          </template>
-          <SiteDetailSimple :domain="domain" embedded />
-        </el-tab-pane>
-
-        <!-- ── General ──────────────────────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="general">
-          <template #label>
-            <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('siteEdit.general') }}</span>
-          </template>
+        <!-- ── Overview: read-only ── -->
+        <el-tab-pane name="overview" :label="$t('siteEdit.overview')">
           <div class="tab-content">
-            <!-- Identity card -->
-            <EditCard :title="$t('siteEdit.identity')" :hint="$t('siteEdit.identityHint')">
-                <el-form :model="site" label-position="top" size="default">
-                  <el-form-item :label="$t('sites.domain')">
-                    <el-input :model-value="site.domain" disabled>
-                      <template #prepend><el-icon><Link /></el-icon></template>
-                    </el-input>
-                  </el-form-item>
-                  <el-form-item :label="$t('sites.bindIp')">
-                    <el-select
-                      v-model="site.bindAddresses"
-                      class="bind-address-select"
-                      style="width: 100%"
-                      multiple
-                      clearable
-                      collapse-tags
-                      collapse-tags-tooltip
-                      filterable
-                      :loading="bindAddressOptionsLoading"
-                      :disabled="bindAddressOptionsLoading || bindAddressOptions.length === 0"
-                      @change="onBindAddressesChange"
-                    >
-                      <el-option
-                        v-for="opt in bindAddressOptions"
-                        :key="opt.value"
-                        :label="opt.label"
-                        :value="opt.value"
-                      />
-                    </el-select>
-                    <div class="hint">{{ $t('sites.bindIpHint') }}</div>
-                  </el-form-item>
-                  <el-form-item :label="$t('sites.documentRoot')" required>
-                    <el-input
-                      v-model="site.documentRoot"
-                      placeholder="C:\work\htdocs\myapp"
-                      class="path-input"
-                      @input="markDirty"
-                    >
-                      <template #append>
-                        <el-button
-                          class="browse-append-btn"
-                          :aria-label="$t('sites.edit.browseDocRoot')"
-                          @click="showFolderBrowser = true"
-                        >
-                          <el-icon><FolderOpened /></el-icon>
-                          <span>Browse…</span>
-                        </el-button>
-                      </template>
-                    </el-input>
-                    <div class="hint" v-if="site.documentRoot">
-                      <el-icon><Check /></el-icon>
-                      Apache will serve files from this folder
-                    </div>
-                  </el-form-item>
-                </el-form>
-            </EditCard>
-
-            <!-- Alias picker card -->
-            <EditCard
-              :title="$t('siteEdit.aliasesCard')"
-              :hint="$t('sites.additionalDomains', { n: aliases.length })"
-            >
-              <div class="alias-chips">
-                  <el-tag
-                    v-for="alias in aliases"
-                    :key="alias"
-                    class="alias-chip"
-                    closable
-                    effect="dark"
-                    @close="removeAlias(alias)"
-                  >
-                    {{ alias }}
-                  </el-tag>
-                  <el-input
-                    v-if="aliasInputVisible"
-                    ref="aliasInputRef"
-                    v-model="aliasInput"
-                    size="small"
-                    class="alias-input"
-                    placeholder="www.myapp.loc"
-                    @keydown.enter.prevent="addAlias"
-                    @blur="addAlias"
-                  />
-                  <el-button
-                    v-else
-                    size="small"
-                    class="alias-add-btn"
-                    @click="showAliasInput"
-                  >
-                    + Add alias
-                  </el-button>
-                </div>
-                <div class="hint">
-                  Wildcards supported: <code>*.myapp.loc</code> catches every subdomain.
-                </div>
-            </EditCard>
-
-            <!-- Framework detection card -->
-            <EditCard :title="$t('siteEdit.frameworkCard')" :hint="$t('siteEdit.frameworkHint')">
-                <div class="framework-row">
-                  <el-input
-                    v-model="site.framework"
-                    placeholder="wordpress, laravel, nextjs, …"
-                    class="framework-input"
-                    @input="markDirty"
-                  />
-                  <el-button size="default" @click="detectFramework" :loading="detecting">
-                    <el-icon><Search /></el-icon>
-                    <span>Auto-detect</span>
-                  </el-button>
-                </div>
-            </EditCard>
-
-            <!-- Docker Compose detection + lifecycle card -->
-            <EditCard
-              v-if="composeInfo"
-              :title="$t('siteEdit.dockerCard')"
-              :hint="composeInfo.fileName ?? undefined"
-            >
-              <div style="display: flex; align-items: center; gap: var(--wdc-space-2); flex-wrap: wrap">
-                  <el-tag size="small" type="info" effect="plain">{{ composeInfo.fileName }}</el-tag>
-                  <el-button size="small" type="success" @click="runCompose('up')" :loading="composeLoading">
-                    {{ $t('siteEdit.composeUp') }}
-                  </el-button>
-                  <el-button size="small" type="danger" plain @click="runCompose('down')" :loading="composeLoading">
-                    {{ $t('siteEdit.composeDown') }}
-                  </el-button>
-                  <el-button size="small" @click="runCompose('restart')" :loading="composeLoading">
-                    {{ $t('common.restart') }}
-                  </el-button>
-                  <el-button size="small" @click="runCompose('ps')" :loading="composeLoading">
-                    {{ $t('common.status') }}
-                  </el-button>
-                </div>
-                <div v-if="composeOutput" class="compose-output">
-                  <pre>{{ composeOutput }}</pre>
-                </div>
-            </EditCard>
+            <SiteOverview :site="site" :toggling="toggling" @change="goToSetting" @toggle="toggleEnabled" />
           </div>
         </el-tab-pane>
 
-        <!-- ── Runtime ──────────────────────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="runtime">
-          <template #label>
-            <span class="tab-label"><el-icon><Cpu /></el-icon> {{ $t('siteEdit.runtime') }}</span>
-          </template>
-          <div class="tab-content">
-            <EditCard :title="$t('siteEdit.runtimeCard')" :hint="$t('siteEdit.runtimeHint')">
-                <div class="runtime-picker">
-                  <button
-                    class="runtime-card"
-                    :class="{ active: selectedRuntime === 'static' }"
-                    @click="selectRuntime('static')"
-                    type="button"
-                  >
-                    <div class="runtime-card-icon runtime-static">HTML</div>
-                    <div class="runtime-card-title">{{ $t('siteEdit.static') }}</div>
-                    <div class="runtime-card-desc">{{ $t('siteEdit.staticDesc') }}</div>
-                  </button>
-                  <button
-                    class="runtime-card"
-                    :class="{ active: selectedRuntime === 'php' }"
-                    @click="selectRuntime('php')"
-                    type="button"
-                  >
-                    <div class="runtime-card-icon runtime-php">PHP</div>
-                    <div class="runtime-card-title">PHP</div>
-                    <div class="runtime-card-desc">{{ $t('siteEdit.phpDesc') }}</div>
-                  </button>
-                  <button
-                    class="runtime-card"
-                    :class="{ active: selectedRuntime === 'node' }"
-                    @click="selectRuntime('node')"
-                    type="button"
-                  >
-                    <div class="runtime-card-icon runtime-node">N</div>
-                    <div class="runtime-card-title">Node.js</div>
-                    <div class="runtime-card-desc">{{ $t('siteEdit.nodeDesc') }}</div>
-                  </button>
-                </div>
-
-                <!-- Node.js upstream port + start command (only when Node is selected) -->
-                <div v-if="selectedRuntime === 'node'" class="php-version-picker">
-                  <label class="sub-label">{{ $t('siteEdit.upstreamPort') }}</label>
-                  <el-input-number
-                    v-model="nodeUpstreamPort"
-                    :min="1024"
-                    :max="65535"
-                    controls-position="right"
-                    style="width: 180px"
-                    @change="markDirty"
-                  />
-                  <div class="hint" style="margin-top: var(--wdc-space-2)">
-                    Port your Node.js app listens on. Apache will <code>ProxyPass</code> all requests to it.
+        <!-- ── Settings: the one place a site is edited ── -->
+        <el-tab-pane name="settings" :label="$t('siteEdit.settings')">
+          <div class="tab-content settings">
+            <EditCard v-if="uiMode.isAdvanced" id="set-domain" :title="$t('siteEdit.domainGroup')">
+              <el-form label-position="top" @submit.prevent>
+                <el-form-item :label="$t('sites.domain')">
+                  <el-input :model-value="site.domain" disabled />
+                  <div class="hint">{{ $t('siteEdit.domainReadonly') }}</div>
+                </el-form-item>
+                <el-form-item :label="$t('sites.aliases')">
+                  <div class="alias-chips">
+                    <el-tag
+                      v-for="alias in aliases"
+                      :key="alias"
+                      class="alias-chip"
+                      closable
+                      @close="removeAlias(alias)"
+                    >{{ alias }}</el-tag>
+                    <el-input
+                      v-if="aliasInputVisible"
+                      ref="aliasInputRef"
+                      v-model="aliasInput"
+                      size="small"
+                      class="alias-input"
+                      placeholder="www.myapp.loc"
+                      :aria-label="$t('siteEdit.addAlias')"
+                      @keydown.enter.prevent="addAlias"
+                      @blur="addAlias"
+                    />
+                    <el-button v-else size="small" class="alias-add-btn" @click="showAliasInput">+ {{ $t('siteEdit.addAlias') }}</el-button>
                   </div>
+                  <div class="hint">{{ $t('sites.new.aliasesHint') }}</div>
+                </el-form-item>
+              </el-form>
+            </EditCard>
 
-                  <label class="sub-label" style="margin-top: var(--wdc-space-4)">{{ $t('siteEdit.startCommand') }}</label>
-                  <el-input
-                    v-model="nodeStartCommand"
-                    placeholder="npm start"
-                    clearable
-                    style="width: 320px"
-                    @input="markDirty"
-                  />
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">
-                    Command to start your app (e.g. <code>npm start</code>, <code>npm run dev</code>, <code>node server.js</code>).
-                    Empty defaults to <code>npm start</code>.
+            <EditCard id="set-folder" :title="$t('siteEdit.folderGroup')">
+              <el-form label-position="top" @submit.prevent>
+                <el-form-item :label="$t('sites.new.folder')" required>
+                  <el-input v-model="site.documentRoot" placeholder="C:\work\htdocs\myapp" class="path-input" spellcheck="false">
+                    <template #append>
+                      <el-button :aria-label="$t('sites.edit.browseDocRoot')" @click="showFolderBrowser = true">
+                        <el-icon aria-hidden="true"><FolderOpened /></el-icon>
+                        <span>{{ $t('sites.new.pick') }}</span>
+                      </el-button>
+                    </template>
+                  </el-input>
+                  <div v-if="folderState === 'exists'" class="hint hint-ok">
+                    <el-icon aria-hidden="true"><Check /></el-icon>{{ $t('sites.new.folderExists') }}
                   </div>
-
-                  <!-- Per-site Node process controls -->
-                  <div class="node-process-controls" style="margin-top: var(--wdc-space-4)">
-                    <label class="sub-label">{{ $t('siteEdit.process') }}</label>
-                    <div v-if="!nodePluginAvailable" class="hint" style="margin-top: var(--wdc-space-1)">
-                      <el-icon style="color: var(--el-color-warning)"><WarningFilled /></el-icon>
-                      Node.js plugin not loaded in daemon. Apache will still reverse-proxy
-                      to <code>localhost:{{ nodeUpstreamPort }}</code>, but you must start
-                      the Node process yourself. Install <code>NKS.WebDevConsole.Plugin.Node</code>
-                      and restart the daemon to enable per-site process management.
-                    </div>
-                    <div v-else style="display: flex; align-items: center; gap: var(--wdc-space-2-5); margin-top: var(--wdc-space-1)">
-                      <HealthStatusDot
-                        :level="nodeProcessState === 2 ? 'ok' : nodeProcessState === 4 ? 'err' : nodeProcessState === 1 ? 'warn' : 'muted'"
-                        :pulse="nodeProcessState === 1"
-                      />
-                      <span style="font-size: 0.85rem; color: var(--wdc-text-2)">
-                        {{ nodeProcessState === 2 ? t('common.running') : nodeProcessState === 4 ? t('common.crashed') : nodeProcessState === 1 ? t('common.starting') : t('common.stopped') }}
-                        <template v-if="nodeProcessPid"> (PID {{ nodeProcessPid }})</template>
-                      </span>
-                      <el-button
-                        v-if="nodeProcessState !== 2"
-                        size="small"
-                        type="success"
-                        @click="startNodeProcess"
-                        :loading="nodeProcessLoading"
-                      >{{ $t('siteEdit.start') }}</el-button>
-                      <el-button
-                        v-if="nodeProcessState === 2"
-                        size="small"
-                        type="danger"
-                        @click="stopNodeProcess"
-                        :loading="nodeProcessLoading"
-                      >{{ $t('common.stop') }}</el-button>
-                      <el-button
-                        v-if="nodeProcessState === 2"
-                        size="small"
-                        @click="restartNodeProcess"
-                        :loading="nodeProcessLoading"
-                      >{{ $t('siteEdit.restart') }}</el-button>
-                    </div>
+                  <div v-else-if="folderState === 'missing'" class="hint hint-warn">
+                    <el-icon aria-hidden="true"><WarningFilled /></el-icon>{{ $t('sites.new.folderMissing') }}
                   </div>
-                </div>
+                  <div v-else class="hint">{{ $t('siteEdit.folderHint') }}</div>
+                </el-form-item>
+              </el-form>
+            </EditCard>
 
-                <!-- PHP version sub-picker (only when PHP is selected) -->
-                <div v-if="selectedRuntime === 'php'" class="php-version-picker">
-                  <label class="sub-label">PHP Version</label>
-                  <div class="php-version-grid">
+            <EditCard id="set-runtime" :title="$t('siteEdit.runtimeGroup')">
+              <div class="runtime-picker" role="radiogroup" :aria-label="$t('siteEdit.runtimeGroup')">
+                <button
+                  v-for="rt in runtimeChoices"
+                  :key="rt.id"
+                  type="button"
+                  role="radio"
+                  class="runtime-card"
+                  :class="{ active: selectedRuntime === rt.id }"
+                  :aria-checked="selectedRuntime === rt.id"
+                  @click="selectRuntime(rt.id)"
+                >
+                  <span class="runtime-card-title">{{ rt.title }}</span>
+                  <span class="runtime-card-desc">{{ rt.desc }}</span>
+                </button>
+              </div>
+
+              <div v-if="selectedRuntime === 'php'" class="runtime-extra">
+                <template v-if="siteState.phpVersions === null || siteState.phpVersions.length">
+                  <span class="sub-label">{{ $t('sites.phpVersion') }}</span>
+                  <div class="php-version-grid" role="radiogroup" :aria-label="$t('sites.phpVersion')">
                     <button
-                      v-for="v in phpVersions"
+                      v-for="v in siteState.phpVersions ?? []"
                       :key="v.value"
                       type="button"
+                      role="radio"
                       class="php-version-btn"
-                      :class="{ active: site.phpVersion === v.value, 'php-active': v.isActive }"
-                      :title="v.isActive ? `${v.label} — runtime-active` : v.label"
-                      @click="setPhpVersion(v.value)"
-                    >
-                      {{ v.label }}
-                    </button>
-                    <div v-if="phpVersions.length === 0" class="hint">
-                      No PHP versions installed. Open the Binaries page to install one.
-                    </div>
+                      :class="{ active: site.phpVersion === v.value }"
+                      :aria-checked="site.phpVersion === v.value"
+                      :title="`PHP ${v.full}`"
+                      @click="site.phpVersion = v.value"
+                    >PHP {{ v.value }}<span v-if="v.isActive" class="php-default">{{ $t('sites.list.phpDefault') }}</span></button>
+                  </div>
+                  <div v-if="phpVersionMissing" class="inline-callout">
+                    <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+                    <span>{{ $t('siteEdit.phpMissing', { v: site.phpVersion }) }}</span>
+                    <el-button size="small" @click="router.push('/binaries')">{{ $t('siteEdit.openBinaries') }}</el-button>
+                  </div>
+                </template>
+                <div v-else class="inline-callout">
+                  <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+                  <span>{{ $t('sites.new.noPhp') }}</span>
+                  <el-button size="small" :loading="siteState.installing.has('php')" @click="siteState.install('php')">{{ $t('sites.new.installPhp') }}</el-button>
+                </div>
+              </div>
+
+              <div v-else-if="selectedRuntime === 'node'" class="runtime-extra">
+                <div class="node-fields">
+                  <label class="field">
+                    <span class="sub-label">{{ $t('siteEdit.upstreamPort') }}</span>
+                    <el-input-number v-model="nodePort" :min="1024" :max="65535" controls-position="right" />
+                  </label>
+                  <label class="field field-grow">
+                    <span class="sub-label">{{ $t('siteEdit.startCommand') }}</span>
+                    <el-input v-model="nodeCommand" placeholder="npm start" clearable />
+                  </label>
+                </div>
+                <div class="hint">{{ $t('siteEdit.upstreamPortHint') }} {{ $t('siteEdit.startCommandHint') }}</div>
+
+                <div v-if="uiMode.isAdvanced" class="node-process">
+                  <span class="sub-label">{{ $t('siteEdit.process') }}</span>
+                  <div v-if="nodePlugin !== 'ok'" class="inline-callout">
+                    <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+                    <span>{{ $t(nodePlugin === 'disabled' ? 'siteEdit.nodePluginDisabled' : 'siteEdit.nodePluginMissing') }}</span>
+                    <el-button
+                      v-if="nodePlugin === 'disabled'"
+                      size="small"
+                      :loading="nodePluginBusy"
+                      @click="enableNodePlugin"
+                    >{{ $t('siteEdit.enablePlugin') }}</el-button>
+                    <el-button v-else size="small" @click="router.push('/plugins')">{{ $t('siteEdit.openPlugins') }}</el-button>
+                  </div>
+                  <div v-else class="node-process-row">
+                    <HealthStatusDot
+                      :level="nodeProcessState === 2 ? 'ok' : nodeProcessState === 4 ? 'err' : nodeProcessState === 1 ? 'warn' : 'muted'"
+                      :pulse="nodeProcessState === 1"
+                    />
+                    <span class="node-process-state">
+                      {{ nodeProcessState === 2 ? $t('common.running') : nodeProcessState === 4 ? $t('common.crashed') : nodeProcessState === 1 ? $t('common.starting') : $t('common.stopped') }}
+                      <template v-if="nodeProcessPid"> (PID {{ nodeProcessPid }})</template>
+                    </span>
+                    <el-button v-if="nodeProcessState !== 2" size="small" type="primary" :loading="nodeProcessLoading" @click="startNodeProcess">{{ $t('siteEdit.start') }}</el-button>
+                    <template v-else>
+                      <el-button size="small" :loading="nodeProcessLoading" @click="stopNodeProcess">{{ $t('common.stop') }}</el-button>
+                      <el-button size="small" :loading="nodeProcessLoading" @click="restartNodeProcess">{{ $t('siteEdit.restart') }}</el-button>
+                    </template>
                   </div>
                 </div>
+              </div>
             </EditCard>
 
-            <EditCard
-              :title="$t('siteEdit.ports')"
-              hint="Default: 80 (HTTP) and 443 (HTTPS)"
-            >
-              <div class="port-grid">
-                  <div class="port-item">
-                    <label class="sub-label">HTTP Port</label>
-                    <el-input-number
-                      v-model="site.httpPort"
-                      :min="1"
-                      :max="65535"
-                      controls-position="right"
-                      style="width: 100%"
-                      @change="markDirty"
-                    />
-                  </div>
-                  <div class="port-item" v-if="site.sslEnabled">
-                    <label class="sub-label">HTTPS Port</label>
-                    <el-input-number
-                      v-model="site.httpsPort"
-                      :min="1"
-                      :max="65535"
-                      controls-position="right"
-                      style="width: 100%"
-                      @change="markDirty"
-                    />
-                  </div>
-                </div>
+            <EditCard id="set-https" :title="$t('siteEdit.httpsGroup')">
+              <label class="toggle-line">
+                <el-switch v-model="site.sslEnabled" />
+                <span class="toggle-label">{{ $t('siteEdit.httpsToggle') }}</span>
+              </label>
+              <div v-if="site.sslEnabled && httpsNeedsSetup" class="inline-callout">
+                <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+                <span>{{ $t('sites.new.httpsNeedsCa') }}</span>
+                <el-button size="small" :loading="siteState.installing.has('https')" @click="siteState.install('https')">{{ $t('sites.new.installHttps') }}</el-button>
+              </div>
+              <div v-else class="hint">{{ $t('sites.new.httpsHint') }}</div>
             </EditCard>
+
+            <EditCard v-if="uiMode.isAdvanced" id="set-network" :title="$t('siteEdit.networkGroup')">
+              <el-form label-position="top" @submit.prevent>
+                <el-form-item :label="$t('sites.bindIp')">
+                  <el-select
+                    v-model="site.bindAddresses"
+                    class="bind-address-select"
+                    multiple
+                    clearable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    filterable
+                    :loading="bindLoading"
+                    :disabled="bindLoading || bindOptions.length === 0"
+                    @change="onBindChange"
+                  >
+                    <el-option v-for="opt in bindOptions" :key="opt.value" :label="opt.label" :value="opt.value">
+                      <span class="bind-opt-label">{{ opt.label }}</span>
+                      <span v-if="opt.wildcard || opt.loopback" class="bind-opt-badge">{{ $t('sites.bindIpRecommended') }}</span>
+                    </el-option>
+                  </el-select>
+                  <div class="hint">{{ $t('sites.bindIpHint') }}</div>
+                </el-form-item>
+                <div class="port-grid">
+                  <el-form-item :label="$t('siteEdit.httpPort')">
+                    <el-input-number v-model="site.httpPort" :min="1" :max="65535" controls-position="right" />
+                  </el-form-item>
+                  <el-form-item v-if="site.sslEnabled" :label="$t('siteEdit.httpsPort')">
+                    <el-input-number v-model="site.httpsPort" :min="1" :max="65535" controls-position="right" />
+                  </el-form-item>
+                </div>
+                <div class="hint">{{ $t('siteEdit.portsHint') }}</div>
+              </el-form>
+            </EditCard>
+
+            <EditCard v-if="siteState.cloudflareActive" id="set-tunnel" :title="$t('siteEdit.tunnelGroup')">
+              <label class="toggle-line">
+                <el-switch :model-value="!!site.cloudflare?.enabled" :disabled="!tunnelConfigured" @change="setTunnel" />
+                <span class="toggle-label">{{ $t('siteEdit.tunnelLabel') }}</span>
+              </label>
+              <div v-if="!tunnelConfigured" class="inline-callout">
+                <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+                <span>{{ $t('siteEdit.tunnelNotConfigured') }}</span>
+                <el-button size="small" @click="router.push('/cloudflare')">{{ $t('siteEdit.openCloudflare') }}</el-button>
+              </div>
+              <div v-else-if="site.cloudflare?.enabled" class="hint mono">https://{{ site.cloudflare.subdomain }}.{{ site.cloudflare.zoneName }}</div>
+            </EditCard>
+
+            <EditCard v-if="uiMode.isAdvanced" id="set-framework" :title="$t('siteEdit.frameworkGroup')">
+              <div class="framework-row">
+                <el-input v-model="site.framework" :placeholder="$t('siteEdit.frameworkPlaceholder')" :aria-label="$t('sites.framework')" />
+                <el-button :loading="detecting" @click="detectFramework">
+                  <el-icon aria-hidden="true"><Search /></el-icon><span>{{ $t('siteEdit.autoDetect') }}</span>
+                </el-button>
+              </div>
+              <div class="hint">{{ $t('siteEdit.frameworkHint') }}</div>
+
+              <div v-if="composeInfo" class="compose-block">
+                <span class="sub-label">{{ $t('siteEdit.dockerCard') }}: <code>{{ composeInfo.fileName }}</code></span>
+                <div class="compose-actions">
+                  <el-button size="small" type="primary" :loading="composeLoading" @click="runCompose('up')">{{ $t('siteEdit.composeUp') }}</el-button>
+                  <el-button size="small" :loading="composeLoading" @click="runCompose('down')">{{ $t('siteEdit.composeDown') }}</el-button>
+                  <el-button size="small" :loading="composeLoading" @click="runCompose('restart')">{{ $t('common.restart') }}</el-button>
+                  <el-button size="small" :loading="composeLoading" @click="runCompose('ps')">{{ $t('common.status') }}</el-button>
+                </div>
+                <pre v-if="composeOutput" class="compose-output">{{ composeOutput }}</pre>
+              </div>
+            </EditCard>
+
+            <section id="set-danger" class="danger-box" :aria-labelledby="`${uid}-danger`">
+              <h2 :id="`${uid}-danger`" class="danger-title">{{ $t('siteEdit.deleteTitle') }}</h2>
+              <p class="danger-desc">{{ $t('siteEdit.deleteDesc') }}</p>
+              <el-button type="danger" plain @click="confirmDelete">{{ $t('siteEdit.deleteAction') }}</el-button>
+            </section>
           </div>
         </el-tab-pane>
 
-        <!-- ── Deploy ──────────────────────────────
-             Inserted BEFORE <PluginSlot> for stable ordering (per v2 audit
-             ui-ux fix #2). The Deploy tab is a 1st-class wdc capability via
-             the NksDeploy plugin (registered through IDeployBackend); the
-             tab itself ships with the app rather than being a plugin
-             contribution to keep its placement deterministic. -->
-        <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy">
-          <template #label>
-            <span class="tab-label"><el-icon><Upload /></el-icon> {{ $t('siteEdit.deploy') }}</span>
-          </template>
-          <div class="tab-content">
-            <DeploySiteTab :domain="domain" />
-          </div>
+        <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy" :label="$t('siteEdit.deploy')">
+          <div class="tab-content"><DeploySiteTab :domain="domain" /></div>
         </el-tab-pane>
 
-        <!-- F91.6: plugin-contributed tabs (SSL, Cloudflare, Composer, …).
-             Each plugin's UiContribution(slot="site-edit-tabs") renders as
-             its own <el-tab-pane> with label/content the plugin supplies.
-             Disabling a plugin removes its contribution → tab vanishes. -->
+        <!-- Plugin-contributed tabs (SSL, Cloudflare, Composer, …); they edit the
+             same site copy and save with the same bar. -->
         <PluginSlot
           name="site-edit-tabs"
           :context="{ domain, site, redirectHttps }"
@@ -393,211 +300,52 @@
           @dirty="markDirty"
         />
 
-        <!-- ── History ──────────────────────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="history">
-          <template #label>
-            <span class="tab-label"><el-icon><Clock /></el-icon> {{ $t('siteEdit.history') }} ({{ history.length }})</span>
-          </template>
+        <el-tab-pane v-if="uiMode.isAdvanced" name="history" :label="`${$t('siteEdit.history')} (${history.length})`">
           <div class="tab-content">
-            <div class="history-banner">
-              <el-icon><InfoFilled /></el-icon>
-              <span>
-                Rollback points capture this site's vhost + plugin config
-                before every save. Restore a previous version if a recent
-                change broke something — only config files are reverted,
-                the site's document root is left alone.
-              </span>
+            <div class="info-banner">
+              <el-icon aria-hidden="true"><InfoFilled /></el-icon>
+              <span>{{ $t('siteEdit.historyBanner') }}</span>
             </div>
             <el-empty v-if="history.length === 0" :description="$t('sites.history.emptyDescription')" :image-size="64" />
-            <div v-else class="history-list">
-              <div v-for="(h, i) in history" :key="h.timestamp" class="history-row">
-                <div class="history-when">
-                  <el-icon><Clock /></el-icon>
-                  <span>{{ formatDate(h.createdAt ?? h.timestamp) }}</span>
-                </div>
-                <div class="history-label">
+            <ul v-else class="history-list">
+              <li v-for="(h, i) in history" :key="h.timestamp" class="history-row">
+                <span class="history-when">{{ formatDate(h.createdAt ?? h.timestamp) }}</span>
+                <span class="history-label">
                   <span class="version-badge">v{{ history.length - i }}</span>
-                  <span v-if="h.label">{{ h.label }}</span>
-                  <span v-else class="version-hint">config snapshot</span>
-                </div>
-                <el-button size="small" text type="primary" @click="rollback(h.timestamp, h.createdAt)">
-                  {{ $t('common.restore') }}
-                </el-button>
-              </div>
-            </div>
+                  {{ h.label || $t('siteEdit.snapshot') }}
+                </span>
+                <el-button size="small" text type="primary" @click="rollback(h.timestamp, h.createdAt)">{{ $t('common.restore') }}</el-button>
+              </li>
+            </ul>
           </div>
         </el-tab-pane>
 
-        <!-- ── Metrics ──────────────────────────── -->
-        <el-tab-pane name="metrics">
-          <template #label>
-            <span class="tab-label"><el-icon><DataLine /></el-icon> {{ $t('siteEdit.metrics') }}</span>
-          </template>
-          <div class="tab-content">
-            <div class="metrics-toolbar">
-              <el-button size="small" :loading="metricsLoading" :icon="Refresh" @click="refreshMetrics">
-                {{ $t('common.refresh') }}
-              </el-button>
-              <span v-if="metricsLastRefresh" class="hint metrics-timestamp">
-                Last updated {{ metricsAgeDisplay }}
-              </span>
-            </div>
-            <div v-if="!siteMetrics" class="hint" style="padding: var(--wdc-space-5) 0">
-              <span v-if="metricsLoading">{{ $t('siteEdit.metricsLoading') }}</span>
-              <span v-else>{{ $t('siteEdit.metricsEmpty') }}</span>
-            </div>
-
-            <!-- F74 layout: historical chart FIRST (dominant visual), then
-                 compact KPI cards + request-rate sparkline as a summary strip,
-                 then the access log detail table at the bottom. Previous
-                 order (cards → sparkline → table → chart) buried the chart. -->
-
-            <!-- Historical data section -->
-            <div class="historical-section">
-              <div class="historical-header">
-                <span class="historical-title">{{ $t('siteEdit.historical') }}</span>
-                <div class="historical-controls">
-                  <div class="historical-control-item">
-                    <label class="historical-label">{{ $t('metrics.historical.dateLabel') }}</label>
-                    <el-date-picker
-                      v-model="historicalDate"
-                      type="date"
-                      size="small"
-                      :disabled-date="isDateDisabled"
-                      value-format="YYYY-MM-DD"
-                      format="YYYY-MM-DD"
-                      style="width: 150px"
-                      @change="onHistoricalParamsChange"
-                    />
-                  </div>
-                  <div class="historical-control-item">
-                    <label class="historical-label">{{ $t('metrics.historical.granularityLabel') }}</label>
-                    <el-select
-                      v-model="historicalGranularity"
-                      size="small"
-                      style="width: 90px"
-                      @change="onHistoricalParamsChange"
-                    >
-                      <el-option label="1m" value="1m" />
-                      <el-option label="5m" value="5m" />
-                      <el-option label="15m" value="15m" />
-                      <el-option label="1h" value="1h" />
-                    </el-select>
-                  </div>
-                  <el-button
-                    size="small"
-                    :loading="historicalLoading"
-                    :icon="Refresh"
-                    @click="loadHistoricalMetrics"
-                  >
-                    {{ $t('metrics.historical.refresh') }}
-                  </el-button>
-                  <div class="historical-series-toggles">
-                    <el-check-tag
-                      v-for="s in historicalSeriesOptions"
-                      :key="s.key"
-                      :checked="historicalActiveSeries.includes(s.key)"
-                      :style="{ '--check-tag-color': s.color }"
-                      class="series-toggle"
-                      @change="(checked: boolean) => toggleSeries(s.key, checked)"
-                    >
-                      {{ $t(s.labelKey) }}
-                    </el-check-tag>
-                  </div>
-                </div>
-              </div>
-
-              <div class="historical-chart-wrap">
-                <div v-if="historicalLoading" class="historical-overlay">
-                  <span class="hint">{{ $t('metrics.historical.loading') }}</span>
-                </div>
-                <div
-                  v-if="!historicalLoading && historicalIsEmptyDay"
-                  class="historical-overlay historical-empty"
-                >
-                  {{ $t('metrics.historical.emptyDay') }}
-                </div>
-                <v-chart
-                  v-if="activeTab === 'metrics'"
-                  :option="historicalChartOption"
-                  :autoresize="true"
-                  style="width: 100%; height: 220px"
-                />
-              </div>
-            </div>
-
-            <!-- Recent parsed access-log entries. Restored here after the
-                 F74 chart-first reorder accidentally dropped the table. -->
-            <SiteAccessLogs v-if="site" :domain="site.domain" class="access-log-section" />
+        <el-tab-pane name="logs" :label="$t('siteEdit.logs')">
+          <div class="tab-content tab-wide">
+            <el-radio-group v-model="logsView" class="logs-switch" :aria-label="$t('siteEdit.logs')">
+              <el-radio-button value="errors">{{ $t('siteEdit.errors') }}</el-radio-button>
+              <el-radio-button value="access">{{ $t('siteEdit.access') }}</el-radio-button>
+            </el-radio-group>
+            <SiteErrorLogs v-if="logsView === 'errors'" :domain="site.domain" />
+            <SiteAccessLogs v-else :domain="site.domain" />
           </div>
         </el-tab-pane>
 
-        <!-- ── Error Logs ───────────────────────── -->
-        <el-tab-pane name="errors">
-          <template #label>
-            <span class="tab-label"><el-icon><WarningFilled /></el-icon> {{ $t('siteEdit.errors') }}</span>
-          </template>
-          <div class="tab-content" style="max-width: 100%">
-            <SiteErrorLogs v-if="site" :domain="site.domain" />
-          </div>
-        </el-tab-pane>
-
-        <!-- ── Danger ───────────────────────────── -->
-        <el-tab-pane v-if="uiMode.isAdvanced" name="danger">
-          <template #label>
-            <span class="tab-label danger-label"><el-icon><WarningFilled /></el-icon> {{ $t('siteEdit.danger') }}</span>
-          </template>
-          <div class="tab-content">
-            <!-- Task 28: rename-domain section. Backend endpoint not
-                 wired yet — disabled with tooltip explaining the reason
-                 until PATCH /api/sites/{domain}/rename is implemented. -->
-            <div class="danger-box" style="margin-bottom: var(--wdc-space-4)">
-              <div class="danger-title">
-                <el-icon><Setting /></el-icon>
-                Rename domain
-              </div>
-              <div class="danger-desc">
-                Changes the site's primary domain. Updates vhost, hosts
-                file, SSL cert paths, and Cloudflare tunnel route. Coming
-                in a future release.
-              </div>
-              <el-input
-                v-model="renameNewDomain"
-                :placeholder="site.domain"
-                size="default"
-                style="max-width: 320px; margin-bottom: var(--wdc-space-2)"
-                disabled
-              />
-              <el-tooltip content="Backend PATCH /api/sites/{domain}/rename not yet implemented" placement="top">
-                <el-button type="warning" size="default" disabled>
-                  Rename to {{ renameNewDomain || '...' }}
-                </el-button>
-              </el-tooltip>
-            </div>
-
-            <div class="danger-box">
-              <div class="danger-title">
-                <el-icon><WarningFilled /></el-icon>
-                Delete this site
-              </div>
-              <div class="danger-desc">
-                Removes the vhost config and hosts file entry. Document root and databases are not touched.
-              </div>
-              <el-button type="danger" size="default" @click="confirmDelete">
-                {{ $t('common.delete') }} {{ site.domain }}
-              </el-button>
-            </div>
+        <el-tab-pane name="metrics" :label="$t('siteEdit.metrics')">
+          <div class="tab-content tab-wide">
+            <SiteMetrics :domain="site.domain" :active="activeTab === 'metrics'" />
           </div>
         </el-tab-pane>
       </el-tabs>
     </div>
 
-    <!-- Folder browser dialog -->
-    <FolderBrowser
-      v-model="showFolderBrowser"
-      :initial-path="site?.documentRoot"
-      @select="onFolderPick"
-    />
+    <div v-if="site && dirty" class="save-bar" role="region" :aria-label="$t('siteEdit.unsavedAria')">
+      <span class="save-text">{{ $t('siteEdit.unsaved') }}</span>
+      <el-button :disabled="saving" @click="discard">{{ $t('common.discard') }}</el-button>
+      <el-button type="primary" :loading="saving" @click="save">{{ $t('sites.saveAndApply') }}</el-button>
+    </div>
+
+    <FolderBrowser v-model="showFolderBrowser" :initial-path="site?.documentRoot" @select="onFolderPick" />
   </div>
 </template>
 
@@ -606,62 +354,50 @@
 // this page — SiteEdit is parametric by :domain and MUST refresh state on
 // every navigation, unlike Dashboard/Sites/Binaries which benefit from cache.
 defineOptions({ name: 'SiteEdit' })
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import {
-  ArrowLeft, Setting, Cpu, Lock, Clock, WarningFilled,
-  FolderOpened, Check, Search, Link, DataLine, Refresh, Grid,
-  InfoFilled, Upload, House,
-} from '@element-plus/icons-vue'
-import DeploySiteTab from '../deploy/DeploySiteTab.vue'
-import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
+import { Check, Folder, FolderOpened, InfoFilled, Search, TopRight, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import DeploySiteTab from '../deploy/DeploySiteTab.vue'
+import EditCard from '../shared/EditCard.vue'
+import FolderBrowser from '../shared/FolderBrowser.vue'
+import HealthStatusDot from '../shared/HealthStatusDot.vue'
+import PluginSlot from '../shared/PluginSlot.vue'
+import SiteAccessLogs from './SiteAccessLogs.vue'
+import SiteErrorLogs from './SiteErrorLogs.vue'
+import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
+import SiteMetrics from '../sites/SiteMetrics.vue'
+import SiteOverview from '../sites/SiteOverview.vue'
+import SiteStatusBadge from '../sites/SiteStatusBadge.vue'
+import { useFolderState } from '../sites/folderCheck'
 import { useSitesStore } from '../../stores/sites'
-import { useDaemonStore } from '../../stores/daemon'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
-import type { SiteInfo, HistoricalMetrics } from '../../api/types'
-import FolderBrowser from '../shared/FolderBrowser.vue'
-import EditCard from '../shared/EditCard.vue'
-import HealthStatusDot from '../shared/HealthStatusDot.vue'
-import SiteErrorLogs from './SiteErrorLogs.vue'
-import SiteAccessLogs from './SiteAccessLogs.vue'
-import SiteComposer from './SiteComposer.vue'
-// Lazy-load — SiteDetailSimple + its two sub-cards (Services, Activity)
-// only render in simple mode. Advanced users open the full tabbed editor.
-const SiteDetailSimple = defineAsyncComponent(() => import('./SiteDetailSimple.vue'))
-import PluginSlot from '../shared/PluginSlot.vue'
+import { useSiteApplyStore } from '../../stores/siteApply'
+import { useSiteStateStore } from '../../stores/siteState'
+import type { SiteInfo } from '../../api/types'
 import {
-  fetchCloudflareZones, fetchCloudflareConfig, suggestCloudflareSubdomain,
   fetchNodeSites, startNodeSite, stopNodeSite, restartNodeSite,
-  fetchSiteMetrics, type SiteMetrics,
   fetchDockerComposeStatus, type DockerComposeStatus,
   composeUp, composeDown, composeRestart, composePs,
-  getHistoricalMetrics,
-  fetchBindAddressOptions,
-  fetchPhpVersions,
-  daemonBaseUrl,
+  fetchBindAddressOptions, daemonBaseUrl, setSiteEnabled,
   type BindAddressOption,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } from 'echarts/components'
-import VChart from 'vue-echarts'
-
-use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent])
+import { openUrl, revealFolder, siteUrl } from '../../utils/siteUrl'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const sitesStore = useSitesStore()
-const daemonStore = useDaemonStore()
 const uiMode = useUiModeStore()
 const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
+const siteApplyStore = useSiteApplyStore()
+const siteState = useSiteStateStore()
+const uid = useId()
 
 const domain = computed(() => String(route.params.domain || ''))
 
@@ -669,20 +405,31 @@ const site = ref<SiteInfo | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const dirty = ref(false)
-// ?tab=errors / ?tab=composer deep links (activity card, Composer page).
-// The activity card links to this same route, so the query is watched
-// instead of read once, and the active tab is mirrored back into the
-// query so a repeated click on such a link is a real navigation.
+const toggling = ref(false)
+const redirectHttps = ref(true)
+
+const state = computed(() => (site.value ? siteState.stateOf(site.value) : { kind: 'running' as const }))
+const url = computed(() => (site.value ? siteUrl(site.value) : ''))
+
+// ── Tabs ───────────────────────────────────────────────────────────────
+// Deep links (?tab=…): the old Danger/General/Runtime tabs are now Settings,
+// Errors/Access are the two views of Logs.
+const TAB_ALIASES: Record<string, string> = { general: 'settings', runtime: 'settings', danger: 'settings', errors: 'logs', access: 'logs' }
 function queryTab(): string {
   const q = route.query.tab
-  return typeof q === 'string' && q ? q : 'overview'
+  const tab = typeof q === 'string' && q ? q : 'overview'
+  return TAB_ALIASES[tab] ?? tab
 }
 const activeTab = ref(queryTab())
+const logsView = ref<'errors' | 'access'>(route.query.tab === 'access' ? 'access' : 'errors')
+
+// The activity card links to this same route, so the query is watched
+// instead of read once, and the active tab is mirrored back into the query.
 watch(() => route.query.tab, () => {
-  // Leaving the page also changes the query; only follow it while this
-  // route is still the site page.
-  if (!route.params.domain) return
+  if (!route.params.domain) return // leaving the page also changes the query
   const tab = queryTab()
+  if (route.query.tab === 'access') logsView.value = 'access'
+  else if (route.query.tab === 'errors') logsView.value = 'errors'
   if (tab !== activeTab.value) activeTab.value = tab
 })
 watch(activeTab, (tab) => {
@@ -692,931 +439,11 @@ watch(activeTab, (tab) => {
   else query.tab = tab
   void router.replace({ query })
 })
-// Same per-version option shape as Sites.vue wizard — keeps the detail
-// page and the wizard aligned. `value` is the backend-persisted
-// majorMinor; `label` shows the full patch + active flag.
-interface PhpVersionOption { value: string; label: string; isActive: boolean }
-const phpVersions = ref<PhpVersionOption[]>([])
-const history = ref<Array<{ timestamp: string; createdAt?: string; label?: string }>>([])
-// Task 28: Danger-tab rename input. Kept reactive so a future rename
-// backend can wire up immediately without a template change.
-const renameNewDomain = ref('')
-const composeInfo = ref<DockerComposeStatus | null>(null)
-const composeLoading = ref(false)
-const composeOutput = ref('')
-const bindAddressOptions = ref<BindAddressOption[]>([])
-const bindAddressOptionsLoading = ref(false)
 
-async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
-  if (!site.value) return
-  composeLoading.value = true
-  composeOutput.value = ''
-  try {
-    const fn = action === 'up' ? composeUp
-      : action === 'down' ? composeDown
-      : action === 'restart' ? composeRestart
-      : composePs
-    const result = await fn(site.value.domain)
-    composeOutput.value = result.output || (result.ok ? 'Done' : 'Failed')
-    if (!result.ok) ElMessage.warning(t('siteEditToast.composeNonZero', { action }))
-  } catch (e) {
-    const msg = errorMessage(e)
-    composeOutput.value = msg
-    ElMessage.error(t('siteEditToast.composeFailed', { action, err: msg }))
-  } finally {
-    composeLoading.value = false
-  }
-}
-const redirectHttps = ref(true)
-
-// ── Alias chip picker ──────────────────────────────────────────────────
-const aliases = ref<string[]>([])
-const aliasInput = ref('')
-const aliasInputVisible = ref(false)
-// Same pattern as CommandPalette.inputRef — only focus() is ever called.
-const aliasInputRef = ref<{ focus?: () => void } | null>(null)
-watch(() => site.value?.aliases, (al) => { aliases.value = [...(al ?? [])] }, { immediate: true })
-
-function showAliasInput() {
-  aliasInputVisible.value = true
-  void nextTick(() => aliasInputRef.value?.focus?.())
-}
-
-function addAlias() {
-  const v = aliasInput.value.trim()
-  if (v && !aliases.value.includes(v)) {
-    aliases.value.push(v)
-    markDirty()
-  }
-  aliasInput.value = ''
-  aliasInputVisible.value = false
-}
-
-function removeAlias(a: string) {
-  aliases.value = aliases.value.filter(x => x !== a)
-  markDirty()
-}
-
-// ── Runtime picker ─────────────────────────────────────────────────────
-const nodeUpstreamPort = ref(3000)
-const nodeStartCommand = ref('')
-
-const selectedRuntime = computed<'static' | 'php' | 'node'>(() => {
-  if (site.value?.nodeUpstreamPort && site.value.nodeUpstreamPort > 0) return 'node'
-  if (site.value?.phpVersion && site.value.phpVersion !== 'none') return 'php'
-  return 'static'
-})
-
-watch(() => site.value?.nodeUpstreamPort, (v) => {
-  if (typeof v === 'number' && v > 0) nodeUpstreamPort.value = v
-}, { immediate: true })
-
-watch(() => site.value?.nodeStartCommand, (v) => {
-  nodeStartCommand.value = v ?? ''
-}, { immediate: true })
-
-// ── Node.js process control ───────────────────────────────────────────
-const nodeProcessState = ref(0)
-const nodeProcessPid = ref<number | null>(null)
-const nodeProcessLoading = ref(false)
-// True when the daemon has the Node plugin loaded. False means /api/node/sites
-// returned an error or the plugin DLL isn't present — we hide the process
-// controls and show an explanatory message so the user knows why.
-const nodePluginAvailable = ref(true)
-
-async function refreshNodeStatus() {
-  if (!site.value || selectedRuntime.value !== 'node') return
-  try {
-    const list = await fetchNodeSites()
-    nodePluginAvailable.value = true
-    const proc = list.find(p => p.domain === site.value!.domain)
-    nodeProcessState.value = proc?.state ?? 0
-    nodeProcessPid.value = proc?.pid ?? null
-  } catch {
-    // Plugin not loaded or daemon unreachable — disable controls instead
-    // of leaving a blank/misleading status pill.
-    nodePluginAvailable.value = false
-    nodeProcessState.value = 0
-    nodeProcessPid.value = null
-  }
-}
-
-async function startNodeProcess() {
-  if (!site.value) return
-  nodeProcessLoading.value = true
-  try {
-    const result = await startNodeSite(site.value.domain)
-    nodeProcessState.value = result.state
-    nodeProcessPid.value = result.pid
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.nodeStartFailed', { err: errorMessage(e) }))
-  } finally {
-    nodeProcessLoading.value = false
-  }
-}
-
-async function stopNodeProcess() {
-  if (!site.value) return
-  nodeProcessLoading.value = true
-  try {
-    await stopNodeSite(site.value.domain)
-    nodeProcessState.value = 0
-    nodeProcessPid.value = null
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.nodeStopFailed', { err: errorMessage(e) }))
-  } finally {
-    nodeProcessLoading.value = false
-  }
-}
-
-async function restartNodeProcess() {
-  if (!site.value) return
-  nodeProcessLoading.value = true
-  try {
-    const result = await restartNodeSite(site.value.domain)
-    nodeProcessState.value = result.state
-    nodeProcessPid.value = result.pid
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.nodeRestartFailed', { err: errorMessage(e) }))
-  } finally {
-    nodeProcessLoading.value = false
-  }
-}
-
-function selectRuntime(rt: 'static' | 'php' | 'node') {
-  if (!site.value) return
-  if (rt === 'static') {
-    site.value.phpVersion = 'none'
-    site.value.nodeUpstreamPort = 0
-  } else if (rt === 'php') {
-    // Fall back to empty rather than a fabricated '8.4' — the dropdown's
-    // empty-state hint ("no PHP installed — go to Binaries") should
-    // then guide the user instead of silently storing a broken value.
-    site.value.phpVersion =
-      phpVersions.value.find(p => p.isActive)?.value
-      ?? phpVersions.value[0]?.value
-      ?? ''
-    site.value.nodeUpstreamPort = 0
-  } else if (rt === 'node') {
-    site.value.phpVersion = 'none'
-    site.value.nodeUpstreamPort = nodeUpstreamPort.value || 3000
-  }
-  markDirty()
-}
-
-function setPhpVersion(v: string) {
-  if (!site.value) return
-  site.value.phpVersion = v
-  markDirty()
-}
-
-// ── Folder browser ─────────────────────────────────────────────────────
-const showFolderBrowser = ref(false)
-
-function onFolderPick(path: string) {
-  if (!site.value) return
-  site.value.documentRoot = path
-  markDirty()
-}
-
-// ── Cloudflare Tunnel per-site ─────────────────────────────────────────
-const cloudflareEnabled = ref(false)
-const cloudflareSubdomain = ref('')
-const cloudflareZoneId = ref('')
-const cloudflareZoneName = ref('')
-const cloudflareLocalService = ref('localhost:80')
-const cloudflareProtocol = ref<'http' | 'https'>('http')
-// Same minimal shape as CloudflareTunnel's CfZone — kept inline to avoid
-// coupling page files together for a 2-field type.
-const cfZones = ref<{ id: string; name: string }[]>([])
-const loadingCfZones = ref(false)
-const cfSubdomainTemplate = ref('{stem}-dev')
-
-const selectedCfZoneName = computed(() => {
-  const z = cfZones.value.find(x => x.id === cloudflareZoneId.value)
-  return z?.name ?? cloudflareZoneName.value ?? ''
-})
-
-watch(() => site.value?.cloudflare, (cf) => {
-  if (!cf) return
-  cloudflareEnabled.value = cf.enabled ?? false
-  cloudflareSubdomain.value = cf.subdomain ?? ''
-  cloudflareZoneId.value = cf.zoneId ?? ''
-  cloudflareZoneName.value = cf.zoneName ?? ''
-  cloudflareLocalService.value = cf.localService ?? 'localhost:80'
-  cloudflareProtocol.value = (cf.protocol ?? 'http') as 'http' | 'https'
-}, { immediate: true })
-
-async function loadCfZones() {
-  loadingCfZones.value = true
-  try {
-    const res = await fetchCloudflareZones()
-    cfZones.value = res?.result ?? []
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.cloudflareZonesFailed', { err: errorMessage(e) }))
-  } finally {
-    loadingCfZones.value = false
-  }
-}
-
-// Load subdomain template from global Cloudflare config on mount so the
-// auto-fill uses whatever prefix/suffix the user has configured.
-async function loadCfSubdomainTemplate() {
-  try {
-    const cfg = await fetchCloudflareConfig()
-    if (cfg?.subdomainTemplate) cfSubdomainTemplate.value = cfg.subdomainTemplate
-  } catch { /* plugin not loaded — keep default */ }
-}
-
-/**
- * Render the subdomain template with the current site. Supports:
- *   {stem}  — local domain stripped of .loc/.local/.test
- *   {user}  — lowercased guess at the username (falls back to empty)
- * Keeps the template simple on purpose: users who need something fancier
- * can just edit the generated value in the subdomain input field.
- */
-function renderSubdomainTemplate(): string {
-  if (!site.value) return ''
-  const stem = site.value.domain.replace(/\.(loc|local|test)$/i, '')
-  // No reliable OS username source in a vanilla browser — Electron main
-  // could expose it via preload, but defaulting to empty avoids a hard
-  // dependency and keeps the default template ({stem}-dev) unambiguous.
-  const user = ''
-  return cfSubdomainTemplate.value
-    .replace('{stem}', stem)
-    .replace('{user}', user)
-    // Collapse stray double dashes from empty placeholders and strip
-    // leading/trailing ones so "{user}-{stem}" with empty user doesn't
-    // produce "-myapp".
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-async function onCloudflareToggle(v: boolean) {
-  // Disabling needs user confirmation — save flow will delete the CNAME
-  // from Cloudflare and strip the ingress rule, which means the public
-  // URL stops resolving immediately after the next save.
-  if (!v && cloudflareSubdomain.value && cloudflareZoneName.value) {
-    try {
-      await ElMessageBox.confirm(
-        `Disable Cloudflare Tunnel for ${site.value?.domain}? The public URL https://${cloudflareSubdomain.value}.${cloudflareZoneName.value} will be taken offline when you click Save.`,
-        'Disable tunnel for this site',
-        {
-          confirmButtonText: 'Disable',
-          cancelButtonText: 'Cancel',
-          type: 'warning',
-        },
-      )
-    } catch {
-      // User cancelled — flip the switch back on
-      cloudflareEnabled.value = true
-      return
-    }
-  }
-
-  markDirty()
-  if (v && cfZones.value.length === 0) void loadCfZones()
-  // Auto-fill the subdomain from the backend-rendered template (which
-  // knows the install salt and computes a deterministic 6-char hash)
-  // only if the user hasn't already typed something. Falls back to a
-  // client-side render if the backend endpoint is unavailable.
-  if (v && !cloudflareSubdomain.value && site.value) {
-    try {
-      const res = await suggestCloudflareSubdomain(site.value.domain)
-      if (res.suggestion) cloudflareSubdomain.value = res.suggestion
-      else cloudflareSubdomain.value = renderSubdomainTemplate()
-    } catch {
-      cloudflareSubdomain.value = renderSubdomainTemplate()
-    }
-  }
-  // Auto-fill local service from the site's HTTP port
-  if (v && site.value) {
-    const port = site.value.httpPort || 80
-    cloudflareLocalService.value = `localhost:${port}`
-  }
-}
-
-function onZoneChange(zoneId: string) {
-  const z = cfZones.value.find(x => x.id === zoneId)
-  cloudflareZoneName.value = z?.name ?? ''
-  markDirty()
-}
-
-// ── cloudflared service status (read-only indicator only) ──────────
-// The Start/Stop button lives on the /cloudflare page so per-site edits
-// can't accidentally kill other exposed sites.
-const cloudflareRunning = computed(() => {
-  const svc = daemonStore.services.find(s => s.id === 'cloudflare')
-  return svc?.state === 2 || svc?.status === 'running'
-})
-const totalExposedCount = computed(() =>
-  sitesStore.sites.filter(s => s.cloudflare?.enabled).length
-)
-
-// ── Auto-detect framework ──────────────────────────────────────────────
-const detecting = ref(false)
-async function detectFramework() {
-  if (!site.value) return
-  detecting.value = true
-  try {
-    const res = await fetch(`${daemonBaseUrl()}/api/sites/${site.value.domain}/detect-framework`, {
-      method: 'POST',
-      headers: sitesStore.authHeaders(),
-    })
-    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
-    const data = await res.json()
-    if (data.framework) {
-      site.value.framework = data.framework
-      ElMessage.success(t('siteEditToast.detected', { framework: data.framework }))
-      markDirty()
-    } else {
-      ElMessage.info(t('siteEditToast.noFramework'))
-    }
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.detectFailed', { err: errorMessage(e) }))
-  } finally {
-    detecting.value = false
-  }
-}
-
-function markDirty() { dirty.value = true }
-
-function normalizeBindAddresses(values: string[] | undefined): string[] {
-  const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
-  if (selected.length === 0) return []
-  if (selected.includes('*')) {
-    return selected[selected.length - 1] === '*'
-      ? ['*']
-      : selected.filter(v => v !== '*')
-  }
-  return selected
-}
-
-function onBindAddressesChange(values: string[]) {
-  if (!site.value) return
-  site.value.bindAddresses = normalizeBindAddresses(values)
-  site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
-  markDirty()
-}
-
-// F91.6: plugin-contributed tabs (SSL, Cloudflare) emit `update:site` when
-// they edit a subset of the site record (e.g. sslEnabled, cloudflare.*).
-// We merge the incoming partial into our reactive `site.value` so the save
-// path + the rest of the UI observe the change immediately.
-function onPluginSiteUpdate(updated: SiteInfo) {
-  if (!site.value) return
-  site.value = { ...site.value, ...updated }
-  markDirty()
-}
-
-// ── Store sync ────────────────────────────────────────────────────────
-// The Overview tab (SiteDetailSimple) saves straight through the sites
-// store, while this page edits its own copy and PUTs the whole record on
-// Save & Apply. Without syncing, an Overview change (PHP version, tunnel,
-// SSL, document root, bind) followed by a save from another tab sent the
-// stale copy back and silently reverted it. `storeBaseline` is the store
-// entry this copy was last synced from, so a later store change can be
-// diffed against it to find exactly what changed elsewhere.
-let storeBaseline: SiteInfo | null = null
-
-function cloneSite(s: SiteInfo): SiteInfo {
-  return JSON.parse(JSON.stringify(s)) as SiteInfo
-}
-
-function sameValue(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b)
-}
-
-function normalizeSiteCopy(s: SiteInfo) {
-  s.bindAddresses = normalizeBindAddresses(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
-  s.bindAddress = s.bindAddresses[0] ?? '*'
-  if (s.domain?.toLowerCase() === 'localhost') s.localhostLoopbackEnabled = true
-}
-
-function seedFromStore(found: SiteInfo | undefined) {
-  storeBaseline = found ? cloneSite(found) : null
-  const copy = found ? cloneSite(found) : null
-  if (copy) normalizeSiteCopy(copy)
-  site.value = copy
-  dirty.value = false
-}
-
-// Apply only the fields that changed in the store since the last sync,
-// leaving the user's unsaved edits on other fields untouched. Cloudflare
-// is merged per sub-field on top of the tunnel refs, which are what
-// save() actually sends.
-function mergeStoreChanges(next: SiteInfo) {
-  if (!site.value || !storeBaseline) return
-  const prev = storeBaseline as unknown as Record<string, unknown>
-  const incoming = next as unknown as Record<string, unknown>
-  const local = site.value as unknown as Record<string, unknown>
-  const keys = new Set([...Object.keys(prev), ...Object.keys(incoming)])
-  for (const key of keys) {
-    if (sameValue(prev[key], incoming[key])) continue
-    if (key === 'cloudflare') {
-      const before = (prev.cloudflare ?? {}) as Record<string, unknown>
-      const after = (next.cloudflare ?? {}) as Record<string, unknown>
-      const merged: Record<string, unknown> = {
-        enabled: cloudflareEnabled.value,
-        subdomain: cloudflareSubdomain.value,
-        zoneId: cloudflareZoneId.value,
-        zoneName: cloudflareZoneName.value,
-        localService: cloudflareLocalService.value,
-        protocol: cloudflareProtocol.value,
-      }
-      for (const sub of new Set([...Object.keys(before), ...Object.keys(after)])) {
-        if (!sameValue(before[sub], after[sub])) merged[sub] = after[sub]
-      }
-      site.value.cloudflare = merged as unknown as SiteInfo['cloudflare']
-    } else {
-      local[key] = incoming[key] === undefined ? undefined : JSON.parse(JSON.stringify(incoming[key]))
-    }
-  }
-  normalizeSiteCopy(site.value)
-  storeBaseline = cloneSite(next)
-}
-
-const storeEntry = computed(() => sitesStore.sites.find(s => s.domain === domain.value))
-watch(storeEntry, (next) => {
-  // Not loaded yet, site deleted, or a domain switch in progress — load()
-  // seeds those cases itself.
-  if (!next || !site.value || !storeBaseline) return
-  if (storeBaseline.domain !== next.domain || site.value.domain !== next.domain) return
-  if (sameValue(storeBaseline, next)) return
-  if (dirty.value) mergeStoreChanges(next)
-  else seedFromStore(next)
-}, { deep: true })
-
-async function load() {
-  loading.value = true
-  try {
-    await sitesStore.load()
-    seedFromStore(sitesStore.sites.find(s => s.domain === domain.value))
-
-    // PHP versions — authoritative list from daemon. Leave the array
-    // empty on failure so the template's "no versions installed" hint
-    // renders instead of lying about versions the user doesn't actually
-    // have. The old fallback ['8.4','8.3','8.2'] hid the bug where the
-    // daemon lost the PHP plugin state at boot — now the user sees the
-    // real empty state and knows to install via the Binaries page.
-    try {
-      const versions = await fetchPhpVersions()
-      phpVersions.value = versions.map(v => {
-        const mm = v.majorMinor || v.version.split('.').slice(0, 2).join('.') || v.version
-        return {
-          value: mm,
-          label: `PHP ${v.version}${v.isActive ? ' (active)' : ''}`,
-          isActive: !!v.isActive,
-        }
-      })
-    } catch { phpVersions.value = [] }
-
-    bindAddressOptionsLoading.value = true
-    try {
-      bindAddressOptions.value = await fetchBindAddressOptions()
-      for (const current of site.value?.bindAddresses ?? ['*']) {
-        if (current && !bindAddressOptions.value.some(o => o.value === current)) {
-          bindAddressOptions.value.push({
-            value: current,
-            label: `${current} (saved, unavailable)`,
-            description: 'Saved site value that is not present on this device right now.',
-            wildcard: current === '*',
-            loopback: false,
-          })
-        }
-      }
-    } catch {
-      bindAddressOptions.value = []
-    } finally {
-      bindAddressOptionsLoading.value = false
-    }
-
-    // history
-    try {
-      const res = await fetch(`${daemonBaseUrl()}/api/sites/${domain.value}/history`, {
-        headers: sitesStore.authHeaders(),
-      })
-      if (res.ok) history.value = await res.json() as Array<{ timestamp: string; createdAt?: string; label?: string }>
-    } catch { /* optional */ }
-
-    // Docker Compose detection (non-blocking)
-    fetchDockerComposeStatus(domain.value)
-      .then(s => { composeInfo.value = s.hasCompose ? s : null })
-      .catch(() => { composeInfo.value = null })
-
-    // Node process status (non-blocking)
-    refreshNodeStatus()
-  } finally {
-    loading.value = false
-  }
-}
-
-async function save() {
-  if (!site.value) return
-  site.value.bindAddresses = normalizeBindAddresses(site.value.bindAddresses)
-  if (site.value.bindAddresses.length === 0) {
-    ElMessage.warning(t('siteEditToast.bindRequired'))
-    return
-  }
-  site.value.bindAddress = site.value.bindAddresses[0]
-  saving.value = true
-  try {
-    // Commit aliases from chip picker (no more comma-separated string)
-    site.value.aliases = [...aliases.value]
-    // Commit Node.js proxy port + start command from runtime tab
-    if (selectedRuntime.value === 'node') {
-      site.value.nodeUpstreamPort = nodeUpstreamPort.value
-      site.value.nodeStartCommand = nodeStartCommand.value || ''
-    } else {
-      site.value.nodeUpstreamPort = 0
-      site.value.nodeStartCommand = ''
-    }
-    // Commit Cloudflare sub-config from the dedicated tab. When disabled we
-    // still send the object so the daemon can clear any previous ingress
-    // rule on apply rather than leaving a stale CNAME pointing here.
-    site.value.cloudflare = {
-      enabled: cloudflareEnabled.value,
-      subdomain: cloudflareSubdomain.value,
-      zoneId: cloudflareZoneId.value,
-      zoneName: cloudflareZoneName.value,
-      localService: cloudflareLocalService.value,
-      protocol: cloudflareProtocol.value,
-    }
-    await sitesStore.update(site.value.domain, site.value)
-    ElMessage.success(t('siteEditToast.updated'))
-    // Surface daemon's bind-IP / NIC warnings the same way Sites.vue
-    // createSite does — without this, an operator flipping bind to a
-    // bogus IP in advanced mode would see only success while Apache
-    // silently fails to bind at next restart.
-    for (const w of sitesStore.lastUpdateWarnings) {
-      ElMessage.warning({ message: w, duration: 8000, showClose: true })
-    }
-    dirty.value = false
-    // After apply, the orchestrator may have started/stopped a Node process.
-    // Refresh the status pill so the UI reflects the current state.
-    if (selectedRuntime.value === 'node') {
-      void refreshNodeStatus()
-    }
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
-  } finally {
-    saving.value = false
-  }
-}
-
-async function rollback(timestamp: string, createdAt?: string) {
-  if (!site.value) return
-  try {
-    await ElMessageBox.confirm(t('toast.restoreConfigConfirm', { when: formatDate(createdAt ?? timestamp) }), t('toast.restoreTitle'), {
-      type: 'warning',
-      confirmButtonText: t('toast.restoreTitle'),
-      cancelButtonText: t('common.cancel'),
-    })
-  } catch { return }
-  try {
-    const res = await fetch(`${daemonBaseUrl()}/api/sites/${site.value.domain}/rollback`, {
-      method: 'POST',
-      headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ timestamp }),
-    })
-    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
-    ElMessage.success(t('siteEditToast.configRestored'))
-    await load()
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.restoreFailed', { err: errorMessage(e) }))
-  }
-}
-
-async function confirmDelete() {
-  if (!site.value) return
-  try {
-    await ElMessageBox.confirm(
-      `Delete site "${site.value.domain}"? This cannot be undone.`,
-      'Confirm deletion',
-      { type: 'warning', confirmButtonText: 'Delete', confirmButtonClass: 'el-button--danger' }
-    )
-    await sitesStore.remove(site.value.domain)
-    ElMessage.success(t('siteEditToast.deleted'))
-    router.push('/sites')
-  } catch { /* user cancelled */ }
-}
-
-function openInBrowser() {
-  if (!site.value) return
-  const s = site.value
-  const proto = s.sslEnabled ? 'https' : 'http'
-  const port = s.sslEnabled ? (s.httpsPort || 443) : (s.httpPort || 80)
-  const portSuffix = (s.sslEnabled && port === 443) || (!s.sslEnabled && port === 80) ? '' : `:${port}`
-  window.open(`${proto}://${s.domain}${portSuffix}`, '_blank')
-}
-
-// ── Site metrics (Phase 11 performance monitoring) ────────────────────
-const siteMetrics = ref<SiteMetrics | null>(null)
-const metricsLoading = ref(false)
-const metricsLastRefresh = ref<string | null>(null)
-// Ticker that nudges Vue to re-render `formatAge(metricsLastRefresh)` every
-// 5s so the "Last updated Xs ago" label doesn't freeze while the tab is open.
-// Without this, formatAge only recomputes on refresh and users see stale
-// relative-time text until they click Refresh or switch tabs.
-const metricsTick = ref(0)
-let metricsTickTimer: ReturnType<typeof setInterval> | null = null
-let metricsPollTimer: ReturnType<typeof setInterval> | null = null
-
-// Request-rate ring buffer — 60 samples at 5s interval = 5-minute rolling
-// window. Each entry is requests-per-minute computed from the delta between
-// consecutive raw-count polls. Phase 11 timeseries chart reads this directly.
-const REQUEST_RATE_BUFFER_SIZE = 60
-const REQUEST_RATE_POLL_INTERVAL_MS = 5000
-const requestRateHistory = ref<number[]>([])
-let lastRequestCount: number | null = null
-let lastPollTimestamp: number | null = null
-
-const currentRequestRate = computed(() => {
-  const h = requestRateHistory.value
-  return h.length > 0 ? Math.round(h[h.length - 1]) : 0
-})
-
-async function refreshMetrics() {
-  if (!site.value) return
-  // Re-entrancy guard: if a previous poll is still in-flight (e.g. slow
-  // daemon), skip this tick instead of racing with ourselves on the ring
-  // buffer. Without this guard two concurrent refreshes could both read
-  // `lastRequestCount`, compute deltas against the same baseline, and
-  // push duplicate/skewed samples that distort the timeseries.
-  if (metricsLoading.value) return
-  metricsLoading.value = true
-  try {
-    const m = await fetchSiteMetrics(site.value.domain)
-    siteMetrics.value = m.hasMetrics ? m : null
-    metricsLastRefresh.value = new Date().toISOString()
-
-    // Populate the ring buffer with the delta since the previous sample,
-    // normalized to requests-per-minute. The first sample primes the counter
-    // so we don't push a bogus 0 spike on first load.
-    const count = m?.accessLog?.requestCount ?? 0
-    const now = Date.now()
-    if (lastRequestCount !== null && lastPollTimestamp !== null && now > lastPollTimestamp) {
-      const deltaCount = Math.max(0, count - lastRequestCount)
-      const deltaSeconds = (now - lastPollTimestamp) / 1000
-      const requestsPerMin = deltaSeconds > 0 ? (deltaCount * 60) / deltaSeconds : 0
-      requestRateHistory.value.push(requestsPerMin)
-      if (requestRateHistory.value.length > REQUEST_RATE_BUFFER_SIZE) {
-        requestRateHistory.value.shift()
-      }
-    }
-    lastRequestCount = count
-    lastPollTimestamp = now
-  } catch {
-    // Transient network errors shouldn't wipe the metrics display — keep
-    // the last good `siteMetrics` visible and just skip the sample.
-    // Only clear on permanent failures (which we can't distinguish here,
-    // so we rely on the user clicking Refresh manually to reset).
-  }
-  finally { metricsLoading.value = false }
-}
-
-function startMetricsTicker() {
-  if (metricsTickTimer) return
-  metricsTickTimer = setInterval(() => { metricsTick.value++ }, 5000)
-  // Auto-poll the metrics endpoint every 5s to feed the ring buffer.
-  // Kept separate from the tick timer so a future change to the display
-  // cadence doesn't accidentally break timeseries accuracy.
-  if (!metricsPollTimer) {
-    metricsPollTimer = setInterval(() => { void refreshMetrics() }, REQUEST_RATE_POLL_INTERVAL_MS)
-  }
-}
-function stopMetricsTicker() {
-  if (metricsTickTimer) { clearInterval(metricsTickTimer); metricsTickTimer = null }
-  if (metricsPollTimer) { clearInterval(metricsPollTimer); metricsPollTimer = null }
-}
-
-function formatNumber(n: number): string {
-  return n.toLocaleString()
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function formatAge(iso?: string | null): string {
-  if (!iso) return '—'
-  const age = Date.now() - new Date(iso).getTime()
-  const s = Math.floor(age / 1000)
-  if (s < 60) return `${s}s ago`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
-}
-
-function goBack() {
-  router.push('/sites')
-}
-
-function formatDate(s: string | number | undefined | null): string {
-  // Task 18: robust timestamp parsing — daemon returns history timestamps
-  // as either ISO-8601 strings, numeric unix seconds, or numeric unix
-  // milliseconds. Previous `new Date(s).toLocaleString()` produced
-  // "Invalid Date" whenever the value arrived as a number or as a
-  // space-separated "YYYY-MM-DD HH:mm:ss" (Safari rejects the latter).
-  if (s === null || s === undefined || s === '') return '—'
-  let d: Date
-  if (typeof s === 'number') {
-    // Heuristic: unix seconds if under year-3000 threshold, else ms
-    d = new Date(s < 1e12 ? s * 1000 : s)
-  } else {
-    // Replace space with 'T' to make ISO-ish strings parse everywhere
-    const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)
-      ? s.replace(' ', 'T')
-      : s
-    d = new Date(normalized)
-  }
-  if (Number.isNaN(d.getTime())) return String(s)
-  return d.toLocaleString()
-}
-
-// Reactive display of "Last updated Xs ago" — depends on metricsTick so Vue
-// re-renders it on the 5s tick without any manual string interpolation.
-const metricsAgeDisplay = computed(() => {
-  void metricsTick.value // register dependency
-  return formatAge(metricsLastRefresh.value)
-})
-
-// ── Historical metrics (Phase 7.2) ────────────────────────────────────
-
-function todayString(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-const historicalDate = ref<string>(todayString())
-const historicalGranularity = ref<string>('5m')
-const historicalLoading = ref(false)
-const historicalData = ref<HistoricalMetrics | null>(null)
-
-const historicalSeriesOptions = [
-  { key: 'requests', labelKey: 'metrics.historical.seriesRequests', color: '#6366f1' },
-  { key: 'bytes',    labelKey: 'metrics.historical.seriesBytes',    color: '#10b981' },
-  { key: 'errors',   labelKey: 'metrics.historical.seriesErrors',   color: '#ef4444' },
-] as const
-
-type SeriesKey = typeof historicalSeriesOptions[number]['key']
-
-const historicalActiveSeries = ref<SeriesKey[]>(['requests'])
-
-function toggleSeries(key: SeriesKey, checked: boolean) {
-  if (checked) {
-    if (!historicalActiveSeries.value.includes(key)) {
-      historicalActiveSeries.value = [...historicalActiveSeries.value, key]
-    }
-  } else {
-    historicalActiveSeries.value = historicalActiveSeries.value.filter(k => k !== key)
-  }
-}
-
-function isDateDisabled(date: Date): boolean {
-  const today = new Date()
-  today.setHours(23, 59, 59, 999)
-  return date > today
-}
-
-async function loadHistoricalMetrics() {
-  if (!site.value) return
-  historicalLoading.value = true
-  try {
-    historicalData.value = await getHistoricalMetrics(site.value.domain, {
-      date: historicalDate.value,
-      granularity: historicalGranularity.value,
-    })
-  } catch (e) {
-    ElMessage.error(t('siteEditToast.historicalMetricsFailed', { err: errorMessage(e) }))
-    historicalData.value = null
-  } finally {
-    historicalLoading.value = false
-  }
-}
-
-function onHistoricalParamsChange() {
-  void loadHistoricalMetrics()
-}
-
-const historicalIsEmptyDay = computed(() => {
-  if (!historicalData.value) return false
-  return historicalData.value.series.every(s => s.data.every(p => p.value === 0))
-})
-
-const SERIES_COLORS: Record<SeriesKey, string> = {
-  requests: '#6366f1',
-  bytes:    '#10b981',
-  errors:   '#ef4444',
-}
-
-const historicalChartOption = computed(() => {
-  const data = historicalData.value
-  const activeSeries = historicalActiveSeries.value
-
-  // Build xAxis labels from the first available series, or an empty array
-  const firstSeries = data?.series[0]
-  const xLabels: string[] = firstSeries
-    ? firstSeries.data.map(p => {
-        try {
-          const d = new Date(p.ts)
-          return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-        } catch {
-          return p.ts
-        }
-      })
-    : []
-
-  const seriesDef = historicalSeriesOptions
-    .filter(s => activeSeries.includes(s.key))
-    .map(s => {
-      const found = data?.series.find(sr => sr.name === s.key)
-      const values: number[] = found ? found.data.map(p => p.value) : xLabels.map(() => 0)
-      const color = SERIES_COLORS[s.key]
-      return {
-        name: s.key,
-        type: 'line' as const,
-        data: values,
-        smooth: 0.2,
-        symbol: 'none',
-        lineStyle: { color, width: 1.5 },
-        areaStyle: {
-          color: {
-            type: 'linear' as const,
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: color + '22' },
-              { offset: 1, color: color + '03' },
-            ],
-          },
-        },
-      }
-    })
-
-  return {
-    animation: false,
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: '#1c1e2a',
-      borderColor: 'rgba(255,255,255,0.12)',
-      textStyle: { color: '#eceef6', fontSize: 11 },
-    },
-    legend: { show: false },
-    grid: { top: 12, right: 16, bottom: 40, left: 48 },
-    dataZoom: [
-      { type: 'inside', start: 0, end: 100 },
-      { type: 'slider', height: 20, bottom: 4, borderColor: 'transparent', fillerColor: 'rgba(99,102,241,0.12)' },
-    ],
-    xAxis: {
-      type: 'category',
-      data: xLabels,
-      boundaryGap: false,
-      axisLabel: {
-        fontSize: 10,
-        color: '#8b8fa8',
-        interval: Math.max(0, Math.floor(xLabels.length / 12) - 1),
-      },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      splitLine: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      splitNumber: 3,
-      axisLabel: {
-        fontSize: 10,
-        color: '#8b8fa8',
-        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
-      },
-      splitLine: {
-        lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' },
-      },
-      axisLine: { show: false },
-      axisTick: { show: false },
-    },
-    series: seriesDef,
-  }
-})
-
-watch(domain, () => {
-  // The request-rate chart computes deltas against the previous sample; a
-  // sample from the previous site would show a spike or a dip.
-  requestRateHistory.value = []
-  lastRequestCount = null
-  lastPollTimestamp = null
-  void load()
-})
-
-// Fall back to Overview when the active tab has no pane to show: a tab
-// only Advanced density renders (deep link, or switching modes on the
-// page), Deploy with the deploy surface turned off, or an unknown
-// ?tab= value, which used to leave the page with an empty body.
-const BASE_TABS: readonly string[] = ['overview', 'metrics', 'errors']
-const ADVANCED_TABS: readonly string[] = ['general', 'runtime', 'deploy', 'history', 'danger']
+// Fall back to Overview when the active tab has no pane to show: an Advanced-only tab
+// in Simple mode, Deploy with the deploy surface off, or an unknown ?tab= value.
+const BASE_TABS: readonly string[] = ['overview', 'settings', 'logs', 'metrics']
+const ADVANCED_TABS: readonly string[] = ['deploy', 'history']
 const pluginTabNames = computed(() =>
   pluginsStore.contributionsForSlot('site-edit-tabs')
     .map(c => c.props?.name)
@@ -1640,82 +467,526 @@ watch(
   { immediate: true },
 )
 
-watch(activeTab, (tab) => {
-  if (tab === 'metrics') {
-    void refreshMetrics()
-    startMetricsTicker()
-    if (!historicalData.value) void loadHistoricalMetrics()
-  } else {
-    stopMetricsTicker()
+/** "Change" links on the overview open the matching group on the Settings tab. */
+async function goToSetting(section: string) {
+  activeTab.value = 'settings'
+  await nextTick()
+  const el = document.getElementById(`set-${section}`)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  el?.querySelector<HTMLElement>('input, button, [tabindex="0"]')?.focus({ preventScroll: true })
+}
+
+// ── Working copy of the site ───────────────────────────────────────────
+// The page edits a copy and sends it whole on save. `storeBaseline` is the store
+// entry the copy was last synced from, so a later change of the store entry
+// (a plugin tab saved, a rollback) can be diffed against it without losing
+// the user's unsaved edits.
+let storeBaseline: SiteInfo | null = null
+let seeding = false
+
+const cloneSite = (s: SiteInfo): SiteInfo => JSON.parse(JSON.stringify(s)) as SiteInfo
+const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+function normalizeBind(values: string[] | undefined): string[] {
+  const selected = [...new Set((values ?? []).map(v => String(v).trim()).filter(Boolean))]
+  if (!selected.includes('*')) return selected
+  return selected[selected.length - 1] === '*' ? ['*'] : selected.filter(v => v !== '*')
+}
+
+function normalizeSiteCopy(s: SiteInfo) {
+  s.bindAddresses = normalizeBind(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
+  s.bindAddress = s.bindAddresses[0] ?? '*'
+  if (s.domain?.toLowerCase() === 'localhost') s.localhostLoopbackEnabled = true
+}
+
+function seedFromStore(found: SiteInfo | undefined) {
+  seeding = true
+  storeBaseline = found ? cloneSite(found) : null
+  const copy = found ? cloneSite(found) : null
+  if (copy) normalizeSiteCopy(copy)
+  site.value = copy
+  dirty.value = false
+  // Watchers triggered by the seed run before this resolves.
+  void nextTick(() => { seeding = false; dirty.value = false })
+}
+
+function markDirty() { if (!seeding) dirty.value = true }
+
+// Any edit of the copy marks the page dirty; aliases and the Node fields live
+// in their own refs and are folded back into the copy on save.
+const aliases = ref<string[]>([])
+const nodePort = ref(3000)
+const nodeCommand = ref('')
+watch(() => site.value?.aliases, (al) => { aliases.value = [...(al ?? [])] }, { immediate: true })
+watch(() => site.value?.nodeUpstreamPort, (v) => { if (typeof v === 'number' && v > 0) nodePort.value = v }, { immediate: true })
+watch(() => site.value?.nodeStartCommand, (v) => { nodeCommand.value = v ?? '' }, { immediate: true })
+watch([site, aliases, nodePort, nodeCommand], markDirty, { deep: true })
+
+function mergeStoreChanges(next: SiteInfo) {
+  if (!site.value || !storeBaseline) return
+  const prev = storeBaseline as unknown as Record<string, unknown>
+  const incoming = next as unknown as Record<string, unknown>
+  const local = site.value as unknown as Record<string, unknown>
+  for (const key of new Set([...Object.keys(prev), ...Object.keys(incoming)])) {
+    if (sameValue(prev[key], incoming[key])) continue
+    if (key === 'cloudflare') {
+      const before = (prev.cloudflare ?? {}) as Record<string, unknown>
+      const after = (next.cloudflare ?? {}) as Record<string, unknown>
+      const merged = { ...((local.cloudflare ?? {}) as Record<string, unknown>) }
+      for (const sub of new Set([...Object.keys(before), ...Object.keys(after)])) {
+        if (!sameValue(before[sub], after[sub])) merged[sub] = after[sub]
+      }
+      local.cloudflare = merged
+    } else {
+      local[key] = incoming[key] === undefined ? undefined : JSON.parse(JSON.stringify(incoming[key]))
+    }
   }
+  normalizeSiteCopy(site.value)
+  storeBaseline = cloneSite(next)
+}
+
+const storeEntry = computed(() => sitesStore.sites.find(s => s.domain === domain.value))
+watch(storeEntry, (next) => {
+  // Not loaded yet, site deleted, or a domain switch in progress — load() seeds those cases itself.
+  if (!next || !site.value || !storeBaseline) return
+  if (storeBaseline.domain !== next.domain || site.value.domain !== next.domain) return
+  if (sameValue(storeBaseline, next)) return
+  if (dirty.value) mergeStoreChanges(next)
+  else seedFromStore(next)
+}, { deep: true })
+
+function discard() {
+  seedFromStore(storeEntry.value)
+}
+
+// ── Folder ─────────────────────────────────────────────────────────────
+const showFolderBrowser = ref(false)
+const folderState = useFolderState(computed({
+  get: () => site.value?.documentRoot ?? '',
+  set: () => { /* read-only view of the field */ },
+}))
+
+function onFolderPick(path: string) {
+  if (site.value) site.value.documentRoot = path
+}
+
+async function openFolder() {
+  if (!site.value) return
+  if (!(await revealFolder(site.value.documentRoot))) ElMessage.info(t('sitesToast.folderPickerDesktopOnly'))
+}
+
+// ── Aliases ────────────────────────────────────────────────────────────
+const aliasInput = ref('')
+const aliasInputVisible = ref(false)
+const aliasInputRef = ref<{ focus?: () => void } | null>(null)
+
+function showAliasInput() {
+  aliasInputVisible.value = true
+  void nextTick(() => aliasInputRef.value?.focus?.())
+}
+function addAlias() {
+  const v = aliasInput.value.trim().toLowerCase()
+  if (v && !aliases.value.includes(v)) aliases.value = [...aliases.value, v]
+  aliasInput.value = ''
+  aliasInputVisible.value = false
+}
+function removeAlias(a: string) {
+  aliases.value = aliases.value.filter(x => x !== a)
+}
+
+// ── Runtime ────────────────────────────────────────────────────────────
+type Runtime = 'static' | 'php' | 'node'
+const selectedRuntime = computed<Runtime>(() => {
+  if (site.value?.nodeUpstreamPort && site.value.nodeUpstreamPort > 0) return 'node'
+  if (site.value?.phpVersion && site.value.phpVersion !== 'none') return 'php'
+  return 'static'
 })
+const runtimeChoices = computed(() => [
+  { id: 'php' as const, title: 'PHP', desc: t('siteEdit.phpDesc') },
+  { id: 'static' as const, title: t('sites.runtimeStaticSite'), desc: t('siteEdit.staticDesc') },
+  { id: 'node' as const, title: 'Node.js', desc: t('siteEdit.nodeDesc') },
+])
+
+function selectRuntime(rt: Runtime) {
+  const s = site.value
+  if (!s || rt === selectedRuntime.value) return
+  if (rt === 'static') {
+    s.phpVersion = 'none'
+    s.nodeUpstreamPort = 0
+  } else if (rt === 'php') {
+    const list = siteState.phpVersions ?? []
+    s.phpVersion = (list.find(p => p.isActive) ?? list[0])?.value ?? ''
+    s.nodeUpstreamPort = 0
+  } else {
+    s.phpVersion = 'none'
+    s.nodeUpstreamPort = nodePort.value || 3000
+  }
+}
+
+const phpVersionMissing = computed(() => {
+  const v = site.value?.phpVersion
+  const list = siteState.phpVersions
+  return !!v && v !== 'none' && !!list && list.length > 0 && !list.some(p => p.value === v.split('.').slice(0, 2).join('.'))
+})
+
+// ── HTTPS / tunnel ─────────────────────────────────────────────────────
+const httpsNeedsSetup = computed(() => {
+  const p = siteState.prerequisites
+  return !!p && !(p.mkcertBinaryInstalled && p.mkcertCaInstalled)
+})
+
+const tunnelConfigured = computed(() => !!(site.value?.cloudflare?.subdomain && site.value.cloudflare.zoneId))
+function setTunnel(on: boolean | string | number) {
+  if (!site.value?.cloudflare) return
+  site.value.cloudflare = { ...site.value.cloudflare, enabled: on === true }
+}
+
+// ── Network ────────────────────────────────────────────────────────────
+const bindOptions = ref<BindAddressOption[]>([])
+const bindLoading = ref(false)
+
+function onBindChange(values: string[]) {
+  if (!site.value) return
+  site.value.bindAddresses = normalizeBind(values)
+  site.value.bindAddress = site.value.bindAddresses[0] ?? '*'
+}
+
+async function loadBindOptions() {
+  bindLoading.value = true
+  try {
+    bindOptions.value = await fetchBindAddressOptions()
+    for (const current of site.value?.bindAddresses ?? ['*']) {
+      if (current && !bindOptions.value.some(o => o.value === current)) {
+        bindOptions.value.push({
+          value: current,
+          label: `${current} (${t('siteEdit.bindUnavailable')})`,
+          description: '',
+          wildcard: current === '*',
+          loopback: false,
+        })
+      }
+    }
+  } catch {
+    bindOptions.value = []
+  } finally {
+    bindLoading.value = false
+  }
+}
+
+// ── Framework + Docker Compose ─────────────────────────────────────────
+const detecting = ref(false)
+async function detectFramework() {
+  if (!site.value) return
+  detecting.value = true
+  try {
+    const res = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(site.value.domain)}/detect-framework`, {
+      method: 'POST',
+      headers: sitesStore.authHeaders(),
+    })
+    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
+    const data = await res.json() as { framework?: string }
+    if (data.framework) {
+      site.value.framework = data.framework
+      ElMessage.success(t('siteEditToast.detected', { framework: data.framework }))
+    } else {
+      ElMessage.info(t('siteEditToast.noFramework'))
+    }
+  } catch (e) {
+    ElMessage.error(t('siteEditToast.detectFailed', { err: errorMessage(e) }))
+  } finally {
+    detecting.value = false
+  }
+}
+
+const composeInfo = ref<DockerComposeStatus | null>(null)
+const composeLoading = ref(false)
+const composeOutput = ref('')
+
+async function runCompose(action: 'up' | 'down' | 'restart' | 'ps') {
+  if (!site.value) return
+  composeLoading.value = true
+  composeOutput.value = ''
+  try {
+    const fn = { up: composeUp, down: composeDown, restart: composeRestart, ps: composePs }[action]
+    const result = await fn(site.value.domain)
+    composeOutput.value = result.output || t(result.ok ? 'siteEdit.composeDone' : 'siteEdit.composeFailedShort')
+    if (!result.ok) ElMessage.warning(t('siteEditToast.composeNonZero', { action }))
+  } catch (e) {
+    const msg = errorMessage(e)
+    composeOutput.value = msg
+    ElMessage.error(t('siteEditToast.composeFailed', { action, err: msg }))
+  } finally {
+    composeLoading.value = false
+  }
+}
+
+// ── Node.js process ────────────────────────────────────────────────────
+const NODE_PLUGIN_ID = 'nks.wdc.node'
+const nodeProcessState = ref(0)
+const nodeProcessPid = ref<number | null>(null)
+const nodeProcessLoading = ref(false)
+const nodePluginReachable = ref(true)
+const nodePluginBusy = ref(false)
+
+// 'disabled' = installed but turned off, 'missing' = not installed or not answering.
+const nodePlugin = computed<'ok' | 'disabled' | 'missing'>(() => {
+  const manifest = pluginsStore.manifests.find(m => m.id === NODE_PLUGIN_ID)
+  if (manifest && !manifest.enabled) return 'disabled'
+  return nodePluginReachable.value ? 'ok' : 'missing'
+})
+
+async function refreshNodeStatus() {
+  if (!site.value || selectedRuntime.value !== 'node') return
+  try {
+    const list = await fetchNodeSites()
+    nodePluginReachable.value = true
+    const proc = list.find(p => p.domain === site.value!.domain)
+    nodeProcessState.value = proc?.state ?? 0
+    nodeProcessPid.value = proc?.pid ?? null
+  } catch {
+    nodePluginReachable.value = false
+    nodeProcessState.value = 0
+    nodeProcessPid.value = null
+  }
+}
+
+async function enableNodePlugin() {
+  nodePluginBusy.value = true
+  try {
+    await pluginsStore.toggleEnable(NODE_PLUGIN_ID)
+    await refreshNodeStatus()
+  } catch (e) {
+    ElMessage.error(errorMessage(e))
+  } finally {
+    nodePluginBusy.value = false
+  }
+}
+
+async function nodeAction(run: () => Promise<unknown>, failKey: string) {
+  if (!site.value) return
+  nodeProcessLoading.value = true
+  try {
+    // start/restart answer with the process state; stop answers without one (= stopped).
+    const result = await run() as { state?: number; pid?: number | null } | undefined
+    nodeProcessState.value = result?.state ?? 0
+    nodeProcessPid.value = result?.pid ?? null
+  } catch (e) {
+    ElMessage.error(t(failKey, { err: errorMessage(e) }))
+  } finally {
+    nodeProcessLoading.value = false
+  }
+}
+const startNodeProcess = () => nodeAction(() => startNodeSite(site.value!.domain), 'siteEditToast.nodeStartFailed')
+const stopNodeProcess = () => nodeAction(() => stopNodeSite(site.value!.domain), 'siteEditToast.nodeStopFailed')
+const restartNodeProcess = () => nodeAction(() => restartNodeSite(site.value!.domain), 'siteEditToast.nodeRestartFailed')
+
+// ── Plugin tabs ────────────────────────────────────────────────────────
+// Plugin tabs (SSL, Cloudflare) emit `update:site` with the part of the
+// record they edit; it is merged into the working copy and saved with it.
+function onPluginSiteUpdate(updated: SiteInfo) {
+  if (!site.value) return
+  site.value = { ...site.value, ...updated }
+  markDirty()
+}
+
+// ── Load / save ────────────────────────────────────────────────────────
+const history = ref<Array<{ timestamp: string; createdAt?: string; label?: string }>>([])
+
+async function load() {
+  loading.value = true
+  try {
+    await sitesStore.load()
+    seedFromStore(sitesStore.sites.find(s => s.domain === domain.value))
+    void siteApplyStore.hydrate()
+    void siteState.refresh()
+    void loadBindOptions()
+
+    try {
+      const res = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain.value)}/history`, { headers: sitesStore.authHeaders() })
+      if (res.ok) history.value = await res.json() as typeof history.value
+    } catch { /* optional */ }
+
+    fetchDockerComposeStatus(domain.value)
+      .then(s => { composeInfo.value = s.hasCompose ? s : null })
+      .catch(() => { composeInfo.value = null })
+    void refreshNodeStatus()
+  } finally {
+    loading.value = false
+  }
+}
+
+async function save() {
+  const s = site.value
+  if (!s || saving.value) return
+  s.bindAddresses = normalizeBind(s.bindAddresses)
+  if (s.bindAddresses.length === 0) {
+    ElMessage.warning(t('siteEditToast.bindRequired'))
+    return
+  }
+  if (selectedRuntime.value === 'php' && !s.phpVersion) {
+    ElMessage.warning(t('siteEdit.phpRequired'))
+    return
+  }
+  s.bindAddress = s.bindAddresses[0]
+  s.aliases = [...aliases.value]
+  if (selectedRuntime.value === 'node') {
+    s.nodeUpstreamPort = nodePort.value
+    s.nodeStartCommand = nodeCommand.value || ''
+  } else {
+    s.nodeUpstreamPort = 0
+    s.nodeStartCommand = ''
+  }
+  saving.value = true
+  try {
+    await siteApplyStore.track(s.domain, () => sitesStore.update(s.domain, s))
+    ElMessage.success(t('siteEditToast.updated'))
+    // The daemon's bind-IP / NIC warnings: Apache would fail to bind at the next start.
+    for (const w of sitesStore.lastUpdateWarnings) ElMessage.warning({ message: w, duration: 8000, showClose: true })
+    seeding = true
+    dirty.value = false
+    void nextTick(() => { seeding = false; dirty.value = false })
+    void refreshNodeStatus()
+  } catch (e) {
+    ElMessage.error(t('siteEditToast.updateFailed', { err: errorMessage(e) }))
+  } finally {
+    saving.value = false
+  }
+}
+
+// Ctrl+S saves while there is something to save.
+function onKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && dirty.value) {
+    e.preventDefault()
+    void save()
+  }
+}
+
+async function confirmLeave(): Promise<boolean> {
+  if (!dirty.value) return true
+  try {
+    await ElMessageBox.confirm(t('siteEdit.leaveText'), t('siteEdit.leaveTitle'), {
+      type: 'warning',
+      confirmButtonText: t('siteEdit.leaveConfirm'),
+      cancelButtonText: t('siteEdit.stay'),
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+onBeforeRouteLeave(confirmLeave)
+onBeforeRouteUpdate((to, from) => (to.params.domain === from.params.domain ? true : confirmLeave()))
+
+async function toggleEnabled() {
+  const s = site.value
+  if (!s) return
+  const enabled = s.enabled === false
+  toggling.value = true
+  try {
+    await siteApplyStore.track(s.domain, () => setSiteEnabled(s.domain, enabled))
+    ElMessage.success(t(enabled ? 'sitesToast.enabled' : 'sitesToast.disabled', { domain: s.domain }))
+    await sitesStore.load()
+  } catch (e) {
+    ElMessage.error(t('sitesToast.toggleFailed', { err: errorMessage(e) }))
+  } finally {
+    toggling.value = false
+  }
+}
+
+async function rollback(timestamp: string, createdAt?: string) {
+  if (!site.value) return
+  try {
+    await ElMessageBox.confirm(t('toast.restoreConfigConfirm', { when: formatDate(createdAt ?? timestamp) }), t('toast.restoreTitle'), {
+      type: 'warning',
+      confirmButtonText: t('toast.restoreTitle'),
+      cancelButtonText: t('common.cancel'),
+    })
+  } catch { return }
+  try {
+    const res = await fetch(`${daemonBaseUrl()}/api/sites/${encodeURIComponent(site.value.domain)}/rollback`, {
+      method: 'POST',
+      headers: { ...sitesStore.authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp }),
+    })
+    if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`)
+    ElMessage.success(t('siteEditToast.configRestored'))
+    await load()
+  } catch (e) {
+    ElMessage.error(t('siteEditToast.restoreFailed', { err: errorMessage(e) }))
+  }
+}
+
+async function confirmDelete() {
+  const s = site.value
+  if (!s) return
+  try {
+    await ElMessageBox.confirm(t('sitesToast.deleteConfirm', { domain: s.domain }), t('sites.delete'), {
+      type: 'warning',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel'),
+      confirmButtonClass: 'el-button--danger',
+    })
+  } catch {
+    return // cancelled
+  }
+  try {
+    await sitesStore.remove(s.domain)
+  } catch (e) {
+    ElMessage.error(t('sitesToast.deleteFailed', { err: errorMessage(e) }))
+    return
+  }
+  dirty.value = false
+  ElMessage.success(t('sitesToast.deleted', { domain: s.domain }))
+  void router.push('/sites')
+}
+
+function formatDate(s: string | number | undefined | null): string {
+  // The daemon returns history timestamps as ISO strings, unix seconds or
+  // unix milliseconds, and some as "YYYY-MM-DD HH:mm:ss" (rejected by Safari).
+  if (s === null || s === undefined || s === '') return '—'
+  let d: Date
+  if (typeof s === 'number') d = new Date(s < 1e12 ? s * 1000 : s)
+  else d = new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s) ? s.replace(' ', 'T') : s)
+  return Number.isNaN(d.getTime()) ? String(s) : d.toLocaleString()
+}
+
+watch(domain, () => { void load() })
 onMounted(() => {
   void load()
-  void loadCfSubdomainTemplate()
-  // If the page mounts with the Metrics tab already active (state restore
-  // after reload), the activeTab watcher won't fire because the value hasn't
-  // changed — so start the ticker and fetch metrics explicitly here.
-  if (activeTab.value === 'metrics') {
-    void refreshMetrics()
-    startMetricsTicker()
-    void loadHistoricalMetrics()
-  }
+  window.addEventListener('keydown', onKeydown)
 })
-onBeforeUnmount(() => {
-  stopMetricsTicker()
-})
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>
-.site-apply { margin-bottom: var(--wdc-space-4); }
 .site-edit-page {
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-height: 100%;
-  background: var(--wdc-bg);
+  overflow-x: hidden;
 }
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
+  gap: var(--wdc-space-4);
   padding: 0 0 var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
-  background: transparent;
-  flex-shrink: 0;
 }
-.header-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--wdc-space-1-5);
-  min-width: 0;
-}
-.crumbs {
-  display: flex;
-  gap: var(--wdc-space-2);
-  font-size: 0.87rem;
-  color: var(--wdc-text-3);
-}
+.header-left { display: flex; flex-direction: column; align-items: flex-start; gap: var(--wdc-space-1-5); min-width: 0; }
+.crumbs { display: flex; gap: var(--wdc-space-2); font-size: 0.87rem; color: var(--wdc-text-2); }
 .crumb-link {
   color: var(--wdc-text-2);
   text-decoration: underline;
   text-decoration-color: var(--wdc-border-strong);
   text-underline-offset: 0.2em;
-  cursor: pointer;
 }
 .crumb-link:hover { color: var(--wdc-text); text-decoration-color: var(--wdc-accent); }
-.title-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--wdc-space-0-5);
-}
-.title-label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--wdc-text-3);
-  font-family: var(--wdc-font-display);
-}
+.crumb-link:focus-visible,
+.title-url:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; border-radius: var(--wdc-radius-xs); }
 .title-name {
   font-size: 1.728rem;
   line-height: 1.1;
@@ -1723,729 +994,222 @@ onBeforeUnmount(() => {
   color: var(--wdc-text);
   overflow-wrap: anywhere;
 }
-.header-actions {
-  display: flex;
-  gap: var(--wdc-space-2);
+.title-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wdc-space-1) var(--wdc-space-4); }
+.title-url {
+  color: var(--wdc-accent-ink);
+  font-family: var(--wdc-font-mono);
+  font-size: 0.87rem;
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
 }
+.header-actions { display: flex; gap: var(--wdc-space-2); }
+.header-actions :deep(.el-button + .el-button) { margin-left: 0; }
+.header-actions :deep(.el-button > span) { display: inline-flex; align-items: center; gap: var(--wdc-space-1-5); }
 
-.state-box {
-  padding: var(--wdc-space-6) var(--wdc-space-5);
-}
+.state-box { padding: var(--wdc-space-6) 0; }
+.edit-body { flex: 1; padding-top: var(--wdc-space-4); }
+.site-apply { margin-bottom: var(--wdc-space-3); }
 
-.edit-body {
-  flex: 1;
-  padding: 0 var(--wdc-space-4-5);
-}
-
-.site-tabs {
-  margin-top: var(--wdc-space-2);
-}
-
-/* F91.8: full-width, responsive tab bar. Each tab claims equal horizontal
-   space with flex:1 so the header fills the whole row instead of hugging
-   the left edge. The :deep() selector is required because the actual
-   <el-tabs__*> elements live outside scoped-CSS reach.
-   Scrollable fallback kicks in under 640px so narrow windows don't wrap
-   into a 5-line tab header — horizontal scroll is the lesser evil. */
+/* Tabs keep their natural width and sit on the left. */
 .site-tabs :deep(.el-tabs__header) { margin-bottom: 0; }
-.site-tabs :deep(.el-tabs__nav-wrap) {
-  width: 100%;
-  padding: 0 var(--wdc-space-1);
-  /* Horizontal scroll fallback whenever the 11 tabs (general / runtime /
-     deploy / cloudflare / ssl / composer / history / metrics / errors /
-     backup / danger) can't all fit at their natural width. Previously
-     `flex: 1 1 0` + `min-width: 0` + `text-overflow: ellipsis` cropped
-     labels to "Obecn", "Runtim", "Metrik" on common laptop widths. */
-  overflow-x: auto;
-}
-.site-tabs :deep(.el-tabs__nav-wrap::after) { background: var(--wdc-border); }
-.site-tabs :deep(.el-tabs__nav) {
-  display: flex;
-  width: 100%;
-  min-width: max-content; /* never shrink below the sum of tab natural widths */
-  float: none;            /* override Element Plus default float layout */
-}
-.site-tabs :deep(.el-tabs__active-bar) { /* keep the indicator aligned under full-width items */
-  bottom: 0;
-}
-.site-tabs :deep(.el-tabs__item) {
-  flex: 1 1 0;
-  min-width: max-content; /* keep label intact; fill only when extra space exists */
-  padding: 0 var(--wdc-space-2-5);
-  text-align: center;
-  justify-content: center;
-  display: inline-flex;
-  align-items: center;
-}
-
-.tab-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--wdc-space-1-5);
-  font-size: 0.88rem;
-  white-space: nowrap;
-}
-.tab-label.danger-label {
-  color: var(--wdc-status-error);
-}
+.site-tabs :deep(.el-tabs__nav-wrap) { overflow-x: auto; }
+.site-tabs :deep(.el-tabs__item) { padding: 0 var(--wdc-space-4); font-size: 0.93rem; }
 
 .tab-content {
-  padding: var(--wdc-space-5) var(--wdc-space-1) var(--wdc-space-5-5);
   display: flex;
   flex-direction: column;
-  gap: var(--wdc-space-4-5);
-  max-width: 100%; /* F91.8: tab content fills container — no 960px cap */
-  box-sizing: border-box;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-5) var(--wdc-space-1) var(--wdc-space-5-5);
 }
-
-/* Two-column form — collapses to single column under 800px so labels +
-   inputs don't squash to unreadable widths on narrow windows. */
-.two-col-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--wdc-space-4) var(--wdc-space-5);
-  max-width: 100%;
-}
-.two-col-form .el-form-item {
-  margin-bottom: 0;
-  min-width: 0; /* allow ellipsis instead of overflow */
-}
-
-/* Metrics subtab toolbar + historical chart: wrap instead of horizontal
-   scroll when container narrows. */
-.metrics-toolbar {
-  flex-wrap: wrap;
-  gap: var(--wdc-space-2-5);
-}
-.historical-controls {
-  flex-wrap: wrap;
-  gap: var(--wdc-space-2-5) var(--wdc-space-4);
-}
-
-/* SiteEdit page shell: cap total width but let content reflow below
-   1100px. Previously a fixed 1000+ layout meant the window scrollbar
-   appeared on any laptop-size screen. */
-.site-edit-page {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-@media (max-width: 900px) {
-  .tab-content { padding: 16px 2px 20px; gap: 14px; }
-  .edit-card-header { flex-wrap: wrap; gap: 6px; padding: 12px 14px; }
-}
+.tab-content.settings { max-width: 880px; }
+.tab-wide { max-width: 100%; }
+.logs-switch { align-self: flex-start; }
 
 .hint {
-  margin-top: var(--wdc-space-1-5);
-  font-size: 0.78rem;
-  color: var(--wdc-text-3);
   display: flex;
   align-items: center;
-  gap: var(--wdc-space-1-5);
-}
-.hint code {
-  font-family: 'JetBrains Mono', monospace;
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  padding: 1px var(--wdc-space-1-5);
-  border-radius: var(--wdc-radius-sm);
-  color: var(--wdc-accent);
-  font-size: 0.76rem;
-}
-
-.bind-address-select :deep(.el-tag) {
-  background: var(--wdc-accent) !important;
-  border-color: var(--wdc-accent) !important;
-  color: var(--wdc-bg) !important;
-  font-weight: 700;
-  min-height: 32px;
-}
-
-.bind-address-select :deep(.el-tag__close) {
-  color: var(--wdc-bg) !important;
-  min-width: 32px;
-  min-height: 32px;
-}
-
-/* Card sections moved to EditCard shared primitive (plan §6).
-   Note: SiteEdit uses 20px body padding (vs 18px 20px in primitive);
-   slight visual variance acceptable since primitive's 18px is closer
-   to el-card defaults. */
-
-/* ─── Path input + Browse ────────────────────────────────────────────── */
-.path-input {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-.path-input :deep(.el-input__wrapper) {
-  min-width: 0;
-  flex: 1 1 0%;
-}
-.path-input :deep(.el-input__inner) {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  min-width: 0;
-}
-.path-input :deep(.el-input-group__append) {
-  padding: 0 !important;
-  background: var(--wdc-surface-2) !important;
-  border-color: var(--wdc-border) !important;
-  flex-shrink: 0;
-}
-.browse-append-btn {
-  border: none !important;
-  background: transparent !important;
-  color: var(--wdc-accent) !important;
-  font-weight: 700 !important;
-  height: 100% !important;
-  padding: 0 var(--wdc-space-3-5) !important;
-  box-shadow: none !important;
-  white-space: nowrap;
-  /* Icon + label sit flush; earlier CSS only gave the button 12px side
-     padding + no inner gap, so at the default 13-14px system font the
-     icon collided with the trailing ellipsis and pushed "Browse…" past
-     the el-input-group__append clip. 14px padding + 6px flex gap holds
-     the full label inside every Element Plus theme. */
-  display: inline-flex !important;
-  align-items: center;
-  gap: var(--wdc-space-1-5);
-  min-width: fit-content;
-}
-.browse-append-btn > span {
-  display: inline-block;
-}
-.browse-append-btn:hover {
-  background: var(--wdc-accent-dim) !important;
-}
-
-/* ─── Form overflow guard ─────────────────────────────────────────────── */
-.edit-card-body :deep(.el-form) {
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-.edit-card-body :deep(.el-form-item) {
-  min-width: 0;
-}
-.edit-card-body :deep(.el-form-item__content) {
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.edit-card-body :deep(.el-input-group) {
-  display: flex;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.edit-card-body :deep(.el-input-group__prepend),
-.edit-card-body :deep(.el-input-group__append) {
-  flex-shrink: 0;
-  max-width: 40%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-sizing: border-box;
-}
-.edit-card-body :deep(.el-input-group .el-input__wrapper) {
-  flex: 1 1 0%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-@media (max-width: 900px) {
-  .edit-card-body :deep(.el-form--label-top .el-form-item) {
-    flex-direction: column;
-  }
-}
-
-/* ─── Alias chip picker ──────────────────────────────────────────────── */
-.alias-chips {
-  display: flex;
   flex-wrap: wrap;
-  gap: var(--wdc-space-2);
-  align-items: center;
-  min-height: 32px;
+  gap: var(--wdc-space-1-5);
+  width: 100%;
+  margin-top: var(--wdc-space-1-5);
+  color: var(--wdc-text-3);
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
-.alias-chip {
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 0.78rem !important;
-  font-weight: 600 !important;
-  padding: var(--wdc-space-1) var(--wdc-space-2-5) !important;
-  height: 28px !important;
-  background: var(--wdc-accent) !important;
-  border-color: var(--wdc-accent) !important;
-  color: var(--wdc-bg) !important;
-}
-.alias-input {
-  width: 220px;
-}
-.alias-input :deep(.el-input__inner) {
-  font-family: 'JetBrains Mono', monospace;
-}
-.alias-add-btn {
-  font-weight: 600 !important;
-  border-style: dashed !important;
-}
+.hint-ok { color: var(--wdc-status-running); }
+.hint-warn { color: var(--wdc-status-starting); }
+.hint.mono { font-family: var(--wdc-font-mono); }
 
-/* ─── Framework detect row ───────────────────────────────────────────── */
-.framework-row {
-  display: flex;
-  gap: var(--wdc-space-2);
-  align-items: stretch;
-}
-.framework-input {
-  flex: 1;
-}
+:deep(.el-form-item) { margin-bottom: var(--wdc-space-4); }
+:deep(.el-form-item:last-child) { margin-bottom: 0; }
+:deep(.el-select) { width: 100%; }
+:deep(.el-input-number) { width: 170px; }
+.path-input :deep(.el-input__inner) { font-family: var(--wdc-font-mono); font-size: 0.85rem; }
+.path-input :deep(.el-input-group__append .el-button) { gap: var(--wdc-space-1-5); }
 
-/* ─── Runtime picker cards ───────────────────────────────────────────── */
-.runtime-picker {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--wdc-space-3);
-}
+.sub-label { display: block; margin-bottom: var(--wdc-space-2); color: var(--wdc-text-2); font-size: 0.82rem; font-family: var(--wdc-font-display); font-weight: 500; }
+
+/* Alias chips */
+.alias-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wdc-space-2); min-height: 32px; }
+.alias-chip { font-family: var(--wdc-font-mono); }
+.alias-input { width: 220px; }
+.alias-add-btn { border-style: dashed; }
+
+/* Runtime picker */
+.runtime-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--wdc-space-3); }
 .runtime-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--wdc-space-1-5);
-  padding: var(--wdc-space-4-5) var(--wdc-space-4-5);
-  background: var(--wdc-surface-2);
-  border: 2px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, transform 0.08s;
-  text-align: left;
+  gap: var(--wdc-space-1);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
+  border: 1px solid var(--wdc-border-strong);
+  border-radius: var(--wdc-radius-md);
+  background: var(--wdc-surface);
+  color: inherit;
   font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.runtime-card:hover:not(:disabled) {
-  border-color: var(--wdc-border-strong);
-  background: var(--wdc-elevated);
+@media (hover: hover) { .runtime-card:hover { background: var(--wdc-hover); } }
+.runtime-card.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); box-shadow: inset 0 0 0 1px var(--wdc-accent); }
+.runtime-card:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; }
+.runtime-card-title { color: var(--wdc-text); font-family: var(--wdc-font-display); font-weight: 600; }
+.runtime-card-desc { color: var(--wdc-text-2); font-size: 0.8rem; line-height: 1.4; }
+.runtime-extra { margin-top: var(--wdc-space-4); padding-top: var(--wdc-space-4); border-top: 1px solid var(--wdc-border); }
+
+.php-version-grid { display: flex; flex-wrap: wrap; gap: var(--wdc-space-2); }
+.php-version-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wdc-space-2);
+  min-height: 34px;
+  padding: 0 var(--wdc-space-3-5);
+  border: 1px solid var(--wdc-border-strong);
+  border-radius: var(--wdc-radius);
+  background: var(--wdc-surface);
+  color: var(--wdc-text);
+  font-family: var(--wdc-font-mono);
+  font-size: 0.87rem;
+  cursor: pointer;
 }
-.runtime-card.active {
-  border-color: var(--wdc-accent);
-  background: var(--wdc-accent-dim);
-  box-shadow: 0 0 0 3px var(--wdc-accent-glow);
-}
-.runtime-card:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.runtime-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--wdc-radius-sm);
+@media (hover: hover) { .php-version-btn:hover { background: var(--wdc-hover); } }
+.php-version-btn.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); color: var(--wdc-accent-ink); box-shadow: inset 0 0 0 1px var(--wdc-accent); }
+.php-version-btn:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; }
+.php-default { color: var(--wdc-text-3); font-family: var(--wdc-font-body); font-size: 0.72rem; }
+.php-version-btn.active .php-default { color: var(--wdc-accent-ink); }
+
+.node-fields { display: flex; flex-wrap: wrap; gap: var(--wdc-space-4); }
+.field { display: grid; }
+.field-grow { flex: 1; min-width: 220px; }
+.node-process { margin-top: var(--wdc-space-4); }
+.node-process-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--wdc-space-2-5); }
+.node-process-state { color: var(--wdc-text-2); font-size: 0.87rem; }
+
+.inline-callout {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.1rem;
-  font-family: 'JetBrains Mono', monospace;
-  margin-bottom: var(--wdc-space-1);
-}
-.runtime-card-icon.runtime-static {
-  background: var(--wdc-elevated);
-  color: var(--wdc-text);
-}
-.runtime-card-icon.runtime-php {
-  background: var(--wdc-brand-php);
-  color: var(--wdc-on-accent);
-}
-.runtime-card-icon.runtime-node {
-  background: var(--wdc-brand-node);
-  color: var(--wdc-on-accent);
-}
-.runtime-card-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-}
-.runtime-card-desc {
-  font-size: 0.78rem;
-  color: var(--wdc-text-3);
-  line-height: 1.4;
-}
-
-/* Node process status dot moved to HealthStatusDot primitive (plan §6). */
-
-/* ─── PHP version sub-picker ─────────────────────────────────────────── */
-.php-version-picker {
-  margin-top: var(--wdc-space-4-5);
-  padding-top: var(--wdc-space-4-5);
-  border-top: 1px solid var(--wdc-border);
-}
-.sub-label {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--wdc-text-2);
-  margin-bottom: var(--wdc-space-2-5);
-  font-family: var(--wdc-font-display);
-}
-.php-version-grid {
-  display: flex;
   flex-wrap: wrap;
   gap: var(--wdc-space-2);
-}
-.php-version-btn {
-  min-width: 76px;
-  padding: var(--wdc-space-2-5) var(--wdc-space-4-5);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  color: var(--wdc-text-2);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-.php-version-btn:hover {
-  border-color: var(--wdc-border-strong);
-  color: var(--wdc-text);
-}
-.php-version-btn.active {
-  background: var(--wdc-brand-php);
-  border-color: var(--wdc-brand-php);
-  color: var(--wdc-on-accent);
-}
-
-/* ─── Port grid ──────────────────────────────────────────────────────── */
-.port-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--wdc-space-4);
-  max-width: 520px;
-}
-.port-item {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── Tunnel status row (inside Cloudflare tab) ──────────────────────── */
-.tunnel-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--wdc-space-4-5);
-  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
-  margin-top: var(--wdc-space-4);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-}
-.tunnel-status-meta { flex: 1; }
-.tunnel-status-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  margin-bottom: var(--wdc-space-1);
-}
-.tunnel-pill {
-  display: inline-block;
-  padding: var(--wdc-space-0-5) var(--wdc-space-2-5);
+  margin-top: var(--wdc-space-2-5);
+  padding: var(--wdc-space-2) var(--wdc-space-3);
+  border: 1px solid var(--wdc-border-strong);
   border-radius: var(--wdc-radius);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  margin-left: var(--wdc-space-1-5);
-}
-.tunnel-pill-on {
-  background: var(--wdc-status-running);
-  color: var(--wdc-bg);
-}
-.tunnel-pill-off {
-  background: var(--wdc-surface);
-  color: var(--wdc-text-3);
-  border: 1px solid var(--wdc-border);
-}
-.tunnel-shared-count {
-  font-size: 0.78rem;
-  color: var(--wdc-text-3);
-  margin-left: var(--wdc-space-0-5);
-}
-.tunnel-status-desc {
-  font-size: 0.8rem;
-  color: var(--wdc-text-3);
-  line-height: 1.5;
-}
-.tunnel-status-desc code {
-  font-family: 'JetBrains Mono', monospace;
   background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  padding: 1px var(--wdc-space-1-5);
-  border-radius: var(--wdc-radius-sm);
-  color: var(--wdc-accent);
-  font-size: 0.76rem;
-}
-
-.cf-subdomain-row {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-2);
-}
-.cf-zone-suffix {
-  font-size: 0.85rem;
-  color: var(--wdc-text-3);
-  white-space: nowrap;
-}
-
-/* ─── SSL toggle rows ────────────────────────────────────────────────── */
-.ssl-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--wdc-space-5);
-  padding: var(--wdc-space-3-5) 0;
-}
-.ssl-toggle-row + .ssl-toggle-row {
-  border-top: 1px solid var(--wdc-border);
-}
-.ssl-toggle-meta {
-  flex: 1;
-}
-.ssl-toggle-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--wdc-text);
-  margin-bottom: var(--wdc-space-1);
-}
-.ssl-toggle-desc {
-  font-size: 0.8rem;
-  color: var(--wdc-text-3);
-  line-height: 1.4;
-}
-
-.history-banner {
-  display: flex;
-  gap: var(--wdc-space-2-5);
-  align-items: flex-start;
-  padding: var(--wdc-space-3) var(--wdc-space-3-5);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  font-size: 0.82rem;
   color: var(--wdc-text-2);
-  line-height: 1.5;
-  margin-bottom: var(--wdc-space-2);
-}
-.history-banner .el-icon {
-  color: var(--wdc-accent);
-  margin-top: var(--wdc-space-0-5);
-  flex-shrink: 0;
-}
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--wdc-space-2);
-  /* Task 18: full-width (was max-width 720px). */
-}
-.history-row {
-  display: grid;
-  grid-template-columns: 220px 1fr auto;
-  align-items: center;
-  gap: var(--wdc-space-4);
-  padding: var(--wdc-space-3) var(--wdc-space-4);
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-}
-.history-when {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-2);
   font-size: 0.82rem;
-  color: var(--wdc-text-2);
 }
-.history-label {
-  font-size: 0.85rem;
-  color: var(--wdc-text);
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-2-5);
-}
-.version-badge {
-  background: var(--wdc-accent);
-  color: white;
-  padding: var(--wdc-space-0-5) var(--wdc-space-2);
-  border-radius: var(--wdc-radius);
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-}
-.version-hint {
-  color: var(--wdc-text-3);
-  font-style: italic;
-  font-size: 0.78rem;
-}
+.inline-callout .el-icon { color: var(--wdc-status-starting); }
+.inline-callout .el-button { margin-left: auto; }
 
-/* ─── Metrics cards ──────────────────────────────────────────────────── */
-.metrics-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-3);
-  margin-bottom: var(--wdc-space-3);
-}
-.metrics-timestamp {
-  font-size: 0.8rem;
-  color: var(--wdc-text-3);
-}
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--wdc-space-3);
-  margin-bottom: var(--wdc-space-4);
-}
-.metrics-chart-wrap {
-  margin-top: var(--wdc-space-4-5);
-  background: var(--wdc-surface-2);
-  border-radius: var(--wdc-radius-sm);
-  padding: var(--wdc-space-3) var(--wdc-space-4);
-}
-.metrics-chart-label {
-  font-size: 0.78rem;
-  color: var(--wdc-text-3);
-  margin-bottom: var(--wdc-space-2);
-}
-.table-responsive {
-  overflow-x: auto;
-}
-.metric-card {
-  background: var(--wdc-surface-2);
-  border-radius: var(--wdc-radius-sm);
-  padding: var(--wdc-space-4-5);
-  text-align: center;
-}
-.metric-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  font-family: 'JetBrains Mono', monospace;
-}
-.metric-label {
-  font-size: 0.78rem;
-  color: var(--wdc-text-3);
-  margin-top: var(--wdc-space-1);
-}
+.toggle-line { display: inline-flex; align-items: center; gap: var(--wdc-space-2-5); cursor: pointer; }
+.toggle-label { color: var(--wdc-text); font-weight: 500; }
 
-/* ─── Compose output ─────────────────────────────────────────────────── */
+.port-grid { display: flex; flex-wrap: wrap; gap: var(--wdc-space-4); }
+
+.framework-row { display: flex; gap: var(--wdc-space-2); }
+.framework-row :deep(.el-button > span) { display: inline-flex; align-items: center; gap: var(--wdc-space-1-5); }
+.compose-block { margin-top: var(--wdc-space-4); padding-top: var(--wdc-space-4); border-top: 1px solid var(--wdc-border); }
+.compose-actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-2); }
+.compose-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .compose-output {
-  margin-top: var(--wdc-space-3);
-  background: var(--wdc-surface-2);
-  border-radius: var(--wdc-radius-sm);
-  padding: var(--wdc-space-3);
   max-height: 200px;
+  margin: var(--wdc-space-3) 0 0;
+  padding: var(--wdc-space-3);
   overflow-y: auto;
-}
-.compose-output pre {
-  margin: 0;
+  border-radius: var(--wdc-radius-sm);
+  background: var(--wdc-log-bg);
+  color: var(--wdc-log-text);
+  font-family: var(--wdc-font-mono);
   font-size: 0.75rem;
-  font-family: 'JetBrains Mono', monospace;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--wdc-text-2);
 }
 
 .danger-box {
-  padding: var(--wdc-space-5) var(--wdc-space-5-5);
-  background: rgba(239, 68, 68, 0.06);
-  border: 2px solid rgba(239, 68, 68, 0.32);
-  border-radius: var(--wdc-radius);
-  max-width: 640px;
+  padding: var(--wdc-space-4) var(--wdc-space-5);
+  border: 1px solid color-mix(in oklab, var(--wdc-status-error) 45%, var(--wdc-border));
+  border-radius: var(--wdc-radius-lg);
 }
-.danger-title {
+.danger-title { margin-bottom: var(--wdc-space-2); font-size: 0.97rem; color: var(--wdc-status-error); }
+.danger-desc { margin: 0 0 var(--wdc-space-3); color: var(--wdc-text-2); font-size: 0.87rem; line-height: 1.5; max-width: 70ch; }
+
+.info-banner {
   display: flex;
-  align-items: center;
-  gap: var(--wdc-space-2);
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--wdc-status-error);
-  margin-bottom: var(--wdc-space-2);
-}
-.danger-desc {
-  font-size: 0.85rem;
+  align-items: flex-start;
+  gap: var(--wdc-space-2-5);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-md);
+  background: var(--wdc-surface-2);
   color: var(--wdc-text-2);
-  margin-bottom: var(--wdc-space-3-5);
+  font-size: 0.87rem;
+  line-height: 1.5;
+}
+.info-banner .el-icon { margin-top: 2px; color: var(--wdc-accent-ink); flex-shrink: 0; }
+.history-list { display: flex; flex-direction: column; gap: var(--wdc-space-2); margin: 0; padding: 0; list-style: none; }
+.history-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--wdc-space-4);
+  padding: var(--wdc-space-2-5) var(--wdc-space-4);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius-md);
+  background: var(--wdc-surface);
+}
+.history-when { color: var(--wdc-text-2); font-size: 0.87rem; }
+.history-label { display: flex; align-items: center; gap: var(--wdc-space-2-5); font-size: 0.87rem; }
+.version-badge {
+  padding: 0 var(--wdc-space-2);
+  border-radius: var(--wdc-radius-xs);
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent-ink);
+  font-family: var(--wdc-font-mono);
+  font-size: 0.75rem;
 }
 
-/* ─── Historical metrics section ─────────────────────────────────────── */
-.historical-section {
-  margin-top: var(--wdc-space-5);
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  overflow: hidden;
-}
-.historical-header {
+/* Sticky bar at the bottom while there is something to save. */
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--wdc-space-3);
+  justify-content: flex-end;
+  gap: var(--wdc-space-2);
+  margin-top: auto;
   padding: var(--wdc-space-3) var(--wdc-space-4);
-  background: var(--wdc-surface-2);
-  border-bottom: 1px solid var(--wdc-border);
+  border-top: 1px solid var(--wdc-border-strong);
+  background: var(--wdc-elevated);
+  box-shadow: var(--wdc-shadow-pop);
 }
-.historical-title {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--wdc-text);
-  flex-shrink: 0;
-  font-family: var(--wdc-font-display);
-}
-.historical-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--wdc-space-2-5);
-}
-.historical-control-item {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-1-5);
-}
-.historical-label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--wdc-text-3);
-  white-space: nowrap;
-  font-family: var(--wdc-font-display);
-}
-.historical-series-toggles {
-  display: flex;
-  gap: var(--wdc-space-1-5);
-  align-items: center;
-}
-.series-toggle {
-  font-size: 0.7rem !important;
-  font-weight: 600 !important;
-  padding: var(--wdc-space-1) var(--wdc-space-2-5) !important;
-  border-radius: var(--wdc-radius-full) !important;
-  cursor: pointer;
-}
-.historical-chart-wrap {
-  position: relative;
-  padding: var(--wdc-space-3) var(--wdc-space-2) var(--wdc-space-1);
-}
-.historical-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 1;
-  background: transparent;
-}
-.historical-empty {
-  font-size: 0.82rem;
-  color: var(--wdc-text-3);
-  font-style: italic;
+.save-bar :deep(.el-button + .el-button) { margin-left: 0; }
+.save-text { margin-right: auto; color: var(--wdc-text); font-family: var(--wdc-font-display); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .runtime-picker { grid-template-columns: minmax(0, 1fr); }
+  .history-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .history-when { grid-column: 1 / -1; }
 }
 </style>

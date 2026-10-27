@@ -41,11 +41,6 @@ test.describe('Daemon warnings wrapper contract', () => {
     expect(source).toMatch(/for\s*\(const\s+w\s+of\s+sitesStore\.lastUpdateWarnings\)/)
   })
 
-  test('SiteDetailSimple.vue bind change toasts lastUpdateWarnings', () => {
-    const source = readFileSync(join(srcRoot, 'components', 'pages', 'SiteDetailSimple.vue'), 'utf-8')
-    expect(source).toMatch(/for\s*\(const\s+w\s+of\s+sitesStore\.lastUpdateWarnings\)/)
-  })
-
   test('Daemon SiteEndpoints.cs PUT /api/sites/{domain} wraps response on warnings', () => {
     const programPath = resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs')
     const source = readFileSync(programPath, 'utf-8')
