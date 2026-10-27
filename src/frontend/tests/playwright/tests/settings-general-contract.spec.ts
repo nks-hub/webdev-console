@@ -41,6 +41,14 @@ test.describe('Settings General contract', () => {
     expect(settings).not.toMatch(/method: 'DELETE'[\s\S]{0,80}api\/databases/)
   })
 
+  test('the mode switch lets el-switch finish before the layout swaps', () => {
+    // Emitting update:uiMode synchronously unmounted the switch before its
+    // nextTick write to <input>: "Cannot set properties of null (setting 'checked')".
+    const card = read('src', 'components', 'settings', 'easy', 'EasyGeneralSettings.vue')
+    expect(card).toMatch(/@change="\(value: boolean\) => onModeChange\(value\)"/)
+    expect(card).toMatch(/setTimeout\(\(\) => emit\('update:uiMode'/)
+  })
+
   test('default PHP version is loaded and saved', () => {
     const settings = read('src', 'components', 'pages', 'Settings.vue')
     expect(settings).toMatch(/settings\['general\.defaultPhp'\]/)

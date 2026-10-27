@@ -34,7 +34,7 @@
           :model-value="isAdvanced"
           :active-text="t('settings.mode.advanced')"
           :inactive-text="t('settings.mode.simple')"
-          @change="(value: boolean) => emit('update:uiMode', value ? 'advanced' : 'simple')"
+          @change="(value: boolean) => onModeChange(value)"
         />
         <div class="hint">{{ t('settings.mode.description') }}</div>
       </el-form-item>
@@ -138,6 +138,14 @@ const emit = defineEmits<{
   flushDns: []
   discoverMamp: []
 }>()
+
+// Switching the mode swaps the Settings layout, which unmounts this switch.
+// el-switch writes to its <input> on nextTick after @change, so emitting
+// synchronously left it writing to a removed element (a TypeError on every
+// mode flip). Let the switch finish first.
+function onModeChange(value: boolean): void {
+  setTimeout(() => emit('update:uiMode', value ? 'advanced' : 'simple'))
+}
 </script>
 
 <style scoped>
