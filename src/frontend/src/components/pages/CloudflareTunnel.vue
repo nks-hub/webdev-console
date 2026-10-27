@@ -13,16 +13,24 @@
           <el-icon><Link /></el-icon>
           <span>{{ $t('cloudflare.docs') }}</span>
         </el-button>
-        <el-button
+        <el-tooltip
           v-if="!pluginMissing"
-          size="small"
-          :type="serviceRunning ? 'danger' : 'success'"
-          :loading="toggling"
-          :disabled="!daemonStore.connected || !configReady"
-          @click="toggleTunnel"
+          :disabled="configReady || serviceRunning"
+          :content="$t('cloudflare.startNeedsSetup')"
+          placement="bottom"
         >
-          {{ serviceRunning ? $t('cloudflare.stopTunnel') : $t('cloudflare.startTunnel') }}
-        </el-button>
+          <span>
+            <el-button
+              size="small"
+              :type="serviceRunning ? 'danger' : 'success'"
+              :loading="toggling"
+              :disabled="!daemonStore.connected || !configReady"
+              @click="toggleTunnel"
+            >
+              {{ serviceRunning ? $t('cloudflare.stopTunnel') : $t('cloudflare.startTunnel') }}
+            </el-button>
+          </span>
+        </el-tooltip>
       </div>
     </div>
 
@@ -54,10 +62,13 @@
           <div class="status-title">
             {{ serviceRunning ? $t('cloudflare.status.tunnelRunning') : (serviceInfo ? $t('cloudflare.status.stopped') : $t('cloudflare.status.unknown')) }}
           </div>
-          <div class="status-meta" v-if="serviceInfo">
+          <div class="status-meta" v-if="serviceRunning && serviceInfo">
             {{ $t('cloudflare.status.pidUptime', { pid: serviceInfo.pid ?? '—', uptime: formatUptime(serviceInfo.uptimeSeconds ?? serviceInfo.uptime) }) }}
           </div>
-          <div class="status-meta" v-else-if="configReady">
+          <div class="status-meta" v-else-if="!configReady">
+            {{ $t('cloudflare.status.finishSetup') }}
+          </div>
+          <div class="status-meta" v-else-if="!serviceInfo">
             {{ $t('cloudflare.status.serviceInfoUnavailable') }}
           </div>
         </div>
@@ -131,7 +142,7 @@
                 </span>
               </div>
               <div class="hint" style="margin-top: var(--wdc-space-3);">
-                {{ $t('cloudflare.autoSetupExplain', { tunnel: 'NKS-WDC-Tunnel-{md5}', file: '~/.wdc/cloudflare/config.json' }) }}
+                {{ $t('cloudflare.autoSetupExplain', { tunnel: 'NKS-WDC-Tunnel-…', file: '~/.wdc/cloudflare/config.json' }) }}
               </div>
           </EditCard>
 
@@ -249,7 +260,9 @@
                 </span>
               </div>
               <div class="hint" style="margin-top: var(--wdc-space-2-5);">
-                {{ $t('cloudflare.syncExplain', { target: `${config.tunnelId ? config.tunnelId.slice(0, 8) + '…' : 'tunnel'}.cfargotunnel.com` }) }}
+                {{ config.tunnelId
+                  ? $t('cloudflare.syncExplain', { target: `${config.tunnelId.slice(0, 8)}….cfargotunnel.com` })
+                  : $t('cloudflare.syncNeedsTunnel') }}
               </div>
           </EditCard>
         </div>
@@ -260,7 +273,13 @@
         <template #label>
           <span class="tab-label"><el-icon><Postcard /></el-icon> {{ $t('cloudflare.tabs.dns') }}</span>
         </template>
-        <div class="tab-content">
+        <el-empty v-if="!config.apiToken" :image-size="64" class="cf-dns-gate">
+          <template #description>
+            <p>{{ $t('cloudflare.dnsNeedsToken') }}</p>
+          </template>
+          <el-button type="primary" @click="activeTab = 'settings'">{{ $t('cloudflare.goToStep1') }}</el-button>
+        </el-empty>
+        <div v-else class="tab-content">
           <EditCard :title="$t('cloudflare.dnsRecords')" :hint="activeZone?.name || $t('cloudflare.pickZone')">
               <el-select
                 v-model="selectedDnsZoneId"

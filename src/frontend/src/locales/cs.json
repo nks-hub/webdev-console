@@ -1250,7 +1250,7 @@
     "filterPlaceholder": "Filtrovat moduly…",
     "noMatching": "Žádný modul neodpovídá „{q}“",
     "noEntries": "Katalog je prázdný. Zkontrolujte, že běží démon a že je katalog dostupný.",
-    "catalogReleases": "{n} verze v katalogu | {n} verze v katalogu | {n} verzí v katalogu",
+    "catalogReleases": "{n} verze | {n} verze | {n} verzí",
     "catalogUnreachable": "nedostupný",
     "manageVersions": "Spravovat verze",
     "back": "Zpět",
@@ -1389,7 +1389,9 @@
     "pluginMissingDesc": "Certifikáty pro HTTPS spravuje plugin SSL (mkcert). Bez něj tato stránka nemá co zobrazit.",
     "caNotTrusted": "CA zatím není důvěryhodná",
     "pluginMissingTitle": "Plugin SSL není nainstalovaný",
-    "daemonUnreachable": "Nepodařilo se spojit s démonem: {err}"
+    "daemonUnreachable": "Nepodařilo se spojit s démonem: {err}",
+    "generateNeedsMkcert": "Nejdřív nainstalujte mkcert",
+    "noCertsNoMkcert": "Zatím tu není žádný certifikát. Po instalaci mkcert se certifikát vytvoří sám, když u webu zapnete HTTPS."
   },
   "plugins": {
     "title": "Pluginy",
@@ -1770,7 +1772,8 @@
       "defaultSelected": "Výchozí vybrána",
       "pickDefaultZone": "Vyberte výchozí zónu",
       "pidUptime": "PID {pid} · běží {uptime}",
-      "tokenMissingHint": "Vložte ho v kroku 1"
+      "tokenMissingHint": "Vložte ho v kroku 1",
+      "finishSetup": "Dokončete kroky 1 a 2"
     },
     "tabs": {
       "setup": "Nastavení",
@@ -1797,7 +1800,7 @@
     "tokenPlaceholder": "cfut_… nebo 40znakový token",
     "requiredScopes": "Vyžadovaná oprávnění:",
     "createTokenAt": "Token vytvoříte na",
-    "autoSetupExplain": "Automatické nastavení ověří token, vybere první účet, najde nebo vytvoří tunel s názvem {tunnel}, stáhne jeho JWT a vše uloží do {file}.",
+    "autoSetupExplain": "Automatické nastavení ověří token, vybere první účet, najde nebo vytvoří tunel s názvem {tunnel}, stáhne jeho přístupový token a vše uloží do {file}.",
     "subdomainPlaceholders": "Zástupné znaky:",
     "subdomainStem": "= lokální doména bez {loc}/{local}/{test}",
     "subdomainUser": "= uživatelské jméno OS",
@@ -1828,7 +1831,11 @@
     "pluginMissingDesc": "Tunel a DNS záznamy spravuje plugin Cloudflare. Bez něj se nic z této stránky nedá nastavit.",
     "syncedSites": "Do Cloudflare synchronizován {n} web | Do Cloudflare synchronizovány {n} weby | Do Cloudflare synchronizováno {n} webů",
     "pluginMissingTitle": "Plugin Cloudflare není nainstalovaný",
-    "autoSetupDone": "Účet: {account} · Tunel: {tunnel}"
+    "autoSetupDone": "Účet: {account} · Tunel: {tunnel}",
+    "startNeedsSetup": "Nejdřív dokončete krok 1 (API token) a krok 2 (cloudflared).",
+    "syncNeedsTunnel": "Synchronizace potřebuje tunel. Nastavte ho v kroku 1 na kartě Nastavení.",
+    "dnsNeedsToken": "DNS záznamy se načítají přes API Cloudflare. Nejdřív vložte API token v kroku 1.",
+    "goToStep1": "Přejít na krok 1"
   },
   "siteEdit": {
     "composeUp": "Spustit",

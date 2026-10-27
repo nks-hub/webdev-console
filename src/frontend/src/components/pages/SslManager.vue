@@ -5,7 +5,6 @@
         <h1 class="page-title">{{ $t('ssl.title') }}</h1>
         <template v-if="loaded && pluginLoaded && !pluginDisabled">
           <el-tag v-if="mkcertInstalled" type="success" size="small" effect="plain">{{ $t('ssl.mkcertReady') }}</el-tag>
-          <el-tag v-else type="danger" size="small" effect="plain">{{ $t('ssl.mkcertMissing') }}</el-tag>
           <el-tag v-if="mkcertInstalled && caInstalled" type="success" size="small" effect="plain">{{ $t('ssl.caTrusted') }}</el-tag>
           <el-tag v-else-if="mkcertInstalled" type="warning" size="small" effect="plain">{{ $t('ssl.caNotTrusted') }}</el-tag>
         </template>
@@ -19,17 +18,25 @@
         >
           {{ $t('ssl.installCa') }}
         </el-button>
-        <el-button size="small" @click="loadCerts" :loading="loading">{{ $t('common.refresh') }}</el-button>
-        <el-button
+        <el-button size="small" @click="loadCerts" :loading="loading" :icon="Refresh">{{ $t('common.refresh') }}</el-button>
+        <el-tooltip
           v-if="pluginLoaded && !pluginDisabled"
-          type="primary"
-          size="small"
-          :icon="Plus"
-          @click="showGenerateDialog = true"
-          :disabled="!mkcertInstalled"
+          :disabled="mkcertInstalled"
+          :content="$t('ssl.generateNeedsMkcert')"
+          placement="bottom"
         >
-          {{ $t('ssl.generate') }}
-        </el-button>
+          <span>
+            <el-button
+              type="primary"
+              size="small"
+              :icon="Plus"
+              @click="showGenerateDialog = true"
+              :disabled="!mkcertInstalled"
+            >
+              {{ $t('ssl.generate') }}
+            </el-button>
+          </span>
+        </el-tooltip>
       </div>
     </div>
 
@@ -120,7 +127,7 @@
 
         <el-empty
           v-else-if="!loading"
-          :description="$t('ssl.noCerts')"
+          :description="mkcertInstalled ? $t('ssl.noCerts') : $t('ssl.noCertsNoMkcert')"
           :image-size="64"
         />
       </template>
@@ -165,7 +172,7 @@ import LoadingState from '../shared/LoadingState.vue'
 import PluginMissingState from '../shared/PluginMissingState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { Lock, Plus } from '@element-plus/icons-vue'
+import { Lock, Plus, Refresh } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchLatestBinary, fetchSites, installBinary } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { installErrorMessage } from '../../utils/binaries'

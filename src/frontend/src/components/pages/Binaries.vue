@@ -47,7 +47,7 @@
             style="width: 220px"
             prefix-icon="Search"
           />
-          <el-button size="small" :loading="loading" @click="refresh">{{ $t('common.refresh') }}</el-button>
+          <el-button size="small" :loading="loading" :icon="Refresh" @click="refresh">{{ $t('common.refresh') }}</el-button>
         </div>
       </div>
 
@@ -157,7 +157,7 @@
           </p>
         </div>
         <div class="header-actions">
-          <el-button size="small" :loading="loading" @click="refresh">{{ $t('common.refresh') }}</el-button>
+          <el-button size="small" :loading="loading" :icon="Refresh" @click="refresh">{{ $t('common.refresh') }}</el-button>
         </div>
       </div>
 
@@ -327,7 +327,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, Refresh } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import {
   fetchBinaryCatalog,

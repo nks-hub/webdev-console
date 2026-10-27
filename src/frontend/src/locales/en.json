@@ -1250,7 +1250,7 @@
     "filterPlaceholder": "Filter modules…",
     "noMatching": "No modules matching ‘{q}’",
     "noEntries": "The catalog is empty. Check that the daemon is running and the catalog is reachable.",
-    "catalogReleases": "{n} version in catalog | {n} versions in catalog",
+    "catalogReleases": "{n} version | {n} versions",
     "catalogUnreachable": "unreachable",
     "manageVersions": "Manage versions",
     "back": "Back",
@@ -1389,7 +1389,9 @@
     "pluginMissingDesc": "HTTPS certificates are managed by the SSL (mkcert) plugin. Without it this page has nothing to show.",
     "caNotTrusted": "CA not trusted yet",
     "pluginMissingTitle": "The SSL plugin is not installed",
-    "daemonUnreachable": "Cannot connect to the daemon: {err}"
+    "daemonUnreachable": "Cannot connect to the daemon: {err}",
+    "generateNeedsMkcert": "Install mkcert first",
+    "noCertsNoMkcert": "No certificates yet. Once mkcert is installed, a certificate is created automatically when you turn on HTTPS for a site."
   },
   "plugins": {
     "title": "Plugins",
@@ -1718,7 +1720,7 @@
     "subtitle": "Expose local sites to the internet via an encrypted tunnel",
     "tunnelRunning": "Tunnel is running",
     "tunnelStopped": "Tunnel is stopped",
-    "tunnelHint": "Uses the JWT fetched in Step 1 and connects to Cloudflare's edge.",
+    "tunnelHint": "Uses the tunnel token fetched in step 1 and connects to Cloudflare.",
     "toast": {
       "settingsSaved": "Cloudflare settings saved",
       "binaryPathSaved": "Binary path saved",
@@ -1770,7 +1772,8 @@
       "defaultSelected": "Default selected",
       "pickDefaultZone": "Pick default zone",
       "pidUptime": "PID {pid} · up {uptime}",
-      "tokenMissingHint": "Paste it in step 1"
+      "tokenMissingHint": "Paste it in step 1",
+      "finishSetup": "Finish steps 1 and 2"
     },
     "tabs": {
       "setup": "Setup",
@@ -1797,14 +1800,14 @@
     "tokenPlaceholder": "cfut_… or 40-char token",
     "requiredScopes": "Required scopes:",
     "createTokenAt": "Create one at",
-    "autoSetupExplain": "Auto-setup will: verify the token, pick the first account, find or create a tunnel named {tunnel}, fetch its JWT, and save everything to {file}.",
+    "autoSetupExplain": "Auto-setup verifies the token, picks the first account, finds or creates a tunnel named {tunnel}, fetches its access token and saves everything to {file}.",
     "subdomainPlaceholders": "Placeholders:",
     "subdomainStem": "= local domain without {loc}/{local}/{test}",
     "subdomainUser": "= OS username",
     "subdomainExample": "Example for {domain}:",
     "savePathBtn": "Save path",
     "saveTemplateBtn": "Save template",
-    "exposedSites": "Exposed sites",
+    "exposedSites": "Published sites",
     "exposedSitesHint": "Sites with Cloudflare Tunnel enabled in SiteEdit > Cloudflare tab",
     "noSitesExposed": "No sites are exposed yet. Open a site in the Sites page, Cloudflare tab, toggle \"Enable tunnel for this site\", pick a zone, enter a subdomain, Save, then click \"Sync all sites\" below.",
     "syncAllSites": "Sync all sites to Cloudflare ({n})",
@@ -1828,7 +1831,11 @@
     "pluginMissingDesc": "The tunnel and DNS records are managed by the Cloudflare plugin. Without it nothing on this page can be set up.",
     "syncedSites": "Synced {n} site to Cloudflare | Synced {n} sites to Cloudflare",
     "pluginMissingTitle": "The Cloudflare plugin is not installed",
-    "autoSetupDone": "Account: {account} · Tunnel: {tunnel}"
+    "autoSetupDone": "Account: {account} · Tunnel: {tunnel}",
+    "startNeedsSetup": "Finish step 1 (API token) and step 2 (cloudflared) first.",
+    "syncNeedsTunnel": "Sync needs a tunnel. Set it up in step 1 on the Setup tab.",
+    "dnsNeedsToken": "DNS records are loaded through the Cloudflare API. Paste the API token in step 1 first.",
+    "goToStep1": "Go to step 1"
   },
   "siteEdit": {
     "composeUp": "Start",

@@ -6,7 +6,7 @@
         <span class="version-count" v-if="versions.length">{{ $t('php.installedCount', { n: versions.length }, versions.length) }}</span>
       </div>
       <div class="header-actions">
-        <el-button size="small" @click="loadVersions" :loading="loading">{{ $t('common.refresh') }}</el-button>
+        <el-button size="small" @click="loadVersions" :loading="loading" :icon="Refresh">{{ $t('common.refresh') }}</el-button>
         <el-button size="small" type="primary" :icon="Plus" @click="addVersion">{{ $t('php.addVersion') }}</el-button>
       </div>
     </div>
@@ -43,7 +43,7 @@
             <el-tag v-if="isActive(ver)" type="success" size="small" effect="plain">{{ $t('php.default') }}</el-tag>
           </div>
           <div class="ver-full">{{ ver.version }}</div>
-          <div class="ver-path mono">{{ ver.path }}</div>
+          <div class="ver-path mono" :title="ver.directory ?? ver.path">{{ ver.directory ?? ver.path }}</div>
           <div class="ver-actions" v-if="!isActive(ver)">
             <el-button size="small" text @click.stop="setDefault(ver.version)">{{ $t('php.setDefault') }}</el-button>
           </div>
@@ -113,7 +113,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchPhpVersions } from '../../api/daemon'
 import type { PhpVersion } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
@@ -156,6 +156,10 @@ async function loadVersions() {
   loadError.value = ''
   try {
     versions.value = await fetchPhpVersions()
+    // Open the version new sites use, so extensions and php.ini are visible
+    // without first guessing that the card is clickable.
+    const initial = versions.value.find(isActive) ?? versions.value[0]
+    if (!selectedVersion.value && initial) selectVersion(initial)
   } catch (e) {
     loadError.value = t('php.daemonUnreachable', { err: errorMessage(e) })
   } finally { loading.value = false }
@@ -297,13 +301,8 @@ onMounted(() => { void loadVersions() })
 }
 
 .version-count {
-  font-size: 0.72rem;
-  font-weight: 600;
-  background: var(--wdc-accent-dim);
-  color: var(--wdc-accent);
-  padding: var(--wdc-space-0-5) var(--wdc-space-2);
-  border-radius: var(--wdc-radius);
-  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  color: var(--wdc-text-3);
 }
 
 .page-body { padding: 0 0 24px; }
