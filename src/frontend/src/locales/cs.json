@@ -1223,7 +1223,7 @@
       "empty": "Žádné databáze neodpovídají filtru.",
       "noTables": "žádné tabulky",
       "dbCount": "databází",
-      "tableCount": "{count} tabulek",
+      "tableCount": "{count} tabulka | {count} tabulky | {count} tabulek",
       "tableName": "Tabulka",
       "rows": "Řádky",
       "size": "Velikost",
@@ -1231,7 +1231,7 @@
       "comment": "Poznámka"
     },
     "browse": {
-      "totalRows": "{count} řádků",
+      "totalRows": "{count} řádek | {count} řádky | {count} řádků",
       "filterPlaceholder": "Výraz pro WHERE: id > 100 AND name LIKE 'foo%'",
       "applyFilter": "Použít",
       "filterHint": "SQL podmínka, vloží se za WHERE beze změny",
@@ -1280,7 +1280,10 @@
       "createNeedsRunning": "Nejdřív spusťte MySQL",
       "notRunningHint": "Spusťte ho tlačítkem níže. Pokud se nespustí, příčinu najdete v logu MySQL.",
       "startedButUnreachable": "služba hlásí spuštění, ale databáze zatím neodpovídá; zkuste za chvíli Obnovit"
-    }
+    },
+    "dbCountTag": "{n} databáze | {n} databáze | {n} databází",
+    "nameHint": "Písmena bez diakritiky, číslice a podtržítko, nejvýš 64 znaků.",
+    "nameInvalid": "Název může obsahovat jen písmena bez diakritiky, číslice a podtržítko."
   },
   "binaries": {
     "title": "Binárky",

@@ -5,7 +5,7 @@
       <div class="header-left">
         <h1 class="page-title">{{ $t('databases.title') }}</h1>
         <el-tag size="small" type="info" effect="plain" v-if="databases.length > 0">
-          {{ databases.length }} {{ $t('databases.tree.dbCount') }}
+          {{ $t('databases.dbCountTag', { n: databases.length }, databases.length) }}
         </el-tag>
       </div>
       <div class="header-actions">
@@ -130,7 +130,7 @@
               <h2 class="overview-title mono">{{ selectedDb }}</h2>
               <div class="overview-meta">
                 <el-tag size="small" effect="plain" type="info">
-                  {{ $t('databases.tree.tableCount', { count: (dbTables[selectedDb]?.length ?? 0) }) }}
+                  {{ $t('databases.tree.tableCount', { count: (dbTables[selectedDb]?.length ?? 0) }, dbTables[selectedDb]?.length ?? 0) }}
                 </el-tag>
                 <el-tag v-if="dbCharsets[selectedDb]" size="small" effect="plain">
                   {{ dbCharsets[selectedDb] }}
@@ -233,13 +233,18 @@
     <!-- Create dialog -->
     <el-dialog v-model="showCreateDialog" :title="$t('databases.newDatabase')" width="400px">
       <el-form label-position="top" size="small">
-        <el-form-item :label="$t('databases.nameLabel')" required>
+        <el-form-item
+          :label="$t('databases.nameLabel')"
+          required
+          :error="newDbName && !newDbNameValid ? $t('databases.nameInvalid') : ''"
+        >
           <el-input v-model="newDbName" :placeholder="$t('databases.namePlaceholder')" @keyup.enter="createDatabase" />
+          <div v-if="!newDbName || newDbNameValid" class="name-hint">{{ $t('databases.nameHint') }}</div>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showCreateDialog = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" :loading="creating" @click="createDatabase" :disabled="!newDbName.trim()">
+        <el-button type="primary" :loading="creating" @click="createDatabase" :disabled="!newDbNameValid">
           {{ $t('common.create') }}
         </el-button>
       </template>
@@ -635,20 +640,27 @@ watch(selectedTable, () => {
 })
 
 // ── Create / drop / import / export
+// Same rule as the daemon (IsValidDatabaseName), checked here so the user
+// gets a Czech hint before the request instead of an English 400.
+const newDbNameValid = computed(() => /^[A-Za-z0-9_]{1,64}$/.test(newDbName.value.trim()))
+
 async function createDatabase() {
-  if (!newDbName.value.trim()) return
+  if (!newDbNameValid.value) return
+  const name = newDbName.value.trim()
   creating.value = true
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/databases`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ name: newDbName.value }),
+      body: JSON.stringify({ name }),
     })
     if (!r.ok) throw await httpError(r)
-    ElMessage.success(t('databases.createdToast', { name: newDbName.value }))
+    ElMessage.success(t('databases.createdToast', { name }))
     newDbName.value = ''
     showCreateDialog.value = false
     await loadDatabases()
+    // Open the new database so the user sees where it went.
+    if (databases.value.some(d => d.name === name)) onTreeSelect({ db: name })
   } catch (e) {
     ElMessage.error(`${t('databases.createFailed')}: ${errorMessage(e)}`)
   } finally {
@@ -871,6 +883,7 @@ onMounted(() => { void loadDatabases() })
 
 .empty-title { font-size: 1rem; color: var(--wdc-text); margin: 0 0 6px; font-weight: 600; }
 .empty-hint { font-size: 0.85rem; color: var(--wdc-text-3); margin: 0; max-width: 480px; }
+.name-hint { font-size: 0.76rem; color: var(--wdc-text-3); margin-top: var(--wdc-space-1); line-height: 1.4; }
 
 .overview-header {
   display: flex;

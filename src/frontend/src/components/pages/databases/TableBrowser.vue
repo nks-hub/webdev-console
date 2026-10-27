@@ -7,7 +7,7 @@
           <span>{{ database }}.{{ table }}</span>
         </span>
         <el-tag size="small" type="info" effect="plain" v-if="totalRows != null">
-          {{ t('databases.browse.totalRows', { count: totalRows.toLocaleString() }) }}
+          {{ t('databases.browse.totalRows', { count: totalRows.toLocaleString() }, totalRows) }}
         </el-tag>
       </div>
       <div class="toolbar-right">

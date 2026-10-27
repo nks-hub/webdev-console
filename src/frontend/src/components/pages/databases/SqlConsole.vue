@@ -73,7 +73,7 @@
           <div class="result-meta">
             <span class="meta-stmt mono">{{ r.statementText }}</span>
             <span class="meta-stat">{{ t('databases.console.rowsCount', { n: r.rows.length }) }}</span>
-            <span class="meta-stat" v-if="r.rowsAffected > 0">{{ t('databases.console.affected', { count: r.rowsAffected }) }}</span>
+            <span class="meta-stat" v-if="r.rowsAffected > 0">{{ t('databases.console.affected', { count: r.rowsAffected }, r.rowsAffected) }}</span>
             <span class="meta-stat">{{ r.executionTimeMs }} ms</span>
           </div>
           <el-table
@@ -106,7 +106,7 @@
           </el-table>
           <div v-else class="result-affected">
             <el-icon><Check /></el-icon>
-            <span>{{ t('databases.console.affected', { count: r.rowsAffected }) }}</span>
+            <span>{{ t('databases.console.affected', { count: r.rowsAffected }, r.rowsAffected) }}</span>
           </div>
         </el-tab-pane>
       </el-tabs>
