@@ -79,7 +79,8 @@
 
     <!-- Visual analytics row — timeline + top tools (moved below tiles
          so primary KPIs are read first). -->
-    <div class="analytics-row">
+    <!-- Without calls the chart is an empty 240 px box above the empty state. -->
+    <div v-if="stats && stats.total > 0" class="analytics-row">
       <McpActivityTimeline class="analytics-timeline" />
       <McpTopToolsPanel
         class="analytics-toptools"
@@ -92,8 +93,8 @@
     <!-- Perf KPI strip — latency percentiles + throughput + error rate -->
     <div v-if="stats && stats.total > 0" class="perf-kpis">
       <div class="kpi" :title="t('mcpActivity.kpi.callsPerMinHint')">
-        <span class="kpi-num">{{ formatThroughput(stats.callsPerMinute).num }}</span>
-        <span class="kpi-unit">{{ formatThroughput(stats.callsPerMinute).unit }}</span>
+        <span class="kpi-num">{{ formatThroughput(stats.total / STATS_WINDOW_MINUTES).num }}</span>
+        <span class="kpi-unit">{{ formatThroughput(stats.total / STATS_WINDOW_MINUTES).unit }}</span>
         <span class="kpi-label">{{ t('mcpActivity.kpi.throughput') }}</span>
       </div>
       <div class="kpi">
@@ -112,7 +113,7 @@
         <span class="kpi-label">{{ t('mcpActivity.kpi.latencyP99') }}</span>
       </div>
       <div class="kpi" :class="{ warn: stats.errorRatePercent > 1, danger: stats.errorRatePercent > 5 }">
-        <span class="kpi-num">{{ stats.errorRatePercent.toFixed(1) }}</span>
+        <span class="kpi-num">{{ formatNumber(stats.errorRatePercent, 1) }}</span>
         <span class="kpi-unit">%</span>
         <span class="kpi-label">{{ t('mcpActivity.kpi.errorRate') }}</span>
       </div>
@@ -361,7 +362,16 @@ import {
   type McpToolCallStats,
 } from '../../api/daemon'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+// The stats cover the last 24 h. Throughput is worked out from the count:
+// the daemon's callsPerMinute is rounded to 0.01, which turned 8 calls a
+// day into 14.
+const STATS_WINDOW_MINUTES = 1440
+
+function formatNumber(n: number, digits: number): string {
+  return n.toLocaleString(locale.value, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+}
 
 const entries = ref<McpToolCallEntry[]>([])
 const totalCount = ref(0)
@@ -560,11 +570,11 @@ function onToolSelect(toolName: string): void {
 // doesn't show "0.0/min" when ~10 calls/day is plenty visible. Switches
 // to /h or /day when /min rounds toward zero.
 function formatThroughput(perMinute: number): { num: string; unit: string } {
-  if (perMinute >= 1) return { num: perMinute.toFixed(1), unit: t('mcpActivity.kpi.perMinute') }
+  if (perMinute >= 1) return { num: formatNumber(perMinute, 1), unit: t('mcpActivity.kpi.perMinute') }
   const perHour = perMinute * 60
-  if (perHour >= 1) return { num: perHour.toFixed(1), unit: t('mcpActivity.kpi.perHour') }
+  if (perHour >= 1) return { num: formatNumber(perHour, 1), unit: t('mcpActivity.kpi.perHour') }
   const perDay = perHour * 24
-  return { num: perDay.toFixed(0), unit: t('mcpActivity.kpi.perDay') }
+  return { num: formatNumber(perDay, 0), unit: t('mcpActivity.kpi.perDay') }
 }
 
 function setDangerFilter(level: 'read' | 'mutate' | 'destructive' | null): void {
@@ -620,7 +630,7 @@ async function refresh(): Promise<void> {
     const offset = (currentPage.value - 1) * pageSize.value
     const [list, s] = await Promise.all([
       fetchMcpToolCalls(pageSize.value, offset, dangerFilter.value, toolFilter.value || null, sessionFilter.value || null, searchQuery.value || null),
-      fetchMcpToolCallStats(1440),
+      fetchMcpToolCallStats(STATS_WINDOW_MINUTES),
     ])
     entries.value = list.entries
     totalCount.value = list.total
