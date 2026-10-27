@@ -107,7 +107,30 @@ const sentryEnvironment = (
   || process.env.SENTRY_ENVIRONMENT_DEFAULT
   || (app.isPackaged ? 'production' : 'development')
 )
-if (sentryDsn) {
+// Crash reports leave the machine only after the user opted in under
+// Settings → General → Privacy. The daemon stores that choice in
+// <data dir>/data/telemetry-consent.json (TelemetryConsent.cs). Read lazily:
+// the portable data dir is only known after the portable block below.
+let crashReportConsent: boolean | null = null
+function hasCrashReportConsent(): boolean {
+  if (crashReportConsent === null) {
+    try {
+      const file = join(process.env.WDC_DATA_DIR || join(homedir(), '.wdc'), 'data', 'telemetry-consent.json')
+      const consent = JSON.parse(readFileSync(file, 'utf-8')) as { enabled?: unknown; crashReports?: unknown }
+      crashReportConsent = consent.enabled === true && consent.crashReports === true
+    } catch {
+      crashReportConsent = false
+    }
+  }
+  return crashReportConsent
+}
+
+// Started at most once, before app 'ready' (the SDK registers its IPC
+// scheme then), so turning crash reports on applies from the next launch.
+let sentryStarted = false
+function startSentryIfConsented(): void {
+  if (sentryStarted || !sentryDsn || !hasCrashReportConsent()) return
+  sentryStarted = true
   Sentry.init({
     dsn: sentryDsn,
     // Release tag populated from CFBundleShortVersionString (macOS) /
@@ -120,9 +143,13 @@ if (sentryDsn) {
     // Strip anything identifying. Runtime env can still override per-call
     // via Sentry.setUser if the user explicitly opts in.
     beforeSend(event) {
+      if (!hasCrashReportConsent()) return null
       if (event.user) event.user = { id: undefined, email: undefined, username: undefined, ip_address: undefined }
       if (event.server_name) event.server_name = ''
       return event
+    },
+    beforeSendTransaction(event) {
+      return hasCrashReportConsent() ? event : null
     },
     // Electron-specific extras: bundle native crash reports (minidump)
     // when the main process is killed by the OS, and preload renderer
@@ -146,6 +173,8 @@ if (sentryDsn) {
   app.on('window-all-closed', () => Sentry.addBreadcrumb({ category: 'app', message: 'window-all-closed', level: 'info' }))
 }
 
+const startedAtLogin = process.argv.includes('--hidden')
+  || (process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAtLogin)
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let daemon: ChildProcess | null = null
@@ -244,6 +273,8 @@ if (isPortable) {
   console.log('[portable]   electron userData:', portableDir)
   console.log('[portable]   daemon WDC_DATA_DIR:', portableWdcDir)
 }
+
+startSentryIfConsented()
 
 // OS notification identity (Windows AppUserModelID, app name for macOS /
 // libnotify). Runs after the portable block because it pins the userData
@@ -595,7 +626,7 @@ async function spawnDaemonInner() {
   // user env always wins; only set the fallback from the Vite-baked CI
   // secret when nothing else is present. Backend gets its own DSN because
   // it's a separate Sentry project from the Electron one (27 vs 28).
-  if (!daemonEnv.SENTRY_DSN && daemonSentryDsn) {
+  if (!daemonEnv.SENTRY_DSN && daemonSentryDsn && hasCrashReportConsent()) {
     daemonEnv.SENTRY_DSN = daemonSentryDsn
   }
   if (!daemonEnv.SENTRY_ENVIRONMENT) {
@@ -898,7 +929,10 @@ async function createWindow() {
     }
   })
 
-  win.once('ready-to-show', () => win?.show())
+  // Launched by the login item: start in the tray, like after closing.
+  win.once('ready-to-show', () => {
+    if (!startedAtLogin) win?.show()
+  })
 
   // Minimize to tray on close instead of quitting
   win.on('close', (e) => {
@@ -1825,6 +1859,9 @@ app.on('second-instance', (_evt, argv) => {
   if (deepLink) forwardSsoCallback(deepLink)
   if (win) {
     if (win.isMinimized()) win.restore()
+    // A second launch while the window sits in the tray (after closing it,
+    // or after a login-item start) should bring it back.
+    win.show()
     win.focus()
   }
 })
@@ -2147,6 +2184,36 @@ ipcMain.handle('app-get-version', async () => {
     gitSha,
     full: gitSha ? `${version}-${gitSha}` : version,
   }
+})
+
+// Renderer Sentry rides on the main-process client, so it starts only when
+// main did. The Settings privacy switch reports changes here: switching off
+// stops reporting at once, switching on applies from the next launch.
+ipcMain.handle('crash-reports-state', () => ({ active: sentryStarted, consent: hasCrashReportConsent() }))
+ipcMain.handle('telemetry-consent-changed', async () => {
+  crashReportConsent = null
+  if (sentryStarted && !hasCrashReportConsent()) {
+    await Sentry.close().catch(() => false)
+    sentryStarted = false
+  }
+  return { active: sentryStarted, consent: hasCrashReportConsent() }
+})
+
+// "Run at startup" is the OS login item itself, not a stored setting.
+// Portable copies move with their folder and dev runs launch electron.exe,
+// so neither registers one; Linux has no login-item API in Electron.
+const LOGIN_ITEM_ARGS = ['--hidden']
+const autostartSupported = app.isPackaged && !isPortable && process.platform !== 'linux'
+function autostartState() {
+  return {
+    supported: autostartSupported,
+    enabled: autostartSupported && app.getLoginItemSettings({ args: LOGIN_ITEM_ARGS }).openAtLogin,
+  }
+}
+ipcMain.handle('autostart-get', () => autostartState())
+ipcMain.handle('autostart-set', (_evt, enabled: unknown) => {
+  if (autostartSupported) app.setLoginItemSettings({ openAtLogin: enabled === true, args: LOGIN_ITEM_ARGS })
+  return autostartState()
 })
 
 app.whenReady().then(async () => {

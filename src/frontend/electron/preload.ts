@@ -145,6 +145,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: (): Promise<{ version: string; gitSha: string; full: string }> =>
     ipcRenderer.invoke('app-get-version'),
 
+  // OS login item ("Run at startup"). supported=false in portable/dev builds.
+  autostartGet: (): Promise<{ supported: boolean; enabled: boolean }> =>
+    ipcRenderer.invoke('autostart-get'),
+  autostartSet: (enabled: boolean): Promise<{ supported: boolean; enabled: boolean }> =>
+    ipcRenderer.invoke('autostart-set', enabled),
+
+  // Crash-report consent: whether main started Sentry, and a nudge after the
+  // Settings privacy switch wrote a new consent so main re-reads it.
+  crashReportsState: (): Promise<{ active: boolean; consent: boolean }> =>
+    ipcRenderer.invoke('crash-reports-state'),
+  telemetryConsentChanged: (): Promise<{ active: boolean; consent: boolean }> =>
+    ipcRenderer.invoke('telemetry-consent-changed'),
+
   // Self-elevation: kill the running daemon and re-spawn it under UAC.
   // Wired to the "Restart as admin" button shown when an admin-required
   // daemon endpoint (hosts apply, hosts restore, etc.) returns 403.

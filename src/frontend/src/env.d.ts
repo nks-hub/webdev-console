@@ -90,5 +90,12 @@ interface Window {
     getAppVersion: () => Promise<{ version: string; gitSha: string; full: string }>
     /** Bundled MCP server location + whether the daemon wrote nks-wdc-mcp.port. */
     getMcpServerInfo?: () => Promise<McpServerInfo>
+    /** OS login item ("Run at startup"); supported=false in portable/dev builds. */
+    autostartGet?: () => Promise<{ supported: boolean; enabled: boolean }>
+    autostartSet?: (enabled: boolean) => Promise<{ supported: boolean; enabled: boolean }>
+    /** Whether main started Sentry (only with crash-report consent). */
+    crashReportsState?: () => Promise<{ active: boolean; consent: boolean }>
+    /** Tell main the telemetry consent file changed. */
+    telemetryConsentChanged?: () => Promise<{ active: boolean; consent: boolean }>
   }
 }

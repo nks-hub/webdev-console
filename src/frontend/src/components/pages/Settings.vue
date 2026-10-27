@@ -21,6 +21,7 @@
             :theme-mode="themeStore.mode"
             :is-advanced="uiModeStore.isAdvanced"
             :run-on-startup="runOnStartup"
+            :run-on-startup-supported="runOnStartupSupported"
             :default-php="defaultPhp"
             :php-versions="phpVersions"
             :flushing-dns="flushingDns"
@@ -31,10 +32,10 @@
             @update:locale="onLocaleChange"
             @update:theme-mode="themeStore.setMode"
             @update:ui-mode="uiModeStore.setUiMode"
-            @update:run-on-startup="runOnStartup = $event"
-            @update:default-php="defaultPhp = $event"
-            @update:telemetry-enabled="telemetryEnabled = $event"
-            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @update:run-on-startup="setRunOnStartup"
+            @update:default-php="saveDefaultPhp"
+            @update:telemetry-enabled="setTelemetryConsent({ enabled: $event })"
+            @update:telemetry-crash-reports="setTelemetryConsent({ crashReports: $event })"
             @flush-dns="flushDns"
             @discover-mamp="discoverMamp"
           />
@@ -221,11 +222,6 @@
           </div>
         </SettingsPanel>
 
-        <div v-if="isDirty" class="settings-footer simple-settings-footer">
-          <span class="footer-unsaved">{{ $t('settings.unsaved.label', changedCount) }}</span>
-          <el-button type="primary" size="small" :loading="saving" @click="save">{{ $t('settings.unsaved.save') }}</el-button>
-          <el-button size="small" @click="discardChanges">{{ $t('settings.unsaved.discard') }}</el-button>
-        </div>
       </div>
 
       <SettingsShell
@@ -328,6 +324,7 @@
             :theme-mode="themeStore.mode"
             :is-advanced="uiModeStore.isAdvanced"
             :run-on-startup="runOnStartup"
+            :run-on-startup-supported="runOnStartupSupported"
             :default-php="defaultPhp"
             :php-versions="phpVersions"
             :flushing-dns="flushingDns"
@@ -337,10 +334,10 @@
             @update:locale="onLocaleChange"
             @update:theme-mode="themeStore.setMode"
             @update:ui-mode="uiModeStore.setUiMode"
-            @update:run-on-startup="runOnStartup = $event"
-            @update:default-php="defaultPhp = $event"
-            @update:telemetry-enabled="telemetryEnabled = $event"
-            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @update:run-on-startup="setRunOnStartup"
+            @update:default-php="saveDefaultPhp"
+            @update:telemetry-enabled="setTelemetryConsent({ enabled: $event })"
+            @update:telemetry-crash-reports="setTelemetryConsent({ crashReports: $event })"
             @flush-dns="flushDns"
             @discover-mamp="discoverMamp"
           />
@@ -1464,8 +1461,8 @@ async function loadDeployFlipReadiness(): Promise<void> {
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
-const defaultPhp = ref('8.4')
-const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
+const defaultPhp = ref('')
+const phpVersions = ref<string[]>([])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
 
@@ -1893,11 +1890,90 @@ async function discoverMamp() {
   }
 }
 
+// "Výchozí verze PHP" offers installed versions only. A stored version that
+// is no longer installed is not shown; the effective default then is the
+// active version (what the new-site dialog falls back to), else the first.
 async function loadPhpVersions() {
   try {
-    const data = await fetchPhpVersions()
-    phpVersions.value = data.map(v => v.majorMinor || v.version)
-  } catch { /* keep defaults */ }
+    const [installed, settings] = await Promise.all([fetchPhpVersions(), fetchSettings()])
+    phpVersions.value = installed.map(v => v.majorMinor || v.version)
+    const stored = settings['general.defaultPhp'] ?? ''
+    const active = installed.find(v => v.isActive)
+    defaultPhp.value = phpVersions.value.includes(stored)
+      ? stored
+      : (active ? (active.majorMinor || active.version) : (phpVersions.value[0] ?? ''))
+  } catch {
+    phpVersions.value = []
+    defaultPhp.value = ''
+  }
+}
+
+async function saveDefaultPhp(version: string) {
+  const previous = defaultPhp.value
+  defaultPhp.value = version
+  try {
+    await saveSettings({ 'general.defaultPhp': version })
+    ElMessage.success(t('settingsToast.settingsSaved'))
+  } catch (e) {
+    defaultPhp.value = previous
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+  }
+}
+
+// "Spustit při startu" is the OS login item, read from and written to
+// Electron directly — a value in the settings table started nothing.
+const runOnStartupSupported = ref(false)
+async function loadRunOnStartup() {
+  const state = await window.electronAPI?.autostartGet?.().catch(() => null)
+  runOnStartupSupported.value = state?.supported ?? false
+  runOnStartup.value = state?.enabled ?? false
+}
+
+async function setRunOnStartup(enabled: boolean) {
+  const api = window.electronAPI
+  if (!api?.autostartSet) return
+  try {
+    const state = await api.autostartSet(enabled)
+    runOnStartup.value = state.enabled
+    if (state.enabled === enabled) ElMessage.success(t('settingsToast.settingsSaved'))
+    else ElMessage.error(t('settingsToast.autostartFailed'))
+  } catch (e) {
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+  }
+}
+
+// Telemetry consent lives in the daemon's telemetry-consent.json, the file
+// the main process checks before sending any crash report.
+async function loadTelemetryConsent() {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/telemetry/consent`, { headers: authHeaders() })
+    if (!r.ok) return
+    const consent = await r.json() as { enabled?: boolean; crashReports?: boolean }
+    telemetryEnabled.value = consent.enabled === true
+    telemetryCrashReports.value = consent.crashReports === true
+  } catch { /* daemon unreachable — switches stay off */ }
+}
+
+async function setTelemetryConsent(patch: { enabled?: boolean; crashReports?: boolean }) {
+  const enabled = patch.enabled ?? telemetryEnabled.value
+  const crashReports = patch.crashReports ?? telemetryCrashReports.value
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/telemetry/consent`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ enabled, crashReports, usageMetrics: false }),
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    const consent = await r.json() as { enabled?: boolean; crashReports?: boolean }
+    telemetryEnabled.value = consent.enabled === true
+    telemetryCrashReports.value = consent.crashReports === true
+    const state = await window.electronAPI?.telemetryConsentChanged?.().catch(() => null)
+    ElMessage.success(state && state.consent && !state.active
+      ? t('settingsToast.crashReportsAfterRestart')
+      : t('settingsToast.settingsSaved'))
+  } catch (e) {
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+  }
 }
 
 async function loadMcpKindOptions(): Promise<void> {
@@ -1940,7 +2016,6 @@ function applyValues(data: Record<string, string>): void {
   mcpToolCallRetentionDays.value = Math.max(1, intOr(data['mcp.toolCallRetentionDays'], 30))
   deployEnabled.value = boolDefaultOn(data['deploy.enabled'])
   deployUseLegacyHostHandlers.value = boolDefaultOn(data['deploy.useLegacyHostHandlers'])
-  runOnStartup.value = data['general.runOnStartup'] === 'true'
   paths.apache = data['paths.apache'] ?? ''
   paths.mysql = data['paths.mysql'] ?? ''
   paths.php = data['paths.php'] ?? ''
@@ -1949,8 +2024,6 @@ function applyValues(data: Record<string, string>): void {
   paths.hostsFile = data['paths.hostsFile'] ?? ''
   catalogUrl.value = data['daemon.catalogUrl'] ?? ''
   pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
-  telemetryEnabled.value = data['telemetry.enabled'] === 'true'
-  telemetryCrashReports.value = data['telemetry.crashReports'] === 'true'
   backupDir.value = data['backup.dir'] ?? ''
   backupScheduleHours.value = intOr(data['backup.scheduleHours'], 24)
   deviceName.value = data['sync.deviceName'] ?? ''
@@ -1974,7 +2047,6 @@ function formValues(): Record<string, string> {
     'mcp.toolCallRetentionDays': String(mcpToolCallRetentionDays.value),
     'deploy.enabled': String(deployEnabled.value),
     'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
-    'general.runOnStartup': String(runOnStartup.value),
     'paths.apache': paths.apache,
     'paths.mysql': paths.mysql,
     'paths.php': paths.php,
@@ -1983,8 +2055,6 @@ function formValues(): Record<string, string> {
     'paths.hostsFile': paths.hostsFile,
     'daemon.catalogUrl': catalogUrl.value,
     'plugins.autoSyncEnabled': String(pluginAutoSync.value),
-    'telemetry.enabled': String(telemetryEnabled.value),
-    'telemetry.crashReports': String(telemetryCrashReports.value),
     'backup.dir': backupDir.value,
     'backup.scheduleHours': String(backupScheduleHours.value),
     'sync.deviceName': deviceName.value,
@@ -2791,6 +2861,8 @@ onMounted(async () => {
   void loadSettings()
   void loadDatabases()
   void loadPhpVersions()
+  void loadRunOnStartup()
+  void loadTelemetryConsent()
   void loadBackups()
   void loadDeviceId()
   void loadPluginCatalogStatus()
@@ -2927,11 +2999,6 @@ async function save() {
 .simple-runtime-grid {
   display: grid;
   gap: var(--wdc-space-1);
-}
-
-.simple-settings-footer {
-  grid-column: 1 / -1;
-  margin-top: 0 !important;
 }
 
 .settings-tabs {

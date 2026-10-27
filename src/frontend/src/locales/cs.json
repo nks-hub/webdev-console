@@ -2312,7 +2312,9 @@
     "syncImported": "Importováno {count} sync nastavení z {file}",
     "importFailed": "Import selhal: {err}",
     "settingsSaved": "Nastavení uloženo",
-    "failedToSave": "Uložení selhalo: {err}"
+    "failedToSave": "Uložení selhalo: {err}",
+    "autostartFailed": "Systém automatické spuštění nepovolil.",
+    "crashReportsAfterRestart": "Uloženo. Hlášení o pádech se začnou odesílat po restartu aplikace."
   },
   "settings": {
     "title": "Nastavení",
@@ -2501,10 +2503,10 @@
       "sectionPrivacy": "Soukromí",
       "language": "Jazyk",
       "runOnStartup": "Spustit při startu",
-      "runOnStartupHint": "Spustí NKS WDC tiše po přihlášení do OS.",
+      "runOnStartupHint": "Po přihlášení do systému spustí NKS WebDev Console na pozadí, s ikonou v oznamovací oblasti.",
       "autoStartServices": "Automaticky spustit služby",
       "defaultPhpVersion": "Výchozí verze PHP",
-      "defaultPhpHint": "Použije se při vytvoření nového webu bez explicitní verze.",
+      "defaultPhpHint": "Předvyplní se při zakládání nového webu. Nabízí jen nainstalované verze.",
       "dnsCache": "DNS cache",
       "dnsCacheHint": "Vyčistí cache OS resolveru, aby čerstvě přidaná .loc doména hned rezolvovala.",
       "flushDnsCache": "Vyprázdnit DNS cache",
@@ -2512,10 +2514,11 @@
       "mampMigrate": "Importovat z MAMP",
       "mampHint": "Najde instalaci MAMP PRO na tomto počítači a naimportuje její vhosty jako weby ve WDC.",
       "telemetry": "Telemetrie",
-      "telemetryHint": "Odesílá anonymní statistiky používání pro zlepšení NKS WDC. Žádná osobní data, žádné názvy webů, žádný kód — jen počty využití jednotlivých funkcí.",
+      "telemetryHint": "Povolí odesílání diagnostických údajů vývojářům aplikace. Dokud je vypnuto, aplikace nic neodesílá.",
       "crashReports": "Hlášení o pádech",
-      "crashReportsHint": "Odesílá stack trace při pádu aplikace.",
-      "selectPlaceholder": "Vyber"
+      "crashReportsHint": "Při chybě nebo pádu aplikace odešle technický popis: výpis zásobníku, verzi aplikace a systému a poslední kroky v aplikaci. Hesla, tokeny ani obsah souborů se neodesílají. Zapnutí platí od příštího spuštění, vypnutí hned.",
+      "selectPlaceholder": "Vyber",
+      "noPhpInstalled": "Žádné PHP není nainstalované"
     },
     "ports": {
       "description": "Výchozí porty služeb. Po změně restartuj služby.",

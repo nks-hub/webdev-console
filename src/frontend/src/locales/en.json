@@ -2312,7 +2312,9 @@
     "syncImported": "Imported {count} sync settings from {file}",
     "importFailed": "Import failed: {err}",
     "settingsSaved": "Settings saved",
-    "failedToSave": "Failed to save: {err}"
+    "failedToSave": "Failed to save: {err}",
+    "autostartFailed": "The system did not allow starting at sign-in.",
+    "crashReportsAfterRestart": "Saved. Crash reports start being sent after the app restarts."
   },
   "settings": {
     "title": "Settings",
@@ -2501,10 +2503,10 @@
       "sectionPrivacy": "Privacy",
       "language": "Language",
       "runOnStartup": "Run on startup",
-      "runOnStartupHint": "Launches NKS WDC silently after you sign in to your OS.",
+      "runOnStartupHint": "Starts NKS WebDev Console in the background after you sign in to the system, with an icon in the notification area.",
       "autoStartServices": "Auto-start services",
       "defaultPhpVersion": "Default PHP version",
-      "defaultPhpHint": "Used when creating a new site without an explicit version.",
+      "defaultPhpHint": "Preselected when you create a new site. Lists installed versions only.",
       "dnsCache": "DNS Cache",
       "dnsCacheHint": "Clears the OS resolver cache so a freshly added .loc domain resolves immediately.",
       "flushDnsCache": "Flush DNS Cache",
@@ -2512,10 +2514,11 @@
       "mampMigrate": "Migrate MAMP",
       "mampHint": "Scan for MAMP PRO installation on this machine and import its vhosts as WDC sites.",
       "telemetry": "Telemetry",
-      "telemetryHint": "Send anonymous usage statistics to help improve NKS WDC. No personal data, no site names, no code — just feature usage counts.",
+      "telemetryHint": "Allows sending diagnostic data to the app's developers. While it is off, the app sends nothing.",
       "crashReports": "Crash reports",
-      "crashReportsHint": "Send stack traces when the app crashes.",
-      "selectPlaceholder": "Select"
+      "crashReportsHint": "When the app hits an error or crashes, sends a technical report: the stack trace, app and OS versions and the last steps in the app. Passwords, tokens and file contents are never sent. Turning it on applies from the next launch, turning it off applies at once.",
+      "selectPlaceholder": "Select",
+      "noPhpInstalled": "No PHP installed"
     },
     "ports": {
       "description": "Configure default service ports. Restart services after changing.",
