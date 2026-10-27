@@ -492,10 +492,136 @@
              immediately; the daemon refuses them from the MCP token. -->
         <section v-show="activeTab === 'mcp'" class="shell-section">
           <div class="tab-content">
-            <p v-if="!mcpEnabled" class="tab-desc">
-              {{ $t('mcpCapabilities.mcpOff') }}
-              <el-button size="small" text @click="activeTab = 'advanced'">{{ $t('mcpCapabilities.openAdvanced') }}</el-button>
-            </p>
+            <!-- MCP switch and its options live with the capability toggles
+                 and, like them, save on change. Default OFF: hides the AI
+                 confirmation banner and the MCP sidebar entry. -->
+            <div class="settings-section" id="mcp-section">
+              <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
+              <p class="hint">
+                {{ $t('settings.mcp.description') }}
+                <strong>{{ $t('settings.mcp.warning') }}</strong>
+              </p>
+              <el-form label-position="left" label-width="320px" size="small">
+                <el-form-item :label="$t('settings.mcp.enableLabel')">
+                  <el-switch :model-value="mcpEnabled" @update:model-value="setMcpEnabled" />
+                  <!-- Copy-paste setup for Claude Code / Desktop / Cursor
+                       lives on the MCP page's "Connect an AI client" card. -->
+                  <el-button
+                    link
+                    type="primary"
+                    class="mcp-connect-link"
+                    data-testid="settings-mcp-connect-link"
+                    @click="$router.push('/mcp/activity')"
+                  >
+                    {{ $t('mcpConnect.openFromSettings') }} →
+                  </el-button>
+                </el-form-item>
+                <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
+                     mode where any regex-valid kind passes). Turn ON to refuse
+                     any kind not registered via IDestructiveOperationKinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
+                  <el-switch :model-value="mcpStrictKinds" @update:model-value="setMcpStrictKinds" />
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.strictKindsHint') }}</div>
+                </el-form-item>
+                <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
+                     separated list (e.g. "restore,cancel") of kind ids
+                     for which the validator skips grant auto-approval.
+                     Operator's "ring-fence the riskiest ops" knob: even
+                     wildcard always-grants must yield to the GUI banner
+                     for these kinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
+                  <!-- Phase 7.5+++ — multi-select over registered kinds.
+                       Falls back to a free-text input only if the kinds
+                       endpoint hasn't responded yet (or returns empty),
+                       so the setting is still editable without the
+                       registry. The store/save format stays a comma-
+                       separated string (back-compat with backend). -->
+                  <el-select
+                    v-if="mcpKindOptions.length > 0"
+                    v-model="mcpAlwaysConfirmKindsArr"
+                    multiple
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    @change="saveAlwaysConfirmKinds"
+                    :placeholder="$t('settings.mcp.alwaysConfirmKindsPlaceholder')"
+                    style="max-width: 480px; width: 100%"
+                  >
+                    <el-option
+                      v-for="opt in mcpKindOptions"
+                      :key="opt.id"
+                      :label="humanKindLabel(opt)"
+                      :value="opt.id"
+                    >
+                      <span>{{ humanKindLabel(opt) }}</span>
+                      <span class="muted" style="margin-left: var(--wdc-space-2); font-size: 11px">
+                        {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
+                      </span>
+                    </el-option>
+                  </el-select>
+                  <el-input
+                    v-else
+                    v-model="mcpAlwaysConfirmKinds"
+                    placeholder="restore,cancel"
+                    @change="saveAlwaysConfirmKinds"
+                    style="max-width: 320px"
+                  />
+                  <!-- Phase 7.5+++ — one-click presets. "Lock all destructive"
+                       fills the picker with every kind tagged Destructive
+                       (restore, test_hook, settings_write, plus any plugin-
+                       contributed dangerous kinds). "Clear" resets. -->
+                  <div v-if="mcpKindOptions.length > 0" style="margin-top: var(--wdc-space-1-5)">
+                    <el-button
+                      size="small"
+                      :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
+                      @click="lockAllDestructive"
+                    >
+                      <el-icon><Lock /></el-icon>
+                      <span>{{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}</span>
+                    </el-button>
+                    <el-button
+                      size="small"
+                      plain
+                      :disabled="mcpAlwaysConfirmKindsArr.length === 0"
+                      @click="clearAlwaysConfirm"
+                    >
+                      {{ $t('settings.mcp.clearAlwaysConfirm') }}
+                    </el-button>
+                  </div>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
+                </el-form-item>
+                <!-- Phase 7.5+++ — operator-tunable janitor retention.
+                     Defaults match GrantSweeperService.Default* (1d/30d).
+                     Setting either to 0 disables that branch (keep all). -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
+                  <el-input-number v-model="mcpExpiredRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px"
+                    @change="(v: number | undefined) => saveMcpNumber('mcp.grant_expired_retention_days', v)" />
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
+                </el-form-item>
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
+                  <el-input-number v-model="mcpRevokedRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px"
+                    @change="(v: number | undefined) => saveMcpNumber('mcp.grant_revoked_retention_days', v)" />
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
+                </el-form-item>
+                <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
+                     hourly McpToolCallsSweeperService. Bumping this
+                     keeps history for forensics; lowering reclaims disk
+                     when traffic is heavy. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
+                  <el-input-number v-model="mcpToolCallRetentionDays"
+                    :min="1" :max="365" controls-position="right" style="width: 120px"
+                    @change="(v: number | undefined) => saveMcpNumber('mcp.toolCallRetentionDays', v)" />
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
+                </el-form-item>
+              </el-form>
+            </div>
+
+            <p v-if="!mcpEnabled" class="tab-desc">{{ $t('mcpCapabilities.mcpOff') }}</p>
             <McpCapabilitiesSettings v-if="activeTab === 'mcp'" />
           </div>
         </section>
@@ -639,131 +765,6 @@
                 </div>
               </el-collapse-item>
             </el-collapse>
-
-            <!-- Phase 6.23 — MCP integration toggle. Default OFF: hides
-                 the AI agent confirmation banner + MCP Intents sidebar
-                 entry + makes the daemon's /api/mcp/intents endpoints
-                 return 404. Operators not running an AI client see no
-                 trace of the subsystem. -->
-            <div class="settings-section" id="mcp-section" style="margin-top: var(--wdc-space-4)">
-              <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
-              <p class="hint">
-                {{ $t('settings.mcp.description') }}
-                <strong>{{ $t('settings.mcp.warning') }}</strong>
-              </p>
-              <el-form label-position="left" label-width="320px" size="small">
-                <el-form-item :label="$t('settings.mcp.enableLabel')">
-                  <el-switch v-model="mcpEnabled" />
-                  <!-- Copy-paste setup for Claude Code / Desktop / Cursor
-                       lives on the MCP page's "Connect an AI client" card. -->
-                  <el-button
-                    link
-                    type="primary"
-                    class="mcp-connect-link"
-                    data-testid="settings-mcp-connect-link"
-                    @click="$router.push('/mcp/activity')"
-                  >
-                    {{ $t('mcpConnect.openFromSettings') }} →
-                  </el-button>
-                </el-form-item>
-                <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
-                     mode where any regex-valid kind passes). Turn ON to refuse
-                     any kind not registered via IDestructiveOperationKinds. -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
-                  <el-switch v-model="mcpStrictKinds" />
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.strictKindsHint') }}</div>
-                </el-form-item>
-                <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
-                     separated list (e.g. "restore,cancel") of kind ids
-                     for which the validator skips grant auto-approval.
-                     Operator's "ring-fence the riskiest ops" knob: even
-                     wildcard always-grants must yield to the GUI banner
-                     for these kinds. -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
-                  <!-- Phase 7.5+++ — multi-select over registered kinds.
-                       Falls back to a free-text input only if the kinds
-                       endpoint hasn't responded yet (or returns empty),
-                       so the setting is still editable without the
-                       registry. The store/save format stays a comma-
-                       separated string (back-compat with backend). -->
-                  <el-select
-                    v-if="mcpKindOptions.length > 0"
-                    v-model="mcpAlwaysConfirmKindsArr"
-                    multiple
-                    filterable
-                    collapse-tags
-                    collapse-tags-tooltip
-                    :placeholder="$t('settings.mcp.alwaysConfirmKindsPlaceholder')"
-                    style="max-width: 480px; width: 100%"
-                  >
-                    <el-option
-                      v-for="opt in mcpKindOptions"
-                      :key="opt.id"
-                      :label="humanKindLabel(opt)"
-                      :value="opt.id"
-                    >
-                      <span>{{ humanKindLabel(opt) }}</span>
-                      <span class="muted" style="margin-left: var(--wdc-space-2); font-size: 11px">
-                        {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
-                      </span>
-                    </el-option>
-                  </el-select>
-                  <el-input
-                    v-else
-                    v-model="mcpAlwaysConfirmKinds"
-                    placeholder="restore,cancel"
-                    style="max-width: 320px"
-                  />
-                  <!-- Phase 7.5+++ — one-click presets. "Lock all destructive"
-                       fills the picker with every kind tagged Destructive
-                       (restore, test_hook, settings_write, plus any plugin-
-                       contributed dangerous kinds). "Clear" resets. -->
-                  <div v-if="mcpKindOptions.length > 0" style="margin-top: var(--wdc-space-1-5)">
-                    <el-button
-                      size="small"
-                      :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
-                      @click="lockAllDestructive"
-                    >
-                      🔒 {{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}
-                    </el-button>
-                    <el-button
-                      size="small"
-                      plain
-                      :disabled="mcpAlwaysConfirmKindsArr.length === 0"
-                      @click="clearAlwaysConfirm"
-                    >
-                      {{ $t('settings.mcp.clearAlwaysConfirm') }}
-                    </el-button>
-                  </div>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
-                </el-form-item>
-                <!-- Phase 7.5+++ — operator-tunable janitor retention.
-                     Defaults match GrantSweeperService.Default* (1d/30d).
-                     Setting either to 0 disables that branch (keep all). -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
-                  <el-input-number v-model="mcpExpiredRetentionDays"
-                    :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
-                </el-form-item>
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
-                  <el-input-number v-model="mcpRevokedRetentionDays"
-                    :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
-                </el-form-item>
-                <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
-                     hourly McpToolCallsSweeperService. Bumping this
-                     keeps history for forensics; lowering reclaims disk
-                     when traffic is heavy. -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
-                  <el-input-number v-model="mcpToolCallRetentionDays"
-                    :min="1" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
-                </el-form-item>
-              </el-form>
-            </div>
 
             <!-- Phase 7.1a — deploy subsystem toggle. Default ON since
                  most users install WDC FOR site management with deploy.
@@ -1183,7 +1184,7 @@ import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.v
 import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
 import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell, Lock } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -1294,12 +1295,14 @@ watch(() => uiModeStore.isSimple, (simple) => {
 // scroll attribute lets us jump to a specific anchor.
 const route = useRoute()
 function applyDeepLink(): void {
-  const tabParam = typeof route.query.tab === 'string' ? route.query.tab : ''
+  const scrollTarget = typeof route.query.scroll === 'string' ? route.query.scroll : ''
+  const tabParam = scrollTarget === 'mcp-section'
+    ? 'mcp'
+    : (typeof route.query.tab === 'string' ? route.query.tab : '')
   if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
     if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) return
     activeTab.value = tabParam
   }
-  const scrollTarget = typeof route.query.scroll === 'string' ? route.query.scroll : ''
   if (scrollTarget) {
     // Defer to next tick so the tab content is in the DOM before we
     // scroll to its anchor.
@@ -1380,6 +1383,7 @@ function lockAllDestructive(): void {
   // additions (e.g. plugin-specific kinds) aren't dropped.
   const merged = new Set([...mcpAlwaysConfirmKindsArr.value, ...destructiveKindIds.value])
   mcpAlwaysConfirmKindsArr.value = Array.from(merged)
+  saveAlwaysConfirmKinds()
 }
 
 // Phase 7.5+++ — operator-locale label for the kind. Shared lookup
@@ -1394,6 +1398,47 @@ function humanKindLabel(opt: { id?: string; label?: string }): string {
 
 function clearAlwaysConfirm(): void {
   mcpAlwaysConfirmKindsArr.value = []
+  saveAlwaysConfirmKinds()
+}
+
+// MCP options save on change, like the capability toggles beside them.
+async function saveMcpSetting(patch: Record<string, string>): Promise<boolean> {
+  try {
+    await saveSettings(patch)
+    ElMessage.success(t('settingsToast.settingsSaved'))
+    return true
+  } catch (e) {
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+    return false
+  }
+}
+
+async function setMcpEnabled(enabled: boolean) {
+  if (enabled) {
+    try {
+      await ElMessageBox.confirm(t('settings.mcp.enableConfirm'), t('settings.mcp.enableConfirmTitle'), {
+        type: 'warning',
+        confirmButtonText: t('settings.mcp.enableConfirmButton'),
+        cancelButtonText: t('common.cancel'),
+      })
+    } catch { return }
+  }
+  if (await saveMcpSetting({ 'mcp.enabled': String(enabled) })) {
+    mcpEnabled.value = enabled
+    if (enabled) void loadMcpKindOptions()
+  }
+}
+
+async function setMcpStrictKinds(strict: boolean) {
+  if (await saveMcpSetting({ 'mcp.strict_kinds': String(strict) })) mcpStrictKinds.value = strict
+}
+
+function saveAlwaysConfirmKinds(): void {
+  void saveMcpSetting({ 'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value })
+}
+
+function saveMcpNumber(key: string, value: number | undefined): void {
+  if (typeof value === 'number' && Number.isFinite(value)) void saveMcpSetting({ [key]: String(value) })
 }
 // Phase 7.5+++ — janitor retention windows. Defaults match
 // GrantSweeperService.Default* constants (1 day, 30 days). Setting
@@ -2037,12 +2082,6 @@ function formValues(): Record<string, string> {
     'ports.mailpitSmtp': String(ports.mailpitSmtp),
     'ports.mailpitHttp': String(ports.mailpitHttp),
     'ports.phpFpmBase': String(phpFpmBasePort.value),
-    'mcp.enabled': String(mcpEnabled.value),
-    'mcp.strict_kinds': String(mcpStrictKinds.value),
-    'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
-    'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
-    'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
-    'mcp.toolCallRetentionDays': String(mcpToolCallRetentionDays.value),
     'deploy.enabled': String(deployEnabled.value),
     'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
     'paths.apache': paths.apache,
@@ -2096,6 +2135,7 @@ async function loadSettings() {
     applyValues(await fetchSettings())
     loadedValues.value = formValues()
     settingsLoaded.value = true
+    if (mcpEnabled.value && mcpKindOptions.value.length === 0) void loadMcpKindOptions()
   } catch { /* daemon not reachable — keep defaults, saving stays blocked */ }
 }
 
@@ -2865,10 +2905,6 @@ onMounted(async () => {
   })
   void loadMysqlRootStatus()
   void loadSnapshots()
-  // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
-  // multi-select. Best-effort: silent failure leaves the input as the
-  // free-text fallback, no toast (kinds endpoint may be MCP-disabled).
-  void loadMcpKindOptions()
   if (accountToken.value) {
     void loadDevicesAccount()
     // Mirror the renderer's accountToken into daemon SettingsStore so
