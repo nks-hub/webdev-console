@@ -68,6 +68,15 @@ test.describe('Simple-mode features contract', () => {
     expect(source).toMatch(/siteState\.install\('php'\)/)
   })
 
+  test('New sites start on the PHP version chosen in Settings', () => {
+    // Settings stores the choice as general.defaultPhp; the shared site state
+    // marks it as the default version when it is installed, and the create
+    // dialog and the site page preselect that version.
+    const state = readFileSync(join(srcRoot, 'stores', 'siteState.ts'), 'utf-8')
+    expect(state).toMatch(/general\.defaultPhp/)
+    expect(readFileSync(join(srcRoot, 'components', 'sites', 'CreateSiteDialog.vue'), 'utf-8')).toMatch(/p\.isDefault/)
+  })
+
   test('i18n keys for all simple-mode redesigns exist cs+en', () => {
     const cs = JSON.parse(readFileSync(join(srcRoot, 'locales', 'cs.json'), 'utf-8')) as Record<string, unknown>
     const en = JSON.parse(readFileSync(join(srcRoot, 'locales', 'en.json'), 'utf-8')) as Record<string, unknown>

@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { i18n } from '../i18n'
 import {
-  fetchLatestBinary, fetchOnboardingState, fetchPhpVersions, installBinary, installSslCa, startService,
+  fetchLatestBinary, fetchOnboardingState, fetchPhpVersions, fetchSettings, installBinary, installSslCa, startService,
   type OnboardingState,
 } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
@@ -32,7 +32,8 @@ export interface InstalledPhp {
   /** major.minor, as stored in the site config. */
   value: string
   full: string
-  isActive: boolean
+  /** The version a new site starts with: the Settings choice when installed, else the daemon's active one. */
+  isDefault: boolean
 }
 
 const majorMinor = (v: string) => v.split('.').slice(0, 2).join('.')
@@ -72,15 +73,21 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   async function loadPhpVersions() {
     try {
+      const [list, settings] = await Promise.all([
+        fetchPhpVersions(),
+        fetchSettings().catch(() => ({} as Record<string, string>)),
+      ])
       // Several patch versions of one major.minor collapse into one entry; the active patch wins.
-      const byMinor = new Map<string, InstalledPhp>()
-      for (const v of await fetchPhpVersions()) {
+      const byMinor = new Map<string, { value: string; full: string; active: boolean }>()
+      for (const v of list) {
         const value = v.majorMinor || majorMinor(v.version)
         const seen = byMinor.get(value)
-        if (!seen) byMinor.set(value, { value, full: v.version, isActive: !!v.isActive })
-        else if (v.isActive) Object.assign(seen, { full: v.version, isActive: true })
+        if (!seen) byMinor.set(value, { value, full: v.version, active: !!v.isActive })
+        else if (v.isActive) Object.assign(seen, { full: v.version, active: true })
       }
-      phpVersions.value = [...byMinor.values()]
+      const wanted = majorMinor(settings['general.defaultPhp']?.trim() ?? '')
+      const preferred = byMinor.has(wanted) ? wanted : [...byMinor.values()].find(v => v.active)?.value
+      phpVersions.value = [...byMinor.values()].map(v => ({ value: v.value, full: v.full, isDefault: v.value === preferred }))
     } catch { /* keep the last known list */ }
   }
 
@@ -117,7 +124,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
     return {
       kind: 'php',
       label: phpLabel(wanted),
-      title: installed ? `PHP ${installed.full}${installed.isActive ? ` · ${t('sites.list.phpDefault')}` : ''}` : undefined,
+      title: installed ? `PHP ${installed.full}${installed.isDefault ? ` · ${t('sites.list.phpDefault')}` : ''}` : undefined,
       missing: false,
     }
   }

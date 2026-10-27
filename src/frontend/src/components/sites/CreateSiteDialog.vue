@@ -320,13 +320,13 @@ function onFolderPicked(path: string) {
 
 // ── Runtime ─────────────────────────────────────────────────────────
 function phpOptionLabel(v: InstalledPhp): string {
-  return `PHP ${v.value}${v.isActive ? ` (${t('sites.list.phpDefault')})` : ''}`
+  return `PHP ${v.value}${v.isDefault ? ` (${t('sites.list.phpDefault')})` : ''}`
 }
 
 function ensurePhpVersion() {
   const list = siteState.phpVersions ?? []
   if (list.length && !list.some(p => p.value === form.phpVersion)) {
-    form.phpVersion = (list.find(p => p.isActive) ?? list[0]).value
+    form.phpVersion = (list.find(p => p.isDefault) ?? list[0]).value
   }
 }
 watch(() => siteState.phpVersions, ensurePhpVersion)

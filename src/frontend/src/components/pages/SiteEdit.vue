@@ -137,7 +137,7 @@
                       :aria-checked="site.phpVersion === v.value"
                       :title="`PHP ${v.full}`"
                       @click="site.phpVersion = v.value"
-                    >PHP {{ v.value }}<span v-if="v.isActive" class="php-default">{{ $t('sites.list.phpDefault') }}</span></button>
+                    >PHP {{ v.value }}<span v-if="v.isDefault" class="php-default">{{ $t('sites.list.phpDefault') }}</span></button>
                   </div>
                   <div v-if="phpVersionMissing" class="inline-callout">
                     <el-icon aria-hidden="true"><WarningFilled /></el-icon>
@@ -615,7 +615,7 @@ function selectRuntime(rt: Runtime) {
     s.nodeUpstreamPort = 0
   } else if (rt === 'php') {
     const list = siteState.phpVersions ?? []
-    s.phpVersion = (list.find(p => p.isActive) ?? list[0])?.value ?? ''
+    s.phpVersion = (list.find(p => p.isDefault) ?? list[0])?.value ?? ''
     s.nodeUpstreamPort = 0
   } else {
     s.phpVersion = 'none'
