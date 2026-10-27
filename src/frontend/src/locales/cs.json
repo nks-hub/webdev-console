@@ -864,8 +864,7 @@
           "title": "Služby webu",
           "restart": "Restartovat",
           "start": "Spustit",
-          "restarted": "{name} restartováno",
-          "started": "{name} spuštěno"
+          "shared": "Služby sdílejí všechny weby, restart se týká všech."
         },
         "activity": {
           "title": "Nedávná aktivita",
@@ -1011,7 +1010,8 @@
       },
       "tunnelOpen": "Otevřít veřejnou adresu v prohlížeči",
       "tunnelOfflineTitle": "Služba tunelu je zastavená, tato adresa neodpoví, dokud nespustíte cloudflared.",
-      "tunnelOffline": "nedostupný"
+      "tunnelOffline": "nedostupný",
+      "openWaiting": "Apache neběží, web zatím neodpoví."
     },
     "reapplyAllTitle": "Přegenerovat konfiguraci všech webů",
     "reapplyAllConfirm": "Konfigurace všech webů se vytvoří znovu a Apache se krátce restartuje. Během restartu weby neodpovídají. Pokračovat?",
@@ -1039,11 +1039,24 @@
       },
       "failed": {
         "title": "Apache se nepodařilo spustit.",
-        "detail": "{err}"
+        "detail": "{err}",
+        "noReason": "Proces skončil dřív, než se rozběhl. Důvod obvykle najdete na konci logu Apache."
       },
       "installApache": "Nainstalovat Apache",
       "startApache": "Spustit Apache",
-      "showLog": "Zobrazit log"
+      "showLog": "Zobrazit log",
+      "restarting": {
+        "title": "Apache se restartuje…",
+        "detail": "Dokončuje se uložení webu, weby chvíli neodpovídají."
+      },
+      "stopping": {
+        "title": "Apache se zastavuje…",
+        "detail": "Weby chvíli neodpovídají."
+      },
+      "crashed": {
+        "title": "Apache spadl.",
+        "detail": "Proces skončil sám od sebe. Důvod obvykle najdete na konci logu Apache."
+      }
     },
     "empty": {
       "title": "Zatím tu není žádný web",
@@ -1107,15 +1120,15 @@
         },
         "laravel": {
           "label": "Laravel",
-          "hint": "Web se obsluhuje z podsložky public projektu. Doplnila se do cesty."
+          "hint": "Do cesty se přidá podsložka public, ze které Apache web obsluhuje."
         },
         "symfony": {
           "label": "Symfony",
-          "hint": "Web se obsluhuje z podsložky public projektu. Doplnila se do cesty."
+          "hint": "Do cesty se přidá podsložka public, ze které Apache web obsluhuje."
         },
         "nette": {
           "label": "Nette",
-          "hint": "Web se obsluhuje z podsložky www projektu. Doplnila se do cesty."
+          "hint": "Do cesty se přidá podsložka www, ze které Apache web obsluhuje."
         },
         "nextjs": {
           "label": "Next.js (Node)",
@@ -1137,7 +1150,14 @@
         "domainNoTld": "Doména potřebuje příponu, například mojeapp.loc.",
         "domainExists": "Web s touto doménou už existuje.",
         "folderRequired": "Vyberte složku webu."
-      }
+      },
+      "folderUsed": "Tuto složku už používá web {domain}. Oba weby ukážou stejné soubory.",
+      "httpsOffNeedsCa": "HTTPS je vypnuté, protože chybí certifikační autorita. Po její instalaci se zapne.",
+      "installHttpsOn": "Nainstalovat a zapnout",
+      "mysqlStopped": "MySQL neběží, databáze se nevytvoří.",
+      "startMysql": "Spustit MySQL",
+      "mysqlStarting": "MySQL se spouští, za chvíli půjde databázi vytvořit.",
+      "creating": "Web se vytváří a Apache se restartuje, může to trvat několik sekund."
     }
   },
   "uiMode": {
@@ -1915,7 +1935,7 @@
     "composeDone": "Hotovo",
     "composeFailedShort": "Selhalo",
     "deleteTitle": "Smazat web",
-    "deleteDesc": "Odstraní se konfigurace webu, záznam v hosts a vhost v Apache. Soubory ve složce a databáze zůstanou.",
+    "deleteDesc": "Odstraní se konfigurace webu, záznam v hosts a virtuální host v Apache. Soubory ve složce a databáze zůstanou.",
     "deleteAction": "Smazat web…",
     "unsaved": "Neuložené změny",
     "unsavedAria": "Neuložené změny webu",
@@ -1923,7 +1943,7 @@
     "leaveText": "Máte neuložené změny. Opravdu chcete stránku opustit?",
     "leaveConfirm": "Odejít bez uložení",
     "stay": "Zůstat",
-    "historyBanner": "Záloha konfigurace se vytvoří před každým uložením. Obnovou se vrátí jen konfigurační soubory webu (vhost a nastavení pluginů). Složka s weby se nemění.",
+    "historyBanner": "Záloha konfigurace se vytvoří před každým uložením. Obnovou se vrátí jen konfigurační soubory webu (virtuální host a nastavení pluginů). Složka s weby se nemění.",
     "snapshot": "Záloha konfigurace",
     "ov": {
       "state": "Stav",
@@ -1940,9 +1960,10 @@
         "running": "Web odpovídá na adrese výše.",
         "waitingStopped": "Konfigurace je zapsaná. Web začne odpovídat, až spustíte Apache, tlačítko je níže ve Službách webu.",
         "waitingMissing": "Konfigurace je zapsaná. Web začne odpovídat po instalaci a spuštění Apache, tlačítko je níže ve Službách webu.",
-        "failed": "Poslední použití konfigurace se nepovedlo. Podrobnosti jsou v pruhu Poslední použití konfigurace nahoře.",
+        "failed": "Poslední použití konfigurace se nepovedlo. Podrobnosti jsou v pruhu nahoře.",
         "applying": "Konfigurace se právě ukládá a používá.",
-        "disabled": "Web je vypnutý: konfigurace zůstala zachována, ale web neodpovídá. Po zapnutí se vrátí do provozu."
+        "disabled": "Web je vypnutý: konfigurace zůstala zachována, ale web neodpovídá. Po zapnutí se vrátí do provozu.",
+        "waitingBusy": "Apache se právě spouští nebo restartuje. Web začne odpovídat za okamžik."
       },
       "on": "Zapnuto"
     },
@@ -3506,7 +3527,8 @@
       "apacheDown": "Apache neběží",
       "batch": "Konfigurace se načte jednou pro všechny weby",
       "hosts": "Soubor hosts se nemění (vypnuto nastavením prostředí)"
-    }
+    },
+    "applyHint": "Znovu vytvoří certifikát, virtuální host a záznam v hosts podle nastavení webu."
   },
   "servicesPage": {
     "title": "Služby",

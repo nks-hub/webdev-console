@@ -31,13 +31,15 @@ test.describe('Per-site web server contract', () => {
     expect(source).toMatch(/siteState\.startWebServer\(\)/)
     expect(source).toMatch(/siteState\.install\('apache'\)/)
     expect(source).toMatch(/sites\.banner\.startApache/)
-    expect(source).toMatch(/ws === 'missing'/)
-    expect(source).toMatch(/ws === 'stopped'/)
+    expect(source).toMatch(/v-if="kind === 'missing'"/)
+    expect(source).toMatch(/case 'stopped':/)
   })
 
   test('a failed start is reported instead of swallowed', () => {
     const source = read('stores', 'siteState.ts')
-    expect(source).toMatch(/async function startWebServer[\s\S]*?catch \(e\)[\s\S]*?ElMessage\.error\(t\('toast\.startFailed'/)
+    // services.act toasts the failure and keeps the daemon's reason in lastError, which the banner shows.
+    expect(source).toMatch(/async function startWebServer[\s\S]*?services\.act\(/)
+    expect(source).toMatch(/startError = computed\(\(\) => services\.lastError/)
   })
 
   test('i18n keys for Start/Install Apache exist in both locales', () => {

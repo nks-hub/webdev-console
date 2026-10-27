@@ -58,7 +58,7 @@
 
             <td class="col-web">
               <div class="web-line">
-                <router-link class="web-domain" :to="detailLink(row.site)">{{ row.site.domain }}</router-link>
+                <router-link class="web-domain" :to="detailLink(row.site)" :title="$t('sites.list.menu.edit')">{{ row.site.domain }}</router-link>
                 <span v-if="row.site.framework" class="chip">{{ row.site.framework }}</span>
                 <span
                   v-if="composeStatus[row.site.domain]?.hasCompose"
@@ -127,6 +127,7 @@
                 <el-button
                   size="small"
                   :disabled="row.state.kind === 'disabled'"
+                  :title="row.state.kind === 'waiting' ? $t('sites.list.openWaiting') : undefined"
                   :aria-label="$t('sites.list.openAria', { domain: row.site.domain })"
                   @click.stop="openUrl(row.url)"
                 >
@@ -146,7 +147,7 @@
                   :popper-options="{ modifiers: [{ name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } }] }"
                   @command="(cmd: string) => emit('action', cmd, row.site)"
                 >
-                  <el-button size="small" text :aria-label="$t('sites.card.moreActions', { domain: row.site.domain })" @click.stop>
+                  <el-button size="small" text :title="$t('sites.list.moreHeader')" :aria-label="$t('sites.card.moreActions', { domain: row.site.domain })" @click.stop>
                     <el-icon aria-hidden="true"><MoreFilled /></el-icon>
                   </el-button>
                   <template #dropdown>

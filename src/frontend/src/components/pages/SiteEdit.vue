@@ -40,6 +40,8 @@
     <div v-else class="edit-body">
       <SiteApplyPipeline :domain="domain" class="site-apply" />
 
+      <!-- Logs, metrics and deploy are lazy: they read logs and call the deploy plugin, which a page
+           that only edits a folder should not do on load. -->
       <el-tabs v-model="activeTab" class="site-tabs">
         <!-- ── Overview: read-only ── -->
         <el-tab-pane name="overview" :label="$t('siteEdit.overview')">
@@ -86,8 +88,14 @@
 
             <EditCard id="set-folder" :title="$t('siteEdit.folderGroup')">
               <el-form label-position="top" @submit.prevent>
-                <el-form-item :label="$t('sites.new.folder')" required>
-                  <el-input v-model="site.documentRoot" placeholder="C:\work\htdocs\myapp" class="path-input" spellcheck="false">
+                <el-form-item>
+                  <el-input
+                    v-model="site.documentRoot"
+                    placeholder="C:\work\htdocs\myapp"
+                    class="path-input"
+                    spellcheck="false"
+                    :aria-label="$t('sites.new.folder')"
+                  >
                     <template #append>
                       <el-button :aria-label="$t('sites.edit.browseDocRoot')" @click="showFolderBrowser = true">
                         <el-icon aria-hidden="true"><FolderOpened /></el-icon>
@@ -95,7 +103,10 @@
                       </el-button>
                     </template>
                   </el-input>
-                  <div v-if="folderState === 'exists'" class="hint hint-ok">
+                  <div v-if="folderOwner" class="hint hint-warn">
+                    <el-icon aria-hidden="true"><WarningFilled /></el-icon>{{ $t('sites.new.folderUsed', { domain: folderOwner }) }}
+                  </div>
+                  <div v-else-if="folderState === 'exists'" class="hint hint-ok">
                     <el-icon aria-hidden="true"><Check /></el-icon>{{ $t('sites.new.folderExists') }}
                   </div>
                   <div v-else-if="folderState === 'missing'" class="hint hint-warn">
@@ -286,7 +297,7 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy" :label="$t('siteEdit.deploy')">
+        <el-tab-pane v-if="uiMode.isAdvanced && featureFlagsStore.showDeploySurface" name="deploy" lazy :label="$t('siteEdit.deploy')">
           <div class="tab-content"><DeploySiteTab :domain="domain" /></div>
         </el-tab-pane>
 
@@ -320,7 +331,7 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane name="logs" :label="$t('siteEdit.logs')">
+        <el-tab-pane name="logs" lazy :label="$t('siteEdit.logs')">
           <div class="tab-content tab-wide">
             <el-radio-group v-model="logsView" class="logs-switch" :aria-label="$t('siteEdit.logs')">
               <el-radio-button value="errors">{{ $t('siteEdit.errors') }}</el-radio-button>
@@ -331,7 +342,7 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane name="metrics" :label="$t('siteEdit.metrics')">
+        <el-tab-pane name="metrics" lazy :label="$t('siteEdit.metrics')">
           <div class="tab-content tab-wide">
             <SiteMetrics :domain="site.domain" :active="activeTab === 'metrics'" />
           </div>
@@ -370,7 +381,7 @@ import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
 import SiteMetrics from '../sites/SiteMetrics.vue'
 import SiteOverview from '../sites/SiteOverview.vue'
 import SiteStatusBadge from '../sites/SiteStatusBadge.vue'
-import { useFolderState } from '../sites/folderCheck'
+import { useFolderOwner, useFolderState } from '../sites/folderCheck'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
@@ -565,6 +576,11 @@ const folderState = useFolderState(computed({
   get: () => site.value?.documentRoot ?? '',
   set: () => { /* read-only view of the field */ },
 }))
+
+const folderOwner = useFolderOwner(
+  computed(() => site.value?.documentRoot ?? ''),
+  computed(() => site.value?.domain),
+)
 
 function onFolderPick(path: string) {
   if (site.value) site.value.documentRoot = path

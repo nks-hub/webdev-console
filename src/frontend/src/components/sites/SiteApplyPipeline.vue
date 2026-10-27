@@ -23,6 +23,7 @@
           size="small"
           :type="tone === 'failed' ? 'primary' : 'default'"
           :loading="busy"
+          :title="t('siteApply.applyHint')"
           @click="reapply"
         >{{ record ? t('siteApply.applyAgain') : t('siteApply.applyNow') }}</el-button>
       </div>
@@ -64,7 +65,7 @@
     </div>
 
     <div v-if="compact" class="ap-compact-actions">
-      <el-button size="small" type="primary" :loading="busy" @click="reapply">{{ t('siteApply.applyAgain') }}</el-button>
+      <el-button size="small" type="primary" :loading="busy" :title="t('siteApply.applyHint')" @click="reapply">{{ t('siteApply.applyAgain') }}</el-button>
     </div>
   </section>
 </template>

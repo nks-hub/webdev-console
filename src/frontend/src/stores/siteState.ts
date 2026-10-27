@@ -3,14 +3,16 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { i18n } from '../i18n'
 import {
-  fetchLatestBinary, fetchOnboardingState, fetchPhpVersions, fetchSettings, installBinary, installSslCa, startService,
+  fetchLatestBinary, fetchOnboardingState, fetchPhpVersions, fetchSettings, installBinary, installSslCa,
   type OnboardingState,
 } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
-import { errorMessage } from '../utils/errors'
+import { appDisplayName, installErrorMessage } from '../utils/binaries'
+import { serviceViewState } from '../utils/serviceState'
 import { phpLabel } from '../utils/siteUrl'
 import { useDaemonStore } from './daemon'
 import { usePluginsStore } from './plugins'
+import { useServicesStore } from './services'
 import { useSiteApplyStore } from './siteApply'
 
 /** What a site is doing right now. The one definition shared by the list, the detail header and the overview. */
@@ -23,8 +25,16 @@ export interface SiteState {
   detail?: string
 }
 
-/** State of the web server that every site depends on. */
-export type WebServerKind = 'running' | 'starting' | 'stopped' | 'missing' | 'unknown'
+/**
+ * State of the web server that every site depends on. `restarting` is the
+ * short gap while a site is being saved (the daemon reloads Apache by stopping
+ * and starting it), `crashed` a web server that died or was switched off.
+ */
+export type WebServerKind =
+  | 'running' | 'starting' | 'stopping' | 'restarting' | 'stopped' | 'crashed' | 'missing' | 'unknown'
+
+/** The database server a new site's database would be created on. */
+export type DatabaseServerKind = 'running' | 'starting' | 'stopped' | 'missing' | 'unknown'
 
 export type PrerequisiteApp = 'apache' | 'php' | 'mysql' | 'https'
 
@@ -42,27 +52,46 @@ export const useSiteStateStore = defineStore('siteState', () => {
   const daemon = useDaemonStore()
   const plugins = usePluginsStore()
   const apply = useSiteApplyStore()
+  const services = useServicesStore()
   const t = (key: string, named?: Record<string, unknown>) => i18n.global.t(key, named ?? {}) as string
 
   const prerequisites = ref<OnboardingState['prerequisites'] | null>(null)
   /** null until the first successful load, so "PHP missing" is never claimed on a failed request. */
   const phpVersions = ref<InstalledPhp[] | null>(null)
   const starting = ref(false)
-  const startError = ref('')
   const installing = ref<Set<PrerequisiteApp>>(new Set())
 
   const apacheService = computed(() => daemon.services.find(s => s.id === 'apache' || s.id === 'httpd'))
 
+  /** Apache died before it ever reached "running" (a bad config, a busy port), as opposed to crashing later. */
+  const apacheStartFailed = computed(() => apacheService.value?.crashKind === 'startFailed')
+
+  /** Why the last start of Apache failed, from the shared services store (also set by the Services page). */
+  const startError = computed(() => services.lastError[apacheService.value?.id ?? 'apache'] ?? '')
+
   const webServer = computed<WebServerKind>(() => {
     const svc = apacheService.value
-    if (svc && (svc.state === 2 || svc.status === 'running')) return 'running'
-    if (starting.value || svc?.state === 1) return 'starting'
-    if (prerequisites.value?.apacheInstalled === false) return 'missing'
-    return svc ? 'stopped' : 'unknown'
+    const view = svc ? serviceViewState(svc) : null
+    if (view === 'running') return 'running'
+    if (view === 'notInstalled' || (!svc && prerequisites.value?.apacheInstalled === false)) return 'missing'
+    if (!svc) return 'unknown'
+    // Saving a site reloads Apache, so a web server that is down during a save is only restarting.
+    if (apply.applying.size > 0) return 'restarting'
+    if (starting.value || view === 'starting') return 'starting'
+    if (view === 'stopping') return 'stopping'
+    return view === 'crashed' || view === 'disabled' ? 'crashed' : 'stopped'
   })
 
-  // A running web server makes an earlier failed start irrelevant.
-  watch(webServer, (ws) => { if (ws === 'running') startError.value = '' })
+  /** MySQL or MariaDB, whichever the daemon manages. */
+  const databaseService = computed(() => daemon.services.find(s => s.id === 'mysql' || s.id === 'mariadb'))
+  const databaseServer = computed<DatabaseServerKind>(() => {
+    const svc = databaseService.value
+    const view = svc ? serviceViewState(svc) : null
+    if (view === 'running') return 'running'
+    if (view === 'notInstalled' || (!svc && prerequisites.value?.mysqlInstalled === false)) return 'missing'
+    if (!svc) return 'unknown'
+    return view === 'starting' ? 'starting' : 'stopped'
+  })
 
   const cloudflareActive = computed(() =>
     plugins.manifests.some(m => m.id === 'nks.wdc.cloudflare' && m.enabled))
@@ -93,13 +122,20 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   const refresh = () => Promise.all([loadPrerequisites(), loadPhpVersions()])
 
+  // The checklist ("Apache installed? PHP? HTTPS?") must follow installs done anywhere: a binary being
+  // installed or removed changes the services' `installed` flag, so that is the cue to read it again.
+  let prerequisitesTimer: ReturnType<typeof setTimeout> | undefined
+  watch(() => daemon.services.map(s => `${s.id}:${s.installed}`).join('|'), () => {
+    clearTimeout(prerequisitesTimer)
+    prerequisitesTimer = setTimeout(() => void refresh(), 400)
+  })
+
   function stateOf(site: SiteInfo): SiteState {
     if (site.enabled === false) return { kind: 'disabled' }
     if (apply.applying.has(site.domain)) return { kind: 'applying' }
     const failed = apply.results[site.domain]?.steps.find(s => s.status === 'failed')
     if (failed) return { kind: 'failed', step: failed.name, detail: failed.detail ?? undefined }
-    const ws = webServer.value
-    return ws === 'stopped' || ws === 'missing' || ws === 'starting' ? { kind: 'waiting' } : { kind: 'running' }
+    return webServer.value === 'running' || webServer.value === 'unknown' ? { kind: 'running' } : { kind: 'waiting' }
   }
 
   /** Czech/English name of an apply step ("Certifikát", "Virtual host", …). */
@@ -129,23 +165,20 @@ export const useSiteStateStore = defineStore('siteState', () => {
     }
   }
 
-  /** Starts Apache and reports a failure to the user instead of swallowing it. */
+  /** Starts Apache; a failure is toasted and its reason kept in the services store for the banner. */
   async function startWebServer(): Promise<boolean> {
     starting.value = true
-    startError.value = ''
     try {
-      const r = await startService(apacheService.value?.id ?? 'apache')
-      if (r && r.ok === false) throw new Error(r.message)
-      return true
-    } catch (e) {
-      startError.value = errorMessage(e)
-      ElMessage.error(t('toast.startFailed', { err: startError.value }))
-      return false
+      return await services.act(apacheService.value?.id ?? 'apache', 'start', 'Apache')
     } finally {
       starting.value = false
-      await daemon.poll()
       void loadPrerequisites()
     }
+  }
+
+  async function startDatabase(): Promise<boolean> {
+    const svc = databaseService.value
+    return svc ? services.act(svc.id, 'start', svc.id === 'mariadb' ? 'MariaDB' : 'MySQL') : false
   }
 
   async function latestVersion(app: string): Promise<string> {
@@ -157,19 +190,24 @@ export const useSiteStateStore = defineStore('siteState', () => {
   /** Installs one prerequisite the way the first-run wizard does. */
   async function install(app: PrerequisiteApp): Promise<boolean> {
     installing.value = new Set(installing.value).add(app)
+    const binary = app === 'https' ? 'mkcert' : app
+    let version = ''
     try {
       if (app === 'https') {
-        if (!prerequisites.value?.mkcertBinaryInstalled) await installBinary('mkcert', await latestVersion('mkcert'))
+        if (!prerequisites.value?.mkcertBinaryInstalled) {
+          version = await latestVersion(binary)
+          await installBinary(binary, version)
+        }
         await installSslCa()
         ElMessage.success(t('ssl.caTrusted'))
       } else {
-        const version = await latestVersion(app)
-        await installBinary(app, version)
-        ElMessage.success(t('toast.installedVersion', { app, version }))
+        version = await latestVersion(binary)
+        await installBinary(binary, version)
+        ElMessage.success(t('toast.installedVersion', { app: appDisplayName(binary), version }))
       }
       return true
     } catch (e) {
-      ElMessage.error(t('toast.installFailed', { err: errorMessage(e) }))
+      ElMessage.error(installErrorMessage(t, e, binary, version))
       return false
     } finally {
       const next = new Set(installing.value)
@@ -181,7 +219,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   return {
     prerequisites, phpVersions, starting, startError, installing,
-    webServer, cloudflareActive,
-    refresh, loadPrerequisites, loadPhpVersions, stateOf, stepLabel, runtimeOf, startWebServer, install,
+    webServer, apacheStartFailed, databaseServer, cloudflareActive,
+    refresh, loadPrerequisites, loadPhpVersions, stateOf, stepLabel, runtimeOf, startWebServer, startDatabase, install,
   }
 })

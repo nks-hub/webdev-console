@@ -2,11 +2,10 @@
   <div class="site-overview">
     <section class="ov-card" :aria-labelledby="`${uid}-state`">
       <h2 :id="`${uid}-state`" class="ov-heading">{{ $t('siteEdit.ov.state') }}</h2>
-      <div class="ov-state-row">
-        <SiteStatusBadge :state="state" class="ov-badge" />
-        <a v-if="state.kind !== 'disabled'" class="ov-url" :href="url" @click.prevent="openUrl(url)">{{ url }}</a>
-      </div>
-      <p class="ov-explain">{{ explanation }}</p>
+      <p class="ov-explain">
+        {{ explanation }}
+        <a v-if="state.kind === 'running'" class="ov-url" :href="url" @click.prevent="openUrl(url)">{{ url }}</a>
+      </p>
       <div class="ov-actions">
         <el-button :loading="toggling" @click="emit('toggle')">
           {{ site.enabled === false ? $t('sites.list.enable') : $t('sites.list.disable') }}
@@ -14,7 +13,7 @@
       </div>
     </section>
 
-    <SimpleSiteServicesCard :domain="site.domain" class="ov-card" />
+    <SiteServices :domain="site.domain" class="ov-card" />
 
     <section class="ov-card" :aria-labelledby="`${uid}-settings`">
       <h2 :id="`${uid}-settings`" class="ov-heading">{{ $t('siteEdit.ov.settings') }}</h2>
@@ -33,7 +32,7 @@
       </dl>
     </section>
 
-    <SimpleSiteActivityCard :domain="site.domain" class="ov-card" />
+    <SiteActivity :domain="site.domain" class="ov-card" />
   </div>
 </template>
 
@@ -44,9 +43,8 @@ import type { SiteInfo } from '../../api/types'
 import { useSiteStateStore } from '../../stores/siteState'
 import { useUiModeStore } from '../../stores/uiMode'
 import { displayPath, openUrl, siteUrl } from '../../utils/siteUrl'
-import SimpleSiteActivityCard from '../pages/SimpleSiteActivityCard.vue'
-import SimpleSiteServicesCard from '../pages/SimpleSiteServicesCard.vue'
-import SiteStatusBadge from './SiteStatusBadge.vue'
+import SiteActivity from './SiteActivity.vue'
+import SiteServices from './SiteServices.vue'
 
 /**
  * Read-only summary of a site. Nothing is edited here: every value has a
@@ -68,7 +66,11 @@ const url = computed(() => siteUrl(props.site))
 const explanation = computed(() => {
   switch (state.value.kind) {
     case 'running': return t('siteEdit.ov.explain.running')
-    case 'waiting': return t(siteState.webServer === 'missing' ? 'siteEdit.ov.explain.waitingMissing' : 'siteEdit.ov.explain.waitingStopped')
+    case 'waiting': {
+      const ws = siteState.webServer
+      const busy = ws === 'starting' || ws === 'stopping' || ws === 'restarting'
+      return t(ws === 'missing' ? 'siteEdit.ov.explain.waitingMissing' : busy ? 'siteEdit.ov.explain.waitingBusy' : 'siteEdit.ov.explain.waitingStopped')
+    }
     case 'failed': return t('siteEdit.ov.explain.failed')
     case 'applying': return t('siteEdit.ov.explain.applying')
     default: return t('siteEdit.ov.explain.disabled')
@@ -120,8 +122,6 @@ const rows = computed<Row[]>(() => {
   font-size: 0.93rem;
   color: var(--wdc-text-2);
 }
-.ov-state-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wdc-space-2) var(--wdc-space-4); }
-.ov-badge { font-size: 1rem; }
 .ov-url {
   color: var(--wdc-accent-ink);
   font-family: var(--wdc-font-mono);
@@ -130,7 +130,7 @@ const rows = computed<Row[]>(() => {
   overflow-wrap: anywhere;
 }
 .ov-url:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; border-radius: var(--wdc-radius-xs); }
-.ov-explain { margin: var(--wdc-space-2) 0 0; color: var(--wdc-text-2); font-size: 0.87rem; line-height: 1.5; max-width: 70ch; }
+.ov-explain { margin: 0; color: var(--wdc-text); font-size: 0.93rem; line-height: 1.55; max-width: 70ch; }
 .ov-actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-2); margin-top: var(--wdc-space-3); }
 .ov-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
