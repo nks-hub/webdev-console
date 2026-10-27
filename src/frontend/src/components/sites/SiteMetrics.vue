@@ -163,6 +163,8 @@ const chartOption = computed(() => {
     yAxis: {
       type: 'value',
       min: 0,
+      // Counts and bytes are whole numbers; without this a day with one request gets ticks 0, 0.25, 0.5 shown as 0 0 1 1 1.
+      minInterval: 1,
       splitNumber: 3,
       axisLabel: { fontSize: 11, color: axisText, formatter: (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v))) },
       splitLine: { lineStyle: { color: rgba(p.border), type: 'dashed' } },

@@ -1,5 +1,6 @@
-import { ref, watch, type Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import { browseFolder } from '../../api/daemon'
+import { useSitesStore } from '../../stores/sites'
 import { errorMessage } from '../../utils/errors'
 
 /**
@@ -27,4 +28,17 @@ export function useFolderState(path: Ref<string>) {
   }, { immediate: true })
 
   return state
+}
+
+// shortcut: paths compare case-insensitively (right on Windows and macOS), upgrade for case-sensitive Linux volumes.
+const samePath = (p: string) => p.trim().replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+
+/** Domain of another site that already serves this folder, or '' when nobody does. */
+export function useFolderOwner(path: Ref<string>, ownDomain?: Ref<string | undefined>) {
+  const sites = useSitesStore()
+  return computed(() => {
+    const wanted = samePath(path.value ?? '')
+    if (!wanted) return ''
+    return sites.sites.find(s => s.domain !== ownDomain?.value && samePath(s.documentRoot) === wanted)?.domain ?? ''
+  })
 }

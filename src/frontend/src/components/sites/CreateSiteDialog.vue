@@ -3,6 +3,8 @@
     v-model="open"
     :title="$t('sites.create')"
     width="560px"
+    align-center
+    class="create-site-dialog"
     @opened="onOpened"
     @closed="reset"
   >
@@ -45,7 +47,10 @@
             </el-button>
           </template>
         </el-input>
-        <div v-if="folderState === 'exists'" class="field-note note-ok">
+        <div v-if="folderOwner" class="field-note note-warn">
+          <el-icon aria-hidden="true"><WarningFilled /></el-icon> {{ $t('sites.new.folderUsed', { domain: folderOwner }) }}
+        </div>
+        <div v-else-if="folderState === 'exists'" class="field-note note-ok">
           <el-icon aria-hidden="true"><Check /></el-icon> {{ $t('sites.new.folderExists') }}
         </div>
         <div v-else-if="folderState === 'missing'" class="field-note note-warn">
@@ -103,17 +108,17 @@
 
       <div class="toggle-item">
         <label class="toggle-line">
-          <el-switch v-model="form.sslEnabled" />
+          <el-switch v-model="form.sslEnabled" @change="sslTouched = true" />
           <span class="toggle-label">{{ $t('sites.new.https') }}</span>
         </label>
-        <div v-if="form.sslEnabled && httpsNeedsSetup" class="inline-callout">
+        <div v-if="httpsNeedsSetup" class="inline-callout">
           <el-icon aria-hidden="true"><WarningFilled /></el-icon>
-          <span>{{ $t('sites.new.httpsNeedsCa') }}</span>
+          <span>{{ form.sslEnabled ? $t('sites.new.httpsNeedsCa') : $t('sites.new.httpsOffNeedsCa') }}</span>
           <el-button
             size="small"
             :loading="siteState.installing.has('https')"
-            @click="siteState.install('https')"
-          >{{ $t('sites.new.installHttps') }}</el-button>
+            @click="installHttps"
+          >{{ form.sslEnabled ? $t('sites.new.installHttps') : $t('sites.new.installHttpsOn') }}</el-button>
         </div>
         <div v-else class="field-note">{{ $t('sites.new.httpsHint') }}</div>
       </div>
@@ -127,10 +132,10 @@
 
       <div class="toggle-item">
         <label class="toggle-line">
-          <el-switch v-model="form.createDb" :disabled="mysqlMissing" />
+          <el-switch v-model="form.createDb" :disabled="dbBlocked" />
           <span class="toggle-label">{{ $t('sites.createDatabase') }}</span>
         </label>
-        <div v-if="mysqlMissing" class="inline-callout">
+        <div v-if="siteState.databaseServer === 'missing'" class="inline-callout">
           <el-icon aria-hidden="true"><WarningFilled /></el-icon>
           <span>{{ $t('sites.new.mysqlMissing') }}</span>
           <el-button
@@ -139,6 +144,12 @@
             @click="siteState.install('mysql')"
           >{{ $t('sites.new.installMysql') }}</el-button>
         </div>
+        <div v-else-if="siteState.databaseServer === 'stopped'" class="inline-callout">
+          <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+          <span>{{ $t('sites.new.mysqlStopped') }}</span>
+          <el-button size="small" @click="siteState.startDatabase()">{{ $t('sites.new.startMysql') }}</el-button>
+        </div>
+        <div v-else-if="siteState.databaseServer === 'starting'" class="field-note">{{ $t('sites.new.mysqlStarting') }}</div>
         <el-input
           v-else-if="form.createDb"
           v-model="form.dbName"
@@ -208,6 +219,7 @@
     </el-form>
 
     <template #footer>
+      <span v-if="creating" class="creating-note" role="status">{{ $t('sites.new.creating') }}</span>
       <el-button @click="open = false">{{ $t('common.cancel') }}</el-button>
       <el-button type="primary" :loading="creating" @click="submit">{{ $t('sites.simple.submit') }}</el-button>
     </template>
@@ -226,11 +238,12 @@ import siteTemplatesConfig from '../../config/site-templates.json'
 import { daemonBaseUrl, fetchBindAddressOptions, fetchSystem, type BindAddressOption } from '../../api/daemon'
 import type { SiteInfo } from '../../api/types'
 import { useSitesStore } from '../../stores/sites'
+import { useSiteApplyStore } from '../../stores/siteApply'
 import { useSiteStateStore, type InstalledPhp } from '../../stores/siteState'
 import { errorMessage } from '../../utils/errors'
 import { pickNativeFolder } from '../../utils/pickFolder'
 import { pathSeparator, siteUrl } from '../../utils/siteUrl'
-import { useFolderState } from './folderCheck'
+import { useFolderOwner, useFolderState } from './folderCheck'
 
 type Runtime = 'php' | 'static' | 'node'
 interface SiteTemplate {
@@ -245,6 +258,7 @@ const emit = defineEmits<{ (e: 'created', domain: string): void }>()
 
 const { t } = useI18n()
 const sitesStore = useSitesStore()
+const siteApplyStore = useSiteApplyStore()
 const siteState = useSiteStateStore()
 
 const formRef = ref<FormInstance>()
@@ -301,6 +315,7 @@ watch([() => form.domain, () => form.template], () => {
 })
 
 const folderState = useFolderState(toRef(form, 'documentRoot'))
+const folderOwner = useFolderOwner(toRef(form, 'documentRoot'))
 
 async function pickFolder() {
   const chosen = await pickNativeFolder(t('sites.selectFolder'), form.documentRoot || undefined)
@@ -344,8 +359,25 @@ const httpsNeedsSetup = computed(() => {
   const p = siteState.prerequisites
   return !!p && !(p.mkcertBinaryInstalled && p.mkcertCaInstalled)
 })
-const mysqlMissing = computed(() => siteState.prerequisites?.mysqlInstalled === false)
-watch(mysqlMissing, (missing) => { if (missing) form.createDb = false })
+
+// HTTPS only works once the local certificate authority is trusted. Until then the safe default is
+// "off" (a site with HTTPS and no certificate answers with a browser error, or not at all); the
+// callout installs the authority and switches HTTPS on. A choice the user made is left alone.
+const sslTouched = ref(false)
+watch([open, httpsNeedsSetup], ([isOpen, needsSetup]) => {
+  if (isOpen && !sslTouched.value) form.sslEnabled = !needsSetup
+}, { immediate: true })
+
+async function installHttps() {
+  if (await siteState.install('https')) {
+    form.sslEnabled = true
+    sslTouched.value = true
+  }
+}
+
+// A database can only be created while the database server runs.
+const dbBlocked = computed(() => ['missing', 'stopped', 'starting'].includes(siteState.databaseServer))
+watch(dbBlocked, (blocked) => { if (blocked) form.createDb = false })
 
 const dbNameSuggestion = computed(() => {
   const stem = form.domain.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
@@ -418,6 +450,7 @@ function onOpened() {
 function reset() {
   Object.assign(form, emptyForm())
   docRootTouched.value = false
+  sslTouched.value = false
   formRef.value?.clearValidate()
   ensurePhpVersion()
 }
@@ -462,7 +495,8 @@ async function submit() {
         : {}),
       ...(form.cloudflareTunnel ? { cloudflareTunnel: true } : {}),
     }
-    const created = await sitesStore.create(payload)
+    // The save reloads Apache; tracking it keeps the web server banner from calling that a fault.
+    const created = await siteApplyStore.track(domain, () => sitesStore.create(payload))
 
     for (const w of sitesStore.lastCreateWarnings) ElMessage.warning({ message: w, duration: 8000, showClose: true })
     for (const h of sitesStore.lastCreateHints) ElMessage.info({ message: h, duration: 6000, showClose: true })
@@ -568,4 +602,10 @@ async function submit() {
 .more-options > summary:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; border-radius: var(--wdc-radius-xs); }
 
 .submit-proxy { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.creating-note { margin-right: var(--wdc-space-3); color: var(--wdc-text-2); font-size: 0.82rem; }
+</style>
+
+<style>
+/* The form is longer than a laptop window: the body scrolls, the buttons stay in view. */
+.create-site-dialog .el-dialog__body { max-height: calc(100vh - 220px); overflow-y: auto; }
 </style>
