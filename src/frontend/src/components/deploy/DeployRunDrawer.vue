@@ -165,26 +165,27 @@ const open = computed(() => deployStore.isDrawerOpen)
 // pre_deploy_backup runs FIRST when Snapshot.Include=true (Phase 6.2),
 // before any code touches the remote — keeping it at the top makes the
 // snapshot/code/health phases visually distinct.
-const KNOWN_STEPS: { key: string; label: string }[] = [
-  { key: 'pre_deploy_backup', label: 'pre-deploy DB snapshot' },
-  { key: 'git_pull', label: 'git pull' },
-  { key: 'composer_install', label: 'composer install' },
-  { key: 'npm_build', label: 'npm/vite build' },
-  { key: 'shared_links', label: 'shared symlinks' },
-  { key: 'writable', label: 'writable dirs' },
-  { key: 'cache_clear', label: 'cache clear' },
-  { key: 'doctrine_proxy', label: 'doctrine proxies' },
-  { key: 'schema_update', label: 'schema update' },
-  { key: 'di_warmup', label: 'DI warmup' },
-  { key: 'latte_warmup', label: 'latte warmup' },
-  { key: 'symlink_switch', label: 'symlink switch (PONR)' },
-  { key: 'fpm_reload', label: 'php-fpm reload' },
-  { key: 'opcache_clear', label: 'opcache clear' },
-  { key: 'health_check', label: 'health check' },
-  { key: 'cleanup_releases', label: 'cleanup releases' },
+// Labels live in the locale under deploy.steps.<key>.
+const KNOWN_STEPS: string[] = [
+  'pre_deploy_backup',
+  'git_pull',
+  'composer_install',
+  'npm_build',
+  'shared_links',
+  'writable',
+  'cache_clear',
+  'doctrine_proxy',
+  'schema_update',
+  'di_warmup',
+  'latte_warmup',
+  'symlink_switch',
+  'fpm_reload',
+  'opcache_clear',
+  'health_check',
+  'cleanup_releases',
 ]
 
-const ponrIdx = computed(() => KNOWN_STEPS.findIndex(s => s.key === 'symlink_switch'))
+const ponrIdx = computed(() => KNOWN_STEPS.indexOf('symlink_switch'))
 
 const stepStates = computed<Map<string, WaterfallStep['state']>>(() => {
   const m = new Map<string, WaterfallStep['state']>()
@@ -214,9 +215,9 @@ const stepStates = computed<Map<string, WaterfallStep['state']>>(() => {
 })
 
 const waterfallSteps = computed<WaterfallStep[]>(() =>
-  KNOWN_STEPS.map(s => ({
-    label: s.label,
-    state: stepStates.value.get(s.key) ?? 'pending',
+  KNOWN_STEPS.map(key => ({
+    label: t(`deploy.steps.${key}`),
+    state: stepStates.value.get(key) ?? 'pending',
   })))
 
 const currentIdx = computed(() => {

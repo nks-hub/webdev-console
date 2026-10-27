@@ -81,7 +81,7 @@
               <Check v-if="host.runMigrations" />
               <Close v-else />
             </el-icon>
-            migrations
+            {{ t('deploySettings.hostCardCmp.migrations') }}
           </el-tag>
           <el-tag type="info" size="small" effect="plain">
             <el-icon class="flag-icon"><Timer /></el-icon>

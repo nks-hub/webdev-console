@@ -5,7 +5,7 @@
       <el-form-item :label="t('settings.account.email')">
         <el-input
           :model-value="email"
-          placeholder="you@example.com"
+          :placeholder="$t('login.emailPlaceholder')"
           @update:model-value="(value: string) => emit('update:email', value)"
         />
       </el-form-item>

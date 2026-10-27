@@ -51,7 +51,7 @@
                 <el-form-item :label="$t('cloudflareSite.subdomainLabel')">
                   <div class="subdomain-row">
                     <el-input v-model="form.subdomain" placeholder="myapp" />
-                    <span class="subdomain-zone">.{{ activeZoneName || '(zóna)' }}</span>
+                    <span class="subdomain-zone">.{{ activeZoneName || $t('cloudflareSite.zoneFallback') }}</span>
                     <el-button
                       v-if="props.site?.domain"
                       size="small"
@@ -376,7 +376,7 @@ async function applyNow() {
     const sync = await cloudflareSync()
     applyStatus.value = {
       kind: 'success',
-      message: `Synced ${sync.synced ?? 0} site(s) — ${publicUrl.value}`,
+      message: t('cloudflareSite.syncedStatus', { n: sync.synced ?? 0, url: publicUrl.value }),
     }
     ElMessage.success(t('toast.tunnelApplied', { url: publicUrl.value }))
   } catch (e) {

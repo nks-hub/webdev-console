@@ -114,7 +114,7 @@
     "searchPlaceholder": "Hledat weby, služby a akce"
   },
   "autostart": {
-    "label": "Auto-start při spuštění WDC"
+    "label": "Spouštět se spuštěním WDC"
   },
   "login": {
     "subtitle": "Místní vývojová konzole",
@@ -163,8 +163,8 @@
     "tunnel": "Tunel",
     "tools": "Nástroje",
     "composer": "Composer",
-    "hosts": "Hosts soubor",
-    "mcpGrants": "MCP oprávnění",
+    "hosts": "Soubor hosts",
+    "mcpGrants": "Pravidla MCP",
     "mcp": "AI klienti (MCP)",
     "backups": "Zálohy",
     "help": "Nápověda",
@@ -199,7 +199,7 @@
     "title": "Vybrat složku",
     "parent": "Nadřazený adresář",
     "drivesHome": "Disky / Domů",
-    "pathPlaceholder": "Zadej cestu a stiskni Enter…",
+    "pathPlaceholder": "Zadejte cestu a stiskněte Enter…",
     "go": "Přejít",
     "emptyDir": "(prázdný adresář)",
     "selectThis": "Vybrat tuto složku"
@@ -291,7 +291,7 @@
   "mcpIntents": {
     "title": "Žádosti AI",
     "refresh": "Obnovit",
-    "description": "Akce, o které AI požádala a které musí někdo schválit. O čekajících žádostech rozhodneš tady. Provedené a odvolané žádosti zůstávají v historii 7 dní, nepoužité zmizí den po vypršení.",
+    "description": "Akce, o které AI požádala a které musí někdo schválit. O čekajících žádostech rozhodujete tady. Provedené a odvolané žádosti zůstávají v historii 7 dní, nepoužité zmizí den po vypršení.",
     "stateSummaryAria": "Počty žádostí podle stavu",
     "domainBreakdownAria": "Žádosti podle cíle",
     "domainBreakdownTitle": "Podle cíle:",
@@ -305,7 +305,7 @@
       "searchAria": "Hledat podle cíle",
       "showing": "Zobrazeno {visible} z {total}"
     },
-    "emptyNoIntents": "Zatím žádné žádosti. Objeví se, až bude AI chtít udělat něco, co musíš schválit.",
+    "emptyNoIntents": "Zatím žádné žádosti. Objeví se, až bude AI chtít udělat něco, co musíte schválit.",
     "emptyNoMatch": "Filtrům neodpovídá žádná žádost",
     "emptyTable": "Žádné žádosti",
     "bulk": {
@@ -334,7 +334,7 @@
     "matchedGrantBanner": "Jen žádosti schválené pravidlem",
     "clearMatchedGrantFilter": "Zrušit filtr",
     "manualConfirm": "ručně",
-    "confirmedManually": "Schváleno ručně, žádné pravidlo nepasovalo",
+    "confirmedManually": "Schváleno ručně, žádné pravidlo neodpovídalo",
     "revoke": "Odvolat",
     "revokeAria": "Odvolat schválenou žádost, aby ji AI nemohla provést",
     "single": {
@@ -377,7 +377,7 @@
     "stats": {
       "active": "aktivní pravidla",
       "deadweight": "nepoužitá pravidla",
-      "deadweightHint": "Pravidla starší než 7 dní, která AI ještě nepoužila. Nejspíš je můžeš odvolat.",
+      "deadweightHint": "Pravidla starší než 7 dní, která AI ještě nepoužila. Nejspíš je můžete odvolat.",
       "totalMatches": "schváleno pravidly",
       "lastMatch": "naposledy:",
       "alwaysConfirm": "akcí se vždy ptá",
@@ -397,7 +397,7 @@
     },
     "suggested": {
       "title": "{n} návrh na automatické schválení | {n} návrhy na automatické schválení | {n} návrhů na automatické schválení",
-      "hint": "Tyhle akce za posledních 7 dní opakovaně schvaluješ ručně. „Schvalovat samo“ vytvoří pravidlo pro všechny AI klienty.",
+      "hint": "Tyto akce za posledních 7 dní opakovaně schvalujete ručně. „Schvalovat samo“ vytvoří pravidlo pro všechny AI klienty.",
       "occurrences": "{n}× schváleno ručně",
       "autoApprove": "Schvalovat samo",
       "created": "Pravidlo vytvořeno: {kind} – {domain}",
@@ -406,17 +406,17 @@
     },
     "off": {
       "title": "MCP je vypnuté",
-      "body": "AI klienti teď k WDC nemají přístup. Zapni MCP přepínačem výše, pak se tu ukáže aktivita, žádosti a pravidla."
+      "body": "AI klienti teď k WDC nemají přístup. Zapněte MCP přepínačem výše, pak se tu ukáže aktivita, žádosti a pravidla."
     },
     "glossary": {
-      "requests": "AI chce udělat něco, co nejde snadno vrátit (smazat databázi, přepsat konfiguraci), a čeká, až to schválíš.",
-      "rules": "tyhle žádosti schvaluj automaticky, třeba restart služeb.",
+      "requests": "AI chce udělat něco, co nejde snadno vrátit (smazat databázi, přepsat konfiguraci), a čeká, až to schválíte.",
+      "rules": "které žádosti se schválí samy, třeba restart služeb.",
       "catalog": "seznam akcí, u kterých se AI musí zeptat."
     }
   },
   "mcpOnboarding": {
     "title": "Kolik toho smí AI udělat bez ptaní?",
-    "hint": "Vyber profil. Pravidla pak můžeš upravit v záložce Pravidla.",
+    "hint": "Vyberte profil. Pravidla pak můžete upravit v záložce Pravidla.",
     "dismiss": "Přeskočit",
     "recommended": "doporučeno",
     "applied": "Profil {profile} je nastavený",
@@ -424,7 +424,7 @@
     "profiles": {
       "minimal": {
         "name": "Minimální",
-        "desc": "Nejbezpečnější: každou žádost AI schvaluješ ručně.",
+        "desc": "Nejbezpečnější: každou žádost AI schvalujete ručně.",
         "bullets": [
           "Žádná pravidla pro automatické schválení",
           "Čtení a běžné akce (weby, služby, databáze) AI provede sama",
@@ -458,26 +458,26 @@
         "bullets": [
           "Jedno pravidlo pro všechny akce a cíle",
           "Na nic se nezeptá, ani na nevratné akce",
-          "Co se má schvalovat vždy, nastavíš v Schvalovaných akcích tlačítkem Upravit „vždy se ptát“"
+          "Akce, na které se má AI ptát vždy, nastavíte v záložce Schvalované akce tlačítkem Upravit „vždy se ptát“"
         ],
         "cta": "Použít Plnou důvěru…"
       },
       "custom": {
         "name": "Ručně",
-        "desc": "Bez profilu. Pravidla si vytvoříš v záložce Pravidla.",
+        "desc": "Bez profilu. Pravidla si vytvoříte v záložce Pravidla.",
         "bullets": [
           "Otevře záložku Pravidla",
-          "Začneš bez pravidel",
+          "Začnete bez pravidel",
           "Pro ty, kdo přesně vědí, co chtějí povolit"
         ],
         "cta": "Otevřít Pravidla"
       }
     },
     "default": "výchozí",
-    "permissiveConfirm": "Plná důvěra vytvoří pravidlo, se kterým každý připojený AI klient provede bez ptaní i nevratné akce, třeba smazání databáze. Pro potvrzení napiš {word}.",
-    "applyFailed": "Profil {profile} se nastavil jen zčásti ({ok} z {total} pravidel). Zkus to znovu.",
+    "permissiveConfirm": "Plná důvěra vytvoří pravidlo, se kterým každý připojený AI klient provede bez ptaní i nevratné akce, třeba smazání databáze. Pro potvrzení napište {word}.",
+    "applyFailed": "Profil {profile} se nastavil jen zčásti ({ok} z {total} pravidel). Zkuste to znovu.",
     "permissiveWord": "DŮVĚŘUJI",
-    "permissiveMismatch": "Napiš přesně {word}."
+    "permissiveMismatch": "Napište přesně {word}."
   },
   "mcpActivity": {
     "stats": {
@@ -487,8 +487,8 @@
       "destructives": "Nevratné",
       "errors": "Chyby",
       "sessions": "Relace (session)",
-      "clickToFilter": "Klikni pro filtr na tuto úroveň",
-      "clickToClear": "Klikni pro zrušení filtru"
+      "clickToFilter": "Kliknutím zobrazíte jen tuto úroveň",
+      "clickToClear": "Kliknutím zrušíte filtr"
     },
     "kpi": {
       "throughput": "propustnost",
@@ -516,10 +516,11 @@
     },
     "timeline": {
       "title": "Aktivita za posledních {hours} h",
-      "empty": "(žádná aktivita)"
+      "empty": "(žádná aktivita)",
+      "errorsInHour": "{n} chyba v {hour} h | {n} chyby v {hour} h | {n} chyb v {hour} h"
     },
     "topTools": {
-      "title": "Top nástroje 24h",
+      "title": "Nejčastější nástroje za 24 h",
       "clickHint": "Filtrovat na {tool}"
     },
     "detail": {
@@ -541,7 +542,8 @@
       "byTool": "Rozdělení podle nástroje",
       "allCalls": "Všechna volání",
       "copyJson": "Kopírovat JSON",
-      "copied": "JSON zkopírován do schránky"
+      "copied": "JSON zkopírován do schránky",
+      "avgMs": "průměr {ms} ms"
     },
     "danger": {
       "read": "čtení",
@@ -551,8 +553,8 @@
     "refresh": "Obnovit",
     "exportCsv": "Export CSV",
     "totalShown": "{n} z {total}",
-    "empty": "Zatím se nepřipojil žádný AI klient. Postup najdeš výše.",
-    "readsCollapsed": "{n}× čtení sbaleno (rozbalíš kliknutím)",
+    "empty": "Zatím se nepřipojil žádný AI klient. Postup najdete výše.",
+    "readsCollapsed": "{n}× čtení sbaleno (rozbalíte kliknutím)",
     "justNow": "právě teď",
     "minutesAgo": "před {n} min",
     "hoursAgo": "před {n} h",
@@ -563,14 +565,14 @@
   "mcpKinds": {
     "title": "Akce, které AI musí schválit",
     "refresh": "Obnovit",
-    "description": "O tyhle akce musí AI požádat. Popis vidíš i v žádosti. Nevratné akce nejdou vzít zpět. „Vždy se ptát“ znamená, že akci neschválí žádné pravidlo.",
+    "description": "O tyto akce musí AI požádat. Popis uvidíte i v žádosti. Nevratné akce nejdou vzít zpět. „Vždy se ptát“ znamená, že akci neschválí žádné pravidlo.",
     "labels": {
       "deploy": "Nasadit novou verzi",
       "rollback": "Vrátit se na předchozí verzi",
       "cancel": "Přerušit běžící deploy",
       "restore": "Obnovit databázový snapshot",
       "test_hook": "Spustit deploy hook pro test",
-      "settings_write": "Přepsat per-site deploy nastavení",
+      "settings_write": "Přepsat nastavení deploye webu",
       "snapshot_create": "Vytvořit ruční snapshot aktuální verze",
       "database_drop": "Smazat databázi",
       "database_query": "Spustit libovolný SQL dotaz",
@@ -595,7 +597,7 @@
       "mysql_user_password": "Resetovat heslo uživatelského účtu MySQL",
       "backup_restore": "Obnovit zálohu WDC přes současný stav"
     },
-    "empty": "Daemon zatím nevrátil žádné akce.",
+    "empty": "Démon zatím nevrátil žádné akce.",
     "col": {
       "id": "ID",
       "label": "Popis",
@@ -608,7 +610,7 @@
     "noAutoApprove": "–",
     "quickGrant": "Přidat pravidlo",
     "alwaysConfirm": "Vždy se ptát",
-    "alwaysConfirmTooltip": "Bez „vždy se ptát“ by tuhle akci schvalovala pravidla ({n}). Klikni pro úpravu.",
+    "alwaysConfirmTooltip": "Bez „vždy se ptát“ by tuto akci schvalovala pravidla ({n}). Kliknutím nastavení změníte.",
     "editAlwaysConfirm": "Upravit „vždy se ptát“",
     "danger": {
       "reversible": "Vratné",
@@ -764,7 +766,7 @@
     }
   },
   "siteEditToast": {
-    "composeNonZero": "Compose {action} skončil s nenulovým exit code",
+    "composeNonZero": "Compose {action} skončil s nenulovým návratovým kódem",
     "composeFailed": "Compose {action} selhal: {err}",
     "nodeStartFailed": "Spuštění Node selhalo: {err}",
     "nodeStopFailed": "Zastavení Node selhalo: {err}",
@@ -772,20 +774,20 @@
     "detected": "Rozpoznáno: {framework}",
     "noFramework": "Žádný framework nerozpoznán",
     "detectFailed": "Rozpoznání selhalo: {err}",
-    "bindRequired": "Vyber alespoň jednu IP nebo zvol * pro všechny listener adresy.",
+    "bindRequired": "Vyberte aspoň jednu IP adresu, nebo zvolte * pro všechny adresy.",
     "updated": "Změny jsou uloženy a použity",
     "updateFailed": "Aktualizace selhala: {err}",
     "configRestored": "Konfigurace obnovena",
     "restoreFailed": "Obnovení selhalo: {err}",
-    "historicalMetricsFailed": "Historické metriky selhaly: {err}"
+    "historicalMetricsFailed": "Historické metriky se nepodařilo načíst: {err}"
   },
   "sitesToast": {
     "enabled": "Web {domain} zapnut",
     "disabled": "Web {domain} vypnut",
     "toggleFailed": "Přepnutí selhalo: {err}",
     "folderPickerDesktopOnly": "Výběr složky je dostupný jen v desktopové aplikaci",
-    "bindRequired": "Vyber alespoň jednu IP nebo zvol * pro všechny listener adresy.",
-    "createdWithDb": "Web {domain} + databáze {db} vytvořen",
+    "bindRequired": "Vyberte aspoň jednu IP adresu, nebo zvolte * pro všechny adresy.",
+    "createdWithDb": "Web {domain} a databáze {db} jsou vytvořené",
     "createdDbFailed": "Web {domain} vytvořen (vytvoření databáze selhalo)",
     "createdSslMissing": "Web je vytvořen, ale certifikát pro HTTPS se nepodařilo vystavit. Nainstalujte mkcert a jeho certifikační autoritu na stránce SSL.",
     "created": "Web {domain} vytvořen",
@@ -806,7 +808,7 @@
     "framework": "Framework",
     "template": "Šablona",
     "templatePlaceholder": "Vyberte šablonu…",
-    "templateNone": "— Bez šablony —",
+    "templateNone": "Bez šablony",
     "createDatabase": "Vytvořit databázi",
     "filterPlaceholder": "Hledat web, alias nebo složku",
     "aliases": "Aliasy",
@@ -828,7 +830,7 @@
     "backToSites": "Zpět na Weby",
     "notFound": "Web „{domain}“ nebyl nalezen",
     "simple": {
-      "cloudflareTunnel": "Cloudflare Tunel",
+      "cloudflareTunnel": "Tunel Cloudflare",
       "submit": "Vytvořit web"
     },
     "detail": {
@@ -872,7 +874,7 @@
       "duplicated": "Duplikováno: {name}"
     },
     "edit": {
-      "browseDocRoot": "Vybrat složku document root"
+      "browseDocRoot": "Vybrat kořenovou složku webu"
     },
     "access": {
       "title": "Přístupy",
@@ -887,27 +889,28 @@
       "lines": "Záznamů",
       "since": "Od",
       "refresh": "Obnovit",
-      "autoRefresh": "Auto"
+      "autoRefresh": "Automaticky",
+      "ipTooltip": "Skutečná IP klienta (přednost má CF-Connecting-IP nebo X-Forwarded-For, jinak adresa spojení)"
     },
     "composer": {
       "tabLabel": "Composer",
-      "noProject": "Nenalezen Composer projekt",
+      "noProject": "Projekt Composeru nenalezen",
       "init": "Inicializovat Composer",
-      "initHint": "Spusť composer init ve složce webu pro začátek",
+      "initHint": "Pro začátek spusťte ve složce webu composer init",
       "install": "Spustit composer install",
       "require": "Přidat balíček",
       "packageName": "Název balíčku",
       "packageNameHint": "např. nette/application nebo symfony/console:^6.0",
-      "lockStatus": "Lock soubor",
+      "lockStatus": "Soubor composer.lock",
       "packageCount": "{count} balíčků v require",
       "lastOutput": "Výstup posledního příkazu",
       "exitCode": "Návratový kód",
       "running": "Spouštím composer…",
       "success": "Příkaz dokončen úspěšně",
-      "failed": "Příkaz selhal (exit kód {code})",
-      "pluginMissing": "Plugin Composer není načten — nainstaluj ho v sekci Pluginy",
-      "frameworkDetected": "Detekován {framework}",
-      "installPrompt": "Spusť composer install pro stažení závislostí",
+      "failed": "Příkaz selhal (návratový kód {code})",
+      "pluginMissing": "Plugin Composer není načtený. Nainstalujte ho na stránce Pluginy.",
+      "frameworkDetected": "Rozpoznáno: {framework}",
+      "installPrompt": "Spusťte composer install, stáhnou se závislosti",
       "installNow": "Nainstalovat",
       "dismiss": "Skrýt",
       "openOnPackagist": "Otevřít {name} na packagist.org",
@@ -916,7 +919,7 @@
       "removed": "{name} odebrán",
       "updateAvailable": "Nová verze k dispozici: v{latest}",
       "abandoned": "Tento balíček je opuštěn",
-      "abandonedReplacedBy": "Opuštěn — nahrazuje {name}",
+      "abandonedReplacedBy": "Opuštěný, náhrada: {name}",
       "openRepository": "Otevřít repozitář",
       "outdatedBadge": "Zastaralé",
       "colName": "Název",
@@ -927,7 +930,7 @@
       "statusOk": "OK",
       "statusOutdated": "Zastaralý",
       "statusAbandoned": "Opuštěný",
-      "versionSelectPlaceholder": "Verze (auto)",
+      "versionSelectPlaceholder": "Verze (automaticky)",
       "initTitle": "Inicializovat Composer",
       "initName": "Název balíčku",
       "initDescription": "Popis (volitelný)",
@@ -936,7 +939,10 @@
       "checkConflicts": "Zkontrolovat konflikty",
       "noConflicts": "Žádné konflikty",
       "conflictsTitle": "Konflikty a varování",
-      "majorJump": "Major version jump — možné breaking changes"
+      "majorJump": "Skok o hlavní verzi, možné nekompatibilní změny",
+      "present": "nalezen",
+      "missing": "chybí",
+      "versionAuto": "(automaticky)"
     },
     "list": {
       "stateFilter": "Filtrovat podle stavu",
@@ -972,7 +978,7 @@
       "showDetail": "Zobrazit podrobnosti",
       "hideDetail": "Skrýt podrobnosti",
       "missing": "chybí",
-      "phpMissingTitle": "PHP {v} není nainstalované. Nainstalujte ji na stránce Binárky, nebo web přepněte na jinou verzi.",
+      "phpMissingTitle": "PHP {v} není nainstalované. Nainstalujte ho na stránce Binárky, nebo web přepněte na jinou verzi.",
       "phpDefault": "výchozí",
       "menu": {
         "edit": "Nastavení webu",
@@ -1151,7 +1157,7 @@
     "portSwitchFailed": "Přepnutí portu selhalo",
     "createdToast": "Databáze {name} vytvořena",
     "createFailed": "Vytvoření selhalo",
-    "dropConfirm": "Smazat databázi „{name}\"? Tato akce smaže VŠECHNA data a nelze ji vrátit.",
+    "dropConfirm": "Smazat databázi „{name}“? Tato akce smaže VŠECHNA data a nelze ji vrátit.",
     "dropFailed": "Smazání selhalo",
     "droppedToast": "Databáze {name} smazána",
     "importingToast": "Importuji {file} do {db}…",
@@ -1184,7 +1190,7 @@
       "totalRows": "{count} řádků",
       "filterPlaceholder": "Výraz pro WHERE: id > 100 AND name LIKE 'foo%'",
       "applyFilter": "Použít",
-      "filterHint": "syrový SQL boolean výraz, použije se jako WHERE",
+      "filterHint": "SQL podmínka, vloží se za WHERE beze změny",
       "empty": "Na této stránce nejsou žádná data.",
       "queryTime": "Dotaz: {ms} ms"
     },
@@ -1194,7 +1200,7 @@
       "colName": "Název",
       "colType": "Typ",
       "colNullable": "Null",
-      "colDefault": "Default",
+      "colDefault": "Výchozí hodnota",
       "colComment": "Poznámka",
       "idxName": "Název",
       "idxColumns": "Sloupce",
@@ -1210,10 +1216,11 @@
       "history": "Historie ({count})",
       "clearHistory": "Vymazat historii",
       "runHint": "Napište SQL nahoře a spusťte ho klávesami Ctrl+Enter. Více příkazů oddělte středníkem.",
-      "affected": "{count} řádků ovlivněno",
+      "affected": "Ovlivněné řádky: {count}",
       "tabAffected": "#{n}: ovlivněno ({count})",
       "tabRows": "#{n}: řádky ({count})",
-      "run": "Spustit dotaz"
+      "run": "Spustit dotaz",
+      "rowsCount": "Řádky: {n}"
     },
     "diag": {
       "notInstalledTitle": "MySQL zatím není nainstalovaný",
@@ -1238,7 +1245,7 @@
     "modules": "modulů",
     "filterPlaceholder": "Filtrovat moduly…",
     "noMatching": "Žádný modul neodpovídá „{q}“",
-    "noEntries": "Katalog je prázdný. Zkontrolujte, že běží daemon a že je katalog dostupný.",
+    "noEntries": "Katalog je prázdný. Zkontrolujte, že běží démon a že je katalog dostupný.",
     "catalogReleases": "{n} verze v katalogu | {n} verze v katalogu | {n} verzí v katalogu",
     "catalogUnreachable": "nedostupný",
     "manageVersions": "Spravovat verze",
@@ -1325,14 +1332,14 @@
     "addVersion": "Přidat verzi",
     "configLoadFailed": "Soubor php.ini se nepodařilo načíst: {err}",
     "configNotFound": "Pro PHP {version} se nenašel soubor php.ini. Zkuste stránku načíst znovu; pokud to nepomůže, verzi v Binárkách přeinstalujte.",
-    "daemonUnreachable": "Nepodařilo se spojit s daemonem: {err}",
+    "daemonUnreachable": "Nepodařilo se spojit s démonem: {err}",
     "installedCount": "{n} nainstalovaná verze | {n} nainstalované verze | {n} nainstalovaných verzí",
     "extensionAria": "Rozšíření {name} zapnuté"
   },
   "ssl": {
     "title": "SSL certifikáty",
     "generate": "Vygenerovat certifikát",
-    "installCa": "Instalovat CA",
+    "installCa": "Nainstalovat CA",
     "caInstalled": "Certifikační autorita je nainstalovaná a důvěryhodná",
     "caTrusted": "CA je důvěryhodná",
     "revoke": "Odvolat",
@@ -1362,7 +1369,7 @@
       "generateBtn": "Vygenerovat"
     },
     "revokeConfirmTitle": "Odvolat certifikát",
-    "revokeConfirmMessage": "Odvolat certifikát pro „{domain}\"? Weby, které ho používají, poběží přes HTTP, dokud nebude vygenerován nový certifikát.",
+    "revokeConfirmMessage": "Odvolat certifikát pro „{domain}“? Weby, které ho používají, poběží přes HTTP, dokud nebude vygenerován nový certifikát.",
     "installMkcert": "Nainstalovat mkcert",
     "caInstallFailed": "Instalace certifikační autority selhala: {err}",
     "generateFailed": "Certifikát se nepodařilo vytvořit: {err}",
@@ -1378,12 +1385,12 @@
     "pluginMissingDesc": "Certifikáty pro HTTPS spravuje plugin SSL (mkcert). Bez něj tato stránka nemá co zobrazit.",
     "caNotTrusted": "CA zatím není důvěryhodná",
     "pluginMissingTitle": "Plugin SSL není nainstalovaný",
-    "daemonUnreachable": "Nepodařilo se spojit s daemonem: {err}"
+    "daemonUnreachable": "Nepodařilo se spojit s démonem: {err}"
   },
   "plugins": {
     "title": "Pluginy",
     "installed": "Nainstalované",
-    "marketplace": "Marketplace",
+    "marketplace": "Ke stažení",
     "installedCount": "{count} nainstalováno",
     "enabledRatio": "{enabled} zapnuto z {total} nainstalovaných",
     "uninstall": "Odinstalovat",
@@ -1393,12 +1400,12 @@
     "installedTag": "Nainstalováno",
     "sourceUnavailable": "Zdroj není dostupný",
     "restore": "Vrátit plugin",
-    "marketplaceCount": "{count} v marketplacu",
+    "marketplaceCount": "{count} ke stažení",
     "searchPlaceholder": "Hledat pluginy…",
     "copyUrl": "Kopírovat URL",
     "openPanel": "Otevřít panel",
-    "marketplaceUnreachable": "Marketplace není dostupný: {error}",
-    "noMarketplaceItems": "Žádné pluginy v marketplacu",
+    "marketplaceUnreachable": "Seznam pluginů ke stažení není dostupný: {error}",
+    "noMarketplaceItems": "Žádné pluginy ke stažení",
     "installConfirm": "Instalovat {name} v{version} z {url}? Po instalaci bude nutný restart démona.",
     "toast": {
       "urlCopied": "URL ke stažení zkopírováno do schránky",
@@ -1409,29 +1416,29 @@
       "installedNotification": "{name} nainstalován",
       "loadedAfterInstall": "Plugin načten.",
       "toggleFailed": "Přepnutí pluginu selhalo: {err}",
-      "restartTimeout": "Daemon po restartu neodpovídá. Zkuste stisknout Ctrl+R.",
-      "restartTimeoutLong": "Daemon po restartu neodpovídá ani po 15 s. Zkuste stisknout Ctrl+R.",
+      "restartTimeout": "Démon po restartu neodpovídá. Zkuste stisknout Ctrl+R.",
+      "restartTimeoutLong": "Démon po restartu neodpovídá ani po 15 s. Zkuste stisknout Ctrl+R.",
       "restored": "Plugin {id} je vrácený",
       "restoreFailed": "Vrácení pluginu selhalo: {err}",
-      "rebuildTitle": "Plugin potřebuje rebuild",
+      "rebuildTitle": "Plugin je potřeba znovu sestavit",
       "restoringTitle": "Vracím plugin",
-      "uninstallConfirmMessage": "Opravdu odinstalovat „{name}\"? Soubory pluginu budou smazány.",
+      "uninstallConfirmMessage": "Opravdu odinstalovat „{name}“? Soubory pluginu budou smazány.",
       "uninstallConfirmTitle": "Odinstalovat plugin",
       "uninstallBtn": "Odinstalovat",
-      "uninstalledRestart": "Plugin odinstalován a daemon restartován",
+      "uninstalledRestart": "Plugin odinstalován a démon restartován",
       "uninstalledNotificationTitle": "Odinstalováno",
-      "uninstalledRestarting": "{msg} Restartuji daemon…",
+      "uninstalledRestarting": "{msg} Restartuji démona…",
       "fileDeleted": "Plugin smazán.",
       "uninstalled": "Plugin odinstalován",
       "uninstallFailed": "Odinstalace selhala: {err}"
     },
     "installSuccess": "{name} nainstalován",
     "installFailed": "Instalace selhala",
-    "restartRequired": "Restartujte daemon, aby se nový plugin načetl.",
+    "restartRequired": "Restartujte démona, aby se nový plugin načetl.",
     "page": {
       "loadFailed": "Načtení pluginu selhalo",
       "backToDashboard": "Zpět na přehled",
-      "notFound": "Plugin „{id}\" nenalezen.",
+      "notFound": "Plugin „{id}“ nenalezen.",
       "enabled": "Zapnuto",
       "disabled": "Vypnuto",
       "about": "O pluginu",
@@ -1440,9 +1447,9 @@
       "license": "Licence",
       "capabilities": "Schopnosti",
       "platforms": "Platformy",
-      "bundleFailed": "Nepodařilo se načíst UI bundle pluginu: {error}",
-      "fallback": "Použiji schema-driven panely.",
-      "noPanel": "Tento plugin neposkytuje vlastní UI panel."
+      "bundleFailed": "Rozhraní pluginu se nepodařilo načíst: {error}",
+      "fallback": "Použiji obecné panely podle schématu.",
+      "noPanel": "Tento plugin nemá vlastní panel."
     },
     "reload": "Načíst znovu",
     "marketplaceSource": "Zdroj: {source}",
@@ -1477,7 +1484,7 @@
     "addDialogHostname": "Hostname",
     "addDialogComment": "Komentář (volitelný)",
     "addDialogSave": "Přidat",
-    "searchPlaceholder": "Filtrovat hostname nebo IP...",
+    "searchPlaceholder": "Filtrovat hostname nebo IP…",
     "sourceWdc": "wdc",
     "sourceCustom": "vlastní",
     "sourceExternal": "systémový",
@@ -1496,16 +1503,16 @@
     "externalNotApplied": "{count} změna mimo blok WDC se nezapsala. Tyto řádky upravte přímo v souboru hosts. | {count} změny mimo blok WDC se nezapsaly. Tyto řádky upravte přímo v souboru hosts. | {count} změn mimo blok WDC se nezapsalo. Tyto řádky upravte přímo v souboru hosts.",
     "applyError": "Změny se nepodařilo uložit",
     "adminRequired": "Vyžaduje práva správce. Restartujte WDC jako správce.",
-    "adminRequiredPrompt": "Daemon WDC nemá práva správce. Restartovat ho jako správce? Windows zobrazí dialog Řízení uživatelských účtů.",
+    "adminRequiredPrompt": "Démon WDC nemá práva správce. Restartovat ho jako správce? Windows zobrazí dialog Řízení uživatelských účtů.",
     "restartAsAdmin": "Restartovat jako správce",
     "elevateUnavailable": "Restart s právy správce funguje jen v aplikaci, ne v prohlížeči.",
-    "elevateDispatched": "Windows zobrazil dialog Řízení uživatelských účtů. Potvrďte ho a daemon se restartuje jako správce.",
+    "elevateDispatched": "Windows zobrazil dialog Řízení uživatelských účtů. Potvrďte ho a démon se restartuje jako správce.",
     "elevateFailed": "Restart s právy správce se nepodařil",
     "emptyTitle": "Žádné záznamy",
     "emptyHostsCorruptionTitle": "Soubor hosts je prázdný, pravděpodobně je poškozený",
     "emptyHostsCorruptionBody": "Soubor hosts ve Windows nemá žádný záznam. Obvykle to znamená, že ho něco omylem přepsalo. Obnovte ho ze zálohy WDC nebo do něj znovu zapište záznamy webů.",
     "loadFailedTitle": "Soubor hosts se nepodařilo načíst",
-    "loadFailedBody": "Nepodařilo se spojit s daemonem nebo načíst záznamy. Zkontrolujte, že daemon WDC běží, a zkuste to znovu.",
+    "loadFailedBody": "Nepodařilo se spojit s démonem nebo načíst záznamy. Zkontrolujte, že démon WDC běží, a zkuste to znovu.",
     "retry": "Zkusit znovu",
     "autoManagedInfo": "WDC automaticky přidává a odebírá záznamy při vytvoření nebo smazání webu.",
     "ipColumn": "IP adresa",
@@ -1560,7 +1567,7 @@
     "databasesEmbedHint": "Tento panel spravuje lokální MySQL databáze přímo. Hlavní stránku Databáze použijte pro širší pracovní prostor.",
     "databasesCount": "databází",
     "databaseSizeUnknown": "Velikost není načtená",
-    "databaseNameInvalid": "Název databáze může mít 1-64 písmen, číslic nebo podtržítek.",
+    "databaseNameInvalid": "Název databáze může mít 1–64 písmen, číslic nebo podtržítek.",
     "databaseCreated": "Databáze {name} vytvořena",
     "databaseDropped": "Databáze {name} smazána",
     "toast": {
@@ -1568,7 +1575,7 @@
       "changePasswordFailed": "Změna hesla selhala: {err}",
       "rootResetTitle": "Reset root hesla",
       "rootResetConfirmEmpty": "Toto resetuje všechny root účty na prázdné heslo. Pokračovat?",
-      "rootResetConfirm": "Toto zastaví MySQL, resetuje všechny root účty a znovu spustí. Pokračovat?",
+      "rootResetConfirm": "Toto zastaví MySQL, resetuje všechny root účty a znovu ho spustí. Pokračovat?",
       "rootResetBtn": "Reset",
       "rootResetSuccess": "MySQL root heslo resetováno",
       "rootResetStatus": "Root heslo úspěšně resetováno",
@@ -1582,8 +1589,8 @@
       "createUserFailed": "Vytvoření uživatele selhalo: {err}",
       "userPasswordUpdated": "Heslo MySQL uživatele aktualizováno",
       "userPasswordUpdateFailed": "Aktualizace hesla selhala: {err}",
-      "grantApplied": "MySQL grant aplikován",
-      "grantFailed": "Grant selhal: {err}",
+      "grantApplied": "Oprávnění MySQL přidáno",
+      "grantFailed": "Oprávnění se nepodařilo přidat: {err}",
       "userDeleted": "MySQL uživatel smazán",
       "deleteUserFailed": "Smazání uživatele selhalo: {err}",
       "dropUserConfirmTitle": "Smazat MySQL uživatele",
@@ -1604,25 +1611,25 @@
     "privileges": "Oprávnění",
     "privilegeRead": "Pouze čtení",
     "privilegeReadWrite": "Čtení + zápis",
-    "privilegeAdmin": "Admin",
+    "privilegeAdmin": "Správce",
     "flags": "Příznaky",
     "locked": "Zamčeno",
-    "expired": "Expirované",
+    "expired": "Heslo vypršelo",
     "setPassword": "Nastavit heslo",
     "grant": "Přidat oprávnění",
     "changePassword": "Změna hesla",
-    "changePasswordHint": "Aktuální heslo nechte prázdné pro reset root hesla přes spravovaný servisní tok",
+    "changePasswordHint": "Když aktuální heslo necháte prázdné, WDC heslo roota resetuje samo.",
     "currentPassword": "Aktuální heslo",
     "currentPasswordOptional": "Volitelné pro reset",
     "newPassword": "Nové heslo",
     "confirmPassword": "Potvrzení nového hesla",
     "changePasswordBtn": "Změnit heslo",
     "passwordChanged": "MySQL root heslo změněno",
-    "resetWithoutCurrentConfirm": "Aktuální heslo je prázdné, WDC proto resetuje root přes spravovaný servisní tok. Pokračovat?",
+    "resetWithoutCurrentConfirm": "Aktuální heslo je prázdné, WDC proto heslo roota resetuje samo. Pokračovat?",
     "resetToEmptyConfirm": "Tímto se všechny root účty nastaví na prázdné heslo. Pokračovat?",
     "resetPassword": "Reset root hesla",
-    "resetWarning": "Toto je destruktivní operace",
-    "resetDescription": "Zastaví MySQL, spustí v safe módu (--skip-grant-tables), resetuje všechny root účty na nové heslo a poté normálně restartuje.",
+    "resetWarning": "Tuto akci nejde vrátit",
+    "resetDescription": "Zastaví MySQL, spustí ho v nouzovém režimu (--skip-grant-tables), nastaví všem root účtům nové heslo a pak ho normálně spustí.",
     "newRootPassword": "Nové root heslo",
     "resetPasswordBtn": "Resetovat root heslo",
     "needsRunning": "Databáze a uživatele uvidíte, až MySQL poběží."
@@ -1661,25 +1668,27 @@
   },
   "cloudflareSite": {
     "title": "Cloudflare Tunnel",
-    "subtitle": "Veřejný hostname pro tento web",
-    "exposeTitle": "Vystavit přes tunel",
-    "exposeDesc": "Vytvoří proxied CNAME ve tvé Cloudflare zóně a přidá ingress pravidlo, aby byl web dostupný přes HTTPS bez port-forwardingu.",
+    "subtitle": "Veřejná adresa tohoto webu",
+    "exposeTitle": "Zpřístupnit přes tunel",
+    "exposeDesc": "Vytvoří ve vaší zóně Cloudflare záznam CNAME s proxy a přidá do tunelu pravidlo, takže web bude dostupný přes HTTPS bez přesměrování portů.",
     "createTunnel": "Vytvořit tunel",
     "subdomainLabel": "Subdoména",
-    "subdomainHint": "Hostname pod tvou zónou, kde bude tento web dostupný.",
+    "subdomainHint": "Adresa pod vaší zónou, na které bude tento web dostupný.",
     "suggest": "Navrhnout",
     "zoneLabel": "Zóna",
-    "zonePlaceholder": "Vyber Cloudflare zónu…",
+    "zonePlaceholder": "Vyberte zónu Cloudflare…",
     "advancedLabel": "Pokročilé",
     "localServiceLabel": "Lokální služba",
-    "localServiceHint": "Auto-odvozeno z portu webu + SSL nastavení. Přenastavuj jen když víš, že tvůj tunel potřebuje jiný upstream.",
-    "publicUrl": "Veřejné URL",
-    "applyNow": "Aplikovat tunel",
-    "applyAgain": "Aplikovat znovu",
-    "applyHint": "Upraví per-site CNAME + ingress pravidlo na Cloudflare. Nezávisle na Uložit & Použít nadřazeného formuláře.",
-    "notConfiguredTitle": "Cloudflare účet není nakonfigurovaný",
-    "notConfiguredBody": "Nejdřív nastav API token, účet a tunel v sekci Cloudflare.",
-    "openSetup": "Otevřít Cloudflare nastavení"
+    "localServiceHint": "Odvozuje se z portu webu a nastavení SSL. Měňte jen tehdy, když víte, že váš tunel potřebuje jinou cílovou adresu.",
+    "publicUrl": "Veřejná adresa",
+    "applyNow": "Použít tunel",
+    "applyAgain": "Použít znovu",
+    "applyHint": "Hned upraví záznam CNAME a pravidlo tunelu pro tento web v Cloudflare. Nezávisí na tlačítku Uložit a použít.",
+    "notConfiguredTitle": "Účet Cloudflare není nastavený",
+    "notConfiguredBody": "Nejdřív nastavte API token, účet a tunel na stránce Cloudflare.",
+    "openSetup": "Otevřít nastavení Cloudflare",
+    "syncedStatus": "Synchronizováno webů: {n} · {url}",
+    "zoneFallback": "(zóna)"
   },
   "cloudflare": {
     "title": "Cloudflare Tunnel",
@@ -1688,7 +1697,7 @@
     "tunnelStopped": "Tunel je zastavený",
     "tunnelHint": "Použije token tunelu získaný v kroku 1 a připojí se k síti Cloudflare.",
     "toast": {
-      "settingsSaved": "Cloudflare nastavení uloženo",
+      "settingsSaved": "Nastavení Cloudflare uloženo",
       "binaryPathSaved": "Cesta k binárce uložena",
       "subdomainTemplateSaved": "Šablona subdomény uložena",
       "saveFailed": "Uložení selhalo: {err}",
@@ -1703,11 +1712,11 @@
       "listTunnelsFailed": "Načtení tunelů selhalo: {err}",
       "startFailed": "Spuštění selhalo: {err}",
       "stopFailed": "Zastavení selhalo: {err}",
-      "configureTunnelFirst": "Nejdřív nakonfiguruj tunnel ID",
-      "loadIngressFailed": "Načtení ingress selhalo: {err}",
+      "configureTunnelFirst": "Nejdřív nastavte ID tunelu",
+      "loadIngressFailed": "Pravidla tunelu se nepodařilo načíst: {err}",
       "ruleAdded": "Pravidlo přidáno: {hostname} → {service}",
-      "ingressApplied": "Aplikováno {n} ingress pravidel na tunel",
-      "ingressApplyFailed": "Aplikace selhala: {err}",
+      "ingressApplied": "Do tunelu zapsáno pravidel: {n}",
+      "ingressApplyFailed": "Pravidla tunelu se nepodařilo zapsat: {err}",
       "loadDnsFailed": "Načtení DNS selhalo: {err}",
       "pickZoneFirst": "Nejdřív vyberte zónu",
       "dnsCreated": "{type} {name} vytvořen",
@@ -1726,7 +1735,7 @@
       "tunnelRunning": "Tunel běží",
       "stopped": "Zastaveno",
       "unknown": "Stav neznámý",
-      "serviceInfoUnavailable": "Stav služby není k dispozici. Zkontrolujte, že běží daemon.",
+      "serviceInfoUnavailable": "Stav služby není k dispozici. Zkontrolujte, že běží démon.",
       "tokenStored": "API token uložen",
       "tokenMissing": "API token chybí",
       "tokenStoredUnverified": "Token uložen (neověřen)",
@@ -1757,7 +1766,7 @@
       "subdomainTemplateHint": "Výchozí veřejný hostname při zapnutí tunelu na webu"
     },
     "actions": {
-      "autoSetup": "Auto-nastavení tunelu",
+      "autoSetup": "Nastavit tunel automaticky",
       "browse": "Procházet…",
       "savePath": "Uložit cestu",
       "saveTemplate": "Uložit šablonu"
@@ -1765,14 +1774,14 @@
     "tokenPlaceholder": "cfut_… nebo 40znakový token",
     "requiredScopes": "Vyžadovaná oprávnění:",
     "createTokenAt": "Token vytvoříte na",
-    "autoSetupExplain": "Auto-nastavení provede: ověří token, vybere první účet, najde nebo vytvoří tunel pojmenovaný {tunnel}, stáhne jeho JWT a vše uloží do {file}.",
+    "autoSetupExplain": "Automatické nastavení ověří token, vybere první účet, najde nebo vytvoří tunel s názvem {tunnel}, stáhne jeho JWT a vše uloží do {file}.",
     "subdomainPlaceholders": "Zástupné znaky:",
     "subdomainStem": "= lokální doména bez {loc}/{local}/{test}",
     "subdomainUser": "= uživatelské jméno OS",
     "subdomainExample": "Příklad pro {domain}:",
     "savePathBtn": "Uložit cestu",
     "saveTemplateBtn": "Uložit šablonu",
-    "exposedSites": "Vystavené weby",
+    "exposedSites": "Zveřejněné weby",
     "exposedSitesHint": "Weby, které mají tunel zapnutý v úpravě webu na kartě Cloudflare",
     "noSitesExposed": "Zatím není zveřejněný žádný web. Otevřete web v sekci Weby, na kartě Cloudflare zapněte „Povolit tunel pro tento web“, vyberte zónu, zadejte subdoménu a uložte. Potom tu klikněte na „Synchronizovat všechny weby“.",
     "syncAllSites": "Synchronizovat všechny weby do Cloudflare ({n})",
@@ -1843,7 +1852,7 @@
     "httpsPort": "Port HTTPS",
     "portsHint": "Výchozí jsou porty 80 pro HTTP a 443 pro HTTPS.",
     "bindUnavailable": "uloženo, teď nedostupné",
-    "tunnelLabel": "Zpřístupnit web přes Cloudflare tunel",
+    "tunnelLabel": "Zpřístupnit web přes tunel Cloudflare",
     "tunnelNotConfigured": "Tunel zatím není nastavený. Zónu a subdoménu zvolíte na stránce Cloudflare.",
     "openCloudflare": "Otevřít Cloudflare",
     "frameworkPlaceholder": "wordpress, laravel, nextjs…",
@@ -1871,7 +1880,7 @@
       "none": "žádné",
       "network": "Síť",
       "allAddresses": "všechny adresy",
-      "tunnel": "Cloudflare tunel",
+      "tunnel": "Tunel Cloudflare",
       "explain": {
         "running": "Web odpovídá na adrese výše.",
         "waitingStopped": "Konfigurace je zapsaná. Web začne odpovídat, až spustíte Apache, tlačítko je níže ve Službách webu.",
@@ -1887,8 +1896,8 @@
   "deploySettings": {
     "tabs": {
       "hosts": "Hosti",
-      "snapshots": "DB Snapshot",
-      "hooks": "Hooks",
+      "snapshots": "Snapshot DB",
+      "hooks": "Hooky",
       "notifications": "Notifikace",
       "advanced": "Pokročilé"
     },
@@ -1905,27 +1914,27 @@
     },
     "saveAll": "Uložit všechna nastavení",
     "saveSuccess": "Nastavení uloženo",
-    "saveLocalOnly": "Nastavení uloženo lokálně (backend persistence v Phase 6.3)",
+    "saveLocalOnly": "Nastavení uloženo jen lokálně, ukládání do démona zatím chybí",
     "saveFailed": "Uložení selhalo",
-    "saveBlockedLoadFailed": "Nastavení deploye se nepodařilo načíst z daemonu, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až daemon poběží, otevřete stránku znovu.",
+    "saveBlockedLoadFailed": "Nastavení deploye se nepodařilo načíst z démona, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až démon poběží, otevřete stránku znovu.",
     "discard": "Zahodit",
     "discardConfirmTitle": "Zahodit změny?",
     "discardConfirmMessage": "Všechny neuložené změny v tomto formuláři budou zahozeny. Pokračovat?",
     "discarded": "Změny zahozeny",
     "unsavedChanges": "neuložené změny",
     "allSaved": "uloženo",
-    "mcpGrantsBadge": "{n} MCP grant(ů)",
-    "mcpGrantsTooltip": "{n} aktivních MCP grantů umožňuje AI provést destruktivní akce na tomto webu bez potvrzení. Klikněte pro detail.",
-    "backendBuiltInTooltip": "Deploy obsluhuje vestavěný handler v daemon procesu. Po nahrání nks.wdc.deploy pluginu se přepne na plugin-řízený deploy.",
-    "backendPluginTooltip": "Deploy obsluhuje plugin nks.wdc.deploy verze {v}. Plugin lze deaktivovat ve správě pluginů — daemon pak vrátí 404 na všechny deploy endpointy.",
+    "mcpGrantsBadge": "Pravidla MCP: {n}",
+    "mcpGrantsTooltip": "Aktivní pravidla MCP ({n}) dovolují AI provést na tomto webu nevratné akce bez ptaní. Kliknutím zobrazíte podrobnosti.",
+    "backendBuiltInTooltip": "Deploy obsluhuje vestavěná část démona. Po nahrání pluginu nks.wdc.deploy ho převezme tento plugin.",
+    "backendPluginTooltip": "Deploy obsluhuje plugin nks.wdc.deploy verze {v}. Plugin jde vypnout ve správě pluginů, démon pak na všechny adresy deploye vrátí 404.",
     "recheckReadiness": "Znovu zkontrolovat",
     "openGlobalSettings": "Otevřít v Nastavení",
-    "readyToFlip": "Plugin parita ověřena — flip useLegacyHostHandlers=false je bezpečný",
-    "stayOnBuiltIn": "Zůstaňte v built-in režimu — {n} blokátor(ů) výše",
+    "readyToFlip": "Plugin umí totéž co vestavěná obsluha, přepnout useLegacyHostHandlers na false je bezpečné",
+    "stayOnBuiltIn": "Zůstaňte u vestavěné obsluhy, blokujících podmínek: {n} (viz výše)",
     "restartPendingTitle": "Vyžadován restart démona",
-    "restartPendingDescription": "Hodnota deploy.useLegacyHostHandlers byla změněna, ale autorita handleru se aplikuje až při dalším startu démona.",
-    "restartPendingTooltip": "Nastavení změněno — restartuj daemona, aby se projevilo",
-    "gatedEndpointsLabel": "Endpointy které přejdou pod plugin po restartu ({n}):",
+    "restartPendingDescription": "Hodnota deploy.useLegacyHostHandlers se změnila, nová obsluha deploye ale začne platit až po dalším spuštění démona.",
+    "restartPendingTooltip": "Nastavení se změnilo. Projeví se po restartu démona.",
+    "gatedEndpointsLabel": "Adresy API, které po restartu převezme plugin ({n}):",
     "hostCardCmp": {
       "edit": "Upravit",
       "remove": "Odebrat",
@@ -1933,24 +1942,25 @@
       "remotePath": "Vzdálená cesta",
       "branch": "Větev",
       "localPaths": "Lokální cesty",
-      "localPathsNotSet": "nenastavené (vyžaduje localPaths v body deploye)",
+      "localPathsNotSet": "nenastavené (deploy je musí poslat v localPaths)",
       "flags": "Volby",
-      "soak": "soak {n} s",
+      "soak": "sledování {n} s",
       "healthUrl": "Kontrola dostupnosti",
-      "phpPath": "PHP binárka"
+      "phpPath": "Program PHP",
+      "migrations": "migrace"
     },
     "hosts": {
-      "title": "Deploy hosti",
-      "lead": "Každý host odpovídá jednomu deploy cíli (production, staging, …). Nastavení definuje SSH spojení, vzdálenou cestu, větev a build kroky. Lokální cesty jsou volitelné pro local-loopback backend.",
+      "title": "Hosti pro deploy",
+      "lead": "Každý host odpovídá jednomu cíli deploye (production, staging, …). Určuje spojení SSH, vzdálenou cestu, větev a kroky sestavení. Lokální cesty jsou volitelné, používá je jen lokální režim deploye.",
       "addHost": "Přidat hosta",
       "addFirstHost": "Přidat prvního hosta",
-      "emptyTitle": "Žádný deploy host",
+      "emptyTitle": "Žádný host pro deploy",
       "saveHosts": "Uložit hosty",
-      "count": "{n} hostů",
-      "empty": "Zatím nejsou nakonfigurovaní žádní hosti — klikněte na „Přidat hosta“ pro nastavení produkce / stagingu / atd.",
+      "count": "Hosti: {n}",
+      "empty": "Zatím tu není žádný host. Produkci, staging a další cíle přidáte tlačítkem „Přidat hosta“.",
       "col": {
         "name": "Název",
-        "sshTarget": "SSH user{'@'}host",
+        "sshTarget": "SSH uživatel{'@'}host",
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
         "localPaths": "Lokální cesty",
@@ -1962,64 +1972,76 @@
       "ariaEditHost": "Upravit hosta {name}",
       "ariaRemoveHost": "Odebrat hosta {name}",
       "ariaComposerEnabled": "Composer install zapnut",
-      "ariaComposerDisabled": "Composer install vypnut"
+      "ariaComposerDisabled": "Composer install vypnut",
+      "hostAdded": "Host přidán",
+      "hostUpdated": "Host upraven",
+      "removeConfirmTitle": "Odebrat hosta",
+      "removeConfirmMessage": "Odebrat hosta „{name}“?"
     },
     "hostDialog": {
-      "addTitle": "Přidat deploy hosta",
+      "addTitle": "Přidat hosta pro deploy",
       "editTitle": "Upravit hosta",
       "name": "Název (slug)",
       "namePlaceholder": "production",
-      "nameHelp": "Unikátní identifikátor používaný v CLI a deploy logu. Po vytvoření už nelze změnit.",
+      "nameHelp": "Jedinečný identifikátor pro příkazový řádek a log deploye. Po vytvoření ho nejde změnit.",
       "sshHost": "SSH host",
       "sshHostPlaceholder": "192.168.1.10",
-      "sshUser": "SSH user",
+      "sshUser": "SSH uživatel",
       "sshUserPlaceholder": "deploy",
       "port": "Port",
       "remotePath": "Vzdálená cesta",
       "remotePathPlaceholder": "/var/www/myapp",
       "branch": "Větev",
       "branchPlaceholder": "main",
-      "phpPath": "Cesta k PHP binárce (volitelné)",
+      "phpPath": "Cesta k PHP (volitelné)",
       "phpPathPlaceholder": "/usr/bin/php8.3",
-      "healthUrl": "URL pro health check (volitelné)",
+      "healthUrl": "URL kontroly dostupnosti (volitelné)",
       "healthUrlPlaceholder": "https://example.com/health",
-      "soakSeconds": "Soak (sekundy)",
+      "soakSeconds": "Doba sledování (sekundy)",
       "composerInstall": "Spustit composer install",
       "runMigrations": "Spustit migrace",
       "testConnection": "Otestovat připojení",
-      "testConnectionOk": "TCP probe prošel ({ms} ms)",
-      "testConnectionRequestFailed": "Probe neúspěšný: {error}",
-      "localPathsTitle": "Lokální cesty (local-loopback backend)",
-      "localPathsHelp": "Když jsou nastavené, tlačítko Deploy v GUI je použije automaticky. Slouží k deployi bez vzdáleného SSH (pro lokální testy a fixture weby).",
+      "testConnectionOk": "Spojení TCP funguje ({ms} ms)",
+      "testConnectionRequestFailed": "Test spojení selhal: {error}",
+      "localPathsTitle": "Lokální cesty (lokální režim deploye)",
+      "localPathsHelp": "Když jsou nastavené, tlačítko Deploy je použije automaticky. Slouží k deployi bez SSH, pro lokální testy a testovací weby.",
       "localSourcePath": "Lokální zdrojová cesta",
       "localSourcePathPlaceholder": "C:/work/sites/blog.loc",
       "localTargetPath": "Lokální cílová cesta",
       "localTargetPathPlaceholder": "C:/work/deploy-targets/blog.loc",
       "sharedDirs": "Sdílené adresáře",
       "sharedDirsPlaceholder": "log, temp, uploads",
-      "sharedDirsHelp": "Adresáře symlinkované ze shared/ do každého releasu. Default: log, temp",
+      "sharedDirsHelp": "Adresáře propojené symlinkem ze shared/ do každého releasu. Výchozí: log, temp",
       "sharedFiles": "Sdílené soubory",
       "sharedFilesPlaceholder": ".env, config.local.neon",
-      "sharedFilesHelp": "Soubory symlinkované ze shared/ do každého releasu (např. .env)"
+      "sharedFilesHelp": "Soubory propojené symlinkem ze shared/ do každého releasu (např. .env)",
+      "rules": {
+        "nameRequired": "Zadejte název",
+        "nameFormat": "Jen malá písmena, číslice, pomlčky a podtržítka",
+        "sshHostRequired": "Zadejte SSH host",
+        "sshUserRequired": "Zadejte SSH uživatele",
+        "remotePathRequired": "Zadejte vzdálenou cestu",
+        "branchRequired": "Zadejte větev"
+      }
     },
     "wizard": {
-      "step1Title": "Detaily hosta",
+      "step1Title": "Údaje o hostovi",
       "step2Title": "Strategie",
       "step3Title": "Ověření",
       "host": "Název cíle (používá se v URL)",
       "hostHint": "Krátký slug jako „production“ nebo „staging“. Používá se v URL a CLI příkazech.",
       "hostnameField": "SSH host",
-      "hostnameHint": "Hostname nebo IP, kam CI připojuje ssh. Musí být dosažitelný z tohoto stroje.",
-      "userField": "SSH user",
+      "hostnameHint": "Hostname nebo IP, ke které se připojuje SSH. Musí být dosažitelná z tohoto počítače.",
+      "userField": "SSH uživatel",
       "deployPath": "Vzdálená cesta pro deploy",
-      "deployPathHint": "Absolutní cesta na vzdáleném hostu, kam se nahrávají release. Vytvoří se, pokud chybí.",
+      "deployPathHint": "Absolutní cesta na vzdáleném hostu, kam se nahrávají releasy. Když chybí, vytvoří se.",
       "branch": "Větev",
-      "healthCheckUrl": "URL health checku",
-      "healthCheckHint": "Endpoint, který vrátí 200 jakmile je nová verze živá. Při selhání spustí auto-rollback.",
+      "healthCheckUrl": "URL kontroly dostupnosti",
+      "healthCheckHint": "Adresa, která vrátí 200, jakmile nová verze běží. Když kontrola selže, spustí se automatický rollback.",
       "keepReleases": "Ponechat N starých releasů",
-      "autoRollback": "Auto-rollback při selhání health checku",
+      "autoRollback": "Automatický rollback, když selže kontrola dostupnosti",
       "reviewTitle": "Zkontrolujte a dokončete",
-      "reviewBody": "Průvodce zapíše deploy.neon (a deploy.local.neon pro tajné údaje). Soubor leží v rootu projektu a lze ho commitnout do gitu.",
+      "reviewBody": "Průvodce zapíše deploy.neon (a deploy.local.neon pro tajné údaje). Soubor leží v kořeni projektu a jde ho commitnout do gitu.",
       "summary": {
         "target": "Cíl",
         "sshHost": "SSH host",
@@ -2035,20 +2057,20 @@
       "finish": "Dokončit nastavení"
     },
     "snapshot": {
-      "title": "DB snapshot před deployem",
+      "title": "Snapshot DB před deployem",
       "enabled": "Vytvořit snapshot DB před každým deployem",
       "enabledHint": "Před atomickým přepnutím symlinku se vytvoří dump databáze, aby šlo obnovit při selhání migrace.",
-      "retentionDays": "Retence (dny)",
-      "snapshotsTitle": "Poslední DB snapshoty",
+      "retentionDays": "Uchovávat (dny)",
+      "snapshotsTitle": "Poslední snapshoty DB",
       "restoreTitle": "Obnovit tento snapshot (přepíše živá data)",
       "colCreated": "Vytvořeno",
       "colSize": "Velikost",
       "switchEnabled": "Zapnuto",
       "switchDisabled": "Vypnuto",
-      "detectionTitle": "Detekce SQLite: připraveno ve fázi 6.3",
-      "detectionBody": "Podpora MySQL / PostgreSQL a automatická detekce cesty k SQLite se zde zobrazí, jakmile bude napojená backend snapshot služba.",
+      "detectionTitle": "Rozpoznání SQLite zatím není hotové",
+      "detectionBody": "Podpora MySQL a PostgreSQL a automatické hledání cesty k SQLite se tu zobrazí, až bude napojená služba pro snapshoty.",
       "onDemandTitle": "Snapshot na vyžádání",
-      "onDemandHint": "Vytvořit snapshot databáze hned bez spuštění deploye. Vhodné před ručními schema migracemi nebo ad-hoc operacemi na DB.",
+      "onDemandHint": "Vytvoří snapshot databáze hned, bez spuštění deploye. Hodí se před ruční migrací schématu nebo jiným zásahem do databáze.",
       "snapshotNow": "Vytvořit snapshot databáze",
       "recentTitle": "Poslední snapshoty",
       "noneYet": "Zatím nebyl uložen žádný snapshot.",
@@ -2058,41 +2080,44 @@
       "restore": "Obnovit",
       "saveSettings": "Uložit nastavení snapshotů",
       "filterAll": "Vše",
-      "filterPreDeploy": "Pre-deploy",
+      "filterPreDeploy": "Před deployem",
       "filterManual": "Ruční",
       "filterNoMatch": "Žádný snapshot v této kategorii.",
-      "kindPreDeploy": "před nasazením",
+      "kindPreDeploy": "před deployem",
       "kindManual": "ruční",
       "restoreOkTitle": "Snapshot obnoven",
       "restoreOkBody": "Symlink current přepnut na release {release} ({size}).",
       "restoreOkGeneric": "Snapshot byl obnoven.",
-      "restoreFailed": "Obnova snapshotu selhala: {error}"
+      "restoreFailed": "Obnova snapshotu selhala: {error}",
+      "restorePromptTitle": "Obnovit snapshot databáze",
+      "restorePromptMessage": "Pro potvrzení napište {id}. Živá databáze webu {domain} se PŘEPÍŠE snapshotem z {date}. Obnova SQLite vytvoří záložní kopii .bak, obnova SQL ne, mějte proto vlastní zálohu.",
+      "restorePromptMismatch": "Napište přesně {id}, jinak obnovu nejde spustit"
     },
     "hooks": {
       "title": "Hooky životního cyklu",
       "addHook": "Přidat hook",
-      "intro": "Hooks se spouští v daných lifecycle eventech. Šipkami nahoru/dolů změníte pořadí spouštění v rámci jednoho eventu.",
-      "empty": "Žádné hooks nakonfigurované.",
+      "intro": "Hooky se spouštějí v jednotlivých fázích deploye. Šipkami nahoru a dolů změníte pořadí v rámci jedné fáze.",
+      "empty": "Žádné hooky nejsou nastavené.",
       "moveUp": "Posunout hook {n} nahoru",
       "moveDown": "Posunout hook {n} dolů",
       "removeAria": "Odebrat hook {n}",
       "remove": "Odebrat",
-      "save": "Uložit hooks",
-      "enabledAria": "Zapnout/vypnout hook {n} (vypnuté zůstanou v configu, ale neběží)",
+      "save": "Uložit hooky",
+      "enabledAria": "Zapnout nebo vypnout hook {n} (vypnutý zůstane v konfiguraci, ale nespustí se)",
       "description": "Popis (volitelný)",
-      "descriptionPlaceholder": "např. 'Notify Slack na prod deploy' — pomáhá identifikaci v dlouhém seznamu",
+      "descriptionPlaceholder": "např. „Zpráva do Slacku po deployi na produkci“, pomůže hook najít v dlouhém seznamu",
       "urlPlaceholder": "https://…",
       "commandPlaceholder": "php artisan migrate",
-      "event": "Event",
+      "event": "Fáze",
       "type": "Typ",
       "url": "URL",
       "command": "Příkaz / skript",
-      "timeout": "Timeout (s)",
+      "timeout": "Časový limit (s)",
       "ariaForm": "Hook {n}",
-      "emptyTitle": "Žádné hooks",
-      "count": "{n} hooks",
+      "emptyTitle": "Žádné hooky",
+      "count": "Hooky: {n}",
       "untitled": "(bez popisu)",
-      "test": "Test",
+      "test": "Vyzkoušet",
       "testAria": "Otestovat hook {n} samostatně",
       "testOkTitle": "Hook prošel",
       "testOkBody": "Hook se vykonal v {ms} ms.",
@@ -2101,23 +2126,23 @@
     },
     "notifications": {
       "title": "Notifikace",
-      "lead": "Notifikace o událostech deploye doručit do nakonfigurovaných kanálů. Stav 'on' znamená, že kanál bude reagovat — pravidla spouštění určují které události.",
+      "lead": "Notifikace o událostech deploye se posílají do nastavených kanálů. Zapnutý kanál je posílá, o kterých událostech, určují spouštěče.",
       "slackTitle": "Slack",
-      "slackLead": "Webhook URL pro Slack — vytvoříte si v Slack workspace pod „Apps → Incoming Webhooks“.",
+      "slackLead": "Adresa webhooku pro Slack. Vytvoříte ji ve Slacku v sekci „Apps → Incoming Webhooks“.",
       "emailTitle": "E-mail",
       "emailLead": "Seznam příjemců, kteří dostanou e-mail při zadaných událostech.",
       "triggersTitle": "Spouštěče",
-      "triggersLead": "Které události spouští notifikaci. Platí napříč všemi nakonfigurovanými kanály.",
+      "triggersLead": "Které události spustí notifikaci. Platí pro všechny nastavené kanály.",
       "triggersCount": "{n} aktivních",
       "statusOn": "zapnuto",
       "statusOff": "vypnuto",
       "statusCount": "{n} příjemců",
       "testSlack": "Otestovat Slack",
-      "testSlackOkTitle": "Slack notifikace odeslána",
-      "testSlackOkBody": "Test message doručena za {ms} ms.",
-      "testSlackFailTitle": "Slack notifikace selhala",
+      "testSlackOkTitle": "Notifikace do Slacku odeslána",
+      "testSlackOkBody": "Testovací zpráva doručena za {ms} ms.",
+      "testSlackFailTitle": "Notifikace do Slacku selhala",
       "testSlackFailGeneric": "Webhook se nepodařilo zavolat.",
-      "slackWebhook": "Slack webhook URL",
+      "slackWebhook": "Adresa webhooku Slacku",
       "slackWebhookPlaceholder": "https://hooks.slack.com/services/…",
       "emailRecipients": "Příjemci e-mailů",
       "emailPlaceholder": "Přidat e-mail a stisknout Enter",
@@ -2126,21 +2151,21 @@
       "notifyOn": "Notifikovat při",
       "stateSuccess": "Úspěch",
       "stateFailure": "Selhání",
-      "stateAwaitingSoak": "Čekání na soak",
+      "stateAwaitingSoak": "Čeká na konec sledování",
       "stateCancelled": "Zrušeno",
       "save": "Uložit notifikace"
     },
     "advanced": {
       "title": "Pokročilá nastavení",
-      "lead": "Méně časté přepínače pro zkušené operátory. Životní cyklus releasů + libovolné proměnné prostředí, které deploy backend vystaví během build/migration kroků.",
+      "lead": "Méně časté volby pro zkušené uživatele: životní cyklus releasů a vlastní proměnné prostředí, které deploy předá krokům sestavení a migrace.",
       "lifecycleTitle": "Životní cyklus deploye",
-      "lifecycleLead": "Retence release adresářů, lock timeout a souběžnost pro multi-host deploy.",
-      "envLead": "Klíč/hodnota proměnných předaných buildu i migracím. Slouží např. pro APP_ENV=production, DB_PASSWORD=…, atd.",
+      "lifecycleLead": "Kolik release adresářů ponechat, časový limit zámku a souběžný deploy na víc hostů.",
+      "envLead": "Proměnné předané sestavení i migracím, třeba APP_ENV=production nebo DB_PASSWORD.",
       "envEmpty": "Žádné proměnné prostředí.",
       "keepReleases": "Ponechat N releasů na vzdáleném hostu",
-      "keepReleasesHint": "Starší release se po každém úspěšném deployi prořežou.",
-      "lockTimeout": "Timeout zámku (sekundy)",
-      "lockTimeoutHint": "Deploy lock starší než tato hodnota je považován za zaseknutý a automaticky uvolněn.",
+      "keepReleasesHint": "Starší releasy se po každém úspěšném deployi smažou.",
+      "lockTimeout": "Časový limit zámku (sekundy)",
+      "lockTimeoutHint": "Zámek deploye starší než tato hodnota se považuje za zaseknutý a automaticky se uvolní.",
       "allowConcurrent": "Povolit souběžné deploye na různé hosty",
       "switchAllowed": "Povoleno",
       "switchSerialised": "Sériově",
@@ -2149,29 +2174,31 @@
       "envValue": "hodnota",
       "envAdd": "Přidat",
       "envRemove": "Odebrat",
-      "envRemoveAria": "Odebrat env var {key}",
-      "envKeyAriaNew": "Nový klíč env var",
-      "envValAriaNew": "Nová hodnota env var",
-      "envKeyAria": "Klíč env var: {key}",
-      "envValAria": "Hodnota env var pro {key}",
+      "envRemoveAria": "Odebrat proměnnou {key}",
+      "envKeyAriaNew": "Název nové proměnné",
+      "envValAriaNew": "Hodnota nové proměnné",
+      "envKeyAria": "Název proměnné: {key}",
+      "envValAria": "Hodnota proměnné {key}",
       "save": "Uložit pokročilá nastavení"
-    }
+    },
+    "blockersLabel": "Blokující podmínky:",
+    "backendBuiltIn": "vestavěná obsluha"
   },
   "deploy": {
     "loading": "Načítám stav deploye…",
     "subTabs": {
       "deploy": "Deploy",
-      "releases": "Release",
+      "releases": "Releasy",
       "groups": "Skupiny",
       "settings": "Nastavení"
     },
     "releases": {
-      "title": "Release",
-      "summary": "{releases} release · {deploys} deployů celkem",
+      "title": "Releasy",
+      "summary": "Releasy: {releases} · deploye celkem: {deploys}",
       "refresh": "Obnovit",
-      "empty": "Zatím žádný release nebyl nasazený.",
+      "empty": "Zatím nebyl nasazen žádný release.",
       "col": {
-        "releaseId": "Release ID",
+        "releaseId": "ID releasu",
         "firstSeen": "Poprvé nasazeno",
         "hosts": "Hosti",
         "deploys": "Deployů",
@@ -2185,16 +2212,16 @@
       },
       "rollbackToBtn": "Vrátit se sem",
       "rollbackToConfirmTitle": "Vrátit se na konkrétní release",
-      "rollbackToConfirmMessage": "Přepnout symlink current pro hosta '{host}' na release {releaseId}? Tato akce přepíše současný produkční stav.",
+      "rollbackToConfirmMessage": "Přepnout symlink current pro hosta „{host}“ na release {releaseId}? Tato akce přepíše současný stav produkce.",
       "rollbackToSuccess": "Symlink current přepnut na release {releaseId}"
     },
     "empty": {
       "title": "Deploy {domain}",
-      "description": "Nakonfigurujte cíle pro deploy, abyste mohli publikovat release přímo z WDC. Vygenerujeme {neon} v rootu projektu (lze commitnout do gitu) a gitignored {localNeon} pro tajné údaje.",
+      "description": "Nastavte cíle deploye a releasy budete publikovat přímo z WDC. Vytvoříme {neon} v kořeni projektu (jde commitnout do gitu) a {localNeon} pro tajné údaje, který git ignoruje.",
       "bullets": {
         "zeroDowntime": "Atomický přepínač symlinků bez výpadku",
-        "autoRollback": "Auto-rollback při selhání health-checku",
-        "multiHost": "Více cílů (produkce / staging) s konfigurací pro každý host"
+        "autoRollback": "Automatický rollback, když selže kontrola dostupnosti",
+        "multiHost": "Víc cílů (produkce, staging) s vlastním nastavením pro každého hosta"
       },
       "startWizard": "Spustit průvodce nastavením",
       "importExisting": "Importovat existující deploy.neon",
@@ -2204,8 +2231,8 @@
       "loadFailed": "Nepodařilo se načíst stav deploye: {error}"
     },
     "placeholders": {
-      "preflightRerun": "Opětovné spuštění preflightu přijde v dalším commitu",
-      "configPersistence": "Persistence konfigurace přijde v dalším commitu"
+      "preflightRerun": "Opakované spuštění kontrol zatím není hotové",
+      "configPersistence": "Ukládání konfigurace zatím není hotové"
     },
     "health": {
       "ok": "OK",
@@ -2218,43 +2245,50 @@
       "title": "Změny od posledního deploye",
       "noNewCommits": "Žádné nové commity od posledního deploye",
       "commits": "Commity:",
-      "composerChanged": "composer.lock se změnil — závislosti se na vzdáleném hostu znovu instalují",
+      "composerChanged": "composer.lock se změnil, závislosti se na vzdáleném hostu nainstalují znovu",
       "files": "Soubory:",
       "showCommits": "Zobrazit {n} commitů"
     },
     "preflight": {
-      "title": "Pre-deploy kontroly",
-      "rerun": "Spustit znovu"
+      "title": "Kontroly před deployem",
+      "rerun": "Spustit znovu",
+      "checks": {
+        "git_status": "Stav pracovního stromu gitu",
+        "php_lint": "php -l na změněných souborech",
+        "di_container": "Ověření DI kontejneru Nette",
+        "schema_validate": "Kontrola schématu Doctrine",
+        "manifest_check": "Manifest Vite existuje"
+      }
     },
     "waterfall": {
-      "ponrLabel": "BOD ZE KTERÉHO NENÍ NÁVRATU — symlink se přepne · cancel zakázán · po tomto už jen rollback",
+      "ponrLabel": "BOD BEZ NÁVRATU: symlink se přepne · zrušit už nejde · dál jen rollback",
       "stepAria": "{label}: {state}"
     },
     "drawer": {
       "title": "Deploy",
       "noActive": "Žádný aktivní deploy",
-      "closeAria": "Zavřít drawer",
+      "closeAria": "Zavřít panel",
       "groupLink": "Součást skupinového deploye",
       "viewGroup": "Zobrazit skupinu →",
       "rawOutput": "Surový výstup",
-      "hooksTitle": "Hooks",
+      "hooksTitle": "Hooky",
       "cancel": "Zrušit",
-      "cancelDisabled": "Cancel zakázán (po PONR)",
-      "cancelDisabledTitle": "Nelze zrušit po bodu, ze kterého není návratu — použijte rollback",
+      "cancelDisabled": "Zrušit už nejde (po bodu bez návratu)",
+      "cancelDisabledTitle": "Po bodu bez návratu deploy zrušit nejde, použijte rollback",
       "retry": "Zkusit znovu",
       "noDeploy": "Žádný probíhající deploy",
       "completedSuccess": "Úspěšně dokončeno",
       "failed": "Selhalo: {message}",
-      "phaseInline": "{phase} — {step} {message}",
+      "phaseInline": "{phase} – {step} {message}",
       "cancelConfirmTitle": "Zrušit deploy",
       "cancelConfirmMessage": "Zrušit deploy {domain}?",
       "cancelYes": "Ano, zrušit",
       "cancelKeep": "Nechat běžet",
-      "cancelToast": "Cancel požadavek odeslán",
-      "cancelFailed": "Cancel selhal"
+      "cancelToast": "Požadavek na zrušení odeslán",
+      "cancelFailed": "Zrušení selhalo"
     },
     "groupHistory": {
-      "title": "Historie deploy skupin",
+      "title": "Historie skupinových deployů",
       "successRate": "{ok}/{total} skupin úspěšných",
       "refresh": "Obnovit",
       "noGroups": "Zatím žádné skupinové deploye",
@@ -2272,23 +2306,34 @@
       },
       "running": "běží",
       "open": "Otevřít",
-      "openAria": "Otevřít tento per-host deploy v draweru",
+      "openAria": "Otevřít deploy tohoto hosta v panelu",
       "rollback": "Vrátit",
-      "rollbackAria": "Kaskádově vrátit každého commitnutého hosta v této skupině",
+      "rollbackAria": "Vrátit všechny hosty skupiny, u kterých deploy už přepnul release",
       "replay": "Spustit znovu",
       "replayAria": "Spustit tuto skupinu znovu se stejným seznamem hostů",
       "errorLabel": "Chyba:",
       "phaseAria": "Fáze {phase}",
-      "hostsCount": "{n} host | {n} hosti | {n} hostů"
+      "hostsCount": "{n} host | {n} hosti | {n} hostů",
+      "replaySubsetTitle": "Spustit znovu jen část?",
+      "replaySubsetMessage": "Původní skupina dopadla různě:\n  Úspěšně: {okCount} ({okHosts})\n  Selhalo: {failedCount} ({failedHosts})\n\nSpustit znovu jen hosty, u kterých deploy selhal (doporučeno), nebo všechny?",
+      "replayFailedOnly": "Jen neúspěšné hosty ({n})",
+      "replayAllHosts": "Všechny hosty ({n})",
+      "replayConfirmTitle": "Spustit skupinu znovu",
+      "replayConfirmMessage": "Spustit tuto skupinu znovu se stejnými hosty ({n})?\n\nHosti: {hosts}\nPůvodní skupina: {group}…\n\nVznikne nová skupina, původní řádek zůstane v historii beze změny.",
+      "replayConfirmBtn": "Spustit znovu",
+      "replayStarted": "Skupina spuštěna znovu (hostů: {n}), nová skupina {group}…",
+      "rollbackConfirmTitle": "Vrátit skupinu",
+      "rollbackConfirmMessage": "Vrátit všechny hosty této skupiny, u kterých deploy už přepnul release?\n\nHostů k vrácení: {n}\nSkupina: {group}…\n\nRollback vrací jen symlink releasu. Snapshoty databáze před deployem se automaticky neobnoví, obnovíte je ručně v záložce Nastavení.",
+      "rollbackConfirmBtn": "Vrátit skupinu"
     },
     "rawOutput": {
       "modeAria": "Režim výstupu",
-      "tabText": "Text (a11y)",
+      "tabText": "Text (přístupný)",
       "tabAnsi": "ANSI",
       "copy": "Kopírovat",
-      "logAria": "Log nasazení (text)",
+      "logAria": "Log deploye (text)",
       "copySuccess": "Zkopírováno do schránky",
-      "copyFail": "Kopírování selhalo — schránka odepřena"
+      "copyFail": "Kopírování selhalo, schránka není přístupná"
     },
     "hostCard": {
       "selectAria": "Zahrnout {host} do skupinového deploye",
@@ -2301,7 +2346,7 @@
       "deploy": "Deploy",
       "rollback": "Vrátit",
       "ageJustNow": "před {n} s",
-      "ageMinutes": "před {n} m",
+      "ageMinutes": "před {n} min",
       "ageHours": "před {n} h",
       "ageDays": "před {n} d"
     },
@@ -2325,28 +2370,28 @@
     },
     "confirmModal": {
       "title": "Potvrzení deploye",
-      "alertTitle": "Chystáte se deploynout na {domain} → {host}",
-      "alertBody": "Tímto publikujete nejnovější commit. Nejprve běží pre-deploy testy; po přepnutí symlinku už deploy nelze zrušit — pouze vrátit (rollback).",
+      "alertTitle": "Chystáte se spustit deploy {domain} → {host}",
+      "alertBody": "Nasadí se nejnovější commit. Nejdřív proběhnou kontroly před deployem. Po přepnutí symlinku už deploy zrušit nejde, jde jen vrátit (rollback).",
       "typeHostLabel": "Pro potvrzení napište název hosta",
       "typeHostSuffix": ":",
-      "mismatch": "Neshoduje se — napište přesně „{host}“.",
+      "mismatch": "Neshoduje se, napište přesně „{host}“.",
       "snapshotLabel": "Vytvořit snapshot databáze před deployem",
-      "snapshotHint": "Vytvoří gzipped dump databáze do ~/.wdc/backups/pre-deploy/ před spuštěním deploye. Selhání snapshotu deploy zruší (fail-fast). Lze obnovit ze seznamu snapshotů v záložce Nastavení.",
-      "deployNow": "Deploynout",
-      "countdown": "{seconds} s — pusťte pro přerušení",
+      "snapshotHint": "Před spuštěním deploye uloží komprimovaný dump databáze do ~/.wdc/backups/pre-deploy/. Když se snapshot nepovede, deploy se zruší. Obnovit ho jde ze seznamu snapshotů v záložce Nastavení.",
+      "deployNow": "Spustit deploy",
+      "countdown": "{seconds} s, pusťte tlačítko pro přerušení",
       "cancel": "Zrušit",
       "lastReleaseLabel": "Poslední release:",
       "lastDeployedLabel": "Nasazeno:",
       "lastDeployOk": "úspěšně",
       "lastDeployFailed": "se selháním",
-      "firstEverDeploy": "První deploy na tohoto hosta — žádná předchozí verze.",
-      "recentDeployWarn": "Předchozí deploy proběhl před {seconds} s — možná jste klikli omylem dvakrát?",
+      "firstEverDeploy": "První deploy na tohoto hosta, předchozí verze neexistuje.",
+      "recentDeployWarn": "Předchozí deploy proběhl před {seconds} s. Neklikli jste omylem dvakrát?",
       "ageJustNow": "před {n} s",
-      "ageMinutes": "před {n} m",
+      "ageMinutes": "před {n} min",
       "ageHours": "před {n} h",
       "ageDays": "před {n} d",
       "preview": "Náhled plánu",
-      "previewTitle": "Náhled deploy plánu"
+      "previewTitle": "Náhled plánu deploye"
     },
     "statusBanner": {
       "aria": "Přehled stavu deployů pro tento web",
@@ -2355,7 +2400,7 @@
       "hosts": "Hostů",
       "lastDeploy": "Poslední deploy",
       "justNow": "právě teď",
-      "minutesAgo": "před {n} m",
+      "minutesAgo": "před {n} min",
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d",
       "triggeredByLabel": "Zdroje:"
@@ -2365,22 +2410,22 @@
       "label": "Rychlý deploy:",
       "targetPlaceholder": "Vyberte cíl",
       "targetAria": "Cílový host",
-      "allHosts": "— Všichni hosti —",
+      "allHosts": "Všichni hosti",
       "branchPlaceholder": "větev (volitelné)",
       "branchAria": "Větev",
       "withSnapshot": "Se snapshotem DB",
-      "withSnapshotTip": "Před deployem vytvoří .zip aktuálního release adresáře — slouží jako rychlý rollback artefakt, není to dump databáze.",
+      "withSnapshotTip": "Před deployem zabalí aktuální release adresář do .zip pro rychlý rollback. Není to dump databáze.",
       "deployOne": "Deploy",
-      "deployAll": "Deploy {n} hostů",
+      "deployAll": "Deploy na všechny hosty ({n})",
       "started": "Deploy spuštěn",
       "startedGroup": "Skupinový deploy spuštěn ({id})",
       "failed": "Deploy se nezdařil",
       "hint": "Přeskočí potvrzovací dialog. Pro plné nastavení použijte tlačítko Deploy na kartě hosta.",
       "preview": "Náhled",
-      "previewAllHostsTip": "Náhled je per-host. Vyberte konkrétního hosta místo „— Všichni hosti —“.",
-      "previewTitle": "Náhled deploy plánu",
+      "previewAllHostsTip": "Náhled je pro jednoho hosta. Místo „Všichni hosti“ vyberte konkrétního hosta.",
+      "previewTitle": "Náhled plánu deploye",
       "previewClose": "Zavřít",
-      "previewConfirm": "Deploynout",
+      "previewConfirm": "Spustit deploy",
       "previewFailed": "Náhled se nepodařilo načíst",
       "plan": {
         "wouldRelease": "Nový release",
@@ -2388,17 +2433,17 @@
         "extractTo": "Cíl",
         "branch": "Větev",
         "sourceLastModified": "Zdroj naposledy změněn",
-        "staleSourceWarn": "Zdroj se od posledního úspěšného deploye nezměnil — zveřejníte identický release.",
-        "alwaysConfirmHint": "Operátor označil druh deploy jako vždy-potvrdit — i s aktivním grantem uvidíte GUI banner.",
+        "staleSourceWarn": "Zdroj se od posledního úspěšného deploye nezměnil, zveřejníte stejný release.",
+        "alwaysConfirmHint": "Deploy je nastavený na „vždy se ptát“, takže žádost uvidíte ke schválení i při platném pravidle.",
         "currentRelease": "Aktuální release",
         "previousRelease": "Předchozí release",
         "shared": "Sdílené",
-        "retention": "Retence",
+        "retention": "Uchování",
         "retentionValue": "Ponechat {keep} z {existing} (smaže {prune})",
-        "hooks": "Hooks",
+        "hooks": "Hooky",
         "noHooks": "žádné",
         "healthCheck": "Kontrola dostupnosti",
-        "soak": "Soak",
+        "soak": "Sledování",
         "soakSeconds": "{n} s před commitem",
         "notifications": "Notifikace",
         "slackEnabled": "Slack zapnutý",
@@ -2406,18 +2451,18 @@
       }
     },
     "commandCenter": {
-      "noHosts": "Žádní deploy hosti nejsou nakonfigurovaní",
+      "noHosts": "Žádní hosti pro deploy nejsou nastavení",
       "groupToolbarAria": "Skupinový deploy na více hostů",
       "selectAllAria": "Vybrat všechny hosty pro skupinový deploy",
       "selectAllLabel": "Vyberte hosty pro skupinový deploy",
       "selectedCount": "Vybráno: {n}",
-      "deployGroupBtn": "Deploy {n} hostů jako skupina",
+      "deployGroupBtn": "Skupinový deploy na vybrané hosty ({n})",
       "groupConfirmTitle": "Potvrdit skupinový deploy",
-      "groupConfirmMessage": "Deploynout {domain} na {n} hostů atomicky?\n\nHosti: {hosts}\n\nPokud kterýkoli host selže po přepnutí symlinku, všechny commitnuté hosty se automaticky vrátí.",
-      "groupConfirmBtn": "Deploynout jako skupina",
+      "groupConfirmMessage": "Spustit deploy {domain} na vybraných hostech ({n}) jako jeden celek?\n\nHosti: {hosts}\n\nKdyž některý host selže po přepnutí symlinku, všichni hosti, u kterých deploy už prošel, se automaticky vrátí.",
+      "groupConfirmBtn": "Spustit jako skupinu",
       "cancel": "Zrušit",
-      "groupNeedTwo": "Vyberte alespoň 2 hosty pro skupinový deploy",
-      "groupStarted": "Skupinový deploy spuštěn — viz záložka Skupiny (id: {id})",
+      "groupNeedTwo": "Pro skupinový deploy vyberte aspoň 2 hosty",
+      "groupStarted": "Skupinový deploy spuštěn, sledujte záložku Skupiny (id: {id})",
       "groupFailed": "Skupinový deploy se nepodařilo spustit",
       "rollbackConfirmTitle": "Potvrdit rollback",
       "rollbackHostMessage": "Vrátit {domain} → {host} na předchozí release?",
@@ -2426,9 +2471,27 @@
       "noPreviousDeploy": "Není co vracet",
       "rollbackDispatched": "Rollback spuštěn",
       "rollbackFailed": "Rollback selhal",
-      "deployStarted": "Deploy spuštěn — sledujte drawer",
-      "deployStartedSnap": "Deploy spuštěn (se snapshotem databáze) — sledujte drawer",
+      "deployStarted": "Deploy spuštěn, průběh sledujte v panelu",
+      "deployStartedSnap": "Deploy spuštěn (se snapshotem databáze), průběh sledujte v panelu",
       "deployFailed": "Deploy se nepodařilo spustit"
+    },
+    "steps": {
+      "pre_deploy_backup": "snapshot DB před deployem",
+      "git_pull": "git pull",
+      "composer_install": "composer install",
+      "npm_build": "sestavení npm/vite",
+      "shared_links": "symlinky sdílených souborů",
+      "writable": "zapisovatelné adresáře",
+      "cache_clear": "vyčištění cache",
+      "doctrine_proxy": "proxy třídy Doctrine",
+      "schema_update": "aktualizace schématu",
+      "di_warmup": "příprava DI kontejneru",
+      "latte_warmup": "příprava šablon Latte",
+      "symlink_switch": "přepnutí symlinku (bod bez návratu)",
+      "fpm_reload": "znovunačtení php-fpm",
+      "opcache_clear": "vyčištění OPcache",
+      "health_check": "kontrola dostupnosti",
+      "cleanup_releases": "úklid starých releasů"
     }
   },
   "metrics": {
@@ -2436,7 +2499,7 @@
       "dateLabel": "Datum",
       "granularityLabel": "Granularita",
       "refresh": "Obnovit",
-      "loading": "Načítání...",
+      "loading": "Načítání…",
       "emptyDay": "Žádný provoz v tento den",
       "seriesRequests": "Požadavky",
       "seriesBytes": "Bajty",
@@ -2466,7 +2529,7 @@
       "message": "Zpráva",
       "pid": "PID",
       "client": "Klient",
-      "autoRefresh": "Auto-obnovení",
+      "autoRefresh": "Automaticky obnovovat",
       "lines": "Řádků",
       "since": "Od",
       "empty": "Žádné záznamy chyb pro aktuální filtr",
@@ -2487,8 +2550,7 @@
     "configlessSummary": "{name} se konfiguruje jinak",
     "noConfigSummary": "Žádný konfigurační soubor pro {name}",
     "configless": {
-      "hint": "Nastavení pro tuto službu se předává přes CLI argumenty, per-site TOML konfiguraci nebo proměnné prostředí. Žádné soubory k úpravě tu nejsou.",
-      "daemonLooked": "Démon hledal {paths}. Zkontrolujte, že je program nainstalovaný přes"
+      "hint": "Nastavení pro tuto službu se předává přes argumenty příkazového řádku, konfiguraci TOML u jednotlivých webů nebo proměnné prostředí. Žádné soubory k úpravě tu nejsou."
     }
   },
   "serviceConfig": {
@@ -2546,7 +2608,7 @@
     "snapshotDeleted": "Snímek smazán",
     "deleteFailed": "Smazání selhalo: {err}",
     "dnsFlushed": "DNS cache vyprázdněna",
-    "dnsFlushUnavailable": "Vyprázdnění DNS teď nejde, daemon neodpovídá.",
+    "dnsFlushUnavailable": "Vyprázdnění DNS teď nejde, démon neodpovídá.",
     "noMampSites": "Žádné MAMP PRO weby nebyly nalezeny",
     "mampImported": "Importováno {count} webů z MAMP",
     "mampFailed": "Import z MAMP selhal: {err}",
@@ -2584,7 +2646,7 @@
   "settings": {
     "title": "Nastavení",
     "subtitle": "Nastavení aplikace NKS WebDev Console a jejích služeb",
-    "loadFailedSaveBlocked": "Nastavení se nepodařilo načíst z daemonu, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až daemon poběží, načtěte stránku znovu.",
+    "loadFailedSaveBlocked": "Nastavení se nepodařilo načíst z démona, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až démon poběží, načtěte stránku znovu.",
     "tabs": {
       "general": "Obecné",
       "ports": "Porty",
@@ -2613,7 +2675,7 @@
       },
       "services": {
         "title": "Služby",
-        "subtitle": "Stav místních služeb (Apache, MySQL, PHP, ...)",
+        "subtitle": "Stav místních služeb (Apache, MySQL, PHP…)",
         "manageOnDashboard": "Spravovat na přehledu",
         "notInstalled": "Nenainstalováno",
         "crashed": "Spadlo"
@@ -2677,7 +2739,7 @@
       "catalogNeverSynced": "zatím nesynchronizován"
     },
     "advanced": {
-      "tabDesc": "Spojení s katalogem, heslo MySQL, synchronizace pluginů a nasazení. Prázdné pole znamená výchozí hodnotu.",
+      "tabDesc": "Spojení s katalogem, heslo MySQL, synchronizace pluginů a deploy. Prázdné pole znamená výchozí hodnotu.",
       "catalogUrl": "Adresa katalogu",
       "binaryReleases": "Spojení s katalogem",
       "testConnection": "Vyzkoušet spojení",
@@ -2815,15 +2877,15 @@
     },
     "ports": {
       "description": "Porty, na kterých služby naslouchají. Po uložení se dotčené služby samy znovu načtou.",
-      "httpPort": "HTTP port",
-      "httpsPort": "HTTPS port",
-      "mysqlPort": "MySQL port",
-      "redisPort": "Redis port",
+      "httpPort": "Port HTTP",
+      "httpsPort": "Port HTTPS",
+      "mysqlPort": "Port MySQL",
+      "redisPort": "Port Redis",
       "mailpitSmtp": "Mailpit SMTP",
       "mailpitHttp": "Mailpit HTTP",
-      "phpFpmBase": "Základ PHP-FPM portu",
-      "phpFpmFormula": "Porty jednotlivých verzí se odvozují jako základ + major×10 + minor. Např. základ 9000 + PHP 8.4 = port 9084.",
-      "postgresqlPort": "PostgreSQL port",
+      "phpFpmBase": "Základní port PHP-FPM",
+      "phpFpmFormula": "Port každé verze PHP se spočítá jako základ + hlavní verze × 10 + vedlejší verze. Například základ 9000 a PHP 8.4 dají port 9084.",
+      "postgresqlPort": "Port PostgreSQL",
       "inUseTitle": "Port je obsazený",
       "inUseConfirm": "Tyto porty už používá jiný program: {ports}. Služba se na nich nespustí, dokud se neuvolní. Přesto uložit?",
       "duplicate": "Stejný port má víc služeb: {ports}. Každá služba potřebuje vlastní port."
@@ -2891,15 +2953,15 @@
       "daysSuffix": "dní"
     },
     "deploySubsystem": {
-      "title": "Nasazení (deploy)",
-      "description": "Záložka Nasazení u webů. Vypněte, pokud aplikaci používáte jen pro lokální vývoj a nikam nenasazujete. Historie nasazení zůstane uložená a po opětovném zapnutí se vrátí.",
-      "enableLabel": "Povolit nasazení",
-      "legacyHandlersLabel": "Obsluha nasazení",
+      "title": "Deploy (nasazení na server)",
+      "description": "Záložka Deploy u webů. Vypněte ji, pokud aplikaci používáte jen pro lokální vývoj a nikam nenasazujete. Historie deployů zůstane uložená a po opětovném zapnutí se vrátí.",
+      "enableLabel": "Povolit deploy",
+      "legacyHandlersLabel": "Obsluha deploye",
       "legacyHandlersHint": "Vestavěná (výchozí)",
-      "legacyHandlersTooltip": "Vypnutím převezme nasazení plugin. Změna se projeví po restartu aplikace.",
+      "legacyHandlersTooltip": "Vypnutím převezme deploy plugin. Změna se projeví po restartu aplikace.",
       "legacyHandlersLocked": "Zatím nejde, blokujících podmínek: {n}",
-      "modeBuiltIn": "Nasazení teď obsluhuje vestavěná část aplikace.",
-      "modePlugin": "Nasazení teď obsluhuje plugin {v}."
+      "modeBuiltIn": "Deploy teď obsluhuje vestavěná část aplikace.",
+      "modePlugin": "Deploy teď obsluhuje plugin {v}."
     },
     "groups": {
       "app": "Aplikace",
@@ -2917,12 +2979,12 @@
     },
     "mcpTab": {
       "optionsTitle": "Další volby MCP",
-      "simpleSubtitle": "Co smějí AI asistenti připojení přes MCP. Vypnuté MCP žádného AI klienta nepustí."
+      "simpleSubtitle": "Co smí AI klienti připojení přes MCP. Vypnuté MCP žádného AI klienta nepustí."
     }
   },
   "mcpGrants": {
     "title": "Pravidla automatického schválení",
-    "description": "Pravidlo říká: tuhle akci na tomhle cíli schval bez ptaní. Daemon pravidla zkontroluje dřív, než se tě zeptá. Platí i po restartu.",
+    "description": "Pravidlo říká, že se tato akce na tomto cíli schválí bez ptaní. Démon pravidla projde dřív, než se vás zeptá. Pravidla platí i po restartu.",
     "refresh": "Obnovit",
     "newGrant": "Nové pravidlo",
     "revoke": "Odvolat",
@@ -2951,7 +3013,7 @@
       "hoursAgo": "před {n} h",
       "daysAgo": "před {n} d",
       "deadweight": "nepoužité",
-      "deadweightTooltip": "Pravidlo je starší než {days} dní a AI ho nikdy nepoužila. Nejspíš ho můžeš odvolat.",
+      "deadweightTooltip": "Pravidlo je starší než {days} dní a AI ho nikdy nepoužila. Nejspíš ho můžete odvolat.",
       "drilldownTooltip": "Zobrazit žádosti schválené tímto pravidlem ({id})."
     },
     "expiresIn": {
@@ -2960,7 +3022,7 @@
       "minutes": "za {n} min",
       "hours": "za {n} h"
     },
-    "expiringSoonTooltip": "Pravidlo vyprší do hodiny. Pak se AI zase zeptá, dokud nevytvoříš nové.",
+    "expiringSoonTooltip": "Pravidlo vyprší do hodiny. Pak se AI zase zeptá, dokud nevytvoříte nové.",
     "usage": {
       "all": "Vše",
       "inuse": "Používaná",
@@ -2981,9 +3043,9 @@
       "title": "Nové pravidlo",
       "scopeType": "Pro koho",
       "scopeValue": "Klient nebo relace",
-      "scopeValueRequired": "Vyber klienta nebo relaci.",
+      "scopeValueRequired": "Vyberte klienta nebo relaci.",
       "scopeValuePlaceholder": {
-        "session": "Vyber relaci z Aktivity",
+        "session": "Vyberte relaci z Aktivity",
         "apiKey": "client:claude-code",
         "instance": "ID instalace (UUID)"
       },
@@ -3000,11 +3062,11 @@
       "notePlaceholder": "Proč pravidlo existuje (volitelné)",
       "create": "Vytvořit",
       "anyKind": "Všechny akce (*)",
-      "kindInvalid": "Vyber akci ze seznamu.",
-      "targetRequired": "Vyplň cíl, nebo napiš * pro cokoli.",
+      "kindInvalid": "Vyberte akci ze seznamu.",
+      "targetRequired": "Vyplňte cíl, nebo napište * pro cokoli.",
       "expiry30m": "30 min",
       "expiry24h": "24 hodin",
-      "noKnownValues": "WDC zatím žádnou hodnotu neviděl, můžeš ji napsat.",
+      "noKnownValues": "WDC zatím žádnou hodnotu nevidělo, můžete ji napsat.",
       "targetHint": "Cíl je doména webu, název databáze nebo ID služby. * znamená cokoli, *_dev všechno, co končí na _dev.",
       "expiry2h": "2 hodiny",
       "anyKindHint": "Neplatí pro akce skupin z Nastavení → AI klienti (MCP). Ty musí pravidlo jmenovat."
@@ -3023,7 +3085,7 @@
     "exportToast": "Exportováno pravidel: {n}",
     "importJson": "Import JSON",
     "importToast": "Importováno: {imported}, duplicitních přeskočeno: {skipped}",
-    "importPartial": "Importováno: {imported}, duplicit: {skipped}, chyb: {failed}. Podrobnosti jsou v logu daemonu.",
+    "importPartial": "Importováno: {imported}, duplicit: {skipped}, chyb: {failed}. Podrobnosti jsou v logu démona.",
     "importFailed": "Import se nepodařil: {error}",
     "sweepDone": "Uklizeno starých pravidel: {n}",
     "sweepNothing": "Není co uklízet",
@@ -3044,8 +3106,8 @@
       "targetPlaceholder": "blog.loc, shop_db, …",
       "run": "Vyzkoušet",
       "resultMatch": "Žádost by schválilo pravidlo",
-      "resultNoMatch": "Žádné pravidlo nepasuje",
-      "resultNoMatchHint": "AI by se musela zeptat a žádost by čekala na tvoje schválení. Zkontroluj, pro koho pravidlo platí, akci a cíl.",
+      "resultNoMatch": "Žádné pravidlo neodpovídá",
+      "resultNoMatchHint": "AI by se musela zeptat a žádost by čekala na vaše schválení. Zkontrolujte, pro koho pravidlo platí, akci a cíl.",
       "previousMatches": "Pravidlo už schválilo {n}×.",
       "resultId": "ID pravidla:"
     },
@@ -3086,13 +3148,13 @@
     "banner": {
       "stackLabel": "Žádosti AI čekající na schválení",
       "kindRequest": "AI chce: {kind}",
-      "genericRequest": "AI žádá o akci, kterou daemon nepopsal",
+      "genericRequest": "AI žádá o akci, kterou démon nepopsal",
       "noDescription": "Bez popisu.",
-      "alwaysConfirmExplain": "Tuhle akci máš nastavenou na „vždy se ptát“, takže ji žádné pravidlo neschválí samo.",
+      "alwaysConfirmExplain": "Tuto akci máte nastavenou na „vždy se ptát“, takže ji žádné pravidlo neschválí samo.",
       "expiresIn": "vyprší za {seconds} s",
       "approve": "Schválit",
       "decline": "Odmítnout",
-      "declineAria": "Odmítnout: AI tuhle žádost už nebude moct provést",
+      "declineAria": "Odmítnout: AI tuto žádost už nebude moct provést",
       "dismiss": "Zavřít",
       "ageJustNow": "právě teď",
       "ageSeconds": "před {seconds} s",
@@ -3106,19 +3168,19 @@
       "toastTrustedFor": "Schváleno. Stejnou akci na stejném cíli teď {minutes} min schválí pravidlo.",
       "toastAlwaysTrusted": "Schváleno. Stejnou akci na stejném cíli od teď schválí pravidlo.",
       "toastGrantFailed": "Pravidlo se nepodařilo uložit: {error}",
-      "dismissHint": "Zavřít. AI dál čeká, žádost najdeš v záložce Žádosti.",
+      "dismissHint": "Zavřít. AI dál čeká, žádost najdete v záložce Žádosti.",
       "forSession": "jen pro toto spuštění AI klienta",
       "forClient": "jen pro AI klienta {client}",
-      "trustAlwaysRule": "Zároveň vznikne trvalé pravidlo: „{kind}“ na {target} schvaluj bez ptaní, {who}. Zrušíš ho v záložce Pravidla.",
+      "trustAlwaysRule": "Zároveň vznikne trvalé pravidlo: „{kind}“ na {target} se bude schvalovat bez ptaní, {who}. Zrušíte ho v záložce Pravidla.",
       "target": "Cíl:",
       "forAll": "pro všechny připojené AI klienty",
-      "trustMinutesRule": "Zároveň vznikne pravidlo: „{kind}“ na {target} schvaluj {minutes} min bez ptaní, {who}.",
+      "trustMinutesRule": "Zároveň vznikne pravidlo: „{kind}“ na {target} se bude {minutes} min schvalovat bez ptaní, {who}.",
       "aiSays": "Popis od AI (neověřený):"
     },
     "notify": {
       "title": "NKS WDC: žádost AI čeká na schválení",
-      "body": "AI chce: {kind}. Otevři WDC a žádost schval, nebo odmítni.",
-      "bodyGeneric": "AI žádá o akci, kterou musíš schválit. Otevři WDC a žádost schval, nebo odmítni."
+      "body": "AI chce: {kind}. Otevřete WDC a žádost schvalte, nebo odmítněte.",
+      "bodyGeneric": "AI žádá o akci, kterou musíte schválit. Otevřete WDC a žádost schvalte, nebo odmítněte."
     }
   },
   "footer": {
@@ -3152,7 +3214,7 @@
       },
       "firstSite": {
         "title": "Vytvoření prvního webu",
-        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='simple'>Jednoduchý režim</h3><p>Krátký formulář: doména, složka webu, verze PHP a volitelně HTTPS a tunel Cloudflare.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulka webů a úplné nastavení každého webu v záložkách: Obecné, Runtime, Cloudflare, SSL, Composer, Metriky, Chyby, Historie a Nebezpečné.</p>"
+        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='simple'>Jednoduchý režim</h3><p>Krátký formulář: doména, složka webu, verze PHP a volitelně HTTPS a tunel Cloudflare.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulka webů a stránka každého webu se záložkami Přehled, Nastavení, Logy a Metriky, v Pokročilém režimu i Deploy a Historie. Další záložky přidávají pluginy, třeba SSL, Cloudflare a Composer.</p>"
       },
       "sitesSimple": {
         "title": "Weby v Jednoduchém režimu",
@@ -3160,7 +3222,7 @@
       },
       "sitesAdvanced": {
         "title": "Weby v Pokročilém režimu",
-        "body": "<p>Tabulkový pohled. Hlavní akce řádku je <strong>Upravit</strong>, která otevře stránku úpravy webu se záložkami. Další akce, například otevření v prohlížeči nebo smazání, jsou v menu na konci řádku.</p><h3 id='tabs'>Záložky úpravy webu</h3><ul><li><strong>Obecné</strong>: doména, aliasy, složka webu, verze PHP</li><li><strong>Runtime</strong>: ladění poolu PHP-FPM, proměnné prostředí</li><li><strong>Cloudflare</strong>: tunel pro tento web</li><li><strong>SSL</strong>: přepínač certifikátu a vlastní cesty</li><li><strong>Composer</strong>: správa balíčků</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Chyby</strong>: souhrn chyb z Apache a PHP-FPM</li><li><strong>Historie</strong>: body, ke kterým se lze s konfigurací vrátit</li><li><strong>Nebezpečné</strong>: přejmenování domény a smazání webu</li></ul>"
+        "body": "<p>Tabulkový pohled. Hlavní akce řádku je <strong>Upravit</strong>, která otevře stránku úpravy webu se záložkami. Další akce, například otevření v prohlížeči nebo smazání, jsou v menu na konci řádku.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v Pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: záložky z pluginů</li></ul>"
       },
       "databases": {
         "title": "Databáze",
@@ -3168,7 +3230,7 @@
       },
       "ssl": {
         "title": "SSL certifikáty",
-        "body": "<p>Stránka <strong>SSL</strong> spravuje lokálně důvěryhodné certifikáty TLS přes mkcert.</p><h3 id='setup'>Nastavení</h3><ul><li><strong>Instalace certifikační autority</strong>: kořenový certifikát mkcert se přidá do úložiště systému. Stačí jednou na počítač.</li><li><strong>Generovat</strong>: vydá certifikát pro doménu a volitelné aliasy.</li></ul><h3 id='status'>Stav certifikátu</h3><p>Karta certifikátu ukazuje odpočet do vypršení (odznak zežloutne při 14 dnech a méně), vystavitele a otisk SHA-1. Certifikáty bez odpovídajícího webu jsou ztlumené s odznakem <em>Osiřelý</em>.</p>"
+        "body": "<p>Stránka <strong>SSL</strong> spravuje lokálně důvěryhodné certifikáty TLS přes mkcert.</p><h3 id='setup'>Nastavení</h3><ul><li><strong>Instalace certifikační autority</strong>: kořenový certifikát mkcert se přidá do úložiště systému. Stačí jednou na počítač.</li><li><strong>Vygenerovat certifikát</strong>: vydá certifikát pro doménu a volitelné aliasy.</li></ul><h3 id='status'>Stav certifikátu</h3><p>Karta certifikátu ukazuje odpočet do vypršení (odznak zežloutne při 14 dnech a méně), vystavitele a otisk SHA-1. Certifikáty bez odpovídajícího webu jsou ztlumené s odznakem <em>Bez webu</em>.</p>"
       },
       "composer": {
         "title": "Composer",
@@ -3179,16 +3241,16 @@
         "body": "<p>Stránka <strong>Cloudflare</strong> zpřístupní weby z WDC na veřejné adrese přes Cloudflare Tunnel, bez otevírání portů ve firewallu.</p><h3 id='setup'>Nastavení</h3><p>Vložte API token Cloudflare a vyberte zónu. U konkrétního webu pak zapněte tunel v Úprava webu → Cloudflare.</p><p><strong>Poznámka:</strong> <code>cloudflared</code> je jediný proces pro všechny weby v tunelu. Jeho restart se dotkne všech tunelovaných webů.</p>"
       },
       "hosts": {
-        "title": "Hosts soubor",
-        "body": "<p>Stránka <strong>Hosts soubor</strong> je bezpečnější editor systémového souboru hosts. Záznamy WDC jsou uvnitř bloku <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code>, vše mimo něj zůstane beze změny.</p><h3 id='safety'>Bezpečnost</h3><p>Ve Windows je potřeba oprávnění správce. Před každým zápisem se vytvoří záloha <code>.bak</code> s časovým razítkem.</p>"
+        "title": "Soubor hosts",
+        "body": "<p>Stránka <strong>Soubor hosts</strong> je editor systémového souboru hosts. Záznamy WDC jsou uvnitř bloku <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code>, vše mimo něj zůstane beze změny.</p><h3 id='safety'>Bezpečnost</h3><p>Ve Windows je potřeba oprávnění správce. Před každým zápisem se vytvoří záloha <code>.bak</code> s časovým razítkem.</p>"
       },
       "plugins": {
         "title": "Pluginy",
         "body": "<p>WDC se skládá z pluginů. Démon načítá pluginy ze složky pluginů (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…) a každý má vlastní verzi. Zapnout nebo vypnout je můžete na stránce <strong>Pluginy</strong>; vypnutý plugin zmizí z menu i z přehledu služeb.</p><p>Vlastní plugin popisují <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> a <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>průvodce psaním pluginu</a>.</p>"
       },
       "mcp": {
-        "title": "MCP pro AI nástroje",
-        "body": "<p>WDC obsahuje server MCP (Model Context Protocol), přes který AI nástroje (Claude Code, Cursor a další) vytvářejí a spravují weby. Zapnete ho v Nastavení, po zapnutí se v menu objeví položka <strong>MCP</strong> s aktivitou, žádostmi a pravidly.</p><h3 id='tools'>Dostupné nástroje</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>Nástroj kompatibilní s MCP nasměrujte na transport nks-wdc. Rizikové akce AI nejdřív potvrdíte vy.</p>"
+        "title": "AI klienti (MCP)",
+        "body": "<p>WDC obsahuje server MCP (Model Context Protocol), přes který AI klienti (Claude Code, Cursor a další) vytvářejí a spravují weby. Zapnete ho v Nastavení → AI klienti (MCP), kde je i návod na připojení klienta. Aktivitu, žádosti a pravidla najdete v menu pod položkou <strong>AI klienti (MCP)</strong>.</p><h3 id='tools'>Dostupné nástroje</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>Nevratné akce AI provede až po vašem schválení, pokud je nepokryje pravidlo.</p>"
       },
       "shortcuts": {
         "title": "Klávesové zkratky",
@@ -3196,7 +3258,7 @@
       },
       "settings": {
         "title": "Nastavení",
-        "body": "<p><strong>Nastavení</strong> je rozdělené do záložek, například:</p><ul><li><strong>Obecné</strong>: jazyk, motiv, režim rozhraní, spuštění při startu, automatické spouštění služeb, výchozí verze PHP, telemetrie</li><li><strong>Porty</strong>: porty jednotlivých služeb</li><li><strong>Cesty</strong>: cesty k programům a k souboru hosts</li><li><strong>Databáze</strong>: výchozí přihlašovací údaje správce MySQL</li><li><strong>Pokročilé</strong>: zapnutí pluginů, automatický restart služeb, vlastní adresa katalogu</li><li><strong>Účet</strong>: volitelné přihlášení ke katalogu NKS a synchronizace</li><li><strong>Aktualizace</strong>: kontrola nových verzí WDC</li><li><strong>O aplikaci</strong>: verze, zdroje a informace o běhu</li></ul>"
+        "body": "<p><strong>Nastavení</strong> je rozdělené do záložek, například:</p><ul><li><strong>Obecné</strong>: jazyk, motiv, režim rozhraní, spuštění při startu, automatické spouštění služeb, výchozí verze PHP, telemetrie</li><li><strong>Porty</strong>: porty jednotlivých služeb</li><li><strong>Cesty</strong>: kam aplikace ukládá data a zálohy</li><li><strong>Pokročilé</strong>: spojení s katalogem, heslo uživatele root v MySQL, synchronizace pluginů a deploy</li><li><strong>Účet</strong>: volitelné přihlášení ke katalogu NKS</li><li><strong>Synchronizace</strong>: přenos nastavení přes cloud nebo soubor</li><li><strong>AI klienti (MCP)</strong>: co smí AI klienti dělat</li><li><strong>Notifikace</strong>: systémová upozornění</li><li><strong>Aktualizace</strong>: kontrola nových verzí WDC</li><li><strong>O aplikaci</strong>: verze, zdroje a informace o běhu</li></ul>"
       },
       "binaries": {
         "title": "Binárky",
@@ -3204,7 +3266,7 @@
       },
       "metrics": {
         "title": "Metriky a logy",
-        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je v Úprava webu → Metriky a Chyby.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze), tabulku služeb se stavem, portem, verzí a využitím CPU a paměti a nedávnou aktivitu. V Pokročilém režimu jsou navíc grafy CPU a paměti za posledních 5 minut.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
+        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je na stránce webu v záložkách Metriky a Logy.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze), tabulku služeb se stavem, portem, verzí a využitím CPU a paměti a nedávnou aktivitu. V Pokročilém režimu jsou navíc grafy CPU a paměti za posledních 5 minut.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
       }
     },
     "wizard": {
@@ -3238,8 +3300,8 @@
         },
         "cli": {
           "title": "Použijte příkazový řádek",
-          "desc": "WDC obsahuje nástroj <code>wdc</code> pro skripty a pro napojení AI nástrojů přes MCP. Časté příkazy:",
-          "tip": "Tip: s Claude Code ho propojíte přes server MCP, viz Nápověda → MCP pro AI nástroje."
+          "desc": "WDC obsahuje nástroj <code>wdc</code> pro skripty a pro napojení AI klientů přes MCP. Časté příkazy:",
+          "tip": "Tip: s Claude Code ho propojíte přes server MCP, viz Nápověda → AI klienti (MCP)."
         }
       }
     },
@@ -3305,8 +3367,8 @@
     "autostartOff": "{name}: automatické spuštění vypnuto",
     "saveFailed": "Uložení selhalo: {err}",
     "openPathFailed": "Cestu nelze otevřít: {err}",
-    "hostExists": "Host s názvem „{name}\" už existuje",
-    "hostRemoved": "Host „{name}\" odebrán",
+    "hostExists": "Host s názvem „{name}“ už existuje",
+    "hostRemoved": "Host „{name}“ odebrán",
     "snapshotFailed": "Snapshot selhal: {err}",
     "restoreFailed": "Obnovení selhalo: {err}",
     "replayFailed": "Opakování se nepodařilo spustit: {err}",
@@ -3325,26 +3387,26 @@
     "revokeFailed": "Odvolání selhalo: {err}",
     "certGenerated": "Certifikát pro {domain} vygenerován",
     "certRevoked": "Certifikát pro {domain} odvolán",
-    "loadIntentsFailed": "Načtení intentů selhalo: {err}",
+    "loadIntentsFailed": "Žádosti AI se nepodařilo načíst: {err}",
     "deleted": "{name} smazáno",
     "extEnabled": "{name} zapnuto",
     "extDisabled": "{name} vypnuto",
-    "extEnabledRestarted": "{name} zapnuto — PHP restartováno",
-    "extDisabledRestarted": "{name} vypnuto — PHP restartováno",
+    "extEnabledRestarted": "{name} zapnuto, PHP restartováno",
+    "extDisabledRestarted": "{name} vypnuto, PHP restartováno",
     "extToggleFailed": "Přepnutí {name} selhalo: {err}",
     "phpDefaultSet": "Nové weby teď dostanou PHP {version}",
     "setDefaultFailed": "Nastavení výchozí verze selhalo: {err}",
-    "vhostsRegenerated": "Všech {n} vhostů přegenerováno",
+    "vhostsRegenerated": "Konfigurace všech webů přegenerována ({n})",
     "vhostsPartial": "{ok} v pořádku, {failed} selhalo: {list}",
     "httpFailed": "Selhalo: HTTP {status}",
     "reapplyFailed": "Opětovné použití selhalo: {err}",
     "restoreConfigConfirm": "Obnovit konfiguraci z {when}?",
     "restoreTitle": "Obnovit",
     "suggestSubdomainFailed": "Nepodařilo se navrhnout subdoménu: {err}",
-    "tunnelApplied": "Tunel aplikován: {url}",
-    "applyFailed": "Aplikace selhala: {err}",
+    "tunnelApplied": "Tunel nastaven: {url}",
+    "applyFailed": "Použití selhalo: {err}",
     "copied": "Zkopírováno: {url}",
-    "clipboardUnavailable": "Schránka nedostupná — URL: {url}"
+    "clipboardUnavailable": "Schránka není dostupná. Adresa: {url}"
   },
   "siteApply": {
     "title": "Poslední použití konfigurace",
@@ -3361,19 +3423,19 @@
     "steps": {
       "ssl": "Certifikát",
       "phpIni": "Nastavení PHP",
-      "vhost": "Virtual host",
-      "php": "PHP runtime",
-      "reload": "Reload webserveru",
+      "vhost": "Virtuální host",
+      "php": "Běhové prostředí PHP",
+      "reload": "Načtení konfigurace webového serveru",
       "node": "Proces Node.js",
       "hosts": "Soubor hosts",
-      "cloudflare": "Cloudflare tunel"
+      "cloudflare": "Tunel Cloudflare"
     },
     "hints": {
-      "hosts": "Potvrďte výzvu správce, nebo spusťte WDC jako správce, a aplikujte znovu.",
-      "ssl": "Na stránce SSL nainstalujte mkcert a jeho CA, pak aplikujte znovu.",
-      "reload": "Zkontrolujte webserver na stránce Služby — jeho log obvykle ukáže vadnou direktivu.",
+      "hosts": "Potvrďte výzvu správce, nebo spusťte WDC jako správce, a konfiguraci použijte znovu.",
+      "ssl": "Na stránce SSL nainstalujte mkcert a jeho CA, pak konfiguraci použijte znovu.",
+      "reload": "Zkontrolujte webový server na stránce Služby, jeho log obvykle ukáže chybnou direktivu.",
       "php": "Na stránce Binárky nainstalujte verzi PHP, kterou web používá.",
-      "vhost": "Plugin webserveru nemohl zapsat vhost; ověřte, že je Apache nainstalovaný."
+      "vhost": "Plugin webového serveru nemohl zapsat virtuální host. Ověřte, že je Apache nainstalovaný."
     },
     "failedStep": "Selhal krok „{step}“",
     "moreFailed": "Selhal ještě {n} další krok. | Selhaly ještě {n} další kroky. | Selhalo ještě {n} dalších kroků.",
@@ -3384,7 +3446,7 @@
     "hideSteps": "Skrýt kroky",
     "skip": {
       "apacheDown": "Apache neběží",
-      "batch": "Reload proběhne jednou pro všechny weby",
+      "batch": "Konfigurace se načte jednou pro všechny weby",
       "hosts": "Soubor hosts se nemění (vypnuto nastavením prostředí)"
     }
   },
@@ -3536,68 +3598,66 @@
     }
   },
   "mcpCapabilities": {
-    "intro": "AI klienti připojení přes MCP smí vždy číst stav WDC a dělat běžné věci ze seznamu níže. Každá skupina povolí něco navíc. Nevratné akce i v povolené skupině dál schvaluješ, pokud je nepokryje pravidlo.",
+    "intro": "AI klienti připojení přes MCP smí vždy číst stav WDC a dělat běžné věci ze seznamu níže. Každá skupina povolí něco navíc. Nevratné akce i v povolené skupině dál schvalujete, pokud je nepokryje pravidlo.",
     "loadFailed": "Seznam schopností se nepodařilo načíst: {err}",
-    "approvalStillRequired": "Nevratné akce dál musíš schválit",
+    "approvalStillRequired": "Nevratné akce dál musíte schválit",
     "alwaysTitle": "Co AI smí vždy",
-    "alwaysHint": "Tohle MCP nástroje potřebují pro běžnou práci. Vypneš to jen vypnutím MCP.",
+    "alwaysHint": "Tyto akce nástroje MCP potřebují pro běžnou práci. Vypnout je jde jen vypnutím celého MCP.",
     "neverTitle": "Co AI nesmí nikdy",
     "settingsPrefix": "Nastavení začínající {prefix}",
     "enableTitle": "Povolit AI klientům?",
-    "enableConfirm": "AI klienti připojení k WDC budou smět: {name}. Nevratné akce v této skupině dál musíš schválit.",
+    "enableConfirm": "AI klienti připojení k WDC budou smět: {name}. Nevratné akce v této skupině dál musíte schválit.",
     "enableButton": "Povolit",
     "enabled": "AI klienti teď smí: {name}",
     "disabled": "{name}: pro AI klienty vypnuto",
-    "mcpOff": "MCP je vypnuté a daemon AI klienty odmítá. Zapneš ho přepínačem níže.",
-    "openAdvanced": "Nastavení v Pokročilých",
     "groups": {
       "settings_operator": {
         "title": "Provozní nastavení",
-        "description": "Měnit nastavení deploye, daemonu, pluginů, synchronizace, cest a telemetrie a složku záloh."
+        "description": "Měnit nastavení deploye, démona, pluginů, synchronizace, cest a telemetrie a složku záloh."
       },
       "service_config": {
         "title": "Konfigurace služeb",
-        "description": "Přepisovat httpd.conf, php.ini a další konfigurační soubory služeb. Každý zápis musíš schválit."
+        "description": "Přepisovat httpd.conf, php.ini a další konfigurační soubory služeb. Každý zápis musíte schválit."
       },
       "hosts_file": {
         "title": "Soubor hosts",
-        "description": "Přepsat, zálohovat nebo obnovit systémový soubor hosts. Zápis musíš schválit."
+        "description": "Přepsat, zálohovat nebo obnovit systémový soubor hosts. Zápis musíte schválit."
       },
       "node_process": {
         "title": "Procesy Node.js",
-        "description": "Nastavit startovací příkaz webů v Node.js a tyto procesy spouštět, zastavovat a restartovat. Spuštění musíš schválit."
+        "description": "Nastavit startovací příkaz webů v Node.js a tyto procesy spouštět, zastavovat a restartovat. Spuštění musíte schválit."
       },
       "site_advanced_fields": {
         "title": "Pokročilá pole webu",
-        "description": "Nastavovat pole webu nad rámec domény, složky, PHP a HTTPS (porty, prostředí, PHP nastavení)."
+        "description": "Nastavovat pole webu nad rámec domény, složky, PHP a HTTPS (porty, prostředí, nastavení PHP)."
       },
       "cloudflare_credentials": {
         "title": "Přístupy ke Cloudflare",
-        "description": "Nastavovat cestu k cloudflared, tokeny tunelu a API, účet a směrování tunelu. Každou změnu musíš schválit."
+        "description": "Nastavovat cestu k cloudflared, tokeny tunelu a API, účet a směrování tunelu. Každou změnu musíte schválit."
       },
       "plugin_install": {
         "title": "Instalace pluginů",
-        "description": "Instalovat pluginy z adresy URL a odinstalovat je. Každou akci musíš schválit."
+        "description": "Instalovat pluginy z adresy URL a odinstalovat je. Každou akci musíte schválit."
       },
       "database_admin": {
         "title": "Správa databázového serveru",
-        "description": "Resetovat a měnit root hesla MySQL a PostgreSQL, mazat účty MySQL, zakládat účty s administrátorskými právy nebo pro jiný než místní počítač, importovat SQL dumpy a exportovat do souboru. Většinu z toho musíš schválit."
+        "description": "Resetovat a měnit root hesla MySQL a PostgreSQL, mazat účty MySQL, zakládat účty s administrátorskými právy nebo pro jiný než místní počítač, importovat SQL dumpy a exportovat do souboru. Většinu z toho musíte schválit."
       },
       "backup_restore": {
         "title": "Obnova a mazání záloh",
-        "description": "Obnovit WDC ze zálohy přes současné weby a nastavení, nebo zálohu smazat. Každou akci musíš schválit."
+        "description": "Obnovit WDC ze zálohy přes současné weby a nastavení, nebo zálohu smazat. Každou akci musíte schválit."
       },
       "deploy_config": {
         "title": "Nastavení deploye",
         "description": "Číst a měnit nastavení deploye webů (servery, hooky, webhooky, proměnné prostředí), zkoušet hooky a notifikace a ověřovat servery."
       },
       "daemon_admin": {
-        "title": "Správa daemonu",
-        "description": "Restartovat, vypnout nebo resetovat daemon a spustit odinstalaci. Každou akci musíš schválit."
+        "title": "Správa démona",
+        "description": "Restartovat, vypnout nebo resetovat démona a spustit odinstalaci. Každou akci musíte schválit."
       },
       "unlisted_routes": {
         "title": "Vše ostatní",
-        "description": "Každou další routu daemonu, která není v žádné skupině výše (Docker Compose, synchronizace katalogu a další)."
+        "description": "Každou další routu démona, která není v žádné skupině výše (Docker Compose, synchronizace katalogu a další)."
       },
       "composer": {
         "title": "Composer",
@@ -3605,27 +3665,27 @@
       },
       "cloudflare_dns": {
         "title": "DNS záznamy v Cloudflare",
-        "description": "Vytvářet veřejné DNS záznamy v zónách uloženého účtu Cloudflare, třeba subdoménu mířící jinam. Smazání záznamu i tak musíš schválit."
+        "description": "Vytvářet veřejné DNS záznamy v zónách uloženého účtu Cloudflare, třeba subdoménu mířící jinam. Smazání záznamu i tak musíte schválit."
       }
     },
-    "riskyMismatch": "Napiš přesně {word}.",
+    "riskyMismatch": "Napište přesně {word}.",
     "neverList": [
       "Schválit vlastní žádost.",
       "Vytvářet, měnit nebo mazat pravidla automatického schválení.",
       "Měnit nastavení MCP, včetně přepínačů na této stránce."
     ],
-    "riskyConfirm": "„{name}“ otevře AI klientům všechny routy daemonu, které nejsou v jiné skupině, i ty, které přibudou později. Pro potvrzení napiš {word}.",
+    "riskyConfirm": "„{name}“ otevře AI klientům všechny routy démona, které nejsou v jiné skupině, i ty, které přibudou později. Pro potvrzení napište {word}.",
     "alwaysList": [
       "Číst stav WDC, weby, služby, databáze, logy, zálohy a nastavení.",
-      "Zakládat, upravovat a mazat weby a aplikovat jejich konfiguraci. Smazání webu musíš schválit.",
-      "Spouštět služby. Zastavení a restart musíš schválit.",
-      "Zakládat databáze, číst a exportovat data a spouštět dotazy pro čtení. Smazání databáze a SQL, které mění data, musíš schválit.",
-      "Zakládat účty MySQL pro běžnou databázi a měnit jejich práva. Reset hesla účtu musíš schválit.",
-      "Zapínat a vypínat pluginy a rozšíření PHP, instalovat a odinstalovat binárky. Instalaci binárky musíš schválit.",
-      "Vytvářet SSL certifikáty a instalovat certifikační autoritu. Smazání certifikátu musíš schválit.",
+      "Zakládat, upravovat a mazat weby a aplikovat jejich konfiguraci. Smazání webu musíte schválit.",
+      "Spouštět služby. Zastavení a restart musíte schválit.",
+      "Zakládat databáze, číst a exportovat data a spouštět dotazy pro čtení. Smazání databáze a SQL, které mění data, musíte schválit.",
+      "Zakládat účty MySQL pro běžnou databázi a měnit jejich práva. Reset hesla účtu musíte schválit.",
+      "Zapínat a vypínat pluginy a rozšíření PHP, instalovat a odinstalovat binárky. Instalaci binárky musíte schválit.",
+      "Vytvářet SSL certifikáty a instalovat certifikační autoritu. Smazání certifikátu musíte schválit.",
       "Měnit běžná nastavení WDC (ne provozní nastavení a nastavení MCP) a vytvářet zálohy.",
-      "Číst zóny, DNS záznamy a tunely v Cloudflare. Smazání DNS záznamu musíš schválit.",
-      "Spustit deploy, rollback nebo obnovu snapshotu, vždy až po tvém schválení."
+      "Číst zóny, DNS záznamy a tunely v Cloudflare. Smazání DNS záznamu musíte schválit.",
+      "Spustit deploy, rollback nebo obnovu snapshotu, vždy až po vašem schválení."
     ],
     "devTitle": "Podrobnosti pro vývojáře (routy a nástroje)",
     "riskyWord": "POVOLIT",
@@ -3634,10 +3694,10 @@
     "master": {
       "label": "Povolit AI klienty (MCP)",
       "on": "MCP je zapnuté. AI klienti můžou WDC ovládat v rozsahu níže.",
-      "off": "MCP je vypnuté. Daemon odmítne každého AI klienta, i toho, který už běží. Přepínače níže začnou platit po zapnutí.",
+      "off": "MCP je vypnuté. Démon odmítne každého AI klienta, i toho, který už běží. Přepínače níže začnou platit po zapnutí.",
       "connectGuide": "Jak připojit AI klienta"
     },
-    "riskyGroup": "Povolí i routy, které přibudou v dalších verzích. Zapínej jen dočasně."
+    "riskyGroup": "Povolí i routy, které přibudou v dalších verzích. Zapínejte jen dočasně."
   },
   "splash": {
     "failedTitle": "Službu na pozadí se nepodařilo spustit",
@@ -3678,16 +3738,16 @@
         "description": "Některá služba, třeba Apache nebo MySQL, spadla."
       },
       "sites": {
-        "label": "Chyby při aplikaci webů",
-        "description": "Aplikace konfigurace webu skončila s chybnými kroky."
+        "label": "Chyby při použití konfigurace webu",
+        "description": "Použití konfigurace webu skončilo chybou v některém kroku."
       },
       "deploy": {
         "label": "Deploye",
         "description": "Deploy doběhl, ať už úspěšně, nebo s chybou."
       },
       "mcp": {
-        "label": "Žádosti MCP o potvrzení",
-        "description": "AI asistent čeká, až schválíte nějakou operaci."
+        "label": "Žádosti AI o schválení",
+        "description": "AI klient čeká, až schválíte nějakou akci."
       },
       "backup": {
         "label": "Zálohy",
@@ -3698,8 +3758,8 @@
         "description": "Je k dispozici nová verze NKS WebDev Console (jednou pro každou verzi)."
       },
       "daemon": {
-        "label": "Stav daemonu",
-        "description": "Daemon na pozadí se zastavil nebo byl automaticky restartován."
+        "label": "Stav démona",
+        "description": "Démon na pozadí se zastavil nebo byl automaticky restartován."
       },
       "system": {
         "label": "Ostatní systémové události",
@@ -3729,7 +3789,7 @@
     "events": {
       "serviceCrashedTitle": "Služba {service} spadla",
       "serviceCrashedBody": "Služba se neočekávaně zastavila. Kliknutím otevřete Služby.",
-      "siteApplyFailedTitle": "Web {domain} se nepodařilo aplikovat celý",
+      "siteApplyFailedTitle": "Konfiguraci webu {domain} se nepodařilo použít celou",
       "siteApplyFailedBody": "Krok „{step}“ selhal: {detail}",
       "siteApplyFailedBodyNoDetail": "Krok „{step}“ selhal.",
       "siteApplyFailedMore": "Selhaly i další kroky ({count}).",
@@ -3746,8 +3806,8 @@
       "rollbackFailedTitle": "Rollback selhal",
       "rollbackFailedBody": "Rollback selhal: {error}",
       "mcpConfirmTitle": "Je potřeba vaše schválení",
-      "mcpConfirmBodyKind": "AI asistent chce spustit „{kind}“. Otevřete NKS WebDev Console a operaci schvalte nebo zamítněte.",
-      "mcpConfirmBody": "AI asistent chce spustit destruktivní operaci. Otevřete NKS WebDev Console a operaci schvalte nebo zamítněte.",
+      "mcpConfirmBodyKind": "AI klient chce spustit „{kind}“. Otevřete NKS WebDev Console a akci schvalte, nebo odmítněte.",
+      "mcpConfirmBody": "AI klient chce spustit nevratnou akci. Otevřete NKS WebDev Console a akci schvalte, nebo odmítněte.",
       "backupCompletedTitle": "Záloha dokončena",
       "backupCompletedBody": "{trigger} záloha uložena (souborů: {files}, {size}).",
       "backupFailedTitle": "Záloha selhala",
@@ -3756,14 +3816,14 @@
       "backupTriggerManual": "Ruční",
       "updateAvailableTitle": "Je dostupná aktualizace",
       "updateAvailableBody": "Je k dispozici NKS WebDev Console {version}.",
-      "daemonRestartedTitle": "Daemon byl restartován",
-      "daemonRestartedBody": "Daemon NKS WebDev Console se neočekávaně zastavil a byl automaticky znovu spuštěn.",
-      "daemonGaveUpTitle": "Daemon se opakovaně zastavuje",
-      "daemonGaveUpBody": "Automatické restarty byly zastaveny. Zkontrolujte logy a pak použijte „Spustit daemon“ v nabídce v systémové liště.",
-      "daemonStartFailedTitle": "Daemon se nepodařilo spustit",
+      "daemonRestartedTitle": "Démon byl restartován",
+      "daemonRestartedBody": "Démon NKS WebDev Console se neočekávaně zastavil a byl automaticky znovu spuštěn.",
+      "daemonGaveUpTitle": "Démon se opakovaně zastavuje",
+      "daemonGaveUpBody": "Automatické restarty byly zastaveny. Zkontrolujte logy a pak v nabídce v systémové liště použijte položku „Start daemon“.",
+      "daemonStartFailedTitle": "Démona se nepodařilo spustit",
       "daemonStartFailedBody": "{error}",
-      "daemonMigrationFailedTitle": "Upgrade databáze selhal",
-      "daemonMigrationFailedBody": "Daemon se zastavil, protože se nepodařilo upgradovat jeho databázi. Zkontrolujte log daemonu a pak použijte „Spustit daemon“ v nabídce v systémové liště.",
+      "daemonMigrationFailedTitle": "Aktualizace databáze selhala",
+      "daemonMigrationFailedBody": "Démon se zastavil, protože se nepodařilo aktualizovat jeho databázi. Zkontrolujte log démona a pak v nabídce v systémové liště použijte položku „Start daemon“.",
       "updateLaterButton": "Později",
       "updateCheckFailedTitle": "Kontrola aktualizací selhala",
       "updateReadyDetail": "Restartujte aplikaci a aktualizace se nainstaluje. Jinak se nainstaluje při příštím ukončení aplikace.",
@@ -3776,7 +3836,7 @@
   },
   "mcpConnect": {
     "title": "Připojit AI klienta",
-    "hint": "Zaregistruj MCP server WDC v Claude Code, Claude Desktop nebo Cursoru. Nevratné akce i tak schvaluješ tady, pokud je nepokryje pravidlo.",
+    "hint": "Zaregistrujte MCP server WDC v Claude Code, Claude Desktop nebo Cursoru. Nevratné akce i tak schvalujete tady, pokud je nepokryje pravidlo.",
     "enableLabel": "Povolit AI klienty (MCP)",
     "showSetup": "Zobrazit návod",
     "hideSetup": "Skrýt návod",
@@ -3784,8 +3844,8 @@
     "status": {
       "enabled": "MCP je zapnuté",
       "disabled": "MCP je vypnuté – AI klienti nemají přístup",
-      "portFile": "Daemon je připravený pro AI klienty",
-      "noPortFile": "Daemon neběží nebo nepřipravil MCP token",
+      "portFile": "Démon je připravený pro AI klienty",
+      "noPortFile": "Démon neběží nebo nepřipravil token pro MCP",
       "serverFound": "MCP server je součástí instalace",
       "serverMissing": "MCP server na uvedené cestě chybí",
       "lastCall": "Poslední volání MCP {when} ({tool})",
@@ -3796,23 +3856,23 @@
     "clients": {
       "claudeCode": {
         "title": "Claude Code",
-        "where": "Spusť jednou v terminálu. Server pak bude dostupný ve všech projektech."
+        "where": "Spusťte jednou v terminálu. Server pak bude dostupný ve všech projektech."
       },
       "claudeDesktop": {
         "title": "Claude Desktop",
-        "where": "Do claude_desktop_config.json (Windows: %APPDATA%\\Claude\\, macOS: ~/Library/Application Support/Claude/; soubor otevře i Claude Desktop v Nastavení → Developer → Edit Config). Když v něm už jiné servery máš, přidej jen položku nks-wdc do mcpServers. Pak Claude Desktop restartuj."
+        "where": "Do claude_desktop_config.json (Windows: %APPDATA%\\Claude\\, macOS: ~/Library/Application Support/Claude/; soubor otevře i Claude Desktop v Nastavení → Developer → Edit Config). Když v něm už jiné servery máte, přidejte jen položku nks-wdc do mcpServers. Pak Claude Desktop restartujte."
       },
       "cursor": {
         "title": "Cursor",
-        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máš, přidej jen položku nks-wdc do mcpServers."
+        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máte, přidejte jen položku nks-wdc do mcpServers."
       }
     },
     "copy": "Kopírovat",
     "copied": "Zkopírováno do schránky",
-    "copyFailed": "Kopírování se nepodařilo, označ text a zkopíruj ho ručně",
+    "copyFailed": "Kopírování se nepodařilo, označte text a zkopírujte ho ručně",
     "pathUnknown": "Skutečnou cestu ukáže desktopová aplikace; tento náhled používá zástupný text.",
     "enabledToast": "MCP zapnuto",
-    "disabledToast": "MCP vypnuto, daemon AI klienty odmítá",
+    "disabledToast": "MCP vypnuto, démon AI klienty odmítá",
     "toggleFailed": "Nastavení MCP se nepodařilo změnit: {error}",
     "ago": {
       "seconds": "před {n} s",
@@ -3826,14 +3886,14 @@
       "node": "Node.js",
       "app": "WDC (bez Node.js)",
       "nodeHint": "Potřebuje Node.js 18 nebo novější v PATH.",
-      "appHint": "Použije program WDC, Node.js není potřeba. Když WDC přeinstaluješ jinam, ukázku zkopíruj znovu."
+      "appHint": "Použije program WDC, Node.js není potřeba. Když WDC přeinstalujete jinam, ukázku zkopírujte znovu."
     },
     "copyEntry": "Kopírovat jen položku nks-wdc",
     "test": {
       "button": "Vyzkoušet připojení",
-      "ok": "Funguje: server se spustil a daemon odpověděl.",
+      "ok": "Funguje: server se spustil a démon odpověděl.",
       "notStarted": "Server se nespustil:",
-      "daemonRefused": "Server běží, ale daemon odmítl:",
+      "daemonRefused": "Server běží, ale démon odmítl:",
       "unavailable": "Vyzkoušet jde jen v desktopové aplikaci s nainstalovaným serverem."
     },
     "copyFile": "Kopírovat celý soubor"
@@ -3852,7 +3912,7 @@
   },
   "pluginMissing": {
     "enable": "Zapnout plugin",
-    "openMarketplace": "Otevřít Pluginy › Marketplace",
+    "openMarketplace": "Otevřít Pluginy › Ke stažení",
     "disabledHint": "Plugin je nainstalovaný, ale vypnutý."
   },
   "mcpApproval": {
@@ -3863,9 +3923,16 @@
     "noTarget": "bez cíle",
     "aiSays": "Popis od AI (neověřený): {prompt}",
     "aiSaysNothing": "AI k žádosti nic nenapsala.",
-    "typeToConfirm": "Pro schválení napiš {expected}.",
+    "typeToConfirm": "Pro schválení napište {expected}.",
     "word": "SCHVALUJI",
-    "mismatch": "Napiš přesně {expected}.",
+    "mismatch": "Napište přesně {expected}.",
     "approve": "Schválit"
+  },
+  "sslSiteTab": {
+    "hint": "Místní certifikáty přes mkcert",
+    "enable": "Zapnout HTTPS",
+    "enableDesc": "Vytvoří certifikát, kterému tento počítač důvěřuje, a web začne odpovídat přes HTTPS na portu {port}.",
+    "redirect": "Přesměrovat HTTP na HTTPS",
+    "redirectDesc": "Požadavky přes obyčejné HTTP se automaticky přesměrují na HTTPS."
   }
 }

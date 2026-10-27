@@ -1,7 +1,7 @@
 <template>
   <div class="loading-state" :style="{ padding }">
     <el-icon class="is-loading"><Loading /></el-icon>
-    <span>{{ label }}</span>
+    <span>{{ label ?? $t('common.loading') }}</span>
     <span v-if="showElapsed && elapsed > 4" class="elapsed mono">{{ elapsed }}s</span>
   </div>
 </template>
@@ -18,7 +18,7 @@ import { Loading } from '@element-plus/icons-vue'
 
 withDefaults(
   defineProps<{ label?: string; padding?: string; showElapsed?: boolean }>(),
-  { label: 'Loading…', padding: '48px 24px', showElapsed: true }
+  { padding: '48px 24px', showElapsed: true }
 )
 
 const elapsed = ref(0)

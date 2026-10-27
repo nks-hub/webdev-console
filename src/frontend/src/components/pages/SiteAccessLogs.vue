@@ -78,7 +78,7 @@
         >
           <template #header>
             <el-tooltip
-              content="Real client IP (prefers CF-Connecting-IP / XFF, falls back to socket)"
+              :content="t('sites.access.ipTooltip')"
               placement="top"
               :show-after="300"
             >

@@ -516,7 +516,8 @@
     },
     "timeline": {
       "title": "Activity for last {hours}h",
-      "empty": "(no activity)"
+      "empty": "(no activity)",
+      "errorsInHour": "{n} error in {hour}h | {n} errors in {hour}h"
     },
     "topTools": {
       "title": "Top tools 24h",
@@ -541,7 +542,8 @@
       "byTool": "Per-tool breakdown",
       "allCalls": "All calls",
       "copyJson": "Copy JSON",
-      "copied": "JSON copied to clipboard"
+      "copied": "JSON copied to clipboard",
+      "avgMs": "avg {ms}ms"
     },
     "danger": {
       "read": "read",
@@ -887,7 +889,8 @@
       "lines": "Lines",
       "since": "Since",
       "refresh": "Refresh",
-      "autoRefresh": "Auto"
+      "autoRefresh": "Auto",
+      "ipTooltip": "Real client IP (prefers CF-Connecting-IP / XFF, falls back to socket)"
     },
     "composer": {
       "tabLabel": "Composer",
@@ -936,7 +939,10 @@
       "checkConflicts": "Check conflicts",
       "noConflicts": "No conflicts detected",
       "conflictsTitle": "Conflicts and warnings",
-      "majorJump": "Major version jump — possible breaking changes"
+      "majorJump": "Major version jump — possible breaking changes",
+      "present": "present",
+      "missing": "missing",
+      "versionAuto": "(auto)"
     },
     "list": {
       "stateFilter": "Filter by status",
@@ -1213,7 +1219,8 @@
       "affected": "{count} rows affected",
       "tabAffected": "#{n}: affected ({count})",
       "tabRows": "#{n}: rows ({count})",
-      "run": "Run query"
+      "run": "Run query",
+      "rowsCount": "{n} rows"
     },
     "diag": {
       "notInstalledTitle": "MySQL is not installed yet",
@@ -1679,7 +1686,9 @@
     "applyHint": "Updates the per-site CNAME + ingress rule on Cloudflare. Independent of Save & Apply on the parent form.",
     "notConfiguredTitle": "Cloudflare account is not configured",
     "notConfiguredBody": "Set the API token, account and tunnel in the Cloudflare page first.",
-    "openSetup": "Open Cloudflare setup"
+    "openSetup": "Open Cloudflare setup",
+    "syncedStatus": "Synced {n} site(s) — {url}",
+    "zoneFallback": "(zone)"
   },
   "cloudflare": {
     "title": "Cloudflare Tunnel",
@@ -1937,7 +1946,8 @@
       "flags": "Flags",
       "soak": "soak {n}s",
       "healthUrl": "Health check",
-      "phpPath": "PHP binary"
+      "phpPath": "PHP binary",
+      "migrations": "migrations"
     },
     "hosts": {
       "title": "Deploy hosts",
@@ -1962,7 +1972,11 @@
       "ariaEditHost": "Edit host {name}",
       "ariaRemoveHost": "Remove host {name}",
       "ariaComposerEnabled": "Composer install enabled",
-      "ariaComposerDisabled": "Composer install disabled"
+      "ariaComposerDisabled": "Composer install disabled",
+      "hostAdded": "Host added",
+      "hostUpdated": "Host updated",
+      "removeConfirmTitle": "Confirm removal",
+      "removeConfirmMessage": "Remove host \"{name}\"?"
     },
     "hostDialog": {
       "addTitle": "Add deploy host",
@@ -2000,7 +2014,15 @@
       "sharedDirsHelp": "Directories symlinked from shared/ into each release. Default: log, temp",
       "sharedFiles": "Shared files",
       "sharedFilesPlaceholder": ".env, config.local.neon",
-      "sharedFilesHelp": "Files symlinked from shared/ into each release (e.g. .env)"
+      "sharedFilesHelp": "Files symlinked from shared/ into each release (e.g. .env)",
+      "rules": {
+        "nameRequired": "Name is required",
+        "nameFormat": "Use lowercase letters, digits, hyphens, underscores",
+        "sshHostRequired": "SSH host is required",
+        "sshUserRequired": "SSH user is required",
+        "remotePathRequired": "Remote path is required",
+        "branchRequired": "Branch is required"
+      }
     },
     "wizard": {
       "step1Title": "Host details",
@@ -2066,7 +2088,10 @@
       "restoreOkTitle": "Snapshot restored",
       "restoreOkBody": "current symlink swapped to release {release} ({size}).",
       "restoreOkGeneric": "Snapshot restored.",
-      "restoreFailed": "Snapshot restore failed: {error}"
+      "restoreFailed": "Snapshot restore failed: {error}",
+      "restorePromptTitle": "Restore database snapshot",
+      "restorePromptMessage": "Type \"{id}\" to confirm restore. This will OVERWRITE the live database for {domain} with the snapshot taken at {date}. SQLite restores create a .bak safety copy; SQL restores do NOT — make sure you have a separate backup.",
+      "restorePromptMismatch": "Type exactly \"{id}\" to enable Restore"
     },
     "hooks": {
       "title": "Lifecycle hooks",
@@ -2155,7 +2180,9 @@
       "envKeyAria": "Env var key: {key}",
       "envValAria": "Env var value for {key}",
       "save": "Save advanced settings"
-    }
+    },
+    "blockersLabel": "Blockers:",
+    "backendBuiltIn": "built-in"
   },
   "deploy": {
     "loading": "Loading deploy state…",
@@ -2224,7 +2251,14 @@
     },
     "preflight": {
       "title": "Pre-deploy checks",
-      "rerun": "Re-run"
+      "rerun": "Re-run",
+      "checks": {
+        "git_status": "Working tree status",
+        "php_lint": "php -l on changed files",
+        "di_container": "Nette DI validate",
+        "schema_validate": "Doctrine schema check",
+        "manifest_check": "Vite manifest present"
+      }
     },
     "waterfall": {
       "ponrLabel": "POINT OF NO RETURN — symlink will switch · cancel disabled · only rollback after this",
@@ -2279,7 +2313,18 @@
       "replayAria": "Re-run this group with the same hosts list",
       "errorLabel": "Error:",
       "phaseAria": "Phase {phase}",
-      "hostsCount": "{n} host | {n} hosts"
+      "hostsCount": "{n} host | {n} hosts",
+      "replaySubsetTitle": "Replay subset?",
+      "replaySubsetMessage": "Original group had mixed outcomes:\n  Succeeded: {okCount} ({okHosts})\n  Failed: {failedCount} ({failedHosts})\n\nReplay only the FAILED hosts (recommended) or ALL hosts?",
+      "replayFailedOnly": "Failed only ({n})",
+      "replayAllHosts": "All hosts ({n})",
+      "replayConfirmTitle": "Confirm group replay",
+      "replayConfirmMessage": "Re-run this group with the same hosts ({n})?\n\nHosts: {hosts}\nOriginal group: {group}…\n\nA new groupId will be minted; the original row stays unchanged as audit history.",
+      "replayConfirmBtn": "Replay group",
+      "replayStarted": "Replay started ({n} hosts) — new group {group}…",
+      "rollbackConfirmTitle": "Confirm group rollback",
+      "rollbackConfirmMessage": "Cascade-rollback every committed host in this group?\n\nHosts to roll back: {n}\nGroup: {group}…\n\nRollback rewinds the release symlink only — pre-deploy DB snapshots are NOT auto-restored (operator-driven via Settings tab).",
+      "rollbackConfirmBtn": "Roll back group"
     },
     "rawOutput": {
       "modeAria": "Output mode",
@@ -2429,6 +2474,24 @@
       "deployStarted": "Deploy started — watch the drawer",
       "deployStartedSnap": "Deploy started (with pre-deploy snapshot) — watch the drawer",
       "deployFailed": "Deploy failed to start"
+    },
+    "steps": {
+      "pre_deploy_backup": "pre-deploy DB snapshot",
+      "git_pull": "git pull",
+      "composer_install": "composer install",
+      "npm_build": "npm/vite build",
+      "shared_links": "shared symlinks",
+      "writable": "writable dirs",
+      "cache_clear": "cache clear",
+      "doctrine_proxy": "doctrine proxies",
+      "schema_update": "schema update",
+      "di_warmup": "DI warmup",
+      "latte_warmup": "latte warmup",
+      "symlink_switch": "symlink switch (PONR)",
+      "fpm_reload": "php-fpm reload",
+      "opcache_clear": "opcache clear",
+      "health_check": "health check",
+      "cleanup_releases": "cleanup releases"
     }
   },
   "metrics": {
@@ -3547,8 +3610,6 @@
     "enableButton": "Allow",
     "enabled": "AI clients may now: {name}",
     "disabled": "{name}: off for AI clients",
-    "mcpOff": "MCP is off and the daemon refuses AI clients. Turn it on with the switch below.",
-    "openAdvanced": "Settings in Advanced",
     "groups": {
       "settings_operator": {
         "title": "Operator settings",
@@ -3866,5 +3927,12 @@
     "word": "APPROVE",
     "mismatch": "Type exactly {expected}.",
     "approve": "Approve"
+  },
+  "sslSiteTab": {
+    "hint": "Local certificates via mkcert",
+    "enable": "Enable HTTPS",
+    "enableDesc": "Generates a locally-trusted certificate and binds an HTTPS vhost on port {port}.",
+    "redirect": "HTTP → HTTPS redirect",
+    "redirectDesc": "Automatically redirect plain HTTP requests to the HTTPS version."
   }
 }
