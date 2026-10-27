@@ -2257,17 +2257,9 @@
       "reload": "Znovu načíst"
     }
   },
-  "settingsDb": {
-    "tabDesc": "MySQL databáze spravované NKS WDC.",
-    "noUserDatabases": "Žádné uživatelské databáze",
-    "drop": "Smazat",
-    "create": "Vytvořit",
-    "newPlaceholder": "nova_databaze"
-  },
   "settingsToast": {
     "ssoFailed": "SSO selhalo: {err}",
-    "filePickerDesktopOnly": "Nativní výběr souboru je dostupný jen v desktopové aplikaci",
-    "backupCreated": "Záloha vytvořena: {files} souborů, {size} MB",
+    "backupCreated": "Záloha vytvořena: {files} souborů, {size}",
     "backupFailed": "Záloha selhala: {err}",
     "resetFailed": "Reset selhal: {err}",
     "mysqlRootSaved": "MySQL root heslo uloženo (DPAPI-šifrované)",
@@ -2277,10 +2269,6 @@
     "restoreFailed": "Obnovení selhalo: {err}",
     "snapshotDeleted": "Snapshot smazán",
     "deleteFailed": "Smazání selhalo: {err}",
-    "databaseCreated": "Databáze {name} vytvořena",
-    "createFailed": "Vytvoření selhalo: {err}",
-    "databaseDropped": "Databáze {name} smazána",
-    "dropFailed": "Smazání selhalo: {err}",
     "dnsFlushed": "DNS cache vyprázdněn",
     "dnsFlushAdmin": "Vyprázdnění DNS může vyžadovat administrátorská práva",
     "dnsFlushUnavailable": "Endpoint pro vyprázdnění DNS není dostupný",
@@ -2324,7 +2312,6 @@
       "general": "Obecné",
       "ports": "Porty",
       "paths": "Cesty",
-      "databases": "Databáze",
       "advanced": "Pokročilé",
       "account": "Účet",
       "sync": "Synchronizace",
@@ -2381,15 +2368,7 @@
     },
     "advancedBackups": {
       "title": "Zálohy",
-      "create": "Vytvořit zálohu",
-      "loading": "Načítám zálohy…",
-      "empty": "Žádné zálohy. Klikni na „Vytvořit zálohu\" pro vytvoření.",
-      "colDate": "Datum",
-      "colSize": "Velikost",
-      "backupDir": "Adresář záloh",
-      "schedule": "Interval automatické zálohy",
-      "hours": "hodin",
-      "scheduleHint": "Nastav 0 pro vypnutí. Když > 0, démon vytvoří časově označenou zálohu každých N hodin a maže staré (zachovává 10)."
+      "create": "Vytvořit zálohu"
     },
     "advancedPorts": {
       "pluginPorts": "Porty pluginů",
@@ -2483,17 +2462,10 @@
       "importInvalid": "Soubor neobsahuje nastavení NKS WebDev Console (chybí část „settings“)."
     },
     "paths": {
-      "tabDesc": "Přepiš cesty k binárkám. Nech prázdné pro použití auto-detekovaných výchozích.",
-      "apache": "Apache httpd.exe",
-      "mysql": "MySQL mysqld.exe",
-      "php": "PHP executable",
-      "redis": "Redis redis-server.exe",
-      "sitesDir": "Adresář konfigurací webů",
-      "hostsFile": "Soubor hosts",
-      "hostsHint": "Cesta k systémovému souboru hosts pro lokální překlad domén. Nech prázdné pro výchozí podle OS.",
       "dataDir": "Datový adresář",
-      "dataHint": "Root pro veškerý stav démona: weby, binárky, SSL certifikáty, zálohy, konfigurace.",
-      "browse": "Procházet"
+      "dataHint": "Sem NKS WebDev Console ukládá weby, binárky, SSL certifikáty, zálohy a nastavení. Jiné umístění nastavíte proměnnou prostředí WDC_DATA_DIR nebo souborem portable.txt vedle spustitelného souboru aplikace.",
+      "backupsDesc": "Plán, obsah a seznam záloh najdete na stránce Zálohy.",
+      "manageBackups": "Spravovat zálohy"
     },
     "general": {
       "tabDesc": "Chování aplikace a nastavení při spuštění.",

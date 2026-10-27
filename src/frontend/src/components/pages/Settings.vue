@@ -348,140 +348,19 @@
         <!-- Paths tab -->
         <section v-show="activeTab === 'paths'" class="shell-section">
           <div class="tab-content">
-            <p class="tab-desc">{{ $t('settings.paths.tabDesc') }}</p>
-            <!-- F79: Browse buttons open the native file/folder dialog via
-                 electronAPI.showOpenDialog. Falls back to manual typing when
-                 running outside Electron (dev browser, etc.). -->
-            <SettingsCard :title="$t('settings.tabs.paths')">
-            <el-form label-position="top" size="small">
-              <el-form-item :label="$t('settings.paths.apache')">
-                <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
-                  <template #append>
-                    <el-button @click="browsePath('apache', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.mysql')">
-                <el-input v-model="paths.mysql" placeholder="C:\nks-wdc\binaries\mysql\8.0\bin\mysqld.exe">
-                  <template #append>
-                    <el-button @click="browsePath('mysql', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.php')">
-                <el-input v-model="paths.php" placeholder="C:\nks-wdc\binaries\php\8.4\php.exe">
-                  <template #append>
-                    <el-button @click="browsePath('php', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.redis')">
-                <el-input v-model="paths.redis" placeholder="C:\nks-wdc\binaries\redis\7.2\redis-server.exe">
-                  <template #append>
-                    <el-button @click="browsePath('redis', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.sitesDir')">
-                <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts">
-                  <template #append>
-                    <el-button @click="browsePath('sitesDir', 'folder')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.hostsFile')">
-                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts">
-                  <template #append>
-                    <el-button @click="browsePath('hostsFile', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-                <div class="hint">{{ $t('settings.paths.hostsHint') }}</div>
-              </el-form-item>
-
-              <el-divider />
-
-              <el-form-item :label="$t('settings.paths.dataDir')">
-                <el-input
-                  :model-value="systemInfo?.os?.machine ? `${systemInfo?.daemon?.pid ? '~/.wdc' : '~/.wdc'}` : '~/.wdc'"
-                  disabled
-                  class="mono-input"
-                />
-                <div class="hint">
-                  {{ $t('settings.paths.dataHint') }}
-                  Override with <code>WDC_DATA_DIR</code> environment variable or
-                  <code>portable.txt</code> next to the executable.
-                </div>
-              </el-form-item>
-              <el-form-item :label="$t('settings.advancedBackups.backupDir')">
-                <el-input v-model="backupDir" placeholder="~/.wdc/backups" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.advancedBackups.schedule')">
-                <el-input-number
-                  v-model="backupScheduleHours"
-                  :min="0"
-                  :max="720"
-                  controls-position="right"
-                  style="width: 160px"
-                />
-                <span style="margin-left: var(--wdc-space-2); font-size: 0.82rem; color: var(--wdc-text-3)">{{ $t('settings.advancedBackups.hours') }}</span>
-                <div class="hint">
-                  {{ $t('settings.advancedBackups.scheduleHint') }}
-                </div>
-              </el-form-item>
-            </el-form>
-
-            <!-- Manual backup management -->
-            <div style="margin-top: var(--wdc-space-5); border-top: 1px solid var(--wdc-border); padding-top: var(--wdc-space-4)">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--wdc-space-3)">
-                <span style="font-weight: 600; font-size: 0.95rem">{{ $t('settings.advancedBackups.title') }}</span>
-                <div style="display: flex; gap: var(--wdc-space-2)">
-                  <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
-                    {{ $t('settings.advancedBackups.create') }}
-                  </el-button>
-                  <el-button size="small" @click="loadBackups" :loading="backupsLoading">
-                    {{ $t('common.refresh') }}
-                  </el-button>
-                </div>
-              </div>
-              <div v-if="backupsLoading" class="hint">{{ $t('settings.advancedBackups.loading') }}</div>
-              <div v-else-if="backupsList.length === 0" class="hint">{{ $t('settings.advancedBackups.empty') }}</div>
-              <el-table v-else :data="backupsList" size="small" stripe style="width: 100%">
-                <el-table-column :label="$t('settings.advancedBackups.colDate')" width="180">
-                  <template #default="{ row }">
-                    {{ new Date(row.createdUtc).toLocaleString() }}
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('settings.advancedBackups.colSize')" width="130">
-                  <template #default="{ row }">
-                    {{ (row.size / 1024 / 1024).toFixed(1) }} MB
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('common.actions')">
-                  <template #default="{ row }">
-                    <el-button size="small" @click="downloadBackupFile(row.path)">{{ $t('common.download') }}</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
+            <SettingsCard :title="$t('settings.paths.dataDir')">
+              <el-input :model-value="systemInfo?.dataDir ?? ''" readonly class="mono-input" />
+              <div class="hint">{{ $t('settings.paths.dataHint') }}</div>
             </SettingsCard>
-          </div>
-        </section>
-
-        <!-- Databases tab -->
-        <section v-show="activeTab === 'databases'" class="shell-section">
-          <div class="tab-content">
-            <p class="tab-desc">{{ $t('settingsDb.tabDesc') }}</p>
-            <SettingsCard :title="$t('settings.tabs.databases')">
-              <div class="db-list" v-if="databases.length > 0">
-                <div class="db-row" v-for="db in databases" :key="db">
-                  <span class="db-name">{{ db }}</span>
-                  <el-button size="small" type="danger" text @click="dropDatabase(db)">{{ $t('settingsDb.drop') }}</el-button>
-                </div>
-              </div>
-              <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
-              <div class="db-create">
-                <el-input v-model="newDbName" :placeholder="$t('settingsDb.newPlaceholder')" size="small" style="width: 200px" />
-                <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">{{ $t('settingsDb.create') }}</el-button>
+            <SettingsCard :title="$t('settings.advancedBackups.title')">
+              <p class="tab-desc">{{ $t('settings.paths.backupsDesc') }}</p>
+              <div class="paths-backup-actions">
+                <el-button size="small" type="primary" :loading="backupCreating" @click="manualBackup">
+                  {{ $t('settings.advancedBackups.create') }}
+                </el-button>
+                <el-button size="small" @click="$router.push('/backups')">
+                  {{ $t('settings.paths.manageBackups') }} →
+                </el-button>
               </div>
             </SettingsCard>
           </div>
@@ -1153,7 +1032,7 @@
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">OS</span>
-                  <span class="sys-value">{{ systemInfo.os?.version }}</span>
+                  <span class="sys-value">{{ systemInfo.os?.name ?? systemInfo.os?.version }}</span>
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">.NET</span>
@@ -1178,7 +1057,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, onActivated, watch } from 'vue'
-import { useRoute, onBeforeRouteLeave } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
 import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
@@ -1276,13 +1155,12 @@ const settingsSections = computed<SettingsSection[]>(() => [
   { name: 'about', label: t('settings.tabs.about'), group: 'app' },
   { name: 'ports', label: t('settings.tabs.ports'), group: 'environment' },
   { name: 'paths', label: t('settings.tabs.paths'), group: 'environment' },
-  { name: 'databases', label: t('settings.tabs.databases'), group: 'environment' },
   { name: 'sync', label: t('settings.tabs.sync'), group: 'integration' },
   { name: 'mcp', label: t('settings.tabs.mcp'), group: 'integration' },
   { name: 'advanced', label: t('settings.tabs.advanced'), group: 'integration' },
 ])
 
-const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync', 'mcp'])
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'advanced', 'sync', 'mcp'])
 watch(() => uiModeStore.isSimple, (simple) => {
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
@@ -1294,7 +1172,12 @@ watch(() => uiModeStore.isSimple, (simple) => {
 // the tab is enough to surface the MCP section within Advanced; the
 // scroll attribute lets us jump to a specific anchor.
 const route = useRoute()
+const router = useRouter()
 function applyDeepLink(): void {
+  if (route.query.tab === 'databases') {
+    void router.replace('/databases')
+    return
+  }
   const scrollTarget = typeof route.query.scroll === 'string' ? route.query.scroll : ''
   const tabParam = scrollTarget === 'mcp-section'
     ? 'mcp'
@@ -1315,8 +1198,6 @@ function applyDeepLink(): void {
 watch(() => route.query, applyDeepLink, { immediate: true })
 
 const saving = ref(false)
-const databases = ref<string[]>([])
-const newDbName = ref('')
 const systemInfo = ref<SystemInfo | null>(null)
 const installedVersions = ref<Array<{ app: string; version: string }>>([])
 
@@ -1517,27 +1398,6 @@ const phpVersions = ref<string[]>([])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
 
-// F79: open native OS file/folder picker + write result into paths[key].
-// Electron-only (wrapped via preload's electronAPI.showOpenDialog). When
-// running outside Electron the button no-ops with a warning toast.
-async function browsePath(key: keyof typeof paths, kind: 'file' | 'folder'): Promise<void> {
-  const api = window.electronAPI
-  if (!api?.showOpenDialog) {
-    ElMessage.warning(t('settingsToast.filePickerDesktopOnly'))
-    return
-  }
-  const result = await api.showOpenDialog({
-    properties: kind === 'folder' ? ['openDirectory'] : ['openFile'],
-    title: kind === 'folder' ? 'Select directory' : 'Select file',
-    defaultPath: paths[key] || undefined,
-  })
-  if (result?.canceled) return
-  const picked = result?.filePaths?.[0]
-  if (typeof picked === 'string' && picked.length > 0) {
-    paths[key] = picked
-  }
-}
-
 // F85: format daemon uptime seconds into human-friendly string.
 function formatUptime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '—'
@@ -1551,47 +1411,22 @@ function formatUptime(seconds: number): string {
   return `${d}d ${h % 24}h`
 }
 
-const paths = reactive({
-  apache: '',
-  mysql: '',
-  php: '',
-  redis: '',
-  sitesDir: '',
-  hostsFile: '',
-})
-
 // ── Additional settings from SPEC ─────────────────────────────────────
 const phpFpmBasePort = ref(9000)
 const telemetryEnabled = ref(false)
 const telemetryCrashReports = ref(false)
-const backupDir = ref('')
-// Matches BackupScheduler.DefaultScheduleHours; 0 means "off", so a 0
-// default silently disabled scheduled backups on the first Save.
-const backupScheduleHours = ref(24)
 // Save writes every key; never let it run on top of a failed load.
 const settingsLoaded = ref(false)
 
 // Backup management
-import { fetchBackups, createBackup, downloadBackup, listMcpKinds, type BackupEntry } from '../../api/daemon'
-const backupsList = ref<BackupEntry[]>([])
-const backupsLoading = ref(false)
+import { createBackup, listMcpKinds } from '../../api/daemon'
 const backupCreating = ref(false)
-
-async function loadBackups() {
-  backupsLoading.value = true
-  try {
-    const data = await fetchBackups()
-    backupsList.value = data.backups
-  } catch { backupsList.value = [] }
-  finally { backupsLoading.value = false }
-}
 
 async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: (result.size / 1024 / 1024).toFixed(1) }))
-    void loadBackups()
+    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatSize(result.size) }))
   } catch (e) {
     ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
@@ -1607,8 +1442,9 @@ const httpPort = computed(() => ports.http)
 const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
 
-function downloadBackupFile(path: string) {
-  downloadBackup(path).catch((e) => ElMessage.error(t('backupsPage.snapshots.downloadFailed', { error: errorMessage(e) })))
+function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 // ── Danger-zone reset operations ──────────────────────────────────────
@@ -1855,40 +1691,6 @@ const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
 
-async function loadDatabases() {
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/databases`, { headers: authHeaders() })
-    if (r.ok) {
-      const data = await r.json()
-      databases.value = data.databases ?? []
-    }
-  } catch { /* not connected */ }
-}
-
-async function createDatabase() {
-  if (!newDbName.value) return
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/databases`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ name: newDbName.value }),
-    })
-    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(t('settingsToast.databaseCreated', { name: newDbName.value }))
-    newDbName.value = ''
-    await loadDatabases()
-  } catch (e) { ElMessage.error(t('settingsToast.createFailed', { err: errorMessage(e) })) }
-}
-
-async function dropDatabase(name: string) {
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
-    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(t('settingsToast.databaseDropped', { name }))
-    await loadDatabases()
-  } catch (e) { ElMessage.error(t('settingsToast.dropFailed', { err: errorMessage(e) })) }
-}
-
 async function flushDns() {
   flushingDns.value = true
   try {
@@ -2059,16 +1861,8 @@ function applyValues(data: Record<string, string>): void {
   mcpToolCallRetentionDays.value = Math.max(1, intOr(data['mcp.toolCallRetentionDays'], 30))
   deployEnabled.value = boolDefaultOn(data['deploy.enabled'])
   deployUseLegacyHostHandlers.value = boolDefaultOn(data['deploy.useLegacyHostHandlers'])
-  paths.apache = data['paths.apache'] ?? ''
-  paths.mysql = data['paths.mysql'] ?? ''
-  paths.php = data['paths.php'] ?? ''
-  paths.redis = data['paths.redis'] ?? ''
-  paths.sitesDir = data['paths.sitesDir'] ?? ''
-  paths.hostsFile = data['paths.hostsFile'] ?? ''
   catalogUrl.value = data['daemon.catalogUrl'] ?? ''
   pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
-  backupDir.value = data['backup.dir'] ?? ''
-  backupScheduleHours.value = intOr(data['backup.scheduleHours'], 24)
   deviceName.value = data['sync.deviceName'] ?? ''
 }
 
@@ -2084,16 +1878,8 @@ function formValues(): Record<string, string> {
     'ports.phpFpmBase': String(phpFpmBasePort.value),
     'deploy.enabled': String(deployEnabled.value),
     'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
-    'paths.apache': paths.apache,
-    'paths.mysql': paths.mysql,
-    'paths.php': paths.php,
-    'paths.redis': paths.redis,
-    'paths.sitesDir': paths.sitesDir,
-    'paths.hostsFile': paths.hostsFile,
     'daemon.catalogUrl': catalogUrl.value,
     'plugins.autoSyncEnabled': String(pluginAutoSync.value),
-    'backup.dir': backupDir.value,
-    'backup.scheduleHours': String(backupScheduleHours.value),
     'sync.deviceName': deviceName.value,
   }
 }
@@ -2889,13 +2675,11 @@ let unsubscribeDeploySettingsSse: (() => void) | null = null
 
 onMounted(async () => {
   void loadSettings()
-  void loadDatabases()
   void loadPhpVersions()
   void loadRunOnStartup()
   void window.electronAPI?.updaterGetStatus?.().then((state) => { updaterState.value = state }).catch(() => {})
   unsubscribeUpdater = window.electronAPI?.onUpdaterStatus?.((state) => { updaterState.value = state }) ?? null
   void loadTelemetryConsent()
-  void loadBackups()
   void loadDeviceId()
   void loadPluginCatalogStatus()
   void loadPluginPorts()
@@ -3287,17 +3071,7 @@ async function save() {
 }
 .about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 
-.db-list { margin-bottom: 16px; }
-.db-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--wdc-space-2) var(--wdc-space-3);
-  border-bottom: 1px solid var(--wdc-border);
-}
-.db-row:last-child { border-bottom: none; }
-.db-name { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--wdc-text); }
-.db-create { display: flex; gap: 8px; margin-top: 12px; }
+.paths-backup-actions { display: flex; gap: var(--wdc-space-2); flex-wrap: wrap; }
 
 /* Sync tab */
 .settings-card {

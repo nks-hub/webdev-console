@@ -32,6 +32,15 @@ test.describe('Settings General contract', () => {
     expect(settings).not.toContain("'telemetry.enabled'")
   })
 
+  test('no dead path fields; databases are managed on their own page', () => {
+    // Neither the daemon nor any plugin reads paths.* or backup.dir.
+    const settings = read('src', 'components', 'pages', 'Settings.vue')
+    for (const key of ['paths.apache', 'paths.hostsFile', 'backup.dir']) expect(settings).not.toContain(`'${key}'`)
+    expect(settings).toContain('systemInfo?.dataDir')
+    expect(settings).toMatch(/route\.query\.tab === 'databases'[\s\S]*?router\.replace\('\/databases'\)/)
+    expect(settings).not.toMatch(/method: 'DELETE'[\s\S]{0,80}api\/databases/)
+  })
+
   test('default PHP version is loaded and saved', () => {
     const settings = read('src', 'components', 'pages', 'Settings.vue')
     expect(settings).toMatch(/settings\['general\.defaultPhp'\]/)
