@@ -110,7 +110,7 @@
                     <el-icon aria-hidden="true"><Check /></el-icon>{{ $t('sites.new.folderExists') }}
                   </div>
                   <div v-else-if="folderState === 'missing'" class="hint hint-warn">
-                    <el-icon aria-hidden="true"><WarningFilled /></el-icon>{{ $t('sites.new.folderMissing') }}
+                    <el-icon aria-hidden="true"><WarningFilled /></el-icon>{{ $t('siteEdit.folderMissing') }}
                   </div>
                   <div v-else class="hint">{{ $t('siteEdit.folderHint') }}</div>
                 </el-form-item>

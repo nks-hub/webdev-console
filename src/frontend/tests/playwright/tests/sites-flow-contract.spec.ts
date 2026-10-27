@@ -63,13 +63,20 @@ test.describe('Sites flow contract', () => {
     expect(read('components', 'sites', 'SiteMetrics.vue')).toMatch(/minInterval: 1/)
   })
 
+  test('POST /api/sites creates the folder before the site; only the create dialog promises that', () => {
+    const endpoints = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs'), 'utf-8')
+    expect(endpoints).toMatch(/MapPost\("\/api\/sites",[\s\S]*?EnsureDocumentRoot\([\s\S]*?sm\.CreateAsync\(site\)/)
+    expect(read('components', 'pages', 'SiteEdit.vue')).toMatch(/\$t\('siteEdit\.folderMissing'\)/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)
     const required = [
       'sites.banner.restarting.title', 'sites.banner.stopping.title', 'sites.banner.crashed.detail',
       'sites.new.folderUsed', 'sites.new.httpsOffNeedsCa', 'sites.new.mysqlStopped', 'sites.new.creating',
-      'sites.list.openWaiting', 'siteApply.applyHint', 'siteEdit.ov.explain.waitingBusy',
+      'sites.list.openWaiting', 'siteApply.applyHint', 'siteEdit.ov.explain.waitingBusy', 'siteEdit.folderMissing',
     ]
     for (const locale of ['cs', 'en']) {
       const json = JSON.parse(readFileSync(join(srcRoot, 'locales', `${locale}.json`), 'utf-8')) as Record<string, unknown>
