@@ -23,7 +23,10 @@ public sealed record ServiceInfoDto(
     // Left out of the JSON when unknown, so the UI reads them as optional numbers.
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? UptimeSeconds = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Port = null,
-    IReadOnlyDictionary<string, int>? Ports = null);
+    IReadOnlyDictionary<string, int>? Ports = null,
+    // Why the last start or restart (from the UI, the API or auto-start) threw;
+    // kept until the service is seen running or a new start is requested.
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? StartError = null);
 
 /// <summary>
 /// Remembers per service whether it was seen running since the last start
@@ -36,15 +39,27 @@ public sealed class ServiceRunTracker
     public const string Exited = "exited";
 
     private readonly ConcurrentDictionary<string, bool> _sawRunning = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _startErrors = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Call right before a start or restart is issued.</summary>
-    public void MarkStartRequested(string serviceId) => _sawRunning[serviceId] = false;
+    public void MarkStartRequested(string serviceId)
+    {
+        _sawRunning[serviceId] = false;
+        _startErrors.TryRemove(serviceId, out _);
+    }
+
+    /// <summary>Call when a start or restart threw or timed out.</summary>
+    public void RecordStartFailure(string serviceId, string message) => _startErrors[serviceId] = message;
 
     /// <summary>Feed every status that is about to be reported.</summary>
     public void Observe(ServiceStatus status)
     {
-        if (status.State == ServiceState.Running) _sawRunning[status.Id] = true;
+        if (status.State != ServiceState.Running) return;
+        _sawRunning[status.Id] = true;
+        _startErrors.TryRemove(status.Id, out _);
     }
+
+    public string? StartError(string serviceId) => _startErrors.GetValueOrDefault(serviceId);
 
     /// <summary>Null unless the service is crashed.</summary>
     public string? CrashKind(ServiceStatus status)
@@ -76,11 +91,13 @@ public static class ServiceInfoProjection
     };
 
     // Config properties the plugins use for their listen ports; the same names
-    // Program.cs hydrates from the ports.* settings at boot.
+    // Program.cs hydrates from the ports.* settings at boot. Mailpit calls its
+    // web UI port WebPort.
     private static readonly (string Property, string Key)[] PortProperties =
     [
         ("Port", "port"),
         ("HttpPort", "http"),
+        ("WebPort", "http"),
         ("HttpsPort", "https"),
         ("SmtpPort", "smtp"),
     ];
@@ -124,7 +141,8 @@ public static class ServiceInfoProjection
             status.CpuPercent, status.MemoryBytes, status.Uptime,
             isInstalled, version, app, tracker.CrashKind(status),
             status.Uptime is { } up ? (long)up.TotalSeconds : null,
-            port, ports);
+            port, ports,
+            status.State == ServiceState.Running ? null : tracker.StartError(status.Id));
     }
 
     /// <param name="modules">Same order as <paramref name="statuses"/>; supplies the ports.</param>

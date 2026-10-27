@@ -7,7 +7,7 @@
       :subtitle="t('phpPlugin.subtitle')"
     >
       <template #facts>
-        <div><dt>{{ t('phpPlugin.defaultVersion') }}</dt><dd class="mono">{{ defaultVersion || t('phpPlugin.noDefault') }}</dd></div>
+        <div><dt>{{ t('phpPlugin.defaultVersion') }}</dt><dd :class="{ mono: defaultVersion }">{{ defaultVersion || t('phpPlugin.noDefault') }}</dd></div>
         <div><dt>{{ t('phpPlugin.installedVersions') }}</dt><dd>{{ t('phpPlugin.versionsCount', { n: versions.length }, versions.length) }}</dd></div>
       </template>
     </ServicePageHead>
@@ -238,7 +238,8 @@ onActivated(() => { void loadVersions() })
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-sm);
 }
-.ext-item.enabled { border-color: var(--wdc-accent); }
+/* The switch already shows the state; an off extension is just dimmed. */
+.ext-item:not(.enabled) .ext-name { color: var(--wdc-text-3); }
 .ext-name { font-size: 0.82rem; font-family: var(--wdc-font-mono); }
 .config-pre {
   margin: 0;

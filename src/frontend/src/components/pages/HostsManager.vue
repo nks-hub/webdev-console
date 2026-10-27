@@ -82,7 +82,7 @@
                 autofocus
               />
               <span v-else-if="isEditable(row)" v-activate class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
-              <span v-else class="mono">{{ row.ip }}</span>
+              <span v-else class="mono cell">{{ row.ip }}</span>
             </template>
           </el-table-column>
 
@@ -98,7 +98,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else-if="!isEditable(row)">{{ row.hostname }}</span>
+              <span v-else-if="!isEditable(row)" class="cell">{{ row.hostname }}</span>
               <span v-else v-activate class="editable" @click="startEdit(row, 'hostname')">
                 {{ row.hostname }}
                 <el-tooltip
@@ -135,7 +135,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else-if="!isEditable(row)" class="comment-text">{{ row.comment ?? '' }}</span>
+              <span v-else-if="!isEditable(row)" class="cell comment-text">{{ row.comment ?? '' }}</span>
               <span
                 v-else
                 v-activate
@@ -701,6 +701,11 @@ onMounted(async () => {
 .mono {
   font-family: monospace;
   font-size: 0.88rem;
+}
+
+.cell {
+  display: inline-block;
+  padding: var(--wdc-space-0-5) var(--wdc-space-1-5);
 }
 
 .editable {

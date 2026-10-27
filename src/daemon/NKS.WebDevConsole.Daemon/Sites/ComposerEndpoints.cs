@@ -28,6 +28,36 @@ namespace NKS.WebDevConsole.Daemon.Sites;
 /// </summary>
 internal static class ComposerEndpoints
 {
+    /// <summary>
+    /// Calls a ComposerInvoker method by reflection. The daemon passes a
+    /// per-site PHP path as the argument before the CancellationToken; Composer
+    /// plugin 1.0.2+ takes it (exact-arity overload wins). Builds before 1.0.2
+    /// have no such parameter, so for a method one parameter short the PHP
+    /// override is dropped and composer runs under the plugin's global PHP
+    /// instead of failing with "Parameter count mismatch".
+    /// </summary>
+    internal static async Task<(bool ExitCode, int Code, string Stdout, string Stderr)>
+        InvokeComposerAsync(object invoker, string method, object?[] args)
+    {
+        var candidates = invoker.GetType().GetMethods().Where(x => x.Name == method).ToList();
+        var m = candidates.FirstOrDefault(x => x.GetParameters().Length == args.Length);
+        if (m is null && args.Length >= 2
+            && candidates.FirstOrDefault(x => x.GetParameters().Length == args.Length - 1) is { } shorter)
+        {
+            m = shorter;
+            args = [.. args[..^2], args[^1]];
+        }
+        if (m is null)
+            throw new InvalidOperationException($"Method {method} with {args.Length} parameters not found on ComposerInvoker");
+        var task = (Task)m.Invoke(invoker, args)!;
+        await task;
+        var result = task.GetType().GetProperty("Result")!.GetValue(task)!;
+        var exitCode = (int)result.GetType().GetProperty("ExitCode")!.GetValue(result)!;
+        var stdout   = (string)result.GetType().GetProperty("Stdout")!.GetValue(result)!;
+        var stderr   = (string)result.GetType().GetProperty("Stderr")!.GetValue(result)!;
+        return (exitCode == 0, exitCode, stdout, stderr);
+    }
+
     public static void MapComposerEndpoints(this WebApplication app, PluginLoader pluginLoader)
     {
         // ── Composer endpoints ────────────────────────────────────────────────────────
@@ -71,20 +101,6 @@ internal static class ComposerEndpoints
             if (!string.IsNullOrEmpty(parentDir) && File.Exists(Path.Combine(parentDir, "composer.json")))
                 return parentDir;
             return docroot;
-        }
-
-        static async Task<(bool ExitCode, int Code, string Stdout, string Stderr)>
-            InvokeComposerAsync(object invoker, string method, object?[] args)
-        {
-            var m = invoker.GetType().GetMethod(method)
-                ?? throw new InvalidOperationException($"Method {method} not found on ComposerInvoker");
-            var task = (Task)m.Invoke(invoker, args)!;
-            await task;
-            var result = task.GetType().GetProperty("Result")!.GetValue(task)!;
-            var exitCode = (int)result.GetType().GetProperty("ExitCode")!.GetValue(result)!;
-            var stdout   = (string)result.GetType().GetProperty("Stdout")!.GetValue(result)!;
-            var stderr   = (string)result.GetType().GetProperty("Stderr")!.GetValue(result)!;
-            return (exitCode == 0, exitCode, stdout, stderr);
         }
 
         app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteManager sm, ILoggerFactory lf) =>
@@ -412,6 +428,11 @@ internal static class ComposerEndpoints
                 }
             }
             catch (Exception ex) { lastError = $"invoke: {ex.InnerException?.Message ?? ex.Message}"; }
+
+            // Without a managed phar the plugin falls back to a bare "composer.bat" /
+            // "composer" PATH lookup. That is not an install unless it actually ran.
+            if (version is null && path is not null && !Path.IsPathRooted(path))
+                path = null;
 
             return Results.Ok(new { version, path, phpPath, managed, lastError });
         });

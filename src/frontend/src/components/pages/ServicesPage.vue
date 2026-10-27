@@ -65,14 +65,14 @@
                 >{{ shortName(svc) }}</button>
               </th>
               <td>
-                <span class="status" :class="`st-${stateOf(svc)}`">
+                <span class="status" :class="`st-${stateKeyOf(svc)}`">
                   <el-icon :size="14" aria-hidden="true">
-                    <component :is="STATE_ICONS[stateOf(svc)]" :class="{ spin: isTransient(stateOf(svc)) }" />
+                    <component :is="STATE_ICONS[stateKeyOf(svc)]" :class="{ spin: isTransient(stateOf(svc)) }" />
                   </el-icon>
                   {{ t(`servicesPage.status.${stateKeyOf(svc)}`) }}
                 </span>
               </td>
-              <td class="num mono">{{ svc.port ?? '—' }}</td>
+              <td class="num mono">{{ stateOf(svc) === 'notInstalled' ? '—' : svc.port ?? '—' }}</td>
               <td v-if="uiMode.isAdvanced" class="mono muted">{{ svc.version || '—' }}</td>
             </tr>
           </tbody>
@@ -87,14 +87,14 @@
         <h2 :id="`svc-${selected.id}`" class="panel-title">{{ shortName(selected) }}</h2>
         <!-- Only the state sentence is live; the metrics below change with
              every poll and would be read out every few seconds. -->
-        <p class="panel-status" :class="`st-${selectedState}`" role="status" aria-live="polite">
+        <p class="panel-status" :class="`st-${stateKeyOf(selected)}`" role="status" aria-live="polite">
           <el-icon :size="16" aria-hidden="true">
-            <component :is="STATE_ICONS[selectedState]" :class="{ spin: isTransient(selectedState) }" />
+            <component :is="STATE_ICONS[stateKeyOf(selected)]" :class="{ spin: isTransient(selectedState) }" />
           </el-icon>
           <span>{{ t(`servicesPage.explain.${stateKeyOf(selected)}`, { name: shortName(selected) }) }}</span>
         </p>
 
-        <ServiceErrorNote :service-id="selected.id" />
+        <ServiceErrorNote :service-id="selected.id" :log-reason="logReason" />
 
         <dl v-if="selectedState !== 'notInstalled'" class="dl">
           <div v-if="selectedState === 'running' && selected.uptimeSeconds != null">
@@ -104,7 +104,7 @@
           <div v-if="portsLabel(selected)"><dt>{{ t('servicesPage.facts.ports') }}</dt><dd class="mono">{{ portsLabel(selected) }}</dd></div>
           <template v-if="selectedState === 'running'">
             <div v-if="selected.pid"><dt>PID</dt><dd class="mono">{{ selected.pid }}</dd></div>
-            <div><dt>CPU</dt><dd class="mono">{{ (selected.cpuPercent ?? 0).toFixed(1) }} %</dd></div>
+            <div><dt>CPU</dt><dd class="mono">{{ formatPercent(selected.cpuPercent ?? 0, locale) }}</dd></div>
             <div><dt>RAM</dt><dd class="mono">{{ formatBytes(selected.memoryBytes ?? 0, locale) }}</dd></div>
           </template>
         </dl>
@@ -117,12 +117,16 @@
             <el-button :loading="servicesStore.isBusy(selected.id)" @click="act(selected, 'restart')">{{ t('servicesPage.restart') }}</el-button>
             <el-button type="danger" :loading="servicesStore.isBusy(selected.id)" @click="act(selected, 'stop')">{{ t('servicesPage.stop') }}</el-button>
           </template>
+          <!-- Starting or stopping: the button stays, busy, so the panel does not lose its main action. -->
+          <el-button v-else-if="isTransient(selectedState)" type="primary" loading disabled>
+            {{ t(`servicesPage.status.${selectedState}`) }}
+          </el-button>
           <el-button
-            v-else-if="!isTransient(selectedState)"
+            v-else
             type="primary"
             :loading="servicesStore.isBusy(selected.id)"
             @click="act(selected, 'start')"
-          >{{ isProblemState(selectedState) ? t('servicesPage.fixRestart') : t('servicesPage.start') }}</el-button>
+          >{{ needsAttention(selected) ? t('servicesPage.fixRestart') : t('servicesPage.start') }}</el-button>
           <template v-if="selectedState !== 'notInstalled'">
             <el-button v-if="selected.id !== 'cloudflare'" @click="router.push(`/service/${encodeURIComponent(selected.id)}/config`)">
               {{ t('servicesPage.fixConfig') }}
@@ -142,7 +146,7 @@
               {{ logs[selected.id] ? t('common.refresh') : t('servicesPage.showLog') }}
             </el-button>
           </div>
-          <pre v-if="logs[selected.id]?.length" class="log mono"><code>{{ logs[selected.id].join('\n') }}</code></pre>
+          <pre v-if="logs[selected.id]?.length" class="log mono"><code>{{ logs[selected.id].map(stripStreamTag).join('\n') }}</code></pre>
           <p v-else-if="logErrors[selected.id]" class="log-empty">{{ t('servicesPage.logFailed', { err: logErrors[selected.id] }) }}</p>
           <p v-else-if="logs[selected.id]" class="log-empty">{{ t('servicesPage.logEmpty') }}</p>
         </template>
@@ -164,10 +168,12 @@ import { fetchServiceLogs } from '../../api/daemon'
 import type { ServiceInfo } from '../../api/types'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import ServiceErrorNote from '../shared/ServiceErrorNote.vue'
-import { formatBytes, formatDuration } from '../../utils/format'
+import { formatBytes, formatDuration, formatPercent } from '../../utils/format'
+import { firstErrorLine, stripStreamTag } from '../../utils/logLevel'
 import { shortServiceName as shortName, type ServiceViewState } from '../../utils/serviceState'
 import {
-  cleanError, installRouteOf, isProblemState, manageRouteOf, portsLabel, stateKeyOf, stateOf,
+  cleanError, installRouteOf, manageRouteOf, needsAttention, portsLabel, stateKeyOf, stateOf,
+  type ServiceStateKey,
 } from '../../utils/services'
 
 /**
@@ -178,7 +184,7 @@ import {
 type Filter = 'all' | 'running' | 'problems' | 'notInstalled'
 const FILTERS: Filter[] = ['all', 'running', 'problems', 'notInstalled']
 
-const STATE_ICONS: Record<ServiceViewState, Component> = {
+const STATE_ICONS: Record<ServiceStateKey, Component> = {
   running: Check,
   stopped: Remove,
   starting: Loading,
@@ -186,6 +192,7 @@ const STATE_ICONS: Record<ServiceViewState, Component> = {
   crashed: Close,
   disabled: WarningFilled,
   notInstalled: Download,
+  startFailed: Close,
 }
 const isTransient = (s: ServiceViewState) => s === 'starting' || s === 'stopping'
 
@@ -221,7 +228,7 @@ watch(() => route.query.service, (id) => {
 }, { immediate: true })
 
 // A failed action counts as a problem until the next successful one.
-const isProblem = (s: ServiceInfo) => isProblemState(stateOf(s)) || !!servicesStore.lastError[s.id]
+const isProblem = (s: ServiceInfo) => needsAttention(s) || !!servicesStore.lastError[s.id]
 
 const services = computed(() =>
   (daemonStore.services as ServiceInfo[]).filter(s => pluginsStore.isServiceVisible(s.id)))
@@ -238,8 +245,9 @@ const filters = computed(() => [
   { id: 'notInstalled' as const, label: t('servicesPage.filter.notInstalled'), count: notInstalledCount.value },
 ])
 
+// Same set as the "All" filter (`services`), so the sentence and the filter counts agree.
 const summary = computed(() => {
-  const total = installed.value.length
+  const total = services.value.length
   const parts = [t('servicesPage.summary', { total, running: runningCount.value }, total)]
   if (notInstalledCount.value) parts.push(t('servicesPage.summaryNotInstalled', { n: notInstalledCount.value }, notInstalledCount.value))
   if (problemCount.value) parts.push(t('servicesPage.summaryProblems', { n: problemCount.value }, problemCount.value))
@@ -260,6 +268,11 @@ const visible = computed(() => {
 const selected = computed<ServiceInfo | null>(() =>
   visible.value.find(s => s.id === selectedId.value) ?? visible.value[0] ?? null)
 const selectedState = computed<ServiceViewState>(() => stateOf(selected.value))
+// First error line of the loaded log tail, shown next to the failure itself.
+const logReason = computed(() => {
+  const svc = selected.value
+  return svc && needsAttention(svc) ? firstErrorLine(logs.value[svc.id] ?? []) : null
+})
 
 function select(id: string) {
   selectedId.value = id
@@ -267,7 +280,7 @@ function select(id: string) {
 
 // Load the log tail of a crashed service as soon as it is shown.
 watch(selected, (svc) => {
-  if (svc && isProblemState(stateOf(svc)) && !logs.value[svc.id] && !loadingLogs.value.has(svc.id)) void loadLogs(svc.id)
+  if (svc && needsAttention(svc) && !logs.value[svc.id] && !loadingLogs.value.has(svc.id)) void loadLogs(svc.id)
 }, { immediate: true })
 
 async function loadLogs(id: string) {
@@ -388,7 +401,7 @@ function install(svc: ServiceInfo) {
 
 .status { display: inline-flex; align-items: center; gap: var(--wdc-space-1-5); white-space: nowrap; }
 .st-running .el-icon { color: var(--wdc-status-running); }
-.st-crashed, .st-disabled { color: var(--wdc-status-error); }
+.st-crashed, .st-disabled, .st-startFailed { color: var(--wdc-status-error); }
 .st-starting .el-icon, .st-stopping .el-icon { color: var(--wdc-status-starting); }
 .st-stopped, .st-notInstalled { color: var(--wdc-text-3); }
 .spin { animation: spin 1s linear infinite; }
@@ -410,8 +423,8 @@ function install(svc: ServiceInfo) {
   line-height: 1.45;
 }
 .panel-status .el-icon { margin-top: var(--wdc-space-0-5); flex-shrink: 0; }
-.panel-status.st-crashed, .panel-status.st-disabled { color: var(--wdc-text); }
-.panel-status.st-crashed .el-icon, .panel-status.st-disabled .el-icon { color: var(--wdc-status-error); }
+.panel-status.st-crashed, .panel-status.st-disabled, .panel-status.st-startFailed { color: var(--wdc-text); }
+.panel-status.st-crashed .el-icon, .panel-status.st-disabled .el-icon, .panel-status.st-startFailed .el-icon { color: var(--wdc-status-error); }
 .panel-status.st-stopped .el-icon, .panel-status.st-notInstalled .el-icon { color: var(--wdc-text-3); }
 
 .dl { margin: 0; display: grid; }

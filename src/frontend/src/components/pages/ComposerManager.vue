@@ -6,7 +6,7 @@
         <p class="page-subtitle">{{ $t('composer.subtitle') }}</p>
       </div>
       <div class="header-actions">
-        <el-button size="small" :loading="loading" @click="loadAll">{{ $t('common.refresh') }}</el-button>
+        <el-button size="small" :loading="loading" :icon="Refresh" @click="loadAll">{{ $t('common.refresh') }}</el-button>
       </div>
     </div>
 
@@ -112,7 +112,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Check, WarningFilled } from '@element-plus/icons-vue'
+import { Check, Refresh, WarningFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
 import { usePluginsStore } from '../../stores/plugins'

@@ -1232,9 +1232,13 @@
       "createNeedsMysql": "Install MySQL first",
       "notRunning": "MySQL is installed but not running.",
       "startMysql": "Start MySQL",
-      "startFailed": "Could not start MySQL: {err}",
+      "startFailed": "MySQL could not be started ({err}). The MySQL log shows why.",
       "portConflictTitle": "Port {port} rejected the WDC root password.",
-      "portConflictHint": "Another MySQL server (MAMP, XAMPP or a system service) probably runs on this port. Switch WDC to a free port or reset the root password."
+      "portConflictHint": "Another MySQL server (MAMP, XAMPP or a system service) probably runs on this port. Switch WDC to a free port or reset the root password.",
+      "openLog": "Show MySQL log",
+      "createNeedsRunning": "Start MySQL first",
+      "notRunningHint": "Start it with the button below. If it does not start, the MySQL log shows why.",
+      "startedButUnreachable": "the service reports it started, but the database does not answer yet; try Refresh in a moment"
     }
   },
   "binaries": {
@@ -1249,7 +1253,7 @@
     "filterPlaceholder": "Filter modules…",
     "noMatching": "No modules matching ‘{q}’",
     "noEntries": "The catalog is empty. Check that the daemon is running and the catalog is reachable.",
-    "catalogReleases": "{n} version in catalog | {n} versions in catalog",
+    "catalogReleases": "{n} version | {n} versions",
     "catalogUnreachable": "unreachable",
     "manageVersions": "Manage versions",
     "back": "Back",
@@ -1388,7 +1392,9 @@
     "pluginMissingDesc": "HTTPS certificates are managed by the SSL (mkcert) plugin. Without it this page has nothing to show.",
     "caNotTrusted": "CA not trusted yet",
     "pluginMissingTitle": "The SSL plugin is not installed",
-    "daemonUnreachable": "Cannot connect to the daemon: {err}"
+    "daemonUnreachable": "Cannot connect to the daemon: {err}",
+    "generateNeedsMkcert": "Install mkcert first",
+    "noCertsNoMkcert": "No certificates yet. Once mkcert is installed, a certificate is created automatically when you turn on HTTPS for a site."
   },
   "plugins": {
     "title": "Plugins",
@@ -1466,7 +1472,26 @@
     "disabledHint": "Off. Turn it on with the switch above.",
     "noneLoaded": "No plugins loaded",
     "byAuthor": "By {author}",
-    "noMatching": "No plugins matching ‘{q}’"
+    "noMatching": "No plugins matching ‘{q}’",
+    "marketplaceBuiltIn": "The online marketplace is not available right now. Showing the plugins that ship with WDC.",
+    "descriptions": {
+      "apache": "Apache 2.4 web server. Runs httpd, creates virtual hosts for your sites and checks the configuration.",
+      "caddy": "Caddy web server, an alternative to Apache with automatic HTTPS. Creates a Caddyfile for your sites.",
+      "cloudflare": "Publishes local sites on the internet through Cloudflare Tunnel without port forwarding or a public IP. Manages cloudflared, DNS records and tunnel rules.",
+      "composer": "PHP dependency manager. Runs Composer commands (install, require, update) in site folders.",
+      "hosts": "Manages the WDC block in the system hosts file and keeps a backup before every change.",
+      "deploy": "Deploys sites to servers through nksdeploy without downtime and keeps a deploy history.",
+      "deploy_localrsync": "Deploys to this computer or a network drive with rsync. Used by the deploy module.",
+      "mailpit": "Local SMTP server. Catches e-mail sent by your sites and shows it in a web inbox.",
+      "mariadb": "MariaDB database server, compatible with MySQL, with an encrypted root password and a my.ini template.",
+      "mysql": "MySQL database server with an encrypted root password, a my.ini template and database and user management.",
+      "nginx": "Nginx web server and reverse proxy, an alternative to Apache.",
+      "node": "Manages several Node.js versions in the managed binaries and switches the active one.",
+      "php": "Manages several PHP versions, their php.ini and extensions, and runs PHP for your sites.",
+      "postgresql": "PostgreSQL database server.",
+      "redis": "Redis cache server with a managed redis.conf.",
+      "ssl": "Creates HTTPS certificates with mkcert and installs the local certificate authority."
+    }
   },
   "hosts": {
     "title": "Hosts file",
@@ -1545,13 +1570,13 @@
   "phpPlugin": {
     "title": "PHP",
     "subtitle": "Versions, extensions and php.ini",
-    "defaultVersion": "Default version",
+    "defaultVersion": "Version for new sites",
     "tabVersions": "Versions",
     "tabExtensions": "Extensions",
     "tabLogs": "Log",
     "selectVersionHint": "Pick a PHP version on the Versions tab first.",
     "noExtensions": "The php.ini of this version lists no extensions.",
-    "noDefault": "Not set",
+    "noDefault": "Not chosen",
     "configFailed": "Could not load php.ini: {err}",
     "installedVersions": "Installed",
     "loadFailed": "Could not load PHP versions: {err}",
@@ -1635,7 +1660,8 @@
     "resetDescription": "Stops MySQL, restarts in safe mode (--skip-grant-tables), resets all root accounts to the new password, then restarts normally.",
     "newRootPassword": "New root password",
     "resetPasswordBtn": "Reset root password",
-    "needsRunning": "Databases and users show up once MySQL is running."
+    "needsRunning": "Databases and users show up once MySQL is running. Start it with the button at the top.",
+    "changeNeedsRunning": "The password can only be changed while MySQL is running. If you do not know it, use the reset below."
   },
   "postgresPlugin": {
     "title": "PostgreSQL",
@@ -1698,7 +1724,7 @@
     "subtitle": "Expose local sites to the internet via an encrypted tunnel",
     "tunnelRunning": "Tunnel is running",
     "tunnelStopped": "Tunnel is stopped",
-    "tunnelHint": "Uses the JWT fetched in Step 1 and connects to Cloudflare's edge.",
+    "tunnelHint": "Uses the tunnel token fetched in step 1 and connects to Cloudflare.",
     "toast": {
       "settingsSaved": "Cloudflare settings saved",
       "binaryPathSaved": "Binary path saved",
@@ -1750,7 +1776,8 @@
       "defaultSelected": "Default selected",
       "pickDefaultZone": "Pick default zone",
       "pidUptime": "PID {pid} · up {uptime}",
-      "tokenMissingHint": "Paste it in step 1"
+      "tokenMissingHint": "Paste it in step 1",
+      "finishSetup": "Finish steps 1 and 2"
     },
     "tabs": {
       "setup": "Setup",
@@ -1777,14 +1804,14 @@
     "tokenPlaceholder": "cfut_… or 40-char token",
     "requiredScopes": "Required scopes:",
     "createTokenAt": "Create one at",
-    "autoSetupExplain": "Auto-setup will: verify the token, pick the first account, find or create a tunnel named {tunnel}, fetch its JWT, and save everything to {file}.",
+    "autoSetupExplain": "Auto-setup verifies the token, picks the first account, finds or creates a tunnel named {tunnel}, fetches its access token and saves everything to {file}.",
     "subdomainPlaceholders": "Placeholders:",
     "subdomainStem": "= local domain without {loc}/{local}/{test}",
     "subdomainUser": "= OS username",
     "subdomainExample": "Example for {domain}:",
     "savePathBtn": "Save path",
     "saveTemplateBtn": "Save template",
-    "exposedSites": "Exposed sites",
+    "exposedSites": "Published sites",
     "exposedSitesHint": "Sites with Cloudflare Tunnel enabled in SiteEdit > Cloudflare tab",
     "noSitesExposed": "No sites are exposed yet. Open a site in the Sites page, Cloudflare tab, toggle \"Enable tunnel for this site\", pick a zone, enter a subdomain, Save, then click \"Sync all sites\" below.",
     "syncAllSites": "Sync all sites to Cloudflare ({n})",
@@ -1808,7 +1835,11 @@
     "pluginMissingDesc": "The tunnel and DNS records are managed by the Cloudflare plugin. Without it nothing on this page can be set up.",
     "syncedSites": "Synced {n} site to Cloudflare | Synced {n} sites to Cloudflare",
     "pluginMissingTitle": "The Cloudflare plugin is not installed",
-    "autoSetupDone": "Account: {account} · Tunnel: {tunnel}"
+    "autoSetupDone": "Account: {account} · Tunnel: {tunnel}",
+    "startNeedsSetup": "Finish step 1 (API token) and step 2 (cloudflared) first.",
+    "syncNeedsTunnel": "Sync needs a tunnel. Set it up in step 1 on the Setup tab.",
+    "dnsNeedsToken": "DNS records are loaded through the Cloudflare API. Paste the API token in step 1 first.",
+    "goToStep1": "Go to step 1"
   },
   "siteEdit": {
     "composeUp": "Start",
@@ -2596,7 +2627,9 @@
     "lookedIn": "WDC looked for files here: {paths}",
     "loadFailed": "Could not load the configuration: {err}",
     "unsavedHint": "You have unsaved changes. Save them with Save & Apply or Ctrl+S.",
-    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page."
+    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page.",
+    "generatedTitle": "WDC writes this file itself",
+    "generatedHint": "WDC rewrites it on the next change to a site, a port or a PHP version, and your edits are lost. Make lasting changes in the app (Sites, Settings)."
   },
   "settingsToast": {
     "ssoFailed": "SSO sign-in failed: {err}",
@@ -3469,7 +3502,7 @@
       "crashed": "The service crashed: its process exited on its own. The end of the log usually says why.",
       "disabled": "The service crashed several times in a row, so WDC stopped restarting it. The end of the log says why.",
       "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started.",
-      "startFailed": "The service did not start: its process exited before it was up. The end of the log says why."
+      "startFailed": "The service did not start. The reason is below or at the end of the log."
     },
     "facts": {
       "uptime": "Uptime",
@@ -3490,7 +3523,9 @@
       "title": "The last action failed",
       "copy": "Copy",
       "copied": "Copied to clipboard",
-      "openPorts": "Change port"
+      "openPorts": "Change port",
+      "startTitle": "The service failed to start",
+      "fromLog": "Error from the service log"
     },
     "summaryProblems": "{n} has a problem | {n} have a problem",
     "emptyFilter": "No service matches this filter.",
