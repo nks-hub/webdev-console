@@ -327,9 +327,9 @@ async function refresh(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: var(--wdc-space-3);
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;

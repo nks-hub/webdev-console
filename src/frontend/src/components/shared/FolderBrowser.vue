@@ -235,11 +235,10 @@ watch(() => props.modelValue, (open) => {
   border-radius: var(--wdc-radius-sm);
 }
 .fb-selection-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 .fb-selection-path {
   font-family: 'JetBrains Mono', monospace;

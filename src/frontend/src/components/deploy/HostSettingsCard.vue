@@ -185,8 +185,7 @@ const envHint = computed(() => {
 .info-label {
   color: var(--el-text-color-secondary);
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 .info-value {
   word-break: break-all;

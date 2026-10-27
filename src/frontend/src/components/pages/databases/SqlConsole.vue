@@ -233,10 +233,10 @@ void _unused
   align-items: center;
   justify-content: space-between;
   padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   gap: var(--wdc-space-3);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  background: transparent;
 }
 
 .toolbar-title {

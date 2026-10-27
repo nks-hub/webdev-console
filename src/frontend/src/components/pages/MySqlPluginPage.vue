@@ -1052,14 +1052,14 @@ watch(() => route.query.tab, value => {
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: transparent; padding: 0; }
+.cf-page { min-height: 100%; background: transparent; }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-autostart-row { padding: 10px 24px 0; width: 100%; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
@@ -1100,7 +1100,9 @@ watch(() => route.query.tab, value => {
 .database-detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .tables-section { margin-bottom: 18px; }
 .tables-table { width: 100%; }
-.section-label { margin-bottom: 8px; color: var(--wdc-text-3); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.section-label { margin-bottom: 8px; color: var(--wdc-text-3); font-size: 0.82rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;
+  font-family: var(--wdc-font-display);
+}
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 .query-section { margin-top: 14px; }
 .query-input { margin-bottom: 8px; }

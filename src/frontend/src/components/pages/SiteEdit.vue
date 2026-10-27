@@ -1574,9 +1574,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
   flex-shrink: 0;
 }
 .header-left {
@@ -1590,11 +1590,10 @@ onBeforeUnmount(() => {
   gap: var(--wdc-space-0-5);
 }
 .title-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 .title-name {
   font-size: 1.05rem;
@@ -1960,12 +1959,11 @@ onBeforeUnmount(() => {
 }
 .sub-label {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-2);
   margin-bottom: var(--wdc-space-2-5);
+  font-family: var(--wdc-font-display);
 }
 .php-version-grid {
   display: flex;
@@ -2272,12 +2270,11 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--wdc-border);
 }
 .historical-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text);
   flex-shrink: 0;
+  font-family: var(--wdc-font-display);
 }
 .historical-controls {
   display: flex;
@@ -2291,12 +2288,11 @@ onBeforeUnmount(() => {
   gap: var(--wdc-space-1-5);
 }
 .historical-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   white-space: nowrap;
+  font-family: var(--wdc-font-display);
 }
 .historical-series-toggles {
   display: flex;

@@ -290,7 +290,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-5) var(--wdc-space-5) 0;
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: var(--wdc-space-4-5);
 }
 
