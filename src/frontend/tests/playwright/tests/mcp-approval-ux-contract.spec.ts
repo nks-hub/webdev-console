@@ -148,4 +148,36 @@ test.describe('MCP approval UX contract', () => {
     const cs = JSON.parse(read('locales', 'cs.json'))
     expect(cs.mcpOnboarding.profiles.localDev.name).toBe('Lokální vývoj')
   })
+
+  test('round 2: hub layout, readable banner, reachable decisions', () => {
+    const hub = read('components', 'pages', 'McpHub.vue')
+    // The global page rule pads the hub; a scoped padding: 0 glued the
+    // title to the sidebar.
+    expect(hub).not.toMatch(/\.page \{ padding: 0/)
+    expect(hub).toContain('data-testid="mcp-hub-simple-note"')
+    const card = read('components', 'mcp', 'McpConnectCard.vue')
+    // Opened on Requests, Rules or Actions, the setup steps start collapsed.
+    expect(card).toContain('const expanded = ref(!/\\/mcp\\/(intents|grants|kinds)$/.test(route.path))')
+    const panel = read('components', 'mcp', 'McpOnboardingPanel.vue')
+    expect(panel).toContain("MCP_PROFILES.filter((p) => p.id !== 'custom')")
+
+    const banner = read('components', 'mcp', 'McpConfirmBanner.vue')
+    // Opaque card below the app header; no rules from simple mode.
+    expect(banner).toMatch(/\.mcp-confirm-stack \{[\s\S]*?top: 60px;/)
+    expect(banner).toMatch(/background: linear-gradient\([^;]*\), var\(--wdc-surface\);/)
+    expect(banner).toMatch(/function canTrust[\s\S]*?uiMode\.isAdvanced &&/)
+    expect(read('utils', 'mcpApproval.ts')).not.toContain('inputPlaceholder')
+
+    const intents = read('components', 'pages', 'McpIntents.vue')
+    expect(intents).toContain('<el-table-column label="" width="200" align="right" fixed="right">')
+    expect(intents).toContain('!e.intentId.toLowerCase().startsWith(q)')
+
+    const activity = read('components', 'pages', 'McpActivity.vue')
+    expect(activity).toContain("t('mcpActivity.emptyFiltered')")
+    expect(activity).toMatch(/loadError\.value = err instanceof Error/)
+    expect(activity).toMatch(/watch\(\[searchQuery, toolFilter\]/)
+    const timeline = read('components', 'mcp', 'McpActivityTimeline.vue')
+    expect(timeline).toContain('function localHour(hour: string)')
+    expect(timeline).not.toMatch(/total: \$\{b\.total\}/)
+  })
 })

@@ -1,5 +1,5 @@
 <template>
-  <div class="mcp-activity-page" role="region" :aria-label="t('mcpActivity.stats.totalCalls')">
+  <div class="mcp-activity-page" role="region" :aria-label="t('mcpHub.tabs.activity')">
     <!-- Stats banner — moved to the very top so the six tiles (Celkem
          volání / Read / Mutating / Destruktivní / Chyby / Session) are
          the first thing the operator sees, before chart and KPIs.
@@ -126,13 +126,16 @@
         <el-option :label="t('mcpActivity.danger.destructive')" value="destructive" />
       </el-select>
       <el-input v-model="toolFilter" size="small" :placeholder="t('mcpActivity.filter.toolName')" clearable style="width: 200px" />
-      <el-input v-model="searchQuery" size="small" :placeholder="t('mcpActivity.filter.search')" clearable style="width: 220px">
-        <template #prefix>🔍</template>
-      </el-input>
+      <el-input v-model="searchQuery" size="small" :placeholder="t('mcpActivity.filter.search')" :prefix-icon="Search" clearable style="width: 280px" />
       <el-input v-if="sessionFilter" v-model="sessionFilter" size="small" disabled style="width: 180px">
         <template #prefix><el-icon><Lock /></el-icon></template>
         <template #append>
-          <el-button @click="sessionFilter = ''">✕</el-button>
+          <el-button
+            :icon="Close"
+            :aria-label="t('mcpActivity.filter.clearSession')"
+            :title="t('mcpActivity.filter.clearSession')"
+            @click="sessionFilter = ''"
+          />
         </template>
       </el-input>
       <el-radio-group v-model="viewMode" size="small">
@@ -140,19 +143,32 @@
         <el-radio-button value="flat">{{ t('mcpActivity.view.flat') }}</el-radio-button>
       </el-radio-group>
       <el-checkbox v-model="collapseReads" size="small">{{ t('mcpActivity.filter.collapseReads') }}</el-checkbox>
-      <el-button size="small" :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon> {{ t('mcpActivity.refresh') }}
+      <el-button size="small" :loading="loading" @click="refresh" :icon="Refresh">
+        {{ t('mcpActivity.refresh') }}
       </el-button>
-      <el-button size="small" @click="exportCsv">
-        <el-icon><Download /></el-icon> {{ t('mcpActivity.exportCsv') }}
+      <el-button size="small" @click="exportCsv" :icon="Download">
+        {{ t('mcpActivity.exportCsv') }}
       </el-button>
       <span v-if="totalCount" class="muted total-count">
         {{ t('mcpActivity.totalShown', { n: entries.length, total: totalCount }) }}
       </span>
     </div>
 
-    <!-- Empty state -->
-    <el-empty v-if="!loading && entries.length === 0" :description="t('mcpActivity.empty')" />
+    <!-- Empty state: a failed load, a filter that matches nothing and a
+         log with no calls at all are three different messages. -->
+    <el-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :closable="false"
+      :title="t('mcpActivity.loadFailed', { error: loadError })"
+    />
+    <el-empty
+      v-else-if="!loading && entries.length === 0"
+      :description="filtersActive ? t('mcpActivity.emptyFiltered') : t('mcpActivity.empty')"
+    >
+      <el-button v-if="filtersActive" size="small" @click="clearFilters">{{ t('mcpActivity.filter.clear') }}</el-button>
+    </el-empty>
 
     <!-- Session-grouped view -->
     <div v-else-if="viewMode === 'sessions'" class="sessions-list">
@@ -197,11 +213,11 @@
             ({{ formatDuration(session.startedAt, session.endedAt) }})
           </span>
           <div class="session-counts">
-            <span class="count-pill total">{{ session.entries.length }}</span>
-            <span v-if="session.reads > 0" class="count-pill read">{{ session.reads }}r</span>
-            <span v-if="session.mutates > 0" class="count-pill mutate">{{ session.mutates }}m</span>
-            <span v-if="session.destructives > 0" class="count-pill destructive">{{ session.destructives }}d</span>
-            <span v-if="session.errors > 0" class="count-pill error">{{ session.errors }}!</span>
+            <span class="count-pill total">{{ t('mcpActivity.callsCount', { n: session.entries.length }, session.entries.length) }}</span>
+            <span v-if="session.reads > 0" class="count-pill read">{{ t('mcpActivity.pill.reads', { n: session.reads }, session.reads) }}</span>
+            <span v-if="session.mutates > 0" class="count-pill mutate">{{ t('mcpActivity.pill.mutates', { n: session.mutates }, session.mutates) }}</span>
+            <span v-if="session.destructives > 0" class="count-pill destructive">{{ t('mcpActivity.pill.destructives', { n: session.destructives }, session.destructives) }}</span>
+            <span v-if="session.errors > 0" class="count-pill error">{{ t('mcpActivity.pill.errors', { n: session.errors }, session.errors) }}</span>
             <el-button
               v-if="session.sessionId"
               size="small"
@@ -245,7 +261,7 @@
               </div>
               <div v-if="expandedRows.has(row.entry.id)" class="row-detail">
                 <div class="detail-grid">
-                  <div class="detail-label">id</div>
+                  <div class="detail-label">{{ t('mcpActivity.detail.id') }}</div>
                   <code class="mono detail-value">{{ row.entry.id }}</code>
                   <div class="detail-label">{{ t('mcpActivity.detail.calledAt') }}</div>
                   <code class="mono detail-value">{{ row.entry.calledAt }}</code>
@@ -332,7 +348,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
+import { Refresh, ArrowRight, Lock, Download, Search, Close } from '@element-plus/icons-vue'
 import McpActivityTimeline from '../mcp/McpActivityTimeline.vue'
 import McpTopToolsPanel from '../mcp/McpTopToolsPanel.vue'
 import McpSessionDetailDrawer from '../mcp/McpSessionDetailDrawer.vue'
@@ -351,6 +367,7 @@ const entries = ref<McpToolCallEntry[]>([])
 const totalCount = ref(0)
 const stats = ref<McpToolCallStats | null>(null)
 const loading = ref(false)
+const loadError = ref('')
 
 const currentPage = ref(1)
 const pageSize = ref(50)
@@ -382,12 +399,18 @@ function toggleRow(id: string): void {
   else expandedRows.value.add(id)
   expandedRows.value = new Set(expandedRows.value)
 }
+// The Requests search box also matches request ids.
 function goToIntent(intentId: string | null): void {
   if (!intentId) return
-  window.location.hash = '/mcp/intents'
+  window.location.hash = `/mcp/intents?domain=${encodeURIComponent(intentId)}`
 }
 async function copyArgs(text: string): Promise<void> {
-  try { await navigator.clipboard.writeText(text) } catch { /* ignore */ }
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(t('mcpActivity.detail.copied'))
+  } catch {
+    ElMessage.warning(t('mcpConnect.copyFailed'))
+  }
 }
 
 function expandReads(key: string): void {
@@ -531,11 +554,11 @@ function onToolSelect(toolName: string): void {
 // doesn't show "0.0/min" when ~10 calls/day is plenty visible. Switches
 // to /h or /day when /min rounds toward zero.
 function formatThroughput(perMinute: number): { num: string; unit: string } {
-  if (perMinute >= 1) return { num: perMinute.toFixed(1), unit: '/min' }
+  if (perMinute >= 1) return { num: perMinute.toFixed(1), unit: t('mcpActivity.kpi.perMinute') }
   const perHour = perMinute * 60
-  if (perHour >= 1) return { num: perHour.toFixed(1), unit: '/h' }
+  if (perHour >= 1) return { num: perHour.toFixed(1), unit: t('mcpActivity.kpi.perHour') }
   const perDay = perHour * 24
-  return { num: perDay.toFixed(0), unit: '/day' }
+  return { num: perDay.toFixed(0), unit: t('mcpActivity.kpi.perDay') }
 }
 
 function setDangerFilter(level: 'read' | 'mutate' | 'destructive' | null): void {
@@ -596,16 +619,27 @@ async function refresh(): Promise<void> {
     entries.value = list.entries
     totalCount.value = list.total
     stats.value = s
+    loadError.value = ''
   } catch (err) {
-    console.warn('[McpActivity] refresh failed:', err)
+    loadError.value = err instanceof Error ? err.message : String(err)
   } finally {
     loading.value = false
   }
 }
 
+const filtersActive = computed(() =>
+  !!(dangerFilter.value || toolFilter.value || sessionFilter.value || searchQuery.value))
+
+function clearFilters(): void {
+  dangerFilter.value = null
+  toolFilter.value = ''
+  sessionFilter.value = ''
+  searchQuery.value = ''
+}
+
 // Debounce search input by 300ms so typing doesn't burn requests.
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
-watch(searchQuery, () => {
+watch([searchQuery, toolFilter], () => {
   if (searchDebounce) clearTimeout(searchDebounce)
   searchDebounce = setTimeout(() => {
     currentPage.value = 1
@@ -613,7 +647,7 @@ watch(searchQuery, () => {
   }, 300)
 })
 
-watch([dangerFilter, toolFilter, sessionFilter], () => {
+watch([dangerFilter, sessionFilter], () => {
   currentPage.value = 1
   void refresh()
 })

@@ -36,7 +36,6 @@
           :width="barWidth - 2"
           :height="readH(b)"
           class="bar-read"
-          :title="`${b.hour}: ${b.reads} reads`"
         />
         <rect
           v-if="b.mutates > 0"
@@ -63,7 +62,7 @@
           :points="errorMarker(idx)"
           class="error-marker"
         >
-          <title>{{ t('mcpActivity.timeline.errorsInHour', { n: b.errors, hour: b.hour }, b.errors) }}</title>
+          <title>{{ t('mcpActivity.timeline.errorsInHour', { n: b.errors, hour: localHour(b.hour) }, b.errors) }}</title>
         </polygon>
         <!-- Hour label every 6th bar -->
         <text
@@ -146,9 +145,14 @@ function destructiveH(b: McpToolCallTimelineBucket): number {
   return scale(b.destructives)
 }
 
+// Buckets are UTC hours ('YYYY-MM-DDTHH'); label them in local time.
+function localHour(hour: string): string {
+  const d = new Date(`${hour}:00:00Z`)
+  return Number.isNaN(d.getTime()) ? hour.slice(11, 13) : String(d.getHours()).padStart(2, '0')
+}
+
 function shortHour(hour: string): string {
-  // 'YYYY-MM-DDTHH' → 'HH'
-  return hour.slice(11, 13) + 'h'
+  return localHour(hour) + 'h'
 }
 
 function errorMarker(idx: number): string {
@@ -160,8 +164,10 @@ function errorMarker(idx: number): string {
 }
 
 function tooltipFor(b: McpToolCallTimelineBucket): string {
-  return `${b.hour} — total: ${b.total}, read: ${b.reads}, mutate: ${b.mutates}, destructive: ${b.destructives}` +
-    (b.errors > 0 ? `, errors: ${b.errors}` : '')
+  const line = t('mcpActivity.timeline.tooltip', {
+    hour: `${localHour(b.hour)}:00`, total: b.total, reads: b.reads, mutates: b.mutates, destructives: b.destructives,
+  })
+  return b.errors > 0 ? `${line}, ${t('mcpActivity.timeline.tooltipErrors', { n: b.errors })}` : line
 }
 
 let unsubscribe: (() => void) | null = null
