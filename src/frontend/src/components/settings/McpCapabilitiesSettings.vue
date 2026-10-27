@@ -8,7 +8,14 @@
         <span class="cap-desc">
           {{ flags.mcpEnabled ? t('mcpCapabilities.master.on') : t('mcpCapabilities.master.off') }}
         </span>
-        <el-button size="small" link type="primary" class="caps-connect-link" @click="router.push('/mcp/activity')">
+        <el-button
+          size="small"
+          link
+          type="primary"
+          class="caps-connect-link"
+          data-testid="settings-mcp-connect-link"
+          @click="router.push('/mcp/activity')"
+        >
           {{ t('mcpCapabilities.master.connectGuide') }}
         </el-button>
       </div>

@@ -3946,7 +3946,6 @@
       "hours": "před {n} h",
       "days": "před {n} d"
     },
-    "openFromSettings": "Připojit AI klienta",
     "runtime": {
       "label": "Server spouštět přes",
       "node": "Node.js",

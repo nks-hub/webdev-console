@@ -93,8 +93,8 @@ test.describe('MCP connect contract', () => {
     expect(card).toContain('fetchMcpToolCalls(1, 0)')
     expect(card).toContain("'mcp:tool-call'")
     for (const id of ['claudeCode', 'claudeDesktop', 'cursor']) expect(card).toContain(`id: '${id}'`)
-    const settings = readFileSync(join(srcRoot, 'components', 'pages', 'Settings.vue'), 'utf-8')
-    expect(settings).toMatch(/data-testid="settings-mcp-connect-link"[\s\S]*?\$router\.push\('\/mcp\/activity'\)/)
+    const caps = readFileSync(join(srcRoot, 'components', 'settings', 'McpCapabilitiesSettings.vue'), 'utf-8')
+    expect(caps).toMatch(/data-testid="settings-mcp-connect-link"[\s\S]*?router\.push\('\/mcp\/activity'\)/)
   })
 
   test('connect strings exist in en and cs', () => {

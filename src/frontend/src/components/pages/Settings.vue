@@ -417,15 +417,6 @@
                  like the switches above. -->
             <div v-if="mcpEnabled" class="settings-section" id="mcp-section">
               <h4 class="section-title">{{ $t('settings.mcpTab.optionsTitle') }}</h4>
-              <el-button
-                link
-                type="primary"
-                class="mcp-connect-link"
-                data-testid="settings-mcp-connect-link"
-                @click="$router.push('/mcp/activity')"
-              >
-                {{ $t('mcpConnect.openFromSettings') }} →
-              </el-button>
               <el-form label-position="top" size="small">
                 <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
                      mode where any regex-valid kind passes). Turn ON to refuse
@@ -2956,7 +2947,6 @@ async function save() {
   font-size: 0.82rem;
 }
 
-.mcp-connect-link { margin: 0 0 var(--wdc-space-2); }
 .hint {
   margin-top: var(--wdc-space-2);
   font-size: 0.76rem;

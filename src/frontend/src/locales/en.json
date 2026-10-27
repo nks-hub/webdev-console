@@ -3946,7 +3946,6 @@
       "hours": "{n} h ago",
       "days": "{n} d ago"
     },
-    "openFromSettings": "Connect an AI client",
     "runtime": {
       "label": "Start the server with",
       "node": "Node.js",
