@@ -117,6 +117,9 @@ linux:
         - x64
   icon: build/icon.png
   category: Development
+  # electron-builder 26 derives it from the scoped package name
+  # (@nks-hub/webdev-console) and refuses the '@' in a file name.
+  executableName: nks-webdev-console
 
 publish:
   provider: github
