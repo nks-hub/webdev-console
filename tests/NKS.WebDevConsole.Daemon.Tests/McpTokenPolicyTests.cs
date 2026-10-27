@@ -202,9 +202,6 @@ public class McpTokenPolicyTests
         { McpCapabilities.NodeProcess, "POST /api/node/sites/{domain}/start", null, "domain=app.loc", "node_process", "app.loc", "*mcp*" },
         { McpCapabilities.NodeProcess, "POST /api/sites", """{"domain":"app.loc","nodeStartCommand":"npm start"}""", "", "node_process", "app.loc", "*mcp*" },
         { McpCapabilities.CloudflareCredentials, "PUT /api/cloudflare/config", """{"apiToken":"x"}""", "", "cloudflare_credentials", "config", "*mcp*" },
-        { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/reset-password", """{"newPwd":"x"}""", "", "mysql_root_reset", "root", "*mysql*" },
-        { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/users/drop", """{"userName":"app","host":"localhost"}""", "", "mysql_user_drop", "app@localhost", "*mysql*" },
-        { McpCapabilities.DatabaseAdmin, "POST /api/plugins/postgresql/reset-password", "{}", "", "postgres_root_reset", "postgres", "*postgres*" },
         { McpCapabilities.DaemonAdmin, "POST /api/admin/reset", null, "", "daemon_admin", "reset", "*mcp*" },
     };
 
@@ -239,6 +236,9 @@ public class McpTokenPolicyTests
     [InlineData(McpCapabilities.PluginInstall, "POST", "/api/plugins/install")]
     [InlineData(McpCapabilities.BackupRestore, "POST", "/api/restore")]
     [InlineData(McpCapabilities.DeployConfig, "PUT", "/api/nks.wdc.deploy/sites/{domain}/settings")]
+    [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/reset-password")]
+    [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/users/drop")]
+    [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/postgresql/reset-password")]
     public async Task Routes_whose_endpoint_checks_the_intent_are_not_checked_twice(string capability, string method, string pattern)
     {
         var validator = Validator(false);
