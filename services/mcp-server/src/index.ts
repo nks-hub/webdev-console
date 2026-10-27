@@ -35,6 +35,7 @@ import { registerComposerTools } from './tools/composer.js'
 import { registerNodeTools } from './tools/node.js'
 import { registerHostsTools } from './tools/hosts.js'
 import { daemonClient } from './daemonClient.js'
+import { setClientName } from './callerIdentity.js'
 import { wrapHandler } from './auditLog.js'
 import { SERVER_INSTRUCTIONS } from './instructions.js'
 
@@ -112,6 +113,13 @@ registerConfirmationTools(server, opts)
 registerComposerTools(server, opts)
 registerNodeTools(server, opts)
 registerHostsTools(server, opts)
+
+// The initialize handshake names the AI client (claude-code, Claude Desktop,
+// Cursor, ...). Its name becomes X-Mcp-Api-Key-Id on daemon requests so an
+// operator can scope a trust grant to one client.
+server.server.oninitialized = () => {
+  setClientName(server.server.getClientVersion()?.name)
+}
 
 const transport = new StdioServerTransport()
 await server.connect(transport)

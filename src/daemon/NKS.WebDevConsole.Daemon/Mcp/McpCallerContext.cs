@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace NKS.WebDevConsole.Daemon.Mcp;
 
 /// <summary>
@@ -13,6 +15,16 @@ namespace NKS.WebDevConsole.Daemon.Mcp;
 ///   <item><c>X-Mcp-Api-Key-Id</c>   — durable identity fingerprint (per API key)</item>
 ///   <item><c>X-Mcp-Instance-Id</c>  — wdc instance UUID (this install)</item>
 /// </list>
+///
+/// <para>
+/// These ids are caller-supplied and are NOT authentication. Authentication
+/// is the bearer token: <see cref="IsMcpToken"/> is decided by the auth
+/// middleware from which token matched, and any process holding the MCP
+/// token can send whatever X-Mcp-* values it likes. Session/instance/api-key
+/// scoped grants are therefore a convenience boundary (they keep a grant
+/// given to one agent run from silently applying to the next), not a
+/// security boundary between MCP clients that share the token.
+/// </para>
 ///
 /// AsyncLocal is the right tool here: it flows through await points
 /// inside the validator's <c>QueryAsync</c> calls without us threading
@@ -49,6 +61,36 @@ public static class McpCallerContext
         !string.IsNullOrEmpty(_sessionId.Value) ||
         !string.IsNullOrEmpty(_apiKeyId.Value)  ||
         !string.IsNullOrEmpty(_instanceId.Value);
+
+    /// <summary>
+    /// True when the grants table may be consulted for this caller: either
+    /// the request authenticated with the MCP token (so 'always' grants
+    /// apply even when the MCP server sent no identity headers) or the
+    /// caller carries an identity a scoped grant can match.
+    /// </summary>
+    public static bool CanUseGrants => IsMcpToken || HasAnyIdentity;
+
+    /// <summary>Upper bound for an X-Mcp-* identity value; longer values are ignored.</summary>
+    public const int MaxIdentityLength = 128;
+
+    /// <summary>
+    /// Populate the identity slots from the X-Mcp-* request headers. Called
+    /// once per /api request by the pipeline middleware in Program.cs.
+    /// Values are trimmed; empty or over-long values are treated as absent.
+    /// </summary>
+    public static void ApplyIdentityHeaders(IHeaderDictionary headers)
+    {
+        SessionId  = ReadIdentity(headers, "X-Mcp-Session-Id");
+        ApiKeyId   = ReadIdentity(headers, "X-Mcp-Api-Key-Id");
+        InstanceId = ReadIdentity(headers, "X-Mcp-Instance-Id");
+    }
+
+    private static string? ReadIdentity(IHeaderDictionary headers, string name)
+    {
+        var raw = headers[name].FirstOrDefault()?.Trim();
+        if (string.IsNullOrEmpty(raw) || raw.Length > MaxIdentityLength) return null;
+        return raw;
+    }
 
     /// <summary>
     /// Reset all slots — for tests that share an AsyncLocal scope across

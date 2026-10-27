@@ -11,10 +11,9 @@
  * (the MCP transport itself is one process per AI connection).
  */
 
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { daemonClient } from './daemonClient.js'
-
-const SESSION_ID = randomUUID()
+import { SESSION_ID } from './callerIdentity.js'
 
 /**
  * Static danger map — tool name → danger level. Read calls dominate

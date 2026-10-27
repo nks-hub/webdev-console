@@ -9,6 +9,8 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
+import { identityHeaders } from './callerIdentity.js'
+
 interface PortFile {
   port: number
   token: string
@@ -261,7 +263,11 @@ export class DaemonClient {
     // Bodyless POSTs (start-service, install-ca, create-backup, etc.)
     // should not carry a Content-Type header — some HTTP middleware
     // rejects empty-body requests that claim to be JSON.
+    // X-Mcp-Session-Id / -Instance-Id / -Api-Key-Id let the daemon match
+    // session-, install- and client-scoped trust grants. They are not
+    // authentication (the bearer token is); see callerIdentity.ts.
     const headers: Record<string, string> = {
+      ...identityHeaders(),
       Authorization: `Bearer ${token}`,
     }
     if (body instanceof RawBody) headers['Content-Type'] = body.contentType

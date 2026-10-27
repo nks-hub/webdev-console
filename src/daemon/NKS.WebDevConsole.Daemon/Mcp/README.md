@@ -50,6 +50,27 @@ Auto-approve rules. Pattern: `kindPattern × targetPattern × scope (always
 "⚠️ N never matched" links here filtered by `usage=deadweight` so unused
 rules can be cleaned up.
 
+#### How a rule matches a caller
+The MCP server sends three headers on every daemon request:
+
+| Header              | Value                                                            | Rule scope |
+|---------------------|------------------------------------------------------------------|------------|
+| `X-Mcp-Session-Id`  | one UUID per MCP server process (= audit-log session id)          | `session`  |
+| `X-Mcp-Instance-Id` | stable per-install UUID from `~/.wdc/mcp-instance-id`             | `instance` |
+| `X-Mcp-Api-Key-Id`  | `client:<name>` from the MCP initialize `clientInfo.name`         | `api_key`  |
+
+`always` rules match any request authenticated with the MCP token, with or
+without these headers. The headers are caller-supplied and are not
+authentication (the MCP token is), so session/instance/client scoping is a
+convenience boundary, not a security boundary.
+
+A rule is applied when the agent calls `POST /api/mcp/intents/confirm-request`:
+if one matches, the intent is confirmed right there, no banner is shown, and
+the response is `200 { confirmed: true, autoApproved: true, matchedGrantId }`
+so the agent can proceed at once. Otherwise the banner is broadcast and the
+response is `202 { confirmed: false, autoApproved: false }`. The same rule
+check also runs when an unconfirmed intent is consumed.
+
 ### 4. 📚 Catalog (formerly Kinds)
 Read-only inventory of every destructive operation kind plugins have
 registered. Each row shows the wire-format id, the human label, the
