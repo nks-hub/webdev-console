@@ -2280,7 +2280,7 @@
     "noConfigSummary": "Žádný konfigurační soubor pro {name}",
     "configless": {
       "hint": "Nastavení pro tuto službu se předává přes CLI argumenty, per-site TOML konfiguraci nebo proměnné prostředí. Žádné soubory k úpravě tu nejsou.",
-      "daemonLooked": "Daemon hledal {paths}. Zkontroluj, že je binárka nainstalovaná přes",
+      "daemonLooked": "Démon hledal {paths}. Zkontrolujte, že je program nainstalovaný přes",
       "daemonLookedBinaries": "Binárky",
       "daemonLookedAnd": "a že služba byla alespoň jednou spuštěná."
     }

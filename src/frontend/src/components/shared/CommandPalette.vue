@@ -93,7 +93,7 @@ const selectedIndex = ref(0)
 const inputRef = ref<{ focus: () => void; input?: HTMLInputElement } | null>(null)
 
 type Group = 'recommended' | 'recent' | 'navigate' | 'sites' | 'services' | 'actions'
-const GROUP_ORDER: Group[] = ['recommended', 'recent', 'navigate', 'sites', 'services', 'actions']
+const GROUP_ORDER: Group[] = ['recent', 'recommended', 'navigate', 'sites', 'services', 'actions']
 
 interface Command {
   id: string
