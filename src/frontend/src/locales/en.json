@@ -90,7 +90,8 @@
     "justNow": "just now",
     "warning": "Warning",
     "danger": "Danger",
-    "working": "Working…"
+    "working": "Working…",
+    "retry": "Retry"
   },
   "header": {
     "connected": "Connected",
@@ -2315,7 +2316,8 @@
       "account": "Account",
       "sync": "Sync",
       "update": "Update",
-      "about": "About"
+      "about": "About",
+      "mcp": "AI clients (MCP)"
     },
     "simple": {
       "apacheHttp": "Apache HTTP",
@@ -3083,6 +3085,77 @@
     },
     "figures": {
       "title": "At a glance"
+    }
+  },
+  "mcpCapabilities": {
+    "intro": "AI clients connected over MCP can always read state and run the everyday actions (sites, services, databases). Each group below unlocks more. Destructive actions inside a group still wait for your approval in WDC unless a grant covers them.",
+    "loadFailed": "Could not load the MCP capabilities: {err}",
+    "approvalStillRequired": "Destructive actions still ask for approval",
+    "alwaysTitle": "Always allowed ({n})",
+    "alwaysHint": "What the shipped MCP tools need for everyday work.",
+    "neverTitle": "Never allowed",
+    "neverHint": "An AI client can never approve its own requests or change these switches.",
+    "settingsPrefix": "Settings starting with {prefix}",
+    "enableTitle": "Allow AI clients?",
+    "enableConfirm": "AI clients connected to WDC will be able to use “{name}”. Destructive actions in this group still need your approval.",
+    "enableButton": "Allow",
+    "enabled": "AI clients may now use “{name}”",
+    "disabled": "“{name}” is off for AI clients",
+    "mcpOff": "MCP is turned off, so no AI client can connect. These switches take effect once it is on.",
+    "openAdvanced": "Turn on MCP",
+    "groups": {
+      "settings_operator": {
+        "title": "Operator settings",
+        "description": "Change deploy, daemon, plugin, sync, path and telemetry settings and the backup folder."
+      },
+      "service_config": {
+        "title": "Service configuration",
+        "description": "Edit httpd.conf, php.ini and other service config files, then restart the service."
+      },
+      "hosts_file": {
+        "title": "Hosts file",
+        "description": "Apply, back up and restore the system hosts file."
+      },
+      "node_process": {
+        "title": "Node.js processes",
+        "description": "Set a start command for Node sites and start, stop or restart those processes."
+      },
+      "site_advanced_fields": {
+        "title": "Advanced site fields",
+        "description": "Set site fields beyond domain, folder, PHP and HTTPS (ports, environment, PHP settings)."
+      },
+      "cloudflare_credentials": {
+        "title": "Cloudflare credentials",
+        "description": "Set the cloudflared path, tunnel and API tokens, account and ingress rules."
+      },
+      "plugin_install": {
+        "title": "Plugins",
+        "description": "Install and uninstall plugins."
+      },
+      "database_admin": {
+        "title": "Database administration",
+        "description": "Reset MySQL/PostgreSQL root passwords and drop MySQL users."
+      },
+      "backup_restore": {
+        "title": "Restore backups",
+        "description": "Restore WDC from a backup, replacing current sites and settings."
+      },
+      "deploy_config": {
+        "title": "Deploy configuration",
+        "description": "Change deploy targets and hooks, run hook and notification tests, probe hosts."
+      },
+      "daemon_admin": {
+        "title": "Daemon administration",
+        "description": "Restart, shut down or reset the daemon and run the uninstaller."
+      },
+      "unlisted_routes": {
+        "title": "Everything else",
+        "description": "Any other daemon endpoint without its own group."
+      },
+      "composer": {
+        "title": "Composer",
+        "description": "Run Composer install, require and remove in site folders; package scripts run."
+      }
     }
   }
 }

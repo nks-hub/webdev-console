@@ -90,7 +90,8 @@
     "justNow": "právě teď",
     "warning": "Upozornění",
     "danger": "Nebezpečí",
-    "working": "Pracuji…"
+    "working": "Pracuji…",
+    "retry": "Zkusit znovu"
   },
   "header": {
     "connected": "Připojeno",
@@ -2315,7 +2316,8 @@
       "account": "Účet",
       "sync": "Synchronizace",
       "update": "Aktualizace",
-      "about": "O aplikaci"
+      "about": "O aplikaci",
+      "mcp": "AI klienti (MCP)"
     },
     "simple": {
       "apacheHttp": "Apache HTTP",
@@ -3083,6 +3085,77 @@
     },
     "figures": {
       "title": "Přehled čísel"
+    }
+  },
+  "mcpCapabilities": {
+    "intro": "AI klienti připojení přes MCP mohou vždy číst stav a provádět běžné akce (weby, služby, databáze). Každá skupina níže odemyká víc. Destruktivní akce ve skupině dál čekají na vaše schválení ve WDC, pokud je nepokrývá trvalé oprávnění.",
+    "loadFailed": "Schopnosti MCP se nepodařilo načíst: {err}",
+    "approvalStillRequired": "Destruktivní akce dál vyžadují schválení",
+    "alwaysTitle": "Vždy povoleno ({n})",
+    "alwaysHint": "Co dodané nástroje MCP potřebují pro běžnou práci.",
+    "neverTitle": "Nikdy povoleno",
+    "neverHint": "AI klient nikdy nemůže schválit vlastní požadavek ani měnit tyto přepínače.",
+    "settingsPrefix": "Nastavení začínající {prefix}",
+    "enableTitle": "Povolit AI klientům?",
+    "enableConfirm": "AI klienti připojení k WDC budou moci používat „{name}“. Destruktivní akce v této skupině dál vyžadují vaše schválení.",
+    "enableButton": "Povolit",
+    "enabled": "AI klienti nyní mohou používat „{name}“",
+    "disabled": "„{name}“ je pro AI klienty vypnuto",
+    "mcpOff": "MCP je vypnuté, takže se žádný AI klient nepřipojí. Přepínače začnou platit po jeho zapnutí.",
+    "openAdvanced": "Zapnout MCP",
+    "groups": {
+      "settings_operator": {
+        "title": "Provozní nastavení",
+        "description": "Měnit nastavení deploye, daemonu, pluginů, synchronizace, cest a telemetrie a složku záloh."
+      },
+      "service_config": {
+        "title": "Konfigurace služeb",
+        "description": "Upravovat httpd.conf, php.ini a další konfigurace služeb a službu restartovat."
+      },
+      "hosts_file": {
+        "title": "Soubor hosts",
+        "description": "Aplikovat, zálohovat a obnovovat systémový soubor hosts."
+      },
+      "node_process": {
+        "title": "Procesy Node.js",
+        "description": "Nastavit startovací příkaz Node webů a tyto procesy spouštět, zastavovat a restartovat."
+      },
+      "site_advanced_fields": {
+        "title": "Pokročilá pole webu",
+        "description": "Nastavovat pole webu nad rámec domény, složky, PHP a HTTPS (porty, prostředí, PHP nastavení)."
+      },
+      "cloudflare_credentials": {
+        "title": "Přístupy ke Cloudflare",
+        "description": "Nastavovat cestu k cloudflared, tokeny tunelu a API, účet a pravidla ingress."
+      },
+      "plugin_install": {
+        "title": "Pluginy",
+        "description": "Instalovat a odinstalovat pluginy."
+      },
+      "database_admin": {
+        "title": "Správa databází",
+        "description": "Resetovat root hesla MySQL/PostgreSQL a mazat uživatele MySQL."
+      },
+      "backup_restore": {
+        "title": "Obnova záloh",
+        "description": "Obnovit WDC ze zálohy a nahradit tím současné weby a nastavení."
+      },
+      "deploy_config": {
+        "title": "Konfigurace deploye",
+        "description": "Měnit cíle a hooky deploye, spouštět testy hooků a notifikací, ověřovat hosty."
+      },
+      "daemon_admin": {
+        "title": "Správa daemonu",
+        "description": "Restartovat, vypnout nebo resetovat daemon a spustit odinstalaci."
+      },
+      "unlisted_routes": {
+        "title": "Vše ostatní",
+        "description": "Jakýkoli další endpoint daemonu bez vlastní skupiny."
+      },
+      "composer": {
+        "title": "Composer",
+        "description": "Spouštět Composer install, require a remove ve složkách webů; spouští se i skripty balíčků."
+      }
     }
   }
 }
