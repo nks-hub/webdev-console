@@ -531,7 +531,9 @@
       "mysql_root_reset": "Reset the MySQL root password",
       "mysql_user_drop": "Drop a MySQL user account",
       "postgres_root_reset": "Reset the PostgreSQL superuser password",
-      "backup_delete": "Delete a WDC backup"
+      "backup_delete": "Delete a WDC backup",
+      "mysql_user_admin": "Create or grant a MySQL account with admin privileges or a non-local host",
+      "mysql_user_password": "Reset a MySQL user account's password"
     },
     "empty": "No kinds registered",
     "col": {

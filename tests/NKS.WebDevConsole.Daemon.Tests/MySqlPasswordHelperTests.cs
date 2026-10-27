@@ -113,12 +113,15 @@ public sealed class MySqlPasswordHelperTests
     }
 
     [Fact]
-    public void BuildAlterUserSql_ContainsAllRootHosts()
+    public void BuildAlterUserSql_ContainsLocalRootHostsOnly()
     {
         var sql = MySqlPasswordHelper.BuildAlterUserSql("secret12");
         Assert.Contains("'root'@'localhost'", sql);
         Assert.Contains("'root'@'127.0.0.1'", sql);
-        Assert.Contains("'root'@'%'", sql);
+        // L2: a password reset or change never creates or alters a
+        // network-wide root account.
+        Assert.DoesNotContain("'root'@'%'", sql);
+        Assert.DoesNotContain("%", sql);
     }
 
     [Fact]
@@ -128,7 +131,6 @@ public sealed class MySqlPasswordHelperTests
 
         Assert.Contains("CREATE USER IF NOT EXISTS 'root'@'localhost'", sql);
         Assert.Contains("CREATE USER IF NOT EXISTS 'root'@'127.0.0.1'", sql);
-        Assert.Contains("CREATE USER IF NOT EXISTS 'root'@'%'", sql);
         Assert.True(
             sql.IndexOf("CREATE USER IF NOT EXISTS 'root'@'127.0.0.1'", StringComparison.Ordinal) <
             sql.IndexOf("ALTER USER 'root'@'127.0.0.1'", StringComparison.Ordinal));
@@ -158,7 +160,7 @@ public sealed class MySqlPasswordHelperTests
 
         Assert.Contains("ALTER USER 'root'@'localhost' IDENTIFIED BY '';", sql);
         Assert.Contains("ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY '';", sql);
-        Assert.Contains("ALTER USER 'root'@'%' IDENTIFIED BY '';", sql);
+        Assert.DoesNotContain("'root'@'%'", sql);
     }
 
     // ---- WriteTempInitFile ----

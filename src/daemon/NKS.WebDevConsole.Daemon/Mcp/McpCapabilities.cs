@@ -172,12 +172,14 @@ public static class McpCapabilities
         new("GET", "/api/databases/v2/{name}/tables/{table}/indexes"),
         new("GET", "/api/databases/v2/{name}/tables/{table}/data"),
         new("GET", "/api/databases/{name}/export"),
-        // mysqlUsers.ts
+        // mysqlUsers.ts. Creating and granting stay open for read / readWrite
+        // on an ordinary database to a local account; the "admin" preset or a
+        // non-local host is database_admin (see that capability's BodyFields).
+        // Resetting an account's password needs an intent (checked by the endpoint).
         new("GET", "/api/plugins/mysql/users"),
         new("POST", "/api/plugins/mysql/users"),
-        new("POST", "/api/plugins/mysql/users/password"),
+        new("POST", "/api/plugins/mysql/users/password", "mysql_user_password", "{body.userName}@{body.host}", IntentByEndpoint: true, IntentHost: "*mysql*"),
         new("POST", "/api/plugins/mysql/users/grants"),
-        new("POST", "/api/plugins/mysql/change-password"),
         // php.ts
         new("GET", "/api/php/versions"),
         new("GET", "/api/php/{version}/extensions"),
@@ -216,6 +218,13 @@ public static class McpCapabilities
 
     /// <summary>Query parameter of GET /api/databases/{name}/export naming the file the MCP server writes.</summary>
     public const string ExportOutputPathParameter = "outputPath";
+
+    /// <summary>
+    /// Values of a MySQL account create / grant request that make it database
+    /// administration (descriptive; DatabaseEndpoints decides on the parsed values).
+    /// </summary>
+    public static readonly string[] ElevatedMySqlAccountFields =
+        ["privileges=admin", "host other than localhost, 127.0.0.1, ::1"];
 
     public static readonly string[] CloudflareCredentialFields =
         ["cloudflaredPath", "tunnelToken", "apiToken", "accountId"];
@@ -317,24 +326,33 @@ public static class McpCapabilities
             Tools: ["wdc_composer_install", "wdc_composer_require", "wdc_composer_remove"]),
         new(DatabaseAdmin,
             "Database server administration",
-            "Reset the MySQL or PostgreSQL root password, drop MySQL accounts, read or set the stored root password, " +
-            "import SQL dumps, export a database to a file path. Resets, drops and imports need an approved intent " +
+            "Reset or change the MySQL or PostgreSQL root password, drop MySQL accounts, create MySQL accounts with " +
+            "the admin preset or for a non-local host, read or set the stored root password, import SQL dumps, export " +
+            "a database to a file path. Resets, changes, drops, imports and admin accounts need an approved intent " +
             "(checked by the endpoint).",
             DefaultEnabled: false,
             Routes:
             [
                 // The endpoints run these intent gates (DatabaseEndpoints.IntentGateAsync).
                 new("POST", "/api/plugins/mysql/reset-password", "mysql_root_reset", "root", IntentByEndpoint: true, IntentHost: "*mysql*"),
+                new("POST", "/api/plugins/mysql/change-password", "mysql_root_reset", "root", IntentByEndpoint: true, IntentHost: "*mysql*"),
                 new("POST", "/api/plugins/mysql/users/drop", "mysql_user_drop", "{body.userName}@{body.host}", IntentByEndpoint: true, IntentHost: "*mysql*"),
                 new("POST", "/api/plugins/postgresql/reset-password", "postgres_root_reset", "postgres", IntentByEndpoint: true, IntentHost: "*postgres*"),
                 new("POST", "/api/databases/{name}/import", "database_import", "{name}", IntentByEndpoint: true, IntentHost: "*db*"),
                 new("GET", "/api/databases/root-password"),
                 new("POST", "/api/databases/root-password"),
             ],
-            // An export is always allowed; one the MCP server writes to a file
-            // path names it (wdc_export_database outputPath) and needs this group.
-            BodyFields: [new("GET", "/api/databases/{name}/export", ["?" + ExportOutputPathParameter])],
-            Tools: ["wdc_reset_mysql_root_password", "wdc_drop_mysql_user", "wdc_import_database", "wdc_export_database"]),
+            // An export is always allowed; one the MCP server writes to a file path names it
+            // (wdc_export_database outputPath) and needs this group. MySQL account values are
+            // checked by the endpoint (DatabaseEndpoints.MySqlAccountGrantIsElevated): the
+            // always-allowed routes need this capability and an intent only for these values.
+            BodyFields:
+            [
+                new("GET", "/api/databases/{name}/export", ["?" + ExportOutputPathParameter]),
+                new("POST", "/api/plugins/mysql/users", [.. ElevatedMySqlAccountFields], "mysql_user_admin", "{body.userName}@{body.host}"),
+                new("POST", "/api/plugins/mysql/users/grants", [.. ElevatedMySqlAccountFields], "mysql_user_admin", "{body.userName}@{body.host}"),
+            ],
+            Tools: ["wdc_reset_mysql_root_password", "wdc_change_mysql_root_password", "wdc_drop_mysql_user", "wdc_import_database", "wdc_export_database"]),
         new(BackupRestore,
             "Backup restore and delete",
             "Restore a WDC backup over the current state, or delete a backup. Each needs an approved intent.",

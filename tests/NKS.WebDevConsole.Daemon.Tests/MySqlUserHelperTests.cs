@@ -86,4 +86,43 @@ public sealed class MySqlUserHelperTests
         Assert.Throws<ArgumentException>(() =>
             MySqlUserHelper.BuildGrantDatabaseSql("app", "localhost", "bad-name", "read"));
     }
+
+    // H2: the grant tables and server schemas are never a grant target.
+    [Theory]
+    [InlineData("mysql")]
+    [InlineData("MySQL")]
+    [InlineData("sys")]
+    [InlineData("information_schema")]
+    [InlineData("PERFORMANCE_SCHEMA")]
+    public void System_schemas_are_refused_as_a_grant_target(string database)
+    {
+        Assert.NotNull(MySqlUserHelper.ValidateDatabaseName(database));
+        Assert.Throws<ArgumentException>(() => MySqlUserHelper.BuildGrantDatabaseSql("app", "localhost", database, "read"));
+    }
+
+    [Theory]
+    [InlineData("shop")]
+    [InlineData("mysql_app")]
+    [InlineData("sysdb")]
+    public void Ordinary_databases_stay_valid_grant_targets(string database)
+    {
+        Assert.Null(MySqlUserHelper.ValidateDatabaseName(database));
+    }
+
+    [Theory]
+    [InlineData("localhost", null, false)]
+    [InlineData("localhost", "read", false)]
+    [InlineData("127.0.0.1", "readWrite", false)]
+    [InlineData("::1", "none", false)]
+    [InlineData("LOCALHOST", "read", false)]
+    [InlineData("localhost", "admin", true)]
+    [InlineData("%", null, true)]
+    [InlineData("%", "read", true)]
+    [InlineData("10.0.0.%", "readWrite", true)]
+    [InlineData("local_ost", "read", true)]
+    [InlineData("db.example.com", "read", true)]
+    public void Admin_preset_or_a_non_local_host_is_elevated(string host, string? preset, bool elevated)
+    {
+        Assert.Equal(elevated, MySqlUserHelper.IsElevatedAccount(host, preset));
+    }
 }

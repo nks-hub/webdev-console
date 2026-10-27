@@ -139,6 +139,27 @@ test.describe('Non-deploy MCP gates — bogus token → 403', () => {
     expect(j.error).toBe('intent_rejected')
   })
 
+  test('mysql_root_reset gates POST /api/plugins/mysql/change-password', async ({ authedRequest }) => {
+    const r = await authedRequest.post('/api/plugins/mysql/change-password', {
+      headers: { 'X-Intent-Token': TOKEN },
+      data: { currentPwd: '', newPwd: 'not-applied-1' },
+    })
+    expect(r.status()).toBe(403)
+    const j = await r.json()
+    expect(j.error).toBe('intent_rejected')
+  })
+
+  test('mysql_user_password gates POST /api/plugins/mysql/users/password', async ({ authedRequest }) => {
+    const r = await authedRequest.post('/api/plugins/mysql/users/password', {
+      headers: { 'X-Intent-Token': TOKEN },
+      data: { userName: 'some_test_user', host: 'localhost', password: 'not-applied-1' },
+    })
+    expect(r.status()).toBe(403)
+    const j = await r.json()
+    expect(j.error).toBe('intent_rejected')
+    expect(j.intentKind).toBe('mysql_user_password')
+  })
+
   test('postgres_root_reset gates POST /api/plugins/postgresql/reset-password', async ({ authedRequest }) => {
     const r = await authedRequest.post('/api/plugins/postgresql/reset-password', {
       headers: { 'X-Intent-Token': TOKEN },

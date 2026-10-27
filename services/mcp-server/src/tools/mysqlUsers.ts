@@ -28,7 +28,10 @@ const MySqlHostSchema = z
   .regex(/^[A-Za-z0-9_.:%-]+$/, {
     message: 'host may contain only letters, digits, dot, dash, underscore, percent and colon',
   })
-  .describe("MySQL account host. Common values: 'localhost', '127.0.0.1', '%' (any host).")
+  .describe(
+    "MySQL account host. Common values: 'localhost', '127.0.0.1', '%' (any host). " +
+      "A host other than localhost / 127.0.0.1 / ::1 is database administration (see wdc_create_mysql_user).",
+  )
 
 const MySqlPasswordSchema = z
   .string()
@@ -45,8 +48,16 @@ const MySqlPrivilegePresetSchema = z
       "  'none'      — revoke all (issues only FLUSH PRIVILEGES)\n" +
       "  'read'      — SELECT\n" +
       "  'readWrite' — SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES\n" +
-      "  'admin'     — ALL PRIVILEGES (full access on that database)",
+      "  'admin'     — ALL PRIVILEGES (full access on that database; database administration)\n" +
+      'System schemas (mysql, sys, information_schema, performance_schema) are refused.',
   )
+
+// Creating or granting with the admin preset or for a non-local host.
+const ADMIN_ACCOUNT_NOTE =
+  "With the MCP token, the 'admin' preset or a host other than localhost / 127.0.0.1 / ::1 needs the " +
+  'operator\'s database_admin capability (WDC → Settings → MCP) and the user\'s approval: call ' +
+  'wdc_request_confirmation with operation "mysql_user_admin" and target "userName@host", then pass the ' +
+  'returned intentToken. read / readWrite for a local account need neither.'
 
 export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions): void {
   server.registerTool(
@@ -84,13 +95,16 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         "  host: Account host ('localhost', '127.0.0.1', '%', etc.).\n" +
         '  password: Password (empty allowed if daemon permits passwordless).\n' +
         '  database: Optional database to grant on after creation.\n' +
-        "  privileges: Privilege preset for the optional grant. Defaults to 'readWrite'.",
+        "  privileges: Privilege preset for the optional grant. Defaults to 'readWrite'.\n" +
+        '  intentToken: Approved mysql_user_admin intent, when needed.\n\n' +
+        ADMIN_ACCOUNT_NOTE,
       inputSchema: {
         userName: MySqlUserNameSchema,
         host: MySqlHostSchema,
         password: MySqlPasswordSchema,
         database: DatabaseNameSchema.optional(),
         privileges: MySqlPrivilegePresetSchema.optional(),
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -99,15 +113,19 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async ({ userName, host, password, database, privileges }) =>
+    async ({ userName, host, password, database, privileges, intentToken }) =>
       safe(() =>
-        daemonClient.post('/api/plugins/mysql/users', {
-          userName,
-          host,
-          password,
-          ...(database ? { database } : {}),
-          ...(privileges ? { privileges } : {}),
-        }),
+        daemonClient.post(
+          '/api/plugins/mysql/users',
+          {
+            userName,
+            host,
+            password,
+            ...(database ? { database } : {}),
+            ...(privileges ? { privileges } : {}),
+          },
+          intentHeaders(intentToken),
+        ),
       ),
   )
 
@@ -119,11 +137,15 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         "Change a MySQL user's password via `ALTER USER ... IDENTIFIED BY ...`. " +
         "Cannot be used for 'root' accounts — use wdc_change_mysql_root_password " +
         'instead so the current password is verified before the change.\n\n' +
-        'Args:\n  userName, host, password.',
+        "With the MCP token the daemon needs the user's approval for each account: call " +
+        'wdc_request_confirmation with operation "mysql_user_password" and target "userName@host", ' +
+        'then pass the returned intentToken.\n\n' +
+        'Args:\n  userName, host, password.\n  intentToken: Approved intent from wdc_request_confirmation.',
       inputSchema: {
         userName: MySqlUserNameSchema,
         host: MySqlHostSchema,
         password: MySqlPasswordSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -132,9 +154,13 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async ({ userName, host, password }) =>
+    async ({ userName, host, password, intentToken }) =>
       safe(() =>
-        daemonClient.post('/api/plugins/mysql/users/password', { userName, host, password }),
+        daemonClient.post(
+          '/api/plugins/mysql/users/password',
+          { userName, host, password },
+          intentHeaders(intentToken),
+        ),
       ),
   )
 
@@ -145,12 +171,15 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
       description:
         'Grant a privilege preset on a single database to an existing MySQL user. ' +
         'Idempotent — re-applies the GRANT regardless of current state.\n\n' +
-        'Args:\n  userName, host, database, privileges (preset).',
+        'Args:\n  userName, host, database, privileges (preset).\n' +
+        '  intentToken: Approved mysql_user_admin intent, when needed.\n\n' +
+        ADMIN_ACCOUNT_NOTE,
       inputSchema: {
         userName: MySqlUserNameSchema,
         host: MySqlHostSchema,
         database: DatabaseNameSchema,
         privileges: MySqlPrivilegePresetSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -159,14 +188,13 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async ({ userName, host, database, privileges }) =>
+    async ({ userName, host, database, privileges, intentToken }) =>
       safe(() =>
-        daemonClient.post('/api/plugins/mysql/users/grants', {
-          userName,
-          host,
-          database,
-          privileges,
-        }),
+        daemonClient.post(
+          '/api/plugins/mysql/users/grants',
+          { userName, host, database, privileges },
+          intentHeaders(intentToken),
+        ),
       ),
   )
 
@@ -205,13 +233,16 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
       title: 'Change MySQL root password',
       description:
         "Change the MySQL root password. Requires the current password and " +
-        'applies ALTER USER to all root@* accounts, then verifies connectivity ' +
+        'applies ALTER USER to root@localhost and root@127.0.0.1, then verifies connectivity ' +
         'with the new password before persisting it to the WDC settings.\n\n' +
+        "With the MCP token this needs the operator's database_admin capability (WDC → Settings → MCP) " +
+        'and the user\'s approval: call wdc_request_confirmation with operation "mysql_root_reset" first.\n\n' +
         'Args:\n  currentPwd: Current root password (use empty string for passwordless).\n' +
-        '  newPwd: New password to set.',
+        '  newPwd: New password to set.\n  intentToken: Approved intent from wdc_request_confirmation.',
       inputSchema: {
         currentPwd: z.string().describe('Current root password (empty string for passwordless)'),
         newPwd: MySqlPasswordSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -220,8 +251,10 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async ({ currentPwd, newPwd }) =>
-      safe(() => daemonClient.post('/api/plugins/mysql/change-password', { currentPwd, newPwd })),
+    async ({ currentPwd, newPwd, intentToken }) =>
+      safe(() =>
+        daemonClient.post('/api/plugins/mysql/change-password', { currentPwd, newPwd }, intentHeaders(intentToken)),
+      ),
   )
 
   server.registerTool(

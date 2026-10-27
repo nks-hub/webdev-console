@@ -8,6 +8,17 @@ internal static class MySqlUserHelper
     private static readonly Regex SafeHostRegex = new(@"^[A-Za-z0-9_.:%-]{1,255}$", RegexOptions.Compiled);
     private static readonly Regex SafeDatabaseRegex = new(@"^[A-Za-z0-9_]{1,64}$", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Server schemas no account may be granted a preset on: privileges on
+    /// <c>mysql</c> (the grant tables) amount to full server administration.
+    /// </summary>
+    public static readonly IReadOnlySet<string> SystemSchemas =
+        new HashSet<string>(["mysql", "sys", "information_schema", "performance_schema"], StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Hosts that only reach the account from this machine.</summary>
+    public static readonly IReadOnlySet<string> LocalHosts =
+        new HashSet<string>(["localhost", "127.0.0.1", "::1"], StringComparer.OrdinalIgnoreCase);
+
     public static string? ValidateUserName(string? userName)
     {
         if (string.IsNullOrWhiteSpace(userName))
@@ -30,10 +41,21 @@ internal static class MySqlUserHelper
     {
         if (string.IsNullOrWhiteSpace(database))
             return "database is required";
-        return SafeDatabaseRegex.IsMatch(database)
-            ? null
-            : "database may contain only letters, digits and underscore";
+        if (!SafeDatabaseRegex.IsMatch(database))
+            return "database may contain only letters, digits and underscore";
+        return SystemSchemas.Contains(database)
+            ? $"privileges on the system schema '{database}' cannot be granted from user management"
+            : null;
     }
+
+    /// <summary>
+    /// True when creating or granting this account is database administration
+    /// rather than everyday app setup: a host other than the local machine
+    /// (a wildcard such as '%' included), or the admin preset (ALL PRIVILEGES).
+    /// <paramref name="grantPreset"/> is the preset applied, or null for none.
+    /// </summary>
+    public static bool IsElevatedAccount(string host, string? grantPreset) =>
+        !LocalHosts.Contains(host) || string.Equals(grantPreset, "admin", StringComparison.Ordinal);
 
     public static string BuildCreateUserSql(string userName, string host, string password)
     {

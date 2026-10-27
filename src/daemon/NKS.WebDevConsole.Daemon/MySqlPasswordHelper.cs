@@ -52,9 +52,12 @@ internal static class MySqlPasswordHelper
     }
 
     /// <summary>
-    /// Builds the SQL init-file content that sets the root password on all
-    /// localhost variants. Uses single-quote escaping as a secondary safety
-    /// layer even though we already reject quotes in ValidatePassword.
+    /// Builds the SQL init-file content that sets the root password on the
+    /// local root accounts (root@localhost, root@127.0.0.1). It never creates
+    /// or changes root@'%': WDC connects over 127.0.0.1 only, and a
+    /// network-wide root account is not something a password reset should add.
+    /// Uses single-quote escaping as a secondary safety layer even though we
+    /// already reject quotes and backslashes in ValidatePassword.
     /// </summary>
     public static string BuildAlterUserSql(string password)
     {
@@ -63,10 +66,8 @@ internal static class MySqlPasswordHelper
             "FLUSH PRIVILEGES;\n" +
             $"CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY '{escaped}';\n" +
             $"CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY '{escaped}';\n" +
-            $"CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '{escaped}';\n" +
             $"ALTER USER 'root'@'localhost' IDENTIFIED BY '{escaped}';\n" +
             $"ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY '{escaped}';\n" +
-            $"ALTER USER 'root'@'%' IDENTIFIED BY '{escaped}';\n" +
             "FLUSH PRIVILEGES;\n";
     }
 

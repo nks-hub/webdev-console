@@ -14,7 +14,10 @@ public sealed class McpToolCallsRepository
 
     public McpToolCallsRepository(Database db) { _db = db; }
 
-    /// <summary>Insert a new audit row. Generates id if not supplied.</summary>
+    /// <summary>
+    /// Insert a new audit row. Generates id if not supplied. Secret values in
+    /// the args summary (password, token, ... keys) are redacted before storing.
+    /// </summary>
     public async Task<string> InsertAsync(McpToolCallRow row, CancellationToken ct)
     {
         var id = string.IsNullOrEmpty(row.Id) ? Guid.NewGuid().ToString("N") : row.Id;
@@ -37,7 +40,7 @@ public sealed class McpToolCallsRepository
                 row.SessionId,
                 Caller = string.IsNullOrEmpty(row.Caller) ? "unknown" : row.Caller,
                 row.ToolName,
-                row.ArgsSummary,
+                ArgsSummary = McpAuditRedactor.Redact(row.ArgsSummary),
                 row.ArgsHash,
                 row.DurationMs,
                 ResultCode = string.IsNullOrEmpty(row.ResultCode) ? "ok" : row.ResultCode,

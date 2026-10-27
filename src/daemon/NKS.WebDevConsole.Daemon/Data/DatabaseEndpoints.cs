@@ -3,6 +3,7 @@ using CliWrap.Buffered;
 using Dapper;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Daemon.Binaries;
+using NKS.WebDevConsole.Daemon.Mcp;
 using NKS.WebDevConsole.Daemon.Plugin;
 using NKS.WebDevConsole.Daemon.Services;
 
@@ -34,8 +35,184 @@ internal static class DatabaseEndpoints
     internal const string MySqlRootIntentDomain = "root";
     internal const string PostgresRootIntentDomain = "postgres";
 
-    /// <summary>Intent domain for dropping a MySQL account: <c>user@host</c>.</summary>
+    internal const string MySqlUserPasswordKind = "mysql_user_password";
+    internal const string MySqlUserAdminKind = "mysql_user_admin";
+
+    /// <summary>
+    /// Largest SQL dump /api/databases/{name}/import accepts (no settings key
+    /// exists for it). The body is streamed to a temp file, never buffered.
+    /// </summary>
+    internal const long ImportMaxBytes = 512L * 1024 * 1024;
+
+    // Room for multipart boundaries and part headers on top of ImportMaxBytes.
+    private const long ImportMultipartOverheadBytes = 1024 * 1024;
+
+    /// <summary>Intent domain of a MySQL account (drop, password reset, admin grant): <c>user@host</c>.</summary>
     internal static string MySqlUserIntentDomain(string userName, string host) => $"{userName}@{host}";
+
+    /// <summary>
+    /// Gate for the database administration parts of routes the MCP token may
+    /// otherwise always call: MCP-token callers need the operator's
+    /// <c>database_admin</c> capability and an approved intent; other callers
+    /// pass unless they send X-Intent-Token (see <see cref="IntentGateAsync"/>).
+    /// </summary>
+    internal static async Task<IResult?> DatabaseAdminGateAsync(
+        HttpContext ctx,
+        Func<string, bool> isCapabilityEnabled,
+        IDeployIntentValidator intentValidator,
+        string kind,
+        string domain,
+        string host,
+        string detail)
+    {
+        if (McpCallerContext.IsMcpToken
+            && !isCapabilityEnabled(McpCapabilities.DatabaseAdmin))
+        {
+            var denial = McpTokenPolicy.CapabilityDisabled(
+                McpCapabilities.Get(McpCapabilities.DatabaseAdmin), detail);
+            return Results.Json(denial.Body, statusCode: denial.StatusCode);
+        }
+        return await IntentGateAsync(ctx, intentValidator, kind, domain, host);
+    }
+
+    /// <summary>
+    /// H2 gate for creating a MySQL account or granting it a preset: an
+    /// account for a non-local host, or the admin preset (ALL PRIVILEGES), is
+    /// database administration. <paramref name="grantPreset"/> is the preset
+    /// the endpoint will apply, or null when it grants nothing.
+    /// </summary>
+    internal static Task<IResult?> MySqlAccountGateAsync(
+        HttpContext ctx,
+        Func<string, bool> isCapabilityEnabled,
+        IDeployIntentValidator intentValidator,
+        string userName,
+        string host,
+        string? grantPreset)
+    {
+        if (!MySqlUserHelper.IsElevatedAccount(host, grantPreset))
+            return Task.FromResult<IResult?>(null);
+        return DatabaseAdminGateAsync(
+            ctx, isCapabilityEnabled, intentValidator, MySqlUserAdminKind, MySqlUserIntentDomain(userName, host), MySqlIntentHost,
+            $"MySQL account {userName}@{host}" + (grantPreset == "admin" ? " with the admin preset (ALL PRIVILEGES)" : " for a non-local host"));
+    }
+
+    /// <summary>
+    /// M5: the v2 data browser splices its filter into SQL text. MCP-token
+    /// callers get no filter; they filter through the read-only query route.
+    /// </summary>
+    internal static IResult? McpBrowseFilterRejection(string? where) =>
+        McpCallerContext.IsMcpToken && !string.IsNullOrWhiteSpace(where)
+            ? Results.Json(new
+            {
+                error = "mcp_filter_not_allowed",
+                detail = "The table browser does not take a filter from the MCP token.",
+                hint = "Filter with a SELECT through wdc_query (POST /api/databases/{name}/query), which runs read-only.",
+            }, statusCode: StatusCodes.Status403Forbidden)
+            : null;
+
+    /// <summary>The upload was larger than the import limit.</summary>
+    internal sealed class ImportTooLargeException(long maxBytes)
+        : Exception($"The SQL dump is larger than the import limit of {maxBytes / (1024 * 1024)} MB.")
+    {
+        public long MaxBytes { get; } = maxBytes;
+    }
+
+    /// <summary>
+    /// Streams an import upload (multipart file part, or the raw body) into
+    /// <paramref name="destPath"/> without buffering it in memory. Returns an
+    /// error message for a request without a file, or null.
+    /// Throws <see cref="ImportTooLargeException"/> past <paramref name="maxBytes"/>.
+    /// </summary>
+    internal static async Task<string?> ReceiveImportAsync(HttpRequest request, string destPath, long maxBytes, CancellationToken ct)
+    {
+        if (!request.HasFormContentType)
+        {
+            await CopySqlToFileAsync(request.Body, destPath, maxBytes, ct);
+            return null;
+        }
+
+        var mediaType = Microsoft.Net.Http.Headers.MediaTypeHeaderValue.Parse(request.ContentType);
+        var boundary = Microsoft.Net.Http.Headers.HeaderUtilities.RemoveQuotes(mediaType.Boundary).Value;
+        if (string.IsNullOrEmpty(boundary))
+            return "No file uploaded";
+
+        // The size check is CopySqlToFileAsync's; the reader's own per-part
+        // limit (128 MB by default) would cut a legitimate dump short.
+        var reader = new Microsoft.AspNetCore.WebUtilities.MultipartReader(boundary, request.Body) { BodyLengthLimit = null };
+        while (await reader.ReadNextSectionAsync(ct) is { } section)
+        {
+            if (Microsoft.Net.Http.Headers.ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var disposition)
+                && Microsoft.Net.Http.Headers.ContentDispositionHeaderValueIdentityExtensions.IsFileDisposition(disposition))
+            {
+                await CopySqlToFileAsync(section.Body, destPath, maxBytes, ct);
+                return null;
+            }
+        }
+        return "No file uploaded";
+    }
+
+    /// <summary>
+    /// Copies an SQL dump to <paramref name="destPath"/> as UTF-8 for the mysql
+    /// client, in chunks. A UTF-8 byte order mark is dropped and UTF-16/32 text
+    /// (with a byte order mark) is transcoded, as the former StreamReader-based
+    /// import did; any other bytes are copied unchanged.
+    /// </summary>
+    internal static async Task CopySqlToFileAsync(Stream source, string destPath, long maxBytes, CancellationToken ct)
+    {
+        long total = 0;
+        async Task<int> ReadChunkAsync(byte[] buffer, int offset, int count)
+        {
+            var n = await source.ReadAsync(buffer.AsMemory(offset, count), ct);
+            total += n;
+            if (total > maxBytes) throw new ImportTooLargeException(maxBytes);
+            return n;
+        }
+
+        await using var dest = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+        var buffer = new byte[81920];
+
+        // Read up to four bytes to recognise a byte order mark.
+        var head = 0;
+        while (head < 4)
+        {
+            var n = await ReadChunkAsync(buffer, head, 4 - head);
+            if (n == 0) break;
+            head += n;
+        }
+
+        System.Text.Encoding? transcodeFrom = null;
+        var bomLength = 0;
+        ReadOnlySpan<byte> h = buffer.AsSpan(0, head);
+        if (h.StartsWith(new byte[] { 0xFF, 0xFE, 0x00, 0x00 })) { transcodeFrom = new System.Text.UTF32Encoding(false, false); bomLength = 4; }
+        else if (h.StartsWith(new byte[] { 0x00, 0x00, 0xFE, 0xFF })) { transcodeFrom = new System.Text.UTF32Encoding(true, false); bomLength = 4; }
+        else if (h.StartsWith(new byte[] { 0xEF, 0xBB, 0xBF })) bomLength = 3;
+        else if (h.StartsWith(new byte[] { 0xFF, 0xFE })) { transcodeFrom = System.Text.Encoding.Unicode; bomLength = 2; }
+        else if (h.StartsWith(new byte[] { 0xFE, 0xFF })) { transcodeFrom = System.Text.Encoding.BigEndianUnicode; bomLength = 2; }
+
+        if (transcodeFrom is null)
+        {
+            await dest.WriteAsync(buffer.AsMemory(bomLength, head - bomLength), ct);
+            int n;
+            while ((n = await ReadChunkAsync(buffer, 0, buffer.Length)) > 0)
+                await dest.WriteAsync(buffer.AsMemory(0, n), ct);
+            return;
+        }
+
+        var decoder = transcodeFrom.GetDecoder();
+        await using var writer = new StreamWriter(dest, new System.Text.UTF8Encoding(false), 65536, leaveOpen: true);
+        var chars = new char[transcodeFrom.GetMaxCharCount(buffer.Length)];
+        var pending = head - bomLength;
+        if (pending > 0) Array.Copy(buffer, bomLength, buffer, 0, pending);
+        while (true)
+        {
+            var n = pending > 0 ? pending : await ReadChunkAsync(buffer, 0, buffer.Length);
+            pending = 0;
+            var charCount = decoder.GetChars(buffer, 0, n, chars, 0, flush: n == 0);
+            await writer.WriteAsync(chars.AsMemory(0, charCount), ct);
+            if (n == 0) break;
+        }
+        await writer.FlushAsync(ct);
+    }
 
     /// <summary>
     /// MCP intent gate shared by the database admin routes. Callers holding the
@@ -65,7 +242,13 @@ internal static class DatabaseEndpoints
         return verdict.Ok
             ? null
             : Results.Json(
-                new { error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail },
+                new
+                {
+                    error = "intent_rejected", reason = verdict.Reason, detail = verdict.Detail,
+                    intentKind = kind, intentDomain = domain, intentHost = host,
+                    hint = $"Ask the user to approve it: call wdc_request_confirmation for intent kind \"{kind}\" " +
+                           $"on \"{domain}\", then send the approved intentToken as X-Intent-Token.",
+                },
                 statusCode: verdict.Reason == "pending_confirmation" ? 425 : 403);
     }
 
@@ -513,14 +696,20 @@ internal static class DatabaseEndpoints
 
         // POST /api/plugins/mysql/change-password
         // Verifies currentPwd matches the stored root password, then executes ALTER USER
-        // for all root@* accounts, persists the new password, and verifies connectivity.
+        // for root@localhost and root@127.0.0.1, persists the new password, and verifies connectivity.
+        // With no stored password an empty currentPwd matches, so for the MCP
+        // token this is a root reset: database_admin plus a mysql_root_reset intent.
         app.MapPost("/api/plugins/mysql/change-password", async (
             HttpContext ctx,
             BinaryManager bm,
             SettingsStore settings,
             IServiceProvider sp,
-            ILoggerFactory lf) =>
+            ILoggerFactory lf,
+            IDeployIntentValidator intentValidator) =>
         {
+            if (await IntentGateAsync(ctx, intentValidator, MySqlRootResetKind, MySqlRootIntentDomain, MySqlIntentHost) is { } gate)
+                return gate;
+
             var log = lf.CreateLogger("MySqlChangePassword");
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var currentPwd = MySqlPasswordHelper.GetPayloadValue(body, "currentPwd", "currentPassword");
@@ -875,7 +1064,7 @@ internal static class DatabaseEndpoints
             }
         });
 
-        app.MapPost("/api/plugins/mysql/users", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+        app.MapPost("/api/plugins/mysql/users", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp, IDeployIntentValidator intentValidator) =>
         {
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
@@ -892,6 +1081,11 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { success = false, error = passwordError });
             if (!string.IsNullOrWhiteSpace(database) && MySqlUserHelper.ValidateDatabaseName(database) is { } dbError)
                 return Results.BadRequest(new { success = false, error = dbError });
+            var grantPreset = string.IsNullOrWhiteSpace(database) ? null
+                : string.IsNullOrWhiteSpace(privileges) ? "readWrite" : privileges;
+
+            if (await MySqlAccountGateAsync(ctx, id => McpCapabilities.IsEnabled(settings, id), intentValidator, userName, host, grantPreset) is { } gate)
+                return gate;
 
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
@@ -903,8 +1097,8 @@ internal static class DatabaseEndpoints
             try
             {
                 var sql = MySqlUserHelper.BuildCreateUserSql(userName, host, password);
-                if (!string.IsNullOrWhiteSpace(database))
-                    sql += MySqlUserHelper.BuildGrantDatabaseSql(userName, host, database, string.IsNullOrWhiteSpace(privileges) ? "readWrite" : privileges);
+                if (grantPreset is not null)
+                    sql += MySqlUserHelper.BuildGrantDatabaseSql(userName, host, database, grantPreset);
 
                 var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
                 args.Add("-e");
@@ -925,7 +1119,7 @@ internal static class DatabaseEndpoints
             }
         });
 
-        app.MapPost("/api/plugins/mysql/users/password", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+        app.MapPost("/api/plugins/mysql/users/password", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp, IDeployIntentValidator intentValidator) =>
         {
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
@@ -940,6 +1134,11 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { success = false, error = hostError });
             if (MySqlPasswordHelper.ValidatePassword(password) is { } passwordError)
                 return Results.BadRequest(new { success = false, error = passwordError });
+
+            // Setting another account's password is an account takeover: the
+            // MCP token needs an approved intent for that account.
+            if (await IntentGateAsync(ctx, intentValidator, MySqlUserPasswordKind, MySqlUserIntentDomain(userName, host), MySqlIntentHost) is { } gate)
+                return gate;
 
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
@@ -962,7 +1161,7 @@ internal static class DatabaseEndpoints
                 : Results.BadRequest(new { success = false, error = result.StandardError.Trim() });
         });
 
-        app.MapPost("/api/plugins/mysql/users/grants", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+        app.MapPost("/api/plugins/mysql/users/grants", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp, IDeployIntentValidator intentValidator) =>
         {
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(caseInsensitiveJson);
             var userName = MySqlPasswordHelper.GetPayloadValue(body, "userName", "user");
@@ -978,6 +1177,9 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { success = false, error = dbError });
             if (string.IsNullOrWhiteSpace(privileges))
                 privileges = "readWrite";
+
+            if (await MySqlAccountGateAsync(ctx, id => McpCapabilities.IsEnabled(settings, id), intentValidator, userName, host, privileges) is { } gate)
+                return gate;
 
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
@@ -1277,25 +1479,46 @@ internal static class DatabaseEndpoints
                         statusCode: dbqVerdict.Reason == "pending_confirmation" ? 425 : 403);
             }
 
-            // AI client without an approved intent: the guard above let the
-            // statement through as read-only; run it so that the server
-            // enforces that too (read-only transaction, single statement,
-            // time limit, row cap) instead of handing it to the mysql CLI.
-            if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken && string.IsNullOrEmpty(dbqIntentToken))
+            // AI client (MCP token): never through the mysql CLI, which also
+            // runs its own client commands (system, source, ...) that are not
+            // SQL. Without an approved intent the guard above let the statement
+            // through as read-only; run it so that the server enforces that
+            // too (read-only transaction, single statement, time limit, row
+            // cap). With an approved intent it runs through the driver as is.
+            if (NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
             {
-                try
+                static object Shape(QueryResultSet set, bool truncated)
                 {
-                    var ro = await MakeMySqlDriverV2(settings, sp, bm).ExecuteReadOnlyQueryAsync(
-                        name, sql, McpReadOnlyMaxRows, McpReadOnlyTimeoutSeconds, ct);
-                    var roHeaders = ro.Set.Columns.Select(c => c.Name).ToArray();
-                    var roRows = ro.Set.Rows.Select(r =>
+                    var headers = set.Columns.Select(c => c.Name).ToArray();
+                    var shaped = set.Rows.Select(r =>
                     {
                         var row = new Dictionary<string, string?>();
-                        for (int i = 0; i < roHeaders.Length && i < r.Count; i++)
-                            row[roHeaders[i]] = r[i]?.ToString();
+                        for (int i = 0; i < headers.Length && i < r.Count; i++)
+                            row[headers[i]] = r[i]?.ToString();
                         return row;
                     }).ToList();
-                    return Results.Ok(new { columns = roHeaders, rows = roRows, rowCount = roRows.Count, truncated = ro.Truncated });
+                    return new { columns = headers, rows = shaped, rowCount = shaped.Count, truncated };
+                }
+
+                try
+                {
+                    if (string.IsNullOrEmpty(dbqIntentToken))
+                    {
+                        var ro = await MakeMySqlDriverV2(settings, sp, bm).ExecuteReadOnlyQueryAsync(
+                            name, sql, McpReadOnlyMaxRows, McpReadOnlyTimeoutSeconds, ct);
+                        return Results.Ok(Shape(ro.Set, ro.Truncated));
+                    }
+
+                    var full = await MakeMySqlDriverV2(settings, sp, bm).ExecuteQueryAsync(name, sql, ct);
+                    var withRows = full.Results.FirstOrDefault(r => r.Columns.Count > 0);
+                    return withRows is not null
+                        ? Results.Ok(Shape(withRows, truncated: false))
+                        : Results.Ok(new
+                        {
+                            rows = Array.Empty<object>(),
+                            rowsAffected = full.Results.Sum(r => r.RowsAffected),
+                            message = "Query executed successfully (no output)",
+                        });
                 }
                 catch (MySqlConnector.MySqlException mex)
                 {
@@ -1345,7 +1568,9 @@ internal static class DatabaseEndpoints
             return Results.Ok(new { columns = headers, rows, rowCount = rows.Count });
         });
 
-        // Database export (mysqldump)
+        // Database export (mysqldump). The dump is buffered in memory before it
+        // is sent; fine for development databases, but a very large database
+        // would need the mysqldump output streamed to the response instead.
         app.MapGet("/api/databases/{name}/export", async (string name, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
         {
             if (!IsValidDatabaseName(name))
@@ -1410,50 +1635,64 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "MySQL not installed" });
             var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
 
-            // Read uploaded SQL file or raw body
-            string sql;
-            if (ctx.Request.HasFormContentType)
-            {
-                var form = await ctx.Request.ReadFormAsync();
-                var file = form.Files.FirstOrDefault();
-                if (file is null) return Results.BadRequest(new { error = "No file uploaded" });
-                using var reader = new StreamReader(file.OpenReadStream());
-                sql = await reader.ReadToEndAsync();
-            }
-            else
-            {
-                // `leaveOpen: true` because ASP.NET owns the request body stream;
-                // StreamReader's default Dispose closes the underlying stream,
-                // which would fight the hosting layer. The `using` still releases
-                // the reader's ~1 KB read buffer immediately.
-                using var reader = new StreamReader(ctx.Request.Body, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: -1, leaveOpen: true);
-                sql = await reader.ReadToEndAsync();
-            }
+            // Stream the uploaded SQL file (or raw body) to a temp file; a dump
+            // can be hundreds of MB, so it is never held in memory. Kestrel's
+            // default 30 MB body limit is raised to the import limit here.
+            var sizeFeature = ctx.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+            if (sizeFeature is { IsReadOnly: false })
+                sizeFeature.MaxRequestBodySize = ImportMaxBytes + ImportMultipartOverheadBytes;
+            if (ctx.Request.ContentLength > ImportMaxBytes + ImportMultipartOverheadBytes)
+                return ImportTooLarge();
 
+            // The mysql client also runs its own client commands (system,
+            // source, tee, ...) found in the dump; MysqlClientHardening turns
+            // them off where the installed client supports it. MCP-token imports
+            // additionally need an approved intent.
             var tmpFile = Path.GetTempFileName();
-            await File.WriteAllTextAsync(tmpFile, sql);
-            var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
-            args.Add(name);
             try
             {
-                var result = await CliWrap.Cli.Wrap(mysqlCli)
-                    .WithArguments(args)
-                    .WithEnvironmentVariables(MysqlEnvVars())
-                    .WithStandardInputPipe(CliWrap.PipeSource.FromFile(tmpFile))
-                    .WithValidation(CliWrap.CommandResultValidation.None)
-                    .ExecuteBufferedAsync();
-                return result.ExitCode == 0
-                    ? Results.Ok(new { ok = true, message = "Import completed" })
-                    : Results.BadRequest(new { error = result.StandardError.Trim() });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+                try
+                {
+                    if (await ReceiveImportAsync(ctx.Request, tmpFile, ImportMaxBytes, ct) is { } uploadError)
+                        return Results.BadRequest(new { error = uploadError });
+                }
+                catch (ImportTooLargeException)
+                {
+                    return ImportTooLarge();
+                }
+                catch (Microsoft.AspNetCore.Http.BadHttpRequestException bre) when (bre.StatusCode == StatusCodes.Status413PayloadTooLarge)
+                {
+                    return ImportTooLarge();
+                }
+
+                var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+                args.AddRange(await MysqlClientHardening.ResolveAsync(mysqlCli, ct));
+                args.Add(name);
+                try
+                {
+                    var result = await CliWrap.Cli.Wrap(mysqlCli)
+                        .WithArguments(args)
+                        .WithEnvironmentVariables(MysqlEnvVars())
+                        .WithStandardInputPipe(CliWrap.PipeSource.FromFile(tmpFile))
+                        .WithValidation(CliWrap.CommandResultValidation.None)
+                        .ExecuteBufferedAsync();
+                    return result.ExitCode == 0
+                        ? Results.Ok(new { ok = true, message = "Import completed" })
+                        : Results.BadRequest(new { error = result.StandardError.Trim() });
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = $"Failed to invoke mysql: {ex.Message}" });
+                }
             }
             finally
             {
                 try { File.Delete(tmpFile); } catch { /* best-effort */ }
             }
+
+            static IResult ImportTooLarge() => Results.Json(
+                new { error = "import_too_large", maxBytes = ImportMaxBytes, detail = $"The SQL dump exceeds the import limit of {ImportMaxBytes / (1024 * 1024)} MB." },
+                statusCode: StatusCodes.Status413PayloadTooLarge);
         });
 
         // ── Database explorer v2 (MySqlConnector-backed) ──────────────────────────
@@ -1539,6 +1778,8 @@ internal static class DatabaseEndpoints
         {
             if (!IsValidDatabaseName(db) || !IsValidDatabaseName(table))
                 return Results.BadRequest(new { error = "Invalid identifier" });
+            if (McpBrowseFilterRejection(where) is { } filterRejected)
+                return filterRejected;
             try
             {
                 var opts = new NKS.WebDevConsole.Daemon.Data.BrowseOptions

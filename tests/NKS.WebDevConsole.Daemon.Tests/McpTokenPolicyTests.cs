@@ -125,6 +125,10 @@ public class McpTokenPolicyTests
     [InlineData("POST", "/api/nks.wdc.deploy/sites/{domain}/deploy")]
     [InlineData("GET", "/api/nks.wdc.deploy/sites/{domain}/groups")]
     [InlineData("GET", "/api/nks.wdc.deploy/sites/{domain}/snapshots")]
+    // The endpoints gate the admin parts of these themselves (DatabaseAdminIntentGateTests).
+    [InlineData("POST", "/api/plugins/mysql/users")]
+    [InlineData("POST", "/api/plugins/mysql/users/grants")]
+    [InlineData("POST", "/api/plugins/mysql/users/password")]
     public async Task Routes_the_shipped_tools_use_pass_with_every_capability_off(string method, string pattern)
     {
         Assert.Null(await McpTokenPolicy.EvaluateAsync(Request(method, pattern), AllOff, null));
@@ -168,6 +172,7 @@ public class McpTokenPolicyTests
         { McpCapabilities.NodeProcess, "POST /api/node/sites/{domain}/stop", null, "domain=app.loc" },
         { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/reset-password", """{"newPwd":"x"}""", "" },
         { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/users/drop", """{"userName":"app","host":"localhost"}""", "" },
+        { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/change-password", """{"currentPwd":"","newPwd":"x"}""", "" },
         { McpCapabilities.DatabaseAdmin, "POST /api/plugins/postgresql/reset-password", "{}", "" },
         { McpCapabilities.DatabaseAdmin, "GET /api/databases/root-password", null, "" },
         { McpCapabilities.BackupRestore, "POST /api/restore", "{}", "" },
@@ -255,6 +260,7 @@ public class McpTokenPolicyTests
     [InlineData(McpCapabilities.DeployConfig, "PUT", "/api/nks.wdc.deploy/sites/{domain}/settings")]
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/reset-password")]
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/users/drop")]
+    [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/change-password")]
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/postgresql/reset-password")]
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/databases/{name}/import")]
     [InlineData(McpCapabilities.ServiceConfig, "POST", "/api/services/{id}/config")]
@@ -461,6 +467,19 @@ public class McpTokenPolicyTests
         var unused = always.Where(r => !tools.Contains(r) && r != Canonical("GET", "/api/mcp/capabilities")).ToList();
         Assert.True(unused.Count == 0, "always-allowed routes no tool calls: " + string.Join(", ", unused));
         Assert.Empty(always.Intersect(grouped));
+    }
+
+    // M2: with no stored root password an empty currentPwd matches, so
+    // change-password is a root reset and sits with the other root resets.
+    [Fact]
+    public void Root_password_change_is_database_admin_with_the_root_reset_intent()
+    {
+        var key = Canonical("POST", "/api/plugins/mysql/change-password");
+        Assert.DoesNotContain(key, Canonical(McpCapabilities.AlwaysAllowed));
+        var route = McpCapabilities.Get(McpCapabilities.DatabaseAdmin).Routes
+            .Single(r => Canonical(r.Method, r.Pattern) == key);
+        Assert.Equal(DatabaseEndpoints.MySqlRootResetKind, route.IntentKind);
+        Assert.True(route.IntentByEndpoint);
     }
 
     [Fact]
