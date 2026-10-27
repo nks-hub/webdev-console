@@ -224,7 +224,7 @@
       "inMinutes": "in {m} min",
       "backupNow": "Back up now",
       "openFolder": "Open backup folder",
-      "refresh": "Refresh",
+      "refresh": "Reload",
       "createdToast": "Backup created: {files} files, {size}",
       "noBackupsYet": "No backup yet. Create one first."
     },

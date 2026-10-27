@@ -224,7 +224,7 @@
       "inMinutes": "za {m} min",
       "backupNow": "Zálohovat nyní",
       "openFolder": "Otevřít složku záloh",
-      "refresh": "Obnovit",
+      "refresh": "Načíst znovu",
       "createdToast": "Záloha vytvořena: {files} souborů, {size}",
       "noBackupsYet": "Zatím tu není žádná záloha. Nejdřív nějakou vytvořte."
     },
