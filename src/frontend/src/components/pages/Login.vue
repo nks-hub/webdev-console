@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-brand">
-        <div class="brand-mark">{{ $t('app.name') }}</div>
+        <h1 class="brand-mark">{{ $t('app.name') }}</h1>
         <div class="brand-sub">{{ $t('login.subtitle') }}</div>
       </div>
 
@@ -29,6 +29,11 @@
             :icon="User"
             @click="doSsoLogin"
           >{{ $t('login.signInSso') }}</el-button>
+        </div>
+
+        <div v-if="authStore.loginPending" class="login-wait" role="status">
+          <span>{{ $t('login.waiting') }}</span>
+          <el-button text size="small" @click="authStore.cancelLogin()">{{ $t('login.cancel') }}</el-button>
         </div>
 
         <div v-if="authStore.loginError" class="login-error" role="alert">
@@ -120,6 +125,7 @@ function errorText(raw: unknown): string {
   const msg = errorMessage(raw)
   if (/desktop app|electronAPI/i.test(msg)) return t('login.errors.desktopOnly')
   if (/empty token/i.test(msg)) return t('login.errors.emptyToken')
+  if (/^timed out$/i.test(msg)) return t('login.errors.timedOut')
   if (/\b401\b|unauthori|invalid (credentials|password)|incorrect/i.test(msg)) return t('login.errors.badCredentials')
   if (/\b409\b|already (exists|registered|in use)/i.test(msg)) return t('login.errors.exists')
   if (/failed to fetch|network|ECONNREFUSED|timed? ?out/i.test(msg)) return t('login.errors.network')
@@ -143,6 +149,7 @@ async function doSsoLogin() {
     ElMessage.success(t('login.success'))
     goHome()
   } catch (err) {
+    if (errorMessage(err) === 'cancelled') return
     ElMessage.error(`${t('login.failed')}: ${errorText(err)}`)
   }
 }
@@ -214,6 +221,7 @@ onMounted(loadCatalogUrl)
   align-items: flex-start;
 }
 .brand-mark {
+  margin: 0;
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: 0.06em;
@@ -225,6 +233,13 @@ onMounted(loadCatalogUrl)
 .brand-sub { color: var(--el-text-color-secondary); font-size: 0.82rem; }
 .login-desc { color: var(--el-text-color-secondary); font-size: 0.88rem; line-height: 1.55; }
 .login-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.login-wait {
+  display: flex;
+  align-items: center;
+  gap: var(--wdc-space-2);
+  color: var(--wdc-text-2);
+  font-size: 0.87rem;
+}
 .login-error { color: var(--el-color-danger); font-size: 0.82rem; margin-top: 4px; }
 .login-state { display: flex; align-items: center; gap: 8px; color: var(--el-color-success); font-size: 0.95rem; }
 .login-divider {

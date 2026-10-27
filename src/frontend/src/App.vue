@@ -1,6 +1,7 @@
 <template>
   <el-config-provider :locale="elementLocale">
   <div class="app-root">
+    <a class="skip-link" href="#main" @click.prevent="focusMain">{{ t('app.skipToContent') }}</a>
     <div class="app-body">
       <!-- Sidebar runs the full height on the left; at <960px it moves
            into a drawer opened from the header's menu button. -->
@@ -20,6 +21,11 @@
       <div class="app-main">
       <AppHeader @open-menu="drawerOpen = true" />
       <main id="main" class="content-area" tabindex="-1">
+        <!-- Simple mode leaves these pages out of the menu; opened by link, shortcut or palette they say so. -->
+        <div v-if="uiMode.isSimple && route.meta.advancedNav" class="mode-note" role="note">
+          <span>{{ t('app.advancedPageNote') }}</span>
+          <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('app.switchToAdvanced') }}</el-button>
+        </div>
         <!-- keep-alive caches mounted page components so clicking a nav
              item doesn't re-mount the whole tree AND re-run onMounted's
              fetch cascade every time. This is the biggest win for the
@@ -131,8 +137,7 @@ import type { DeployEventDto } from './api/deploy'
 import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
 import { i18n } from './i18n'
-import elementCs from 'element-plus/es/locale/lang/cs'
-import elementEn from 'element-plus/es/locale/lang/en'
+import { elementLocaleFor } from './utils/elementLocale'
 import { isSafeAppRoute, loadNotificationPrefs, syncNotificationLocale } from './services/osNotifications'
 import {
   notifyBackupCompleted, notifyBackupFailed, notifyDeployComplete, notifyMcpConfirm,
@@ -143,7 +148,7 @@ import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToa
 import { mcpKindLabel } from './utils/mcpKindLabel'
 
 const { t, locale } = useI18n()
-const elementLocale = computed(() => (locale.value === 'cs' ? elementCs : elementEn))
+const elementLocale = computed(() => elementLocaleFor(locale.value))
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
@@ -359,6 +364,10 @@ function reloadApp() {
   window.location.reload()
 }
 
+function focusMain() {
+  document.getElementById('main')?.focus()
+}
+
 function openCommandPalette() {
   commandPalette.value?.open()
 }
@@ -528,6 +537,35 @@ onUnmounted(() => {
   padding: 0;
 }
 .content-area:focus { outline: none; }
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+}
+.skip-link:focus {
+  left: var(--wdc-space-3);
+  top: var(--wdc-space-2);
+  z-index: 10001;
+  padding: var(--wdc-space-2) var(--wdc-space-3);
+  background: var(--wdc-surface);
+  color: var(--wdc-text);
+  border: 2px solid var(--wdc-accent);
+  border-radius: var(--wdc-radius);
+}
+.mode-note {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-2) var(--wdc-space-5);
+  background: var(--wdc-accent-dim);
+  border-bottom: 1px solid var(--wdc-border);
+  color: var(--wdc-accent-ink);
+  font-size: 0.87rem;
+}
 
 /* ═══ Splash overlay — shown until backend first connects ════════════════ */
 .splash-overlay {

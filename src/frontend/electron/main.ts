@@ -21,7 +21,9 @@ import { autoUpdater as electronAutoUpdater } from 'electron-updater'
 import {
   configureNotificationIdentity,
   getNotificationPrefs,
+  menuText,
   notificationText,
+  onLocaleChange,
   setNotificationWindowProvider,
   showOsNotification,
   updateNotificationPrefs,
@@ -181,7 +183,11 @@ let tray: Tray | null = null
 let daemon: ChildProcess | null = null
 let daemonConnected = false
 let isQuitting = false
-let updaterStatus = 'Idle'
+// Tray label of the updater: a key of mainMenu.updaterState plus its parameters.
+let updaterStatus: { key: string; params: Record<string, string | number> } = { key: 'idle', params: {} }
+function setUpdaterStatus(key: string, params: Record<string, string | number> = {}) {
+  updaterStatus = { key, params }
+}
 let updateDownloaded = false
 let checkingForUpdates = false
 
@@ -808,6 +814,35 @@ function saveWindowState(state: WindowState): void {
   } catch { /* non-fatal — we'd rather lose window state than crash the app */ }
 }
 
+function installApplicationMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {
+      label: menuText('edit'),
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: menuText('view'),
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+      ],
+    },
+  ]))
+}
+
 async function createWindow() {
   log.info('[window] creating main BrowserWindow')
   const saved = loadWindowState()
@@ -858,33 +893,7 @@ async function createWindow() {
   // never call Menu.setApplicationMenu, so Electron falls back to "no
   // menu" which silently disables the roles. Incident 2026-05-07:
   // user reported copy/paste and right-click did nothing in WDC.
-  const editMenu = Menu.buildFromTemplate([
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
-      ],
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-      ],
-    },
-  ])
-  Menu.setApplicationMenu(editMenu)
+  installApplicationMenu()
 
   // Right-click context menu — Electron does NOT ship one by default.
   // We render a minimal Copy/Cut/Paste/Select-All menu so users can
@@ -898,12 +907,12 @@ async function createWindow() {
     if (params.linkURL) {
       if (isSafeExternalUrl(params.linkURL)) {
         template.push({
-          label: 'Open Link',
+          label: menuText('openLink'),
           click: () => { void shell.openExternal(params.linkURL) },
         })
       }
       template.push({
-        label: 'Copy Link',
+        label: menuText('copyLink'),
         click: () => { clipboard.writeText(params.linkURL) },
       })
       template.push({ type: 'separator' })
@@ -1033,16 +1042,12 @@ function serviceOrder(id: string): number {
   return index === -1 ? 100 : index
 }
 
+const SERVICE_STATE_KEYS = ['stopped', 'starting', 'running', 'stopping', 'crashed', 'disabled']
+
 function serviceStateLabel(state: number, fallback?: string): string {
-  switch (state) {
-    case 0: return 'Stopped'
-    case 1: return 'Starting'
-    case 2: return 'Running'
-    case 3: return 'Stopping'
-    case 4: return 'Crashed'
-    case 5: return 'Disabled'
-    default: return fallback ? fallback.replace(/^\w/, c => c.toUpperCase()) : 'Unknown'
-  }
+  const key = SERVICE_STATE_KEYS[state]
+  if (key) return menuText(`state.${key}`)
+  return fallback ? fallback.replace(/^\w/, c => c.toUpperCase()) : menuText('state.unknown')
 }
 
 function serviceState(raw: RawTrayService): number {
@@ -1131,7 +1136,7 @@ async function runTrayServiceAction(serviceId: string, action: TrayServiceAction
     log.warn(`[tray] service ${serviceId} ${action} failed: ${message}`)
     void dialog.showMessageBox({
       type: 'error',
-      title: 'Service action failed',
+      title: menuText('actionFailedTitle'),
       message: `${serviceId}: ${message}`,
     })
   } finally {
@@ -1151,17 +1156,17 @@ function serviceActionItems(service: TrayService): Electron.MenuItemConstructorO
   const canRestart = service.running && !service.transitioning
   return [
     {
-      label: 'Start',
+      label: menuText('start'),
       enabled: canStart,
       click: () => { void runTrayServiceAction(service.id, 'start') },
     },
     {
-      label: 'Stop',
+      label: menuText('stop'),
       enabled: canStop,
       click: () => { void runTrayServiceAction(service.id, 'stop') },
     },
     {
-      label: 'Restart',
+      label: menuText('restart'),
       enabled: canRestart,
       click: () => { void runTrayServiceAction(service.id, 'restart') },
     },
@@ -1169,8 +1174,8 @@ function serviceActionItems(service: TrayService): Electron.MenuItemConstructorO
 }
 
 function buildServiceMenuItems(snapshot: TraySnapshot): Electron.MenuItemConstructorOptions[] {
-  if (!snapshot.connected) return [{ label: 'Daemon offline', enabled: false }]
-  if (snapshot.services.length === 0) return [{ label: 'No services registered', enabled: false }]
+  if (!snapshot.connected) return [{ label: menuText('daemonOffline'), enabled: false }]
+  if (snapshot.services.length === 0) return [{ label: menuText('noServices'), enabled: false }]
 
   const coreIds = new Set<string>(TRAY_CORE_SERVICES)
   const coreServices = snapshot.services.filter(service => coreIds.has(service.id))
@@ -1179,21 +1184,21 @@ function buildServiceMenuItems(snapshot: TraySnapshot): Electron.MenuItemConstru
 
   const items: Electron.MenuItemConstructorOptions[] = [
     {
-      label: `Core stack (${coreServices.filter(s => s.running).length}/${coreServices.length} running)`,
+      label: menuText('coreStack', { running: coreServices.filter(s => s.running).length, total: coreServices.length }),
       enabled: coreServices.length > 0,
       submenu: [
         {
-          label: 'Start stopped core services',
+          label: menuText('startCore'),
           enabled: stoppedCoreIds.length > 0,
           click: () => { void runTrayServiceBatch(stoppedCoreIds, 'start') },
         },
         {
-          label: 'Restart running core services',
+          label: menuText('restartCore'),
           enabled: runningCoreIds.length > 0,
           click: () => { void runTrayServiceBatch(runningCoreIds, 'restart') },
         },
         {
-          label: 'Stop running core services',
+          label: menuText('stopCore'),
           enabled: runningCoreIds.length > 0,
           click: () => { void runTrayServiceBatch(runningCoreIds, 'stop') },
         },
@@ -1214,8 +1219,10 @@ function buildServiceMenuItems(snapshot: TraySnapshot): Electron.MenuItemConstru
 
 function copyTrayStatus(snapshot: TraySnapshot) {
   const lines = [
-    `NKS WDC: ${snapshot.connected ? 'connected' : 'offline'}`,
-    `Services: ${snapshot.running}/${snapshot.services.length} running, ${snapshot.failed} failed, ${snapshot.transitioning} changing`,
+    menuText(snapshot.connected ? 'headerConnected' : 'headerOffline'),
+    menuText('statusCopyServices', {
+      running: snapshot.running, total: snapshot.services.length, failed: snapshot.failed, transitioning: snapshot.transitioning,
+    }),
     '',
     ...snapshot.services.map(service => {
       const pid = service.pid ? ` pid=${service.pid}` : ''
@@ -1229,16 +1236,16 @@ function copyTrayStatus(snapshot: TraySnapshot) {
 function buildDiagnosticsMenuItems(snapshot: TraySnapshot): Electron.MenuItemConstructorOptions[] {
   return [
     {
-      label: 'Refresh tray',
+      label: menuText('refresh'),
       click: () => { void updateTray() },
     },
     {
-      label: 'Copy service status',
+      label: menuText('copyStatus'),
       enabled: snapshot.connected,
       click: () => copyTrayStatus(snapshot),
     },
     {
-      label: 'Open logs folder',
+      label: menuText('openLogs'),
       click: async () => {
         const result = await shell.openPath(join(process.env.WDC_DATA_DIR || join(homedir(), '.wdc'), 'logs'))
         if (result) log.warn('[tray] open logs failed:', result)
@@ -1249,16 +1256,18 @@ function buildDiagnosticsMenuItems(snapshot: TraySnapshot): Electron.MenuItemCon
 
 function buildUpdaterMenuItems(): Electron.MenuItemConstructorOptions[] {
   if (!app.isPackaged || isPortable) {
-    return [{ label: 'Updates disabled in portable/dev mode', enabled: false }]
+    return [{ label: menuText('updatesDisabled'), enabled: false }]
   }
 
   return [
     {
-      label: checkingForUpdates ? 'Checking for updates...' : `Status: ${updaterStatus}`,
+      label: checkingForUpdates
+        ? menuText('checkingForUpdates')
+        : menuText('updaterStatus', { status: menuText(`updaterState.${updaterStatus.key}`, updaterStatus.params) }),
       enabled: false,
     },
     {
-      label: updateDownloaded ? 'Install update and restart' : 'Check for updates',
+      label: updateDownloaded ? menuText('installUpdate') : menuText('checkUpdates'),
       enabled: !checkingForUpdates,
       click: async () => {
         if (updateDownloaded) {
@@ -1268,8 +1277,8 @@ function buildUpdaterMenuItems(): Electron.MenuItemConstructorOptions[] {
             const message = error instanceof Error ? error.message : String(error)
             void dialog.showMessageBox({
               type: 'error',
-              title: 'Update failed',
-              message: `Unable to install the downloaded update: ${message}`,
+              title: menuText('updateFailedTitle'),
+              message: menuText('updateFailedBody', { error: message }),
             })
           }
           return
@@ -1296,38 +1305,39 @@ async function updateTray() {
   if (!activeTray || activeTray.isDestroyed()) return
   activeTray.setImage(createTrayIcon(trayIconColor(snapshot)))
 
-  const trayMenuLabel = snapshot.connected ? 'NKS WebDev Console - Connected' : 'NKS WebDev Console - Offline'
+  const trayMenuLabel = menuText(snapshot.connected ? 'headerConnected' : 'headerOffline')
   const summary = snapshot.connected
-    ? `${snapshot.running}/${snapshot.services.length} services running`
-    : 'Daemon unavailable'
-  activeTray.setToolTip(`NKS WDC - ${summary}`)
+    ? menuText(snapshot.services.length === 1 ? 'servicesRunningOne' : 'servicesRunningMany',
+      { running: snapshot.running, total: snapshot.services.length })
+    : menuText('daemonUnavailable')
+  activeTray.setToolTip(menuText('tooltip', { summary }))
 
   const canStartDaemon = !snapshot.connected && !daemon && !daemonSpawning
   const trayMenu = Menu.buildFromTemplate([
     { label: trayMenuLabel, enabled: false },
     { label: summary, enabled: false },
     ...(canStartDaemon
-      ? [{ label: 'Start daemon', click: () => restartDaemonManually() }] as Electron.MenuItemConstructorOptions[]
+      ? [{ label: menuText('startDaemon'), click: () => restartDaemonManually() }] as Electron.MenuItemConstructorOptions[]
       : []),
     { type: 'separator' },
     {
-      label: 'Open Dashboard',
+      label: menuText('openDashboard'),
       click: () => showMainWindow('/dashboard'),
     },
     {
-      label: 'Open Sites',
+      label: menuText('openSites'),
       click: () => showMainWindow('/sites'),
     },
     {
-      label: 'Open Databases',
+      label: menuText('openDatabases'),
       click: () => showMainWindow('/databases'),
     },
     {
-      label: 'Open Settings',
+      label: menuText('openSettings'),
       click: () => showMainWindow('/settings'),
     },
     {
-      label: win?.isVisible() ? 'Hide window' : 'Show window',
+      label: menuText(win?.isVisible() ? 'hideWindow' : 'showWindow'),
       click: () => {
         if (win?.isVisible()) {
           win.hide()
@@ -1339,21 +1349,21 @@ async function updateTray() {
     },
     { type: 'separator' },
     {
-      label: 'Services',
+      label: menuText('services'),
       submenu: buildServiceMenuItems(snapshot),
     },
     {
-      label: 'Diagnostics',
+      label: menuText('diagnostics'),
       submenu: buildDiagnosticsMenuItems(snapshot),
     },
     { type: 'separator' },
     {
-      label: 'Updates',
+      label: menuText('updates'),
       submenu: buildUpdaterMenuItems(),
     },
     { type: 'separator' },
     {
-      label: 'Quit and stop daemon',
+      label: menuText('quit'),
       click: async () => {
         isQuitting = true
         await shutdownDaemon()
@@ -1430,14 +1440,14 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
   if (!app.isPackaged || isPortable || checkingForUpdates) return
 
   checkingForUpdates = true
-  updaterStatus = 'Checking'
+  setUpdaterStatus('checking')
   updateTray()
 
   try {
     const autoUpdater = electronAutoUpdater
     const result = await autoUpdater.checkForUpdates()
     if (!result?.updateInfo?.version) {
-      updaterStatus = 'No update available'
+      setUpdaterStatus('none')
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
           type: 'info',
@@ -1447,7 +1457,7 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
       }
     }
   } catch (error) {
-    updaterStatus = 'Update check failed'
+    setUpdaterStatus('checkFailed')
     const message = error instanceof Error ? error.message : String(error)
     console.error('[updater] check failed:', message)
     setUpdaterState({ status: 'error', error: message })
@@ -1484,7 +1494,7 @@ async function installUpdateAndRestart() {
 
 async function setupAutoUpdater() {
   if (!app.isPackaged || isPortable) {
-    updaterStatus = 'Disabled'
+    setUpdaterStatus('disabled')
     setUpdaterState({ status: 'disabled', disabledReason: isPortable ? 'portable' : 'dev' })
     updateTray()
     return
@@ -1502,13 +1512,13 @@ async function setupAutoUpdater() {
 
     autoUpdater.on('checking-for-update', () => {
       checkingForUpdates = true
-      updaterStatus = 'Checking'
+      setUpdaterStatus('checking')
       // A finished download stays ready to install across later checks.
       if (!updateDownloaded) setUpdaterState({ status: 'checking', error: null })
       updateTray()
     })
     autoUpdater.on('update-available', (info) => {
-      updaterStatus = `Downloading ${info.version}`
+      setUpdaterStatus('downloadingVersion', { version: info.version })
       setUpdaterState({ status: 'downloading', version: info.version, percent: 0, transferred: null, total: null, error: null, checkedAt: new Date().toISOString() })
       updateTray()
       console.log('[updater] Update available:', info.version)
@@ -1526,13 +1536,13 @@ async function setupAutoUpdater() {
     })
     autoUpdater.on('update-not-available', (info) => {
       checkingForUpdates = false
-      updaterStatus = 'Up to date'
+      setUpdaterStatus('upToDate')
       if (!updateDownloaded) setUpdaterState({ status: 'up-to-date', version: info.version, error: null, checkedAt: new Date().toISOString() })
       updateTray()
       console.log('[updater] No update available')
     })
     autoUpdater.on('download-progress', (progress) => {
-      updaterStatus = `Downloading ${Math.round(progress.percent)}%`
+      setUpdaterStatus('downloadingPercent', { percent: Math.round(progress.percent) })
       setUpdaterState({
         status: 'downloading',
         percent: Math.round(progress.percent),
@@ -1544,7 +1554,7 @@ async function setupAutoUpdater() {
     autoUpdater.on('update-downloaded', async (info) => {
       checkingForUpdates = false
       updateDownloaded = true
-      updaterStatus = `Ready to install ${info.version}`
+      setUpdaterStatus('ready', { version: info.version })
       setUpdaterState({ status: 'downloaded', version: info.version, percent: 100, error: null })
       updateTray()
       console.log('[updater] Update downloaded:', info.version)
@@ -1565,7 +1575,7 @@ async function setupAutoUpdater() {
     })
     autoUpdater.on('error', (error) => {
       checkingForUpdates = false
-      updaterStatus = 'Update error'
+      setUpdaterStatus('error')
       // Shown in Settings → Update; before, a broken latest.yml or a missing
       // installer only reached the log and updates failed silently.
       setUpdaterState({ status: 'error', error: error?.message ?? String(error) })
@@ -1575,7 +1585,7 @@ async function setupAutoUpdater() {
 
     void checkForAppUpdates(false)
   } catch (error) {
-    updaterStatus = 'Unavailable'
+    setUpdaterStatus('unavailable')
     setUpdaterState({ status: 'error', error: error instanceof Error ? error.message : String(error) })
     updateTray()
     console.warn('[updater] electron-updater unavailable:', error)
@@ -2350,6 +2360,11 @@ app.whenReady().then(async () => {
   startHealthMonitor()
   createWindow()
   createTray()
+  // The renderer reports the UI language after it loads and on every change.
+  onLocaleChange(() => {
+    installApplicationMenu()
+    void updateTray()
+  })
   await setupAutoUpdater()
 })
 

@@ -526,6 +526,18 @@ h1, h2, h3, h4,
   cursor: not-allowed !important;
   transform: none !important;
 }
+/* Fading alone leaves a disabled primary saturated cobalt, which still reads as
+   clickable on a light ground. It drops to a flat neutral key in both themes. */
+.el-button--primary.is-disabled:not(.is-text):not(.is-link),
+.el-button--primary.is-disabled:not(.is-text):not(.is-link):hover,
+.el-button--primary.is-disabled:not(.is-text):not(.is-link):active,
+.el-button--primary.is-disabled:not(.is-text):not(.is-link):focus {
+  --el-button-bg-color: var(--wdc-surface-2);
+  --el-button-border-color: var(--wdc-border);
+  --el-button-text-color: var(--wdc-text-3);
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
 .el-button.is-loading {
   pointer-events: none;
 }

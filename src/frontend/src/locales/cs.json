@@ -142,8 +142,11 @@
       "exists": "Účet s tímto e-mailem už existuje.",
       "network": "Nepodařilo se spojit s katalogem. Zkontrolujte připojení k internetu.",
       "mismatch": "Hesla se neshodují.",
-      "generic": "Přihlášení se nepovedlo ({detail})."
-    }
+      "generic": "Přihlášení se nepovedlo ({detail}).",
+      "timedOut": "Přihlášení v prohlížeči nebylo dokončeno včas. Zkuste to znovu."
+    },
+    "waiting": "Dokončete přihlášení v otevřeném prohlížeči.",
+    "cancel": "Zrušit"
   },
   "nav": {
     "services": "Služby",
@@ -3254,7 +3257,7 @@
     "tunnelTitle": "Tunel Cloudflare běží. Zveřejněné weby jsou dostupné z internetu.",
     "problems": "{n} problém | {n} problémy | {n} problémů",
     "simpleOffline": "Aplikace se nemůže spojit se službou na pozadí",
-    "simpleProblems": "{n} služba nefunguje | {n} služby nefungují | {n} služeb nefunguje",
+    "simpleProblems": "{n} služba má problém | {n} služby mají problém | {n} služeb má problém",
     "simpleAllRunning": "Vše běží"
   },
   "help": {
@@ -3404,15 +3407,6 @@
     "installedVersion": "Nainstalováno ({version})",
     "versionOf": "Verze: {name}",
     "err": {
-      "forbidden": "Server odmítl stažení {name} {version} (403).",
-      "notFound": "{name} {version} na serveru není (404).",
-      "httpStatus": "Server pro {name} {version} odpověděl chybou {status}.",
-      "notAnArchive": "Server místo {name} {version} vrátil webovou stránku, ne soubor ke stažení.",
-      "shaMismatch": "Stažený soubor {name} {version} nesouhlasí s kontrolním součtem.",
-      "noBuild": "Pro {name} {version} není sestavení pro tento systém.",
-      "unreachable": "{name} {version} se nepodařilo stáhnout, server neodpovídá.",
-      "cancelled": "Instalace {name} {version} byla zrušena.",
-      "generic": "{name} {version} se nepodařilo nainstalovat.",
       "details": "Technické podrobnosti",
       "tryAnother": "Zkusit jinou verzi",
       "openBinaries": "Otevřít Binárky"
@@ -3594,7 +3588,7 @@
   "overview": {
     "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",
     "summaryNoServices": "Zatím žádná nainstalovaná služba · {sites} web | Zatím žádná nainstalovaná služba · {sites} weby | Zatím žádná nainstalovaná služba · {sites} webů",
-    "summaryCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
+    "summaryCrashed": "{n} služba má problém | {n} služby mají problém | {n} služeb má problém",
     "restarted": "{name} restartováno",
     "actionFailed": "{name}: akce se nezdařila",
     "attention": {
@@ -3885,11 +3879,11 @@
       "daemonRestartedTitle": "Démon byl restartován",
       "daemonRestartedBody": "Démon NKS WebDev Console se neočekávaně zastavil a byl automaticky znovu spuštěn.",
       "daemonGaveUpTitle": "Démon se opakovaně zastavuje",
-      "daemonGaveUpBody": "Automatické restarty byly zastaveny. Zkontrolujte logy a pak v nabídce v systémové liště použijte položku „Start daemon“.",
+      "daemonGaveUpBody": "Automatické restarty byly zastaveny. Zkontrolujte logy a pak v nabídce v systémové liště použijte položku „Spustit démona“.",
       "daemonStartFailedTitle": "Démona se nepodařilo spustit",
       "daemonStartFailedBody": "{error}",
       "daemonMigrationFailedTitle": "Aktualizace databáze selhala",
-      "daemonMigrationFailedBody": "Démon se zastavil, protože se nepodařilo aktualizovat jeho databázi. Zkontrolujte log démona a pak v nabídce v systémové liště použijte položku „Start daemon“.",
+      "daemonMigrationFailedBody": "Démon se zastavil, protože se nepodařilo aktualizovat jeho databázi. Zkontrolujte log démona a pak v nabídce v systémové liště použijte položku „Spustit démona“.",
       "updateLaterButton": "Později",
       "updateCheckFailedTitle": "Kontrola aktualizací selhala",
       "updateReadyDetail": "Restartujte aplikaci a aktualizace se nainstaluje. Jinak se nainstaluje při příštím ukončení aplikace.",
@@ -3965,7 +3959,10 @@
   },
   "app": {
     "name": "NKS WebDev Console",
-    "short": "WDC"
+    "short": "WDC",
+    "advancedPageNote": "Tato stránka patří do Pokročilého režimu, proto ji menu v Jednoduchém režimu neukazuje.",
+    "switchToAdvanced": "Přepnout na Pokročilý",
+    "skipToContent": "Přeskočit na obsah"
   },
   "pageError": {
     "title": "Tuto stránku se nepodařilo zobrazit",
@@ -3999,5 +3996,71 @@
     "enableDesc": "Vytvoří certifikát, kterému tento počítač důvěřuje, a web začne odpovídat přes HTTPS na portu {port}.",
     "redirect": "Přesměrovat HTTP na HTTPS",
     "redirectDesc": "Požadavky přes obyčejné HTTP se automaticky přesměrují na HTTPS."
+  },
+  "mainMenu": {
+    "edit": "Úpravy",
+    "view": "Zobrazení",
+    "openLink": "Otevřít odkaz",
+    "copyLink": "Kopírovat odkaz",
+    "headerConnected": "NKS WebDev Console: připojeno",
+    "headerOffline": "NKS WebDev Console: odpojeno",
+    "tooltip": "NKS WebDev Console: {summary}",
+    "servicesRunningOne": "Běží {running} z {total} služby",
+    "servicesRunningMany": "Běží {running} z {total} služeb",
+    "daemonUnavailable": "Démon neodpovídá",
+    "startDaemon": "Spustit démona",
+    "openDashboard": "Otevřít Přehled",
+    "openSites": "Otevřít Weby",
+    "openDatabases": "Otevřít Databáze",
+    "openSettings": "Otevřít Nastavení",
+    "hideWindow": "Skrýt okno",
+    "showWindow": "Zobrazit okno",
+    "services": "Služby",
+    "diagnostics": "Diagnostika",
+    "updates": "Aktualizace",
+    "quit": "Ukončit a zastavit démona",
+    "daemonOffline": "Démon neodpovídá",
+    "noServices": "Žádné registrované služby",
+    "state": {
+      "stopped": "Zastaveno",
+      "starting": "Spouští se",
+      "running": "Běží",
+      "stopping": "Zastavuje se",
+      "crashed": "Spadlo",
+      "disabled": "Vypnuto",
+      "unknown": "Neznámý stav"
+    },
+    "start": "Spustit",
+    "stop": "Zastavit",
+    "restart": "Restartovat",
+    "coreStack": "Základní služby (běží {running} z {total})",
+    "startCore": "Spustit zastavené základní služby",
+    "restartCore": "Restartovat běžící základní služby",
+    "stopCore": "Zastavit běžící základní služby",
+    "actionFailedTitle": "Akce se službou se nezdařila",
+    "refresh": "Obnovit nabídku",
+    "copyStatus": "Zkopírovat stav služeb",
+    "openLogs": "Otevřít složku s logy",
+    "statusCopyServices": "Služby: běží {running} z {total}, s problémem {failed}, mění stav {transitioning}",
+    "updatesDisabled": "Aktualizace jsou v přenosném a vývojovém režimu vypnuté",
+    "checkingForUpdates": "Kontroluji aktualizace…",
+    "updaterStatus": "Stav: {status}",
+    "installUpdate": "Nainstalovat aktualizaci a restartovat",
+    "checkUpdates": "Zkontrolovat aktualizace",
+    "updateFailedTitle": "Aktualizace se nezdařila",
+    "updateFailedBody": "Stažená aktualizace se nenainstalovala: {error}",
+    "updaterState": {
+      "idle": "Nečinný",
+      "checking": "Kontroluji",
+      "none": "Žádná aktualizace",
+      "checkFailed": "Kontrola selhala",
+      "disabled": "Vypnuto",
+      "downloadingVersion": "Stahuji {version}",
+      "upToDate": "Aktuální",
+      "downloadingPercent": "Stahuji {percent} %",
+      "ready": "Připraveno k instalaci {version}",
+      "error": "Chyba aktualizace",
+      "unavailable": "Nedostupné"
+    }
   }
 }

@@ -11,10 +11,6 @@ export function isRunning(svc: ServiceInfo): boolean {
   return svc.state === 2 || svc.status === 'running'
 }
 
-export function isCrashed(svc: ServiceInfo): boolean {
-  return svc.state === 4 || svc.status === 'crashed'
-}
-
 export function serviceViewState(svc: ServiceInfo): ServiceViewState {
   const raw: (typeof BY_NUMBER)[number] = BY_NUMBER[svc.state ?? -1]
     ?? (NAMES.includes(svc.status ?? '') ? svc.status as (typeof BY_NUMBER)[number] : 'stopped')

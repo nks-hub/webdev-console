@@ -1,8 +1,8 @@
 <template>
-  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }" role="status">
+  <footer class="status-bar" :class="{ 'status-bar-simple': uiMode.isSimple }">
     <!-- Simple mode: one plain sentence about the whole stack -->
     <template v-if="uiMode.isSimple">
-      <span class="status-item status-item-center">
+      <span class="status-item status-item-center" role="status">
         <HealthStatusDot :level="simpleLevel" :pulse="simpleLevel === 'ok'" :title="simpleText" />
         <router-link v-if="crashedCount > 0" class="status-link status-alert" :to="problemsLink">{{ simpleText }}</router-link>
         <span v-else>{{ simpleText }}</span>
@@ -67,7 +67,7 @@ const localeName = computed(() => String(locale.value))
 const services = computed(() => daemonStore.visibleServices)
 const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => daemonStore.runningServices.length)
-const crashedCount = computed(() => daemonStore.crashedServices.length)
+const crashedCount = computed(() => daemonStore.problemServices.length)
 const problemsLink = { path: '/services', query: { filter: 'problems' } }
 const tunnelRunning = computed(() => services.value.some(s => s.id === 'cloudflare' && isRunning(s)))
 const totalCpu = computed(() => services.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0))

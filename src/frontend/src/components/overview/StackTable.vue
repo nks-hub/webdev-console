@@ -106,6 +106,7 @@ import type { ServiceInfo } from '../../api/types'
 import { serviceViewState, shortServiceName, type ServiceViewState } from '../../utils/serviceState'
 import { runServiceAction } from '../../utils/serviceActions'
 import { servicePort } from '../../utils/servicePorts'
+import { portsLabel, stateKeyOf } from '../../utils/services'
 import { formatBytes, formatPercent } from '../../utils/format'
 
 const emit = defineEmits<{ logs: [id: string]; config: [id: string] }>()
@@ -118,21 +119,23 @@ const uiMode = useUiModeStore()
 const advanced = computed(() => uiMode.isAdvanced)
 const localeName = computed(() => String(locale.value))
 
-interface Row { svc: ServiceInfo; state: ServiceViewState; port: number | null }
+interface Row { svc: ServiceInfo; state: ServiceViewState; port: string | null }
 
 // Installed services first; the ones still to install go to the bottom.
 const rows = computed<Row[]>(() => {
   const all = daemonStore.visibleServices.map(svc => {
-    const state = serviceViewState(svc)
-    // The daemon reports the configured port when it knows it; the settings table is the fallback.
-    const port = (svc as ServiceInfo & { port?: number }).port ?? servicePort(svc.id)
+    // A service that stopped because its start failed is a problem row, like a crashed one.
+    const raw = serviceViewState(svc)
+    const state = raw === 'stopped' && svc.startError ? 'crashed' : raw
+    // The daemon reports the configured ports ("SMTP 1025 · HTTP 8025"); the settings table is the fallback.
+    const port = portsLabel(svc) ?? servicePort(svc.id)?.toString() ?? null
     return { svc, state, port: state === 'notInstalled' ? null : port }
   })
   return [...all.filter(r => r.state !== 'notInstalled'), ...all.filter(r => r.state === 'notInstalled')]
 })
 
 function statusLabel(row: Row): string {
-  if (row.state === 'crashed' && row.svc.crashKind === 'startFailed') return t('overview.status.startFailed')
+  if (row.state === 'crashed' && stateKeyOf(row.svc) === 'startFailed') return t('overview.status.startFailed')
   return t(`overview.status.${row.state}`)
 }
 </script>

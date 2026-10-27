@@ -142,8 +142,11 @@
       "exists": "An account with this e-mail already exists.",
       "network": "Could not reach the catalog. Check your internet connection.",
       "mismatch": "The passwords do not match.",
-      "generic": "Sign-in did not work ({detail})."
-    }
+      "generic": "Sign-in did not work ({detail}).",
+      "timedOut": "The browser sign-in was not completed in time. Please try again."
+    },
+    "waiting": "Finish signing in in the browser window that opened.",
+    "cancel": "Cancel"
   },
   "nav": {
     "services": "Services",
@@ -3404,15 +3407,6 @@
     "installedVersion": "Installed ({version})",
     "versionOf": "Version: {name}",
     "err": {
-      "forbidden": "The server refused the download of {name} {version} (403).",
-      "notFound": "{name} {version} is not on the server (404).",
-      "httpStatus": "The server for {name} {version} answered with error {status}.",
-      "notAnArchive": "The server returned a web page instead of the {name} {version} download.",
-      "shaMismatch": "The downloaded {name} {version} file does not match its checksum.",
-      "noBuild": "There is no build of {name} {version} for this system.",
-      "unreachable": "Could not download {name} {version}, the server is not responding.",
-      "cancelled": "The installation of {name} {version} was cancelled.",
-      "generic": "{name} {version} could not be installed.",
       "details": "Technical details",
       "tryAnother": "Try another version",
       "openBinaries": "Open Binaries"
@@ -3594,7 +3588,7 @@
   "overview": {
     "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",
     "summaryNoServices": "No services installed yet · {sites} site | No services installed yet · {sites} sites",
-    "summaryCrashed": "{n} service crashed | {n} services crashed",
+    "summaryCrashed": "{n} service has a problem | {n} services have a problem",
     "restarted": "{name} restarted",
     "actionFailed": "{name}: the action failed",
     "attention": {
@@ -3965,7 +3959,10 @@
   },
   "app": {
     "name": "NKS WebDev Console",
-    "short": "WDC"
+    "short": "WDC",
+    "advancedPageNote": "This page belongs to Advanced mode, so the menu does not list it in Simple mode.",
+    "switchToAdvanced": "Switch to Advanced",
+    "skipToContent": "Skip to content"
   },
   "pageError": {
     "title": "This page could not be shown",
@@ -3999,5 +3996,71 @@
     "enableDesc": "Generates a locally-trusted certificate and binds an HTTPS vhost on port {port}.",
     "redirect": "HTTP → HTTPS redirect",
     "redirectDesc": "Automatically redirect plain HTTP requests to the HTTPS version."
+  },
+  "mainMenu": {
+    "edit": "Edit",
+    "view": "View",
+    "openLink": "Open link",
+    "copyLink": "Copy link",
+    "headerConnected": "NKS WebDev Console: connected",
+    "headerOffline": "NKS WebDev Console: offline",
+    "tooltip": "NKS WebDev Console: {summary}",
+    "servicesRunningOne": "{running} of {total} service running",
+    "servicesRunningMany": "{running} of {total} services running",
+    "daemonUnavailable": "Daemon unavailable",
+    "startDaemon": "Start daemon",
+    "openDashboard": "Open Overview",
+    "openSites": "Open Sites",
+    "openDatabases": "Open Databases",
+    "openSettings": "Open Settings",
+    "hideWindow": "Hide window",
+    "showWindow": "Show window",
+    "services": "Services",
+    "diagnostics": "Diagnostics",
+    "updates": "Updates",
+    "quit": "Quit and stop daemon",
+    "daemonOffline": "Daemon offline",
+    "noServices": "No services registered",
+    "state": {
+      "stopped": "Stopped",
+      "starting": "Starting",
+      "running": "Running",
+      "stopping": "Stopping",
+      "crashed": "Crashed",
+      "disabled": "Disabled",
+      "unknown": "Unknown"
+    },
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "coreStack": "Core stack ({running} of {total} running)",
+    "startCore": "Start stopped core services",
+    "restartCore": "Restart running core services",
+    "stopCore": "Stop running core services",
+    "actionFailedTitle": "Service action failed",
+    "refresh": "Refresh menu",
+    "copyStatus": "Copy service status",
+    "openLogs": "Open logs folder",
+    "statusCopyServices": "Services: {running} of {total} running, {failed} with a problem, {transitioning} changing",
+    "updatesDisabled": "Updates are off in portable and dev mode",
+    "checkingForUpdates": "Checking for updates…",
+    "updaterStatus": "Status: {status}",
+    "installUpdate": "Install update and restart",
+    "checkUpdates": "Check for updates",
+    "updateFailedTitle": "Update failed",
+    "updateFailedBody": "Unable to install the downloaded update: {error}",
+    "updaterState": {
+      "idle": "Idle",
+      "checking": "Checking",
+      "none": "No update available",
+      "checkFailed": "Check failed",
+      "disabled": "Disabled",
+      "downloadingVersion": "Downloading {version}",
+      "upToDate": "Up to date",
+      "downloadingPercent": "Downloading {percent}%",
+      "ready": "Ready to install {version}",
+      "error": "Update error",
+      "unavailable": "Unavailable"
+    }
   }
 }

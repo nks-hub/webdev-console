@@ -6,7 +6,7 @@
     align-center
     @close="onDismiss"
   >
-    <div class="ob-wrap">
+    <div class="ob-wrap" @keydown.capture="onKeydownCapture">
       <p class="ob-subtitle">{{ t('onboarding.subtitle') }}</p>
 
       <el-steps :active="activeStep" finish-status="success" align-center class="ob-steps">
@@ -176,7 +176,7 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { compareSemver } from '../../utils/semver'
-import { classifyInstallFailure } from '../../utils/installFailure'
+import { installErrorDetail, installErrorMessage } from '../../utils/binaries'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
 import { OPEN_ONBOARDING_EVENT } from '../../utils/onboarding'
@@ -295,12 +295,11 @@ async function doInstall(app: string, label: string) {
     ElMessage.success(t('toast.installedVersion', { app: label, version }))
     await refreshState()
   } catch (e) {
-    const failure = classifyInstallFailure(e)
     ;(tried[app] ??= []).push(version)
     failures.value[app] = {
       version,
-      text: t(`onboarding.err.${failure.kind}`, { name: label, version, status: failure.status ?? '' }),
-      detail: failure.detail,
+      text: installErrorMessage(t, e, app, version),
+      detail: installErrorDetail(e),
     }
   } finally {
     installing.value.delete(app)
@@ -423,6 +422,14 @@ async function finish() {
 // Every way of closing without finishing (×, Esc, click outside, "Later")
 // lands here. That is "later", not "never": the wizard returns on the next
 // launch unless "Don't show again" is ticked.
+// ElSelect swallows Esc even while its list is closed, so the dialog never sees
+// it; catch it first, but leave an open list to close on its own.
+function onKeydownCapture(e: KeyboardEvent) {
+  if (e.key !== 'Escape') return
+  if ((e.target as HTMLElement | null)?.getAttribute('aria-expanded') === 'true') return
+  visible.value = false
+}
+
 function onDismiss() {
   dismissedThisSession = true
   if (dontShowAgain.value) void markCompleted()

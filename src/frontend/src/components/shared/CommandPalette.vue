@@ -7,6 +7,7 @@
     width="520px"
     class="command-dialog"
     @opened="focusInput"
+    @closed="restoreFocus"
     @close="close"
   >
     <div class="command-palette">
@@ -316,8 +317,17 @@ function focusInput() {
   inputRef.value?.focus()
 }
 
+// Focus goes back to whatever opened the palette (the header search, a menu entry).
+let opener: HTMLElement | null = null
+function restoreFocus() {
+  const el = opener
+  opener = null
+  if (el?.isConnected && document.activeElement === document.body) el.focus()
+}
+
 function open() {
   if (!visible.value) {
+    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     query.value = ''
     selectedIndex.value = 0
     visible.value = true

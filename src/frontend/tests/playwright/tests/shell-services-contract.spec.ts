@@ -19,14 +19,16 @@ test.describe('Shell services contract', () => {
       ['components', 'overview', 'AttentionList.vue'],
     ]) {
       const source = read(...file)
-      expect(source, file.join('/')).toMatch(/daemonStore\.(visibleServices|crashedServices|runningServices)/)
+      expect(source, file.join('/')).toMatch(/daemonStore\.(visibleServices|problemServices|runningServices)/)
       // No private re-count over every service, including those of disabled plugins.
       expect(source, file.join('/')).not.toMatch(/daemonStore\.services\.filter/)
       expect(source, file.join('/')).not.toMatch(/state === 4\)\.length/)
     }
     const store = read('stores', 'daemon.ts')
     expect(store).toMatch(/visibleServices = computed/)
-    expect(store).toMatch(/crashedServices = computed/)
+    expect(store).toMatch(/problemServices = computed/)
+    // A failed start (startError) counts like a crash, the same test the Services page uses.
+    expect(store).toMatch(/needsAttention\(s\)/)
   })
 
   test('problem badge shows a number with text and links to the problem filter', () => {
@@ -51,6 +53,19 @@ test.describe('Shell services contract', () => {
     const dashboard = read('components', 'pages', 'Dashboard.vue')
     expect(dashboard).not.toMatch(/ConfigSidePanel/)
     expect(dashboard).toMatch(/\/service\/\$\{encodeURIComponent\(id\)\}\/config/)
+  })
+
+  test('a disabled primary button is a neutral key, not a faded cobalt one', () => {
+    const tokens = read('assets', 'tokens.css')
+    expect(tokens).toMatch(/\.el-button--primary\.is-disabled:not\(\.is-text\):not\(\.is-link\)[\s\S]*?--el-button-bg-color: var\(--wdc-surface-2\)/)
+  })
+
+  test('browser sign-in can be cancelled and times out', () => {
+    const auth = read('stores', 'auth.ts')
+    expect(auth).toMatch(/function cancelLogin/)
+    expect(auth).toMatch(/SSO_TIMEOUT_MS/)
+    const login = read('components', 'pages', 'Login.vue')
+    expect(login).toMatch(/authStore\.cancelLogin\(\)/)
   })
 
   test('shortcuts read the typed letter or physical key, not a fixed e.key', () => {

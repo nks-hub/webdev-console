@@ -4,8 +4,8 @@ import { join } from 'path'
 import log from 'electron-log/main'
 // Named imports so rollup tree-shakes the rest of the locale files out of
 // dist-electron/main.js — main only needs the notification texts.
-import { osNotifications as enMessages } from '../src/locales/en.json'
-import { osNotifications as csMessages } from '../src/locales/cs.json'
+import { osNotifications as enMessages, mainMenu as enMenu } from '../src/locales/en.json'
+import { osNotifications as csMessages, mainMenu as csMenu } from '../src/locales/cs.json'
 import {
   defaultNotificationPrefs,
   isNotificationChannel,
@@ -125,10 +125,23 @@ export function getNotificationPrefs(): NotificationPrefs {
   return { ...prefs, channels: { ...prefs.channels } }
 }
 
+const localeListeners = new Set<() => void>()
+
+/** Runs when the renderer reports a different UI language (menus rebuild their labels). */
+export function onLocaleChange(listener: () => void): void {
+  localeListeners.add(listener)
+}
+
 export function updateNotificationPrefs(patch: unknown): NotificationPrefs {
   const current = loadState()
+  const previousLocale = current.locale
   state = { ...mergeNotificationPrefs(current, patch), onceKeys: current.onceKeys }
   saveState()
+  if (state.locale !== previousLocale) {
+    for (const listener of localeListeners) {
+      try { listener() } catch (err) { log.warn('[notify] locale listener failed:', err) }
+    }
+  }
   return getNotificationPrefs()
 }
 
@@ -140,6 +153,19 @@ export type MainNotificationText = keyof typeof enMessages.events
 export function notificationText(key: MainNotificationText, params: Record<string, string | number> = {}): string {
   const table = loadState().locale === 'cs' ? csMessages.events : enMessages.events
   const template = (table as Record<string, string>)[key] ?? enMessages.events[key] ?? key
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in params ? String(params[name]) : match)
+}
+
+/**
+ * Looks up `mainMenu.<path>` (tray, application and context menus, dialogs
+ * raised from them) in the UI language, falling back to English.
+ */
+export function menuText(path: string, params: Record<string, string | number> = {}): string {
+  const find = (table: unknown) => path.split('.').reduce<unknown>(
+    (node, part) => (node as Record<string, unknown> | undefined)?.[part], table)
+  const found = find(loadState().locale === 'cs' ? csMenu : enMenu) ?? find(enMenu)
+  const template = typeof found === 'string' ? found : path
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>
     name in params ? String(params[name]) : match)
 }
