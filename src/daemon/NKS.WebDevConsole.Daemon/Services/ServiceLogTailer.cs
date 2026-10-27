@@ -29,15 +29,18 @@ public sealed class ServiceLogTailer : BackgroundService
     private readonly SseService _sse;
     private readonly WebSocketLogStreamer _streamer;
     private readonly ILogger<ServiceLogTailer> _logger;
-    private readonly Dictionary<string, IReadOnlyList<string>> _lastWindow = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ServiceLogBuffer _buffer;
+    // Services read at least once since someone started listening.
+    private readonly HashSet<string> _synced = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DateTime> _watchedUntil = new(StringComparer.OrdinalIgnoreCase);
 
-    public ServiceLogTailer(IServiceProvider sp, SseService sse, WebSocketLogStreamer streamer, ILogger<ServiceLogTailer> logger)
+    public ServiceLogTailer(IServiceProvider sp, SseService sse, WebSocketLogStreamer streamer, ILogger<ServiceLogTailer> logger, ServiceLogBuffer? buffer = null)
     {
         _sp = sp;
         _sse = sse;
         _streamer = streamer;
         _logger = logger;
+        _buffer = buffer ?? new ServiceLogBuffer();
     }
 
     /// <summary>
@@ -76,14 +79,14 @@ public sealed class ServiceLogTailer : BackgroundService
             var wsListening = _streamer.SubscriberCount(id) > 0;
             if (!sseListening && !wsListening)
             {
-                // Nobody watching: forget the baseline so a later listener
-                // doesn't receive a burst of everything logged meanwhile.
-                _lastWindow.Remove(id);
+                // Nobody watching: the next listener starts from a fresh read
+                // so it doesn't receive a burst of everything logged meanwhile.
+                _synced.Remove(id);
                 continue;
             }
 
-            IReadOnlyList<string> window;
-            try { window = await module.GetLogsAsync(WindowLines, ct); }
+            IReadOnlyList<string> fresh;
+            try { fresh = await _buffer.PullAsync(module, WindowLines, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
@@ -91,16 +94,14 @@ public sealed class ServiceLogTailer : BackgroundService
                 continue;
             }
 
-            if (!_lastWindow.TryGetValue(id, out var previous))
+            if (_synced.Add(id))
             {
-                // First look establishes the baseline; history is already
-                // delivered by GET /api/services/{id}/logs and the WS handshake.
-                _lastWindow[id] = window;
+                // First look after (re)starting to listen: those lines are
+                // history, delivered by GET /api/services/{id}/logs and the WS handshake.
                 continue;
             }
-            _lastWindow[id] = window;
 
-            foreach (var line in NewLines(previous, window))
+            foreach (var line in fresh)
             {
                 if (wsListening) _streamer.Push(id, line);
                 if (sseListening)

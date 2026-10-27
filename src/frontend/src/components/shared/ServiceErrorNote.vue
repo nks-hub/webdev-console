@@ -46,8 +46,10 @@ const servicesStore = useServicesStore()
 
 const actionError = computed(() => servicesStore.lastError[props.serviceId] ?? '')
 const fromAction = computed(() => !!actionError.value)
+const service = computed(() => daemonStore.services.find(s => s.id === props.serviceId))
+// "Executable not found" from auto-start adds nothing to "not installed".
 const message = computed(() =>
-  actionError.value || daemonStore.services.find(s => s.id === props.serviceId)?.startError || '')
+  actionError.value || (service.value?.installed === false ? '' : service.value?.startError) || '')
 const cause = computed(() => errorCause(`${message.value}\n${props.logReason ?? ''}`))
 
 async function copy() {

@@ -142,7 +142,9 @@ public static class ServiceInfoProjection
             isInstalled, version, app, tracker.CrashKind(status),
             status.Uptime is { } up ? (long)up.TotalSeconds : null,
             port, ports,
-            status.State == ServiceState.Running ? null : tracker.StartError(status.Id));
+            // Auto-start also tries plugins whose binary is missing; "executable
+            // not found" next to "not installed" is noise, not a failure.
+            status.State == ServiceState.Running || !isInstalled ? null : tracker.StartError(status.Id));
     }
 
     /// <param name="modules">Same order as <paramref name="statuses"/>; supplies the ports.</param>

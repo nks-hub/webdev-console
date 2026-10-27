@@ -86,7 +86,7 @@ internal static class ServiceConfigEndpoints
             return Results.NoContent();
         });
 
-        app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int? lines) =>
+        app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, ServiceLogBuffer logBuffer, int? lines) =>
         {
             var modules = sp.GetServices<IServiceModule>();
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
@@ -94,7 +94,7 @@ internal static class ServiceConfigEndpoints
             if (module == null) return Results.NotFound();
             try
             {
-                var logs = await module.GetLogsAsync(lines ?? 100, CancellationToken.None);
+                var logs = await logBuffer.TailAsync(module, lines ?? 100, CancellationToken.None);
                 return Results.Ok(logs);
             }
             catch (Exception ex)
