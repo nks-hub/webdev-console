@@ -44,6 +44,14 @@ internal static class SettingsEndpoints
             return Results.Ok(dict);
         });
 
+        // Settings → Ports asks before saving a port another process listens on.
+        app.MapGet("/api/ports/check", (int port) =>
+        {
+            if (port is < 1 or > 65535) return Results.BadRequest(new { error = "port must be 1-65535" });
+            var conflict = PortConflictDetector.CheckPort(port);
+            return Results.Ok(new { port, inUse = conflict is not null, ownerPid = conflict?.OwnerPid, ownerName = conflict?.OwnerProcessName });
+        });
+
         app.MapPut("/api/settings", async (
             HttpContext ctx, Database db,
             NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster eventsBus) =>

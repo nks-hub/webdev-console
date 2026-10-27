@@ -2269,8 +2269,7 @@
     "restoreFailed": "Obnovení selhalo: {err}",
     "snapshotDeleted": "Snímek smazán",
     "deleteFailed": "Smazání selhalo: {err}",
-    "dnsFlushed": "DNS cache vyprázdněn",
-    "dnsFlushAdmin": "Vyprázdnění DNS může vyžadovat administrátorská práva",
+    "dnsFlushed": "DNS cache vyprázdněna",
     "dnsFlushUnavailable": "Endpoint pro vyprázdnění DNS není dostupný",
     "noMampSites": "Žádné MAMP PRO weby nebyly nalezeny",
     "mampImported": "Importováno {count} webů z MAMP",
@@ -2303,11 +2302,12 @@
     "failedToSave": "Uložení selhalo: {err}",
     "autostartFailed": "Systém automatické spuštění nepovolil.",
     "crashReportsAfterRestart": "Uloženo. Hlášení o pádech se začnou odesílat po restartu aplikace.",
-    "signedIn": "Přihlášení proběhlo"
+    "signedIn": "Přihlášení proběhlo",
+    "dnsFlushFailed": "DNS cache se nepodařilo vyprázdnit: {err}"
   },
   "settings": {
     "title": "Nastavení",
-    "subtitle": "Konfigurace NKS WDC daemonu a uživatelského rozhraní",
+    "subtitle": "Nastavení aplikace NKS WebDev Console a jejích služeb",
     "loadFailedSaveBlocked": "Nastavení se nepodařilo načíst z daemonu, proto je ukládání zablokované, aby se nepřepsalo výchozími hodnotami. Až daemon poběží, načtěte stránku znovu.",
     "tabs": {
       "general": "Obecné",
@@ -2326,20 +2326,24 @@
       "apacheHttps": "Apache HTTPS",
       "network": {
         "title": "Síť a porty",
-        "subtitle": "Aktuální porty, na kterých služby naslouchají.",
-        "editInAdvanced": "Změnit v pokročilých"
+        "subtitle": "Porty, na kterých služby právě naslouchají.",
+        "editInAdvanced": "Změnit porty"
       },
       "backup": {
         "title": "Záloha",
-        "subtitle": "Vytvoř ruční zálohu konfigurace a databází jedním klikem.",
+        "subtitle": "Jedním klikem vytvoří zálohu podle nastavení na stránce Zálohy.",
         "create": "Vytvořit zálohu teď",
         "openManager": "Otevřít správce záloh"
       },
       "services": {
         "title": "Služby",
         "subtitle": "Stav místních služeb (Apache, MySQL, PHP, ...)",
-        "manageOnDashboard": "Spravovat na přehledu"
-      }
+        "manageOnDashboard": "Spravovat na přehledu",
+        "notInstalled": "Nenainstalováno",
+        "crashed": "Spadlo"
+      },
+      "hiddenTab": "Tato nastavení jsou jen v pokročilém režimu.",
+      "switchToAdvanced": "Přepnout do pokročilého režimu"
     },
     "account": {
       "simpleSubtitle": "Přihlášení a synchronizace mezi zařízeními",
@@ -2379,21 +2383,22 @@
     "advancedPorts": {
       "pluginPorts": "Porty pluginů",
       "active": "{n} aktivní",
-      "portAlertTitle": "Změna HTTP/HTTPS portu znovu načte webserver",
-      "portAlertDesc": "Každý per-site vhost je regenerován s novým portem a Apache (nebo nginx/caddy) se znovu načte. Aktuální browser spojení krátce odpadnou. Před uložením zkontroluj, že nový port není používaný jinou službou."
+      "portAlertTitle": "Změna portu HTTP nebo HTTPS znovu načte webový server",
+      "portAlertDesc": "Konfigurace všech webů se přegenerují s novým portem a webový server se znovu načte. Otevřená spojení v prohlížeči se krátce přeruší. Před uložením se zkontroluje, jestli nový port nepoužívá jiný program.",
+      "defaultPort": "výchozí {port}"
     },
     "sso": {
       "title": "Přihlášení přes SSO",
       "signIn": "Přihlásit přes SSO",
       "signOut": "Odhlásit",
-      "signedIn": "Přihlášen",
-      "signedInAt": "Přihlášen ke katalogu na {url}.",
-      "signedInAs": "Přihlášen jako {who}",
-      "configuredCatalog": "nakonfigurovaném katalogu",
-      "description": "SSO probíhá přes OIDC flow katalogu a token se vrací zpět do WDC přes wdc:// deep-link — WDC samo neukládá heslo. Používá URL katalogu z Nastavení → Obecné.",
-      "catalog": "Katalog",
-      "catalogReachable": "dostupný · poslední synchronizace {ago}",
-      "catalogNeverSynced": "dosud nesynchronizováno"
+      "signedIn": "Přihlášeno",
+      "signedInAt": "Přihlášeno k {url}.",
+      "signedInAs": "Přihlášený účet: {who}",
+      "configuredCatalog": "nastavenému katalogu",
+      "description": "Přihlášení proběhne v prohlížeči přes účet NKS. Heslo WDC neukládá. Adresu katalogu lze změnit v Nastavení → Pokročilé.",
+      "catalog": "Katalog pluginů",
+      "catalogReachable": "dostupný, poslední synchronizace {ago}",
+      "catalogNeverSynced": "zatím nesynchronizován"
     },
     "advanced": {
       "tabDesc": "Spojení s katalogem, heslo MySQL, synchronizace pluginů a nasazení. Prázdné pole znamená výchozí hodnotu.",
@@ -2436,8 +2441,8 @@
     },
     "about": {
       "subtitle": "Správa lokálního vývojového prostředí",
-      "description": "Moderní náhrada za MAMP PRO postavená na Electron + Vue 3 + Element Plus. Spravuje Apache, MySQL, PHP, Redis, Mailpit a SSL certifikáty pro lokální vývoj.",
-      "runtime": "Runtime",
+      "description": "Spravuje lokální Apache, PHP, MySQL, Redis, Mailpit a SSL certifikáty pro vývoj webů.",
+      "runtime": "Běhové prostředí",
       "installedVersions": "Nainstalované verze",
       "daemonUptime": "Doba běhu démona",
       "daemonPid": "PID démona",
@@ -2445,7 +2450,14 @@
       "services": "Služby",
       "sites": "Weby",
       "plugins": "Pluginy",
-      "binaries": "Binárky"
+      "binaries": "Binárky",
+      "website": "Web",
+      "uptime": {
+        "seconds": "{s} s",
+        "minutes": "{m} min {s} s",
+        "hours": "{h} h {m} min",
+        "days": "{d} den {h} h | {d} dny {h} h | {d} dní {h} h"
+      }
     },
     "sync": {
       "topDesc": "Synchronizujte konfiguraci se svým účtem v katalogu, nebo ji uložte do souboru a ze souboru načtěte.",
@@ -2526,7 +2538,7 @@
       "mampImportButton": "Importovat"
     },
     "ports": {
-      "description": "Výchozí porty služeb. Po změně restartuj služby.",
+      "description": "Porty, na kterých služby naslouchají. Po uložení se dotčené služby samy znovu načtou.",
       "httpPort": "HTTP port",
       "httpsPort": "HTTPS port",
       "mysqlPort": "MySQL port",
@@ -2535,7 +2547,10 @@
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "Základ PHP-FPM portu",
       "phpFpmFormula": "Porty jednotlivých verzí se odvozují jako základ + major×10 + minor. Např. základ 9000 + PHP 8.4 = port 9084.",
-      "postgresqlPort": "PostgreSQL port"
+      "postgresqlPort": "PostgreSQL port",
+      "duplicate": "Stejný port má víc služeb: {ports}. Každá služba potřebuje vlastní port.",
+      "inUseTitle": "Port je obsazený",
+      "inUseConfirm": "Tyto porty už používá jiný program: {ports}. Služba se na nich nespustí, dokud se neuvolní. Přesto uložit?"
     },
     "update": {
       "current": "Aktuální verze",

@@ -2270,7 +2270,6 @@
     "snapshotDeleted": "Snapshot deleted",
     "deleteFailed": "Delete failed: {err}",
     "dnsFlushed": "DNS cache flushed",
-    "dnsFlushAdmin": "DNS flush may require admin privileges",
     "dnsFlushUnavailable": "DNS flush endpoint not available",
     "noMampSites": "No MAMP PRO sites found on this machine",
     "mampImported": "Imported {count} site(s) from MAMP",
@@ -2303,11 +2302,12 @@
     "failedToSave": "Failed to save: {err}",
     "autostartFailed": "The system did not allow starting at sign-in.",
     "crashReportsAfterRestart": "Saved. Crash reports start being sent after the app restarts.",
-    "signedIn": "Signed in"
+    "signedIn": "Signed in",
+    "dnsFlushFailed": "Could not flush the DNS cache: {err}"
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Configure NKS WDC daemon and UI preferences",
+    "subtitle": "Settings for NKS WebDev Console and its services",
     "loadFailedSaveBlocked": "Settings could not be loaded from the daemon, so saving is blocked to avoid overwriting them with defaults. Reload the page once the daemon is running.",
     "tabs": {
       "general": "General",
@@ -2326,20 +2326,24 @@
       "apacheHttps": "Apache HTTPS",
       "network": {
         "title": "Network & ports",
-        "subtitle": "Live snapshot of the ports your services listen on.",
-        "editInAdvanced": "Change in Advanced"
+        "subtitle": "The ports your services listen on right now.",
+        "editInAdvanced": "Change ports"
       },
       "backup": {
         "title": "Backup",
-        "subtitle": "Create a manual backup of configs and databases in one click.",
+        "subtitle": "Creates a backup in one click, following the settings on the Backups page.",
         "create": "Create backup now",
         "openManager": "Open backup manager"
       },
       "services": {
         "title": "Services",
         "subtitle": "Local service state (Apache, MySQL, PHP, ...)",
-        "manageOnDashboard": "Manage on dashboard"
-      }
+        "manageOnDashboard": "Manage on dashboard",
+        "notInstalled": "Not installed",
+        "crashed": "Crashed"
+      },
+      "hiddenTab": "These settings are only in Advanced mode.",
+      "switchToAdvanced": "Switch to Advanced mode"
     },
     "account": {
       "simpleSubtitle": "Sign-in and cross-device sync",
@@ -2379,21 +2383,22 @@
     "advancedPorts": {
       "pluginPorts": "Plugin ports",
       "active": "{n} active",
-      "portAlertTitle": "Changing HTTP/HTTPS port reloads the webserver",
-      "portAlertDesc": "Every per-site vhost is regenerated to use the new port and Apache (or nginx/caddy) is reloaded. In-flight browser connections drop briefly. Check that the new port isn't already used by another service before saving."
+      "portAlertTitle": "Changing the HTTP or HTTPS port reloads the web server",
+      "portAlertDesc": "Every site's configuration is regenerated with the new port and the web server reloads. Open browser connections drop briefly. Before saving, the app checks whether another program already uses the new port.",
+      "defaultPort": "default {port}"
     },
     "sso": {
       "title": "Sign in with SSO",
       "signIn": "Sign in with SSO",
       "signOut": "Sign out",
       "signedIn": "Signed in",
-      "signedInAt": "Signed in to the catalog at {url}.",
+      "signedInAt": "Signed in to {url}.",
       "signedInAs": "Signed in as {who}",
-      "configuredCatalog": "configured catalog",
-      "description": "SSO routes through the catalog OIDC flow and returns the token via wdc:// deep-link — no password entry inside WDC. Uses the catalog URL configured in Settings → General.",
-      "catalog": "Catalog",
-      "catalogReachable": "reachable · last sync {ago}",
-      "catalogNeverSynced": "never synced"
+      "configuredCatalog": "the configured catalog",
+      "description": "You sign in in the browser with your NKS account. WDC does not store the password. The catalog address can be changed in Settings → Advanced.",
+      "catalog": "Plugin catalog",
+      "catalogReachable": "reachable, last sync {ago}",
+      "catalogNeverSynced": "not synced yet"
     },
     "advanced": {
       "tabDesc": "Catalog connection, MySQL password, plugin sync and deploys. An empty field means the default value.",
@@ -2436,7 +2441,7 @@
     },
     "about": {
       "subtitle": "Local development server manager",
-      "description": "A modern replacement for MAMP PRO, built with Electron + Vue 3 + Element Plus. Manages Apache, MySQL, PHP, Redis, Mailpit and SSL certificates for local development.",
+      "description": "Manages local Apache, PHP, MySQL, Redis, Mailpit and SSL certificates for web development.",
       "runtime": "Runtime",
       "installedVersions": "Installed Versions",
       "daemonUptime": "Daemon uptime",
@@ -2445,7 +2450,14 @@
       "services": "Services",
       "sites": "Sites",
       "plugins": "Plugins",
-      "binaries": "Binaries"
+      "binaries": "Binaries",
+      "website": "Website",
+      "uptime": {
+        "seconds": "{s} s",
+        "minutes": "{m} min {s} s",
+        "hours": "{h} h {m} min",
+        "days": "{d} day {h} h | {d} days {h} h"
+      }
     },
     "sync": {
       "topDesc": "Sync your configuration with your catalog account, or save it to a file and load it from one.",
@@ -2526,7 +2538,7 @@
       "mampImportButton": "Import"
     },
     "ports": {
-      "description": "Configure default service ports. Restart services after changing.",
+      "description": "The ports your services listen on. After saving, the affected services reload on their own.",
       "httpPort": "HTTP Port",
       "httpsPort": "HTTPS Port",
       "mysqlPort": "MySQL Port",
@@ -2535,7 +2547,10 @@
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "PHP-FPM base port",
       "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084.",
-      "postgresqlPort": "PostgreSQL Port"
+      "postgresqlPort": "PostgreSQL Port",
+      "duplicate": "Several services share a port: {ports}. Each service needs its own port.",
+      "inUseTitle": "Port in use",
+      "inUseConfirm": "Another program already uses these ports: {ports}. The service will not start on them until they are free. Save anyway?"
     },
     "update": {
       "current": "Current version",

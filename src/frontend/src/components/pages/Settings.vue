@@ -9,6 +9,18 @@
 
     <div class="page-body">
       <div v-if="uiModeStore.isSimple" class="simple-settings-grid">
+        <el-alert
+          v-if="hiddenTabRequested"
+          type="info"
+          :closable="false"
+          show-icon
+          class="simple-hidden-tab"
+          :title="$t('settings.simple.hiddenTab')"
+        >
+          <el-button size="small" type="primary" @click="openAdvancedTab(hiddenTabRequested)">
+            {{ $t('settings.simple.switchToAdvanced') }}
+          </el-button>
+        </el-alert>
         <SettingsPanel
           panel-class="simple-settings-panel-main"
           :title="$t('settings.tabs.general')"
@@ -94,7 +106,7 @@
             </div>
           </div>
           <template #actions>
-            <el-button size="small" @click="uiModeStore.setUiMode('advanced')">
+            <el-button size="small" @click="openAdvancedTab('ports')">
               {{ $t('settings.simple.network.editInAdvanced') }} →
             </el-button>
           </template>
@@ -117,14 +129,10 @@
               class="about-sys-row"
             >
               <span class="sys-label">
-                <HealthStatusDot
-                  :level="(svc.state === 2 || svc.status === 'running') ? 'ok' : 'err'"
-                />
-                {{ svc.id }}
+                <HealthStatusDot :level="serviceDot(svc)" />
+                {{ svc.displayName || svc.name || svc.id }}
               </span>
-              <span class="sys-value mono">
-                {{ (svc.state === 2 || svc.status === 'running') ? $t('common.running') : $t('common.stopped') }}
-              </span>
+              <span class="sys-value">{{ serviceStateLabel(svc) }}</span>
             </div>
           </div>
           <template #actions>
@@ -140,6 +148,7 @@
         <SettingsPanel
           :title="$t('settings.simple.backup.title')"
           :subtitle="$t('settings.simple.backup.subtitle')"
+          :icon="FolderOpened"
         >
           <template #actions>
             <el-button
@@ -202,7 +211,7 @@
           v-if="systemInfo"
           panel-class="simple-runtime-panel"
           :title="$t('settings.tabs.about')"
-          :subtitle="`NKS WDC v${appVersion}`"
+          :subtitle="`NKS WebDev Console v${appVersion}`"
           :icon="InfoFilled"
         >
           <div class="simple-runtime-grid">
@@ -265,7 +274,7 @@
                     disabled
                   />
                   <div class="hint">
-                    <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
+                    <code class="mono">{{ p.pluginId }}</code> · {{ $t('settings.advancedPorts.defaultPort', { port: p.defaultPort }) }}
                   </div>
                 </el-form-item>
               </el-form>
@@ -291,6 +300,14 @@
                 <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
                 {{ $t('settings.advancedPorts.portAlertDesc') }}
               </el-alert>
+              <el-alert
+                v-if="duplicatePorts.length > 0"
+                type="error"
+                :closable="false"
+                show-icon
+                style="margin-bottom: var(--wdc-space-3)"
+                :title="$t('settings.ports.duplicate', { ports: duplicatePorts.join(', ') })"
+              />
               <el-form label-position="left" label-width="200px" size="small">
                 <el-form-item :label="$t('settings.ports.httpPort')">
                   <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
@@ -309,6 +326,9 @@
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.mailpitHttp')">
                   <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+                <el-form-item :label="$t('settings.ports.postgresqlPort')">
+                  <el-input-number v-model="ports.postgresql" :min="1" :max="65535" style="width: 100%" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.phpFpmBase')">
                   <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
@@ -929,7 +949,7 @@
         <section v-show="activeTab === 'about'" class="shell-section">
           <div class="tab-content">
             <div class="about-card">
-              <div class="about-logo">NKS WDC</div>
+              <div class="about-logo">NKS WebDev Console</div>
               <div class="about-version">v{{ appVersion }}</div>
               <div class="about-subtitle">{{ $t('settings.about.subtitle') }}</div>
               <div class="about-desc">{{ $t('settings.about.description') }}</div>
@@ -942,20 +962,14 @@
                 <a href="https://github.com/nks-hub/webdev-console-plugins" target="_blank" class="about-link">plugins</a>
                 <a href="https://github.com/nks-hub/wdc-catalog-api" target="_blank" class="about-link">catalog-api</a>
                 <a href="https://github.com/nks-hub/webdev-console-binaries" target="_blank" class="about-link">binaries</a>
-                <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">Website</a>
+                <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">{{ $t('settings.about.website') }}</a>
               </div>
 
-              <div class="about-stack">
-                <el-tag size="small" effect="plain">Electron 34</el-tag>
-                <el-tag size="small" effect="plain">Vue 3.5</el-tag>
-                <el-tag size="small" effect="plain">Element Plus 2.9</el-tag>
-                <el-tag size="small" effect="plain">.NET 9</el-tag>
-              </div>
 
               <!-- F91.4: SSO login moved to Account tab (was here pre-F91.4).
                    Catalog status row stays — it's runtime info, not auth. -->
               <div v-if="pluginCatalogStatus" class="about-sso-status">
-                <HealthStatusDot :level="pluginCatalogStatus.lastFetch ? 'ok' : 'err'" />
+                <HealthStatusDot :level="pluginCatalogStatus.lastFetch ? 'ok' : 'muted'" />
                 <span class="sys-label">{{ $t('settings.sso.catalog') }}</span>
                 <span class="sys-value">
                   {{ pluginCatalogStatus.lastFetch
@@ -1148,6 +1162,7 @@ const settingsSections = computed<SettingsSection[]>(() => [
 
 const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'advanced', 'sync', 'mcp'])
 watch(() => uiModeStore.isSimple, (simple) => {
+  if (!simple) hiddenTabRequested.value = null
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
   }
@@ -1159,7 +1174,18 @@ watch(() => uiModeStore.isSimple, (simple) => {
 // scroll attribute lets us jump to a specific anchor.
 const route = useRoute()
 const router = useRouter()
+// Set when a link asks for an Advanced-only section while in Simple mode.
+const hiddenTabRequested = ref<string | null>(null)
+
+function openAdvancedTab(tab: string): void {
+  hiddenTabRequested.value = null
+  uiModeStore.setUiMode('advanced')
+  activeTab.value = tab
+}
+
 function applyDeepLink(): void {
+  // The page stays alive under other routes; their ?tab= is not ours.
+  if (route.path !== '/settings') return
   if (route.query.tab === 'databases') {
     void router.replace('/databases')
     return
@@ -1169,7 +1195,11 @@ function applyDeepLink(): void {
     ? 'mcp'
     : (typeof route.query.tab === 'string' ? route.query.tab : '')
   if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
-    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) return
+    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) {
+      hiddenTabRequested.value = tabParam
+      return
+    }
+    hiddenTabRequested.value = null
     activeTab.value = tabParam
   }
   if (scrollTarget) {
@@ -1183,6 +1213,12 @@ function applyDeepLink(): void {
 }
 watch(() => route.query, applyDeepLink, { immediate: true })
 
+// Keep the open section in the URL so reload and Back return to it.
+watch(activeTab, (tab) => {
+  if (route.path !== '/settings' || route.query.tab === tab) return
+  void router.replace({ query: { ...route.query, tab, scroll: undefined } })
+})
+
 const saving = ref(false)
 const systemInfo = ref<SystemInfo | null>(null)
 const installedVersions = ref<Array<{ app: string; version: string }>>([])
@@ -1194,6 +1230,13 @@ const ports = reactive({
   redis: 6379,
   mailpitSmtp: 1025,
   mailpitHttp: 8025,
+  postgresql: 5432,
+})
+
+// Two services on one port means one of them fails to start.
+const duplicatePorts = computed<number[]>(() => {
+  const values = Object.values(ports)
+  return [...new Set(values.filter((port, i) => values.indexOf(port) !== i))]
 })
 
 const runOnStartup = ref(false)
@@ -1381,17 +1424,38 @@ const phpVersions = ref<string[]>([])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
 
-// F85: format daemon uptime seconds into human-friendly string.
+// Simple-mode Services panel: a stopped service with no installed binary
+// is "not installed" (grey), not a red failure.
+const installedApps = computed(() => new Set(installedVersions.value.map(b => b.app.toLowerCase())))
+function serviceIsRunning(svc: { state?: number; status?: string }): boolean {
+  return svc.state === 2 || svc.status === 'running'
+}
+function serviceNotInstalled(svc: { id: string; state?: number; status?: string }): boolean {
+  return !serviceIsRunning(svc) && installedVersions.value.length > 0 && !installedApps.value.has(svc.id.toLowerCase())
+}
+function serviceDot(svc: { id: string; state?: number; status?: string }): 'ok' | 'err' | 'muted' {
+  if (serviceIsRunning(svc)) return 'ok'
+  if (svc.state === 4 || svc.status === 'crashed' || svc.status === 'error') return 'err'
+  return 'muted'
+}
+function serviceStateLabel(svc: { id: string; state?: number; status?: string }): string {
+  if (serviceIsRunning(svc)) return t('common.running')
+  if (serviceNotInstalled(svc)) return t('settings.simple.services.notInstalled')
+  if (svc.state === 4 || svc.status === 'crashed' || svc.status === 'error') return t('settings.simple.services.crashed')
+  return t('common.stopped')
+}
+
+// F85: daemon uptime in the UI language ("2 h 5 min", "3 dny 4 h").
 function formatUptime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '—'
   const s = Math.floor(seconds)
-  if (s < 60) return `${s}s`
+  if (s < 60) return t('settings.about.uptime.seconds', { s })
   const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ${s % 60}s`
+  if (m < 60) return t('settings.about.uptime.minutes', { m, s: s % 60 })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ${m % 60}m`
+  if (h < 24) return t('settings.about.uptime.hours', { h, m: m % 60 })
   const d = Math.floor(h / 24)
-  return `${d}d ${h % 24}h`
+  return t('settings.about.uptime.days', { d, h: h % 24 }, d)
 }
 
 // ── Additional settings from SPEC ─────────────────────────────────────
@@ -1673,8 +1737,10 @@ async function flushDns() {
   flushingDns.value = true
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/dns/flush`, { method: 'POST', headers: authHeaders() })
-    if (r.ok) ElMessage.success(t('settingsToast.dnsFlushed'))
-    else ElMessage.warning(t('settingsToast.dnsFlushAdmin'))
+    // The daemon answers 200 either way; `ok` says whether ipconfig succeeded.
+    const result = await r.json().catch(() => null) as { ok?: boolean; output?: string } | null
+    if (r.ok && result?.ok) ElMessage.success(t('settingsToast.dnsFlushed'))
+    else ElMessage.warning(t('settingsToast.dnsFlushFailed', { err: result?.output || `HTTP ${r.status}` }))
   } catch {
     ElMessage.warning(t('settingsToast.dnsFlushUnavailable'))
   } finally {
@@ -1831,6 +1897,7 @@ function applyValues(data: Record<string, string>): void {
   ports.redis = intOr(data['ports.redis'], 6379)
   ports.mailpitSmtp = intOr(data['ports.mailpitSmtp'], 1025)
   ports.mailpitHttp = intOr(data['ports.mailpitHttp'], 8025)
+  ports.postgresql = intOr(data['ports.postgresql'], 5432)
   phpFpmBasePort.value = intOr(data['ports.phpFpmBase'], 9000)
   mcpEnabled.value = boolOn(data['mcp.enabled'])
   mcpStrictKinds.value = boolOn(data['mcp.strict_kinds'])
@@ -1856,6 +1923,7 @@ function formValues(): Record<string, string> {
     'ports.redis': String(ports.redis),
     'ports.mailpitSmtp': String(ports.mailpitSmtp),
     'ports.mailpitHttp': String(ports.mailpitHttp),
+    'ports.postgresql': String(ports.postgresql),
     'ports.phpFpmBase': String(phpFpmBasePort.value),
     'deploy.enabled': String(deployEnabled.value),
     'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
@@ -2708,6 +2776,23 @@ onBeforeUnmount(() => {
   }
 })
 
+// New ports something else already listens on ("8080 (nginx)"). Only the
+// changed ones: the current ports are held by our own running services.
+async function portsInUse(patch: Record<string, string>): Promise<string[]> {
+  const changed = Object.entries(patch)
+    .filter(([key]) => key.startsWith('ports.') && key !== 'ports.phpFpmBase')
+    .map(([, value]) => value)
+  const results = await Promise.all(changed.map(async (port) => {
+    try {
+      const r = await fetch(`${daemonBaseUrl()}/api/ports/check?port=${encodeURIComponent(port)}`, { headers: authHeaders() })
+      if (!r.ok) return null
+      const info = await r.json() as { inUse?: boolean; ownerName?: string | null }
+      return info.inUse ? (info.ownerName ? `${port} (${info.ownerName})` : port) : null
+    } catch { return null }
+  }))
+  return results.filter((x): x is string => x !== null)
+}
+
 async function save() {
   if (!settingsLoaded.value) {
     ElMessage.error(t('settings.loadFailedSaveBlocked'))
@@ -2715,6 +2800,20 @@ async function save() {
   }
   const patch = changedValues.value
   if (Object.keys(patch).length === 0) return
+  if (duplicatePorts.value.length > 0) {
+    ElMessage.error(t('settings.ports.duplicate', { ports: duplicatePorts.value.join(', ') }))
+    return
+  }
+  const busy = await portsInUse(patch)
+  if (busy.length > 0) {
+    try {
+      await ElMessageBox.confirm(t('settings.ports.inUseConfirm', { ports: busy.join(', ') }), t('settings.ports.inUseTitle'), {
+        type: 'warning',
+        confirmButtonText: t('settings.unsaved.save'),
+        cancelButtonText: t('common.cancel'),
+      })
+    } catch { return }
+  }
   saving.value = true
   try {
     // saveSettings throws on non-ok with the daemon's error message extracted.
@@ -3001,11 +3100,11 @@ async function save() {
 .about-subtitle { font-size: 0.88rem; font-weight: 600; color: var(--el-text-color-primary); }
 .about-desc { font-size: 0.82rem; color: var(--el-text-color-secondary); line-height: 1.55; max-width: 56ch; }
 
-.about-stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--wdc-space-1);
-  margin-top: var(--wdc-space-0-5);
+.simple-hidden-tab {
+  grid-column: 1 / -1;
+}
+.simple-hidden-tab :deep(.el-alert__description) {
+  margin-top: var(--wdc-space-2);
 }
 
 .about-system { font-size: 0.85rem; }
