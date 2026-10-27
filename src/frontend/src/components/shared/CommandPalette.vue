@@ -2,8 +2,11 @@
   <el-dialog
     v-model="visible"
     :show-close="false"
+    :title="t('commandPalette.title')"
+    :aria-label="t('commandPalette.title')"
     width="520px"
     class="command-dialog"
+    @opened="focusInput"
     @close="close"
   >
     <div class="command-palette">
@@ -11,31 +14,45 @@
         ref="inputRef"
         v-model="query"
         :placeholder="t('commandPalette.placeholder')"
+        :aria-label="t('commandPalette.placeholder')"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        :aria-expanded="results.length > 0"
+        aria-controls="cmd-listbox"
+        :aria-activedescendant="results.length ? `cmd-opt-${selectedIndex}` : undefined"
         size="large"
         clearable
-        @keydown.enter.prevent="executeFirst"
+        @keydown.enter.prevent="executeSelected"
         @keydown.escape="close"
         @keydown.up.prevent="moveSelection(-1)"
         @keydown.down.prevent="moveSelection(1)"
       />
-      <div class="command-list" v-if="filteredCommands.length">
-        <div
-          v-for="(cmd, i) in filteredCommands"
-          :key="cmd.id"
-          class="command-item"
-          :class="{ selected: i === selectedIndex }"
-          @click="execute(cmd)"
-          @mouseenter="selectedIndex = i"
-        >
-          <el-icon class="cmd-icon"><component :is="cmd.icon" /></el-icon>
-          <div class="cmd-info">
-            <span class="cmd-label">{{ cmd.label }}</span>
-            <span class="cmd-desc" v-if="cmd.description">{{ cmd.description }}</span>
+      <div id="cmd-listbox" class="command-list" role="listbox" :aria-label="t('commandPalette.title')" v-if="results.length">
+        <template v-for="(entry, i) in results" :key="entry.cmd.id">
+          <div v-if="entry.heading" class="command-group" role="presentation">{{ entry.heading }}</div>
+          <div
+            :id="`cmd-opt-${i}`"
+            class="command-item"
+            :class="{ selected: i === selectedIndex }"
+            role="option"
+            :aria-selected="i === selectedIndex"
+            @click="execute(entry.cmd)"
+            @mouseenter="selectedIndex = i"
+          >
+            <el-icon class="cmd-icon" aria-hidden="true"><component :is="entry.cmd.icon" /></el-icon>
+            <div class="cmd-info">
+              <span class="cmd-label">
+                <template v-for="(part, k) in highlight(entry.cmd.label)" :key="k"><mark v-if="part.hit">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
+              </span>
+              <span class="cmd-desc" v-if="entry.cmd.description">{{ entry.cmd.description }}</span>
+            </div>
+            <span class="cmd-tag" v-if="entry.cmd.advanced && uiModeStore.isSimple">{{ t('commandPalette.advancedTag') }}</span>
+            <span class="cmd-shortcut" v-if="entry.cmd.shortcut">{{ entry.cmd.shortcut }}</span>
           </div>
-          <span class="cmd-shortcut" v-if="cmd.shortcut">{{ cmd.shortcut }}</span>
-        </div>
+        </template>
       </div>
-      <div class="command-empty" v-else-if="query">
+      <div class="command-empty" role="status" v-else>
         {{ t('commandPalette.empty') }}
       </div>
     </div>
@@ -46,23 +63,23 @@
 import { ref, computed, watch, nextTick, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-
-const { t } = useI18n()
 import {
-  Monitor, DataAnalysis, Coin, Lock, Grid, Box, Connection,
-  Setting, Share, Message, Plus, Refresh, VideoPlay, VideoPause,
-  Promotion, CircleClose, Edit, Link, DataLine, Key, Operation,
+  Monitor, DataBoard, Coin, Lock, Grid, Box, Connection, Setting, Share, Message, Plus, Refresh,
+  VideoPlay, VideoPause, Promotion, CircleClose, Edit, Link, DataLine, Key, Operation, SetUp,
+  FolderOpened, Download,
 } from '@element-plus/icons-vue'
-import { useServicesStore } from '../../stores/services'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
+import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
+import { runServiceAction, runServiceBatch } from '../../utils/serviceActions'
+import { openMailpit } from '../../utils/mailpit'
 
+const { t } = useI18n()
 const router = useRouter()
 const uiModeStore = useUiModeStore()
 const featureFlagsStore = useFeatureFlagsStore()
-const servicesStore = useServicesStore()
 const daemonStore = useDaemonStore()
 const sitesStore = useSitesStore()
 
@@ -76,106 +93,232 @@ const selectedIndex = ref(0)
 // versions).
 const inputRef = ref<{ focus: () => void } | null>(null)
 
+type Group = 'recommended' | 'recent' | 'navigate' | 'sites' | 'services' | 'actions'
+const GROUP_ORDER: Group[] = ['recommended', 'recent', 'navigate', 'sites', 'services', 'actions']
+
 interface Command {
   id: string
+  group: Group
   label: string
   description?: string
   icon: Component
   shortcut?: string
-  /** Route the command navigates to; used to hide entries the current mode cannot open. */
-  route?: string
+  /** Extra search words (not shown). */
+  keywords?: string
+  /** Page that only exists in the Advanced menu; tagged in Simple mode. */
+  advanced?: boolean
+  /** Also offered in the empty-query "recommended" list. */
+  recommended?: boolean
   action: () => void
 }
 
-// Hide commands whose route the router guard would refuse (Advanced-only
-// pages in Simple mode) and MCP shortcuts when MCP is turned off; they used
-// to bounce silently to /sites.
-function isAvailable(cmd: Command): boolean {
-  if (!cmd.route) return true
-  if (cmd.route.startsWith('/mcp') && !featureFlagsStore.showMcpSurface) return false
-  const target = router.resolve(cmd.route)
-  return !(target.meta.advancedNav && uiModeStore.isSimple)
+// Remembered across sessions: the last few commands that were run.
+const RECENT_KEY = 'wdc.palette.recent'
+const RECENT_MAX = 4
+function readRecent(): string[] {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
+const recentIds = ref<string[]>(readRecent())
+function remember(id: string) {
+  recentIds.value = [id, ...recentIds.value.filter(x => x !== id)].slice(0, RECENT_MAX)
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentIds.value)) } catch { /* private mode */ }
 }
 
-const commands = computed<Command[]>(() => allCommands.value.filter(isAvailable))
+function go(path: string, label: string, icon: Component, extra: Partial<Command> = {}): Command {
+  const target = router.resolve(path)
+  return {
+    id: `go:${path}`,
+    group: 'navigate',
+    label,
+    icon,
+    advanced: !!target.meta.advancedNav,
+    action: () => { void router.push(path) },
+    ...extra,
+  }
+}
 
-const allCommands = computed<Command[]>(() => [
-  { id: 'sites', label: t('commandPalette.gotoSites'), icon: Monitor, shortcut: '', route: '/sites', action: () => router.push('/sites') },
-  { id: 'dashboard', label: t('commandPalette.gotoDashboard'), icon: DataAnalysis, route: '/dashboard', action: () => router.push('/dashboard') },
-  { id: 'services', label: t('commandPalette.gotoServices'), icon: Monitor, route: '/services', action: () => router.push('/services') },
-  { id: 'databases', label: t('commandPalette.gotoDatabases'), icon: Coin, route: '/databases', action: () => router.push('/databases') },
-  { id: 'ssl', label: t('commandPalette.gotoSsl'), icon: Lock, route: '/ssl', action: () => router.push('/ssl') },
-  { id: 'php', label: t('commandPalette.gotoPhp'), icon: Grid, route: '/php', action: () => router.push('/php') },
-  { id: 'binaries', label: t('commandPalette.gotoBinaries'), icon: Box, route: '/binaries', action: () => router.push('/binaries') },
-  { id: 'plugins', label: t('commandPalette.gotoPlugins'), icon: Share, route: '/plugins', action: () => router.push('/plugins') },
-  { id: 'settings', label: t('commandPalette.gotoSettings'), icon: Setting, route: '/settings', action: () => router.push('/settings') },
-  { id: 'cloudflare', label: t('commandPalette.gotoCloudflare'), icon: Connection, route: '/cloudflare', action: () => router.push('/cloudflare') },
-  // MCP shortcuts — Phase 8 redesign surfaces 4 quick jumps for the
-  // most common operator paths into the MCP module.
-  { id: 'mcp-activity', label: t('commandPalette.gotoMcpActivity'), description: t('commandPalette.gotoMcpActivityDesc'), icon: DataLine, route: '/mcp/activity', action: () => router.push('/mcp/activity') },
-  { id: 'mcp-requests', label: t('commandPalette.gotoMcpRequests'), description: t('commandPalette.gotoMcpRequestsDesc'), icon: Lock, route: '/mcp/intents', action: () => router.push('/mcp/intents') },
-  { id: 'mcp-rules', label: t('commandPalette.gotoMcpRules'), description: t('commandPalette.gotoMcpRulesDesc'), icon: Key, route: '/mcp/grants', action: () => router.push('/mcp/grants') },
-  { id: 'mcp-catalog', label: t('commandPalette.gotoMcpCatalog'), description: t('commandPalette.gotoMcpCatalogDesc'), icon: Operation, route: '/mcp/kinds', action: () => router.push('/mcp/kinds') },
-  { id: 'mailpit-ui', label: t('commandPalette.openMailpit'), icon: Message, action: () => window.open('http://localhost:8025', '_blank') },
-  { id: 'new-site', label: t('commandPalette.newSite'), icon: Plus, shortcut: 'Ctrl+N', action: () => router.push({ path: '/sites', query: { create: '1' } }) },
-  { id: 'refresh', label: t('commandPalette.refresh'), icon: Refresh, shortcut: 'F5', action: () => daemonStore.poll() },
-  ...daemonStore.services.map(svc => ({
-    id: `start-${svc.id}`,
-    label: t('commandPalette.startService', { name: svc.displayName || svc.id }),
-    description: svc.state === 2 ? t('commandPalette.alreadyRunning') : '',
-    icon: VideoPlay,
-    action: () => { if (svc.state !== 2) servicesStore.start(svc.id) },
-  })),
-  ...daemonStore.services.map(svc => ({
-    id: `stop-${svc.id}`,
-    label: t('commandPalette.stopService', { name: svc.displayName || svc.id }),
-    description: svc.state === 0 ? t('commandPalette.alreadyStopped') : '',
-    icon: VideoPause,
-    action: () => { if (svc.state === 2) servicesStore.stop(svc.id) },
-  })),
-  { id: 'start-all', label: t('commandPalette.startAll'), icon: Promotion, action: () => {
-    daemonStore.services.filter(s => s.state === 0).forEach(s => servicesStore.start(s.id))
-  }},
-  { id: 'stop-all', label: t('commandPalette.stopAll'), icon: CircleClose, action: () => {
-    daemonStore.services.filter(s => s.state === 2).forEach(s => servicesStore.stop(s.id))
-  }},
-  // Dynamic per-site commands — open in browser + edit
-  ...sitesStore.sites.map(site => ({
-    id: `open-site-${site.domain}`,
+// Pages in Simple mode stay reachable here (tagged "Advanced"), unlike the
+// menu, which leaves them out. MCP pages only exist while MCP is switched on.
+const navigation = computed<Command[]>(() => {
+  const nav: Command[] = [
+    go('/dashboard', t('commandPalette.gotoDashboard'), DataBoard, { recommended: true }),
+    go('/sites', t('commandPalette.gotoSites'), Monitor, { recommended: true }),
+    go('/services', t('commandPalette.gotoServices'), SetUp, { recommended: true }),
+    go('/databases', t('commandPalette.gotoDatabases'), Coin),
+    go('/ssl', t('commandPalette.gotoSsl'), Lock),
+    go('/php', t('commandPalette.gotoPhp'), Grid),
+    go('/binaries', t('commandPalette.gotoBinaries'), Box),
+    go('/plugins', t('commandPalette.gotoPlugins'), Share),
+    go('/cloudflare', t('commandPalette.gotoCloudflare'), Connection),
+    go('/backups', t('nav.backups'), FolderOpened),
+    go('/settings', t('commandPalette.gotoSettings'), Setting, { recommended: true }),
+  ]
+  if (featureFlagsStore.showMcpSurface) {
+    nav.push(
+      go('/mcp/activity', t('commandPalette.gotoMcpActivity'), DataLine, { description: t('commandPalette.gotoMcpActivityDesc') }),
+      go('/mcp/intents', t('commandPalette.gotoMcpRequests'), Lock, { description: t('commandPalette.gotoMcpRequestsDesc') }),
+      go('/mcp/grants', t('commandPalette.gotoMcpRules'), Key, { description: t('commandPalette.gotoMcpRulesDesc') }),
+      go('/mcp/kinds', t('commandPalette.gotoMcpCatalog'), Operation, { description: t('commandPalette.gotoMcpCatalogDesc') }),
+    )
+  }
+  return nav
+})
+
+function siteUrl(site: { domain: string; sslEnabled?: boolean; httpPort?: number; httpsPort?: number }): string {
+  const proto = site.sslEnabled ? 'https' : 'http'
+  const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
+  const suffix = (site.sslEnabled && port === 443) || (!site.sslEnabled && port === 80) ? '' : `:${port}`
+  return `${proto}://${site.domain}${suffix}`
+}
+
+const siteCommands = computed<Command[]>(() => sitesStore.sites.flatMap(site => [
+  {
+    id: `open-site:${site.domain}`,
+    group: 'sites' as const,
     label: t('commandPalette.openSite', { domain: site.domain }),
     icon: Link,
-    action: () => {
-      const proto = site.sslEnabled ? 'https' : 'http'
-      const port = site.sslEnabled ? (site.httpsPort || 443) : (site.httpPort || 80)
-      const suffix = (site.sslEnabled && port === 443) || (!site.sslEnabled && port === 80) ? '' : `:${port}`
-      window.open(`${proto}://${site.domain}${suffix}`, '_blank')
-    },
-  })),
-  ...sitesStore.sites.map(site => ({
-    id: `edit-site-${site.domain}`,
+    action: () => { window.open(siteUrl(site), '_blank') },
+  },
+  {
+    id: `edit-site:${site.domain}`,
+    group: 'sites' as const,
     label: t('commandPalette.editSite', { domain: site.domain }),
     icon: Edit,
-    action: () => router.push(`/sites/${site.domain}/edit`),
-  })),
+    action: () => { void router.push(`/sites/${encodeURIComponent(site.domain)}/edit`) },
+  },
+]))
+
+// Only actions that make sense for the service's state: no "start" on a
+// running service, nothing to start on one that is not installed (install instead).
+const serviceCommands = computed<Command[]>(() => daemonStore.visibleServices.flatMap(svc => {
+  const name = shortServiceName(svc)
+  const state = serviceViewState(svc)
+  if (state === 'notInstalled') {
+    return [{
+      id: `install:${svc.id}`,
+      group: 'services' as const,
+      label: t('commandPalette.installService', { name }),
+      icon: Download,
+      action: () => { void router.push({ path: '/binaries', query: { app: svc.binaryApp ?? svc.id } }) },
+    }]
+  }
+  if (state === 'stopped' || state === 'crashed') {
+    return [{
+      id: `start:${svc.id}`,
+      group: 'services' as const,
+      label: t('commandPalette.startService', { name }),
+      icon: VideoPlay,
+      action: () => { void runServiceAction(svc, 'start') },
+    }]
+  }
+  if (isRunning(svc)) {
+    return [{
+      id: `stop:${svc.id}`,
+      group: 'services' as const,
+      label: t('commandPalette.stopService', { name }),
+      icon: VideoPause,
+      action: () => { void runServiceAction(svc, 'stop') },
+    }]
+  }
+  return []
+}))
+
+const actionCommands = computed<Command[]>(() => {
+  const services = daemonStore.visibleServices
+  const mailpit = services.find(s => s.id === 'mailpit')
+  const startable = services.filter(s => serviceViewState(s) === 'stopped')
+  const out: Command[] = [
+    {
+      id: 'new-site', group: 'actions', label: t('commandPalette.newSite'), icon: Plus, shortcut: 'Ctrl+N',
+      recommended: true, action: () => { void router.push({ path: '/sites', query: { create: '1' } }) },
+    },
+    { id: 'refresh', group: 'actions', label: t('commandPalette.refresh'), icon: Refresh, shortcut: 'F5', action: () => { void daemonStore.poll() } },
+  ]
+  if (mailpit && isRunning(mailpit)) {
+    out.push({ id: 'mailpit-ui', group: 'actions', label: t('commandPalette.openMailpit'), icon: Message, action: openMailpit })
+  }
+  if (startable.length) {
+    out.push({ id: 'start-all', group: 'actions', label: t('commandPalette.startAll'), icon: Promotion, action: () => { void runServiceBatch('start', startable) } })
+  }
+  if (daemonStore.runningServices.length) {
+    out.push({ id: 'stop-all', group: 'actions', label: t('commandPalette.stopAll'), icon: CircleClose, action: () => { void runServiceBatch('stop', daemonStore.runningServices) } })
+  }
+  return out
+})
+
+const allCommands = computed<Command[]>(() => [
+  ...navigation.value, ...siteCommands.value, ...serviceCommands.value, ...actionCommands.value,
 ])
 
-const filteredCommands = computed(() => {
-  if (!query.value) return commands.value.slice(0, 10)
-  const q = query.value.toLowerCase()
-  return commands.value.filter(c =>
-    c.label.toLowerCase().includes(q) ||
-    c.id.toLowerCase().includes(q) ||
-    (c.description ?? '').toLowerCase().includes(q)
-  ).slice(0, 10)
+// Matching ignores case and diacritics: "prehled" finds "Přehled".
+function fold(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+}
+
+interface Entry { cmd: Command; heading?: string }
+
+const results = computed<Entry[]>(() => {
+  const q = fold(query.value.trim())
+  let picked: Command[]
+  if (!q) {
+    const byId = new Map(allCommands.value.map(c => [c.id, c]))
+    const recent = recentIds.value.map(id => byId.get(id)).filter((c): c is Command => !!c)
+    const recentSet = new Set(recent.map(c => c.id))
+    const recommended = allCommands.value.filter(c => c.recommended && !recentSet.has(c.id))
+    picked = [
+      ...recent.map(c => ({ ...c, group: 'recent' as const })),
+      ...recommended.map(c => ({ ...c, group: 'recommended' as const })),
+    ]
+  } else {
+    // Label matches first (prefix before substring), then description / keyword matches.
+    const scored = allCommands.value.flatMap(c => {
+      const label = fold(c.label)
+      const rest = fold(`${c.description ?? ''} ${c.keywords ?? ''}`)
+      const score = label.startsWith(q) ? 0 : label.includes(q) ? 1 : rest.includes(q) ? 2 : -1
+      return score < 0 ? [] : [{ c, score }]
+    })
+    scored.sort((a, b) => a.score - b.score)
+    picked = scored.slice(0, 30).map(s => s.c)
+  }
+  const ordered = [...picked].sort((a, b) =>
+    q ? 0 : GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group))
+  let lastGroup: Group | null = null
+  return ordered.map(cmd => {
+    const heading = !q && cmd.group !== lastGroup ? t(`commandPalette.groups.${cmd.group}`) : undefined
+    lastGroup = cmd.group
+    return { cmd, heading }
+  })
 })
+
+// Splits a label around the matched text so it can be marked without v-html.
+function highlight(label: string): Array<{ text: string; hit: boolean }> {
+  const q = query.value.trim()
+  if (!q) return [{ text: label, hit: false }]
+  const start = fold(label).indexOf(fold(q))
+  // Folding never changes the length of Latin/Czech text, so offsets carry over.
+  if (start < 0 || fold(label).length !== label.length) return [{ text: label, hit: false }]
+  const end = start + q.length
+  return [
+    { text: label.slice(0, start), hit: false },
+    { text: label.slice(start, end), hit: true },
+    { text: label.slice(end), hit: false },
+  ].filter(p => p.text)
+}
 
 watch(query, () => { selectedIndex.value = 0 })
 
+function focusInput() { inputRef.value?.focus() }
+
 function open() {
-  visible.value = true
-  query.value = ''
-  selectedIndex.value = 0
-  nextTick(() => inputRef.value?.focus())
+  if (!visible.value) {
+    query.value = ''
+    selectedIndex.value = 0
+    visible.value = true
+  }
+  nextTick(focusInput)
 }
 
 function close() {
@@ -183,19 +326,21 @@ function close() {
 }
 
 function execute(cmd: Command) {
-  cmd.action()
+  remember(cmd.id)
   close()
+  cmd.action()
 }
 
-function executeFirst() {
-  const cmd = filteredCommands.value[selectedIndex.value]
-  if (cmd) execute(cmd)
+function executeSelected() {
+  const entry = results.value[selectedIndex.value]
+  if (entry) execute(entry.cmd)
 }
 
 function moveSelection(delta: number) {
-  const len = filteredCommands.value.length
+  const len = results.value.length
   if (len === 0) return
   selectedIndex.value = (selectedIndex.value + delta + len) % len
+  void nextTick(() => document.getElementById(`cmd-opt-${selectedIndex.value}`)?.scrollIntoView({ block: 'nearest' }))
 }
 
 defineExpose({ open })
@@ -231,7 +376,7 @@ defineExpose({ open })
   border-left-color: var(--wdc-accent);
   box-shadow: 0 0 0 1px var(--wdc-accent-glow);
 }
-.command-item.selected .cmd-label { color: var(--wdc-accent); font-weight: 600; }
+.command-item.selected .cmd-label { color: var(--wdc-accent-ink); font-weight: 600; }
 
 .cmd-icon {
   font-size: 1rem;
@@ -256,6 +401,31 @@ defineExpose({ open })
 .cmd-desc {
   font-size: 0.72rem;
   color: var(--wdc-text-3);
+}
+
+.command-group {
+  margin: var(--wdc-space-2) var(--wdc-space-3-5) var(--wdc-space-1);
+  font-family: var(--wdc-font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wdc-text-3);
+}
+.cmd-label mark {
+  background: transparent;
+  color: var(--wdc-accent-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--wdc-accent);
+  text-underline-offset: 0.15em;
+}
+.cmd-tag {
+  font-size: 0.68rem;
+  color: var(--wdc-text-3);
+  border: 1px solid var(--wdc-border);
+  padding: 0 var(--wdc-space-1-5);
+  border-radius: 999px;
 }
 
 .cmd-shortcut {
