@@ -566,11 +566,20 @@
     "subtitle": "Manage PHP dependencies across all sites",
     "version": "Composer version",
     "sitesWithComposer": "Sites with Composer",
-    "noSites": "No sites have a composer.json",
+    "noSites": "No sites yet. A site shows up here once its root has a composer.json.",
     "notInstalledTitle": "Composer not detected",
     "notInstalledHint": "Download official composer.phar from getcomposer.org into the managed binaries folder.",
     "installNow": "Install Composer",
-    "missingLock": "missing"
+    "missingLock": "missing",
+    "versionLabel": "Version",
+    "pathLabel": "Path",
+    "versionUnknown": "version unknown",
+    "versionProbeFailed": "Could not read the version: {err}",
+    "installedToast": "Composer is installed ({version})",
+    "installFailed": "Installing Composer failed: {err}",
+    "lockPresent": "composer.lock present",
+    "pluginMissingTitle": "The Composer plugin is not installed",
+    "pluginMissingDesc": "Composer runs for your sites through the Composer plugin. Without it composer.phar can be downloaded, but WDC cannot use it."
   },
   "sidebar": {
     "servicesOnline": "services online"

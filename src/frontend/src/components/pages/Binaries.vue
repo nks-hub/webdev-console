@@ -755,11 +755,10 @@ async function installComposer() {
       ElMessage.error(t('binaries.composer.installFailed', { err: body.error || body.detail || `HTTP ${r.status}` }))
       return
     }
-    const body = await r.json().catch(() => ({})) as { path?: string; version?: string | null }
+    const body = await r.json().catch(() => ({})) as { path?: string }
     await loadComposerVersion()
     // The phar is on disk even when the version probe has no PHP to run it with.
     if (!composerPath.value && body.path) composerPath.value = body.path
-    if (!composerVersion.value && body.version) composerVersion.value = body.version
     ElMessage.success(t('binaries.composer.installed', { version: composerVersion.value || t('binaries.composer.versionUnknown') }))
   } catch (e) {
     ElMessage.error(t('binaries.composer.installFailed', { err: errorMessage(e) }))

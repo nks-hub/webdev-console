@@ -563,14 +563,23 @@
   },
   "composer": {
     "title": "Composer",
-    "subtitle": "Správa PHP závislostí napříč všemi weby",
+    "subtitle": "PHP závislosti napříč všemi weby",
     "version": "Verze Composeru",
     "sitesWithComposer": "Weby s Composerem",
-    "noSites": "Žádné weby nemají composer.json",
-    "notInstalledTitle": "Composer nenalezen",
-    "notInstalledHint": "Stáhněte oficiální composer.phar z getcomposer.org a uložte do spravovaných binárek.",
+    "noSites": "Zatím tu není žádný web. Web se tu objeví, jakmile má v kořeni soubor composer.json.",
+    "notInstalledTitle": "Composer zatím není nainstalovaný",
+    "notInstalledHint": "Stáhne se oficiální composer.phar z getcomposer.org do spravovaných binárek. Spouští se pod výchozí verzí PHP.",
     "installNow": "Nainstalovat Composer",
-    "missingLock": "chybí"
+    "missingLock": "chybí",
+    "versionLabel": "Verze",
+    "pathLabel": "Cesta",
+    "versionUnknown": "verze neznámá",
+    "versionProbeFailed": "Verzi se nepodařilo zjistit: {err}",
+    "installedToast": "Composer je nainstalovaný ({version})",
+    "installFailed": "Instalace Composeru selhala: {err}",
+    "lockPresent": "composer.lock je k dispozici",
+    "pluginMissingTitle": "Plugin Composer není nainstalovaný",
+    "pluginMissingDesc": "Composer na weby spouští plugin Composer. Bez něj se composer.phar sice stáhne, ale WDC ho neumí použít."
   },
   "sidebar": {
     "servicesOnline": "Služeb online"

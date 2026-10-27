@@ -11,20 +11,25 @@
     </div>
 
     <div class="page-body">
-      <!-- Section 1: Composer version -->
-      <el-card class="cm-card" shadow="never">
-        <template #header>
-          <span class="cm-section-title">{{ $t('composer.version') }}</span>
-        </template>
+      <PluginMissingState
+        v-if="pluginState !== 'ok' && pluginState !== 'unknown'"
+        plugin-id="nks.wdc.composer"
+        :title="$t('composer.pluginMissingTitle')"
+        :description="$t('composer.pluginMissingDesc')"
+        @enabled="loadAll"
+      />
 
-        <div v-if="versionLoading" style="padding: var(--wdc-space-2) 0">
+      <!-- Section 1: Composer version -->
+      <EditCard v-else :title="$t('composer.version')">
+        <div v-if="versionLoading">
           <el-skeleton :rows="2" animated />
         </div>
-        <el-descriptions v-else-if="composerVersion" :column="2" border size="small">
-          <el-descriptions-item label="Version">
-            <el-tag type="success" size="small" class="mono">{{ composerVersion }}</el-tag>
+        <el-descriptions v-else-if="composerVersion || composerPath" :column="2" border size="small">
+          <el-descriptions-item :label="$t('composer.versionLabel')">
+            <el-tag v-if="composerVersion" type="success" size="small" class="mono">{{ composerVersion }}</el-tag>
+            <span v-else class="text-muted">{{ $t('composer.versionUnknown') }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="Path">
+          <el-descriptions-item :label="$t('composer.pathLabel')">
             <span class="mono text-muted">{{ composerPath || '—' }}</span>
           </el-descriptions-item>
         </el-descriptions>
@@ -35,20 +40,18 @@
           <el-button type="primary" :loading="installing" @click="selfInstall">
             {{ t('composer.installNow') }}
           </el-button>
-          <p v-if="installError" class="install-error">{{ installError }}</p>
+          <p v-if="installError" class="install-error" role="alert">{{ installError }}</p>
         </div>
-      </el-card>
+        <p v-if="!versionLoading && composerPath && !composerVersion && versionError" class="version-error text-muted">
+          {{ $t('composer.versionProbeFailed', { err: versionError }) }}
+        </p>
+      </EditCard>
 
       <!-- Section 2: Sites with Composer -->
-      <el-card class="cm-card" shadow="never">
-        <template #header>
-          <div class="cm-card-header">
-            <span class="cm-section-title">{{ $t('composer.sitesWithComposer') }}</span>
-            <el-tag v-if="sitesWithComposer.length > 0" type="info" size="small">{{ sitesWithComposer.length }}</el-tag>
-          </div>
-        </template>
+      <EditCard :hint="sitesWithComposer.length > 0 ? String(sitesWithComposer.length) : ''" flush-body>
+        <template #title>{{ $t('composer.sitesWithComposer') }}</template>
 
-        <div v-if="loading" style="padding: var(--wdc-space-2) 0">
+        <div v-if="loading" class="cm-loading">
           <el-skeleton :rows="4" animated />
         </div>
 
@@ -65,22 +68,12 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="composer.json" min-width="160" align="center">
-            <template #default="{ row }">
-              <el-tag v-if="row.status?.hasComposerJson" type="success" size="small">
-                <el-icon><Check /></el-icon>
-              </el-tag>
-              <el-tag v-else type="info" size="small">—</el-tag>
-            </template>
-          </el-table-column>
-
           <el-table-column label="composer.lock" min-width="160" align="center">
             <template #default="{ row }">
-              <el-tag v-if="row.status?.hasLock" type="success" size="small">
+              <el-tag v-if="row.status?.hasLock" type="success" size="small" :aria-label="$t('composer.lockPresent')">
                 <el-icon><Check /></el-icon>
               </el-tag>
-              <el-tag v-else-if="row.status?.hasComposerJson" type="warning" size="small">{{ $t('composer.missingLock') }}</el-tag>
-              <el-tag v-else type="info" size="small">—</el-tag>
+              <el-tag v-else type="warning" size="small">{{ $t('composer.missingLock') }}</el-tag>
             </template>
           </el-table-column>
 
@@ -108,7 +101,7 @@
         <div v-if="loading && scanProgress > 0" class="scan-progress">
           <el-progress :percentage="scanProgress" :format="() => `${scannedCount}/${sites.length}`" />
         </div>
-      </el-card>
+      </EditCard>
     </div>
   </div>
 </template>
@@ -116,16 +109,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { Check, WarningFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
+import { usePluginsStore } from '../../stores/plugins'
 import { composerStatus, daemonAuthHeaders as authHeaders, daemonBaseUrl } from '../../api/daemon'
 import type { ComposerStatus } from '../../api/types'
+import EditCard from '../shared/EditCard.vue'
+import PluginMissingState from '../shared/PluginMissingState.vue'
 
 const { t } = useI18n()
 
 const router = useRouter()
 const sitesStore = useSitesStore()
+const pluginsStore = usePluginsStore()
 
 interface SiteComposerRow {
   domain: string
@@ -137,6 +135,7 @@ const loading = ref(false)
 const versionLoading = ref(false)
 const composerVersion = ref<string | null>(null)
 const composerPath = ref<string | null>(null)
+const versionError = ref<string | null>(null)
 const installing = ref(false)
 const installError = ref<string | null>(null)
 
@@ -145,6 +144,15 @@ const scannedCount = ref(0)
 const allSitesScanned = ref(false)
 
 const sites = computed(() => sitesStore.sites)
+
+// Without the Composer plugin the daemon cannot run composer at all, so a
+// downloaded phar would never show up as installed; say what is missing.
+const pluginState = computed<'unknown' | 'ok' | 'missing' | 'disabled'>(() => {
+  if (pluginsStore.manifests.length === 0) return 'unknown'
+  const manifest = pluginsStore.manifests.find(p => p.id === 'nks.wdc.composer')
+  if (!manifest) return 'missing'
+  return manifest.enabled ? 'ok' : 'disabled'
+})
 
 const sitesWithComposer = computed(() =>
   siteRows.value.filter(r => r.status?.hasComposerJson)
@@ -163,13 +171,14 @@ async function selfInstall(): Promise<void> {
       method: 'POST',
       headers: authHeaders(),
     })
-    if (!r.ok) {
-      const body = await r.json().catch(() => ({})) as { detail?: string }
-      throw new Error(body.detail || `HTTP ${r.status}`)
-    }
+    const body = await r.json().catch(() => ({})) as { detail?: string; path?: string }
+    if (!r.ok) throw new Error(body.detail || `HTTP ${r.status}`)
     await loadComposerVersion()
+    // The phar is on disk even when the version probe cannot run it yet.
+    if (!composerPath.value && body.path) composerPath.value = body.path
+    ElMessage.success(t('composer.installedToast', { version: composerVersion.value || t('composer.versionUnknown') }))
   } catch (e) {
-    installError.value = e instanceof Error ? e.message : String(e)
+    installError.value = t('composer.installFailed', { err: e instanceof Error ? e.message : String(e) })
   } finally {
     installing.value = false
   }
@@ -182,9 +191,10 @@ async function loadComposerVersion(): Promise<void> {
       headers: authHeaders(),
     })
     if (res.ok) {
-      const data = await res.json() as { version?: string; path?: string }
+      const data = await res.json() as { version?: string; path?: string; lastError?: string | null }
       composerVersion.value = data.version ?? null
       composerPath.value = data.path ?? null
+      versionError.value = data.lastError ?? null
     }
   } catch {
     // endpoint may not exist yet — silent, show empty state
@@ -222,13 +232,7 @@ async function scanSites(): Promise<void> {
     })
   )
 
-  // Sort: sites with composer.json first, then alphabetically
-  results.sort((a, b) => {
-    const aHas = a.status?.hasComposerJson ? 1 : 0
-    const bHas = b.status?.hasComposerJson ? 1 : 0
-    if (bHas !== aHas) return bHas - aHas
-    return a.domain.localeCompare(b.domain)
-  })
+  results.sort((a, b) => a.domain.localeCompare(b.domain))
 
   siteRows.value = results
   allSitesScanned.value = true
@@ -239,6 +243,7 @@ async function loadAll(): Promise<void> {
   if (sites.value.length === 0) {
     await sitesStore.load()
   }
+  if (pluginsStore.manifests.length === 0) void pluginsStore.loadAll()
   await Promise.all([loadComposerVersion(), scanSites()])
 }
 
@@ -297,25 +302,14 @@ onMounted(() => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--wdc-space-5-5) var(--wdc-space-5-5);
+  padding: var(--wdc-space-4) 0;
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-4);
 }
 
-.cm-card {
-  border-radius: var(--wdc-radius);
-}
-
-.cm-card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-2-5);
-}
-
-.cm-section-title {
-  font-weight: 600;
-  font-size: 0.9rem;
+.cm-loading {
+  padding: var(--wdc-space-4);
 }
 
 .mono {
@@ -324,12 +318,16 @@ onMounted(() => {
 }
 
 .text-muted {
-  color: var(--el-text-color-secondary);
+  color: var(--wdc-text-3);
+}
+
+.version-error {
+  margin: var(--wdc-space-2) 0 0;
+  font-size: 0.8rem;
 }
 
 .scan-progress {
-  margin-top: var(--wdc-space-3);
-  padding: 0 var(--wdc-space-1);
+  margin: var(--wdc-space-3) var(--wdc-space-4);
 }
 
 .composer-not-installed {
@@ -340,7 +338,7 @@ onMounted(() => {
   padding: var(--wdc-space-6) var(--wdc-space-4);
   text-align: center;
 }
-.composer-not-installed h3 { margin: 4px 0 0; font-size: 1rem; font-weight: 600; }
+.composer-not-installed h3 { margin: var(--wdc-space-1) 0 0; font-size: 1rem; font-weight: 600; }
 .composer-not-installed p { margin: 0; max-width: 420px; font-size: 0.85rem; }
-.install-error { color: var(--el-color-danger); }
+.install-error { color: var(--wdc-status-error); }
 </style>

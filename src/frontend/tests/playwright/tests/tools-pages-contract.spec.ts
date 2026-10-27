@@ -62,4 +62,11 @@ test.describe('Tool pages — source contract', () => {
     expect(readFileSync(join(srcRoot, 'components', 'shared', 'PluginMissingState.vue'), 'utf-8'))
       .toMatch(/query: \{ tab: 'marketplace', q: props\.pluginId \}/)
   })
+
+  test('composer page names a missing plugin instead of looping on install', () => {
+    const vue = page('ComposerManager.vue')
+    expect(vue).toContain('plugin-id="nks.wdc.composer"')
+    expect(vue).toMatch(/if \(!composerPath\.value && body\.path\) composerPath\.value = body\.path/)
+    expect(vue).not.toContain('label="composer.json"')
+  })
 })
