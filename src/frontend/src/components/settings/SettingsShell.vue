@@ -145,9 +145,11 @@ function onKey(e: KeyboardEvent, current: string) {
 }
 .shell-tab:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: -2px; }
 .shell-body { min-width: 0; display: flex; flex-direction: column; gap: var(--wdc-space-4); }
+/* z-index: Element Plus input-number buttons carry z-index 1 and would paint over the bar. */
 .shell-footer {
   position: sticky;
   bottom: 0;
+  z-index: 5;
   display: flex;
   gap: var(--wdc-space-2);
   padding: var(--wdc-space-3) 0;

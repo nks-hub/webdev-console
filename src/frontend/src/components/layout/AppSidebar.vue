@@ -79,7 +79,8 @@
         <a
           v-activate
           class="nav-item nav-item-sso"
-          :class="{ signedin: authStore.isAuthenticated }"
+          :class="{ signedin: authStore.isAuthenticated, active: isPathActive('/login') }"
+          :aria-current="isPathActive('/login') ? 'page' : undefined"
           :title="authStore.isAuthenticated
             ? $t('nav.signedInAsTitle', { name: authStore.displayName || '?' })
             : $t('nav.signInTitle')"
