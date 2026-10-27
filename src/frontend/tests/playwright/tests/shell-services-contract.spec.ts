@@ -53,6 +53,14 @@ test.describe('Shell services contract', () => {
     expect(dashboard).toMatch(/\/service\/\$\{encodeURIComponent\(id\)\}\/config/)
   })
 
+  test('browser sign-in can be cancelled and times out', () => {
+    const auth = read('stores', 'auth.ts')
+    expect(auth).toMatch(/function cancelLogin/)
+    expect(auth).toMatch(/SSO_TIMEOUT_MS/)
+    const login = read('components', 'pages', 'Login.vue')
+    expect(login).toMatch(/authStore\.cancelLogin\(\)/)
+  })
+
   test('shortcuts read the typed letter or physical key, not a fixed e.key', () => {
     const source = read('App.vue')
     expect(source).not.toMatch(/e\.key === 'k'/)

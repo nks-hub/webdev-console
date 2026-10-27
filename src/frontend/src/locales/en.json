@@ -142,8 +142,11 @@
       "exists": "An account with this e-mail already exists.",
       "network": "Could not reach the catalog. Check your internet connection.",
       "mismatch": "The passwords do not match.",
-      "generic": "Sign-in did not work ({detail})."
-    }
+      "generic": "Sign-in did not work ({detail}).",
+      "timedOut": "The browser sign-in was not completed in time. Please try again."
+    },
+    "waiting": "Finish signing in in the browser window that opened.",
+    "cancel": "Cancel"
   },
   "nav": {
     "services": "Services",

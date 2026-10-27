@@ -142,8 +142,11 @@
       "exists": "Účet s tímto e-mailem už existuje.",
       "network": "Nepodařilo se spojit s katalogem. Zkontrolujte připojení k internetu.",
       "mismatch": "Hesla se neshodují.",
-      "generic": "Přihlášení se nepovedlo ({detail})."
-    }
+      "generic": "Přihlášení se nepovedlo ({detail}).",
+      "timedOut": "Přihlášení v prohlížeči nebylo dokončeno včas. Zkuste to znovu."
+    },
+    "waiting": "Dokončete přihlášení v otevřeném prohlížeči.",
+    "cancel": "Zrušit"
   },
   "nav": {
     "services": "Služby",

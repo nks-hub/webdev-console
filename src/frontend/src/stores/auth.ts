@@ -61,6 +61,8 @@ function decodeJwtClaims(jwt: string): SsoIdentity | null {
 // F91.9: persist the catalog-fetched profile so a page reload can show
 // "Signed in as …" before the network round-trip completes.
 const PROFILE_KEY = 'nks-wdc-sso-profile'
+// The browser sign-in can be abandoned; stop waiting after this long.
+const SSO_TIMEOUT_MS = 5 * 60_000
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>(localStorage.getItem(TOKEN_KEY) ?? '')
@@ -142,12 +144,18 @@ export const useAuthStore = defineStore('auth', () => {
     loginError.value = ''
   }
 
+  let cancelPending: (() => void) | null = null
+
+  /** Stops waiting for the browser sign-in; the pending login() rejects with "cancelled". */
+  function cancelLogin() { cancelPending?.() }
+
   /**
    * Kick off the SSO flow against `<catalogUrl>/auth/sso/login`. Resolves
    * once the deep-link callback arrives with a token, rejects if the
    * environment is not Electron or the IdP reports an error.
    */
   async function login(catalogUrl: string): Promise<string> {
+    cancelPending?.()
     const api = window.electronAPI
     if (!api?.onSsoCallback || !api.openExternal) {
       const err = 'SSO requires the desktop app (electronAPI unavailable)'
@@ -159,7 +167,21 @@ export const useAuthStore = defineStore('auth', () => {
     loginError.value = ''
 
     return await new Promise<string>((resolve, reject) => {
-      const unsub = api.onSsoCallback!(payload => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      let unsub: () => void = () => {}
+      const finish = () => {
+        loginPending.value = false
+        clearTimeout(timer)
+        unsub()
+        cancelPending = null
+      }
+      cancelPending = () => { finish(); reject(new Error('cancelled')) }
+      timer = setTimeout(() => {
+        loginError.value = 'timed out'
+        finish()
+        reject(new Error('timed out'))
+      }, SSO_TIMEOUT_MS)
+      unsub = api.onSsoCallback!(payload => {
         // F91.14: trace what the renderer actually sees. If token.length
         // is non-zero but the UI still renders "not signed in", the bug
         // is somewhere between here and the displayName computed.
@@ -181,17 +203,15 @@ export const useAuthStore = defineStore('auth', () => {
             identity.value?.email ?? '', displayName.value ?? '')
           resolve(payload.token)
         } finally {
-          loginPending.value = false
-          unsub()
+          finish()
         }
       })
 
       const base = catalogUrl.replace(/\/$/, '')
       const url = `${base}/auth/sso/login?redirect_uri=${encodeURIComponent('wdc://auth-callback')}`
       void api.openExternal!(url).catch(err => {
-        loginPending.value = false
         loginError.value = String(err)
-        unsub()
+        finish()
         reject(err instanceof Error ? err : new Error(String(err)))
       })
     })
@@ -204,6 +224,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     token, loginError, loginPending, isAuthenticated, identity, displayName,
     profile,
-    login, logout, setToken, setProfile, refreshProfile, authHeader,
+    login, cancelLogin, logout, setToken, setProfile, refreshProfile, authHeader,
   }
 })
