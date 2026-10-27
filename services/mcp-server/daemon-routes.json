@@ -34,6 +34,8 @@
     "GET /api/cloudflare/suggest-subdomain",
     "POST /api/mcp/intents",
     "POST /api/mcp/intents/confirm-request",
+    "GET /api/mcp/intents/{intentId}",
+    "GET /api/mcp/intents",
     "GET /api/databases",
     "POST /api/databases",
     "DELETE /api/databases/{name}",

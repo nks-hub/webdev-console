@@ -112,6 +112,7 @@ public class McpTokenPolicyTests
     [InlineData("POST", "/api/services/{serviceId}/start")]
     [InlineData("POST", "/api/mcp/intents")]
     [InlineData("POST", "/api/mcp/intents/confirm-request")]
+    [InlineData("GET", "/api/mcp/intents/{intentId}")]
     [InlineData("POST", "/api/mcp/tool-calls")]
     [InlineData("GET", "/api/mcp/capabilities")]
     [InlineData("POST", "/api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore")]

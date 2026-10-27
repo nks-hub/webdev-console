@@ -11,7 +11,7 @@
 import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-import { daemonClient } from '../daemonClient.js'
+import { daemonClient, DaemonRequestError } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { safe } from '../formatting.js'
 
@@ -64,7 +64,270 @@ export const IntentTokenSchema = z
       'Required for this operation when the daemon gave the MCP server its own token.',
   )
 
+/** Normalised lifecycle of an intent, as wdc_get_confirmation_status reports it. */
+export type ConfirmationStatus = 'pending' | 'ready' | 'consumed' | 'expired' | 'revoked' | 'unknown'
+
+export interface IntentState {
+  intentId: string
+  status: ConfirmationStatus
+  expiresAt?: string
+  confirmedAt?: string | null
+  usedAt?: string | null
+  revokedAt?: string | null
+  kind?: string
+  domain?: string
+  host?: string
+  /** Trust grant that approved the intent without asking the user, if any. */
+  matchedGrantId?: string | null
+  /** True when a trust grant approved the intent (no banner was shown). */
+  autoApproved?: boolean
+}
+
+interface DaemonIntentRow {
+  intentId: string
+  state?: string
+  expiresAt?: string
+  confirmedAt?: string | null
+  usedAt?: string | null
+  revokedAt?: string | null
+  kind?: string
+  domain?: string
+  host?: string
+  matchedGrantId?: string | null
+}
+
+export function normaliseState(state: string | undefined): ConfirmationStatus {
+  switch (state) {
+    case 'pending_confirmation':
+    case 'pending':
+      return 'pending'
+    case 'ready':
+    case 'consumed':
+    case 'expired':
+    case 'revoked':
+      return state
+    default:
+      return 'unknown'
+  }
+}
+
+/** Next step when a trust grant approved the intent instead of the user. */
+export const NEXT_AUTO_APPROVED =
+  'Approved automatically by a trust grant the user created in WDC; call the operation\'s tool now with the intentToken.'
+
+const NEXT_BY_STATUS: Record<ConfirmationStatus, string> = {
+  pending: 'The user has not decided yet. Ask them to approve the request in WDC; check again or retry the operation with the intentToken afterwards.',
+  ready: 'Approved. Call the operation\'s tool now with the intentToken.',
+  consumed: 'This intent was already used. Request a new confirmation for another run.',
+  expired: 'The request expired before it was used. Request a new confirmation if the user still wants this.',
+  revoked: 'The user revoked this request. Do not retry unless the user asks again.',
+  unknown: 'The daemon reported a state this server does not know; check the WDC app.',
+}
+
+function toState(row: DaemonIntentRow): IntentState {
+  return {
+    intentId: row.intentId,
+    status: normaliseState(row.state),
+    expiresAt: row.expiresAt,
+    confirmedAt: row.confirmedAt ?? null,
+    usedAt: row.usedAt ?? null,
+    revokedAt: row.revokedAt ?? null,
+    kind: row.kind,
+    domain: row.domain,
+    host: row.host,
+    matchedGrantId: row.matchedGrantId ?? null,
+    autoApproved: Boolean(row.matchedGrantId) && Boolean(row.confirmedAt),
+  }
+}
+
+/** The next step for a state, telling a grant approval apart from the user's. */
+export function nextFor(state: Pick<IntentState, 'status' | 'autoApproved'>): string {
+  return state.status === 'ready' && state.autoApproved ? NEXT_AUTO_APPROVED : NEXT_BY_STATUS[state.status]
+}
+
+/** Body of POST /api/mcp/intents/confirm-request on daemons that report grant approvals. */
+interface ConfirmRequestResponse {
+  confirmed?: boolean
+  autoApproved?: boolean
+  matchedGrantId?: string | null
+}
+
+/**
+ * Reads one intent's state. Daemons without `GET /api/mcp/intents/{id}` answer
+ * a bare 404; for those the intent is looked up in the inventory list instead.
+ */
+export async function fetchIntentState(intentId: string): Promise<IntentState> {
+  try {
+    const row = await daemonClient.get<DaemonIntentRow>(`/api/mcp/intents/${encodeURIComponent(intentId)}`)
+    return toState(row)
+  } catch (err) {
+    if (!(err instanceof DaemonRequestError) || err.status !== 404 || err.code) throw err
+  }
+  const list = await daemonClient.get<{ entries?: DaemonIntentRow[] }>('/api/mcp/intents?limit=500')
+  const row = list.entries?.find(e => e.intentId === intentId)
+  if (!row) throw new Error(`Intent ${intentId} was not found (it may have been cleaned up). Request a new confirmation.`)
+  return toState(row)
+}
+
+export interface WaitOptions {
+  sleep?: (ms: number) => Promise<void>
+  now?: () => number
+  pollMs?: number
+}
+
+/**
+ * Polls the intent until it leaves `pending` or `waitSeconds` pass. Returns
+ * the last state seen; `waitSeconds` 0 reads it once.
+ */
+export async function waitForIntent(intentId: string, waitSeconds: number, opts: WaitOptions = {}): Promise<IntentState> {
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)))
+  const now = opts.now ?? Date.now
+  const pollMs = opts.pollMs ?? 2000
+  const deadline = now() + Math.min(Math.max(waitSeconds, 0), MAX_WAIT_SECONDS) * 1000
+  for (;;) {
+    const state = await fetchIntentState(intentId)
+    if (state.status !== 'pending') return state
+    const left = deadline - now()
+    if (left <= 0) return state
+    await sleep(Math.min(pollMs, left))
+  }
+}
+
+export const MAX_WAIT_SECONDS = 120
+
+const WaitSecondsSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(MAX_WAIT_SECONDS)
+  .default(0)
+  .describe(
+    `Wait up to this many seconds (max ${MAX_WAIT_SECONDS}) for the user to approve or reject before returning. ` +
+      '0 returns immediately.',
+  )
+
+const IntentIdSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9-]+$/, 'intentId is the UUID returned by wdc_request_confirmation')
+  .describe('intentId returned by wdc_request_confirmation (not the intentToken).')
+
+export interface ConfirmationRequest {
+  kind: string
+  domain: string
+  host: string
+  ttlSeconds: number
+  prompt: string
+  waitSeconds?: number
+  releaseId?: string
+}
+
+/**
+ * Mints an intent and asks WDC to show the approval banner. When the intent
+ * exists but the banner request fails, the intent is returned with a
+ * warning instead of an error, so the agent can still have it approved in
+ * WDC → MCP → Intents rather than minting duplicates.
+ */
+export async function requestConfirmation(req: ConfirmationRequest, wait?: WaitOptions): Promise<Record<string, unknown>> {
+  const created = await daemonClient.post<{ intentId: string; intentToken: string; expiresAt: string }>(
+    '/api/mcp/intents',
+    {
+      domain: req.domain,
+      host: req.host,
+      kind: req.kind,
+      expiresIn: req.ttlSeconds,
+      ...(req.releaseId ? { releaseId: req.releaseId } : {}),
+    },
+  )
+  const base = { ...created, kind: req.kind, domain: req.domain, host: req.host }
+  let banner: unknown
+  try {
+    banner = await daemonClient.post<ConfirmRequestResponse | null>('/api/mcp/intents/confirm-request', {
+      intentId: created.intentId,
+      prompt: req.prompt,
+    })
+  } catch (err) {
+    return {
+      ...base,
+      status: 'pending',
+      warning:
+        'The intent was created but WDC could not be asked to show the approval banner: ' +
+        (err instanceof Error ? err.message : String(err)) +
+        '. Ask the user to approve intent ' + created.intentId + ' in WDC → MCP → Intents, ' +
+        'then call the operation with this intentToken. Do not request another confirmation for the same operation.',
+    }
+  }
+  // A trust grant that covers this operation approves it on the spot: no
+  // banner is shown and the intentToken can be used right away.
+  const answer = banner && typeof banner === 'object' ? (banner as ConfirmRequestResponse) : undefined
+  if (answer?.confirmed === true) {
+    const autoApproved = answer.autoApproved === true
+    return {
+      ...base,
+      status: 'ready',
+      autoApproved,
+      ...(answer.matchedGrantId ? { matchedGrantId: answer.matchedGrantId } : {}),
+      next: autoApproved ? NEXT_AUTO_APPROVED : NEXT_BY_STATUS.ready,
+    }
+  }
+  if (!req.waitSeconds) {
+    return {
+      ...base,
+      status: 'pending',
+      next:
+        'Ask the user to approve the request in the WDC app, then call the operation again with this intentToken. ' +
+        'wdc_get_confirmation_status(intentId) tells whether they have approved.',
+    }
+  }
+  try {
+    const state = await waitForIntent(created.intentId, req.waitSeconds, wait)
+    return {
+      ...base,
+      status: state.status,
+      expiresAt: state.expiresAt ?? created.expiresAt,
+      ...(state.autoApproved ? { autoApproved: true, matchedGrantId: state.matchedGrantId } : {}),
+      next: nextFor(state),
+    }
+  } catch (err) {
+    return {
+      ...base,
+      status: 'pending',
+      warning:
+        'The approval request was sent, but its status could not be read: ' +
+        (err instanceof Error ? err.message : String(err)) +
+        '. Retry the operation with this intentToken once the user has approved.',
+    }
+  }
+}
+
 export function registerConfirmationTools(server: McpServer, opts: RegisterOptions): void {
+  server.registerTool(
+    'wdc_get_confirmation_status',
+    {
+      title: 'Check whether the user approved a request',
+      description:
+        'Report the state of an approval request made with wdc_request_confirmation (or ' +
+        'wdc_deploy_create_intent).\n\n' +
+        'Args:\n  intentId: The intentId from that call.\n' +
+        `  waitSeconds: Optionally wait up to ${MAX_WAIT_SECONDS}s for the user to decide.\n\n` +
+        'Returns: { intentId, status, expiresAt, confirmedAt, usedAt, revokedAt, kind, domain, host, ' +
+        'matchedGrantId, autoApproved, next } where status is pending (not approved yet), ready (approved, ' +
+        'call the tool now), consumed (already used), expired, or revoked (the user withdrew it). autoApproved ' +
+        'is true when a trust grant the user created approved it instead of the banner.',
+      inputSchema: {
+        intentId: IntentIdSchema,
+        waitSeconds: WaitSecondsSchema,
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ intentId, waitSeconds }) =>
+      safe(async () => {
+        const state = await waitForIntent(intentId, waitSeconds)
+        return { ...state, next: nextFor(state) }
+      }),
+  )
+
   if (opts.readonly) return
 
   const operations = Object.keys(CONFIRMABLE_OPERATIONS) as [ConfirmableOperation, ...ConfirmableOperation[]]
@@ -79,7 +342,8 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
         'dropping MySQL accounts, resetting the MySQL root password) ' +
         'need the user\'s approval in the WDC app. Call this first, tell the user what you want to do and ' +
         'why, wait for them to approve the banner in WDC, then call the operation\'s tool with the ' +
-        'returned intentToken. Until it is approved the daemon answers 425 pending_confirmation.\n\n' +
+        'returned intentToken. Until it is approved the daemon answers 425 pending_confirmation. ' +
+        'An intentToken works once, for exactly this operation and target.\n\n' +
         'Args:\n  operation: One of ' + operations.join(', ') + '.\n' +
         '  target: What the operation acts on (database name, site domain, service id, zone id, ' +
         'binary app, plugin id, MySQL account as userName@host for mysql_user_drop, "config" or the ' +
@@ -87,30 +351,32 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
         'service_config_write, restart/shutdown/reset/uninstall for daemon_admin). ' +
         'Ignored for backup_restore, mysql_root_reset and hosts_write. When the daemon refuses a call ' +
         'with intent_rejected, its intentKind and intentDomain say what to request.\n' +
-        '  reason: One sentence shown to the user.',
+        '  reason: One sentence shown to the user.\n' +
+        `  waitSeconds: Optionally wait up to ${MAX_WAIT_SECONDS}s for the user to decide before returning.\n\n` +
+        'Returns: { intentId, intentToken, expiresAt, status, next } (status pending/ready/expired/revoked). ' +
+        'status ready with autoApproved: true means a trust grant the user created approved it at once: ' +
+        'retry the operation now with the intentToken. If the approval banner could not be shown the intent ' +
+        'is still returned, with a warning.',
       inputSchema: {
         operation: z.enum(operations),
         target: z.string().min(1).max(255),
         reason: z.string().min(1).max(500),
         ttlSeconds: z.number().int().min(60).max(3600).default(600),
+        waitSeconds: WaitSecondsSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ operation, target, reason, ttlSeconds }) =>
-      safe(async () => {
+    async ({ operation, target, reason, ttlSeconds, waitSeconds }) =>
+      safe(() => {
         const { kind, domain, host } = intentFor(operation, target)
-        const created = await daemonClient.post<{ intentId: string; intentToken: string; expiresAt: string }>(
-          '/api/mcp/intents',
-          { domain, host, kind, expiresIn: ttlSeconds },
-        )
-        await daemonClient.post('/api/mcp/intents/confirm-request', {
-          intentId: created.intentId,
-          prompt: `AI wants to ${CONFIRMABLE_OPERATIONS[operation].describe}${'fixedDomain' in CONFIRMABLE_OPERATIONS[operation] ? '' : ' ' + target}: ${reason}`.trim(),
+        return requestConfirmation({
+          kind,
+          domain,
+          host,
+          ttlSeconds,
+          waitSeconds,
+          prompt: `AI wants to ${CONFIRMABLE_OPERATIONS[operation].describe}${'fixedDomain' in CONFIRMABLE_OPERATIONS[operation] ? '' : ` ${target}`}: ${reason}`,
         })
-        return {
-          ...created,
-          next: 'Ask the user to approve the request in the WDC app, then call the operation again with this intentToken.',
-        }
       }),
   )
 }

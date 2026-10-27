@@ -123,9 +123,13 @@ public static class McpCapabilities
         new("DELETE", "/api/cloudflare/zones/{zoneId}/dns/{recordId}"),
         new("GET", "/api/cloudflare/tunnels"),
         new("GET", "/api/cloudflare/suggest-subdomain"),
-        // confirmation.ts, deploy.ts, auditLog.ts; capability list for the agent
+        // confirmation.ts, deploy.ts, auditLog.ts; capability list for the agent.
+        // GET /api/mcp/intents (the inventory, no tokens) is the status
+        // fallback for daemons without GET /api/mcp/intents/{intentId}.
         new("POST", "/api/mcp/intents"),
         new("POST", "/api/mcp/intents/confirm-request"),
+        new("GET", "/api/mcp/intents/{intentId}"),
+        new("GET", "/api/mcp/intents"),
         new("POST", "/api/mcp/tool-calls"),
         new("GET", "/api/mcp/capabilities"),
         // databases.ts

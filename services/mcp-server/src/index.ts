@@ -33,6 +33,7 @@ import { registerDeployTools } from './tools/deploy.js'
 import { registerConfirmationTools } from './tools/confirmation.js'
 import { daemonClient } from './daemonClient.js'
 import { wrapHandler } from './auditLog.js'
+import { SERVER_INSTRUCTIONS } from './instructions.js'
 
 export interface RegisterOptions {
   readonly: boolean
@@ -48,10 +49,13 @@ export interface RegisterOptions {
 
 const READONLY = process.argv.includes('--readonly')
 
-const server = new McpServer({
-  name: 'nks-wdc-mcp-server',
-  version: '0.3.0',
-})
+const server = new McpServer(
+  {
+    name: 'nks-wdc-mcp-server',
+    version: '0.3.0',
+  },
+  { instructions: SERVER_INSTRUCTIONS },
+)
 
 // Phase 8 — wrap registerTool ONCE so every subsequent registration
 // gets audit logging baked in. The wrapper inspects the third positional
